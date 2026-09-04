@@ -1,0 +1,475 @@
+/* TraceChain — security-console minimalism.
+   Forensic tooling, not a crypto dashboard: restrained, dense where it
+   matters, quiet everywhere else.
+
+   Panels are defined by hairline borders at low alpha, never by fills or
+   shadows. Exactly two colours carry meaning — a cold signal green for a
+   confirmed attribution, a muted amber for a fired pattern. Everything else
+   is neutral, including "no match", which is dim text rather than an alarm:
+   finding nothing is a legitimate result, not an error. */
+
+:root {
+  /* Surface — near-black, never pure black, with barely-lifted panels. */
+  --bg: #0a0b0d;
+  --panel: #0f1113;
+  --panel-2: #14171a;
+
+  /* Hairlines. The whole visual system rests on these two values. */
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
+
+  --text: #e6e8ea;
+  --muted: #9aa0a6;
+  --dim: #6b7075;
+  --faint: #4a4f54;
+
+  /* The only two colours that mean anything. */
+  --accent: #2fd3a2;          /* confirmed attribution, live status */
+  --accent-dim: rgba(47, 211, 162, 0.12);
+  --amber: #e0a44a;           /* a laundering pattern fired */
+  --amber-dim: rgba(224, 164, 74, 0.12);
+
+  /* Graph node roles. GraphView.jsx reads these same values. */
+  --seed: #e6e8ea;            /* the reported address — bright, not coloured */
+  --exchange: #2fd3a2;
+  --flagged: #e0a44a;
+  --node: #5b6167;
+
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --r: 6px;
+  --r-lg: 8px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --fast: 140ms;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* A fine grid at 2% so the dark surface has depth without decoration. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+#root { position: relative; z-index: 1; }
+
+::selection { background: var(--accent-dim); color: var(--text); }
+
+/* ---------- scrollbars: thin and dim ---------- */
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.12) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.10);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+/* ---------- focus: must stay visible on transparent borders ---------- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r);
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* ---------- primitives ---------- */
+.mono { font-family: var(--mono); font-variant-ligatures: none; }
+
+.micro {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 500;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(8px);
+}
+
+button {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease),
+              background-color var(--fast) var(--ease);
+}
+button:hover:not(:disabled) { border-color: var(--line-strong); }
+button:disabled { color: var(--faint); cursor: default; }
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #06231a;
+  font-weight: 600;
+}
+button.primary:hover:not(:disabled) { background: #38e0ae; border-color: #38e0ae; }
+button.primary:disabled { background: transparent; border-color: var(--line); color: var(--faint); }
+
+input, select {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  transition: border-color var(--fast) var(--ease);
+}
+input:hover, select:hover { border-color: var(--line-strong); }
+input::placeholder { color: var(--faint); }
+input.invalid { border-color: rgba(224, 164, 74, 0.45); }
+select { cursor: pointer; }
+option { background: var(--panel-2); color: var(--text); }
+
+/* =========================================================================
+   LANDING  ("/")
+   ========================================================================= */
+.landing { min-height: 100%; display: flex; flex-direction: column; }
+
+.landing-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 40px;
+  border-bottom: 1px solid var(--line);
+}
+
+.wordmark { display: flex; align-items: baseline; gap: 10px; }
+.wordmark h1 {
+  font-size: 17px; font-weight: 600; margin: 0;
+  letter-spacing: -0.02em;
+}
+.wordmark .tag { font-size: 12px; color: var(--dim); }
+
+.nav-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex-shrink: 0; }
+.dot.live { background: var(--accent); }
+.dot.down { background: var(--amber); }
+
+.hero {
+  flex: 1;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 80px 40px 72px;
+  max-width: 900px; margin: 0 auto; width: 100%;
+}
+
+.hero h2 {
+  font-size: 42px; font-weight: 600; margin: 0 0 18px;
+  letter-spacing: -0.032em; line-height: 1.1;
+}
+.hero p {
+  font-size: 15px; color: var(--muted); margin: 0 0 44px;
+  max-width: 620px; line-height: 1.65;
+}
+
+/* The address field is the centrepiece. */
+.trace-form { display: flex; flex-direction: column; gap: 14px; }
+
+.address-field {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  padding: 20px 22px;
+  border-radius: var(--r-lg);
+  background: var(--panel);
+}
+.address-field:focus { border-color: var(--line-strong); }
+
+.controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.controls select { flex: 0 0 auto; min-width: 132px; }
+.controls .spacer { flex: 1; }
+.controls button.primary { min-width: 128px; }
+
+.sample {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: var(--dim);
+}
+.sample button {
+  font-family: var(--mono); font-size: 11.5px;
+  padding: 5px 10px; color: var(--muted);
+}
+.sample button:hover { color: var(--text); }
+
+.banner {
+  padding: 11px 14px; border-radius: var(--r);
+  border: 1px solid var(--line-strong);
+  font-size: 13px; color: var(--muted);
+  background: var(--panel);
+}
+.banner.warn { border-color: rgba(224, 164, 74, 0.3); color: var(--amber); }
+
+/* ---------- below the fold ---------- */
+.section { padding: 0 40px 72px; max-width: 1080px; margin: 0 auto; width: 100%; }
+.section > .micro { margin-bottom: 18px; display: block; }
+
+.capabilities {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.capability { background: var(--panel); padding: 22px 20px; }
+.capability .n { font-family: var(--mono); font-size: 20px; color: var(--text); letter-spacing: -0.02em; }
+.capability h3 { font-size: 13px; font-weight: 600; margin: 10px 0 6px; letter-spacing: -0.01em; }
+.capability p { font-size: 12.5px; color: var(--dim); margin: 0; line-height: 1.6; }
+
+.trust {
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--r);
+  padding: 20px 24px;
+  background: var(--panel);
+  font-size: 14px; color: var(--muted); line-height: 1.7;
+  max-width: 780px;
+}
+.trust strong { color: var(--text); font-weight: 500; }
+
+.cases { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.case-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  cursor: pointer;
+  transition: background-color var(--fast) var(--ease);
+  width: 100%; text-align: left;
+  border-left: none; border-right: none; border-top: none; border-radius: 0;
+}
+.case-row:last-child { border-bottom: none; }
+.case-row:hover { background: var(--panel-2); border-color: var(--line); }
+.case-row .addr { font-family: var(--mono); font-size: 12.5px; color: var(--muted); flex: 1; }
+.case-row .meta { font-size: 11px; color: var(--faint); letter-spacing: 0.06em; text-transform: uppercase; }
+.case-row .result { font-size: 12.5px; color: var(--accent); min-width: 92px; text-align: right; }
+.case-row .result.none { color: var(--faint); }
+
+.landing-foot {
+  border-top: 1px solid var(--line);
+  padding: 22px 40px;
+  font-size: 11.5px; color: var(--faint);
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+
+/* =========================================================================
+   TRACE VIEW  ("/trace/:address")
+   ========================================================================= */
+.console { height: 100%; display: flex; flex-direction: column; }
+
+.console-bar {
+  display: flex; align-items: center; gap: 18px;
+  padding: 0 20px; height: 52px; flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 11, 13, 0.85);
+  backdrop-filter: blur(12px);
+}
+.console-bar .brand { font-size: 14px; font-weight: 600; letter-spacing: -0.02em; flex-shrink: 0; }
+.console-bar button { white-space: nowrap; flex-shrink: 0; }
+
+/* The address is already middle-truncated in JS, so this must not shrink —
+   letting it flex made it overlap the badges beside it. */
+.subject {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0; padding-right: 4px;
+}
+.subject .addr {
+  font-family: var(--mono); font-size: 12.5px; color: var(--text);
+  white-space: nowrap;
+}
+.icon-btn {
+  padding: 4px 7px; font-size: 11px; color: var(--dim);
+  border-radius: 4px; line-height: 1;
+}
+.icon-btn:hover { color: var(--text); }
+
+.badges { display: flex; gap: 6px; flex-shrink: 0; }
+
+.export-row { display: flex; gap: 6px; flex-shrink: 0; }
+.export-error { font-size: 11px; color: var(--amber); align-self: center; }
+
+/* Nothing in the console bar may overflow it and cover the surface below.
+   An overhanging child here silently eats clicks on the controls underneath. */
+.console-bar > * { max-height: 100%; }
+.badge {
+  font-size: 11px; padding: 3px 9px; border-radius: 4px;
+  border: 1px solid var(--line); color: var(--muted);
+  letter-spacing: 0.04em; white-space: nowrap;
+}
+.badge.mono { font-family: var(--mono); }
+/* An archived case is evidence as it stood, not a live reading. Say so. */
+.badge.archived { border-color: rgba(224,164,74,0.28); color: var(--amber); }
+
+.console-body { flex: 1; display: flex; min-height: 0; }
+
+.feed-pane { flex: 1; min-width: 0; overflow-y: auto; padding: 20px 24px 60px; }
+.feed-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.hop {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 16px; align-items: start;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+  animation: hop-in 180ms var(--ease) both;
+}
+@keyframes hop-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.hop .idx {
+  font-family: var(--mono); font-size: 11px; color: var(--faint);
+  padding-top: 2px; letter-spacing: 0.04em;
+}
+.hop .route { min-width: 0; }
+.hop .pair { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; }
+.hop .pair .from { color: var(--muted); }
+.hop .pair .arrow { color: var(--faint); }
+.hop .pair .to { color: var(--text); }
+.hop .sub { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+.hop .amount { font-family: var(--mono); font-size: 13px; color: var(--text); text-align: right; white-space: nowrap; }
+.hop .amount .unit { color: var(--dim); font-size: 11px; margin-left: 4px; }
+
+.hop.on-path .to { color: var(--accent); }
+.hop.on-path .idx { color: var(--accent); }
+.hop.terminal .to { color: var(--accent); font-weight: 500; }
+
+.flag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--amber); border: 1px solid rgba(224,164,74,0.28);
+  padding: 2px 7px; border-radius: 4px; margin-top: 6px;
+}
+
+/* skeleton while hops resolve */
+.skeleton { padding: 13px 0; border-bottom: 1px solid var(--line); display: grid;
+            grid-template-columns: 44px 1fr auto; gap: 16px; }
+.sk-bar { height: 10px; border-radius: 3px; background: rgba(255,255,255,0.045); }
+.sk-bar + .sk-bar { margin-top: 7px; }
+.skeleton { animation: sk 1.6s ease-in-out infinite; }
+@keyframes sk { 0%,100% { opacity: 0.5; } 50% { opacity: 0.85; } }
+
+/* ---------- right rail ---------- */
+.rail {
+  width: 360px; flex-shrink: 0;
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.rail-block > .micro { display: block; margin-bottom: 10px; }
+
+.status-line { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted); }
+.status-line .dot.pulse { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.verdict { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; background: var(--panel); }
+.verdict.resolved { border-color: rgba(47,211,162,0.25); }
+.verdict .name { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--accent); }
+.verdict .name.none { color: var(--dim); font-size: 15px; font-weight: 400; }
+.verdict .wallet { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin-top: 6px; word-break: break-all; }
+
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+.kv:last-child { border-bottom: none; }
+.kv .k { color: var(--dim); }
+.kv .v { color: var(--text); font-family: var(--mono); font-size: 12px; text-align: right; }
+
+.rule { border: 1px solid var(--line); border-radius: var(--r); padding: 13px 14px; }
+.rule + .rule { margin-top: 10px; }
+.rule .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.rule .nm { font-size: 12.5px; color: var(--amber); font-weight: 500; }
+.rule .st { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.rule .desc { font-size: 12px; color: var(--muted); margin-top: 7px; line-height: 1.6; }
+.rule .thresholds { margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
+.rule .th { display: flex; justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 11px; padding: 2px 0; }
+.rule .th .tk { color: var(--faint); }
+.rule .th .tv { color: var(--muted); }
+
+.empty { font-size: 12.5px; color: var(--faint); }
+
+/* view toggle above the feed */
+.toggle { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.toggle button { border: none; border-radius: 0; padding: 5px 13px; font-size: 12px; color: var(--dim); }
+.toggle button + button { border-left: 1px solid var(--line); }
+.toggle button.on { color: var(--text); background: var(--panel-2); }
+
+.graph-pane { flex: 1; min-height: 0; position: relative; }
+
+/* graph overlays, restyled to the console language */
+.graph-stats, .graph-hint, .legend, .graph-controls button {
+  background: rgba(15, 17, 19, 0.9);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+.graph-stats { position: absolute; right: 14px; top: 14px; border-radius: var(--r); padding: 7px 11px; font-size: 11.5px; color: var(--muted); font-family: var(--mono); }
+.graph-hint { position: absolute; left: 14px; top: 14px; border-radius: var(--r); padding: 8px 11px; font-size: 11px; color: var(--faint); max-width: 250px; line-height: 1.5; pointer-events: none; }
+.legend { position: absolute; left: 14px; bottom: 14px; border-radius: var(--r); padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; font-size: 11.5px; }
+.legend .item { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.legend .swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.graph-controls { position: absolute; right: 14px; top: 56px; display: flex; flex-direction: column; gap: 6px; }
+.graph-controls button { width: 32px; min-width: 32px; height: 28px; padding: 0; font-size: 12px; color: var(--dim); border-radius: var(--r); }
+.graph-controls button:last-child { width: auto; padding: 0 10px; }
+.graph-controls button:hover:not(:disabled) { color: var(--text); border-color: var(--line-strong); }
+
+/* =========================================================================
+   RESPONSIVE — down to tablet
+   ========================================================================= */
+@media (max-width: 1080px) {
+  .capabilities { grid-template-columns: repeat(2, 1fr); }
+  .rail { width: 320px; }
+}
+
+@media (max-width: 860px) {
+  .landing-nav, .hero, .section, .landing-foot { padding-left: 24px; padding-right: 24px; }
+  .hero { padding-top: 56px; padding-bottom: 48px; }
+  .hero h2 { font-size: 32px; }
+  .console-body { flex-direction: column; }
+  .rail {
+    width: 100%; border-left: none; border-top: 1px solid var(--line);
+    max-height: 46vh;
+  }
+  .controls select { flex: 1 1 40%; min-width: 0; }
+  .console-bar { gap: 12px; overflow-x: auto; }
+  .badges { display: none; }
+}
+
+@media (max-width: 560px) {
+  .capabilities { grid-template-columns: 1fr; }
+  .hop { grid-template-columns: 32px 1fr; }
+  .hop .amount { grid-column: 2; text-align: left; margin-top: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

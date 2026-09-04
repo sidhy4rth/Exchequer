@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "description": "Known centralised-exchange wallets on Tron. A match against one of these is what lets TraceChain say 'the funds were cashed out here'.",
+    "provenance": "Each label is TronScan's own published address tag, read live from its public API (/api/account -> addressTag) by backend/scripts/seed_tron_labels.py. Candidates are the largest USDT-TRC20 holders, since exchanges dominate that list.",
+    "verification_note": "TronScan publicly identifies these addresses as belonging to the named exchanges as of the review date. That is the explorer's own attribution, not an inference by this tool. It does NOT establish who controls the funds -- only the exchange can link a deposit address to a customer, via lawful request. Tags naming issuers, bridges or contracts were excluded: funds reaching those have not been cashed out.",
+    "chain": "tron",
+    "last_reviewed": "2026-09-04",
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
+    "schema": "labels maps a Base58 address to {exchange, label, type}"
+  },
+  "labels": {
+    "TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm": {
+      "exchange": "Binance",
+      "label": "Binance 2",
+      "type": "exchange_wallet"
+    },
+    "TCLgK89AnXbC9rewvhNb9UgXCc2qJJpBXh": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 10",
+      "type": "hot_wallet"
+    },
+    "TJDENsfBJs4RFETt1X1W8wMDc8M5XnJhCe": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 6",
+      "type": "hot_wallet"
+    },
+    "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 7",
+      "type": "hot_wallet"
+    },
+    "TXFBqBbqJommqZf7BV8NNYzePh97UmJodJ": {
+      "exchange": "Bitfinex",
+      "label": "Bitfinex",
+      "type": "exchange_wallet"
+    },
+    "TU4vEruvZwLLkSfV9bNw12EJTPvNr7Pvaa": {
+      "exchange": "Bybit",
+      "label": "Bybit",
+      "type": "exchange_wallet"
+    },
+    "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": {
+      "exchange": "OKX",
+      "label": "OKX Hot Wallet 8",
+      "type": "hot_wallet"
+    }
+  }
+}
