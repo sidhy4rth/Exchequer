@@ -86,3 +86,16 @@ def test_cases_lists_stored_traces(client):
     body = client.get("/cases?limit=5").json()
     assert body["count"] == len(body["cases"])
     assert body["count"] <= 5
+
+
+def test_hops_covered_counts_addresses_found_not_expanded():
+    """depth_reached is 0 on a one-hop trace because the addresses one hop out
+    are found and never expanded -- reporting that reads as "0 hops"."""
+    from app.main import _hops_covered
+    from conftest import addr, make_graph
+
+    seed = addr("5eed")
+    graph = make_graph([(seed, addr("a1"), 1.0), (addr("a1"), addr("b2"), 1.0)], seed=seed)
+
+    assert _hops_covered(graph) == 2
+    assert _hops_covered(make_graph([(seed, addr("a1"), 1.0)], seed=seed)) == 1

@@ -262,6 +262,14 @@ cd backend && .venv/bin/python -m scripts.import_ofac_addresses
 cd backend && .venv/bin/python -m scripts.import_ofac_addresses --dry-run
 ```
 
+Current coverage, from the list published **4 September 2026**:
+
+| File | Coverage |
+|---|---|
+| `backend/data/risk_labels.json` | **124 addresses / 48 designated entities** on Ethereum |
+| `backend/data/risk_labels_tron.json` | **282 addresses** on Tron |
+| `backend/data/risk_labels_bsc.json` | **1 address** on BNB Smart Chain |
+
 Two categories, carrying the same evidentiary weight but different investigative meaning:
 
 | Category | Meaning | Effect on the trace |
@@ -280,8 +288,16 @@ Every address in these files is sanctioned; `mixer` marks the subset that are tu
 project's own editorial classification of the designated entity's name and is recorded as such. The
 sanctions fact itself is never editorial.
 
+**The mixer category is currently empty on all three chains, and that is the correct answer rather
+than missing data.** Every mixer OFAC lists today — Blender.io (46 addresses), Sinbad.io — is a
+*Bitcoin* service, and TraceChain does not trace Bitcoin. Tornado Cash, the one that mattered on
+Ethereum, was delisted in March 2025 following *Van Loon v. Treasury*. The rule and its stop-the-trace
+behaviour are implemented and tested; there is simply nothing on the current list for them to match.
+Re-running the importer will pick up any future designation without a code change.
+
 > Screening degrades safely. With no label file present the trace still runs and still attributes an
-> exchange — it simply reports that it was not screened.
+> exchange — it simply reports that it was not screened. `GET /risk-labels` reports `screened` so a
+> null result is never ambiguous.
 
 ---
 

@@ -87,24 +87,32 @@ class RiskMatch:
 
     def describe(self, native_symbol: str = "ETH") -> str:
         """One sentence an investigator can paste into a report."""
-        where = (
-            "the reported address itself"
-            if self.depth == 0
-            else f"{self.depth} hop{'s' if self.depth != 1 else ''} from the reported address"
-        )
+        # The label usually is the entity name; repeating it as "X (X)" reads
+        # like a bug in a document meant to be quoted.
+        named = self.label if self.label == self.entity else f"{self.label} ({self.entity})"
+
+        # For the reported address itself there is no "value that reached it
+        # within this trace" -- the trace starts there, so the graph holds no
+        # inbound edge and the figure would always be a misleading 0.0000.
+        if self.depth == 0:
+            placement = "It is the reported address itself"
+        else:
+            hops = f"{self.depth} hop{'s' if self.depth != 1 else ''}"
+            placement = (
+                f"It received {self.value_received_native:.4f} {native_symbol} "
+                f"within this trace, {hops} from the reported address"
+            )
+
         if self.category == SANCTIONED:
             return (
-                f"Sanctioned entity: {self.address} is listed as {self.label} "
-                f"({self.entity}) on {self.source}. It received "
-                f"{self.value_received_native:.4f} {native_symbol} within this "
-                f"trace, {where}."
+                f"Sanctioned entity: {self.address} is listed as {named} on "
+                f"{self.source}. {placement}."
             )
         return (
-            f"Mixer: {self.address} is {self.label} ({self.entity}), per "
-            f"{self.source}. It received {self.value_received_native:.4f} "
-            f"{native_symbol} within this trace, {where}. The trace stops here "
-            f"— a mixer pays out from a commingled pool, so transfers leaving "
-            f"it have no established link to the funds that arrived."
+            f"Mixer: {self.address} is {named}, per {self.source}. {placement}. "
+            f"The trace stops here — a mixer pays out from a commingled pool, "
+            f"so transfers leaving it have no established link to the funds "
+            f"that arrived."
         )
 
 

@@ -1,0 +1,1299 @@
+{
+  "_meta": {
+    "description": "Addresses on the U.S. Treasury's Specially Designated Nationals list that TraceChain screens a trace against. A match tells an investigator the funds touched a designated entity, which is the point at which a fraud case acquires an international dimension.",
+    "provenance": "Extracted directly from OFAC's published SDN XML (https://www.treasury.gov/ofac/downloads/sdn.xml) by backend/scripts/import_ofac_addresses.py. Every entry keeps the sanctions programs and the exact idType OFAC recorded, so any label here can be checked against the source document.",
+    "verification_note": "This establishes that the U.S. Treasury published the address against the named designated entity as of the publication date. It does NOT establish that a counterparty who received funds from it is culpable, nor that the designation has force in Indian law. It is a lead and an escalation trigger, not a verdict.",
+    "category_note": "Every address in this file is sanctioned. 'mixer' marks the subset that are tumblers, which is TraceChain's own editorial classification of the designated entity's name, and which additionally stops a trace: a mixer pays out from a commingled pool, so transfers leaving it have no established link to the deposit that arrived.",
+    "chain": "ethereum",
+    "ofac_publish_date": "09/04/2026",
+    "last_reviewed": "2026-09-07",
+    "counts": {
+      "sanctioned": 124,
+      "mixer": 0
+    },
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_ofac_addresses",
+    "schema": "labels maps an address to {category, entity, label, source, ofac_programs, ofac_id_type}"
+  },
+  "labels": {
+    "0x0330070fd38ec3bb94f58fa55d40368271e9e54a": {
+      "category": "sanctioned",
+      "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x038989cbb1710c72b9920dc4fa529158f463e72c": {
+      "category": "sanctioned",
+      "entity": "Armando de Jesus OJEDA AVILES",
+      "label": "Armando de Jesus OJEDA AVILES",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x04dba1194ee10112fe6c3207c0687def0e78bacf": {
+      "category": "sanctioned",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "label": "Alex Adrianus Martinus PEIJNENBURG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x08723392ed15743cc38513c4925f5e6be5c17243": {
+      "category": "sanctioned",
+      "entity": "LAZARUS GROUP",
+      "label": "LAZARUS GROUP",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x08b2efdcdb8822efe5ad0eae55517cf5dc544251": {
+      "category": "sanctioned",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "label": "Alex Adrianus Martinus PEIJNENBURG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x0931ca4d13bb4ba75d9b7132ab690265d749a5e7": {
+      "category": "sanctioned",
+      "entity": "CRYPTEX",
+      "label": "CRYPTEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x098b716b8aaf21512996dc57eb0615e2383e2f96": {
+      "category": "sanctioned",
+      "entity": "LAZARUS GROUP",
+      "label": "LAZARUS GROUP",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x0ee5067b06776a89ccc7dc8ee369984ad7db5e06": {
+      "category": "sanctioned",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "label": "Alex Adrianus Martinus PEIJNENBURG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x12de548f79a50d2bd05481c8515c1ef5183666a9": {
+      "category": "sanctioned",
+      "entity": "OLD VECTOR LLC",
+      "label": "OLD VECTOR LLC",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x14779cec0b117d5194c750c55ea1f42086631964": {
+      "category": "sanctioned",
+      "entity": "Armando de Jesus OJEDA AVILES",
+      "label": "Armando de Jesus OJEDA AVILES",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x175d44451403edf28469df03a9280c1197adb92c": {
+      "category": "sanctioned",
+      "entity": "GAZA NOW",
+      "label": "GAZA NOW (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "0x1967d8af5bd86a497fb3dd7899a020e47560daaf": {
+      "category": "sanctioned",
+      "entity": "Matthew Simon GRIMM",
+      "label": "Matthew Simon GRIMM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x1999ef52700c34de7ec2b68a28aafb37db0c5ade": {
+      "category": "sanctioned",
+      "entity": "Khadzhi Murat Dalgatovich MAGOMEDOV",
+      "label": "Khadzhi Murat Dalgatovich MAGOMEDOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x19aa5fe80d33a56d56c78e82ea5e50e5d80b4dff": {
+      "category": "sanctioned",
+      "entity": "SUEX OTC, S.R.O.",
+      "label": "SUEX OTC, S.R.O.",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x19f8f2b0915daa12a3f5c9cf01df9e24d53794f7": {
+      "category": "sanctioned",
+      "entity": "OKO DESIGN BUREAU",
+      "label": "OKO DESIGN BUREAU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x1b8579cf6ab12ea6b74ac5fa41f3829a3cb61e6e": {
+      "category": "sanctioned",
+      "entity": "Mojtaba GHAL'EH-KUHI",
+      "label": "Mojtaba GHAL'EH-KUHI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x1cab8177ace78b1b6b1c393371f4f2dcae40cbeb": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x1d19b52b54e7ef5ea1a4b40b616165e798eac9f8": {
+      "category": "sanctioned",
+      "entity": "Dmytro RASHEVSKYI",
+      "label": "Dmytro RASHEVSKYI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x1da5821544e25c636c1417ba96ade4cf6d2f9b5a": {
+      "category": "sanctioned",
+      "entity": "SECONDEYE SOLUTION",
+      "label": "SECONDEYE SOLUTION",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "ELECTION-EO13848"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x21b8d56bda776bbe68655a16895afd96f5534fed": {
+      "category": "sanctioned",
+      "entity": "GAZA NOW",
+      "label": "GAZA NOW",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x252a8bd2319d8a555b872990601221b3a2053bce": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x2711d73d559f62f4f855ee21f38378f528e07985": {
+      "category": "sanctioned",
+      "entity": "FIRST VPN SERVICE",
+      "label": "FIRST VPN SERVICE",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x2c7dcd774b33e10367f7d6385479e04f97d179dc": {
+      "category": "sanctioned",
+      "entity": "Dmytro RASHEVSKYI",
+      "label": "Dmytro RASHEVSKYI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x2f389ce8bd8ff92de3402ffce4691d17fc4f6535": {
+      "category": "sanctioned",
+      "entity": "SUEX OTC, S.R.O.",
+      "label": "SUEX OTC, S.R.O.",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x308ed4b7b49797e1a98d3818bff6fe5385410370": {
+      "category": "sanctioned",
+      "entity": "SUEX OTC, S.R.O.",
+      "label": "SUEX OTC, S.R.O.",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x32da24ca413f3e7b53145d4737e172c3bdf81e3e": {
+      "category": "sanctioned",
+      "entity": "Armando de Jesus OJEDA AVILES",
+      "label": "Armando de Jesus OJEDA AVILES",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x35fb6f6db4fb05e6a4ce86f2c93691425626d4b1": {
+      "category": "sanctioned",
+      "entity": "LAZARUS GROUP",
+      "label": "LAZARUS GROUP",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x38735f03b30fbc022ddd06abed01f0ca823c6a94": {
+      "category": "sanctioned",
+      "entity": "John Desmond HANAFIN",
+      "label": "John Desmond HANAFIN (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "0x39d908dac893cbcb53cc86e0ecc369aa4def1a29": {
+      "category": "sanctioned",
+      "entity": "Jonatan ZIMENKOV",
+      "label": "Jonatan ZIMENKOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x3ad9db589d201a710ed237c829c7860ba86510fc": {
+      "category": "sanctioned",
+      "entity": "TASK FORCE RUSICH",
+      "label": "TASK FORCE RUSICH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x3cbded43efdaf0fc77b9c55f6fc9988fcc9b757d": {
+      "category": "sanctioned",
+      "entity": "SOUTHFRONT",
+      "label": "SOUTHFRONT",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "ELECTION-EO13848",
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x3cffd56b47b7b41c56258d9c7731abadc360e073": {
+      "category": "sanctioned",
+      "entity": "LAZARUS GROUP",
+      "label": "LAZARUS GROUP",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x3e37627deaa754090fbfbb8bd226c1ce66d255e9": {
+      "category": "sanctioned",
+      "entity": "LAZARUS GROUP",
+      "label": "LAZARUS GROUP",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x4060cbf80734193f521a3cc6fd4e985df2825279": {
+      "category": "sanctioned",
+      "entity": "Keyvan Fayyaz Gareh BLAGH",
+      "label": "Keyvan Fayyaz Gareh BLAGH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x43fa21d92141ba9db43052492e0deee5aa5f0a93": {
+      "category": "sanctioned",
+      "entity": "Roman SEMENOV",
+      "label": "Roman SEMENOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x48549a34ae37b12f6a30566245176994e17c6b4a": {
+      "category": "sanctioned",
+      "entity": "CHATEX",
+      "label": "CHATEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x4f428c11dc82388fa5136d636e613ad923eb700b": {
+      "category": "sanctioned",
+      "entity": "Armando de Jesus OJEDA AVILES",
+      "label": "Armando de Jesus OJEDA AVILES",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x4f47bc496083c727c5fbe3ce9cdf2b0f6496270c": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x502371699497d08d5339c870851898d6d72521dd": {
+      "category": "sanctioned",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "label": "Alex Adrianus Martinus PEIJNENBURG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x530a64c0ce595026a4a556b703644228179e2d57": {
+      "category": "sanctioned",
+      "entity": "Xingbiao SHEN",
+      "label": "Xingbiao SHEN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x532b77b33a040587e9fd1800088225f99b8b0e8a": {
+      "category": "sanctioned",
+      "entity": "Arash Estaki ALIVAND",
+      "label": "Arash Estaki ALIVAND",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x53b6936513e738f44fb50d2b9476730c0ab3bfc1": {
+      "category": "sanctioned",
+      "entity": "LAZARUS GROUP",
+      "label": "LAZARUS GROUP",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x5512d943ed1f7c8a43f3435c85f7ab68b30121b0": {
+      "category": "sanctioned",
+      "entity": "CHATEX",
+      "label": "CHATEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x56de1527136f76a809e5b14ded6103eecd072ba7": {
+      "category": "sanctioned",
+      "entity": "Keyvan Fayyaz Gareh BLAGH",
+      "label": "Keyvan Fayyaz Gareh BLAGH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x57ec89a0c056163a0314e413320f9b3abe761259": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x5a14e72060c11313e38738009254a90968f58f51": {
+      "category": "sanctioned",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "label": "Alex Adrianus Martinus PEIJNENBURG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x5a7a51bfb49f190e5a6060a5bc6052ac14a3b59f": {
+      "category": "sanctioned",
+      "entity": "Roman SEMENOV",
+      "label": "Roman SEMENOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x5d5b5dafecbf31bdb08bfd3edad4f2694372d0ef": {
+      "category": "sanctioned",
+      "entity": "Rolan SOKOLOVSKI",
+      "label": "Rolan SOKOLOVSKI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x5f48c2a71b2cc96e3f0ccae4e39318ff0dc375b2": {
+      "category": "sanctioned",
+      "entity": "Roman SEMENOV",
+      "label": "Roman SEMENOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x67d40ee1a85bf4a4bb7ffae16de985e8427b6b45": {
+      "category": "sanctioned",
+      "entity": "CHATEX",
+      "label": "CHATEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x6b0736fed0634e15e19cc57fba19cd179c13abca": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x6b69e2a7545c166417a80c61a77562052bffa9c5": {
+      "category": "sanctioned",
+      "entity": "SHPS SHELBIT",
+      "label": "SHPS SHELBIT",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x6be0ae71e6c41f2f9d0d1a3b8d0f75e6f6a0b46e": {
+      "category": "sanctioned",
+      "entity": "Roman SEMENOV",
+      "label": "Roman SEMENOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x6f1ca141a28907f78ebaa64fb83a9088b02a8352": {
+      "category": "sanctioned",
+      "entity": "CHATEX",
+      "label": "CHATEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x6fac4d18c912343bf86fa7049364dd4e424ab9c0": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x72a5843cc08275c8171e582972aa4fda8c397b2a": {
+      "category": "sanctioned",
+      "entity": "SECONDEYE SOLUTION",
+      "label": "SECONDEYE SOLUTION",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "ELECTION-EO13848"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x747afb5c7a7fc34b547cd0fdebf9b91759c5a52b": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x76ea76ca4eb727f18956ab93445a94c5280412b9": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x797d7ae72ebddcdea2a346c1834e04d1f8df102b": {
+      "category": "sanctioned",
+      "entity": "Roman SEMENOV",
+      "label": "Roman SEMENOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x7ced75026204ac29c34bea98905d4c949f27361e": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x7db418b5d567a4e0e8c59ad71be1fce48f3e6107": {
+      "category": "sanctioned",
+      "entity": "SECONDEYE SOLUTION",
+      "label": "SECONDEYE SOLUTION",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "ELECTION-EO13848"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x7f03679b56d8772530efa516b58bb83d4829e881": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x7f19720a857f834887fc9a7bc0a0fbe7fc7f8102": {
+      "category": "sanctioned",
+      "entity": "SECONDEYE SOLUTION",
+      "label": "SECONDEYE SOLUTION",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "ELECTION-EO13848"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x7f367cc41522ce07553e823bf3be79a889debe1b": {
+      "category": "sanctioned",
+      "entity": "Danil POTEKHIN",
+      "label": "Danil POTEKHIN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x7ff9cfad3877f21d41da833e2f775db0569ee3d9": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x83e5bc4ffa856bb84bb88581f5dd62a433a25e0d": {
+      "category": "sanctioned",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "label": "Alex Adrianus Martinus PEIJNENBURG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c": {
+      "category": "sanctioned",
+      "entity": "Anton Nikolaeyvich ANDREYEV",
+      "label": "Anton Nikolaeyvich ANDREYEV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "ELECTION-EO13848"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x8694ed130432be2cd3efff2e4d9dc52351dc7423": {
+      "category": "sanctioned",
+      "entity": "Keyvan Fayyaz Gareh BLAGH",
+      "label": "Keyvan Fayyaz Gareh BLAGH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x8ac5381fcd9e7395d14e02986c344aada84b4bc6": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x8d79c73daae8630c88de372ba8f57592fa987607": {
+      "category": "sanctioned",
+      "entity": "Siavash KAYVANPOUR",
+      "label": "Siavash KAYVANPOUR",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "IRGC"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x8dce2aac0de82bdcaf6b4373b79f94331b8e4995": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x901bb9583b24d97e995513c6778dc6888ab6870e": {
+      "category": "sanctioned",
+      "entity": "Artem Mikhaylovich LIFSHITS",
+      "label": "Artem Mikhaylovich LIFSHITS",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ELECTION-EO13848",
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x931546d9e66836abf687d2bc64b30407bac8c568": {
+      "category": "sanctioned",
+      "entity": "Roman SEMENOV",
+      "label": "Roman SEMENOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x95584c303fcd48af5c6b9873015f2ad0ca84eae3": {
+      "category": "sanctioned",
+      "entity": "Song Guk YUN",
+      "label": "Song Guk YUN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x961c5be54a2ffc17cf4cb021d863c42dacd47fc1": {
+      "category": "sanctioned",
+      "entity": "Wei ZHANG",
+      "label": "Wei ZHANG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x9697749a9e8d6c119d8eeb0d6268a1b99c40684c": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x97b1043abd9e6fc31681635166d430a458d14f9c": {
+      "category": "sanctioned",
+      "entity": "Sang Man KIM",
+      "label": "Sang Man KIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x983a81ca6fb1e441266d2fbcb7d8e530ac2e05a2": {
+      "category": "sanctioned",
+      "entity": "VALERIAN LABS, INC.",
+      "label": "VALERIAN LABS, INC. (USDC)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDC"
+    },
+    "0x9be599d7867f5e1a2d7ec6db9710df2b98a15573": {
+      "category": "sanctioned",
+      "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x9c2bc757b66f24d60f016b6237f8cdd414a879fa": {
+      "category": "sanctioned",
+      "entity": "Mario Alberto JIMENEZ CASTRO",
+      "label": "Mario Alberto JIMENEZ CASTRO",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x9dd7fa4b4950154f7e75bdd8a77266b99b94ec08": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x9f4cda013e354b8fc285bf4b9a60460cee7f7ea9": {
+      "category": "sanctioned",
+      "entity": "SOUTHFRONT",
+      "label": "SOUTHFRONT",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "ELECTION-EO13848",
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xa0e1c89ef1a489c9c7de96311ed5ce5d32c20e4b": {
+      "category": "sanctioned",
+      "entity": "LAZARUS GROUP",
+      "label": "LAZARUS GROUP",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xa40cfbfc8534ffc84e20a7d8bbc3729b26a35f6f": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xa7e5d5a720f06526557c513402f2e6b5fa20b008": {
+      "category": "sanctioned",
+      "entity": "Artem Mikhaylovich LIFSHITS",
+      "label": "Artem Mikhaylovich LIFSHITS",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ELECTION-EO13848",
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xac4cc4b68ea24bbfaac8fd127b67ed445accce22": {
+      "category": "sanctioned",
+      "entity": "Rodrigo ALARCON PALOMARES",
+      "label": "Rodrigo ALARCON PALOMARES",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xb338962b92cd818d6aef0a32a9ecd01212a71f33": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xb5a69da691670f62510793f79a9b36c7db1a7b7c": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xb637f84b66876ebf609c2a4208905f9ddac9d075": {
+      "category": "sanctioned",
+      "entity": "Song Guk YUN",
+      "label": "Song Guk YUN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xb6f5ec1a0a9cd1526536d3f0426c429529471f40": {
+      "category": "sanctioned",
+      "entity": "Sang Man KIM",
+      "label": "Sang Man KIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xbb69e01921b17cd22080968bcc96ba6115da6062": {
+      "category": "sanctioned",
+      "entity": "CRYPTO HOME DMCC",
+      "label": "CRYPTO HOME DMCC",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xbd3276f265b83b5e828c05f46cde9d10a1521a24": {
+      "category": "sanctioned",
+      "entity": "Keyvan Fayyaz Gareh BLAGH",
+      "label": "Keyvan Fayyaz Gareh BLAGH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xc103b7dc095c904b92081eef0c1640081ec01c10": {
+      "category": "sanctioned",
+      "entity": "Rolan SOKOLOVSKI",
+      "label": "Rolan SOKOLOVSKI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xc2a3829f459b3edd87791c74cd45402ba0a20be3": {
+      "category": "sanctioned",
+      "entity": "TASK FORCE RUSICH",
+      "label": "TASK FORCE RUSICH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xc455f7fd3e0e12afd51fba5c106909934d8a0e4a": {
+      "category": "sanctioned",
+      "entity": "CHATEX",
+      "label": "CHATEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xcb74874f1e06fcf80a306e06e5379a44b488ba2d": {
+      "category": "sanctioned",
+      "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xd04e33461fea8302c5e1e13895b60cee8aefda7f": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xd0975b32cea532eadddfc9c60481976e39db3472": {
+      "category": "sanctioned",
+      "entity": "Matthew Simon GRIMM",
+      "label": "Matthew Simon GRIMM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xd5ed34b52ac4ab84d8fa8a231a3218bbf01ed510": {
+      "category": "sanctioned",
+      "entity": "FUNNULL TECHNOLOGY INC",
+      "label": "FUNNULL TECHNOLOGY INC",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xd81414abc631c6cadae1c6198b0c2b15a9b4fde5": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xd8500c631dc32fa18645b7436344a99e4825e10e": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xd882cfc20f52f2599d84b8e8d58c7fb62cfe344b": {
+      "category": "sanctioned",
+      "entity": "Dmitrii KARASAVIDI",
+      "label": "Dmitrii KARASAVIDI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xdb2720ebad55399117ddb4c4a4afd9a4ccada8fe": {
+      "category": "sanctioned",
+      "entity": "Alireza DERAKHSHAN",
+      "label": "Alireza DERAKHSHAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xdcbeffbecce100cce9e4b153c4e15cb885643193": {
+      "category": "sanctioned",
+      "entity": "Roman SEMENOV",
+      "label": "Roman SEMENOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xe05f529f5284d75624eba386cb716928c3b54a2a": {
+      "category": "sanctioned",
+      "entity": "SHPS SHELBIT",
+      "label": "SHPS SHELBIT",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xe1d865c3d669dcc8c57c8d023140cb204e672ee4": {
+      "category": "sanctioned",
+      "entity": "Yunhe WANG",
+      "label": "Yunhe WANG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xe1e4c5e5ed8f03ae61b581e2def126025f2b9401": {
+      "category": "sanctioned",
+      "entity": "Rolan SOKOLOVSKI",
+      "label": "Rolan SOKOLOVSKI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xe3d35f68383732649669aa990832e017340dbca5": {
+      "category": "sanctioned",
+      "entity": "Arash Estaki ALIVAND",
+      "label": "Arash Estaki ALIVAND",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xe7aa314c77f4233c18c6cc84384a9247c0cf367b": {
+      "category": "sanctioned",
+      "entity": "SUEX OTC, S.R.O.",
+      "label": "SUEX OTC, S.R.O.",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xe950dc316b836e4eefb8308bf32bf7c72a1358ff": {
+      "category": "sanctioned",
+      "entity": "GAZA NOW",
+      "label": "GAZA NOW",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xeb507efa9ee692a4c774ad1de9f3cb26fc459da3": {
+      "category": "sanctioned",
+      "entity": "Arman KAHZADIAN",
+      "label": "Arman KAHZADIAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xed6e0a7e4ac94d976eebfb82ccf777a3c6bad921": {
+      "category": "sanctioned",
+      "entity": "Roman SEMENOV",
+      "label": "Roman SEMENOV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xef85a6fafa5942a964dc618e94e230881d29ce2a": {
+      "category": "sanctioned",
+      "entity": "Arman KAHZADIAN",
+      "label": "Arman KAHZADIAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xefe301d259f525ca1ba74a7977b80d5b060b3cca": {
+      "category": "sanctioned",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "label": "Alex Adrianus Martinus PEIJNENBURG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xf1c4c44d2dcbcfa704349e3b57628dbd8404e597": {
+      "category": "sanctioned",
+      "entity": "Keyvan Fayyaz Gareh BLAGH",
+      "label": "Keyvan Fayyaz Gareh BLAGH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xf2235d55b2950a0b1317469d72d07ae65b2e27cb": {
+      "category": "sanctioned",
+      "entity": "Armando de Jesus OJEDA AVILES",
+      "label": "Armando de Jesus OJEDA AVILES",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xf3701f445b6bdafedbca97d1e477357839e4120d": {
+      "category": "sanctioned",
+      "entity": "Ivan Gennadievich KONDRATIEV",
+      "label": "Ivan Gennadievich KONDRATIEV",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xf4377eda661e04b6dda78969796ed31658d602d4": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xf45ecc3a59c7911181c659ce9115854c6175be91": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xf7b31119c2682c88d88d455dbb9d5932c65cf1be": {
+      "category": "sanctioned",
+      "entity": "LAZARUS GROUP",
+      "label": "LAZARUS GROUP",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK3"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xfac583c0cf07ea434052c49115a4682172ab6b4f": {
+      "category": "sanctioned",
+      "entity": "Mingming WANG",
+      "label": "Mingming WANG (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "0xfb3eff152ea55d1bfa04dbdd509a80fd7b72cdeb": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xfda1ec4a6178d4916b001a065422d31ebe5f62ff": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xfec8a60023265364d066a1212fde3930f6ae8da7": {
+      "category": "sanctioned",
+      "entity": "Yevgeniy Igorevich POLYANIN",
+      "label": "Yevgeniy Igorevich POLYANIN (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    }
+  }
+}

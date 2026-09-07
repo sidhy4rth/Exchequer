@@ -1,0 +1,3027 @@
+{
+  "_meta": {
+    "description": "Addresses on the U.S. Treasury's Specially Designated Nationals list that TraceChain screens a trace against. A match tells an investigator the funds touched a designated entity, which is the point at which a fraud case acquires an international dimension.",
+    "provenance": "Extracted directly from OFAC's published SDN XML (https://www.treasury.gov/ofac/downloads/sdn.xml) by backend/scripts/import_ofac_addresses.py. Every entry keeps the sanctions programs and the exact idType OFAC recorded, so any label here can be checked against the source document.",
+    "verification_note": "This establishes that the U.S. Treasury published the address against the named designated entity as of the publication date. It does NOT establish that a counterparty who received funds from it is culpable, nor that the designation has force in Indian law. It is a lead and an escalation trigger, not a verdict.",
+    "category_note": "Every address in this file is sanctioned. 'mixer' marks the subset that are tumblers, which is TraceChain's own editorial classification of the designated entity's name, and which additionally stops a trace: a mixer pays out from a commingled pool, so transfers leaving it have no established link to the deposit that arrived.",
+    "chain": "tron",
+    "ofac_publish_date": "09/04/2026",
+    "last_reviewed": "2026-09-07",
+    "counts": {
+      "sanctioned": 282,
+      "mixer": 0
+    },
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_ofac_addresses",
+    "schema": "labels maps an address to {category, entity, label, source, ofac_programs, ofac_id_type}"
+  },
+  "labels": {
+    "TA3941uFAvmVibSkQ6fMJXxmaSNovX86mz": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TA39q3p75XRSWYAEaSF7dANtyksoa3sLge": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TA3rH2A7iHnm6pKH8gr9cK1EZnShnmZdFg": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TA82wQ77kb9DieW4C8q7C4KwMfnCzfziqN": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TASWbk6X1wiTku5TMmMQYqYFvshVEtfJy8": {
+      "category": "sanctioned",
+      "entity": "ZEDCEX EXCHANGE LTD",
+      "label": "ZEDCEX EXCHANGE LTD",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN-EO13902",
+        "SDGT",
+        "IFSR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TAYhjpL8pPs8T84FSM329nffQpc6jD8GBM": {
+      "category": "sanctioned",
+      "entity": "GRINEX",
+      "label": "GRINEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TAbbVaBKgH4VBLXgWqACuwoKF4cH1HinQh": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TAgZxxuvfuKYJY5UPC1DXF8NPHbKtTzEGu": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TAhHpxPRwo1Bmm1A9m51uZ31tcB7EPq7SY": {
+      "category": "sanctioned",
+      "entity": "Zaid Issam Ahmed AL-JEBOURI",
+      "label": "Zaid Issam Ahmed AL-JEBOURI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TAhwhFv3JpK39Nc2m8W5LPCcoTisutiRfp": {
+      "category": "sanctioned",
+      "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN",
+        "IFSR",
+        "IRGC",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TAoLw5yD5XUoHWeBZRSZ1ExK9HMv2CiPvP": {
+      "category": "sanctioned",
+      "entity": "Ryan James WEDDING",
+      "label": "Ryan James WEDDING",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TAwNQN5tmzJJ694PPuoFUxQY13quBs8YgA": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TAyyw6ZoTZexvTcN7WRR9t79JUFgSAvkL8": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TB1Bcv3x8mg7PVV4nVM48pgHJKcYboTypU": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TB5J8W166YTUmtpUsy4XnNTKLVtesuE9eV": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBATDh41qMQ1yeVYecneEvhpfayYmkAQWS": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TBFW9gF4oDX5cG44gS7AoxQeujScmm3z6h": {
+      "category": "sanctioned",
+      "entity": "Dmytro RASHEVSKYI",
+      "label": "Dmytro RASHEVSKYI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBHTJqAy4DhHhmT3dNceJYNRz4SdLofLre": {
+      "category": "sanctioned",
+      "entity": "Yunhe WANG",
+      "label": "Yunhe WANG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBJqexr1FfGxVKhDsKeou6FVLBW1aS1Ny7": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBKq3SzXigsGhQNzdCYocpt8RzoMh3uxAr": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBWRDpQsW1ZVPGGaBAwVLNb7iqmVBuM1nj": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TBXMiRqUp1XH1zLazWu8cWitMAScv4HsYq": {
+      "category": "sanctioned",
+      "entity": "Miloud ABDERRAHMANE",
+      "label": "Miloud ABDERRAHMANE",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBYRhsZR7Mdn9ezpGVLwZiNVnGm8wZGLAD": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TBZefVsyQpzzxc2WSCLbZBECvxVdzGqdtC": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TBcLqqqyZjNj1ptuXFgj5H768NhNU5nDyn": {
+      "category": "sanctioned",
+      "entity": "Rolan SOKOLOVSKI",
+      "label": "Rolan SOKOLOVSKI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBfVDwNS6hC2Ln2qTLTRKMMPddscFEhhrU": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBhR5MLrTsNZ8FUyKgzdrCjWkYD2orYLdx": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBhTMBAaEWiTtMgMdJ97ZmYotgHeY543cc": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBmqXsFNYTMkyw9jVGBAecGaLyLwbxFTM1": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBtRqkiFzyuwe8nSAGQghxygAfwAF5eERq": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TBwghbQMsBC5xcUxE7ZpYXhfDMXZAfiFv6": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TByksCkUtMaYwHCSaetmAGufpeyfdXBrJk": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TC4VsFHJdZ66BdwobZxkudVZBVmQZgCP65": {
+      "category": "sanctioned",
+      "entity": "ANSARALLAH",
+      "label": "ANSARALLAH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "FTO"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TC5UNu3LGrjjVCuLNDdVgjm4oL5cQAyFRZ": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TC7vaJsxZteEEnnm2EFm9BRSZvezvsuA86": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TC8axQvzJEVR3NKN6mZnJtGy7537GEmh38": {
+      "category": "sanctioned",
+      "entity": "GRINEX",
+      "label": "GRINEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCA7AfTSuDmgYk2VaezfPuZF4Z4X8wxwcQ": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TCA9vmjsYw9MtPKEwRBtGhKFRfr4CLxJAv": {
+      "category": "sanctioned",
+      "entity": "ZEDCEX EXCHANGE LTD",
+      "label": "ZEDCEX EXCHANGE LTD",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN-EO13902",
+        "SDGT",
+        "IFSR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCCryMcQb5A5FSYkmcVy26Nd8J1FWHtfWh": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCEe3McjK9FWby8YsNmtRDwJt1x2s5dFTL": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCFD8N3vM5b4Gr5f1kkajQsodRVNyyAq1d": {
+      "category": "sanctioned",
+      "entity": "OLD VECTOR LLC",
+      "label": "OLD VECTOR LLC",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCUTmWspsaJb3U5JUs5AhVcGwaftyK1qtp": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCXihiScsAodR942Xq45df9qQAdr5nhkjQ": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCk1g37N3x6PDda63waydNQwqTUzFNpsrR": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCn9wM828B1GtsVn8kUaCvoE3RpfCAmtEB": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCqKhk7MpPnGH3UfygE1TRzUo92a5tuVy6": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCu5onCzXuqxjvVzdB2tR4FLuF66d4yRqf": {
+      "category": "sanctioned",
+      "entity": "Rolan SOKOLOVSKI",
+      "label": "Rolan SOKOLOVSKI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCudJgJ14kk3Ss2PEgsT15frztKpyG7HEh": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCyAE8Lxa1rmTThhE5Z3X95PC9rgMrReMX": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCzq6m2zxnQkrZrf8cqYcK6bbXQYAfWYKC": {
+      "category": "sanctioned",
+      "entity": "ZEDCEX EXCHANGE LTD",
+      "label": "ZEDCEX EXCHANGE LTD",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN-EO13902",
+        "SDGT",
+        "IFSR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TD7TXyvmjPfJkfhJuQ58NXA9dX9q81mqAp": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDFj8tYzfLDkwEMo4MJ2DfrbpMztuCCnan": {
+      "category": "sanctioned",
+      "entity": "Miloud ABDERRAHMANE",
+      "label": "Miloud ABDERRAHMANE",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDFtJtyLPgN3oWUoHh23oJox3T5V5nR11K": {
+      "category": "sanctioned",
+      "entity": "Sadiq Abbas Habib SAYYED",
+      "label": "Sadiq Abbas Habib SAYYED",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDHJNJHosn6xNDxMecFZwXyTzE9bYGXp9L": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDNKsLvsY2iSznyghddXz7ZDRc4X3191Z8": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TDSGtCciE9yFKYzDj1kBBc3F7gosguDqwC": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDX3dFNPvJeA9eVLLNqf1ixr4U2ktcDmoD": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDXBEozXRJy7eBYNCoqrDMRCx5QBN4jCCt": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDdbRFoBTEmE3qiR69Y6rKRSG1hoF65QaE": {
+      "category": "sanctioned",
+      "entity": "Elena CHIRKINYAN",
+      "label": "Elena CHIRKINYAN (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TDe2UNAvuUnTbbDo7518eMe3TXN5qJW8Ft": {
+      "category": "sanctioned",
+      "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDhtVUnmYwWfzWVrnzryr3fbQo8VTvj4ji": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDi9s3GeAtFBbUvGxqXiZnxiaH9QpqjYFn": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDprk9jeYPVm6khkBp1u7fwuyJcEJFrPWD": {
+      "category": "sanctioned",
+      "entity": "ANSARALLAH",
+      "label": "ANSARALLAH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "FTO"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TDwN1Eq62bqvVhfGAjdRRJjE46jsi5KNMV": {
+      "category": "sanctioned",
+      "entity": "ANSARALLAH",
+      "label": "ANSARALLAH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "FTO"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TDxXXmCELgrb5VwYobDMyTKVTTdY9LjEjx": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TE3mCcPULjPUE7ykX7RArDPAhyahoy3d2j": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TE5R3hJ6REap6vh14YAqjXczKrYaiteTy3": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TE5paMkU1hPr8BdjkSJLvEyUBxjKKSx1H6": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TE6VgR7rAuY4kuzCjdSVCZFXPjjzSQYY7X": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TEAqwfMhXLaomXhZ8KeMhx3njGmQEDnsUR": {
+      "category": "sanctioned",
+      "entity": "Xingbiao SHEN",
+      "label": "Xingbiao SHEN (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TEBHpD6iiAqhyS4w7zZFmD1rrv65a5HVTD": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TEEYCuGDyeNkuDj4u6GQRXxXo3Nh29r2vP": {
+      "category": "sanctioned",
+      "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TEFph7dZoUN5233cGEzF6XFwRpjPF8fQDS": {
+      "category": "sanctioned",
+      "entity": "Ilya Andreevich GAMBASHIDZE",
+      "label": "Ilya Andreevich GAMBASHIDZE (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TEKeY9i4CcVySJMmhuh2AxZhtgTmugYUMW": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TER8k4zWt3byuHyvyBkLstz3QVUUuBs9pt": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TETfViHWf9ZNB6WJgZBRMB48pTaBFo5Rmd": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TEcuHDQthTmULe8fFLUccBPpjfXaTmJuuD": {
+      "category": "sanctioned",
+      "entity": "GRINEX",
+      "label": "GRINEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TEsxMcVocweTM82Mdmc5diKC6qyCWqSpPv": {
+      "category": "sanctioned",
+      "entity": "Behzad MESRI",
+      "label": "Behzad MESRI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "HRIT-IR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TEtLieZwyjJTth7S5EJqUNjtSbM1ui9toK": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TF4J8Gp7zbS8NA3HLuxsLdx7Ebzr6weCGn": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TFFvv7NAWmbcVfA7QN81mMvUC25TWj1WJx": {
+      "category": "sanctioned",
+      "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
+      "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TFQbqaNbmq2xsVor2NbufLkYZvxFC9wC7k": {
+      "category": "sanctioned",
+      "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN",
+        "IFSR",
+        "IRGC",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TFS2LHNcrffdAVRHpDUpNvnmCHs78cSNbz": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TFdHux43bs21qRsygv5WQWfgtbQeT6nXey": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TFdTr9C3BqQrzKBXqSxJfAZFTh8UwBAfSg": {
+      "category": "sanctioned",
+      "entity": "OKO DESIGN BUREAU",
+      "label": "OKO DESIGN BUREAU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TFebC149jCDiow1MBphhfpHDLeMAKRNrqJ": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TFh7Z4qmdiT7opAYYLmNVXQJtVCkAtg7Zh": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TFqo5f16FJfSKesPxtGN4VN5HNZJebqMQX": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TFrH3dcpnR3tADrAcfyJwiK4brsgf3B7PG": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TFtz6Ae6NNo9VvhnVrj6V1RyEFMtZQMh3r": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TFurWgnyNMq9bhLrLoT9FGnrLfAL2BtR5R": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TFwjPScaJRCbSWVAywE1S1WgaUgSnyYUbD": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TGDaYNWFXi9HJ7NacfETF15vhUH7eRhKzt": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TGJVc32ig2u8tQsYMLE7KXHT5NDQroaVNU": {
+      "category": "sanctioned",
+      "entity": "GAZA NOW",
+      "label": "GAZA NOW (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TGKgLatirRpTugS6wgCUKerjLbzWKXAVqx": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TGLrjZc9c48iMFB4ZmDnSjSRMq27MXPg2k": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TGMFaAXH15oaW8MpcNHLid6NbMKWaaNPdC": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TGNwKzHjYvYP2SwsrmCYrRRvCRdxQgLq1w": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TGRZZsD8gxahF5oE6C7K8LLRHqQzoPa5bX": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TGUPpmW2bAnMCLe5ih2CFisfCHk4gTFDsx": {
+      "category": "sanctioned",
+      "entity": "ANSARALLAH",
+      "label": "ANSARALLAH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "FTO"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TGXE9dGWawjfd3xqFSho1h1bRbRv9wUGrF": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TGckaiamj5NzaYx6Qp6Zu7kahuHArzUo99": {
+      "category": "sanctioned",
+      "entity": "GRINEX",
+      "label": "GRINEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TGdpkwNVFjw2DnbHBCFKLvCygPVPz9w4iM": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TGpNzk9noyvCCdnFPuSg5cqptPs16LjXZq": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TGr2i8ZQiiMRjP3mWyQUH2MQBfKu8GJNqm": {
+      "category": "sanctioned",
+      "entity": "Zaid Issam Ahmed AL-JEBOURI",
+      "label": "Zaid Issam Ahmed AL-JEBOURI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TGsNFrgWfbGN2gX25Wcf8oTejtxtQkvmEx": {
+      "category": "sanctioned",
+      "entity": "ZEDCEX EXCHANGE LTD",
+      "label": "ZEDCEX EXCHANGE LTD",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN-EO13902",
+        "SDGT",
+        "IFSR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TH96tFMn8KGiYSLiwcV3E2UiaJc8jmcbz3": {
+      "category": "sanctioned",
+      "entity": "GAZA NOW",
+      "label": "GAZA NOW (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "THEQTsqPhRDDfgcfBW5npH5Lr9PZhpthrf": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "THHb5iMAbZgQYY19h6uY66y5xt6e11gcZC": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "THJUJFyTnrBWb1ijWav7qfRBrjUuKgP49Z": {
+      "category": "sanctioned",
+      "entity": "Zaid Issam Ahmed AL-JEBOURI",
+      "label": "Zaid Issam Ahmed AL-JEBOURI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "THPfLwEGvHVgRzi7EMnviAFy5WG1feDH1p": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "THUqqeevBQS3EYordDJKwp8DLFknesnfCD": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "THfLaNMBAMz7xXnHoz5BkRMmrwuHKqfAfR": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "THh5woR8qfmDsNknQ3agPYzQSiRtMnKsTh": {
+      "category": "sanctioned",
+      "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
+      "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "THob8vRrpDybXeqZDj8ukQhMjJVJ5nCbTW": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "THstQuwNidzC4YeJ7uPowf55ZdVZtGcHJ5": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TJ812KESWjzJZGEWBPFCu74Js5zQS7jN5A": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TJBg9SxwiUUoqJGk18vK9avxkuV8GrKMK7": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TJCBpxZ3yC7C7oegSRZMFxBcscmUVeSA36": {
+      "category": "sanctioned",
+      "entity": "Almpertos TSORIS",
+      "label": "Almpertos TSORIS (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN-EO13902"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TJCUwt9EKeTyzDw42658h8aYxQXScLdCZR": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TJGVHmHVNuU1vsXGGALLoirPwoRZoMUuhg": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TJdgB1k6ot3f2nLuZug6D8eD3HavTmzmSK": {
+      "category": "sanctioned",
+      "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN",
+        "IFSR",
+        "IRGC",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TJkBr9TZ1xBeJoF7RNWqyEMbYqVJ6fXXHR": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TK17wfSPp32RWrnzZPrGpv7TxdNFvvvE2s": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TK7HUNru8YLMz7vv8kzWRPrE2ZSgZeCaHV": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TKX6rgpGpGrJWzf1qXUUSNL5cYHQt7Z9rY": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TL1k1U6SHohxBqb68kCodxHc9y2LXoDSep": {
+      "category": "sanctioned",
+      "entity": "GRINEX",
+      "label": "GRINEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TL5WqcFX7XkhVLLwaXrdr57gnjC4stBeSG": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TLC3piEQ5n4tcULKHqLTGhmYFUyHUVSxck": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TLDtPq9PQsDuQunME8CSeVdYaLtRdrVgoJ": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TLFqEhiG7RUSZ9x5iph99Ke5782dkgRnWf": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TLM3zA3EWycoDX4ZX4gKze7sgfbdkntTum": {
+      "category": "sanctioned",
+      "entity": "OBSHCHESTVO S OGRANICHENNOI OTVETSTVENNOSTYU KONSTRUKTORSKOE BYURO VOSTOK",
+      "label": "OBSHCHESTVO S OGRANICHENNOI OTVETSTVENNOSTYU KONSTRUKTORSKOE BYURO VOSTOK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TLNRT524dzL5FF1nJHDhYEMFpeWjLjRbz1": {
+      "category": "sanctioned",
+      "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
+      "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TLRMHPjLGXsVpD9RVzSfat6zDiVDrd4b4w": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TLj5ZRvem4DAdbZLTGU3qAbAdLQug57JVo": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TLoG3vbjDgqmTD5bM7w9rMgA6ysaNReuRy": {
+      "category": "sanctioned",
+      "entity": "Zaid Issam Ahmed AL-JEBOURI",
+      "label": "Zaid Issam Ahmed AL-JEBOURI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TLvuvpfBKdxddxSsJefeiGCe9eVY8HUroE": {
+      "category": "sanctioned",
+      "entity": "ZEDCEX EXCHANGE LTD",
+      "label": "ZEDCEX EXCHANGE LTD",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN-EO13902",
+        "SDGT",
+        "IFSR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TM6Kix9wH8cYQ4rLpFifsQ4ddH3rPX3f8p": {
+      "category": "sanctioned",
+      "entity": "ANSARALLAH",
+      "label": "ANSARALLAH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "FTO"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TMECKT19hfumcK3KqQKbhxkn1ohyeR58xu": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TMGLqRQ4twjW8wJhVH1mQR7nUThpGHUsN3": {
+      "category": "sanctioned",
+      "entity": "Ilya Andreevich GAMBASHIDZE",
+      "label": "Ilya Andreevich GAMBASHIDZE (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TMRxAJt87MVYnadWne53AxZFG1FPKGfoGz": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TMStbg5fgb4uTV7fK1gEYF9hKAzP3siPsG": {
+      "category": "sanctioned",
+      "entity": "Jiantong WANG",
+      "label": "Jiantong WANG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TMfDhpUqW5W6HcMPXFaJfaiY271CYa51Hs": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TMgnRWb9xFMtktny9Lzty21QYLLQD93ft6": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TMiSGhXXVsvJzqwGbwAsGiFxWg2eALZoM5": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TMoMat6oyJLKxSb6SfQWBWc7q5PSm3Gr6U": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TMocScwSbSn2cqRCHVkzZSEar3Jk5AsXgo": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TMuBvwcgrTj6JysMmutXWaPjk1kREK2BDe": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TMuCgBejD5RsNANZdjGtaM3YyKGNgDoy7N": {
+      "category": "sanctioned",
+      "entity": "GRINEX",
+      "label": "GRINEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TN56YaCBymut2xoiRvy3v2qZ2pYgmBAtSo": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNDjh6WGLYyWmkh8vfu42bXVHUqFNQ3rDq": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNHNySUf8LMzhzSiQnHCXCbgatscQbM4ZQ": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNKyDgjn2WHZwHhH2Mj5AGMnK4moBX9xQd": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNTFhgFoKH4srBMiWbfrVFqP2AThSmdwf1": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNVbVXAgUT83Sv7E9oZwWutXqzs13sr6xN": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNZxGWCwvsHr6JxQxzoeDXV597Yf7Zb7nV": {
+      "category": "sanctioned",
+      "entity": "GRINEX",
+      "label": "GRINEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81": {
+      "category": "sanctioned",
+      "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN",
+        "IFSR",
+        "IRGC",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNmKrdYLPtFwPNWJUjrXdkQw4gSwpszUJd": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNmRfnSUXZoWWzxcDDbf95eGQYXt1mJDt8": {
+      "category": "sanctioned",
+      "entity": "FUNNULL TECHNOLOGY INC",
+      "label": "FUNNULL TECHNOLOGY INC",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER3"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNrX2FwrHKoo4XACGkmSzqeK4pdnKYn6Z7": {
+      "category": "sanctioned",
+      "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNsMJKvAtqiWntAnrcS8jkugL37FGzoqss": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNuA5CQ6LB4jTHoNrjEeQZJmcmhQuHMbQ7": {
+      "category": "sanctioned",
+      "entity": "ZEDCEX EXCHANGE LTD",
+      "label": "ZEDCEX EXCHANGE LTD",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN-EO13902",
+        "SDGT",
+        "IFSR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TNzvDTvcQTaY9jFrv85JnqibnGcudePj1z": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TP3kVtnFgDSoSqzw178nLJtGWNjrbKNgB6": {
+      "category": "sanctioned",
+      "entity": "Keyvan Fayyaz Gareh BLAGH",
+      "label": "Keyvan Fayyaz Gareh BLAGH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPCnxv28xNbvtAaEppddvnfkjQpaFeAkV3": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPDLpXxPcaSsupEZ3yrVksmNkYP5SLeKxu": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPF9UQhqpV18BPWg5xo6MeB3h8t4iEg9gP": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TPH1ehJuNY8cRuJgWTXoGuzkVpK5ckueLF": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPJ1JNX98MJpHueBJeF5SVSg85z8mYg1P1": {
+      "category": "sanctioned",
+      "entity": "Ryan James WEDDING",
+      "label": "Ryan James WEDDING",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPPR7e8hGC57dexrE2jy1f94wtuGyVP6Dp": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TPTFrDhx5tntyp5mRX423DaAe8aLDMUs31": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPcUZYthDfxNsHQnZZGBM1BDNBeNSjfPZE": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TPcwqbJ3ViWMUQMiKfMjDM7VTiCzdRu1cH": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPgxjjB6AJeMSQFngbUM6dMMxPHa9GEtYa": {
+      "category": "sanctioned",
+      "entity": "Siavash KAYVANPOUR",
+      "label": "Siavash KAYVANPOUR",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "IRGC"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPkNp2Z5KiA1sLWpPMWsfNErVo2dHxc4iy": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPnUDsrLYZg1UXGkpXSmhFEY5J5etfzE9S": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPo3JyryRcQ3uhBWexeYhtkpMitsUwY4uB": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TPwjq8YuABThppKM5ppsuagBFwDhzpnY11": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TPyE2oSoaysrXfLzwf9wetBVr9JudLwjtD": {
+      "category": "sanctioned",
+      "entity": "Zaid Issam Ahmed AL-JEBOURI",
+      "label": "Zaid Issam Ahmed AL-JEBOURI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TQ5H49Wz3K57zNHmuXVp6uLzFwitxviABs": {
+      "category": "sanctioned",
+      "entity": "Arash Estaki ALIVAND",
+      "label": "Arash Estaki ALIVAND",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TQ5mpZPbQMSq2s1vSM3RJgiB1AsTsiTpFZ": {
+      "category": "sanctioned",
+      "entity": "ANSARALLAH",
+      "label": "ANSARALLAH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "FTO"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TQ8a74SiDig3EDSC14tosLACWLbvaNYwCJ": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TQKQ4ntejdYYJpuYkFz8oCSDoXW6RKRDdY": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TQVZEuLHacexyJX3nZStaPzxceS63C9bax": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TQb6Pc4PmfUdUokLq5ygNioj4PnodNak9b": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TQetJ6xMqvv2Fu4ftD9UdBhuaKem5HbMou": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TQt3dWHiPdaKioG7nwovoTDUtxfimyuxYa": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TQthYM5nLqwAEr6DScC8tRtw29ncEB53mK": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TR18rEj7gWjKBJLYrowyfnvjWLTTsXGngK": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TR3yiEuFrbBnP8X5DKYFjRxCwbxcYyftD4": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TR83KsDjUKeds62PcAgo7BfhPJPSpMk7Ba": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TRBACioxdrdsYEZHvJWiUDZcMdBPpEe5Ub": {
+      "category": "sanctioned",
+      "entity": "Wei ZHANG",
+      "label": "Wei ZHANG",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TRWDtgCfXzTcMv8W6iJxh6umeqeF3zG7n5": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TRZvMk2D4fmjGjtuZHRVpgw6yjk8NcjsHV": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TRakpsE1mZjCUMNPyozR4BW2ZtJsF7ZWFN": {
+      "category": "sanctioned",
+      "entity": "Arash Estaki ALIVAND",
+      "label": "Arash Estaki ALIVAND",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TRkGqvaobVp4XDNmSceRo5hDcJYDTFmYjd": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TRmrnQiUY1ofMcTQUXvgeauKcZPnmwUeUR": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TRqbVMHWck3j2vKzA16L69v3cwuoyQSY8L": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TS729BUXeZWBhJGPKCdK75q7VU4nhkJkYT": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TSE5NWTJckiN8hJCUzwB3RgsMbdF4uCrmr": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TSFCGGbR57b56c4MXdiW5gzpD8j6cmimgo": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TSSQDgExKUELagzAKTAcoLMviq4SZ1eTFm": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TSbGiFzG9xFXUYgGA6RwbS3jvKNpeA4c3R": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TScXZTbDjjZ6a6jiC7dZjgCqfNo4vm7atV": {
+      "category": "sanctioned",
+      "entity": "Zaid Issam Ahmed AL-JEBOURI",
+      "label": "Zaid Issam Ahmed AL-JEBOURI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TSi1d66cgg3cPm9L6c2ZD8K1381XusSjkc": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TSxAAo67VTDgKT537EVXxdogkJtk9c6ojz": {
+      "category": "sanctioned",
+      "entity": "Alireza DERAKHSHAN",
+      "label": "Alireza DERAKHSHAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTAHMdqoom4f2VTWniroPWQHcTRZ4caoH4": {
+      "category": "sanctioned",
+      "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
+      "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TTKnV2S1295UrPr7N67Tp9ykNL7xX2Z4Uj": {
+      "category": "sanctioned",
+      "entity": "Fengbing XIA",
+      "label": "Fengbing XIA",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTLRNgLpz5H5tLPuNU4FViUs7zmmAtyvzW": {
+      "category": "sanctioned",
+      "entity": "Dmytro RASHEVSKYI",
+      "label": "Dmytro RASHEVSKYI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTS9o5KkpGgH8cK9LofLmMAPYb5zfQvSNa": {
+      "category": "sanctioned",
+      "entity": "ZEDCEX EXCHANGE LTD",
+      "label": "ZEDCEX EXCHANGE LTD",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN-EO13902",
+        "SDGT",
+        "IFSR"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTUDyVhhpCC1xJoPmWzdjLAzeoPwbSABdr": {
+      "category": "sanctioned",
+      "entity": "CRYPTEX",
+      "label": "CRYPTEX",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER2",
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTUqoT6EAmiM1xLvwVwxhjvjaoEUGtKDdZ": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TTVJuXWCusAURrpNShiypauagEH1N4CrxV": {
+      "category": "sanctioned",
+      "entity": "CRYPTO HOME DMCC",
+      "label": "CRYPTO HOME DMCC",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTct1DezYvriNWU7Wi3mygLoskkaw61mra": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TTgcTTNbNuFdbrhvbjMZVrdU5KALyzDaPw": {
+      "category": "sanctioned",
+      "entity": "GAZA NOW",
+      "label": "GAZA NOW (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TTiDLWE6fZK8okMJv6ijg42yrH6W2pjSr9": {
+      "category": "sanctioned",
+      "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN",
+        "IFSR",
+        "IRGC",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTrJwfL8SCSWBXWAPcZV8Pd5fZf1rznRhz": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTs7KRq39547ruAsxb9brAPuTLy7h3U6H1": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTuDmNhu8A6koPJRUd8Q5RnsT1FMfrZnoj": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TTzMs5AR66jr9mQMkWfCHVwd3AiLLYPepQ": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TU4tDFRvcKhAZ1jdihojmBWZqvJhQCnJ4F": {
+      "category": "sanctioned",
+      "entity": "AEZA GROUP LLC",
+      "label": "AEZA GROUP LLC",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4",
+        "CAATSA - RUSSIA"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TU8hJXgHdxWuj4DaaBKQFUwDeB8B5Xacke": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TUCsTq7TofTCJRRoHk6RvhMoS2mJLm5Yzq": {
+      "category": "sanctioned",
+      "entity": "Mingming WANG",
+      "label": "Mingming WANG (XBT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - XBT"
+    },
+    "TUErmQ9GtRDGC4g4L5wjWS55Ju5hYfR3sa": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TUKsuPVb8kgJVFp5x528KC5HisUVdzxami": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TUa7BcRjT3eT7kPyNWPvHQkz4qF9v68D7A": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TUcNB6c22JmcwXbbbuv9HVPeVqv5HSiTwQ": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TUcjuVB6RFvsMgE352Kdc3VHvFvteti97B": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TUfq9hfP7qUDMoJbzkjG4GPtNxhZewqk8Z": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TUoixKFaWVsHxGWgnYyMzpkrT22YqU7VvH": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TUuaxBAWfA5nmsqNfycxYrzEvz4a5GJMGY": {
+      "category": "sanctioned",
+      "entity": "FIRST VPN SERVICE",
+      "label": "FIRST VPN SERVICE",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TUyo1Kfnnjr2iMQdZxLWPX1U8Xiy1Wz5z5": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TV5ZTpKDszLTF6XcMnPongS33pwBgF91by": {
+      "category": "sanctioned",
+      "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
+      "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TV62LkiP1GiNdFCJEdY3xf6GdNLCCi6mfu": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TV6cvFEMcfxGsWqgxpBrXZ35MkhdtdhT3G": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVDsEFm19zLV8HeXdt6G75rLroxnp6uqpV": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TVJ4B5R8c8dS65NtUXpZPMGUpCRq8BQUrC": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVNyvx2astt2AB1Us67ENjfMZeEXZeiuu6": {
+      "category": "sanctioned",
+      "entity": "Ryan James WEDDING",
+      "label": "Ryan James WEDDING",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "ILLICIT-DRUGS-EO14059"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVUS1CVQnnzoJG8PBWkcWyf7DkLrS8yh5Z": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVXHp8bMrpRd5HGy3w1yu9f87qwRrMHFp8": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVXP7Aj5KFUPKMQUrsU6F3wUsyiLiUaUje": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVacWx7F5wgMgn49L5frDf9KLgdYy8nPHL": {
+      "category": "sanctioned",
+      "entity": "Ali SHAFIU",
+      "label": "Ali SHAFIU (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TVgJTK9qPg7wGTyeTG2MYF8aKMEx883xYU": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVgUsVzA7mpFExP4zS7HHbtKti6UuBDuwZ": {
+      "category": "sanctioned",
+      "entity": "Zaid Issam Ahmed AL-JEBOURI",
+      "label": "Zaid Issam Ahmed AL-JEBOURI",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVn4q7L4fKEPbygi7UHq1CKfZxtbeuMV5q": {
+      "category": "sanctioned",
+      "entity": "ANSARALLAH",
+      "label": "ANSARALLAH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "FTO"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TVttWTHTCU9kULP51m9BaHpmCW8H1BJJNQ": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TVu2SiQrWSnfwk8quAeDxfiaLy6FHzYkMA": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TVyiDQ25H6Rx6PcNV1WyjGasGSa8ehj1Uv": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TW3RgbhYkFEFnmRJ9mE9b83T9XYSMkjwuD": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TW9mABkenngQyJBqce5khR9fNCBF5gsBFQ": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TWAfC6htS1FyFv1r3aKENuD8DQGMzBbP8L": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TWBAPzpPiZarfVsY2BLXeaLhNHurn4wkWG": {
+      "category": "sanctioned",
+      "entity": "Tawfiq Muhammad Sa'id AL-LAW",
+      "label": "Tawfiq Muhammad Sa'id AL-LAW (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TWBqpQLDPCrXgRW1X9yFqR8NFfjyFSq5k4": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TWdqVcA3NyrNv71NgbMwKv3C5XMxj4XjSp": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TWoRwYzsifrD79DHDpTHC8fq787MvH9Qro": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TWumrtaEaPCv8Bs9mXqKkhY5sZVd78QAdS": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TWwv8FQiES3yHGig7y3zJWYuPaZfSV3vmY": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TWxoDF6qvjMUeTYRimaiARGsJTUnjrzZn3": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TX1zyMrYZNbtQx7yPZp4adZV5NbToGNrkS": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TX5GV4DyfxNB3rPkzZJhmqZ1efVmL4rEqG": {
+      "category": "sanctioned",
+      "entity": "TASK FORCE RUSICH",
+      "label": "TASK FORCE RUSICH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "RUSSIA-EO14024"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TXEaKf4rT3rMoD3Vuqnuhwr6vLq6BL5t33": {
+      "category": "sanctioned",
+      "entity": "ANSARALLAH",
+      "label": "ANSARALLAH (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT",
+        "FTO"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TXEsK1sEsKjZ1xtHitnyAAoqw3WLdYdRNW": {
+      "category": "sanctioned",
+      "entity": "GAZA NOW",
+      "label": "GAZA NOW (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TXFUYHVJMDyKikutvCG6qNgTUS5pxtZhHs": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TXGHxdYbGy574z5hBu4LNzq9NzjZQ9bhUf": {
+      "category": "sanctioned",
+      "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IRAN",
+        "IFSR",
+        "IRGC",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXHb3BkGgYmygyS14MJKX8kTcFGT7dXN4r": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXN3hVukebhyYR31YPCYd7aJAvmUeXu1ab": {
+      "category": "sanctioned",
+      "entity": "SHPS SHELBIT",
+      "label": "SHPS SHELBIT",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXR1nhqAek4c5Dq9EfjQLarcBWR9Jp6N7m": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXR4FDAZZLDSvuRxveW9aBMybbaS12WWHk": {
+      "category": "sanctioned",
+      "entity": "Keyvan Fayyaz Gareh BLAGH",
+      "label": "Keyvan Fayyaz Gareh BLAGH",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXc4kRiMEcdXRxWpSKkD5qKaARExN4uxPq": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TXgm2Pej4dHzh6oAJvaxAVFDevgGJqfSKr": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXhf9nU9bjo1j9z5qEesHdr6gtdndfnA4T": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXoVNrqm11FFVKcF1vEND64gibVkr1HwAR": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXw4d7BseHBn6sneMUzm4nEdfPVjuJGEH9": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TYAiWf2KhXrGuWxmCPaJgC6zNYwFuKtioi": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TYD6a4PAAfAgegEdDf9oZUnW4DFmS8jeFT": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TYDUutYN4YLKUPeT7TG27Yyqw6kNVLq9QZ": {
+      "category": "sanctioned",
+      "entity": "Arash Estaki ALIVAND",
+      "label": "Arash Estaki ALIVAND",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "IFSR",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TYK29mbyvVxLaLUKdFSTRADMwoxaVbVZQg": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TYVveapkRkm5RHcDNPU9QnPk8N5RdsS4iY": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TYeQD2VddTZ9NkFkAnT9DD8cUGetGUQZB2": {
+      "category": "sanctioned",
+      "entity": "Hyon Sop SIM",
+      "label": "Hyon Sop SIM",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TYvR9x3Dqx39s9rooaSAHwVwF8psBrcFBV": {
+      "category": "sanctioned",
+      "entity": "ISIL KHORASAN",
+      "label": "ISIL KHORASAN",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "FTO",
+        "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TYxwUhoLPF7AgfG9GaXFEp8CQi8K8KG1m3": {
+      "category": "sanctioned",
+      "entity": "CHEIL CREDIT BANK",
+      "label": "CHEIL CREDIT BANK (USDT)",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - USDT"
+    },
+    "TZB4NrX7k9ZsV6PRc1GigAztLL8WHpLvwP": {
+      "category": "sanctioned",
+      "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "source": "OFAC SDN list, published 09/04/2026",
+      "ofac_programs": [
+        "DPRK4"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    }
+  }
+}

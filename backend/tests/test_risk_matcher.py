@@ -192,8 +192,22 @@ def test_a_sanctioned_description_names_the_list_and_the_entity(risk_file):
 
 
 def test_description_says_when_the_reported_address_is_itself_listed(risk_file):
+    """No value figure there: the trace starts at the seed, so the graph holds
+    no inbound edge and any number would be a misleading 0.0000."""
     matcher = RiskMatcher.from_file(risk_file)
     graph = make_graph([(SDN_ADDR, addr("a1"), 5.0)], seed=SDN_ADDR)
     text = matcher.annotate(graph)[0].describe("ETH")
 
-    assert "the reported address itself" in text
+    assert "It is the reported address itself" in text
+    assert "0.0000" not in text
+
+
+def test_description_does_not_repeat_a_name_that_is_its_own_label(risk_file):
+    """OFAC entries usually label an address with the entity name itself;
+    printing "X (X)" reads like a bug in a document meant to be quoted."""
+    matcher = RiskMatcher.from_file(risk_file)
+    graph = make_graph([(SEED, SDN_ADDR, 5.0)], seed=SEED)
+    text = matcher.annotate(graph)[0].describe("ETH")
+
+    assert "LAZARUS GROUP (LAZARUS GROUP)" not in text
+    assert "listed as LAZARUS GROUP on" in text

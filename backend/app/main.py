@@ -187,6 +187,17 @@ def _trace_path(
     return steps
 
 
+def _hops_covered(graph: nx.DiGraph) -> int:
+    """The deepest address the graph actually contains.
+
+    Not the same as TraceResult.depth_reached, which counts how deep the walk
+    *expanded* -- at max_depth=1 the addresses one hop out are found and then
+    never expanded, so depth_reached is 0 while the graph plainly spans a hop.
+    Reporting that to a user reads as "traced 11 addresses across 0 hops".
+    """
+    return max((data.get("depth", 0) for _, data in graph.nodes(data=True)), default=0)
+
+
 def _direct_senders(graph: nx.DiGraph, seed: str) -> list[dict[str, Any]]:
     """Addresses that paid the reported address directly, largest first.
 
@@ -439,9 +450,10 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         # Edge case: no exchange upstream. On a reverse trace that is a minor
         # result -- the senders are what was being looked for.
         senders = graph.in_degree(seed)
+        hops = _hops_covered(graph)
         message = (
             f"Traced {result.node_count} addresses back across "
-            f"{result.depth_reached} hops. {senders} address"
+            f"{hops} hop{'s' if hops != 1 else ''}. {senders} address"
             f"{'es' if senders != 1 else ''} funded the reported address "
             "directly. None of the upstream addresses matched a known exchange "
             "wallet, so the funds could not be traced back to a point of "
@@ -449,11 +461,13 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         )
     elif primary is None:
         # Edge case: traced fine, but nothing matched a known exchange.
+        hops = _hops_covered(graph)
         message = (
-            f"Traced {result.node_count} addresses across {result.depth_reached} "
-            "hops, but none matched a known exchange wallet. The funds may not "
-            "have reached an exchange yet, may have gone to one not in the label "
-            "database, or may lie beyond the hop limit."
+            f"Traced {result.node_count} addresses across {hops} "
+            f"hop{'s' if hops != 1 else ''}, but none matched a known exchange "
+            "wallet. The funds may not have reached an exchange yet, may have "
+            "gone to one not in the label database, or may lie beyond the hop "
+            "limit."
         )
 
     case_id = models.new_case_id()
