@@ -414,6 +414,24 @@ class EtherscanClient:
             and tx.value_wei > 0
         ]
 
+    def get_incoming_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
+        """Only the transfers *received by* `address` that actually moved value.
+
+        This is what a reverse trace follows -- who funded this address, rather
+        than where its money went. Etherscan's txlist returns both directions
+        in one response, so this costs no extra API call beyond the outgoing
+        fetch it mirrors.
+        """
+        target = normalize_address(address)
+        return [
+            tx
+            for tx in self.get_transactions(address, limit=limit)
+            if tx.to_address == target
+            and tx.from_address
+            and not tx.is_error
+            and tx.value_wei > 0
+        ]
+
     def get_transaction_count(self, address: str) -> int:
         """Nonce = number of transactions *sent* by this address.
 

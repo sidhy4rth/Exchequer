@@ -10,7 +10,15 @@ from __future__ import annotations
 import pytest
 
 from app.etherscan_client import EtherscanError, Transaction
-from app.graph_builder import InvalidAddressError, TraceConfig, build_trace_graph, graph_to_dict
+from app.graph_builder import (
+    INCOMING,
+    OUTGOING,
+    InvalidAddressError,
+    InvalidDirectionError,
+    TraceConfig,
+    build_trace_graph,
+    graph_to_dict,
+)
 
 from conftest import addr
 
@@ -32,18 +40,32 @@ def tx(src: str, dst: str, value: float, ts: int = 1_700_000_000) -> Transaction
 
 
 class FakeClient:
-    """Serves a fixed address -> outgoing-transfers map and counts the calls."""
+    """Serves a fixed address -> outgoing-transfers map and counts the calls.
+
+    The incoming view is derived from the same ledger rather than declared
+    separately, so the two directions cannot drift apart and a reverse-trace
+    test is genuinely walking the same transfers backwards.
+    """
 
     def __init__(self, ledger: dict[str, list[Transaction]], fail_on: set[str] | None = None):
         self.ledger = ledger
         self.fail_on = fail_on or set()
         self.calls: list[str] = []
 
-    def get_outgoing_transactions(self, address, limit=None):
+    def _check(self, address: str) -> None:
         self.calls.append(address)
         if address in self.fail_on:
             raise EtherscanError(f"simulated upstream failure for {address}")
+
+    def get_outgoing_transactions(self, address, limit=None):
+        self._check(address)
         return self.ledger.get(address, [])
+
+    def get_incoming_transactions(self, address, limit=None):
+        self._check(address)
+        return [
+            t for txs in self.ledger.values() for t in txs if t.to_address == address
+        ]
 
 
 def test_rejects_a_malformed_address():
@@ -210,3 +232,89 @@ def test_graph_to_dict_drops_per_transaction_detail():
     assert "transactions" not in edge
     assert edge["value_native"] == 10.0
     assert edge["flags"] == []
+
+
+# ---------------------------------------------------------------------------
+# Reverse traversal
+# ---------------------------------------------------------------------------
+def test_a_reverse_trace_walks_back_to_the_funders():
+    """On a scammer's wallet these senders are the candidate other victims."""
+    ledger = {
+        addr("d1"): [tx(addr("d1"), SEED, 5.0)],
+        addr("d2"): [tx(addr("d2"), SEED, 3.0)],
+        addr("d3"): [tx(addr("d3"), addr("d1"), 5.0)],
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger), direction=INCOMING)
+
+    assert set(result.graph.predecessors(SEED)) == {addr("d1"), addr("d2")}
+    assert result.graph.nodes[addr("d3")]["depth"] == 2
+    assert result.direction == INCOMING
+
+
+def test_a_reverse_trace_keeps_edges_pointing_the_way_money_moved():
+    """Downstream code reads value flow, not walk order."""
+    ledger = {addr("d1"): [tx(addr("d1"), SEED, 5.0)]}
+    result = build_trace_graph(SEED, FakeClient(ledger), direction=INCOMING)
+
+    assert result.graph.has_edge(addr("d1"), SEED)
+    assert not result.graph.has_edge(SEED, addr("d1"))
+    assert result.graph.edges[addr("d1"), SEED]["value_native"] == pytest.approx(5.0)
+
+
+def test_a_reverse_trace_annotates_the_seed_as_a_receiver():
+    ledger = {
+        addr("d1"): [tx(addr("d1"), SEED, 5.0)],
+        addr("d2"): [tx(addr("d2"), SEED, 3.0)],
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger), direction=INCOMING)
+    node = result.graph.nodes[SEED]
+
+    assert node["total_in_native"] == pytest.approx(8.0)
+    assert node["total_out_native"] == 0.0
+    assert node["in_degree"] == 2
+
+
+def test_the_brakes_apply_in_reverse_too():
+    """A busy wallet must not blow up a reverse trace either."""
+    ledger = {
+        addr(f"d{i}"): [tx(addr(f"d{i}"), SEED, float(i))] for i in range(1, 6)
+    }
+    result = build_trace_graph(
+        SEED,
+        FakeClient(ledger),
+        cfg=TraceConfig(max_branches_per_node=2, min_value_native=0.0),
+        direction=INCOMING,
+    )
+
+    assert set(result.graph.predecessors(SEED)) == {addr("d5"), addr("d4")}
+    assert any("fan-out limit" in r for r in result.truncation_reasons)
+
+
+def test_a_reverse_trace_stops_at_an_exchange():
+    """Funds arriving from an exchange were withdrawn there; going further
+    would walk into that exchange's unrelated customer traffic."""
+    exchange = addr("e11")
+    ledger = {
+        exchange: [tx(exchange, SEED, 5.0)],
+        addr("d9"): [tx(addr("d9"), exchange, 5.0)],
+    }
+    client = FakeClient(ledger)
+    result = build_trace_graph(
+        SEED, client, is_terminal=lambda a: a == exchange, direction=INCOMING
+    )
+
+    assert addr("d9") not in result.graph
+    assert exchange not in client.calls
+
+
+def test_an_unknown_direction_is_rejected():
+    with pytest.raises(InvalidDirectionError):
+        build_trace_graph(SEED, FakeClient({}), direction="sideways")
+
+
+def test_direction_defaults_to_outgoing():
+    ledger = {SEED: [tx(SEED, addr("a1"), 10.0)]}
+    result = build_trace_graph(SEED, FakeClient(ledger))
+
+    assert result.direction == OUTGOING
+    assert result.graph.has_edge(SEED, addr("a1"))

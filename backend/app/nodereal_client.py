@@ -240,7 +240,27 @@ class NoderealClient:
     def get_outgoing_transactions(
         self, address: str, limit: int | None = None
     ) -> list[Transaction]:
-        """Transfers sent *by* `address`, newest first.
+        """Transfers sent *by* `address`, newest first."""
+        return self._get_directional_transactions(address, "fromAddress", limit)
+
+    def get_incoming_transactions(
+        self, address: str, limit: int | None = None
+    ) -> list[Transaction]:
+        """Transfers received *by* `address`, newest first.
+
+        What a reverse trace follows. NodeReal filters on either end server
+        side, so this costs exactly what the outgoing direction costs.
+        """
+        return self._get_directional_transactions(address, "toAddress", limit)
+
+    def _get_directional_transactions(
+        self, address: str, direction_param: str, limit: int | None = None
+    ) -> list[Transaction]:
+        """Transfers with `address` at one end, newest first.
+
+        `direction_param` is NodeReal's own filter key -- "fromAddress" for
+        transfers sent, "toAddress" for transfers received. Pushing the filter
+        to the server means we pay for exactly the records the trace follows.
 
         History is walked backwards from the chain head in 100k-block windows
         (the API maximum) and stops as soon as `limit` transfers are collected,
@@ -266,7 +286,7 @@ class NoderealClient:
                     "category": category,
                     "fromBlock": hex(window_start),
                     "toBlock": hex(window_end),
-                    "fromAddress": normalize_address(address),
+                    direction_param: normalize_address(address),
                     "maxCount": hex(min(MAX_COUNT, cap - len(collected))),
                     "order": "desc",
                 }
@@ -303,5 +323,5 @@ class NoderealClient:
         return collected[:cap]
 
     def get_transactions(self, address: str, limit: int | None = None, sort: str = "desc"):
-        """Present for interface parity; a trace only ever follows outgoing value."""
+        """Present for interface parity; callers pick a direction explicitly."""
         return self.get_outgoing_transactions(address, limit=limit)

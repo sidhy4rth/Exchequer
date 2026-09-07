@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 
 from app.exchange_matcher import ExchangeMatch
+from app.graph_builder import INCOMING, OUTGOING
 from app.pattern_detection import PatternFinding
 from app.scoring import (
     WEIGHT_AMOUNT_CORRELATION,
@@ -165,3 +166,39 @@ def test_native_symbol_reaches_the_explanation():
     result = score_case(graph, SEED, a_match(), max_depth=4, native_symbol="USDT")
     correlation = next(c for c in result.components if c.name == "amount_correlation")
     assert "USDT" in correlation.explanation
+
+
+# ---------------------------------------------------------------------------
+# Reverse traces
+# ---------------------------------------------------------------------------
+def test_amount_correlation_reads_the_path_the_money_moved():
+    """A reverse trace's edges run exchange -> seed. Looking for the fixed
+    seed -> exchange path would find none and silently score 0.5."""
+    graph = make_graph(
+        [(EXCHANGE, addr("a1"), 10.0), (addr("a1"), SEED, 5.0)], seed=SEED
+    )
+    component = _amount_correlation(graph, SEED, EXCHANGE, "ETH", INCOMING)
+
+    assert component.raw_value == pytest.approx(0.5)
+    assert "reached the reported address" in component.explanation
+
+
+def test_hop_proximity_explains_a_direct_deposit_in_the_right_direction():
+    assert "received funds directly" in _hop_proximity(1, 4, OUTGOING).explanation
+    assert "sent funds directly" in _hop_proximity(1, 4, INCOMING).explanation
+
+
+def test_a_reverse_trace_summary_states_the_mirrored_claim():
+    graph = make_graph([(EXCHANGE, SEED, 10.0)], seed=SEED)
+    result = score_case(graph, SEED, a_match(depth=1), max_depth=4, direction=INCOMING)
+
+    assert "came from Binance" in result.summary
+    assert result.score == 1.0
+
+
+def test_an_unattributed_reverse_trace_says_the_senders_are_the_result():
+    graph = make_graph([(addr("a1"), SEED, 10.0)], seed=SEED)
+    result = score_case(graph, SEED, None, direction=INCOMING)
+
+    assert result.score is None
+    assert "senders found are still the substantive result" in result.summary

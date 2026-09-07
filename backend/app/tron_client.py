@@ -259,11 +259,27 @@ class TronClient:
     def get_outgoing_transactions(
         self, address: str, limit: int | None = None
     ) -> list[Transaction]:
-        """Transfers sent *by* `address`, newest first.
+        """Transfers sent *by* `address`, newest first."""
+        return self._get_directional_transactions(address, "only_from", limit)
 
-        `only_from=true` pushes the direction filter to the server, so we pay
-        for exactly the records the trace follows rather than filtering a mixed
-        page locally.
+    def get_incoming_transactions(
+        self, address: str, limit: int | None = None
+    ) -> list[Transaction]:
+        """Transfers received *by* `address`, newest first.
+
+        What a reverse trace follows: which addresses funded this one.
+        """
+        return self._get_directional_transactions(address, "only_to", limit)
+
+    def _get_directional_transactions(
+        self, address: str, direction_param: str, limit: int | None = None
+    ) -> list[Transaction]:
+        """Transfers with `address` at one end, newest first.
+
+        `direction_param` is TronGrid's own filter flag -- `only_from` for
+        transfers sent, `only_to` for transfers received. Pushing the filter to
+        the server means we pay for exactly the records the trace follows
+        rather than filtering a mixed page locally.
         """
         if not is_tron_address(address):
             raise ValueError(f"Not a valid Tron address: {address!r}")
@@ -287,7 +303,7 @@ class TronClient:
 
         while len(collected) < cap:
             params: dict[str, Any] = {
-                "only_from": "true",
+                direction_param: "true",
                 "limit": page_size,
                 "order_by": "block_timestamp,desc",
             }
@@ -312,5 +328,5 @@ class TronClient:
         return collected[:cap]
 
     def get_transactions(self, address: str, limit: int | None = None, sort: str = "desc"):
-        """Present for interface parity; a trace only ever follows outgoing value."""
+        """Present for interface parity; callers pick a direction explicitly."""
         return self.get_outgoing_transactions(address, limit=limit)

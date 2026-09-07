@@ -73,6 +73,11 @@ class Chain:
     native_symbol: str  # ETH, BNB, ...
     explorer_url: str  # for "verify this yourself" links
     labels_filename: str  # exchange labels, relative to data/
+    # Sanctions / mixer labels, relative to data/. Separate from the exchange
+    # file because it answers a different question -- not "where was this
+    # cashed out" but "what did it touch on the way" -- and because it comes
+    # from a different source with its own publication date.
+    risk_labels_filename: str = ""
     # Which upstream serves this chain's transaction history. "etherscan"
     # works only where the free tier does, which is Ethereum mainnet alone --
     # verified against the live API, which rejects every other chainid with
@@ -90,6 +95,15 @@ class Chain:
     @property
     def labels_path(self) -> Path:
         return DATA_DIR / self.labels_filename
+
+    @property
+    def risk_labels_path(self) -> Path | None:
+        """Where this chain's sanctions/mixer labels live, if it has any.
+
+        None rather than a missing path: a chain with no risk file still
+        traces and still attributes an exchange, it simply is not screened.
+        """
+        return DATA_DIR / self.risk_labels_filename if self.risk_labels_filename else None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -136,6 +150,7 @@ CHAINS: dict[str, Chain] = {
         native_symbol="ETH",
         explorer_url="https://etherscan.io",
         labels_filename="exchange_labels.json",
+        risk_labels_filename="risk_labels.json",
         tokens=(
             Token("USDT", "0xdac17f958d2ee523a2206206994597c13d831ec7", 6),
             Token("USDC", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", 6),
@@ -148,6 +163,7 @@ CHAINS: dict[str, Chain] = {
         native_symbol="BNB",
         explorer_url="https://bscscan.com",
         labels_filename="exchange_labels_bsc.json",
+        risk_labels_filename="risk_labels_bsc.json",
         # Etherscan's free tier refuses chainid 56, so BSC is served by
         # NodeReal, whose free tier does cover it.
         provider="nodereal",
@@ -167,6 +183,7 @@ CHAINS["tron"] = Chain(
     native_symbol="TRX",
     explorer_url="https://tronscan.org",
     labels_filename="exchange_labels_tron.json",
+    risk_labels_filename="risk_labels_tron.json",
     provider="trongrid",
     address_family="tron",
     tokens=(

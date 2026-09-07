@@ -37,13 +37,17 @@ from .etherscan_client import (
 )
 from .exchange_matcher import ExchangeMatcher, get_matcher
 from .graph_builder import (
+    INCOMING,
+    OUTGOING,
     InvalidAddressError,
+    InvalidDirectionError,
     TraceConfig,
     build_trace_graph,
     graph_to_dict,
 )
 from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .report import build_report, render_text_report
+from .risk_matcher import MIXER, SANCTIONED, get_risk_matcher
 from .scoring import score_case
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -59,6 +63,20 @@ async def lifespan(_app: FastAPI):
             logger.warning(
                 "No exchange labels for %s -- traces on that chain will graph "
                 "but never attribute",
+                chain.name,
+            )
+    for key, chain in config.CHAINS.items():
+        risk = get_risk_matcher(key)
+        if len(risk):
+            counts = risk.counts_by_category()
+            logger.info(
+                "%s: screening against %d sanctioned and %d mixer addresses",
+                chain.name, counts[SANCTIONED], counts[MIXER],
+            )
+        else:
+            logger.warning(
+                "No risk labels for %s -- traces on that chain will not be "
+                "screened against sanctions or mixer lists",
                 chain.name,
             )
     for key, status in provider_status().items():
@@ -118,16 +136,36 @@ class TraceRequest(BaseModel):
             "Defaults to the chain's native currency."
         ),
     )
+    direction: str = Field(
+        OUTGOING,
+        pattern="^(outgoing|incoming)$",
+        description=(
+            "Which way to follow the money. 'outgoing' (default) chases where "
+            "the reported address sent funds, answering which exchange they "
+            "were cashed out at. 'incoming' walks backwards to the addresses "
+            "that funded it -- on a scammer's wallet those senders are "
+            "candidate victims of the same operation."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-def _trace_path(graph: nx.DiGraph, seed: str, target: str) -> list[dict[str, Any]]:
-    """The shortest chain of addresses from the reported address to `target`,
-    with the amount moved at each step. This is what goes in the report."""
+def _trace_path(
+    graph: nx.DiGraph, seed: str, target: str, direction: str = OUTGOING
+) -> list[dict[str, Any]]:
+    """The shortest chain of addresses between the reported address and
+    `target`, with the amount moved at each step. This is what goes in the
+    report.
+
+    Always read in the direction the money moved, so a reverse trace's path
+    runs from the exchange down to the reported address rather than being
+    printed backwards.
+    """
+    source, destination = (seed, target) if direction == OUTGOING else (target, seed)
     try:
-        path = nx.shortest_path(graph, seed, target)
+        path = nx.shortest_path(graph, source, destination)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return []
 
@@ -149,6 +187,39 @@ def _trace_path(graph: nx.DiGraph, seed: str, target: str) -> list[dict[str, Any
     return steps
 
 
+def _direct_senders(graph: nx.DiGraph, seed: str) -> list[dict[str, Any]]:
+    """Addresses that paid the reported address directly, largest first.
+
+    This is what a reverse trace is actually for. If the reported address
+    belongs to a scammer, these are the people who sent money to it, and each
+    one is a candidate victim of the same operation.
+
+    Deliberately named for what is observable. These addresses *funded the
+    reported address*; calling them victims would be an inference this tool
+    cannot support from transaction data alone, since a sender may equally be
+    the scammer's own wallet, an exchange withdrawal, or an unrelated payment.
+    """
+    senders: list[dict[str, Any]] = []
+    for sender, _, edge in graph.in_edges(seed, data=True):
+        data = graph.nodes[sender]
+        senders.append(
+            {
+                "address": sender,
+                "value_native": round(edge.get("value_native", 0.0), 6),
+                "tx_count": edge.get("tx_count", 0),
+                "first_seen": edge.get("first_seen"),
+                "last_seen": edge.get("last_seen"),
+                # A sender that is itself a labelled exchange is not a victim:
+                # it is a withdrawal, and saying so prevents the obvious
+                # misreading of this list.
+                "exchange": data.get("exchange"),
+                "risk_category": data.get("risk_category"),
+            }
+        )
+    senders.sort(key=lambda item: item["value_native"], reverse=True)
+    return senders
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -158,6 +229,7 @@ def health() -> dict[str, Any]:
     chains = provider_status()
     for key, status in chains.items():
         status["exchange_labels"] = len(get_matcher(key))
+        status["risk_labels"] = get_risk_matcher(key).counts_by_category()
     return {
         "status": "ok",
         "etherscan_key_configured": bool(config.ETHERSCAN_API_KEY),
@@ -166,6 +238,7 @@ def health() -> dict[str, Any]:
         "max_depth": config.TRACE_MAX_DEPTH,
         # Kept for the existing frontend status line: labels on the default chain.
         "exchange_labels_loaded": len(get_matcher()),
+        "risk_labels_loaded": len(get_risk_matcher()),
         "chains": chains,
     }
 
@@ -192,8 +265,14 @@ def exchanges(chain: str | None = Query(None, description="ethereum or bsc")) ->
 
 @app.post("/trace")
 def trace(request: TraceRequest) -> dict[str, Any]:
-    """Trace outgoing funds from a reported address to a cash-out point."""
+    """Trace funds to or from a reported address.
+
+    Outgoing answers "where did the victim's money go"; incoming answers "who
+    sent money to this address", which on a scammer's wallet enumerates the
+    other people who paid it.
+    """
     address = request.address.strip()
+    direction = request.direction
 
     # Which chain. Never inferred from the address: an EVM address is valid on
     # every EVM chain, and the same address can hold funds on both Ethereum and
@@ -219,6 +298,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
 
     seed = normalize_address(address)
     matcher = get_matcher(chain.key)
+    risk_matcher = get_risk_matcher(chain.key)
     trace_config = TraceConfig(
         max_depth=request.max_depth or config.TRACE_MAX_DEPTH,
     )
@@ -236,9 +316,14 @@ def trace(request: TraceRequest) -> dict[str, Any]:
                 seed,
                 client,
                 cfg=trace_config,
-                # Stop expanding at known exchange wallets: the trace has found
-                # its answer there, and those wallets have millions of txs.
-                is_terminal=matcher.is_exchange,
+                # Two quite different reasons to stop. An exchange is where the
+                # trail *ends*: the funds arrived, and those wallets have
+                # millions of unrelated transactions. A mixer is where the trail
+                # *breaks*: its payouts come from a commingled pool, so
+                # expanding through one would invent a path the transactions do
+                # not support.
+                is_terminal=lambda a: matcher.is_exchange(a) or risk_matcher.is_terminal(a),
+                direction=direction,
             )
     except UnknownAssetError as exc:
         # Edge case: the request named an asset this chain does not carry.
@@ -266,12 +351,17 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         ) from exc
     except InvalidAddressError as exc:  # defensive; validated above
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except InvalidDirectionError as exc:  # defensive; the request model validates it
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     graph = result.graph
 
     # Attribution, patterns, score.
-    matches = matcher.annotate(graph)
+    matches = matcher.annotate(graph, direction)
     primary = ExchangeMatcher.primary_match(matches)
+    # Sanctions / mixer screening. Runs after exchange annotation so a node
+    # that is somehow on both lists keeps both sets of tags.
+    risk_matches = risk_matcher.annotate(graph, direction)
     findings = detect_patterns(
         graph, PatternConfig(native_symbol=asset_symbol), matcher.is_exchange
     )
@@ -283,6 +373,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         max_depth=trace_config.max_depth,
         truncated=result.truncated,
         native_symbol=asset_symbol,
+        direction=direction,
     )
 
     # Edge case: the address has never sent anything. Not an error -- a finding.
@@ -290,11 +381,46 @@ def trace(request: TraceRequest) -> dict[str, Any]:
     if result.edge_count == 0:
         others = [chain.native_symbol] + [t.symbol for t in chain.tokens]
         others = [a for a in others if a != asset_symbol]
+        alternatives = f" — try {' or '.join(others)}." if others else "."
+        if direction == OUTGOING:
+            message = (
+                f"This address sent no {asset_symbol} with value, so there is "
+                f"nothing to trace in {asset_symbol}. It may have only received "
+                "funds, or the money may have moved as a different asset"
+                + alternatives
+            )
+        else:
+            message = (
+                f"This address received no {asset_symbol} with value, so there "
+                f"is nothing to trace back in {asset_symbol}. It may have only "
+                "sent funds, or the money may have arrived as a different asset"
+                + alternatives
+            )
+    elif primary is None and any(m.category == MIXER for m in risk_matches):
+        # Edge case: the trail did not go cold, it was deliberately cut. Saying
+        # "no exchange found" here would understate what was actually
+        # discovered, which is that the funds were sent to a tumbler.
+        mixers = [m for m in risk_matches if m.category == MIXER]
+        names = sorted({m.entity for m in mixers})
         message = (
-            f"This address sent no {asset_symbol} with value, so there is nothing "
-            f"to trace in {asset_symbol}. It may have only received funds, or the "
-            "money may have moved as a different asset"
-            + (f" — try {' or '.join(others)}." if others else ".")
+            f"The trace stopped at {'a mixer' if len(mixers) == 1 else 'mixers'} "
+            f"({', '.join(names)}) rather than at an exchange. Funds entering a "
+            "mixer are paid out from a commingled pool, so transfers leaving it "
+            "cannot be linked to this deposit by on-chain evidence and following "
+            "them would manufacture a trail. Use of a sanctioned mixer is itself "
+            "a substantive finding and is grounds for escalation."
+        )
+    elif primary is None and direction == INCOMING:
+        # Edge case: no exchange upstream. On a reverse trace that is a minor
+        # result -- the senders are what was being looked for.
+        senders = graph.in_degree(seed)
+        message = (
+            f"Traced {result.node_count} addresses back across "
+            f"{result.depth_reached} hops. {senders} address"
+            f"{'es' if senders != 1 else ''} funded the reported address "
+            "directly. None of the upstream addresses matched a known exchange "
+            "wallet, so the funds could not be traced back to a point of "
+            "purchase or withdrawal."
         )
     elif primary is None:
         # Edge case: traced fine, but nothing matched a known exchange.
@@ -318,6 +444,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "hop_count": primary.depth if primary else result.depth_reached,
         # -- supporting detail, used by the sidebar and the report --
         "address": seed,
+        "direction": direction,
         "chain": chain.key,
         "chain_name": chain.name,
         "chain_id": chain.chain_id,
@@ -335,9 +462,20 @@ def trace(request: TraceRequest) -> dict[str, Any]:
             round(primary.value_received_native, 6) if primary else None
         ),
         "matches": [m.to_dict() for m in matches],
+        # Sanctions / mixer screening. `risk_flags` mirrors `flags` so the
+        # frontend can render both the same way; `risk_notes` are report-ready
+        # sentences so neither the UI nor the report has to re-phrase them.
+        "risk_matches": [m.to_dict() for m in risk_matches],
+        "risk_flags": sorted({m.category for m in risk_matches}),
+        "risk_notes": [m.describe(asset_symbol) for m in risk_matches],
         "findings": [f.to_dict() for f in findings],
         "confidence_detail": confidence.to_dict(),
-        "trace_path": _trace_path(graph, seed, primary.address) if primary else [],
+        "trace_path": (
+            _trace_path(graph, seed, primary.address, direction) if primary else []
+        ),
+        # Only populated on a reverse trace: the seed has no inbound edges when
+        # the walk ran outward.
+        "direct_senders": _direct_senders(graph, seed),
         "depth_reached": result.depth_reached,
         "addresses_expanded": result.addresses_expanded,
         "api_calls": result.api_calls,

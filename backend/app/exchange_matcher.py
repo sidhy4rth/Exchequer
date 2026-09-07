@@ -29,6 +29,7 @@ import networkx as nx
 
 from . import config
 from .etherscan_client import normalize_address
+from .graph_builder import OUTGOING
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,11 @@ class ExchangeMatch:
     label: str
     wallet_type: str
     depth: int  # hops from the victim-reported address
-    value_received_native: float  # value that reached it *within this trace*
+    # Value that moved between this wallet and the rest of the trace. On a
+    # forward trace that is what reached it; on a reverse trace the exchange
+    # sits upstream and has no inbound edges, so it is what the wallet sent
+    # into the trace. Summing the wrong side would report a confident 0.
+    value_received_native: float
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -135,11 +140,15 @@ class ExchangeMatcher:
         return normalize_address(address) in self._labels
 
     # -- graph annotation --------------------------------------------------
-    def annotate(self, graph: nx.DiGraph) -> list[ExchangeMatch]:
+    def annotate(self, graph: nx.DiGraph, direction: str = OUTGOING) -> list[ExchangeMatch]:
         """Tag every known exchange address in `graph` and return the matches.
 
-        Sorted by depth (closest to the victim first), then by value received,
-        so the most investigatively relevant match leads.
+        Sorted by depth (closest to the victim first), then by value, so the
+        most investigatively relevant match leads.
+
+        `direction` decides which side of the node carries the traced value:
+        an exchange at the end of a forward trace received it, one found
+        upstream of a reverse trace sent it.
         """
         matches: list[ExchangeMatch] = []
 
@@ -148,9 +157,11 @@ class ExchangeMatcher:
             if meta is None:
                 continue
 
-            value_in = sum(
-                edge.get("value_native", 0.0) for _, _, edge in graph.in_edges(node, data=True)
+            edges = (
+                graph.in_edges(node, data=True) if direction == OUTGOING
+                else graph.out_edges(node, data=True)
             )
+            value_in = sum(edge.get("value_native", 0.0) for _, _, edge in edges)
             data["exchange"] = meta["exchange"]
             data["label"] = meta["label"]
             data["wallet_type"] = meta["type"]

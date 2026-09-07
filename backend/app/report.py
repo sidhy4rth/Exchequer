@@ -28,6 +28,7 @@ def build_report(case: Case) -> dict[str, Any]:
     matches = result.get("matches", [])
     findings = result.get("findings", [])
     graph = result.get("graph", {})
+    direction = result.get("direction", "outgoing")
 
     return {
         "report_version": REPORT_VERSION,
@@ -41,8 +42,18 @@ def build_report(case: Case) -> dict[str, Any]:
             "chain_id": result.get("chain_id"),
             "native_currency": native_symbol,
             "block_explorer": result.get("explorer_url"),
+            "direction": direction,
         },
+        # Only meaningful on a reverse trace. Named for what the transactions
+        # show -- these addresses funded the reported one -- because calling
+        # them victims would be an inference the data does not support.
+        "funding_sources": result.get("direct_senders", []),
         "attribution": {
+            "claim": (
+                "Exchange at which the traced funds arrived"
+                if direction == "outgoing"
+                else "Exchange from which the traced funds originated"
+            ),
             "exchange": result.get("exchange"),
             "exchange_address": result.get("exchange_address"),
             "exchange_wallet_label": result.get("exchange_label"),
@@ -58,6 +69,17 @@ def build_report(case: Case) -> dict[str, Any]:
             "components": confidence_detail.get("components", []),
         },
         "trace_path": result.get("trace_path", []),
+        # Sanctions / mixer screening sits above the patterns because it is a
+        # finding of a different order: a pattern is this tool's inference from
+        # arithmetic, while a sanctions hit is a published government
+        # designation that an investigator must act on regardless of what the
+        # rest of the trace concluded.
+        "risk_screening": {
+            "screened": True,
+            "categories": result.get("risk_flags", []),
+            "matches": result.get("risk_matches", []),
+            "notes": result.get("risk_notes", []),
+        },
         "patterns_detected": findings,
         "graph_summary": {
             "addresses": len(graph.get("nodes", [])),
@@ -67,21 +89,45 @@ def build_report(case: Case) -> dict[str, Any]:
             "truncation_reasons": result.get("truncation_reasons", []),
         },
         "limitations": confidence_detail.get("caveats", []),
-        "methodology": _methodology(native_symbol),
+        "methodology": _methodology(native_symbol, direction),
     }
 
 
-def _methodology(native_symbol: str = "ETH") -> list[str]:
+def _methodology(native_symbol: str = "ETH", direction: str = "outgoing") -> list[str]:
     """Plain description of what the tool did, so the result is reproducible."""
+    if direction == "outgoing":
+        walk = (
+            f"Outgoing {native_symbol} transfers were followed from the reported "
+            "address using breadth-first traversal, depth-limited, via a public "
+            "blockchain data API."
+        )
+        grouping = (
+            "At each address, transfers were grouped by recipient and the "
+            "highest-value destinations followed first; dust transfers below a "
+            "minimum threshold were excluded as spam."
+        )
+    else:
+        walk = (
+            f"Incoming {native_symbol} transfers were followed backwards from "
+            "the reported address using breadth-first traversal, depth-limited, "
+            "via a public blockchain data API. The graph therefore shows which "
+            "addresses funded the reported one, not where its funds went."
+        )
+        grouping = (
+            "At each address, transfers were grouped by sender and the "
+            "highest-value sources followed first; dust transfers below a "
+            "minimum threshold were excluded as spam."
+        )
     return [
-        f"Outgoing {native_symbol} transfers were followed from the reported "
-        "address using breadth-first traversal, depth-limited, via a public "
-        "blockchain data API.",
-        "At each address, transfers were grouped by recipient and the "
-        "highest-value destinations followed first; dust transfers below a "
-        "minimum threshold were excluded as spam.",
+        walk,
+        grouping,
         "Every address in the resulting graph was compared, by exact match, "
         "against a database of publicly labelled exchange wallets.",
+        "Every address was also screened, by exact match, against digital "
+        "currency addresses published on the U.S. Treasury's Specially "
+        "Designated Nationals list. A trace is stopped at any address "
+        "identified as a mixer: its payouts come from a commingled pool, so "
+        "transfers leaving it have no established link to the deposit traced.",
         "Laundering patterns were identified using fixed arithmetic rules "
         "(peel chain, amount split). Each finding records the thresholds it "
         "applied so it can be re-checked by hand.",
@@ -105,6 +151,7 @@ def render_text_report(report: dict[str, Any]) -> str:
     attribution = report["attribution"]
     confidence = report["confidence"]
     symbol = case.get("native_currency", "ETH")
+    direction = case.get("direction", "outgoing")
 
     rule()
     add(f"{TOOL_NAME.upper()} - CRYPTOCURRENCY TRACE REPORT")
@@ -115,6 +162,9 @@ def render_text_report(report: dict[str, Any]) -> str:
     if case.get("chain_id"):
         chain_line += f" (chainid {case['chain_id']})"
     add(f"Chain            : {chain_line}")
+    add(f"Direction        : "
+        + ("outgoing (where the funds went)" if direction == "outgoing"
+           else "incoming (who funded this address)"))
     add(f"Traced at        : {case['traced_at']}")
     add(f"Report generated : {report['generated_at']}")
     add("")
@@ -122,6 +172,8 @@ def render_text_report(report: dict[str, Any]) -> str:
     rule("-")
     add("ATTRIBUTION")
     rule("-")
+    if attribution.get("claim"):
+        add(f"Claim            : {attribution['claim']}")
     if attribution["exchange"]:
         add(f"Exchange         : {attribution['exchange']}")
         add(f"Wallet           : {attribution['exchange_address']}")
@@ -129,11 +181,44 @@ def render_text_report(report: dict[str, Any]) -> str:
             add(f"Wallet label     : {attribution['exchange_wallet_label']}")
         add(f"Hops from source : {attribution['hop_count']}")
         if attribution.get("value_received_native") is not None:
-            add(f"Value received   : {attribution['value_received_native']} {symbol}")
-    else:
+            label = "Value received  " if direction == "outgoing" else "Value sent      "
+            add(f"{label} : {attribution['value_received_native']} {symbol}")
+    elif direction == "outgoing":
         add("No known exchange wallet was reached within the traced depth.")
         add("This does not establish that the funds were not cashed out.")
+    else:
+        add("No known exchange wallet was found upstream within the traced depth.")
+        add("This does not establish that the funds did not originate at one.")
     add("")
+
+    # A reverse trace's substantive output. Printed before confidence because
+    # on this kind of trace it, not the attribution, is the finding.
+    funders = report.get("funding_sources") or []
+    if direction == "incoming" and funders:
+        rule("-")
+        add("ADDRESSES THAT FUNDED THE REPORTED ADDRESS")
+        rule("-")
+        for line in _wrap(
+            "Each address below sent funds directly to the reported address. "
+            "Where the reported address belongs to an offender, these senders "
+            "are candidate victims of the same operation and may each hold a "
+            "separate complaint. This list states only what the transactions "
+            "show: a sender may equally be the offender's own wallet, an "
+            "exchange withdrawal, or an unrelated payment."
+        ):
+            add(line)
+        add("")
+        add(f"{'address':<44} {'value ' + symbol:>16} {'tx':>4}  note")
+        add("-" * 78)
+        for sender in funders:
+            note = ""
+            if sender.get("exchange"):
+                note = f"{sender['exchange']} (withdrawal, not a victim)"
+            elif sender.get("risk_category"):
+                note = sender["risk_category"]
+            add(f"{sender['address']:<44} {sender['value_native']:>16,.2f} "
+                f"{sender.get('tx_count', 0):>4}  {note}")
+        add("")
 
     rule("-")
     add("CONFIDENCE")
@@ -158,7 +243,8 @@ def render_text_report(report: dict[str, Any]) -> str:
 
     if report.get("trace_path"):
         rule("-")
-        add("TRACE PATH (reported address -> exchange)")
+        add("TRACE PATH (reported address -> exchange)" if direction == "outgoing"
+            else "TRACE PATH (exchange -> reported address)")
         rule("-")
         for i, step in enumerate(report["trace_path"]):
             arrow = "    |" if i else ""
@@ -171,6 +257,25 @@ def render_text_report(report: dict[str, Any]) -> str:
                 add("    v")
             label = f"  [{step['label']}]" if step.get("label") else ""
             add(f"[{i}] {step['address']}{label}")
+        add("")
+
+    # Screening comes before the heuristics: a published designation outranks
+    # this tool's own arithmetic, and an investigator reading top-down should
+    # meet it first.
+    screening = report.get("risk_screening") or {}
+    rule("-")
+    add("SANCTIONS AND MIXER SCREENING")
+    rule("-")
+    if screening.get("matches"):
+        for note in screening.get("notes", []):
+            for line in _wrap(note, bullet="* "):
+                add(line)
+            add("")
+    else:
+        add("No address in this trace appeared on the screened lists.")
+        add("Screening is an exact match against digital currency addresses")
+        add("published on the U.S. Treasury SDN list; an address absent from")
+        add("that list is not thereby established as legitimate.")
         add("")
 
     if report.get("patterns_detected"):

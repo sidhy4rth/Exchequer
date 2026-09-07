@@ -12,6 +12,7 @@ import json
 import pytest
 
 from app.exchange_matcher import ExchangeMatcher
+from app.graph_builder import INCOMING, OUTGOING
 
 from conftest import addr, make_graph
 
@@ -121,3 +122,24 @@ def test_primary_match_breaks_a_depth_tie_on_value(label_file):
 
 def test_primary_match_of_nothing_is_none():
     assert ExchangeMatcher.primary_match([]) is None
+
+
+# ---------------------------------------------------------------------------
+# Reverse traces
+# ---------------------------------------------------------------------------
+def test_value_is_read_from_the_side_the_money_actually_moved(label_file):
+    """Upstream of a reverse trace the exchange sent the value; it has no
+    inbound edges at all, so summing those would report a confident zero."""
+    matcher = ExchangeMatcher.from_file(label_file)
+    graph = make_graph([(HOT, SEED, 9.0)], seed=SEED)
+
+    match = matcher.annotate(graph, direction=INCOMING)[0]
+    assert match.value_received_native == pytest.approx(9.0)
+
+
+def test_a_forward_trace_still_reads_inbound_value(label_file):
+    matcher = ExchangeMatcher.from_file(label_file)
+    graph = make_graph([(SEED, HOT, 9.0)], seed=SEED)
+
+    match = matcher.annotate(graph, direction=OUTGOING)[0]
+    assert match.value_received_native == pytest.approx(9.0)

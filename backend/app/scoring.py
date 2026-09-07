@@ -37,6 +37,7 @@ from typing import Any
 import networkx as nx
 
 from .exchange_matcher import ExchangeMatch
+from .graph_builder import OUTGOING
 from .pattern_detection import PatternFinding
 
 logger = logging.getLogger(__name__)
@@ -110,7 +111,7 @@ def _band(score: float) -> str:
     return "very low"
 
 
-def _hop_proximity(depth: int, max_depth: int) -> ScoreComponent:
+def _hop_proximity(depth: int, max_depth: int, direction: str = OUTGOING) -> ScoreComponent:
     """Linear decay with distance from the victim's address.
 
     depth 1 scores 1.0 (a direct deposit to the exchange) and each further hop
@@ -119,10 +120,15 @@ def _hop_proximity(depth: int, max_depth: int) -> ScoreComponent:
     """
     span = max(max_depth, 1)
     raw = max(0.0, min(1.0, 1.0 - (depth - 1) / span))
-    if depth <= 1:
+    if depth <= 1 and direction == OUTGOING:
         explanation = (
             "The exchange wallet received funds directly from the reported "
             "address, with no intermediary."
+        )
+    elif depth <= 1:
+        explanation = (
+            "The exchange wallet sent funds directly to the reported address, "
+            "with no intermediary."
         )
     else:
         explanation = (
@@ -134,13 +140,20 @@ def _hop_proximity(depth: int, max_depth: int) -> ScoreComponent:
 
 
 def _amount_correlation(
-    graph: nx.DiGraph, seed: str, exchange_address: str, native_symbol: str = "ETH"
+    graph: nx.DiGraph, seed: str, exchange_address: str, native_symbol: str = "ETH",
+    direction: str = OUTGOING,
 ) -> ScoreComponent:
-    """Fraction of the value leaving the seed that reached the exchange.
+    """Fraction of the value that survived the route between seed and exchange.
 
     Measured along the shortest path, comparing the amount on the first hop
     with the amount on the final hop. A high ratio means the money largely
     survived the journey intact and is very likely the same money.
+
+    The path is read the way the money moved, which depends on the direction
+    of the trace: seed -> exchange when following funds out, exchange -> seed
+    when following them back. Taking the fixed seed -> exchange path in both
+    cases would find no route on a reverse trace and silently score every one
+    of them at the neutral 0.5 below.
     """
     if seed == exchange_address:
         return ScoreComponent(
@@ -150,8 +163,11 @@ def _amount_correlation(
             "The reported address is itself a labelled exchange wallet.",
         )
 
+    source, destination = (
+        (seed, exchange_address) if direction == OUTGOING else (exchange_address, seed)
+    )
     try:
-        path = nx.shortest_path(graph, seed, exchange_address)
+        path = nx.shortest_path(graph, source, destination)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         # Defensive: the matcher found the address in the graph, so a path
         # should exist. Score neutrally rather than inventing a number.
@@ -180,15 +196,26 @@ def _amount_correlation(
     arrived = amounts[-1]
     raw = max(0.0, min(1.0, arrived / sent))
 
+    if direction == OUTGOING:
+        explanation = (
+            f"{arrived:.4f} {native_symbol} reached the exchange out of "
+            f"{sent:.4f} {native_symbol} that left the reported address on this "
+            f"path ({raw * 100:.1f}% of the value survived the route). A high "
+            f"proportion indicates the same funds; a low one may indicate an "
+            f"unrelated transfer that merely ends at an exchange."
+        )
+    else:
+        explanation = (
+            f"{arrived:.4f} {native_symbol} reached the reported address out of "
+            f"{sent:.4f} {native_symbol} that left the exchange wallet on this "
+            f"path ({raw * 100:.1f}% of the value survived the route). A high "
+            f"proportion indicates the reported address was funded from that "
+            f"withdrawal; a low one may indicate an unrelated transfer that "
+            f"merely happens to originate at an exchange."
+        )
+
     return ScoreComponent(
-        "amount_correlation",
-        raw,
-        WEIGHT_AMOUNT_CORRELATION,
-        f"{arrived:.4f} {native_symbol} reached the exchange out of "
-        f"{sent:.4f} {native_symbol} that left "
-        f"the reported address on this path ({raw * 100:.1f}% of the value "
-        f"survived the route). A high proportion indicates the same funds; a low "
-        f"one may indicate an unrelated transfer that merely ends at an exchange.",
+        "amount_correlation", raw, WEIGHT_AMOUNT_CORRELATION, explanation
     )
 
 
@@ -226,8 +253,14 @@ def score_case(
     max_depth: int = 4,
     truncated: bool = False,
     native_symbol: str = "ETH",
+    direction: str = OUTGOING,
 ) -> ConfidenceScore:
-    """Compute the confidence score for one traced case."""
+    """Compute the confidence score for one traced case.
+
+    On a reverse trace the three components measure the same quantities, but
+    the claim they support is the mirror image: not "the funds reached this
+    exchange" but "the funds came from it".
+    """
     findings = findings or []
 
     if primary_match is None:
@@ -241,24 +274,36 @@ def score_case(
                 "the funds were not cashed out -- it may mean the exchange used "
                 "is absent from the label database, or that the funds have not "
                 "yet reached one within the traced depth."
+            ) if direction == OUTGOING else (
+                "No address upstream of the reported address matched a known "
+                "exchange wallet, so the funds could not be traced back to a "
+                "point of purchase or withdrawal. The senders found are still "
+                "the substantive result of a reverse trace."
             ),
             caveats=_caveats(findings, truncated, matched=False),
         )
 
     components = [
-        _hop_proximity(primary_match.depth, max_depth),
-        _amount_correlation(graph, seed, primary_match.address, native_symbol),
+        _hop_proximity(primary_match.depth, max_depth, direction),
+        _amount_correlation(graph, seed, primary_match.address, native_symbol, direction),
         _match_directness(primary_match),
     ]
     score = round(sum(c.contribution for c in components), 4)
     band = _band(score)
 
-    summary = (
-        f"{band.capitalize()} confidence ({score:.2f}) that funds from the "
-        f"reported address reached {primary_match.exchange} at "
-        f"{primary_match.address}, {primary_match.depth} hop"
-        f"{'s' if primary_match.depth != 1 else ''} from the source."
-    )
+    hops = f"{primary_match.depth} hop{'s' if primary_match.depth != 1 else ''}"
+    if direction == OUTGOING:
+        claim = (
+            f"funds from the reported address reached {primary_match.exchange} "
+            f"at {primary_match.address}, {hops} from the source"
+        )
+    else:
+        claim = (
+            f"funds reaching the reported address came from "
+            f"{primary_match.exchange} at {primary_match.address}, {hops} "
+            f"upstream"
+        )
+    summary = f"{band.capitalize()} confidence ({score:.2f}) that {claim}."
 
     return ConfidenceScore(
         score=score,

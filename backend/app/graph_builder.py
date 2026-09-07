@@ -1,7 +1,23 @@
 """Builds a directed transaction graph from a seed address via BFS.
 
-The traversal follows *outgoing* value transfers only -- we are chasing where
-the victim's money went, not where it came from.
+The traversal runs in one of two directions, and which one is chosen is an
+investigative decision, not a detail:
+
+  outgoing  Follows where the reported address sent money. This is the
+            cash-out question -- given a victim's report, which exchange did
+            the funds reach.
+
+  incoming  Follows who sent money *to* the reported address. This is the
+            source question, and on a scammer's wallet it enumerates the
+            addresses that funded it. Those senders are candidate victims of
+            the same operation, which is how one report becomes a picture of
+            a whole campaign.
+
+Edges always point the way the money moved, whichever direction the walk
+runs. A reverse trace therefore produces a graph whose arrows flow *into* the
+seed, so every downstream consumer -- the pattern rules, the amount
+arithmetic, the renderer -- keeps reading value flow the same way rather than
+having to know which direction produced the graph.
 
 Four independent brakes stop a busy wallet from blowing the trace up. Each is
 a deliberate, documented investigative choice, not an arbitrary cap:
@@ -45,6 +61,15 @@ from .etherscan_client import (
 
 logger = logging.getLogger(__name__)
 
+# Which way the walk runs. See the module docstring.
+OUTGOING = "outgoing"
+INCOMING = "incoming"
+DIRECTIONS = (OUTGOING, INCOMING)
+
+
+class InvalidDirectionError(ValueError):
+    """Raised when a caller asks for a traversal direction that does not exist."""
+
 
 class InvalidAddressError(ValueError):
     """Raised when the submitted address is not a valid Ethereum address."""
@@ -67,6 +92,7 @@ class TraceResult:
 
     graph: nx.DiGraph
     seed: str
+    direction: str = OUTGOING
     depth_reached: int = 0
     addresses_expanded: int = 0
     api_calls: int = 0
@@ -89,8 +115,13 @@ class TraceResult:
             self.truncation_reasons.append(reason)
 
 
-def _aggregate_by_recipient(txs: Iterable[Transaction]) -> dict[str, list[Transaction]]:
-    """Group outgoing transfers by destination address.
+def _aggregate_by_counterparty(
+    txs: Iterable[Transaction], direction: str
+) -> dict[str, list[Transaction]]:
+    """Group transfers by the address at the far end.
+
+    Which end that is depends on the direction of the walk: the recipient when
+    following money out, the sender when following it back in.
 
     Grouping happens *before* the branch limit is applied, so an address that
     sent five separate transfers to the same recipient counts as one branch
@@ -98,8 +129,9 @@ def _aggregate_by_recipient(txs: Iterable[Transaction]) -> dict[str, list[Transa
     """
     grouped: dict[str, list[Transaction]] = defaultdict(list)
     for tx in txs:
-        if tx.to_address:
-            grouped[tx.to_address].append(tx)
+        counterparty = tx.to_address if direction == OUTGOING else tx.from_address
+        if counterparty:
+            grouped[counterparty].append(tx)
     return grouped
 
 
@@ -108,12 +140,22 @@ def build_trace_graph(
     client: EtherscanClient,
     cfg: TraceConfig | None = None,
     is_terminal: Callable[[str], bool] | None = None,
+    direction: str = OUTGOING,
 ) -> TraceResult:
-    """Breadth-first trace of outgoing funds from `seed_address`.
+    """Breadth-first trace of funds to or from `seed_address`.
+
+    `direction` is OUTGOING (where the money went) or INCOMING (who sent it).
+    See the module docstring for why that choice is investigative rather than
+    cosmetic.
 
     `is_terminal` is injected rather than imported so this module stays
     independent of exchange matching; main.py passes in the exchange matcher.
     """
+    if direction not in DIRECTIONS:
+        raise InvalidDirectionError(
+            f"'{direction}' is not a traversal direction. "
+            f"Expected one of: {', '.join(DIRECTIONS)}."
+        )
     if not is_valid_address(seed_address):
         raise InvalidAddressError(
             f"'{seed_address}' is not a valid Ethereum address "
@@ -122,12 +164,17 @@ def build_trace_graph(
 
     cfg = cfg or TraceConfig()
     is_terminal = is_terminal or (lambda _addr: False)
+    fetch = (
+        client.get_outgoing_transactions
+        if direction == OUTGOING
+        else client.get_incoming_transactions
+    )
 
     seed = normalize_address(seed_address)
     graph = nx.DiGraph()
     graph.add_node(seed, address=seed, depth=0, is_seed=True, expanded=False)
 
-    result = TraceResult(graph=graph, seed=seed)
+    result = TraceResult(graph=graph, seed=seed, direction=direction)
 
     queue: deque[tuple[str, int]] = deque([(seed, 0)])
     visited: set[str] = {seed}
@@ -154,9 +201,7 @@ def build_trace_graph(
             break
 
         try:
-            outgoing = client.get_outgoing_transactions(
-                address, limit=cfg.max_txs_per_address
-            )
+            transfers = fetch(address, limit=cfg.max_txs_per_address)
             result.api_calls += 1
         except EtherscanError as exc:
             # If we cannot even read the address the victim reported, we have
@@ -177,13 +222,13 @@ def build_trace_graph(
         result.addresses_expanded += 1
         result.depth_reached = max(result.depth_reached, depth)
 
-        grouped = _aggregate_by_recipient(outgoing)
+        grouped = _aggregate_by_counterparty(transfers, direction)
 
         # Brake 3: drop dust before ranking, so tiny spam transfers cannot
         # crowd out a genuine movement of funds.
         branches = [
-            (recipient, txs)
-            for recipient, txs in grouped.items()
+            (counterparty, txs)
+            for counterparty, txs in grouped.items()
             if sum(tx.value_native for tx in txs) >= cfg.min_value_native
         ]
 
@@ -191,18 +236,18 @@ def build_trace_graph(
         branches.sort(key=lambda item: sum(tx.value_native for tx in item[1]), reverse=True)
         if len(branches) > cfg.max_branches_per_node:
             result.note_truncation(
-                f"fan-out limit of {cfg.max_branches_per_node} destinations "
+                f"fan-out limit of {cfg.max_branches_per_node} counterparties "
                 f"per address applied at {address[:10]}..."
             )
             branches = branches[: cfg.max_branches_per_node]
 
-        for recipient, txs in branches:
+        for counterparty, txs in branches:
             total_value = sum(tx.value_native for tx in txs)
 
-            if recipient not in graph:
+            if counterparty not in graph:
                 graph.add_node(
-                    recipient,
-                    address=recipient,
+                    counterparty,
+                    address=counterparty,
                     depth=depth + 1,
                     is_seed=False,
                     expanded=False,
@@ -210,13 +255,22 @@ def build_trace_graph(
             else:
                 # Keep the shortest known distance from the seed -- confidence
                 # scoring rewards short paths, so this must not drift upward.
-                graph.nodes[recipient]["depth"] = min(
-                    graph.nodes[recipient].get("depth", depth + 1), depth + 1
+                graph.nodes[counterparty]["depth"] = min(
+                    graph.nodes[counterparty].get("depth", depth + 1), depth + 1
                 )
 
+            # The edge always points the way the money moved. Walking outward,
+            # that is seed -> counterparty; walking back, it is counterparty ->
+            # seed. Everything downstream reads value flow rather than walk
+            # order because of this line.
+            source, target = (
+                (address, counterparty) if direction == OUTGOING
+                else (counterparty, address)
+            )
+
             graph.add_edge(
-                address,
-                recipient,
+                source,
+                target,
                 value_native=total_value,
                 tx_count=len(txs),
                 first_seen=min(tx.timestamp for tx in txs),
@@ -233,9 +287,9 @@ def build_trace_graph(
                 ],
             )
 
-            if recipient not in visited:
-                visited.add(recipient)
-                queue.append((recipient, depth + 1))
+            if counterparty not in visited:
+                visited.add(counterparty)
+                queue.append((counterparty, depth + 1))
 
     _annotate_node_totals(graph)
     return result
@@ -283,6 +337,12 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "is_terminal": data.get("is_terminal", False),
             "label": data.get("label"),
             "exchange": data.get("exchange"),
+            # Sanctions / mixer screening. Present on every node so the
+            # frontend can style a flagged address without a second lookup;
+            # None on the overwhelming majority that are not listed.
+            "risk_category": data.get("risk_category"),
+            "risk_entity": data.get("risk_entity"),
+            "risk_label": data.get("risk_label"),
             "total_in_native": round(data.get("total_in_native", 0.0), 6),
             "total_out_native": round(data.get("total_out_native", 0.0), 6),
             "activity_count": data.get("activity_count", 0),
