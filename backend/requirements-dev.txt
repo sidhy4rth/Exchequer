@@ -1,0 +1,4 @@
+# Test-only dependencies. Kept out of requirements.txt so the deployed image
+# does not carry them -- the Dockerfile installs the runtime file alone.
+-r requirements.txt
+pytest==8.3.4
