@@ -318,3 +318,79 @@ def test_direction_defaults_to_outgoing():
 
     assert result.direction == OUTGOING
     assert result.graph.has_edge(SEED, addr("a1"))
+
+
+# ---------------------------------------------------------------------------
+# Concurrent level fetching
+# ---------------------------------------------------------------------------
+def test_results_keep_input_order_however_the_requests_finish():
+    """The graph a trace produces must not depend on network timing, so a
+    slow first request must not reorder the level behind it."""
+    import time
+
+    from app.graph_builder import _fetch_level
+
+    pending = [(addr(f"a{i}"), 1) for i in range(1, 5)]
+
+    def fetch(address, limit=None):
+        # Reverse the natural completion order: the first submitted finishes last.
+        time.sleep(0.05 * (4 - int(address[3], 16)))
+        return [tx(address, SEED, float(int(address[3], 16)))]
+
+    results = _fetch_level(pending, fetch, TraceConfig())
+
+    assert [txs[0].from_address for txs, _ in results] == [a for a, _ in pending]
+
+
+def test_a_failure_is_returned_not_raised_so_the_caller_can_classify_it():
+    """Fatal at the seed, a warning deeper in -- only the caller knows which."""
+    from app.graph_builder import _fetch_level
+
+    def fetch(address, limit=None):
+        if address == addr("a2"):
+            raise EtherscanError("boom")
+        return [tx(address, SEED, 1.0)]
+
+    results = _fetch_level([(addr("a1"), 1), (addr("a2"), 1)], fetch, TraceConfig())
+
+    assert results[0][1] is None
+    assert isinstance(results[1][1], EtherscanError)
+    assert results[1][0] == []
+
+
+def test_a_single_address_is_fetched_without_a_thread_pool():
+    """The common case -- the seed, and any level that narrows to one."""
+    from app.graph_builder import _fetch_level
+
+    calls = []
+
+    def fetch(address, limit=None):
+        calls.append(address)
+        return [tx(address, SEED, 1.0)]
+
+    results = _fetch_level([(addr("a1"), 0)], fetch, TraceConfig())
+
+    assert calls == [addr("a1")]
+    assert results[0][1] is None
+
+
+def test_concurrency_does_not_change_the_graph():
+    """Same ledger, one worker or six: byte-identical result."""
+    ledger = {
+        SEED: [tx(SEED, addr(f"a{i}"), float(i)) for i in range(1, 6)],
+        **{addr(f"a{i}"): [tx(addr(f"a{i}"), addr(f"b{i}"), float(i) / 2)] for i in range(1, 6)},
+    }
+
+    def build(workers):
+        result = build_trace_graph(
+            SEED,
+            FakeClient(dict(ledger)),
+            cfg=TraceConfig(max_concurrent_fetches=workers, min_value_native=0.0),
+        )
+        return graph_to_dict(result.graph)
+
+    serial, parallel = build(1), build(6)
+
+    assert sorted(n["id"] for n in serial["nodes"]) == sorted(n["id"] for n in parallel["nodes"])
+    assert sorted((e["source"], e["target"], e["value_native"]) for e in serial["edges"]) == \
+           sorted((e["source"], e["target"], e["value_native"]) for e in parallel["edges"])

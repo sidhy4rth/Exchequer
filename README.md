@@ -143,7 +143,9 @@ Real mainnet addresses that produce real attributions. Pick the **chain** and **
 | BSC · BNB | `0x8894e0a0c962cb723c1976a4421c95949be2d4e3` | Native BNB fan-out from a Binance hot wallet |
 | Ethereum · ETH | `0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045` | vitalik.eth — busy wallet, exercises the fan-out limits |
 
-Start at **2–3 hops** for a demo. A 4-hop trace on a busy Ethereum wallet takes ~3 minutes and ~60 API calls because of free-tier rate limiting.
+Start at **2–3 hops** for a demo: those return in roughly 20 seconds. A 4-hop trace on a busy Ethereum wallet takes about 40 seconds and ~44 API calls.
+
+Addresses at the same depth are fetched concurrently (`TRACE_CONCURRENCY`, default 6). Providers answer in ~5 seconds on the free tiers and almost all of that is network wait, so fetching a level serially left a trace idle most of the time. The clients' own throttles still cap the request *rate*, so this shortens a trace without increasing load on the API — and the graph is unchanged, because results are reassembled in address order rather than completion order.
 
 ---
 
@@ -515,7 +517,7 @@ is fine for evaluation and not for concurrent use.
 | BSC shows "unavailable" in the chain selector | `NODEREAL_API_KEY` is not set in `backend/.env`. Ethereum is unaffected. |
 | BSC trace finds nothing on an address you know is active | Its activity may predate the lookback window. Raise `NODEREAL_LOOKBACK_BLOCKS`. |
 | `blockNum not reached` in the logs | NodeReal's index trails the chain head by a few blocks. Handled automatically; safe to ignore. |
-| Trace is slow on a busy wallet | Expected — requests are throttled to stay under the free-tier cap. Use 2–3 hops for a demo. |
+| Trace is slow on a busy wallet | Partly expected — requests are throttled to stay under the free-tier cap. A level of addresses is fetched concurrently, so if traces feel serial check `TRACE_CONCURRENCY` has not been set to 1. Use 2–3 hops for a demo. |
 | Exchange is `null` on a real address | The funds may not have reached an exchange within the hop limit, or that exchange is not in the label file. Check `GET /exchanges`. |
 
 ---

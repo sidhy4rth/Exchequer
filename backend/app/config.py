@@ -262,6 +262,12 @@ NODEREAL_LOOKBACK_BLOCKS: int = _int_env("NODEREAL_LOOKBACK_BLOCKS", 500_000)
 TRACE_MAX_DEPTH: int = _int_env("TRACE_MAX_DEPTH", 4)
 TRACE_MAX_TXS_PER_ADDRESS: int = _int_env("TRACE_MAX_TXS_PER_ADDRESS", 200)
 TRACE_MAX_NODES: int = _int_env("TRACE_MAX_NODES", 400)
+# How many addresses at one depth are fetched concurrently. Providers answer in
+# ~5s on the free tiers, almost all of it network wait, so fetching a level
+# serially spends most of a trace idle. The clients' own throttles still cap the
+# request rate, so this shortens a trace without raising the load on the API.
+# Six keeps a comfortable margin under Etherscan's ~5 req/s free-tier ceiling.
+TRACE_CONCURRENCY: int = _int_env("TRACE_CONCURRENCY", 6)
 
 # SQLite location. Relative paths resolve against backend/.
 _db_raw = os.getenv("TRACECHAIN_DB_PATH", "tracechain.db")
