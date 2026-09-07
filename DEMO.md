@@ -1,10 +1,12 @@
 # TraceChain — demo addresses
 
-Three Ethereum mainnet addresses, verified on 4 September 2026. Each was traced
-**twice back to back** and returned identical findings both times.
+Five Ethereum mainnet traces over four addresses. Traces 1-3 were verified on
+4 September 2026, traces 4-5 on 7 September 2026; each was run **twice back to
+back** and returned identical findings both times.
 
-All three run at **depth 3** on **Ethereum / ETH** and complete in under 20
-seconds, so they can be traced live.
+Traces 1-3 run at **depth 3** on **Ethereum / ETH** and complete in under 20
+seconds. Traces 4-5 are reverse traces at **1 hop** and return in about two
+seconds each, so the whole set can be run live.
 
 ---
 
@@ -91,6 +93,57 @@ the score is lower, and the tool says so rather than overstating.
 
 ---
 
+## 4 — Reverse trace: who paid the offender
+
+```
+0x536c4921d1aafde6a5cda882fb5ca046f3601c65
+```
+Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~2 seconds, 1 API call**
+
+| | |
+|---|---|
+| Addresses that funded it | **10** |
+| Total received | 195.6203 ETH |
+| Largest single sender | 139.2700 ETH |
+| Exchanges among the senders | none |
+
+This is address 2 again, asked the other question. Forwards, it fans 617 ETH
+across ten recipients and fires the laundering rules. Backwards, **ten separate
+addresses paid money into it** — and none of them is a labelled exchange, so
+none is explained away as a withdrawal.
+
+Say the number out loud: one complaint, ten more addresses that paid the same
+wallet. Each is a candidate victim who may hold a separate FIR, and the panel
+is labelled *"Funded this address"* rather than *"victims"* on purpose — the
+transactions establish that money moved, not who the sender was.
+
+---
+
+## 5 — Reverse trace: why it is labelled carefully
+
+```
+0x60d02e0956e2f3795167c15ba61ab452c85c2533
+```
+Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~2 seconds**
+
+| | |
+|---|---|
+| Addresses that funded it | 9 |
+| **Of which labelled exchanges** | **6** — five Binance, one OKX |
+| Candidate victims | 3 |
+
+The demo for the honesty of the tool. Nine addresses funded this wallet, but
+six of them are exchange hot wallets, and the panel marks each one
+**"withdrawal, not a victim"** in the row itself. A tool that reported "9
+victims" here would be wrong by a factor of three, and it would be wrong in the
+direction that inflates a case.
+
+Run this straight after 4. The contrast is the argument: the same feature, on
+one address producing ten leads and on another quietly discarding six false
+ones.
+
+---
+
 ## Running order
 
 Trace 1, then 2, then 3. The story escalates: nothing found → something odd but
@@ -99,6 +152,12 @@ inconclusive → money located at an exchange with two independent patterns.
 Set the depth selector to **3 hops**. Two hops is faster but none of the
 patterns fire there; four hops takes about three minutes and adds nothing to
 the argument.
+
+Then switch the first selector to **"Who sent funds here"** and run 4 and 5 at
+**1 hop**. Both return in about two seconds on a single API call, so they cost
+almost no stage time, and they change the scale of the claim: the first three
+traces follow one victim's money, while 4 finds ten more people who paid the
+same wallet and 5 shows the tool refusing to overcount them.
 
 ---
 
@@ -131,3 +190,14 @@ cd ~/tracechain/frontend && npm run dev
 
 Open <http://localhost:5173> — use `localhost`, not `127.0.0.1`.
 Check the status line reads **3 chains** before you start.
+
+If asked about sanctions screening: every address in every trace is checked
+against the OFAC SDN list published 4 September 2026 — 124 Ethereum, 282 Tron
+and 1 BSC address. None of the demo addresses is listed, and that is worth
+saying plainly. `GET /risk-labels` shows exactly what the screening covers, so
+"no hit" can always be told apart from "not screened".
+
+The mixer category is empty, and there is a good answer if it comes up: every
+mixer currently on the SDN list is a Bitcoin service, and Tornado Cash was
+delisted in March 2025. The stop-at-a-mixer rule is built and tested; the list
+simply has nothing on our three chains today.
