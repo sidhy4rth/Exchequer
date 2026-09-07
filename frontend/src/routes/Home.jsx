@@ -26,6 +26,7 @@ export default function Home() {
   const [chain, setChain] = useState('ethereum')
   const [asset, setAsset] = useState('ETH')
   const [depth, setDepth] = useState(4)
+  const [direction, setDirection] = useState('outgoing')
   const [touched, setTouched] = useState(false)
 
   useEffect(() => {
@@ -65,9 +66,10 @@ export default function Home() {
       chain: opts.chain ?? chain,
       asset: opts.asset ?? asset,
       depth: String(opts.depth ?? depth),
+      direction: opts.direction ?? direction,
     })
     navigate(`/trace/${addr}?${params}`)
-  }, [navigate, chain, asset, depth])
+  }, [navigate, chain, asset, depth, direction])
 
   function submit(event) {
     event.preventDefault()
@@ -98,10 +100,21 @@ export default function Home() {
       <header className="hero">
         <h2>Follow the money to the exchange it left through.</h2>
         <p>
-          A victim reports one wallet address. TraceChain follows outgoing transfers
-          hop by hop, flags known laundering patterns along the way, and identifies
-          the exchange where the funds were cashed out — as a report an investigator
-          can attach to a legal request.
+          {direction === 'outgoing' ? (
+            <>
+              A victim reports one wallet address. TraceChain follows outgoing transfers
+              hop by hop, flags known laundering patterns along the way, and identifies
+              the exchange where the funds were cashed out — as a report an investigator
+              can attach to a legal request.
+            </>
+          ) : (
+            <>
+              Walk the money backwards. TraceChain follows incoming transfers to find
+              every address that funded this wallet — where it belongs to an offender,
+              those senders are candidate victims of the same operation, each of whom
+              may hold a separate complaint.
+            </>
+          )}
         </p>
 
         <form className="trace-form" onSubmit={submit}>
@@ -118,6 +131,16 @@ export default function Home() {
           />
 
           <div className="controls">
+            <select
+              value={direction}
+              onChange={(e) => setDirection(e.target.value)}
+              aria-label="Trace direction"
+              title="Outgoing follows where this address sent funds. Incoming finds the addresses that paid it."
+            >
+              <option value="outgoing">Where funds went</option>
+              <option value="incoming">Who sent funds here</option>
+            </select>
+
             <select
               value={chain}
               onChange={(e) => changeChain(e.target.value)}
@@ -151,7 +174,7 @@ export default function Home() {
 
             <span className="spacer" />
             <button type="submit" className="primary" disabled={!valid || backendDown}>
-              Trace
+              {direction === 'outgoing' ? 'Trace' : 'Trace back'}
             </button>
           </div>
 

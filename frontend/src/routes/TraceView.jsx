@@ -5,6 +5,7 @@ import GraphView from '../components/GraphView'
 import ExportButton from '../components/ExportButton'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer' }
 
 /** Middle-truncated address: both ends carry identity, the middle does not. */
 function middle(address, head = 10, tail = 8) {
@@ -30,6 +31,10 @@ export default function TraceView() {
   const chain = params.get('chain') || 'ethereum'
   const asset = params.get('asset') || 'ETH'
   const depth = Number(params.get('depth') || 4)
+  // A stored case carries the direction it was traced with; a live trace takes
+  // it from the URL. Reading the result first means an archived case always
+  // renders as what it actually was, not as whatever the URL happens to say.
+  const requestedDirection = params.get('direction') || 'outgoing'
 
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -49,7 +54,7 @@ export default function TraceView() {
 
     const request = stored
       ? fetchCase(caseId)
-      : traceAddress(routeAddress, depth, chain, asset)
+      : traceAddress(routeAddress, depth, chain, asset, requestedDirection)
 
     request
       .then((data) => { if (!cancelled) { setResult(data); setLoading(false) } })
@@ -60,7 +65,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, routeAddress, chain, asset, depth])
+  }, [stored, caseId, routeAddress, chain, asset, depth, requestedDirection])
 
   // Hops, ordered the way the traversal found them: nearest the victim first,
   // then by value within a hop.
@@ -113,6 +118,9 @@ export default function TraceView() {
   // the chain's native symbol so amounts are never rendered unlabelled.
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const findings = result?.findings ?? []
+  const riskMatches = result?.risk_matches ?? []
+  const funders = result?.direct_senders ?? []
+  const reverse = (result?.direction ?? requestedDirection) === 'incoming'
   const shown = hops.slice(0, revealed)
 
   return (
@@ -135,6 +143,11 @@ export default function TraceView() {
           </span>
           <span className="badge mono">{unit}</span>
           {!stored && <span className="badge mono">{depth} hops</span>}
+          {reverse && (
+            <span className="badge reverse" title="Walking incoming transfers backwards to the addresses that funded this one">
+              Reverse trace
+            </span>
+          )}
           {stored && (
             <span className="badge archived" title="Loaded from the case store — not re-traced">
               Archived{tracedAt ? ` · ${tracedAt}` : ''}
@@ -149,7 +162,10 @@ export default function TraceView() {
           <button
             onClick={() => {
               const q = new URLSearchParams({
-                chain: result.chain, asset: result.asset, depth: String(result.depth_reached || 3),
+                chain: result.chain,
+                asset: result.asset,
+                depth: String(result.depth_reached || 3),
+                direction: result.direction ?? 'outgoing',
               })
               navigate(`/trace/${result.address}?${q}`)
             }}
@@ -195,7 +211,9 @@ export default function TraceView() {
           {!loading && !error && view === 'feed' && (
             hops.length === 0 ? (
               <p className="empty">
-                {result?.message ?? 'No outgoing transfers found for this address.'}
+                {result?.message ?? (reverse
+                  ? 'No incoming transfers found for this address.'
+                  : 'No outgoing transfers found for this address.')}
               </p>
             ) : (
               shown.map((h) => (
@@ -213,7 +231,7 @@ export default function TraceView() {
                     <div className="sub">
                       {h.tx_count} transfer{h.tx_count === 1 ? '' : 's'}
                       {h.last_seen ? ` · ${when(h.last_seen)}` : ''}
-                      {h.isTerminal ? ' · cash-out point' : ''}
+                      {h.isTerminal ? (reverse ? ' · source' : ' · cash-out point') : ''}
                     </div>
                     {h.flags?.map((f) => (
                       <span className="flag" key={f}>{PATTERN_NAME[f] ?? f}</span>
@@ -240,15 +258,21 @@ export default function TraceView() {
             <div className="status-line">
               <span className={`dot ${status === 'running' ? 'live pulse'
                 : status === 'resolved' ? 'live' : status === 'failed' ? 'down' : ''}`} />
-              {status === 'running' && (stored ? 'Loading stored case…' : 'Traversing outgoing transfers…')}
-              {status === 'resolved' && (stored ? 'Archived — cash-out point identified' : 'Cash-out point identified')}
+              {status === 'running' && (stored ? 'Loading stored case…'
+                : reverse ? 'Walking incoming transfers backwards…'
+                : 'Traversing outgoing transfers…')}
+              {status === 'resolved' && (reverse
+                ? (stored ? 'Archived — source exchange identified' : 'Source exchange identified')
+                : (stored ? 'Archived — cash-out point identified' : 'Cash-out point identified'))}
               {status === 'complete' && (stored ? 'Archived — no exchange matched' : 'Trace complete — no exchange matched')}
               {status === 'failed' && 'Trace failed'}
             </div>
           </div>
 
           <div className="rail-block">
-            <span className="micro">Attribution</span>
+            <span className="micro">
+              {reverse ? 'Source exchange' : 'Attribution'}
+            </span>
             <div className={`verdict ${result?.exchange ? 'resolved' : ''}`}>
               {result?.exchange ? (
                 <>
@@ -258,10 +282,13 @@ export default function TraceView() {
                   <div style={{ marginTop: 14 }}>
                     <div className="kv">
                       <span className="k">Distance</span>
-                      <span className="v">{result.hop_count} hop{result.hop_count === 1 ? '' : 's'}</span>
+                      <span className="v">
+                        {result.hop_count} hop{result.hop_count === 1 ? '' : 's'}
+                        {reverse ? ' upstream' : ''}
+                      </span>
                     </div>
                     <div className="kv">
-                      <span className="k">Value received</span>
+                      <span className="k">{reverse ? 'Value sent' : 'Value received'}</span>
                       <span className="v">{num(result.value_received_native ?? 0)} {unit}</span>
                     </div>
                     <div className="kv">
@@ -274,7 +301,8 @@ export default function TraceView() {
                 </>
               ) : (
                 <div className="name none">
-                  {loading ? 'Awaiting result…' : 'No exchange matched'}
+                  {loading ? 'Awaiting result…'
+                    : reverse ? 'No source exchange matched' : 'No exchange matched'}
                 </div>
               )}
             </div>
@@ -282,6 +310,61 @@ export default function TraceView() {
               <p className="empty" style={{ marginTop: 10 }}>{result.message}</p>
             )}
           </div>
+
+          {riskMatches.length > 0 && (
+            <div className="rail-block">
+              <span className="micro">Sanctions screening</span>
+              {riskMatches.map((m) => (
+                <div className={`risk ${m.category}`} key={m.address}>
+                  <div className="top">
+                    <span className="nm">{RISK_NAME[m.category] ?? m.category}</span>
+                    <span className="st">
+                      {m.depth === 0 ? 'reported address'
+                        : `${m.depth} hop${m.depth === 1 ? '' : 's'}`}
+                    </span>
+                  </div>
+                  <div className="ent">{m.entity}</div>
+                  <div className="wallet">{m.address}</div>
+                  <div className="desc">
+                    {num(m.value_received_native)} {unit} · {m.source}
+                  </div>
+                  {m.is_terminal && (
+                    <div className="desc stop">
+                      The trace stops here. A mixer pays out from a commingled pool,
+                      so transfers leaving it have no established link to the funds
+                      that arrived.
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {reverse && funders.length > 0 && (
+            <div className="rail-block">
+              <span className="micro">Funded this address · {funders.length}</span>
+              <p className="empty" style={{ marginBottom: 10 }}>
+                Each address below paid the reported address directly. Where that
+                address belongs to an offender, these senders are candidate victims
+                of the same operation. A sender may equally be the offender&rsquo;s own
+                wallet or an exchange withdrawal.
+              </p>
+              {funders.map((f) => (
+                <div className="funder" key={f.address}>
+                  <div className="top">
+                    <span className="wallet">{middle(f.address, 10, 8)}</span>
+                    <span className="amt">{num(f.value_native)} {unit}</span>
+                  </div>
+                  <div className="sub">
+                    {f.tx_count} transfer{f.tx_count === 1 ? '' : 's'}
+                    {f.last_seen ? ` · ${when(f.last_seen)}` : ''}
+                    {f.exchange ? ` · ${f.exchange} withdrawal, not a victim` : ''}
+                    {f.risk_category ? ` · ${RISK_NAME[f.risk_category] ?? f.risk_category}` : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="rail-block">
             <span className="micro">Patterns fired</span>

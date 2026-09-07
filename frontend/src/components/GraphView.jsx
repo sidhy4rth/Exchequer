@@ -6,12 +6,17 @@ import { forceCollide } from 'd3-force-3d'
 // JS and cannot read CSS variables, so these values are duplicated here on
 // purpose — change one, change both.
 //
-// Only two things carry colour: a confirmed exchange (accent green) and a
-// fired pattern (amber). The reported address is bright neutral rather than
-// coloured, and ordinary traced addresses are dim, so the eye lands on the
-// answer instead of on decoration.
+// Three things carry colour: a sanctions or mixer hit (red), a confirmed
+// exchange (accent green) and a fired pattern (amber). The reported address is
+// bright neutral rather than coloured, and ordinary traced addresses are dim,
+// so the eye lands on the answer instead of on decoration.
+//
+// Red is reserved for the risk lists and outranks the rest. A published
+// government designation is a fact from outside this tool, and it should not
+// have to compete for attention with the tool's own inferences.
 const COLORS = {
   seed: '#e6e8ea',
+  risk: '#e5484d',
   exchange: '#2fd3a2',
   flagged: '#e0a44a',
   node: '#5b6167',
@@ -36,6 +41,7 @@ const DIMMED_ALPHA = 0.12
 
 function roleOf(node) {
   if (node.is_seed) return 'seed'
+  if (node.risk_category) return 'risk'
   if (node.exchange) return 'exchange'
   if (node.flags?.length) return 'flagged'
   return 'node'
@@ -291,6 +297,12 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
       ctx.fillStyle = 'rgba(47,211,162,0.14)'
       ctx.fill()
     }
+    if (role === 'risk') {
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
+      ctx.fillStyle = 'rgba(229,72,77,0.18)'
+      ctx.fill()
+    }
 
     ctx.beginPath()
     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI)
@@ -304,6 +316,17 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
     } else if (role === 'exchange' || role === 'seed') {
       ctx.strokeStyle = 'rgba(255,255,255,0.55)'
       ctx.lineWidth = 1.2 / globalScale
+      ctx.stroke()
+    }
+
+    // A risk ring is drawn on any listed address, including the reported one.
+    // Role alone would hide the fact that the victim's own reported address is
+    // on a sanctions list, which is precisely the case worth seeing.
+    if (node.risk_category) {
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, radius + 2.2, 0, 2 * Math.PI)
+      ctx.strokeStyle = COLORS.risk
+      ctx.lineWidth = 1.6 / globalScale
       ctx.stroke()
     }
 
@@ -323,13 +346,15 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
     // Important nodes are always labelled. Ordinary ones appear only once the
     // user has zoomed in far enough for them to be readable, which keeps a
     // large graph legible instead of a wall of text.
-    const important = role === 'seed' || role === 'exchange' || isActive
+    const important = role === 'seed' || role === 'exchange' || role === 'risk' || isActive
     if ((!important && globalScale < 1.6) || faded) {
       ctx.restore()
       return
     }
 
-    const text = role === 'exchange' && node.label ? node.label : short(node.address)
+    const text = role === 'risk' && node.risk_entity ? node.risk_entity
+      : role === 'exchange' && node.label ? node.label
+      : short(node.address)
     const fontSize = Math.max(10 / globalScale, 2.2)
     ctx.font = `${important ? 500 : 400} ${fontSize}px 'JetBrains Mono', ui-monospace, monospace`
 
@@ -456,6 +481,10 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
             <div className="item">
               <span className="swatch" style={{ background: COLORS.seed }} />
               Reported address
+            </div>
+            <div className="item">
+              <span className="swatch" style={{ background: COLORS.risk }} />
+              Sanctioned / mixer
             </div>
             <div className="item">
               <span className="swatch" style={{ background: COLORS.exchange }} />

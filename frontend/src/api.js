@@ -33,7 +33,14 @@ async function toError(response) {
   return new Error(detail || fallbacks[response.status] || `Request failed (${response.status})`)
 }
 
-export async function traceAddress(address, maxDepth, chain, asset) {
+/**
+ * Run a traversal.
+ *
+ * `direction` is 'outgoing' (where the reported address sent funds) or
+ * 'incoming' (which addresses funded it). Omitted rather than defaulted here,
+ * so the backend stays the single authority on what the default is.
+ */
+export async function traceAddress(address, maxDepth, chain, asset, direction) {
   let response
   try {
     response = await fetch(`${BASE}/trace`, {
@@ -44,6 +51,7 @@ export async function traceAddress(address, maxDepth, chain, asset) {
         ...(maxDepth ? { max_depth: maxDepth } : {}),
         ...(chain ? { chain } : {}),
         ...(asset ? { asset } : {}),
+        ...(direction ? { direction } : {}),
       }),
     })
   } catch {

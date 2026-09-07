@@ -23,15 +23,18 @@
   --dim: #6b7075;
   --faint: #4a4f54;
 
-  /* The only two colours that mean anything. */
+  /* The only three colours that mean anything. */
   --accent: #2fd3a2;          /* confirmed attribution, live status */
   --accent-dim: rgba(47, 211, 162, 0.12);
+  --risk: #e5484d;            /* sanctions / mixer hit — outranks everything */
+  --risk-dim: rgba(229, 72, 77, 0.12);
   --amber: #e0a44a;           /* a laundering pattern fired */
   --amber-dim: rgba(224, 164, 74, 0.12);
 
   /* Graph node roles. GraphView.jsx reads these same values. */
   --seed: #e6e8ea;            /* the reported address — bright, not coloured */
   --exchange: #2fd3a2;
+  --risk-node: #e5484d;
   --flagged: #e0a44a;
   --node: #5b6167;
 
@@ -327,6 +330,7 @@ option { background: var(--panel-2); color: var(--text); }
 .badge.mono { font-family: var(--mono); }
 /* An archived case is evidence as it stood, not a live reading. Say so. */
 .badge.archived { border-color: rgba(224,164,74,0.28); color: var(--amber); }
+.badge.reverse { border-color: rgba(47,211,162,0.30); color: var(--accent); }
 
 .console-body { flex: 1; display: flex; min-height: 0; }
 
@@ -417,6 +421,32 @@ option { background: var(--panel-2); color: var(--text); }
 .rule .th .tv { color: var(--muted); }
 
 .empty { font-size: 12.5px; color: var(--faint); }
+
+/* sanctions / mixer screening — deliberately the loudest block in the rail,
+   because a published designation outranks anything this tool inferred */
+.risk {
+  border: 1px solid rgba(229, 72, 77, 0.32);
+  border-left-width: 2px;
+  background: var(--risk-dim);
+  border-radius: var(--r);
+  padding: 13px 14px;
+}
+.risk + .risk { margin-top: 10px; }
+.risk .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.risk .nm { font-size: 12.5px; color: var(--risk); font-weight: 600; letter-spacing: 0.01em; }
+.risk .st { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.risk .ent { font-size: 13px; color: var(--text); margin-top: 6px; font-weight: 500; }
+.risk .wallet { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 3px; word-break: break-all; }
+.risk .desc { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+.risk .desc.stop { color: var(--risk); opacity: 0.92; }
+
+/* addresses that funded the reported one — a reverse trace's real output */
+.funder { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+.funder + .funder { margin-top: 8px; }
+.funder .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.funder .wallet { font-family: var(--mono); font-size: 11.5px; color: var(--text); }
+.funder .amt { font-family: var(--mono); font-size: 12px; color: var(--accent); white-space: nowrap; }
+.funder .sub { font-size: 11px; color: var(--faint); margin-top: 4px; line-height: 1.5; }
 
 /* view toggle above the feed */
 .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
