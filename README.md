@@ -6,7 +6,7 @@ Built for Smart India Hackathon 2026 — problem statement **SIH26183** (Ministr
 
 A victim reports one wallet address. TraceChain follows the money outward hop by hop, flags known laundering patterns along the way, identifies the exchange where the funds landed, and produces a report an investigator can attach to a legal request.
 
-It traces **two chains and three assets each** — Ethereum (ETH, USDT, USDC) and BNB Smart Chain (BNB, USDT, USDC) — because most laundering moves as stablecoins, not as native currency.
+It traces **three chains** — Ethereum (ETH, USDT, USDC), BNB Smart Chain (BNB, USDT, USDC) and Tron (TRX, USDT) — because most laundering moves as stablecoins rather than native currency, and USDT-TRC20 on Tron is the dominant cash-out rail for scam proceeds out of India.
 
 The design principle throughout is **auditability**. Every attribution is an exact match against a published exchange wallet in a data file you can open and read. Every laundering finding is a handful of arithmetic comparisons that reports the thresholds it applied. There is no model, no clustering, and no proprietary score — because a conclusion that reaches a courtroom has to be one a human can re-check by hand.
 
@@ -19,17 +19,22 @@ The design principle throughout is **auditability**. Every attribution is an exa
         │
         ▼
   ┌───────────────┐   Picks the provider for the chosen chain + asset
-  │ chain_data.py │   Ethereum → Etherscan   BSC → NodeReal
-  └───────┬───────┘   Both rate-limit aware, retrying with backoff
+  │ chain_data.py │   Ethereum → Etherscan  BSC → NodeReal  Tron → TronGrid
+  └───────┬───────┘   All rate-limit aware, retrying with backoff
           ▼
-  ┌───────────────┐   BFS over outgoing transfers, depth-limited (default 4 hops)
-  │ graph_        │   Follows highest-value destinations first; drops dust
-  │ builder.py    │   Stops at exchange wallets — the money has arrived
-  └───────┬───────┘
+  ┌───────────────┐   BFS, depth-limited (default 4 hops), in either direction
+  │ graph_        │   outgoing → where the money went (default)
+  │ builder.py    │   incoming → who funded this address
+  └───────┬───────┘   Highest-value branches first; drops dust
           ▼
   ┌───────────────┐   Exact lookup against that chain's own label file
   │ exchange_     │   (labels are never shared between chains)
   │ matcher.py    │
+  └───────┬───────┘
+          ▼
+  ┌───────────────┐   Exact lookup against OFAC's published SDN list
+  │ risk_         │   Stops the trace at a mixer — its payouts are
+  │ matcher.py    │   uncorrelated with its deposits
   └───────┬───────┘
           ▼
   ┌───────────────┐   Peel chain + amount split, as explainable fixed rules
@@ -52,6 +57,7 @@ The design principle throughout is **auditability**. Every attribution is an exa
 - **Node.js 20+** and npm
 - A free **Etherscan API key** (Ethereum)
 - A free **NodeReal API key** (BNB Smart Chain) — optional; without it Ethereum still works and BSC reports itself unavailable
+- A free **TronGrid API key** (Tron) — optional; Tron works without one, but keyless requests are throttled to roughly one every 1.2 seconds
 
 ---
 
@@ -137,7 +143,8 @@ Start at **2–3 hops** for a demo. A 4-hop trace on a busy Ethereum wallet take
 ### `POST /trace`
 
 ```json
-{ "address": "0x...", "chain": "bsc", "asset": "USDT", "max_depth": 4 }
+{ "address": "0x...", "chain": "bsc", "asset": "USDT", "max_depth": 4,
+  "direction": "outgoing" }
 ```
 
 `chain` is `ethereum` (default) or `bsc`. `asset` is the chain's native symbol or a stablecoin —
@@ -149,6 +156,22 @@ single asset keeps every threshold and weight valid without change.
 
 The chain is never inferred from the address: an EVM address is valid on every EVM chain, and the same
 address can hold unrelated funds on both.
+
+`direction` is `outgoing` (default) or `incoming`, and it changes the question being asked.
+
+| Direction | Question | What comes back |
+|---|---|---|
+| `outgoing` | Where did the victim's money go? | The exchange it was cashed out at, with a confidence score |
+| `incoming` | Who sent money to this address? | `direct_senders` — every address that funded it, largest first |
+
+A reverse trace is what turns one complaint into a picture of a campaign. If the reported address
+belongs to an offender, the addresses that paid it are candidate victims of the same operation, each
+of whom may hold a separate FIR. The field is named `direct_senders` rather than "victims" on purpose:
+a sender may equally be the offender's own wallet, an exchange withdrawal, or an unrelated payment,
+and the response marks the ones that are labelled exchanges so that reading is not left to the reader.
+
+Edges always point the way the money moved, whichever direction the walk ran — so a reverse trace's
+graph, patterns and amounts are read exactly like a forward one's.
 
 ```json
 {
@@ -223,6 +246,44 @@ Detected laundering patterns and truncated traversals are reported as **caveats*
 
 ---
 
+## Sanctions and mixer screening
+
+Every address in a trace is also checked against the digital currency addresses published on the
+U.S. Treasury's **Specially Designated Nationals list**. The matching rule is the same exact lookup
+the exchange labels use, for the same reason: an address is called sanctioned if and only if a
+published government list says so.
+
+Labels are generated straight from Treasury's own XML, and each entry keeps the sanctions programs
+and the exact `idType` OFAC recorded, so any label can be checked against the source document:
+
+```bash
+cd backend && .venv/bin/python -m scripts.import_ofac_addresses
+cd backend && .venv/bin/python -m scripts.import_ofac_addresses --dry-run
+```
+
+Two categories, carrying the same evidentiary weight but different investigative meaning:
+
+| Category | Meaning | Effect on the trace |
+|---|---|---|
+| `sanctioned` | The address belongs to a designated entity | None — it is an ordinary wallet whose transfers mean what they say |
+| `mixer` | The address is a tumbler | **The trace stops here** |
+
+The mixer rule is the important one, and it is a correctness rule rather than a presentational one.
+A tumbler pays out from a commingled pool, so transfers leaving it have no established relationship
+to the deposit the trace arrived on. Following them would not follow the money — it would manufacture
+a trail the transactions do not support and hand an investigator a confident-looking graph built on a
+false premise. Stopping and saying so is the honest answer, and a trace that ends at a mixer reports
+that as a substantive finding rather than as a failed search for an exchange.
+
+Every address in these files is sanctioned; `mixer` marks the subset that are tumblers, which is this
+project's own editorial classification of the designated entity's name and is recorded as such. The
+sanctions fact itself is never editorial.
+
+> Screening degrades safely. With no label file present the trace still runs and still attributes an
+> exchange — it simply reports that it was not screened.
+
+---
+
 ## Exchange labels
 
 Labels are **per chain and never shared between them**. Binance's hot wallet on Ethereum and Binance's
@@ -233,6 +294,10 @@ manufacture an attribution no transaction supports.
 |---|---|
 | `backend/data/exchange_labels.json` | **337 addresses / 18 exchanges** — Binance, Coinbase, Kraken, OKX, Bitfinex, Huobi/HTX, KuCoin, Gate.io, Crypto.com, Bybit, Bitstamp, HitBTC, Gemini, Bithumb, Bittrex, Poloniex, Upbit, Remitano |
 | `backend/data/exchange_labels_bsc.json` | **30 addresses / 9 exchanges** — Binance, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, **CoinDCX**, Azbit, FixedFloat |
+| `backend/data/exchange_labels_tron.json` | **7 addresses / 4 exchanges** — Binance, OKX, Bybit, Bitfinex |
+| `backend/data/risk_labels*.json` | Sanctioned and mixer addresses per chain, generated from OFAC's SDN list — see [Sanctions and mixer screening](#sanctions-and-mixer-screening) |
+
+**374 verified exchange wallets in total, across three chains.**
 
 Both files are generated, not hand-typed, and both are reproducible:
 
@@ -241,11 +306,14 @@ cd backend
 python -m scripts.import_exchange_labels    # Ethereum: import + verify
 python -m scripts.audit_label_contracts     # Ethereum: strip non-custody contracts
 python -m scripts.seed_bsc_labels           # BSC: import + verify
+python -m scripts.seed_tron_labels          # Tron: import + verify
 python -m scripts.verify_labels             # re-check the Ethereum file on demand
 ```
 
-Addresses originate from the explorers' own published label pages (Etherscan / BscScan), imported from a
-dataset pinned to a specific commit so a re-run reproduces the same input.
+Addresses originate from the explorers' own published label pages. Ethereum and BSC are imported from a
+dataset pinned to a specific commit, so a re-run reproduces the same input. Tron labels are read **live from
+TronScan's own API** (`/api/account` → `addressTag`), which is the strongest provenance available for free
+anywhere in this project — the label comes from the explorer that assigns it.
 
 ### Nothing is accepted on the label alone
 
@@ -299,6 +367,9 @@ Stated plainly, and repeated in every exported report:
 - **An exchange match identifies where funds arrived, not who controls the account.** Only the exchange can link a deposit address to a customer identity, via a lawful request.
 - **The graph is a sample, not a complete picture.** Depth, fan-out and node limits mean funds may also have reached other exchanges along paths that were not expanded.
 - **Attribution is only as good as the label file.** A null result may mean the exchange is simply absent from it — check `GET /exchanges`.
+- **A trace stops at a mixer, and cannot resume past one.** This is deliberate rather than a gap to close: the link between a tumbler's deposits and its payouts does not exist in the transaction data, so no amount of further traversal could recover it.
+- **Screening covers the OFAC SDN list only.** An address absent from it is not thereby established as legitimate, and the designation carries no automatic force in Indian law — it is a lead and an escalation trigger, not a verdict.
+- **`direct_senders` lists addresses that funded the reported one, not confirmed victims.** A sender may be the offender's own wallet, an exchange withdrawal, or an unrelated payment; only the exchanges among them can be identified from chain data alone.
 
 ---
 
@@ -313,36 +384,96 @@ tracechain/
 │   │   ├── chain_data.py         picks the provider for a chain + asset
 │   │   ├── etherscan_client.py   Etherscan wrapper (native + ERC-20)
 │   │   ├── nodereal_client.py    NodeReal wrapper for BNB Smart Chain
-│   │   ├── graph_builder.py      BFS traversal → NetworkX graph
+│   │   ├── tron_client.py        TronGrid wrapper for Tron (TRC-20 + TRX)
+│   │   ├── graph_builder.py      BFS traversal (both directions) → NetworkX graph
 │   │   ├── exchange_matcher.py   exact-match attribution
+│   │   ├── risk_matcher.py       sanctions + mixer screening
 │   │   ├── pattern_detection.py  peel chain + amount split
 │   │   ├── scoring.py            confidence score
 │   │   ├── models.py             SQLite (SQLAlchemy) case storage
 │   │   └── report.py             exportable report
 │   ├── data/
 │   │   ├── exchange_labels.json      337 verified Ethereum exchange wallets
-│   │   └── exchange_labels_bsc.json   30 verified BSC exchange wallets
+│   │   ├── exchange_labels_bsc.json   30 verified BSC exchange wallets
+│   │   ├── exchange_labels_tron.json   7 verified Tron exchange wallets
+│   │   └── risk_labels*.json          OFAC SDN addresses, per chain
 │   ├── scripts/
 │   │   ├── check_etherscan.py         live API smoke test
 │   │   ├── verify_labels.py           re-checks every Ethereum label
 │   │   ├── import_exchange_labels.py  imports + verifies Ethereum labels
 │   │   ├── audit_label_contracts.py   removes non-custody contracts
-│   │   └── seed_bsc_labels.py         imports + verifies BSC labels
+│   │   ├── seed_bsc_labels.py         imports + verifies BSC labels
+│   │   ├── seed_tron_labels.py        imports Tron labels from TronScan tags
+│   │   └── import_ofac_addresses.py   builds risk labels from OFAC's SDN XML
+│   ├── tests/                         pure-function suite, no network or keys
 │   ├── requirements.txt
+│   ├── requirements-dev.txt
 │   └── .env.example
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx
 │   │   ├── api.js
+│   │   ├── styles.css
+│   │   ├── routes/
+│   │   │   ├── Home.jsx           landing form, chain/asset/direction
+│   │   │   └── TraceView.jsx      console: feed, graph, evidence rail
 │   │   └── components/
-│   │       ├── AddressInput.jsx
 │   │       ├── GraphView.jsx      force graph, label-collision aware
-│   │       ├── ResultSidebar.jsx
 │   │       └── ExportButton.jsx
 │   ├── vite.config.js
 │   └── package.json
+├── Dockerfile                    one image: Node builds the UI, FastAPI serves it
+├── DEMO.md                       verified demo addresses
 └── README.md
 ```
+
+---
+
+## Tests
+
+The rules that decide what an investigator is told are pure functions over a graph, so the suite
+needs no API key, no network and no database:
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Coverage is deliberately two-sided. Every heuristic is tested both for firing on the shape it
+describes *and* for staying silent on ordinary activity, because a false accusation is the expensive
+failure here.
+
+| File | What it pins down |
+|---|---|
+| `test_pattern_detection.py` | Peel chain and amount split, their thresholds, the exchange exemption, graph tagging |
+| `test_scoring.py` | Each weighted component, band boundaries, and that patterns and truncation add caveats without moving the number |
+| `test_exchange_matcher.py` | Both label-file shapes, case-insensitive lookup, closest-match preference, degrading to "no attribution" on a missing or corrupt file |
+| `test_risk_matcher.py` | Both categories, that a mixer ends a trace and a sanctioned address does not, unknown categories dropped rather than guessed |
+| `test_graph_builder.py` | All four traversal brakes, both directions, seed-vs-deeper fetch failures, depth stability |
+| `test_ofac_import.py` | Chain assignment from OFAC's own idType, and that a Bitcoin address is skipped rather than misfiled |
+
+---
+
+## Deployment
+
+A single Docker image builds the frontend with Node and serves it from FastAPI, so
+the UI and API share one origin — no CORS, no second deployment, and no backend
+URL baked into the bundle.
+
+```bash
+docker build -t tracechain .
+docker run -p 8000:8000 --env-file backend/.env -v tracechain-data:/data tracechain
+```
+
+Then open <http://localhost:8000>. The same image runs on Railway, Fly, Render or
+any VM; `railway.json` adds a health check on `/health`. Mount a volume at `/data`
+so the case store survives a redeploy.
+
+**A note on hosting this publicly.** The free API tiers allow roughly three
+requests per second *across the whole deployment*, and one trace makes 12–60
+calls. Two people tracing at once will throttle each other, so a public instance
+is fine for evaluation and not for concurrent use.
 
 ---
 
@@ -364,8 +495,11 @@ tracechain/
 
 ## Upgrade path
 
+- **Bitcoin** — a different model entirely (UTXO rather than accounts), so it needs its own adapter rather than another entry in the chain registry.
 - **Postgres** — `models.py` uses SQLAlchemy, so it is a connection-string change.
 - **More chains** — `chain_data.py` is the only seam that knows where data comes from. Adding a chain needs three things: a transfer-history API (not just an RPC node), verified token contracts, and its own label file. Etherscan's **Lite plan ($49/mo)** unlocks Polygon, Arbitrum, Optimism, Base and Avalanche through the code already present — all of which have published labels.
-- **Tron (TRC-20)** — the dominant cash-out rail for Indian scam proceeds. Needs a TronGrid key and its own adapter, since Tron uses a different address format and value model.
 - **More label coverage** — the matcher is the only component that decides attribution, and it reads one JSON file per chain.
 - **Deposit-address clustering** — `match_directness` already exists as a separate scoring input so weaker inferred attributions score lower than exact matches.
+- **Cross-case correlation** — every trace is already stored, so finding reported addresses that converge on a shared intermediary is a query over the case table rather than new tracing machinery. This is what scales a reverse trace from one campaign to a national picture.
+- **Cross-asset following** — the sharpest remaining limitation. A launderer who swaps ETH for USDT at a DEX breaks the trail; detecting a deposit into a known router and resuming on the output asset would close it.
+- **PDF reports** — `report.py` already emits structured JSON and plain text, so this is a renderer, not new analysis.
