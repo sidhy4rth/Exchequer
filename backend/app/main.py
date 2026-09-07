@@ -263,6 +263,31 @@ def exchanges(chain: str | None = Query(None, description="ethereum or bsc")) ->
     }
 
 
+@app.get("/risk-labels")
+def risk_labels(chain: str | None = Query(None, description="ethereum, bsc or tron")) -> dict[str, Any]:
+    """What the sanctions and mixer screening covers.
+
+    The counterpart to /exchanges, and exposed for the same reason: without it
+    a trace reporting no sanctions hit is ambiguous between "nothing in this
+    trace is listed" and "this chain has no risk labels loaded at all". Those
+    two answers are very different and an investigator has to be able to tell
+    them apart.
+    """
+    try:
+        selected = config.get_chain(chain)
+    except config.UnknownChainError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    matcher = get_risk_matcher(selected.key)
+    return {
+        "chain": selected.key,
+        "chain_name": selected.name,
+        "count": len(matcher),
+        "counts_by_category": matcher.counts_by_category(),
+        "entities": matcher.entities,
+        "screened": len(matcher) > 0,
+    }
+
+
 @app.post("/trace")
 def trace(request: TraceRequest) -> dict[str, Any]:
     """Trace funds to or from a reported address.

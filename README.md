@@ -202,7 +202,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /trace/{case_id}` | Retrieve a stored case |
 | `GET /trace/{case_id}/report?format=text` | Downloadable report (`format=json` for structured) |
 | `GET /cases` | History of past traces |
-| `GET /exchanges?chain=bsc` | What that chain's label database covers |
+| `GET /exchanges?chain=bsc` | What that chain's exchange label database covers |
+| `GET /risk-labels?chain=bsc` | What that chain's sanctions/mixer screening covers |
 | `GET /health` | Liveness, plus per-chain readiness, assets and label counts |
 
 ---
