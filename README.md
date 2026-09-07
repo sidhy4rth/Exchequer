@@ -113,6 +113,15 @@ npm install
 npm run dev
 ```
 
+> **Building the UI to be served by FastAPI instead** (one origin, no Vite):
+> ```bash
+> cd frontend && VITE_API_BASE="" npm run build
+> ```
+> The empty base makes the bundle call `/health` and `/trace` directly. A plain
+> `npm run build` bakes in the dev-mode `/api` prefix, which only the Vite proxy
+> rewrites — served by FastAPI those calls return the SPA's own HTML and the UI
+> reports the backend as unreachable. The Dockerfile sets this variable already.
+
 Open **<http://localhost:5173>**.
 
 > Use `localhost`, not `127.0.0.1`. Vite binds to IPv6 `[::1]` by default, so `http://127.0.0.1:5173` will not connect. Run `npm run dev -- --host 127.0.0.1` if you need IPv4.
@@ -500,6 +509,7 @@ is fine for evaluation and not for concurrent use.
 |---|---|
 | `/health` shows `etherscan_key_configured: false` | `backend/.env` is missing or has no key. Copy `.env.example`, add the key, restart. |
 | Frontend says "Cannot reach the TraceChain backend" | The backend is not running on port 8000. Start it with `uvicorn app.main:app --reload`. |
+| The UI loads from port 8000 but every request fails | The bundle was built without `VITE_API_BASE`, so it calls `/api/health` while FastAPI serves `/health` — the request falls through to the SPA catch-all and returns HTML. Rebuild with `VITE_API_BASE="" npm run build`. Only affects a bundle served by FastAPI; the Vite dev server proxies `/api` and is unaffected. |
 | `http://127.0.0.1:5173` refuses to connect | Vite binds to IPv6. Use `http://localhost:5173`. |
 | Trace returns 429 | Provider rate limit. Wait a few seconds; reduce the hop count. |
 | BSC shows "unavailable" in the chain selector | `NODEREAL_API_KEY` is not set in `backend/.env`. Ethereum is unaffected. |
