@@ -38,11 +38,13 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ ./backend/
 COPY --from=frontend /build/dist ./frontend/dist
 
-# Case history lives on a mounted volume so it survives a redeploy. Without a
-# volume this still runs -- the store simply resets, which is fine for a demo
-# but would lose archived cases.
+# Case history lives at /data so a volume mounted there survives a redeploy.
+# Mount one from the platform (Railway rejects a Dockerfile VOLUME line and
+# expects its own volumes; `docker run -v` works the same). Without a volume
+# this still runs -- the store simply resets, which is fine for a demo but
+# would lose archived cases.
 ENV EXCHEQUER_DB_PATH=/data/exchequer.db
-VOLUME ["/data"]
+RUN mkdir -p /data
 
 WORKDIR /app/backend
 EXPOSE 8000
