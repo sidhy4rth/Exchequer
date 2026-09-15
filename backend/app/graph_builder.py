@@ -37,6 +37,18 @@ a deliberate, documented investigative choice, not an arbitrary cap:
         its answer, and those wallets have millions of transactions that would
         swamp the graph with noise.
 
+A fifth rule is about *when*, and it is a correctness rule rather than a
+brake. Money cannot be forwarded before it arrives. When the walk reaches an
+address at hop N, it knows the moment the traced funds landed there (the
+earliest transfer on the edge that brought them), and only transfers leaving
+at or after that moment can carry them. Anything the address sent earlier is
+its own prior business and is left out of the graph. Walking backwards the
+rule mirrors: only money that reached a sender at or before it paid the next
+hop can have funded that payment. Without this rule a wallet's unrelated
+history would be reported as the victim's money, which is exactly the kind
+of claim this tool must never make. The seed itself is not windowed: the
+trace starts there and does not know when the victim's funds arrived.
+
 The graph is a networkx.DiGraph. One edge per (sender -> recipient) pair,
 carrying the aggregate value plus the individual transactions, so pattern
 detection can look at the individual amounts later.
@@ -106,6 +118,9 @@ class TraceResult:
     truncation_reasons: list[str] = field(default_factory=list)
     terminal_addresses: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Transfers left out because they happened on the wrong side of the moment
+    # the traced funds passed through an address. See the module docstring.
+    transfers_excluded_by_time: int = 0
 
     @property
     def node_count(self) -> int:
@@ -239,6 +254,10 @@ def build_trace_graph(
 
     frontier: list[tuple[str, int]] = [(seed, 0)]
     visited: set[str] = {seed}
+    # When the traced funds passed through each address: the earliest arrival
+    # when walking out, the latest departure when walking back. Set when the
+    # address is first reached, read when it is expanded one level later.
+    window: dict[str, int] = {}
 
     # One level of the search at a time, so the addresses at a given depth can
     # be fetched together. See _fetch_level for why that matters.
@@ -287,10 +306,17 @@ def build_trace_graph(
                 if depth == 0:
                     raise error
                 # Deeper in, one unreachable address must not kill the whole
-                # trace: record it and carry on with the partial picture.
+                # trace: record it and carry on with the partial picture. It
+                # is also a truncation: everything past that address is
+                # missing, and the report must say so rather than present the
+                # partial graph as the complete picture.
                 logger.warning("Could not fetch %s: %s", address, error)
                 result.warnings.append(
                     f"Could not fetch transactions for {address}: {error}"
+                )
+                result.note_truncation(
+                    f"transactions of {address[:10]}... could not be fetched, so "
+                    "the graph beyond it is missing"
                 )
                 graph.nodes[address]["fetch_failed"] = True
                 continue
@@ -298,6 +324,21 @@ def build_trace_graph(
             graph.nodes[address]["expanded"] = True
             result.addresses_expanded += 1
             result.depth_reached = max(result.depth_reached, depth)
+
+            # Time rule: only transfers on the right side of the moment the
+            # traced funds passed through this address can carry them.
+            cutoff = window.get(address)
+            if cutoff:
+                before = len(transfers)
+                if direction == OUTGOING:
+                    transfers = [tx for tx in transfers if tx.timestamp >= cutoff]
+                    graph.nodes[address]["window_start"] = cutoff
+                else:
+                    transfers = [tx for tx in transfers if tx.timestamp <= cutoff]
+                    graph.nodes[address]["window_end"] = cutoff
+                excluded = before - len(transfers)
+                graph.nodes[address]["excluded_by_time"] = excluded
+                result.transfers_excluded_by_time += excluded
 
             grouped = _aggregate_by_counterparty(transfers, direction)
 
@@ -344,6 +385,23 @@ def build_trace_graph(
                     (address, counterparty) if direction == OUTGOING
                     else (counterparty, address)
                 )
+
+                # Record when the traced funds passed through the counterparty,
+                # for the time rule when it is expanded. The seed is never
+                # windowed: the trace starts there.
+                if counterparty != seed:
+                    stamps = [tx.timestamp for tx in txs if tx.timestamp > 0]
+                    if stamps:
+                        if direction == OUTGOING:
+                            arrived = min(stamps)
+                            window[counterparty] = min(
+                                window.get(counterparty, arrived), arrived
+                            )
+                        else:
+                            left = max(stamps)
+                            window[counterparty] = max(
+                                window.get(counterparty, left), left
+                            )
 
                 graph.add_edge(
                     source,
@@ -425,6 +483,11 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "total_in_native": round(data.get("total_in_native", 0.0), 6),
             "total_out_native": round(data.get("total_out_native", 0.0), 6),
             "activity_count": data.get("activity_count", 0),
+            # The time rule's working for this address: from when (or until
+            # when) its transfers were followed, and how many fell outside.
+            "window_start": data.get("window_start"),
+            "window_end": data.get("window_end"),
+            "excluded_by_time": data.get("excluded_by_time", 0),
             "flags": sorted(data.get("flags", [])),
         }
         for node, data in graph.nodes(data=True)

@@ -139,15 +139,39 @@ def _hop_proximity(depth: int, max_depth: int, direction: str = OUTGOING) -> Sco
     return ScoreComponent("hop_proximity", raw, WEIGHT_HOP_PROXIMITY, explanation)
 
 
+def principal_path(graph: nx.DiGraph, source: str, destination: str) -> list[str]:
+    """The route the attribution is read along, chosen the same way every time.
+
+    Among the shortest paths from `source` to `destination`, the one whose
+    narrowest hop carried the most value -- the path that could have moved the
+    most of the traced funds. networkx's own shortest_path picks one of several
+    equal-length routes by insertion order, which is arbitrary from an
+    investigator's point of view: a dust transfer that happens to reach the
+    same exchange could be the path the score and the report were read from.
+    Ties are broken by address order so the choice is reproducible.
+
+    Raises the same exceptions as nx.shortest_path when there is no route.
+    """
+    def bottleneck(path: list[str]) -> float:
+        return min(
+            graph.edges[path[i], path[i + 1]].get("value_native", 0.0)
+            for i in range(len(path) - 1)
+        ) if len(path) > 1 else 0.0
+
+    paths = list(nx.all_shortest_paths(graph, source, destination))
+    return min(paths, key=lambda p: (-bottleneck(p), p))
+
+
 def _amount_correlation(
     graph: nx.DiGraph, seed: str, exchange_address: str, native_symbol: str = "ETH",
     direction: str = OUTGOING,
 ) -> ScoreComponent:
     """Fraction of the value that survived the route between seed and exchange.
 
-    Measured along the shortest path, comparing the amount on the first hop
-    with the amount on the final hop. A high ratio means the money largely
-    survived the journey intact and is very likely the same money.
+    Measured along the principal path (see `principal_path`), comparing the
+    amount on the first hop with the amount on the final hop. A high ratio
+    means the money largely survived the journey intact and is very likely
+    the same money.
 
     The path is read the way the money moved, which depends on the direction
     of the trace: seed -> exchange when following funds out, exchange -> seed
@@ -167,7 +191,7 @@ def _amount_correlation(
         (seed, exchange_address) if direction == OUTGOING else (exchange_address, seed)
     )
     try:
-        path = nx.shortest_path(graph, source, destination)
+        path = principal_path(graph, source, destination)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         # Defensive: the matcher found the address in the graph, so a path
         # should exist. Score neutrally rather than inventing a number.
@@ -280,7 +304,7 @@ def score_case(
                 "point of purchase or withdrawal. The senders found are still "
                 "the substantive result of a reverse trace."
             ),
-            caveats=_caveats(findings, truncated, matched=False),
+            caveats=_caveats(findings, truncated, matched=False, asset=native_symbol),
         )
 
     components = [
@@ -310,12 +334,12 @@ def score_case(
         band=band,
         components=components,
         summary=summary,
-        caveats=_caveats(findings, truncated, matched=True),
+        caveats=_caveats(findings, truncated, matched=True, asset=native_symbol),
     )
 
 
 def _caveats(
-    findings: list[PatternFinding], truncated: bool, matched: bool
+    findings: list[PatternFinding], truncated: bool, matched: bool, asset: str = "ETH"
 ) -> list[str]:
     """Limitations a reader must know before acting on the score.
 
@@ -345,8 +369,9 @@ def _caveats(
             "customer identity, via a lawful request."
         )
     caveats.append(
-        "Only direct native-currency transfers are traced. Token (ERC-20 / "
-        "BEP-20) transfers, internal "
-        "contract transactions and bridges to other chains are not covered."
+        f"Only direct {asset} transfers were followed. Value that moved as a "
+        "different asset (for example after a swap into another token), "
+        "through an internal contract call, or across a bridge to another "
+        "chain is not covered."
     )
     return caveats

@@ -48,7 +48,7 @@ from .graph_builder import (
 from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .report import build_report, render_text_report
 from .risk_matcher import MIXER, SANCTIONED, get_risk_matcher
-from .scoring import score_case
+from .scoring import principal_path, score_case
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -161,11 +161,12 @@ def _trace_path(
 
     Always read in the direction the money moved, so a reverse trace's path
     runs from the exchange down to the reported address rather than being
-    printed backwards.
+    printed backwards. The same route the score was computed along, so the
+    report and the confidence working never describe two different paths.
     """
     source, destination = (seed, target) if direction == OUTGOING else (target, seed)
     try:
-        path = nx.shortest_path(graph, source, destination)
+        path = principal_path(graph, source, destination)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return []
 
@@ -522,6 +523,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "direct_senders": _direct_senders(graph, seed),
         "depth_reached": result.depth_reached,
         "addresses_expanded": result.addresses_expanded,
+        "transfers_excluded_by_time": result.transfers_excluded_by_time,
         "api_calls": result.api_calls,
         "truncated": result.truncated,
         "truncation_reasons": result.truncation_reasons,

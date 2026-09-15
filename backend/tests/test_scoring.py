@@ -71,6 +71,23 @@ def test_amount_correlation_compares_first_hop_with_last():
     assert _amount_correlation(graph, SEED, EXCHANGE).raw_value == pytest.approx(0.5)
 
 
+def test_amount_correlation_reads_the_route_that_could_have_carried_the_most():
+    """Two equal-length routes reach the exchange: one carried 100, one carried
+    a dust transfer. The score must be read along the 100, not along whichever
+    route networkx happened to find first."""
+    from app.scoring import principal_path
+
+    graph = make_graph(
+        [
+            (SEED, addr("d1"), 0.01), (addr("d1"), EXCHANGE, 0.01),
+            (SEED, addr("a1"), 100.0), (addr("a1"), EXCHANGE, 60.0),
+        ],
+        seed=SEED,
+    )
+    assert principal_path(graph, SEED, EXCHANGE) == [SEED, addr("a1"), EXCHANGE]
+    assert _amount_correlation(graph, SEED, EXCHANGE).raw_value == pytest.approx(0.6)
+
+
 def test_amount_correlation_is_neutral_when_no_path_exists():
     """Defensive: score neutrally rather than inventing a number."""
     graph = make_graph([(SEED, addr("a1"), 10.0), (addr("b2"), EXCHANGE, 5.0)], seed=SEED)
@@ -166,6 +183,17 @@ def test_native_symbol_reaches_the_explanation():
     result = score_case(graph, SEED, a_match(), max_depth=4, native_symbol="USDT")
     correlation = next(c for c in result.components if c.name == "amount_correlation")
     assert "USDT" in correlation.explanation
+
+
+def test_the_scope_caveat_names_the_asset_that_was_actually_traced():
+    """A USDT trace used to carry a caveat saying token transfers are not
+    covered -- a false statement in every stablecoin report."""
+    graph = make_graph([(SEED, EXCHANGE, 10.0)], seed=SEED)
+    result = score_case(graph, SEED, a_match(), max_depth=4, native_symbol="USDT")
+    scope = next(c for c in result.caveats if c.startswith("Only direct"))
+    assert "USDT" in scope
+    assert "not covered" in scope
+    assert "Token (ERC-20" not in scope
 
 
 # ---------------------------------------------------------------------------

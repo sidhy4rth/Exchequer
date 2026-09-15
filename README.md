@@ -223,11 +223,17 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 
 Both rules live in `backend/app/pattern_detection.py`, and every threshold is a named constant in one `PatternConfig` dataclass at the top. Each finding reports the thresholds it applied, so it can be re-checked by hand.
 
+### Before either rule: money cannot be forwarded before it arrives
+
+The traversal itself applies one rule about *when*. When the trace reaches a wallet, it knows the moment the traced funds landed there — the earliest transfer on the edge that brought them. Only transfers that wallet made **at or after** that moment can carry the victim's money, so anything it sent earlier is left out of the graph as the wallet's own prior business. Walking backwards the rule mirrors: only money a sender received **at or before** it paid the next hop can have funded that payment.
+
+Without this, a busy wallet that once received the victim's funds would have its entire earlier history reported as where the victim's money went. The reported address itself is not windowed, because the trace starts there and does not know when the victim's funds arrived. Every node in the response carries `window_start` (or `window_end` on a reverse trace) and `excluded_by_time`, and the total is reported as `transfers_excluded_by_time`, so the effect of the rule is visible rather than silent.
+
 ### Peel chain
 
 Stolen funds walked through a series of throwaway wallets, with a little skimmed off at each hop.
 
-1. Find wallets with exactly one source and one destination in the trace, appearing in **at most 3 transfers** (single-use).
+1. Find wallets with exactly one source and one destination *within the trace*, appearing in **at most 3 transfers** within it. (The trace only sees a wallet's transfers to and from the addresses it followed — see [Limitations](#limitations).)
 2. Join consecutive such wallets into a run; keep runs of **2 or more**.
 3. Amounts must **never grow** along the run (2% tolerance for gas noise).
 4. The run must **end lower than it started** — that is the "peel".
@@ -394,6 +400,12 @@ Stated plainly, and repeated in every exported report:
 - **BSC covers a recent window, not all history.** NodeReal caps one query at 100,000 blocks (~3.5 days), so history is walked backwards in windows — 500,000 blocks (~17 days) by default. Raise `NODEREAL_LOOKBACK_BLOCKS` to widen it, at proportionally more API calls. Ethereum has no such limit.
 - **An exchange match identifies where funds arrived, not who controls the account.** Only the exchange can link a deposit address to a customer identity, via a lawful request.
 - **The graph is a sample, not a complete picture.** Depth, fan-out and node limits mean funds may also have reached other exchanges along paths that were not expanded.
+- **The fan-out limit can be evaded on purpose.** Only the 10 highest-value counterparties of each address are followed. A launderer who splits funds into eleven or more parts knows the smallest will not be followed, and one who sends the real money as the eleventh-largest transfer defeats the walk. Raising `max_branches_per_node` narrows this at a geometric cost in API calls; it does not remove it.
+- **Only the most recent 200 transfers of each address are read** (`TRACE_MAX_TXS_PER_ADDRESS`). On a busy wallet, older transfers — including the one that carried the victim's money — may lie beyond that window and go unseen. The trace reports nothing when this happens because the provider does not say how many transfers were not returned.
+- **"Single-use" means single-use within the trace.** The peel-chain rule sees only a wallet's transfers to and from the addresses the trace followed. A wallet with one inbound and one outbound transfer *in the graph* may have hundreds of other transfers the trace never fetched, so a peel-chain finding is a statement about the shape of the traced path, not about the wallet's whole history.
+- **The amount-split rule has no time window and counts only followed branches.** It compares what a wallet received from the trace with what it sent onward at any later time, so a wallet that received funds and then, over months, paid three unrelated recipients has the same shape as one that fanned them out within the hour. And because only the top 10 counterparties are followed, the forwarded fraction is computed over those, never over the wallet's full outflow.
+- **Amount correlation is capped at 100%.** If 1 ETH left the reported address and 100 ETH later arrived at the exchange along the same route, the component scores 1.0, because all of the traced value could have arrived — but most of what reached the exchange was then somebody else's. The explanation text prints both figures so the dilution is visible; the number alone does not show it.
+- **The reported address is not time-windowed.** The trace does not know when the victim's funds arrived at the address they reported, so all of its outflows are followed, including any made before the fraud. Every later hop is windowed (see [Before either rule](#before-either-rule-money-cannot-be-forwarded-before-it-arrives)).
 - **Attribution is only as good as the label file.** A null result may mean the exchange is simply absent from it — check `GET /exchanges`.
 - **A trace stops at a mixer, and cannot resume past one.** This is deliberate rather than a gap to close: the link between a tumbler's deposits and its payouts does not exist in the transaction data, so no amount of further traversal could recover it.
 - **Screening covers the OFAC SDN list only.** An address absent from it is not thereby established as legitimate, and the designation carries no automatic force in Indian law — it is a lead and an escalation trigger, not a verdict.

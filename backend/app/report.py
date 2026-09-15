@@ -118,9 +118,23 @@ def _methodology(native_symbol: str = "ETH", direction: str = "outgoing") -> lis
             "highest-value sources followed first; dust transfers below a "
             "minimum threshold were excluded as spam."
         )
+    if direction == "outgoing":
+        timing = (
+            "At every address after the reported one, only transfers made at "
+            "or after the moment the traced funds arrived there were followed. "
+            "Money cannot be forwarded before it is received, so anything the "
+            "address sent earlier was left out of the graph."
+        )
+    else:
+        timing = (
+            "At every address before the reported one, only transfers received "
+            "at or before the moment it paid the next address were followed, "
+            "since only money already held could have funded that payment."
+        )
     return [
         walk,
         grouping,
+        timing,
         "Every address in the resulting graph was compared, by exact match, "
         "against a database of publicly labelled exchange wallets.",
         "Every address was also screened, by exact match, against digital "

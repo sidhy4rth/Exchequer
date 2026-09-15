@@ -191,6 +191,80 @@ def test_an_unreadable_address_deeper_in_degrades_to_a_warning():
     assert result.node_count == 2
     assert len(result.warnings) == 1
     assert result.graph.nodes[addr("a1")]["fetch_failed"] is True
+    # ...but the graph past that wallet is missing, and a report that did not
+    # say so would present a partial picture as the whole one.
+    assert result.truncated is True
+    assert any("could not be fetched" in r for r in result.truncation_reasons)
+
+
+# ---------------------------------------------------------------------------
+# The time rule: money cannot be forwarded before it arrives
+# ---------------------------------------------------------------------------
+def test_transfers_made_before_the_funds_arrived_are_not_followed():
+    """a1 received the traced funds at t=100. What it sent at t=50 was its own
+    prior money, and following it would report a stranger's payment as the
+    victim's."""
+    ledger = {
+        SEED: [tx(SEED, addr("a1"), 10.0, ts=100)],
+        addr("a1"): [
+            tx(addr("a1"), addr("b2"), 7.0, ts=50),    # before the funds arrived
+            tx(addr("a1"), addr("c3"), 7.0, ts=150),   # after
+        ],
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger))
+
+    assert addr("b2") not in result.graph
+    assert addr("c3") in result.graph
+    assert result.graph.nodes[addr("a1")]["window_start"] == 100
+    assert result.graph.nodes[addr("a1")]["excluded_by_time"] == 1
+    assert result.transfers_excluded_by_time == 1
+
+
+def test_a_transfer_in_the_same_second_as_the_arrival_is_followed():
+    """Funds can arrive and leave in one block; 'at or after' is the rule."""
+    ledger = {
+        SEED: [tx(SEED, addr("a1"), 10.0, ts=100)],
+        addr("a1"): [tx(addr("a1"), addr("b2"), 9.0, ts=100)],
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger))
+    assert addr("b2") in result.graph
+    assert result.transfers_excluded_by_time == 0
+
+
+def test_the_earliest_of_several_arrivals_opens_the_window():
+    """Two transfers brought funds in; anything after the first can carry them."""
+    ledger = {
+        SEED: [tx(SEED, addr("a1"), 4.0, ts=300), tx(SEED, addr("a1"), 6.0, ts=100)],
+        addr("a1"): [tx(addr("a1"), addr("b2"), 3.0, ts=200)],
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger))
+    assert addr("b2") in result.graph
+    assert result.graph.nodes[addr("a1")]["window_start"] == 100
+
+
+def test_the_seed_itself_is_never_windowed():
+    """The trace starts at the reported address and does not know when the
+    victim's funds reached it, so all of its outflows are in scope."""
+    ledger = {SEED: [tx(SEED, addr("a1"), 1.0, ts=10), tx(SEED, addr("b2"), 1.0, ts=900)]}
+    result = build_trace_graph(SEED, FakeClient(ledger))
+    assert {addr("a1"), addr("b2")} <= set(result.graph.nodes)
+    assert "window_start" not in result.graph.nodes[SEED]
+
+
+def test_a_reverse_trace_only_follows_money_that_was_already_there():
+    """d1 paid the seed at t=100. Funds d1 received at t=150 could not have
+    been what it paid with, so they are not the victim's money's origin."""
+    ledger = {
+        addr("d1"): [tx(addr("d1"), SEED, 5.0, ts=100)],
+        addr("a1"): [tx(addr("a1"), addr("d1"), 5.0, ts=150)],   # arrived after
+        addr("b1"): [tx(addr("b1"), addr("d1"), 5.0, ts=50)],    # already held
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger), direction=INCOMING)
+
+    assert addr("a1") not in result.graph
+    assert addr("b1") in result.graph
+    assert result.graph.nodes[addr("d1")]["window_end"] == 100
+    assert result.transfers_excluded_by_time == 1
 
 
 # ---------------------------------------------------------------------------

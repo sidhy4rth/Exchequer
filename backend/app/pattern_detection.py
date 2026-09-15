@@ -136,7 +136,9 @@ def _walk_chains(graph: nx.DiGraph, passthrough: set[str]) -> list[list[str]]:
     chains: list[list[str]] = []
     seen: set[str] = set()
 
-    for node in passthrough:
+    # Sorted so the findings come out in the same order in every process: a
+    # set of strings iterates in hash order, which Python randomises per run.
+    for node in sorted(passthrough):
         if node in seen:
             continue
 
