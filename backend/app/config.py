@@ -292,6 +292,15 @@ TRACE_CONCURRENCY: int = _int_env("TRACE_CONCURRENCY", 6)
 # it only against a paid plan, where the real ceiling is higher.
 ETHERSCAN_MIN_INTERVAL: float = float(os.getenv("ETHERSCAN_MIN_INTERVAL", "0.5"))
 
+# Whether an Ethereum native-currency trace also reads internal transactions
+# (value moved by a contract call: a multisig payout, a smart-contract wallet,
+# a bridge or router sending ETH). Etherscan serves these from a separate
+# endpoint, so it costs a second request per expanded address -- roughly
+# doubling a native trace's request count -- which is why it is a switch.
+ETHERSCAN_INCLUDE_INTERNAL: bool = (
+    os.getenv("ETHERSCAN_INCLUDE_INTERNAL", "true").strip().lower() not in ("0", "false", "no", "off")
+)
+
 # SQLite location. Relative paths resolve against backend/.
 _db_raw = os.getenv("TRACECHAIN_DB_PATH", "tracechain.db")
 DB_PATH: Path = Path(_db_raw) if Path(_db_raw).is_absolute() else BACKEND_DIR / _db_raw

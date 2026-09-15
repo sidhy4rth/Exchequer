@@ -27,7 +27,9 @@ def make_client(payload: dict, **kwargs) -> tuple[EtherscanClient, list]:
         # No spacing: these tests are about how many requests happen, not when.
         min_interval=0.0,
         client=httpx.Client(transport=transport),
-        **kwargs,
+        # Internal transactions are a second request per address by design;
+        # they have their own tests. These count the cache alone.
+        **{"include_internal": False, **kwargs},
     )
     return client, seen
 

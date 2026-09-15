@@ -459,7 +459,7 @@ To add one properly:
 Stated plainly, and repeated in every exported report:
 
 - **One asset per trace.** ETH, USDT and USDC are each traced separately. A swap at a labelled DEX router is now *detected* — the trace records what asset came back and tells you where to re-run — but it is not followed automatically, and a swap whose output is the native coin, a swap sent to a liquidity pool rather than a router, or a bridge to a chain TraceChain does not cover, still ends the trail.
-- **Internal contract transactions are not traced.** Value moved by a contract call rather than a direct transfer is invisible.
+- **Internal contract transactions are traced on Ethereum only, at double the request cost.** Value moved by a contract call — a multisig paying out, a smart-contract wallet, a router returning ETH — comes from Etherscan's separate `txlistinternal` endpoint, so a native ETH trace makes two requests per expanded address instead of one (`ETHERSCAN_INCLUDE_INTERNAL=false` turns it off). Measured on the demo traces: trace 3 gained 203 contract-moved transfers and 21 addresses; traces 1, 2 and 6 were unchanged; wall time rose from 15.5 s to 17.4 s because the extra requests overlap. Each such transfer is tagged `internal` and edges report `internal_tx_count`. On BSC and Tron, and on every token trace, contract-moved value is still invisible.
 - **BSC covers a recent window, not all history.** NodeReal caps one query at 100,000 blocks (~3.5 days), so history is walked backwards in windows — 500,000 blocks (~17 days) by default. Raise `NODEREAL_LOOKBACK_BLOCKS` to widen it, at proportionally more API calls. Ethereum has no such limit.
 - **An exchange match identifies where funds arrived, not who controls the account.** Only the exchange can link a deposit address to a customer identity, via a lawful request.
 - **The graph is a sample, not a complete picture.** Depth, fan-out and node limits mean funds may also have reached other exchanges along paths that were not expanded.
@@ -533,9 +533,14 @@ Every refusal costs a retry with exponential backoff, so asking faster returned
 *less* usable data than asking slower. `ETHERSCAN_MIN_INTERVAL` therefore
 defaults to **0.50s** -- the measured optimum, not the documented one.
 
+A native ETH trace now makes two requests per expanded address — `txlist` and
+`txlistinternal` — so the ~35 above is ~70 with internal transactions on (the
+default); the second request overlaps with the first, so wall time grows far
+less than request count. Token traces are unaffected.
+
 Since the ceiling is per *second* while the daily quota goes barely touched (a
-trace costs ~35 of 100,000 calls/day), the only lever that shortens a trace is
-making fewer requests. So responses are cached per credential for
+trace costs well under 100 of 100,000 calls/day), the only lever that shortens
+a trace is making fewer requests. So responses are cached per credential for
 `API_CACHE_TTL_SECONDS` (default 600). On-chain history is append-only, so a
 cached answer can lag the newest blocks but never contradict them -- traces are
 byte-identical warm and cold. The effect:

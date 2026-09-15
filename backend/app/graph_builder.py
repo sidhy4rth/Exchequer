@@ -430,6 +430,9 @@ def build_trace_graph(
                     target,
                     value_native=total_value,
                     tx_count=len(txs),
+                    # How many of those were moved by a contract call rather
+                    # than a signed transfer. Reported, not treated differently.
+                    internal_tx_count=sum(1 for tx in txs if tx.internal),
                     first_seen=min(tx.timestamp for tx in txs),
                     last_seen=max(tx.timestamp for tx in txs),
                     # Individual transfers, newest first -- pattern detection reads these.
@@ -439,6 +442,7 @@ def build_trace_graph(
                             "value_native": tx.value_native,
                             "timestamp": tx.timestamp,
                             "block_number": tx.block_number,
+                            "internal": tx.internal,
                         }
                         for tx in sorted(txs, key=lambda t: t.timestamp, reverse=True)
                     ],
@@ -526,6 +530,7 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "target": dst,
             "value_native": round(data.get("value_native", 0.0), 6),
             "tx_count": data.get("tx_count", 0),
+            "internal_tx_count": data.get("internal_tx_count", 0),
             "first_seen": data.get("first_seen"),
             "last_seen": data.get("last_seen"),
             "flags": sorted(data.get("flags", [])),

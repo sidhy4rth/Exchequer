@@ -82,14 +82,15 @@ wallets.
 ```
 0x536c4921d1aafde6a5cda882fb5ca046f3601c65
 ```
-Ethereum · ETH · 3 hops · **~16 seconds, 30 API calls**
+Ethereum · ETH · 3 hops · **~17 seconds, ~60 API calls**
 
 | | |
 |---|---|
-| Addresses traced | 57 |
+| Addresses traced | 73 (of which 21 reached only through contract-moved value) |
 | Exchange | **none matched** (a week ago: Binance at 0.65) |
-| Patterns | **peel chain** |
+| Patterns | **peel chain** + **amount split** |
 | Transfers excluded by the time rule | **393** |
+| Internal (contract-moved) transfers seen | 203 |
 
 On 4 September this trace reached Binance with confidence 0.65 and both
 patterns fired. On 15 September, with the time rule in place, it reaches no
@@ -101,8 +102,11 @@ transfers of that kind — money that was never the reported wallet's.
 Say this out loud. A tool that reports where the victim's money went has to
 be able to lose an attribution when the evidence does not support it, and
 this one did. The peel-chain finding remains: single-use wallets forwarding
-declining amounts in sequence. Switch to the Graph view for the fan-out from
-the reported address — 617 ETH across ten recipients.
+declining amounts in sequence. The amount split fires again once
+contract-moved value is read (203 internal transfers, invisible a week ago):
+a wallet in this graph fans funds out through a contract call, and the rule
+now sees it. Switch to the Graph view for the fan-out from the reported
+address — 617 ETH across ten recipients.
 
 ---
 

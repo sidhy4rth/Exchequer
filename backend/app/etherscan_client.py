@@ -119,10 +119,14 @@ class Transaction:
     # A trace follows one asset at a time, so this is what the graph is about.
     asset: str = ""
     contract_address: str | None = None  # None for native transfers
+    # True when the value was moved by a contract call (Etherscan's
+    # `txlistinternal`) rather than by a transaction the sender signed. The
+    # money moved just the same; the flag is kept so a report can say how.
+    internal: bool = False
 
     @classmethod
-    def from_api(cls, raw: dict[str, Any]) -> "Transaction | None":
-        """Build a Transaction from one Etherscan `txlist` record.
+    def from_api(cls, raw: dict[str, Any], internal: bool = False) -> "Transaction | None":
+        """Build a Transaction from one Etherscan `txlist` or `txlistinternal` record.
 
         Returns None if the record is unusable (missing/garbled fields) rather
         than raising, so one bad row cannot abort an entire trace.
@@ -141,6 +145,7 @@ class Transaction:
                 # Etherscan sets isError="1" on reverted txs. Those moved no
                 # funds, so laundering heuristics must ignore them.
                 is_error=str(raw.get("isError", "0")) == "1",
+                internal=internal,
             )
         except (TypeError, ValueError):
             logger.warning("Skipping malformed Etherscan tx record: %r", raw)
@@ -218,6 +223,7 @@ class EtherscanClient:
         contract_address: str | None = None,
         asset_symbol: str | None = None,
         client: httpx.Client | None = None,
+        include_internal: bool | None = None,  # None -> config.ETHERSCAN_INCLUDE_INTERNAL
     ) -> None:
         self.api_key = api_key if api_key is not None else config.ETHERSCAN_API_KEY
         self.chain_id = chain_id if chain_id is not None else config.ETHERSCAN_CHAIN_ID
@@ -232,6 +238,9 @@ class EtherscanClient:
             normalize_address(contract_address) if contract_address else None
         )
         self.asset_symbol = asset_symbol or "ETH"
+        self.include_internal = (
+            include_internal if include_internal is not None else config.ETHERSCAN_INCLUDE_INTERNAL
+        )
 
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout)
@@ -446,13 +455,33 @@ class EtherscanClient:
             # Etherscan occasionally returns a bare string on odd inputs.
             logger.warning("Unexpected %s result for %s: %r",
                            params["action"], address, result)
-            return []
+            result = []
 
         parse = (
             Transaction.from_token_api if self.contract_address else Transaction.from_api
         )
-        txs = [parse(raw) for raw in result]
-        return [tx for tx in txs if tx is not None]
+        txs = [tx for tx in (parse(raw) for raw in result) if tx is not None]
+
+        # Value moved by a contract call -- a multisig paying out, a
+        # smart-contract wallet, a router returning ETH -- never appears in
+        # txlist. It is a second endpoint and a second request; see
+        # config.ETHERSCAN_INCLUDE_INTERNAL for why that is a switch.
+        if not self.contract_address and self.include_internal:
+            internal_raw = self._request({**params, "action": "txlistinternal"})
+            if isinstance(internal_raw, list):
+                txs += [
+                    tx for tx in (Transaction.from_api(raw, internal=True) for raw in internal_raw)
+                    if tx is not None
+                ]
+            # Each source was capped at `offset` by its own request. The union
+            # is deliberately NOT capped again: measured on a busy demo wallet,
+            # trimming the merged list to the newest `offset` let a burst of
+            # recent internal inflows displace the older signed outflows the
+            # trace was actually following, and the graph shrank from 31
+            # addresses to 6.
+            txs.sort(key=lambda t: t.timestamp, reverse=(sort == "desc"))
+
+        return txs
 
     def get_outgoing_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
         """Only the transfers *sent by* `address` that actually moved value.
