@@ -35,6 +35,7 @@ from .etherscan_client import (
     is_valid_address,
     normalize_address,
 )
+from .correlation import correlate
 from .deposit_inference import describe as describe_inference, infer_deposit_addresses
 from .exchange_matcher import ExchangeMatcher, get_matcher, get_router_matcher
 from .swap_detection import describe as describe_swap, detect_swaps
@@ -631,6 +632,35 @@ def cases(limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
     """History of past traces, most recent first."""
     records = models.list_cases(limit=limit)
     return {"count": len(records), "cases": [c.summary() for c in records]}
+
+
+@app.get("/cases/correlate")
+def cases_correlate(
+    case_id: str | None = Query(None, description="only clusters that include this case"),
+    min_cases: int = Query(2, ge=2, le=50),
+) -> dict[str, Any]:
+    """Intermediary addresses shared by two or more stored cases.
+
+    The campaign view: separate complaints whose traced funds converge on the
+    same unlabelled wallet or the same inferred deposit address. A query over
+    what is already stored -- no new tracing, no API calls. Labelled exchange
+    wallets, routers and sanctioned entities are never counted as shared
+    intermediaries: two victims who both cashed out at Binance share a bank,
+    not an offender.
+    """
+    records = models.all_cases()
+    clusters = correlate(records, only_case=case_id, min_cases=min_cases)
+    return {
+        "cases_examined": len(records),
+        "cluster_count": len(clusters),
+        "clusters": clusters,
+        "rule": (
+            "An intermediary is any address in a stored trace other than the "
+            "reported address and other than a labelled exchange wallet, DEX router "
+            "or sanctioned entity. A cluster is an intermediary reached by traces "
+            f"of at least {min_cases} different reported addresses on the same chain."
+        ),
+    }
 
 
 # ---------------------------------------------------------------------------

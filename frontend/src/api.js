@@ -81,6 +81,16 @@ export async function fetchCases(limit = 20) {
   return response.json()
 }
 
+/**
+ * Stored cases whose traced funds passed through the same intermediary as
+ * `caseId`. A query over the case store, so it never touches the chain.
+ */
+export async function fetchRelatedCases(caseId) {
+  const response = await fetch(`${BASE}/cases/correlate?case_id=${encodeURIComponent(caseId)}`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
 export async function fetchHealth() {
   const response = await fetch(`${BASE}/health`)
   if (!response.ok) throw await toError(response)

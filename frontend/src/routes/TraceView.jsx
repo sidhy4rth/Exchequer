@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { fetchCase, traceAddress } from '../api'
+import { fetchCase, fetchRelatedCases, traceAddress } from '../api'
 import GraphView from '../components/GraphView'
 import ExportButton from '../components/ExportButton'
 
@@ -37,6 +37,17 @@ export default function TraceView() {
   const requestedDirection = params.get('direction') || 'outgoing'
 
   const [result, setResult] = useState(null)
+  // Stored cases that share an intermediary with this one. Loaded after the
+  // trace, from the case store only; a failure here must not disturb the trace.
+  const [related, setRelated] = useState([])
+  useEffect(() => {
+    if (!result?.case_id) { setRelated([]); return }
+    let cancelled = false
+    fetchRelatedCases(result.case_id)
+      .then((r) => { if (!cancelled) setRelated(r.clusters || []) })
+      .catch(() => { if (!cancelled) setRelated([]) })
+    return () => { cancelled = true }
+  }, [result?.case_id])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState('feed')
@@ -341,6 +352,45 @@ export default function TraceView() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {related.length > 0 && (
+            <div className="rail-block">
+              <span className="micro">Related cases · {related.length}</span>
+              <p className="empty" style={{ marginBottom: 10 }}>
+                Stored traces of <em>other</em> reported addresses passed through the
+                same intermediary wallet as this one. Exchange hot wallets are never
+                counted: two victims who cashed out at the same exchange share a
+                bank, not an offender.
+              </p>
+              {related.slice(0, 8).map((c) => (
+                <div className="risk" key={`${c.chain}-${c.address}`}>
+                  <div className="top">
+                    <span className="nm">
+                      {c.inferred_exchange
+                        ? `Probable ${c.inferred_exchange} deposit address`
+                        : 'Shared intermediary'}
+                    </span>
+                    <span className="st">{c.reported_addresses.length} reported addresses</span>
+                  </div>
+                  <div className="wallet">{c.address}</div>
+                  {c.cases
+                    .filter((k) => k.case_id !== result.case_id)
+                    .map((k) => (
+                      <div className="desc" key={k.case_id}>
+                        <a href={`/case/${k.case_id}`}>{k.reported_address}</a>
+                        {' · '}{num(k.value_in_native)} {k.asset} at {k.depth} hop{k.depth === 1 ? '' : 's'}
+                      </div>
+                    ))}
+                </div>
+              ))}
+              {related.length > 8 && (
+                <p className="empty" style={{ marginTop: 8 }}>
+                  …and {related.length - 8} more shared intermediaries. The full list is
+                  at <code>GET /cases/correlate?case_id={result.case_id}</code>.
+                </p>
+              )}
             </div>
           )}
 

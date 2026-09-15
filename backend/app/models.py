@@ -120,6 +120,20 @@ def get_case(case_id: str) -> Case | None:
         return case
 
 
+def all_cases(limit: int = 2000) -> list[Case]:
+    """Every stored case with its full result, newest first, for correlation.
+
+    Bounded so a long-running instance cannot be asked to load an unbounded
+    table into memory; 2,000 traces is far more than a demo or a pilot holds.
+    """
+    with Session(_engine) as session:
+        stmt = select(Case).order_by(Case.created_at.desc()).limit(limit)
+        cases = list(session.scalars(stmt))
+        for case in cases:
+            session.expunge(case)
+        return cases
+
+
 def list_cases(limit: int = 50) -> list[Case]:
     """Most recent cases first."""
     with Session(_engine) as session:

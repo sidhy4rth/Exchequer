@@ -213,6 +213,7 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /trace/{case_id}` | Retrieve a stored case |
 | `GET /trace/{case_id}/report?format=text` | Downloadable report (`format=json` for structured) |
 | `GET /cases` | History of past traces |
+| `GET /cases/correlate` | Intermediary addresses shared by two or more stored cases — the campaign view. `?case_id=` narrows it to one case; see [Cross-case correlation](#cross-case-correlation) |
 | `GET /exchanges?chain=bsc` | What that chain's exchange label database covers |
 | `GET /risk-labels?chain=bsc` | What that chain's sanctions/mixer screening covers |
 | `GET /health` | Liveness, plus per-chain readiness, assets and label counts |
@@ -292,6 +293,20 @@ Three weighted components. The score is a plain function of these three inputs a
 **No exchange match scores 0.0 and reports "no attribution"** — never a low-but-nonzero number that might get over-read.
 
 Detected laundering patterns and truncated traversals are reported as **caveats** rather than folded into the number, so the score stays reproducible and an investigator is never quietly nudged by a hidden adjustment.
+
+---
+
+## Cross-case correlation
+
+One complaint gives one trace. The problem statement's actual ask is the campaign: many complaints whose money converges on the same wallets. Every trace is stored with its full graph, so `GET /cases/correlate` is a query over what has already been traced — no new API calls, no new tracing, and it answers in milliseconds.
+
+The rule, in plain terms. For every stored case, the *intermediaries* are the addresses in its graph other than the reported address and other than anything with a label of its own — an exchange hot wallet, a DEX router, a sanctioned entity. An intermediary reached by traces of **two or more different reported addresses on the same chain** is a point of convergence, and is returned with the cases that reach it, how far from each reported address it sits, and how much of each case's traced value arrived there. Inferred deposit addresses count and are named as such, because a request to the exchange can then ask about one address on behalf of several complaints. Exchange hot wallets are excluded on purpose: two victims whose money both ended at Binance 14 share a bank, not an offender. The same wallet traced twice is one complaint, not two.
+
+The trace view shows a **Related cases** panel whenever the case just traced shares an intermediary with a stored one, ranked by how many complaints converge, then probable deposit addresses first, then by value.
+
+What it showed on 15 September 2026: three wallets carrying Etherscan's *Phish / Hack* label (`0x000000000532…`, `0x0000000009324…`, `0x00000000bf02…`) share **61 intermediaries**, four of them inferred Binance deposit addresses — the shape of one operation run from several wallets, which three separate complaints would never have shown.
+
+The way it can mislead, stated plainly: the rule can only exclude what the label files know. An unlabelled *public contract* — the Beacon Deposit Contract, a liquid-staking pool, a bridge — is reached by many unrelated traces and appears as a "shared intermediary" with a very large value. Read a cluster with its amounts: money converging on a wallet in sums comparable to the traced values is a lead; a wallet receiving 130,000 ETH inside one trace is a service. The cure is a label for that service, added the way every other label is added.
 
 ---
 

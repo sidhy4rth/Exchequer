@@ -261,6 +261,31 @@ value. If asked why this matters more than the Ethereum demos: TRM Labs put
 
 ---
 
+## 10 — New: three complaints, one operation
+
+```
+0x000000000532b45f47779fce440748893b257865
+```
+Ethereum · ETH · 3 hops · **~15 seconds** (then open the stored case)
+
+| | |
+|---|---|
+| Addresses traced | 76 |
+| Attribution | Binance — probable deposit address (inferred) `0x11b07437…c4663`, 2 hops, confidence 0.74 |
+| **Related cases** | **61 shared intermediaries** with two other stored traces (`0x0000000009324…`, `0x00000000bf02…`), four of them inferred Binance deposit addresses |
+
+All three reported addresses carry Etherscan's *Phish / Hack* label, and all
+three were traced separately. The *Related cases* panel shows that their money
+passes through the same 61 wallets — the same amounts at the same hops — which
+is what one operation run from several wallets looks like, and what three
+separate complaints would never have shown. Say the line: this is a query over
+cases already traced; it costs no API call. Then say the caveat the README
+states: the rule excludes what the label files know, so an unlabelled public
+contract can appear as a "shared intermediary" too — read a cluster with its
+amounts.
+
+---
+
 ## Running order
 
 Trace 1, then 2, then 3. The story escalates: nothing found → something odd

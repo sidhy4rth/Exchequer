@@ -9,6 +9,7 @@
 - **Phase 3.** JUDGE_QA.md, DEMO.md re-verified, this file.
 - **Phase 4, swaps at DEX routers.** 20 Ethereum and 4 BSC routers imported by script and bytecode-verified; a transfer into one stops the trace, the receipt is read, and the edge carries `swap{router, asset_in, amount_in, asset_out, amount_out, tx}`. The response and report say what the money became and where to re-run. Detection only — the trace is not resumed on the output asset, because amount correlation across two assets has no defensible definition yet. Verified on a real 2,000 ETH → wstETH swap.
 - **Phase 5, Tron labels.** The seeder now pages TronScan's largest USDT-TRC20 holders and TRX accounts, keeps only tags naming a known exchange, and verifies each on chain (no bytecode, inbound value > 0): 7 labels / 4 exchanges → **40 / 18**, 0 rejected. No Indian exchange is tagged by TronScan among the 900 largest accounts; stated in the README. Verified end to end on a live USDT-TRC20 trace to Binance-Hot 7.
+- **Phase 6, cross-case correlation.** `GET /cases/correlate`: unlabelled intermediaries (and inferred deposit addresses) reached by two or more different reported addresses, same chain, with cases, depths and values; a *Related cases* panel in the trace view. Three phishing-labelled wallets were found to share 61 intermediaries. Caveat documented: unlabelled public contracts (the Beacon Deposit Contract) show up as shared intermediaries because no label file knows them.
 
 ## What was measured
 
@@ -28,7 +29,7 @@
 
 ## Left undone, and why
 
-- Swap *resumption* on the output asset (Phase 4 ships detection only). Phases 6–8 (cross-case correlation, internal transactions, investigator's report) were ordered after the mandatory Q&A; see NOTES.md for what, if anything, was started.
+- Swap *resumption* on the output asset (Phase 4 ships detection only). Phases 7–8 (internal transactions, investigator's report) were ordered after the mandatory Q&A; see NOTES.md for what, if anything, was started.
 - Swaps whose output is the native coin, or whose transfer lands on a liquidity pool rather than a router, are not recognised; PancakeSwap and SunSwap routers have no scripted label source in the pinned dataset.
 - No Tron or BSC validation: no scripted source of Tron *controls* with provenance was found, and the brief forbids hand-typed addresses.
 - FATF's own documents could not be fetched (HTTP 403); they are cited through a labelled secondary source.
