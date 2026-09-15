@@ -36,7 +36,7 @@ from typing import Any
 
 import networkx as nx
 
-from .exchange_matcher import ExchangeMatch
+from .exchange_matcher import INFERRED_DEPOSIT, ExchangeMatch
 from .graph_builder import OUTGOING
 from .pattern_detection import PatternFinding
 
@@ -246,12 +246,26 @@ def _amount_correlation(
 def _match_directness(match: ExchangeMatch) -> ScoreComponent:
     """Exact hot-wallet match vs. a weaker attribution.
 
-    Today every match is an exact lookup against the labelled database, so this
-    scores 1.0. The component exists as a distinct, weighted input because the
-    upgrade path (clustering, deposit-address inference) will produce weaker
-    attributions, and those must score lower rather than being silently blended
-    in with exact matches.
+    An exact lookup against the labelled database scores 1.0. An inferred
+    deposit address (deposit_inference.py) scores 0.5, so at the same distance
+    it always scores 0.125 below a labelled hot wallet. It sits one hop closer
+    than the hot wallet it sweeps to, which hop proximity rewards by 0.1 at
+    the default depth, so against that particular wallet the two come out
+    within a few hundredths of each other -- the report shows both.
     """
+    if match.wallet_type == INFERRED_DEPOSIT:
+        e = match.evidence or {}
+        return ScoreComponent(
+            "match_directness",
+            0.5,
+            WEIGHT_MATCH_DIRECTNESS,
+            f"Inferred, not labelled: {match.address} is not in the attribution "
+            f"database. It is called a probable {match.exchange} deposit address "
+            f"because every one of its {e.get('sweep_count')} outgoing transfers "
+            f"went to the labelled {match.exchange} wallet "
+            f"{e.get('sweep_destination')} and nowhere else. Only "
+            f"{match.exchange} can confirm this.",
+        )
     if match.wallet_type in ("hot_wallet", "cold_wallet"):
         raw = 1.0
         explanation = (

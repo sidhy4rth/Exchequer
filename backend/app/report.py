@@ -57,6 +57,12 @@ def build_report(case: Case) -> dict[str, Any]:
             "exchange": result.get("exchange"),
             "exchange_address": result.get("exchange_address"),
             "exchange_wallet_label": result.get("exchange_label"),
+            # An inferred attribution names a probable deposit address, not a
+            # labelled wallet; the notes carry the evidence and what would
+            # confirm it.
+            "inferred": result.get("attribution_inferred", False),
+            "inferred_deposit_addresses": result.get("inferred_deposits", []),
+            "inference_notes": result.get("inference_notes", []),
             "hop_count": result.get("hop_count"),
             "value_received_native": result.get("value_received_native"),
             "value_currency": native_symbol,
@@ -193,10 +199,16 @@ def render_text_report(report: dict[str, Any]) -> str:
         add(f"Wallet           : {attribution['exchange_address']}")
         if attribution.get("exchange_wallet_label"):
             add(f"Wallet label     : {attribution['exchange_wallet_label']}")
+        if attribution.get("inferred"):
+            add("Basis            : INFERRED from the wallet's behaviour, not a label-file match")
         add(f"Hops from source : {attribution['hop_count']}")
         if attribution.get("value_received_native") is not None:
             label = "Value received  " if direction == "outgoing" else "Value sent      "
             add(f"{label} : {attribution['value_received_native']} {symbol}")
+        for note in attribution.get("inference_notes") or []:
+            add("")
+            for line in _wrap(note):
+                add(line)
     elif direction == "outgoing":
         add("No known exchange wallet was reached within the traced depth.")
         add("This does not establish that the funds were not cashed out.")

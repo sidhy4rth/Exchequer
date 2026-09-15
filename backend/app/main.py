@@ -35,6 +35,7 @@ from .etherscan_client import (
     is_valid_address,
     normalize_address,
 )
+from .deposit_inference import describe as describe_inference, infer_deposit_addresses
 from .exchange_matcher import ExchangeMatcher, get_matcher
 from .graph_builder import (
     INCOMING,
@@ -367,6 +368,19 @@ def trace(request: TraceRequest) -> dict[str, Any]:
                 is_terminal=lambda a: matcher.is_exchange(a) or risk_matcher.is_terminal(a),
                 direction=direction,
             )
+            # Attribution. Exact label-file matches first, then addresses whose
+            # outgoing history is nothing but sweeps into one of those labelled
+            # wallets -- inferred deposit addresses. The inference runs while
+            # the provider is still open so it can record the address's
+            # current balance as evidence (forward traces only: a reverse
+            # trace fetches inflows, and the rule reads outflows).
+            matches = matcher.annotate(result.graph, direction)
+            inferred = []
+            if direction == OUTGOING:
+                inferred = infer_deposit_addresses(
+                    result.graph, matcher,
+                    balance_of=getattr(client, "get_balance_native", None),
+                )
     except UnknownAssetError as exc:
         # Edge case: the request named an asset this chain does not carry.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -398,8 +412,10 @@ def trace(request: TraceRequest) -> dict[str, Any]:
 
     graph = result.graph
 
-    # Attribution, patterns, score.
-    matches = matcher.annotate(graph, direction)
+    # Patterns, score. An inferred deposit address one hop before the hot
+    # wallet is the address a lawful request must name, so it leads when it
+    # is closer; a label-file match wins any tie.
+    matches = matches + inferred
     primary = ExchangeMatcher.primary_match(matches)
     # Sanctions / mixer screening. Runs after exchange annotation so a node
     # that is somehow on both lists keeps both sets of tags.
@@ -503,6 +519,12 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "message": message,
         "exchange_address": primary.address if primary else None,
         "exchange_label": primary.label if primary else None,
+        # True when the attribution names an inferred deposit address rather
+        # than a label-file wallet. The evidence is in `matches` and the
+        # sentence in `inference_notes`.
+        "attribution_inferred": bool(primary and primary.inferred),
+        "inferred_deposits": [m.to_dict() for m in inferred],
+        "inference_notes": [describe_inference(m, asset_symbol) for m in inferred],
         "value_received_native": (
             round(primary.value_received_native, 6) if primary else None
         ),

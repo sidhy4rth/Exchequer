@@ -277,7 +277,11 @@ export default function TraceView() {
               {result?.exchange ? (
                 <>
                   <div className="name">{result.exchange}</div>
-                  <div className="wallet">{result.exchange_label}</div>
+                  <div className="wallet">
+                    {result.attribution_inferred
+                      ? `Probable ${result.exchange} deposit address (inferred — see evidence)`
+                      : result.exchange_label}
+                  </div>
                   <div className="wallet">{result.exchange_address}</div>
                   <div style={{ marginTop: 14 }}>
                     <div className="kv">

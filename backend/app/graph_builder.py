@@ -328,6 +328,25 @@ def build_trace_graph(
             result.addresses_expanded += 1
             result.depth_reached = max(result.depth_reached, depth)
 
+            # What this address does with money in general, from its complete
+            # fetched outgoing history -- recorded before the time rule trims
+            # the list, because deposit-address inference asks about the
+            # wallet's behaviour, not about the traced funds.
+            if direction == OUTGOING:
+                outflows: dict[str, dict] = {}
+                for tx in transfers:
+                    if not tx.to_address:
+                        continue
+                    stats = outflows.setdefault(
+                        tx.to_address, {"count": 0, "total": 0.0, "first": None, "last": None}
+                    )
+                    stats["count"] += 1
+                    stats["total"] += tx.value_native
+                    if tx.timestamp:
+                        stats["first"] = min(stats["first"] or tx.timestamp, tx.timestamp)
+                        stats["last"] = max(stats["last"] or tx.timestamp, tx.timestamp)
+                graph.nodes[address]["outflows_by_counterparty"] = outflows
+
             # Time rule: only transfers on the right side of the moment the
             # traced funds passed through this address can carry them.
             cutoff = window.get(address)
@@ -483,6 +502,9 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "risk_category": data.get("risk_category"),
             "risk_entity": data.get("risk_entity"),
             "risk_label": data.get("risk_label"),
+            # Set by deposit_inference when the address's outgoing history is
+            # nothing but sweeps into one labelled exchange wallet.
+            "inferred_exchange": data.get("inferred_exchange"),
             "total_in_native": round(data.get("total_in_native", 0.0), 6),
             "total_out_native": round(data.get("total_out_native", 0.0), 6),
             "activity_count": data.get("activity_count", 0),

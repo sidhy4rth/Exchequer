@@ -33,6 +33,11 @@ from .graph_builder import OUTGOING
 
 logger = logging.getLogger(__name__)
 
+# The wallet_type of an attribution that was inferred from an address's
+# behaviour (deposit_inference.py) rather than read from a label file. Scoring
+# treats it as weaker, and the report says so.
+INFERRED_DEPOSIT = "inferred_deposit"
+
 
 @dataclass(frozen=True)
 class ExchangeMatch:
@@ -48,16 +53,26 @@ class ExchangeMatch:
     # sits upstream and has no inbound edges, so it is what the wallet sent
     # into the trace. Summing the wrong side would report a confident 0.
     value_received_native: float
+    # Present only on an inferred match: everything the inference looked at.
+    evidence: dict[str, Any] | None = None
+
+    @property
+    def inferred(self) -> bool:
+        return self.wallet_type == INFERRED_DEPOSIT
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "address": self.address,
             "exchange": self.exchange,
             "label": self.label,
             "wallet_type": self.wallet_type,
             "depth": self.depth,
             "value_received_native": round(self.value_received_native, 6),
+            "inferred": self.inferred,
         }
+        if self.evidence is not None:
+            out["evidence"] = self.evidence
+        return out
 
 
 class ExchangeMatcher:
@@ -189,11 +204,12 @@ class ExchangeMatcher:
         Rule: the exchange reached in the fewest hops from the victim's
         address. Rationale -- the shortest path is the least diluted by
         intermediate mixing, so it is the strongest attribution. Ties are
-        broken by the larger value received.
-
-        `annotate` already sorts by exactly that key, so this is the head.
+        broken by preferring a label-file match over an inferred one, then by
+        the larger value received.
         """
-        return matches[0] if matches else None
+        if not matches:
+            return None
+        return min(matches, key=lambda m: (m.depth, m.inferred, -m.value_received_native))
 
 
 @lru_cache(maxsize=None)
