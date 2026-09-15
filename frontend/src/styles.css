@@ -327,17 +327,6 @@ a { color: var(--navy); }
 .status .dot.down { background: var(--red); }
 .status .n { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); font-size: 11.5px; }
 
-.demos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.demo {
-  display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left;
-  padding: 11px 12px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r);
-  cursor: pointer; font-weight: 400; min-height: 138px;
-}
-.demo:hover { border-color: var(--navy); background: var(--panel); }
-.demo .n { font-family: var(--mono); font-size: 10.5px; color: var(--faint); letter-spacing: 0.08em; }
-.demo .t { font-weight: 600; font-size: 13px; line-height: 1.3; }
-.demo .h { font-size: 11.5px; color: var(--muted); line-height: 1.45; flex: 1; }
-.demo .m { display: flex; gap: 5px; flex-wrap: wrap; }
 
 .coverage { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .coverage table, .cases-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -359,7 +348,6 @@ a { color: var(--navy); }
   .finding { grid-template-columns: 1fr 1fr; }
   .finding .send { grid-column: 1 / -1; }
   .split { grid-template-columns: minmax(0, 1fr) 340px; }
-  .demos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .coverage { grid-template-columns: 1fr; }
   .intake { grid-template-columns: 1fr; }
 }
@@ -373,3 +361,9 @@ a { color: var(--navy); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* One of the ten verified DEMO.md traces, loaded into the form rather than run
+   from a card: the demo goes through the same button a real address does. */
+.examples { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.examples label { white-space: nowrap; }
+.examples select { flex: 1; min-width: 0; max-width: 560px; }

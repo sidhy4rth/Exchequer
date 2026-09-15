@@ -95,6 +95,16 @@ export default function Home() {
     navigate(`/trace/${addr}?${q}`)
   }, [navigate, chain, asset, depth, direction])
 
+  // Fill the form from one of the verified DEMO.md traces. The trace is not
+  // started: the officer still presses the same button they would for a real
+  // address, so the demo path and the real path are the same path.
+  function loadDemo(n) {
+    const d = DEMOS.find((x) => x.n === n)
+    if (!d) return
+    setChain(d.chain); setAsset(d.asset); setDepth(d.depth); setDirection(d.direction)
+    setAddress(d.address); setTouched(false)
+  }
+
   function submit(event) {
     event.preventDefault()
     setTouched(true)
@@ -147,6 +157,17 @@ export default function Home() {
                     {direction === 'outgoing' ? 'Trace' : 'Trace back'}
                   </button>
                 </div>
+                <div className="examples">
+                  <label htmlFor="example">Load a verified example</label>
+                  <select id="example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
+                    <option value="">Choose one of the ten traces in DEMO.md…</option>
+                    {DEMOS.map((d) => (
+                      <option key={d.n} value={d.n} title={d.hook}>
+                        {d.n} · {d.title} · {d.chain === 'tron' ? 'Tron' : 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {showInvalid && (
                   <div className="banner warn">
                     Not a valid {active?.name ?? 'wallet'} address — expected {family === 'tron' ? 'T followed by 33 Base58 characters' : '0x followed by 40 hexadecimal characters'}.
@@ -178,28 +199,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section>
-          <div className="card">
-            <div className="head"><span className="micro">Verified demonstrations · DEMO.md</span><span className="note">each opens a live trace; numbers measured cold on 15 September 2026</span></div>
-            <div className="body">
-              <div className="demos">
-                {DEMOS.map((d) => (
-                  <button key={d.n} type="button" className="demo" onClick={() => open(d.address, d)} disabled={backendDown} title={d.address}>
-                    <span className="n">DEMO {d.n}</span>
-                    <span className="t">{d.title}</span>
-                    <span className="h">{d.hook}</span>
-                    <span className="m">
-                      <span className="pill">{d.chain === 'tron' ? 'Tron' : 'Ethereum'}</span>
-                      <span className="pill mono">{d.asset}</span>
-                      <span className="pill mono">{d.depth} hop{d.depth === 1 ? '' : 's'}</span>
-                      {d.direction === 'incoming' && <span className="pill navy">reverse</span>}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
 
         <section className="coverage">
           <div className="card">
