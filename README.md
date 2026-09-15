@@ -211,7 +211,7 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | Endpoint | Purpose |
 |---|---|
 | `GET /trace/{case_id}` | Retrieve a stored case |
-| `GET /trace/{case_id}/report?format=text` | Downloadable report (`format=json` for structured) |
+| `GET /trace/{case_id}/report?format=text` | The investigator's report (`format=json` for structured) — header with the tool version from `git describe`, a one-paragraph plain-English summary, the finding and its basis (label match or inference), the path hop by hop with amounts, times and hashes, every pattern with the thresholds it applied, every inferred address with its evidence and what would confirm it, the limitations, and an appendix of every address and transaction hash so anything in it can be re-checked on a public explorer. Cases traced before 15 September 2026 lack the stored hashes and say so |
 | `GET /cases` | History of past traces |
 | `GET /cases/correlate` | Intermediary addresses shared by two or more stored cases — the campaign view. `?case_id=` narrows it to one case; see [Cross-case correlation](#cross-case-correlation) |
 | `GET /exchanges?chain=bsc` | What that chain's exchange label database covers |

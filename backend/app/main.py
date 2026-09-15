@@ -187,8 +187,33 @@ def _trace_path(
             edge = graph.edges[path[i - 1], node]
             step["value_native"] = round(edge.get("value_native", 0.0), 6)
             step["tx_count"] = edge.get("tx_count", 0)
+            step["first_seen"] = edge.get("first_seen")
+            step["last_seen"] = edge.get("last_seen")
+            step["tx_hashes"] = [t.get("hash") for t in edge.get("transactions", [])][:20]
         steps.append(step)
     return steps
+
+
+def _all_transfers(graph: nx.DiGraph) -> list[dict[str, Any]]:
+    """Every individual transfer in the trace, for the report's appendix.
+
+    Kept out of `graph`, which the frontend draws as aggregate edges, and
+    stored with the case so that anything the report says can be re-checked
+    on a public explorer months later without re-tracing.
+    """
+    rows: list[dict[str, Any]] = []
+    for src, dst, data in graph.edges(data=True):
+        for tx in data.get("transactions", []):
+            rows.append({
+                "hash": tx.get("hash"),
+                "from": src,
+                "to": dst,
+                "value_native": round(tx.get("value_native", 0.0), 6),
+                "timestamp": tx.get("timestamp"),
+                "internal": bool(tx.get("internal", False)),
+            })
+    rows.sort(key=lambda r: (r["timestamp"] or 0, r["hash"] or ""))
+    return rows
 
 
 def _hops_covered(graph: nx.DiGraph) -> int:
@@ -575,6 +600,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         # Only populated on a reverse trace: the seed has no inbound edges when
         # the walk ran outward.
         "direct_senders": _direct_senders(graph, seed),
+        "transfers": _all_transfers(graph),
         "depth_reached": result.depth_reached,
         "addresses_expanded": result.addresses_expanded,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,

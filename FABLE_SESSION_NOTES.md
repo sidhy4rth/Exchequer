@@ -11,6 +11,7 @@
 - **Phase 5, Tron labels.** The seeder now pages TronScan's largest USDT-TRC20 holders and TRX accounts, keeps only tags naming a known exchange, and verifies each on chain (no bytecode, inbound value > 0): 7 labels / 4 exchanges → **40 / 18**, 0 rejected. No Indian exchange is tagged by TronScan among the 900 largest accounts; stated in the README. Verified end to end on a live USDT-TRC20 trace to Binance-Hot 7.
 - **Phase 6, cross-case correlation.** `GET /cases/correlate`: unlabelled intermediaries (and inferred deposit addresses) reached by two or more different reported addresses, same chain, with cases, depths and values; a *Related cases* panel in the trace view. Three phishing-labelled wallets were found to share 61 intermediaries. Caveat documented: unlabelled public contracts (the Beacon Deposit Contract) show up as shared intermediaries because no label file knows them.
 - **Phase 7, internal transactions.** Etherscan `txlistinternal` merged into the same `Transaction` shape, tagged `internal`, on by default (`ETHERSCAN_INCLUDE_INTERNAL`). Two requests per expanded native address instead of one. Demo 3 gained 203 contract-moved transfers and 21 addresses; others unchanged. A first version capped the merged list at 200 and shrank a busy demo from 31 to 6 addresses — caught by measuring, fixed, and pinned by a test.
+- **Phase 8, the investigator's report.** Report format v2: header with `git describe` version, one-paragraph plain summary, the finding with its basis (label match or inference), the path hop by hop with amounts, times and hashes, patterns with thresholds, inferred addresses with evidence and confirmation sentence, limitations, and an appendix of every address and transaction. Every individual transfer is now stored with the case for that appendix; older cases render with a note instead of failing. No PDF: nothing in the dependency set renders one and the text report is the deliverable.
 
 ## What was measured
 
@@ -30,7 +31,7 @@
 
 ## Left undone, and why
 
-- Swap *resumption* on the output asset (Phase 4 ships detection only). Phase 8 (the investigator's report) was ordered after the mandatory Q&A; see NOTES.md for what, if anything, was started. Internal transactions remain invisible on BSC, Tron and every token trace.
+- Swap *resumption* on the output asset (Phase 4 ships detection only). Internal transactions remain invisible on BSC, Tron and every token trace. No PDF renderer.
 - Swaps whose output is the native coin, or whose transfer lands on a liquidity pool rather than a router, are not recognised; PancakeSwap and SunSwap routers have no scripted label source in the pinned dataset.
 - No Tron or BSC validation: no scripted source of Tron *controls* with provenance was found, and the brief forbids hand-typed addresses.
 - FATF's own documents could not be fetched (HTTP 403); they are cited through a labelled secondary source.

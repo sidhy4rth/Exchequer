@@ -321,12 +321,16 @@ Every trace is stored as a case, so a known-good result can be opened
 instantly and will look identical every time:
 
 ```
-http://localhost:5173/case/9e58a465-68ef-46d0-832e-3de43ce459b6
+http://localhost:5173/case/88e4fa65-fbe8-4335-9278-a79153d38514
 ```
 
 That is trace 6 as archived on 15 September. Use it as a fallback, or as the
 closing argument for why cases are preserved: **evidence has to be kept as it
-stood when it was taken.**
+stood when it was taken.** Its text report
+(`GET /trace/88e4fa65-fbe8-4335-9278-a79153d38514/report?format=text`) is the
+one to hand a judge who asks what an officer would actually attach to a
+request: 415 lines, and the appendix lists every one of the transactions the
+32 addresses were connected by.
 
 ---
 
