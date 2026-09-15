@@ -15,16 +15,18 @@ import { forceCollide } from 'd3-force-3d'
 // government designation is a fact from outside this tool, and it should not
 // have to compete for attention with the tool's own inferences.
 const COLORS = {
-  seed: '#e6e8ea',
-  risk: '#e5484d',
-  exchange: '#2fd3a2',
-  flagged: '#e0a44a',
-  node: '#5b6167',
-  link: 'rgba(255,255,255,0.10)',
-  linkPath: '#2fd3a2',
-  linkFlagged: '#e0a44a',
-  text: '#e6e8ea',
-  dim: '#6b7075',
+  seed: '#16191d',
+  risk: '#b3261e',
+  exchange: '#1d7a4c',
+  inferred: '#9a5b00',
+  service: '#b9b5ac',
+  flagged: '#c98a1e',
+  node: '#8a9098',
+  link: 'rgba(22,25,29,0.16)',
+  linkPath: '#1d7a4c',
+  linkFlagged: '#c98a1e',
+  text: '#16191d',
+  dim: '#5b6169',
 }
 
 // Bubble sizing. Area is proportional to value, not radius -- a wallet that
@@ -37,7 +39,7 @@ const MAX_RADIUS = 22
 // exchanges: a sanctioned wallet that moved dust is still the most important
 // bubble on the canvas, and sizing it by value alone buries it.
 const FLOOR_RADIUS = 8
-const ANSWER_ROLES = new Set(['seed', 'exchange', 'risk'])
+const ANSWER_ROLES = new Set(['seed', 'exchange', 'inferred', 'risk'])
 
 // How far a non-highlighted element fades when something is highlighted.
 const DIMMED_ALPHA = 0.12
@@ -62,7 +64,9 @@ const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer' }
 const ROLE_NAME = {
   seed: 'Reported address',
   risk: 'Sanctioned / mixer',
-  exchange: 'Cash-out point',
+  exchange: 'Labelled exchange wallet',
+  inferred: 'Probable deposit address (inferred)',
+  service: 'Service contract or router, not expanded',
   flagged: 'Flagged by a pattern',
   node: 'Traced address',
 }
@@ -70,7 +74,9 @@ const ROLE_NAME = {
 function roleOf(node) {
   if (node.is_seed) return 'seed'
   if (node.risk_category) return 'risk'
-  if (node.exchange) return 'exchange'
+  if (node.exchange && !node.inferred_exchange) return 'exchange'
+  if (node.inferred_exchange) return 'inferred'
+  if (node.is_router || node.is_service_contract) return 'service'
   if (node.flags?.length) return 'flagged'
   return 'node'
 }
@@ -107,8 +113,11 @@ function nodeTooltip(node, unit) {
   const role = roleOf(node)
   const suffix = unit ? ` ${unit}` : ''
   const body = rows([
-    ['Exchange', node.exchange],
+    ['Exchange', node.inferred_exchange ? `${node.inferred_exchange} (inferred)` : node.exchange],
     ['Wallet', node.label && node.label !== node.exchange ? node.label : null],
+    ['Router', node.router],
+    ['Not expanded', node.is_service_contract ? 'contract paying out to many addresses' : null],
+    ['Excluded by time rule', node.excluded_by_time ? `${node.excluded_by_time} earlier transfers` : null],
     ['Listed as', node.risk_entity],
     ['Category', node.risk_category ? RISK_NAME[node.risk_category] ?? node.risk_category : null],
     ['Depth', `${node.depth} hop${node.depth === 1 ? '' : 's'} from seed`],
@@ -440,7 +449,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
   // Risk leads for the same reason it owns red -- an outside designation
   // outranks the tool's own matches -- then shallowest, then largest.
   const landmarks = useMemo(() => {
-    const rank = { risk: 0, exchange: 1 }
+    const rank = { risk: 0, exchange: 1, inferred: 2 }
     return graphData.nodes
       .filter((n) => rank[roleOf(n)] !== undefined)
       .sort((a, b) =>
@@ -492,13 +501,13 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (role === 'exchange') {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
-      ctx.fillStyle = 'rgba(47,211,162,0.14)'
+      ctx.fillStyle = 'rgba(29,122,76,0.16)'
       ctx.fill()
     }
     if (role === 'risk') {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
-      ctx.fillStyle = 'rgba(229,72,77,0.18)'
+      ctx.fillStyle = 'rgba(179,38,30,0.16)'
       ctx.fill()
     }
 
@@ -511,8 +520,8 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
       ctx.strokeStyle = COLORS.text
       ctx.lineWidth = 1.6 / globalScale
       ctx.stroke()
-    } else if (role === 'exchange' || role === 'seed') {
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)'
+    } else if (role === 'exchange' || role === 'seed' || role === 'inferred') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)'
       ctx.lineWidth = 1.2 / globalScale
       ctx.stroke()
     }
@@ -533,7 +542,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (node.pinned) {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 2.6, 0, 2 * Math.PI)
-      ctx.strokeStyle = 'rgba(230,237,243,0.75)'
+      ctx.strokeStyle = 'rgba(22,25,29,0.6)'
       ctx.lineWidth = 1 / globalScale
       ctx.setLineDash([3 / globalScale, 2.5 / globalScale])
       ctx.stroke()
@@ -545,7 +554,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (isSelected) {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 5.5, 0, 2 * Math.PI)
-      ctx.strokeStyle = 'rgba(230,232,234,0.85)'
+      ctx.strokeStyle = 'rgba(22,25,29,0.85)'
       ctx.lineWidth = 1.4 / globalScale
       ctx.stroke()
     }
@@ -565,9 +574,10 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
 
     const text = role === 'risk' && node.risk_entity ? node.risk_entity
       : role === 'exchange' && node.label ? node.label
+      : role === 'inferred' ? `${node.inferred_exchange}? ${short(node.address)}`
       : short(node.address)
     const fontSize = Math.max(10 / globalScale, 2.2)
-    ctx.font = `${important ? 500 : 400} ${fontSize}px 'JetBrains Mono', ui-monospace, monospace`
+    ctx.font = `${important ? 500 : 400} ${fontSize}px 'IBM Plex Mono', ui-monospace, monospace`
 
     const width = ctx.measureText(text).width
     const padX = 3 / globalScale
@@ -592,7 +602,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     }
     labelBoxes.current.push(box)
 
-    ctx.fillStyle = 'rgba(10,11,13,0.85)'
+    ctx.fillStyle = 'rgba(255,255,255,0.88)'
     ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0)
 
     ctx.textAlign = 'center'
@@ -612,7 +622,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
           width={size.width}
           height={size.height}
           graphData={graphData}
-          backgroundColor="#0a0b0d"
+          backgroundColor="#ffffff"
           nodeRelSize={4}
           nodeCanvasObject={drawNode}
           nodeLabel={(node) => nodeTooltip(node, unit)}
@@ -647,7 +657,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
             const key = `${idOf(link.source)}>${idOf(link.target)}`
             if (hoverLinkRef.current === link) return COLORS.text
             if (isFaded(idOf(link.source)) || isFaded(idOf(link.target))) {
-              return 'rgba(255,255,255,0.035)'
+              return 'rgba(22,25,29,0.05)'
             }
             if (pathEdges.has(key)) return COLORS.linkPath
             if (link.flags?.length) return COLORS.linkFlagged
@@ -683,8 +693,8 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
           </div>
 
           <div className="graph-controls">
-            <button onClick={() => zoomBy(1.4)} title="Zoom in">+</button>
-            <button onClick={() => zoomBy(1 / 1.4)} title="Zoom out">−</button>
+            <button onClick={() => zoomBy(1.4)} title="Zoom in" aria-label="Zoom in">+</button>
+            <button onClick={() => zoomBy(1 / 1.4)} title="Zoom out" aria-label="Zoom out">&minus;</button>
             <button
               onClick={fitToView}
               title="Fit the whole graph in view (f)"
@@ -722,6 +732,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
                     <span className="name">
                       {role === 'risk'
                         ? node.risk_entity ?? RISK_NAME[node.risk_category] ?? 'Listed'
+                        : role === 'inferred' ? `${node.inferred_exchange} deposit (inferred)`
                         : node.label ?? node.exchange}
                     </span>
                     <span className="addr">{short(node.address)}</span>
@@ -742,7 +753,15 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
             </div>
             <div className="item">
               <span className="swatch" style={{ background: COLORS.exchange }} />
-              Matched exchange
+              Labelled exchange wallet
+            </div>
+            <div className="item">
+              <span className="swatch" style={{ background: COLORS.inferred }} />
+              Probable deposit address (inferred)
+            </div>
+            <div className="item">
+              <span className="swatch" style={{ background: COLORS.service }} />
+              Service contract / router, not expanded
             </div>
             <div className="item">
               <span className="swatch" style={{ background: COLORS.flagged }} />
