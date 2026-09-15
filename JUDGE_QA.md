@@ -53,7 +53,11 @@ tuning until it looks good. Two things temper it: a wallet documented as
 *holding* stolen funds is not thereby documented as laundering them in one of
 these two shapes, so this is not recall against ground truth; and 19 of those
 32 wallets reached a labelled exchange within three hops, which is the finding
-that actually matters for a lawful request.
+that actually matters for a lawful request. If asked: 35 of the 47 ordinary
+wallets reached one too. Reaching an exchange is not a sign of fraud — almost
+everyone's money passes through one — it is the *attribution* the tool exists
+to make once a wallet has been reported. The fraud is established by the
+complaint; the tool establishes where the money went.
 
 **5. What did you validate against, and can we check it?**
 
