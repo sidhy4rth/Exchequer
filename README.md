@@ -650,6 +650,11 @@ failure here.
 | `test_risk_matcher.py` | Both categories, that a mixer ends a trace and a sanctioned address does not, unknown categories dropped rather than guessed |
 | `test_graph_builder.py` | All four traversal brakes, both directions, seed-vs-deeper fetch failures, depth stability |
 | `test_ofac_import.py` | Chain assignment from OFAC's own idType, and that a Bitcoin address is skipped rather than misfiled |
+| `test_deposit_inference.py` | The sweep shape fires; one deposit, a wallet that also spends, sweeps to an unlabelled or a labelled *deposit* wallet, dust, the seed and unexpanded wallets all stay silent; an inference scores below a label match |
+| `test_swap_detection.py` | Swap outputs read from a real 1inch receipt; native-coin outputs reported as unreadable, never guessed; receipts capped per edge; a failed receipt cannot kill a trace |
+| `test_correlation.py` | Two complaints on one unlabelled wallet cluster; a shared hot wallet, router or sanctioned entity never does; the same wallet traced twice is one complaint; chains never mix |
+| `test_internal_transactions.py` | Contract-moved value is merged and tagged at exactly one extra request, never on a token trace, and never displaces signed transfers |
+| `test_report.py` | Every section an officer needs is present, times and hashes included; a case stored by an earlier version still renders |
 
 ---
 
