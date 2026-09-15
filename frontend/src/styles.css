@@ -1,11 +1,14 @@
-/* TraceChain — case-file dashboard.
-   A light paper surface with ink text and hairline rules, dense where the
-   evidence is and quiet everywhere else. It should read like the printed
-   report an officer attaches to a request, not like a product.
+/* TraceChain — two skins over one set of tokens.
 
-   Three colours carry meaning: green for a confirmed attribution, amber for a
-   fired pattern or an inference, red for a sanctions or mixer hit, which
-   outranks everything. Navy is for interaction only. Nothing else is coloured. */
+   Dark (default): a near-black console surface with serif headings and
+   monospace labels — an operations room, not a product page. Light: the
+   case-file look, paper and ink, for a bright room or a printout. The skin is
+   chosen from the top bar and remembered per browser.
+
+   In both, three colours carry meaning: green for a confirmed attribution,
+   amber for a fired pattern or an inference, red for a sanctions or mixer hit,
+   which outranks everything. The interaction colour (--navy) is navy on paper
+   and off-white on the console. Nothing else is coloured. */
 
 :root {
   --paper: #f5f4f0;
@@ -20,6 +23,10 @@
 
   --navy: #1f3a5f;
   --navy-soft: #e6ecf4;
+  --navy-hover: #163052;
+  --on-navy: #ffffff;
+  --overlay: rgba(255, 255, 255, 0.94);
+  --shadow: 0 6px 20px rgba(22, 25, 29, 0.14);
 
   --green: #1d7a4c;
   --green-soft: #e3f2ea;
@@ -35,6 +42,30 @@
   --r: 3px;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --fast: 120ms;
+}
+
+html[data-theme="dark"] {
+  --paper: #0b0c0e;
+  --panel: #111316;
+  --panel-2: #181b1f;
+  --rule: #22262b;
+  --rule-strong: #343940;
+  --ink: #ececea;
+  --muted: #a0a5ab;
+  --faint: #6b7178;
+  --navy: #ececea;
+  --navy-hover: #ffffff;
+  --on-navy: #0b0c0e;
+  --navy-soft: rgba(236, 236, 234, 0.08);
+  --green: #2fd3a2;
+  --green-soft: rgba(47, 211, 162, 0.12);
+  --amber: #e0a44a;
+  --amber-soft: rgba(224, 164, 74, 0.14);
+  --red: #ff5c5c;
+  --red-soft: rgba(255, 92, 92, 0.14);
+  --overlay: rgba(17, 19, 22, 0.92);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -75,8 +106,8 @@ button {
 }
 button:hover:not(:disabled) { background: var(--panel-2); border-color: var(--ink); }
 button:disabled { color: var(--faint); cursor: default; }
-button.primary { background: var(--navy); border-color: var(--navy); color: #fff; }
-button.primary:hover:not(:disabled) { background: #163052; border-color: #163052; }
+button.primary { background: var(--navy); border-color: var(--navy); color: var(--on-navy); }
+button.primary:hover:not(:disabled) { background: var(--navy-hover); border-color: var(--navy-hover); }
 button.primary:disabled { background: var(--panel-2); border-color: var(--rule); color: var(--faint); }
 button.quiet { border-color: transparent; background: transparent; color: var(--muted); padding: 4px 6px; }
 button.quiet:hover:not(:disabled) { background: var(--panel-2); border-color: transparent; color: var(--ink); }
@@ -180,7 +211,12 @@ a { color: var(--navy); }
 .finding .metric .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 14px; }
 
 .score { display: flex; align-items: baseline; gap: 10px; }
-.score .big { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 500; line-height: 1; }
+.score .big {
+  font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 500; line-height: 1;
+  padding: 8px 10px; border: 2px solid var(--green); color: var(--green); border-radius: var(--r); min-width: 64px; text-align: center;
+}
+.score .big.medium { border-color: var(--amber); color: var(--amber); }
+.score .big.low, .score .big.na { border-color: var(--rule-strong); color: var(--muted); }
 .score .band { font-size: 12px; color: var(--muted); }
 .component { display: grid; grid-template-columns: 118px 1fr 92px; gap: 10px; align-items: center; font-size: 12px; }
 .component .k { color: var(--muted); }
@@ -205,8 +241,15 @@ a { color: var(--navy); }
 .feed { display: flex; flex-direction: column; }
 .feed .row {
   display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: start;
-  padding: 8px 14px; border-top: 1px solid var(--rule); animation: rise 160ms var(--ease) both;
+  padding: 10px 14px 10px 26px; border-top: 1px solid var(--rule); animation: rise 160ms var(--ease) both;
+  position: relative;
 }
+/* A timeline down the left: one line, one mark per transfer, so the feed reads
+   as a sequence rather than a table. */
+.feed .row::before { content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 1px; background: var(--rule-strong); }
+.feed .row::after { content: ''; position: absolute; left: 11px; top: 16px; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.feed .row.on-path::after { background: var(--green); }
+.feed .row.to-red::after { background: var(--red); }
 @keyframes rise { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 .feed .hop { font-family: var(--mono); font-size: 11px; color: var(--faint); padding-top: 2px; }
 .feed .pair { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; }
@@ -266,13 +309,13 @@ a { color: var(--navy); }
 
 /* graph overlays */
 .graph-stats, .graph-hint, .legend, .graph-controls button, .jump-panel {
-  background: rgba(255, 255, 255, 0.94); border: 1px solid var(--rule);
+  background: var(--overlay); border: 1px solid var(--rule);
 }
 .graph-stats { position: absolute; right: 12px; top: 12px; border-radius: var(--r); padding: 5px 9px; font-size: 11px; color: var(--muted); font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .graph-hint { position: absolute; left: 12px; top: 12px; border-radius: var(--r); padding: 6px 9px; font-size: 11px; color: var(--faint); max-width: 260px; line-height: 1.45; pointer-events: none; }
 .legend { position: absolute; left: 12px; bottom: 12px; border-radius: var(--r); padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; font-size: 11px; }
 .legend .item { display: flex; align-items: center; gap: 7px; color: var(--muted); }
-.legend .swatch { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15); }
+.legend .swatch { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; border: 1px solid var(--rule-strong); }
 .graph-controls { position: absolute; right: 12px; top: 46px; display: flex; flex-direction: column; gap: 4px; }
 .graph-controls button { width: 30px; min-width: 30px; height: 26px; padding: 0; font-size: 12px; color: var(--muted); border-radius: var(--r); justify-content: center; }
 .graph-controls button:last-child { width: auto; padding: 0 9px; }
@@ -291,9 +334,9 @@ a { color: var(--navy); }
 
 /* Tooltip is injected by react-force-graph; only its class can be styled. */
 .graph-tooltip {
-  background: #fff !important; border: 1px solid var(--rule-strong); border-radius: var(--r);
+  background: var(--panel) !important; border: 1px solid var(--rule-strong); border-radius: var(--r);
   padding: 0 !important; font-family: var(--sans) !important; color: var(--ink) !important;
-  max-width: 300px; box-shadow: 0 6px 20px rgba(22, 25, 29, 0.14);
+  max-width: 300px; box-shadow: var(--shadow);
 }
 .graph-tooltip .gt { padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
 .graph-tooltip .gt-head { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
@@ -317,7 +360,7 @@ a { color: var(--navy); }
 .intake .row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto auto auto; gap: 8px; }
 .intake .address-field { font-family: var(--mono); font-size: 13.5px; padding: 10px 12px; }
 .intake .row select { min-width: 120px; }
-.intake .lede { font-family: var(--serif); font-size: 19px; font-weight: 500; line-height: 1.3; margin: 0; }
+.intake .lede { font-family: var(--serif); font-size: 26px; font-weight: 500; line-height: 1.25; margin: 0; letter-spacing: -0.01em; }
 .intake .lede + .note { max-width: 720px; }
 
 .status { display: flex; flex-direction: column; gap: 8px; min-width: 300px; }
@@ -367,3 +410,11 @@ a { color: var(--navy); }
 .examples { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--muted); }
 .examples label { white-space: nowrap; }
 .examples select { flex: 1; min-width: 0; max-width: 560px; }
+
+/* top-bar status line and skin toggle */
+.sysline { display: inline-flex; align-items: center; gap: 8px; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+.sysline .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); display: inline-block; }
+.sysline .dot.live { background: var(--green); }
+.sysline .dot.down { background: var(--red); }
+.theme-toggle { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; color: var(--muted); }
+.theme-toggle:hover { color: var(--ink); }

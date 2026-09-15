@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import ThemeToggle from '../components/ThemeToggle'
 import { fetchCases, fetchExchanges, fetchHealth, fetchRiskLabels } from '../api'
 
 // Same rules the backend enforces, checked here only so an obvious typo gets
@@ -117,8 +118,14 @@ export default function Home() {
     <div className="home">
       <header className="topbar">
         <Link to="/" className="brand">TraceChain<small>Cryptocurrency fraud tracing</small></Link>
+        <span className="sysline mono">
+          {backendDown ? <><span className="dot down" />BACKEND UNREACHABLE</>
+            : health ? <><span className="dot live" />SYSTEM OPERATIONAL · {chains.filter((c) => c.ready).length} CHAINS · SOURCE: LIVE BLOCKCHAIN APIS</>
+            : <><span className="dot" />CONNECTING</>}
+        </span>
         <span className="grow" />
         <span className="note">Smart India Hackathon 2026 · SIH26183 · Ministry of Home Affairs</span>
+        <ThemeToggle />
       </header>
 
       <div className="home-body">

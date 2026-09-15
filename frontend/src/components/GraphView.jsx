@@ -1,3 +1,4 @@
+import { currentTheme } from '../theme'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import { forceCollide } from 'd3-force-3d'
@@ -14,20 +15,27 @@ import { forceCollide } from 'd3-force-3d'
 // Red is reserved for the risk lists and outranks the rest. A published
 // government designation is a fact from outside this tool, and it should not
 // have to compete for attention with the tool's own inferences.
-const COLORS = {
-  seed: '#16191d',
-  risk: '#b3261e',
-  exchange: '#1d7a4c',
-  inferred: '#9a5b00',
-  service: '#b9b5ac',
-  flagged: '#c98a1e',
-  node: '#8a9098',
-  link: 'rgba(22,25,29,0.16)',
-  linkPath: '#1d7a4c',
-  linkFlagged: '#c98a1e',
-  text: '#16191d',
-  dim: '#5b6169',
+const PALETTES = {
+  light: {
+    seed: '#16191d', risk: '#b3261e', exchange: '#1d7a4c', inferred: '#9a5b00',
+    service: '#b9b5ac', flagged: '#c98a1e', node: '#8a9098',
+    link: 'rgba(22,25,29,0.16)', linkPath: '#1d7a4c', linkFlagged: '#c98a1e',
+    text: '#16191d', dim: '#5b6169', background: '#ffffff',
+    haloExchange: 'rgba(29,122,76,0.16)', haloRisk: 'rgba(179,38,30,0.16)',
+    ring: 'rgba(255,255,255,0.8)', ringInk: 'rgba(22,25,29,0.6)', ringSelected: 'rgba(22,25,29,0.85)',
+    labelBox: 'rgba(255,255,255,0.88)',
+  },
+  dark: {
+    seed: '#ececea', risk: '#ff5c5c', exchange: '#2fd3a2', inferred: '#e0a44a',
+    service: '#4a5057', flagged: '#e0a44a', node: '#5b6167',
+    link: 'rgba(236,236,234,0.13)', linkPath: '#2fd3a2', linkFlagged: '#e0a44a',
+    text: '#ececea', dim: '#9a9fa6', background: '#111316',
+    haloExchange: 'rgba(47,211,162,0.18)', haloRisk: 'rgba(255,92,92,0.2)',
+    ring: 'rgba(17,19,22,0.9)', ringInk: 'rgba(236,236,234,0.6)', ringSelected: 'rgba(236,236,234,0.9)',
+    labelBox: 'rgba(17,19,22,0.85)',
+  },
 }
+let COLORS = PALETTES[currentTheme()]
 
 // Bubble sizing. Area is proportional to value, not radius -- a wallet that
 // moved 100x more than another should look 100x bigger by area, which is what
@@ -163,6 +171,14 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
   const containerRef = useRef(null)
   const graphRef = useRef(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
+  // The canvas painter reads COLORS on every frame; swap the palette and
+  // force a repaint when the skin flips.
+  const [theme, setTheme] = useState(currentTheme())
+  useEffect(() => {
+    const onChange = (e) => { COLORS = PALETTES[e.detail] ?? PALETTES.dark; setTheme(e.detail) }
+    window.addEventListener('themechange', onChange)
+    return () => window.removeEventListener('themechange', onChange)
+  }, [])
   // Highlight state lives in refs, not React state, and the canvas callbacks
   // read it at draw time. react-force-graph holds on to the callback closures
   // it was given, so a value captured from render scope goes stale and the
@@ -501,13 +517,13 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (role === 'exchange') {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
-      ctx.fillStyle = 'rgba(29,122,76,0.16)'
+      ctx.fillStyle = COLORS.haloExchange
       ctx.fill()
     }
     if (role === 'risk') {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
-      ctx.fillStyle = 'rgba(179,38,30,0.16)'
+      ctx.fillStyle = COLORS.haloRisk
       ctx.fill()
     }
 
@@ -521,7 +537,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
       ctx.lineWidth = 1.6 / globalScale
       ctx.stroke()
     } else if (role === 'exchange' || role === 'seed' || role === 'inferred') {
-      ctx.strokeStyle = 'rgba(255,255,255,0.8)'
+      ctx.strokeStyle = COLORS.ring
       ctx.lineWidth = 1.2 / globalScale
       ctx.stroke()
     }
@@ -542,7 +558,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (node.pinned) {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 2.6, 0, 2 * Math.PI)
-      ctx.strokeStyle = 'rgba(22,25,29,0.6)'
+      ctx.strokeStyle = COLORS.ringInk
       ctx.lineWidth = 1 / globalScale
       ctx.setLineDash([3 / globalScale, 2.5 / globalScale])
       ctx.stroke()
@@ -554,7 +570,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (isSelected) {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 5.5, 0, 2 * Math.PI)
-      ctx.strokeStyle = 'rgba(22,25,29,0.85)'
+      ctx.strokeStyle = COLORS.ringSelected
       ctx.lineWidth = 1.4 / globalScale
       ctx.stroke()
     }
@@ -602,7 +618,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     }
     labelBoxes.current.push(box)
 
-    ctx.fillStyle = 'rgba(255,255,255,0.88)'
+    ctx.fillStyle = COLORS.labelBox
     ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0)
 
     ctx.textAlign = 'center'
@@ -618,11 +634,12 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
       {hasData && size.width > 0 && (
         <ForceGraph2D
+          key={theme}
           ref={graphRef}
           width={size.width}
           height={size.height}
           graphData={graphData}
-          backgroundColor="#ffffff"
+          backgroundColor={COLORS.background}
           nodeRelSize={4}
           nodeCanvasObject={drawNode}
           nodeLabel={(node) => nodeTooltip(node, unit)}

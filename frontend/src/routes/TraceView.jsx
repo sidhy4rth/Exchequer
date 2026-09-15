@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { fetchCase, fetchRelatedCases, traceAddress } from '../api'
 import GraphView from '../components/GraphView'
+import ThemeToggle from '../components/ThemeToggle'
 import ExportButton from '../components/ExportButton'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
@@ -194,6 +195,7 @@ export default function TraceView() {
             <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />Re-trace</button>
           )}
           <button className="quiet" onClick={() => navigate('/')}><Icon d={ICONS.back} />New trace</button>
+          <ThemeToggle />
         </div>
       </header>
 
@@ -273,13 +275,13 @@ export default function TraceView() {
                 <span className="q">How sure, and why</span>
                 {result.confidence == null ? (
                   <>
-                    <div className="score"><span className="big" style={{ color: 'var(--muted)' }}>n/a</span><span className="band">not applicable</span></div>
+                    <div className="score"><span className="big na">n/a</span><span className="band">not applicable</span></div>
                     <p className="note">No exchange was attributed, so there is nothing to score. A number here would be over-read; null is the honest value.</p>
                   </>
                 ) : (
                   <>
                     <div className="score">
-                      <span className="big">{result.confidence.toFixed(2)}</span>
+                      <span className={`big ${result.confidence_detail?.band ?? ''}`}>{result.confidence.toFixed(2)}</span>
                       <span className="band">{result.confidence_detail?.band} · weighted sum of the three inputs below, nothing else</span>
                     </div>
                     {components.map((c) => (
@@ -348,7 +350,7 @@ export default function TraceView() {
                     </p>
                   )}
                   {shown.map((h) => (
-                    <div key={`${h.source}>${h.target}`} className={`row${h.onPath ? ' on-path' : ''}`}>
+                    <div key={`${h.source}>${h.target}`} className={`row${h.onPath ? ' on-path' : ''}${h.toKind === 'red' ? ' to-red' : ''}`}>
                       <div className="hop">HOP {h.hop}</div>
                       <div>
                         <div className="pair">
