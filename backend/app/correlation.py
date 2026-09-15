@@ -26,10 +26,15 @@ supports.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
+
+# Decides whether (chain, address) is a labelled contract or wallet that must
+# never count as an intermediary. main.py passes the exchange and router
+# label files; the tests pass whatever they need.
+Excluder = Callable[[str, str], bool]
 
 
-def _intermediaries(result: dict[str, Any]) -> list[dict[str, Any]]:
+def _intermediaries(result: dict[str, Any], chain: str, excluded: Excluder | None) -> list[dict[str, Any]]:
     seed = result.get("address")
     out = []
     for node in result.get("graph", {}).get("nodes", []):
@@ -37,16 +42,29 @@ def _intermediaries(result: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         if node.get("exchange") or node.get("is_router") or node.get("risk_category"):
             continue
+        # A contract that pays out to many addresses (WETH, a pool) is a
+        # service every trace passes through; so is anything the label files
+        # know, even in a case stored before the graph carried these flags.
+        if node.get("is_service_contract"):
+            continue
+        if excluded is not None and excluded(chain, node["id"]):
+            continue
         out.append(node)
     return out
 
 
-def correlate(cases: Iterable[Any], only_case: str | None = None, min_cases: int = 2) -> list[dict[str, Any]]:
+def correlate(
+    cases: Iterable[Any],
+    only_case: str | None = None,
+    min_cases: int = 2,
+    excluded: Excluder | None = None,
+) -> list[dict[str, Any]]:
     """Clusters of stored cases that share an intermediary address.
 
     `cases` are model.Case rows (anything with `.id`, `.address`, `.created_at`
     and `.result`). `only_case` narrows the answer to clusters that include
-    that case, which is what the trace view asks for.
+    that case, which is what the trace view asks for. `excluded` says which
+    addresses are known contracts or exchange wallets on a chain.
     """
     by_key: dict[tuple[str, str], dict[str, dict[str, Any]]] = defaultdict(dict)
     inferred: dict[tuple[str, str], str] = {}
@@ -56,7 +74,7 @@ def correlate(cases: Iterable[Any], only_case: str | None = None, min_cases: int
         if not result:
             continue
         chain = result.get("chain") or "ethereum"
-        for node in _intermediaries(result):
+        for node in _intermediaries(result, chain, excluded):
             key = (chain, node["id"])
             if node.get("inferred_exchange"):
                 inferred[key] = node["inferred_exchange"]
@@ -103,3 +121,39 @@ def correlate(cases: Iterable[Any], only_case: str | None = None, min_cases: int
         c["address"],
     ))
     return clusters
+
+
+def related_cases(clusters: list[dict[str, Any]], case_id: str) -> list[dict[str, Any]]:
+    """The same answer regrouped by the *other* case, for the trace view.
+
+    An investigator reading a trace wants "which other complaints does this
+    one touch, and through what", not a list of wallets each naming cases.
+    One entry per other case, carrying every shared intermediary, most shared
+    first; within a case, probable deposit addresses first, then by value.
+    """
+    by_case: dict[str, dict[str, Any]] = {}
+    for cluster in clusters:
+        if not any(m["case_id"] == case_id for m in cluster["cases"]):
+            continue
+        for member in cluster["cases"]:
+            if member["case_id"] == case_id:
+                continue
+            entry = by_case.setdefault(member["case_id"], {
+                "case_id": member["case_id"],
+                "reported_address": member["reported_address"],
+                "chain": cluster["chain"],
+                "asset": member["asset"],
+                "traced_at": member["traced_at"],
+                "exchange": member["exchange"],
+                "shared": [],
+            })
+            entry["shared"].append({
+                "address": cluster["address"],
+                "inferred_exchange": cluster["inferred_exchange"],
+                "depth": member["depth"],
+                "value_in_native": member["value_in_native"],
+            })
+    for entry in by_case.values():
+        entry["shared"].sort(key=lambda s: (0 if s["inferred_exchange"] else 1, -s["value_in_native"]))
+        entry["shared_count"] = len(entry["shared"])
+    return sorted(by_case.values(), key=lambda e: (-e["shared_count"], e["traced_at"]), reverse=False)

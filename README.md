@@ -302,7 +302,9 @@ One complaint gives one trace. The problem statement's actual ask is the campaig
 
 The rule, in plain terms. For every stored case, the *intermediaries* are the addresses in its graph other than the reported address and other than anything with a label of its own — an exchange hot wallet, a DEX router, a sanctioned entity. An intermediary reached by traces of **two or more different reported addresses on the same chain** is a point of convergence, and is returned with the cases that reach it, how far from each reported address it sits, and how much of each case's traced value arrived there. Inferred deposit addresses count and are named as such, because a request to the exchange can then ask about one address on behalf of several complaints. Exchange hot wallets are excluded on purpose: two victims whose money both ended at Binance 14 share a bank, not an offender. The same wallet traced twice is one complaint, not two.
 
-The trace view shows a **Related cases** panel whenever the case just traced shares an intermediary with a stored one, ranked by how many complaints converge, then probable deposit addresses first, then by value.
+Contracts are never intermediaries either: a contract recognised as a service by the traversal (WETH, a pool — see the fifth brake) is skipped by its flag, and anything in the exchange or router label files is skipped by lookup, which also covers cases stored before the graph carried those flags. The response carries the clusters and, when `case_id` is given, `related_cases`: the same answer grouped by the *other* case, each listing the wallets shared with this one, probable deposit addresses first. That grouping is what the trace view shows as the **Related cases** panel.
+
+The case store is evidence and nothing deletes from it in normal use. Traces run for measurement go through the same endpoint, though, so `scripts/prune_cases.py --keep <id> …` exists to reduce a demo machine's store to the cases that matter; it copies the database aside first and refuses to delete everything.
 
 What it showed on 15 September 2026: three wallets carrying Etherscan's *Phish / Hack* label (`0x000000000532…`, `0x0000000009324…`, `0x00000000bf02…`) share **61 intermediaries**, four of them inferred Binance deposit addresses — the shape of one operation run from several wallets, which three separate complaints would never have shown.
 
@@ -600,7 +602,8 @@ tracechain/
 │   ├── scripts/
 │   │   ├── seed_router_labels.py      imports + verifies DEX routers
 │   │   ├── build_validation_corpus.py builds the measurement corpus by script
-│   │   ├── validate_patterns.py       measures the rules; offline from the snapshot
+│   │   ├── validate_patterns.py       measures the rules; offline from the snapshot; stores nothing
+│   │   ├── prune_cases.py             reduces the case store to named cases, with a backup
 │   │   ├── check_etherscan.py         live API smoke test
 │   │   ├── verify_labels.py           re-checks every Ethereum label
 │   │   ├── import_exchange_labels.py  imports + verifies Ethereum labels

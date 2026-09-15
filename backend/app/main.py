@@ -35,7 +35,7 @@ from .etherscan_client import (
     is_valid_address,
     normalize_address,
 )
-from .correlation import correlate
+from .correlation import correlate, related_cases
 from .deposit_inference import describe as describe_inference, infer_deposit_addresses
 from .exchange_matcher import ExchangeMatcher, get_matcher, get_router_matcher
 from .swap_detection import describe as describe_swap, detect_swaps
@@ -676,16 +676,30 @@ def cases_correlate(
     not an offender.
     """
     records = models.all_cases()
-    clusters = correlate(records, only_case=case_id, min_cases=min_cases)
+
+    def known_contract_or_exchange(chain_key: str, address: str) -> bool:
+        try:
+            return bool(get_router_matcher(chain_key).lookup(address)
+                        or get_matcher(chain_key).lookup(address))
+        except config.UnknownChainError:
+            return False
+
+    clusters = correlate(records, only_case=case_id, min_cases=min_cases,
+                         excluded=known_contract_or_exchange)
     return {
         "cases_examined": len(records),
         "cluster_count": len(clusters),
         "clusters": clusters,
+        # The same answer grouped by the other case, which is how the trace
+        # view shows it. Empty unless case_id was given.
+        "related_cases": related_cases(clusters, case_id) if case_id else [],
         "rule": (
             "An intermediary is any address in a stored trace other than the "
             "reported address and other than a labelled exchange wallet, DEX router "
             "or sanctioned entity. A cluster is an intermediary reached by traces "
-            f"of at least {min_cases} different reported addresses on the same chain."
+            f"of at least {min_cases} different reported addresses on the same chain. "
+            "Contracts recognised as services (a pool, WETH) and anything in the "
+            "exchange or router label files are never intermediaries."
         ),
     }
 

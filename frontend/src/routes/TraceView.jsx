@@ -44,7 +44,7 @@ export default function TraceView() {
     if (!result?.case_id) { setRelated([]); return }
     let cancelled = false
     fetchRelatedCases(result.case_id)
-      .then((r) => { if (!cancelled) setRelated(r.clusters || []) })
+      .then((r) => { if (!cancelled) setRelated(r.related_cases || []) })
       .catch(() => { if (!cancelled) setRelated([]) })
     return () => { cancelled = true }
   }, [result?.case_id])
@@ -360,34 +360,39 @@ export default function TraceView() {
               <span className="micro">Related cases · {related.length}</span>
               <p className="empty" style={{ marginBottom: 10 }}>
                 Stored traces of <em>other</em> reported addresses passed through the
-                same intermediary wallet as this one. Exchange hot wallets are never
-                counted: two victims who cashed out at the same exchange share a
-                bank, not an offender.
+                same wallets as this one. Exchange wallets, routers and service
+                contracts are never counted: two victims who cashed out at the same
+                exchange share a bank, not an offender.
               </p>
               {related.slice(0, 8).map((c) => (
-                <div className="risk" key={`${c.chain}-${c.address}`}>
+                <div className="risk" key={c.case_id}>
                   <div className="top">
                     <span className="nm">
-                      {c.inferred_exchange
-                        ? `Probable ${c.inferred_exchange} deposit address`
-                        : 'Shared intermediary'}
+                      <a href={`/case/${c.case_id}`}>{c.reported_address}</a>
                     </span>
-                    <span className="st">{c.reported_addresses.length} reported addresses</span>
+                    <span className="st">
+                      {c.shared_count} shared wallet{c.shared_count === 1 ? '' : 's'}
+                    </span>
                   </div>
-                  <div className="wallet">{c.address}</div>
-                  {c.cases
-                    .filter((k) => k.case_id !== result.case_id)
-                    .map((k) => (
-                      <div className="desc" key={k.case_id}>
-                        <a href={`/case/${k.case_id}`}>{k.reported_address}</a>
-                        {' · '}{num(k.value_in_native)} {k.asset} at {k.depth} hop{k.depth === 1 ? '' : 's'}
-                      </div>
-                    ))}
+                  <div className="ent">
+                    {c.exchange ? `reached ${c.exchange}` : 'no exchange matched'} · traced {String(c.traced_at).slice(0, 10)}
+                  </div>
+                  {c.shared.slice(0, 4).map((s) => (
+                    <div className="desc" key={s.address}>
+                      <span className="wallet">{s.address}</span>
+                      {' · '}
+                      {s.inferred_exchange ? `probable ${s.inferred_exchange} deposit address · ` : ''}
+                      {num(s.value_in_native)} {c.asset} at {s.depth} hop{s.depth === 1 ? '' : 's'}
+                    </div>
+                  ))}
+                  {c.shared_count > 4 && (
+                    <div className="desc">…and {c.shared_count - 4} more shared wallets</div>
+                  )}
                 </div>
               ))}
               {related.length > 8 && (
                 <p className="empty" style={{ marginTop: 8 }}>
-                  …and {related.length - 8} more shared intermediaries. The full list is
+                  …and {related.length - 8} more related cases. The full list is
                   at <code>GET /cases/correlate?case_id={result.case_id}</code>.
                 </p>
               )}

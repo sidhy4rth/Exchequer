@@ -121,3 +121,55 @@ def test_a_corrupt_stored_case_is_skipped():
         a_case("c2", addr("2"), [{"id": SHARED}]),
     ]
     assert len(correlate(cases)) == 1
+
+
+# ---------------------------------------------------------------------------
+# Contracts are never intermediaries; the panel groups by case
+# ---------------------------------------------------------------------------
+def test_a_service_contract_is_never_a_shared_intermediary():
+    """WETH or a pool is reached by every second trace; sharing it means nothing."""
+    weth = addr("c02a")
+    cases = [
+        a_case("c1", addr("1"), [{"id": weth, "service": True}]),
+        a_case("c2", addr("2"), [{"id": weth, "service": True}]),
+    ]
+    for c in cases:  # a_case does not know the flag; set it on the stored nodes
+        r = c.result
+        for n in r["graph"]["nodes"]:
+            if n["id"] == weth:
+                n["is_service_contract"] = True
+        c.result_json = json.dumps(r)
+    assert correlate(cases) == []
+
+
+def test_addresses_the_label_files_know_are_excluded_even_in_old_cases():
+    """A case stored before the graph carried exchange or router flags still
+    must not correlate on a router or a hot wallet; the caller's label lookup
+    catches those."""
+    router = addr("d0")
+    cases = [a_case("c1", addr("1"), [{"id": router}]), a_case("c2", addr("2"), [{"id": router}])]
+    assert correlate(cases) != []  # nothing on the node says what it is
+    assert correlate(cases, excluded=lambda chain, a: a == router) == []
+
+
+def test_related_cases_groups_shared_intermediaries_by_the_other_case():
+    from app.correlation import related_cases
+
+    x, y, dep = addr("5a1"), addr("5a2"), addr("de90")
+    cases = [
+        a_case("c1", addr("1"), [{"id": x, "value": 1.0}, {"id": y, "value": 2.0}, {"id": dep, "inferred": "Binance", "value": 0.5}]),
+        a_case("c2", addr("2"), [{"id": x, "value": 3.0}, {"id": y, "value": 4.0}, {"id": dep, "inferred": "Binance", "value": 0.7}]),
+        a_case("c3", addr("3"), [{"id": x, "value": 5.0}]),
+    ]
+    clusters = correlate(cases)
+    related = related_cases(clusters, "c1")
+
+    assert [r["case_id"] for r in related] == ["c2", "c3"]
+    assert related[0]["reported_address"] == addr("2")
+    assert related[0]["shared_count"] == 3
+    # Probable deposit address first, then by value, and the values are the
+    # other case's, not this one's.
+    assert [s["address"] for s in related[0]["shared"]] == [dep, y, x]
+    assert related[0]["shared"][1]["value_in_native"] == 4.0
+    assert related[1]["shared_count"] == 1
+    assert related_cases(clusters, "c9") == []
