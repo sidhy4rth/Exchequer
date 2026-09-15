@@ -398,6 +398,55 @@ Stated plainly, and repeated in every exported report:
 - **A trace stops at a mixer, and cannot resume past one.** This is deliberate rather than a gap to close: the link between a tumbler's deposits and its payouts does not exist in the transaction data, so no amount of further traversal could recover it.
 - **Screening covers the OFAC SDN list only.** An address absent from it is not thereby established as legitimate, and the designation carries no automatic force in Indian law — it is a lead and an escalation trigger, not a verdict.
 - **`direct_senders` lists addresses that funded the reported one, not confirmed victims.** A sender may be the offender's own wallet, an exchange withdrawal, or an unrelated payment; only the exchanges among them can be identified from chain data alone.
+- **A first-time trace is as fast as the free tier allows, and no faster.** See below.
+
+---
+
+## Why a trace takes the time it does
+
+Almost none of it is TraceChain. The graph walk, the pattern rules and the
+scoring together take milliseconds; a trace's wall time is very nearly *the
+number of provider requests it makes*, and on a free key those arrive at
+roughly one and a half to two per second. A depth-3 trace expands ~35
+addresses, which is where ~20 seconds comes from.
+
+Measured against a live Etherscan free key, the documented "5 requests/second"
+is not what is granted in practice:
+
+| Spacing | Offered | Refused | Useful throughput |
+| --- | --- | --- | --- |
+| 0.20s | 4.8/s | **67%** | 1.61/s |
+| 0.34s | 2.7/s | **54%** | 1.21/s |
+| **0.50s** | **1.6/s** | **4%** | **1.56/s** |
+| 0.70s | 1.3/s | 0% | 1.28/s |
+
+Every refusal costs a retry with exponential backoff, so asking faster returned
+*less* usable data than asking slower. `ETHERSCAN_MIN_INTERVAL` therefore
+defaults to **0.50s** -- the measured optimum, not the documented one.
+
+Since the ceiling is per *second* while the daily quota goes barely touched (a
+trace costs ~35 of 100,000 calls/day), the only lever that shortens a trace is
+making fewer requests. So responses are cached per credential for
+`API_CACHE_TTL_SECONDS` (default 600). On-chain history is append-only, so a
+cached answer can lag the newest blocks but never contradict them -- traces are
+byte-identical warm and cold. The effect:
+
+| | Requests | Time |
+| --- | --- | --- |
+| First trace of an address | ~35 | ~20s |
+| Either direction, again | **0** | **0.03s** |
+
+Both traversal directions read the provider's one combined transaction list, so
+a reverse trace of an address already traced forward reuses what is in hand.
+
+`GET /health` reports `api_budget` -- a high `rate_limit_penalties` means the
+key is being refused, a high cache `hit_rate` means repeat work is already free.
+
+**If cold traces are still too slow**, the remaining lever is fan-out: the
+traversal follows the 10 highest-value counterparties per address
+(`max_branches_per_node`). Lowering it cuts requests roughly geometrically with
+depth -- but it is an investigative choice, not a performance knob, because a
+narrower walk can miss a path the funds actually took.
 
 ---
 
@@ -517,6 +566,9 @@ is fine for evaluation and not for concurrent use.
 | BSC shows "unavailable" in the chain selector | `NODEREAL_API_KEY` is not set in `backend/.env`. Ethereum is unaffected. |
 | BSC trace finds nothing on an address you know is active | Its activity may predate the lookback window. Raise `NODEREAL_LOOKBACK_BLOCKS`. |
 | `blockNum not reached` in the logs | NodeReal's index trails the chain head by a few blocks. Handled automatically; safe to ignore. |
+| Traces feel slow in general | Expected on a free key — a trace is provider-bound, not compute-bound. Check `api_budget` in `GET /health`: `rate_limit_penalties` climbing means the key is being refused (raise `ETHERSCAN_MIN_INTERVAL`), and re-running the same address should be instant from cache. See [Why a trace takes the time it does](#why-a-trace-takes-the-time-it-does). |
+| Traces got slower after several runs | The pacer widens itself when the provider refuses, and narrows back as requests succeed. A widened `interval` in `/health` means the key is under pressure — from another tool sharing it, or from a burst of traces. |
+| A trace returns stale data | Responses are cached for `API_CACHE_TTL_SECONDS` (default 600). Lower it, or restart the backend, if you need to see a transfer made seconds ago. |
 | Trace is slow on a busy wallet | Partly expected — requests are throttled to stay under the free-tier cap. A level of addresses is fetched concurrently, so if traces feel serial check `TRACE_CONCURRENCY` has not been set to 1. Use 2–3 hops for a demo. |
 | Exchange is `null` on a real address | The funds may not have reached an exchange within the hop limit, or that exchange is not in the label file. Check `GET /exchanges`. |
 

@@ -472,6 +472,72 @@ option { background: var(--panel-2); color: var(--text); }
 .graph-controls button:last-child { width: auto; padding: 0 10px; }
 .graph-controls button:hover:not(:disabled) { color: var(--text); border-color: var(--line-strong); }
 
+/* Hover tooltip. react-force-graph owns the positioning and injects our HTML
+   into .graph-tooltip, so the class is styled rather than authored here. Its
+   default is a black box with a white border, which is louder than anything
+   else on the console -- restated as a panel like every other surface. */
+.graph-tooltip {
+  background: rgba(15, 17, 19, 0.96) !important;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  backdrop-filter: blur(8px);
+  padding: 0 !important;
+  font-family: var(--sans) !important;
+  color: var(--text) !important;
+  max-width: 300px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+.graph-tooltip .gt { padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.graph-tooltip .gt-head {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;
+}
+.graph-tooltip .gt-addr {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  word-break: break-all; margin-bottom: 5px; line-height: 1.4;
+}
+.graph-tooltip .r { display: flex; justify-content: space-between; gap: 14px; font-size: 11.5px; }
+.graph-tooltip .r .k { color: var(--faint); }
+.graph-tooltip .r .v { color: var(--muted); font-family: var(--mono); text-align: right; }
+.graph-tooltip .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.graph-tooltip .tags span {
+  font-size: 10px; padding: 1px 6px; border-radius: 3px;
+  background: var(--amber-dim); color: var(--amber);
+}
+.graph-tooltip .gt-foot {
+  margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line);
+  font-size: 10px; color: var(--faint);
+}
+
+/* Jump list — the cash-out points and risk hits, reachable without hunting.
+   Capped in height because a wide trace can match a dozen exchanges and the
+   panel must not grow into the canvas it is meant to help read. */
+.jump-panel {
+  position: absolute; right: 14px; bottom: 14px;
+  background: rgba(15, 17, 19, 0.9);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  border-radius: var(--r);
+  padding: 9px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 40%; overflow-y: auto;
+  min-width: 190px; max-width: 240px;
+}
+.jump-panel .micro { margin-bottom: 4px; }
+.jump-panel button {
+  display: flex; align-items: center; gap: 8px;
+  background: none; border: none; border-radius: 4px;
+  padding: 4px 6px; width: 100%; text-align: left; cursor: pointer;
+  color: var(--muted); font-family: var(--sans); font-size: 11.5px;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.jump-panel button:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+.jump-panel button.active { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+.jump-panel .swatch { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.jump-panel .name {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.jump-panel .addr { font-family: var(--mono); font-size: 10px; color: var(--faint); flex-shrink: 0; }
+
 /* =========================================================================
    RESPONSIVE — down to tablet
    ========================================================================= */

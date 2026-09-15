@@ -121,3 +121,19 @@ def amount_split_graph() -> nx.DiGraph:
         ],
         seed=seed,
     )
+
+
+@pytest.fixture(autouse=True)
+def _reset_api_budget():
+    """Keep the shared pacer and response cache from leaking between tests.
+
+    Both are process-wide by design -- the provider enforces its rate limit per
+    credential, not per client -- which means without this a cached response or
+    a widened interval from one test would silently change the next one's
+    result. Test order must never affect an outcome.
+    """
+    from app import api_budget
+
+    api_budget.reset()
+    yield
+    api_budget.reset()

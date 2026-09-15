@@ -247,7 +247,7 @@ export default function TraceView() {
 
           {!loading && !error && view === 'graph' && (
             <div className="graph-pane" style={{ height: 'calc(100vh - 150px)' }}>
-              <GraphView data={result.graph} tracePath={result.trace_path} />
+              <GraphView data={result.graph} tracePath={result.trace_path} unit={unit} />
             </div>
           )}
         </main>

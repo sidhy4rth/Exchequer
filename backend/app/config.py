@@ -264,10 +264,22 @@ TRACE_MAX_TXS_PER_ADDRESS: int = _int_env("TRACE_MAX_TXS_PER_ADDRESS", 200)
 TRACE_MAX_NODES: int = _int_env("TRACE_MAX_NODES", 400)
 # How many addresses at one depth are fetched concurrently. Providers answer in
 # ~5s on the free tiers, almost all of it network wait, so fetching a level
-# serially spends most of a trace idle. The clients' own throttles still cap the
-# request rate, so this shortens a trace without raising the load on the API.
-# Six keeps a comfortable margin under Etherscan's ~5 req/s free-tier ceiling.
+# serially spends most of a trace idle. The shared pacer still caps the request
+# rate, so this overlaps network waiting without raising the load on the API.
 TRACE_CONCURRENCY: int = _int_env("TRACE_CONCURRENCY", 6)
+
+# Minimum spacing between Etherscan requests, in seconds.
+#
+# Etherscan documents ~5 req/s on the free tier. Measured against a live free
+# key, that is not what it grants: sustained load at 0.34s spacing (2.9 req/s)
+# was refused 54% of the time, and every refusal costs a retry with exponential
+# backoff. Pushing harder therefore made traces *slower* -- at 0.20s spacing,
+# two thirds of requests were refused.
+#
+# 0.50s was the measured optimum: 4% refusals and the highest useful throughput
+# of any spacing tried. Raise it if the key is shared with another tool; lower
+# it only against a paid plan, where the real ceiling is higher.
+ETHERSCAN_MIN_INTERVAL: float = float(os.getenv("ETHERSCAN_MIN_INTERVAL", "0.5"))
 
 # SQLite location. Relative paths resolve against backend/.
 _db_raw = os.getenv("TRACECHAIN_DB_PATH", "tracechain.db")
@@ -275,3 +287,11 @@ DB_PATH: Path = Path(_db_raw) if Path(_db_raw).is_absolute() else BACKEND_DIR / 
 
 # Default-chain label file. Per-chain callers should use Chain.labels_path.
 EXCHANGE_LABELS_PATH: Path = DEFAULT_CHAIN.labels_path
+
+# How long a provider response stays reusable. On-chain history is append-only,
+# so a cached answer can only lag the newest blocks -- never contradict them.
+# The free tiers cap requests per *second* while leaving the daily quota barely
+# touched (a trace costs ~35 of 100,000 calls/day), so reusing an answer is
+# what actually shortens a trace: the second traversal direction, an overlapping
+# trace and every re-run of the same address all stop touching the network.
+API_CACHE_TTL_SECONDS: float = float(os.getenv("API_CACHE_TTL_SECONDS", "600"))

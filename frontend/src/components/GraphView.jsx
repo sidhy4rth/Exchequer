@@ -32,12 +32,40 @@ const COLORS = {
 // the eye actually compares. Radius therefore scales with the square root.
 const MIN_RADIUS = 3.2
 const MAX_RADIUS = 22
-// The seed and the matched exchange are the two addresses the user came to
-// find, so they never shrink below this however little value passed through.
+// Addresses the user came to find never shrink below this however little value
+// passed through them. This covers the risk hits too, not just the seed and the
+// exchanges: a sanctioned wallet that moved dust is still the most important
+// bubble on the canvas, and sizing it by value alone buries it.
 const FLOOR_RADIUS = 8
+const ANSWER_ROLES = new Set(['seed', 'exchange', 'risk'])
 
 // How far a non-highlighted element fades when something is highlighted.
 const DIMMED_ALPHA = 0.12
+
+// Padding around a bubble's clickable area, in SCREEN pixels.
+//
+// This matters more than it looks. The padding used to be a flat value added
+// to the radius, which is in *graph* units -- so it shrank along with
+// everything else as the camera pulled back. A 125-node trace frames at
+// roughly 0.3x, which left an ordinary 3.2-radius bubble with about two pixels
+// of hittable area, while the seed and the exchanges kept FLOOR_RADIUS and
+// stayed easy to hit. The graph read as though only some bubbles were
+// interactive. Dividing by the live zoom holds the padding constant on screen
+// at every framing, so every bubble is reachable however far out you are.
+const HIT_PAD = 9
+// Same reasoning for edges, kept smaller so a link never steals the pointer
+// from a bubble sitting on top of it.
+const LINK_HIT_PAD = 4
+
+const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer' }
+const ROLE_NAME = {
+  seed: 'Reported address',
+  risk: 'Sanctioned / mixer',
+  exchange: 'Cash-out point',
+  flagged: 'Flagged by a pattern',
+  node: 'Traced address',
+}
 
 function roleOf(node) {
   if (node.is_seed) return 'seed'
@@ -55,7 +83,74 @@ function flowOf(node) {
 const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`
 const idOf = (end) => (typeof end === 'object' ? end.id : end)
 
-export default function GraphView({ data, tracePath, onSelect, selected }) {
+const num = (value) =>
+  value >= 1000 ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                : Number((value || 0).toFixed(6)).toString()
+
+const when = (seconds) =>
+  seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
+
+// Tooltip content is injected as HTML by react-force-graph, and some of these
+// values (labels, entity names) originate outside this codebase, so escape.
+const esc = (value) =>
+  String(value ?? '').replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+
+const rows = (pairs) =>
+  pairs
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => `<div class="r"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`)
+    .join('')
+
+/** Everything known about an address, without having to click it. */
+function nodeTooltip(node, unit) {
+  const role = roleOf(node)
+  const suffix = unit ? ` ${unit}` : ''
+  const body = rows([
+    ['Exchange', node.exchange],
+    ['Wallet', node.label && node.label !== node.exchange ? node.label : null],
+    ['Listed as', node.risk_entity],
+    ['Category', node.risk_category ? RISK_NAME[node.risk_category] ?? node.risk_category : null],
+    ['Depth', `${node.depth} hop${node.depth === 1 ? '' : 's'} from seed`],
+    ['Received', `${num(node.total_in_native)}${suffix}`],
+    ['Sent', `${num(node.total_out_native)}${suffix}`],
+    ['Transfers', node.activity_count],
+  ])
+  const flags = node.flags?.length
+    ? `<div class="tags">${node.flags
+        .map((f) => `<span>${esc(PATTERN_NAME[f] ?? f)}</span>`)
+        .join('')}</div>`
+    : ''
+  return `<div class="gt">
+    <div class="gt-head" style="color:${COLORS[role]}">${esc(ROLE_NAME[role])}</div>
+    <div class="gt-addr">${esc(node.address)}</div>
+    ${body}${flags}
+    <div class="gt-foot">Click to keep this highlighted</div>
+  </div>`
+}
+
+/** What actually moved along an edge. */
+function linkTooltip(link, unit) {
+  const suffix = unit ? ` ${unit}` : ''
+  const body = rows([
+    ['Value', `${num(link.value_native)}${suffix}`],
+    ['Transfers', link.tx_count],
+    ['First', when(link.first_seen)],
+    ['Last', when(link.last_seen)],
+  ])
+  const flags = link.flags?.length
+    ? `<div class="tags">${link.flags
+        .map((f) => `<span>${esc(PATTERN_NAME[f] ?? f)}</span>`)
+        .join('')}</div>`
+    : ''
+  return `<div class="gt">
+    <div class="gt-head" style="color:${COLORS.text}">Transfer</div>
+    <div class="gt-addr">${esc(short(idOf(link.source)))} → ${esc(short(idOf(link.target)))}</div>
+    ${body}${flags}
+  </div>`
+}
+
+export default function GraphView({ data, tracePath, onSelect, selected, unit = '' }) {
   const containerRef = useRef(null)
   const graphRef = useRef(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -67,13 +162,26 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
   // stale. The canvas already repaints continuously, so no re-render is needed
   // to show a change.
   const hoverRef = useRef(null)
+  const hoverLinkRef = useRef(null)
   const selectedRef = useRef(null)
   const focusRef = useRef({ id: null, set: null })
   const neighboursRef = useRef(new Map())
+  // The live camera scale, for anything that has to be sized in screen pixels
+  // rather than graph units. Read on every pointer-area repaint, so it is a ref
+  // for the same staleness reason as the highlight state above.
+  const zoomRef = useRef(1)
   // Bumped whenever a node is pinned or released, purely so the control bar
   // re-renders with a current count. The pin itself lives on the node object,
   // because that is what the physics simulation reads.
   const [pinTick, setPinTick] = useState(0)
+
+  // Selection works whether or not a parent asks to own it. Left uncontrolled,
+  // a click still pins the highlight -- which is the whole point of clicking,
+  // and used to do nothing at all on the trace screen because no handler was
+  // passed down.
+  const [ownSelected, setOwnSelected] = useState(null)
+  const controlled = selected !== undefined
+  const activeSelected = controlled ? selected : ownSelected
 
   const labelBoxes = useRef([])
 
@@ -136,8 +244,7 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
     (node) => {
       const scaled =
         MIN_RADIUS + (MAX_RADIUS - MIN_RADIUS) * Math.sqrt(flowOf(node) / maxFlow)
-      const role = roleOf(node)
-      if (role === 'seed' || role === 'exchange') return Math.max(scaled, FLOOR_RADIUS)
+      if (ANSWER_ROLES.has(roleOf(node))) return Math.max(scaled, FLOOR_RADIUS)
       return scaled
     },
     [maxFlow],
@@ -220,19 +327,53 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
     focusRef.current = { id, set }
   }, [])
 
+  // Hovering an edge lights up just its two ends, which is the question an
+  // edge actually asks: who paid whom. No single node owns the focus here, so
+  // neither end gets the active ring.
+  const resolveFocus = useCallback(() => {
+    const node = hoverRef.current
+    if (node) {
+      applyFocus(node)
+      return
+    }
+    const link = hoverLinkRef.current
+    if (link) {
+      focusRef.current = {
+        id: null,
+        set: new Set([idOf(link.source), idOf(link.target)]),
+      }
+      return
+    }
+    applyFocus(selectedRef.current)
+  }, [applyFocus])
+
   // A selection made elsewhere (or cleared on a new trace) has to reach the
   // renderer too.
   useEffect(() => {
-    selectedRef.current = selected ?? null
-    applyFocus(hoverRef.current ?? selected ?? null)
-  }, [selected, applyFocus])
+    selectedRef.current = activeSelected ?? null
+    resolveFocus()
+  }, [activeSelected, resolveFocus])
 
   const handleHover = useCallback(
     (node) => {
       hoverRef.current = node?.id ?? null
-      applyFocus(hoverRef.current ?? selectedRef.current)
+      // Cursor feedback is mutated directly rather than held in state: this
+      // fires on every pointer move across the canvas, and a re-render per
+      // move would cost far more than it is worth.
+      if (containerRef.current) {
+        containerRef.current.style.cursor = node ? 'pointer' : 'default'
+      }
+      resolveFocus()
     },
-    [applyFocus],
+    [resolveFocus],
+  )
+
+  const handleLinkHover = useCallback(
+    (link) => {
+      hoverLinkRef.current = link ?? null
+      resolveFocus()
+    },
+    [resolveFocus],
   )
 
   const isFaded = (id) => {
@@ -241,6 +382,18 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
   }
 
   // -- interaction -------------------------------------------------------
+  const handleSelect = useCallback(
+    (node) => {
+      // Clicking the selected bubble again releases it, so the graph can be
+      // returned to its unfocused state without hunting for empty background.
+      if (!controlled) {
+        setOwnSelected((current) => (node && current === node.id ? null : node?.id ?? null))
+      }
+      onSelect?.(node)
+    },
+    [controlled, onSelect],
+  )
+
   // Dragging pins. A bubble the user has deliberately moved should stay where
   // they put it -- otherwise the layout springs back and the arrangement they
   // were building is lost.
@@ -281,10 +434,55 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
     fg.zoom(fg.zoom() * factor, 250)
   }, [])
 
+  // The addresses worth jumping straight to: the cash-out points and the risk
+  // hits. Finding these by hovering a 125-bubble canvas is the slow path even
+  // once every bubble is hittable, so list them and fly the camera there.
+  // Risk leads for the same reason it owns red -- an outside designation
+  // outranks the tool's own matches -- then shallowest, then largest.
+  const landmarks = useMemo(() => {
+    const rank = { risk: 0, exchange: 1 }
+    return graphData.nodes
+      .filter((n) => rank[roleOf(n)] !== undefined)
+      .sort((a, b) =>
+        rank[roleOf(a)] - rank[roleOf(b)] ||
+        (a.depth ?? 0) - (b.depth ?? 0) ||
+        flowOf(b) - flowOf(a))
+  }, [graphData])
+
+  const flyTo = useCallback(
+    (node) => {
+      const fg = graphRef.current
+      // The live copy carries the simulation's coordinates; the list item is a
+      // reference to that same object, but guard anyway for a node the layout
+      // has not positioned yet.
+      if (fg && Number.isFinite(node.x) && Number.isFinite(node.y)) {
+        fg.centerAt(node.x, node.y, 600)
+        fg.zoom(Math.max(fg.zoom(), 2.4), 600)
+      }
+      if (!controlled) setOwnSelected(node.id)
+      onSelect?.(node)
+    },
+    [controlled, onSelect],
+  )
+
+  // Escape drops the selection, f re-frames. Ignored while a form field has
+  // focus so the search box on the surrounding page keeps working.
+  useEffect(() => {
+    const onKey = (event) => {
+      const tag = event.target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return
+      if (event.key === 'Escape') handleSelect(null)
+      else if (event.key === 'f' || event.key === 'F') fitToView()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleSelect, fitToView])
+
   function drawNode(node, ctx, globalScale) {
     const role = roleOf(node)
     const radius = radiusOf(node)
     const isActive = focusRef.current.id === node.id
+    const isSelected = selectedRef.current === node.id
     const faded = isFaded(node.id)
 
     ctx.save()
@@ -342,11 +540,24 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
       ctx.setLineDash([])
     }
 
+    // A held selection reads differently from a passing hover: the outer ring
+    // says "this stays until you dismiss it".
+    if (isSelected) {
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, radius + 5.5, 0, 2 * Math.PI)
+      ctx.strokeStyle = 'rgba(230,232,234,0.85)'
+      ctx.lineWidth = 1.4 / globalScale
+      ctx.stroke()
+    }
+
     // --- labels -----------------------------------------------------------
     // Important nodes are always labelled. Ordinary ones appear only once the
     // user has zoomed in far enough for them to be readable, which keeps a
-    // large graph legible instead of a wall of text.
-    const important = role === 'seed' || role === 'exchange' || role === 'risk' || isActive
+    // large graph legible instead of a wall of text. Anything inside the
+    // current focus is labelled too: naming the counterparties is most of the
+    // value of focusing an address in the first place.
+    const inFocus = !!focusRef.current.set && focusRef.current.set.has(node.id)
+    const important = ANSWER_ROLES.has(role) || isActive || inFocus
     if ((!important && globalScale < 1.6) || faded) {
       ctx.restore()
       return
@@ -404,21 +615,37 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
           backgroundColor="#0a0b0d"
           nodeRelSize={4}
           nodeCanvasObject={drawNode}
+          nodeLabel={(node) => nodeTooltip(node, unit)}
           nodePointerAreaPaint={(node, color, ctx) => {
             ctx.fillStyle = color
             ctx.beginPath()
-            ctx.arc(node.x, node.y, radiusOf(node) + 3, 0, 2 * Math.PI)
+            ctx.arc(node.x, node.y, radiusOf(node) + HIT_PAD / zoomRef.current, 0, 2 * Math.PI)
             ctx.fill()
           }}
+          onZoom={({ k }) => { zoomRef.current = k || 1 }}
           onRenderFramePre={() => { labelBoxes.current = [] }}
           onNodeHover={handleHover}
-          onNodeClick={(node) => onSelect?.(node)}
+          onNodeClick={handleSelect}
           onNodeRightClick={(node) => releaseNode(node)}
-          onBackgroundClick={() => onSelect?.(null)}
+          onBackgroundClick={() => handleSelect(null)}
           enableNodeDrag
           onNodeDragEnd={handleDragEnd}
+          linkLabel={(link) => linkTooltip(link, unit)}
+          onLinkHover={handleLinkHover}
+          linkPointerAreaPaint={(link, color, ctx) => {
+            const s = link.source
+            const t = link.target
+            if (!s || !t || !Number.isFinite(s.x) || !Number.isFinite(t.x)) return
+            ctx.strokeStyle = color
+            ctx.lineWidth = LINK_HIT_PAD / zoomRef.current
+            ctx.beginPath()
+            ctx.moveTo(s.x, s.y)
+            ctx.lineTo(t.x, t.y)
+            ctx.stroke()
+          }}
           linkColor={(link) => {
             const key = `${idOf(link.source)}>${idOf(link.target)}`
+            if (hoverLinkRef.current === link) return COLORS.text
             if (isFaded(idOf(link.source)) || isFaded(idOf(link.target))) {
               return 'rgba(255,255,255,0.035)'
             }
@@ -429,6 +656,7 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
           linkWidth={(link) => {
             const key = `${idOf(link.source)}>${idOf(link.target)}`
             const base = 0.6 + 2.2 * Math.sqrt((link.value_native || 0) / maxValue)
+            if (hoverLinkRef.current === link) return base + 1.6
             return pathEdges.has(key) ? base + 1 : base
           }}
           linkDirectionalArrowLength={4}
@@ -459,7 +687,7 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
             <button onClick={() => zoomBy(1 / 1.4)} title="Zoom out">−</button>
             <button
               onClick={fitToView}
-              title="Fit the whole graph in view"
+              title="Fit the whole graph in view (f)"
             >
               Fit
             </button>
@@ -473,9 +701,35 @@ export default function GraphView({ data, tracePath, onSelect, selected }) {
           </div>
 
           <div className="graph-hint">
-            Drag a bubble to pin it · right-click to release · hover to isolate its
-            transfers · scroll to zoom · bubble size = value moved
+            Hover any bubble for detail · click to keep it highlighted · drag to
+            pin · right-click to release · scroll to zoom · bubble size = value
+            moved
           </div>
+
+          {landmarks.length > 0 && (
+            <div className="jump-panel">
+              <span className="micro">Jump to</span>
+              {landmarks.map((node) => {
+                const role = roleOf(node)
+                return (
+                  <button
+                    key={node.id}
+                    className={activeSelected === node.id ? 'active' : ''}
+                    onClick={() => flyTo(node)}
+                    title={node.address}
+                  >
+                    <span className="swatch" style={{ background: COLORS[role] }} />
+                    <span className="name">
+                      {role === 'risk'
+                        ? node.risk_entity ?? RISK_NAME[node.risk_category] ?? 'Listed'
+                        : node.label ?? node.exchange}
+                    </span>
+                    <span className="addr">{short(node.address)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           <div className="legend">
             <div className="item">

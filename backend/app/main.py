@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import chain_data, config, models
+from . import api_budget, chain_data, config, models
 from .chain_data import (
     ProviderNotConfiguredError,
     UnknownAssetError,
@@ -251,6 +251,11 @@ def health() -> dict[str, Any]:
         "exchange_labels_loaded": len(get_matcher()),
         "risk_labels_loaded": len(get_risk_matcher()),
         "chains": chains,
+        # Why a trace was slow. On the free tiers the provider, not the
+        # traversal, is what costs the seconds: a high `rate_limit_penalties`
+        # means the key is being refused and every refusal costs a backoff,
+        # while a high cache `hit_rate` means repeat work is already free.
+        "api_budget": api_budget.budget_stats(),
     }
 
 
@@ -606,7 +611,13 @@ if FRONTEND_DIR.is_dir():
         candidate = (FRONTEND_DIR / full_path).resolve()
         if full_path and candidate.is_file() and FRONTEND_DIR.resolve() in candidate.parents:
             return FileResponse(candidate)
-        return FileResponse(FRONTEND_DIR / "index.html")
+        # The shell must never be cached: a stale index.html keeps pointing at
+        # asset hashes from a previous build, and the old bundle then calls the
+        # wrong API base and reports the backend as unreachable.
+        return FileResponse(
+            FRONTEND_DIR / "index.html",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
 
     logger.info("Serving frontend from %s", FRONTEND_DIR)
 else:

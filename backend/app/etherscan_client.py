@@ -27,7 +27,6 @@ from __future__ import annotations
 import logging
 import random
 import re
-import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -35,6 +34,7 @@ from typing import Any
 import httpx
 
 from . import config
+from .api_budget import ResponseCache, SharedPacer, get_cache, get_pacer
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +214,7 @@ class EtherscanClient:
         base_url: str | None = None,
         timeout: float = 20.0,
         max_retries: int = 4,
-        min_interval: float = 0.34,  # ~3 req/s, the current free-tier ceiling
+        min_interval: float | None = None,  # None -> config.ETHERSCAN_MIN_INTERVAL
         contract_address: str | None = None,
         asset_symbol: str | None = None,
         client: httpx.Client | None = None,
@@ -223,7 +223,9 @@ class EtherscanClient:
         self.chain_id = chain_id if chain_id is not None else config.ETHERSCAN_CHAIN_ID
         self.base_url = base_url or config.ETHERSCAN_BASE_URL
         self.max_retries = max_retries
-        self.min_interval = min_interval
+        self.min_interval = (
+            min_interval if min_interval is not None else config.ETHERSCAN_MIN_INTERVAL
+        )
         # When set, the client follows this ERC-20 contract instead of native
         # ETH. A trace follows one asset at a time.
         self.contract_address = (
@@ -233,8 +235,28 @@ class EtherscanClient:
 
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout)
-        self._lock = threading.Lock()
-        self._last_request_at = 0.0
+
+        # Etherscan enforces its rate limit per API key, across every chain that
+        # key is used on -- one V2 key serves Ethereum and BSC alike. A client is
+        # built per trace, so pacing it per instance would let two concurrent
+        # traces double the request rate against a limit that never doubled.
+        # Both the pacer and the cache are therefore keyed by credential, not by
+        # client and not by chain.
+        scope = f"etherscan:{(self.api_key or 'anon')[:8]}"
+        self._pacer = get_pacer(
+            scope,
+            lambda: SharedPacer(
+                interval=self.min_interval,
+                min_interval=self.min_interval,
+                # Measured against the live free tier, refusals start well below
+                # the documented ceiling and cost more than they save. Give the
+                # pacer room to back off to roughly one request per second.
+                max_interval=max(self.min_interval * 5, 2.5),
+            ),
+        )
+        self._cache = get_cache(
+            scope, lambda: ResponseCache(ttl_seconds=config.API_CACHE_TTL_SECONDS)
+        )
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -249,12 +271,20 @@ class EtherscanClient:
 
     # -- internals ---------------------------------------------------------
     def _throttle(self) -> None:
-        """Space requests at least `min_interval` apart to stay under the cap."""
-        with self._lock:
-            elapsed = time.monotonic() - self._last_request_at
-            if elapsed < self.min_interval:
-                time.sleep(self.min_interval - elapsed)
-            self._last_request_at = time.monotonic()
+        """Block until the credential's shared schedule permits a request."""
+        self._pacer.wait()
+
+    @staticmethod
+    def _cache_key(params: dict[str, Any]) -> tuple:
+        """A stable key for one query, with the credential left out.
+
+        Sorted so parameter order cannot produce two entries for one question,
+        and without `apikey` so the same query asked under a different key still
+        hits -- the answer is a property of the chain, not of who asked.
+        """
+        return tuple(sorted(
+            (k, str(v)) for k, v in params.items() if k != "apikey"
+        ))
 
     def _request(self, params: dict[str, Any]) -> Any:
         """Perform one Etherscan call with throttling, retries and backoff.
@@ -270,6 +300,16 @@ class EtherscanClient:
             )
 
         query = {**params, "chainid": self.chain_id, "apikey": self.api_key}
+
+        # On-chain history is append-only, so a cached answer can only ever lag
+        # the newest blocks -- it cannot be wrong about what already happened.
+        # That is what makes this safe, and it is the single biggest saving
+        # available: the provider, not the traversal, is what makes a trace slow.
+        cache_key = self._cache_key(query)
+        hit, cached = self._cache.get(cache_key)
+        if hit:
+            return cached
+
         last_error: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
@@ -286,6 +326,8 @@ class EtherscanClient:
                 last_error = EtherscanError(
                     f"Etherscan returned HTTP {response.status_code}"
                 )
+                if response.status_code == 429:
+                    self._pacer.penalize()
                 self._backoff(attempt, reason=f"HTTP {response.status_code}")
                 continue
 
@@ -304,20 +346,29 @@ class EtherscanClient:
             if "jsonrpc" in payload:
                 if payload.get("error"):
                     raise EtherscanError(f"Etherscan proxy error: {payload['error']}")
-                return payload.get("result")
+                self._pacer.reward()
+                result = payload.get("result")
+                self._cache.put(cache_key, result)
+                return result
 
             status = str(payload.get("status", ""))
             message = str(payload.get("message", ""))
             result = payload.get("result")
 
             if status == "1":
+                self._pacer.reward()
+                self._cache.put(cache_key, result)
                 return result
 
             # status != "1". Three distinct cases, and they must not be conflated.
             haystack = f"{message} {result if isinstance(result, str) else ''}".lower()
 
-            # 1. Genuinely empty -- a valid answer, not a failure.
+            # 1. Genuinely empty -- a valid answer, not a failure. Cached like
+            # any other answer: "this address has no transactions" is exactly as
+            # re-askable as a full list, and re-asking it costs the same second.
             if any(phrase in haystack for phrase in _EMPTY_MESSAGES):
+                self._pacer.reward()
+                self._cache.put(cache_key, [])
                 return []
 
             # 2. Rate limited -- back off and retry.
@@ -325,6 +376,11 @@ class EtherscanClient:
                 last_error = EtherscanRateLimitError(
                     f"Etherscan rate limit hit: {message} {result}"
                 )
+                # Tell the shared pacer, not just this call: a refusal means the
+                # rate every trace is using is too high, and slowing only the
+                # request that happened to be refused would leave the others to
+                # trip the same limit again.
+                self._pacer.penalize()
                 self._backoff(attempt, reason="rate limit")
                 continue
 
