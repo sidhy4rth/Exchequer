@@ -15,6 +15,15 @@ const COMPONENT_NAME = {
 // trace takes the time it does"). Shown while loading so a wait has a size.
 const EXPECTED_REQUESTS = { 1: 2, 2: 12, 3: 35, 4: 75, 5: 150, 6: 300 }
 
+/** OFAC stamps its list "MM/DD/YYYY"; an Indian reader parses that as day-first.
+ * Spell the month out so "09/04/2026" cannot be read as 9 April. */
+function unambiguousDate(text) {
+  return String(text ?? '').replace(/(\d{2})\/(\d{2})\/(\d{4})/, (_, mm, dd, yyyy) => {
+    const d = new Date(Date.UTC(+yyyy, +mm - 1, +dd))
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  })
+}
+
 /** Middle-truncated address: both ends carry identity, the middle does not. */
 function middle(address, head = 10, tail = 8) {
   if (!address || address.length <= head + tail + 1) return address
@@ -220,7 +229,7 @@ export default function TraceView() {
                 <div className="line" key={m.address}>
                   <strong>{RISK_NAME[m.category] ?? m.category}:</strong> {m.entity} — <Address value={m.address} />
                   {' · '}{m.depth === 0 ? 'the reported address itself' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away, ${num(m.value_received_native)} ${unit} reached it`}
-                  {' · '}<span className="mono">{m.source}</span>
+                  {' · '}<span className="mono">{unambiguousDate(m.source)}</span>
                   {m.is_terminal && ' · A mixer pays out from a commingled pool, so transfers leaving it have no established link to the funds that arrived.'}
                 </div>
               ))}
