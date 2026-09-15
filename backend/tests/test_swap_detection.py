@@ -151,3 +151,32 @@ def test_the_sentence_says_where_to_resume():
     text = describe(swaps[0])
     assert "a swap, not a payment" in text
     assert f"re-run it on token {WSTETH} from {SENDER}" in text
+
+
+# ---------------------------------------------------------------------------
+# Second adversarial pass: what must never be called a swap
+# ---------------------------------------------------------------------------
+def test_a_refund_of_the_traced_token_is_not_a_swap_output():
+    """On a USDT trace, unspent USDT coming back is a refund; reporting it as
+    'swapped USDT for USDT' would send an officer chasing nothing."""
+    usdt = ETHEREUM.tokens[0]
+    receipt = {"logs": [{
+        "address": usdt.address,
+        "topics": [TRANSFER_TOPIC, "0x" + "0" * 24 + ROUTER[2:], "0x" + "0" * 24 + SENDER[2:]],
+        "data": hex(5_000_000),
+    }]}
+    swaps = detect_swaps(router_graph(), routers(), lambda h: receipt, ETHEREUM, "USDT",
+                         asset_contract=usdt.address)
+    assert swaps[0]["output_read"] is False
+
+
+def test_a_contracts_internal_payout_to_a_router_is_not_its_swap():
+    """A pool settling a stranger's swap pays the router by internal transfer.
+    Reading that receipt would report the stranger's input as the pool's
+    output and tell the officer to re-run from the pool."""
+    graph = router_graph()
+    for t in graph.edges[SENDER, ROUTER]["transactions"]:
+        t["internal"] = True
+    swaps = detect_swaps(graph, routers(), lambda h: RECEIPT, ETHEREUM, "ETH")
+    assert swaps == []
+    assert "swap" not in graph.edges[SENDER, ROUTER]

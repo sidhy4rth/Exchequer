@@ -54,10 +54,10 @@ logger = logging.getLogger(__name__)
 
 # Label types a sweep may land on. A labelled deposit wallet is excluded: a
 # wallet whose outflows go to *another* deposit address is a customer, not a
-# deposit address.
-SWEEP_DESTINATION_TYPES = frozenset(
-    {"hot_wallet", "exchange_wallet", "contract_wallet", "cold_wallet"}
-)
+# deposit address. So is an exchange-operated contract wallet: the label
+# audit typed deposit *forwarders* that way, and a wallet paying into one of
+# those is, again, the customer.
+SWEEP_DESTINATION_TYPES = frozenset({"hot_wallet", "exchange_wallet", "cold_wallet"})
 
 
 @dataclass(frozen=True)
@@ -119,6 +119,10 @@ def infer_deposit_addresses(
 
         evidence: dict[str, Any] = {
             "sweep_count": stats["count"],
+            # True when the provider's cap on transfers per address was hit,
+            # so older outflows exist that were not read. The sentence below
+            # says "most recent" in that case rather than "every".
+            "outgoing_history_capped": bool(data.get("outgoing_history_capped", False)),
             "sweep_destination": destination,
             "sweep_destination_label": meta["label"],
             "share_of_outflow_to_destination": 1.0,
@@ -172,9 +176,15 @@ def describe(match: ExchangeMatch, native_symbol: str = "ETH") -> str:
     balance_text = (
         f" Its current balance is {balance:.4f} {native_symbol}." if balance is not None else ""
     )
+    scope = (
+        f"Every one of its {e.get('sweep_count')} most recent outgoing transfers (older "
+        f"history exists and was not read)"
+        if e.get("outgoing_history_capped")
+        else f"Every one of its {e.get('sweep_count')} outgoing transfers"
+    )
     return (
         f"{match.address} is inferred to be a {match.exchange} deposit address. "
-        f"Every one of its {e.get('sweep_count')} outgoing transfers went to "
+        f"{scope} went to "
         f"{e.get('sweep_destination')} ({e.get('sweep_destination_label')}), a "
         f"labelled {match.exchange} wallet, and to nowhere else -- the shape an "
         f"exchange produces when it sweeps a customer's deposits into its hot "

@@ -104,18 +104,31 @@ def detect_swaps(
     chain: config.Chain,
     asset_symbol: str,
     cfg: SwapConfig | None = None,
+    asset_contract: str | None = None,
 ) -> list[dict[str, Any]]:
     """Tag router nodes and, where a receipt can be read, the swap on each edge.
 
     Returns one record per swap found (or per router edge whose output could
     not be read), for the response and the report.
+
+    `asset_contract` is the token being traced, if any. A Transfer of that
+    same token back to the sender is a refund of unspent input, not a swap
+    output, and is never reported as one.
     """
     cfg = cfg or SwapConfig()
     findings: list[dict[str, Any]] = []
+    asset_contract = normalize_address(asset_contract) if asset_contract else None
 
     for source, target, edge in graph.edges(data=True):
         meta = routers.lookup(target)
         if meta is None:
+            continue
+        transactions = edge.get("transactions") or []
+        # A contract paying a router by internal transfer is a pool settling
+        # somebody else's swap, not the contract swapping. Reading that
+        # receipt would report the stranger's input token as this contract's
+        # "output". Only transfers the sender signed are swaps by the sender.
+        if transactions and all(tx.get("internal") for tx in transactions):
             continue
         node = graph.nodes[target]
         node["is_router"] = True
@@ -123,7 +136,6 @@ def detect_swaps(
         node["label"] = node.get("label") or meta["label"]
 
         swaps: list[dict[str, Any]] = []
-        transactions = edge.get("transactions") or []
         for tx in transactions[: cfg.max_receipts_per_edge]:
             record: dict[str, Any] = {
                 "router": meta["exchange"],
@@ -145,7 +157,10 @@ def detect_swaps(
                 except Exception as exc:  # noqa: BLE001 -- one receipt must not kill a trace
                     logger.warning("Receipt for %s could not be read: %s", tx.get("hash"), exc)
             if receipt:
-                outputs = parse_swap_outputs(receipt, source)
+                outputs = [
+                    o for o in parse_swap_outputs(receipt, source)
+                    if o["contract"] != asset_contract
+                ]
                 if outputs:
                     # The largest single output is the swap's result; the rest
                     # are refunds or fee rebates and are listed, not summed.

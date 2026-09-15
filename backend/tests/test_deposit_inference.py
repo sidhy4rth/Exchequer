@@ -168,3 +168,26 @@ def test_a_label_file_match_wins_a_tie_on_distance():
     exact = matcher().annotate(graph)
     tied = [type(inferred[0])(**{**inferred[0].__dict__, "depth": exact[0].depth})]
     assert ExchangeMatcher.primary_match(exact + tied).inferred is False
+
+
+# ---------------------------------------------------------------------------
+# Second adversarial pass
+# ---------------------------------------------------------------------------
+def test_paying_into_an_exchange_contract_wallet_marks_a_customer():
+    """The label audit typed deposit forwarders as contract wallets; a wallet
+    that pays one twice is the customer who owns the forwarder, not a deposit
+    address of the exchange."""
+    graph = sweep_graph()
+    forwarder = matcher(**{HOT: {"exchange": "Binance", "label": "Binance: Deposit Forwarder",
+                                  "type": "contract_wallet"}})
+    assert infer_deposit_addresses(graph, forwarder) == []
+
+
+def test_a_capped_history_is_said_to_be_most_recent_not_every():
+    graph = sweep_graph(sweeps=200)
+    graph.nodes[DEPOSIT]["outgoing_history_capped"] = True
+    found = infer_deposit_addresses(graph, matcher())
+    assert found[0].evidence["outgoing_history_capped"] is True
+    text = describe(found[0], "ETH")
+    assert "most recent outgoing transfers (older history exists" in text
+    assert "Every one of its 200 outgoing transfers went" not in text

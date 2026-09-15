@@ -407,6 +407,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
                 result.graph, routers,
                 receipt_of=getattr(client, "get_transaction_receipt", None),
                 chain=chain, asset_symbol=asset_symbol,
+                asset_contract=token.address if token else None,
             ) if direction == OUTGOING else []
             # Attribution. Exact label-file matches first, then addresses whose
             # outgoing history is nothing but sweeps into one of those labelled
