@@ -365,11 +365,11 @@ export default function TraceView() {
                 exchange share a bank, not an offender.
               </p>
               {related.slice(0, 8).map((c) => (
-                <div className="risk" key={c.case_id}>
+                <div className="related" key={c.case_id}>
                   <div className="top">
-                    <span className="nm">
-                      <a href={`/case/${c.case_id}`}>{c.reported_address}</a>
-                    </span>
+                    <a className="nm" href={`/case/${c.case_id}`} title={c.reported_address}>
+                      {middle(c.reported_address, 10, 8)}
+                    </a>
                     <span className="st">
                       {c.shared_count} shared wallet{c.shared_count === 1 ? '' : 's'}
                     </span>
@@ -378,15 +378,16 @@ export default function TraceView() {
                     {c.exchange ? `reached ${c.exchange}` : 'no exchange matched'} · traced {String(c.traced_at).slice(0, 10)}
                   </div>
                   {c.shared.slice(0, 4).map((s) => (
-                    <div className="desc" key={s.address}>
-                      <span className="wallet">{s.address}</span>
-                      {' · '}
-                      {s.inferred_exchange ? `probable ${s.inferred_exchange} deposit address · ` : ''}
-                      {num(s.value_in_native)} {c.asset} at {s.depth} hop{s.depth === 1 ? '' : 's'}
+                    <div className="row" key={s.address}>
+                      <span className="wallet" title={s.address}>{middle(s.address, 10, 8)}</span>
+                      <span className="via">
+                        {s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}
+                        {num(s.value_in_native)} {c.asset} · {s.depth} hop{s.depth === 1 ? '' : 's'}
+                      </span>
                     </div>
                   ))}
                   {c.shared_count > 4 && (
-                    <div className="desc">…and {c.shared_count - 4} more shared wallets</div>
+                    <div className="more">…and {c.shared_count - 4} more shared wallets</div>
                   )}
                 </div>
               ))}

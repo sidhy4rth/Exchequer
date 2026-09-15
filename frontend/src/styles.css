@@ -440,6 +440,28 @@ option { background: var(--panel-2); color: var(--text); }
 .risk .desc { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
 .risk .desc.stop { color: var(--risk); opacity: 0.92; }
 
+/* another stored complaint that passed through the same wallet. Neutral on
+   purpose: red means a sanctions hit, and a shared intermediary is a lead,
+   not a verdict. */
+.related { border: 1px solid var(--line-strong); border-radius: var(--r); padding: 12px 14px; }
+.related + .related { margin-top: 10px; }
+.related .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.related .nm {
+  font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+  color: var(--accent); text-decoration: none;
+  border-bottom: 1px solid var(--accent-dim);
+}
+.related .nm:hover { border-bottom-color: var(--accent); }
+.related .st { font-family: var(--mono); font-size: 11px; color: var(--dim); white-space: nowrap; }
+.related .ent { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.related .row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  margin-top: 7px; font-size: 11px; line-height: 1.5;
+}
+.related .row .wallet { font-family: var(--mono); color: var(--text); }
+.related .row .via { color: var(--dim); text-align: right; }
+.related .more { font-size: 11px; color: var(--dim); margin-top: 7px; }
+
 /* addresses that funded the reported one — a reverse trace's real output */
 .funder { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
 .funder + .funder { margin-top: 8px; }

@@ -173,3 +173,22 @@ def test_related_cases_groups_shared_intermediaries_by_the_other_case():
     assert related[0]["shared"][1]["value_in_native"] == 4.0
     assert related[1]["shared_count"] == 1
     assert related_cases(clusters, "c9") == []
+
+
+def test_related_cases_never_lists_the_same_reported_address_or_repeat_traces():
+    from app.correlation import related_cases
+
+    x = addr("5a1")
+    cases = [
+        # The same reported address traced three times, plus one other complaint
+        # that also traced twice. Only the other address counts, and only once.
+        a_case("c1", addr("1"), [{"id": x, "value": 1.0}], when="2026-09-15T12:00:00+00:00"),
+        a_case("c1-old", addr("1"), [{"id": x, "value": 1.0}], when="2026-09-15T10:00:00+00:00"),
+        a_case("c1-older", addr("1").upper(), [{"id": x, "value": 1.0}], when="2026-09-15T09:00:00+00:00"),
+        a_case("c2-old", addr("2"), [{"id": x, "value": 2.0}], when="2026-09-14T10:00:00+00:00"),
+        a_case("c2", addr("2"), [{"id": x, "value": 3.0}], when="2026-09-15T11:00:00+00:00"),
+    ]
+    related = related_cases(correlate(cases), "c1")
+
+    assert [r["case_id"] for r in related] == ["c2"]
+    assert related[0]["shared"][0]["value_in_native"] == 3.0

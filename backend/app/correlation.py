@@ -128,15 +128,40 @@ def related_cases(clusters: list[dict[str, Any]], case_id: str) -> list[dict[str
 
     An investigator reading a trace wants "which other complaints does this
     one touch, and through what", not a list of wallets each naming cases.
-    One entry per other case, carrying every shared intermediary, most shared
-    first; within a case, probable deposit addresses first, then by value.
+    One entry per other *reported address*, carrying every shared
+    intermediary, most shared first; within a case, probable deposit addresses
+    first, then by value.
+
+    Two exclusions keep the list honest. An earlier trace of the same reported
+    address is not a related case -- a wallet cannot corroborate itself, and
+    the store holds repeat traces of the same address at different depths.
+    And another address traced several times is one complaint, so only its
+    most recent trace is listed.
     """
+    own_address: str | None = None
+    for cluster in clusters:
+        for m in cluster["cases"]:
+            if m["case_id"] == case_id:
+                own_address = (m["reported_address"] or "").lower()
+                break
+        if own_address is not None:
+            break
+
     by_case: dict[str, dict[str, Any]] = {}
+    latest_for_address: dict[str, str] = {}
     for cluster in clusters:
         if not any(m["case_id"] == case_id for m in cluster["cases"]):
             continue
         for member in cluster["cases"]:
             if member["case_id"] == case_id:
+                continue
+            reported = (member["reported_address"] or "").lower()
+            if reported == own_address:
+                continue
+            chosen = latest_for_address.setdefault(reported, member["case_id"])
+            if chosen != member["case_id"]:
+                # cluster["cases"] is newest first, so the first case seen for
+                # an address is its most recent trace; older ones are skipped.
                 continue
             entry = by_case.setdefault(member["case_id"], {
                 "case_id": member["case_id"],

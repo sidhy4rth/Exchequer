@@ -40,25 +40,41 @@ async function toError(response) {
  * 'incoming' (which addresses funded it). Omitted rather than defaulted here,
  * so the backend stays the single authority on what the default is.
  */
-export async function traceAddress(address, maxDepth, chain, asset, direction) {
-  let response
-  try {
-    response = await fetch(`${BASE}/trace`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        address,
-        ...(maxDepth ? { max_depth: maxDepth } : {}),
-        ...(chain ? { chain } : {}),
-        ...(asset ? { asset } : {}),
-        ...(direction ? { direction } : {}),
-      }),
-    })
-  } catch {
-    throw new Error('Cannot reach the TraceChain backend. Is it running on port 8000?')
-  }
-  if (!response.ok) throw await toError(response)
-  return response.json()
+const inFlight = new Map()
+
+export function traceAddress(address, maxDepth, chain, asset, direction) {
+  const body = JSON.stringify({
+    address,
+    ...(maxDepth ? { max_depth: maxDepth } : {}),
+    ...(chain ? { chain } : {}),
+    ...(asset ? { asset } : {}),
+    ...(direction ? { direction } : {}),
+  })
+  // One trace per identical request at a time. React's development-mode
+  // StrictMode mounts the trace view twice, and a user can double-click; the
+  // backend cannot cancel a traversal it has started, so a second identical
+  // POST would run the whole trace again -- twice the provider requests and a
+  // duplicate stored case -- for an answer already on its way.
+  const existing = inFlight.get(body)
+  if (existing) return existing
+  const request = (async () => {
+    let response
+    try {
+      response = await fetch(`${BASE}/trace`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      })
+    } catch {
+      throw new Error('Cannot reach the TraceChain backend. Is it running on port 8000?')
+    } finally {
+      inFlight.delete(body)
+    }
+    if (!response.ok) throw await toError(response)
+    return response.json()
+  })()
+  inFlight.set(body, request)
+  return request
 }
 
 /**
