@@ -223,7 +223,7 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 
 Both rules live in `backend/app/pattern_detection.py`, and every threshold is a named constant in one `PatternConfig` dataclass at the top. Each finding reports the thresholds it applied, so it can be re-checked by hand.
 
-Where the rules come from, stated honestly: the *shapes* come from the literature, the *numbers* do not. The peel chain was named and described by Meiklejohn et al. in 2013 (*A Fistful of Bitcoins*, IMC'13), who also warned in the same paragraph that the shape "extends well beyond criminal activity" — ordinary exchange withdrawals produce it too. The fan-out shape is what Elliptic's 2025 pig-butchering typology describes as moving funds "through dozens of intermediary wallets" before they reach an exchange. **Every numeric threshold below — 3 transfers, 2 intermediates, 50%, 2%, 3 recipients, 50–110%, 90% — is this project's own choice and comes from no paper.** How those choices behave on real wallets is measured in [Validation against real wallets](#validation-against-real-wallets); the sources are in [RESEARCH.md](RESEARCH.md).
+Where the rules come from, stated honestly: the *shapes* come from the literature, the *numbers* do not. The peel chain was named and described by Meiklejohn et al. in 2013 (*A Fistful of Bitcoins*, IMC'13), who also warned in the same paragraph that the shape "extends well beyond criminal activity" — ordinary exchange withdrawals produce it too. The fan-out shape is what Elliptic's 2025 pig-butchering typology describes as moving funds "through dozens of intermediary wallets" before they reach an exchange. **Every numeric threshold below — 3 transfers, 2 intermediates, 50%, 2%, 4 recipients, 90–102%, 60% — is this project's own choice and comes from no paper.** How those choices behave on real wallets is measured in [Validation against real wallets](#validation-against-real-wallets); the sources are in [RESEARCH.md](RESEARCH.md).
 
 ### Before either rule: money cannot be forwarded before it arrives
 
@@ -245,10 +245,29 @@ Stolen funds walked through a series of throwaway wallets, with a little skimmed
 
 One address receives a sum and fans it out across several recipients, multiplying the paths an investigator must follow. This is sometimes called "structuring", but that word is a legal term for breaking up *currency* transactions to evade a *reporting threshold* (31 CFR § 1010.100(xx)), and there is no reporting threshold on a public blockchain — so the rule here describes a shape, not a statutory offence. The same shape is produced by payroll, exchanges and market makers, which is why the rule is treated as a reason to look closer and never as a verdict.
 
-1. Sent to **3 or more** distinct recipients.
-2. Between **50% and 110%** of what came in went straight back out — it forwarded, it did not keep.
-3. No single recipient took more than **90%** of the total, so the money was genuinely divided rather than passed along whole with dust attached.
+1. Sent to **4 or more** distinct recipients.
+2. Between **90% and 102%** of what came in went back out — it passed the money through, it did not spend it.
+3. No single recipient took more than **60%** of the total, so the money was genuinely divided rather than passed along mostly whole.
 4. The address is **not itself a known exchange** — exchanges fan out to thousands of customers by design.
+
+These numbers were tightened on 15 September 2026 from the original 3 / 50–110% / 90% after the measurement below: the original values flagged 40% of ordinary high-volume wallets.
+
+### Inferred exchange deposit addresses
+
+Most real cash-outs do not land on a labelled hot wallet. The customer is given a *deposit address* the exchange controls, the money lands there, and the exchange later sweeps it into a hot wallet. The label files know the hot wallet and almost never the deposit address, so a trace reaches an unlabelled wallet one hop before the exchange — and that unlabelled wallet is the one a lawful request has to name, because a hot wallet receives from thousands of customers and identifies nobody.
+
+The rule in `backend/app/deposit_inference.py` says an unlabelled wallet is a **probable deposit address of exchange E** when:
+
+1. It is not the reported address and has no label of its own.
+2. It made **at least 2** outgoing transfers.
+3. **Every one of them** went to the **same** labelled E wallet (a hot, exchange, contract or cold wallet — never a labelled *deposit* wallet, since deposits sweep to hot wallets) and to nowhere else.
+4. Where the provider can answer cheaply, its current balance is recorded as evidence — a swept deposit address holds close to nothing — but a balance is never a requirement, because a deposit that has not yet been swept is still a deposit address.
+
+The tell is the *whole* history, not the last transfer. A personal wallet that deposits to Binance sends to its own deposit address, which is unlabelled, and does other things with its money; a deposit address does one thing, every time, to one place. The rule reads only outgoing transfers, so it cannot measure the delay between a deposit and its sweep, and it cannot see the gas-funding transfer an exchange sends before an ERC-20 sweep. It is strict on what it can see rather than loose on what it cannot.
+
+An inferred address is a **weaker attribution and is scored as one**: `match_directness` is 0.5 instead of 1.0, so at the same distance it scores 0.125 below a labelled wallet. It sits one hop closer than the hot wallet it sweeps to, which hop proximity rewards, so against that particular wallet the two come out within a few hundredths of each other — both appear in `matches`, the response says `attribution_inferred: true`, the sidebar reads *"Probable Binance deposit address (inferred — see evidence)"*, and the report prints the evidence (sweep count, destination, share, balance) and the sentence that would confirm it: a lawful request to the exchange asking whether the address is one of theirs.
+
+Ways it can be wrong, stated plainly: an exchange's *own* internal wallet that consolidates into a hot wallet has the same shape and would be called a deposit address (harmless in practice — it still belongs to that exchange); a wallet whose owner really did send everything, twice, straight to a labelled hot wallet would be misnamed; and the rule only sees the newest 200 transfers, so an address with an older, different history is judged on its recent one. It never fires on a wallet the trace did not expand, so at the depth limit it says nothing rather than guessing. On the validation corpus it fired on **0 of 48** control wallets — see [Validation against real wallets](#validation-against-real-wallets).
 
 ### Confidence score
 
@@ -413,6 +432,40 @@ Stated plainly, and repeated in every exported report:
 - **Screening covers the OFAC SDN list only.** An address absent from it is not thereby established as legitimate, and the designation carries no automatic force in Indian law — it is a lead and an escalation trigger, not a verdict.
 - **`direct_senders` lists addresses that funded the reported one, not confirmed victims.** A sender may be the offender's own wallet, an exchange withdrawal, or an unrelated payment; only the exchanges among them can be identified from chain data alone.
 - **A first-time trace is as fast as the free tier allows, and no faster.** See below.
+
+---
+
+## Validation against real wallets
+
+The two pattern rules were measured against real Ethereum wallets, because a threshold that was chosen rather than derived has to be shown to behave. Two corpora, every address fetched by script from a named source and checked on chain for contract bytecode (none typed by hand; provenance for each entry is in `backend/data/validation/corpus.json`):
+
+- **40 positives** — wallets publicly documented as fraud or theft proceeds: 20 from the OFAC SDN list already in the repo (Lazarus Group and other designated individuals; exchanges and OTC services excluded), 17 carrying Etherscan's own *Phish / Hack* label, and the 3 WazirX-hack attacker addresses named in CloudSEK's write-up of 19 July 2024.
+- **48 controls** — ordinary wallets with no fraud association, from the same pinned label dataset the exchange importer uses: investment funds, mining-pool payout wallets, charities, payment processors, OTC desks, trading firms, company treasuries and airdrop distributors. The pools, processors and distributors are there on purpose: they fan out by design, so they are the wallets most likely to trip the amount-split rule.
+
+Each wallet was traced forward at depth 3 with the real pipeline (1,416 provider requests in total, 37 addresses per trace on average), and a rule counts as *fired* if it produced a finding anywhere in that graph — which is what an investigator running the tool would see. 32 positives and 47 controls had at least one outgoing ETH transfer; the rest hold and never send, and are excluded because nothing can fire on an empty graph.
+
+| Rule | Thresholds | Fired on positives (of 32) | Fired on controls (of 47) |
+|---|---|---|---|
+| Peel chain | 3 transfers, 2 intermediates, 50% retention (defaults) | **2** | **2** |
+| Peel chain | any retention 0.3–0.9, any activity cap 2–6 | 2 | 1–2 |
+| Peel chain | 3 intermediates | 0 | 0 |
+| Amount split | **previous defaults**: 3 recipients, 50–110% forwarded, 90% cap | 12 | **19** |
+| Amount split | 3 recipients, 90–102%, 60% cap | 8 | 9 |
+| Amount split | 4 recipients, 90–102%, 90% cap | 7 | 8 |
+| Amount split | **current defaults**: 4 recipients, 90–102%, 60% cap | **6** | **5** |
+| Amount split | 5 recipients, 90–102%, 60% cap | 3 | 5 |
+| Deposit-address inference | 2 sweeps, 100% to one labelled wallet | — | **0 of 48 control seeds** |
+
+What the numbers establish, and what they do not. **Neither rule separates documented-illicit wallets from ordinary high-volume ones within three hops**, and no point in the 68-point threshold grid brought control firings to zero while still firing on any positive. The peel chain almost never fires; both control hits are mining-pool payouts, which is precisely the legitimate shape Meiklejohn et al. warned produces it. The amount split at its old defaults flagged 40% of ordinary wallets, so the defaults were moved to the grid point with the fewest control firings that still fired on positives — 11% of controls, 19% of positives — and that is an estimate from 79 wallets, not a law. Read a pattern finding as the tool has always asked you to: a reason to look closer, never a verdict. The measurement also does not test recall against ground truth, since a wallet documented as holding stolen funds is not thereby documented as laundering them in one of these two shapes. The deposit-address rule fired on none of the 48 control seeds, which are wallets known not to be exchange deposit addresses; it also marked 69 deeper, unknown wallets across 20 control traces, about which nothing is known either way.
+
+Only Ethereum / ETH was measured. Tron and BSC positives exist (OFAC lists 282 Tron addresses) but no scripted source of Tron *controls* with the same provenance discipline was found, so no number is claimed for those chains.
+
+Regenerate the table (offline, from the committed snapshot; add `--refresh` to re-fetch):
+
+```bash
+cd backend && .venv/bin/python -m scripts.build_validation_corpus   # only to rebuild the corpus
+cd backend && .venv/bin/python -m scripts.validate_patterns
+```
 
 ---
 

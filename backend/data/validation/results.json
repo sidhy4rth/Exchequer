@@ -1,0 +1,2367 @@
+{
+  "generated": "2026-09-15T14:39:22Z",
+  "depth": 3,
+  "chain": "ethereum",
+  "asset": "ETH",
+  "defaults": {
+    "low_activity_max": 3,
+    "min_chain_intermediates": 2,
+    "min_hop_retention": 0.5,
+    "growth_tolerance": 0.02,
+    "min_split_branches": 4,
+    "min_forwarded_ratio": 0.9,
+    "max_forwarded_ratio": 1.02,
+    "max_single_branch_share": 0.6
+  },
+  "summary": {
+    "positive": {
+      "wallets_with_outflow": 32,
+      "wallets_traced": 40,
+      "peel_chain": [
+        "0x0084515449b037205a33d6d3940a5684126aa4b5",
+        "0x04dba1194ee10112fe6c3207c0687def0e78bacf"
+      ],
+      "amount_split": [
+        "0x000000000532b45f47779fce440748893b257865",
+        "0x00000000072d54638c2c2a3da3f715360269eea1",
+        "0x0000000009324b6434d7766af41908e4c49ee1d7",
+        "0x00278018530825863b765dc6cd581c0a8d471ade",
+        "0x04b21735e93fa3f8df70e2da89e6922616891a88",
+        "0x098b716b8aaf21512996dc57eb0615e2383e2f96"
+      ],
+      "reached_exchange": 19,
+      "seed_inferred_as_deposit": [],
+      "traces_with_an_inferred_node": 11,
+      "inferred_nodes_total": 29
+    },
+    "control": {
+      "wallets_with_outflow": 47,
+      "wallets_traced": 48,
+      "peel_chain": [
+        "0x06b8c5883ec71bc3f4b332081519f23834c8706e",
+        "0x11905bd0863ba579023f662d1935e39d0c671933"
+      ],
+      "amount_split": [
+        "0x04668ec2f57cc15c381b461b9fedab5d451c8f7f",
+        "0x0708f87a089a91c65d48721aa941084648562287",
+        "0x11905bd0863ba579023f662d1935e39d0c671933",
+        "0x3ba21b6477f48273f41d241aa3722ffb9e07e247",
+        "0x6c85006eae121cf2444f0852cab9914607915df2"
+      ],
+      "reached_exchange": 35,
+      "seed_inferred_as_deposit": [],
+      "traces_with_an_inferred_node": 20,
+      "inferred_nodes_total": 69
+    }
+  },
+  "per_address": [
+    {
+      "address": "0x0330070fd38ec3bb94f58fa55d40368271e9e54a",
+      "corpus": "positive",
+      "why": "designated entity: AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY (DPRK4)",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x038989cbb1710c72b9920dc4fa529158f463e72c",
+      "corpus": "positive",
+      "why": "designated entity: Armando de Jesus OJEDA AVILES (ILLICIT-DRUGS-EO14059, SDGT)",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x04dba1194ee10112fe6c3207c0687def0e78bacf",
+      "corpus": "positive",
+      "why": "designated entity: Alex Adrianus Martinus PEIJNENBURG (ILLICIT-DRUGS-EO14059)",
+      "nodes": 60,
+      "edges": 68,
+      "outgoing_counterparties": 8,
+      "exchange": "OKX",
+      "patterns": [
+        "peel_chain"
+      ],
+      "pattern_addresses": {
+        "peel_chain": [
+          "0x04dba1194ee10112fe6c3207c0687def0e78bacf",
+          "0x3d58ba7f7ef40e1497c622ccbd125ff80512e83d",
+          "0xf7114cabe59a646703ec4004a3bd36553eaeea14",
+          "0x5b7934cdbb5cd076bd486e0f017aeb777bf0d04c"
+        ]
+      },
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 22,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x08723392ed15743cc38513c4925f5e6be5c17243",
+      "corpus": "positive",
+      "why": "designated entity: LAZARUS GROUP (DPRK3)",
+      "nodes": 6,
+      "edges": 8,
+      "outgoing_counterparties": 4,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 6,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x08b2efdcdb8822efe5ad0eae55517cf5dc544251",
+      "corpus": "positive",
+      "why": "designated entity: Alex Adrianus Martinus PEIJNENBURG (ILLICIT-DRUGS-EO14059)",
+      "nodes": 14,
+      "edges": 13,
+      "outgoing_counterparties": 1,
+      "exchange": "OKX",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 3,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0931ca4d13bb4ba75d9b7132ab690265d749a5e7",
+      "corpus": "positive",
+      "why": "designated entity: CRYPTEX (CYBER2, RUSSIA-EO14024)",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x098b716b8aaf21512996dc57eb0615e2383e2f96",
+      "corpus": "positive",
+      "why": "designated entity: LAZARUS GROUP (DPRK3)",
+      "nodes": 50,
+      "edges": 92,
+      "outgoing_counterparties": 10,
+      "exchange": null,
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x08723392ed15743cc38513c4925f5e6be5c17243",
+          "0xf945fa5b71cfaa2736b427b7213cff14cc83279c",
+          "0x0dcb08eabb2bedf838226fb7b2c15a69132df8b2",
+          "0x49788613913050ce0da9c8313654cee3f4848a9e"
+        ]
+      },
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 49,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0ee5067b06776a89ccc7dc8ee369984ad7db5e06",
+      "corpus": "positive",
+      "why": "designated entity: Alex Adrianus Martinus PEIJNENBURG (ILLICIT-DRUGS-EO14059)",
+      "nodes": 53,
+      "edges": 58,
+      "outgoing_counterparties": 5,
+      "exchange": "OKX",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 13,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x12de548f79a50d2bd05481c8515c1ef5183666a9",
+      "corpus": "positive",
+      "why": "designated entity: OLD VECTOR LLC (CYBER4)",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x14779cec0b117d5194c750c55ea1f42086631964",
+      "corpus": "positive",
+      "why": "designated entity: Armando de Jesus OJEDA AVILES (ILLICIT-DRUGS-EO14059, SDGT)",
+      "nodes": 6,
+      "edges": 6,
+      "outgoing_counterparties": 1,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 5,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x175d44451403edf28469df03a9280c1197adb92c",
+      "corpus": "positive",
+      "why": "designated entity: GAZA NOW (SDGT)",
+      "nodes": 10,
+      "edges": 12,
+      "outgoing_counterparties": 2,
+      "exchange": "Bybit",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xcd02509dccf48b7764cb478478a8d8bf077dcfe9",
+        "0x62802a1a41fcd3438b441b29097c7a9fa55949ae"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 7,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x1967d8af5bd86a497fb3dd7899a020e47560daaf",
+      "corpus": "positive",
+      "why": "designated entity: Matthew Simon GRIMM (ILLICIT-DRUGS-EO14059)",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x1999ef52700c34de7ec2b68a28aafb37db0c5ade",
+      "corpus": "positive",
+      "why": "designated entity: Khadzhi Murat Dalgatovich MAGOMEDOV (RUSSIA-EO14024)",
+      "nodes": 27,
+      "edges": 29,
+      "outgoing_counterparties": 6,
+      "exchange": "Huobi / HTX",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 15,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x19f8f2b0915daa12a3f5c9cf01df9e24d53794f7",
+      "corpus": "positive",
+      "why": "designated entity: OKO DESIGN BUREAU (RUSSIA-EO14024)",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x1cab8177ace78b1b6b1c393371f4f2dcae40cbeb",
+      "corpus": "positive",
+      "why": "designated entity: Behzad MESRI (CYBER2, HRIT-IR)",
+      "nodes": 14,
+      "edges": 20,
+      "outgoing_counterparties": 1,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 12,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x1d19b52b54e7ef5ea1a4b40b616165e798eac9f8",
+      "corpus": "positive",
+      "why": "designated entity: Dmytro RASHEVSKYI (CYBER4)",
+      "nodes": 2,
+      "edges": 1,
+      "outgoing_counterparties": 1,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x21b8d56bda776bbe68655a16895afd96f5534fed",
+      "corpus": "positive",
+      "why": "designated entity: GAZA NOW (SDGT)",
+      "nodes": 9,
+      "edges": 10,
+      "outgoing_counterparties": 3,
+      "exchange": "Bybit",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xcd02509dccf48b7764cb478478a8d8bf077dcfe9",
+        "0x62802a1a41fcd3438b441b29097c7a9fa55949ae"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 6,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x2711d73d559f62f4f855ee21f38378f528e07985",
+      "corpus": "positive",
+      "why": "designated entity: FIRST VPN SERVICE (CYBER4)",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x000000000532b45f47779fce440748893b257865",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3901",
+      "nodes": 76,
+      "edges": 85,
+      "outgoing_counterparties": 3,
+      "exchange": "Binance",
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0xcafecaa65b9c7e88aa9fff42d7ca89fda629130b",
+          "0xbd5f591d5a3dc3663a91ed38d6b135c9f0fc2670",
+          "0xe7c2ac40d41f5c6763b011d731262c9e05bb8287",
+          "0x90d25fb79b0397cfebf5484e6b7c67e607fed1bc"
+        ]
+      },
+      "inferred_deposit_nodes": [
+        "0x11b074371fd7e7fbc4056cbb4868c99a9f0c4663",
+        "0x20e2df0b52cbf21901099e0b281dfb1c9e697d11",
+        "0x20e3a9cf9f2d4773de24fb50b1eff25fed70acc3",
+        "0x2bc3678d93e7c82bc37cc951b608ca5ade962e2b"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 26,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x00000000072d54638c2c2a3da3f715360269eea1",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing4939",
+      "nodes": 32,
+      "edges": 44,
+      "outgoing_counterparties": 9,
+      "exchange": "Binance",
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x029fc32677e80d51ec839525a3c1f4dba590345e",
+          "0xf138bb766e47649bc4944b1fe444f120a40c760b",
+          "0x5e3cec43bb4256c883b0e247a96352be07ddacd6",
+          "0xbb814c1996c5c18c68990a13af7a604a6564df9a"
+        ]
+      },
+      "inferred_deposit_nodes": [
+        "0xd1565e8f8da523fe526aedd37e73b5090eb7aa20",
+        "0x8290868cc51e7315d1318f449d48fe66fcf203a5",
+        "0xd76a659333a1183798a2939e9808387955b79fb5",
+        "0x143c855bfa5629c8fa024ce1dda875645a363d9e"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 20,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0000000009324b6434d7766af41908e4c49ee1d7",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3857",
+      "nodes": 74,
+      "edges": 82,
+      "outgoing_counterparties": 3,
+      "exchange": "Binance",
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x7f781d6966fe917a61524d508da9a7b15ee2e238",
+          "0xc4a2f98dd3a69edc81891435cbef9b417a40b485",
+          "0x9aa005642528749e6dbf2bb85dc7222f916e012f",
+          "0xc696dca90db2f57ccdc85ec7486d177234af22ef"
+        ]
+      },
+      "inferred_deposit_nodes": [
+        "0x11b074371fd7e7fbc4056cbb4868c99a9f0c4663",
+        "0x20e2df0b52cbf21901099e0b281dfb1c9e697d11",
+        "0x20e3a9cf9f2d4773de24fb50b1eff25fed70acc3",
+        "0x2bc3678d93e7c82bc37cc951b608ca5ade962e2b"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 26,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0000000086c5d614bec59dfd2c9b88f7cb57f23c",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing4604",
+      "nodes": 4,
+      "edges": 3,
+      "outgoing_counterparties": 1,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 3,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x00000000bf02300fd6251627aa3db8933a0eee83",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3856",
+      "nodes": 55,
+      "edges": 62,
+      "outgoing_counterparties": 2,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x11b074371fd7e7fbc4056cbb4868c99a9f0c4663",
+        "0x20e2df0b52cbf21901099e0b281dfb1c9e697d11",
+        "0x20e3a9cf9f2d4773de24fb50b1eff25fed70acc3",
+        "0x2bc3678d93e7c82bc37cc951b608ca5ade962e2b"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 21,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x00000e32e51011e28958d4696627c82c3dacd5a6",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3541",
+      "nodes": 30,
+      "edges": 31,
+      "outgoing_counterparties": 5,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 9,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x00067010f3ae17aa53e2b4d5142dda35380cf72d",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing2882",
+      "nodes": 28,
+      "edges": 29,
+      "outgoing_counterparties": 1,
+      "exchange": "HitBTC",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 12,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0020731604c882cf7bf8c444be97d17b19ea4316",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3977",
+      "nodes": 35,
+      "edges": 36,
+      "outgoing_counterparties": 3,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 11,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x00278018530825863b765dc6cd581c0a8d471ade",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3875",
+      "nodes": 27,
+      "edges": 32,
+      "outgoing_counterparties": 1,
+      "exchange": "Binance",
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0xd325555ca4114bac1aaac0f92fc3d506c75fa42f",
+          "0x611a116786aa887116307f4c1fed410ca4ff782f",
+          "0x28d162e94f0dcb803601339d4f323e720be1389e",
+          "0x953a0c099e7fb73a9e7874a773e248f540ab3ab3"
+        ]
+      },
+      "inferred_deposit_nodes": [
+        "0x9af3050031bd7842b2d761b6f28963efe236918a"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 12,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x002bf459dc58584d58886169ea0e80f3ca95ffaf",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing1300",
+      "nodes": 40,
+      "edges": 39,
+      "outgoing_counterparties": 2,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 8,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x002f0c8119c16d310342d869ca8bf6ace34d9c39",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing1493",
+      "nodes": 33,
+      "edges": 33,
+      "outgoing_counterparties": 2,
+      "exchange": "Remitano",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xaf6a0f3527528a8ca052784f4fee565c3288cd71",
+        "0x8cd6ffce25e40832209e636a4cc256535e576f7c"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 17,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x003f12c49df27295fe97d4990b7901e2c855adf5",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing4449",
+      "nodes": 19,
+      "edges": 29,
+      "outgoing_counterparties": 2,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xf8b63a02c686ee123584b15b037de0521d651caf",
+        "0xf53bc8d2ed2599e13164bfa31424160741b1ce1d",
+        "0xbf9482384d8a481f147868dd48c204ccdaac9cd1"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 15,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0059b14e35dab1b4eee1e2926c7a5660da66f747",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing371",
+      "nodes": 33,
+      "edges": 37,
+      "outgoing_counterparties": 3,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 20,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x005b9f4516f8e640bbe48136901738b323c53b00",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing957",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0061fb5485dff4bb85c078dca80d19119224d97e",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing1689",
+      "nodes": 18,
+      "edges": 25,
+      "outgoing_counterparties": 2,
+      "exchange": "HitBTC",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 13,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x00650a784ee109797ba8c05f3496bdbf2b2b7a1c",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing2650",
+      "nodes": 56,
+      "edges": 62,
+      "outgoing_counterparties": 2,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 14,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0067b43cb530e683dbffb43f5caacde867472721",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing4989",
+      "nodes": 24,
+      "edges": 26,
+      "outgoing_counterparties": 3,
+      "exchange": "HitBTC",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x4a1265873468a63a9710a3185fdcff7154a2c50c"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 10,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x007a376e488cee20e2b059e683e61af28eea9f63",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3019",
+      "nodes": 102,
+      "edges": 117,
+      "outgoing_counterparties": 4,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xd391c4a2a923f1b835b681985c45a1cbf1c685e6",
+        "0xd8ce1addb79b03389504b4ffd7d521c5f494681b"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 18,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0084515449b037205a33d6d3940a5684126aa4b5",
+      "corpus": "positive",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing2033",
+      "nodes": 11,
+      "edges": 10,
+      "outgoing_counterparties": 2,
+      "exchange": null,
+      "patterns": [
+        "peel_chain"
+      ],
+      "pattern_addresses": {
+        "peel_chain": [
+          "0x0084515449b037205a33d6d3940a5684126aa4b5",
+          "0xc469d1c94887bdd02ee3c7bf9cc80b1d41f3ccbc",
+          "0x5e5720a3de83d46b537048471d36a771a7d41e07",
+          "0x70faa28a6b8d6829a4b1e649d26ec9a2a39ba413"
+        ]
+      },
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 6,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x04b21735e93fa3f8df70e2da89e6922616891a88",
+      "corpus": "positive",
+      "why": "named as an attacker address in the WazirX (Indian exchange) hack of 18 July 2024",
+      "nodes": 11,
+      "edges": 20,
+      "outgoing_counterparties": 3,
+      "exchange": null,
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x58d3b2fd2ce20a7149244d7e34d18b9b55448e7a",
+          "0x7d256f71507e7c7fea337e8518e2bd8f3cf8d30b",
+          "0x93097b0a0ace8fcd0b2337ae5dc7f638c48234c2",
+          "0x2d2906f7c8da32e87064d9e71c98f39b2ceba968"
+        ]
+      },
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 9,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x35febc10112302e0d69f35f42cce85816f8745ca",
+      "corpus": "positive",
+      "why": "named as an attacker address in the WazirX (Indian exchange) hack of 18 July 2024",
+      "nodes": 26,
+      "edges": 49,
+      "outgoing_counterparties": 8,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 21,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x90ca792206ed7ee9bc9da0d0df981fc5619f91fd",
+      "corpus": "positive",
+      "why": "named as an attacker address in the WazirX (Indian exchange) hack of 18 July 2024",
+      "nodes": 16,
+      "edges": 32,
+      "outgoing_counterparties": 2,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 13,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x05e793ce0c6027323ac150f6d45c2344d28b6019",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 1,
+      "edges": 0,
+      "outgoing_counterparties": 0,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0716a17fbaee714f1e6ab0f9d59edbc5f09815c0",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 17,
+      "edges": 20,
+      "outgoing_counterparties": 2,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 6,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x073dca8acbc11ffb0b5ae7ef171e4c0b065ffa47",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 55,
+      "edges": 58,
+      "outgoing_counterparties": 2,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 21,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x085af684acdb1220d111fee971b733c5e5ae6ccd",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 2,
+      "edges": 1,
+      "outgoing_counterparties": 1,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0c0fe4e0236480e16b679ee1fd0c5247f9cf35f0",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 17,
+      "edges": 21,
+      "outgoing_counterparties": 1,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 8,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0f4ee9631f4be0a63756515141281a3e2b293bbe",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 36,
+      "edges": 40,
+      "outgoing_counterparties": 3,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 17,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x112b69178d416cd03222de9e6dd6b3adf36412aa",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 4,
+      "edges": 3,
+      "outgoing_counterparties": 2,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xf15cfb3a758529c40ef6a1a2ccc1a938d93920ab"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 3,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x11577a8a5baf1e25b9a2d89f39670f447d75c3cd",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 81,
+      "edges": 95,
+      "outgoing_counterparties": 10,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 31,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x1157a2076b9bb22a85cc2c162f20fab3898f4101",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 72,
+      "edges": 76,
+      "outgoing_counterparties": 10,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xe68d67d69bb6ec3d9f98838bc6af393c87eb0e32",
+        "0x76c63e9a62f66b46402f9ded520add79669d630d",
+        "0x112c5698e6ce9ab30ad4654de9005c2481f3e333"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 22,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x23a5efe19aa966388e132077d733672cf5798c03",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 67,
+      "edges": 68,
+      "outgoing_counterparties": 6,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 18,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x23b4cd421b7cb7d274689b2a7c100baf8546941b",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 40,
+      "edges": 40,
+      "outgoing_counterparties": 10,
+      "exchange": "OKX",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 17,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x2e675eeae4747c248bfddbafaa3a8a2fdddaa44b",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 9,
+      "edges": 8,
+      "outgoing_counterparties": 7,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 9,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x3507e4978e0eb83315d20df86ca0b976c0e40ccb",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 2,
+      "edges": 1,
+      "outgoing_counterparties": 1,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x3ba21b6477f48273f41d241aa3722ffb9e07e247",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 53,
+      "edges": 58,
+      "outgoing_counterparties": 7,
+      "exchange": null,
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x4862733b5fddfd35f35ea8ccf08f5045e57388b3",
+          "0x7119cb953db332a3b60730d5d39e7b1ba5120e86",
+          "0x21077c80971716faa403060a6d209274754a609d",
+          "0xf5f1ca5bd4f0641a9606cc1245430d6530bf65a8"
+        ]
+      },
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 24,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x40c20da8d0214a7ef33a84e287992858db744e6d",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 2,
+      "edges": 1,
+      "outgoing_counterparties": 1,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 2,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x4655b7ad0b5f5bacb9cf960bbffceb3f0e51f363",
+      "corpus": "control",
+      "why": "investment fund treasury",
+      "nodes": 13,
+      "edges": 14,
+      "outgoing_counterparties": 4,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 11,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x00192fb10df37c9fb26829eb2cc623cd1bf599e8",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 13,
+      "edges": 12,
+      "outgoing_counterparties": 10,
+      "exchange": "Kraken",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x142e6d753734e1b6902edee140422105b0e7b8c7",
+        "0x9780717b31c28451c8cf623c8809bdee37dbe2e3"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 11,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x002e08000acbbae2155fab7ac01929564949070d",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 25,
+      "edges": 27,
+      "outgoing_counterparties": 10,
+      "exchange": "Kraken",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x142e6d753734e1b6902edee140422105b0e7b8c7",
+        "0x0a5a8f3af1fcaaa107cb828ded954f1c51cd4139",
+        "0x2a75249f181a6c045bab7ea7920ed9701173a4a1",
+        "0xf637bf53eaef401a972c2ac7bb7f2a5c21d85d0d",
+        "0x71bfe5e7532edea14b3ba3797f26bd7a868fb86b"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 18,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x01ca8a0ba4a80d12a8fb6e3655688f57b16608cf",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 4,
+      "edges": 4,
+      "outgoing_counterparties": 2,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xfd377623bcf3067c4200c18a600d1930611e4b25"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 3,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x03e75d7dd38cce2e20ffee35ec914c57780a8e29",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 35,
+      "edges": 36,
+      "outgoing_counterparties": 10,
+      "exchange": "Gate.io",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x779f3f4b9c5e87ca9078f743cb5c5466f513a6da",
+        "0xd1bd4428edb019815c314e2335db56d80ff41d19"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 20,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x04668ec2f57cc15c381b461b9fedab5d451c8f7f",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 155,
+      "edges": 192,
+      "outgoing_counterparties": 10,
+      "exchange": "OKX",
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x2790d16bfbea6676605a43a922505943371dbcc5",
+          "0xa0c68c638235ee32657e8f720a23cec1bfc77c77",
+          "0x1b1277112dc438bfaf9208a9fd283fe3f536a524",
+          "0x2285673905beb438c9ea159ec9b02ff348fe5ff3"
+        ]
+      },
+      "inferred_deposit_nodes": [
+        "0x1e09cb04e0ce466b1f7bfa9048d2d48da7c0c85f",
+        "0x949a3c066a7f41ba20dcca1463e1438ade0a7572",
+        "0xbc1657d90606f96a0d09183930fe15dc4b118a4a",
+        "0x617415b0cacf776048fca328007da04e8088f8ba",
+        "0x0fe68263116a45794ce7ed884acba4adaa4a3855",
+        "0x3574ce8d76ab560ed904dc947e3bcc6044ab5856",
+        "0xaf3a0d66db89ef152a9c90abc50446994c61799c",
+        "0x6e4781d0a327c601e4923309867e21dcab6037e9",
+        "0x77cf0096b88957a43f0cbce98c0c49d851e939c3"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 53,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x06b8c5883ec71bc3f4b332081519f23834c8706e",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 73,
+      "edges": 94,
+      "outgoing_counterparties": 8,
+      "exchange": "Binance",
+      "patterns": [
+        "peel_chain"
+      ],
+      "pattern_addresses": {
+        "peel_chain": [
+          "0x06b8c5883ec71bc3f4b332081519f23834c8706e",
+          "0x7bb73d14ecd5d1bb1885001012a904651f5c4229",
+          "0x69f1bd6e2307379c1e83cda58cdebc424f64f8df",
+          "0x90210001ffdc5c90645c347a583922c1b9fe8e44"
+        ]
+      },
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 38,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0708f87a089a91c65d48721aa941084648562287",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 115,
+      "edges": 136,
+      "outgoing_counterparties": 10,
+      "exchange": "Huobi / HTX",
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x2790d16bfbea6676605a43a922505943371dbcc5",
+          "0xa0c68c638235ee32657e8f720a23cec1bfc77c77",
+          "0x1b1277112dc438bfaf9208a9fd283fe3f536a524",
+          "0x2285673905beb438c9ea159ec9b02ff348fe5ff3"
+        ]
+      },
+      "inferred_deposit_nodes": [
+        "0x70b1d33305495520873a03dcefe30a37aebe1354",
+        "0x4d8511f46714729f4ab766ff2a558130d2dd4f31",
+        "0xb3fdc5f4b4057443481020b2bd8ef67008dbeaa5",
+        "0xe9990336a4e9c48b3390bfeee72b3ef3b18c7415",
+        "0xdb21f2e36cc6ad1b9a60671f37e777d11d3ba6f4"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 42,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x09ab1303d3ccaf5f018cd511146b07a240c70294",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 47,
+      "edges": 48,
+      "outgoing_counterparties": 10,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 25,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x11905bd0863ba579023f662d1935e39d0c671933",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 47,
+      "edges": 50,
+      "outgoing_counterparties": 10,
+      "exchange": "Binance",
+      "patterns": [
+        "amount_split",
+        "peel_chain"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x87753b9c8fd0ebd4cb3223378bb436da1817aa17",
+          "0x856d569ed696a3624eb60583da49001a935961c1",
+          "0x4e659bc3fc954631785d4a9363646322b080dfc4",
+          "0xb8d82e4eabf05d2516286a14e73df1af3b076cd1"
+        ],
+        "peel_chain": [
+          "0x11905bd0863ba579023f662d1935e39d0c671933",
+          "0x045676149bcd982a3752e5c912866015b41a5980",
+          "0x055cf5b94e49222862124683cbdd738a0c77b5f3",
+          "0x0b715f74f3f4c71159bad038349c7a5477e02b60"
+        ]
+      },
+      "inferred_deposit_nodes": [
+        "0xc36c696a48f02c4a2017eb90ede9f3d5f1891264",
+        "0x4c2888ccb8dedf959a70f454e0a2931e5ddb9707"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 23,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x14b30f257c2737370203a15aa343c2b600dfb675",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 27,
+      "edges": 39,
+      "outgoing_counterparties": 10,
+      "exchange": "Huobi / HTX",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x4597dc3214ad4ccc226bc5be927b6900d1c070d5",
+        "0x1e3a3c9e0402dc13e297551d9b8d863b16cc1aa8"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 15,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x151255dd9e38e44db38ea06ec66d0d113d6cbe37",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 85,
+      "edges": 97,
+      "outgoing_counterparties": 10,
+      "exchange": "Bitfinex",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x57b4bd7090e51bdb6a645aa24e1c4973830818c0",
+        "0x0ca835feff2d9a0f6cee0ed34449a868a85de791",
+        "0xfbaa61dfc06660dc036c1ffed1ebe41636f04f28",
+        "0x7ea172b74e1d4ec26c445c514e250fa9679a40c0"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 39,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x1ad91ee08f21be3de0ba2ba6918e714da6b45836",
+      "corpus": "control",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "nodes": 100,
+      "edges": 115,
+      "outgoing_counterparties": 9,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xd37de49b4a18424bad7a33f4a1c1b8cf77597930",
+        "0xe78d0287938d8f3601743727c89b0ad0d8023f19",
+        "0x56baee0d9e6e71f287179a530ff02efcf7f2abef",
+        "0x25b7cd318f2b517ac9561c943f8373b32fa69946",
+        "0x21c37558499d581a53cdcf9726fc0dea9b7f961c",
+        "0xb365954872d36974af014e90b4b3aca61e31a229",
+        "0x47e34493f45924204dbad72485e7f31bdf766db5",
+        "0x4b8bb7de1f673b3c1d68ea5cf70dd56500d6db19",
+        "0x775f7b03904287ac6113bdd7372195997e0ebc35",
+        "0xffc3bd142f52ad290b98ae990648fc44a82caebb"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 45,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x095f1fd53a56c01c76a2a56b7273995ce915d8c4",
+      "corpus": "control",
+      "why": "charity donation wallet",
+      "nodes": 8,
+      "edges": 7,
+      "outgoing_counterparties": 7,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x542eff118023cff2821b24156a507a513fe93539",
+      "corpus": "control",
+      "why": "charity donation wallet",
+      "nodes": 9,
+      "edges": 8,
+      "outgoing_counterparties": 8,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 1,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x54334ebc8c9ef04bc28d614caa557143ed8afc87",
+      "corpus": "control",
+      "why": "charity donation wallet",
+      "nodes": 14,
+      "edges": 13,
+      "outgoing_counterparties": 6,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 3,
+      "seconds": 0.0
+    },
+    {
+      "address": "0xbf2952b759a70250caa53d9d7f910cd985cbf6aa",
+      "corpus": "control",
+      "why": "charity donation wallet",
+      "nodes": 2,
+      "edges": 1,
+      "outgoing_counterparties": 1,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 2,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x09942b2409079d9cb3b36dba8d6a60118e270746",
+      "corpus": "control",
+      "why": "payment processor: fans out to merchants by design",
+      "nodes": 23,
+      "edges": 26,
+      "outgoing_counterparties": 5,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 13,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x20dc0b9520cc2c2be89f247061a2c8e310045949",
+      "corpus": "control",
+      "why": "payment processor: fans out to merchants by design",
+      "nodes": 17,
+      "edges": 17,
+      "outgoing_counterparties": 10,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 13,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x3cadbeb58cb5162439908eda08df0a305b016da8",
+      "corpus": "control",
+      "why": "payment processor: fans out to merchants by design",
+      "nodes": 151,
+      "edges": 193,
+      "outgoing_counterparties": 10,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x2a07499bc6442254228167992b75328b4a406bde",
+        "0xf4e925fb2212d089685c630d30229e24ed49595d",
+        "0x66b554842c252716c66946eec37c4592e48a31dd",
+        "0x712bb2bfa44befa596f928429199855968be1403"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 69,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x5d9fe07813a260857cf60639dac710ebb9531a20",
+      "corpus": "control",
+      "why": "payment processor: fans out to merchants by design",
+      "nodes": 94,
+      "edges": 110,
+      "outgoing_counterparties": 10,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xb4c801687fdffcf3106b843926370b3717129e55",
+        "0x8f833a563d8c0731032fa1381ea535d3378d7f9c",
+        "0x599ba4f7eda1e0b1cc679bc40535f03f80ac12f9",
+        "0x61b4d53b49db4c40df89cae543f2ba9326515887"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 42,
+      "seconds": 0.0
+    },
+    {
+      "address": "0xc148548ebc5fea18d17778e7d00d7ddfda02d7c2",
+      "corpus": "control",
+      "why": "payment processor: fans out to merchants by design",
+      "nodes": 8,
+      "edges": 9,
+      "outgoing_counterparties": 3,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 6,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0548f59fee79f8832c299e01dca5c76f034f558e",
+      "corpus": "control",
+      "why": "OTC trading desk",
+      "nodes": 71,
+      "edges": 94,
+      "outgoing_counterparties": 10,
+      "exchange": "Kraken",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 28,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x5d509a25f25190e77a1e46e72333788b1f069ce1",
+      "corpus": "control",
+      "why": "OTC trading desk",
+      "nodes": 117,
+      "edges": 148,
+      "outgoing_counterparties": 10,
+      "exchange": "Binance",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xba35557d746ed75ac0c023944ab911bfc6d2a40d"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 45,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x6c85006eae121cf2444f0852cab9914607915df2",
+      "corpus": "control",
+      "why": "OTC trading desk",
+      "nodes": 61,
+      "edges": 85,
+      "outgoing_counterparties": 10,
+      "exchange": "Coinbase",
+      "patterns": [
+        "amount_split"
+      ],
+      "pattern_addresses": {
+        "amount_split": [
+          "0x24cbabbd2c9e44dc2d882ad29ae0aa53be3147e8",
+          "0xafc8bc72c756ddc1957b276f5fbcb989dad93730",
+          "0x2e1005796262a31443ae69f7fc0da4dc5eb59b26",
+          "0xedcc13d25e23032b61d30c298334f92d7c0ba84e"
+        ]
+      },
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 29,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x6d21266dfcf5541bee9f67c4837aaa72b3bf9303",
+      "corpus": "control",
+      "why": "OTC trading desk",
+      "nodes": 41,
+      "edges": 48,
+      "outgoing_counterparties": 5,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xd8934c9fdbc91dcf2b0f14af044011a5c859f423",
+        "0x794bb271bfb2f59dda9192a49a3941ed5406a386"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 19,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x02535b41344f2e05836b80be44b0d190e24dd35a",
+      "corpus": "control",
+      "why": "trading firm",
+      "nodes": 60,
+      "edges": 68,
+      "outgoing_counterparties": 10,
+      "exchange": "Kraken",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xbaffeadff1ee5df8fb2e6ebb4721117eea604d5f",
+        "0xb5a705aa2da587c4315e636eb69cc3e12aa34d1a",
+        "0x7b0221a991ec492ba2a2006bf242fbeb655b657f",
+        "0x03935d63730c0bcc41e074cce0ab471cdbe052af",
+        "0x86abea238c7b962f55fe660282dc88ce52c4ed14"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 27,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x2957ea6d4f06bc2badfb2958c65fc7d1be5461b1",
+      "corpus": "control",
+      "why": "trading firm",
+      "nodes": 4,
+      "edges": 3,
+      "outgoing_counterparties": 3,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 4,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x4631018f63d5e31680fb53c11c9e1b11f1503e6f",
+      "corpus": "control",
+      "why": "trading firm",
+      "nodes": 53,
+      "edges": 63,
+      "outgoing_counterparties": 10,
+      "exchange": "Gate.io",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xc9e62685ab5be5d44aba531b4021414e42adb6c9",
+        "0xa0072e93743d89f6476eefd95fa689a84171445c",
+        "0x5160f96e26ad0306c72e60e5d4b8eb2468f8fb95"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 33,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x2d00c3c132a0567bbbb45ffcfd8c6543e08ff626",
+      "corpus": "control",
+      "why": "company treasury wallet",
+      "nodes": 32,
+      "edges": 35,
+      "outgoing_counterparties": 1,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 11,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x842f8f6fb524996d0b660621da895166e1cea691",
+      "corpus": "control",
+      "why": "company treasury wallet",
+      "nodes": 56,
+      "edges": 79,
+      "outgoing_counterparties": 10,
+      "exchange": "Coinbase",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0xca64d8044b515c4226c916eea31482c307abeb71"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 34,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0105a3bb58793a8514de8aa6bfdff33cad219186",
+      "corpus": "control",
+      "why": "airdrop distributor: fans out to recipients by design",
+      "nodes": 190,
+      "edges": 239,
+      "outgoing_counterparties": 10,
+      "exchange": "Kraken",
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [
+        "0x6d23f85460555140fa5970f48be72d91307d4309",
+        "0xddfaad02b628ea4ec7f0223db099542923fbedc3",
+        "0xd6805980344c0e4e266a52d4583f3d7eac31e662"
+      ],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 52,
+      "seconds": 0.0
+    },
+    {
+      "address": "0x0345f8208f90f65a8430a8f77c614a9a4ab7ede0",
+      "corpus": "control",
+      "why": "airdrop distributor: fans out to recipients by design",
+      "nodes": 11,
+      "edges": 13,
+      "outgoing_counterparties": 5,
+      "exchange": null,
+      "patterns": [],
+      "pattern_addresses": {},
+      "inferred_deposit_nodes": [],
+      "seed_inferred_as_deposit": false,
+      "api_calls": 9,
+      "seconds": 0.0
+    }
+  ],
+  "sweep": {
+    "peel_chain": [
+      {
+        "low_activity_max": 2,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.3,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 2,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.5,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 2,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.7,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 2,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.9,
+        "positives_fired": 2,
+        "controls_fired": 1,
+        "recall": 0.062,
+        "precision": 0.667
+      },
+      {
+        "low_activity_max": 2,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.3,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 2,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.5,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 2,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.7,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 2,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.9,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 3,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.3,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 3,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.5,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 3,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.7,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 3,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.9,
+        "positives_fired": 2,
+        "controls_fired": 1,
+        "recall": 0.062,
+        "precision": 0.667
+      },
+      {
+        "low_activity_max": 3,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.3,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 3,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.5,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 3,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.7,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 3,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.9,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 4,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.3,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 4,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.5,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 4,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.7,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 4,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.9,
+        "positives_fired": 2,
+        "controls_fired": 1,
+        "recall": 0.062,
+        "precision": 0.667
+      },
+      {
+        "low_activity_max": 4,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.3,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 4,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.5,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 4,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.7,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 4,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.9,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 6,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.3,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 6,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.5,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 6,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.7,
+        "positives_fired": 2,
+        "controls_fired": 2,
+        "recall": 0.062,
+        "precision": 0.5
+      },
+      {
+        "low_activity_max": 6,
+        "min_chain_intermediates": 2,
+        "min_hop_retention": 0.9,
+        "positives_fired": 2,
+        "controls_fired": 1,
+        "recall": 0.062,
+        "precision": 0.667
+      },
+      {
+        "low_activity_max": 6,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.3,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 6,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.5,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 6,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.7,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      },
+      {
+        "low_activity_max": 6,
+        "min_chain_intermediates": 3,
+        "min_hop_retention": 0.9,
+        "positives_fired": 0,
+        "controls_fired": 0,
+        "recall": 0.0,
+        "precision": null
+      }
+    ],
+    "amount_split": [
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 12,
+        "controls_fired": 19,
+        "recall": 0.375,
+        "precision": 0.387
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 11,
+        "controls_fired": 17,
+        "recall": 0.344,
+        "precision": 0.393
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 9,
+        "controls_fired": 13,
+        "recall": 0.281,
+        "precision": 0.409
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 12,
+        "controls_fired": 18,
+        "recall": 0.375,
+        "precision": 0.4
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 11,
+        "controls_fired": 15,
+        "recall": 0.344,
+        "precision": 0.423
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 9,
+        "controls_fired": 11,
+        "recall": 0.281,
+        "precision": 0.45
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 11,
+        "controls_fired": 17,
+        "recall": 0.344,
+        "precision": 0.393
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 10,
+        "controls_fired": 14,
+        "recall": 0.312,
+        "precision": 0.417
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 8,
+        "controls_fired": 11,
+        "recall": 0.25,
+        "precision": 0.421
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 11,
+        "controls_fired": 16,
+        "recall": 0.344,
+        "precision": 0.407
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 10,
+        "controls_fired": 13,
+        "recall": 0.312,
+        "precision": 0.435
+      },
+      {
+        "min_split_branches": 3,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 8,
+        "controls_fired": 9,
+        "recall": 0.25,
+        "precision": 0.471
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 8,
+        "controls_fired": 14,
+        "recall": 0.25,
+        "precision": 0.364
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 8,
+        "controls_fired": 13,
+        "recall": 0.25,
+        "precision": 0.381
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 7,
+        "controls_fired": 12,
+        "recall": 0.219,
+        "precision": 0.368
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 7,
+        "controls_fired": 11,
+        "recall": 0.219,
+        "precision": 0.389
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 7,
+        "controls_fired": 10,
+        "recall": 0.219,
+        "precision": 0.412
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 6,
+        "controls_fired": 9,
+        "recall": 0.188,
+        "precision": 0.4
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 7,
+        "controls_fired": 9,
+        "recall": 0.219,
+        "precision": 0.438
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 7,
+        "controls_fired": 9,
+        "recall": 0.219,
+        "precision": 0.438
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 6,
+        "controls_fired": 8,
+        "recall": 0.188,
+        "precision": 0.429
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 7,
+        "controls_fired": 8,
+        "recall": 0.219,
+        "precision": 0.467
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 7,
+        "controls_fired": 8,
+        "recall": 0.219,
+        "precision": 0.467
+      },
+      {
+        "min_split_branches": 4,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 6,
+        "controls_fired": 5,
+        "recall": 0.188,
+        "precision": 0.545
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 4,
+        "controls_fired": 13,
+        "recall": 0.125,
+        "precision": 0.235
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 4,
+        "controls_fired": 13,
+        "recall": 0.125,
+        "precision": 0.235
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.5,
+          1.1
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 4,
+        "controls_fired": 12,
+        "recall": 0.125,
+        "precision": 0.25
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 3,
+        "controls_fired": 10,
+        "recall": 0.094,
+        "precision": 0.231
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 3,
+        "controls_fired": 10,
+        "recall": 0.094,
+        "precision": 0.231
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.7,
+          1.1
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 3,
+        "controls_fired": 9,
+        "recall": 0.094,
+        "precision": 0.25
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 3,
+        "controls_fired": 9,
+        "recall": 0.094,
+        "precision": 0.25
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 3,
+        "controls_fired": 9,
+        "recall": 0.094,
+        "precision": 0.25
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.8,
+          1.05
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 3,
+        "controls_fired": 8,
+        "recall": 0.094,
+        "precision": 0.273
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.9,
+        "positives_fired": 3,
+        "controls_fired": 6,
+        "recall": 0.094,
+        "precision": 0.333
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.8,
+        "positives_fired": 3,
+        "controls_fired": 6,
+        "recall": 0.094,
+        "precision": 0.333
+      },
+      {
+        "min_split_branches": 5,
+        "forward_band": [
+          0.9,
+          1.02
+        ],
+        "max_single_branch_share": 0.6,
+        "positives_fired": 3,
+        "controls_fired": 5,
+        "recall": 0.094,
+        "precision": 0.375
+      }
+    ]
+  }
+}

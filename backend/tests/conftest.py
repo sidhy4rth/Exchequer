@@ -109,15 +109,16 @@ def peel_chain_graph() -> nx.DiGraph:
 
 @pytest.fixture
 def amount_split_graph() -> nx.DiGraph:
-    """A wallet that receives 10 and fans 9 out across three recipients."""
+    """A wallet that receives 10 and fans 9.6 out evenly across four recipients."""
     seed = addr("5eed")
     splitter = addr("5911")
     return make_graph(
         [
             (seed, splitter, 10.0),
-            (splitter, addr("c1"), 3.0),
-            (splitter, addr("c2"), 3.0),
-            (splitter, addr("c3"), 3.0),
+            (splitter, addr("c1"), 2.4),
+            (splitter, addr("c2"), 2.4),
+            (splitter, addr("c3"), 2.4),
+            (splitter, addr("c4"), 2.4),
         ],
         seed=seed,
     )

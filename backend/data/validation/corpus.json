@@ -1,0 +1,951 @@
+{
+  "_meta": {
+    "description": "Wallets the laundering heuristics are measured against. Positives are publicly documented as fraud or theft proceeds; controls are ordinary active wallets with no fraud association. Every address was fetched from the source recorded on it and checked for contract bytecode; none was typed by hand.",
+    "built": "2026-09-15T14:22:29+00:00",
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.build_validation_corpus",
+    "sources": {
+      "ofac": "backend/data/risk_labels.json (OFAC SDN XML)",
+      "phish-hack": "dappcenter/etherscan-labels @ d547040b8bf65577945bcc53cec62a96945cc705",
+      "wazirx": "https://www.cloudsek.com/blog/wazirx-incident-explained",
+      "controls": "brianleect/etherscan-labels @ 923aba72c7e2d0682f7ae6194b6140bd90668dc9"
+    },
+    "dropped_as_contracts": [
+      "0x1b8579cf6ab12ea6b74ac5fa41f3829a3cb61e6e  (contract)",
+      "0x252a8bd2319d8a555b872990601221b3a2053bce  (contract)",
+      "0x003eb9c77b5b896fcc27adead606d23def34510e  (contract)",
+      "0x3ec9f2a4c604eab2cb19740d82aa3bbf322a4afc  (contract)",
+      "0xc7464dbca260a8faf033460622b23467df5aea42  (contract)",
+      "0xe17b6ef3c60c7342987425e011571fdcde468df1  (contract)",
+      "0xd0e4e3a739a454386da9957432b170c006327b0d  (contract)",
+      "0x204b937feaec333e9e6d72d35f1d131f187ecea1  (contract)",
+      "0x059550a1ca3c46a2adb803e9e3ea4585a34f004a  (contract)",
+      "0x220a9f0dd581cbc58fcfb907de0454cbf3777f76  (contract)",
+      "0x4cc89906db523af7c3bb240a959be21cb812b434  (contract)",
+      "0x1a34e5b97d684b124e32bd3b7dc82736c216976b  (contract)",
+      "0x38ca50c6e3391a5bf73c2504bd9cd9c0b9d89053  (contract)",
+      "0x4cc427be94c8df62b1f3a2a3cbff904fa80284e8  (contract)",
+      "0x534ea640f829f542ee439e76833b5002db4eda80  (contract)",
+      "0x04dfdfa471b79cc9e6e8c355e6c71f8ec4916c50  (contract)",
+      "0x3b7e71a9f15eebb541c82f88ef020ae7040484f1  (contract)",
+      "0x4c20cdadbcae364edc03e2b90f09eb97d08ce3c8  (contract)",
+      "0x51f43d0c05eefdeb70eeaf973e0b8286e494902d  (contract)",
+      "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae  (contract)",
+      "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359  (contract)"
+    ],
+    "unavailable_sources": [],
+    "counts": {
+      "positives": 40,
+      "controls": 48
+    }
+  },
+  "positives": [
+    {
+      "address": "0x0330070fd38ec3bb94f58fa55d40368271e9e54a",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY (DPRK4)",
+      "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x038989cbb1710c72b9920dc4fa529158f463e72c",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Armando de Jesus OJEDA AVILES (ILLICIT-DRUGS-EO14059, SDGT)",
+      "entity": "Armando de Jesus OJEDA AVILES",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x04dba1194ee10112fe6c3207c0687def0e78bacf",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Alex Adrianus Martinus PEIJNENBURG (ILLICIT-DRUGS-EO14059)",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x08723392ed15743cc38513c4925f5e6be5c17243",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: LAZARUS GROUP (DPRK3)",
+      "entity": "LAZARUS GROUP",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x08b2efdcdb8822efe5ad0eae55517cf5dc544251",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Alex Adrianus Martinus PEIJNENBURG (ILLICIT-DRUGS-EO14059)",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0931ca4d13bb4ba75d9b7132ab690265d749a5e7",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: CRYPTEX (CYBER2, RUSSIA-EO14024)",
+      "entity": "CRYPTEX",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x098b716b8aaf21512996dc57eb0615e2383e2f96",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: LAZARUS GROUP (DPRK3)",
+      "entity": "LAZARUS GROUP",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0ee5067b06776a89ccc7dc8ee369984ad7db5e06",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Alex Adrianus Martinus PEIJNENBURG (ILLICIT-DRUGS-EO14059)",
+      "entity": "Alex Adrianus Martinus PEIJNENBURG",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x12de548f79a50d2bd05481c8515c1ef5183666a9",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: OLD VECTOR LLC (CYBER4)",
+      "entity": "OLD VECTOR LLC",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x14779cec0b117d5194c750c55ea1f42086631964",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Armando de Jesus OJEDA AVILES (ILLICIT-DRUGS-EO14059, SDGT)",
+      "entity": "Armando de Jesus OJEDA AVILES",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x175d44451403edf28469df03a9280c1197adb92c",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: GAZA NOW (SDGT)",
+      "entity": "GAZA NOW",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x1967d8af5bd86a497fb3dd7899a020e47560daaf",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Matthew Simon GRIMM (ILLICIT-DRUGS-EO14059)",
+      "entity": "Matthew Simon GRIMM",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x1999ef52700c34de7ec2b68a28aafb37db0c5ade",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Khadzhi Murat Dalgatovich MAGOMEDOV (RUSSIA-EO14024)",
+      "entity": "Khadzhi Murat Dalgatovich MAGOMEDOV",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x19f8f2b0915daa12a3f5c9cf01df9e24d53794f7",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: OKO DESIGN BUREAU (RUSSIA-EO14024)",
+      "entity": "OKO DESIGN BUREAU",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x1cab8177ace78b1b6b1c393371f4f2dcae40cbeb",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Behzad MESRI (CYBER2, HRIT-IR)",
+      "entity": "Behzad MESRI",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x1d19b52b54e7ef5ea1a4b40b616165e798eac9f8",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: Dmytro RASHEVSKYI (CYBER4)",
+      "entity": "Dmytro RASHEVSKYI",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x21b8d56bda776bbe68655a16895afd96f5534fed",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: GAZA NOW (SDGT)",
+      "entity": "GAZA NOW",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x2711d73d559f62f4f855ee21f38378f528e07985",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "OFAC SDN list via backend/data/risk_labels.json",
+      "source_url": "https://www.treasury.gov/ofac/downloads/sdn.xml",
+      "why": "designated entity: FIRST VPN SERVICE (CYBER4)",
+      "entity": "FIRST VPN SERVICE",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x000000000532b45f47779fce440748893b257865",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3901",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x00000000072d54638c2c2a3da3f715360269eea1",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing4939",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0000000009324b6434d7766af41908e4c49ee1d7",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3857",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0000000086c5d614bec59dfd2c9b88f7cb57f23c",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing4604",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x00000000bf02300fd6251627aa3db8933a0eee83",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3856",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x00000e32e51011e28958d4696627c82c3dacd5a6",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3541",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x00067010f3ae17aa53e2b4d5142dda35380cf72d",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing2882",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0020731604c882cf7bf8c444be97d17b19ea4316",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3977",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x00278018530825863b765dc6cd581c0a8d471ade",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3875",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x002bf459dc58584d58886169ea0e80f3ca95ffaf",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing1300",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x002f0c8119c16d310342d869ca8bf6ace34d9c39",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing1493",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x003f12c49df27295fe97d4990b7901e2c855adf5",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing4449",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0059b14e35dab1b4eee1e2926c7a5660da66f747",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing371",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x005b9f4516f8e640bbe48136901738b323c53b00",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing957",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0061fb5485dff4bb85c078dca80d19119224d97e",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing1689",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x00650a784ee109797ba8c05f3496bdbf2b2b7a1c",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing2650",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0067b43cb530e683dbffb43f5caacde867472721",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing4989",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x007a376e488cee20e2b059e683e61af28eea9f63",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing3019",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0084515449b037205a33d6d3940a5684126aa4b5",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan 'Phish / Hack' label via dappcenter/etherscan-labels @ d547040b8b",
+      "source_url": "https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json",
+      "why": "labelled Phish / Hack by Etherscan: Fake_Phishing2033",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x04b21735e93fa3f8df70e2da89e6922616891a88",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "CloudSEK, 'WazirX Incident: Explained', 19 July 2024",
+      "source_url": "https://www.cloudsek.com/blog/wazirx-incident-explained",
+      "why": "named as an attacker address in the WazirX (Indian exchange) hack of 18 July 2024",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x35febc10112302e0d69f35f42cce85816f8745ca",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "CloudSEK, 'WazirX Incident: Explained', 19 July 2024",
+      "source_url": "https://www.cloudsek.com/blog/wazirx-incident-explained",
+      "why": "named as an attacker address in the WazirX (Indian exchange) hack of 18 July 2024",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x90ca792206ed7ee9bc9da0d0df981fc5619f91fd",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "CloudSEK, 'WazirX Incident: Explained', 19 July 2024",
+      "source_url": "https://www.cloudsek.com/blog/wazirx-incident-explained",
+      "why": "named as an attacker address in the WazirX (Indian exchange) hack of 18 July 2024",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    }
+  ],
+  "controls": [
+    {
+      "address": "0x05e793ce0c6027323ac150f6d45c2344d28b6019",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "a16z",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0716a17fbaee714f1e6ab0f9d59edbc5f09815c0",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Fund: 0x071...5C0",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x073dca8acbc11ffb0b5ae7ef171e4c0b065ffa47",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Alameda Research 1",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x085af684acdb1220d111fee971b733c5e5ae6ccd",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Three Arrows Capital: Binance Deposit",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0c0fe4e0236480e16b679ee1fd0c5247f9cf35f0",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Alameda Research 22",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0f4ee9631f4be0a63756515141281a3e2b293bbe",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Alameda Research 23",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x112b69178d416cd03222de9e6dd6b3adf36412aa",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Fund: 0x112...2aa",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x11577a8a5baf1e25b9a2d89f39670f447d75c3cd",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Fund: 0x115...3cD",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x1157a2076b9bb22a85cc2c162f20fab3898f4101",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "FalconX: 0x115...101",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x23a5efe19aa966388e132077d733672cf5798c03",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Arca: 0x23a...c03",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x23b4cd421b7cb7d274689b2a7c100baf8546941b",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Taureon Capital",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x2e675eeae4747c248bfddbafaa3a8a2fdddaa44b",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Fund: 0x2e6...44b",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x3507e4978e0eb83315d20df86ca0b976c0e40ccb",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Alameda Research: Binance Deposit",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x3ba21b6477f48273f41d241aa3722ffb9e07e247",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Fund: 0x3BA...247",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x40c20da8d0214a7ef33a84e287992858db744e6d",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "BridgeTower Capital: Lido Node Operator",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x4655b7ad0b5f5bacb9cf960bbffceb3f0e51f363",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'fund' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/fund.json",
+      "why": "investment fund treasury",
+      "label": "Fund: 0x465...363",
+      "category": "fund",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x00192fb10df37c9fb26829eb2cc623cd1bf599e8",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "2Miners: PPLNS",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x002e08000acbbae2155fab7ac01929564949070d",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "2Miners: SOLO",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x01ca8a0ba4a80d12a8fb6e3655688f57b16608cf",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "Miner: 0x01C...8cf",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x03e75d7dd38cce2e20ffee35ec914c57780a8e29",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "GPUMINE Pool 1",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x04668ec2f57cc15c381b461b9fedab5d451c8f7f",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "zhizhu.top",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x06b8c5883ec71bc3f4b332081519f23834c8706e",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "Mining Express",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0708f87a089a91c65d48721aa941084648562287",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "Miner: 0x070...287",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x09ab1303d3ccaf5f018cd511146b07a240c70294",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "Minerall Pool",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x11905bd0863ba579023f662d1935e39d0c671933",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "Comining 1",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x14b30f257c2737370203a15aa343c2b600dfb675",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "Huixingpool.com",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x151255dd9e38e44db38ea06ec66d0d113d6cbe37",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "DwarfPool 2",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x1ad91ee08f21be3de0ba2ba6918e714da6b45836",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'mining' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/mining.json",
+      "why": "mining-pool payout wallet: fans out to miners by design",
+      "label": "Hiveon Pool",
+      "category": "mining",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x095f1fd53a56c01c76a2a56b7273995ce915d8c4",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'charity' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/charity.json",
+      "why": "charity donation wallet",
+      "label": "Electronic Frontier Foundation",
+      "category": "charity",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x542eff118023cff2821b24156a507a513fe93539",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'charity' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/charity.json",
+      "why": "charity donation wallet",
+      "label": "SENS Research Foundation",
+      "category": "charity",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x54334ebc8c9ef04bc28d614caa557143ed8afc87",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'charity' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/charity.json",
+      "why": "charity donation wallet",
+      "label": "Rainforest Foundation US",
+      "category": "charity",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0xbf2952b759a70250caa53d9d7f910cd985cbf6aa",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'charity' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/charity.json",
+      "why": "charity donation wallet",
+      "label": "Mask On: NFT Donation",
+      "category": "charity",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x09942b2409079d9cb3b36dba8d6a60118e270746",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'payments' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/payments.json",
+      "why": "payment processor: fans out to merchants by design",
+      "label": "CryptoProWorld.com",
+      "category": "payments",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x20dc0b9520cc2c2be89f247061a2c8e310045949",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'payments' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/payments.json",
+      "why": "payment processor: fans out to merchants by design",
+      "label": "B2BinPay",
+      "category": "payments",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x3cadbeb58cb5162439908eda08df0a305b016da8",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'payments' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/payments.json",
+      "why": "payment processor: fans out to merchants by design",
+      "label": "Transak",
+      "category": "payments",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x5d9fe07813a260857cf60639dac710ebb9531a20",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'payments' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/payments.json",
+      "why": "payment processor: fans out to merchants by design",
+      "label": "Paykassa Inc.",
+      "category": "payments",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0xc148548ebc5fea18d17778e7d00d7ddfda02d7c2",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'payments' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/payments.json",
+      "why": "payment processor: fans out to merchants by design",
+      "label": "SoTradeFX",
+      "category": "payments",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0548f59fee79f8832c299e01dca5c76f034f558e",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'otc' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/otc.json",
+      "why": "OTC trading desk",
+      "label": "Genesis Trading: OTC Desk 2",
+      "category": "otc",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x5d509a25f25190e77a1e46e72333788b1f069ce1",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'otc' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/otc.json",
+      "why": "OTC trading desk",
+      "label": "Counter Network",
+      "category": "otc",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x6c85006eae121cf2444f0852cab9914607915df2",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'otc' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/otc.json",
+      "why": "OTC trading desk",
+      "label": "Genesis Trading: OTC Desk 4",
+      "category": "otc",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x6d21266dfcf5541bee9f67c4837aaa72b3bf9303",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'otc' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/otc.json",
+      "why": "OTC trading desk",
+      "label": "Genesis Trading: OTC Desk 3",
+      "category": "otc",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x02535b41344f2e05836b80be44b0d190e24dd35a",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'trading' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/trading.json",
+      "why": "trading firm",
+      "label": "Bitcoin.de",
+      "category": "trading",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x2957ea6d4f06bc2badfb2958c65fc7d1be5461b1",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'trading' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/trading.json",
+      "why": "trading firm",
+      "label": "LCX 3",
+      "category": "trading",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x4631018f63d5e31680fb53c11c9e1b11f1503e6f",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'trading' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/trading.json",
+      "why": "trading firm",
+      "label": "LCX 2",
+      "category": "trading",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x2d00c3c132a0567bbbb45ffcfd8c6543e08ff626",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'company-funds' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/company-funds.json",
+      "why": "company treasury wallet",
+      "label": "Origin: Ecosystem Growth",
+      "category": "company-funds",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x842f8f6fb524996d0b660621da895166e1cea691",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'company-funds' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/company-funds.json",
+      "why": "company treasury wallet",
+      "label": "XIO Labs: Foundation Fund",
+      "category": "company-funds",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0105a3bb58793a8514de8aa6bfdff33cad219186",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'airdrop-distributor' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/airdrop-distributor.json",
+      "why": "airdrop distributor: fans out to recipients by design",
+      "label": "BlackFort Wallet: BXF Distribution",
+      "category": "airdrop-distributor",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    },
+    {
+      "address": "0x0345f8208f90f65a8430a8f77c614a9a4ab7ede0",
+      "chain": "ethereum",
+      "asset": "ETH",
+      "source": "Etherscan label 'airdrop-distributor' via brianleect/etherscan-labels @ 923aba72c7",
+      "source_url": "https://raw.githubusercontent.com/brianleect/etherscan-labels/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/accounts/airdrop-distributor.json",
+      "why": "airdrop distributor: fans out to recipients by design",
+      "label": "AdsByWiFi: WADS Airdrop",
+      "category": "airdrop-distributor",
+      "verified": "no contract bytecode (eth_getCode) at time of build"
+    }
+  ]
+}

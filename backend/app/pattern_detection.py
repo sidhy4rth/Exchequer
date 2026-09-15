@@ -83,18 +83,25 @@ class PatternConfig:
     growth_tolerance: float = 0.02
 
     # -- amount split ------------------------------------------------------
-    # Fewer than three recipients is ordinary behaviour (paying someone and
-    # keeping change). Three or more is deliberate fragmentation.
-    min_split_branches: int = 3
-    # Of what came in, this fraction or more must go straight back out.
-    # A wallet that keeps most of the money is a destination, not a splitter.
-    min_forwarded_ratio: float = 0.5
-    # Allow slightly more out than in (the wallet may hold a prior balance),
-    # but not so much that we are looking at an unrelated funding source.
-    max_forwarded_ratio: float = 1.10
+    # These four were re-set on 15 September 2026 from the measurement in
+    # scripts/validate_patterns.py. The original values (3 recipients, 50-110%
+    # forwarded, 90% single-branch cap) fired within three hops of 12 of 32
+    # documented-illicit wallets and 19 of 47 ordinary ones; the values below
+    # fire on 6 and 5. No point in the grid reached zero ordinary wallets, so
+    # this is the least-bad operating point on that corpus, not a proof.
+    #
+    # Fewer than four recipients is within ordinary behaviour (pay a few
+    # people, keep change). Four or more is fragmentation.
+    min_split_branches: int = 4
+    # Of what came in, this fraction or more must go straight back out. A
+    # wallet that keeps even a tenth is spending, not passing through.
+    min_forwarded_ratio: float = 0.9
+    # Allow a little more out than in (a small prior balance), but not so much
+    # that an unrelated funding source is being counted.
+    max_forwarded_ratio: float = 1.02
     # No single outgoing transfer may carry more than this share of the total,
-    # otherwise the money was forwarded whole with dust attached, not split.
-    max_single_branch_share: float = 0.90
+    # otherwise the money was forwarded mostly whole, not divided.
+    max_single_branch_share: float = 0.60
 
 
 @dataclass

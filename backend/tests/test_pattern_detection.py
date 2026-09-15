@@ -121,54 +121,58 @@ def test_amount_split_fires_on_an_even_fan_out(amount_split_graph):
     finding = findings[0]
     assert finding.pattern == AMOUNT_SPLIT
     assert finding.evidence["address"] == addr("5911")
-    assert finding.evidence["branch_count"] == 3
+    assert finding.evidence["branch_count"] == 4
     assert finding.evidence["total_in_native"] == 10.0
-    assert finding.evidence["total_out_native"] == 9.0
-    assert finding.evidence["forwarded_ratio"] == 0.9
+    assert finding.evidence["total_out_native"] == 9.6
+    assert finding.evidence["forwarded_ratio"] == 0.96
     assert finding.evidence["largest_branch_share"] < CFG.max_single_branch_share
 
 
-def test_amount_split_needs_three_recipients():
-    """Paying one person and keeping change is not structuring."""
+def test_amount_split_needs_four_recipients():
+    """Paying a few people and keeping change is ordinary; the validation run
+    showed three recipients fires on 40% of ordinary high-volume wallets."""
     seed = addr("5eed")
     splitter = addr("5911")
     graph = make_graph(
         [
             (seed, splitter, 10.0),
-            (splitter, addr("c1"), 4.5),
-            (splitter, addr("c2"), 4.5),
+            (splitter, addr("c1"), 3.2),
+            (splitter, addr("c2"), 3.2),
+            (splitter, addr("c3"), 3.2),
         ],
         seed=seed,
     )
     assert detect_amount_splits(graph, CFG, NOT_AN_EXCHANGE) == []
 
 
-def test_amount_split_ignores_a_wallet_that_keeps_the_money():
-    """Forwarding 20% of the inflow makes it a destination, not a splitter."""
+def test_amount_split_ignores_a_wallet_that_keeps_some_of_the_money():
+    """Forwarding 80% of the inflow is spending, not passing through."""
     seed = addr("5eed")
     splitter = addr("5911")
     graph = make_graph(
         [
             (seed, splitter, 10.0),
-            (splitter, addr("c1"), 0.7),
-            (splitter, addr("c2"), 0.7),
-            (splitter, addr("c3"), 0.6),
+            (splitter, addr("c1"), 2.0),
+            (splitter, addr("c2"), 2.0),
+            (splitter, addr("c3"), 2.0),
+            (splitter, addr("c4"), 2.0),
         ],
         seed=seed,
     )
     assert detect_amount_splits(graph, CFG, NOT_AN_EXCHANGE) == []
 
 
-def test_amount_split_ignores_money_forwarded_whole_with_dust_attached():
-    """One branch taking ~98% is a pass-through, not a division."""
+def test_amount_split_ignores_money_forwarded_mostly_whole():
+    """One branch taking ~94% is a pass-through with change, not a division."""
     seed = addr("5eed")
     splitter = addr("5911")
     graph = make_graph(
         [
             (seed, splitter, 10.0),
-            (splitter, addr("c1"), 8.8),
+            (splitter, addr("c1"), 9.4),
             (splitter, addr("c2"), 0.1),
             (splitter, addr("c3"), 0.1),
+            (splitter, addr("c4"), 0.1),
         ],
         seed=seed,
     )
@@ -188,9 +192,10 @@ def test_amount_split_skips_the_seed_which_has_no_observed_inflow():
     seed = addr("5eed")
     graph = make_graph(
         [
-            (seed, addr("c1"), 3.0),
-            (seed, addr("c2"), 3.0),
-            (seed, addr("c3"), 3.0),
+            (seed, addr("c1"), 2.5),
+            (seed, addr("c2"), 2.5),
+            (seed, addr("c3"), 2.5),
+            (seed, addr("c4"), 2.5),
         ],
         seed=seed,
     )
@@ -217,9 +222,10 @@ def test_detect_patterns_returns_strongest_first():
             (seed, addr("a1"), 10.0),
             (addr("a1"), addr("b2"), 9.5),
             (addr("b2"), splitter, 9.0),
-            (splitter, addr("c1"), 3.0),
-            (splitter, addr("c2"), 3.0),
-            (splitter, addr("c3"), 2.5),
+            (splitter, addr("c1"), 2.3),
+            (splitter, addr("c2"), 2.3),
+            (splitter, addr("c3"), 2.3),
+            (splitter, addr("c4"), 2.0),
         ],
         seed=seed,
     )
