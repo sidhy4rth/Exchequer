@@ -197,7 +197,7 @@ def main() -> int:
         "_meta": {
             "description": (
                 "Known centralised-exchange wallets on BNB Smart Chain. A match "
-                "against one of these is what lets TraceChain say 'the funds "
+                "against one of these is what lets Exchequer say 'the funds "
                 "were cashed out here'."
             ),
             "provenance": (

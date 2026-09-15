@@ -129,7 +129,7 @@ Reporting Portal; the Enforcement Directorate opens a PMLA case on the
 predicate FIR. Since the notification of 7 March 2023, exchanges are reporting
 entities that must register with FIU-IND and keep records that "enable it to
 reconstruct individual transactions" and identify the customer (PMLA s.12).
-The ED obtains those under s.50; state police by notice. TraceChain's output is
+The ED obtains those under s.50; state police by notice. Exchequer's output is
 the input to that request: the deposit address, the transaction hashes,
 amounts and times, in a form the exchange's compliance team can match. The
 report says on every attribution that only the exchange can link an address

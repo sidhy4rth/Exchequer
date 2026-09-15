@@ -1,4 +1,4 @@
-"""Shared fixtures for the TraceChain test suite.
+"""Shared fixtures for the Exchequer test suite.
 
 The rules under test (pattern detection, scoring) are pure functions over a
 networkx graph, so nothing here touches the network, an API key, or the

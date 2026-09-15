@@ -1,6 +1,6 @@
 """Tests for the laundering heuristics.
 
-These rules are the part of TraceChain that makes an accusation, so what
+These rules are the part of Exchequer that makes an accusation, so what
 matters is not only that they fire on the shape they describe but that they
 stay silent on ordinary activity. Each rule therefore gets both.
 """

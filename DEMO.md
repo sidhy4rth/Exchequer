@@ -1,4 +1,4 @@
-# TraceChain — demo addresses
+# Exchequer — demo addresses
 
 Ten traces, all re-verified **cold** (empty cache) on **15 September 2026**
 after the time rule, the new amount-split thresholds, internal transactions
@@ -12,7 +12,7 @@ return in two seconds on two requests each. The README's flagship address at
 
 ## What these labels mean
 
-TraceChain establishes two things and no more:
+Exchequer establishes two things and no more:
 
 1. whether funds reached a wallet published in an exchange label file (or a
    wallet inferred, with evidence, to be that exchange's deposit address), and
@@ -338,8 +338,8 @@ request: 415 lines, and the appendix lists every one of the transactions the
 ## Before presenting
 
 ```bash
-cd ~/tracechain/backend && source .venv/bin/activate && uvicorn app.main:app --reload --port 8000
-cd ~/tracechain/frontend && npm run dev
+cd ~/exchequer/backend && source .venv/bin/activate && uvicorn app.main:app --reload --port 8000
+cd ~/exchequer/frontend && npm run dev
 ```
 
 Open <http://localhost:5173> — use `localhost`, not `127.0.0.1`.

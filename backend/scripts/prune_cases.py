@@ -6,7 +6,7 @@ demo re-runs, the cost measurements -- went through the same endpoint as a
 real trace and were stored beside the cases that matter, and the Related
 cases panel then correlated a demo against dozens of copies of itself.
 
-The database file is copied to tracechain.db.bak-<timestamp> first, so a
+The database file is copied to exchequer.db.bak-<timestamp> first, so a
 mistaken run can be undone by renaming the copy back.
 
     cd backend && .venv/bin/python -m scripts.prune_cases --keep <id> [--keep <id> ...]

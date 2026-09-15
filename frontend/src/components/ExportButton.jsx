@@ -23,7 +23,7 @@ export default function ExportButton({ caseId, address }) {
 
       const link = document.createElement('a')
       link.href = url
-      link.download = `tracechain-${address.slice(0, 10)}-${caseId.slice(0, 8)}.${format === 'json' ? 'json' : 'txt'}`
+      link.download = `exchequer-${address.slice(0, 10)}-${caseId.slice(0, 8)}.${format === 'json' ? 'json' : 'txt'}`
       document.body.appendChild(link)
       link.click()
       link.remove()

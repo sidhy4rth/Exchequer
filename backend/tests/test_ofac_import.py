@@ -2,7 +2,7 @@
 
 This parser decides what goes into a file that accuses named parties, so the
 cases that matter are the ones where it must *not* write an entry: a Bitcoin
-address filed under Ethereum, or a chain TraceChain does not trace, would each
+address filed under Ethereum, or a chain Exchequer does not trace, would each
 produce a label that can only ever mislead.
 
 The fixture is a cut-down copy of the real document's structure, so no network

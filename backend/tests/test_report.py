@@ -68,7 +68,7 @@ def test_the_text_report_carries_every_section_an_officer_needs():
 
     assert "Case ID          : case-1" in text
     assert "Asset followed   : ETH" in text
-    assert "Tool version     : TraceChain" in text
+    assert "Tool version     : Exchequer" in text
     assert "SUMMARY" in text and "was followed across 3 addresses" in flat
     assert "infers to be a Binance deposit address" in flat
     assert "INFERRED from the wallet's behaviour" in text

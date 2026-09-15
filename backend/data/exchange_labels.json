@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "Known centralised-exchange deposit/hot wallets on Ethereum mainnet. A match against one of these is what lets TraceChain say 'the funds were cashed out here'.",
+    "description": "Known centralised-exchange deposit/hot wallets on Ethereum mainnet. A match against one of these is what lets Exchequer say 'the funds were cashed out here'.",
     "provenance": "Addresses originate from Etherscan's own public address labels (etherscan.io/accounts/label/*). The initial set was transcribed by hand; the remainder was imported from brianleect/etherscan-labels @ 923aba72c7e2d0682f7ae6194b6140bd90668dc9, a published scrape of those same pages, via backend/scripts/import_exchange_labels.py.",
     "verification_note": "Every address was checked against live mainnet data before being added: each has a real history of value-bearing transfers, consistent with exchange operation. That confirms the address is real and economically active -- it does NOT independently re-confirm which company operates it, and no free API exposes Etherscan's label data. Re-verify on etherscan.io before any evidentiary use. Candidates whose entire history was zero-value address-poisoning spam were rejected.",
     "chain": "ethereum-mainnet",

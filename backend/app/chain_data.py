@@ -1,6 +1,6 @@
 """Chooses which data provider serves which chain.
 
-The rest of TraceChain does not care where transactions come from. It asks a
+The rest of Exchequer does not care where transactions come from. It asks a
 source for `get_outgoing_transactions(address)` and gets back a list of
 `Transaction`. That is the whole contract, and this module is the only place
 that knows which upstream satisfies it for a given chain.

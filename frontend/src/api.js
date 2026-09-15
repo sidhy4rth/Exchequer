@@ -1,4 +1,4 @@
-// Calls to the TraceChain backend.
+// Calls to the Exchequer backend.
 //
 // Requests are relative, so the frontend works unchanged whether it is served
 // by the Vite dev server (which proxies /api to port 8000) or by FastAPI
@@ -66,7 +66,7 @@ export function traceAddress(address, maxDepth, chain, asset, direction) {
         body,
       })
     } catch {
-      throw new Error('Cannot reach the TraceChain backend. Is it running on port 8000?')
+      throw new Error('Cannot reach the Exchequer backend. Is it running on port 8000?')
     } finally {
       inFlight.delete(body)
     }

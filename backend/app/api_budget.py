@@ -1,7 +1,7 @@
 """Process-wide API budget: one pacer and one response cache per credential.
 
 Both pieces exist for the same reason, which measurement made plain. On
-Etherscan's free tier a trace is not slow because of anything TraceChain
+Etherscan's free tier a trace is not slow because of anything Exchequer
 computes -- the graph, the pattern rules and the scoring together take
 milliseconds. It is slow because it waits on the provider, and the provider
 answers roughly two useful requests per second no matter how hard it is asked.

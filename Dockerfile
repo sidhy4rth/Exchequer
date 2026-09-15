@@ -1,4 +1,4 @@
-# TraceChain — one image, one service.
+# Exchequer — one image, one service.
 #
 # Stage 1 builds the React bundle; stage 2 runs FastAPI and serves that bundle
 # itself. Shipping them together means the UI and API share an origin, so there
@@ -41,7 +41,7 @@ COPY --from=frontend /build/dist ./frontend/dist
 # Case history lives on a mounted volume so it survives a redeploy. Without a
 # volume this still runs -- the store simply resets, which is fine for a demo
 # but would lose archived cases.
-ENV TRACECHAIN_DB_PATH=/data/tracechain.db
+ENV EXCHEQUER_DB_PATH=/data/exchequer.db
 VOLUME ["/data"]
 
 WORKDIR /app/backend

@@ -1,9 +1,9 @@
 {
   "_meta": {
-    "description": "Addresses on the U.S. Treasury's Specially Designated Nationals list that TraceChain screens a trace against. A match tells an investigator the funds touched a designated entity, which is the point at which a fraud case acquires an international dimension.",
+    "description": "Addresses on the U.S. Treasury's Specially Designated Nationals list that Exchequer screens a trace against. A match tells an investigator the funds touched a designated entity, which is the point at which a fraud case acquires an international dimension.",
     "provenance": "Extracted directly from OFAC's published SDN XML (https://www.treasury.gov/ofac/downloads/sdn.xml) by backend/scripts/import_ofac_addresses.py. Every entry keeps the sanctions programs and the exact idType OFAC recorded, so any label here can be checked against the source document.",
     "verification_note": "This establishes that the U.S. Treasury published the address against the named designated entity as of the publication date. It does NOT establish that a counterparty who received funds from it is culpable, nor that the designation has force in Indian law. It is a lead and an escalation trigger, not a verdict.",
-    "category_note": "Every address in this file is sanctioned. 'mixer' marks the subset that are tumblers, which is TraceChain's own editorial classification of the designated entity's name, and which additionally stops a trace: a mixer pays out from a commingled pool, so transfers leaving it have no established link to the deposit that arrived.",
+    "category_note": "Every address in this file is sanctioned. 'mixer' marks the subset that are tumblers, which is Exchequer's own editorial classification of the designated entity's name, and which additionally stops a trace: a mixer pays out from a commingled pool, so transfers leaving it have no established link to the deposit that arrived.",
     "chain": "tron",
     "ofac_publish_date": "09/04/2026",
     "last_reviewed": "2026-09-07",

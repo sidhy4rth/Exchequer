@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "Known centralised-exchange wallets on Tron. A match against one of these is what lets TraceChain say 'the funds were cashed out here'.",
+    "description": "Known centralised-exchange wallets on Tron. A match against one of these is what lets Exchequer say 'the funds were cashed out here'.",
     "provenance": "Each label is TronScan's own published address tag, read from its public API (the addressTag on /api/token_trc20/holders and /api/account/list) by backend/scripts/seed_tron_labels.py. Candidates are the largest USDT-TRC20 holders and TRX accounts, since exchanges dominate both lists.",
     "verification_note": "TronScan publicly identifies these addresses as belonging to the named exchanges as of the review date. That is the explorer's own attribution, not an inference by this tool. Each address was then checked on chain: no contract bytecode (TronGrid wallet/getcontract) and at least one received USDT-TRC20 or TRX transfer. It does NOT establish who controls the funds -- only the exchange can link a deposit address to a customer, via lawful request. Tags naming issuers, bridges, protocols or contracts were excluded, and tags not recognised as an exchange were listed for review, not kept.",
     "chain": "tron",

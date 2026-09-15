@@ -3,7 +3,7 @@
 Nothing secret is ever hardcoded here -- the Etherscan API key is read from
 the ETHERSCAN_API_KEY environment variable only.
 
-TraceChain is multi-chain. Etherscan's V2 endpoint serves every supported
+Exchequer is multi-chain. Etherscan's V2 endpoint serves every supported
 chain from one host and one API key, selected by a `chainid` query parameter,
 so adding a chain here costs no extra signup and no extra key. What a chain
 *does* need is its own exchange-label file: Binance's hot wallets on BNB Smart
@@ -223,7 +223,7 @@ _CHAIN_ALIASES: dict[str, str] = {
 
 
 class UnknownChainError(ValueError):
-    """Raised when a caller asks for a chain TraceChain does not support."""
+    """Raised when a caller asks for a chain Exchequer does not support."""
 
 
 def get_chain(key: str | None = None) -> Chain:
@@ -250,7 +250,7 @@ ETHERSCAN_BASE_URL: str = os.getenv("ETHERSCAN_BASE_URL", "https://api.etherscan
 
 # Which chain a request that names none is traced on. ETHERSCAN_CHAIN_ID is
 # still honoured so existing .env files keep working unchanged.
-_default_key = (os.getenv("TRACECHAIN_DEFAULT_CHAIN") or "").strip().lower()
+_default_key = (os.getenv("EXCHEQUER_DEFAULT_CHAIN") or "").strip().lower()
 if _default_key and _default_key in CHAINS:
     DEFAULT_CHAIN: Chain = CHAINS[_default_key]
 else:
@@ -302,7 +302,7 @@ ETHERSCAN_INCLUDE_INTERNAL: bool = (
 )
 
 # SQLite location. Relative paths resolve against backend/.
-_db_raw = os.getenv("TRACECHAIN_DB_PATH", "tracechain.db")
+_db_raw = os.getenv("EXCHEQUER_DB_PATH", "exchequer.db")
 DB_PATH: Path = Path(_db_raw) if Path(_db_raw).is_absolute() else BACKEND_DIR / _db_raw
 
 # Default-chain label file. Per-chain callers should use Chain.labels_path.

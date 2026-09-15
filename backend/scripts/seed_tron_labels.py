@@ -161,7 +161,7 @@ def main() -> int:
     parser.add_argument("--accounts", type=int, default=300, help="largest TRX accounts to inspect")
     args = parser.parse_args()
 
-    scan_headers = {"User-Agent": "TraceChain/1.0", "Accept": "application/json"}
+    scan_headers = {"User-Agent": "Exchequer/1.0", "Accept": "application/json"}
     grid_headers = {"Accept": "application/json"}
     if config.TRONGRID_API_KEY:
         grid_headers["TRON-PRO-API-KEY"] = config.TRONGRID_API_KEY
@@ -233,7 +233,7 @@ def main() -> int:
         "_meta": {
             "description": (
                 "Known centralised-exchange wallets on Tron. A match against one "
-                "of these is what lets TraceChain say 'the funds were cashed out "
+                "of these is what lets Exchequer say 'the funds were cashed out "
                 "here'."
             ),
             "provenance": (

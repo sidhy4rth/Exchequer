@@ -1,6 +1,6 @@
 # What the README claims, and what the sources actually say
 
-TraceChain's pitch is that every attribution can be traced to a published label
+Exchequer's pitch is that every attribution can be traced to a published label
 file. This document applies the same standard to the *claims* the README makes
 about laundering: each one is listed with the source that supports it, the exact
 passage, and a verdict. Where the README said more than the evidence supports,
@@ -157,7 +157,7 @@ and its name come from the 2013 Bitcoin de-anonymisation literature, and
 Elliptic still describes it in 2025 as a step in laundering scam proceeds. But
 the paper that coined the term says in the same paragraph that the shape
 "extends well beyond criminal activity" and is seen in ordinary exchange
-withdrawals and mining payouts. TraceChain's rule adapts the idea to an
+withdrawals and mining payouts. Exchequer's rule adapts the idea to an
 account-based chain (there are no change addresses on Ethereum or Tron, so
 "one-time change address" becomes "single-use intermediate wallet"). **The
 numeric thresholds — at most 3 transfers, at least 2 intermediates, at least
@@ -329,7 +329,7 @@ Bharatiya Nagarik Suraksha Sanhita, 2023, formerly section 91 CrPC) — this
 step is general procedure and is stated here from the investigator's side, not
 from a source read in this session.
 
-**What this means for TraceChain's output.** A trace ends at an *address*.
+**What this means for Exchequer's output.** A trace ends at an *address*.
 The record that links that address to a person exists only at the exchange,
 under section 12, and is obtained under section 50 (ED) or a police notice.
 So the sentence the report attaches to every attribution — "an exchange match

@@ -25,7 +25,7 @@ from .evidence import seal_text
 from .models import Case
 
 REPORT_VERSION = "2.0"
-TOOL_NAME = "TraceChain"
+TOOL_NAME = "Exchequer"
 
 
 def tool_version() -> str:

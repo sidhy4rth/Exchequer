@@ -6,7 +6,7 @@
 // GraphView paints on a canvas and cannot read CSS variables per frame, so it
 // subscribes to `themechange` and re-reads its palette when the skin flips.
 
-const KEY = 'tracechain-theme'
+const KEY = 'exchequer-theme'
 
 export function currentTheme() {
   return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'

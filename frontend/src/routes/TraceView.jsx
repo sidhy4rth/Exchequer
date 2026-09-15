@@ -176,7 +176,7 @@ export default function TraceView() {
   return (
     <div className="results">
       <header className="topbar">
-        <Link to="/" className="brand">TraceChain<small>Case view</small></Link>
+        <Link to="/" className="brand">Exchequer<small>Case view</small></Link>
         <div className="subject">
           <span className="micro">{reverse ? 'Reported address (funded by)' : 'Reported address'}</span>
           <Address value={address} head={12} tail={10} />

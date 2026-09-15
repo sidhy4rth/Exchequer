@@ -1,6 +1,6 @@
 """Build data/risk_labels*.json from OFAC's published SDN list.
 
-Provenance is the whole point of this script. TraceChain's exchange labels
+Provenance is the whole point of this script. Exchequer's exchange labels
 come from explorer tags, which are an attribution by a third party. A sanctions
 label is stronger than that and must be sourced accordingly: the U.S. Treasury
 publishes the Specially Designated Nationals list as XML, each entry carrying
@@ -69,7 +69,7 @@ NS = {"s": "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/e
 # OFAC records crypto addresses in an id whose type begins with this.
 ID_TYPE_PREFIX = "Digital Currency Address - "
 
-# Which of OFAC's currency codes belong to a chain TraceChain traces. Codes
+# Which of OFAC's currency codes belong to a chain Exchequer traces. Codes
 # for chains we do not cover (XBT, XMR, LTC, ZEC ...) are counted and reported
 # but not written -- a Bitcoin address in an Ethereum label file could only
 # ever produce a false negative or a confusing report.
@@ -188,7 +188,7 @@ def write_chain_file(chain_key: str, labels: dict[str, dict], published: str, dr
         "_meta": {
             "description": (
                 "Addresses on the U.S. Treasury's Specially Designated Nationals "
-                "list that TraceChain screens a trace against. A match tells an "
+                "list that Exchequer screens a trace against. A match tells an "
                 "investigator the funds touched a designated entity, which is the "
                 "point at which a fraud case acquires an international dimension."
             ),
@@ -208,7 +208,7 @@ def write_chain_file(chain_key: str, labels: dict[str, dict], published: str, dr
             ),
             "category_note": (
                 "Every address in this file is sanctioned. 'mixer' marks the "
-                "subset that are tumblers, which is TraceChain's own editorial "
+                "subset that are tumblers, which is Exchequer's own editorial "
                 "classification of the designated entity's name, and which "
                 "additionally stops a trace: a mixer pays out from a commingled "
                 "pool, so transfers leaving it have no established link to the "
@@ -277,7 +277,7 @@ def main() -> int:
 
     total = sum(len(v) for v in by_chain.values())
     print(f"\nOFAC SDN list published {published}")
-    print(f"Found {total} addresses on chains TraceChain traces:\n")
+    print(f"Found {total} addresses on chains Exchequer traces:\n")
 
     for chain_key in config.CHAINS:
         write_chain_file(chain_key, by_chain.get(chain_key, {}), published, args.dry_run)

@@ -94,7 +94,7 @@ ADDRESS_RE = re.compile(r"0x[0-9a-fA-F]{40}")
 
 def fetch(url: str) -> bytes:
     # Some publishers refuse urllib's default agent string outright.
-    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (TraceChain corpus builder)"})
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Exchequer corpus builder)"})
     with urllib.request.urlopen(request, timeout=60) as response:
         return response.read()
 

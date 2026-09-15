@@ -1,10 +1,10 @@
-# TraceChain
+# Exchequer
 
 **Traces cryptocurrency fraud from a victim-reported wallet address to the exchange it was cashed out through.**
 
 Built for Smart India Hackathon 2026 — problem statement **SIH26183** (Ministry of Home Affairs).
 
-A victim reports one wallet address. TraceChain follows the money outward hop by hop, flags known laundering patterns along the way, identifies the exchange where the funds landed, and produces a report an investigator can attach to a legal request.
+A victim reports one wallet address. Exchequer follows the money outward hop by hop, flags known laundering patterns along the way, identifies the exchange where the funds landed, and produces a report an investigator can attach to a legal request.
 
 It traces **three chains** — Ethereum (ETH, USDT, USDC), BNB Smart Chain (BNB, USDT, USDC) and Tron (TRX, USDT). The choice follows the published evidence rather than a hunch: Chainalysis measured stablecoins at 63% of illicit transaction volume in 2024 and 84% in 2025; TRM Labs measured 58% of 2024 illicit volume on Tron (a share that halved in 2025); and the UN Office on Drugs and Crime describes USDT on Tron as the "preferred choice" of the Southeast-Asian cyber-fraud operations that target Indian victims. No published source measures the cash-out rails for Indian scam proceeds specifically, so this README does not claim one. Every figure above is quoted from the source it came from in [RESEARCH.md](RESEARCH.md).
 
@@ -67,11 +67,11 @@ The design principle throughout is **auditability**. Every attribution is an exa
 
 1. Go to <https://etherscan.io/apis> and create a free account.
 2. Sign in, open **API Keys** in the left sidebar, click **Add**.
-3. Name it anything (e.g. `tracechain`) and copy the key.
+3. Name it anything (e.g. `exchequer`) and copy the key.
 
-The free tier allows ~5 requests/second and 100,000 requests/day. TraceChain self-throttles below that limit and backs off automatically, so a demo will not die mid-trace.
+The free tier allows ~5 requests/second and 100,000 requests/day. Exchequer self-throttles below that limit and backs off automatically, so a demo will not die mid-trace.
 
-> TraceChain uses Etherscan's **V2** multi-chain endpoint (`api.etherscan.io/v2/api?chainid=1`). The old V1 per-chain hosts have been retired, so a key issued for V1 still works but the old URLs do not.
+> Exchequer uses Etherscan's **V2** multi-chain endpoint (`api.etherscan.io/v2/api?chainid=1`). The old V1 per-chain hosts have been retired, so a key issued for V1 still works but the old URLs do not.
 
 ### 2. Backend
 
@@ -357,7 +357,7 @@ sanctions fact itself is never editorial.
 
 **The mixer category is currently empty on all three chains, and that is the correct answer rather
 than missing data.** Every mixer OFAC lists today — Blender.io (46 addresses), Sinbad.io — is a
-*Bitcoin* service, and TraceChain does not trace Bitcoin. Tornado Cash, the one that mattered on
+*Bitcoin* service, and Exchequer does not trace Bitcoin. Tornado Cash, the one that mattered on
 Ethereum, was delisted in March 2025 following *Van Loon v. Treasury*. The rule and its stop-the-trace
 behaviour are implemented and tested; there is simply nothing on the current list for them to match.
 Re-running the importer will pick up any future designation without a code change.
@@ -493,7 +493,7 @@ no manifest, and the report says so rather than inventing one.
 
 Stated plainly, and repeated in every exported report:
 
-- **One asset per trace.** ETH, USDT and USDC are each traced separately. A swap at a labelled DEX router is now *detected* — the trace records what asset came back and tells you where to re-run — but it is not followed automatically, and a swap whose output is the native coin, a swap sent to a liquidity pool rather than a router, or a bridge to a chain TraceChain does not cover, still ends the trail.
+- **One asset per trace.** ETH, USDT and USDC are each traced separately. A swap at a labelled DEX router is now *detected* — the trace records what asset came back and tells you where to re-run — but it is not followed automatically, and a swap whose output is the native coin, a swap sent to a liquidity pool rather than a router, or a bridge to a chain Exchequer does not cover, still ends the trail.
 - **Internal contract transactions are traced on Ethereum only, at double the request cost.** Value moved by a contract call — a multisig paying out, a smart-contract wallet, a router returning ETH — comes from Etherscan's separate `txlistinternal` endpoint, read on a forward trace only for addresses with no signed outflow (a contract), and on a reverse trace for every address (`ETHERSCAN_INCLUDE_INTERNAL=false` turns it off). Each such transfer is tagged `internal` and edges report `internal_tx_count`. On BSC and Tron, and on every token trace, contract-moved value is still invisible. Reading these adds a fifth brake: an address with **no signed outgoing transfer but contract-originated ones is a contract** (a wallet cannot start an internal transfer), and a contract that pays out to **more than 3 distinct addresses** is a service — WETH, a liquidity pool, a router — whose payouts are other people's money, so it is marked `is_service_contract`, noted as a truncation, and not expanded. A multisig forwarding to one or two recipients still is. Without this brake the flagship address at 4 hops expanded WETH and nine pools: 249 requests and 127 s instead of 41 and 22 s.
 - **BSC covers a recent window, not all history.** NodeReal caps one query at 100,000 blocks (~3.5 days), so history is walked backwards in windows — 500,000 blocks (~17 days) by default. Raise `NODEREAL_LOOKBACK_BLOCKS` to widen it, at proportionally more API calls. Ethereum has no such limit.
 - **An exchange match identifies where funds arrived, not who controls the account.** Only the exchange can link a deposit address to a customer identity, via a lawful request.
@@ -549,7 +549,7 @@ cd backend && .venv/bin/python -m scripts.validate_patterns
 
 ## Why a trace takes the time it does
 
-Almost none of it is TraceChain. The graph walk, the pattern rules and the
+Almost none of it is Exchequer. The graph walk, the pattern rules and the
 scoring together take milliseconds; a trace's wall time is very nearly *the
 number of provider requests it makes*, and on a free key those arrive at
 roughly one and a half to two per second. A depth-3 trace expands ~35
@@ -607,7 +607,7 @@ narrower walk can miss a path the funds actually took.
 ## Project structure
 
 ```
-tracechain/
+exchequer/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py               FastAPI app and routes
@@ -708,8 +708,8 @@ the UI and API share one origin — no CORS, no second deployment, and no backen
 URL baked into the bundle.
 
 ```bash
-docker build -t tracechain .
-docker run -p 8000:8000 --env-file backend/.env -v tracechain-data:/data tracechain
+docker build -t exchequer .
+docker run -p 8000:8000 --env-file backend/.env -v exchequer-data:/data exchequer
 ```
 
 Then open <http://localhost:8000>. The same image runs on Railway, Fly, Render or
@@ -728,7 +728,7 @@ is fine for evaluation and not for concurrent use.
 | Symptom | Fix |
 |---|---|
 | `/health` shows `etherscan_key_configured: false` | `backend/.env` is missing or has no key. Copy `.env.example`, add the key, restart. |
-| Frontend says "Cannot reach the TraceChain backend" | The backend is not running on port 8000. Start it with `uvicorn app.main:app --reload`. |
+| Frontend says "Cannot reach the Exchequer backend" | The backend is not running on port 8000. Start it with `uvicorn app.main:app --reload`. |
 | The UI loads from port 8000 but every request fails | The bundle was built without `VITE_API_BASE`, so it calls `/api/health` while FastAPI serves `/health` — the request falls through to the SPA catch-all and returns HTML. Rebuild with `VITE_API_BASE="" npm run build`. Only affects a bundle served by FastAPI; the Vite dev server proxies `/api` and is unaffected. |
 | `http://127.0.0.1:5173` refuses to connect | Vite binds to IPv6. Use `http://localhost:5173`. |
 | Trace returns 429 | Provider rate limit. Wait a few seconds; reduce the hop count. |

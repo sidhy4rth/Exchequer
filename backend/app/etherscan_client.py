@@ -1,6 +1,6 @@
 """Thin, rate-limit-aware wrapper around the Etherscan API.
 
-Only one thing is asked of this module by the rest of TraceChain:
+Only one thing is asked of this module by the rest of Exchequer:
 
     client.get_transactions(address) -> list[Transaction]
 
@@ -70,7 +70,7 @@ def is_valid_address(address: str) -> bool:
 
 
 def normalize_address(address: str) -> str:
-    """Canonical key form used everywhere in TraceChain.
+    """Canonical key form used everywhere in Exchequer.
 
     EVM addresses are lowercased: Etherscan returns mixed-case (EIP-55
     checksummed) addresses in some fields and lowercase in others, and

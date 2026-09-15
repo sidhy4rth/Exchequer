@@ -1,4 +1,4 @@
-"""TraceChain FastAPI application.
+"""Exchequer FastAPI application.
 
 Endpoints:
     POST /trace                     trace a reported address
@@ -91,7 +91,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="TraceChain",
+    title="Exchequer",
     description=(
         "Traces cryptocurrency fraud from a victim-reported wallet address to "
         "the exchange it was cashed out through."
@@ -653,7 +653,7 @@ def get_report(
             render_text_report(report),
             headers={
                 "Content-Disposition": (
-                    f'attachment; filename="tracechain-{case_id[:8]}.txt"'
+                    f'attachment; filename="exchequer-{case_id[:8]}.txt"'
                 )
             },
         )

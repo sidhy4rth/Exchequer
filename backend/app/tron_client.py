@@ -213,7 +213,7 @@ class TronClient:
                 to_address=(raw.get("to") or "").strip() or None,
                 value_native=units / (10**decimals) if decimals >= 0 else float(units),
                 value_wei=units,
-                # TronGrid reports milliseconds; the rest of TraceChain uses seconds.
+                # TronGrid reports milliseconds; the rest of Exchequer uses seconds.
                 timestamp=int(raw.get("block_timestamp", 0)) // 1000,
                 block_number=0,  # not returned by this endpoint
                 is_error=False,

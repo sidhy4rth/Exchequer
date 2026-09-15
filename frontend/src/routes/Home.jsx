@@ -117,7 +117,7 @@ export default function Home() {
   return (
     <div className="home">
       <header className="topbar">
-        <Link to="/" className="brand">TraceChain<small>Cryptocurrency fraud tracing</small></Link>
+        <Link to="/" className="brand">Exchequer<small>Cryptocurrency fraud tracing</small></Link>
         <span className="sysline mono">
           {backendDown ? <><span className="dot down" />BACKEND UNREACHABLE</>
             : health ? <><span className="dot live" />SYSTEM OPERATIONAL · {chains.filter((c) => c.ready).length} CHAINS · SOURCE: LIVE BLOCKCHAIN APIS</>

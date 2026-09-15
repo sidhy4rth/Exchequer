@@ -3,7 +3,7 @@
 Design rule for this module: every finding must be explainable to a
 non-technical investigator, and every threshold must be visible, named, and
 attached to the finding as evidence. A commercial tool says "suspicious, 0.87".
-TraceChain says "these four wallets each appear 1-3 times, each forwarded
+Exchequer says "these four wallets each appear 1-3 times, each forwarded
 between 50% and 100% of what it received, and the amounts declined from
 10.00 to 8.60 ETH -- that is a peel chain."
 
