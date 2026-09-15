@@ -505,6 +505,9 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             # Set by deposit_inference when the address's outgoing history is
             # nothing but sweeps into one labelled exchange wallet.
             "inferred_exchange": data.get("inferred_exchange"),
+            # A DEX router: funds sent here were swapped, not paid.
+            "is_router": data.get("is_router", False),
+            "router": data.get("router"),
             "total_in_native": round(data.get("total_in_native", 0.0), 6),
             "total_out_native": round(data.get("total_out_native", 0.0), 6),
             "activity_count": data.get("activity_count", 0),
@@ -526,6 +529,9 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "first_seen": data.get("first_seen"),
             "last_seen": data.get("last_seen"),
             "flags": sorted(data.get("flags", [])),
+            # Present when the recipient is a swap router: what went in and,
+            # if the receipt showed it, what came back to the sender.
+            "swap": data.get("swap"),
         }
         for src, dst, data in graph.edges(data=True)
     ]

@@ -209,6 +209,32 @@ which is why it scores lower and names what would confirm it.
 
 ---
 
+## 8 — New: the trail changes asset instead of dying
+
+```
+0x4655b7ad0b5f5bacb9cf960bbffceb3f0e51f363
+```
+Ethereum · ETH · 2 hops · **~3 seconds, 4 API calls**
+
+| | |
+|---|---|
+| Addresses traced | 11 |
+| Exchange | none matched |
+| Swaps | **1** — 2,000 ETH into **1inch v4: Aggregation Router**, tx `0x5782df21…`, returned as 1,901.31 wstETH (`0x7f39c581…2ca0`) |
+| Message | *"…the funds were swapped … re-run it on token 0x7f39c581… from 0x4655b7ad… to follow the money further."* |
+
+This is a control wallet from the validation corpus (an investment fund), not
+a fraud case; it is here because it swaps in the open. A week ago the ETH
+trace ended at the router with "sent nothing onward". Now the router is
+recognised, the transaction's receipt is read, and the response says what the
+money became and where to resume. The output token is named by contract
+because wstETH is not in the configured token list — the tool prints the raw
+units rather than guess the decimals. Note the router bubble is terminal: a
+contract has no outgoing transfers of its own, so no API call is spent
+expanding it.
+
+---
+
 ## Running order
 
 Trace 1, then 2, then 3. The story escalates: nothing found → something odd

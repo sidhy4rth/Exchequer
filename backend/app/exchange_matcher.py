@@ -213,6 +213,21 @@ class ExchangeMatcher:
 
 
 @lru_cache(maxsize=None)
+def get_router_matcher(chain_key: str | None = None) -> ExchangeMatcher:
+    """DEX routers for one chain, in the same file shape as exchange labels.
+
+    Same class on purpose: an exact lookup in a file a human can open. The
+    `exchange` field holds the protocol name (Uniswap, 1inch) and `type` is
+    always "router". A chain with no router file gets an empty matcher, so
+    swaps simply go undetected there rather than failing the trace.
+    """
+    chain = config.get_chain(chain_key)
+    if chain.router_labels_path is None:
+        return ExchangeMatcher({}, chain=chain.key)
+    return ExchangeMatcher.from_file(chain.router_labels_path, chain=chain.key)
+
+
+@lru_cache(maxsize=None)
 def get_matcher(chain_key: str | None = None) -> ExchangeMatcher:
     """Matcher for one chain. Cached so each label file is read once.
 

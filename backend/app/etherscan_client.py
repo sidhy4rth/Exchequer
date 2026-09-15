@@ -506,6 +506,18 @@ class EtherscanClient:
         )
         return int(result, 16) if isinstance(result, str) else 0
 
+    def get_transaction_receipt(self, tx_hash: str) -> dict[str, Any] | None:
+        """The receipt of one transaction, with its event logs.
+
+        Used to read what a swap returned to the sender: the ERC-20 Transfer
+        events in the receipt are the only place that fact is recorded. The
+        `proxy` module is on the free tier and one receipt costs one request.
+        """
+        result = self._request(
+            {"module": "proxy", "action": "eth_getTransactionReceipt", "txhash": tx_hash}
+        )
+        return result if isinstance(result, dict) else None
+
     def get_balance_native(self, address: str) -> float:
         """Current native-currency balance of `address`."""
         if not is_valid_address(address):

@@ -36,7 +36,8 @@ from .etherscan_client import (
     normalize_address,
 )
 from .deposit_inference import describe as describe_inference, infer_deposit_addresses
-from .exchange_matcher import ExchangeMatcher, get_matcher
+from .exchange_matcher import ExchangeMatcher, get_matcher, get_router_matcher
+from .swap_detection import describe as describe_swap, detect_swaps
 from .graph_builder import (
     INCOMING,
     OUTGOING,
@@ -342,6 +343,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
     seed = normalize_address(address)
     matcher = get_matcher(chain.key)
     risk_matcher = get_risk_matcher(chain.key)
+    routers = get_router_matcher(chain.key)
     trace_config = TraceConfig(
         max_depth=request.max_depth or config.TRACE_MAX_DEPTH,
     )
@@ -359,15 +361,27 @@ def trace(request: TraceRequest) -> dict[str, Any]:
                 seed,
                 client,
                 cfg=trace_config,
-                # Two quite different reasons to stop. An exchange is where the
-                # trail *ends*: the funds arrived, and those wallets have
+                # Three quite different reasons to stop. An exchange is where
+                # the trail *ends*: the funds arrived, and those wallets have
                 # millions of unrelated transactions. A mixer is where the trail
                 # *breaks*: its payouts come from a commingled pool, so
                 # expanding through one would invent a path the transactions do
-                # not support.
-                is_terminal=lambda a: matcher.is_exchange(a) or risk_matcher.is_terminal(a),
+                # not support. A swap router is where the trail *changes
+                # asset*: the funds came straight back to the sender as a
+                # different token, and a router contract has no outgoing
+                # transfers of its own to follow anyway.
+                is_terminal=lambda a: (
+                    matcher.is_exchange(a) or risk_matcher.is_terminal(a) or routers.is_exchange(a)
+                ),
                 direction=direction,
             )
+            # Swaps. Reads one receipt per router-bound transfer (capped) so
+            # the response can say what asset the money became.
+            swaps = detect_swaps(
+                result.graph, routers,
+                receipt_of=getattr(client, "get_transaction_receipt", None),
+                chain=chain, asset_symbol=asset_symbol,
+            ) if direction == OUTGOING else []
             # Attribution. Exact label-file matches first, then addresses whose
             # outgoing history is nothing but sweeps into one of those labelled
             # wallets -- inferred deposit addresses. The inference runs while
@@ -468,6 +482,19 @@ def trace(request: TraceRequest) -> dict[str, Any]:
             "them would manufacture a trail. Use of a sanctioned mixer is itself "
             "a substantive finding and is grounds for escalation."
         )
+    elif primary is None and any(s.get("output_read") for s in swaps):
+        # Edge case: the trail did not go cold, it changed asset. Saying which
+        # asset and where to resume is the whole point of detecting it.
+        first = next(s for s in swaps if s.get("output_read"))
+        others = len([s for s in swaps if s.get("output_read")]) - 1
+        message = (
+            f"No exchange was reached in {asset_symbol}, but the funds were swapped: "
+            f"{first['sender']} exchanged {first['amount_in']:.4f} {asset_symbol} for "
+            f"{first['asset_out']} at {first['router_label']}"
+            + (f" (and {others} more swap{'s' if others != 1 else ''} were found)" if others else "")
+            + f". This trace follows {asset_symbol} and ends there; re-run it on "
+            f"{first['asset_out']} from {first['sender']} to follow the money further."
+        )
     elif primary is None and direction == INCOMING:
         # Edge case: no exchange upstream. On a reverse trace that is a minor
         # result -- the senders are what was being looked for.
@@ -536,6 +563,10 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "risk_flags": sorted({m.category for m in risk_matches}),
         "risk_notes": [m.describe(asset_symbol) for m in risk_matches],
         "findings": [f.to_dict() for f in findings],
+        # Transfers into DEX routers, with what came back where the receipt
+        # showed it. The graph edge carries the same record as `swap`.
+        "swaps": swaps,
+        "swap_notes": [describe_swap(s) for s in swaps],
         "confidence_detail": confidence.to_dict(),
         "trace_path": (
             _trace_path(graph, seed, primary.address, direction) if primary else []

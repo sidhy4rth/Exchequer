@@ -7,6 +7,7 @@
 - **Phase 1b, validation.** 40 documented-illicit and 48 ordinary wallets, all fetched by script and bytecode-checked, traced with the real pipeline; 1,416 requests snapshotted so the run is offline and reproducible. 68-point threshold sweep.
 - **Phase 2, deposit-address inference.** Unlabelled wallet whose entire outgoing history is ≥2 sweeps to one labelled exchange wallet → "probable E deposit address", scored lower (directness 0.5), evidence attached, confirmation sentence in the report, sidebar qualifier.
 - **Phase 3.** JUDGE_QA.md, DEMO.md re-verified, this file.
+- **Phase 4, swaps at DEX routers.** 20 Ethereum and 4 BSC routers imported by script and bytecode-verified; a transfer into one stops the trace, the receipt is read, and the edge carries `swap{router, asset_in, amount_in, asset_out, amount_out, tx}`. The response and report say what the money became and where to re-run. Detection only — the trace is not resumed on the output asset, because amount correlation across two assets has no defensible definition yet. Verified on a real 2,000 ETH → wstETH swap.
 
 ## What was measured
 
@@ -26,7 +27,8 @@
 
 ## Left undone, and why
 
-- Phases 4–8 (DEX swap following, Tron label coverage, cross-case correlation, internal transactions, investigator's report) were ordered after the mandatory Q&A; see NOTES.md for what, if anything, was started.
+- Swap *resumption* on the output asset (Phase 4 ships detection only). Phases 5–8 (Tron label coverage, cross-case correlation, internal transactions, investigator's report) were ordered after the mandatory Q&A; see NOTES.md for what, if anything, was started.
+- Swaps whose output is the native coin, or whose transfer lands on a liquidity pool rather than a router, are not recognised; PancakeSwap and SunSwap routers have no scripted label source in the pinned dataset.
 - No Tron or BSC validation: no scripted source of Tron *controls* with provenance was found, and the brief forbids hand-typed addresses.
 - FATF's own documents could not be fetched (HTTP 403); they are cited through a labelled secondary source.
 

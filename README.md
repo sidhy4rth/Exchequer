@@ -269,6 +269,16 @@ An inferred address is a **weaker attribution and is scored as one**: `match_dir
 
 Ways it can be wrong, stated plainly: an exchange's *own* internal wallet that consolidates into a hot wallet has the same shape and would be called a deposit address (harmless in practice — it still belongs to that exchange); a wallet whose owner really did send everything, twice, straight to a labelled hot wallet would be misnamed; and the rule only sees the newest 200 transfers, so an address with an older, different history is judged on its recent one. It never fires on a wallet the trace did not expand, so at the depth limit it says nothing rather than guessing. On the validation corpus it fired on **0 of 48** control wallets — see [Validation against real wallets](#validation-against-real-wallets).
 
+### Swaps at a DEX router
+
+A trace follows one asset, so when a wallet sends 10 ETH to a Uniswap router the ETH trail ends there — but the wallet did not lose the money; it got it back as USDT in the same transaction and carried on. Until now the trace reported that as "sent to an address that sent nothing onward", which is true of the ETH and false of the money.
+
+When an outgoing transfer's recipient is in `backend/data/router_labels*.json` (see [Router labels](#router-labels)), the trace stops there — a router contract has no outgoing transfers of its own — fetches the transaction's receipt (one request per transfer, at most two per edge), and reads its ERC-20 `Transfer` events. A transfer whose recipient is the wallet that sent the swap is the swap's output. The edge then carries `swap: {router, asset_in, amount_in, asset_out, amount_out, tx, …}`, the response lists every swap in `swaps` with a plain sentence in `swap_notes`, the report prints them under *Swaps*, and when no exchange was reached the message says where to resume: *"funds were swapped for USDT at Uniswap V3: Router 2; re-run the trace on USDT from 0x…"*.
+
+**The trace is not resumed on the output asset.** Doing that honestly means deciding what amount correlation should mean across 1 ETH → 2,400 USDT, and the one-asset-per-trace rule exists precisely because those are not comparable. A swap that is recorded and re-run keeps every threshold valid; a swap silently crossed does not.
+
+What it cannot see, stated plainly: a swap *into* the chain's native coin leaves no `Transfer` to the sender (the router unwraps WETH and sends ETH internally), so it is reported as "sent to a router; no token output found in the receipt" rather than guessed; a token whose contract is not in the chain's configured token list is named by contract with the amount left in raw units, because guessing its decimals would misstate the figure; and on a *token* trace the transfer into a swap usually lands on a liquidity pool rather than the router, so only transactions sent to a labelled router are recognised.
+
 ### Confidence score
 
 Three weighted components. The score is a plain function of these three inputs and nothing else:
@@ -393,6 +403,14 @@ attributing that as a cash-out would have named a company that never took custod
 contract wallets (multisig, deposit forwarders) were kept and typed `contract_wallet`, since funds
 reaching those really have reached the exchange.
 
+### Router labels
+
+`backend/data/router_labels.json` (**20 routers, 9 protocols** — Uniswap V2, V3 and Universal Router, 1inch v2–v5, 0x Exchange Proxy, KyberSwap, Metamask Swap Router, OKX DEX, THORSwap, and two smaller ones) and `router_labels_bsc.json` (**4 routers**) come from the same pinned dataset as the exchange labels, restricted to entries whose explorer name ends in "Router" (or is 0x's Exchange Proxy) — executors, governors and allowance targets carry a protocol's name but are not where a swap is sent. Verification is the mirror image of the exchange check: a router **must** carry contract bytecode, and every entry did. PancakeSwap's category is empty in the pinned dataset and SunSwap has no Etherscan-style label source, so BSC and Tron coverage is thin and says so.
+
+```bash
+cd backend && .venv/bin/python -m scripts.seed_router_labels
+```
+
 ### Indian exchanges
 
 **CoinDCX is now covered on BSC** (`0x8c7efd5b…c88973e`), imported from BscScan's own labels and verified
@@ -416,7 +434,7 @@ To add one properly:
 
 Stated plainly, and repeated in every exported report:
 
-- **One asset per trace.** ETH, USDT and USDC are each traced separately; a launderer who *swaps* between assets, or bridges to a chain TraceChain does not cover, is not followed across that hop.
+- **One asset per trace.** ETH, USDT and USDC are each traced separately. A swap at a labelled DEX router is now *detected* — the trace records what asset came back and tells you where to re-run — but it is not followed automatically, and a swap whose output is the native coin, a swap sent to a liquidity pool rather than a router, or a bridge to a chain TraceChain does not cover, still ends the trail.
 - **Internal contract transactions are not traced.** Value moved by a contract call rather than a direct transfer is invisible.
 - **BSC covers a recent window, not all history.** NodeReal caps one query at 100,000 blocks (~3.5 days), so history is walked backwards in windows — 500,000 blocks (~17 days) by default. Raise `NODEREAL_LOOKBACK_BLOCKS` to widen it, at proportionally more API calls. Ethereum has no such limit.
 - **An exchange match identifies where funds arrived, not who controls the account.** Only the exchange can link a deposit address to a customer identity, via a lawful request.
@@ -533,6 +551,8 @@ tracechain/
 │   │   ├── exchange_matcher.py   exact-match attribution
 │   │   ├── risk_matcher.py       sanctions + mixer screening
 │   │   ├── pattern_detection.py  peel chain + amount split
+│   │   ├── deposit_inference.py  probable exchange deposit addresses
+│   │   ├── swap_detection.py     swaps at DEX routers, from receipts
 │   │   ├── scoring.py            confidence score
 │   │   ├── models.py             SQLite (SQLAlchemy) case storage
 │   │   └── report.py             exportable report
@@ -540,8 +560,13 @@ tracechain/
 │   │   ├── exchange_labels.json      337 verified Ethereum exchange wallets
 │   │   ├── exchange_labels_bsc.json   30 verified BSC exchange wallets
 │   │   ├── exchange_labels_tron.json   7 verified Tron exchange wallets
-│   │   └── risk_labels*.json          OFAC SDN addresses, per chain
+│   │   ├── risk_labels*.json          OFAC SDN addresses, per chain
+│   │   ├── router_labels*.json        verified DEX routers, per chain
+│   │   └── validation/                corpus, snapshot and results of the rule measurement
 │   ├── scripts/
+│   │   ├── seed_router_labels.py      imports + verifies DEX routers
+│   │   ├── build_validation_corpus.py builds the measurement corpus by script
+│   │   ├── validate_patterns.py       measures the rules; offline from the snapshot
 │   │   ├── check_etherscan.py         live API smoke test
 │   │   ├── verify_labels.py           re-checks every Ethereum label
 │   │   ├── import_exchange_labels.py  imports + verifies Ethereum labels
@@ -649,5 +674,5 @@ is fine for evaluation and not for concurrent use.
 - **More label coverage** — the matcher is the only component that decides attribution, and it reads one JSON file per chain.
 - **Deposit-address clustering** — `match_directness` already exists as a separate scoring input so weaker inferred attributions score lower than exact matches.
 - **Cross-case correlation** — every trace is already stored, so finding reported addresses that converge on a shared intermediary is a query over the case table rather than new tracing machinery. This is what scales a reverse trace from one campaign to a national picture.
-- **Cross-asset following** — the sharpest remaining limitation. A launderer who swaps ETH for USDT at a DEX breaks the trail; detecting a deposit into a known router and resuming on the output asset would close it.
+- **Cross-asset following** — swaps at labelled routers are detected and the output asset named; resuming the trace on that asset automatically needs a defensible definition of amount correlation across two assets, which does not exist yet.
 - **PDF reports** — `report.py` already emits structured JSON and plain text, so this is a renderer, not new analysis.

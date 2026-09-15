@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "description": "DEX routers and aggregators. A transfer into one of these is a swap, not a payment or a cash-out: the sender received a different asset back in the same transaction.",
+    "chain": "bsc",
+    "provenance": "Imported from brianleect/etherscan-labels @ 923aba72c7e2d0682f7ae6194b6140bd90668dc9, a published scrape of the explorer's own label pages, categories ['dex']; only entries whose explorer name ends in 'Router' (or 0x's Exchange Proxy) were taken, and each was verified to carry contract bytecode.",
+    "generated": "2026-09-15T14:46:37+00:00",
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_router_labels",
+    "rejected": [],
+    "count": 4
+  },
+  "labels": {
+    "0x1a1ec25dc08e98e5e93f1104b5e5cdd298707d31": {
+      "exchange": "Metamask",
+      "label": "Metamask: Swap Router",
+      "type": "router"
+    },
+    "0x30d70e3c613c50da8030556aa949fbc21fd51454": {
+      "exchange": "Merrymen Swap",
+      "label": "Merrymen Swap: Router",
+      "type": "router"
+    },
+    "0x638f32fe09baec1fdc54f962e3e8e5f2b286aa70": {
+      "exchange": "Transit",
+      "label": "Transit: Swap Router",
+      "type": "router"
+    },
+    "0xccf4881b849d94c15c98567ba71b08ed829aba33": {
+      "exchange": "Impossible Finance",
+      "label": "Impossible Finance: V2 Swap Router",
+      "type": "router"
+    }
+  }
+}

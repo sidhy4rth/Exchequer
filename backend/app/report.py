@@ -87,6 +87,10 @@ def build_report(case: Case) -> dict[str, Any]:
             "notes": result.get("risk_notes", []),
         },
         "patterns_detected": findings,
+        # Transfers into DEX routers. A swap is where a one-asset trace ends
+        # and where the officer should re-run it on the output asset.
+        "swaps": result.get("swaps", []),
+        "swap_notes": result.get("swap_notes", []),
         "graph_summary": {
             "addresses": len(graph.get("nodes", [])),
             "transfers": len(graph.get("edges", [])),
@@ -321,6 +325,15 @@ def render_text_report(report: dict[str, Any]) -> str:
         add("None. The traced transfers did not match the peel-chain or")
         add("amount-split heuristics.")
         add("")
+
+    if report.get("swap_notes"):
+        rule("-")
+        add("SWAPS (THE TRACE CHANGES ASSET HERE)")
+        rule("-")
+        for note in report["swap_notes"]:
+            for line in _wrap(note, bullet="* "):
+                add(line)
+            add("")
 
     summary = report["graph_summary"]
     rule("-")

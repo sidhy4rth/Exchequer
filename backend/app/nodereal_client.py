@@ -322,6 +322,11 @@ class NoderealClient:
 
         return collected[:cap]
 
+    def get_transaction_receipt(self, tx_hash: str) -> dict[str, Any] | None:
+        """One transaction's receipt and event logs, for reading swap outputs."""
+        result = self._rpc("eth_getTransactionReceipt", [tx_hash])
+        return result if isinstance(result, dict) else None
+
     def get_transactions(self, address: str, limit: int | None = None, sort: str = "desc"):
         """Present for interface parity; callers pick a direction explicitly."""
         return self.get_outgoing_transactions(address, limit=limit)

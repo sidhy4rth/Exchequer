@@ -1,0 +1,113 @@
+{
+  "_meta": {
+    "description": "DEX routers and aggregators. A transfer into one of these is a swap, not a payment or a cash-out: the sender received a different asset back in the same transaction.",
+    "chain": "ethereum",
+    "provenance": "Imported from brianleect/etherscan-labels @ 923aba72c7e2d0682f7ae6194b6140bd90668dc9, a published scrape of the explorer's own label pages, categories ['dex', '1inch', 'okx', 'router']; only entries whose explorer name ends in 'Router' (or 0x's Exchange Proxy) were taken, and each was verified to carry contract bytecode.",
+    "generated": "2026-09-15T14:46:35+00:00",
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_router_labels",
+    "rejected": [],
+    "count": 20
+  },
+  "labels": {
+    "0x11111112542d85b3ef69ae05771c2dccff4faa26": {
+      "exchange": "1inch",
+      "label": "1inch v3: Aggregation Router",
+      "type": "router"
+    },
+    "0x111111125434b319222cdbf8c261674adb56f3ae": {
+      "exchange": "1inch",
+      "label": "1inch v2: Aggregation Router",
+      "type": "router"
+    },
+    "0x1111111254eeb25477b68fb85ed929f73a960582": {
+      "exchange": "1inch",
+      "label": "1inch v5: Aggregation Router",
+      "type": "router"
+    },
+    "0x1111111254fb6c44bac0bed2854e76f90643097d": {
+      "exchange": "1inch",
+      "label": "1inch v4: Aggregation Router",
+      "type": "router"
+    },
+    "0x3b3ae790df4f312e745d270119c6052904fb6790": {
+      "exchange": "OKX DEX",
+      "label": "OKX DEX: Aggregation Router",
+      "type": "router"
+    },
+    "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad": {
+      "exchange": "Uniswap",
+      "label": "Uniswap: Universal Router",
+      "type": "router"
+    },
+    "0x6131b5fae19ea4f9d964eac0408e4408b66337b5": {
+      "exchange": "KyberSwap",
+      "label": "KyberSwap: Meta Aggregation Router v2",
+      "type": "router"
+    },
+    "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45": {
+      "exchange": "Uniswap",
+      "label": "Uniswap V3: Router 2",
+      "type": "router"
+    },
+    "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": {
+      "exchange": "Uniswap",
+      "label": "Uniswap V2: Router 2",
+      "type": "router"
+    },
+    "0x881d40237659c251811cec9c364ef91dc08d300c": {
+      "exchange": "Metamask",
+      "label": "Metamask: Swap Router",
+      "type": "router"
+    },
+    "0xa4dc97a565e2364cdeb4efe38c0f153bccb62b01": {
+      "exchange": "BTswap",
+      "label": "BTswap: Router",
+      "type": "router"
+    },
+    "0xa58f22e0766b3764376c92915ba545d583c19dbc": {
+      "exchange": "Alchemist Coin",
+      "label": "Alchemist Coin: MistX Router",
+      "type": "router"
+    },
+    "0xc145990e84155416144c532e31f89b840ca8c2ce": {
+      "exchange": "THORSwap",
+      "label": "THORSwap: RouterV2",
+      "type": "router"
+    },
+    "0xd47140f6ab73f6d6b6675fb1610bb5e9b5d96fe5": {
+      "exchange": "1inch",
+      "label": "1inch: Old Router V2",
+      "type": "router"
+    },
+    "0xdef1c0ded9bec7f1a1670819833240f027b25eff": {
+      "exchange": "0x",
+      "label": "0x: Exchange Proxy",
+      "type": "router"
+    },
+    "0xdf1a1b60f2d438842916c0adc43748768353ec25": {
+      "exchange": "KyberSwap",
+      "label": "KyberSwap: Aggregation Router 2",
+      "type": "router"
+    },
+    "0xe069cb01d06ba617bcdf789bf2ff0d5e5ca20c71": {
+      "exchange": "1inch",
+      "label": "1inch: Router 2",
+      "type": "router"
+    },
+    "0xe592427a0aece92de3edee1f18e0157c05861564": {
+      "exchange": "Uniswap",
+      "label": "Uniswap V3: Router",
+      "type": "router"
+    },
+    "0xef1c6e67703c7bd7107eed8303fbe6ec2554bf6b": {
+      "exchange": "Uniswap",
+      "label": "Uniswap: Old Universal Router",
+      "type": "router"
+    },
+    "0xfcadf926669e7cad0e50287ea7d563020289ed2c": {
+      "exchange": "Alchemist Coin",
+      "label": "Alchemist Coin: MistX Router 2",
+      "type": "router"
+    }
+  }
+}
