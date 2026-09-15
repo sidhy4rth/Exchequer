@@ -235,6 +235,32 @@ expanding it.
 
 ---
 
+## 9 — New: Tron, the chain the evidence points at
+
+```
+THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph
+```
+Tron · USDT · 2 hops · **under a second, 1 API call**
+
+| | |
+|---|---|
+| Addresses traced | 2 |
+| Exchange | **Binance** — `Binance-Hot 7`, 1 hop |
+| Value received | 26,405.28 USDT |
+| Confidence | **1.00** |
+
+A USDT-TRC20 wallet whose every transfer went to Binance's labelled hot
+wallet. Found by script on 15 September (the most recent sender of at least
+1,000 USDT into `Binance-Hot 7`), not chosen by hand. The point of the demo is
+the label file behind it: a week ago Tron had 7 labelled wallets across 4
+exchanges, so most Tron traces ended nowhere; it now has 40 across 18, every
+one read from TronScan's own tag and checked on chain for bytecode and inbound
+value. If asked why this matters more than the Ethereum demos: TRM Labs put
+58% of 2024 illicit crypto volume on Tron and UNODC calls USDT on Tron the
+"preferred choice" of the cyber-fraud industry — see RESEARCH.md for both.
+
+---
+
 ## Running order
 
 Trace 1, then 2, then 3. The story escalates: nothing found → something odd

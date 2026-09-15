@@ -108,8 +108,9 @@ overfit and hide that.
 **10. What if the exchange is not in your list?**
 
 Then the trace returns `exchange: null` with a message, never a guess.
-`GET /exchanges` shows exactly what is covered — 337 Ethereum, 30 BSC and 7
-Tron wallets today. The new deposit-address inference narrows the gap from the
+`GET /exchanges` shows exactly what is covered — 337 Ethereum, 30 BSC and 40
+Tron wallets today, every one read from the explorer's own label and checked on
+chain. The new deposit-address inference narrows the gap from the
 other side: when an unlabelled wallet's entire outgoing history is sweeps into
 one labelled hot wallet, the tool names it as a *probable* deposit address of
 that exchange, scores it lower than a label match, and says what would confirm

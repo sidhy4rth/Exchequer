@@ -359,10 +359,10 @@ manufacture an attribution no transaction supports.
 |---|---|
 | `backend/data/exchange_labels.json` | **337 addresses / 18 exchanges** — Binance, Coinbase, Kraken, OKX, Bitfinex, Huobi/HTX, KuCoin, Gate.io, Crypto.com, Bybit, Bitstamp, HitBTC, Gemini, Bithumb, Bittrex, Poloniex, Upbit, Remitano |
 | `backend/data/exchange_labels_bsc.json` | **30 addresses / 9 exchanges** — Binance, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, **CoinDCX**, Azbit, FixedFloat |
-| `backend/data/exchange_labels_tron.json` | **7 addresses / 4 exchanges** — Binance, OKX, Bybit, Bitfinex |
+| `backend/data/exchange_labels_tron.json` | **40 addresses / 18 exchanges** — Binance, Huobi/HTX, KuCoin, MEXC, Poloniex, OKX, Bybit, Bitfinex, Bitget, Gate.io, Kraken, Upbit, Bithumb, Coinone, Bitpanda, CoinSpot, FixedFloat, UEEx |
 | `backend/data/risk_labels*.json` | Sanctioned and mixer addresses per chain, generated from OFAC's SDN list — see [Sanctions and mixer screening](#sanctions-and-mixer-screening) |
 
-**374 verified exchange wallets in total, across three chains.**
+**407 verified exchange wallets in total, across three chains.**
 
 Both files are generated, not hand-typed, and both are reproducible:
 
@@ -377,8 +377,13 @@ python -m scripts.verify_labels             # re-check the Ethereum file on dema
 
 Addresses originate from the explorers' own published label pages. Ethereum and BSC are imported from a
 dataset pinned to a specific commit, so a re-run reproduces the same input. Tron labels are read **live from
-TronScan's own API** (`/api/account` → `addressTag`), which is the strongest provenance available for free
-anywhere in this project — the label comes from the explorer that assigns it.
+TronScan's own API** (the `addressTag` on its largest-holder listings), which is the strongest provenance
+available for free anywhere in this project — the label comes from the explorer that assigns it. The Tron
+importer inspects the 600 largest USDT-TRC20 holders and 300 largest TRX accounts, keeps only tags that name a
+known centralised exchange (unrecognised tags are printed for review, never kept), and then applies the same
+two on-chain checks as Ethereum: no contract bytecode (TronGrid `wallet/getcontract`) and at least one received
+transfer. On the 15 September 2026 run: 48 tagged candidates, 40 kept, 0 rejected on chain, 6 listed for review
+(a payment processor, a gambling site, an asset manager, a DeFi vault).
 
 ### Nothing is accepted on the label alone
 
@@ -416,7 +421,11 @@ cd backend && .venv/bin/python -m scripts.seed_router_labels
 **CoinDCX is now covered on BSC** (`0x8c7efd5b…c88973e`), imported from BscScan's own labels and verified
 on-chain. WazirX and ZebPay remain absent: their hot wallets could not be sourced to a standard
 appropriate for an attribution tool, and guessing one would mean falsely naming a real company in a
-law-enforcement report.
+law-enforcement report. On Tron, none of the 900 largest accounts inspected carries a TronScan tag for
+CoinDCX, WazirX, ZebPay or Giottus — the importer looks for them and would keep them if the explorer tagged
+one — so an Indian exchange's Tron deposit can currently only be reached through the
+[inferred deposit address](#inferred-exchange-deposit-addresses) rule if it sweeps to a labelled wallet, or
+not at all.
 
 To add one properly:
 
@@ -559,7 +568,7 @@ tracechain/
 │   ├── data/
 │   │   ├── exchange_labels.json      337 verified Ethereum exchange wallets
 │   │   ├── exchange_labels_bsc.json   30 verified BSC exchange wallets
-│   │   ├── exchange_labels_tron.json   7 verified Tron exchange wallets
+│   │   ├── exchange_labels_tron.json  40 verified Tron exchange wallets
 │   │   ├── risk_labels*.json          OFAC SDN addresses, per chain
 │   │   ├── router_labels*.json        verified DEX routers, per chain
 │   │   └── validation/                corpus, snapshot and results of the rule measurement
