@@ -422,6 +422,7 @@ class EtherscanClient:
         address: str,
         limit: int | None = None,
         sort: str = "desc",
+        include_internal: bool | None = None,
     ) -> list[Transaction]:
         """Return normal native-currency transactions involving `address`.
 
@@ -466,7 +467,8 @@ class EtherscanClient:
         # smart-contract wallet, a router returning ETH -- never appears in
         # txlist. It is a second endpoint and a second request; see
         # config.ETHERSCAN_INCLUDE_INTERNAL for why that is a switch.
-        if not self.contract_address and self.include_internal:
+        want_internal = self.include_internal if include_internal is None else include_internal
+        if not self.contract_address and want_internal:
             internal_raw = self._request({**params, "action": "txlistinternal"})
             if isinstance(internal_raw, list):
                 txs += [
@@ -488,16 +490,30 @@ class EtherscanClient:
 
         This is what the trace follows: we are chasing where the money went.
         Reverted txs and zero-value calls are excluded because no funds moved.
+
+        Internal transactions are read only when the signed list shows no
+        outgoing transfer at all. A wallet that signs transactions cannot
+        originate an internal transfer, so for an ordinary wallet the second
+        request could only ever return nothing; it matters for a contract --
+        a multisig, a smart-contract wallet -- which never signs. Measured on
+        the README's flagship address at 4 hops, asking unconditionally cost
+        110 requests where 41 had done the job.
         """
         target = normalize_address(address)
-        return [
-            tx
-            for tx in self.get_transactions(address, limit=limit)
-            if tx.from_address == target
-            and tx.to_address is not None
-            and not tx.is_error
-            and tx.value_wei > 0
-        ]
+
+        def outgoing(txs: list[Transaction]) -> list[Transaction]:
+            return [
+                tx for tx in txs
+                if tx.from_address == target
+                and tx.to_address is not None
+                and not tx.is_error
+                and tx.value_wei > 0
+            ]
+
+        signed = outgoing(self.get_transactions(address, limit=limit, include_internal=False))
+        if signed or self.contract_address or not self.include_internal:
+            return signed
+        return outgoing(self.get_transactions(address, limit=limit, include_internal=True))
 
     def get_incoming_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
         """Only the transfers *received by* `address` that actually moved value.

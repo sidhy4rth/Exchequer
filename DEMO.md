@@ -1,11 +1,12 @@
 # TraceChain — demo addresses
 
-Seven Ethereum mainnet traces over six addresses, all re-verified on
-**15 September 2026** after the time rule and the new amount-split thresholds
-landed; each was run **twice back to back** and returned identical findings
-both times. Traces 1–3 and 6–7 run at **depth 3** on **Ethereum / ETH** and
-complete in under 20 seconds cold; traces 4–5 are reverse traces at **1 hop**
-and return in about two seconds.
+Ten traces, all re-verified **cold** (empty cache) on **15 September 2026**
+after the time rule, the new amount-split thresholds, internal transactions
+and the service-contract brake landed. Every request count and time below is
+from that run. Traces 1–3, 6–7 and 10 run at **depth 3** on **Ethereum / ETH**
+and complete in 4–20 seconds; traces 4–5 are reverse traces at **1 hop** and
+return in two seconds on two requests each. The README's flagship address at
+**4 hops** takes ~40 seconds and 73 requests.
 
 ---
 
@@ -32,7 +33,7 @@ transaction data.
 ```
 0x7c3e9bab6715e4040f013e865b193b0209642e36
 ```
-Ethereum · ETH · 3 hops · **~3 seconds, 5 API calls**
+Ethereum · ETH · 3 hops · **~4 seconds, 6 API calls**
 
 | | |
 |---|---|
@@ -82,15 +83,15 @@ wallets.
 ```
 0x536c4921d1aafde6a5cda882fb5ca046f3601c65
 ```
-Ethereum · ETH · 3 hops · **~17 seconds, ~60 API calls**
+Ethereum · ETH · 3 hops · **~20 seconds, 35 API calls**
 
 | | |
 |---|---|
-| Addresses traced | 73 (of which 21 reached only through contract-moved value) |
+| Addresses traced | 56 |
 | Exchange | **none matched** (a week ago: Binance at 0.65) |
-| Patterns | **peel chain** + **amount split** |
-| Transfers excluded by the time rule | **393** |
-| Internal (contract-moved) transfers seen | 203 |
+| Patterns | **peel chain** |
+| Transfers excluded by the time rule | **643** |
+| Service contracts recognised and not expanded | 1 |
 
 On 4 September this trace reached Binance with confidence 0.65 and both
 patterns fired. On 15 September, with the time rule in place, it reaches no
@@ -102,11 +103,11 @@ transfers of that kind — money that was never the reported wallet's.
 Say this out loud. A tool that reports where the victim's money went has to
 be able to lose an attribution when the evidence does not support it, and
 this one did. The peel-chain finding remains: single-use wallets forwarding
-declining amounts in sequence. The amount split fires again once
-contract-moved value is read (203 internal transfers, invisible a week ago):
-a wallet in this graph fans funds out through a contract call, and the rule
-now sees it. Switch to the Graph view for the fan-out from the reported
-address — 617 ETH across ten recipients.
+declining amounts in sequence. One contract in the graph pays out to many
+addresses and is marked as a service rather than expanded — the fix that
+brought the flagship demo back from four minutes to forty seconds. Switch to
+the Graph view for the fan-out from the reported address — 617 ETH across ten
+recipients.
 
 ---
 
@@ -115,7 +116,7 @@ address — 617 ETH across ten recipients.
 ```
 0x536c4921d1aafde6a5cda882fb5ca046f3601c65
 ```
-Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~2 seconds, 1 API call**
+Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~2 seconds, 2 API calls**
 
 | | |
 |---|---|
@@ -162,7 +163,7 @@ the direction that inflates a case. Run this straight after 4.
 ```
 0x00000000072d54638c2c2a3da3f715360269eea1
 ```
-Ethereum · ETH · 3 hops · **~13 seconds, 20 API calls**
+Ethereum · ETH · 3 hops · **~13 seconds, 24 API calls**
 
 | | |
 |---|---|
@@ -191,7 +192,7 @@ the exact match is still listed.
 ```
 0x21b8d56bda776bbe68655a16895afd96f5534fed
 ```
-Ethereum · ETH · 3 hops · **~5 seconds, 6 API calls**
+Ethereum · ETH · 3 hops · **~5 seconds, 8 API calls**
 
 | | |
 |---|---|
@@ -218,7 +219,7 @@ which is why it scores lower and names what would confirm it.
 ```
 0x4655b7ad0b5f5bacb9cf960bbffceb3f0e51f363
 ```
-Ethereum · ETH · 2 hops · **~3 seconds, 4 API calls**
+Ethereum · ETH · 2 hops · **~3 seconds, 5 API calls**
 
 | | |
 |---|---|
@@ -270,7 +271,7 @@ value. If asked why this matters more than the Ethereum demos: TRM Labs put
 ```
 0x000000000532b45f47779fce440748893b257865
 ```
-Ethereum · ETH · 3 hops · **~15 seconds** (then open the stored case)
+Ethereum · ETH · 3 hops · **~15 seconds, 30 API calls** (then open the stored case)
 
 | | |
 |---|---|
@@ -321,13 +322,13 @@ Every trace is stored as a case, so a known-good result can be opened
 instantly and will look identical every time:
 
 ```
-http://localhost:5173/case/88e4fa65-fbe8-4335-9278-a79153d38514
+http://localhost:5173/case/75e32f8e-a88c-43af-b456-b99278f275cf
 ```
 
 That is trace 6 as archived on 15 September. Use it as a fallback, or as the
 closing argument for why cases are preserved: **evidence has to be kept as it
 stood when it was taken.** Its text report
-(`GET /trace/88e4fa65-fbe8-4335-9278-a79153d38514/report?format=text`) is the
+(`GET /trace/75e32f8e-a88c-43af-b456-b99278f275cf/report?format=text`) is the
 one to hand a judge who asks what an officer would actually attach to a
 request: 415 lines, and the appendix lists every one of the transactions the
 32 addresses were connected by.

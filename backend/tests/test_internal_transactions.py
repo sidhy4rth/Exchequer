@@ -47,6 +47,22 @@ def test_internal_transfers_are_merged_and_tagged():
     assert txs[1].internal is False
 
 
+def test_a_wallet_that_signs_transfers_costs_one_request_on_a_forward_trace():
+    """It cannot originate an internal transfer, so the second request is
+    never made for it."""
+    client, seen = make_client(include_internal=True)
+    client.get_outgoing_transactions(ADDR)
+    assert seen == ["txlist"]
+
+
+def test_a_contract_with_no_signed_outflow_is_asked_for_internal_payouts():
+    client, seen = make_client(include_internal=True)
+    out = client.get_outgoing_transactions(MULTISIG)
+    assert seen == ["txlist", "txlistinternal"]
+    assert [t.to_address for t in out] == [ADDR.lower()]
+    assert out[0].internal is True
+
+
 def test_the_incoming_view_sees_a_contract_payout():
     """A multisig paying the reported address is exactly what was invisible."""
     client, _ = make_client(include_internal=True)

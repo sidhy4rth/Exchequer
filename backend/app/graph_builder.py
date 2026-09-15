@@ -40,7 +40,13 @@ a deliberate, documented investigative choice, not an arbitrary cap:
         its answer, and those wallets have millions of transactions that would
         swamp the graph with noise.
 
-A fifth rule is about *when*, and it is a correctness rule rather than a
+  5. max_contract_payout_recipients (default 3)
+        Applies only to contracts, recognised by having no signed outgoing
+        transfer. One paying out to more distinct addresses than this is a
+        service (WETH, a pool, a router) and is not expanded: its payouts are
+        other people's money. See TraceConfig for the measurement behind it.
+
+A sixth rule is about *when*, and it is a correctness rule rather than a
 brake. Money cannot be forwarded before it arrives. When the walk reaches an
 address at hop N, it knows the moment the traced funds landed there (the
 earliest transfer on the edge that brought them), and only transfers leaving
@@ -105,6 +111,16 @@ class TraceConfig:
     # requests are made or what the resulting graph contains. The provider's
     # rate limit is still enforced by the client's own throttle.
     max_concurrent_fetches: int = config.TRACE_CONCURRENCY
+    # Brake 5, for contracts only. An address with no signed outgoing transfer
+    # but with contract-originated ones is a contract (a wallet cannot start an
+    # internal transfer). A contract that pays out to more distinct addresses
+    # than this is a service -- WETH, a liquidity pool, a router -- and its
+    # payouts are other people's money, so it is not expanded. A multisig or
+    # smart-contract wallet forwarding to a few recipients still is. Measured
+    # on the README's flagship address at depth 4: without this, reading
+    # internal transactions made the trace expand WETH and nine pools and
+    # cost 249 requests instead of 41.
+    max_contract_payout_recipients: int = 3
 
 
 @dataclass
@@ -120,6 +136,8 @@ class TraceResult:
     truncated: bool = False  # a limit stopped us before the graph was exhausted
     truncation_reasons: list[str] = field(default_factory=list)
     terminal_addresses: list[str] = field(default_factory=list)
+    # Contracts recognised as services (see TraceConfig) and left unexpanded.
+    service_contracts: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     # Transfers left out because they happened on the wrong side of the moment
     # the traced funds passed through an address. See the module docstring.
@@ -157,6 +175,25 @@ def _aggregate_by_counterparty(
         if counterparty:
             grouped[counterparty].append(tx)
     return grouped
+
+
+def _is_service_contract(
+    transfers: list[Transaction], direction: str, cfg: TraceConfig
+) -> bool:
+    """True when `transfers` show a contract paying out to many addresses.
+
+    Walking out, the address's own outflows are in hand: none signed and more
+    than the cap of distinct recipients means a service. Walking back, the
+    inflows are in hand instead, and the same shape reads as many distinct
+    senders into a contract -- but an ordinary wallet also receives signed
+    transfers from many people, so in that direction the test is only applied
+    when every transfer in hand is contract-originated, which a wallet's
+    inflows never all are.
+    """
+    if not transfers or any(not tx.internal for tx in transfers):
+        return False
+    far_end = {tx.to_address if direction == OUTGOING else tx.from_address for tx in transfers}
+    return len(far_end - {None}) > cfg.max_contract_payout_recipients
 
 
 def _fetch_level(
@@ -346,6 +383,11 @@ def build_trace_graph(
                         stats["first"] = min(stats["first"] or tx.timestamp, tx.timestamp)
                         stats["last"] = max(stats["last"] or tx.timestamp, tx.timestamp)
                 graph.nodes[address]["outflows_by_counterparty"] = outflows
+                # The provider returns at most this many transfers, so a list
+                # this long means older history was not read.
+                graph.nodes[address]["outgoing_history_capped"] = (
+                    len(transfers) >= cfg.max_txs_per_address
+                )
 
             # Time rule: only transfers on the right side of the moment the
             # traced funds passed through this address can carry them.
@@ -361,6 +403,19 @@ def build_trace_graph(
                 excluded = before - len(transfers)
                 graph.nodes[address]["excluded_by_time"] = excluded
                 result.transfers_excluded_by_time += excluded
+
+            # Brake 5: a service contract's payouts are not the traced money.
+            # Only the reported address itself is exempt -- the trace starts
+            # there whatever it is.
+            if depth > 0 and _is_service_contract(transfers, direction, cfg):
+                graph.nodes[address]["is_service_contract"] = True
+                result.service_contracts.append(address)
+                result.note_truncation(
+                    f"{address[:10]}... is a contract that pays out to many addresses "
+                    "(a pool, a wrapped-token contract or a router); its payouts are "
+                    "not followed"
+                )
+                continue
 
             grouped = _aggregate_by_counterparty(transfers, direction)
 
@@ -512,6 +567,8 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             # A DEX router: funds sent here were swapped, not paid.
             "is_router": data.get("is_router", False),
             "router": data.get("router"),
+            # A contract that pays out to many addresses; not expanded.
+            "is_service_contract": data.get("is_service_contract", False),
             "total_in_native": round(data.get("total_in_native", 0.0), 6),
             "total_out_native": round(data.get("total_out_native", 0.0), 6),
             "activity_count": data.get("activity_count", 0),

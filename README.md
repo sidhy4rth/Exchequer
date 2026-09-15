@@ -136,7 +136,7 @@ Real mainnet addresses that produce real attributions. Pick the **chain** and **
 
 | Chain / asset | Address | What you get |
 |---|---|---|
-| Ethereum · ETH | `0x60d02e0956e2f3795167c15ba61ab452c85c2533` | **Best demo.** ~138 addresses at 4 hops, reaches **Binance** in 2, confidence ≈ 0.90, plus an amount-split flag |
+| Ethereum · ETH | `0x60d02e0956e2f3795167c15ba61ab452c85c2533` | **Best demo.** ~120 addresses at 4 hops in ~40 s / 73 requests, reaches **Binance** in 2, confidence ≈ 0.90; six service contracts (WETH, pools) recognised and left unexpanded, one swap detected |
 | Ethereum · ETH | `0x536c4921d1aafde6a5cda882fb5ca046f3601c65` | **Laundering demo, ~10s.** 617 ETH fanned across 10 recipients — 11 red bubbles, no exchange match |
 | Ethereum · USDT | `0x0b2fdf416cf2951499de9a1adac65c8e9907c8c2` | Stablecoin cash-out — **Binance 14** in 1 hop, 102.8M USDT, confidence 1.00 |
 | BSC · USDT | `0x32d03f46ba2857c8e6a920ab3fed1f24d35d85d1` | **BNB Smart Chain** — Binance Hot Wallet 6 in 1 hop, 19.3M USDT |
@@ -459,7 +459,7 @@ To add one properly:
 Stated plainly, and repeated in every exported report:
 
 - **One asset per trace.** ETH, USDT and USDC are each traced separately. A swap at a labelled DEX router is now *detected* — the trace records what asset came back and tells you where to re-run — but it is not followed automatically, and a swap whose output is the native coin, a swap sent to a liquidity pool rather than a router, or a bridge to a chain TraceChain does not cover, still ends the trail.
-- **Internal contract transactions are traced on Ethereum only, at double the request cost.** Value moved by a contract call — a multisig paying out, a smart-contract wallet, a router returning ETH — comes from Etherscan's separate `txlistinternal` endpoint, so a native ETH trace makes two requests per expanded address instead of one (`ETHERSCAN_INCLUDE_INTERNAL=false` turns it off). Measured on the demo traces: trace 3 gained 203 contract-moved transfers and 21 addresses; traces 1, 2 and 6 were unchanged; wall time rose from 15.5 s to 17.4 s because the extra requests overlap. Each such transfer is tagged `internal` and edges report `internal_tx_count`. On BSC and Tron, and on every token trace, contract-moved value is still invisible.
+- **Internal contract transactions are traced on Ethereum only, at double the request cost.** Value moved by a contract call — a multisig paying out, a smart-contract wallet, a router returning ETH — comes from Etherscan's separate `txlistinternal` endpoint, read on a forward trace only for addresses with no signed outflow (a contract), and on a reverse trace for every address (`ETHERSCAN_INCLUDE_INTERNAL=false` turns it off). Each such transfer is tagged `internal` and edges report `internal_tx_count`. On BSC and Tron, and on every token trace, contract-moved value is still invisible. Reading these adds a fifth brake: an address with **no signed outgoing transfer but contract-originated ones is a contract** (a wallet cannot start an internal transfer), and a contract that pays out to **more than 3 distinct addresses** is a service — WETH, a liquidity pool, a router — whose payouts are other people's money, so it is marked `is_service_contract`, noted as a truncation, and not expanded. A multisig forwarding to one or two recipients still is. Without this brake the flagship address at 4 hops expanded WETH and nine pools: 249 requests and 127 s instead of 41 and 22 s.
 - **BSC covers a recent window, not all history.** NodeReal caps one query at 100,000 blocks (~3.5 days), so history is walked backwards in windows — 500,000 blocks (~17 days) by default. Raise `NODEREAL_LOOKBACK_BLOCKS` to widen it, at proportionally more API calls. Ethereum has no such limit.
 - **An exchange match identifies where funds arrived, not who controls the account.** Only the exchange can link a deposit address to a customer identity, via a lawful request.
 - **The graph is a sample, not a complete picture.** Depth, fan-out and node limits mean funds may also have reached other exchanges along paths that were not expanded.
@@ -468,6 +468,7 @@ Stated plainly, and repeated in every exported report:
 - **"Single-use" means single-use within the trace.** The peel-chain rule sees only a wallet's transfers to and from the addresses the trace followed. A wallet with one inbound and one outbound transfer *in the graph* may have hundreds of other transfers the trace never fetched, so a peel-chain finding is a statement about the shape of the traced path, not about the wallet's whole history.
 - **The amount-split rule has no time window and counts only followed branches.** It compares what a wallet received from the trace with what it sent onward at any later time, so a wallet that received funds and then, over months, paid three unrelated recipients has the same shape as one that fanned them out within the hour. And because only the top 10 counterparties are followed, the forwarded fraction is computed over those, never over the wallet's full outflow.
 - **Amount correlation is capped at 100%.** If 1 ETH left the reported address and 100 ETH later arrived at the exchange along the same route, the component scores 1.0, because all of the traced value could have arrived — but most of what reached the exchange was then somebody else's. The explanation text prints both figures so the dilution is visible; the number alone does not show it.
+- **The time rule resolves to the second, not to the position within a block.** Transfers carry a block timestamp; a transfer that left an address earlier *in the same block* as the traced funds arrived is followed as if it came after, because "at or after" is judged on the timestamp. This can admit one transfer per address that predates the arrival by a few seconds; it cannot admit anything from an earlier block.
 - **The reported address is not time-windowed.** The trace does not know when the victim's funds arrived at the address they reported, so all of its outflows are followed, including any made before the fraud. Every later hop is windowed (see [Before either rule](#before-either-rule-money-cannot-be-forwarded-before-it-arrives)).
 - **Attribution is only as good as the label file.** A null result may mean the exchange is simply absent from it — check `GET /exchanges`.
 - **A trace stops at a mixer, and cannot resume past one.** This is deliberate rather than a gap to close: the link between a tumbler's deposits and its payouts does not exist in the transaction data, so no amount of further traversal could recover it.
@@ -533,10 +534,14 @@ Every refusal costs a retry with exponential backoff, so asking faster returned
 *less* usable data than asking slower. `ETHERSCAN_MIN_INTERVAL` therefore
 defaults to **0.50s** -- the measured optimum, not the documented one.
 
-A native ETH trace now makes two requests per expanded address — `txlist` and
-`txlistinternal` — so the ~35 above is ~70 with internal transactions on (the
-default); the second request overlaps with the first, so wall time grows far
-less than request count. Token traces are unaffected.
+Reading internal transactions adds a second request (`txlistinternal`) only for
+an address whose signed list shows no outgoing transfer — a wallet that signs
+transactions cannot originate an internal one, so for an ordinary wallet the
+second request could return nothing. Measured on the flagship address at
+4 hops: asking unconditionally cost 110 requests, asking only for
+contract-shaped addresses costs 73, and the pre-internal-transaction trace
+cost 41. Reverse traces ask both questions for every address, since a
+contract's payout *into* a wallet is exactly what they look for.
 
 Since the ceiling is per *second* while the daily quota goes barely touched (a
 trace costs well under 100 of 100,000 calls/day), the only lever that shortens

@@ -468,3 +468,70 @@ def test_concurrency_does_not_change_the_graph():
     assert sorted(n["id"] for n in serial["nodes"]) == sorted(n["id"] for n in parallel["nodes"])
     assert sorted((e["source"], e["target"], e["value_native"]) for e in serial["edges"]) == \
            sorted((e["source"], e["target"], e["value_native"]) for e in parallel["edges"])
+
+
+# ---------------------------------------------------------------------------
+# Brake 5: a contract that pays out to many addresses is a service
+# ---------------------------------------------------------------------------
+def itx(src, dst, value, ts=1_700_000_100):
+    """A contract-originated transfer (Etherscan txlistinternal)."""
+    t = tx(src, dst, value, ts=ts)
+    return Transaction(**{**t.__dict__, "internal": True})
+
+
+def test_a_contract_paying_out_to_many_addresses_is_not_expanded():
+    """WETH, a pool, a router: its payouts are other people's money. Reading
+    internal transactions made the flagship demo expand ten of these."""
+    weth = addr("c02a")
+    ledger = {
+        SEED: [tx(SEED, weth, 10.0)],
+        weth: [itx(weth, addr(f"a{i}"), 1.0) for i in range(1, 8)],
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger))
+
+    assert result.graph.out_degree(weth) == 0
+    assert result.graph.nodes[weth]["is_service_contract"] is True
+    assert result.service_contracts == [weth]
+    assert any("pays out to many" in r for r in result.truncation_reasons)
+
+
+def test_a_multisig_forwarding_to_a_few_recipients_is_still_followed():
+    """The reason internal transactions are read at all."""
+    safe = addr("5afe")
+    ledger = {
+        SEED: [tx(SEED, safe, 10.0)],
+        safe: [itx(safe, addr("a1"), 6.0), itx(safe, addr("a2"), 3.9)],
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger))
+    assert set(result.graph.successors(safe)) == {addr("a1"), addr("a2")}
+    assert "is_service_contract" not in result.graph.nodes[safe]
+
+
+def test_a_wallet_with_signed_transfers_is_never_a_service_contract():
+    """A wallet paying many people is fan-out, handled by brake 2, not this."""
+    busy = addr("b05")
+    ledger = {
+        SEED: [tx(SEED, busy, 10.0)],
+        busy: [tx(busy, addr(f"a{i}"), 0.5) for i in range(1, 8)],
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger))
+    assert result.graph.out_degree(busy) == 7
+    assert result.service_contracts == []
+
+
+def test_the_reported_address_is_expanded_whatever_it_is():
+    ledger = {SEED: [itx(SEED, addr(f"a{i}"), 1.0) for i in range(1, 8)]}
+    result = build_trace_graph(SEED, FakeClient(ledger))
+    assert result.graph.out_degree(SEED) == 7
+
+
+def test_a_reverse_trace_stops_at_a_contract_fed_by_many():
+    """Walking back into WETH would enumerate everyone who ever wrapped ETH."""
+    weth = addr("c02a")
+    ledger = {
+        weth: [itx(weth, SEED, 5.0)],
+        **{addr(f"d{i}"): [itx(addr(f"d{i}"), weth, 1.0)] for i in range(1, 8)},
+    }
+    result = build_trace_graph(SEED, FakeClient(ledger), direction=INCOMING)
+    assert result.graph.in_degree(weth) == 0
+    assert weth in result.service_contracts
