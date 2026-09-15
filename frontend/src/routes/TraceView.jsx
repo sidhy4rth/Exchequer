@@ -283,7 +283,6 @@ export default function TraceView() {
                     ))}
                   </>
                 )}
-                {(result.confidence_detail?.caveats ?? []).slice(0, 2).map((c) => <p className="note" key={c}>{c}</p>)}
               </div>
             </div>
 

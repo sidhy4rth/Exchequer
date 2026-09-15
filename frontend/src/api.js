@@ -107,6 +107,20 @@ export async function fetchRelatedCases(caseId) {
   return response.json()
 }
 
+/** What the attribution database covers on one chain. */
+export async function fetchExchanges(chain) {
+  const response = await fetch(`${BASE}/exchanges?chain=${encodeURIComponent(chain)}`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+/** What sanctions and mixer screening covers on one chain. */
+export async function fetchRiskLabels(chain) {
+  const response = await fetch(`${BASE}/risk-labels?chain=${encodeURIComponent(chain)}`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
 export async function fetchHealth() {
   const response = await fetch(`${BASE}/health`)
   if (!response.ok) throw await toError(response)
