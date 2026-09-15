@@ -218,7 +218,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /cases/correlate` | Intermediary addresses shared by two or more stored cases — the campaign view. `?case_id=` narrows it to one case; see [Cross-case correlation](#cross-case-correlation) |
 | `GET /exchanges?chain=bsc` | What that chain's exchange label database covers |
 | `GET /risk-labels?chain=bsc` | What that chain's sanctions/mixer screening covers |
-| `GET /health` | Liveness, plus per-chain readiness, assets and label counts |
+| `GET /health` | Liveness, plus per-chain readiness, assets and label counts. Never gated |
+| `GET /auth/status` · `POST /auth/login` · `POST /auth/logout` | Officer sign-in — see [Officer sign-in and chain of custody](#officer-sign-in-and-chain-of-custody). Every other route requires a session when a code is set |
 
 ---
 
@@ -458,6 +459,31 @@ To add one properly:
 
 ---
 
+## Officer sign-in and chain of custody
+
+A court asks not only what the evidence says but who produced it and when. With
+`EXCHEQUER_ACCESS_CODE` set in `backend/.env`, every page asks for the officer's
+name, service ID and unit plus that code, and who ran each trace is written into
+the case and printed in the report header beside the time and the content hash:
+
+```
+Traced at        : 2026-09-15T18:54:10+00:00
+Traced by        : Inspector R. Sharma (ID 4471) · Cyber Cell, Bengaluru
+```
+
+The gate is deliberately small: one shared code, no user database, nothing to
+breach. The name and ID are recorded as stated, not verified against a
+directory — what the code establishes is that the person was entitled to use
+the instance; what the record establishes is what they said at the time. The
+session is a signed, expiring cookie that cannot be edited without the code.
+
+With the variable unset the gate is off: everything works, no officer is
+recorded, and the report says `Traced by: not recorded (sign-in was off on this
+instance)` rather than leaving the line out. If you host this publicly, set the
+code — it also stops strangers spending the provider quota.
+
+---
+
 ## Evidence integrity
 
 A finding can be re-derived from the report — the arithmetic is on the page. What
@@ -624,6 +650,7 @@ exchequer/
 │   │   ├── swap_detection.py     swaps at DEX routers, from receipts
 │   │   ├── scoring.py            confidence score
 │   │   ├── models.py             SQLite (SQLAlchemy) case storage
+│   │   ├── auth.py               officer sign-in; who ran each trace
 │   │   ├── report.py             exportable report
 │   │   └── evidence.py           hash-and-timestamp of every provider response
 │   ├── data/
@@ -697,6 +724,7 @@ failure here.
 | `test_correlation.py` | Two complaints on one unlabelled wallet cluster; a shared hot wallet, router or sanctioned entity never does; the same wallet traced twice is one complaint; chains never mix |
 | `test_internal_transactions.py` | Contract-moved value is merged and tagged at exactly one extra request, never on a token trace, and never displaces signed transfers |
 | `test_report.py` | Every section an officer needs is present, times and hashes included; the evidence manifest prints and the content hash verifies; a case stored by an earlier version still renders |
+| `test_auth.py` | A wrong code is refused, a right one records the stated officer, a forged or expired session is not a session, protected routes refuse without one, and an unset code means no gate |
 | `test_evidence.py` | A response is hashed as received with the credential stripped; a cache hit re-uses the original hash and time; the manifest hash ignores arrival order; a sealed report stops verifying if one byte changes |
 
 ---

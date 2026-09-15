@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import OfficerBadge from '../components/OfficerBadge'
 import ThemeToggle from '../components/ThemeToggle'
 import { fetchCases, fetchExchanges, fetchHealth, fetchRiskLabels } from '../api'
 
@@ -125,6 +126,7 @@ export default function Home() {
         </span>
         <span className="grow" />
         <span className="note">Smart India Hackathon 2026 · SIH26183 · Ministry of Home Affairs</span>
+        <OfficerBadge />
         <ThemeToggle />
       </header>
 
@@ -258,7 +260,7 @@ export default function Home() {
             <div className="head"><span className="micro">Stored cases · {cases.length}</span><span className="note">evidence as it stood when it was taken; opening one does not re-trace</span></div>
             {cases.length === 0 ? <p className="note" style={{ padding: 12 }}>No stored cases yet.</p> : (
               <table className="cases-table">
-                <thead><tr><th>Reported address</th><th>Chain</th><th>Asset</th><th>Result</th><th style={{ textAlign: 'right' }}>Confidence</th><th style={{ textAlign: 'right' }}>Addresses</th><th>Flags</th><th>Traced</th></tr></thead>
+                <thead><tr><th>Reported address</th><th>Chain</th><th>Asset</th><th>Result</th><th style={{ textAlign: 'right' }}>Confidence</th><th style={{ textAlign: 'right' }}>Addresses</th><th>Flags</th><th>Traced</th><th>By</th></tr></thead>
                 <tbody>
                   {cases.map((c) => (
                     <tr className="row" key={c.case_id} onClick={() => navigate(`/case/${c.case_id}`)} title={`Open stored case for ${c.address}`}>
@@ -270,6 +272,7 @@ export default function Home() {
                       <td className="num">{c.node_count}</td>
                       <td>{(c.flags ?? []).map((f) => <span className="pill amber" key={f} style={{ marginRight: 4 }}>{f.replace('_', ' ')}</span>)}</td>
                       <td className="mono">{String(c.created_at).slice(0, 10)}</td>
+                      <td className={c.traced_by ? '' : 'none'} title={c.traced_by ? [c.traced_by.officer_id && `ID ${c.traced_by.officer_id}`, c.traced_by.unit].filter(Boolean).join(' · ') : 'sign-in was off'}>{c.traced_by?.name ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>

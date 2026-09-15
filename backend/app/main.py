@@ -15,13 +15,13 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import networkx as nx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import api_budget, chain_data, config, models
+from . import api_budget, auth, chain_data, config, models
 from .chain_data import (
     ProviderNotConfiguredError,
     UnknownAssetError,
@@ -108,7 +108,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
     ],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -263,6 +263,50 @@ def _direct_senders(graph: nx.DiGraph, seed: str) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+class LoginRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80)
+    officer_id: str = Field("", max_length=40)
+    unit: str = Field("", max_length=120)
+    access_code: str = Field(..., min_length=1)
+
+
+@app.get("/auth/status")
+def auth_status(request: Request) -> dict[str, Any]:
+    """Whether sign-in is required here, and who is signed in if anyone."""
+    officer = auth.current_officer(request)
+    return {
+        "required": auth.gate_enabled(),
+        "officer": officer.to_dict() if officer else None,
+    }
+
+
+@app.post("/auth/login")
+def auth_login(body: LoginRequest, response: Response) -> dict[str, Any]:
+    """Admit an officer who knows the access code and has said who they are.
+
+    The name and ID are not verified against anything -- there is no user
+    database -- they are recorded. What the gate establishes is that the
+    person had the access code; what the record establishes is what they
+    stated at the time, which is what a chain-of-custody line needs.
+    """
+    if not auth.gate_enabled():
+        raise HTTPException(status_code=400, detail="Sign-in is not enabled on this instance.")
+    if not auth.code_matches(body.access_code):
+        raise HTTPException(status_code=401, detail="Access code not recognised.")
+    officer = auth.Officer(
+        name=body.name.strip(), officer_id=body.officer_id.strip(),
+        unit=body.unit.strip(), signed_in_at=models.utc_now_iso(),
+    )
+    auth.set_session(response, officer)
+    return {"officer": officer.to_dict()}
+
+
+@app.post("/auth/logout")
+def auth_logout(response: Response) -> dict[str, Any]:
+    auth.clear_session(response)
+    return {"ok": True}
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     """Liveness probe, plus the configuration facts that break demos."""
@@ -289,7 +333,7 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/exchanges")
-def exchanges(chain: str | None = Query(None, description="ethereum or bsc")) -> dict[str, Any]:
+def exchanges(chain: str | None = Query(None, description="ethereum or bsc"), _officer: auth.Officer | None = Depends(auth.require_officer)) -> dict[str, Any]:
     """What the attribution database covers.
 
     Exposed so a user can see immediately whether a null attribution means
@@ -309,7 +353,7 @@ def exchanges(chain: str | None = Query(None, description="ethereum or bsc")) ->
 
 
 @app.get("/risk-labels")
-def risk_labels(chain: str | None = Query(None, description="ethereum, bsc or tron")) -> dict[str, Any]:
+def risk_labels(chain: str | None = Query(None, description="ethereum, bsc or tron"), _officer: auth.Officer | None = Depends(auth.require_officer)) -> dict[str, Any]:
     """What the sanctions and mixer screening covers.
 
     The counterpart to /exchanges, and exposed for the same reason: without it
@@ -334,7 +378,7 @@ def risk_labels(chain: str | None = Query(None, description="ethereum, bsc or tr
 
 
 @app.post("/trace")
-def trace(request: TraceRequest) -> dict[str, Any]:
+def trace(request: TraceRequest, officer: auth.Officer | None = Depends(auth.require_officer)) -> dict[str, Any]:
     """Trace funds to or from a reported address.
 
     Outgoing answers "where did the victim's money go"; incoming answers "who
@@ -574,6 +618,9 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "asset_contract": token.address if token else None,
         "explorer_url": chain.explorer_url,
         "created_at": created_at,
+        # Who ran it -- the first line of the chain of custody. None on an
+        # instance with sign-in off, and the report says so.
+        "traced_by": officer.to_dict() if officer else None,
         "message": message,
         "exchange_address": primary.address if primary else None,
         "exchange_label": primary.label if primary else None,
@@ -629,7 +676,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
 
 
 @app.get("/trace/{case_id}")
-def get_trace(case_id: str) -> dict[str, Any]:
+def get_trace(case_id: str, _officer: auth.Officer | None = Depends(auth.require_officer)) -> dict[str, Any]:
     """Retrieve a previously traced case."""
     case = models.get_case(case_id)
     if case is None:
@@ -641,6 +688,7 @@ def get_trace(case_id: str) -> dict[str, Any]:
 def get_report(
     case_id: str,
     format: str = Query("json", pattern="^(json|text)$", description="json or text"),
+    _officer: auth.Officer | None = Depends(auth.require_officer),
 ):
     """Exportable summary suitable for a law-enforcement handoff."""
     case = models.get_case(case_id)
@@ -661,7 +709,7 @@ def get_report(
 
 
 @app.get("/cases")
-def cases(limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
+def cases(limit: int = Query(50, ge=1, le=500), _officer: auth.Officer | None = Depends(auth.require_officer)) -> dict[str, Any]:
     """History of past traces, most recent first."""
     records = models.list_cases(limit=limit)
     return {"count": len(records), "cases": [c.summary() for c in records]}
@@ -669,6 +717,7 @@ def cases(limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
 
 @app.get("/cases/correlate")
 def cases_correlate(
+    _officer: auth.Officer | None = Depends(auth.require_officer),
     case_id: str | None = Query(None, description="only clusters that include this case"),
     min_cases: int = Query(2, ge=2, le=50),
 ) -> dict[str, Any]:

@@ -75,6 +75,7 @@ class Case(Base):
             "flags": result.get("flags", []),
             "hop_count": result.get("hop_count"),
             "node_count": len(result.get("graph", {}).get("nodes", [])),
+            "traced_by": result.get("traced_by"),
         }
 
 

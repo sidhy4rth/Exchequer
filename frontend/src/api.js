@@ -24,6 +24,7 @@ async function toError(response) {
     detail = detail.map((d) => d.msg).join('; ')
   }
   const fallbacks = {
+    401: 'Sign in to use Exchequer.',
     400: 'That address does not look like a valid wallet address.',
     404: 'No stored case with that id.',
     429: 'The data provider is rate limiting us. Wait a few seconds and try again.',
@@ -136,4 +137,27 @@ export async function fetchReport(caseId, format = 'text') {
   const response = await fetch(reportUrl(caseId, format))
   if (!response.ok) throw await toError(response)
   return format === 'text' ? response.text() : response.json()
+}
+
+/** Whether this instance requires sign-in, and who is signed in if anyone. */
+export async function fetchAuthStatus() {
+  const response = await fetch(`${BASE}/auth/status`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+export async function login(name, officerId, unit, accessCode) {
+  const response = await fetch(`${BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, officer_id: officerId, unit, access_code: accessCode }),
+  })
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+export async function logout() {
+  const response = await fetch(`${BASE}/auth/logout`, { method: 'POST' })
+  if (!response.ok) throw await toError(response)
+  return response.json()
 }

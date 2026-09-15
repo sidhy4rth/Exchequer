@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { fetchCase, fetchRelatedCases, traceAddress } from '../api'
 import GraphView from '../components/GraphView'
+import OfficerBadge from '../components/OfficerBadge'
 import ThemeToggle from '../components/ThemeToggle'
 import ExportButton from '../components/ExportButton'
 
@@ -195,6 +196,7 @@ export default function TraceView() {
             <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />Re-trace</button>
           )}
           <button className="quiet" onClick={() => navigate('/')}><Icon d={ICONS.back} />New trace</button>
+          <OfficerBadge />
           <ThemeToggle />
         </div>
       </header>
@@ -320,6 +322,11 @@ export default function TraceView() {
                 <div className="buttons">
                   <ExportButton caseId={result.case_id} address={address} />
                 </div>
+                <p className="note small custody">
+                  {result.traced_by
+                    ? <>Traced by <strong>{result.traced_by.name}</strong>{result.traced_by.officer_id ? ` (ID ${result.traced_by.officer_id})` : ''}{result.traced_by.unit ? ` · ${result.traced_by.unit}` : ''} at {String(result.created_at).replace('T', ' ').slice(0, 19)} UTC — on the report header beside the content hash.</>
+                    : <>Traced with sign-in off — the report records no officer. Set <span className="mono">EXCHEQUER_ACCESS_CODE</span> to record who runs each trace.</>}
+                </p>
               </div>
             </div>
           </section>

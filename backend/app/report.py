@@ -76,6 +76,9 @@ def build_report(case: Case) -> dict[str, Any]:
             "block_explorer": result.get("explorer_url"),
             "direction": direction,
             "max_depth": result.get("max_depth"),
+            # The officer who ran the trace, as stated at sign-in. None when
+            # the instance had sign-in off.
+            "traced_by": result.get("traced_by"),
         },
         "summary": _summary(case, result),
         # Only meaningful on a reverse trace. Named for what the transactions
@@ -308,6 +311,16 @@ def render_text_report(report: dict[str, Any]) -> str:
         + ("outgoing (where the funds went)" if direction == "outgoing"
            else "incoming (who funded this address)"))
     add(f"Traced at        : {case['traced_at']}")
+    officer = case.get("traced_by")
+    if officer:
+        who = officer.get("name", "")
+        if officer.get("officer_id"):
+            who += f" (ID {officer['officer_id']})"
+        if officer.get("unit"):
+            who += f" · {officer['unit']}"
+        add(f"Traced by        : {who}")
+    else:
+        add("Traced by        : not recorded (sign-in was off on this instance)")
     add(f"Report generated : {report['generated_at']}")
     add(f"Tool version     : {TOOL_NAME} {report.get('tool_version', 'unknown')} "
         f"(report format v{report['report_version']})")
