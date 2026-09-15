@@ -1,12 +1,11 @@
 # TraceChain — demo addresses
 
-Five Ethereum mainnet traces over four addresses. Traces 1-3 were verified on
-4 September 2026, traces 4-5 on 7 September 2026; each was run **twice back to
-back** and returned identical findings both times.
-
-Traces 1-3 run at **depth 3** on **Ethereum / ETH** and complete in under 20
-seconds. Traces 4-5 are reverse traces at **1 hop** and return in about two
-seconds each, so the whole set can be run live.
+Seven Ethereum mainnet traces over six addresses, all re-verified on
+**15 September 2026** after the time rule and the new amount-split thresholds
+landed; each was run **twice back to back** and returned identical findings
+both times. Traces 1–3 and 6–7 run at **depth 3** on **Ethereum / ETH** and
+complete in under 20 seconds cold; traces 4–5 are reverse traces at **1 hop**
+and return in about two seconds.
 
 ---
 
@@ -14,14 +13,17 @@ seconds each, so the whole set can be run live.
 
 TraceChain establishes two things and no more:
 
-1. whether funds reached a wallet published in an exchange label file, and
+1. whether funds reached a wallet published in an exchange label file (or a
+   wallet inferred, with evidence, to be that exchange's deposit address), and
 2. whether the transfers matched fixed arithmetic thresholds.
 
 It does **not** establish that anyone committed a crime. An amount split means
 funds were fanned across many recipients — launderers do that, and so do
-exchanges, payment processors and market makers. Describe these as *findings*,
-not verdicts. That is also the strongest position to argue from: every number
-below is re-checkable by hand from public transaction data.
+exchanges, payment processors and market makers; the README's validation
+section measured it firing on 11% of ordinary high-volume wallets. Describe
+these as *findings*, not verdicts. That is also the strongest position to
+argue from: every number below is re-checkable by hand from public
+transaction data.
 
 ---
 
@@ -30,20 +32,23 @@ below is re-checkable by hand from public transaction data.
 ```
 0x7c3e9bab6715e4040f013e865b193b0209642e36
 ```
-Ethereum · ETH · 3 hops · **~4 seconds**
+Ethereum · ETH · 3 hops · **~3 seconds, 5 API calls**
 
 | | |
 |---|---|
-| Addresses traced | 12 |
+| Addresses traced | 7 |
 | Exchange | none matched |
 | Confidence | not applicable — nothing attributed |
 | Patterns | none |
+| Transfers excluded by the time rule | 18 |
 
 The funds were followed for three hops and never reached a labelled exchange,
 and no laundering rule matched. Note what the tool does here: the confidence
 panel reads **"Not applicable — no exchange attributed"** rather than 0%.
-Finding nothing is a legitimate result, not a failure, and the tool refuses to
-score an attribution it did not make.
+Finding nothing is a legitimate result, not a failure. The graph is smaller
+than it was a week ago (12 addresses then) because 18 transfers the
+intermediate wallets made *before* the traced funds arrived are no longer
+followed — see trace 3 for why that matters.
 
 ---
 
@@ -52,44 +57,52 @@ score an attribution it did not make.
 ```
 0xbc1ada2e98dd0087cf4cc0c8bd0e6276c82fadc9
 ```
-Ethereum · ETH · 3 hops · **~5 seconds**
+Ethereum · ETH · 3 hops · **~7 seconds, 12 API calls**
 
 | | |
 |---|---|
-| Addresses traced | 30 |
+| Addresses traced | 31 |
 | Exchange | none matched |
 | Confidence | not applicable |
 | Patterns | **amount split** |
 
-This is the ambiguous case, and the most honest one to show. The wallet fanned
-its balance across multiple recipients — the shape structuring produces — but
-the money did not reach any exchange in the label file within three hops. That
-is a reason to look closer, not a conclusion. The rail prints the exact
-thresholds the rule applied, so a reviewer can decide for themselves.
+The ambiguous case, and the most honest one to show. A wallet downstream
+fanned what it received across four or more recipients, passing 90–102% of it
+straight through — the shape structuring produces — but the money did not
+reach any exchange in the label file within three hops. That is a reason to
+look closer, not a conclusion. The rail prints the exact thresholds the rule
+applied, so a reviewer can decide for themselves. This finding survived the
+tightened thresholds; the old ones would have fired on 40% of ordinary
+wallets.
 
 ---
 
-## 3 — Attributed cash-out, two patterns
+## 3 — The demo that changed, and why that is the best thing to show
 
 ```
 0x536c4921d1aafde6a5cda882fb5ca046f3601c65
 ```
-Ethereum · ETH · 3 hops · **~16 seconds**
+Ethereum · ETH · 3 hops · **~16 seconds, 30 API calls**
 
 | | |
 |---|---|
-| Addresses traced | ~90 |
-| Exchange | **Binance** |
-| Confidence | **0.65** |
-| Patterns | **amount split** + **peel chain** |
+| Addresses traced | 57 |
+| Exchange | **none matched** (a week ago: Binance at 0.65) |
+| Patterns | **peel chain** |
+| Transfers excluded by the time rule | **393** |
 
-The strongest case in the set: funds reach a published Binance wallet, and
-**both** laundering rules fire independently along the route. Switch to the
-Graph view — the amber fan-out and the green attributed path are visible in one
-frame.
+On 4 September this trace reached Binance with confidence 0.65 and both
+patterns fired. On 15 September, with the time rule in place, it reaches no
+exchange. The only change to the traversal is that a wallet's transfers made
+*before* the traced funds arrived there are no longer followed, and this graph
+left out 393 of them. The earlier Binance attribution was reached through
+transfers of that kind — money that was never the reported wallet's.
 
-Note the confidence is 0.65, not 1.00. The route is longer and more diluted, so
-the score is lower, and the tool says so rather than overstating.
+Say this out loud. A tool that reports where the victim's money went has to
+be able to lose an attribution when the evidence does not support it, and
+this one did. The peel-chain finding remains: single-use wallets forwarding
+declining amounts in sequence. Switch to the Graph view for the fan-out from
+the reported address — 617 ETH across ten recipients.
 
 ---
 
@@ -103,19 +116,19 @@ Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~2 seconds, 
 | | |
 |---|---|
 | Addresses that funded it | **10** |
-| Total received | 195.6203 ETH |
-| Largest single sender | 139.2700 ETH |
+| Total received | 248.2094 ETH |
+| Largest single sender | 197.7415 ETH |
 | Exchanges among the senders | none |
 
-This is address 2 again, asked the other question. Forwards, it fans 617 ETH
-across ten recipients and fires the laundering rules. Backwards, **ten separate
-addresses paid money into it** — and none of them is a labelled exchange, so
-none is explained away as a withdrawal.
+Trace 3 asked the other question. **Ten separate addresses paid money into
+it** — and none of them is a labelled exchange, so none is explained away as
+a withdrawal. (The totals grew since 7 September because the wallet has kept
+receiving; the sender count did not.)
 
-Say the number out loud: one complaint, ten more addresses that paid the same
-wallet. Each is a candidate victim who may hold a separate FIR, and the panel
-is labelled *"Funded this address"* rather than *"victims"* on purpose — the
-transactions establish that money moved, not who the sender was.
+One complaint, ten more addresses that paid the same wallet. Each is a
+candidate victim who may hold a separate FIR, and the panel is labelled
+*"Funded this address"* rather than *"victims"* on purpose — the transactions
+establish that money moved, not who the sender was.
 
 ---
 
@@ -131,53 +144,108 @@ Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~2 seconds**
 | Addresses that funded it | 9 |
 | **Of which labelled exchanges** | **6** — five Binance, one OKX |
 | Candidate victims | 3 |
+| Source exchange | Binance, confidence 1.00 |
 
-The demo for the honesty of the tool. Nine addresses funded this wallet, but
-six of them are exchange hot wallets, and the panel marks each one
-**"withdrawal, not a victim"** in the row itself. A tool that reported "9
-victims" here would be wrong by a factor of three, and it would be wrong in the
-direction that inflates a case.
+Nine addresses funded this wallet, but six of them are exchange hot wallets,
+and the panel marks each one **"withdrawal, not a victim"** in the row itself.
+A tool that reported "9 victims" here would be wrong by a factor of three, in
+the direction that inflates a case. Run this straight after 4.
 
-Run this straight after 4. The contrast is the argument: the same feature, on
-one address producing ten leads and on another quietly discarding six false
-ones.
+---
+
+## 6 — New: the deposit address a request has to name
+
+```
+0x00000000072d54638c2c2a3da3f715360269eea1
+```
+Ethereum · ETH · 3 hops · **~13 seconds, 20 API calls**
+
+| | |
+|---|---|
+| Addresses traced | 32 |
+| Attribution | **Binance — probable deposit address (inferred)** `0xd1565e8f…7aa20`, 1 hop |
+| Confidence | **0.875** (hop 1.0 · amount 1.0 · directness **0.5**) |
+| Evidence | 2 outgoing transfers, 100% of them to **Binance 14**, 2.3201 ETH swept, current balance 0.0183 ETH |
+| Also in `matches` | Binance 14 itself, exact label, 2 hops |
+| Patterns | amount split |
+
+The reported address carries Etherscan's *Phish / Hack* label. Its funds went
+to an unlabelled wallet whose entire outgoing history is two sweeps into
+Binance's labelled hot wallet and nothing else — the shape an exchange
+produces when it sweeps a customer's deposits. The sidebar reads *"Probable
+Binance deposit address (inferred — see evidence)"* and the report prints the
+sentence that would confirm it: a lawful request to Binance asking whether
+that address is one it issued, and to whom. That is the address the request
+has to name; the hot wallet two hops on identifies nobody. Note the directness
+component at 0.5: the tool scores an inference below a label-file match, and
+the exact match is still listed.
+
+---
+
+## 7 — New: a sanctioned wallet, and an inference that says what it cannot see
+
+```
+0x21b8d56bda776bbe68655a16895afd96f5534fed
+```
+Ethereum · ETH · 3 hops · **~5 seconds, 6 API calls**
+
+| | |
+|---|---|
+| Addresses traced | 9 |
+| Sanctions screening | **hit — the reported address is on the OFAC SDN list** (GAZA NOW, SDGT) |
+| Attribution | **Bybit — probable deposit address (inferred)** `0xcd02509d…dcfe9`, 1 hop |
+| Confidence | 0.875 |
+| Evidence | 4 transfers, 100% to **Bybit 1**, 3.3581 ETH swept, current balance **1.2121 ETH** |
+
+Two things in one small trace. The reported address itself is a published
+designation, which the tool reports above everything else. And its funds
+reach a wallet inferred to be a Bybit deposit address — with a balance of
+1.21 ETH still sitting there. The rule records that balance rather than
+hiding it: a deposit that has landed and not yet been swept is still a
+deposit address, but a reviewer should see the number and weigh it. If asked
+"could this be a personal wallet that happens to send only to Bybit?" — yes,
+and the README's section on inferred deposit addresses says exactly that,
+which is why it scores lower and names what would confirm it.
 
 ---
 
 ## Running order
 
-Trace 1, then 2, then 3. The story escalates: nothing found → something odd but
-inconclusive → money located at an exchange with two independent patterns.
+Trace 1, then 2, then 3. The story escalates: nothing found → something odd
+but inconclusive → a trace that *lost* its exchange when the time rule was
+applied, which is the strongest argument for the tool's honesty you can make
+in one screen.
 
-Set the depth selector to **3 hops**. Two hops is faster but none of the
-patterns fire there; four hops takes about three minutes and adds nothing to
-the argument.
+Set the depth selector to **3 hops**.
 
 Then switch the first selector to **"Who sent funds here"** and run 4 and 5 at
-**1 hop**. Both return in about two seconds on a single API call, so they cost
-almost no stage time, and they change the scale of the claim: the first three
-traces follow one victim's money, while 4 finds ten more people who paid the
-same wallet and 5 shows the tool refusing to overcount them.
+**1 hop**. Both return in about two seconds on a single API call, and they
+change the scale of the claim: one wallet, ten more people who paid it — and
+the tool refusing to overcount on the next.
+
+Finish with 6 (and 7 if there is time): the new capability, an attribution
+that names the deposit address the request has to cite, scored as the
+inference it is.
 
 ---
 
 ## If a live trace disappoints
 
-Pattern findings are threshold comparisons against a graph that reshapes as new
-transactions arrive. These three were stable when verified, but a wallet that
-fires today may not fire next week — this is a property of the method, not a
-defect, and it is worth saying out loud if asked.
+Pattern findings are threshold comparisons against a graph that reshapes as
+new transactions arrive. Trace 3 is the proof: a wallet that fires today may
+not fire next week — this is a property of the method, not a defect, and it
+is worth saying out loud if asked.
 
-Every trace is stored as a case, so a known-good result can be opened instantly
-and will look identical every time:
+Every trace is stored as a case, so a known-good result can be opened
+instantly and will look identical every time:
 
 ```
-http://localhost:5173/case/4db62a96-588b-4db0-b220-f99b3c5fc0a3
+http://localhost:5173/case/9e58a465-68ef-46d0-832e-3de43ce459b6
 ```
 
-Binance attribution at 0.90 confidence with an amount split, archived from
-earlier today. Use it as a fallback, or as the closing argument for why cases
-are preserved: **evidence has to be kept as it stood when it was taken.**
+That is trace 6 as archived on 15 September. Use it as a fallback, or as the
+closing argument for why cases are preserved: **evidence has to be kept as it
+stood when it was taken.**
 
 ---
 
@@ -191,11 +259,15 @@ cd ~/tracechain/frontend && npm run dev
 Open <http://localhost:5173> — use `localhost`, not `127.0.0.1`.
 Check the status line reads **3 chains** before you start.
 
+If asked about the research behind the laundering claims: RESEARCH.md has
+every claim, the source read for it, the exact passage and a verdict; the
+README's *Validation against real wallets* has the measured numbers; and
+JUDGE_QA.md has the fifteen answers. The three sentences to have ready are at
+the end of FABLE_SESSION_NOTES.md.
+
 If asked about sanctions screening: every address in every trace is checked
 against the OFAC SDN list published 4 September 2026 — 124 Ethereum, 282 Tron
-and 1 BSC address. None of the demo addresses is listed, and that is worth
-saying plainly. `GET /risk-labels` shows exactly what the screening covers, so
-"no hit" can always be told apart from "not screened".
+and 1 BSC address. Trace 7 is a live hit; none of the others is listed.
 
 The mixer category is empty, and there is a good answer if it comes up: every
 mixer currently on the SDN list is a Bitcoin service, and Tornado Cash was
