@@ -124,6 +124,8 @@ npm run dev
 
 Open **<http://localhost:5173>**.
 
+The interface is a light case-file dashboard (IBM Plex; three signal colours — green for a confirmed attribution, amber for a pattern or an inference, red for a sanctions or mixer hit, which outranks everything). The home page is the intake: the address form, the ten `DEMO.md` traces one click each, what the label files and screening cover, and the stored cases. A trace opens as a case view laid out in the order an officer asks: a red sanctions banner if any address is listed; then where the money went, how sure and why (the score with its three components), and what to send to the exchange (the address to cite, the confirmation sentence for an inference, the exports); then the money-flow graph with the transfer feed beneath it, and beside them the evidence — what the tool did not look at (time-rule exclusions, service contracts, swaps, request count, truncation), inferred deposit evidence, patterns with thresholds, swaps, related cases, and on a reverse trace the funders with exchange withdrawals marked.
+
 > Use `localhost`, not `127.0.0.1`. Vite binds to IPv6 `[::1]` by default, so `http://127.0.0.1:5173` will not connect. Run `npm run dev -- --host 127.0.0.1` if you need IPv4.
 
 The frontend calls `/api/*`, which Vite proxies to the backend on port 8000 — so no URL is hardcoded and nothing needs configuring.
@@ -621,8 +623,8 @@ tracechain/
 │   │   ├── api.js
 │   │   ├── styles.css
 │   │   ├── routes/
-│   │   │   ├── Home.jsx           landing form, chain/asset/direction
-│   │   │   └── TraceView.jsx      console: feed, graph, evidence rail
+│   │   │   ├── Home.jsx           intake: address form, the ten DEMO.md traces, coverage, stored cases
+│   │   │   └── TraceView.jsx      case view: sanctions banner, finding strip, graph, feed, evidence rail
 │   │   └── components/
 │   │       ├── GraphView.jsx      force graph, label-collision aware
 │   │       └── ExportButton.jsx
