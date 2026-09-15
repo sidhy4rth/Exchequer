@@ -744,6 +744,15 @@ Then open <http://localhost:8000>. The same image runs on Railway, Fly, Render o
 any VM; `railway.json` adds a health check on `/health`. Mount a volume at `/data`
 so the case store survives a redeploy.
 
+On Railway specifically: `railway init`, `railway add --service exchequer`,
+`railway variables --set KEY=value …` for the three provider keys,
+`EXCHEQUER_ACCESS_CODE` and `EXCHEQUER_SESSION_SECRET`, `railway volume add
+--mount-path /data`, `railway up`, `railway domain`. A fresh instance has an
+empty case store; `python -m scripts.seed_hosted https://<host> <access-code>
+"Name" "ID" "Unit"` replays the `DEMO.md` traces so the related-cases demo has
+something to relate to. `railway down` removes the deployment but keeps the
+project, variables and volume, so it can be brought back in two minutes.
+
 **A note on hosting this publicly.** The free API tiers allow roughly three
 requests per second *across the whole deployment*, and one trace makes 12–60
 calls. Two people tracing at once will throttle each other, so a public instance
