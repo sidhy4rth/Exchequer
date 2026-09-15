@@ -20,12 +20,21 @@ Two patterns are implemented:
     activity. Distinguishing feature vs. an ordinary transfer chain: the
     wallets are single-use and the money keeps most of its value at each hop.
 
-  AMOUNT SPLIT (structuring)
-    One address receives a sum and immediately fans it out into several
-    smaller transfers, to stay under reporting thresholds and to multiply the
-    paths an investigator must follow. Distinguishing feature vs. ordinary
-    spending: nearly all of what came in goes straight back out, split across
-    several recipients, none of which individually receives the whole amount.
+  AMOUNT SPLIT
+    One address receives a sum and fans it out into several smaller
+    transfers, multiplying the paths an investigator must follow.
+    Distinguishing feature vs. ordinary spending: nearly all of what came in
+    goes back out, split across several recipients, none of which
+    individually receives the whole amount. Sometimes called "structuring",
+    but that is a legal term for evading a currency reporting threshold, and
+    no such threshold exists on chain -- this rule describes a shape.
+
+Where these come from: the peel chain was named by Meiklejohn et al. (IMC'13),
+who noted the shape also occurs in ordinary exchange withdrawals; the fan-out
+is the shape Elliptic's 2025 pig-butchering typology describes. The numeric
+thresholds in PatternConfig are this project's own choices, not figures from
+any paper, and scripts/validate_patterns.py measures how they behave on real
+wallets. See RESEARCH.md.
 """
 from __future__ import annotations
 
@@ -58,8 +67,8 @@ class PatternConfig:
 
     # -- peel chain --------------------------------------------------------
     # "Low activity" = the wallet appears in at most this many transfers within
-    # the trace. The brief specifies 1-3 uses: a wallet created to pass money
-    # along once, not a wallet somebody actually lives in.
+    # the trace: a wallet created to pass money along once, not a wallet
+    # somebody actually lives in. The number is this project's choice.
     low_activity_max: int = 3
     # Minimum number of consecutive throwaway wallets before we call it a
     # chain. Two intermediates (a three-hop path) is the shortest sequence that

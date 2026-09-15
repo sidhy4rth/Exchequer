@@ -23,8 +23,11 @@ Four independent brakes stop a busy wallet from blowing the trace up. Each is
 a deliberate, documented investigative choice, not an arbitrary cap:
 
   1. max_depth (default 4)
-        Laundering hops that matter happen close to the source. Past ~4 hops
-        the graph is mostly unrelated exchange traffic.
+        A cost limit, and an engineering judgement rather than a finding from
+        the literature: each level multiplies the API calls, and in the demo
+        traces the attributions were found within three hops. Meiklejohn et
+        al. (2013) followed peeling chains for 100 hops, so a launderer who
+        goes deeper is simply not followed -- the README says so.
   2. max_branches_per_node (default 10)
         We follow the highest-value destinations first. Laundering follows the
         money; dust and airdrop spam do not carry the stolen funds.

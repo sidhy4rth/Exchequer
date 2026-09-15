@@ -187,9 +187,9 @@ CHAINS["tron"] = Chain(
     provider="trongrid",
     address_family="tron",
     tokens=(
-        # Verified against TronScan: symbol USDT, 6 decimals. USDT on Tron is
-        # the single largest stablecoin rail by transfer count, which is why
-        # this chain matters for fraud work at all.
+        # Verified against TronScan: symbol USDT, 6 decimals. Tron has hosted
+        # the largest circulating supply of USDT since April 2021 (UNODC, 2024;
+        # see RESEARCH.md), which is why this chain matters for fraud work.
         Token("USDT", "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", 6),
     ),
 )

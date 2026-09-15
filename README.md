@@ -6,7 +6,7 @@ Built for Smart India Hackathon 2026 — problem statement **SIH26183** (Ministr
 
 A victim reports one wallet address. TraceChain follows the money outward hop by hop, flags known laundering patterns along the way, identifies the exchange where the funds landed, and produces a report an investigator can attach to a legal request.
 
-It traces **three chains** — Ethereum (ETH, USDT, USDC), BNB Smart Chain (BNB, USDT, USDC) and Tron (TRX, USDT) — because most laundering moves as stablecoins rather than native currency, and USDT-TRC20 on Tron is the dominant cash-out rail for scam proceeds out of India.
+It traces **three chains** — Ethereum (ETH, USDT, USDC), BNB Smart Chain (BNB, USDT, USDC) and Tron (TRX, USDT). The choice follows the published evidence rather than a hunch: Chainalysis measured stablecoins at 63% of illicit transaction volume in 2024 and 84% in 2025; TRM Labs measured 58% of 2024 illicit volume on Tron (a share that halved in 2025); and the UN Office on Drugs and Crime describes USDT on Tron as the "preferred choice" of the Southeast-Asian cyber-fraud operations that target Indian victims. No published source measures the cash-out rails for Indian scam proceeds specifically, so this README does not claim one. Every figure above is quoted from the source it came from in [RESEARCH.md](RESEARCH.md).
 
 The design principle throughout is **auditability**. Every attribution is an exact match against a published exchange wallet in a data file you can open and read. Every laundering finding is a handful of arithmetic comparisons that reports the thresholds it applied. There is no model, no clustering, and no proprietary score — because a conclusion that reaches a courtroom has to be one a human can re-check by hand.
 
@@ -223,6 +223,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 
 Both rules live in `backend/app/pattern_detection.py`, and every threshold is a named constant in one `PatternConfig` dataclass at the top. Each finding reports the thresholds it applied, so it can be re-checked by hand.
 
+Where the rules come from, stated honestly: the *shapes* come from the literature, the *numbers* do not. The peel chain was named and described by Meiklejohn et al. in 2013 (*A Fistful of Bitcoins*, IMC'13), who also warned in the same paragraph that the shape "extends well beyond criminal activity" — ordinary exchange withdrawals produce it too. The fan-out shape is what Elliptic's 2025 pig-butchering typology describes as moving funds "through dozens of intermediary wallets" before they reach an exchange. **Every numeric threshold below — 3 transfers, 2 intermediates, 50%, 2%, 3 recipients, 50–110%, 90% — is this project's own choice and comes from no paper.** How those choices behave on real wallets is measured in [Validation against real wallets](#validation-against-real-wallets); the sources are in [RESEARCH.md](RESEARCH.md).
+
 ### Before either rule: money cannot be forwarded before it arrives
 
 The traversal itself applies one rule about *when*. When the trace reaches a wallet, it knows the moment the traced funds landed there — the earliest transfer on the edge that brought them. Only transfers that wallet made **at or after** that moment can carry the victim's money, so anything it sent earlier is left out of the graph as the wallet's own prior business. Walking backwards the rule mirrors: only money a sender received **at or before** it paid the next hop can have funded that payment.
@@ -239,9 +241,9 @@ Stolen funds walked through a series of throwaway wallets, with a little skimmed
 4. The run must **end lower than it started** — that is the "peel".
 5. Each hop must forward **at least 50%** of what it received. A hop that keeps half the money is a split, and the other rule handles it.
 
-### Amount split (structuring)
+### Amount split
 
-One address receives a sum and immediately fans it out to hide the trail.
+One address receives a sum and fans it out across several recipients, multiplying the paths an investigator must follow. This is sometimes called "structuring", but that word is a legal term for breaking up *currency* transactions to evade a *reporting threshold* (31 CFR § 1010.100(xx)), and there is no reporting threshold on a public blockchain — so the rule here describes a shape, not a statutory offence. The same shape is produced by payroll, exchanges and market makers, which is why the rule is treated as a reason to look closer and never as a verdict.
 
 1. Sent to **3 or more** distinct recipients.
 2. Between **50% and 110%** of what came in went straight back out — it forwarded, it did not keep.

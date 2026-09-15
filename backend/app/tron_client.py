@@ -1,9 +1,11 @@
 """Tron data provider, backed by TronGrid.
 
-Tron matters disproportionately for this problem statement. USDT-TRC20 is the
-dominant rail for moving scam proceeds out of India: transfers are cheap, fast,
-and the volume is enormous. A fraud tool that cannot follow a `T...` address
-cannot follow the most common case it will be handed.
+Tron matters disproportionately for this problem statement. TRM Labs measured
+58% of 2024 illicit crypto volume on Tron, and the UN Office on Drugs and Crime
+describes USDT on Tron as the "preferred choice" of the Southeast-Asian
+cyber-fraud operations that target Indian victims (sources in RESEARCH.md).
+Transfers are cheap and fast, and a fraud tool that cannot follow a `T...`
+address cannot follow a case it is very likely to be handed.
 
 Tron is not an EVM chain, and three differences drive this module:
 
