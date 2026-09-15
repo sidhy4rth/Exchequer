@@ -32,6 +32,8 @@ from typing import Any
 
 import httpx
 
+from .evidence import EvidenceLog
+
 from . import config
 from .etherscan_client import EtherscanError, Transaction, is_tron_address
 
@@ -133,6 +135,7 @@ class TronClient:
 
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout, headers=headers)
+        self.evidence = EvidenceLog()
         self._lock = threading.Lock()
         self._last_request_at = 0.0
 
@@ -183,6 +186,8 @@ class TronClient:
 
             if body.get("success") is False:
                 raise TronError(f"TronGrid error: {str(body.get('error'))[:200]}")
+            query = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+            self.evidence.record("trongrid", f"GET {self.base_url}{path}?{query}", response.content)
             return body
 
         raise TronError(

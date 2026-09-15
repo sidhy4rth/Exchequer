@@ -108,3 +108,38 @@ def test_the_json_report_carries_the_appendix_and_version():
     assert report["appendix"]["addresses"] == [SEED, MID, HOT]
     assert [t["hash"] for t in report["appendix"]["transactions"]] == ["0xaaa", "0xccc"]
     assert report["tool_version"]
+
+
+def test_the_report_prints_the_evidence_manifest_and_seals_itself():
+    from app.evidence import verify_sealed_text
+
+    result = full_result()
+    result["evidence"] = {
+        "algorithm": "sha256", "count": 2, "retrieved": 1, "from_cache": 1,
+        "providers": ["etherscan"],
+        "first_retrieved_at": "2026-09-15T15:40:36Z", "last_retrieved_at": "2026-09-15T15:40:36Z",
+        "manifest_sha256": "ab" * 32,
+        "records": [
+            {"provider": "etherscan", "request": "GET https://api.etherscan.io/v2/api?action=txlist&address=" + SEED,
+             "retrieved_at": "2026-09-15T15:40:36Z", "sha256": "cd" * 32, "bytes": 812, "from_cache": False},
+            {"provider": "etherscan", "request": "GET https://api.etherscan.io/v2/api?action=txlist&address=" + MID,
+             "retrieved_at": "2026-09-15T15:40:36Z", "sha256": "ef" * 32, "bytes": 90, "from_cache": True},
+        ],
+    }
+    text = render_text_report(build_report(stored(result)))
+
+    assert "APPENDIX C - EVIDENCE MANIFEST" in text
+    assert "Manifest SHA-256: " + "ab" * 32 in text
+    assert "sha256 " + "cd" * 32 in text
+    assert "90 bytes  cached" in text
+    assert "CONTENT HASH" in text
+    assert verify_sealed_text(text)
+    assert not verify_sealed_text(text.replace("9.5", "9.6", 1))
+
+
+def test_a_case_stored_before_hashing_says_so_and_still_seals():
+    from app.evidence import verify_sealed_text
+
+    text = render_text_report(build_report(stored(full_result())))
+    assert "No evidence manifest was stored with this case" in text
+    assert verify_sealed_text(text)

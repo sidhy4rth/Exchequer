@@ -458,6 +458,37 @@ To add one properly:
 
 ---
 
+## Evidence integrity
+
+A finding can be re-derived from the report — the arithmetic is on the page. What
+cannot be re-derived is the input: the provider's answer to each query, at the
+moment it was given. So every response a trace is computed from is hashed
+(SHA-256) as it arrives, with the request that produced it — credential removed,
+parameters in a fixed order — and the UTC time, and the set is stored with the
+case as an evidence manifest. One hash over all of them, computed over the
+sorted records so it does not depend on the order concurrent fetches finished,
+is the manifest hash. The text report prints the whole manifest as Appendix C
+and ends with a content hash over every byte above it.
+
+What this establishes: that the bytes hashed are the bytes the tool used. A
+reviewer who re-issues a request and obtains the same hash has shown the input
+was unchanged; a different hash means the chain — or the provider — has moved
+on, which for append-only history means newer transactions exist. It does not
+make a response tamper-proof; it makes tampering detectable, and it lets the
+document that leaves this tool be checked against the document that reaches a
+court:
+
+```
+$ head -c -N report.txt | shasum -a 256     # everything above the CONTENT HASH line
+```
+
+A response served from the process cache is the same bytes retrieved earlier,
+so it is recorded with its original hash and time and marked `cached` — it is
+not presented as a second retrieval. Cases stored before this was added carry
+no manifest, and the report says so rather than inventing one.
+
+---
+
 ## Limitations
 
 Stated plainly, and repeated in every exported report:
@@ -593,7 +624,8 @@ tracechain/
 │   │   ├── swap_detection.py     swaps at DEX routers, from receipts
 │   │   ├── scoring.py            confidence score
 │   │   ├── models.py             SQLite (SQLAlchemy) case storage
-│   │   └── report.py             exportable report
+│   │   ├── report.py             exportable report
+│   │   └── evidence.py           hash-and-timestamp of every provider response
 │   ├── data/
 │   │   ├── exchange_labels.json      337 verified Ethereum exchange wallets
 │   │   ├── exchange_labels_bsc.json   30 verified BSC exchange wallets
@@ -664,7 +696,8 @@ failure here.
 | `test_swap_detection.py` | Swap outputs read from a real 1inch receipt; native-coin outputs reported as unreadable, never guessed; receipts capped per edge; a failed receipt cannot kill a trace |
 | `test_correlation.py` | Two complaints on one unlabelled wallet cluster; a shared hot wallet, router or sanctioned entity never does; the same wallet traced twice is one complaint; chains never mix |
 | `test_internal_transactions.py` | Contract-moved value is merged and tagged at exactly one extra request, never on a token trace, and never displaces signed transfers |
-| `test_report.py` | Every section an officer needs is present, times and hashes included; a case stored by an earlier version still renders |
+| `test_report.py` | Every section an officer needs is present, times and hashes included; the evidence manifest prints and the content hash verifies; a case stored by an earlier version still renders |
+| `test_evidence.py` | A response is hashed as received with the credential stripped; a cache hit re-uses the original hash and time; the manifest hash ignores arrival order; a sealed report stops verifying if one byte changes |
 
 ---
 

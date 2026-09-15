@@ -394,6 +394,16 @@ export default function TraceView() {
                     <span className="n">{result.api_calls}</span>
                     <span className="t">provider requests<small>{result.graph.nodes.length} addresses, {result.graph.edges.length} aggregated transfers, {result.transfers?.length ?? 0} individual transactions, depth {result.depth_reached} reached of {stored ? (result.max_depth ?? '—') : depth}.</small></span>
                   </div>
+                  {result.evidence?.count > 0 && (
+                    <div className="exclusion">
+                      <span className="n">{result.evidence.count}</span>
+                      <span className="t">provider responses hashed as evidence<small>
+                        Every response this trace was computed from, SHA-256 at arrival with its request and UTC time
+                        {result.evidence.from_cache > 0 ? ` (${result.evidence.from_cache} re-used from cache)` : ''}. Manifest{' '}
+                        <span className="mono" title={result.evidence.manifest_sha256}>{result.evidence.manifest_sha256.slice(0, 16)}…</span>; the full list is Appendix C of the report, which carries its own content hash.
+                      </small></span>
+                    </div>
+                  )}
                   {result.truncation_reasons?.length > 0 && (
                     <ul className="reasons">
                       {result.truncation_reasons.map((r) => <li key={r}>{r}</li>)}

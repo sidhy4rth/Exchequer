@@ -65,7 +65,7 @@ class ResponseCache:
     def __init__(self, ttl_seconds: float = 600.0, max_entries: int = 2048) -> None:
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
-        self._entries: OrderedDict[Hashable, tuple[float, Any]] = OrderedDict()
+        self._entries: OrderedDict[Hashable, tuple[float, Any, dict | None]] = OrderedDict()
         self._lock = threading.Lock()
         self._hits = 0
         self._misses = 0
@@ -77,7 +77,7 @@ class ResponseCache:
             if entry is None:
                 self._misses += 1
                 return False, None
-            stored_at, value = entry
+            stored_at, value, _meta = entry
             if time.monotonic() - stored_at > self.ttl_seconds:
                 del self._entries[key]
                 self._misses += 1
@@ -86,9 +86,16 @@ class ResponseCache:
             self._hits += 1
             return True, value
 
-    def put(self, key: Hashable, value: Any) -> None:
+    def meta(self, key: Hashable) -> dict | None:
+        """The retrieval metadata stored with a live entry (hash, time, size),
+        so a cache hit can be recorded as evidence with its original values."""
         with self._lock:
-            self._entries[key] = (time.monotonic(), value)
+            entry = self._entries.get(key)
+            return entry[2] if entry else None
+
+    def put(self, key: Hashable, value: Any, meta: dict | None = None) -> None:
+        with self._lock:
+            self._entries[key] = (time.monotonic(), value, meta)
             self._entries.move_to_end(key)
             while len(self._entries) > self.max_entries:
                 self._entries.popitem(last=False)

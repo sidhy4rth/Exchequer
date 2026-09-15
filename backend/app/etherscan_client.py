@@ -35,6 +35,7 @@ import httpx
 
 from . import config
 from .api_budget import ResponseCache, SharedPacer, get_cache, get_pacer
+from .evidence import EvidenceLog, utc_now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -266,6 +267,8 @@ class EtherscanClient:
         self._cache = get_cache(
             scope, lambda: ResponseCache(ttl_seconds=config.API_CACHE_TTL_SECONDS)
         )
+        # Every response this client's trace was built from, hashed on arrival.
+        self.evidence = EvidenceLog()
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -295,6 +298,20 @@ class EtherscanClient:
             (k, str(v)) for k, v in params.items() if k != "apikey"
         ))
 
+    def _describe(self, query: dict[str, Any]) -> str:
+        """The request as a reviewer would re-issue it: same URL, same
+        parameters in a fixed order, without the credential."""
+        parts = "&".join(f"{k}={v}" for k, v in sorted(query.items()) if k != "apikey")
+        return f"GET {self.base_url}?{parts}"
+
+    def _record(self, request_desc: str, cache_key: tuple, response: httpx.Response, result: Any) -> None:
+        """Hash the bytes this answer came from, store them with the cached
+        value, and log them as evidence for this trace."""
+        rec = self.evidence.record("etherscan", request_desc, response.content)
+        self._cache.put(cache_key, result, meta={
+            "sha256": rec.sha256, "retrieved_at": rec.retrieved_at, "bytes": rec.bytes,
+        })
+
     def _request(self, params: dict[str, Any]) -> Any:
         """Perform one Etherscan call with throttling, retries and backoff.
 
@@ -315,8 +332,10 @@ class EtherscanClient:
         # That is what makes this safe, and it is the single biggest saving
         # available: the provider, not the traversal, is what makes a trace slow.
         cache_key = self._cache_key(query)
+        request_desc = self._describe(query)
         hit, cached = self._cache.get(cache_key)
         if hit:
+            self.evidence.record_cached("etherscan", request_desc, self._cache.meta(cache_key))
             return cached
 
         last_error: Exception | None = None
@@ -357,7 +376,7 @@ class EtherscanClient:
                     raise EtherscanError(f"Etherscan proxy error: {payload['error']}")
                 self._pacer.reward()
                 result = payload.get("result")
-                self._cache.put(cache_key, result)
+                self._record(request_desc, cache_key, response, result)
                 return result
 
             status = str(payload.get("status", ""))
@@ -366,7 +385,7 @@ class EtherscanClient:
 
             if status == "1":
                 self._pacer.reward()
-                self._cache.put(cache_key, result)
+                self._record(request_desc, cache_key, response, result)
                 return result
 
             # status != "1". Three distinct cases, and they must not be conflated.
@@ -377,7 +396,7 @@ class EtherscanClient:
             # re-askable as a full list, and re-asking it costs the same second.
             if any(phrase in haystack for phrase in _EMPTY_MESSAGES):
                 self._pacer.reward()
-                self._cache.put(cache_key, [])
+                self._record(request_desc, cache_key, response, [])
                 return []
 
             # 2. Rate limited -- back off and retry.

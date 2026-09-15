@@ -422,6 +422,10 @@ def trace(request: TraceRequest) -> dict[str, Any]:
                     result.graph, matcher,
                     balance_of=getattr(client, "get_balance_native", None),
                 )
+            # Every provider response the trace was computed from, hashed on
+            # arrival. Taken while the client is still open, after the last
+            # call that could add to it (the balance reads above).
+            evidence = client.evidence.manifest() if hasattr(client, "evidence") else None
     except UnknownAssetError as exc:
         # Edge case: the request named an asset this chain does not carry.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -606,6 +610,8 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "addresses_expanded": result.addresses_expanded,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,
         "api_calls": result.api_calls,
+        # Hash-and-timestamp of every response above; see app/evidence.py.
+        "evidence": evidence,
         "truncated": result.truncated,
         "truncation_reasons": result.truncation_reasons,
         "warnings": result.warnings,

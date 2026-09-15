@@ -31,7 +31,11 @@ import threading
 import time
 from typing import Any, Iterable
 
+import json
+
 import httpx
+
+from .evidence import EvidenceLog
 
 from . import config
 from .etherscan_client import (
@@ -103,6 +107,7 @@ class NoderealClient:
 
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout)
+        self.evidence = EvidenceLog()
         self._lock = threading.Lock()
         self._last_request_at = 0.0
         self._head_block: int | None = None
@@ -172,6 +177,11 @@ class NoderealClient:
                     continue
                 raise NoderealError(f"NodeReal error: {message}")
 
+            self.evidence.record(
+                "nodereal",
+                f"POST {self.url.split('/v1/')[0]}/v1/<key> {method} {json.dumps(params, sort_keys=True)}",
+                response.content,
+            )
             return body.get("result")
 
         raise NoderealError(
