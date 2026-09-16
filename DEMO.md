@@ -327,9 +327,13 @@ wallets** — their choice, our population.
 **The list:** Etherscan's Phish / Hack tags, mirrored on GitHub (the same
 source the validation corpus and demos 6 and 10 came from), 5,594 addresses:
 
-    https://github.com/dappcenter/etherscan-labels/blob/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json
+    https://raw.githubusercontent.com/dappcenter/etherscan-labels/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json
 
-Open it on the judges' side, ask for a line number, paste the address,
+(The raw view: 850 KB, 33,566 lines, six per entry, so GitHub's normal file
+view refuses to render it.) Many entries carry Etherscan's name tag —
+`"Akropolis Hacker 1"` — which reads better than bare hex; one with a
+`txnCount` of a few dozen is a fuller trace than one with two. Open it on
+the judges' side, ask for a line number, paste the address,
 **Where funds went · Ethereum · ETH · 3 hops**. Depth 3, not 4: 4 can take
 40 s cold, 3 is usually under 20.
 
