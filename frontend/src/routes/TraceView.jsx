@@ -404,7 +404,7 @@ export default function TraceView() {
                         <div className="sub">
                           <span>{h.tx_count} transfer{h.tx_count === 1 ? '' : 's'}{h.internal_tx_count ? ` (${h.internal_tx_count} by contract call)` : ''}</span>
                           {h.last_seen ? <span>{when(h.last_seen)}</span> : null}
-                          {h.onPath && <span className="pill green">attributed path</span>}
+                          {h.onPath && <span className="pill red">traced funds</span>}
                           {h.swap && <span className="pill amber">swap at {h.swap.router_label}</span>}
                           {h.flags?.map((f) => <span className="pill amber" key={f}>{PATTERN_NAME[f] ?? f}</span>)}
                         </div>

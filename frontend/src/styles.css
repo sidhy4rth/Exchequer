@@ -309,21 +309,39 @@ details.more summary:hover { color: var(--ink); }
   position: relative;
 }
 /* A timeline down the left: one line, one mark per transfer, so the feed reads
-   as a sequence rather than a table. */
-.feed .row::before { content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 1px; background: var(--rule-strong); }
+   as a sequence rather than a table. The line carries a slow downward flow so
+   the hops read as money moving; on the attributed path it runs red and
+   faster, and the mark pulses, matching the trail in the flow view. */
+.feed .row::before {
+  content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 1px;
+  background: repeating-linear-gradient(to bottom, var(--rule-strong) 0 6px, transparent 6px 14px);
+  animation: feedflow 1.4s linear infinite;
+}
 .feed .row::after { content: ''; position: absolute; left: 11px; top: 16px; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
-.feed .row.on-path::after { background: var(--green); }
+.feed .row.on-path::before {
+  left: 13px; width: 3px;
+  background: repeating-linear-gradient(to bottom, var(--red) 0 6px, transparent 6px 14px);
+  animation-duration: 0.6s;
+}
+.feed .row.on-path::after { background: var(--red); animation: feedpulse 1.4s ease-out infinite; }
 .feed .row.to-red::after { background: var(--red); }
+.feed .row.on-path .pair .arrow { color: var(--red); animation: nudge 0.9s ease-in-out infinite; }
+@keyframes feedflow { to { background-position: 0 14px; } }
+@keyframes feedpulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); }
+  100% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--red) 0%, transparent); }
+}
+@keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
 @keyframes rise { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 .feed .hop { font-family: var(--mono); font-size: 11px; color: var(--faint); padding-top: 2px; }
 .feed .pair { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; }
 .feed .pair .to.green { color: var(--green); font-weight: 500; }
 .feed .pair .to.red { color: var(--red); font-weight: 500; }
-.feed .pair .arrow { color: var(--faint); }
+.feed .pair .arrow { color: var(--faint); display: inline-block; }
 .feed .sub { font-size: 11.5px; color: var(--faint); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
 .feed .amount { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.5px; text-align: right; white-space: nowrap; }
 .feed .amount .unit { color: var(--faint); font-size: 11px; margin-left: 4px; }
-.feed .row.on-path { background: var(--green-soft); }
+.feed .row.on-path { background: var(--red-soft); }
 
 /* Loading */
 .loading { display: flex; flex-direction: column; gap: 10px; padding: 26px 14px; align-items: flex-start; }
