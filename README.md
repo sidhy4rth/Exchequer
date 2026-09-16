@@ -655,6 +655,7 @@ exchequer/
 │   │   ├── validate_patterns.py       measures the rules; offline from the snapshot; stores nothing
 │   │   ├── prune_cases.py             reduces the case store to named cases, with a backup
 │   │   ├── seed_hosted.py             replays the demo traces against a hosted instance
+│   │   ├── scout.py                   tries candidate addresses for a live demo, storing nothing
 │   │   ├── check_etherscan.py         live API smoke test
 │   │   ├── verify_labels.py           re-checks every Ethereum label
 │   │   ├── import_exchange_labels.py  imports + verifies Ethereum labels

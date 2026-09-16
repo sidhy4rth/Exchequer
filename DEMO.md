@@ -317,6 +317,53 @@ inference it is.
 
 ---
 
+## Letting a judge pick a live address
+
+Do not let them pick from Etherscan's front page. "Latest transactions" is
+bots, swaps and gas top-ups; a random one is a wallet with two counterparties
+and nothing to say. Let them pick at random **from a list of reported fraud
+wallets** — their choice, our population.
+
+**The list:** Etherscan's Phish / Hack tags, mirrored on GitHub (the same
+source the validation corpus and demos 6 and 10 came from), 5,594 addresses:
+
+    https://github.com/dappcenter/etherscan-labels/blob/d547040b8bf65577945bcc53cec62a96945cc705/src/hack-addresses.json
+
+Open it on the judges' side, ask for a line number, paste the address,
+**Where funds went · Ethereum · ETH · 3 hops**. Depth 3, not 4: 4 can take
+40 s cold, 3 is usually under 20.
+
+**What that population produces.** 16 picked at random on 16 September 2026,
+3 hops, cold: six reached an exchange (Bitfinex 0.88 via an inferred deposit
+address and an amount split; Poloniex 0.95; Remitano 0.74; Binance 0.74 after
+a swap; Bittrex 0.68; Coinbase 0.47), six traced but reached nothing within
+3 hops, four had never sent ETH or USDT (receive-only or contract
+addresses). So roughly 40% land on an exchange, and a quarter are dead ends
+by nature. Say the sentence before pressing Trace: *"We have not seen this
+one. If it finds nothing, that is a finding — the tool never guesses."*
+
+**Scout the night before.** `scripts/scout.py` runs addresses through the
+same code as `POST /trace` and prints one line each, storing no case:
+
+    cd backend && .venv/bin/python -m scripts.scout --file candidates.txt
+    cd backend && .venv/bin/python -m scripts.scout 0x… --depth 3 --direction incoming
+
+Whatever it touches is cached, so an address scouted on the hosted instance
+traces in under a second on the day. The six above are ready-made fallbacks;
+`0x414bca67…` (→ Poloniex 0.95, one hop, 2 addresses) is the fastest.
+
+**If the pick is thin**, re-run it as *Who sent funds here*: on a scam
+wallet the funders are almost always the fuller picture, and the exchanges
+among them are marked as withdrawals.
+
+Two lists that do *not* work for this: Etherscan's per-incident exploit
+pages (e.g. `etherscan.io/accounts/label/wazirx-exploit` — the WazirX hack
+proceeds went into Tornado Cash, which OFAC delisted in March 2025, so all
+seven trace to nothing labelled), and the old umbrella `phish-hack` label
+page, which Etherscan has emptied.
+
+---
+
 ## If a live trace disappoints
 
 Pattern findings are threshold comparisons against a graph that reshapes as
