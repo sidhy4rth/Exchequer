@@ -265,7 +265,9 @@ class EtherscanClient:
             ),
         )
         self._cache = get_cache(
-            scope, lambda: ResponseCache(ttl_seconds=config.API_CACHE_TTL_SECONDS)
+            scope, lambda: ResponseCache(
+                ttl_seconds=config.API_CACHE_TTL_SECONDS, path=config.API_CACHE_PATH,
+            )
         )
         # Every response this client's trace was built from, hashed on arrival.
         self.evidence = EvidenceLog()

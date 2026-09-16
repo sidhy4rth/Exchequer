@@ -52,6 +52,12 @@ ENV EXCHEQUER_VERSION=${EXCHEQUER_VERSION}
 ENV EXCHEQUER_DB_PATH=/data/exchequer.db
 RUN mkdir -p /data
 
+# The provider response cache also lives on the volume (beside the case
+# store, by default), so a redeploy does not forget every response; and the
+# demo addresses are traced in the background at startup so the first real
+# request finds them cached rather than paying the cold cost.
+ENV EXCHEQUER_WARM_CACHE=1
+
 WORKDIR /app/backend
 EXPOSE 8000
 

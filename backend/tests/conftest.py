@@ -18,7 +18,14 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
+from app import config  # noqa: E402
 from app.graph_builder import _annotate_node_totals  # noqa: E402
+
+# The suite never touches the network, so it never needs a cached response to
+# survive a restart -- and it must not leave a provider_cache.db beside the
+# real case store or read one a previous run left. Set at import, before any
+# module-scoped TestClient starts the app.
+config.API_CACHE_PATH = None
 
 
 def addr(tag: str) -> str:
@@ -125,16 +132,19 @@ def amount_split_graph() -> nx.DiGraph:
 
 
 @pytest.fixture(autouse=True)
-def _reset_api_budget():
+def _reset_api_budget(monkeypatch):
     """Keep the shared pacer and response cache from leaking between tests.
 
     Both are process-wide by design -- the provider enforces its rate limit per
     credential, not per client -- which means without this a cached response or
     a widened interval from one test would silently change the next one's
-    result. Test order must never affect an outcome.
+    result. Test order must never affect an outcome. The cache is also kept
+    in memory here: a test must not leave a provider_cache.db beside the real
+    case store, and must not read one a previous run left.
     """
     from app import api_budget
 
+    monkeypatch.setattr(config, "API_CACHE_PATH", None)
     api_budget.reset()
     yield
     api_budget.reset()

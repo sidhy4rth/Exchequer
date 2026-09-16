@@ -309,9 +309,31 @@ DB_PATH: Path = Path(_db_raw) if Path(_db_raw).is_absolute() else BACKEND_DIR / 
 EXCHANGE_LABELS_PATH: Path = DEFAULT_CHAIN.labels_path
 
 # How long a provider response stays reusable. On-chain history is append-only,
-# so a cached answer can only lag the newest blocks -- never contradict them.
-# The free tiers cap requests per *second* while leaving the daily quota barely
-# touched (a trace costs ~35 of 100,000 calls/day), so reusing an answer is
-# what actually shortens a trace: the second traversal direction, an overlapping
-# trace and every re-run of the same address all stop touching the network.
-API_CACHE_TTL_SECONDS: float = float(os.getenv("API_CACHE_TTL_SECONDS", "600"))
+# so a cached answer can only lag the newest blocks -- never contradict them --
+# and every cached response is recorded in the case's evidence manifest with
+# the time it was originally retrieved, so the report always shows how old the
+# data was. The free tiers cap requests per *second* while leaving the daily
+# quota barely touched (a trace costs ~35 of 100,000 calls/day), so reusing an
+# answer is what actually shortens a trace: the second traversal direction, an
+# overlapping trace and every re-run of the same address all stop touching the
+# network. A day, so a demo traced in the morning is still instant in the
+# afternoon; set it in seconds.
+API_CACHE_TTL_SECONDS: float = float(os.getenv("API_CACHE_TTL_SECONDS", str(24 * 3600)))
+
+# Where cached responses are kept between restarts. Beside the case store by
+# default (so a /data volume holds both); an empty value or "off" keeps the
+# cache in memory only. Without this a redeploy forgets every response and the
+# first trace of each demo address is cold again.
+_cache_raw = os.getenv("API_CACHE_PATH", "provider_cache.db").strip()
+API_CACHE_PATH: Path | None = (
+    None if _cache_raw.lower() in ("", "off", "none", "0", "false")
+    else Path(_cache_raw) if Path(_cache_raw).is_absolute()
+    else DB_PATH.parent / _cache_raw
+)
+
+# Whether to trace the DEMO.md addresses in the background at startup so their
+# responses are cached before anyone asks. Off by default: on a laptop it
+# would spend the key's rate on every restart. The Docker image turns it on.
+WARM_CACHE_AT_STARTUP: bool = (
+    os.getenv("EXCHEQUER_WARM_CACHE", "").strip().lower() in ("1", "true", "yes", "on")
+)

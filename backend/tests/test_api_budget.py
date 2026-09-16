@@ -93,6 +93,62 @@ def test_cache_is_thread_safe():
         assert cache.get(i) == (True, i * 2)
 
 
+# --- ResponseCache on disk --------------------------------------------------
+def test_a_disk_backed_cache_survives_a_new_instance(tmp_path):
+    """The point of the disk layer: a restart must not forget the responses."""
+    path = tmp_path / "cache.db"
+    first = ResponseCache(path=path)
+    key = (("action", "txlist"), ("address", "0xabc"))
+    first.put(key, [{"hash": "0x1"}], meta={"sha256": "ab", "retrieved_at": "t", "bytes": 3})
+    first.close()
+
+    second = ResponseCache(path=path)
+    hit, value = second.get(key)
+    assert hit is True and value == [{"hash": "0x1"}]
+    # The evidence record for a hit carries the original retrieval, not a new one.
+    assert second.meta(key) == {"sha256": "ab", "retrieved_at": "t", "bytes": 3}
+    assert second.stats()["hits_from_disk"] == 1
+    assert second.stats()["persistent"] is True
+    second.close()
+
+
+def test_a_disk_entry_expires_on_the_same_clock(tmp_path):
+    """An entry written before a restart is exactly as old afterwards."""
+    path = tmp_path / "cache.db"
+    first = ResponseCache(ttl_seconds=0.05, path=path)
+    first.put("k", "v")
+    first.close()
+    time.sleep(0.08)
+    second = ResponseCache(ttl_seconds=0.05, path=path)
+    assert second.get("k") == (False, None)
+    second.close()
+
+
+def test_a_value_that_cannot_be_written_to_disk_still_caches_in_memory(tmp_path):
+    cache = ResponseCache(path=tmp_path / "cache.db")
+    cache.put("k", object())  # not JSON
+    assert cache.get("k")[0] is True
+    assert cache.stats()["entries_on_disk"] == 0
+    cache.close()
+
+
+def test_clear_empties_the_disk_too(tmp_path):
+    path = tmp_path / "cache.db"
+    cache = ResponseCache(path=path)
+    cache.put("k", 1)
+    cache.clear()
+    cache.close()
+    assert ResponseCache(path=path).get("k") == (False, None)
+
+
+def test_without_a_path_nothing_is_written(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cache = ResponseCache()
+    cache.put("k", 1)
+    assert cache.stats()["persistent"] is False
+    assert list(tmp_path.iterdir()) == []
+
+
 # --- SharedPacer ------------------------------------------------------------
 def test_pacer_spaces_requests():
     pacer = SharedPacer(interval=0.05)

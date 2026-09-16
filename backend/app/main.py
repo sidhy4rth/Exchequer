@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import api_budget, chain_data, config, models
+from . import api_budget, chain_data, config, models, warmup
 from .chain_data import (
     ProviderNotConfiguredError,
     UnknownAssetError,
@@ -87,6 +87,9 @@ async def lifespan(_app: FastAPI):
             logger.info("%s: ready via %s", status["name"], status["provider"])
         else:
             logger.warning("%s unavailable: %s", status["name"], status["detail"])
+    # After the providers are known to be configured: the demo addresses are
+    # traced in the background so the first real request finds them cached.
+    warmup.start_in_background()
     yield
 
 
@@ -285,6 +288,10 @@ def health() -> dict[str, Any]:
         # means the key is being refused and every refusal costs a backoff,
         # while a high cache `hit_rate` means repeat work is already free.
         "api_budget": api_budget.budget_stats(),
+        # Whether the demo addresses are being (or have been) traced in the
+        # background so they answer from cache. A trace during `in_progress`
+        # shares the key's rate with the warm-up.
+        "warm_cache": warmup.status(),
     }
 
 
@@ -333,13 +340,13 @@ def risk_labels(chain: str | None = Query(None, description="ethereum, bsc or tr
     }
 
 
-@app.post("/trace")
-def trace(request: TraceRequest) -> dict[str, Any]:
-    """Trace funds to or from a reported address.
+def run_trace(request: TraceRequest) -> dict[str, Any]:
+    """Run one trace and return the full result, without storing it.
 
-    Outgoing answers "where did the victim's money go"; incoming answers "who
-    sent money to this address", which on a scammer's wallet enumerates the
-    other people who paid it.
+    Everything the endpoint does except the case record: the endpoint gives
+    the result a case id and saves it; the startup warm-up runs the demo
+    addresses through this and keeps nothing, so the provider responses are
+    cached without a row appearing in the case store.
     """
     address = request.address.strip()
     direction = request.direction
@@ -554,12 +561,9 @@ def trace(request: TraceRequest) -> dict[str, Any]:
             "limit."
         )
 
-    case_id = models.new_case_id()
-    created_at = models.utc_now_iso()
-
     payload: dict[str, Any] = {
         # -- the documented API contract --
-        "case_id": case_id,
+        "case_id": None,  # set by the endpoint when the case is stored
         "graph": graph_to_dict(graph),
         "exchange": primary.exchange if primary else None,
         "confidence": confidence.score,
@@ -577,7 +581,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "asset_is_native": is_native,
         "asset_contract": token.address if token else None,
         "explorer_url": chain.explorer_url,
-        "created_at": created_at,
+        "created_at": None,  # set with the case id
         "message": message,
         "exchange_address": primary.address if primary else None,
         "exchange_label": primary.label if primary else None,
@@ -621,9 +625,25 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "truncation_reasons": result.truncation_reasons,
         "warnings": result.warnings,
     }
+    return payload
+
+
+@app.post("/trace")
+def trace(request: TraceRequest) -> dict[str, Any]:
+    """Trace funds to or from a reported address.
+
+    Outgoing answers "where did the victim's money go"; incoming answers "who
+    sent money to this address", which on a scammer's wallet enumerates the
+    other people who paid it.
+    """
+    payload = run_trace(request)
+    case_id = models.new_case_id()
+    created_at = models.utc_now_iso()
+    payload["case_id"] = case_id
+    payload["created_at"] = created_at
 
     try:
-        models.save_case(case_id, seed, payload, created_at=created_at)
+        models.save_case(case_id, payload["address"], payload, created_at=created_at)
     except Exception as exc:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
         payload.setdefault("warnings", []).append(

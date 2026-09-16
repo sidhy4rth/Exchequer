@@ -27,7 +27,7 @@ def main() -> None:
                                      headers={"Content-Type": "application/json"})
         return json.load(urllib.request.urlopen(req, timeout=timeout))
 
-    seeds = json.loads((Path(__file__).parent / "demo_traces.json").read_text())
+    seeds = json.loads((Path(__file__).resolve().parent.parent / "data" / "demo_traces.json").read_text())
     for s in seeds:
         t = time.time()
         try:

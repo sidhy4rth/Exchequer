@@ -8,6 +8,12 @@ and complete in 4–20 seconds; traces 4–5 are reverse traces at **1 hop** and
 return in two seconds on two requests each. The README's flagship address at
 **4 hops** takes ~40 seconds and 73 requests.
 
+Those are cold numbers. On the hosted instance the backend traces this list
+in the background at startup and keeps the responses on disk, so on the day
+each of these answers from cache in well under a second — say "20–40 seconds
+cold, instant cached", and `GET /health` → `warm_cache` shows whether the
+warm-up has finished.
+
 ---
 
 ## What these labels mean

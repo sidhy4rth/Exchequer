@@ -581,9 +581,11 @@ contract's payout *into* a wallet is exactly what they look for.
 Since the ceiling is per *second* while the daily quota goes barely touched (a
 trace costs well under 100 of 100,000 calls/day), the only lever that shortens
 a trace is making fewer requests. So responses are cached per credential for
-`API_CACHE_TTL_SECONDS` (default 600). On-chain history is append-only, so a
+`API_CACHE_TTL_SECONDS` (default a day). On-chain history is append-only, so a
 cached answer can lag the newest blocks but never contradict them -- traces are
-byte-identical warm and cold. The effect:
+byte-identical warm and cold, and the evidence manifest records for every
+cached response when it was originally retrieved, so the report never hides
+how old the data was. The effect:
 
 | | Requests | Time |
 | --- | --- | --- |
@@ -595,6 +597,15 @@ a reverse trace of an address already traced forward reuses what is in hand.
 
 `GET /health` reports `api_budget` -- a high `rate_limit_penalties` means the
 key is being refused, a high cache `hit_rate` means repeat work is already free.
+
+The cache is also written to disk (`API_CACHE_PATH`, a SQLite file beside the
+case store; `off` for memory only), so a restart or a redeploy does not forget
+every response. And with `EXCHEQUER_WARM_CACHE=1` -- on in the Docker image --
+the backend traces the `DEMO.md` addresses (`backend/data/demo_traces.json`)
+in a background thread at startup, storing no case, and again at three
+quarters of the TTL, so the demos never go cold on a hosted instance. A trace
+made while that first pass is running shares the key's rate with it;
+`GET /health` reports `warm_cache.in_progress` so you can tell.
 
 **If cold traces are still too slow**, the remaining lever is fan-out: the
 traversal follows the 10 highest-value counterparties per address
@@ -625,19 +636,23 @@ exchequer/
 │   │   ├── scoring.py            confidence score
 │   │   ├── models.py             SQLite (SQLAlchemy) case storage
 │   │   ├── report.py             exportable report
-│   │   └── evidence.py           hash-and-timestamp of every provider response
+│   │   ├── evidence.py           hash-and-timestamp of every provider response
+│   │   ├── api_budget.py         shared request pacer + response cache (memory and disk)
+│   │   └── warmup.py             traces the demo addresses at startup so they are cached
 │   ├── data/
 │   │   ├── exchange_labels.json      337 verified Ethereum exchange wallets
 │   │   ├── exchange_labels_bsc.json   30 verified BSC exchange wallets
 │   │   ├── exchange_labels_tron.json  40 verified Tron exchange wallets
 │   │   ├── risk_labels*.json          OFAC SDN addresses, per chain
 │   │   ├── router_labels*.json        verified DEX routers, per chain
+│   │   ├── demo_traces.json           the DEMO.md traces, as requests; read by the warm-up and the seed script
 │   │   └── validation/                corpus, snapshot and results of the rule measurement
 │   ├── scripts/
 │   │   ├── seed_router_labels.py      imports + verifies DEX routers
 │   │   ├── build_validation_corpus.py builds the measurement corpus by script
 │   │   ├── validate_patterns.py       measures the rules; offline from the snapshot; stores nothing
 │   │   ├── prune_cases.py             reduces the case store to named cases, with a backup
+│   │   ├── seed_hosted.py             replays the demo traces against a hosted instance
 │   │   ├── check_etherscan.py         live API smoke test
 │   │   ├── verify_labels.py           re-checks every Ethereum label
 │   │   ├── import_exchange_labels.py  imports + verifies Ethereum labels
@@ -698,6 +713,8 @@ failure here.
 | `test_internal_transactions.py` | Contract-moved value is merged and tagged at exactly one extra request, never on a token trace, and never displaces signed transfers |
 | `test_report.py` | Every section an officer needs is present, times and hashes included; the evidence manifest prints and the content hash verifies; a case stored by an earlier version still renders |
 | `test_evidence.py` | A response is hashed as received with the credential stripped; a cache hit re-uses the original hash and time; the manifest hash ignores arrival order; a sealed report stops verifying if one byte changes |
+| `test_api_budget.py` | The cache distinguishes a miss from a cached None, expires, evicts LRU; a disk-backed cache survives a new instance with the original retrieval metadata and expires on the same clock; the pacer widens on refusal and narrows on success |
+| `test_warmup.py` | Every demo is traced and no case is stored; one failing demo does not stop the rest; off unless configured; the shipped demo list is valid requests |
 
 ---
 
@@ -745,7 +762,7 @@ is fine for evaluation and not for concurrent use.
 | `blockNum not reached` in the logs | NodeReal's index trails the chain head by a few blocks. Handled automatically; safe to ignore. |
 | Traces feel slow in general | Expected on a free key — a trace is provider-bound, not compute-bound. Check `api_budget` in `GET /health`: `rate_limit_penalties` climbing means the key is being refused (raise `ETHERSCAN_MIN_INTERVAL`), and re-running the same address should be instant from cache. See [Why a trace takes the time it does](#why-a-trace-takes-the-time-it-does). |
 | Traces got slower after several runs | The pacer widens itself when the provider refuses, and narrows back as requests succeed. A widened `interval` in `/health` means the key is under pressure — from another tool sharing it, or from a burst of traces. |
-| A trace returns stale data | Responses are cached for `API_CACHE_TTL_SECONDS` (default 600). Lower it, or restart the backend, if you need to see a transfer made seconds ago. |
+| A trace returns stale data | Responses are cached for `API_CACHE_TTL_SECONDS` (default a day), on disk as well as in memory. Lower it, or delete `backend/provider_cache.db`, if you need to see a transfer made seconds ago; the report's evidence section shows when each response was retrieved. |
 | Trace is slow on a busy wallet | Partly expected — requests are throttled to stay under the free-tier cap. A level of addresses is fetched concurrently, so if traces feel serial check `TRACE_CONCURRENCY` has not been set to 1. Use 2–3 hops for a demo. |
 | Exchange is `null` on a real address | The funds may not have reached an exchange within the hop limit, or that exchange is not in the label file. Check `GET /exchanges`. |
 
