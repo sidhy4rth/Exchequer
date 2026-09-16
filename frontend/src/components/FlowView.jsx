@@ -236,12 +236,14 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
           const dx = Math.max(24, (x2 - x1) * 0.45)
           const d = `M${x1},${l.a.y} C${x1 + dx},${l.a.y} ${x2 - dx},${l.b.y} ${x2},${l.b.y}`
           const faded = lit && !(lit.has(l.a.node.id) && lit.has(l.b.node.id))
-          // Money moves along the line while it, or an address it touches,
-          // is under the pointer.
-          const moving = hover && (
-            hover.kind === 'link' ? hover.item === l
-              : (hover.item.node.id === l.a.node.id || hover.item.node.id === l.b.node.id)
-          )
+          // The traced funds are always on the move, so the trail reads as a
+          // chain before anyone touches it. Under the pointer the animation
+          // belongs to what is hovered: that line, or every transfer of that
+          // address -- and the trail stops unless it is part of it.
+          const moving = hover
+            ? (hover.kind === 'link' ? hover.item === l
+              : (hover.item.node.id === l.a.node.id || hover.item.node.id === l.b.node.id))
+            : l.onPath
           const key = `${l.edge.source}>${l.edge.target}`
           const enter = (e) => setHover({ kind: 'link', item: l, ...place(e) })
           const move = (e) => setHover((h) => (h ? { ...h, ...place(e) } : h))
