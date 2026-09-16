@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 // pointing the way the money moved -- left to right, always. No physics:
 // the same graph draws the same picture every time, and a judge at the back
 // of the room can read it in one glance because the attributed path is the
-// one bold green line and everything else is thin.
+// one bold red line -- the money under investigation -- and everything else is thin.
 //
 // Colour carries meaning exactly as elsewhere: green for a labelled exchange,
 // amber for an inference or a fired pattern, red for a sanctions or mixer hit.
@@ -223,7 +223,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
             <path d="M0 0.5 L8 4 L0 7.5 z" style={{ fill: 'var(--faint)' }} />
           </marker>
           <marker id="arrow-path" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
-            <path d="M0 0.5 L8 4 L0 7.5 z" style={{ fill: 'var(--green)' }} />
+            <path d="M0 0.5 L8 4 L0 7.5 z" style={{ fill: 'var(--red)' }} />
           </marker>
         </defs>
 
@@ -321,7 +321,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
         {['seed', 'exchange', 'inferred', 'risk', 'flagged', 'service'].map((r) => (
           <span key={r}><i style={{ background: ROLE_VAR[r] }} />{ROLE_NAME[r].replace(' (inferred)', '').replace(', not expanded', '')}</span>
         ))}
-        <span><i className="line" />attributed path</span>
+        <span><i className="line" />the traced funds (attributed path)</span>
       </div>
     </div>
   )

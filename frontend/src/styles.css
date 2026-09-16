@@ -261,19 +261,19 @@ details.more summary:hover { color: var(--ink); }
 .flow .flow-col { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; fill: var(--faint); }
 .flow .flow-link { fill: none; stroke: var(--ink); opacity: 0.16; transition: opacity var(--fast) var(--ease); cursor: default; }
 .flow .flow-link.flagged { stroke: var(--amber); opacity: 0.55; }
-.flow .flow-link.on-path { stroke: var(--green); opacity: 1; }
+.flow .flow-link.on-path { stroke: var(--red); opacity: 1; }
 .flow .flow-hit { fill: none; stroke: transparent; stroke-width: 9; cursor: default; }
 .flow .flow-hit:hover + .flow-link, .flow g:hover > .flow-link { opacity: 0.9; }
 /* Money on the move: a dash pattern running the way the transfer went. */
 .flow .flow-dash { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-dasharray: 3 9; animation: dashflow 0.6s linear infinite; pointer-events: none; }
-.flow .flow-dash.on-path { stroke: var(--green); }
+.flow .flow-dash.on-path { stroke: var(--red); }
 .flow .flow-dash.flagged { stroke: var(--amber); }
 @keyframes dashflow { to { stroke-dashoffset: -12; } }
 .flow .flow-node { cursor: copy; transition: opacity var(--fast) var(--ease); }
 .flow .flow-node .halo { fill: none; stroke: currentColor; opacity: 0.35; }
 .flow .flow-node.role-exchange .halo { stroke: var(--green); }
 .flow .flow-node.role-risk .halo { stroke: var(--red); }
-.flow .flow-node.on-path circle:not(.halo) { stroke: var(--green); stroke-width: 1.5; }
+.flow .flow-node.on-path circle:not(.halo) { stroke: var(--red); stroke-width: 1.5; }
 .flow .flow-cap { font-family: var(--sans); font-size: 11px; font-weight: 500; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
 .flow-tip {
   position: absolute; z-index: 2; pointer-events: none; width: 290px;
@@ -289,7 +289,7 @@ details.more summary:hover { color: var(--ink); }
 .flow-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 14px 10px; border-top: 1px solid var(--rule); font-size: 11px; color: var(--muted); }
 .flow-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .flow-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.flow-legend i.line { width: 16px; height: 2px; border-radius: 1px; background: var(--green); }
+.flow-legend i.line { width: 16px; height: 2px; border-radius: 1px; background: var(--red); }
 
 /* Body: graph left (primary), evidence rail right. */
 .split { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; align-items: start; }
