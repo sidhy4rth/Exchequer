@@ -236,18 +236,31 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
           const dx = Math.max(24, (x2 - x1) * 0.45)
           const d = `M${x1},${l.a.y} C${x1 + dx},${l.a.y} ${x2 - dx},${l.b.y} ${x2},${l.b.y}`
           const faded = lit && !(lit.has(l.a.node.id) && lit.has(l.b.node.id))
+          // Money moves along the line while it, or an address it touches,
+          // is under the pointer.
+          const moving = hover && (
+            hover.kind === 'link' ? hover.item === l
+              : (hover.item.node.id === l.a.node.id || hover.item.node.id === l.b.node.id)
+          )
+          const key = `${l.edge.source}>${l.edge.target}`
+          const enter = (e) => setHover({ kind: 'link', item: l, ...place(e) })
+          const move = (e) => setHover((h) => (h ? { ...h, ...place(e) } : h))
+          const leave = () => setHover(null)
           return (
-            <path
-              key={`${l.edge.source}>${l.edge.target}`}
-              d={d}
-              className={`flow-link${l.onPath ? ' on-path' : ''}${l.flagged ? ' flagged' : ''}`}
-              strokeWidth={l.onPath ? Math.max(2.4, l.width) : l.width}
-              style={{ opacity: faded ? 0.08 : undefined }}
-              markerEnd={l.onPath ? 'url(#arrow-path)' : 'url(#arrow)'}
-              onMouseEnter={(e) => setHover({ kind: 'link', item: l, ...place(e) })}
-              onMouseMove={(e) => setHover((h) => (h ? { ...h, ...place(e) } : h))}
-              onMouseLeave={() => setHover(null)}
-            />
+            <g key={key}>
+              <path
+                d={d}
+                className={`flow-link${l.onPath ? ' on-path' : ''}${l.flagged ? ' flagged' : ''}`}
+                strokeWidth={l.onPath ? Math.max(2.4, l.width) : l.width}
+                style={{ opacity: faded ? 0.08 : undefined }}
+                markerEnd={l.onPath ? 'url(#arrow-path)' : 'url(#arrow)'}
+              />
+              {moving && (
+                <path d={d} className={`flow-dash${l.onPath ? ' on-path' : ''}${l.flagged ? ' flagged' : ''}`} strokeWidth={Math.max(l.width, 1.6)} />
+              )}
+              {/* A wide invisible stroke so a thin line is easy to hover. */}
+              <path d={d} className="flow-hit" onMouseEnter={enter} onMouseMove={move} onMouseLeave={leave} />
+            </g>
           )
         })}
 
