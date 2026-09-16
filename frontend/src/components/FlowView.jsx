@@ -258,7 +258,11 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
                 markerEnd={l.onPath ? 'url(#arrow-path)' : 'url(#arrow)'}
               />
               {moving && (
-                <path d={d} className={`flow-dash${l.onPath ? ' on-path' : ''}${l.flagged ? ' flagged' : ''}`} strokeWidth={Math.max(l.width, 1.6)} />
+                <path
+                  d={d}
+                  className={`flow-dash${l.onPath ? ' on-path' : ''}${l.flagged ? ' flagged' : ''}`}
+                  strokeWidth={l.onPath ? Math.max(2.4, l.width) * 0.6 : l.flagged ? l.width * 0.6 : Math.max(l.width, 1.6)}
+                />
               )}
               {/* A wide invisible stroke so a thin line is easy to hover. */}
               <path d={d} className="flow-hit" onMouseEnter={enter} onMouseMove={move} onMouseLeave={leave} />

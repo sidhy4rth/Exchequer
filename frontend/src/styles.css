@@ -266,9 +266,11 @@ details.more summary:hover { color: var(--ink); }
 .flow .flow-hit:hover + .flow-link, .flow g:hover > .flow-link { opacity: 0.9; }
 /* Money on the move: a dash pattern running the way the transfer went. */
 .flow .flow-dash { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-dasharray: 3 9; animation: dashflow 0.6s linear infinite; pointer-events: none; }
-.flow .flow-dash.on-path { stroke: var(--red); }
-.flow .flow-dash.flagged { stroke: var(--amber); }
-@keyframes dashflow { to { stroke-dashoffset: -12; } }
+/* On a coloured line the dashes are cut *out* of it -- background-coloured
+   gaps travelling along the red (or amber) stroke -- so the movement shows on
+   a line that is already solid colour. */
+.flow .flow-dash.on-path, .flow .flow-dash.flagged { stroke: var(--panel); stroke-dasharray: 5 9; stroke-linecap: butt; }
+@keyframes dashflow { to { stroke-dashoffset: -14; } }
 .flow .flow-node { cursor: copy; transition: opacity var(--fast) var(--ease); }
 .flow .flow-node .halo { fill: none; stroke: currentColor; opacity: 0.35; }
 .flow .flow-node.role-exchange .halo { stroke: var(--green); }
