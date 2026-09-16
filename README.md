@@ -1,5 +1,7 @@
 # Exchequer
 
+[![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
+
 **Traces cryptocurrency fraud from a victim-reported wallet address to the exchange it was cashed out through.**
 
 Built for Smart India Hackathon 2026 — problem statement **SIH26183** (Ministry of Home Affairs).
