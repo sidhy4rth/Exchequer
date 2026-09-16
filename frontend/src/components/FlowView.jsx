@@ -131,7 +131,7 @@ function layout(data, tracePath, direction, width) {
     // Adjacent addresses with the same caption would print it on top of
     // itself when the rows are tighter than a line of text; say it once, with
     // a count, on the first of the run.
-    if (rowGap < 14) {
+    if (rowGap < 24) {
       let run = null
       ordered.forEach((n) => {
         const p = placed.get(n.id)
