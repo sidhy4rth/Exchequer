@@ -70,6 +70,7 @@ class Case(Base):
             "created_at": self.created_at,
             "chain": self._normalise_chain(result.get("chain")),
             "asset": result.get("asset"),
+            "direction": result.get("direction", "outgoing"),
             "exchange": result.get("exchange"),
             "confidence": result.get("confidence"),
             "flags": result.get("flags", []),

@@ -68,7 +68,7 @@ export default function Home() {
         })
       })
       .catch(() => setHealth({ status: 'down' }))
-    fetchCases(12).then((d) => setCases(d.cases)).catch(() => {})
+    fetchCases(20).then((d) => setCases(d.cases)).catch(() => {})
   }, [])
 
   const chains = health?.chains ? Object.values(health.chains) : []
@@ -132,10 +132,7 @@ export default function Home() {
         <section className="intake">
           <div className="card">
             <div className="body">
-              <p className="lede">Follow a reported wallet's money to the exchange it left through — as evidence an officer can attach to a request.</p>
-              <p className="note">
-                Every attribution is an exact match against a published exchange label, or an inference that says so and scores lower. Every pattern prints the thresholds it applied. The tool states what it did not look at. It names an exchange, never a person.
-              </p>
+              <p className="lede">Follow a reported wallet's money to the exchange it left through.</p>
               <form onSubmit={submit}>
                 <div className="row">
                   <input
@@ -188,81 +185,79 @@ export default function Home() {
           </div>
 
           <div className="card">
-            <div className="head"><span className="micro">Providers</span><span className="note">{health ? `${totalLabels} exchange labels` : ''}</span></div>
+            <div className="head"><span className="micro">Coverage</span><span className="note">{health ? `${totalLabels} exchange labels` : ''}</span></div>
             <div className="body status">
               {!health && <span className="note">Connecting…</span>}
               {backendDown && <div className="line"><span className="dot down" /><span>Backend unreachable</span><span /></div>}
               {chains.map((c) => (
                 <div className="line" key={c.key}>
                   <span className={`dot ${c.ready ? 'live' : 'down'}`} />
-                  <span>{c.name} <span className="note">via {c.provider}</span></span>
+                  <span>{c.name}</span>
                   <span className="n">{c.exchange_labels} labels · {(c.risk_labels?.sanctioned ?? 0) + (c.risk_labels?.mixer ?? 0)} screened</span>
                 </div>
               ))}
-              {health?.api_budget?.pacers && Object.values(health.api_budget.pacers).map((p, i) => (
-                <div className="line" key={i}><span className="dot" /><span className="note">request pacing</span><span className="n">{p.interval}s · {p.rate_limit_penalties} refusals</span></div>
-              ))}
             </div>
           </div>
         </section>
 
-
-        <section className="coverage">
-          <div className="card">
-            <div className="head"><span className="micro">Exchange labels</span><span className="note">exact-match attribution</span></div>
-            <table>
-              <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Wallets</th><th>Exchanges</th></tr></thead>
-              <tbody>
-                {chains.map((c) => (
-                  <tr key={c.key}>
-                    <td>{c.name}</td>
-                    <td className="num">{coverage[c.key]?.exchanges?.count ?? c.exchange_labels}</td>
-                    <td className="exchanges">{coverage[c.key]?.exchanges?.exchanges?.join(', ') ?? '…'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="card">
-            <div className="head"><span className="micro">Sanctions and mixer screening</span><span className="note">OFAC SDN list</span></div>
-            <table>
-              <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th><th>Screened</th></tr></thead>
-              <tbody>
-                {chains.map((c) => (
-                  <tr key={c.key}>
-                    <td>{c.name}</td>
-                    <td className="num">{coverage[c.key]?.risk?.counts_by_category?.sanctioned ?? c.risk_labels?.sanctioned ?? 0}</td>
-                    <td className="num">{coverage[c.key]?.risk?.counts_by_category?.mixer ?? c.risk_labels?.mixer ?? 0}</td>
-                    <td>{(coverage[c.key]?.risk?.screened ?? (c.risk_labels?.sanctioned > 0)) ? 'yes' : 'no'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="note" style={{ padding: '8px 14px' }}>The mixer count is zero because every mixer on the current SDN list is a Bitcoin service; the stop-at-a-mixer rule is built and tested.</p>
-          </div>
-          <div className="card">
-            <div className="head"><span className="micro">What a trace does</span></div>
-            <div className="body">
-              <div className="kv"><span className="k">Attribution</span><span className="v">exact label match, or a stated inference</span></div>
-              <div className="kv"><span className="k">Patterns</span><span className="v">fixed arithmetic, thresholds printed</span></div>
-              <div className="kv"><span className="k">Time rule</span><span className="v">only transfers after the funds arrived</span></div>
-              <div className="kv"><span className="k">Stops at</span><span className="v">exchanges, mixers, routers, service contracts</span></div>
-              <div className="kv"><span className="k">Score</span><span className="v">three weighted inputs; null when nothing matched</span></div>
-              <div className="kv"><span className="k">Never</span><span className="v">a person, a model, a guess</span></div>
+        <details className="card sec">
+          <summary><span className="micro">What the label files cover</span><span className="note">exchanges by chain · OFAC SDN screening · what a trace does</span></summary>
+          <div className="coverage">
+            <div>
+              <div className="head"><span className="micro">Exchange labels</span><span className="note">exact-match attribution</span></div>
+              <table>
+                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Wallets</th><th>Exchanges</th></tr></thead>
+                <tbody>
+                  {chains.map((c) => (
+                    <tr key={c.key}>
+                      <td>{c.name}</td>
+                      <td className="num">{coverage[c.key]?.exchanges?.count ?? c.exchange_labels}</td>
+                      <td className="exchanges">{coverage[c.key]?.exchanges?.exchanges?.join(', ') ?? '…'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div className="head"><span className="micro">Sanctions and mixer screening</span><span className="note">OFAC SDN list</span></div>
+              <table>
+                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th></tr></thead>
+                <tbody>
+                  {chains.map((c) => (
+                    <tr key={c.key}>
+                      <td>{c.name}</td>
+                      <td className="num">{coverage[c.key]?.risk?.counts_by_category?.sanctioned ?? c.risk_labels?.sanctioned ?? 0}</td>
+                      <td className="num">{coverage[c.key]?.risk?.counts_by_category?.mixer ?? c.risk_labels?.mixer ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="note" style={{ padding: '8px 14px' }}>Every mixer on the current SDN list is a Bitcoin service, so the count is zero; the stop-at-a-mixer rule is built and tested.</p>
+            </div>
+            <div>
+              <div className="head"><span className="micro">What a trace does</span></div>
+              <div className="body">
+                <div className="kv"><span className="k">Attribution</span><span className="v">exact label match, or a stated inference</span></div>
+                <div className="kv"><span className="k">Patterns</span><span className="v">fixed arithmetic, thresholds printed</span></div>
+                <div className="kv"><span className="k">Time rule</span><span className="v">only transfers after the funds arrived</span></div>
+                <div className="kv"><span className="k">Stops at</span><span className="v">exchanges, mixers, routers, service contracts</span></div>
+                <div className="kv"><span className="k">Score</span><span className="v">three weighted inputs; null when nothing matched</span></div>
+                <div className="kv"><span className="k">Never</span><span className="v">a person, a model, a guess</span></div>
+              </div>
             </div>
           </div>
-        </section>
+        </details>
 
         <section>
           <div className="card">
-            <div className="head"><span className="micro">Stored cases · {cases.length}</span><span className="note">evidence as it stood when it was taken; opening one does not re-trace</span></div>
+            <div className="head"><span className="micro">Stored cases · {cases.length}</span><span className="note">opening one does not re-trace</span></div>
             {cases.length === 0 ? <p className="note" style={{ padding: 12 }}>No stored cases yet.</p> : (
               <table className="cases-table">
                 <thead><tr><th>Reported address</th><th>Chain</th><th>Asset</th><th>Result</th><th style={{ textAlign: 'right' }}>Confidence</th><th style={{ textAlign: 'right' }}>Addresses</th><th>Flags</th><th>Traced</th></tr></thead>
                 <tbody>
                   {cases.map((c) => (
                     <tr className="row" key={c.case_id} onClick={() => navigate(`/case/${c.case_id}`)} title={`Open stored case for ${c.address}`}>
-                      <td className="mono">{middle(c.address, 12, 10)}</td>
+                      <td className="mono">{middle(c.address, 12, 10)}{c.direction === 'incoming' && <span className="pill navy" style={{ marginLeft: 8 }}>reverse</span>}</td>
                       <td>{c.chain}</td>
                       <td className="mono">{c.asset ?? '—'}</td>
                       <td className={c.exchange ? '' : 'none'}>{c.exchange ?? 'no match'}</td>

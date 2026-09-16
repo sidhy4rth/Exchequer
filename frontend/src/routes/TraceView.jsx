@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { fetchCase, fetchRelatedCases, traceAddress } from '../api'
 import GraphView from '../components/GraphView'
+import FlowView from '../components/FlowView'
 import ThemeToggle from '../components/ThemeToggle'
 import ExportButton from '../components/ExportButton'
 
@@ -12,9 +13,27 @@ const COMPONENT_NAME = {
   amount_correlation: 'Amount correlation',
   match_directness: 'Match directness',
 }
-// Rough request counts by depth, measured on the demo traces (README, "Why a
-// trace takes the time it does"). Shown while loading so a wait has a size.
-const EXPECTED_REQUESTS = { 1: 2, 2: 12, 3: 35, 4: 75, 5: 150, 6: 300 }
+
+/** Truncation reasons come back one sentence per address. Grouped by kind
+ * they read as a summary rather than a wall. */
+function groupReasons(reasons) {
+  const counts = { depth: 0, nodes: 0, fanout: 0, service: 0, fetch: 0, other: [] }
+  ;(reasons ?? []).forEach((r) => {
+    if (r.startsWith('depth limit')) counts.depth += 1
+    else if (r.startsWith('node limit')) counts.nodes += 1
+    else if (r.startsWith('fan-out limit')) counts.fanout += 1
+    else if (r.includes('pays out to many addresses')) counts.service += 1
+    else if (r.includes('could not be fetched')) counts.fetch += 1
+    else counts.other.push(r)
+  })
+  const out = []
+  if (counts.depth) out.push('the hop limit was reached')
+  if (counts.nodes) out.push('the address limit was reached')
+  if (counts.fanout) out.push(`only the 10 largest counterparties were followed at ${counts.fanout} address${counts.fanout === 1 ? '' : 'es'}`)
+  if (counts.service) out.push(`${counts.service} service contract${counts.service === 1 ? '' : 's'} not expanded`)
+  if (counts.fetch) out.push(`${counts.fetch} address${counts.fetch === 1 ? '' : 'es'} could not be fetched`)
+  return out.concat(counts.other)
+}
 
 /** OFAC stamps its list "MM/DD/YYYY"; an Indian reader parses that as day-first.
  * Spell the month out so "09/04/2026" cannot be read as 9 April. */
@@ -87,6 +106,8 @@ export default function TraceView() {
   const [loading, setLoading] = useState(true)
   const [elapsed, setElapsed] = useState(0)
   const [revealed, setRevealed] = useState(0)
+  const [showAll, setShowAll] = useState(false)
+  const [view, setView] = useState('flow') // 'flow' | 'bubbles'
   const timers = useRef([])
 
   // Stored cases that share an intermediary with this one. Loaded after the
@@ -103,7 +124,7 @@ export default function TraceView() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true); setError(null); setResult(null); setRevealed(0); setElapsed(0)
+    setLoading(true); setError(null); setResult(null); setRevealed(0); setElapsed(0); setShowAll(false)
     const started = Date.now()
     const tick = setInterval(() => setElapsed((Date.now() - started) / 1000), 200)
     if (justTraced) {
@@ -141,12 +162,16 @@ export default function TraceView() {
     const onPath = new Set()
     const path = result.trace_path ?? []
     for (let i = 0; i < path.length - 1; i += 1) onPath.add(`${path[i].address}>${path[i + 1].address}`)
+    const backwards = result.direction === 'incoming'
     return result.graph.edges
       .map((e) => {
         const to = byId.get(e.target) ?? {}
+        const from = byId.get(e.source) ?? {}
         return {
           ...e,
-          hop: to.depth ?? 1,
+          // How far from the reported address this transfer sits: the far end
+          // of the edge, which is the sender on a reverse trace.
+          hop: (backwards ? from.depth : to.depth) ?? 1,
           toLabel: to.label,
           toKind: to.risk_category ? 'red' : to.exchange ? 'green' : '',
           onPath: onPath.has(`${e.source}>${e.target}`),
@@ -179,7 +204,21 @@ export default function TraceView() {
   const path = result?.trace_path ?? []
   const pathHashes = path.reduce((n, step) => n + (step.tx_hashes?.length ?? 0), 0)
   const primaryInference = inferred.find((m) => m.address === result?.exchange_address)
-  const shown = hops.slice(0, revealed)
+  // The rows worth reading first: the attributed path, anything flagged or
+  // red, any swap. With no exchange, the largest transfers instead.
+  const notable = useMemo(() => {
+    const picked = hops.filter((h) => h.onPath || h.toKind === 'red' || h.swap || h.flags?.length)
+    return picked.length ? picked : hops.slice(0, 12)
+  }, [hops])
+  const visible = showAll ? hops : notable
+  const shown = visible.slice(0, revealed)
+  const grouped = groupReasons(result?.truncation_reasons)
+  const scopeLine = result ? [
+    result.transfers_excluded_by_time ? `${result.transfers_excluded_by_time} pre-arrival transfers left out` : null,
+    serviceContracts.length ? `${serviceContracts.length} service contract${serviceContracts.length === 1 ? '' : 's'}` : null,
+    swaps.length ? `${swaps.length} swap${swaps.length === 1 ? '' : 's'}` : null,
+    result.evidence?.count ? `${result.evidence.count} responses hashed` : null,
+  ].filter(Boolean).join(' · ') : ''
 
   const retrace = useCallback(() => {
     if (!result) return
@@ -189,6 +228,7 @@ export default function TraceView() {
     })
     navigate(`/trace/${result.address}?${q}`)
   }, [navigate, result])
+
 
   return (
     <div className="results">
@@ -229,7 +269,7 @@ export default function TraceView() {
               <p className="note">
                 {stored
                   ? 'Read from the case store; the chain is not consulted.'
-                  : `Expect roughly ${EXPECTED_REQUESTS[depth] ?? '—'} provider requests at ${depth} hop${depth === 1 ? '' : 's'} — about two per second on a free key. Every request is one address's transfer history.`}
+                  : 'One request per address, about two a second on a free key. Instant when the addresses have been seen before.'}
               </p>
             </div>
           </div>
@@ -258,87 +298,63 @@ export default function TraceView() {
         )}
 
         {result && (
-          <section className="finding">
-            {/* 1. Where did the money go */}
-            <div className="card">
-              <div className="body">
-                <span className="q">{reverse ? 'Where the money came from' : 'Where the money went'}</span>
-                {result.exchange ? (
-                  <>
-                    <h2 className="green">{result.exchange}</h2>
-                    <div className="basis">
-                      {result.attribution_inferred
-                        ? <><strong>Inferred, not labelled.</strong> Probable {result.exchange} deposit address — every outgoing transfer it made went to a labelled {result.exchange} wallet. Evidence below.</>
-                        : <><strong>Exact match</strong> against the published label <span className="mono">{result.exchange_label}</span>.</>}
-                    </div>
-                    <Address value={result.exchange_address} head={14} tail={12} />
-                    <div className="metrics">
-                      <div className="metric"><div className="k">Distance</div><div className="v">{result.hop_count} hop{result.hop_count === 1 ? '' : 's'}{reverse ? ' up' : ''}</div></div>
-                      <div className="metric"><div className="k">{reverse ? 'Sent' : 'Arrived'}</div><div className="v">{num(result.value_received_native ?? 0)} {unit}</div></div>
-                      <div className="metric"><div className="k">Basis</div><div className="v" style={{ fontFamily: 'var(--sans)', fontSize: 12.5 }}>{result.attribution_inferred ? 'inference' : 'label file'}</div></div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="none">{reverse ? 'No source exchange matched' : 'No exchange matched'}</h2>
-                    <p className="note">{result.message ?? 'No address in the trace is in a published exchange label file. This is a finding, not a failure, and it is not scored.'}</p>
-                  </>
-                )}
-              </div>
+          <section className="card finding-bar">
+            {/* The answer */}
+            <div className="answer">
+              <span className="q">{reverse ? 'Where the money came from' : 'Where the money went'}</span>
+              {result.exchange ? (
+                <>
+                  <h2 className="green">{result.exchange}</h2>
+                  <div className="basis">
+                    {result.attribution_inferred
+                      ? <><strong>Inferred, not labelled</strong> — probable deposit address</>
+                      : <><strong>Exact match</strong> · label <span className="mono">{result.exchange_label}</span></>}
+                    {' · '}{result.hop_count} hop{result.hop_count === 1 ? '' : 's'}{reverse ? ' upstream' : ''}
+                    {' · '}<span className="num">{num(result.value_received_native ?? 0)} {unit}</span> {reverse ? 'sent' : 'arrived'}
+                  </div>
+                  <div className="cite">
+                    <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
+                    <Address value={result.exchange_address} head={22} tail={20} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="none">{reverse ? 'No source exchange matched' : 'No exchange matched'}</h2>
+                  <p className="note">{result.message ?? 'No address in the trace is in a published exchange label file. This is a finding, not a failure, and it is not scored.'}</p>
+                </>
+              )}
             </div>
 
-            {/* 2. How sure, and why */}
-            <div className="card">
-              <div className="body">
-                <span className="q">How sure, and why</span>
-                {result.confidence == null ? (
-                  <>
-                    <div className="score"><span className="big na">n/a</span><span className="band">not applicable</span></div>
-                    <p className="note">No exchange was attributed, so there is nothing to score. A number here would be over-read; null is the honest value.</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="score">
-                      <span className={`big ${result.confidence_detail?.band ?? ''}`}>{result.confidence.toFixed(2)}</span>
-                      <span className="band">{result.confidence_detail?.band} · weighted sum of the three inputs below, nothing else</span>
-                    </div>
+            {/* How sure */}
+            <div className="sure">
+              <span className="q">How sure</span>
+              {result.confidence == null ? (
+                <div className="score"><span className="big na">n/a</span><span className="band">nothing attributed, so nothing to score</span></div>
+              ) : (
+                <>
+                  <div className="score">
+                    <span className={`big ${result.confidence_detail?.band ?? ''}`}>{result.confidence.toFixed(2)}</span>
+                    <span className="band">{String(result.confidence_detail?.band ?? '').replace(/^./, (c) => c.toUpperCase())}</span>
+                  </div>
+                  <div className="components">
                     {components.map((c) => (
-                      <div className="component" key={c.name}>
+                      <div className="component" key={c.name} title={c.explanation}>
                         <span className="k">{COMPONENT_NAME[c.name] ?? c.name}</span>
                         <span className="bar"><span style={{ width: `${Math.round(c.raw_value * 100)}%` }} /></span>
                         <span className="v">{c.raw_value.toFixed(2)} × {c.weight}</span>
-                        <span className="why">{c.explanation}</span>
                       </div>
                     ))}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* 3. What exactly to send */}
-            <div className="card send">
-              <div className="body">
-                <span className="q">What to send to the exchange</span>
-                {result.exchange ? (
-                  <>
-                    <div className="cite">
-                      <span className="note">Address to cite in the request{result.attribution_inferred ? ' (inferred — ask whether it is theirs)' : ''}:</span>
-                      <Address value={result.exchange_address} head={22} tail={20} />
+                  </div>
+                  <details className="more">
+                    <summary>How the score is built</summary>
+                    <div className="why-list">
+                      {components.map((c) => <p key={c.name}><strong>{COMPONENT_NAME[c.name] ?? c.name}.</strong> {c.explanation}</p>)}
+                      <p className="note">The score is the weighted sum of these three inputs and nothing else. A pattern never moves it. An exchange match identifies where funds arrived, not who controls the account; only the exchange can link an address to a customer, on a lawful request (PMLA s.12, s.50).</p>
+                      {primaryInference && <p className="confirm">{primaryInference.evidence?.confirmation}</p>}
                     </div>
-                    <p className="note">
-                      The path below carries {pathHashes} transaction hash{pathHashes === 1 ? '' : 'es'} over {Math.max(path.length - 1, 0)} hop{path.length - 1 === 1 ? '' : 's'}; the report lists every one, with amounts and times, so the exchange can match them against its own records. Only the exchange can link an address to a customer, on a lawful request (PMLA s.12, s.50).
-                    </p>
-                    {primaryInference && <div className="confirm">{primaryInference.evidence?.confirmation}</div>}
-                  </>
-                ) : (
-                  <p className="note">
-                    There is no exchange to write to. The report still lists every address and transaction in the trace, so the {result.graph.nodes.length} addresses here can be re-checked on a public explorer{swaps.some((s) => s.output_read) ? ', and the swap below says which asset to re-run on' : ''}.
-                  </p>
-                )}
-                <div className="buttons">
-                  <ExportButton caseId={result.case_id} address={address} />
-                </div>
-              </div>
+                  </details>
+                </>
+              )}
             </div>
           </section>
         )}
@@ -349,17 +365,24 @@ export default function TraceView() {
               <div className="card graph-card">
                 <div className="head">
                   <span className="micro">Money flow · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
-                  <span className="note">bubble area = value moved · arrows point the way the money went</span>
+                  <span className="seg">
+                    <button className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
+                    <button className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
+                  </span>
                 </div>
-                <div className="stage">
-                  <GraphView data={result.graph} tracePath={result.trace_path} unit={unit} />
-                </div>
+                {view === 'flow'
+                  ? <FlowView data={result.graph} tracePath={result.trace_path} unit={unit} direction={result.direction} />
+                  : <div className="stage"><GraphView data={result.graph} tracePath={result.trace_path} unit={unit} /></div>}
               </div>
 
               <div className="card">
                 <div className="head">
-                  <span className="micro">Transfer feed · in the order the traversal found them</span>
-                  <span className="note">{shown.length < hops.length ? `${shown.length} / ${hops.length}` : `${hops.length}`}</span>
+                  <span className="micro">{showAll ? 'All transfers' : 'Transfers that matter'} · {visible.length}</span>
+                  {hops.length > notable.length && (
+                    <button className="quiet" onClick={() => { setShowAll((v) => !v); setRevealed(hops.length) }}>
+                      {showAll ? 'Show fewer' : `Show all ${hops.length}`}
+                    </button>
+                  )}
                 </div>
                 <div className="feed">
                   {hops.length === 0 && (
@@ -381,7 +404,7 @@ export default function TraceView() {
                         <div className="sub">
                           <span>{h.tx_count} transfer{h.tx_count === 1 ? '' : 's'}{h.internal_tx_count ? ` (${h.internal_tx_count} by contract call)` : ''}</span>
                           {h.last_seen ? <span>{when(h.last_seen)}</span> : null}
-                          {h.onPath && <span className="pill green">on the attributed path</span>}
+                          {h.onPath && <span className="pill green">attributed path</span>}
                           {h.swap && <span className="pill amber">swap at {h.swap.router_label}</span>}
                           {h.flags?.map((f) => <span className="pill amber" key={f}>{PATTERN_NAME[f] ?? f}</span>)}
                         </div>
@@ -394,48 +417,9 @@ export default function TraceView() {
             </div>
 
             <aside className="rail">
-              {/* 4. What the tool did not look at */}
-              <div className="card">
-                <div className="head"><span className="micro">What the tool did not look at</span><span className="note">{result.truncated ? 'truncated' : 'complete within limits'}</span></div>
-                <div className="body">
-                  <div className="exclusion">
-                    <span className={`n ${result.transfers_excluded_by_time ? '' : 'zero'}`}>{result.transfers_excluded_by_time ?? 0}</span>
-                    <span className="t">transfers made before the traced funds arrived<small>Money cannot be forwarded before it is received; these were left out.</small></span>
-                  </div>
-                  <div className="exclusion">
-                    <span className={`n ${serviceContracts.length ? '' : 'zero'}`}>{serviceContracts.length}</span>
-                    <span className="t">service contracts not expanded<small>Contracts paying out to many addresses (WETH, pools, routers): their payouts are other people's money.{serviceContracts.length ? ' ' : ''}{serviceContracts.map((n) => <Address key={n.id} value={n.id} head={8} tail={6} />).reduce((acc, el, i) => (i ? [...acc, ' ', el] : [el]), [])}</small></span>
-                  </div>
-                  <div className="exclusion">
-                    <span className={`n ${swaps.length ? '' : 'zero'}`}>{swaps.length}</span>
-                    <span className="t">swaps detected, not followed<small>The trace follows one asset; a swap is recorded and the output asset named, never crossed.</small></span>
-                  </div>
-                  <div className="exclusion">
-                    <span className="n">{result.api_calls}</span>
-                    <span className="t">provider requests<small>{result.graph.nodes.length} addresses, {result.graph.edges.length} aggregated transfers, {result.transfers?.length ?? 0} individual transactions, depth {result.depth_reached} reached of {stored ? (result.max_depth ?? '—') : depth}.</small></span>
-                  </div>
-                  {result.evidence?.count > 0 && (
-                    <div className="exclusion">
-                      <span className="n">{result.evidence.count}</span>
-                      <span className="t">provider responses hashed as evidence<small>
-                        Every response this trace was computed from, SHA-256 at arrival with its request and UTC time
-                        {result.evidence.from_cache > 0 ? ` (${result.evidence.from_cache} re-used from cache)` : ''}. Manifest{' '}
-                        <span className="mono" title={result.evidence.manifest_sha256}>{result.evidence.manifest_sha256.slice(0, 16)}…</span>; the full list is Appendix C of the report, which carries its own content hash.
-                      </small></span>
-                    </div>
-                  )}
-                  {result.truncation_reasons?.length > 0 && (
-                    <ul className="reasons">
-                      {result.truncation_reasons.map((r) => <li key={r}>{r}</li>)}
-                    </ul>
-                  )}
-                  {result.warnings?.length > 0 && result.warnings.map((w) => <p className="note" key={w}>! {w}</p>)}
-                </div>
-              </div>
-
               {inferred.length > 0 && (
-                <div className="card">
-                  <div className="head"><span className="micro">Inferred deposit addresses · {inferred.length}</span><span className="pill amber">inference</span></div>
+                <details className="card sec" open={Boolean(result.attribution_inferred)}>
+                  <summary><span className="micro">Inferred deposit addresses · {inferred.length}</span><span className="pill amber">inference</span></summary>
                   <div className="body">
                     {inferred.map((m) => {
                       const e = m.evidence ?? {}
@@ -446,25 +430,22 @@ export default function TraceView() {
                           <div className="thresholds">
                             <span className="tk">outgoing transfers</span><span className="tv">{e.sweep_count}{e.outgoing_history_capped ? ' (newest only)' : ''}</span>
                             <span className="tk">all to</span><span className="tv">{e.sweep_destination_label}</span>
-                            <span className="tk">share to that wallet</span><span className="tv">100%</span>
                             <span className="tk">total swept</span><span className="tv">{num(e.total_swept_native ?? 0)} {unit}</span>
                             {e.current_balance_native != null && <><span className="tk">current balance</span><span className="tv">{num(e.current_balance_native)} {unit}</span></>}
                             {e.first_sweep && <><span className="tk">sweeps between</span><span className="tv">{when(e.first_sweep).slice(0, 10)} – {when(e.last_sweep).slice(0, 10)}</span></>}
                           </div>
-                          <div className="desc">{e.confirmation}</div>
                         </div>
                       )
                     })}
                   </div>
-                </div>
+                </details>
               )}
 
-              <div className="card">
-                <div className="head"><span className="micro">Patterns · {findings.length}</span>{findings.length > 0 && <span className="pill amber">reason to look closer</span>}</div>
-                <div className="body">
-                  {findings.length === 0
-                    ? <p className="note">No rule matched. The traced transfers did not meet the peel-chain or amount-split thresholds.</p>
-                    : findings.map((f) => (
+              {findings.length > 0 ? (
+                <details className="card sec" open>
+                  <summary><span className="micro">Patterns · {findings.length}</span><span className="pill amber">reason to look closer</span></summary>
+                  <div className="body">
+                    {findings.map((f) => (
                       <div className="rule-block" key={f.pattern}>
                         <div className="top"><span className="nm amber">{PATTERN_NAME[f.pattern] ?? f.pattern}</span><span className="st">strength {f.strength}</span></div>
                         <div className="desc">{f.description}</div>
@@ -477,66 +458,64 @@ export default function TraceView() {
                         )}
                       </div>
                     ))}
-                  {findings.length > 0 && <p className="note">Measured on real wallets, the amount-split shape appears within three hops of about one in nine ordinary high-volume wallets. A pattern never moves the score.</p>}
-                </div>
-              </div>
+                    <p className="note">A pattern is a shape, not a verdict, and never moves the score.</p>
+                  </div>
+                </details>
+              ) : (
+                <div className="card sec flat"><span className="micro">Patterns · none</span><span className="note">no peel chain or amount split</span></div>
+              )}
 
               {swaps.length > 0 && (
-                <div className="card">
-                  <div className="head"><span className="micro">Swaps · {swaps.length}</span><span className="note">the trace changes asset here</span></div>
+                <details className="card sec" open={!result.exchange}>
+                  <summary><span className="micro">Swaps · {swaps.length}</span><span className="note">the trace changes asset here</span></summary>
                   <div className="body">
                     {swaps.map((s) => (
                       <div className="swap" key={s.tx}>
                         <Address value={s.sender} head={8} tail={6} /> sent <span className="num">{num(s.amount_in)} {s.asset_in}</span> to <strong>{s.router_label}</strong>
                         {s.output_read
-                          ? <> and received <span className="num">{s.amount_out != null ? num(s.amount_out) : s.amount_out_units} {s.asset_out}</span> back in the same transaction. Re-run on that asset from the sender to follow the money further.</>
-                          : <>. No token came back to the sender in the receipt — what a swap into the native coin looks like — so the output is reported as unread, not guessed.</>}
+                          ? <> and got <span className="num">{s.amount_out != null ? num(s.amount_out) : s.amount_out_units} {s.asset_out}</span> back. Re-run on {s.asset_out} from the sender to follow it further.</>
+                          : <>. Nothing came back to the sender in the receipt — a swap into the native coin looks like this — so the output is unread, not guessed.</>}
                         <div className="grid">
-                          <span className="k">router</span><Address value={s.router_address} head={10} tail={8} />
                           <span className="k">tx</span><Address value={s.tx} head={12} tail={10} />
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
+                </details>
               )}
 
-              {/* 5. One complaint, or a campaign */}
-              <div className="card">
-                <div className="head"><span className="micro">Related cases · {related.length}</span><span className="note">from the case store, no re-tracing</span></div>
-                <div className="body">
-                  {related.length === 0
-                    ? <p className="note">No stored trace of another reported address passed through the same wallets as this one. Exchange wallets, routers and service contracts are never counted.</p>
-                    : (
-                      <>
-                        {related.slice(0, 8).map((c) => (
-                          <div className="related-case" key={c.case_id}>
-                            <div className="top">
-                              <a href={`/case/${c.case_id}`} className="mono" title={c.reported_address}>{middle(c.reported_address, 10, 8)}</a>
-                              <span className="st">{c.shared_count} shared wallet{c.shared_count === 1 ? '' : 's'}</span>
-                            </div>
-                            <div className="ent">{c.exchange ? `reached ${c.exchange}` : 'no exchange matched'} · traced {String(c.traced_at).slice(0, 10)}</div>
-                            {c.shared.slice(0, 4).map((s) => (
-                              <div className="row" key={s.address}>
-                                <Address value={s.address} head={10} tail={8} />
-                                <span className="via">{s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}{num(s.value_in_native)} {c.asset} · {s.depth} hop{s.depth === 1 ? '' : 's'}</span>
-                              </div>
-                            ))}
-                            {c.shared_count > 4 && <div className="ent">…and {c.shared_count - 4} more shared wallets</div>}
+              {related.length > 0 ? (
+                <details className="card sec" open>
+                  <summary><span className="micro">Related cases · {related.length}</span><span className="note">same wallets, other complaints</span></summary>
+                  <div className="body">
+                    {related.slice(0, 8).map((c) => (
+                      <div className="related-case" key={c.case_id}>
+                        <div className="top">
+                          <a href={`/case/${c.case_id}`} className="mono" title={c.reported_address}>{middle(c.reported_address, 10, 8)}</a>
+                          <span className="st">{c.shared_count} shared wallet{c.shared_count === 1 ? '' : 's'}</span>
+                        </div>
+                        <div className="ent">{c.exchange ? `reached ${c.exchange}` : 'no exchange matched'} · traced {String(c.traced_at).slice(0, 10)}</div>
+                        {c.shared.slice(0, 3).map((s) => (
+                          <div className="row" key={s.address}>
+                            <Address value={s.address} head={10} tail={8} />
+                            <span className="via">{s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}{num(s.value_in_native)} {c.asset}</span>
                           </div>
                         ))}
-                        {related.length > 8 && <p className="note">…and {related.length - 8} more related cases. Full list: <code>GET /cases/correlate?case_id={result.case_id}</code>.</p>}
-                        <p className="note">Two victims who cashed out at the same exchange share a bank, not an offender; only unlabelled wallets and probable deposit addresses count.</p>
-                      </>
-                    )}
-                </div>
-              </div>
+                        {c.shared_count > 3 && <div className="ent">…and {c.shared_count - 3} more</div>}
+                      </div>
+                    ))}
+                    {related.length > 8 && <p className="note">…and {related.length - 8} more related cases.</p>}
+                    <p className="note">Only unlabelled wallets and probable deposit addresses count; a shared exchange is a shared bank, not a shared offender.</p>
+                  </div>
+                </details>
+              ) : (
+                <div className="card sec flat"><span className="micro">Related cases · none</span><span className="note">no other stored complaint shares a wallet</span></div>
+              )}
 
               {reverse && funders.length > 0 && (
-                <div className="card">
-                  <div className="head"><span className="micro">Funded this address · {funders.length}</span><span className="note">{funders.filter((f) => f.exchange).length} are exchange withdrawals</span></div>
+                <details className="card sec" open>
+                  <summary><span className="micro">Funded this address · {funders.length}</span><span className="note">{funders.filter((f) => f.exchange).length} are exchange withdrawals</span></summary>
                   <div className="body">
-                    <p className="note">Each address paid the reported one directly. Where that address belongs to an offender, these are candidate victims of the same operation — but a sender may equally be the offender's own wallet or an exchange withdrawal, and the exchanges are marked.</p>
                     {funders.map((f) => (
                       <div className="funder" key={f.address}>
                         <Address value={f.address} head={12} tail={10} />
@@ -548,9 +527,42 @@ export default function TraceView() {
                         </span>
                       </div>
                     ))}
+                    <p className="note">Candidate victims where the reported address is an offender's — but a sender may equally be the offender's own wallet; the exchanges are marked.</p>
                   </div>
-                </div>
+                </details>
               )}
+
+              <details className="card sec">
+                <summary><span className="micro">Scope and evidence</span><span className="note">{result.truncated ? 'truncated' : 'complete within limits'}</span></summary>
+                <div className="body">
+                  <p className="note">{scopeLine || 'Nothing was left out.'}</p>
+                  <div className="exclusion">
+                    <span className={`n ${result.transfers_excluded_by_time ? '' : 'zero'}`}>{result.transfers_excluded_by_time ?? 0}</span>
+                    <span className="t">transfers before the traced funds arrived<small>Money cannot be forwarded before it is received; these were left out.</small></span>
+                  </div>
+                  <div className="exclusion">
+                    <span className={`n ${serviceContracts.length ? '' : 'zero'}`}>{serviceContracts.length}</span>
+                    <span className="t">service contracts not expanded<small>WETH, pools, routers: their payouts are other people's money.</small></span>
+                  </div>
+                  <div className="exclusion">
+                    <span className="n">{result.api_calls}</span>
+                    <span className="t">provider requests<small>{result.transfers?.length ?? 0} individual transactions; depth {result.depth_reached} reached of {result.max_depth ?? depth}.</small></span>
+                  </div>
+                  {result.evidence?.count > 0 && (
+                    <div className="exclusion">
+                      <span className="n">{result.evidence.count}</span>
+                      <span className="t">responses hashed as evidence<small>
+                        SHA-256 at arrival{result.evidence.from_cache > 0 ? ` (${result.evidence.from_cache} from cache, with their original time)` : ''}. Manifest{' '}
+                        <span className="mono" title={result.evidence.manifest_sha256}>{result.evidence.manifest_sha256.slice(0, 16)}…</span>; full list in the report, which carries its own content hash.
+                      </small></span>
+                    </div>
+                  )}
+                  {grouped.length > 0 && (
+                    <ul className="reasons">{grouped.map((r) => <li key={r}>{r}</li>)}</ul>
+                  )}
+                  {result.warnings?.length > 0 && result.warnings.map((w) => <p className="note" key={w}>! {w}</p>)}
+                </div>
+              </details>
             </aside>
           </section>
         )}
