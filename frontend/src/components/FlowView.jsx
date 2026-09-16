@@ -72,10 +72,10 @@ function layout(data, tracePath, direction, width) {
   const columnOf = (d) => (direction === 'incoming' ? maxDepth - d : d)
 
   const onPath = new Set()
-  const pathEdges = new Set()
+  const pathEdges = new Map() // edge key -> position along the chain
   ;(tracePath ?? []).forEach((step, i, arr) => {
     onPath.add(step.address)
-    if (i < arr.length - 1) pathEdges.add(`${step.address}>${arr[i + 1].address}`)
+    if (i < arr.length - 1) pathEdges.set(`${step.address}>${arr[i + 1].address}`, i)
   })
 
   // Neighbours one hop nearer the seed, whichever way the edge points.
@@ -155,6 +155,7 @@ function layout(data, tracePath, direction, width) {
       return {
         edge: e, a, b,
         onPath: pathEdges.has(`${e.source}>${e.target}`),
+        pathIndex: pathEdges.get(`${e.source}>${e.target}`),
         width: 0.8 + 2.2 * Math.sqrt((e.value_native || 0) / maxValue),
         flagged: Boolean(e.flags?.length),
       }
@@ -170,8 +171,13 @@ function layout(data, tracePath, direction, width) {
   return { placed, links, height, columns: headers, maxDepth, colWidth }
 }
 
+const COMET_HEAD = 0.28   // fraction of a segment the light covers
+const COMET_SEGMENT_MS = 700
+const COMET_PAUSE_MS = 900
+
 export default function FlowView({ data, tracePath, unit = '', direction = 'outgoing' }) {
   const box = useRef(null)
+  const cometRefs = useRef(new Map()) // pathIndex -> [glow, core] elements
   const [width, setWidth] = useState(900)
   const [hover, setHover] = useState(null) // { kind: 'node'|'link', item, x, y }
   const [copied, setCopied] = useState(null)
@@ -201,6 +207,45 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
     }
     return new Set([hover.item.a.node.id, hover.item.b.node.id])
   }, [hover, links])
+
+  // The traced funds as one light running the whole chain, hop by hop, with
+  // a breath at the end before it runs again. Paused while something is
+  // hovered: the animation then belongs to what is under the pointer.
+  const chainLength = (tracePath?.length ?? 1) - 1
+  const paused = Boolean(hover)
+  useEffect(() => {
+    const refs = cometRefs.current
+    if (chainLength < 1 || paused) {
+      refs.forEach((els) => els.forEach((el) => { if (el) el.style.opacity = 0 }))
+      return undefined
+    }
+    const cycle = chainLength * COMET_SEGMENT_MS + COMET_PAUSE_MS
+    let frame = 0
+    const start = performance.now()
+    const ease = (u) => u * u * (3 - 2 * u) // smoothstep
+    const tick = (now) => {
+      const t = (now - start) % cycle
+      const travelling = t < chainLength * COMET_SEGMENT_MS
+      const c = travelling ? t / COMET_SEGMENT_MS : chainLength + 1
+      const k = Math.floor(c)
+      const u = travelling ? ease(c - k) : 0
+      refs.forEach((els, i) => {
+        // Head on segment k at u; the tail may still lie on segment k - 1.
+        let offset = null
+        if (i === k) offset = COMET_HEAD - u
+        else if (i === k - 1 && u < COMET_HEAD) offset = COMET_HEAD - (1 + u)
+        els.forEach((el) => {
+          if (!el) return
+          if (offset === null) { el.style.opacity = 0; return }
+          el.style.opacity = 1
+          el.setAttribute('stroke-dashoffset', String(offset))
+        })
+      })
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [chainLength, paused, links])
 
   const copy = (address) => {
     navigator.clipboard?.writeText(address).then(() => {
@@ -236,14 +281,14 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
           const dx = Math.max(24, (x2 - x1) * 0.45)
           const d = `M${x1},${l.a.y} C${x1 + dx},${l.a.y} ${x2 - dx},${l.b.y} ${x2},${l.b.y}`
           const faded = lit && !(lit.has(l.a.node.id) && lit.has(l.b.node.id))
-          // The traced funds are always on the move, so the trail reads as a
-          // chain before anyone touches it. Under the pointer the animation
-          // belongs to what is hovered: that line, or every transfer of that
-          // address -- and the trail stops unless it is part of it.
-          const moving = hover
-            ? (hover.kind === 'link' ? hover.item === l
-              : (hover.item.node.id === l.a.node.id || hover.item.node.id === l.b.node.id))
-            : l.onPath
+          // Under the pointer the movement belongs to what is hovered: that
+          // line, or every transfer of that address. Otherwise the traced
+          // funds run on their own (the comet below, driven per frame).
+          const swept = hover && (
+            hover.kind === 'link' ? hover.item === l
+              : (hover.item.node.id === l.a.node.id || hover.item.node.id === l.b.node.id)
+          )
+          const tone = l.onPath ? ' on-path' : l.flagged ? ' flagged' : ''
           const key = `${l.edge.source}>${l.edge.target}`
           const enter = (e) => setHover({ kind: 'link', item: l, ...place(e) })
           const move = (e) => setHover((h) => (h ? { ...h, ...place(e) } : h))
@@ -257,12 +302,25 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
                 style={{ opacity: faded ? 0.08 : undefined }}
                 markerEnd={l.onPath ? 'url(#arrow-path)' : 'url(#arrow)'}
               />
-              {moving && (
-                <path
-                  d={d}
-                  className={`flow-dash${l.onPath ? ' on-path' : ''}${l.flagged ? ' flagged' : ''}`}
-                  strokeWidth={l.onPath ? Math.max(2.4, l.width) * 0.6 : l.flagged ? l.width * 0.6 : Math.max(l.width, 1.6)}
-                />
+              {l.onPath && !swept && (
+                <>
+                  <path
+                    d={d} pathLength="1" className="flow-comet glow on-path"
+                    strokeDasharray={`${COMET_HEAD} 2`} style={{ opacity: 0 }}
+                    ref={(el) => { const pair = cometRefs.current.get(l.pathIndex) ?? [null, null]; pair[0] = el; cometRefs.current.set(l.pathIndex, pair) }}
+                  />
+                  <path
+                    d={d} pathLength="1" className="flow-comet core on-path"
+                    strokeDasharray={`${COMET_HEAD} 2`} style={{ opacity: 0 }}
+                    ref={(el) => { const pair = cometRefs.current.get(l.pathIndex) ?? [null, null]; pair[1] = el; cometRefs.current.set(l.pathIndex, pair) }}
+                  />
+                </>
+              )}
+              {swept && (
+                <>
+                  <path d={d} pathLength="1" className={`flow-sweep glow${tone}`} />
+                  <path d={d} pathLength="1" className={`flow-sweep core${tone}`} />
+                </>
               )}
               {/* A wide invisible stroke so a thin line is easy to hover. */}
               <path d={d} className="flow-hit" onMouseEnter={enter} onMouseMove={move} onMouseLeave={leave} />

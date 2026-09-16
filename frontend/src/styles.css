@@ -264,13 +264,20 @@ details.more summary:hover { color: var(--ink); }
 .flow .flow-link.on-path { stroke: var(--red); opacity: 1; }
 .flow .flow-hit { fill: none; stroke: transparent; stroke-width: 9; cursor: default; }
 .flow .flow-hit:hover + .flow-link, .flow g:hover > .flow-link { opacity: 0.9; }
-/* Money on the move: a dash pattern running the way the transfer went. */
-.flow .flow-dash { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-dasharray: 3 9; animation: dashflow 0.6s linear infinite; pointer-events: none; }
-/* On a coloured line the dashes are cut *out* of it -- background-coloured
-   gaps travelling along the red (or amber) stroke -- so the movement shows on
-   a line that is already solid colour. */
-.flow .flow-dash.on-path, .flow .flow-dash.flagged { stroke: var(--panel); stroke-dasharray: 5 9; stroke-linecap: butt; }
-@keyframes dashflow { to { stroke-dashoffset: -14; } }
+/* Money on the move. One light travels the traced path hop by hop (the
+   comet, positioned per frame in FlowView); a hovered line gets the same
+   light sweeping it end to end. Both are a bright core over a soft glow. */
+.flow .flow-comet, .flow .flow-sweep { fill: none; stroke-linecap: round; pointer-events: none; }
+.flow .glow { stroke-width: 9; opacity: 0.45; filter: blur(3px); }
+.flow .core { stroke-width: 2.6; }
+.flow .flow-comet.on-path.glow, .flow .flow-sweep.on-path.glow { stroke: var(--red); }
+.flow .flow-comet.on-path.core, .flow .flow-sweep.on-path.core { stroke: color-mix(in srgb, var(--red) 45%, white); }
+.flow .flow-sweep.flagged.glow { stroke: var(--amber); }
+.flow .flow-sweep.flagged.core { stroke: color-mix(in srgb, var(--amber) 45%, white); }
+.flow .flow-sweep.glow:not(.on-path):not(.flagged) { stroke: var(--ink); opacity: 0.3; }
+.flow .flow-sweep.core:not(.on-path):not(.flagged) { stroke: var(--ink); }
+.flow .flow-sweep { stroke-dasharray: 0.3 2; animation: sweep 1.3s cubic-bezier(0.45, 0, 0.35, 1) infinite; }
+@keyframes sweep { from { stroke-dashoffset: 0.3; } to { stroke-dashoffset: -1.7; } }
 .flow .flow-node { cursor: copy; transition: opacity var(--fast) var(--ease); }
 .flow .flow-node .halo { fill: none; stroke: currentColor; opacity: 0.35; }
 .flow .flow-node.role-exchange .halo { stroke: var(--green); }
@@ -314,22 +321,22 @@ details.more summary:hover { color: var(--ink); }
    faster, and the mark pulses, matching the trail in the flow view. */
 .feed .row::before {
   content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 1px;
-  background: repeating-linear-gradient(to bottom, var(--rule-strong) 0 6px, transparent 6px 14px);
-  animation: feedflow 1.4s linear infinite;
+  background: linear-gradient(to bottom, transparent 0%, var(--rule-strong) 50%, transparent 100%) 0 0 / 100% 46px repeat-y, var(--rule);
+  animation: glide 2.6s cubic-bezier(0.45, 0, 0.35, 1) infinite;
 }
 .feed .row::after { content: ''; position: absolute; left: 11px; top: 16px; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
 .feed .row.on-path::before {
-  left: 13px; width: 3px;
-  background: repeating-linear-gradient(to bottom, var(--red) 0 6px, transparent 6px 14px);
-  animation-duration: 0.6s;
+  left: 13px; width: 3px; border-radius: 2px;
+  background: linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--red) 45%, white) 50%, transparent 100%) 0 0 / 100% 46px repeat-y, color-mix(in srgb, var(--red) 55%, transparent);
+  animation-duration: 1.1s;
 }
-.feed .row.on-path::after { background: var(--red); animation: feedpulse 1.4s ease-out infinite; }
+.feed .row.on-path::after { background: var(--red); animation: feedpulse 1.6s cubic-bezier(0.2, 0.7, 0.3, 1) infinite; }
 .feed .row.to-red::after { background: var(--red); }
-.feed .row.on-path .pair .arrow { color: var(--red); animation: nudge 0.9s ease-in-out infinite; }
-@keyframes feedflow { to { background-position: 0 14px; } }
+.feed .row.on-path .pair .arrow { color: var(--red); animation: nudge 1.3s cubic-bezier(0.45, 0, 0.35, 1) infinite; }
+@keyframes glide { to { background-position: 0 46px, 0 0; } }
 @keyframes feedpulse {
   0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); }
-  100% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--red) 0%, transparent); }
+  100% { box-shadow: 0 0 0 11px color-mix(in srgb, var(--red) 0%, transparent); }
 }
 @keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
 @keyframes rise { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
