@@ -38,6 +38,12 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ ./backend/
 COPY --from=frontend /build/dist ./frontend/dist
 
+# The image has no .git, so the report's "tool version" line is baked in at
+# build time: `docker build --build-arg EXCHEQUER_VERSION=$(git describe --always)`.
+# Railway sets RAILWAY_GIT_COMMIT_SHA automatically; either is read at startup.
+ARG EXCHEQUER_VERSION=""
+ENV EXCHEQUER_VERSION=${EXCHEQUER_VERSION}
+
 # Case history lives at /data so a volume mounted there survives a redeploy.
 # Mount one from the platform (Railway rejects a Dockerfile VOLUME line and
 # expects its own volumes; `docker run -v` works the same). Without a volume

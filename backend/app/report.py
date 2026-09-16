@@ -16,6 +16,7 @@ hashes, amounts and times. This report is the input to that request.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,10 +29,20 @@ REPORT_VERSION = "2.0"
 TOOL_NAME = "Exchequer"
 
 
-def tool_version() -> str:
-    """`git describe` of the code that produced the report, so a reader can
-    check out exactly what ran. Falls back cleanly where there is no git (the
-    Docker image), because a report must never fail over its own footer."""
+def _read_tool_version() -> str:
+    """The code that produced the report, so a reader can check out exactly
+    what ran. `git describe` where there is a checkout; in the Docker image
+    there is no git, so the commit comes from the environment instead --
+    EXCHEQUER_VERSION from the build, or the one Railway sets. Falls back cleanly, because a report must never fail over its own
+    footer."""
+    baked = (
+        os.getenv("EXCHEQUER_VERSION", "").strip()
+        # Railway injects the deployed commit; the short form is what a
+        # reader would type into `git checkout`.
+        or os.getenv("RAILWAY_GIT_COMMIT_SHA", "").strip()[:12]
+    )
+    if baked:
+        return baked
     try:
         out = subprocess.run(
             ["git", "describe", "--tags", "--always", "--dirty"],
@@ -42,6 +53,15 @@ def tool_version() -> str:
     except (OSError, subprocess.SubprocessError):
         pass
     return "unknown (not a git checkout)"
+
+
+# Read once. The code does not change while the process runs, and shelling out
+# to git on every report is a subprocess in the request path for nothing.
+_TOOL_VERSION = _read_tool_version()
+
+
+def tool_version() -> str:
+    return _TOOL_VERSION
 
 
 def _when(ts: int | None) -> str:

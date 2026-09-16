@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { fetchCase, fetchRelatedCases, traceAddress } from '../api'
 import GraphView from '../components/GraphView'
 import ThemeToggle from '../components/ThemeToggle'
@@ -70,7 +70,12 @@ export default function TraceView() {
   const { address: routeAddress, caseId } = useParams()
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const stored = Boolean(caseId)
+  // A trace that has just finished arrives here by redirect with its result
+  // in the navigation state, so the case view does not fetch what it already
+  // holds. Distinguished from an archived case only in the header pill.
+  const justTraced = stored && location.state?.result?.case_id === caseId
 
   const chain = params.get('chain') || 'ethereum'
   const asset = params.get('asset') || 'ETH'
@@ -101,11 +106,23 @@ export default function TraceView() {
     setLoading(true); setError(null); setResult(null); setRevealed(0); setElapsed(0)
     const started = Date.now()
     const tick = setInterval(() => setElapsed((Date.now() - started) / 1000), 200)
+    if (justTraced) {
+      setResult(location.state.result); setLoading(false); clearInterval(tick)
+      return undefined
+    }
     const request = stored
       ? fetchCase(caseId)
       : traceAddress(routeAddress, depth, chain, asset, requestedDirection)
     request
-      .then((data) => { if (!cancelled) { setResult(data); setLoading(false) } })
+      .then((data) => {
+        if (cancelled) return
+        if (stored) { setResult(data); setLoading(false); return }
+        // The trace is stored the moment it completes, so the URL becomes the
+        // case's own. A refresh or the back button then reopens the stored
+        // case instead of running the traversal again -- another wait on the
+        // provider and a duplicate row in the case store.
+        navigate(`/case/${data.case_id}`, { replace: true, state: { result: data } })
+      })
       .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false) } })
       .finally(() => clearInterval(tick))
     return () => {
@@ -114,7 +131,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, routeAddress, chain, asset, depth, requestedDirection])
+  }, [stored, caseId, routeAddress, chain, asset, depth, requestedDirection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -168,7 +185,7 @@ export default function TraceView() {
     if (!result) return
     const q = new URLSearchParams({
       chain: result.chain, asset: result.asset,
-      depth: String(result.depth_reached || 3), direction: result.direction ?? 'outgoing',
+      depth: String(result.max_depth ?? result.depth_reached ?? 3), direction: result.direction ?? 'outgoing',
     })
     navigate(`/trace/${result.address}?${q}`)
   }, [navigate, result])
@@ -184,9 +201,10 @@ export default function TraceView() {
         <div className="pills">
           <span className="pill">{result?.chain_name ?? chain}</span>
           <span className="pill mono">{unit}</span>
-          {!stored && <span className="pill mono">{depth} hops</span>}
+          {(!stored || result?.max_depth) && <span className="pill mono">{stored ? result.max_depth : depth} hops</span>}
           {reverse && <span className="pill navy" title="Incoming transfers walked backwards to the addresses that funded this one">Reverse trace</span>}
-          {stored && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
+          {stored && !justTraced && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
+          {justTraced && <span className="pill green" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
         </div>
         <span className="grow" />
         <div className="actions">

@@ -171,6 +171,23 @@ def test_findings_and_truncation_add_caveats_but_never_move_the_score():
     assert any("sample" in c for c in flagged.caveats)
 
 
+def test_the_scope_caveat_says_whether_contract_moved_value_was_read():
+    """A report must not disclaim internal transactions that its own transfer
+    list contains, nor claim them on a chain where they were never fetched."""
+    graph = make_graph([(SEED, EXCHANGE, 10.0)], seed=SEED)
+
+    without = score_case(graph, SEED, a_match(), internal_transfers_read=False)
+    with_internal = score_case(graph, SEED, a_match(), internal_transfers_read=True)
+
+    assert any("internal contract call" in c and "not covered" in c for c in without.caveats)
+    assert not any("internal contract call" in c for c in with_internal.caveats)
+    assert any("Value moved by a contract call was read" in c for c in with_internal.caveats)
+    # Either way the swap and bridge limits are stated, and the number is untouched.
+    for result in (without, with_internal):
+        assert any("swap" in c and "bridge" in c for c in result.caveats)
+    assert without.score == with_internal.score
+
+
 def test_a_matched_case_always_carries_the_identity_caveat():
     """An exchange match is not an identification of a person."""
     graph = make_graph([(SEED, EXCHANGE, 10.0)], seed=SEED)

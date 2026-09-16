@@ -292,12 +292,17 @@ def score_case(
     truncated: bool = False,
     native_symbol: str = "ETH",
     direction: str = OUTGOING,
+    internal_transfers_read: bool = False,
 ) -> ConfidenceScore:
     """Compute the confidence score for one traced case.
 
     On a reverse trace the three components measure the same quantities, but
     the claim they support is the mirror image: not "the funds reached this
     exchange" but "the funds came from it".
+
+    `internal_transfers_read` says whether value moved by contract calls was
+    part of the data (Ethereum native traces read Etherscan's internal
+    transaction list); the limitations paragraph is worded to match.
     """
     findings = findings or []
 
@@ -318,7 +323,8 @@ def score_case(
                 "point of purchase or withdrawal. The senders found are still "
                 "the substantive result of a reverse trace."
             ),
-            caveats=_caveats(findings, truncated, matched=False, asset=native_symbol),
+            caveats=_caveats(findings, truncated, matched=False, asset=native_symbol,
+                             internal_transfers_read=internal_transfers_read),
         )
 
     components = [
@@ -348,12 +354,14 @@ def score_case(
         band=band,
         components=components,
         summary=summary,
-        caveats=_caveats(findings, truncated, matched=True, asset=native_symbol),
+        caveats=_caveats(findings, truncated, matched=True, asset=native_symbol,
+                         internal_transfers_read=internal_transfers_read),
     )
 
 
 def _caveats(
-    findings: list[PatternFinding], truncated: bool, matched: bool, asset: str = "ETH"
+    findings: list[PatternFinding], truncated: bool, matched: bool, asset: str = "ETH",
+    internal_transfers_read: bool = False,
 ) -> list[str]:
     """Limitations a reader must know before acting on the score.
 
@@ -382,10 +390,24 @@ def _caveats(
             "receiving account. Only the exchange can link a deposit address to a "
             "customer identity, via a lawful request."
         )
-    caveats.append(
-        f"Only direct {asset} transfers were followed. Value that moved as a "
-        "different asset (for example after a swap into another token), "
-        "through an internal contract call, or across a bridge to another "
-        "chain is not covered."
-    )
+    # What was not looked at. The internal-transaction clause has to match
+    # what the trace actually read: on an Ethereum native trace contract-moved
+    # value is in the data, and saying it is not would contradict the report's
+    # own transfer list.
+    if internal_transfers_read:
+        caveats.append(
+            f"Only {asset} transfers were followed. Value that moved as a "
+            "different asset (for example after a swap into another token) or "
+            "across a bridge to another chain is not covered. Value moved by a "
+            "contract call was read for addresses that signed no outgoing "
+            "transfer of their own (contracts) and for every address on a "
+            "reverse trace; a wallet's own signed transfers were read in full."
+        )
+    else:
+        caveats.append(
+            f"Only direct {asset} transfers were followed. Value that moved as a "
+            "different asset (for example after a swap into another token), "
+            "through an internal contract call, or across a bridge to another "
+            "chain is not covered."
+        )
     return caveats

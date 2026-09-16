@@ -426,6 +426,9 @@ def trace(request: TraceRequest) -> dict[str, Any]:
             # arrival. Taken while the client is still open, after the last
             # call that could add to it (the balance reads above).
             evidence = client.evidence.manifest() if hasattr(client, "evidence") else None
+            # Whether contract-moved value was part of the data, for the
+            # limitations paragraph. Only the Etherscan native path reads it.
+            internal_read = bool(getattr(client, "include_internal", False)) and is_native
     except UnknownAssetError as exc:
         # Edge case: the request named an asset this chain does not carry.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -477,6 +480,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         truncated=result.truncated,
         native_symbol=asset_symbol,
         direction=direction,
+        internal_transfers_read=internal_read,
     )
 
     # Edge case: the address has never sent anything. Not an error -- a finding.
@@ -607,6 +611,7 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         "direct_senders": _direct_senders(graph, seed),
         "transfers": _all_transfers(graph),
         "depth_reached": result.depth_reached,
+        "max_depth": trace_config.max_depth,
         "addresses_expanded": result.addresses_expanded,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,
         "api_calls": result.api_calls,
