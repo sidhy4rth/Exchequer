@@ -171,6 +171,12 @@ function layout(data, tracePath, direction, width) {
   return { placed, links, height, columns: headers, maxDepth, colWidth }
 }
 
+// The stage is a fixed-height window onto the diagram. A big trace is drawn
+// at full size and scaled to fit; the viewer zooms into a region for detail.
+const STAGE_HEIGHT = 560
+const ZOOM_MIN = 0.15
+const ZOOM_MAX = 4
+
 const COMET_HEAD = 0.28   // fraction of a segment the light covers
 const COMET_SEGMENT_MS = 700
 const COMET_PAUSE_MS = 900
@@ -191,10 +197,58 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
     return () => ro.disconnect()
   }, [])
 
-  const { placed, links, height, columns } = useMemo(
-    () => layout(data, tracePath, direction, width), [data, tracePath, direction, width],
-  )
+  // Layout in world units, then the scale that fits it in the stage. The
+  // world is laid out wider when it will be scaled down, so at fit it fills
+  // the stage edge to edge rather than shrinking into the middle.
+  const { placed, links, height, columns, fit } = useMemo(() => {
+    const first = layout(data, tracePath, direction, width)
+    const k = Math.min(1, STAGE_HEIGHT / first.height)
+    const world = k < 1 ? layout(data, tracePath, direction, width / k) : first
+    return { ...world, fit: { k, tx: 0, ty: 0 } }
+  }, [data, tracePath, direction, width])
   const maxColumn = Math.max(0, ...columns.map((c) => c.column))
+  const stageHeight = Math.min(STAGE_HEIGHT, height)
+
+  const [view, setView] = useState(fit)
+  useEffect(() => { setView(fit) }, [fit])
+  const drag = useRef(null)
+
+  const zoomBy = (factor, cx = width / 2, cy = stageHeight / 2) => {
+    setView((v) => {
+      const k = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, v.k * factor))
+      // Keep the point under the cursor where it is.
+      const ratio = k / v.k
+      return { k, tx: cx - (cx - v.tx) * ratio, ty: cy - (cy - v.ty) * ratio }
+    })
+  }
+  // The wheel handler must not be passive, or the page scrolls as well.
+  useEffect(() => {
+    const el = box.current
+    if (!el) return undefined
+    const onWheel = (e) => {
+      e.preventDefault()
+      const rect = el.getBoundingClientRect()
+      zoomBy(Math.exp(-e.deltaY * 0.0015), e.clientX - rect.left, e.clientY - rect.top)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [width, stageHeight])
+
+  const onMouseDown = (e) => {
+    if (e.button !== 0) return
+    drag.current = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty, moved: false }
+  }
+  const onMouseMove = (e) => {
+    const d = drag.current
+    if (!d) return
+    const dx = e.clientX - d.x; const dy = e.clientY - d.y
+    if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true
+    if (d.moved) setView((v) => ({ ...v, tx: d.tx + dx, ty: d.ty + dy }))
+  }
+  const endDrag = () => { drag.current = null }
+  // Captions and dots stay legible when the world is scaled down.
+  const counter = Math.min(1 / view.k, 2.2)
+  const textCounter = Math.min(1 / view.k, 3.2)
 
   // Hovering an address lights its own transfers; everything else recedes.
   const lit = useMemo(() => {
@@ -261,8 +315,11 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
   const alpha = (id) => (lit && !lit.has(id) ? 0.18 : 1)
 
   return (
-    <div className="flow" ref={box}>
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Money flow by hop">
+    <div className={`flow${drag.current?.moved ? ' dragging' : ''}`} ref={box}>
+      <svg
+        width={width} height={stageHeight} viewBox={`0 0 ${width} ${stageHeight}`} role="img" aria-label="Money flow by hop"
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={endDrag} onMouseLeave={endDrag}
+      >
         <defs>
           <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0 0.5 L8 4 L0 7.5 z" style={{ fill: 'var(--faint)' }} />
@@ -272,8 +329,9 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
           </marker>
         </defs>
 
+        <g transform={`translate(${view.tx} ${view.ty}) scale(${view.k})`}>
         {columns.map((h) => (
-          <text key={h.column} className="flow-col" x={h.x} y={16} textAnchor="middle">{h.text}</text>
+          <text key={h.column} className="flow-col" x={h.x} y={16} textAnchor="middle" style={{ fontSize: 10.5 * textCounter }}>{h.text}</text>
         ))}
 
         {links.map((l) => {
@@ -299,18 +357,19 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
                 d={d}
                 className={`flow-link${l.onPath ? ' on-path' : ''}${l.flagged ? ' flagged' : ''}`}
                 strokeWidth={l.onPath ? Math.max(2.4, l.width) : l.width}
+                vectorEffect="non-scaling-stroke"
                 style={{ opacity: faded ? 0.08 : undefined }}
                 markerEnd={l.onPath ? 'url(#arrow-path)' : 'url(#arrow)'}
               />
               {l.onPath && !swept && (
                 <>
                   <path
-                    d={d} pathLength="1" className="flow-comet glow on-path"
+                    d={d} pathLength="1" className="flow-comet glow on-path" vectorEffect="non-scaling-stroke"
                     strokeDasharray={`${COMET_HEAD} 2`} style={{ opacity: 0 }}
                     ref={(el) => { const pair = cometRefs.current.get(l.pathIndex) ?? [null, null]; pair[0] = el; cometRefs.current.set(l.pathIndex, pair) }}
                   />
                   <path
-                    d={d} pathLength="1" className="flow-comet core on-path"
+                    d={d} pathLength="1" className="flow-comet core on-path" vectorEffect="non-scaling-stroke"
                     strokeDasharray={`${COMET_HEAD} 2`} style={{ opacity: 0 }}
                     ref={(el) => { const pair = cometRefs.current.get(l.pathIndex) ?? [null, null]; pair[1] = el; cometRefs.current.set(l.pathIndex, pair) }}
                   />
@@ -318,12 +377,12 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
               )}
               {swept && (
                 <>
-                  <path d={d} pathLength="1" className={`flow-sweep glow${tone}`} />
-                  <path d={d} pathLength="1" className={`flow-sweep core${tone}`} />
+                  <path d={d} pathLength="1" className={`flow-sweep glow${tone}`} vectorEffect="non-scaling-stroke" />
+                  <path d={d} pathLength="1" className={`flow-sweep core${tone}`} vectorEffect="non-scaling-stroke" />
                 </>
               )}
               {/* A wide invisible stroke so a thin line is easy to hover. */}
-              <path d={d} className="flow-hit" onMouseEnter={enter} onMouseMove={move} onMouseLeave={leave} />
+              <path d={d} className="flow-hit" vectorEffect="non-scaling-stroke" onMouseEnter={enter} onMouseMove={move} onMouseLeave={leave} />
             </g>
           )
         })}
@@ -336,16 +395,17 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
             onMouseEnter={(e) => setHover({ kind: 'node', item: p, ...place(e) })}
             onMouseMove={(e) => setHover((h) => (h ? { ...h, ...place(e) } : h))}
             onMouseLeave={() => setHover(null)}
-            onClick={() => copy(p.node.id)}
+            onClick={() => { if (!drag.current?.moved) copy(p.node.id) }}
           >
-            {(p.role === 'exchange' || p.role === 'risk' || p.node.risk_category) && <circle cx={p.x} cy={p.y} r={p.r + 5} className="halo" style={p.node.risk_category ? { stroke: 'var(--red)' } : undefined} />}
-            <circle cx={p.x} cy={p.y} r={p.r + 6} fill="transparent" />
-            <circle cx={p.x} cy={p.y} r={p.r} fill={p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]} />
+            {(p.role === 'exchange' || p.role === 'risk' || p.node.risk_category) && <circle cx={p.x} cy={p.y} r={(p.r + 5) * counter} className="halo" vectorEffect="non-scaling-stroke" style={p.node.risk_category ? { stroke: 'var(--red)' } : undefined} />}
+            <circle cx={p.x} cy={p.y} r={(p.r + 6) * counter} fill="transparent" />
+            <circle cx={p.x} cy={p.y} r={p.r * counter} fill={p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]} vectorEffect="non-scaling-stroke" />
             {p.caption && (
               <text
                 className="flow-cap"
-                x={p.column === 0 ? p.x + p.r + 6 : p.column === maxColumn ? p.x - p.r - 6 : p.x}
-                y={p.column === 0 || p.column === maxColumn ? p.y : p.y - p.r - 5}
+                style={{ fontSize: 11 * textCounter }}
+                x={p.column === 0 ? p.x + (p.r + 6) * counter : p.column === maxColumn ? p.x - (p.r + 6) * counter : p.x}
+                y={p.column === 0 || p.column === maxColumn ? p.y : p.y - (p.r + 5) * counter}
                 textAnchor={p.column === 0 ? 'start' : p.column === maxColumn ? 'end' : 'middle'}
                 dominantBaseline={p.column === 0 || p.column === maxColumn ? 'middle' : 'auto'}
                 fill={p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]}
@@ -353,7 +413,17 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
             )}
           </g>
         ))}
+        </g>
       </svg>
+
+      <div className="flow-controls">
+        <button type="button" onClick={() => zoomBy(1.4)} title="Zoom in">+</button>
+        <button type="button" onClick={() => zoomBy(1 / 1.4)} title="Zoom out">−</button>
+        <button type="button" onClick={() => setView(fit)} title="Fit the whole trace on screen">Fit</button>
+      </div>
+      {height > STAGE_HEIGHT && view.k === fit.k && (
+        <div className="flow-hint">Scaled to fit · scroll to zoom · drag to pan</div>
+      )}
 
       {hover && (
         <div className="flow-tip" style={{ left: Math.min(hover.x + 14, width - 300), top: hover.y + 14 }}>
