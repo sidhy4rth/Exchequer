@@ -19,7 +19,7 @@ seed, so every downstream consumer -- the pattern rules, the amount
 arithmetic, the renderer -- keeps reading value flow the same way rather than
 having to know which direction produced the graph.
 
-Four independent brakes stop a busy wallet from blowing the trace up. Each is
+Six independent brakes stop a busy wallet from blowing the trace up. Each is
 a deliberate, documented investigative choice, not an arbitrary cap:
 
   1. max_depth (default 4)
@@ -46,7 +46,14 @@ a deliberate, documented investigative choice, not an arbitrary cap:
         service (WETH, a pool, a router) and is not expanded: its payouts are
         other people's money. See TraceConfig for the measurement behind it.
 
-A sixth rule is about *when*, and it is a correctness rule rather than a
+  6. time_budget_seconds (default None -- off)
+        A wall-clock cap the caller opts into. On the free tiers a busy wallet
+        at four hops can take minutes; with a budget the walk stops expanding
+        once the time is spent and reports what it has, marked truncated. It
+        never changes what an address yields, only how much of the graph was
+        reached before the clock ran out, and the report says so.
+
+One more rule is about *when*, and it is a correctness rule rather than a
 brake. Money cannot be forwarded before it arrives. When the walk reaches an
 address at hop N, it knows the moment the traced funds landed there (the
 earliest transfer on the edge that brought them), and only transfers leaving
@@ -65,6 +72,7 @@ detection can look at the individual amounts later.
 from __future__ import annotations
 
 import logging
+import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -121,6 +129,10 @@ class TraceConfig:
     # internal transactions made the trace expand WETH and nine pools and
     # cost 249 requests instead of 41.
     max_contract_payout_recipients: int = 3
+    # Brake 6. None means no cap: the walk runs until the other brakes stop
+    # it. Checked between batches of fetches, so the overshoot is at most one
+    # batch of concurrent requests.
+    time_budget_seconds: float | None = None
 
 
 @dataclass
@@ -142,6 +154,9 @@ class TraceResult:
     # Transfers left out because they happened on the wrong side of the moment
     # the traced funds passed through an address. See the module docstring.
     transfers_excluded_by_time: int = 0
+    # Addresses reached but never expanded because the time budget ran out.
+    addresses_unexpanded_by_time: int = 0
+    seconds_elapsed: float = 0.0
 
     @property
     def node_count(self) -> int:
@@ -196,10 +211,15 @@ def _is_service_contract(
     return len(far_end - {None}) > cfg.max_contract_payout_recipients
 
 
+class TimeBudgetExceeded(Exception):
+    """Internal marker: the address was not fetched because the clock ran out."""
+
+
 def _fetch_level(
     pending: list[tuple[str, int]],
     fetch: Callable[..., list[Transaction]],
     cfg: TraceConfig,
+    deadline: float | None = None,
 ) -> list[tuple[list[Transaction], Exception | None]]:
     """Fetch every address at one depth together, preserving input order.
 
@@ -222,7 +242,14 @@ def _fetch_level(
     An exception is returned rather than raised so the caller can apply the
     rule it already had -- fatal at the seed, a warning deeper in -- with the
     depth in hand.
+
+    With a `deadline` (a time.monotonic() instant), the level is fetched one
+    batch of `max_concurrent_fetches` at a time and stops once the deadline
+    has passed; the addresses never fetched come back with
+    TimeBudgetExceeded in place of a result.
     """
+    results: list[tuple[list[Transaction], Exception | None]] = [([], None)] * len(pending)
+
     if len(pending) == 1:
         address, _ = pending[0]
         try:
@@ -230,23 +257,28 @@ def _fetch_level(
         except Exception as exc:  # noqa: BLE001 -- classified by the caller
             return [([], exc)]
 
-    workers = min(cfg.max_concurrent_fetches, len(pending))
-    results: list[tuple[list[Transaction], Exception | None]] = [([], None)] * len(pending)
-
     def one(index: int, address: str):
         try:
             return index, fetch(address, limit=cfg.max_txs_per_address), None
         except Exception as exc:  # noqa: BLE001 -- classified by the caller
             return index, [], exc
 
+    workers = min(cfg.max_concurrent_fetches, len(pending))
+    batch_size = workers if deadline is not None else len(pending)
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="trace") as pool:
-        futures = [
-            pool.submit(one, index, address)
-            for index, (address, _depth) in enumerate(pending)
-        ]
-        for future in as_completed(futures):
-            index, transfers, error = future.result()
-            results[index] = (transfers, error)
+        for start in range(0, len(pending), batch_size):
+            if deadline is not None and time.monotonic() >= deadline:
+                for index in range(start, len(pending)):
+                    results[index] = ([], TimeBudgetExceeded())
+                break
+            futures = [
+                pool.submit(one, index, address)
+                for index, (address, _depth) in enumerate(pending)
+                if start <= index < start + batch_size
+            ]
+            for future in as_completed(futures):
+                index, transfers, error = future.result()
+                results[index] = (transfers, error)
 
     return results
 
@@ -292,6 +324,9 @@ def build_trace_graph(
 
     result = TraceResult(graph=graph, seed=seed, direction=direction)
 
+    started = time.monotonic()
+    deadline = started + cfg.time_budget_seconds if cfg.time_budget_seconds else None
+
     frontier: list[tuple[str, int]] = [(seed, 0)]
     visited: set[str] = {seed}
     # When the traced funds passed through each address: the earliest arrival
@@ -327,13 +362,32 @@ def build_trace_graph(
             result.note_truncation(f"node limit of {cfg.max_nodes} addresses reached")
             break
 
-        fetched = _fetch_level(pending, fetch, cfg)
+        # Brake 6: the clock. The seed is always fetched -- a budget so short
+        # that not even the reported address was read would be no trace at
+        # all -- so the check starts at the first level beyond it.
+        if deadline is not None and pending[0][1] > 0 and time.monotonic() >= deadline:
+            result.addresses_unexpanded_by_time += len(pending)
+            result.note_truncation(
+                f"time budget of {cfg.time_budget_seconds:.0f} s reached; "
+                f"{len(pending)} reached address{'es' if len(pending) != 1 else ''} "
+                "at the frontier were not expanded"
+            )
+            break
+
+        fetched = _fetch_level(pending, fetch, cfg, deadline=deadline if pending[0][1] > 0 else None)
         next_frontier: list[tuple[str, int]] = []
 
         for (address, depth), (transfers, error) in zip(pending, fetched):
             if graph.number_of_nodes() >= cfg.max_nodes:
                 result.note_truncation(f"node limit of {cfg.max_nodes} addresses reached")
                 break
+
+            if isinstance(error, TimeBudgetExceeded):
+                # Brake 6, mid-level: reached, never read. Not a failure of
+                # the provider and not this address's fault; counted so the
+                # report can say how much of the frontier the clock cut off.
+                result.addresses_unexpanded_by_time += 1
+                continue
 
             result.api_calls += 1
 
@@ -507,8 +561,20 @@ def build_trace_graph(
                     visited.add(counterparty)
                     next_frontier.append((counterparty, depth + 1))
 
+        # Anything the clock cut off mid-level is a truncation the report
+        # must state; the frontier past it is also not walked.
+        if result.addresses_unexpanded_by_time and deadline is not None and time.monotonic() >= deadline:
+            result.note_truncation(
+                f"time budget of {cfg.time_budget_seconds:.0f} s reached; "
+                f"{result.addresses_unexpanded_by_time} reached address"
+                f"{'es' if result.addresses_unexpanded_by_time != 1 else ''} "
+                "were not expanded"
+            )
+            break
+
         frontier = next_frontier
 
+    result.seconds_elapsed = round(time.monotonic() - started, 2)
     _annotate_node_totals(graph)
     return result
 

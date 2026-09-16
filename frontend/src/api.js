@@ -42,13 +42,16 @@ async function toError(response) {
  */
 const inFlight = new Map()
 
-export function traceAddress(address, maxDepth, chain, asset, direction) {
+export function traceAddress(address, maxDepth, chain, asset, direction, timeBudgetSeconds) {
   const body = JSON.stringify({
     address,
     ...(maxDepth ? { max_depth: maxDepth } : {}),
     ...(chain ? { chain } : {}),
     ...(asset ? { asset } : {}),
     ...(direction ? { direction } : {}),
+    // Optional: stop expanding after this many seconds and return what was
+    // reached, marked truncated. Omitted, the trace runs its full course.
+    ...(timeBudgetSeconds ? { time_budget_seconds: timeBudgetSeconds } : {}),
   })
   // One trace per identical request at a time. React's development-mode
   // StrictMode mounts the trace view twice, and a user can double-click; the

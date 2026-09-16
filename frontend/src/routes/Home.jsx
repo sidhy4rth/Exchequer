@@ -38,6 +38,10 @@ const DEMOS = [
     title: 'Three complaints, one operation', hook: 'Shares 61 intermediaries with two other stored phishing wallets, four of them inferred Binance deposit addresses.' },
 ]
 
+// The optional wall-clock cap, in seconds. 1:30 is long enough for any of
+// the demo traces cold and short enough to keep a room waiting comfortably.
+const TIME_BUDGET_SECONDS = 90
+
 const middle = (a, head = 10, tail = 8) => (a && a.length > head + tail + 1 ? `${a.slice(0, head)}…${a.slice(-tail)}` : a)
 
 export default function Home() {
@@ -50,6 +54,9 @@ export default function Home() {
   const [asset, setAsset] = useState('ETH')
   const [depth, setDepth] = useState(4)
   const [direction, setDirection] = useState('outgoing')
+  // Off by default: the trace runs its full course. On, it stops at 1:30 and
+  // reports what it reached -- for a live pick whose size nobody knows.
+  const [capped, setCapped] = useState(false)
   const [touched, setTouched] = useState(false)
 
   useEffect(() => {
@@ -93,8 +100,9 @@ export default function Home() {
       chain: opts.chain ?? chain, asset: opts.asset ?? asset,
       depth: String(opts.depth ?? depth), direction: opts.direction ?? direction,
     })
+    if (opts.capped ?? capped) q.set('budget', String(TIME_BUDGET_SECONDS))
     navigate(`/trace/${addr}?${q}`)
-  }, [navigate, chain, asset, depth, direction])
+  }, [navigate, chain, asset, depth, direction, capped])
 
   // Fill the form from one of the verified DEMO.md traces. The trace is not
   // started: the officer still presses the same button they would for a real
@@ -162,6 +170,12 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="examples">
+                  <label className="toggle" title="With this on, the trace stops expanding after 1 minute 30 seconds and reports what it reached, marked truncated. Off, it runs until the depth, fan-out and size limits stop it -- which on a busy wallet at 4 hops can take several minutes.">
+                    <input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} />
+                    <span className="switch" aria-hidden="true" />
+                    <span>Stop after <span className="mono">1:30</span></span>
+                  </label>
+                  <span className="sep" />
                   <label htmlFor="example">Load a verified example</label>
                   <select id="example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
                     <option value="">Choose one of the ten traces in DEMO.md…</option>

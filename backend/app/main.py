@@ -142,6 +142,15 @@ class TraceRequest(BaseModel):
             "Defaults to the chain's native currency."
         ),
     )
+    time_budget_seconds: int | None = Field(
+        None, ge=10, le=600,
+        description=(
+            "Optional wall-clock cap. With it set the walk stops expanding once "
+            "the time is spent and returns what it has, marked truncated with the "
+            "reason. Without it the trace runs until the depth, fan-out and size "
+            "limits stop it, however long that takes on the provider's free tier."
+        ),
+    )
     direction: str = Field(
         OUTGOING,
         pattern="^(outgoing|incoming)$",
@@ -379,6 +388,7 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
     routers = get_router_matcher(chain.key)
     trace_config = TraceConfig(
         max_depth=request.max_depth or config.TRACE_MAX_DEPTH,
+        time_budget_seconds=float(request.time_budget_seconds) if request.time_budget_seconds else None,
     )
 
     # Which asset this trace follows. Everything downstream -- edge values,
@@ -616,6 +626,11 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
         "transfers": _all_transfers(graph),
         "depth_reached": result.depth_reached,
         "max_depth": trace_config.max_depth,
+        # The clock, if the caller set one, and what it cost: how long the walk
+        # took and how many reached addresses it left unexpanded.
+        "time_budget_seconds": request.time_budget_seconds,
+        "seconds_elapsed": result.seconds_elapsed,
+        "addresses_unexpanded_by_time": result.addresses_unexpanded_by_time,
         "addresses_expanded": result.addresses_expanded,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,
         "api_calls": result.api_calls,

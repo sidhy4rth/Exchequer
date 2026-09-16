@@ -535,3 +535,80 @@ def test_a_reverse_trace_stops_at_a_contract_fed_by_many():
     result = build_trace_graph(SEED, FakeClient(ledger), direction=INCOMING)
     assert result.graph.in_degree(weth) == 0
     assert weth in result.service_contracts
+
+
+# --- Brake 6: the time budget -----------------------------------------------
+class SlowClient(FakeClient):
+    """Every fetch takes `delay` seconds, so a budget can be made to run out."""
+
+    def __init__(self, ledger, delay: float):
+        super().__init__(ledger)
+        self.delay = delay
+
+    def get_outgoing_transactions(self, address, limit=None):
+        import time
+        time.sleep(self.delay)
+        return super().get_outgoing_transactions(address, limit)
+
+
+def _wide_ledger(levels: int = 3, fan: int = 4):
+    """A seed that fans out `fan` ways at every level for `levels` hops."""
+    ledger = {}
+    frontier = [SEED]
+    counter = 0
+    for _ in range(levels):
+        nxt = []
+        for node in frontier:
+            outs = []
+            for _ in range(fan):
+                counter += 1
+                child = addr(f"b{counter:03x}")
+                outs.append(tx(node, child, 1.0))
+                nxt.append(child)
+            ledger[node] = outs
+        frontier = nxt
+    return ledger
+
+
+def test_without_a_time_budget_the_walk_is_unchanged():
+    """Off by default: a config with no budget produces the same graph as before."""
+    ledger = _wide_ledger()
+    plain = build_trace_graph(SEED, FakeClient(ledger), cfg=TraceConfig(max_depth=3, max_branches_per_node=10))
+    budgeted = build_trace_graph(SEED, FakeClient(ledger), cfg=TraceConfig(max_depth=3, max_branches_per_node=10, time_budget_seconds=60))
+
+    assert plain.node_count == budgeted.node_count == 1 + 4 + 16 + 64
+    assert budgeted.addresses_unexpanded_by_time == 0
+    assert not any("time budget" in r for r in budgeted.truncation_reasons)
+    assert budgeted.seconds_elapsed >= 0
+
+
+def test_a_spent_time_budget_stops_the_walk_and_says_so():
+    """The clock runs out: what was reached is kept, what was not read is
+    counted, and the truncation names the budget."""
+    ledger = _wide_ledger(levels=3, fan=4)
+    # Each fetch costs 0.05 s; one batch of concurrent fetches is 0.05 s. A
+    # 0.12 s budget admits the seed and roughly one level.
+    client = SlowClient(ledger, delay=0.05)
+    result = build_trace_graph(
+        SEED, client,
+        cfg=TraceConfig(max_depth=3, max_branches_per_node=10, max_concurrent_fetches=4, time_budget_seconds=0.12),
+    )
+
+    assert result.truncated
+    assert any("time budget of 0 s" in r or "time budget" in r for r in result.truncation_reasons)
+    assert result.addresses_unexpanded_by_time > 0
+    # Nothing beyond the seed's fan-out is guaranteed, but the seed always is.
+    assert result.node_count >= 1 + 4
+    assert result.node_count < 1 + 4 + 16 + 64
+    # The addresses the clock cut off were never asked for.
+    assert len(client.calls) < 1 + 4 + 16
+
+
+def test_the_reported_address_is_always_read_whatever_the_budget():
+    """A budget too short for even the seed would be no trace at all."""
+    ledger = _wide_ledger(levels=1, fan=3)
+    client = SlowClient(ledger, delay=0.05)
+    result = build_trace_graph(SEED, client, cfg=TraceConfig(max_depth=1, time_budget_seconds=0.001))
+
+    assert client.calls[0] == SEED
+    assert result.node_count == 1 + 3

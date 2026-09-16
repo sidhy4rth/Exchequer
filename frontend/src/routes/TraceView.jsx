@@ -19,7 +19,8 @@ const COMPONENT_NAME = {
 function groupReasons(reasons) {
   const counts = { depth: 0, nodes: 0, fanout: 0, service: 0, fetch: 0, other: [] }
   ;(reasons ?? []).forEach((r) => {
-    if (r.startsWith('depth limit')) counts.depth += 1
+    if (r.startsWith('time budget')) counts.other.push(r)
+    else if (r.startsWith('depth limit')) counts.depth += 1
     else if (r.startsWith('node limit')) counts.nodes += 1
     else if (r.startsWith('fan-out limit')) counts.fanout += 1
     else if (r.includes('pays out to many addresses')) counts.service += 1
@@ -49,6 +50,7 @@ function middle(address, head = 10, tail = 8) {
   if (!address || address.length <= head + tail + 1) return address
   return `${address.slice(0, head)}…${address.slice(-tail)}`
 }
+const mmss = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
 const num = (value) =>
@@ -100,6 +102,8 @@ export default function TraceView() {
   const asset = params.get('asset') || 'ETH'
   const depth = Number(params.get('depth') || 4)
   const requestedDirection = params.get('direction') || 'outgoing'
+  // Optional wall-clock cap, in seconds; absent means the trace runs its course.
+  const budget = Number(params.get('budget')) || null
 
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -133,7 +137,7 @@ export default function TraceView() {
     }
     const request = stored
       ? fetchCase(caseId)
-      : traceAddress(routeAddress, depth, chain, asset, requestedDirection)
+      : traceAddress(routeAddress, depth, chain, asset, requestedDirection, budget)
     request
       .then((data) => {
         if (cancelled) return
@@ -152,7 +156,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, routeAddress, chain, asset, depth, requestedDirection]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stored, caseId, routeAddress, chain, asset, depth, requestedDirection, budget]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -226,6 +230,7 @@ export default function TraceView() {
       chain: result.chain, asset: result.asset,
       depth: String(result.max_depth ?? result.depth_reached ?? 3), direction: result.direction ?? 'outgoing',
     })
+    if (result.time_budget_seconds) q.set('budget', String(result.time_budget_seconds))
     navigate(`/trace/${result.address}?${q}`)
   }, [navigate, result])
 
@@ -243,6 +248,7 @@ export default function TraceView() {
           <span className="pill mono">{unit}</span>
           {(!stored || result?.max_depth) && <span className="pill mono">{stored ? result.max_depth : depth} hops</span>}
           {reverse && <span className="pill navy" title="Incoming transfers walked backwards to the addresses that funded this one">Reverse trace</span>}
+          {(result ? result.time_budget_seconds : budget) && <span className="pill mono" title="The walk stopped expanding once this much time was spent">{mmss(result ? result.time_budget_seconds : budget)} cap</span>}
           {stored && !justTraced && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
           {justTraced && <span className="pill green" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
         </div>
@@ -264,7 +270,7 @@ export default function TraceView() {
           <div className="card">
             <div className="body loading">
               <span className="micro">{stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
-              <span className="elapsed">{elapsed.toFixed(1)} s</span>
+              <span className="elapsed">{elapsed.toFixed(1)} s{!stored && budget ? <small> · stops expanding at {mmss(budget)}{elapsed > budget ? ' — finishing what it has' : ''}</small> : null}</span>
               <div className="bar"><span /></div>
               <p className="note">
                 {stored
@@ -544,9 +550,15 @@ export default function TraceView() {
                     <span className={`n ${serviceContracts.length ? '' : 'zero'}`}>{serviceContracts.length}</span>
                     <span className="t">service contracts not expanded<small>WETH, pools, routers: their payouts are other people's money.</small></span>
                   </div>
+                  {result.addresses_unexpanded_by_time > 0 && (
+                    <div className="exclusion">
+                      <span className="n">{result.addresses_unexpanded_by_time}</span>
+                      <span className="t">addresses reached but not expanded<small>The {mmss(result.time_budget_seconds)} time cap ran out first; the graph beyond them is missing.</small></span>
+                    </div>
+                  )}
                   <div className="exclusion">
                     <span className="n">{result.api_calls}</span>
-                    <span className="t">provider requests<small>{result.transfers?.length ?? 0} individual transactions; depth {result.depth_reached} reached of {result.max_depth ?? depth}.</small></span>
+                    <span className="t">provider requests<small>{result.transfers?.length ?? 0} individual transactions; depth {result.depth_reached} reached of {result.max_depth ?? depth}{result.seconds_elapsed ? `; ${result.seconds_elapsed} s` : ''}.</small></span>
                   </div>
                   {result.evidence?.count > 0 && (
                     <div className="exclusion">

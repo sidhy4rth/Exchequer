@@ -159,7 +159,7 @@ Addresses at the same depth are fetched concurrently (`TRACE_CONCURRENCY`, defau
 
 ```json
 { "address": "0x...", "chain": "bsc", "asset": "USDT", "max_depth": 4,
-  "direction": "outgoing" }
+  "direction": "outgoing", "time_budget_seconds": 90 }
 ```
 
 `chain` is `ethereum` (default) or `bsc`. `asset` is the chain's native symbol or a stablecoin —
@@ -187,6 +187,14 @@ and the response marks the ones that are labelled exchanges so that reading is n
 
 Edges always point the way the money moved, whichever direction the walk ran — so a reverse trace's
 graph, patterns and amounts are read exactly like a forward one's.
+
+`time_budget_seconds` (optional, 10–600) is a wall-clock cap. Without it a trace runs until the depth,
+fan-out and size limits stop it — on a busy wallet at 4 hops that can be three minutes on the free
+tier. With it, the walk stops expanding once the time is spent and returns what it has: the addresses
+it reached but never read are counted in `addresses_unexpanded_by_time`, the truncation reason names
+the budget, and `seconds_elapsed` says how long it actually took. The overshoot is at most one batch of
+concurrent requests (a few seconds). The interface offers this as a **Stop after 1:30** switch beside the
+address form, off by default; the demos never need it, a judge's random pick might.
 
 ```json
 {
@@ -709,7 +717,7 @@ failure here.
 | `test_scoring.py` | Each weighted component, band boundaries, and that patterns and truncation add caveats without moving the number |
 | `test_exchange_matcher.py` | Both label-file shapes, case-insensitive lookup, closest-match preference, degrading to "no attribution" on a missing or corrupt file |
 | `test_risk_matcher.py` | Both categories, that a mixer ends a trace and a sanctioned address does not, unknown categories dropped rather than guessed |
-| `test_graph_builder.py` | All four traversal brakes, both directions, seed-vs-deeper fetch failures, depth stability |
+| `test_graph_builder.py` | All six traversal brakes (including the time budget: unchanged when unspent, stops and counts what it cut when spent, always reads the seed), both directions, seed-vs-deeper fetch failures, depth stability |
 | `test_ofac_import.py` | Chain assignment from OFAC's own idType, and that a Bitcoin address is skipped rather than misfiled |
 | `test_deposit_inference.py` | The sweep shape fires; one deposit, a wallet that also spends, sweeps to an unlabelled or a labelled *deposit* wallet, dust, the seed and unexpanded wallets all stay silent; an inference scores below a label match |
 | `test_swap_detection.py` | Swap outputs read from a real 1inch receipt; native-coin outputs reported as unreadable, never guessed; receipts capped per edge; a failed receipt cannot kill a trace |
