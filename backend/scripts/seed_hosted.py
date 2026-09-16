@@ -2,15 +2,14 @@
 not empty on the day -- demo 10's related-cases panel needs the two sibling
 phishing wallets to have been traced.
 
-    .venv/bin/python -m scripts.seed_hosted https://<host> <access-code> "Name" "ID" "Unit"
+    .venv/bin/python -m scripts.seed_hosted https://<host>
 
-Signs in as the officer given, runs each trace in demo_traces.json in order
-(shared intermediaries hit the response cache, so the set takes a couple of
-minutes), and prints one line per trace.
+Runs each trace in demo_traces.json in order (shared intermediaries hit the
+response cache, so the set takes a couple of minutes), and prints one line
+per trace.
 """
 from __future__ import annotations
 
-import http.cookiejar
 import json
 import sys
 import time
@@ -19,20 +18,15 @@ from pathlib import Path
 
 
 def main() -> None:
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         sys.exit(__doc__)
-    host, code = sys.argv[1].rstrip("/"), sys.argv[2]
-    name, officer_id, unit = (sys.argv[3:6] + ["Exchequer demo", "", ""])[:3]
-    cj = http.cookiejar.CookieJar()
-    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    host = sys.argv[1].rstrip("/")
 
     def post(path: str, body: dict, timeout: int = 600):
         req = urllib.request.Request(f"{host}{path}", data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json"})
-        return json.load(op.open(req, timeout=timeout))
+        return json.load(urllib.request.urlopen(req, timeout=timeout))
 
-    print("signed in as", post("/auth/login", {"name": name, "officer_id": officer_id, "unit": unit,
-                                               "access_code": code})["officer"]["name"])
     seeds = json.loads((Path(__file__).parent / "demo_traces.json").read_text())
     for s in seeds:
         t = time.time()
@@ -42,7 +36,7 @@ def main() -> None:
                   f"{str(d.get('exchange')):9} conf {d.get('confidence')} | nodes {len(d['graph']['nodes'])}")
         except Exception as exc:  # keep going; one failed trace should not stop the seed
             print(f"  {s['address'][:12]} FAILED {exc}")
-    print("stored cases:", json.load(op.open(f"{host}/cases"))["count"])
+    print("stored cases:", json.load(urllib.request.urlopen(f"{host}/cases"))["count"])
 
 
 if __name__ == "__main__":
