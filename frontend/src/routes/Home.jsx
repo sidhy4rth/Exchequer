@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import { fetchCases, fetchExchanges, fetchHealth, fetchRiskLabels } from '../api'
+import { signOut } from '../session'
 
 // Same rules the backend enforces, checked here only so an obvious typo gets
 // immediate feedback instead of a round trip. The backend remains the
@@ -133,6 +134,7 @@ export default function Home() {
         </span>
         <span className="grow" />
         <span className="note">Smart India Hackathon 2026 · SIH26183 · Ministry of Home Affairs</span>
+        <button className="quiet" onClick={() => { signOut(); navigate('/signin') }} title="Back to the sign-in page">Sign out</button>
         <ThemeToggle />
       </header>
 

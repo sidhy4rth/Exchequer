@@ -126,6 +126,11 @@ npm run dev
 
 Open **<http://localhost:5173>**.
 
+The first screen is a sign-in page: **username `admin`, password `admin`**. It is a front door for the
+demonstration, not access control — the backend has no accounts and the API answers without it; the
+page remembers, for the browser tab, that the door was crossed. Behind the form the cursor scans an
+unlit transaction lattice and a click sends a trace pulse outward along it, hop by hop.
+
 The interface answers first and shows evidence on demand. The home page is the address form with the ten `DEMO.md` traces in a dropdown, one line of coverage per chain, and the stored cases. A case opens as: a red sanctions banner if any address is listed; one finding bar — where the money went, the address to cite, how sure (the score with its three inputs; the working one click away); then the money flow drawn by hop, the reported address on the left and whatever it reached on the right, the attributed path the one bold green line, every other transfer thin (the force-directed bubble view is a toggle); beneath it only the transfers that matter — the attributed path, anything flagged or sanctioned, any swap — with the full list one click away; and on the right, one folded section each for inferred deposit addresses, patterns, swaps, related cases, funders and scope, opening only when they hold something. Every address copies itself when clicked. Dark console skin by default; the paper case-file skin is one click away and remembered per browser.
 
 > Use `localhost`, not `127.0.0.1`. Vite binds to IPv6 `[::1]` by default, so `http://127.0.0.1:5173` will not connect. Run `npm run dev -- --host 127.0.0.1` if you need IPv4.
@@ -681,9 +686,11 @@ exchequer/
 │   │   ├── api.js
 │   │   ├── styles.css
 │   │   ├── routes/
+│   │   │   ├── SignIn.jsx         the demo front door (admin / admin), over the lattice
 │   │   │   ├── Home.jsx           intake: address form, the ten DEMO.md traces, coverage, stored cases
 │   │   │   └── TraceView.jsx      case view: sanctions banner, finding bar, flow, feed, folded evidence rail
 │   │   └── components/
+│   │       ├── Lattice.jsx        sign-in backdrop: a wallet lattice the cursor scans, a click traces
 │   │       ├── FlowView.jsx       the money flow by hop: layered SVG, attributed path bold
 │   │       ├── GraphView.jsx      force graph, label-collision aware (the "Bubbles" toggle)
 │   │       └── ExportButton.jsx
