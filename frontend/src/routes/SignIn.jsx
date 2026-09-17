@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import Lattice from '../components/Lattice'
+import Ledger from '../components/Ledger'
+import Mark from '../components/Mark'
 import ThemeToggle from '../components/ThemeToggle'
 import { signIn } from '../session'
 
-// The first screen. The lattice behind it is the tool's own metaphor: an
-// unlit ledger that the cursor scans, and a click traces outward hop by hop.
+// The first screen. Behind the card is the ledger the tool knows, real
+// addresses coloured by what it knows about them; the cursor reads it and a
+// click traces an address across it. The card is a demonstration front door
+// -- see session.js -- not access control.
 
 export default function SignIn() {
   const navigate = useNavigate()
@@ -25,28 +28,35 @@ export default function SignIn() {
 
   return (
     <div className="signin">
-      <Lattice />
+      <Ledger />
       <div className="signin-top">
         <span className="micro">Restricted · cyber crime cell</span>
         <ThemeToggle />
       </div>
-      <form className="signin-card" onSubmit={submit} onClick={(e) => e.stopPropagation()}>
-        <div className="brand-block">
-          <svg width="30" height="30" viewBox="0 0 26 26" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true"><circle cx="13" cy="13" r="11.5" /><circle cx="13" cy="13" r="8" /><path d="M13 5v16M5 13h16" /><circle cx="13" cy="13" r="2.4" fill="currentColor" stroke="none" /></svg>
-          <span className="name">Exchequer</span>
-          <span className="micro">Cryptocurrency fraud tracing</span>
+      <form className="signin-card" onSubmit={submit} autoComplete="off">
+        <div className="card-head">
+          <Mark size={34} />
+          <div className="card-title">
+            <span className="name">Exchequer</span>
+            <span className="micro">Cryptocurrency fraud tracing</span>
+          </div>
+          <span className="status"><i /><span className="micro">Restricted</span></span>
         </div>
-        <label>
+        <div className="rule" />
+        <label className="field">
           <span className="micro">Officer</span>
-          <input value={user} onChange={(e) => { setUser(e.target.value); setError(false) }} autoComplete="username" spellCheck={false} autoFocus aria-invalid={error} />
+          <input value={user} onChange={(e) => { setUser(e.target.value); setError(false) }} placeholder="name or service ID" spellCheck={false} autoFocus aria-invalid={error} />
         </label>
-        <label>
+        <label className="field">
           <span className="micro">Access code</span>
-          <input type="password" value={pass} onChange={(e) => { setPass(e.target.value); setError(false) }} autoComplete="current-password" aria-invalid={error} />
+          <input type="password" value={pass} onChange={(e) => { setPass(e.target.value); setError(false) }} placeholder="••••••••" aria-invalid={error} />
         </label>
         {error && <span className="signin-error">Not recognised.</span>}
-        <button type="submit" className="primary" disabled={!user || !pass}>Enter</button>
-        <span className="note">Move the cursor to scan the ledger · click to trace</span>
+        <button type="submit" className="primary enter" disabled={!user || !pass}>
+          Enter the ledger
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" /></svg>
+        </button>
+        <span className="note">Move the cursor to read the ledger · click an address to trace it</span>
       </form>
       <div className="signin-foot micro">Smart India Hackathon 2026 · SIH26183 · Ministry of Home Affairs</div>
     </div>

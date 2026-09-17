@@ -6,6 +6,7 @@ Endpoints:
     GET  /trace/{case_id}/report    exportable report (json or text)
     GET  /cases                     history of past traces
     GET  /exchanges                 what the label database covers
+    GET  /ledger                    the addresses the tool knows, for the sign-in backdrop
     GET  /health                    liveness + configuration check
 """
 from __future__ import annotations
@@ -641,6 +642,49 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
         "warnings": result.warnings,
     }
     return payload
+
+
+@app.get("/ledger")
+def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4000)) -> dict[str, Any]:
+    """The addresses the tool knows, for the sign-in page's backdrop.
+
+    Every entry is real: the exchange wallets it attributes to, the
+    sanctions list it screens against, the deposit addresses it has inferred
+    and the unlabelled intermediaries of the stored cases. Each carries only
+    what the case view would show -- the kind, the exchange, the label -- so
+    the page can colour it the same way. Shuffled with a fixed seed so the
+    sea looks the same on every load.
+    """
+    try:
+        selected = config.get_chain(chain)
+    except config.UnknownChainError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(address: str, kind: str, exchange: str = "", label: str = "") -> None:
+        if address in seen:
+            return
+        seen.add(address)
+        rows.append({"a": address, "k": kind, "e": exchange, "t": label})
+
+    for address, meta in get_risk_matcher(selected.key).entries():
+        add(address, "sanctioned", "", f"OFAC SDN · {meta.get('entity', '')}"[:48])
+    for address, meta in get_matcher(selected.key).entries():
+        add(address, "exchange", meta.get("exchange", ""), (meta.get("label") or meta.get("exchange", ""))[:40])
+    for case in models.all_cases(limit=200):
+        result = case.result
+        if result.get("chain") != selected.key:
+            continue
+        for match in result.get("inferred_deposits", []):
+            add(match["address"], "inferred", match["exchange"], f"probable {match['exchange']} deposit")
+        for node in result.get("graph", {}).get("nodes", []):
+            if node.get("exchange") or node.get("risk_category") or node.get("is_router") or node.get("is_service_contract"):
+                continue
+            add(node["id"], "wallet", "", "reported address" if node.get("is_seed") else "")
+    import random
+    random.Random(4).shuffle(rows)
+    return {"chain": selected.key, "count": len(rows), "entries": rows[:limit]}
 
 
 @app.post("/trace")

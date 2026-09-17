@@ -4,6 +4,7 @@ import { fetchCase, fetchRelatedCases, traceAddress } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
 import ThemeToggle from '../components/ThemeToggle'
+import Mark from '../components/Mark'
 import ExportButton from '../components/ExportButton'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
@@ -238,7 +239,7 @@ export default function TraceView() {
   return (
     <div className="results">
       <header className="topbar">
-        <Link to="/" className="brand">Exchequer<small>Case view</small></Link>
+        <Link to="/" className="brand"><Mark size={18} />Exchequer<small>Case view</small></Link>
         <div className="subject">
           <span className="micro">{reverse ? 'Reported address (funded by)' : 'Reported address'}</span>
           <Address value={address} head={12} tail={10} />

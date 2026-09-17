@@ -172,7 +172,8 @@ a { color: var(--navy); }
   height: 48px; padding: 0 20px; flex-shrink: 0;
   background: var(--panel); border-bottom: 1px solid var(--rule);
 }
-.topbar .brand { font-family: var(--serif); font-weight: 600; font-size: 15px; color: var(--ink); text-decoration: none; letter-spacing: 0.01em; flex-shrink: 0; }
+.topbar .brand { font-family: var(--serif); font-weight: 600; font-size: 15px; color: var(--ink); text-decoration: none; letter-spacing: 0.01em; flex-shrink: 0; display: inline-flex; align-items: center; gap: 9px; }
+.mark { display: inline-block; flex-shrink: 0; color: var(--ink); }
 .topbar .brand small { font-family: var(--sans); font-weight: 400; color: var(--faint); font-size: 11px; margin-left: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
 .topbar .subject { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .topbar .pills { display: flex; gap: 6px; flex-wrap: nowrap; }
@@ -527,23 +528,42 @@ details.more summary:hover { color: var(--ink); }
 .theme-toggle:hover { color: var(--ink); }
 
 /* =========================================================================
-   SIGN-IN: the lattice behind, one small card in front.
+   SIGN-IN: the ledger behind, one card in front.
    ========================================================================= */
 .signin { position: relative; min-height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--paper); }
 .lattice { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .signin-top { position: absolute; left: 20px; right: 16px; top: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; }
 .signin-top .micro { color: var(--amber); }
 .signin-card {
-  position: relative; width: 340px; display: flex; flex-direction: column; gap: 14px;
-  padding: 26px 26px 22px; background: color-mix(in srgb, var(--panel) 88%, transparent);
-  border: 1px solid var(--rule-strong); border-radius: var(--r); box-shadow: var(--shadow); backdrop-filter: blur(6px);
+  position: relative; width: 400px; display: flex; flex-direction: column; gap: 22px; padding: 26px 30px 24px;
+  background: color-mix(in srgb, var(--panel) 76%, transparent);
+  border: 1px solid var(--rule-strong); border-top-color: var(--amber); border-radius: 4px;
+  backdrop-filter: blur(14px) saturate(120%); box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.04);
 }
-.signin-card .brand-block { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 6px; color: var(--amber); }
-.signin-card .brand-block .name { font-family: var(--serif); font-weight: 600; font-size: 22px; color: var(--ink); letter-spacing: 0.01em; }
-.signin-card label { display: flex; flex-direction: column; gap: 5px; }
-.signin-card input { font-family: var(--mono); font-size: 13.5px; padding: 10px 12px; }
-.signin-card input[aria-invalid="true"] { border-color: var(--red); }
-.signin-card button.primary { padding: 10px 14px; font-size: 13.5px; margin-top: 4px; justify-content: center; }
-.signin-error { font-size: 12px; color: var(--red); }
-.signin-card .note { text-align: center; font-size: 11px; }
+.signin-card .card-head { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; }
+.signin-card .card-head .mark { color: var(--ink); }
+.signin-card .card-title { display: flex; flex-direction: column; gap: 3px; }
+.signin-card .card-title .name { font-family: var(--serif); font-weight: 600; font-size: 24px; line-height: 1; color: var(--ink); letter-spacing: 0.01em; }
+.signin-card .status { display: inline-flex; align-items: center; gap: 7px; }
+.signin-card .status i { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); animation: breathe 2.4s ease-out infinite; }
+.signin-card .status .micro { color: var(--amber); }
+@keyframes breathe { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--amber) 55%, transparent); } 100% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--amber) 0%, transparent); } }
+.signin-card .rule { height: 1px; background: linear-gradient(90deg, var(--rule-strong), transparent); }
+.signin-card .field { display: flex; flex-direction: column; gap: 8px; }
+.signin-card .field .micro { transition: color var(--fast) var(--ease); }
+.signin-card .field:focus-within .micro { color: var(--ink); }
+.signin-card .field input {
+  font-family: var(--mono); font-size: 15px; color: var(--ink);
+  background: transparent; border: none; border-bottom: 1px solid var(--rule-strong); border-radius: 0;
+  padding: 6px 0 10px; outline: none; transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+.signin-card .field input::placeholder { color: var(--faint); opacity: 0.7; }
+.signin-card .field input:focus { border-bottom-color: var(--ink); box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--ink) 40%, transparent); }
+.signin-card .field input[aria-invalid="true"] { border-bottom-color: var(--red); }
+.signin-card button.enter { padding: 13px 16px; font-size: 13.5px; justify-content: center; gap: 10px; letter-spacing: 0.02em; transition: box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease); }
+.signin-card button.enter:hover:not(:disabled) { box-shadow: 0 12px 30px -10px color-mix(in srgb, var(--ink) 50%, transparent); transform: translateY(-1px); }
+.signin-card button.enter svg { transition: transform var(--fast) var(--ease); }
+.signin-card button.enter:hover:not(:disabled) svg { transform: translateX(3px); }
+.signin-error { font-size: 12px; color: var(--red); margin-top: -10px; }
+.signin-card .note { text-align: center; font-size: 11px; margin-top: -6px; }
 .signin-foot { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; }

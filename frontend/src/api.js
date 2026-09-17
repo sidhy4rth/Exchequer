@@ -124,6 +124,13 @@ export async function fetchRiskLabels(chain) {
   return response.json()
 }
 
+/** The addresses the tool knows -- real, labelled -- for the sign-in backdrop. */
+export async function fetchLedger(limit = 1400) {
+  const response = await fetch(`${BASE}/ledger?limit=${limit}`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
 export async function fetchHealth() {
   const response = await fetch(`${BASE}/health`)
   if (!response.ok) throw await toError(response)

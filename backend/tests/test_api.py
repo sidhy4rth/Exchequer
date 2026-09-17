@@ -99,3 +99,19 @@ def test_hops_covered_counts_addresses_found_not_expanded():
 
     assert _hops_covered(graph) == 2
     assert _hops_covered(make_graph([(seed, addr("a1"), 1.0)], seed=seed)) == 1
+
+
+def test_ledger_lists_real_labelled_addresses(client):
+    """The sign-in backdrop draws the tool's own knowledge, nothing invented."""
+    body = client.get("/ledger?chain=ethereum&limit=100").json()
+    assert body["chain"] == "ethereum"
+    assert body["count"] >= 400  # 337 exchange wallets + 124 OFAC addresses, at least
+    assert len(body["entries"]) == 100
+    kinds = {e["k"] for e in body["entries"]}
+    assert kinds <= {"sanctioned", "exchange", "inferred", "wallet"}
+    for e in body["entries"]:
+        assert e["a"].startswith("0x") and len(e["a"]) == 42
+        if e["k"] == "exchange":
+            assert e["e"]
+        if e["k"] == "sanctioned":
+            assert e["t"].startswith("OFAC SDN")

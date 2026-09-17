@@ -205,6 +205,10 @@ class RiskMatcher:
     def lookup(self, address: str) -> dict[str, str] | None:
         return self._labels.get(normalize_address(address))
 
+    def entries(self) -> list[tuple[str, dict[str, str]]]:
+        """Every (address, record) pair, for anything that lists the database."""
+        return list(self._labels.items())
+
     def is_flagged(self, address: str) -> bool:
         return normalize_address(address) in self._labels
 
