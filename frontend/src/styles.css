@@ -603,7 +603,9 @@ details.more summary:hover { color: var(--ink); }
 .pr-bar i { grid-column: 1 / -1; display: block; height: 3px; background: var(--panel-2); }
 .pr-bar i b { display: block; height: 100%; background: var(--ink); }
 .pr-route { grid-template-rows: auto minmax(0, 1fr) auto; gap: 18px; padding-top: 24px; }
-.pr-rowhead { display: flex; justify-content: space-between; align-items: baseline; }
+.pr-rowhead { display: flex; justify-content: space-between; align-items: center; }
+.pr-rowright { display: inline-flex; align-items: center; gap: 16px; }
+.pr-stage { position: relative; height: 100%; min-height: 420px; }
 .pr-flow { min-height: 0; border: 1px solid var(--rule); background: var(--panel); border-radius: var(--r); overflow: hidden; }
 .pr-flow .flow-legend { display: none; }
 .pr-hops { display: grid; grid-template-columns: auto 1fr auto; gap: 10px 24px; font-family: var(--mono); font-size: 15px; align-items: baseline; }

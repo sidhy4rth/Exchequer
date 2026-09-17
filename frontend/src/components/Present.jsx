@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import FlowView from './FlowView'
+import GraphView from './GraphView'
 import ExportButton from './ExportButton'
 
 // Present mode: the same case as four screens, one thing on each, big
@@ -22,6 +23,7 @@ const short = (a) => (a ? `${a.slice(0, 8)}…${a.slice(-6)}` : '')
 
 export default function Present({ result, related = [], unit, onClose }) {
   const [screen, setScreen] = useState(0)
+  const [view, setView] = useState('flow') // 'flow' | 'bubbles', as in the console
   const reverse = result.direction === 'incoming'
   const total = 4
 
@@ -105,9 +107,19 @@ export default function Present({ result, related = [], unit, onClose }) {
     <div className="pr-screen pr-route" key="route">
       <div className="pr-rowhead">
         <span className="micro">How it got there · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
-        <span className="micro">{reverse ? 'money flows into the reported wallet, right' : 'the traced funds in red, left to right'}</span>
+        <span className="pr-rowright">
+          <span className="micro">{view === 'flow' ? (reverse ? 'money flows into the reported wallet, right' : 'the traced funds in red, left to right') : 'bubble area = value moved · arrows the way the money went'}</span>
+          <span className="seg">
+            <button type="button" className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
+            <button type="button" className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
+          </span>
+        </span>
       </div>
-      <div className="pr-flow"><FlowView data={result.graph} tracePath={result.trace_path} unit={unit} direction={result.direction} /></div>
+      <div className="pr-flow">
+        {view === 'flow'
+          ? <FlowView data={result.graph} tracePath={result.trace_path} unit={unit} direction={result.direction} />
+          : <div className="pr-stage"><GraphView data={result.graph} tracePath={result.trace_path} unit={unit} /></div>}
+      </div>
       <div className="pr-hops">
         {path.slice(1).map((s, i) => (
           <div className="pr-hop" key={s.address}>
