@@ -87,6 +87,13 @@ def hex_to_base58(raw: str) -> str:
     return encoded
 # TronGrid's per-page maximum.
 MAX_PAGE = 200
+# How many raw records to read per address before giving up on filling the
+# cap. The native endpoint returns every transaction the account signed, and
+# on a busy wallet almost none of those are TRX transfers, so counting only
+# the records we keep would page through the whole history (observed: a
+# wallet that paginated for minutes and never finished). Five pages is the
+# same budget as one fully-kept page on Etherscan, five times over.
+MAX_SCAN = MAX_PAGE * 5
 
 
 class TronError(EtherscanError):
@@ -307,8 +314,9 @@ class TronClient:
         # limit as results accumulate makes TronGrid reject the next page with
         # "fingerprint does not match current set of params".
         page_size = min(MAX_PAGE, cap)
+        scanned = 0
 
-        while len(collected) < cap:
+        while len(collected) < cap and scanned < MAX_SCAN:
             params: dict[str, Any] = {
                 direction_param: "true",
                 "limit": page_size,
@@ -321,6 +329,7 @@ class TronClient:
 
             body = self._get(path, params)
             records = body.get("data") or []
+            scanned += len(records)
             for raw in records:
                 tx = parse(raw)
                 # Only successful, value-bearing transfers are evidence of money
