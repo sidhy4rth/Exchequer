@@ -54,6 +54,12 @@ CATEGORY_ERC20 = "20"
 # Hard limits imposed by the API itself.
 MAX_BLOCK_WINDOW = 100_000
 MAX_COUNT = 1_000
+# Raw records to read per address before giving up on filling the cap. The
+# lookback already bounds the walk to a few windows, but a wallet that spams
+# zero-value or failed transfers inside one window would otherwise be paged
+# through in full, since only kept transfers count against the cap. Pages are
+# sized to the trace cap (200 by default), so this is five pages.
+MAX_SCAN = 1_000
 
 # NodeReal's transfer index trails the chain head by a few blocks, and asking
 # for a block it has not indexed yet fails the whole query with "blockNum not
@@ -285,13 +291,14 @@ class NoderealClient:
         head = self.head_block()
         floor = max(0, head - self.lookback_blocks)
         collected: list[Transaction] = []
+        scanned = 0
         window_end = head
 
-        while window_end > floor and len(collected) < cap:
+        while window_end > floor and len(collected) < cap and scanned < MAX_SCAN:
             window_start = max(floor, window_end - MAX_BLOCK_WINDOW + 1)
             page_key: str | None = None
 
-            while len(collected) < cap:
+            while len(collected) < cap and scanned < MAX_SCAN:
                 params: dict[str, Any] = {
                     "category": category,
                     "fromBlock": hex(window_start),
@@ -317,7 +324,9 @@ class NoderealClient:
                     self._head_block = min(self._head_block or window_end, window_end)
                     params["toBlock"] = hex(window_end)
                     result = self._rpc("nr_getAssetTransfers", [params]) or {}
-                for raw in result.get("transfers") or []:
+                transfers = result.get("transfers") or []
+                scanned += len(transfers)
+                for raw in transfers:
                     tx = self._to_transaction(raw)
                     # Only value-bearing, successful transfers are evidence of
                     # money moving; the rest is noise the trace must not follow.
