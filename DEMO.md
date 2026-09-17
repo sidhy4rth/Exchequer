@@ -297,6 +297,10 @@ amounts.
 
 ---
 
+## Present mode
+
+On any case, press **P** (or the Present button). The case becomes four screens sized for the projector: the finding alone, the route alone, four numbers for what was left out, the handoff. Arrow keys step; **Esc** drops back to the console with everything still there — use Present for the walk-through, the console for questions.
+
 ## Running order
 
 Trace 1, then 2, then 3. The story escalates: nothing found → something odd

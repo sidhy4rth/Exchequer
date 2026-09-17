@@ -6,6 +6,7 @@ import FlowView from '../components/FlowView'
 import ThemeToggle from '../components/ThemeToggle'
 import Mark from '../components/Mark'
 import ExportButton from '../components/ExportButton'
+import Present from '../components/Present'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
 const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer' }
@@ -68,6 +69,7 @@ const ICONS = {
   copy: ['M9 9h10v10H9z', 'M5 15V5h10'],
   back: ['M15 6l-6 6 6 6'],
   redo: ['M4 12a8 8 0 1 1 2.3 5.7', 'M4 18v-6h6'],
+  present: ['M3 5h18v11H3z', 'M8 20h8', 'M12 16v4'],
 }
 
 /** An address that copies itself when clicked and shows the full value on hover. */
@@ -113,6 +115,8 @@ export default function TraceView() {
   const [revealed, setRevealed] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState('flow') // 'flow' | 'bubbles'
+  // Present mode: the case as four big screens. P opens it, Esc closes it.
+  const [presenting, setPresenting] = useState(false)
   const timers = useRef([])
 
   // Stored cases that share an intermediary with this one. Loaded after the
@@ -225,6 +229,16 @@ export default function TraceView() {
     result.evidence?.count ? `${result.evidence.count} responses hashed` : null,
   ].filter(Boolean).join(' · ') : ''
 
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'p' && e.key !== 'P') return
+      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return
+      if (result && !presenting) { e.preventDefault(); setPresenting(true) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [result, presenting])
+
   const retrace = useCallback(() => {
     if (!result) return
     const q = new URLSearchParams({
@@ -238,6 +252,7 @@ export default function TraceView() {
 
   return (
     <div className="results">
+      {presenting && result && <Present result={result} related={related} unit={unit} onClose={() => setPresenting(false)} />}
       <header className="topbar">
         <Link to="/" className="brand"><Mark size={18} />Exchequer<small>Case view</small></Link>
         <div className="subject">
@@ -255,6 +270,7 @@ export default function TraceView() {
         </div>
         <span className="grow" />
         <div className="actions">
+          {result && <button onClick={() => setPresenting(true)} title="The case as four big screens (P)"><Icon d={ICONS.present} />Present</button>}
           {result && <ExportButton caseId={result.case_id} address={address} />}
           {stored && result && (
             <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />Re-trace</button>
