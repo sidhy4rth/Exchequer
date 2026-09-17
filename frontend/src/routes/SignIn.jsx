@@ -34,13 +34,13 @@ export default function SignIn() {
         <ThemeToggle />
       </div>
       <form className="signin-card" onSubmit={submit} autoComplete="off">
+        <span className="signin-status"><i /><span className="micro">Restricted</span></span>
         <div className="card-head">
           <Mark size={34} />
           <div className="card-title">
             <span className="name">Exchequer</span>
             <span className="micro">Cryptocurrency fraud tracing</span>
           </div>
-          <span className="status"><i /><span className="micro">Restricted</span></span>
         </div>
         <div className="rule" />
         <label className="field">
