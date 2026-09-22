@@ -198,7 +198,7 @@ Ethereum · ETH · 3 hops · **~11 seconds, 20 API calls**
 | Confidence | **0.875** (hop 1.0 · amount 1.0 · directness **0.5**) |
 | Evidence | 2 outgoing transfers, 100% of them to **Binance 14**, 2.3201 ETH swept |
 | Also in `matches` | Binance 14 itself, exact label, 2 hops |
-| **Screening** | **mixer — Tornado Cash Proxy** `0x722122df…6b6967`, 3 hops, 10 ETH in; the trace stops there |
+| **Screening** | the reported address is itself a **reported phishing wallet** (`Fake_Phishing4939`); **mixer — Tornado Cash Proxy** `0x722122df…6b6967`, 3 hops, 10 ETH in; the trace stops there |
 | Patterns | amount split |
 
 The reported address carries Etherscan's *Phish / Hack* label. Its funds went
@@ -309,7 +309,8 @@ Ethereum · ETH · 3 hops · **~3 seconds, 26 API calls** (then open the stored 
 |---|---|
 | Addresses traced | 76 |
 | Attribution | Binance — probable deposit address (inferred) `0x11b07437…c4663`, 2 hops, confidence 0.74 |
-| **Related cases** | **61 shared intermediaries** with `0x0000000009324…` and **47** with `0x00000000bf02…`, four of them inferred Binance deposit addresses |
+| **Related cases** | **60 shared intermediaries** with `0x0000000009324…` and **46** with `0x00000000bf02…`, four of them inferred Binance deposit addresses |
+| **Screening** | all three reported addresses are on Etherscan's phishing list, and **all three reach the same reported phishing wallet** (`Fake_Phishing4645`) at 3 hops |
 
 All three reported addresses carry Etherscan's *Phish / Hack* label, and all
 three were traced separately. The *Related cases* panel shows that their money
@@ -320,6 +321,12 @@ cases already traced; it costs no API call. Then say the caveat the README
 states: the rule excludes what the label files know, so an unlabelled public
 contract can appear as a "shared intermediary" too — read a cluster with its
 amounts.
+
+New since the scam lists went in: the same known phishing wallet appears three
+hops out in all three traces. It is labelled now, so it is flagged in each
+case rather than counted as a shared intermediary (hence 60 and 46, where the
+15 September run counted 61 and 47) — and a labelled scam wallet common to
+three complaints is a stronger link than an unlabelled one.
 
 ---
 
@@ -463,7 +470,9 @@ Two more categories sit beside the sanctions lists, and the alert always says
 which source a hit came from. **Mixers** (40 Ethereum, 14 BSC: Tornado Cash,
 Typhoon, Privacy Pools pools and routers) — Tornado Cash left the OFAC list in
 March 2025, so these come from Etherscan's own tags, and a trace still stops at
-one; trace 6 is a live hit. **Stolen funds** (254 Ethereum, 42 BSC) — wallets
-Etherscan tags as the perpetrator of a hack or phishing theft: the WazirX,
-Bybit, BingX, Ronin and other exploiters. A trace flags those and keeps going,
-because where the thief moved the money is the point.
+one; trace 6 is a live hit. **Stolen funds** (8,393 Ethereum, 560 BSC) — the
+WazirX, Bybit, BingX, Ronin and other exploiters Etherscan tags, plus reported
+phishing and scam wallets from ScamSniffer's blacklist and Etherscan's
+Phish/Hack list, each checked on chain. A trace flags those and keeps going,
+because where the thief moved the money is the point. Traces 6 and 10 start
+at one: their reported addresses are on the phishing list.

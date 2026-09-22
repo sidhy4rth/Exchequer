@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 *.db
 sdn.xml
+*_check.jsonl

@@ -36,6 +36,20 @@ that has gone quiet is exactly as relevant to a trace that reaches it.
 
     cd backend && .venv/bin/python -m scripts.import_threat_labels
     cd backend && .venv/bin/python -m scripts.import_threat_labels --chain bsc --dry-run
+
+Scam lists
+----------
+`--scam-lists` adds reported phishing and scam wallets from three published
+lists, all pinned: ScamSniffer's address blacklist (a Web3 security vendor,
+updated daily, published with a 7-day delay), and two mirrors of Etherscan's
+Phish/Hack label (dappcenter/etherscan-labels and Forta's labelled datasets).
+They join the `stolen` category; each entry names the lists that report it.
+The Etherscan lists are Ethereum's; ScamSniffer names no chain, so each of its
+addresses is filed under every EVM chain it has been used on. Existing entries
+are kept, and addresses already on a sanctions list are skipped. Progress is
+checkpointed, so an interrupted run resumes.
+
+    cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists --checkpoint scam_check.jsonl
 """
 from __future__ import annotations
 
@@ -149,6 +163,135 @@ def used_on_bsc(client: NoderealClient, address: str) -> bool:
     return int(client._rpc("eth_getBalance", [address, "latest"]) or "0x0", 16) > 0
 
 
+SCAMSNIFFER = ("scamsniffer/scam-database", "753310a5c8ae9b83d8d05ae21e3b2ae60bf87c98")
+PHISH_HACK = ("dappcenter/etherscan-labels", "d547040b8bf65577945bcc53cec62a96945cc705")
+FORTA = ("forta-network/labelled-datasets", "40a9c2f2bd7e9ddfdd0f3540db589f0288e1e88a")
+
+
+def raw(repo_commit: tuple[str, str], path: str) -> bytes:
+    repo, commit = repo_commit
+    with urllib.request.urlopen(f"https://raw.githubusercontent.com/{repo}/{commit}/{path}", timeout=120) as r:
+        return r.read()
+
+
+def scam_candidates() -> dict[str, dict]:
+    """{address: {tag, sources, etherscan}} across the three lists."""
+    out: dict[str, dict] = {}
+
+    def add(address: str, tag: str, source: str, etherscan: bool) -> None:
+        addr = normalize_address(address)
+        if not is_valid_address(addr):
+            return
+        row = out.setdefault(addr, {"tag": "", "sources": [], "etherscan": False})
+        row["tag"] = row["tag"] or (tag or "").strip()
+        if source not in row["sources"]:
+            row["sources"].append(source)
+        row["etherscan"] = row["etherscan"] or etherscan
+
+    for address in json.loads(raw(SCAMSNIFFER, "blacklist/address.json")):
+        add(address, "", f"ScamSniffer address blacklist @ {SCAMSNIFFER[1][:10]}", False)
+    etherscan_src = "Etherscan Phish/Hack label"
+    for row in json.loads(raw(PHISH_HACK, "src/hack-addresses.json")):
+        add(row["address"], row.get("nameTag", ""), f"{etherscan_src}, via {PHISH_HACK[0]} @ {PHISH_HACK[1][:10]}", True)
+    for path, key, tag_key in (("labels/1/phishing_scams.csv", "address", "etherscan_tag"),
+                               ("labels/1/etherscan_malicious_labels.csv", "banned_address", "wallet_tag")):
+        for row in csv.DictReader(io.StringIO(raw(FORTA, path).decode())):
+            add(row[key], row.get(tag_key, ""), f"{etherscan_src}, via {FORTA[0]} @ {FORTA[1][:10]}", True)
+    return out
+
+
+def scam_entity(tag: str) -> tuple[str, str]:
+    """(entity, label) for a reported scam wallet."""
+    found = classify(tag) if tag else None
+    if found and found[0] == STOLEN:
+        return found[1], tag
+    return "Reported phishing / scam wallet", tag or "Reported phishing / scam wallet"
+
+
+def import_scam_lists(checkpoint: Path, dry_run: bool) -> int:
+    from scripts.import_eth_labels import has_any_activity
+
+    candidates = scam_candidates()
+    listed: set[str] = set()
+    documents: dict[str, dict] = {}
+    for key in CHAIN_IDS:
+        chain = config.CHAINS[key]
+        for path in (chain.risk_labels_path, chain.intl_sanctions_path):
+            if path and path.exists():
+                listed |= set(json.loads(path.read_text())["labels"])
+        documents[key] = json.loads(chain.threat_labels_path.read_text())
+    have = set(documents["ethereum"]["labels"]) | set(documents["bsc"]["labels"])
+    todo = sorted(a for a in candidates if a not in listed and a not in have)
+
+    done: dict[str, list[str]] = {}
+    if checkpoint.exists():
+        for line in checkpoint.read_text().splitlines():
+            row = json.loads(line)
+            done[row["address"]] = row["chains"]
+    remaining = [a for a in todo if a not in done]
+    print(f"{len(candidates)} reported addresses; {len(todo)} new; "
+          f"{len(todo) - len(remaining)} already checked; {len(remaining)} to check", flush=True)
+
+    bsc = NoderealClient(chain_slug="bsc-mainnet") if config.NODEREAL_API_KEY else None
+    try:
+        with EtherscanClient(chain_id=1) as eth, checkpoint.open("a") as log:
+            for n, addr in enumerate(remaining, 1):
+                chains = []
+                try:
+                    if has_any_activity(eth, addr):
+                        chains.append("ethereum")
+                    # Etherscan's list is Ethereum's own; only ScamSniffer's needs BSC checked.
+                    if bsc and not candidates[addr]["etherscan"] and used_on_bsc(bsc, addr):
+                        chains.append("bsc")
+                except (EtherscanError, NoderealError, ValueError) as exc:
+                    print(f"  ! {addr}: {str(exc)[:60]}", flush=True)
+                    continue
+                done[addr] = chains
+                log.write(json.dumps({"address": addr, "chains": chains}) + "\n")
+                log.flush()
+                if n % 250 == 0:
+                    print(f"  checked {len(todo) - len(remaining) + n}/{len(todo)}", flush=True)
+    finally:
+        if bsc:
+            bsc.close()
+
+    unchecked = [a for a in todo if a not in done]
+    added = Counter()
+    for addr in todo:
+        for chain_key in done.get(addr, []):
+            entity, label = scam_entity(candidates[addr]["tag"])
+            documents[chain_key]["labels"][addr] = {
+                "category": STOLEN, "entity": entity, "label": label,
+                "source": "; ".join(candidates[addr]["sources"]),
+            }
+            added[chain_key] += 1
+    unused = sum(1 for a in todo if done.get(a) == [])
+    print(f"\nadded {dict(added)}  never used={unused}  unchecked={len(unchecked)}")
+    if dry_run:
+        print("--dry-run: nothing written.")
+        return 0
+    if unchecked:
+        print("Some addresses could not be checked; re-run to finish before writing.")
+        return 1
+    for chain_key, document in documents.items():
+        labels = document["labels"]
+        counts = Counter(m["category"] for m in labels.values())
+        meta = document["_meta"]
+        meta["counts"] = {STOLEN: counts[STOLEN], MIXER: counts[MIXER]}
+        meta["last_reviewed"] = datetime.now(timezone.utc).date().isoformat()
+        meta["scam_lists"] = (
+            f"{added[chain_key]} reported phishing/scam wallets from ScamSniffer ({SCAMSNIFFER[0]} "
+            f"@ {SCAMSNIFFER[1]}) and Etherscan's Phish/Hack label ({PHISH_HACK[0]} @ {PHISH_HACK[1]}; "
+            f"{FORTA[0]} @ {FORTA[1]}), each confirmed used on this chain. A report on a list is an "
+            "accusation by that list, not a finding. Regenerate: cd backend && .venv/bin/python -m "
+            "scripts.import_threat_labels --scam-lists"
+        )
+        document["labels"] = dict(sorted(labels.items(), key=lambda kv: (kv[1]["category"], kv[1]["entity"], kv[1]["label"])))
+        config.CHAINS[chain_key].threat_labels_path.write_text(json.dumps(document, indent=2) + "\n")
+        print(f"Wrote {len(labels)} labels to {config.CHAINS[chain_key].threat_labels_path}")
+    return 0
+
+
 def verify_ethereum(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str]]:
     kept, dropped = {}, []
     with EtherscanClient(chain_id=1) as client:
@@ -190,7 +333,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--chain", choices=[*CHAIN_IDS, "all"], default="all")
     parser.add_argument("--dry-run", action="store_true", help="verify but do not write")
+    parser.add_argument("--scam-lists", action="store_true", help="add reported phishing/scam wallets instead")
+    parser.add_argument("--checkpoint", type=Path, default=Path("scam_check.jsonl"),
+                        help="progress file for --scam-lists, so an interrupted run resumes")
     args = parser.parse_args()
+
+    if args.scam_lists:
+        return import_scam_lists(args.checkpoint, args.dry_run)
 
     chains = list(CHAIN_IDS) if args.chain == "all" else [args.chain]
     if "bsc" in chains and not config.NODEREAL_API_KEY:

@@ -16,9 +16,9 @@ Three categories, with very different investigative meaning:
               pays out from that pool, deliberately severing the link between
               input and output.
 
-  stolen      The address is a wallet the block explorer attributes to the
-              perpetrator of a known hack or phishing campaign (e.g. "WazirX
-              Exploiter 3"). Funds that touch one are commingled with the
+  stolen      The address is a wallet the block explorer or a published
+              scam list attributes to the perpetrator of a known hack or
+              phishing campaign (e.g. "WazirX Exploiter 3"). Funds that touch one are commingled with the
               proceeds of that theft, which ties a fraud case to a larger,
               already-documented laundering operation.
 
@@ -129,8 +129,8 @@ class RiskMatch:
             return (
                 f"Stolen funds: {self.address} is tagged as {named} by "
                 f"{self.source}. {placement}. Funds that pass through it are "
-                f"commingled with the proceeds of that theft; the tag is the "
-                f"explorer's attribution, not a finding that any counterparty "
+                f"commingled with the proceeds of that theft; the tag is that "
+                f"source's attribution, not a finding that any counterparty "
                 f"took part in it."
             )
         return (

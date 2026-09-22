@@ -33,6 +33,19 @@ evidentiary use.
 
     cd backend && .venv/bin/python -m scripts.import_eth_labels
     cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc --dry-run
+
+Deposit addresses
+-----------------
+`--deposits Bitget` imports one exchange's per-customer deposit addresses on
+Ethereum instead ("Bitget Dep: 0x..." tags, ~19,000 of them). These are the
+most useful labels there are -- a deposit address names one customer account,
+which is exactly what a lawful request asks the exchange about -- and the
+costliest to check, so the mode is separate and resumable. The check is
+existence, not value: many deposit addresses only ever receive tokens, so an
+address passes with one normal transaction or, failing that, one token
+transfer. Progress is appended to `--checkpoint`; a re-run skips what it has.
+
+    cd backend && .venv/bin/python -m scripts.import_eth_labels --deposits Bitget --checkpoint bitget.jsonl
 """
 from __future__ import annotations
 
@@ -199,12 +212,106 @@ def verify_bsc(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str], lis
     return accepted, rejected, errors
 
 
+DEPOSIT_TAG = re.compile(r"^(?P<name>.+?)\s+Dep:\s", re.IGNORECASE)
+
+
+def deposit_candidates(exchange: str) -> dict[str, dict[str, str]]:
+    """{address: record} for every '<exchange> Dep: 0x..' tag on Ethereum."""
+    with urllib.request.urlopen(SOURCE_URL, timeout=120) as response:
+        rows = csv.DictReader(io.StringIO(response.read().decode()))
+        out: dict[str, dict[str, str]] = {}
+        for row in rows:
+            if row["chainId"] != CHAIN_IDS["ethereum"]:
+                continue
+            tag = (row["nameTag"] or "").strip()
+            match = DEPOSIT_TAG.match(tag)
+            addr = normalize_address(row["address"])
+            if match and CANONICAL.get(tag_head(match["name"])) == exchange and is_valid_address(addr):
+                out[addr] = {"exchange": exchange, "label": tag, "type": "deposit_wallet"}
+    return out
+
+
+def has_any_activity(client: EtherscanClient, address: str) -> bool:
+    """One normal transaction, or failing that one token transfer, ever."""
+    if client.get_transactions(address, limit=1, sort="asc", include_internal=False):
+        return True
+    tokens = client._request({
+        "module": "account", "action": "tokentx", "address": address,
+        "startblock": 0, "endblock": 99999999, "page": 1, "offset": 1, "sort": "asc",
+    })
+    return bool(tokens)
+
+
+def import_deposits(exchange: str, checkpoint: Path, dry_run: bool, limit: int | None) -> int:
+    path = config.CHAINS["ethereum"].labels_path
+    document = json.loads(path.read_text())
+    existing: dict[str, dict] = document["labels"]
+    candidates = deposit_candidates(exchange)
+    todo = sorted(a for a in candidates if a not in existing)
+    if limit:
+        todo = todo[:limit]
+
+    done: dict[str, bool] = {}
+    if checkpoint.exists():
+        for line in checkpoint.read_text().splitlines():
+            row = json.loads(line)
+            done[row["address"]] = row["used"]
+    remaining = [a for a in todo if a not in done]
+    print(f"Dataset: {DATASET_REPO} @ {DATASET_COMMIT[:10]}")
+    print(f"{exchange} deposit addresses: {len(candidates)} tagged, {len(todo)} not yet labelled, "
+          f"{len(todo) - len(remaining)} already checked, {len(remaining)} to check", flush=True)
+
+    with EtherscanClient(chain_id=1) as client, checkpoint.open("a") as log:
+        for n, addr in enumerate(remaining, 1):
+            try:
+                used = has_any_activity(client, addr)
+            except (EtherscanError, ValueError) as exc:
+                print(f"  ! {addr}: {str(exc)[:60]}", flush=True)
+                continue  # not checkpointed: a re-run tries it again
+            done[addr] = used
+            log.write(json.dumps({"address": addr, "used": used}) + "\n")
+            log.flush()
+            if n % 250 == 0:
+                print(f"  checked {len(todo) - len(remaining) + n}/{len(todo)}", flush=True)
+
+    accepted = {a: candidates[a] for a in todo if done.get(a) is True}
+    unused = [a for a in todo if done.get(a) is False]
+    unchecked = [a for a in todo if a not in done]
+    print(f"\n{exchange}: accepted={len(accepted)}  never used={len(unused)}  unchecked={len(unchecked)}")
+    if dry_run or not accepted:
+        print("Nothing written." if accepted else "Nothing verified; file unchanged.")
+        return 0
+    if unchecked:
+        print(f"{len(unchecked)} addresses could not be checked; re-run to finish before writing.")
+        return 1
+
+    merged = {**existing, **accepted}
+    document["labels"] = dict(sorted(merged.items(), key=lambda kv: (kv[1]["exchange"], kv[1]["label"])))
+    meta = document.setdefault("_meta", {})
+    meta["last_reviewed"] = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+    meta.setdefault("deposit_addresses", {})[exchange] = (
+        f"{len(accepted)} per-customer deposit addresses, tagged '{exchange} Dep' by Etherscan, "
+        f"imported from {DATASET_REPO} @ {DATASET_COMMIT} and each confirmed to have at least "
+        f"one transaction or token transfer on chain; {len(unused)} never-used addresses left out. "
+        f"Regenerate: cd backend && .venv/bin/python -m scripts.import_eth_labels --deposits {exchange}"
+    )
+    path.write_text(json.dumps(document, indent=2) + "\n")
+    print(f"Wrote {len(merged)} labels to {path} (+{len(accepted)})")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--chain", choices=[*CHAIN_IDS, "all"], default="all")
     parser.add_argument("--dry-run", action="store_true", help="verify but do not write")
     parser.add_argument("--limit", type=int, default=None, help="cap candidates per chain (for testing)")
+    parser.add_argument("--deposits", metavar="EXCHANGE", help="import this exchange's deposit addresses instead")
+    parser.add_argument("--checkpoint", type=Path, default=Path("deposit_check.jsonl"),
+                        help="progress file for --deposits, so an interrupted run resumes")
     args = parser.parse_args()
+
+    if args.deposits:
+        return import_deposits(args.deposits, args.checkpoint, args.dry_run, args.limit)
 
     chains = list(CHAIN_IDS) if args.chain == "all" else [args.chain]
     if "bsc" in chains and not config.NODEREAL_API_KEY:

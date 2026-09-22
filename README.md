@@ -382,7 +382,7 @@ Three categories, with different investigative meaning and different authority b
 |---|---|---|---|
 | `sanctioned` | The address is on a government sanctions or seizure list | OFAC, UK, EU, Israel, Japan, France | None — it is an ordinary wallet whose transfers mean what they say |
 | `mixer` | The address is a tumbler's pool or router | Etherscan / BscScan tags | **The trace stops here** |
-| `stolen` | The explorer tags the address as the perpetrator of a hack or phishing theft | Etherscan / BscScan tags | None — where the thief moved the money is the point |
+| `stolen` | The address is tagged as a hacker's or reported as a phishing / scam wallet | Etherscan / BscScan tags, ScamSniffer | None — where the thief moved the money is the point |
 
 The mixer rule is the important one, and it is a correctness rule rather than a presentational one.
 A tumbler pays out from a commingled pool, so transfers leaving it have no established relationship
@@ -396,13 +396,17 @@ Cash, the mixer that mattered on Ethereum, left the SDN list in March 2025 follo
 Treasury*, and every mixer OFAC still lists is a Bitcoin service — so a sanctions-only screen would never
 stop at a mixer on these chains. `scripts/import_threat_labels.py` takes the pools and routers of Tornado
 Cash, Typhoon and Privacy Pools (40 on Ethereum, 14 on BSC; never their governance, token or vesting
-contracts) and the wallets Etherscan tags as a thief's (254 on Ethereum, 42 on BSC: the WazirX, Bybit,
-BingX, Ronin and other exploiters, and phishing wallets), each checked to exist and to have been used on
-chain. They sit in `threat_labels*.json`, below the government lists: where an address is on both, the
+contracts) and the wallets Etherscan tags as a thief's (the WazirX, Bybit, BingX, Ronin and other exploiters), each
+checked to exist and to have been used on chain. `--scam-lists` then adds reported phishing and scam
+wallets from ScamSniffer's published blacklist and Etherscan's Phish/Hack label (two pinned mirrors),
+filed under each chain they have been used on — 1,604 with no history on either chain were left out.
+Stolen-funds coverage: **8,393 on Ethereum, 560 on BSC**. A wallet on a scam list is that list's
+accusation, and the finding says whose. They sit in `threat_labels*.json`, below the government lists: where an address is on both, the
 government entry is the one reported.
 
 ```bash
 cd backend && .venv/bin/python -m scripts.import_threat_labels
+cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists
 ```
 
 > Screening degrades safely. With no label file present the trace still runs and still attributes an

@@ -7,11 +7,12 @@
     "chain": "bsc",
     "last_reviewed": "2026-09-22",
     "counts": {
-      "stolen": 42,
+      "stolen": 560,
       "mixer": 14
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_threat_labels",
-    "schema": "labels maps an address to {category, entity, label, source}"
+    "schema": "labels maps an address to {category, entity, label, source}",
+    "scam_lists": "518 reported phishing/scam wallets from ScamSniffer (scamsniffer/scam-database @ 753310a5c8ae9b83d8d05ae21e3b2ae60bf87c98) and Etherscan's Phish/Hack label (dappcenter/etherscan-labels @ d547040b8bf65577945bcc53cec62a96945cc705; forta-network/labelled-datasets @ 40a9c2f2bd7e9ddfdd0f3540db589f0288e1e88a), each confirmed used on this chain. A report on a list is an accusation by that list, not a finding. Regenerate: cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists"
   },
   "labels": {
     "0xd9689b0ae0eeddbbb817b4c8bfabad5bb29dd0df": {
@@ -289,6 +290,3114 @@
       "entity": "QubitFin exploit",
       "label": "QubitFin Exploiter 2",
       "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x000000002651a7206f8d7a23fe4410edf16dbec3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0000000dc3d9e17e3449e59bb75cb4005ee8aa7f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0000000f7e71bfbcdae6d29aa49ed557afaef9d2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x006bfe806273b9bf223769532332a687d8f6dd11": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x00b1fd5fb9f0fc47df092d8e71547e753a56d1f1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x00c69f9421a1d58601a61275799cc2aeb443acc8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x029be452dd25e57b2bcdaefe7b98b6917f975d74": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x02cbbede84577866616119d1b78858a6a49d617e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x030f7745e5abc1e632a86c9121b01ece5d6a9c8f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x03499474a491ef05127d8087a227089361ba7303": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x038cd3dc5ed5a4e63e9d32abf7551f881de77d41": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x04ee62c90fec42d98fc21a882dcb40de70d43166": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x05cc236add269a69e024e45f46deb5fa2d9a5b97": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x060ce179fc30f98022228d3694a7d5f71b5c2c3e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x063a2953fb36cc8ebeac80259dd8a1c972ad778a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0660e55dca2c44fa9f1716286d81c84c79fb2ac7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0698bda55cf6887d2932a30845c8ea723fb58b4c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x070cc35011c2b9962c835499c836b031af1131d9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0749620c19e2c0f96fc462259dd0463c113ea0f1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x07ebc29f3f7a2c37f1254b395dd469ddd572a857": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x088251d92971fe4dec9a949fd02a5d75cbdfa24d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x08d14aae50b7da86379b7f2c611cb7c4477bd41f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0a63054930e47814d9ff6071923011cbb9ae6a78": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0b4bd6edde650a34dc5572e33624e3e077d63fef": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0b96b72744ea17bc040fb1da7e81a99aa2b5f36a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0c36614d5b794da5918157e0ef104848edd4c71e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0c521cc697ef52f999033d61a0910d6b1f2d7cd2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0dad1dfd24025def1a5c815e870a7784870f3435": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0eb09fa9b2f28a9064e86d7796db69f3a203e332": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0ec3b5af50e2108ac153df21cf07fb38823b48ff": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0f732ccbb681021ba33d99f976b9a6199f8e72d8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x0fe7723b20913600fc7bf462346bb0e99eb7d691": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x101ce0cedd142f199c9ef61739ae59b6611a0fc0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1055839cf88eceb30a7cdb74afbd1d0f922cf9dd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1133805de803d9af378941a09d22de9634bec3e0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1305661f7dad36b0a14fe33234cecb991cc84cf5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1466053227ee72982ef4cc36007328c773be22a3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x14c11c0b8b397a58a88ac8565bed3b212f6ca5d2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1572e6d687a79a30b7e25e4f3837f7af2ee442e2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x164e84226882c385940134f5b292cb89bc4feed6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1665bd914c07be16293d08b114d790297b53d73d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x16c558ecc7d31f4e0098ee1d72c53f6422d64873": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x16df3862b103976a2f5dd876f81aa3ec60757f04": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x17504785059123e758f1cd2bfa00ab45b613f9e5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x177bb575b45d059510616a05d301f898dadde294": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x17b421d2eb40055c08f13333c558a9384ed55768": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x17ce37bef93d8a0faf0c832ff68914a8038f083d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x17ece9c860a3b1c8daa0888cdee352e71f2d88fb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1807823deb1ca3ff5f94640af39c61745dde6dd0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x18750359746aa811e292816f8913cc52f84ed6e6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x18ea8a9ac49454d1c99c6c348ab3f453bf130b77": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1abf0a2edc83a25f51412d685fe15bb51597732a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1ae903747574be866498e83c5730dc00f034b092": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1b199b8acde4f05a49703a9e598a8d47629c0dc5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1d415322eaef5cafae79c8b3cfe984bb9669a840": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1d6cada7af0c86323c3be27e0719e9cfdccd2a7a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1e157f86ceb5560a2d7eb3b8a380c9e67846b885": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1eb80b13dc0a40adbb0b9846ea3579b8b406da65": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x1fdeb062c5f37524c6c51d2817be6448ae3ca53a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2042320030d7748f15350b77776144129d4c2214": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x20ae39ff9fb5340a2e9d737f811053d9026d0b1d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2250ee6dcd94b8f8c732d56503b23ffae79704c3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2252096d66c72985e66639c344695b17bbed4192": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2380fd8b951b6d53c014bb12e8108fee36c18fdf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x24c65fcc3e8ef57d4848d10ca1ca0372baa29c44": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x24c7143109dae8d10e686ed98100881c413fe3f8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x24dfe3492c742ecf2406f779c456a55f90902e88": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x25d34ce16bab70c38dc0ca46b745d54b7a36cfac": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x25dc40a73a085dbb32b7f4ed1998c610c218d5e9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x276ca1b5b8d8dc239dfdc3f9c69121050d460d4d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x28b02b4125799d48872ffb26a7c47762799dfbe1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x28fde71d85d5d8145c33313397068b399a04117e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x29052d47e359b6a339d8ad586951ad461b8556dd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2914724c98050eec49a06e072bf305911fbfbf9f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2a2c35adbeb59f618c26af2eaa8dd58e130957b0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2acbc10f6af960d02b4907e9fec5ea259b038e16": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2b22d1256fbffed294c83624c08a79d63be13a12": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2b5410b12ddaf243872d3b81fd6e457fd1713c4a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2bccf77ec6b6cda8fc6112745a2f481b2e475318": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2c3cbf1224f67a679fd70cc68af1748e10dbea86": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2c7c2750284dd3ef6bf6ae0133aab14e3f5d5abe": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2d18120eaf5bf460a85f2691199c1c56fc84a8e9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2d32ccc4a300f988a24a1e911b126388f4d0770d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2e541bd6bdaf0e52f2bc000ddc483de00b5e26e5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x2ffdce87e2de466348a589acb4121b476c7605a5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x30946151ef8d5d3c7691fd9bb28d9b293f5bbbdd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x312c88f77ab5958c9e67c6cd6518e4e7aff22f8e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x31c7baefa42953916e433143f0e56fb43a699c7e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x32153e46f9f29639626056db479f54e401b47d8a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x321ddd97643b8a49c566eddad394075d6de09ce0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x322ed36e9a3cc2cb2728f26d021d6abca5891921": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x323ac86588563e8176889cd47a3448e10df8a4c8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3342c0e319c6703bf81363933764dccf5eceddc9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x337f2b17e1eff2c15745b4aaee93cbf9a9563264": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3450cb642ef000a087dcba926fca451b0275a6cf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x34b059980d00eee2b1c48b80ba4d3fd7c121e6f4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x34c3a43f3f3658a0bba42fe7ffaffe5cc498697c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x353d473f8b959fa7f74831b476ba9eb1a0153f16": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3550a5f5b55014abb76d867bd268f00a876c472d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x35db0f6125ecd21676a09bfd9edb8a0aaae4f0b5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x35f4e7f393c9ba4cd8ce252977092e64a3aedaca": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x36038059236fc88ecc3e42f20bb20ef11797ee6e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3626efb26783006c97431a3a77ddc4113572a619": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x36737241ac15590ec43e59c13607abac9fdda5ea": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3679d9d96a8ee227324bdfe7222618cfe2227418": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x370709af74256108d2dd194e36f74f53ca22e92a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x370f16860606cc28ac8aae4b596cfd91ef57d3b7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3789c8e51107f259fce329ad5be309bf7a60c31b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x380dcded7e65d9752f9fb3ae15fb769b9fd32561": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x38e45cbd710cd9c170a428cf0191cdcbcdc8ac06": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3944fb2e694f59129dd6531a0cd1f8c760dd0385": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x39e5efbf80a074cd0656599753b04ee616b15d7b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x39ef68fea5b33d0aeaa5b0598a7109853c0a1dfd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3acb5bdb4e844cf2fe1f4ffcfc207b7094846db7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3bde96f61cec53e760456ad1f7bcc37e9da1e4b1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3c4d11b383ed6b003d0b8361bd9d51a647f03d08": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3c6bab999cfe6412645f996fc36d8033ce85f7da": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3c6e151577903cb995baf4583fe4247dc2c2b751": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3d459f85be2493a31bcc44659ca3c7379793f448": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3d90d8ef295a486605172aea882685bbb371376f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x3eda48190cbd6511b00ae771802202b4039896b5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x40c8590f2d2f543689b42f9a1f1872cb7461aa0d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x41126e19981eb1bbfe92b1d1cc4fe7104b044ab2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x41a21fab6cfa2272df0ad121d4b610f93988434a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x41d3be8c67d59b7659d1727e98f7fb7a870fcc34": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x41d4c8894b529d50eb82a1c183019e883c77d1db": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x41fe63738eeab23a70e38fd1ce10989716eacac8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x422e922f018d6661375a7139a89839328aa130dc": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x42accde77afbdb744179765e70007aaea982a7b1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x43412801d29861ecc4c4d86e5becfd16af86a67b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x44354ba8e41d613dd62d58de5b90b26f07b3ff0f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x449774e801d03d425d370732f3378df5782c6f20": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x465dd42f5e2de7afd5e70a9d75b384e83b09a224": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x46b8dc3b3c638ff27eecec73b77de75dfb5888bc": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x479445ed1c488c66bab39bddc0c4030af765c003": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x48618c851a83303ea2877edcb971ddbf88207b87": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x48c8b0f4d7bb278dd81f00d5bfe4ff2029a1d197": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x49c755c49559f3141ae50911c25a9d1285fbb7b4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x49d0ff32efb806ec9c668df0cf6d68592245788b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x49d4a61f1cbfa28a78af631f058c18d14c1a3acf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x49ed4715f7cc2424c2a4cc93ba35b5bf50401000": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4a29b5b42f8f0f539a9ca9eb706a63703864b689": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4a404be0cc6982ed80138f4b8ddea4db64deaa4e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4a57ae665ce8cc565eba852245da484695ed34ee": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4a7f32516a0a8f421d52b7d13e1e869631379348": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4aa838569a9d95bb45647173362b925325fcb2e7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4ad22b7bac2e152fa05e05166a57f98a96820d9b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4b7109a385208b9eddd47dcc54ab4820baba79b5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4c0c28821cb724692499e65ce7134c20655e5681": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4d1f50728023882ae62bed3cc5adc9e5da418ccd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4d9a1d40f4be710aa2a34fc9d101a31668b6d4bd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4ec97678a576b8269ace204710d7ac8043c80dcf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x4f44bd9853737e37668a91963e1b20a0ef52e30c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x50d8088d81b5fc0e55e470bc2ef001a7f5415a85": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x50fb3c0a35d94b98bfdb8c32e4532eb880fec977": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x513462c44978a1375f030aa9510874823f4bb690": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x51d07e2899c0ac6058b52c6f8f352f73d3f0e2e9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5286f9a2d7db7e0bfea591ae6ea9d2e064c08038": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x52adb9810284ac185483eb02cfcae1d86034b4b5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x52c30cff016658ac43089cb739cf6d6aba138997": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x541cb7ee31d0544c491608c97666865c87ffe36d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5444e7e26c0574faac6d0e06b1a0f9ea3da564fb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x54b5669fabf1d7ec58cffd753a214fc4f0434b7b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x54e070cacbe522da1380cbe4269db4a396d86044": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5509dfd69c7fe9770c8d34be00868a1f33d7b108": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x55483cd25de645fd14d6fa637e55e565141d5166": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5556178de6dcb747caea45e27a5b5a70101cba42": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x557468ea6a35c733ca5524aa1d2d43d06e877d8a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x561a5ed9f412506b9df147103aca4347f37ae954": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5664bc7b6a9b3ab4e7793af00bada51cb3aae818": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x584b07e07c024d6d89163ad1c8396fa081e914cf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x587deca23398c0514afb482fada76be97e3e78a0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x58a2555478c3a1b8c6aadd9e7b872f6b426bc944": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x58ea1c0616d6356c82d0282d220fe9f9b7706796": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x597c49bcd536eac13a03d9adeba89de0496e043c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x59bd216b973640bf109cb0e244d4404bfb89a528": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x59fed4cbd3434256cf0c23e4361035704e6f5579": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5a83a53e27d4d039950aae2142824dabbc192475": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5ad5754109718cc3837c3e872c907b7a6c7d25b4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5b19a172b4ce95310d14f49c3575ed84f9b55b27": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5b4ae7d49421705882e999a75ecdfdfe17da7878": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5c0895c2178b4f13c09b070df5747748da20b93c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5c893fba70df50d70ec98c8df85dc6078247afb2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5dbeb0fe0e6b5a03e9912628df6a073aeabe5b47": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5e04d1b0047300038323b9ac5f7cb9e0843e15e6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x5f0fbf1bb3e553c2edfd887dd9f2308792f162b9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x61018bdce873eb4a325b35471443bf4805f0da81": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x61375c9e8da3a90cf02a3c1fd28e983c6e529195": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x618437b3a94596c3e3e733ca4fc0d7b3a34361ab": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x622adeae91fa0d1fbd08cc37cc1bdae1d4cc0738": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x62474d6c379788be4f9cddc0e67c3013a78522d9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x635241d839ecbdc5eb47874138053288e92f4dbc": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6470e514f665fa5284fe8e42568a112e908b9359": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x64726c9f0148331e5433122fa85943b8ecdbcd92": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x666a135f40cf8fef3bdf47e707a8cb5b682858c9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x66efc9f2604dc771d0081111b296a1e98d4f0a57": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x677194b74f7b080b211515a1b97229dea910604f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x679dbce52f42f277b59859c5a3b4953a6fff3e46": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x67a8142d93ec172175bccce4969873058b56290a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x67e16ea3aa6e606d604893063b6934542ca44d27": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x67e58531f664b4f69a118add7824cac8755f27f2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x68144468bc9170c0391b5e2cf75fa4a6fca252d3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x689b378f9c1ab4c37d25112ca6b8da787eca72ba": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x68b80574cf8733ebeb0f8056820f84f82f76f323": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x68f54b92c9b985e17bb33328e11a0193f7a6451b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x69227919ef39aa8c1aa5a56ba738b52986dafabf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6b1c106c1ebc105a343d1b6c3130f18b259ab1e6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6b51064813627987939376706dff1d1f0dc5d65a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6be253cd909b694476516ca173561ae702b32366": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6dd2f906368fa50133d724d3346d9c5b3c2d17ea": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6e01af3913026660fcebb93f054345eccd972251": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6f5df4312185a5dd85965ff8dc4fc023a15c47b9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6f777797d9c60ae334fc4561b0c931fa9f442395": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6fe76152785b094e75aa6b98992834a3a5f4d095": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x6ffa15fd1fe59a09be1497df44e8e939308702b3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7036520268350667cb5a9be6d40d3218aec88f4f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x70501b2c9aa43b7b63be784f5b261ed4d609b0e4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7088e7ad395921c403af490ef282e6f067b827f9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x708ea8cd8d4e9f487d7f05e33a3d4ea844c8db80": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x70fc465d8f45a0b961b8c1bd12beab5172a46109": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x710b5bb4552f20524232ae3e2467a6dc74b21982": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x712dd65e00d630b035d1185a61bd902d3a1f150d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x714f9e905f131a95603530d61d9eeadf884b119a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x71555fd3c87db56738b25f497302fd33f636cf04": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7276ae926e549cfe1306f536b120a8ed1ff85632": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x727b6866bdba3921bda2757c42956a02c71f8d7e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x72b30630c8b29cba0e0142bae1971fc347177caf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x72c6e157e68c8e1e731d413ea46c0db1ca415036": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7395770759502eada4a76f84041aeb3d696fcb0b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7486e2dd55e3afbf307c906028a081a940814e47": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x749bdd6bdc42e52d95c4574d09054f6f3ff4b34b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7502359202de8f2ebaa7229850b4387e1da43b63": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x75798c3c28d95c96705d77bd7b906c2237ef9659": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x769ffcbf7cd348476309b08473b5ac76d3eaded8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x76c2cc48be51b31481ad592a645910c0a85a9b23": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x76d6fccd16f5d715036845c3d9ebff54ef7571c1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x77662202f6b6827cb0bb354d97b63c0158257ad8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7784604037f1245e8a720059cfb8ecc809a215f9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x77e8175057d746863dad4b3acc2ae15db538d8e3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7879ffdff60efcc057cbb54f12ee8bd8c02037d9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x78aa2c23b5238864e41ebbc1224605b55a019912": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7943c8dfac2498a6273088915e23653af3fc9648": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7aa155182927aec5fcb905a142cee91b1365377e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7ad4c759c0ccfbb3daa94c320cba77e617d04ab6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7b5f326d9e8b36237d17a1918f2fd99992619eae": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7c5c5bc1f28a74525b64046203331a1464476c97": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7cf9fabcde58b9044a1fc1ce2b3ac839d5e998e6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7d21e718ecf7e5186bd6fda9ff034fd6252f6813": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7d8904598e5ec80ffb241349767a1840bd35d51d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7da4d659f78ade3c43daa67763dcca40b4fb09d7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7dbffd0aaff69c5967fa04dcdce5553fbcc11ec3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7df9805fa545b53cbbaa0b4cd14a427b18c4cb59": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7e2d35a00d73a534d4d5508e557e0b1c6e60c977": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7e6033e24620dcff23d721119f10a8fe1f889a46": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7e74f74a434f039927d5f3f6897d0237a811a3ea": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7e92b316d18459e859f33d345d41db6c6d90f615": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x7eb07e6bfda797b279a060561de9ce6a066338d7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x82f6088f6dc063a877db9ecd5cfa1dded63779a7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x82fdc983ba7bddf8f780769fc85960f6dc66eaf4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x830601f4446d8e1a792d5da9f571275a56b41aac": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8366c33eee56da4f70da46496578a3ebba6e7e10": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8413c544095f7e69d4ad3bfcf4b77deedda0cc39": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8441cc7cc7cc2d21a4ef99f652be35bcbccf3acf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x852e9bef1b4f6b9c3b8da53beb7aee022618af0f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8578e357504b72ad54ba60c138cb9386f210e50d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x85febc827129c3aa11e9bdc0c52eecc044f6fcab": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x862ed3fc70747d888696ac30bc2cdf6e4c1d5c70": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x864004adb83b4af504bc421a9848b7508b353a5c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x86d021e4b742a7abcb6b12321b5f59fb419a167c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8760513f944be842ffb4888fde71cad1e2a394c3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8880b22f5e86d753ebc9dbc2e2023ee63befe7b7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x891619ea8de8c73779c1fb8b6a582f7a913e55ff": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x892cac6a3406f5c42559009b0eb7fe842c4c550a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8975ea150d825e8394076dbed3aca9cf614d6a99": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x89dbbefa737599708a8da1595134af9597965aef": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8a1b0379e31bc4642f3d63e0c56f39753d4caafb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8a89c0d00c7edd948a74c83c7672a958efbd5efa": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8a9eab59d578ff9c6475666b9d565d49ec7c51a2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8ac27603b5c2c31d32bc8b3b6b738420cf36a74e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8cccdc0da2d3c6ad4a754db4812b9eef19877eec": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8cf6cc426e91b8e7877ddb33d3d2c0a5ee24f6ad": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8d50d2eeeed7ea1de60c51ba3f767e48dfbd2320": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8e133cbac54740f9c908d53bbc01b510fe180c7e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x8f32f3ee0312dca80b8e3e3080fabf2e8a436960": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x905a2d50629f6e2479a13f0595b7c1c8920701f3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9100f2d14b8431f989724dded7a31ef7e9b63426": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x929bf7dfc9c9ef3d3824ba368cb5b70300fc0186": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x92d2f52ce80161b8debd5d34ee454cca2112f44d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x92f5ae24da305f6fbd2d62586ed4de84ad05650f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x944a5886761487f241f9317c87c8250d5cc38890": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x950cb62960f2399826af70a3adeb622db0e778cb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x953de0fee9e7b8056dd802b2e9ba0c8e540c68b8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x954484b592cc6fccc40b571045f2c2225f5fc2a6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9639a0145ae0ea26bb6afb3547eadadf3ee2018d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x96b2073301ac5f7c0ceb85846296dd620027bad4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x96d983263c0689fc990dfb0853621875c48c049d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9739c1d0fae7130e9491b3b431fddc0d66de6a84": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9809967c396dc3f00e1eb032ae9b416bfcf0d07e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x99d01153a8c5d35bad737c28780da835da0a9ce0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9a0525016ff2f6e0c63214a52bc4adce3be0a990": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9ad9b61a2af06ab64543839fd2bc980c6b7768bd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9b22ed396cd2eba81c2c0228318e0d88a9cf06bd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9b4b1010504d10c079d907c6660e43984ecbf62b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9c42011ac4327e94214bab603be6d173ee5b05aa": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9c83551e8c31b55e81db9e1aaffeea71c5c0c4e9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9dc279d44af18f233de27bc833350950b5896cfd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9f42cd9104209ef97b75d37f529366edae9c6b50": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9f6d083c99e5559ae99309732772bf775fd89527": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9fc722b5766b0be5fa0db5b128c18e9136a43de9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0x9fcd0783ee1f717f8169a7ce1870a7eac4dd0ddd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa05e963b20658afd34f731beef11bb9de8ed1990": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa0c12e3aeac3e2d28a9a0909f4a982d4995db85d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa0db38548d69879e844020742bfd888c28dcd17f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa11102be112d13fddbfd91e5d9a2bc0093c0b4fc": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa1ff39556d4e49f2eeac1c2e01f4f557d712ce28": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa2a44ddc508f0b67f86e4756a8770e400df2b18d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa2d316e5a1c1fa2e1c8c420e29580da773335678": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa342a1904b6fc4d659b7dae30fca2e87ef2f154a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa372a45fab2aa66d79fae09b6089da5c53ca8fdf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa3c847f474f1d358a678fc70a03916fe1344a13f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa3fdf93843fa411e9cb9411bd841689ff1dcdbbb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa473bfbe93e07c8eabf00aa69a3a99f812f461a7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa4923941cd425326c708f5b768310de2f1e45258": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa5e1f7e79b3e854ac67a660288c7c97755867627": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa5fa5d90ce4e1c41ea0da1d116ba6d3b270a12bf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa6d4fa3563ff4f2e1fd148a027eef3c11fafd30e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa70d0709987c5a27f2bac0f39abbc4d8cf6d03b4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa72eaeea69e57ef2151fa3022862efc768896239": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa72f2943e856aa5266b01fe015a2c9e73a42a72a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa7ca89befad1b33755ef60e1d9a500286ccccc2a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa7d0c0ece37ff638dec6191a048ef15c63fa53e1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa85c03116b1775bc13266d59968c863acf2b50c3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa8886ef50c254490a8893c8b2ffb97f3a0d3c354": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa8e9d22a920413cd8607dc3f0b274c9f82f2822c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa974551cc5d452b5e3ad2147d88114699205f042": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xa9f4edfab9f626441029e29d5763400b52cdc30f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xaa01c987952db328de3aee15a06f38c7981ae8fb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xaa0be9b44b1ab698ba2c1948f2aa232edd2ae8b8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xaa22da7573cc20c190dda9aed3a53506b10b2611": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xaa53316a6fb64b4cc61cc7b008d1046c8c35cfc8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xaaa7b3fb33d02cf25e896f4838b1a9e4a5f0519f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xab63502a660b9aaa48551b10cf477c75c5deacb9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xac5c75b2982c6b00177e818dc72c6581c55231f2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xac75724a9713db3d3d1a82847fbdb41770445e17": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xacf2ba7f6420a602210c1eade6f3b3342b6b6756": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xadf363c6090f911f20c1b59a99928bcb5eed0e5c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xae34212eddae5b5e994b5c798f95e0dc08282efe": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xae44ffba176b1ee04cddc820d320d30df83600d8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xaf020461de5d7144aa4a66fcd5383d59c884fb2e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xaf18b801b9c166a1bbaa5d949edc2c8d9d2526a9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xafac2553af0436264d92d519d8020f37de1277bd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb0831f26ce6ebd0b778ad2e27ebcd29b387842c7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb0d0da4a1f21079fc0999e28f8bdade521c9f722": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb1259cc986ed64b3f42ff6223846e68d740cba8c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb1b30f3dc470ff6859ad69de05b879779058cab5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb23f71ff33c08f3a718f1a95c47509f24f854939": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb24929c8d4357e86d396af5b214732cca1b17449": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb259678ef5b7540cbbc1ccda9e016089992dc6ce": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb2da7748f16dbddef7c1963000c35b49297a7d06": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb330665203ffbaf0286e60b82af3fbb4f944e579": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb3744fcf41d71d5178f391792abe63fe5d638b7e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb45e378073c553c58f8797cb54d1e30c60065f61": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb476b65a032ad3e5cd90a677cfe6d072f6e7ae37": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb481aab14df626a330677cc4c9e7c8e6a900bc24": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb611e5b4a1c567957d5589cd896b078bab203942": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb67897a53275f258fb4e0c02b29c9cd197bec9f5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb74445b68eea267bd16ebdf3325f1b362832c68c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb802e6b4a9e24342f33f08cdba77469472e55f52": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb81d7efa288231ea256d610458bac8c4625cd6ee": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb94f9a31fa7f86fecd7cc88e2aff26b965958e17": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb96b2eb882d599c8cacc37cdb9c73802a1be36ff": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb9f51278110a1dbec8421629c06796308c7b6729": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xb9ff00698907c2760b9d76c933d9992cbc80be1e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xba144b40370d1d2d755c457172c09e44d8e12fcb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xba4b97051c0c5dfe5127334f803bc1e75f0d6728": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xba954d629377ff220ae05f9d7ce05659bf2fdfc3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbb33e291699faf0fc4a07830625d9027f4375883": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbd09fd80f2afad3a5b1b5d79653f706fed04d9a3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbd3a3a511583506a2ccf31086fe0a9154ac78ca2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbdab7c50aa43220d15a11006375c728731d449b1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbdad7397de4f8aa163d85d78279cd71a96584d15": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbe4d5b09a2a35de1cc3b959b404898588964b281": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbeacbf07229385dcc064276d828abf3468d16de5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbee52b9ef04f04778ee948bd9df2ff54be4b7009": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbee538ecb678b588c5385859d769a4297e9e8172": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xbf28eb4e017e472f9f6c11efabcdcb97f5761707": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc029a173ab1167bb9d3106dca2ec8bf77c88a266": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc0642ea6b5f4f2b7fdaf419125c4aa01dfc8cc8d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc083d5b993d53d4d479af6c4cf9d7707bbee682f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc0fdf4fa92f88b82ccbebfc80fbe4eb7e5a8e0ca": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc1ba3fe01aec33a81bd9e648d2c831ad30908a95": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc1e3224ecec7e216ca2acfba621e523743168c72": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc28d5d922eb85c51b114f35242216ae792f29f16": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc38510c6dc70b310bff70820f5b1384a29ba80b8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc38e595612c0ff8585b64dd36d4cf98a15e0aec6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc3a1fefb4d1caa2082102d54a968a478379a7681": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc3e6157dfe1bfc2bd93cf74cde85b0ca7ba77aa8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc44513498c74609b7649528b0a827c79596ab56c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc48ad449a340d789200604e278f3e08d5414f3ef": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc4cf51cc504f09967f04c6b198d81bb155563b57": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc61248fd95d00853e04031221403b5a2275b6906": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc6436c6bdd657a79bbab8b2eecd5ba1ce69de266": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc66631b72ec458c9b3ce792c32bcc7b466e86507": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc81476ae9f2748725a36b326a1831200ed4f3ecf": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc861601009d4a652a8b68fec75148d751b36bba0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc91a056426017e91bc7fd5c5ca62faa2c1a3191e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc9354047126a48196c0e24a6663d411855584295": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xc965465517a9af291041dd54176680d743a8994a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xca16d13d5eed95f200426a9fe7a71d52a88948ab": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xca86010bed5f5d50deab2793dc9cafda5145052c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xca97140644fd1ba65e337b59caaf637616d5f9a6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xcad5230d7c8ca75786e225918757d23e7a7498ce": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xcc5fca73c5f5e8cb1e3a5e3420652ec369cf6c56": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xcca3791ad3d340ac1e507c83bdd445039427657b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xcda74277521bdc29eeca86bacce49297026e631b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xcdef9447127c9aa9fbc838ae6c8df93a7502fe9e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xce2183fd7e7d296bb9857b39883aaf6f253b70d6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xcfbf4a7b6b872b4aa5dfe03cbe89939b44c0eb98": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd0c5fa8d30b983f5fa3c925039e7307c034dc4a2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd1df2a97c6ceef845d8a751a793a27d6c040deef": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd204da2439fb41e69fc44fd579e19d681b41e403": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd2613e6e8818967349b8eef41584aaa908a450cb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd2c4b19229df42ad4b5c195e1e5c728d260382c9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd422b783ea64f4d30c3531daceb31870c9ac2e61": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd50d84e52d0df090787c03a09767a1e7889b09d5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd5b9fdc57fb8b7d40afb94558761707a43a4e2f3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd613efbccfdc65ba5606061d20fcb0904c224ebd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd688f63104a91e350068938a008f1e28c9602d27": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd7544b54a43bf745855edb2b2a20c1fdee3d1afc": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd7dadbc826664af79319c0b989f02f405ddb0339": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd834c3346e27f5d5b1c76896d79b167fb7480bb2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd86f378396f9e3adb13c23121f1e16e62e0078a8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd912e41aecacbed3514356053dc737bf18f552ca": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xd94e3334861e24439b8b6069598a9ffd8add3c34": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xda142632466f164ac5a508e01fc42f6945bcc9a1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xda26c3adbeaec4afa3f80fe2ddaeb5bc6220b88d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdb2dfeddd270b1b2a5e817dfc51e30ba638199c3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdbd895b56e12e126b52be182412eed8f1398114f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdbdd8d8340f59e30e05b3cb3fb96a0b79f4a597c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdbddbc2b2be722237174aa163ca422069aa2862e": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdc0b6b3bcd52469e1a7219c59a0c5da1a1978f02": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdc4e37f7565b127e9ebf1b406e528a5a41e6f840": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdc9bc901de1c0eb3ee7209982601d44f11cb376c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdcd2b5ba4b36f7c056228fcf1d34dc63ea998a3a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdebcd6708e93276a74410632426e14c7fbc2b860": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xdf40f5cadb5194a362d48c4f481bad857711bc58": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe02e955a3f168cffcce973999ba95b6fe5426f0f": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe04140b62b464a73dbe3a65afc93493674700af6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe1d8ee60ed60d6e31aed8286fed0864f26898458": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe1eba1b8c9e8339ca2a2474c5121fddf8a9fdd3c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe258e101a01e84da434e945b295cf02f28d76c30": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe356a0392813d64666ba90659e0f517ac51fd70c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe3fab8a8d85fbbe19358174bf46b35e22b89f19c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe40fbedd793007147c1568a270dc9c4b342b6566": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe464da92a137365e0bab6b7b122465a36310bfb3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe47810989eaf20eeb62f9f08e33c3e162d2f320d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe484a5b7b865fa138a3c3f8e06a02f72168b6a7d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe53f565e326a08eea805f79ba3b381e7bf8507c7": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe55664dbe2bfa860c4b592874e8e255c28195091": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe68ef95c1a5191d8f71bd6847c4e178ed08c37be": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe6b2d077ac5908260d2dabfbc7ce5fdc402a6c61": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe73c9658e87121735cd2c552d9137e61ad7efbf5": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe7613bbb3bb70912635be122773f5ba4695efa69": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe76db3199f10a8c1ad25b4c087915d1c8032b06c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe7ebb56edf0cc4108060309e4cdd906448b7701d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe8d20921738ebb9f38c416cafd49ec406646e4f9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe8f825b6003ef5738f41c2fecb0043112959b64a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe983a68892fcdce95c4eb2d141d8456e1e702025": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xe995269255777303ea6800ba0351c055c0c264b8": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xea3c38b8074c46459b12ee920416db19dc0d7753": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xebca295e309e3bed2695dbc2a04d22cbd1bd6bad": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xec2a84a0d06b3ff2a5dc2cd86b159a39d1eb8371": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xec6e6043bdc7a2af5c73e599f11dca4b6412dcfb": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xecf5ef3de06c46adefb0640ebb44d37ca0de9eba": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xed25a3fe82ef1364dcccf9476a2a0c48bfb1a94c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xed303aed96d681924e7db98df30aa67964a794ae": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xed5afe2de60281d5247bec81e727c2af0b7d9c71": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xed81b91eb84dbfd53a2c29e69b0b4ec259da86fd": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xede26742364289d24a3c17d11b293b09ff63db1c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xedf9f957ac7ec74636388cde2f313a3ca151d0f1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xee159f2ddf07d2cf159db071551fa3152b0f938b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xef176f8bd53fa98af209bb1e3c8c12fab4deef98": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xef239c44ac981fc343f51e35687ad889f57a7c37": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xef78641af30cff4a41bfd2871f3a160dceffa428": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf02ee89bcea4b38ce71b10b1f1e7c30b11005791": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf2114c725077ee6dfd8bc2ff1492641c548ca5d9": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf27c161fd2d5cb03eee272d15c179778252e88b4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf2922c3780f63aa074115423002d9c5e069ef6d6": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf2c26e2bb5cbdb6cd6e1573b986a55d9cc1f7e5d": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf32059a1880d22fd5863018b30179d31bd5646e3": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf38c8c1cfc465f5444a1216218da12b86f85ee7b": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf3f412835f04d02b06eb5d8b6d8ec46278e90f94": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf45bbd2f2ac49c34e03dc15e90241b94d78ec260": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf4740003307476979ed461cb696bbfb37b480ca1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf49e329f433387f788841e513b2404259c638420": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf54c8daaa225f4cd6b717c85d9f37ab30e73a8a2": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf5675780f4e2790f551f3382b2445ea747d79b65": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf5d3f82790c10f4059e7d94428e1631b67cd51fa": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf61ac9508de7786bd78d327e7c2d17c3d1ebc893": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf7d7e69023b48eca13baaecce954d7cb6e4169a0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf7e3c67d8458c71bd0c17f20cbf8e5c26cd186fa": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf8663df7b1943b9f5a4706812edf4a8b41d98e8a": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf873e25c7c5149f21beb8b3f951bb281da16ffd1": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xf8bfd79def67c08f2a497c08be0775de3402886c": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfb04f5bb49a7f2ccf757fd5ec316a7fabc27aac0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfb4c68caccfa3ea46a7d9a7b59a3f91b40705194": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfb4d3eb37bde8fa4b52c60aabe55b3cd9908ec73": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfb9e9729db82f1e85d787b8a1bac52f27f3a11b4": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfbd0b8a9aa2f8c41b820e725d871bd6f20a6a7bc": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfcb4533ebbac8ded9d09602be40992fa109768c0": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfcf92317297a911797849ad1b33e433f22a83202": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfd00093890af8d8600c4b6939bb8d8ec2fb47057": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfddaaedd0b033a6fa5622db7f46662599fccb668": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfe5055e161a3a5da62d7ec20f425b0b587907d93": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfe7fee30afd19d6ad0167291b338a786b8beca57": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xfe9fca0d8f83b6a423c28e174435be71aeb26383": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xff178b609ee25267abdf8641a2cc18cf86f88dfe": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
+    },
+    "0xffbae3fcd23e96a3caeb8a7bf560e90eecadcc59": {
+      "category": "stolen",
+      "entity": "Reported phishing / scam wallet",
+      "label": "Reported phishing / scam wallet",
+      "source": "ScamSniffer address blacklist @ 753310a5c8"
     },
     "0x3b6e77722e2bbe97c1cfa337b42c0939aeb83671": {
       "category": "stolen",
