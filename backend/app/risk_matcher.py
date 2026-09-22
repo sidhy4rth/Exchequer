@@ -1,12 +1,11 @@
-"""Matches addresses in a trace against sanctioned entities and mixers.
+"""Matches addresses in a trace against sanctioned entities, mixers and stolen funds.
 
 This answers a different question from `exchange_matcher`. That module asks
 "where was the money cashed out", which is the end of the trail. This one asks
 "what did the money touch on the way", which is what determines whether a case
 is ordinary fraud or something an investigator must escalate.
 
-Two categories, both carrying the same evidentiary weight but very different
-investigative meaning:
+Three categories, with very different investigative meaning:
 
   sanctioned  The address is on a published sanctions list. For an Indian
               investigator this is the point at which a fraud case acquires an
@@ -16,6 +15,18 @@ investigative meaning:
   mixer       The address is a tumbler: it pools deposits from many users and
               pays out from that pool, deliberately severing the link between
               input and output.
+
+  stolen      The address is a wallet the block explorer attributes to the
+              perpetrator of a known hack or phishing campaign (e.g. "WazirX
+              Exploiter 3"). Funds that touch one are commingled with the
+              proceeds of that theft, which ties a fraud case to a larger,
+              already-documented laundering operation.
+
+The authority behind them is not the same. A sanctioned address is on a
+government list (the OFAC file); mixer pools and stolen-funds wallets come
+from the explorer's own public tags (the threat file), a strong attribution
+but not a designation. Each match carries its source so a report never
+blurs the two, and where an address is in both, the OFAC entry is kept.
 
 The mixer category carries a consequence the exchange labels do not have, and
 it is the reason this module exists rather than being another label type.
@@ -50,6 +61,8 @@ logger = logging.getLogger(__name__)
 
 SANCTIONED = "sanctioned"
 MIXER = "mixer"
+STOLEN = "stolen"
+CATEGORIES = (SANCTIONED, MIXER, STOLEN)
 
 # Categories whose addresses end a trace. See the module docstring: a mixer
 # breaks the link between deposit and withdrawal, so anything past it is not
@@ -62,7 +75,7 @@ class RiskMatch:
     """One address in the trace that appears on a risk list."""
 
     address: str
-    category: str  # sanctioned | mixer
+    category: str  # sanctioned | mixer | stolen
     entity: str  # the designated entity or mixer service
     label: str  # human-readable, e.g. "Tornado Cash: 10 ETH pool"
     source: str  # which published list, and when it was read
@@ -108,6 +121,14 @@ class RiskMatch:
                 f"Sanctioned entity: {self.address} is listed as {named} on "
                 f"{self.source}. {placement}."
             )
+        if self.category == STOLEN:
+            return (
+                f"Stolen funds: {self.address} is tagged as {named} by "
+                f"{self.source}. {placement}. Funds that pass through it are "
+                f"commingled with the proceeds of that theft; the tag is the "
+                f"explorer's attribution, not a finding that any counterparty "
+                f"took part in it."
+            )
         return (
             f"Mixer: {self.address} is {named}, per {self.source}. {placement}. "
             f"The trace stops here — a mixer pays out from a commingled pool, "
@@ -129,8 +150,17 @@ class RiskMatcher:
 
     # -- loading -----------------------------------------------------------
     @classmethod
-    def from_file(cls, path: Path | None = None, chain: str | None = None) -> "RiskMatcher":
+    def from_file(
+        cls,
+        path: Path | None = None,
+        chain: str | None = None,
+        extra_paths: tuple[Path | None, ...] = (),
+    ) -> "RiskMatcher":
         """Load one chain's risk labels.
+
+        `path` is the OFAC file; `extra_paths` are lower-authority overlays
+        (the threat file). An address already loaded is never overwritten, so
+        a government designation always wins over an explorer tag.
 
         A missing file is not an error. Risk labels are an overlay on the
         trace: without them a trace still runs and still attributes an
@@ -138,53 +168,12 @@ class RiskMatcher:
         """
         if path is None:
             logger.warning("No risk label path given; risk screening disabled")
-            return cls({}, chain=chain)
-        try:
-            raw = json.loads(path.read_text())
-        except FileNotFoundError:
-            logger.warning(
-                "No risk label file at %s -- traces on this chain will not be "
-                "screened against sanctions or mixer lists",
-                path,
-            )
-            return cls({}, chain=chain)
-        except json.JSONDecodeError as exc:
-            logger.error("Risk label file at %s is not valid JSON: %s", path, exc)
-            return cls({}, chain=chain)
-
-        entries = raw.get("labels", raw) if isinstance(raw, dict) else {}
-        default_source = (raw.get("_meta") or {}).get("source", "unspecified list")
-
         labels: dict[str, dict[str, str]] = {}
-        for address, value in entries.items():
-            if address.startswith("_"):  # metadata keys
+        for index, source_path in enumerate((path, *extra_paths)):
+            if source_path is None:
                 continue
-            if not isinstance(value, dict):
-                logger.warning("Risk entry for %s is not an object; skipped", address)
-                continue
-
-            category = (value.get("category") or "").strip().lower()
-            if category not in (SANCTIONED, MIXER):
-                # An unrecognised category must not silently become a warning
-                # of the wrong kind. Dropping it is the safe failure.
-                logger.warning(
-                    "Risk entry for %s has unknown category %r; skipped", address, category
-                )
-                continue
-
-            entity = value.get("entity") or value.get("name")
-            if not entity:
-                logger.warning("Risk entry for %s names no entity; skipped", address)
-                continue
-
-            labels[normalize_address(address)] = {
-                "category": category,
-                "entity": entity,
-                "label": value.get("label", entity),
-                "source": value.get("source", default_source),
-            }
-
-        logger.info("Loaded %d risk labels from %s", len(labels), path)
+            for address, meta in _read_labels(source_path, required=index == 0).items():
+                labels.setdefault(address, meta)
         return cls(labels, chain=chain)
 
     # -- lookup ------------------------------------------------------------
@@ -197,7 +186,7 @@ class RiskMatcher:
         return sorted({meta["entity"] for meta in self._labels.values()})
 
     def counts_by_category(self) -> dict[str, int]:
-        counts = {SANCTIONED: 0, MIXER: 0}
+        counts = {category: 0 for category in CATEGORIES}
         for meta in self._labels.values():
             counts[meta["category"]] = counts.get(meta["category"], 0) + 1
         return counts
@@ -270,4 +259,55 @@ class RiskMatcher:
 def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
     """Risk matcher for one chain. Cached so each label file is read once."""
     chain = config.get_chain(chain_key)
-    return RiskMatcher.from_file(chain.risk_labels_path, chain=chain.key)
+    return RiskMatcher.from_file(
+        chain.risk_labels_path, chain=chain.key, extra_paths=(chain.threat_labels_path,)
+    )
+
+
+def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
+    """Validated {address: record} from one label file; {} if it is unusable."""
+    try:
+        raw = json.loads(path.read_text())
+    except FileNotFoundError:
+        log = logger.warning if required else logger.info
+        log("No risk label file at %s -- traces on this chain will not be "
+            "screened against it", path)
+        return {}
+    except json.JSONDecodeError as exc:
+        logger.error("Risk label file at %s is not valid JSON: %s", path, exc)
+        return {}
+
+    entries = raw.get("labels", raw) if isinstance(raw, dict) else {}
+    default_source = (raw.get("_meta") or {}).get("source", "unspecified list")
+
+    labels: dict[str, dict[str, str]] = {}
+    for address, value in entries.items():
+        if address.startswith("_"):  # metadata keys
+            continue
+        if not isinstance(value, dict):
+            logger.warning("Risk entry for %s is not an object; skipped", address)
+            continue
+
+        category = (value.get("category") or "").strip().lower()
+        if category not in CATEGORIES:
+            # An unrecognised category must not silently become a warning
+            # of the wrong kind. Dropping it is the safe failure.
+            logger.warning(
+                "Risk entry for %s has unknown category %r; skipped", address, category
+            )
+            continue
+
+        entity = value.get("entity") or value.get("name")
+        if not entity:
+            logger.warning("Risk entry for %s names no entity; skipped", address)
+            continue
+
+        labels[normalize_address(address)] = {
+            "category": category,
+            "entity": entity,
+            "label": value.get("label", entity),
+            "source": value.get("source", default_source),
+        }
+
+    logger.info("Loaded %d risk labels from %s", len(labels), path)
+    return labels

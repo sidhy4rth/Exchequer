@@ -30,7 +30,7 @@ const PALETTE = {
   dark: { bg: '#07090c', sanctioned: [255, 92, 92], wallet: [176, 182, 188], ink: '236,236,234', red: '255,92,92' },
   light: { bg: '#f3f1ea', sanctioned: [179, 38, 30], wallet: [70, 76, 84], ink: '22,25,29', red: '179,38,30' },
 }
-const AMBIENT = { sanctioned: 0.36, exchange: 0.36, inferred: 0.22, wallet: 0.11 }
+const AMBIENT = { sanctioned: 0.36, flagged: 0.36, exchange: 0.36, inferred: 0.22, wallet: 0.11 }
 
 // With the backend unreachable the page still needs a sea: a few hundred
 // plain hex strings, all unlabelled, so nothing is claimed about them.
@@ -63,7 +63,7 @@ export default function Ledger() {
     let seed = 7
     const rnd = (a, b) => { seed = (seed * 1664525 + 1013904223) >>> 0; return a + (seed / 4294967296) * (b - a) }
 
-    const colorOf = (it) => (it.k === 'sanctioned' ? palette.sanctioned : (EXCHANGE[it.e] || (it.e ? [47, 211, 162] : palette.wallet)))
+    const colorOf = (it) => (it.k === 'sanctioned' || it.k === 'flagged' ? palette.sanctioned : (EXCHANGE[it.e] || (it.e ? [47, 211, 162] : palette.wallet)))
 
     function build() {
       lanes = []

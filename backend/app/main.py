@@ -51,7 +51,7 @@ from .graph_builder import (
 )
 from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .report import build_report, render_text_report
-from .risk_matcher import MIXER, SANCTIONED, get_risk_matcher
+from .risk_matcher import MIXER, SANCTIONED, STOLEN, get_risk_matcher
 from .scoring import principal_path, score_case
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -74,8 +74,8 @@ async def lifespan(_app: FastAPI):
         if len(risk):
             counts = risk.counts_by_category()
             logger.info(
-                "%s: screening against %d sanctioned and %d mixer addresses",
-                chain.name, counts[SANCTIONED], counts[MIXER],
+                "%s: screening against %d sanctioned, %d mixer and %d stolen-funds addresses",
+                chain.name, counts[SANCTIONED], counts[MIXER], counts[STOLEN],
             )
         else:
             logger.warning(
@@ -532,8 +532,8 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
             f"({', '.join(names)}) rather than at an exchange. Funds entering a "
             "mixer are paid out from a commingled pool, so transfers leaving it "
             "cannot be linked to this deposit by on-chain evidence and following "
-            "them would manufacture a trail. Use of a sanctioned mixer is itself "
-            "a substantive finding and is grounds for escalation."
+            "them would manufacture a trail. Routing funds through a mixer is "
+            "itself a substantive finding and is grounds for escalation."
         )
     elif primary is None and any(s.get("output_read") for s in swaps):
         # Edge case: the trail did not go cold, it changed asset. Saying which
@@ -669,7 +669,11 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
         rows.append({"a": address, "k": kind, "e": exchange, "t": label})
 
     for address, meta in get_risk_matcher(selected.key).entries():
-        add(address, "sanctioned", "", f"OFAC SDN · {meta.get('entity', '')}"[:48])
+        if meta["category"] == SANCTIONED:
+            add(address, "sanctioned", "", f"OFAC SDN · {meta.get('entity', '')}"[:48])
+        else:
+            prefix = "Mixer" if meta["category"] == MIXER else "Stolen funds"
+            add(address, "flagged", "", f"{prefix} · {meta.get('label', '')}"[:48])
     for address, meta in get_matcher(selected.key).entries():
         add(address, "exchange", meta.get("exchange", ""), (meta.get("label") or meta.get("exchange", ""))[:40])
     for case in models.all_cases(limit=200):

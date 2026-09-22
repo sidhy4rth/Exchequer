@@ -1,0 +1,1782 @@
+{
+  "_meta": {
+    "description": "Wallets tied to known hacks and phishing thefts, and mixer pools, that Exchequer screens a trace against. OFAC lists neither, so this file fills the gap the sanctions file leaves.",
+    "provenance": "The block explorer's own address tags (Etherscan), from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a published scrape of them, selected and verified by backend/scripts/import_threat_labels.py.",
+    "verification_note": "Every address was confirmed to exist and to have been used on chain. The attribution itself is the explorer's -- strong, public, but not a government designation. A match means the funds touched a wallet the explorer ties to a theft or a mixer; it does NOT mean any counterparty took part in it. Re-check the tag on the explorer before evidentiary use.",
+    "category_note": "'stolen' marks wallets run by the perpetrator of a hack or a phishing campaign; a trace continues through them. 'mixer' marks pools where deposits commingle; a trace stops there.",
+    "chain": "ethereum",
+    "last_reviewed": "2026-09-22",
+    "counts": {
+      "stolen": 254,
+      "mixer": 40
+    },
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_threat_labels",
+    "schema": "labels maps an address to {category, entity, label, source}"
+  },
+  "labels": {
+    "0x6818809eefce719e480a7526d76bd3e561526b46": {
+      "category": "mixer",
+      "entity": "Privacy Pools",
+      "label": "Privacy Pools: Deposit",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf241d57c6debae225c0f2e6ea1529373c9a9c9fb": {
+      "category": "mixer",
+      "entity": "Privacy Pools",
+      "label": "Privacy Pools: Simple",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 0.1 ETH",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3c2936": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 1 ETH",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4736dcf1b7a3d580672cce6e7c65cd5cc9cfba9d": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 1,00 USDC",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfd8610d20aa15b7b2e3be39b396a1bc3516c7144": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 1,000 DAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd96f2b1c14db8458374d9aca76e26c3d18364307": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 1,000 USDC",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0836222f2b2b24a3f36f98668ed8f0b38d1a872f": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 1,000 USDT",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 10 ETH",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbb93e510bbcd0b7beb5a853875f9ec60275cf498": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 10 WBTC",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf60dd140cff0706bae9cd734ac3ae76ad9ebc32a": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 10,000 DAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x07687e702b410fa43f4cb4af7fa097918ffd2730": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 10,000 DAI 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd691f27f38b395864ea86cfc7253969b409c362d": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 10,000 USDC",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf67721a2d8f736e75a49fdd7fad2e31d8676542a": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 10,000 USDT",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd4b88df4d29f5cedd6857912842cff3b20c8cfa3": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 100 DAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa160cdab225685da1d56aa342ad8841c3b53f291": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 100 ETH",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x169ad27a470d064dede56a2d3ff727986b15d52b": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 100 USDT",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x23773e65ed146a459791799d01336db287f25334": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 100,000 DAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9ad122c22b14202b4490edaf288fdb3c7cb3ff5e": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 100,000 USDT",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x22aaa7720ddd5388a3c0a3333430953c68f1849b": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 5,000 cDAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xaeaac358560e11f52454d997aaff2c5731b6f8a6": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 5,000 cUSDC",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xba214c1c1928a32bffe790263e38b4af9bfcd659": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 50,000 cDAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1356c899d8c9467c7f71c195612f8a395abf2f0a": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 50,000 cUSDC",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb1c8094b234dce6e03f10a5b673c1d8c69739a00": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 500,000 cDAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2717c5e28cf931547b621a5dddb772ab6a35b701": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 500,000 cDAI 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa60c772958a3ed56c1f15dd055ba37ac8e523a0d": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: 500,000 cUSDC",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x94a1b5cdb22c43faab4abeb5c74999895464ddaf": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: Mixer 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb541fc07bc7619fd4062a54d96268525cbc6ffef": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: Mixer 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x905b63fff465b9ffbf41dea908ceb12478ec7601": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: Old Proxy",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x722122df12d4e14e13ac3b6895a86e84145b6967": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: Proxy",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado.Cash: Router",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9cdb933edab885bb767658b9ed5c3800bc1d761b": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 1 ETH",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3bf5416fed0b1d5b884b857e62a7681c0a04802a": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 10 ETH",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd8cb7339b5e9fc1c4477b4c900110d74b72b4830": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 100 ETH",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf5e5a97b2974786a1d7dcb716d2026a586c158b2": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 5,000,000 cDAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5068f49d99fdb3408e8429bd982f1507fc5f4b7d": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 5,000,000 cUSDT",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9852360ba26e8011ee9278babe74829d5ee56e19": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 50,000 cDAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3ed6f336141d7cbdbec9180631ca1a8d119ab855": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 50,000 cUSDT",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6f36a563b8f3e16e867e5dd71341eaee015473c2": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 500,000 cDAI",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb9ea2293f79779293b09a51e900c780989980820": {
+      "category": "mixer",
+      "entity": "Typhoon Cash",
+      "label": "Typhoon.Cash: 500,000 cUSDT",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x358abccb4f5bb715482271890929fdabb3015878": {
+      "category": "stolen",
+      "entity": "BT.Finance exploit",
+      "label": "BT.Finance Exploiter",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf7e8033366166f92eb477b7b38e0d47d47b43326": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xcfc14fa81226074036622976d95897ff84b58d66": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 10",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf36dd342a1d1c63aaddf9a95226349e527917ff3": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 11",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb0146aec3593410c8307b570af69adf4d74678b3": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x940362b46faf7df48af1c8989d809f50466b5fca": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 3",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1dd7daf089c16856155fefd7e2170966bb6b3aee": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 4",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x719981cf7d1a1dc681a1cf0c6b1eeee090d0fed6": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 5",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf26e64ef4300ca027d2ffedd7d765d7a3906091c": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 6",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb77a4a9678315775c4ba89f18f84f87538e748f5": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 7",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x63dc352ddfc17aa04edac47ce36e186c1e54b02c": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 8",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x49284f0ab5098d7effb3392124903c081d1b9f7e": {
+      "category": "stolen",
+      "entity": "BingX exploit",
+      "label": "BingX Exploiter 9",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0fa09c3a328792253f8dee7116848723b72a6d2e": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "ByBit Exploiter",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x47666fab8bd0ac7003bce3f5c3585383f09486e2": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x140c9ab92347734641b1a7c124ffdee58c20c3e3": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 10",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x8c7235e1a6eef91b980d0fca083347fbb7ee1806": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 11",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb172f7e99452446f18ff49a71bfeecf0873003b4": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 12",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xcd7ec020121ead6f99855cbb972df502db5bc63a": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 13",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0e8c1e2881f35ef20343264862a242fb749d6b35": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 14",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2290937a4498c96effb87b8371a33d108f8d433f": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 15",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1bb0970508316dc735329752a4581e0a4babc6b4": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 16",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf0a16603289eaf35f64077ba3681af41194a1c09": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 17",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5af75eab6bec227657fa3e749a8bfd55f02e4b1d": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 18",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb4a862a81abb2f952fca4c6f5510962e18c7f1a2": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 19",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa4b2fd68593b6f34e51cb9edb66e71c1b4ab449e": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x959c4ca19c4532c97a657d82d97accbab70e6fb4": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 20",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb72334cb9d0b614d30c4c60e2bd12ff5ed03c305": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 21",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfc926659dd8808f6e3e0a8d61b20b871f3fa6465": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 22",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfa3fcccb897079fd83bfba690e7d47eb402d6c49": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 23",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x51e9d833ecae4e8d9d8be17300aee6d3398c135d": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 24",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1eb27f136bfe7947f80d6cee3cf0bfdf92b45e57": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 25",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x83c7678492d623fb98834f0fbcb2e7b7f5af8950": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 26",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x52207ec7b1b43aa5db116931a904371ae2c1619e": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 27",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x83ef5e80fad88288f770152875ab0bb16641a09e": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 28",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x23db729908137cb60852f2936d2b5c6de0e1c887": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 29",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x36ed3c0213565530c35115d93a80f9c04d94e4cb": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 3",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xaf620e6d32b1c67f3396ef5d2f7d7642dc2e6ce9": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 30",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xcd1a4a457ca8b0931c3bf81df3cfa227adbdb6e9": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 31",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x96244d83dc15d36847c35209bbdc5bdde9bec3d8": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 32",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x09278b36863be4ccd3d0c22d643e8062d7a11377": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 33",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3a21f4e6bbe527d347ca7c157f4233c935779847": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 34",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbc3e5e8c10897a81b63933348f53f2e052f89a7e": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 35",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9271eddda0f0f2bb7b1a0c712bdf8dbd0a38d1ab": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 36",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4c198b3b5f3a4b1aa706dac73d826c2b795ccd67": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 37",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x684d4b58dc32af786bf6d572a792ff7a883428b9": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 38",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd3c611aed139107dec2294032da3913bc26507fb": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 39",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1542368a03ad1f03d96d51b414f4738961cf4443": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 4",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9ef42873ae015aa3da0c4354aef94a18d2b3407b": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 40",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbde2cc5375fa9e0383309a2ca31213f2d6cabcbd": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 41",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xe69753ddfbedbd249e703eb374452e78dae1ae49": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 42",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xe9bc552fdfa54b30296d95f147e3e0280ff7f7e6": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 43",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbca02b395747d62626a65016f2e64a20bd254a39": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 44",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf302572594a68aa8f951fae64ed3ae7da41c72be": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 45",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x21032176b43d9f7e9410fb37290a78f4fed6044c": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 46",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd5b58cf7813c1edc412367b97876bd400ea5c489": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 47",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa5a023e052243b7cce34cbd4ba20180e8dea6ad6": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 48",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x723a7084028421994d4a7829108d63ab44658315": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 49",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xdd90071d52f20e85c89802e5dc1ec0a7b6475f92": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 5",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1512fcb09463a61862b73ec09b9b354af1790268": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 50",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xeb0baa3a556586192590cad296b1e48df62a8549": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 51",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf03afb1c6a11a7e370920ad42e6ee735dbedf0b1": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 52",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x55cca2f5eb07907696afe4b9db5102bce5feb734": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 53",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4571bd67d14280e40bf3910bd39fbf60834f900a": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 54",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbdd077f651ebe7f7b3ce16fe5f2b025be2969516": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 55",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0a3b4bde9116a950a036204bf0d7a16d285f8995": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 56",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7cbb94041c0f04bb90edbe6901c00cd0051e8e9b": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 57",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0c014567daff377c36e032a2593f9f1177f77750": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 58",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x8a4f03ca00400795119934c2ed458d8dd74a1dad": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 59",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x40e98feeebad7ddb0f0534ccaa617427ea10187e": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 6",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xca4803f32f7002ea4ddd2cecfd6705ec68d05c9c": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 60",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfbc6b16b9d982e2832a1edc37b624ca0cd50dee4": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 61",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xec6da742f2266ec7365a331400a7dcacdcd5d984": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 62",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7f1defe8358148ff42b368706cb3d18e35317268": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 63",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf58841b8ce569bfd1ad73aaf43d93c834855d7e4": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 64",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb21e59b3d4e4d6c5247325dc5fbedbc89afc69f4": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 65",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd508be16c347aeeaee0522e1350b7b7daf7e9bcc": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 66",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf68182c44779cff96e8a670c4e64a2b6c778586d": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 67",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa89ee8022661dfe8ba65e2fcbc3502d306e295e6": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 68",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xc9bac54b55a3b2c6b4bc85d1117024cbe081cfdc": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 69",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x30a822cdd2782d2b2a12a08526452e885978fa1d": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 7",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb61693a2f1f3f788d0f4b7ddf03321028dee5bb1": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 70",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfce3fea9a4d532320f78a0704d72d1f42ce3b92b": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 71",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2de2a4bb7daa74b826ddfb091c05352446a32776": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 72",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xe9ea707243148dcd48585250825f3de9c9feb5b2": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 73",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xac5b4e1d9c2f6c103cb381d5b8f02dda3ad3342f": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 74",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x70ea8c85608bee0b18fb5c547b95f28335d63eea": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 75",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6d46bd3aff100f23c194e5312f93507978a6dc91": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 8",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x660bfcea3a5faf823e8f8bf57dd558db034dea1d": {
+      "category": "stolen",
+      "entity": "Bybit exploit",
+      "label": "Bybit Exploiter 9",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5d690febcec4e49d5b4993eb262a51cc4143787f": {
+      "category": "stolen",
+      "entity": "CPIMP attack",
+      "label": "CPIMP Attacker 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7acbbf40b6f1bdd3fe123a3e491ed442ae753924": {
+      "category": "stolen",
+      "entity": "CPIMP attack",
+      "label": "CPIMP Attacker 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xeb2dee5c7f087ba3600a48b04639ce6179051ab1": {
+      "category": "stolen",
+      "entity": "CPIMP attack",
+      "label": "CPIMP Attacker 3",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7c97313f349608f59a07c23b18ce523a33219d83": {
+      "category": "stolen",
+      "entity": "CPIMP attack",
+      "label": "CPIMP Attacker 4",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x941a9e3b91e1cc015702b897c512d265fae88a9c": {
+      "category": "stolen",
+      "entity": "ChainSwap exploit",
+      "label": "ChainSwap Exploiter",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xeda5066780de29d00dfb54581a707ef6f52d8113": {
+      "category": "stolen",
+      "entity": "ChainSwap hack",
+      "label": "ChainSwap Hacker",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6aa5214abb24cf06591900ffc00f5f50dc5fa892": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x378966338f04e4264aa521841c59406138e86fe9": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 100",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1462680f21eb29df32d1eb14b02ff94b3a018142": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 101",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x57ee1b8ed82191eb73a4fd923e33a71ecf2a552a": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 14",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x31255053776558098885c5be809cd6f38dc2e6c2": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 15",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4066cad8fde97a6182ca24841615955a2c7f9362": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 16",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7657b5ef25bff52499807e75248c9022420e078a": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 17",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x246065f42c50d443cb54fca19e14c2c27ebb0866": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 18",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x28d990a4374aecaaf3db200c1b96d68215c3fc1f": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 19",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xce643d9e0a743e12a30c011c072d5161575c82dd": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 20",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x22a99dd23530b2e587af6e251d950ae7a1d92900": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 21",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x230f038b2157b378f890d417ec25ed5154bc7419": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 22",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x057a3b930702c30e73c309b38a39fd54b468fd83": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 23",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xcaecf0ac70044a5fa5d55dba147eb5dded1dc80b": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 24",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x24c0774663809147e93fe6660554587d475349b4": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 25",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2f508f882b2473d794ad4a11ed06420eec1ccdf0": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 26",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd34bf257a94237d8a4abaa16e724e86ea8a43742": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 27",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf03f3a23d20adf2a5117080d728430d6ae46d169": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 28",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa38106bed4de4bc75950cfe76beb84ddcd238534": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 29",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4fbc89a8afba721d921df4e91a7560dd6217f16d": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 30",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5f665476fc7760f176df764a56765bf6cae8ed31": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 31",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa9cd063e2cd138a989e0ed10c150fc36eca7e9f6": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 32",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xaa5e9ece5aec8cbbfbacfd0fdcf146ad6ee4f647": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 33",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x40ede0a8cd9ed24c731aca7bd687ac4757292216": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 34",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd3088ba055aec9067c7871135849397d0415f937": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 35",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9f232a0c25794d0a3a9bf7d4f7637f4093aaba59": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 36",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6863869b9d138e5bbef0ab565228648718d0b6c4": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 37",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x325a4fb13d568b025c7deb17bb0fec5f49b9029a": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 38",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x44ace81073fa9fe453925a9c47a80873a3b047a0": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 39",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2147921681116d2459b5bb105036791cbb0ff58f": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 4",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x70077ce9ff7e775fb2899450fe5f155526f53104": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 40",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xe60925c0adab7eb8c93686fe162f1a9e450a8d86": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 41",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x72f9fe195642d7c84bad64b5c5f489459eeb8eb4": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 42",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3cea2c22be01ee8a55152d03c1c6d4dff1b3c1ac": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 43",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2fd2924698cab9fc94838a96d60b14aa1497afd0": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 44",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0083a444502df7e3bb6516c0cfd92a60b6bfecd8": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 45",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x35de4f239ff55f9877f51a463ae56d879ec210c2": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 46",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x00768bc9f9a2347579ad331e80e9b80c76f4c891": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 48",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9f57c879a8c856edee3a47c344f15ac5a8da3c69": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 49",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9f66ef51787d9554ae08d1745bd1043321546d2b": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 50",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf454622c6d4184c246b7164f69784691ced57987": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 51",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7c734d35846aa8255461907eeeed1306397173c1": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 52",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x96ee86ca3a9c8eda008a4a52ee0ff2a9e0a9190c": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 53",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfda9415dc40886c9029dc5a892f3d106d76b2dd4": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 54",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x17fa60e290166c3ad9ac426aa0502ba5ebc6f830": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 55",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x543a4b451c25e6e94b11374dc5d530d81f3e6aee": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 56",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9d1e4d4959a61124feeae0b34a9ae0e311b43790": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 57",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5b97513c050508bf589156bdef71d3f5022052aa": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 59",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xdf0fbc9fe94f756cbf3dcfd67c4c7677b56a4a15": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 60",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4cd567d76da9acb592ff3ed847fb6905b7368473": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 61",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5fe5040f062d03b6a1fe336c895bda4cad965bb5": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 62",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x23747df75c01dd9aac224f7b7fd1e4dae2969c35": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 63",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1840de53f22b6e23affb9b4a52261bd7daaf88d4": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 64",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xce7e3adc799d6959578123df69836badbdb1b988": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 65",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x72c498c4b0e4609207bd9a8f459a17642910c2f1": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 66",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd16003fcf72b41925957ecb8934c8d8b36c293d7": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 77",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x8efee6b09c0a71b1a23ecba7837783c5814ed6d0": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 78",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5751481492793868efbce0ebb82728a706a2c8fb": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 79",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x540f4fd6bc148b13943a8e157c3200eb52fa696a": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 80",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xdb0fd4ee668277ce1e12a13022cd3e253005b86f": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 81",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x28c14e2e0d00862b9201e4773975e002d94e7bd6": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 82",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x51dd8238ff9ef19a9895f8f531154d7cc8c507ab": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 83",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa24337982db36036ac30be25aefdbbb3e2473f64": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 84",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd43360749ca17d9eace1119ac0835d3d66f40f1d": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 85",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xee1abcaf6ebea80c65fa585377c00023a3467f02": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 86",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x33a53bb5cff9f5fc3aac3d05af068e979779834b": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 87",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbbd4ddb53ea2796f3fd7d9d79740fa28402f73da": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 88",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5f35187ba2568618eca75b6e8a0de643edd29d9f": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 89",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xe4dadea7ee1ff98582d8aab499639275008535f5": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 90",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xec6ffb13d763d11ae7b8a2075ddb42097d1206a4": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 91",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xff4e34e8ff21b30f82c0b46389064801e49997ab": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 92",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd584294f1bc019c0b1d9af4d9082e74f71b5f2e6": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 93",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x33ddb7c2f24409409a6ca025b04fdfa3ed9e27a3": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 94",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x05d3db345dd039673e2d0ce57e3da9ae4ce8e131": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 95",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x45fd10b4f41d17fc0a129575d59b1542a682d05e": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 96",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xaba5f29874731253c1ed99c0f3266c384e392370": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 97",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xe055be47b19a01186fe6aa2c53cda7cac332eb01": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 98",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9c7db0dfe1a8a8b4ba2a10ecaf3b257448e45cc7": {
+      "category": "stolen",
+      "entity": "Filament exploit",
+      "label": "Filament Exploiter 99",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xeb31973e0febf3e3d7058234a5ebbae1ab4b8c23": {
+      "category": "stolen",
+      "entity": "Kucoin hack",
+      "label": "Kucoin Hacker",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x680910cf5fc9969a25fd57e7896a14ff1e55f36b": {
+      "category": "stolen",
+      "entity": "OnyxDAO exploit",
+      "label": "OnyxDAO Exploiter 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x54f399d3231d78256632a3af7b9fd452a9d65e3e": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing1065264",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1b489de45dcd35eafa6ad1dbf99c5ad42a3f9bb9": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing1065266",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3c523a2531159fb9ed270ff83b11ee64d2911403": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing1340891",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf6ec8d867a227ff5f84761407da1f85826c17797": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing220440",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfb020ca7f4e8c4a5bbbe060f59a249c6275d2b69": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing285381",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa8e31e3c38add6052a9407298faeb8fd393a6cf9": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing285411",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xdf69bc4541b86aa4c5a470b4347e730c38b2c3b2": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing285416",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xdae6c79c46ab3b280ca28259000695529cbd1339": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing285423",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbb5b03e920cf702de5a3ba9fc1445af4b3919c88": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing285490",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0d66715f2bb956c845f265f62de377aef3ec3a07": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing317154",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x67d3b1716abd9b7dacbff4c615e6a83b6a17c841": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing327032",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x549e99dbf7bf9c2d186e6e02ee6e250af9cb942a": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing327631",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5184d6e11682cae99f02f538d4e4fac09eb58712": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing342513",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb42c370f5a560a32d92a23889c6ff4d05261ffbe": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing363105",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbc912d3aba35ccb2c6c7ac0d445b9f3e866adb41": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing396841",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfba2b8d6d4554ed67ddde4814847b02c5114285d": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing462154",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfc8731ba13cd6121b221bb710e2f4c95f141dc2f": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing462246",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xc907a1812eeccdb9cfa8cb2f3208da1d3f98ad6e": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing462458",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa38afc5c1e33f85b06d4b8c2b4312c1dc1054882": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing462873",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa14d5da3c6bf2d9304fe6d4bc6942395b4de048b": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing4940",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa57eda20be51ae07df3c8b92494c974a92cf8956": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing554341",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x363908df2b0890e7e5c1e403935133094287d7d1": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing936357",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xc8a65fadf0e0ddaf421f28feab69bf6e2e589963": {
+      "category": "stolen",
+      "entity": "PolyNetwork exploit",
+      "label": "PolyNetwork Exploiter 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0629b1048298ae9deff0f4100a31967fb3f98962": {
+      "category": "stolen",
+      "entity": "Radiant Capital exploit",
+      "label": "Radiant Capital Exploiter",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x97a05becc2e7891d07f382457cd5d57fd242e4e8": {
+      "category": "stolen",
+      "entity": "Radiant Capital exploit",
+      "label": "Radiant Capital Exploiter 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x8b75e47976c3c500d0148463931717001f620887": {
+      "category": "stolen",
+      "entity": "Radiant Capital exploit",
+      "label": "Radiant Capital Exploiter 3",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x961a19d16db31add5e257bc3d73b403ee0d3680e": {
+      "category": "stolen",
+      "entity": "Radiant Capital exploit",
+      "label": "Radiant Capital Exploiter 4",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6c8ec8f14be7c01672d31cfa5f2cefeab2562b50": {
+      "category": "stolen",
+      "entity": "Truebit exploit",
+      "label": "Truebit Exploiter 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3b58192943ee6f9ae92d54dd1ef378cfd519862a": {
+      "category": "stolen",
+      "entity": "Truebit exploit",
+      "label": "Truebit Exploiter 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x62afdd1bd84f6b152572404be90679ae58eb4862": {
+      "category": "stolen",
+      "entity": "Truebit exploit",
+      "label": "Truebit Exploiter 3",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x273589ca3713e7becf42069f9fb3f0c164ce850a": {
+      "category": "stolen",
+      "entity": "Truebit exploit",
+      "label": "Truebit Exploiter 4",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd12f6e0fa7fbf4e3a1c7996e3f0dd26ab9031a60": {
+      "category": "stolen",
+      "entity": "Truebit exploit",
+      "label": "Truebit Exploiter 5",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x04b21735e93fa3f8df70e2da89e6922616891a88": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xcfbd2326234ddb5f0eaea69313b864c3dff00008": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 10",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x62b4daa783bb22cf45b6524c63c0477ee10b215f": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 11",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xc5265fb6ebe88d62626e2212234c7d3b8b7ef912": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 12",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x313f7c62b4ac4377ebd69fcebbb484a26faef678": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 13",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0cffef1c95e280abc2ff1c44693eee19de921093": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 14",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x252bdaaee67e3a94d80c98b22b6e85c2e4a86e56": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 15",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x8f5376c6eddc246d7e57040b1b0647fd3cbaff89": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 16",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6ad4486edfbceafc170c3dd7762e8be1ddae12c2": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 17",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x57949b506d895d9ededdd9883bc301a820fdd063": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 18",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2d8231e7cb5d21887f0b007878a4bdd8b1a9c0e4": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 19",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x35febc10112302e0d69f35f42cce85816f8745ca": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfae288c79c337e7f55db70abe85d39b59ed130ea": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 20",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xba19fa8e1ebab926a13ebe35ad595d2a4e2c7081": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 21",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6febb3debfcaea0a58fb8a648d5689e691fcf558": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 22",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7189c049e5b5e07ea5bb70c90880bffdb65c6d9b": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 23",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xc63dd6d4efe063807a521ebcbff6c61cd786b2e9": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 24",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6ea4cd20a0930eaf5b0bc097238ceaf9008703d5": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 25",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1957a4c3d2edcb893c9b85833a417ea035d3aed7": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 26",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x668399a6604c41d46c81430e4dff71443d44efe6": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 27",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x90ca792206ed7ee9bc9da0d0df981fc5619f91fd": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 3",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x361384e2761150170d349924a28d965f0dd3f092": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 4",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6eedf92fb92dd68a270c3205e96dccc527728066": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 5",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x9652e54fd0fc60f198e2c0310f2edfd508ffa1c8": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 6",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb822ae96ca67ddc4129b254d46c5cd904bc1c33e": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 7",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x231e2547ca75b8f9e22be1b45845db07300cf9b4": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 8",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb8343bcc0256aa2d11022f12941c40c9822b6afb": {
+      "category": "stolen",
+      "entity": "WazirX exploit",
+      "label": "WazirX Exploiter 9",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x14ec0cd2acee4ce37260b925f74648127a889a28": {
+      "category": "stolen",
+      "entity": "Yearn (yDai) exploit",
+      "label": "Yearn (yDai) Exploiter",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0a652decf9caca373e2b50607ecb7b069d71a7ba": {
+      "category": "stolen",
+      "entity": "ZKSwap exploit",
+      "label": "ZKSwap Exploiter 1",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xc6751e605869a06f91fee6039ae806d089e4c32e": {
+      "category": "stolen",
+      "entity": "ZKSwap exploit",
+      "label": "ZKSwap Exploiter 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf7fd39cbdc12d5002975d3f16ed67583e6243d68": {
+      "category": "stolen",
+      "entity": "ZKSwap exploit",
+      "label": "ZKSwap Exploiter 3",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3aa199a8362e399ce47e7d12467f8c5034f2713b": {
+      "category": "stolen",
+      "entity": "ZKSwap exploit",
+      "label": "ZKSwap Exploiter 4",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2d3103c8fdd9d9411e24f555fdad6b22f29f613a": {
+      "category": "stolen",
+      "entity": "ZKSwap exploit",
+      "label": "ZKSwap Exploiter 5",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf0628ce987b7cf5d3687e1a7656fe37b556742de": {
+      "category": "stolen",
+      "entity": "ZKSwap exploit",
+      "label": "ZKSwap Exploiter 6",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x74487eed1e67f4787e8c0570e8d5d168a05254d4": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0acc0e5faa09cb1976237c3a9af3d3d4b2f35fa5": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter 2",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x967bb571f0fc9ee79c892abf9f99233aa1737e31": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter 3",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xafad9352eb6bcd085dd68268d353d0ed2571af89": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter 5",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x1ae8840ceaef6eec4da1b1e6e5fcf298800b46e6": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter 7",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xef15b99d9d748bd7021906429565027eb5fb5169": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 15",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7d522f67268f1c46d888fe083aaa86f784b9d082": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 16",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf1809f69e33a81796651d3dd14abdb3652d9625b": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 18",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x959a90a6b88d19184ac7c46dfe43ff2968b12bd2": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 19",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0290445d5f6f78452d4d70b49c267bd856fda636": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 21",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0cc4bed1190019cb4be95e81fd4c4fc7cee600a4": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 23",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5f2f99f21181d8668ec6e2e761704d9c383f989a": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 24",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4d0f57689843c32a53668c8d69ddd65f7a490965": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 6",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbc0842230c10066c47711342608ffeed26661884": {
+      "category": "stolen",
+      "entity": "uniBTC exploit",
+      "label": "uniBTC Exploiter 9",
+      "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    }
+  }
+}

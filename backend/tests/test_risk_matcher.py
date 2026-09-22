@@ -1,4 +1,4 @@
-"""Tests for sanctions and mixer screening.
+"""Tests for sanctions, mixer and stolen-funds screening.
 
 Two things matter here and they fail in opposite directions. Calling a clean
 address sanctioned is a false accusation against a real party. Failing to stop
@@ -12,13 +12,14 @@ import json
 
 import pytest
 
-from app.risk_matcher import MIXER, SANCTIONED, RiskMatcher
+from app.risk_matcher import MIXER, SANCTIONED, STOLEN, RiskMatcher
 
 from conftest import addr, make_graph
 
 SEED = addr("5eed")
 MIXER_ADDR = addr("111e4")
 SDN_ADDR = addr("5d1")
+HACK_ADDR = addr("4ac4")
 
 
 @pytest.fixture
@@ -49,7 +50,7 @@ def test_loads_both_categories(risk_file):
     matcher = RiskMatcher.from_file(risk_file)
 
     assert len(matcher) == 2
-    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1}
+    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, STOLEN: 0}
     assert matcher.entities == ["LAZARUS GROUP", "TORNADO CASH"]
 
 
@@ -95,6 +96,72 @@ def test_a_corrupt_file_disables_screening_without_crashing(tmp_path):
 
 def test_no_path_configured_disables_screening():
     assert len(RiskMatcher.from_file(None)) == 0
+
+
+@pytest.fixture
+def threat_file(tmp_path):
+    path = tmp_path / "threat.json"
+    path.write_text(
+        json.dumps(
+            {
+                "_meta": {"source": "Etherscan label"},
+                "labels": {
+                    HACK_ADDR: {
+                        "category": "stolen",
+                        "entity": "WazirX exploit",
+                        "label": "WazirX Exploiter 3",
+                    },
+                    # Also on the OFAC file: the designation must win.
+                    SDN_ADDR: {
+                        "category": "stolen",
+                        "entity": "Ronin Bridge exploit",
+                        "label": "Ronin Bridge Exploiter",
+                    },
+                },
+            }
+        )
+    )
+    return path
+
+
+def test_the_threat_file_adds_stolen_funds_wallets(risk_file, threat_file):
+    matcher = RiskMatcher.from_file(risk_file, extra_paths=(threat_file,))
+
+    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, STOLEN: 1}
+    assert matcher.lookup(HACK_ADDR)["source"] == "Etherscan label"
+
+
+def test_an_ofac_designation_outranks_an_explorer_tag(risk_file, threat_file):
+    """The weaker authority never overwrites the stronger one."""
+    matcher = RiskMatcher.from_file(risk_file, extra_paths=(threat_file,))
+
+    assert matcher.lookup(SDN_ADDR)["category"] == SANCTIONED
+    assert matcher.lookup(SDN_ADDR)["entity"] == "LAZARUS GROUP"
+
+
+def test_a_missing_threat_file_leaves_ofac_screening_intact(risk_file, tmp_path):
+    matcher = RiskMatcher.from_file(risk_file, extra_paths=(tmp_path / "absent.json", None))
+    assert len(matcher) == 2
+
+
+def test_a_stolen_funds_wallet_does_not_end_the_trace(risk_file, threat_file):
+    """Following where a thief moved the money is the whole point."""
+    matcher = RiskMatcher.from_file(risk_file, extra_paths=(threat_file,))
+    assert matcher.is_flagged(HACK_ADDR) is True
+    assert matcher.is_terminal(HACK_ADDR) is False
+
+
+def test_a_stolen_funds_finding_names_its_source_and_its_limits(risk_file, threat_file):
+    matcher = RiskMatcher.from_file(risk_file, extra_paths=(threat_file,))
+    graph = make_graph([(SEED, HACK_ADDR, 5.0)], seed=SEED)
+
+    (match,) = matcher.annotate(graph)
+    sentence = match.describe()
+
+    assert match.category == STOLEN
+    assert "WazirX Exploiter 3 (WazirX exploit)" in sentence
+    assert "Etherscan label" in sentence
+    assert "not a finding" in sentence
 
 
 # ---------------------------------------------------------------------------

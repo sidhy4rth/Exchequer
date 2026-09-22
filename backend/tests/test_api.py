@@ -26,7 +26,7 @@ def test_health_reports_every_chain(client):
     assert set(body["chains"]) == {"ethereum", "bsc", "tron"}
     for chain in body["chains"].values():
         assert "exchange_labels" in chain
-        assert set(chain["risk_labels"]) == {"sanctioned", "mixer"}
+        assert set(chain["risk_labels"]) == {"sanctioned", "mixer", "stolen"}
 
 
 def test_exchanges_lists_what_attribution_covers(client):
@@ -46,7 +46,7 @@ def test_risk_labels_says_whether_screening_ran_at_all(client):
 
     assert body["chain"] == "ethereum"
     assert body["screened"] is (body["count"] > 0)
-    assert set(body["counts_by_category"]) == {"sanctioned", "mixer"}
+    assert set(body["counts_by_category"]) == {"sanctioned", "mixer", "stolen"}
 
 
 def test_an_unknown_chain_is_a_400_on_both_label_endpoints(client):
@@ -108,7 +108,7 @@ def test_ledger_lists_real_labelled_addresses(client):
     assert body["count"] >= 400  # 337 exchange wallets + 124 OFAC addresses, at least
     assert len(body["entries"]) == 100
     kinds = {e["k"] for e in body["entries"]}
-    assert kinds <= {"sanctioned", "exchange", "inferred", "wallet"}
+    assert kinds <= {"sanctioned", "flagged", "exchange", "inferred", "wallet"}
     for e in body["entries"]:
         assert e["a"].startswith("0x") and len(e["a"]) == 42
         if e["k"] == "exchange":

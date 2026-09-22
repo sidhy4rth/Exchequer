@@ -9,7 +9,7 @@ import ExportButton from '../components/ExportButton'
 import Present from '../components/Present'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', stolen: 'Stolen funds' }
 const COMPONENT_NAME = {
   hop_proximity: 'Hop proximity',
   amount_correlation: 'Amount correlation',
@@ -298,14 +298,14 @@ export default function TraceView() {
           </div>
         )}
 
-        {/* Sanctions and mixers: a published designation outranks anything the
-            tool inferred, so it comes before the finding. */}
+        {/* Sanctions, mixers and stolen funds: a published designation or theft
+            outranks anything the tool inferred, so it comes before the finding. */}
         {riskMatches.length > 0 && (
           <div className="alert" role="alert">
             <Icon d={ICONS.alert} />
             <div>
               <div className="title">
-                {riskMatches.length === 1 ? 'Sanctions screening hit' : `${riskMatches.length} sanctions screening hits`}
+                {riskMatches.length === 1 ? 'Risk screening hit' : `${riskMatches.length} risk screening hits`}
                 {riskMatches.some((m) => m.category === 'mixer') ? ' — the trace stops at a mixer' : ''}
               </div>
               {riskMatches.map((m) => (

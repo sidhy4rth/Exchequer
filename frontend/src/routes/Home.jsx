@@ -210,7 +210,7 @@ export default function Home() {
                 <div className="line" key={c.key}>
                   <span className={`dot ${c.ready ? 'live' : 'down'}`} />
                   <span>{c.name}</span>
-                  <span className="n">{c.exchange_labels} labels · {(c.risk_labels?.sanctioned ?? 0) + (c.risk_labels?.mixer ?? 0)} screened</span>
+                  <span className="n">{c.exchange_labels} labels · {(c.risk_labels?.sanctioned ?? 0) + (c.risk_labels?.mixer ?? 0) + (c.risk_labels?.stolen ?? 0)} screened</span>
                 </div>
               ))}
             </div>
@@ -218,7 +218,7 @@ export default function Home() {
         </section>
 
         <details className="card sec">
-          <summary><span className="micro">What the label files cover</span><span className="note">exchanges by chain · OFAC SDN screening · what a trace does</span></summary>
+          <summary><span className="micro">What the label files cover</span><span className="note">exchanges by chain · OFAC, hack and mixer screening · what a trace does</span></summary>
           <div className="coverage">
             <div>
               <div className="head"><span className="micro">Exchange labels</span><span className="note">exact-match attribution</span></div>
@@ -236,15 +236,16 @@ export default function Home() {
               </table>
             </div>
             <div>
-              <div className="head"><span className="micro">Sanctions and mixer screening</span><span className="note">OFAC SDN list</span></div>
+              <div className="head"><span className="micro">Risk screening</span><span className="note">OFAC SDN list · explorer-tagged hacks and mixers</span></div>
               <table>
-                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th></tr></thead>
+                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th><th style={{ textAlign: 'right' }}>Stolen funds</th></tr></thead>
                 <tbody>
                   {chains.map((c) => (
                     <tr key={c.key}>
                       <td>{c.name}</td>
                       <td className="num">{coverage[c.key]?.risk?.counts_by_category?.sanctioned ?? c.risk_labels?.sanctioned ?? 0}</td>
                       <td className="num">{coverage[c.key]?.risk?.counts_by_category?.mixer ?? c.risk_labels?.mixer ?? 0}</td>
+                      <td className="num">{coverage[c.key]?.risk?.counts_by_category?.stolen ?? c.risk_labels?.stolen ?? 0}</td>
                     </tr>
                   ))}
                 </tbody>

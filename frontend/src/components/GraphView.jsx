@@ -68,10 +68,10 @@ const HIT_PAD = 9
 const LINK_HIT_PAD = 4
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', stolen: 'Stolen funds' }
 const ROLE_NAME = {
   seed: 'Reported address',
-  risk: 'Sanctioned / mixer',
+  risk: 'Sanctioned / mixer / stolen funds',
   exchange: 'Labelled exchange wallet',
   inferred: 'Probable deposit address (inferred)',
   service: 'Service contract or router, not expanded',

@@ -42,12 +42,14 @@ const num = (value) =>
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
 
+const RISK_WORD = { sanctioned: 'sanctioned', mixer: 'mixer', stolen: 'stolen funds' }
+
 /** What a node is called on the canvas: the label if it has one, else nothing. */
 function captionOf(node, role) {
-  if (role === 'seed') return node.risk_category ? 'Reported · sanctioned' : 'Reported'
+  if (role === 'seed') return node.risk_category ? `Reported · ${RISK_WORD[node.risk_category] ?? 'flagged'}` : 'Reported'
   if (role === 'exchange') return node.label ?? node.exchange
   if (role === 'inferred') return `probable ${node.inferred_exchange} deposit`
-  if (role === 'risk') return node.risk_entity ?? node.risk_label ?? 'sanctioned'
+  if (role === 'risk') return node.risk_entity ?? node.risk_label ?? RISK_WORD[node.risk_category] ?? 'flagged'
   if (role === 'service') return node.router ?? node.label ?? null
   return null
 }

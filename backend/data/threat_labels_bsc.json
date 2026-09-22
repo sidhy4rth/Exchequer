@@ -1,0 +1,354 @@
+{
+  "_meta": {
+    "description": "Wallets tied to known hacks and phishing thefts, and mixer pools, that Exchequer screens a trace against. OFAC lists neither, so this file fills the gap the sanctions file leaves.",
+    "provenance": "The block explorer's own address tags (BscScan), from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a published scrape of them, selected and verified by backend/scripts/import_threat_labels.py.",
+    "verification_note": "Every address was confirmed to exist and to have been used on chain. The attribution itself is the explorer's -- strong, public, but not a government designation. A match means the funds touched a wallet the explorer ties to a theft or a mixer; it does NOT mean any counterparty took part in it. Re-check the tag on the explorer before evidentiary use.",
+    "category_note": "'stolen' marks wallets run by the perpetrator of a hack or a phishing campaign; a trace continues through them. 'mixer' marks pools where deposits commingle; a trace stops there.",
+    "chain": "bsc",
+    "last_reviewed": "2026-09-22",
+    "counts": {
+      "stolen": 42,
+      "mixer": 14
+    },
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_threat_labels",
+    "schema": "labels maps an address to {category, entity, label, source}"
+  },
+  "labels": {
+    "0xd9689b0ae0eeddbbb817b4c8bfabad5bb29dd0df": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network 100 BUSD",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x66e90e4f92f39873c2feb394ab87616b37afffdb": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 0.1 BNB",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6ff1d9e9fb6d3e118f39672ceb7a7a2234007053": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 1 BNB",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3e505920df6be0ceb8ef4e7af0a13c8347929ca7": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 1 CAKE",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0fc5b5bd6455a3c16c1847a91ebea94d00d5ff8a": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 10 BNB",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x88c264573bf4f424eae64cdb93c3f4f60efc47ec": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 10 BUSD",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x5359e7606438a0de0ffd4d217800204e559db0d3": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 10 CAKE",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd4dc87cc7694114b2bbb21efcc7b6f2a910a1bc4": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 100 CAKE",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x318ff5454006a4585d16d57f4ea6d9bce618cfa0": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 100 TYPH",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x02c94e9ed6264031d2c61b49b63c5f5de6ae1568": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 1000 BUSD",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3b39a8ede4bc9b81eda595f5b0eeca9503a3b4b0": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 1000 TYPH",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xdcdf4048359fa26f550df0f8a226606706828636": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 10000 BUSD",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3b786ea1ba84f52b7a1ee2fa6e18326ad7dc26b7": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 10000 TYPH",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4ad6b15c2ce67b6a8dfa50d491e4ca0492649e81": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 50 BNB",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xf3a465c9fa6663ff50794c698f600faa4b05c777": {
+      "category": "stolen",
+      "entity": "Ankr exploit",
+      "label": "Ankr Exploiter",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x2c6900b24221de2b4a45c8c89482fff96ffb7e55": {
+      "category": "stolen",
+      "entity": "AscendEX hack",
+      "label": "AscendEX Hacker",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x25fb126b6c6b5c8ef732b86822fa0f0024e16c61": {
+      "category": "stolen",
+      "entity": "Bitmart hack",
+      "label": "Bitmart Hacker",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa0acc61547f6bd066f7c9663c17a312b6ad7e187": {
+      "category": "stolen",
+      "entity": "Bunny Finance exploit",
+      "label": "Bunny Finance Exploiter 1",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x158c244b62058330f2c328c720b072d8db2c612f": {
+      "category": "stolen",
+      "entity": "Bunny Finance exploit",
+      "label": "Bunny Finance Exploiter 2",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x68926c8595b211bd8effd9ffee7355426cdd4ce8": {
+      "category": "stolen",
+      "entity": "Eco DeFi hack",
+      "label": "Eco DeFi Hacker",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x8e0d334a77614a7ce089c9246e9b1d7c7172ef02": {
+      "category": "stolen",
+      "entity": "Impossible Finance exploit",
+      "label": "Impossible Finance Exploiter",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x330bf950ab2fb1f8ed039a50b1a92478714a6c7c": {
+      "category": "stolen",
+      "entity": "Maze Protocol hack",
+      "label": "Maze Protocol Hacker 1",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4f5bc3866858bf892118ac675e015286c37bbefd": {
+      "category": "stolen",
+      "entity": "Maze Protocol hack",
+      "label": "Maze Protocol Hacker 2",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xdaf38d906a94a20b07aef895a2cde34877f9da7f": {
+      "category": "stolen",
+      "entity": "Maze Protocol hack",
+      "label": "Maze Protocol Hacker 3",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3551fd337471a8c6374d2f9c97519ca94ba1d59a": {
+      "category": "stolen",
+      "entity": "Maze Protocol hack",
+      "label": "Maze Protocol Hacker 4",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x79391843a5eff373a20e9f93096b41ff38f38013": {
+      "category": "stolen",
+      "entity": "Maze Protocol hack",
+      "label": "Maze Protocol Hacker 5",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6666666c0765744193f48255717f05a0105d2401": {
+      "category": "stolen",
+      "entity": "Maze Protocol hack",
+      "label": "Maze Protocol Hacker 6",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xcba47af0547d12fb6b59c105835fab6b2fbc22ed": {
+      "category": "stolen",
+      "entity": "MetaSwap exploit",
+      "label": "MetaSwap Exploiter",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x731821d13414487ea46f1b485cfb267019917689": {
+      "category": "stolen",
+      "entity": "Pancake Hunny exploit",
+      "label": "Pancake Hunny Exploiter",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xbaedee3beecb43ae66dcfda03600191f6f08ed0b": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing138",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x03ccb56ffc86ef711545f44303ceeb44f7dfd1ed": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing139",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb4e502bee63fb4394e682ef53150d4733dc62aa8": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing143",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x49809e2a256893ae4c136bc7e44ee6a60bba1c95": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing144",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd048b4c23af828e5be412505a51a8dd7b37782dd": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing1556",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xb524a9a21702813f8ea7a79c16afcb5fb4660544": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing1723",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x71753d0586ea6b979dfccbb492a45e611e0e0ad6": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing448",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x139ae647499d762b2c589670be7546298c66f821": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing454",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xac2eeb78f25ac8f19e3097a9dbab102c27dffa8e": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing459",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xa24155e615136363c8c5af4ecde325948621a0af": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing462",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x7aa3a53360541283ffa9192972223b47a902dc0c": {
+      "category": "stolen",
+      "entity": "Phishing wallet",
+      "label": "Fake_Phishing465",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x472a2c88c1a5f794eb80706e587d4a120d9be255": {
+      "category": "stolen",
+      "entity": "Pinecone Finance exploit",
+      "label": "Pinecone Finance Exploiter 1",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x430ad7e178d3e00145f35c041c7f486d7e8a4c7e": {
+      "category": "stolen",
+      "entity": "Pinecone Finance exploit",
+      "label": "Pinecone Finance Exploiter 2",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xfc6682db7e9f57882e8b18ebc9adc7a19f770494": {
+      "category": "stolen",
+      "entity": "Pinecone Finance exploit",
+      "label": "Pinecone Finance Exploiter 3",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0d6e286a7cfd25e0c01fee9756765d8033b32c71": {
+      "category": "stolen",
+      "entity": "PolyNetwork exploit",
+      "label": "PolyNetwork Exploiter",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xd01ae1a708614948b2b5e0b7ab5be6afa01325c7": {
+      "category": "stolen",
+      "entity": "QubitFin exploit",
+      "label": "QubitFin Exploiter",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x21bcb4fa299e13c4fa97b2271099f35a1499e74c": {
+      "category": "stolen",
+      "entity": "QubitFin exploit",
+      "label": "QubitFin Exploiter 2",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x3b6e77722e2bbe97c1cfa337b42c0939aeb83671": {
+      "category": "stolen",
+      "entity": "Spartan Protocol hack",
+      "label": "Spartan Protocol Hacker",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x4464e91002c63a623a8a218bd5dd1f041b61ec04": {
+      "category": "stolen",
+      "entity": "Stake.com hack",
+      "label": "Stake.com Hacker",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xad9217e427ed9df8a89e582601a8614fd4f74563": {
+      "category": "stolen",
+      "entity": "Titano PLAY exploit",
+      "label": "Titano PLAY Exploiter",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x886358f9296de461d12e791bc9ef6f5a03410c64": {
+      "category": "stolen",
+      "entity": "Wault Finance hack",
+      "label": "Wault Finance Hacker",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x59c686272e6f11dc8701a162f938fb085d940ad3": {
+      "category": "stolen",
+      "entity": "XSURGE exploit",
+      "label": "XSURGE Exploiter 1",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x74487eed1e67f4787e8c0570e8d5d168a05254d4": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x0acc0e5faa09cb1976237c3a9af3d3d4b2f35fa5": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter 2",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x967bb571f0fc9ee79c892abf9f99233aa1737e31": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter 3",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0x6551fb9be444987f7482012cbf7ea95a1ee8dd0e": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter 4",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xafad9352eb6bcd085dd68268d353d0ed2571af89": {
+      "category": "stolen",
+      "entity": "bZx PrivKey exploit",
+      "label": "bZx PrivKey Exploiter 5",
+      "source": "BscScan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    }
+  }
+}
