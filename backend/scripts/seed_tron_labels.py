@@ -85,6 +85,8 @@ CANONICAL: dict[str, str] = {
     "digifinex": "DigiFinex", "pionex": "Pionex", "toobit": "Toobit", "weex": "WEEX",
     "bitvavo": "Bitvavo", "bitpanda": "Bitpanda", "nexo": "Nexo", "backpack": "Backpack",
     "coinspot": "CoinSpot", "fixedfloat": "FixedFloat", "ueex": "UEEx",
+    "flipster": "Flipster", "ourbit": "OURBIT", "onus": "ONUS", "westwallet": "WestWallet",
+    "heleket": "Heleket",
 }
 
 

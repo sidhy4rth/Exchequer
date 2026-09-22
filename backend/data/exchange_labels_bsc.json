@@ -5,11 +5,17 @@
     "verification_note": "Every address below was confirmed against live BNB Smart Chain data to be economically active -- recent BNB or BEP-20 USDT transfers, or a non-trivial BNB balance. That proves the address is real and handles funds; it does NOT independently confirm which company operates it, since no free API exposes BscScan's label data. Re-verify on bscscan.com before evidentiary use.",
     "chain": "bsc",
     "chain_id": 56,
-    "last_reviewed": "2026-09-04",
-    "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels",
-    "schema": "labels maps a lowercase address to {exchange, label, type}"
+    "last_reviewed": "2026-09-22",
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels && then cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc",
+    "schema": "labels maps a lowercase address to {exchange, label, type}",
+    "supplemented_from": "8 further labels imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a newer published scrape of the same explorer label pages, and verified on chain the same way, by backend/scripts/import_eth_labels.py."
   },
   "labels": {
+    "0x986a2fca9eda0e06fbf7839b89bfc006ee2a23dd": {
+      "exchange": "AscendEX",
+      "label": "AscendEX Hot Wallet",
+      "type": "hot_wallet"
+    },
     "0x540c428d67b6038c7e6199a02605cbb3b6626384": {
       "exchange": "Azbit",
       "label": "Azbit: Azbit 2",
@@ -19,6 +25,11 @@
       "exchange": "Binance",
       "label": "Binance Hot Wallet 10",
       "type": "hot_wallet"
+    },
+    "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
+      "exchange": "Binance",
+      "label": "Binance: BUSD Stablecoin",
+      "type": "exchange_wallet"
     },
     "0x631fc1ea2270e98fbd9d92658ece0f5a269aa161": {
       "exchange": "Binance",
@@ -130,6 +141,11 @@
       "label": "CoinDCX 2",
       "type": "exchange_wallet"
     },
+    "0x72a53cdbbcc1b9efa39c834a540550e23463aacb": {
+      "exchange": "Crypto.com",
+      "label": "Crypto.com",
+      "type": "exchange_wallet"
+    },
     "0x4727250679294802377dd6ca6541b8e459077c95": {
       "exchange": "FixedFloat",
       "label": "FixedFloat: Hot Wallet",
@@ -139,6 +155,16 @@
       "exchange": "Gate.io",
       "label": "Gate.io",
       "type": "exchange_wallet"
+    },
+    "0x39aa02d6b499a76a70fab5f164e8be587c366141": {
+      "exchange": "Hotbit",
+      "label": "Hotbit",
+      "type": "hot_wallet"
+    },
+    "0xc7029e939075f48fa2d5953381660c7d01570171": {
+      "exchange": "Hotbit",
+      "label": "Hotbit 2",
+      "type": "hot_wallet"
     },
     "0xefdca55e4bce6c1d535cb2d0687b5567eef2ae83": {
       "exchange": "Huobi / HTX",
@@ -158,6 +184,21 @@
     "0x4982085c9e2f89f2ecb8131eca71afad896e89cb": {
       "exchange": "MEXC",
       "label": "mexc.com",
+      "type": "exchange_wallet"
+    },
+    "0xc6acb77befebff0359cc581973859eee8cbaeda1": {
+      "exchange": "MaskEX",
+      "label": "MaskEX 10",
+      "type": "exchange_wallet"
+    },
+    "0xd7aed730a7c4cf8dfe313b16712af3406f6dca5b": {
+      "exchange": "MaskEX",
+      "label": "MaskEX 12",
+      "type": "exchange_wallet"
+    },
+    "0x3dd878a95dcaef2800cd57bb065b5e8f2f438131": {
+      "exchange": "MaskEX",
+      "label": "MaskEX 3",
       "type": "exchange_wallet"
     }
   }

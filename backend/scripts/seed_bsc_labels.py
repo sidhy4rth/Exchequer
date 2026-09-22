@@ -99,6 +99,36 @@ def wallet_type(label: str) -> str:
     return "exchange_wallet"
 
 
+def bsc_activity(
+    native: NoderealClient, token: NoderealClient, usdt_address: str, head: int, floor: int, address: str
+) -> tuple[int, float]:
+    """(recent inbound transfers, BNB balance) for one address.
+
+    Inbound is the better signal: a deposit wallet receives constantly and may
+    almost never send.
+    """
+    moves = 0
+    for client, category in ((native, ["external"]), (token, ["20"])):
+        params = {
+            "category": category,
+            "fromBlock": hex(floor),
+            "toBlock": hex(head),
+            "toAddress": address,
+            "maxCount": "0x5",
+            "order": "desc",
+        }
+        if category == ["20"]:
+            params["contractAddresses"] = [usdt_address]
+        result = client._rpc("nr_getAssetTransfers", [params]) or {}
+        moves += len(result.get("transfers") or [])
+        if moves:
+            break
+
+    balance_raw = native._rpc("eth_getBalance", [address, "latest"])
+    balance = int(balance_raw, 16) / 10**18 if isinstance(balance_raw, str) else 0.0
+    return moves, balance
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
@@ -147,27 +177,7 @@ def main() -> int:
         floor = max(0, head - ACTIVITY_LOOKBACK)
         for address, meta in sorted(candidates.items()):
             try:
-                # Inbound is the better signal: a deposit wallet receives
-                # constantly and may almost never send.
-                moves = 0
-                for client, category in ((native, ["external"]), (token, ["20"])):
-                    params = {
-                        "category": category,
-                        "fromBlock": hex(floor),
-                        "toBlock": hex(head),
-                        "toAddress": address,
-                        "maxCount": "0x5",
-                        "order": "desc",
-                    }
-                    if category == ["20"]:
-                        params["contractAddresses"] = [usdt.address]
-                    result = client._rpc("nr_getAssetTransfers", [params]) or {}
-                    moves += len(result.get("transfers") or [])
-                    if moves:
-                        break
-
-                balance_raw = native._rpc("eth_getBalance", [address, "latest"])
-                balance = int(balance_raw, 16) / 10**18 if isinstance(balance_raw, str) else 0.0
+                moves, balance = bsc_activity(native, token, usdt.address, head, floor, address)
             except (NoderealError, ValueError) as exc:
                 print(f"{address:<44} {meta['exchange']:<14} {'ERROR':>9} {'-':>13}  {str(exc)[:24]}")
                 errors.append(f"{address}: {exc}")

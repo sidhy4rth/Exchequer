@@ -4,23 +4,24 @@
     "provenance": "Each label is TronScan's own published address tag, read from its public API (the addressTag on /api/token_trc20/holders and /api/account/list) by backend/scripts/seed_tron_labels.py. Candidates are the largest USDT-TRC20 holders and TRX accounts, since exchanges dominate both lists.",
     "verification_note": "TronScan publicly identifies these addresses as belonging to the named exchanges as of the review date. That is the explorer's own attribution, not an inference by this tool. Each address was then checked on chain: no contract bytecode (TronGrid wallet/getcontract) and at least one received USDT-TRC20 or TRX transfer. It does NOT establish who controls the funds -- only the exchange can link a deposit address to a customer, via lawful request. Tags naming issuers, bridges, protocols or contracts were excluded, and tags not recognised as an exchange were listed for review, not kept.",
     "chain": "tron",
-    "last_reviewed": "2026-09-15",
+    "last_reviewed": "2026-09-22",
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
     "schema": "labels maps a Base58 address to {exchange, label, type}",
     "counts": {
-      "labels": 40,
-      "exchanges": 18,
+      "labels": 41,
+      "exchanges": 19,
       "by_exchange": {
         "Binance": 12,
-        "Bitpanda": 1,
         "Bitfinex": 1,
         "Bitget": 1,
         "Bithumb": 1,
+        "Bitpanda": 1,
         "Bybit": 1,
         "CoinSpot": 1,
         "Coinone": 1,
         "FixedFloat": 1,
         "Gate.io": 1,
+        "Heleket": 1,
         "Huobi / HTX": 8,
         "Kraken": 1,
         "KuCoin": 3,
@@ -36,7 +37,6 @@
       "TKHuVq1oKVruCGLvqVexFs6dawKv6fQgFs  Tether Treasury"
     ],
     "unrecognised_tags": [
-      "TAYVfoeN2HX3TR1Rbytq7C26rf7Swu3aSC  Heleket Hot Wallet 1",
       "TK8v6HPniRKYixj6Egby712nr5R3xrYYCT  SunX: VaultColdWallet 2",
       "TA3fr8DX9EJjE1LunfWZcrHmz6qVbhtwLA  TronLucky DepositAndWithdraw 1",
       "TU5zwe3736jK1y2kZvQbi8YiPWg28LHss1  TronLucky DepositAndWithdraw 2",
@@ -150,6 +150,11 @@
       "exchange": "Gate.io",
       "label": "Gate",
       "type": "exchange_wallet"
+    },
+    "TAYVfoeN2HX3TR1Rbytq7C26rf7Swu3aSC": {
+      "exchange": "Heleket",
+      "label": "Heleket Hot Wallet 1",
+      "type": "hot_wallet"
     },
     "TK86Qm97uM848dMk8G7xNbJB7zG1uW3h1n": {
       "exchange": "Huobi / HTX",
