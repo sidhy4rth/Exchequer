@@ -151,7 +151,7 @@ Real mainnet addresses that produce real attributions. Pick the **chain** and **
 
 | Chain / asset | Address | What you get |
 |---|---|---|
-| Ethereum · ETH | `0x60d02e0956e2f3795167c15ba61ab452c85c2533` | **Best demo.** ~120 addresses at 4 hops in ~40 s / 73 requests, reaches **Binance** in 2, confidence ≈ 0.90; six service contracts (WETH, pools) recognised and left unexpanded, one swap detected |
+| Ethereum · ETH | `0x60d02e0956e2f3795167c15ba61ab452c85c2533` | **Best demo.** 48 addresses at 4 hops in ~28 s / 31 requests (23 Sep, cold); reaches a **probable Bitget deposit address** in 1 hop, confidence 0.875 (it sweeps 100% to Bitget 6), with **Binance 14**, OKX 24 and Bitget 6 as exact matches at 2 hops; one swap detected |
 | Ethereum · ETH | `0x536c4921d1aafde6a5cda882fb5ca046f3601c65` | **Laundering demo, ~10s.** 617 ETH fanned across 10 recipients — 11 red bubbles, no exchange match |
 | Ethereum · USDT | `0x0b2fdf416cf2951499de9a1adac65c8e9907c8c2` | Stablecoin cash-out — **Binance 14** in 1 hop, 102.8M USDT, confidence 1.00 |
 | BSC · USDT | `0x32d03f46ba2857c8e6a920ab3fed1f24d35d85d1` | **BNB Smart Chain** — Binance Hot Wallet 6 in 1 hop, 19.3M USDT |
@@ -350,20 +350,39 @@ cd backend && .venv/bin/python -m scripts.import_ofac_addresses
 cd backend && .venv/bin/python -m scripts.import_ofac_addresses --dry-run
 ```
 
-Current coverage, from the list published **4 September 2026**:
+Current OFAC coverage, from the list published **18 September 2026**:
 
 | File | Coverage |
 |---|---|
 | `backend/data/risk_labels.json` | **124 addresses / 48 designated entities** on Ethereum |
-| `backend/data/risk_labels_tron.json` | **282 addresses** on Tron |
+| `backend/data/risk_labels_tron.json` | **334 addresses** on Tron |
 | `backend/data/risk_labels_bsc.json` | **1 address** on BNB Smart Chain |
 
-Two categories, carrying the same evidentiary weight but different investigative meaning:
+**Other governments.** OFAC is one government. The UK, the EU, Israel, Japan and France also publish
+crypto addresses they have frozen or seized, and several name addresses OFAC does not — Israel's
+counter-terror seizure orders alone name 585 Tron wallets, almost all USDT. They are imported into
+`intl_sanctions*.json`: the UK Sanctions List and the EU consolidated list read directly (their
+addresses sit in free text, and each is filed under the chain the text names before it — `ETH:`,
+`BNB:`, `TRX:`), and Israel's NBCTF, Japan's Ministry of Finance and France's DG Trésor through
+OpenSanctions, which extracts them from those publishers' documents (CC BY-NC 4.0: non-commercial use).
+Only measures still in force count — a wallet named only in lifted seizure orders is left out. An
+address several governments list names all of them, because "designated by the US, the UK and Israel"
+is a stronger finding than any one alone. Canada, Australia, Switzerland and the UN publish no crypto
+addresses; I checked all 95 official lists OpenSanctions carries.
 
-| Category | Meaning | Effect on the trace |
-|---|---|---|
-| `sanctioned` | The address belongs to a designated entity | None — it is an ordinary wallet whose transfers mean what they say |
-| `mixer` | The address is a tumbler | **The trace stops here** |
+```bash
+cd backend && .venv/bin/python -m scripts.import_intl_sanctions
+```
+
+Sanctioned addresses screened, all governments together: **915 on Tron, 139 on Ethereum, 7 on BSC**.
+
+Three categories, with different investigative meaning and different authority behind them:
+
+| Category | Meaning | Source | Effect on the trace |
+|---|---|---|---|
+| `sanctioned` | The address is on a government sanctions or seizure list | OFAC, UK, EU, Israel, Japan, France | None — it is an ordinary wallet whose transfers mean what they say |
+| `mixer` | The address is a tumbler's pool or router | Etherscan / BscScan tags | **The trace stops here** |
+| `stolen` | The explorer tags the address as the perpetrator of a hack or phishing theft | Etherscan / BscScan tags | None — where the thief moved the money is the point |
 
 The mixer rule is the important one, and it is a correctness rule rather than a presentational one.
 A tumbler pays out from a commingled pool, so transfers leaving it have no established relationship
@@ -372,16 +391,19 @@ a trail the transactions do not support and hand an investigator a confident-loo
 false premise. Stopping and saying so is the honest answer, and a trace that ends at a mixer reports
 that as a substantive finding rather than as a failed search for an exchange.
 
-Every address in these files is sanctioned; `mixer` marks the subset that are tumblers, which is this
-project's own editorial classification of the designated entity's name and is recorded as such. The
-sanctions fact itself is never editorial.
+**Mixers and stolen funds come from the explorer, not a government, and every finding says so.** Tornado
+Cash, the mixer that mattered on Ethereum, left the SDN list in March 2025 following *Van Loon v.
+Treasury*, and every mixer OFAC still lists is a Bitcoin service — so a sanctions-only screen would never
+stop at a mixer on these chains. `scripts/import_threat_labels.py` takes the pools and routers of Tornado
+Cash, Typhoon and Privacy Pools (40 on Ethereum, 14 on BSC; never their governance, token or vesting
+contracts) and the wallets Etherscan tags as a thief's (254 on Ethereum, 42 on BSC: the WazirX, Bybit,
+BingX, Ronin and other exploiters, and phishing wallets), each checked to exist and to have been used on
+chain. They sit in `threat_labels*.json`, below the government lists: where an address is on both, the
+government entry is the one reported.
 
-**The mixer category is currently empty on all three chains, and that is the correct answer rather
-than missing data.** Every mixer OFAC lists today — Blender.io (46 addresses), Sinbad.io — is a
-*Bitcoin* service, and Exchequer does not trace Bitcoin. Tornado Cash, the one that mattered on
-Ethereum, was delisted in March 2025 following *Van Loon v. Treasury*. The rule and its stop-the-trace
-behaviour are implemented and tested; there is simply nothing on the current list for them to match.
-Re-running the importer will pick up any future designation without a code change.
+```bash
+cd backend && .venv/bin/python -m scripts.import_threat_labels
+```
 
 > Screening degrades safely. With no label file present the trace still runs and still attributes an
 > exchange — it simply reports that it was not screened. `GET /risk-labels` reports `screened` so a
@@ -397,12 +419,15 @@ manufacture an attribution no transaction supports.
 
 | File | Coverage |
 |---|---|
-| `backend/data/exchange_labels.json` | **337 addresses / 18 exchanges** — Binance, Coinbase, Kraken, OKX, Bitfinex, Huobi/HTX, KuCoin, Gate.io, Crypto.com, Bybit, Bitstamp, HitBTC, Gemini, Bithumb, Bittrex, Poloniex, Upbit, Remitano |
-| `backend/data/exchange_labels_bsc.json` | **30 addresses / 9 exchanges** — Binance, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, **CoinDCX**, Azbit, FixedFloat |
-| `backend/data/exchange_labels_tron.json` | **40 addresses / 18 exchanges** — Binance, Huobi/HTX, KuCoin, MEXC, Poloniex, OKX, Bybit, Bitfinex, Bitget, Gate.io, Kraken, Upbit, Bithumb, Coinone, Bitpanda, CoinSpot, FixedFloat, UEEx |
-| `backend/data/risk_labels*.json` | Sanctioned and mixer addresses per chain, generated from OFAC's SDN list — see [Sanctions and mixer screening](#sanctions-and-mixer-screening) |
+| `backend/data/exchange_labels.json` | **1,020 addresses / 92 exchanges** — the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX** (29), Bitget, Poloniex; also **Delta Exchange** |
+| `backend/data/exchange_labels_bsc.json` | **38 addresses / 13 exchanges** — Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat |
+| `backend/data/exchange_labels_tron.json` | **41 addresses / 19 exchanges** — Binance, Huobi/HTX, KuCoin, MEXC, Poloniex, OKX, Bybit, Bitfinex, Bitget, Gate.io, Kraken, Upbit, Bithumb, Coinone, Bitpanda, CoinSpot, FixedFloat, UEEx, Heleket |
+| `backend/data/risk_labels*.json`, `intl_sanctions*.json`, `threat_labels*.json` | Sanctioned, mixer and stolen-funds addresses per chain — see [Sanctions and mixer screening](#sanctions-and-mixer-screening) |
 
-**407 verified exchange wallets in total, across three chains.**
+**1,099 verified exchange wallets in total, across three chains.** The Ethereum and BSC files grew on
+22 September from a newer published scrape of the same explorer tags (`scripts/import_eth_labels.py`,
+dawsbot/eth-labels, pinned), every new address checked on chain the same way; the original importer's
+dataset stops in 2023, before Bitget, MEXC and CoinDCX were well covered.
 
 Both files are generated, not hand-typed, and both are reproducible:
 
@@ -557,7 +582,7 @@ Each wallet was traced forward at depth 3 with the real pipeline (1,416 provider
 
 What the numbers establish, and what they do not. **Neither rule separates documented-illicit wallets from ordinary high-volume ones within three hops**, and no point in the 68-point threshold grid brought control firings to zero while still firing on any positive. The peel chain almost never fires; both control hits are mining-pool payouts, which is precisely the legitimate shape Meiklejohn et al. warned produces it. The amount split at its old defaults flagged 40% of ordinary wallets, so the defaults were moved to the grid point with the fewest control firings that still fired on positives — 11% of controls, 19% of positives — and that is an estimate from 79 wallets, not a law. Read a pattern finding as the tool has always asked you to: a reason to look closer, never a verdict. The measurement also does not test recall against ground truth, since a wallet documented as holding stolen funds is not thereby documented as laundering them in one of these two shapes. The deposit-address rule fired on none of the 48 control seeds, which are wallets known not to be exchange deposit addresses; it also marked 69 deeper, unknown wallets across 20 control traces, about which nothing is known either way.
 
-Only Ethereum / ETH was measured. Tron and BSC positives exist (OFAC lists 282 Tron addresses) but no scripted source of Tron *controls* with the same provenance discipline was found, so no number is claimed for those chains.
+Only Ethereum / ETH was measured. Tron and BSC positives exist (OFAC lists 334 Tron addresses) but no scripted source of Tron *controls* with the same provenance discipline was found, so no number is claimed for those chains.
 
 Regenerate the table (offline, from the committed snapshot; add `--refresh` to re-fetch):
 
@@ -661,10 +686,12 @@ exchequer/
 │   │   ├── api_budget.py         shared request pacer + response cache (memory and disk)
 │   │   └── warmup.py             traces the demo addresses at startup so they are cached
 │   ├── data/
-│   │   ├── exchange_labels.json      337 verified Ethereum exchange wallets
-│   │   ├── exchange_labels_bsc.json   30 verified BSC exchange wallets
-│   │   ├── exchange_labels_tron.json  40 verified Tron exchange wallets
+│   │   ├── exchange_labels.json      1,020 verified Ethereum exchange wallets
+│   │   ├── exchange_labels_bsc.json   38 verified BSC exchange wallets
+│   │   ├── exchange_labels_tron.json  41 verified Tron exchange wallets
 │   │   ├── risk_labels*.json          OFAC SDN addresses, per chain
+│   │   ├── intl_sanctions*.json       UK, EU, Israel, Japan, France sanctions/seizure addresses
+│   │   ├── threat_labels*.json        mixer pools and hack/phishing wallets (explorer tags)
 │   │   ├── router_labels*.json        verified DEX routers, per chain
 │   │   ├── demo_traces.json           the DEMO.md traces, as requests; read by the warm-up and the seed script
 │   │   └── validation/                corpus, snapshot and results of the rule measurement
