@@ -423,12 +423,12 @@ manufacture an attribution no transaction supports.
 
 | File | Coverage |
 |---|---|
-| `backend/data/exchange_labels.json` | **1,020 addresses / 92 exchanges** — the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX** (29), Bitget, Poloniex; also **Delta Exchange** |
+| `backend/data/exchange_labels.json` | **20,047 addresses / 92 exchanges**: 1,020 exchange wallets plus **19,027 Bitget per-customer deposit addresses** — the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX** (29), Bitget, Poloniex; also **Delta Exchange** |
 | `backend/data/exchange_labels_bsc.json` | **38 addresses / 13 exchanges** — Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat |
 | `backend/data/exchange_labels_tron.json` | **41 addresses / 19 exchanges** — Binance, Huobi/HTX, KuCoin, MEXC, Poloniex, OKX, Bybit, Bitfinex, Bitget, Gate.io, Kraken, Upbit, Bithumb, Coinone, Bitpanda, CoinSpot, FixedFloat, UEEx, Heleket |
 | `backend/data/risk_labels*.json`, `intl_sanctions*.json`, `threat_labels*.json` | Sanctioned, mixer and stolen-funds addresses per chain — see [Sanctions and mixer screening](#sanctions-and-mixer-screening) |
 
-**1,099 verified exchange wallets in total, across three chains.** The Ethereum and BSC files grew on
+**20,126 verified exchange addresses in total, across three chains**, of which 19,027 are Bitget deposit addresses. A deposit address is the most useful label there is: it names one customer account, which is exactly what a lawful request to the exchange asks about. They come from Etherscan's "Bitget Dep" tags (`import_eth_labels.py --deposits Bitget`), and every one was confirmed on chain to have at least one transaction or token transfer — all 19,027 passed. The Ethereum and BSC files grew on
 22 September from a newer published scrape of the same explorer tags (`scripts/import_eth_labels.py`,
 dawsbot/eth-labels, pinned), every new address checked on chain the same way; the original importer's
 dataset stops in 2023, before Bitget, MEXC and CoinDCX were well covered.
@@ -690,7 +690,7 @@ exchequer/
 │   │   ├── api_budget.py         shared request pacer + response cache (memory and disk)
 │   │   └── warmup.py             traces the demo addresses at startup so they are cached
 │   ├── data/
-│   │   ├── exchange_labels.json      1,020 verified Ethereum exchange wallets
+│   │   ├── exchange_labels.json      1,020 Ethereum exchange wallets + 19,027 Bitget deposit addresses
 │   │   ├── exchange_labels_bsc.json   38 verified BSC exchange wallets
 │   │   ├── exchange_labels_tron.json  41 verified Tron exchange wallets
 │   │   ├── risk_labels*.json          OFAC SDN addresses, per chain
