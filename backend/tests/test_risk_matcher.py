@@ -278,3 +278,17 @@ def test_description_does_not_repeat_a_name_that_is_its_own_label(risk_file):
 
     assert "LAZARUS GROUP (LAZARUS GROUP)" not in text
     assert "listed as LAZARUS GROUP on" in text
+
+
+def test_a_second_government_listing_is_kept_alongside_the_first(risk_file, tmp_path):
+    """Designated by two governments is a stronger finding than by one."""
+    uk = tmp_path / "intl.json"
+    uk.write_text(json.dumps({"labels": {SDN_ADDR: {
+        "category": "sanctioned", "entity": "LAZARUS GROUP",
+        "source": "UK Sanctions List (FCDO)",
+    }}}))
+    matcher = RiskMatcher.from_file(risk_file, extra_paths=(uk,))
+
+    assert matcher.lookup(SDN_ADDR)["source"] == (
+        "OFAC SDN list, published 01/01/2026; also UK Sanctions List (FCDO)"
+    )

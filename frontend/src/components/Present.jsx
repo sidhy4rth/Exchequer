@@ -52,7 +52,7 @@ export default function Present({ result, related = [], unit, onClose }) {
     <div className="pr-screen pr-finding" key="finding">
       {risk.length > 0 && (
         <div className="pr-alert">
-          {risk.map((m) => <span key={m.address}>{{ mixer: 'Mixer', stolen: 'Stolen funds' }[m.category] ?? 'OFAC-listed'} · {m.entity} · {m.depth === 0 ? 'the reported address' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away`}</span>)}
+          {risk.map((m) => <span key={m.address}>{{ mixer: 'Mixer', stolen: 'Stolen funds' }[m.category] ?? (m.source?.startsWith('OFAC') ? 'OFAC-listed' : 'Sanctioned')} · {m.entity} · {m.depth === 0 ? 'the reported address' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away`}</span>)}
         </div>
       )}
       <div className="pr-main">
@@ -144,7 +144,7 @@ export default function Present({ result, related = [], unit, onClose }) {
         <div className="pr-figure"><span className="pr-huge amber">{related.length}</span><span>other stored complaints whose money passed through the same wallet as this one.</span></div>
       </div>
       <div className="pr-facts">
-        <span><b>Sanctions</b> · {risk.length ? `${risk.length} listed address${risk.length === 1 ? '' : 'es'}` : 'no listed address'} · OFAC SDN</span>
+        <span><b>Sanctions</b> · {risk.length ? `${risk.length} listed address${risk.length === 1 ? '' : 'es'}` : 'no listed address'} · US, UK, EU, IL, JP, FR lists</span>
         <span><b>Patterns</b> · {findings.length ? findings.map((f) => f.pattern.replace('_', ' ')).join(', ') : 'none matched'}</span>
         <span><b>Inferred deposits</b> · {inferred.length ? `${inferred.length} · probable ${inferred[0].exchange}, ${inferred[0].depth} hop${inferred[0].depth === 1 ? '' : 's'}` : 'none'}{swaps.length ? ` · ${swaps.length} swap${swaps.length === 1 ? '' : 's'}` : ''}</span>
         <span><b>Scope</b> · {result.api_calls} requests · depth {result.depth_reached} of {result.max_depth ?? '—'}{result.seconds_elapsed ? ` · ${result.seconds_elapsed} s` : ''}{result.time_budget_seconds ? ' · time cap' : ''}</span>

@@ -23,10 +23,14 @@ Three categories, with very different investigative meaning:
               already-documented laundering operation.
 
 The authority behind them is not the same. A sanctioned address is on a
-government list (the OFAC file); mixer pools and stolen-funds wallets come
+government list -- OFAC's, or another government's (the international file:
+UK, EU, Israel, Japan, France); mixer pools and stolen-funds wallets come
 from the explorer's own public tags (the threat file), a strong attribution
 but not a designation. Each match carries its source so a report never
-blurs the two, and where an address is in both, the OFAC entry is kept.
+blurs the two, and where an address is in both, the government entry is kept.
+An address several governments list keeps every one of them in its source,
+because "designated by the US, the UK and the EU" is a stronger finding than
+any one of those alone.
 
 The mixer category carries a consequence the exchange labels do not have, and
 it is the reason this module exists rather than being another label type.
@@ -158,9 +162,11 @@ class RiskMatcher:
     ) -> "RiskMatcher":
         """Load one chain's risk labels.
 
-        `path` is the OFAC file; `extra_paths` are lower-authority overlays
-        (the threat file). An address already loaded is never overwritten, so
-        a government designation always wins over an explorer tag.
+        `path` is the OFAC file; `extra_paths` follow in order of authority
+        (other governments' lists, then the explorer-tag threat file). An
+        address already loaded is never overwritten, so a government
+        designation always wins over an explorer tag; when two lists both
+        sanction it, the later list is appended to the source.
 
         A missing file is not an error. Risk labels are an overlay on the
         trace: without them a trace still runs and still attributes an
@@ -173,7 +179,13 @@ class RiskMatcher:
             if source_path is None:
                 continue
             for address, meta in _read_labels(source_path, required=index == 0).items():
-                labels.setdefault(address, meta)
+                held = labels.setdefault(address, meta)
+                if (
+                    held is not meta
+                    and held["category"] == meta["category"] == SANCTIONED
+                    and meta["source"] not in held["source"]
+                ):
+                    held["source"] = f"{held['source']}; also {meta['source']}"
         return cls(labels, chain=chain)
 
     # -- lookup ------------------------------------------------------------
@@ -260,7 +272,9 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
     """Risk matcher for one chain. Cached so each label file is read once."""
     chain = config.get_chain(chain_key)
     return RiskMatcher.from_file(
-        chain.risk_labels_path, chain=chain.key, extra_paths=(chain.threat_labels_path,)
+        chain.risk_labels_path,
+        chain=chain.key,
+        extra_paths=(chain.intl_sanctions_path, chain.threat_labels_path),
     )
 
 

@@ -1,0 +1,83 @@
+{
+  "_meta": {
+    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S. A match means the funds touched a wallet a government has frozen or seized.",
+    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. Built by backend/scripts/import_intl_sanctions.py.",
+    "opensanctions_versions": {
+      "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20260922180201-mah/entities.ftm.json",
+      "jp_mof_sanctions": "https://data.opensanctions.org/artifacts/jp_mof_sanctions/20260922183801-kpe/entities.ftm.json",
+      "fr_tresor_gels_avoir": "https://data.opensanctions.org/artifacts/fr_tresor_gels_avoir/20260922155801-lpp/entities.ftm.json"
+    },
+    "verification_note": "Each entry is copied from a government publication and names every authority that lists it. It establishes that the government froze or seized the address as of the review date; it does NOT establish that a counterparty who received funds from it is culpable, nor that the measure has force in Indian law. Only measures still in force are included.",
+    "chain": "bsc",
+    "last_reviewed": "2026-09-22",
+    "counts": {
+      "addresses": 6,
+      "by_authority": {
+        "United Kingdom": 2,
+        "Israel": 4,
+        "European Union": 1,
+        "France": 1
+      }
+    },
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
+    "schema": "labels maps an address to {category, entity, label, source, authorities}"
+  },
+  "labels": {
+    "0x175d44451403edf28469df03a9280c1197adb92c": {
+      "category": "sanctioned",
+      "entity": "Mustafa AYASH",
+      "label": "Mustafa AYASH",
+      "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Counter-Terrorism (Sanctions) (EU Exit) Regulations 2019, entry CTD0004; Israel NBCTF administrative seizure order ASO 2/24 (via OpenSanctions)",
+      "authorities": [
+        "United Kingdom",
+        "Israel"
+      ]
+    },
+    "0x3051ca7cb7f6c599fa2f27385ad75010cf0f2bbf": {
+      "category": "sanctioned",
+      "entity": "Garantex",
+      "label": "Garantex",
+      "source": "EU consolidated financial sanctions list, Regulation 2025/389 (OJ L24022025); France Direction Generale du Tresor asset-freeze register (via OpenSanctions)",
+      "authorities": [
+        "European Union",
+        "France"
+      ]
+    },
+    "0x53b9b72dc6f96eb4b54143b211b22e2548e4cf5c": {
+      "category": "sanctioned",
+      "entity": "NBCTF seizure order ASO 22/25",
+      "label": "NBCTF seizure order ASO 22/25",
+      "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xc3b194e0a4bfff0e986594d7768f58746e52eb53": {
+      "category": "sanctioned",
+      "entity": "Mahdi Mohammad Hassan",
+      "label": "Mahdi Mohammad Hassan",
+      "source": "Israel NBCTF administrative seizure order ASO 60/23 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xe3740c1b2fcda407027e2c80906306604e5260e7": {
+      "category": "sanctioned",
+      "entity": "NBCTF seizure order ASO 22/25",
+      "label": "NBCTF seizure order ASO 22/25",
+      "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xe950dc316b836e4eefb8308bf32bf7c72a1358ff": {
+      "category": "sanctioned",
+      "entity": "Mustafa AYASH",
+      "label": "Mustafa AYASH",
+      "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Counter-Terrorism (Sanctions) (EU Exit) Regulations 2019, entry CTD0004",
+      "authorities": [
+        "United Kingdom"
+      ]
+    }
+  }
+}

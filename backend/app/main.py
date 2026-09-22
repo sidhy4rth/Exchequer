@@ -669,10 +669,10 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
         rows.append({"a": address, "k": kind, "e": exchange, "t": label})
 
     for address, meta in get_risk_matcher(selected.key).entries():
-        if meta["category"] == SANCTIONED:
+        if meta["category"] == SANCTIONED and meta.get("source", "").startswith("OFAC"):
             add(address, "sanctioned", "", f"OFAC SDN · {meta.get('entity', '')}"[:48])
         else:
-            prefix = "Mixer" if meta["category"] == MIXER else "Stolen funds"
+            prefix = {SANCTIONED: "Sanctioned", MIXER: "Mixer"}.get(meta["category"], "Stolen funds")
             add(address, "flagged", "", f"{prefix} · {meta.get('label', '')}"[:48])
     for address, meta in get_matcher(selected.key).entries():
         add(address, "exchange", meta.get("exchange", ""), (meta.get("label") or meta.get("exchange", ""))[:40])

@@ -473,10 +473,10 @@ def render_text_report(report: dict[str, Any]) -> str:
     else:
         add("No address in this trace appeared on the screened lists.")
         add("Screening is an exact match against digital currency addresses")
-        add("published on the U.S. Treasury SDN list, and against mixer pools")
-        add("and hack or phishing wallets tagged by the block explorer; an")
-        add("address absent from those lists is not thereby established as")
-        add("legitimate.")
+        add("on the U.S. Treasury SDN list and on UK, EU, Israeli, Japanese and")
+        add("French sanctions and seizure lists, and against mixer pools and")
+        add("hack or phishing wallets tagged by the block explorer; an address")
+        add("absent from those lists is not thereby established as legitimate.")
         add("")
 
     # -- patterns --------------------------------------------------------------

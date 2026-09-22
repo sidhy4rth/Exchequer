@@ -218,7 +218,7 @@ export default function Home() {
         </section>
 
         <details className="card sec">
-          <summary><span className="micro">What the label files cover</span><span className="note">exchanges by chain · OFAC, hack and mixer screening · what a trace does</span></summary>
+          <summary><span className="micro">What the label files cover</span><span className="note">exchanges by chain · sanctions, hack and mixer screening · what a trace does</span></summary>
           <div className="coverage">
             <div>
               <div className="head"><span className="micro">Exchange labels</span><span className="note">exact-match attribution</span></div>
@@ -236,7 +236,7 @@ export default function Home() {
               </table>
             </div>
             <div>
-              <div className="head"><span className="micro">Risk screening</span><span className="note">OFAC SDN list · explorer-tagged hacks and mixers</span></div>
+              <div className="head"><span className="micro">Risk screening</span><span className="note">US, UK, EU, Israel, Japan, France · explorer-tagged hacks and mixers</span></div>
               <table>
                 <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th><th style={{ textAlign: 'right' }}>Stolen funds</th></tr></thead>
                 <tbody>

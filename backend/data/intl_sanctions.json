@@ -1,0 +1,283 @@
+{
+  "_meta": {
+    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S. A match means the funds touched a wallet a government has frozen or seized.",
+    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. Built by backend/scripts/import_intl_sanctions.py.",
+    "opensanctions_versions": {
+      "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20260922180201-mah/entities.ftm.json",
+      "jp_mof_sanctions": "https://data.opensanctions.org/artifacts/jp_mof_sanctions/20260922183801-kpe/entities.ftm.json",
+      "fr_tresor_gels_avoir": "https://data.opensanctions.org/artifacts/fr_tresor_gels_avoir/20260922155801-lpp/entities.ftm.json"
+    },
+    "verification_note": "Each entry is copied from a government publication and names every authority that lists it. It establishes that the government froze or seized the address as of the review date; it does NOT establish that a counterparty who received funds from it is culpable, nor that the measure has force in Indian law. Only measures still in force are included.",
+    "chain": "ethereum",
+    "last_reviewed": "2026-09-22",
+    "counts": {
+      "addresses": 28,
+      "by_authority": {
+        "United Kingdom": 6,
+        "Israel": 14,
+        "European Union": 1,
+        "France": 1,
+        "Japan": 9
+      }
+    },
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
+    "schema": "labels maps an address to {category, entity, label, source, authorities}"
+  },
+  "labels": {
+    "0x002471b8a185f9980708d0eaec5b289714f56f8d": {
+      "category": "sanctioned",
+      "entity": "Garantex",
+      "label": "Garantex",
+      "source": "EU consolidated financial sanctions list, Regulation 2025/389 (OJ L24022025); France Direction Generale du Tresor asset-freeze register (via OpenSanctions)",
+      "authorities": [
+        "European Union",
+        "France"
+      ]
+    },
+    "0x08723392ed15743cc38513c4925f5e6be5c17243": {
+      "category": "sanctioned",
+      "entity": "Lazarus Group",
+      "label": "Lazarus Group",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    },
+    "0x098b716b8aaf21512996dc57eb0615e2383e2f96": {
+      "category": "sanctioned",
+      "entity": "Lazarus Group",
+      "label": "Lazarus Group",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    },
+    "0x11069987e8507d0669c870b578cc9f9b4017d127": {
+      "category": "sanctioned",
+      "entity": "TAREQ ALLA MOHAMMEDALI BARAAASI",
+      "label": "TAREQ ALLA MOHAMMEDALI BARAAASI",
+      "source": "Israel NBCTF administrative seizure order ASO 44/21 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0x175d44451403edf28469df03a9280c1197adb92c": {
+      "category": "sanctioned",
+      "entity": "Mustafa AYASH",
+      "label": "Mustafa AYASH",
+      "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Counter-Terrorism (Sanctions) (EU Exit) Regulations 2019, entry CTD0004; Israel NBCTF administrative seizure order ASO 2/24 (via OpenSanctions)",
+      "authorities": [
+        "United Kingdom",
+        "Israel"
+      ]
+    },
+    "0x21b8d56bda776bbe68655a16895afd96f5534fed": {
+      "category": "sanctioned",
+      "entity": "Mustafa AYASH",
+      "label": "Mustafa AYASH",
+      "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Counter-Terrorism (Sanctions) (EU Exit) Regulations 2019, entry CTD0004; Israel NBCTF administrative seizure order ASO 2/24 (via OpenSanctions)",
+      "authorities": [
+        "United Kingdom",
+        "Israel"
+      ]
+    },
+    "0x35fb6f6db4fb05e6a4ce86f2c93691425626d4b1": {
+      "category": "sanctioned",
+      "entity": "Lazarus Group",
+      "label": "Lazarus Group",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    },
+    "0x3cffd56b47b7b41c56258d9c7731abadc360e073": {
+      "category": "sanctioned",
+      "entity": "Lazarus Group",
+      "label": "Lazarus Group",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    },
+    "0x3e37627deaa754090fbfbb8bd226c1ce66d255e9": {
+      "category": "sanctioned",
+      "entity": "Lazarus Group",
+      "label": "Lazarus Group",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    },
+    "0x4f47bc496083c727c5fbe3ce9cdf2b0f6496270c": {
+      "category": "sanctioned",
+      "entity": "Sim Hyon Sop",
+      "label": "Sim Hyon Sop",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    },
+    "0x53b6936513e738f44fb50d2b9476730c0ab3bfc1": {
+      "category": "sanctioned",
+      "entity": "Lazarus Group",
+      "label": "Lazarus Group",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    },
+    "0x53b9b72dc6f96eb4b54143b211b22e2548e4cf5c": {
+      "category": "sanctioned",
+      "entity": "NBCTF seizure order ASO 22/25",
+      "label": "NBCTF seizure order ASO 22/25",
+      "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0x7eab248c014d1043e54e96ac4f31ec7d9a97ffd3": {
+      "category": "sanctioned",
+      "entity": "NBCTF seizure order ASO 15/22",
+      "label": "NBCTF seizure order ASO 15/22",
+      "source": "Israel NBCTF administrative seizure order ASO 15/22 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0x7ff9cfad3877f21d41da833e2f775db0569ee3d9": {
+      "category": "sanctioned",
+      "entity": "GARANTEX EUROPE OU",
+      "label": "GARANTEX EUROPE OU",
+      "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Russia (Sanctions) (EU Exit) Regulations 2019, entry RUS1421",
+      "authorities": [
+        "United Kingdom"
+      ]
+    },
+    "0x99d29380a2e37c04e4fe75111b7d410674a6cab3": {
+      "category": "sanctioned",
+      "entity": "MAHMOUD MADHAT AHMED BAROUD",
+      "label": "MAHMOUD MADHAT AHMED BAROUD",
+      "source": "Israel NBCTF administrative seizure order ASO 44/21 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xa0e1c89ef1a489c9c7de96311ed5ce5d32c20e4b": {
+      "category": "sanctioned",
+      "entity": "Lazarus Group",
+      "label": "Lazarus Group",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    },
+    "0xad92a818e26fc3dbce7a1972308a4a86f54dd683": {
+      "category": "sanctioned",
+      "entity": "ALI ISMAIL SHAFIQ ABUALKAS",
+      "label": "ALI ISMAIL SHAFIQ ABUALKAS",
+      "source": "Israel NBCTF administrative seizure order ASO 44/21 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xae05eb856cb28c156d9722094f5eefd5693bc181": {
+      "category": "sanctioned",
+      "entity": "Byex Exchange Company Limited",
+      "label": "Byex Exchange Company Limited",
+      "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Global Human Rights Sanctions Regulations 2020, entry GHR0174",
+      "authorities": [
+        "United Kingdom"
+      ]
+    },
+    "0xc077bbfcf9b5b9eec0dd105e15b65ebc2a030600": {
+      "category": "sanctioned",
+      "entity": "ALI ISMAIL SHAFIQ ABUALKAS",
+      "label": "ALI ISMAIL SHAFIQ ABUALKAS",
+      "source": "Israel NBCTF administrative seizure order ASO 44/21 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xc0d227bd0580bad9435ca0b884ebee7ff8da71c9": {
+      "category": "sanctioned",
+      "entity": "MOHAMMED NASSER IBRAHIM ABULAILA",
+      "label": "MOHAMMED NASSER IBRAHIM ABULAILA",
+      "source": "Israel NBCTF administrative seizure order ASO 44/21 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xc8fe1c81e927540fcc99ebb3c880a840082293da": {
+      "category": "sanctioned",
+      "entity": "NBCTF seizure order ASO 19/23",
+      "label": "NBCTF seizure order ASO 19/23",
+      "source": "Israel NBCTF administrative seizure order ASO 19/23 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xd599ac04a1c786972b81e0fef6fb0c3e7b52f8a7": {
+      "category": "sanctioned",
+      "entity": "Byex Exchange Company Limited",
+      "label": "Byex Exchange Company Limited",
+      "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Global Human Rights Sanctions Regulations 2020, entry GHR0174",
+      "authorities": [
+        "United Kingdom"
+      ]
+    },
+    "0xddd42d46a17b9a5b0c53c5ef2b79a6acb1b50333": {
+      "category": "sanctioned",
+      "entity": "MAHMOUD MOHAMMED MAHMOUD AYESH",
+      "label": "MAHMOUD MOHAMMED MAHMOUD AYESH",
+      "source": "Israel NBCTF administrative seizure order ASO 44/21 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xe090669ee62e02f4437b89058a073dc7874aed8f": {
+      "category": "sanctioned",
+      "entity": "NBCTF seizure order ASO 44/21",
+      "label": "NBCTF seizure order ASO 44/21",
+      "source": "Israel NBCTF administrative seizure order ASO 44/21 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xe3740c1b2fcda407027e2c80906306604e5260e7": {
+      "category": "sanctioned",
+      "entity": "NBCTF seizure order ASO 22/25",
+      "label": "NBCTF seizure order ASO 22/25",
+      "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xe950dc316b836e4eefb8308bf32bf7c72a1358ff": {
+      "category": "sanctioned",
+      "entity": "Mustafa AYASH",
+      "label": "Mustafa AYASH",
+      "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Counter-Terrorism (Sanctions) (EU Exit) Regulations 2019, entry CTD0004",
+      "authorities": [
+        "United Kingdom"
+      ]
+    },
+    "0xebfe7a29ea17acb5f6f437e659bd2d472deedc54": {
+      "category": "sanctioned",
+      "entity": "MOHAMMED RAMADAN HASAN ABUKWAIK",
+      "label": "MOHAMMED RAMADAN HASAN ABUKWAIK",
+      "source": "Israel NBCTF administrative seizure order ASO 44/21 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ]
+    },
+    "0xf7b31119c2682c88d88d455dbb9d5932c65cf1be": {
+      "category": "sanctioned",
+      "entity": "Lazarus Group",
+      "label": "Lazarus Group",
+      "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
+      "authorities": [
+        "Japan"
+      ]
+    }
+  }
+}

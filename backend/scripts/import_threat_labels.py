@@ -135,12 +135,26 @@ def candidates_by_chain() -> dict[str, dict[str, dict[str, str]]]:
     return out
 
 
+def used_on_ethereum(client: EtherscanClient, address: str) -> bool:
+    """At least one transaction, ever: the address exists and has been used."""
+    return bool(client.get_transactions(address, limit=1, sort="asc", include_internal=False))
+
+
+def used_on_bsc(client: NoderealClient, address: str) -> bool:
+    """A nonce, contract code or a balance: the address has been used on BSC."""
+    if int(client._rpc("eth_getTransactionCount", [address, "latest"]) or "0x0", 16) > 0:
+        return True
+    if (client._rpc("eth_getCode", [address, "latest"]) or "0x") != "0x":
+        return True
+    return int(client._rpc("eth_getBalance", [address, "latest"]) or "0x0", 16) > 0
+
+
 def verify_ethereum(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str]]:
     kept, dropped = {}, []
     with EtherscanClient(chain_id=1) as client:
         for addr, meta in candidates:
             try:
-                used = bool(client.get_transactions(addr, limit=1, sort="asc", include_internal=False))
+                used = used_on_ethereum(client, addr)
             except (EtherscanError, ValueError) as exc:
                 dropped.append(f"{addr} {meta['label']}: {str(exc)[:40]}")
                 continue
@@ -158,11 +172,7 @@ def verify_bsc(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str]]:
     try:
         for addr, meta in candidates:
             try:
-                used = int(client._rpc("eth_getTransactionCount", [addr, "latest"]) or "0x0", 16) > 0
-                if not used:
-                    used = (client._rpc("eth_getCode", [addr, "latest"]) or "0x") != "0x"
-                if not used:
-                    used = int(client._rpc("eth_getBalance", [addr, "latest"]) or "0x0", 16) > 0
+                used = used_on_bsc(client, addr)
             except (NoderealError, ValueError) as exc:
                 dropped.append(f"{addr} {meta['label']}: {str(exc)[:40]}")
                 continue
