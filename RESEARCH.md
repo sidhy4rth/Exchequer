@@ -404,6 +404,27 @@ publicly reported the wallet for phishing or theft. **What it does not:** that
 the report is correct, or that anyone who transacted with it took part. A scam
 list is that list's accusation, and each finding names the list.
 
+### Tether's USDT freeze list — category `frozen`
+
+**Source V (primary, on chain).** The USDT token contracts themselves:
+`0xdac17f958d2ee523a2206206994597c13d831ec7` on Ethereum and
+`TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t` on Tron. The contract emits
+`AddedBlackList(address)` when Tether freezes an address and
+`RemovedBlackList(address)` when it releases one, and exposes a public
+`isBlackListed(address)`. Every event was read on 23 September 2026 (Ethereum
+through Etherscan's `getLogs`, Tron through TronGrid's event API) and replayed
+in block and log order: **Ethereum 3,133 freezes and 347 releases, 2,780 frozen
+now; Tron 8,584 freezes and 967 releases, 7,597 frozen now.** A random sample
+of 25 frozen and 5 released addresses per chain was checked against
+`isBlackListed()`; all 60 agreed with the replay.
+
+Tether's own statement of why it freezes is Source L above (the T3 Financial
+Crime Unit's "$100 million in criminal assets frozen … money laundering,
+investment fraud, blackmail operations, terrorism financing"). **What a match
+establishes:** that the issuer froze the address, and when. **What it does
+not:** the reason — the event carries none — or that any counterparty took part
+in anything. It is the reason to send Tether a request.
+
 ### Exchange deposit addresses
 
 **Source U.** Etherscan's "Bitget Dep: 0x…" tags, through Source R — 19,027

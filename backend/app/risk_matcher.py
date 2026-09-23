@@ -16,6 +16,11 @@ Three categories, with very different investigative meaning:
               pays out from that pool, deliberately severing the link between
               input and output.
 
+  frozen      Tether has frozen the address's USDT, as recorded by the USDT
+              contract's own blacklist events. The issuer acted on it --
+              after a sanctions match, a law-enforcement request or a theft;
+              the event does not say which.
+
   stolen      The address is a wallet the block explorer or a published
               scam list attributes to the perpetrator of a known hack or
               phishing campaign (e.g. "WazirX Exploiter 3"). Funds that touch one are commingled with the
@@ -66,7 +71,8 @@ logger = logging.getLogger(__name__)
 SANCTIONED = "sanctioned"
 MIXER = "mixer"
 STOLEN = "stolen"
-CATEGORIES = (SANCTIONED, MIXER, STOLEN)
+FROZEN = "frozen"
+CATEGORIES = (SANCTIONED, MIXER, FROZEN, STOLEN)
 
 # Categories whose addresses end a trace. See the module docstring: a mixer
 # breaks the link between deposit and withdrawal, so anything past it is not
@@ -79,7 +85,7 @@ class RiskMatch:
     """One address in the trace that appears on a risk list."""
 
     address: str
-    category: str  # sanctioned | mixer | stolen
+    category: str  # sanctioned | mixer | frozen | stolen
     entity: str  # the designated entity or mixer service
     label: str  # human-readable, e.g. "Tornado Cash: 10 ETH pool"
     source: str  # which published list, and when it was read
@@ -124,6 +130,13 @@ class RiskMatch:
             return (
                 f"Sanctioned entity: {self.address} is listed as {named} on "
                 f"{self.source}. {placement}."
+            )
+        if self.category == FROZEN:
+            return (
+                f"Frozen by Tether: {self.address} — {self.label}, per {self.source}. "
+                f"{placement}. The issuer acted on this address; the freeze does not "
+                f"say why, and it is not a finding that any counterparty took part in "
+                f"anything. Tether can say, on a lawful request."
             )
         if self.category == STOLEN:
             return (
@@ -180,6 +193,12 @@ class RiskMatcher:
                 continue
             for address, meta in _read_labels(source_path, required=index == 0).items():
                 held = labels.setdefault(address, meta)
+                if held is not meta and meta["category"] == MIXER and held["category"] != MIXER:
+                    # Stopping at a mixer is a correctness rule, not a matter of
+                    # authority: Tether freezing a Tornado Cash pool does not make
+                    # its payouts traceable. The mixer label takes the address.
+                    labels[address] = {**meta, "source": f"{meta['source']}; also {held['label']}, per {held['source']}"}
+                    continue
                 if (
                     held is not meta
                     and held["category"] == meta["category"] == SANCTIONED
@@ -274,7 +293,7 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
     return RiskMatcher.from_file(
         chain.risk_labels_path,
         chain=chain.key,
-        extra_paths=(chain.intl_sanctions_path, chain.threat_labels_path),
+        extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, chain.threat_labels_path),
     )
 
 

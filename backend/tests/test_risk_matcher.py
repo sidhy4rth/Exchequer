@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from app.risk_matcher import MIXER, SANCTIONED, STOLEN, RiskMatcher
+from app.risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, RiskMatcher
 
 from conftest import addr, make_graph
 
@@ -50,7 +50,7 @@ def test_loads_both_categories(risk_file):
     matcher = RiskMatcher.from_file(risk_file)
 
     assert len(matcher) == 2
-    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, STOLEN: 0}
+    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, FROZEN: 0, STOLEN: 0}
     assert matcher.entities == ["LAZARUS GROUP", "TORNADO CASH"]
 
 
@@ -127,7 +127,7 @@ def threat_file(tmp_path):
 def test_the_threat_file_adds_stolen_funds_wallets(risk_file, threat_file):
     matcher = RiskMatcher.from_file(risk_file, extra_paths=(threat_file,))
 
-    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, STOLEN: 1}
+    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, FROZEN: 0, STOLEN: 1}
     assert matcher.lookup(HACK_ADDR)["source"] == "Etherscan label"
 
 
@@ -292,3 +292,36 @@ def test_a_second_government_listing_is_kept_alongside_the_first(risk_file, tmp_
     assert matcher.lookup(SDN_ADDR)["source"] == (
         "OFAC SDN list, published 01/01/2026; also UK Sanctions List (FCDO)"
     )
+
+
+def test_a_tether_freeze_is_flagged_and_does_not_end_the_trace(tmp_path):
+    """Frozen USDT means the issuer acted; the wallet's transfers still mean what they say."""
+    frozen = tmp_path / "frozen.json"
+    frozen.write_text(json.dumps({"labels": {HACK_ADDR: {
+        "category": "frozen", "entity": "Tether (USDT freeze)",
+        "label": "USDT frozen by Tether on 2025-01-01", "source": "Tether USDT contract",
+    }}}))
+    matcher = RiskMatcher.from_file(None, extra_paths=(frozen,))
+    graph = make_graph([(SEED, HACK_ADDR, 5.0)], seed=SEED)
+
+    (match,) = matcher.annotate(graph)
+    assert match.category == FROZEN
+    assert matcher.is_terminal(HACK_ADDR) is False
+    assert "does not say why" in match.describe()
+
+
+def test_a_mixer_keeps_stopping_the_trace_whatever_else_lists_it(tmp_path):
+    """A frozen Tornado pool is still a pool: the stop rule must survive the overlap."""
+    frozen = tmp_path / "frozen.json"
+    frozen.write_text(json.dumps({"labels": {MIXER_ADDR: {
+        "category": "frozen", "entity": "Tether (USDT freeze)", "label": "USDT frozen by Tether",
+        "source": "Tether USDT contract"}}}))
+    threat = tmp_path / "threat.json"
+    threat.write_text(json.dumps({"labels": {MIXER_ADDR: {
+        "category": "mixer", "entity": "Tornado Cash", "label": "Tornado.Cash: 1,000 USDT",
+        "source": "Etherscan address tag"}}}))
+    matcher = RiskMatcher.from_file(None, extra_paths=(frozen, threat))
+
+    assert matcher.lookup(MIXER_ADDR)["category"] == MIXER
+    assert matcher.is_terminal(MIXER_ADDR) is True
+    assert "USDT frozen by Tether" in matcher.lookup(MIXER_ADDR)["source"]

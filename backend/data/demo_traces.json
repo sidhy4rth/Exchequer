@@ -89,5 +89,12 @@
   "asset": "ETH",
   "direction": "outgoing",
   "max_depth": 3
+ },
+ {
+  "address": "TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts",
+  "chain": "tron",
+  "asset": "USDT",
+  "direction": "outgoing",
+  "max_depth": 2
  }
 ]

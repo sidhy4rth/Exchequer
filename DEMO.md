@@ -1,6 +1,6 @@
 # Exchequer — demo addresses
 
-Ten traces, all re-verified **cold** (empty cache) on **23 September 2026**,
+Eleven traces. The first ten were re-verified **cold** (empty cache) on **23 September 2026**,
 after the label files grew (1,020 Ethereum exchange wallets across 92
 exchanges, up from 337 across 18) and screening gained other governments'
 sanctions lists, mixer pools and stolen-funds wallets. Every request count and
@@ -335,6 +335,38 @@ three complaints is a stronger link than an unlabelled one.
 
 ---
 
+## 11 — Frozen by Tether, on the chain that matters
+
+```
+TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts
+```
+Tron · USDT · 2 hops · **~3 seconds, 10 API calls**
+
+| | |
+|---|---|
+| Addresses traced | 30 |
+| **Screening** | the reported address — **USDT frozen by Tether on 11 September 2026** — and the wallet it paid next, frozen the same day |
+| Exchange | **Binance** — `Binance-Hot 7`, exact label, 2 hops, 45,968.32 USDT received |
+| Confidence | **0.80** |
+| Patterns | amount split |
+
+Tether can freeze an address on its USDT contract, and it does — after a
+sanctions match, a law-enforcement request or a theft. It publishes nothing but
+the act, and the act is on chain: every freeze is an `AddedBlackList` event on
+the USDT contract. Exchequer replays those events and keeps the addresses
+frozen today — 7,597 on Tron and 2,780 on Ethereum as of 23 September, a random
+sample checked against the contract's own `isBlackListed()` with no
+disagreement. No dataset sits between the chain and the label.
+
+Say what the freeze means and what it does not: the issuer acted on this
+wallet twelve days ago, and on the wallet it paid, the same day — a reason to
+ask Tether what it knows, on a lawful request. It does not say why, and the
+alert says so. Meanwhile 45,968 USDT reached Binance's hot wallet two hops
+out, split across several wallets on the way: the request to Binance is the
+second letter. This is the demo for "why Tron", in three seconds.
+
+---
+
 ## Present mode
 
 On any case, press **P** (or the Present button). The case becomes four screens sized for the projector: the finding alone, the route alone, four numbers for what was left out, the handoff. Arrow keys step; **Esc** drops back to the console with everything still there — use Present for the walk-through, the console for questions.
@@ -356,7 +388,9 @@ the tool refusing to overcount on the next.
 
 Finish with 6 and 7: an attribution that names the deposit address the
 request has to cite, scored as the inference it is; a mixer the trace refuses
-to walk through; and a wallet three governments have acted against.
+to walk through; and a wallet three governments have acted against. If the
+room asks "why Tron?", run 11: three seconds, and Tether's own freeze on the
+screen.
 
 ---
 
@@ -471,8 +505,10 @@ asset-freeze register: 915 Tron, 139 Ethereum and 7 BSC addresses. Only
 measures still in force count; a lifted Israeli seizure order is left out.
 Trace 7 is a live hit on three of those lists at once.
 
-Two more categories sit beside the sanctions lists, and the alert always says
-which source a hit came from. **Mixers** (40 Ethereum, 14 BSC: Tornado Cash,
+Three more categories sit beside the sanctions lists, and the alert always says
+which source a hit came from. **Frozen by Tether** (2,780 Ethereum, 7,597 Tron
+before overlap) — every address whose USDT Tether has frozen, replayed from the
+USDT contract's own blacklist events; trace 11 is a live hit. **Mixers** (40 Ethereum, 14 BSC: Tornado Cash,
 Typhoon, Privacy Pools pools and routers) — Tornado Cash left the OFAC list in
 March 2025, so these come from Etherscan's own tags, and a trace still stops at
 one; trace 6 is a live hit. **Stolen funds** (8,393 Ethereum, 560 BSC) — the

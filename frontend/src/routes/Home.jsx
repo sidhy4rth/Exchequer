@@ -37,7 +37,9 @@ const DEMOS = [
   { n: '09', address: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
     title: 'Tron, in under a second', hook: 'USDT-TRC20 to Binance-Hot 7 in one hop, 26,405 USDT, confidence 1.00 — against 41 verified Tron labels.' },
   { n: '10', address: '0x000000000532b45f47779fce440748893b257865', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
-    title: 'Three complaints, one operation', hook: 'Shares 61 and 47 intermediaries with two other stored phishing wallets, four of them inferred Binance deposit addresses.' },
+    title: 'Three complaints, one operation', hook: 'Shares 60 and 46 intermediaries with two other stored phishing wallets — and all three reach the same known phishing wallet.' },
+  { n: '11', address: 'TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
+    title: 'Frozen by Tether', hook: 'A Tron wallet whose USDT Tether froze on 11 Sep 2026 — as it did the next wallet — splits 45,968 USDT onward; it reaches Binance-Hot 7 at 0.80.' },
 ]
 
 // The optional wall-clock cap, in seconds. 1:30 is long enough for any of
@@ -181,7 +183,7 @@ export default function Home() {
                   <span className="sep" />
                   <label htmlFor="example">Load a verified example</label>
                   <select id="example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
-                    <option value="">Choose one of the ten traces in DEMO.md…</option>
+                    <option value="">Choose one of the eleven traces in DEMO.md…</option>
                     {DEMOS.map((d) => (
                       <option key={d.n} value={d.n} title={d.hook}>
                         {d.n} · {d.title} · {d.chain === 'tron' ? 'Tron' : 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}
@@ -210,7 +212,7 @@ export default function Home() {
                 <div className="line" key={c.key}>
                   <span className={`dot ${c.ready ? 'live' : 'down'}`} />
                   <span>{c.name}</span>
-                  <span className="n">{c.exchange_labels} labels · {(c.risk_labels?.sanctioned ?? 0) + (c.risk_labels?.mixer ?? 0) + (c.risk_labels?.stolen ?? 0)} screened</span>
+                  <span className="n">{c.exchange_labels} labels · {Object.values(c.risk_labels ?? {}).reduce((a, b) => a + b, 0)} screened</span>
                 </div>
               ))}
             </div>
@@ -236,15 +238,16 @@ export default function Home() {
               </table>
             </div>
             <div>
-              <div className="head"><span className="micro">Risk screening</span><span className="note">US, UK, EU, Israel, Japan, France · explorer-tagged hacks and mixers</span></div>
+              <div className="head"><span className="micro">Risk screening</span><span className="note">US, UK, EU, Israel, Japan, France · Tether freezes · explorer-tagged hacks and mixers</span></div>
               <table>
-                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th><th style={{ textAlign: 'right' }}>Stolen funds</th></tr></thead>
+                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th><th style={{ textAlign: 'right' }}>Frozen by Tether</th><th style={{ textAlign: 'right' }}>Stolen funds</th></tr></thead>
                 <tbody>
                   {chains.map((c) => (
                     <tr key={c.key}>
                       <td>{c.name}</td>
                       <td className="num">{coverage[c.key]?.risk?.counts_by_category?.sanctioned ?? c.risk_labels?.sanctioned ?? 0}</td>
                       <td className="num">{coverage[c.key]?.risk?.counts_by_category?.mixer ?? c.risk_labels?.mixer ?? 0}</td>
+                      <td className="num">{coverage[c.key]?.risk?.counts_by_category?.frozen ?? c.risk_labels?.frozen ?? 0}</td>
                       <td className="num">{coverage[c.key]?.risk?.counts_by_category?.stolen ?? c.risk_labels?.stolen ?? 0}</td>
                     </tr>
                   ))}

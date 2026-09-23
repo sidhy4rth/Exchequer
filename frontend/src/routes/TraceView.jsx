@@ -9,7 +9,7 @@ import ExportButton from '../components/ExportButton'
 import Present from '../components/Present'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', stolen: 'Stolen funds' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds' }
 const COMPONENT_NAME = {
   hop_proximity: 'Hop proximity',
   amount_correlation: 'Amount correlation',

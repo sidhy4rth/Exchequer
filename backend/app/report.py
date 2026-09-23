@@ -217,6 +217,8 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
         extra += " At least one address in the trace is on a published sanctions list."
     if "mixer" in risk:
         extra += " The trace stopped at a mixer, whose payouts cannot be linked to its deposits."
+    if "frozen" in risk:
+        extra += " At least one address in the trace has had its USDT frozen by Tether."
     if "stolen" in risk:
         extra += (
             " At least one address in the trace is tagged by the block explorer as a "
@@ -465,7 +467,7 @@ def render_text_report(report: dict[str, Any]) -> str:
 
     # -- screening -------------------------------------------------------------
     screening = report.get("risk_screening") or {}
-    section("SANCTIONS, MIXER AND STOLEN-FUNDS SCREENING")
+    section("SANCTIONS, MIXER, FREEZE AND STOLEN-FUNDS SCREENING")
     if screening.get("matches"):
         for note in screening.get("notes", []):
             para(note, bullet="* ")
@@ -474,9 +476,10 @@ def render_text_report(report: dict[str, Any]) -> str:
         add("No address in this trace appeared on the screened lists.")
         add("Screening is an exact match against digital currency addresses")
         add("on the U.S. Treasury SDN list and on UK, EU, Israeli, Japanese and")
-        add("French sanctions and seizure lists, and against mixer pools and")
-        add("hack or phishing wallets tagged by the block explorer; an address")
-        add("absent from those lists is not thereby established as legitimate.")
+        add("French sanctions and seizure lists, Tether's USDT freeze list, and")
+        add("mixer pools and hack or phishing wallets tagged by the block")
+        add("explorer; an address absent from those lists is not thereby")
+        add("established as legitimate.")
         add("")
 
     # -- patterns --------------------------------------------------------------

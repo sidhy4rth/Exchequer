@@ -52,7 +52,7 @@ export default function Present({ result, related = [], unit, onClose }) {
     <div className="pr-screen pr-finding" key="finding">
       {risk.length > 0 && (
         <div className="pr-alert">
-          {risk.map((m) => <span key={m.address}>{{ mixer: 'Mixer', stolen: 'Stolen funds' }[m.category] ?? (m.source?.startsWith('OFAC') ? 'OFAC-listed' : 'Sanctioned')} · {m.entity} · {m.depth === 0 ? 'the reported address' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away`}</span>)}
+          {risk.map((m) => <span key={m.address}>{{ mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds' }[m.category] ?? (m.source?.startsWith('OFAC') ? 'OFAC-listed' : 'Sanctioned')} · {m.entity} · {m.depth === 0 ? 'the reported address' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away`}</span>)}
         </div>
       )}
       <div className="pr-main">

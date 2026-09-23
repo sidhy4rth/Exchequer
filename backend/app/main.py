@@ -51,7 +51,7 @@ from .graph_builder import (
 )
 from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .report import build_report, render_text_report
-from .risk_matcher import MIXER, SANCTIONED, STOLEN, get_risk_matcher
+from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
 from .scoring import principal_path, score_case
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -74,8 +74,8 @@ async def lifespan(_app: FastAPI):
         if len(risk):
             counts = risk.counts_by_category()
             logger.info(
-                "%s: screening against %d sanctioned, %d mixer and %d stolen-funds addresses",
-                chain.name, counts[SANCTIONED], counts[MIXER], counts[STOLEN],
+                "%s: screening against %d sanctioned, %d mixer, %d Tether-frozen and %d stolen-funds addresses",
+                chain.name, counts[SANCTIONED], counts[MIXER], counts[FROZEN], counts[STOLEN],
             )
         else:
             logger.warning(
@@ -672,7 +672,8 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
         if meta["category"] == SANCTIONED and meta.get("source", "").startswith("OFAC"):
             add(address, "sanctioned", "", f"OFAC SDN · {meta.get('entity', '')}"[:48])
         else:
-            prefix = {SANCTIONED: "Sanctioned", MIXER: "Mixer"}.get(meta["category"], "Stolen funds")
+            prefix = {SANCTIONED: "Sanctioned", MIXER: "Mixer",
+                      FROZEN: "Frozen by Tether"}.get(meta["category"], "Stolen funds")
             add(address, "flagged", "", f"{prefix} · {meta.get('label', '')}"[:48])
     for address, meta in get_matcher(selected.key).entries():
         add(address, "exchange", meta.get("exchange", ""), (meta.get("label") or meta.get("exchange", ""))[:40])

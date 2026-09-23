@@ -40,12 +40,13 @@
 
 <table>
 <tr>
-<td align="center"><h3>30,218</h3>labelled addresses</td>
+<td align="center"><h3>39,622</h3>labelled addresses</td>
 <td align="center"><h3>20,126</h3>exchange addresses<br><sub>incl. 19,027 Bitget deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
+<td align="center"><h3>10,377</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>3</h3>chains, 8 assets</td>
-<td align="center"><h3>249</h3>tests, no network</td>
+<td align="center"><h3>256</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -78,7 +79,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
 | **Names the exchange** | Exact match against 20,126 exchange addresses across 92 exchanges, including **CoinDCX** and **Delta Exchange**, and 19,027 Bitget per-customer deposit addresses. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
-| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; mixer pools (Tornado Cash, Typhoon, Privacy Pools); and 8,953 wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing. |
+| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); and 8,953 wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
 | **Follows a swap's receipt** | A transfer into a known DEX router is read from its receipt: what came back, how much, and where to re-run. |
@@ -118,9 +119,9 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
   │ matcher.py    │   + deposit_inference.py for probable deposit addresses
   └───────┬───────┘
           ▼
-  ┌───────────────┐   Six governments' sanctions/seizure lists, then mixer
-  │ risk_         │   pools and hack/phishing wallets. A government entry
-  │ matcher.py    │   always outranks an explorer tag. Stops at a mixer.
+  ┌───────────────┐   Six governments' sanctions/seizure lists, Tether's
+  │ risk_         │   USDT freezes, then mixer pools and hack/phishing
+  │ matcher.py    │   wallets. Government first; always stops at a mixer.
   └───────┬───────┘
           ▼
   ┌───────────────┐   Peel chain + amount split, as explainable fixed rules
@@ -222,6 +223,7 @@ Real mainnet addresses that produce real attributions — pick the **chain** and
 | Ethereum · USDT | `0x0b2fdf416cf2951499de9a1adac65c8e9907c8c2` | Stablecoin cash-out — **Binance 14** in 1 hop, 102.8M USDT, confidence 1.00 |
 | BSC · USDT | `0x32d03f46ba2857c8e6a920ab3fed1f24d35d85d1` | **BNB Smart Chain** — Binance Hot Wallet 6 in 1 hop, 19.3M USDT |
 | Tron · USDT | `THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph` | **Tron** — Binance-Hot 7 in 1 hop, under a second, confidence 1.00 |
+| Tron · USDT | `TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts` | **Frozen by Tether** on 11 Sep 2026, as was the next wallet; 45,968 USDT split onward to Binance-Hot 7 at 2 hops, 0.80 |
 
 Start at **2–3 hops** for a demo: those return in roughly 5–20 seconds cold, and instantly once cached.
 Addresses at the same depth are fetched concurrently (`TRACE_CONCURRENCY`, default 6); the clients' own
@@ -391,20 +393,24 @@ number, so the score stays reproducible.
 
 ## Screening: sanctions, mixers and stolen funds
 
-Every address in a trace is checked against three kinds of list, with different authority behind them, and
+Every address in a trace is checked against four kinds of list, with different authority behind them, and
 every hit names the list it came from.
 
 | Category | Meaning | Source | Effect on the trace |
 |---|---|---|---|
 | `sanctioned` | On a government sanctions or seizure list | US, UK, EU, Israel, Japan, France | Flagged; the trace continues — its transfers mean what they say |
 | `mixer` | A tumbler's pool or entry router | Etherscan / BscScan tags | **The trace stops here** |
+| `frozen` | Tether has frozen the address's USDT | The USDT contract's own blacklist events | Flagged; the trace continues |
 | `stolen` | A hacker's wallet, or a reported phishing / scam wallet | Etherscan / BscScan tags, ScamSniffer | Flagged; the trace continues — where the thief moved the money is the point |
 
-| Chain | Sanctioned | Mixers | Stolen funds |
-|---|---:|---:|---:|
-| Ethereum | 139 | 40 | 8,393 |
-| BNB Smart Chain | 7 | 14 | 560 |
-| Tron | 915 | — | — |
+| Chain | Sanctioned | Mixers | Frozen by Tether | Stolen funds |
+|---|---:|---:|---:|---:|
+| Ethereum | 139 | 40 | 2,650 | 8,380 |
+| BNB Smart Chain | 7 | 14 | — | 560 |
+| Tron | 915 | — | 6,767 | — |
+
+<sub>Counts are after overlap: an address on a government list is reported as sanctioned, and a mixer pool Tether
+also froze stays a mixer. Before overlap the freeze list holds 2,780 Ethereum and 7,597 Tron addresses.</sub>
 
 **Government lists** are loaded first and always win: where an address is also on an explorer's list, the
 government entry is the one reported, and an address several governments list names all of them — "designated
@@ -418,6 +424,13 @@ by the US, the UK and Israel" is a stronger finding than any one alone.
   measures still in force count — a wallet named only in lifted Israeli seizure orders is left out. Israel's
   orders alone name 585 Tron wallets, almost all USDT. Canada, Australia, Switzerland and the UN publish no crypto
   addresses; all 95 official lists OpenSanctions carries were checked. `scripts/import_intl_sanctions.py`
+
+**Tether's freeze list** is read from the chain itself. Tether can blacklist an address on its USDT contract — after
+a sanctions match, a law-enforcement request or a theft — and every freeze is an `AddedBlackList` event, every
+release a `RemovedBlackList`. Replaying them in order gives the addresses frozen today, with no dataset between the
+contract and the label; a random sample is checked against the contract's own `isBlackListed()` and the import
+refuses to write on any disagreement. A freeze says the issuer acted, not why — and a request to Tether can ask.
+BNB Smart Chain's USDT is a Binance-issued peg with no Tether blacklist. `scripts/import_tether_freezes.py`
 
 **The mixer rule is a correctness rule.** A tumbler pays out from a commingled pool, so transfers leaving it have
 no established relationship to the deposit the trace arrived on. Following them would manufacture a trail and
@@ -659,6 +672,7 @@ provenance — what each source is, what it establishes and what it does not, wi
 | Israel, Japan, France | NBCTF seizure orders, Japan MOF, France DG Trésor — via [OpenSanctions](https://www.opensanctions.org/datasets/il_mod_crypto/) | **CC BY-NC 4.0** — non-commercial use |
 | Exchange, mixer and exploiter tags | Etherscan / BscScan labels via [dawsbot/eth-labels](https://github.com/dawsbot/eth-labels) and [brianleect/etherscan-labels](https://github.com/brianleect/etherscan-labels), pinned | MIT (the datasets); the labels are the explorers' |
 | Tron exchange tags | [TronScan](https://tronscan.org) public API | TronScan's terms |
+| Tether USDT freezes | The USDT contracts' own `AddedBlackList` / `RemovedBlackList` events on [Ethereum](https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7) and [Tron](https://tronscan.org/#/token20/TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t) | Public on-chain data |
 | Phishing / scam wallets | [ScamSniffer scam-database](https://github.com/scamsniffer/scam-database) | **GPL-3.0** |
 | Phishing / hack wallets | Etherscan Phish/Hack label via [dappcenter/etherscan-labels](https://github.com/dappcenter/etherscan-labels) and [Forta labelled datasets](https://github.com/forta-network/labelled-datasets), pinned | MIT |
 
@@ -689,8 +703,9 @@ staying silent on ordinary activity, because a false accusation is the expensive
 | `test_pattern_detection.py` | Peel chain and amount split, their thresholds, the exchange exemption, graph tagging |
 | `test_scoring.py` | Each weighted component, band boundaries; patterns and truncation add caveats without moving the number |
 | `test_exchange_matcher.py` | Both label-file shapes, case-insensitive lookup, closest-match preference, degrading to "no attribution" |
-| `test_risk_matcher.py` | All three categories; a mixer ends a trace, a sanctioned or stolen-funds address does not; a government listing outranks an explorer tag; several governments are all named; unknown categories dropped |
+| `test_risk_matcher.py` | All four categories; a mixer ends a trace and keeps ending it whatever else lists it, a sanctioned, frozen or stolen-funds address does not; a government listing outranks an explorer tag; several governments are all named; unknown categories dropped |
 | `test_threat_import.py` | Thief and phishing tags accepted; "hackerspace" charities, AVS operators and hack *victims* rejected; only mixer pools and routers count, never governance or token contracts |
+| `test_tether_freezes.py` | The replay: a release unfreezes, a re-freeze after a release counts, order within a block follows the log index, Tron addresses convert for the contract call |
 | `test_intl_sanctions_import.py` | The chain named before a free-text address decides where it is filed; a token name alone picks no EVM chain; a wallet named only in lifted seizure orders is left out |
 | `test_ofac_import.py` | Chain assignment from OFAC's own idType; a Bitcoin address is skipped rather than misfiled |
 | `test_graph_builder.py` | All six traversal brakes, both directions, fetch failures, depth stability, the time budget |
@@ -754,6 +769,7 @@ exchequer/
 │   │   ├── exchange_labels*.json      exchange wallets + deposit addresses, per chain
 │   │   ├── risk_labels*.json          OFAC SDN addresses
 │   │   ├── intl_sanctions*.json       UK, EU, Israel, Japan, France
+│   │   ├── frozen_labels*.json        addresses Tether has frozen on USDT
 │   │   ├── threat_labels*.json        mixer pools, hack and phishing wallets
 │   │   ├── router_labels*.json        DEX routers
 │   │   ├── demo_traces.json           the DEMO.md traces, as requests
@@ -761,6 +777,7 @@ exchequer/
 │   ├── scripts/
 │   │   ├── import_ofac_addresses.py   OFAC SDN XML → risk_labels
 │   │   ├── import_intl_sanctions.py   five more governments → intl_sanctions
+│   │   ├── import_tether_freezes.py   USDT blacklist events → frozen_labels
 │   │   ├── import_threat_labels.py    mixers, exploiters, scam lists → threat_labels
 │   │   ├── import_exchange_labels.py  Ethereum exchange wallets (original dataset)
 │   │   ├── import_eth_labels.py       Ethereum + BSC (newer dataset), --deposits
@@ -775,7 +792,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         249 tests, no network or keys
+│   └── tests/                         256 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton
