@@ -19,6 +19,11 @@ which now takes its rules from here):
 - A failed lookup never fails a trace: TronScan being slow or refusing costs
   an attribution, not the answer the trace already has.
 
+The same response carries a second signal, read at no extra cost: TronScan's
+red "warning" tag (e.g. "Suspicious", "Scam"), and address tags naming a
+scam, phishing or hack. Those are reported as a TronScan warning -- a weaker
+finding than a government listing or a Tether freeze, and labelled as such.
+
 TronScan's account endpoint needs its own API key (TRONSCAN_API_KEY, free from
 tronscan.org). Without one the lookup is off and the trace says so.
 """
@@ -103,6 +108,21 @@ def exchange_for_tag(tag: str | None) -> str | None:
     return CANONICAL.get(tag_head(tag))
 
 
+# An address tag that is itself a warning, rather than a name.
+WARNING_TAG = re.compile(r"(scam|phish|fraud|hacker|exploit|drainer|fake)", re.IGNORECASE)
+
+
+def warning_from_response(body: Any) -> str | None:
+    """TronScan's warning about an address: its red tag, else a tag naming a scam."""
+    if not isinstance(body, dict):
+        return None
+    red = body.get("redTag")
+    if isinstance(red, str) and red.strip():
+        return red.strip()
+    tag = tag_from_response(body)
+    return tag if tag and WARNING_TAG.search(tag) else None
+
+
 def tag_from_response(body: Any) -> str | None:
     """The address tag in a TronScan account response.
 
@@ -157,9 +177,13 @@ class TronScanTags:
 
     def tag(self, address: str) -> str | None:
         """TronScan's tag for `address`, or None (no tag, lookup off, or failed)."""
+        return (self.account(address) or {}).get("tag")
+
+    def account(self, address: str) -> dict[str, str | None] | None:
+        """{"tag", "warning"} TronScan holds for `address`; None if off or failed."""
         if not self.enabled:
             return None
-        key = ("tronscan-tag", address)
+        key = ("tronscan-account", address)
         request = f"GET {TRONSCAN}/api/accountv2?address={address}"
         hit, value = self._cache.get(key)
         if hit:
@@ -176,7 +200,7 @@ class TronScanTags:
             self.failures += 1
             logger.warning("TronScan tag lookup failed for %s: %s", address, exc)
             return None
-        value = tag_from_response(body)
+        value = {"tag": tag_from_response(body), "warning": warning_from_response(body)}
         meta = None
         if self.evidence is not None:
             rec = self.evidence.record(PROVIDER, request, response.content)
@@ -193,6 +217,7 @@ class LiveTronExchanges:
         self.is_labelled = is_labelled
         self.found: dict[str, dict[str, str]] = {}
         self.unrecognised: dict[str, str] = {}
+        self.warnings: dict[str, str] = {}
         self._asked: set[str] = set()
         self._lock = threading.Lock()
 
@@ -214,6 +239,14 @@ class LiveTronExchanges:
         """
         if not self.tags.enabled:
             return
+        # The reported address itself: only its warning is wanted -- it is where
+        # the trace starts, never an attribution.
+        seed = next((n for n, data in graph.nodes(data=True) if data.get("is_seed")), None)
+        if seed is not None and self._claim(seed):
+            warning = (self.tags.account(seed) or {}).get("warning")
+            if warning:
+                with self._lock:
+                    self.warnings[seed] = warning
         labelled_depths = [data.get("depth", 0) for n, data in graph.nodes(data=True)
                            if not data.get("is_seed") and (self.is_labelled(n) or n in self.found)]
         horizon = min(labelled_depths) if labelled_depths else None
@@ -237,14 +270,27 @@ class LiveTronExchanges:
             return True
 
     def _ask(self, address: str) -> None:
-        tag = self.tags.tag(address)
+        account = self.tags.account(address) or {}
+        tag, warning = account.get("tag"), account.get("warning")
         exchange = exchange_for_tag(tag)
         with self._lock:
+            if warning:
+                self.warnings[address] = warning
             if exchange:
                 self.found[address] = {"exchange": exchange, "label": f"{tag} (TronScan tag, read live)",
                                        "type": wallet_type(tag)}
             elif tag:
                 self.unrecognised[address] = tag
+
+    def risk_labels(self, category: str) -> dict[str, dict[str, str]]:
+        """The warnings, as risk-label records for the risk matcher."""
+        day = time.strftime("%Y-%m-%d", time.gmtime())
+        return {
+            address: {"category": category, "entity": f"TronScan: {warning}",
+                      "label": f"Tagged \u201c{warning}\u201d by TronScan",
+                      "source": f"TronScan public address tag, read live {day}"}
+            for address, warning in self.warnings.items()
+        }
 
     def summary(self) -> dict[str, Any]:
         return {
@@ -254,4 +300,5 @@ class LiveTronExchanges:
             "failures": self.tags.failures,
             "found": [{"address": a, **m} for a, m in sorted(self.found.items())],
             "unrecognised_tags": [{"address": a, "tag": t} for a, t in sorted(self.unrecognised.items())],
+            "warnings": [{"address": a, "warning": w} for a, w in sorted(self.warnings.items())],
         }

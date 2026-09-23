@@ -15,7 +15,7 @@ from app import main
 from app.etherscan_client import Transaction
 from app.main import TraceRequest, run_trace
 from app.tron_tags import (MAX_LOOKUPS_PER_TRACE, LiveTronExchanges, exchange_for_tag,
-                           tag_from_response)
+                           tag_from_response, warning_from_response)
 
 from conftest import make_graph
 
@@ -29,10 +29,13 @@ class FakeTags:
         self._tags, self.enabled, self.asked = tags, enabled, []
         self.lookups = self.failures = 0
 
-    def tag(self, address):
+    def account(self, address):
         self.asked.append(address)
         self.lookups += 1
-        return self._tags.get(address)
+        value = self._tags.get(address)
+        if isinstance(value, dict):
+            return value
+        return {"tag": value, "warning": warning_from_response({"addressTag": value})}
 
     def close(self):
         pass
@@ -75,7 +78,7 @@ def test_the_sweep_asks_about_the_last_hop_the_walk_never_checked():
     tags = FakeTags({EXCH: "OKX Hot Wallet 8"})
     live = LiveTronExchanges(tags, lambda a: False)
     live.sweep(graph)
-    assert SEED not in tags.asked and EXCH in live.found
+    assert EXCH in live.found and SEED not in live.found
 
 
 def test_lookups_are_capped_per_trace():
@@ -113,7 +116,8 @@ def tron_trace(monkeypatch):
 
     monkeypatch.setattr(main, "open_source", open_source)
     monkeypatch.setattr(main.config, "TRONSCAN_API_KEY", "test-key")
-    monkeypatch.setattr(main.TronScanTags, "tag", lambda self, a: {EXCH: "Binance-Hot 9"}.get(a))
+    monkeypatch.setattr(main.TronScanTags, "account",
+                        lambda self, a: {EXCH: {"tag": "Binance-Hot 9", "warning": None}}.get(a))
 
 
 def test_a_tron_trace_attributes_a_wallet_from_its_tronscan_tag(tron_trace):
@@ -125,7 +129,7 @@ def test_a_tron_trace_attributes_a_wallet_from_its_tronscan_tag(tron_trace):
 
 
 def test_a_failed_lookup_leaves_the_trace_intact(tron_trace, monkeypatch):
-    monkeypatch.setattr(main.TronScanTags, "tag", lambda self, a: None)
+    monkeypatch.setattr(main.TronScanTags, "account", lambda self, a: None)
     result = run_trace(TraceRequest(address=SEED, chain="tron", asset="USDT", max_depth=3))
     assert result["exchange"] is None and len(result["graph"]["nodes"]) == 3
 
@@ -163,4 +167,49 @@ def test_the_sweep_skips_wallets_beyond_the_nearest_labelled_exchange():
     tags = FakeTags({})
     live = LiveTronExchanges(tags, is_labelled=lambda a: a == EXCH)
     live.sweep(graph)
-    assert tags.asked == [HOP]
+    assert tags.asked == [SEED, HOP]
+
+
+# -- TronScan's warning tags --------------------------------------------------
+def test_a_warning_is_the_red_tag_or_a_tag_naming_a_scam():
+    # "Suspicious" is the red tag TronScan put on TMj4fHv4…, seen 24 Sep 2026.
+    assert warning_from_response({"redTag": "Suspicious", "addressTag": ""}) == "Suspicious"
+    assert warning_from_response({"addressTag": "Fake_Phishing123"}) == "Fake_Phishing123"
+    assert warning_from_response({"addressTag": "Binance-Hot 7", "redTag": ""}) is None
+    assert warning_from_response({"balance": 1}) is None
+
+
+def test_a_red_tagged_wallet_in_the_trace_is_a_screening_hit(tron_trace, monkeypatch):
+    monkeypatch.setattr(main.TronScanTags, "account", lambda self, a: {
+        EXCH: {"tag": "Binance-Hot 9", "warning": None},
+        HOP: {"tag": None, "warning": "Suspicious"},
+    }.get(a))
+    result = run_trace(TraceRequest(address=SEED, chain="tron", asset="USDT", max_depth=3))
+    hit = next(m for m in result["risk_matches"] if m["address"] == HOP)
+    assert hit["category"] == "reported" and not hit["is_terminal"]
+    assert result["exchange"] == "Binance"  # a warning never stops the trace
+    note = next(n for n in result["risk_notes"] if HOP in n)
+    assert "Suspicious" in note and "not a designation" in note
+    assert result["live_tags"]["warnings"] == [{"address": HOP, "warning": "Suspicious"}]
+
+
+def test_a_label_file_entry_outranks_tronscans_warning(tron_trace, monkeypatch):
+    from app.risk_matcher import RiskMatcher
+    listed = RiskMatcher({HOP: {"category": "sanctioned", "entity": "X", "label": "X",
+                                "source": "OFAC SDN list"}}, chain="tron")
+    monkeypatch.setattr(main, "get_risk_matcher", lambda key=None: listed)
+    monkeypatch.setattr(main.TronScanTags, "account", lambda self, a: {
+        HOP: {"tag": None, "warning": "Suspicious"}}.get(a))
+    result = run_trace(TraceRequest(address=SEED, chain="tron", asset="USDT", max_depth=3))
+    assert [m["category"] for m in result["risk_matches"] if m["address"] == HOP] == ["sanctioned"]
+
+
+def test_a_warning_on_the_reported_address_itself_is_read(tron_trace, monkeypatch):
+    from app.risk_matcher import RiskMatcher
+    monkeypatch.setattr(main, "get_risk_matcher", lambda key=None: RiskMatcher({}, chain="tron"))
+    monkeypatch.setattr(main.TronScanTags, "account", lambda self, a: {
+        SEED: {"tag": "Binance-Hot 1", "warning": "Suspicious"}}.get(a))
+    result = run_trace(TraceRequest(address=SEED, chain="tron", asset="USDT", max_depth=3))
+    hit = next(m for m in result["risk_matches"] if m["address"] == SEED)
+    assert hit["category"] == "reported" and hit["depth"] == 0
+    assert result["exchange"] is None  # the seed's own tag is never an attribution

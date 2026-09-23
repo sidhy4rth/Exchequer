@@ -27,6 +27,11 @@ Three categories, with very different investigative meaning:
               proceeds of that theft, which ties a fraud case to a larger,
               already-documented laundering operation.
 
+  reported    Tron only, read live: TronScan's own warning tag on the address
+              ("Suspicious", "Scam", a phishing tag). The weakest of the five
+              -- an explorer's warning, not a designation, a freeze or a named
+              theft -- and worded that way.
+
 The authority behind them is not the same. A sanctioned address is on a
 government list -- OFAC's, or another government's (the international file:
 UK, EU, Israel, Japan, France); mixer pools and stolen-funds wallets come
@@ -72,6 +77,8 @@ SANCTIONED = "sanctioned"
 MIXER = "mixer"
 STOLEN = "stolen"
 FROZEN = "frozen"
+# Read live during a Tron trace, never from a label file, so not in CATEGORIES.
+REPORTED = "reported"
 CATEGORIES = (SANCTIONED, MIXER, FROZEN, STOLEN)
 
 # Categories whose addresses end a trace. See the module docstring: a mixer
@@ -137,6 +144,13 @@ class RiskMatch:
                 f"{placement}. The issuer acted on this address; the freeze does not "
                 f"say why, and it is not a finding that any counterparty took part in "
                 f"anything. Tether can say, on a lawful request."
+            )
+        if self.category == REPORTED:
+            return (
+                f"Warning tag: {self.address} is tagged \u201c{self.entity.removeprefix('TronScan: ')}\u201d by "
+                f"TronScan, the Tron block explorer ({self.source}). {placement}. "
+                f"This is the explorer's warning, not a designation or a finding "
+                f"that anyone took part in anything; it is a reason to look closer."
             )
         if self.category == STOLEN:
             return (

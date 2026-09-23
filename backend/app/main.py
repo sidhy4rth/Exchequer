@@ -50,7 +50,7 @@ from .graph_builder import (
 )
 from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .report import build_report, render_text_report
-from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
+from .risk_matcher import FROZEN, MIXER, REPORTED, SANCTIONED, STOLEN, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
 from .scoring import principal_path, score_case
 
@@ -453,6 +453,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                 live.sweep(result.graph)
                 if live.found:
                     matcher = ExchangeMatcher({**matcher._labels, **live.found}, chain=chain.key)
+                if live.warnings:
+                    # A label file's entry always outranks the explorer's warning.
+                    risk_matcher = RiskMatcher({**live.risk_labels(REPORTED), **risk_matcher._labels},
+                                               chain=chain.key)
             # Swaps. Reads one receipt per router-bound transfer (capped) so
             # the response can say what asset the money became.
             swaps = detect_swaps(

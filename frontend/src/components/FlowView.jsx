@@ -42,7 +42,7 @@ const num = (value) =>
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
 
-const RISK_WORD = { sanctioned: 'sanctioned', mixer: 'mixer', frozen: 'frozen by Tether', stolen: 'stolen funds' }
+const RISK_WORD = { sanctioned: 'sanctioned', mixer: 'mixer', frozen: 'frozen by Tether', stolen: 'stolen funds', reported: 'TronScan warning' }
 
 /** What a node is called on the canvas: the label if it has one, else nothing. */
 function captionOf(node, role) {

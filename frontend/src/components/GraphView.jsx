@@ -68,7 +68,7 @@ const HIT_PAD = 9
 const LINK_HIT_PAD = 4
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds', reported: 'TronScan warning' }
 const ROLE_NAME = {
   seed: 'Reported address',
   risk: 'Sanctioned / mixer / frozen / stolen funds',

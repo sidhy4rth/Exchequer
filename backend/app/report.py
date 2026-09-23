@@ -240,6 +240,11 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
         extra += " The trace stopped at a mixer, whose payouts cannot be linked to its deposits."
     if "frozen" in risk:
         extra += " At least one address in the trace has had its USDT frozen by Tether."
+    if "reported" in risk:
+        extra += (
+            " TronScan, the Tron block explorer, carries a warning tag on at least one "
+            "address in the trace."
+        )
     if "stolen" in risk:
         extra += (
             " At least one address in the trace is tagged by the block explorer as a "
@@ -575,9 +580,12 @@ def render_text_report(report: dict[str, Any]) -> str:
     if live is not None:
         if live.get("enabled"):
             add(f"TronScan tags read live    : {live.get('asked', 0)} unlabelled wallets asked, "
-                f"{len(live.get('found') or [])} tagged as an exchange")
+                f"{len(live.get('found') or [])} tagged as an exchange, "
+                f"{len(live.get('warnings') or [])} carrying a TronScan warning")
             for f in live.get("found") or []:
                 add(f"  - {f['address']} {f['label']}")
+            for w in live.get("warnings") or []:
+                add(f"  ! {w['address']} warning tag \u201c{w['warning']}\u201d")
         else:
             add("TronScan tags read live    : off (no TRONSCAN_API_KEY configured)")
     add(f"Addresses examined         : {summary['addresses']}")
