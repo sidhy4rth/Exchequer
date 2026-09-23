@@ -102,15 +102,46 @@ the running order, skip it and go 1 → 3.
 
 ---
 
-## 3 — The attribution that was lost, then found again
+## 3 — An attribution that keeps moving, and what pro-rata says about it
 
 ```
 0x536c4921d1aafde6a5cda882fb5ca046f3601c65
 ```
-Ethereum · ETH · 3 hops · **~11 seconds, 25 API calls**
+Ethereum · ETH · 3 hops · **~10 seconds**
 
 | | |
 |---|---|
+| Addresses traced | 32 |
+| Exchange | **Binance — probable deposit address (inferred)** `0xd6216065…c7154`, **2 hops** — 95 sweeps, all to Binance 14 |
+| Confidence | **0.39** |
+| Pro-rata | **≈ 0.06 of 304.16 ETH** of the reported funds likely arrived; 1.08 ETH reached the address in total |
+| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): **Binance deposit at 0.39** |
+| Patterns | **peel chain** |
+| Transfers excluded by the time rule | **513** |
+
+**Use this one to show honesty, not a clean result.** It has changed four
+times, and every change has a reason the tool can state.
+
+On 4 September it reached Binance at 0.65. On 15 September, with the time
+rule in place, it reached nothing: that path ran through transfers made
+*before* the traced funds arrived — never the reported wallet's money. On the
+morning of 23 September it reached Uphold at 0.82 through a newly labelled
+wallet. By that evening the Uphold path was no longer in the graph — the
+wallets on it are busy, a trace reads each wallet's most recent transfers, and
+new activity changed what it read — and the closest attribution became a
+probable Binance deposit address two hops out.
+
+Then pro-rata puts the number in proportion: 304 ETH left the reported wallet
+on this path, only 1.08 ETH reached that deposit address, and about **0.06 ETH**
+of it is likely the reported funds. The score (0.39) and the amount say the
+same thing: a real path, and a weak lead.
+
+Say this out loud: on live blockchain data an attribution can move, and a
+tool that reports where money went has to say what changed and how much of
+the money it is talking about. Saved cases never move — the report reproduces
+exactly what was seen when the case was traced.
+
+---|---|
 | Addresses traced | 34 |
 | Exchange | **Uphold** — exact label `0x1c727a55…6de5d`, **2 hops**, 53.28 ETH received |
 | Confidence | **0.82** |

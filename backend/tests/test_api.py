@@ -139,3 +139,12 @@ def test_the_statement_marks_address_poisoning_lookalikes():
     assert [r["counterparty"] for r in statement["credits"]] == [real]
     assert [r["counterparty"] for r in statement["poisoning"]] == [fake]
     assert statement["lookalikes"] == 1 and statement["debits"][0]["amount"] == 726.25
+
+
+def test_a_trace_with_save_false_is_not_stored(client, monkeypatch):
+    from app import main, models
+    monkeypatch.setattr(main, "run_trace", lambda request: {"address": request.address})
+    saved = []
+    monkeypatch.setattr(models, "save_case", lambda *a, **k: saved.append(a))
+    body = client.post("/trace", json={"address": "0x" + "1" * 40, "save": False}).json()
+    assert body["case_id"] is None and saved == []

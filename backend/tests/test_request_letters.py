@@ -81,3 +81,16 @@ def test_a_usdt_trace_on_tron_offers_a_tether_letter():
     result = case(chain="tron", chain_name="Tron", asset="USDT")
     assert any(letter["to"] == "tether" for letter in available(result))
     assert "USDT on Tron moved from" in draft("case-1", result, "tether")
+
+
+def test_the_exchange_letter_names_the_pro_rata_amount():
+    from app.request_letters import draft
+    result = {
+        "address": "0x" + "1" * 40, "chain_name": "BNB Smart Chain", "asset": "USDT",
+        "direction": "outgoing", "exchange": "Binance", "exchange_address": "0x" + "2" * 40,
+        "exchange_label": "Binance: Hot Wallet 6", "trace_path": [],
+        "prorata": {"status": "estimated", "estimated": 9.42, "sent": 40.0, "arrived_total": 98.0},
+    }
+    letter = draft("c1", result, "exchange")
+    assert "about 9.420000 USDT" in letter and "98.000000 USDT arrived" in letter
+    assert "your own records of the deposits are authoritative" in letter

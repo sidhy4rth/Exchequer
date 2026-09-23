@@ -1,0 +1,22 @@
+name: Demo health
+
+# Re-runs every DEMO.md trace against the live site once a day and fails if an
+# attribution or score moved, so a drift is found here and not by a judge.
+# The live site does the tracing (with save: false), so this job needs no keys
+# and installs nothing.
+on:
+  schedule:
+    - cron: "30 1 * * *" # 07:00 IST
+  workflow_dispatch:
+
+jobs:
+  demos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Re-run the DEMO.md traces on the live site
+        run: python backend/scripts/check_demos.py

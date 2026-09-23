@@ -174,6 +174,14 @@ class TraceRequest(BaseModel):
             "Each trace keeps its own asset, amounts and score."
         ),
     )
+    save: bool = Field(
+        True,
+        description=(
+            "Store the result as a case. The daily demo health check sets this "
+            "false, so re-running the demos never fills the case history or "
+            "makes a demo look like a repeat complaint."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -946,6 +954,9 @@ def trace(request: TraceRequest) -> dict[str, Any]:
     created_at = models.utc_now_iso()
     payload["case_id"] = case_id
     payload["created_at"] = created_at
+    if not request.save:
+        payload["case_id"] = None
+        return payload
 
     try:
         models.save_case(case_id, payload["address"], payload, created_at=created_at)

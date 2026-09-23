@@ -146,6 +146,17 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
             f"   for {asset} at {swap.get('router_label')} (tx {swap.get('tx')}); the {asset} was followed",
             "   from that swap.",
         ]
+    prorata = trace.get("prorata") or {}
+    if prorata.get("status") == "estimated":
+        others = prorata["arrived_total"] - prorata["estimated"]
+        lines += [
+            "",
+            f"   On a pro-rata estimate from the public records, about {prorata['estimated']:,.6f} {asset}",
+            f"   of the reported funds reached this address"
+            + (f" ({prorata['arrived_total']:,.6f} {asset} arrived along this path in\n"
+               f"   total; about {others:,.6f} came from other sources)." if others > prorata["estimated"] * 0.05 else "."),
+            "   This is an estimate; your own records of the deposits are authoritative.",
+        ]
     lines += [
         "",
         "3. The transfers, hop by hop (all times UTC):",
