@@ -2,6 +2,8 @@
 
 **Smart India Hackathon 2026 · problem statement SIH26183 · Ministry of Home Affairs · Team WiFiBandits**
 
+> **Designed version:** [eight illustrated pages](timeline-design/README.md) · [PDF](Exchequer-Project-Timeline.pdf)
+
 A victim reports one wallet address. Exchequer follows the money hop by hop, screens
 every address it passes against sanctions lists, freezes, mixers and known theft,
 names the exchange where the funds were cashed out — down to the customer deposit
