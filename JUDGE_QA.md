@@ -115,9 +115,9 @@ overfit and hide that.
 **10. What if the exchange is not in your list?**
 
 Then the trace returns `exchange: null` with a message, never a guess.
-`GET /exchanges` shows exactly what is covered — 20,047 Ethereum addresses
-(1,020 exchange wallets across 92 exchanges plus 19,027 Bitget customer deposit
-addresses), 38 on BSC and 41 on Tron, every one read from the explorer's own
+`GET /exchanges` shows exactly what is covered — 25,038 Ethereum addresses
+(1,020 exchange wallets across 92 exchanges plus 24,018 Bitget and Binance
+customer deposit addresses), 38 on BSC and 41 on Tron, every one read from the explorer's own
 label and checked on chain. The new deposit-address inference narrows the gap from the
 other side: when an unlabelled wallet's entire outgoing history is sweeps into
 one labelled hot wallet, the tool names it as a *probable* deposit address of

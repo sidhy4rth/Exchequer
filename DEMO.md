@@ -15,9 +15,10 @@ trace 3 now reaches an exchange again (a newly labelled one), trace 6 now also
 reaches a mixer, and the flagship now ends at a probable Bitget deposit
 address one hop out. None of them changed because a rule was loosened.
 
-Since that run the Ethereum file also carries 19,027 Bitget deposit
-addresses and screening carries ~8,900 reported scam wallets; all ten traces
-were re-checked afterwards and attribute exactly as below — the only change
+Since that run the Ethereum file also carries 24,018 Bitget and Binance deposit
+addresses, and screening carries ~8,900 reported scam wallets and Tether's
+USDT freeze list; all ten traces were re-checked afterwards and attribute
+exactly as below — the only change
 is the phishing flags noted in traces 6 and 10.
 
 Those are cold numbers. On the hosted instance the backend traces this list

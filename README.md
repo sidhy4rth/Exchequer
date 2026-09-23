@@ -40,13 +40,13 @@
 
 <table>
 <tr>
-<td align="center"><h3>39,622</h3>labelled addresses</td>
-<td align="center"><h3>20,126</h3>exchange addresses<br><sub>incl. 19,027 Bitget deposit addresses</sub></td>
+<td align="center"><h3>44,613</h3>labelled addresses</td>
+<td align="center"><h3>25,117</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>10,377</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>3</h3>chains, 8 assets</td>
-<td align="center"><h3>263</h3>tests, no network</td>
+<td align="center"><h3>270</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -77,7 +77,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | | |
 |---|---|
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
-| **Names the exchange** | Exact match against 20,126 exchange addresses across 92 exchanges, including **CoinDCX** and **Delta Exchange**, and 19,027 Bitget per-customer deposit addresses. |
+| **Names the exchange** | Exact match against 25,117 exchange addresses across 92 exchanges, including **CoinDCX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
 | **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); and 8,953 wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
@@ -369,8 +369,8 @@ An inference is **scored as a weaker attribution**: `match_directness` is 0.5 in
 and the report prints the evidence and the sentence that would confirm it. It can be wrong — an exchange's own
 consolidation wallet has the same shape (harmless: it still belongs to that exchange), and a person who really
 did send everything, twice, to one hot wallet would be misnamed. On the validation corpus it fired on **0 of 48**
-control wallets. Where Exchequer holds the explorer's own deposit-address label — the 19,027 Bitget addresses —
-the match is exact instead.
+control wallets. Where Exchequer holds the explorer's own deposit-address label — the 24,018 Bitget and Binance
+addresses — the match is exact instead.
 
 ### Swaps at a DEX router
 
@@ -471,13 +471,14 @@ and matching one chain's address against the other's labels would manufacture an
 
 | File | Coverage |
 |---|---|
-| `exchange_labels.json` | **20,047 addresses / 92 exchanges** — 1,020 exchange wallets (the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX**, Bitget, Poloniex) plus **19,027 Bitget deposit addresses** |
+| `exchange_labels.json` | **25,038 addresses / 92 exchanges** — 1,020 exchange wallets (the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX**, Bitget, Poloniex) plus **19,027 Bitget and 4,991 Binance deposit addresses** |
 | `exchange_labels_bsc.json` | **38 addresses / 13 exchanges** — Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat |
 | `exchange_labels_tron.json` | **41 addresses / 19 exchanges** — read live from TronScan's own address tags |
 
 **A deposit address is the most useful label there is**: it names one customer account, which is exactly what a
-lawful request asks the exchange about. The 19,027 Bitget addresses come from Etherscan's "Bitget Dep" tags, and
-every one was confirmed on chain to have at least one transaction or token transfer — all 19,027 passed.
+lawful request asks the exchange about. The 19,027 Bitget and 4,991 Binance addresses come from Etherscan's
+"Bitget Dep" and "Binance Dep" tags, and every one was confirmed on chain to have at least one transaction or token
+transfer — all 19,027 Bitget addresses passed; 21 of 5,012 Binance addresses had never been used and were left out.
 
 ### Nothing is accepted on the label alone
 
@@ -514,7 +515,7 @@ TronScan tag names an Indian exchange among the largest accounts; the importer l
 cd backend
 python -m scripts.import_exchange_labels                       # Ethereum, original dataset
 python -m scripts.import_eth_labels                            # Ethereum + BSC, newer dataset
-python -m scripts.import_eth_labels --deposits Bitget          # per-customer deposit addresses (resumable)
+python -m scripts.import_eth_labels --deposits Binance         # per-customer deposit addresses (resumable)
 python -m scripts.seed_bsc_labels                              # BSC
 python -m scripts.seed_tron_labels                             # Tron, from TronScan tags
 python -m scripts.seed_router_labels                           # DEX routers
@@ -784,7 +785,7 @@ exchequer/
 │   │   ├── api_budget.py         shared pacer + response cache
 │   │   └── warmup.py             traces the demos at startup
 │   ├── data/
-│   │   ├── exchange_labels*.json      exchange wallets + deposit addresses, per chain
+│   │   ├── exchange_labels*.json      exchange wallets + Bitget/Binance deposit addresses, per chain
 │   │   ├── risk_labels*.json          OFAC SDN addresses
 │   │   ├── intl_sanctions*.json       UK, EU, Israel, Japan, France
 │   │   ├── frozen_labels*.json        addresses Tether has frozen on USDT
@@ -810,7 +811,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         263 tests, no network or keys
+│   └── tests/                         270 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton
@@ -845,8 +846,6 @@ exchequer/
 
 ## Roadmap
 
-- **More deposit-address labels** — the `--deposits` importer takes any exchange Etherscan tags this way; Binance's
-  5,000 tagged deposit addresses are next.
 - **Bitcoin** — a UTXO model, so its own adapter rather than another entry in the chain registry.
 - **More chains** — Etherscan's paid tier unlocks Polygon, Arbitrum, Optimism, Base and Avalanche through the code
   already present.

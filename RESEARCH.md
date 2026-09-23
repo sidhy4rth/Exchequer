@@ -427,10 +427,11 @@ in anything. It is the reason to send Tether a request.
 
 ### Exchange deposit addresses
 
-**Source U.** Etherscan's "Bitget Dep: 0x…" tags, through Source R — 19,027
-addresses Etherscan attributes to Bitget customer deposit accounts. Every one
-was confirmed on chain to have at least one transaction or token transfer; all
-19,027 passed. **What a match establishes:** that the explorer attributes the
+**Source U.** Etherscan's "Bitget Dep: 0x…" and "Binance Dep: 0x…" tags,
+through Source R — 19,027 and 5,012 addresses Etherscan attributes to Bitget
+and Binance customer deposit accounts. Every one was checked on chain for at
+least one transaction or token transfer: all 19,027 Bitget addresses passed,
+and 4,991 of the Binance addresses (21 had never been used and were left out). **What a match establishes:** that the explorer attributes the
 address to a Bitget deposit account. **What it does not:** which customer —
 only Bitget can say, on a lawful request, which is exactly the request the
 report prepares.
