@@ -115,3 +115,25 @@ def test_ledger_lists_real_labelled_addresses(client):
             assert e["e"]
         if e["k"] == "sanctioned":
             assert e["t"].startswith("OFAC SDN")
+
+
+def test_the_statement_marks_address_poisoning_lookalikes():
+    from types import SimpleNamespace
+    from app.main import _wallet_statement
+    real, fake = "0xe47abfc8cf59ed425698600472526e846729d2fe", "0xe47a24cf165ece74a59c8afc5cd1cbc525f3d2fe"
+    me = "0x" + "b3" * 20
+
+    def tx(src, dst, amount):
+        return SimpleNamespace(hash=f"0x{abs(hash((src, dst, amount))):x}", timestamp=1, value_native=amount,
+                               from_address=src, to_address=dst)
+
+    class Source:
+        def get_outgoing_transactions(self, address, limit=None):
+            return [tx(me, real, 726.25)]
+
+        def get_incoming_transactions(self, address, limit=None):
+            return [tx(fake, me, 0.000073), tx(real, me, 5.0)]
+
+    statement = _wallet_statement(Source(), me)
+    assert [r["lookalike"] for r in statement["credits"]] == [True, False]
+    assert statement["lookalikes"] == 1 and statement["debits"][0]["amount"] == 726.25

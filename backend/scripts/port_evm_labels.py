@@ -55,6 +55,10 @@ from scripts.import_eth_labels import (CANONICAL, DATASET_COMMIT, DATASET_REPO, 
                                        SKIP_TAG, tag_head, wallet_type)
 
 TARGETS = ("polygon", "arbitrum")
+# BNB Smart Chain has its own importers and a label file of its own; the port
+# only adds to it (never replaces an entry), and reads the chain through
+# NodeReal, since Etherscan's free tier does not serve it.
+MERGE_TARGETS = ("bsc",)
 DAWS_CHAIN_ID = {"arbitrum": "42161"}
 BRIAN = ("https://raw.githubusercontent.com/brianleect/etherscan-labels/"
          "923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/{site}/accounts/exchange.json")
@@ -102,6 +106,23 @@ def sanctioned_candidates() -> dict[str, dict[str, str]]:
     return out
 
 
+class NoderealProbe:
+    """The two on-chain questions, asked of NodeReal instead of Etherscan."""
+
+    def __init__(self) -> None:
+        from app.nodereal_client import NoderealClient
+        self._client = NoderealClient(chain_slug="bsc-mainnet", native_symbol="BNB")
+
+    def __enter__(self) -> "NoderealProbe":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._client.close()
+
+    def _request(self, params: dict) -> str:
+        return self._client._rpc(params["action"], [params["address"], "latest"])
+
+
 def is_account(client: EtherscanClient, address: str) -> bool:
     code = client._request({"module": "proxy", "action": "eth_getCode", "address": address, "tag": "latest"})
     return code in ("0x", "", None)
@@ -136,14 +157,16 @@ def main() -> int:
     eth_exchanges, sanctioned = ethereum_candidates(), sanctioned_candidates()
     today = datetime.now(timezone.utc).date().isoformat()
     with args.checkpoint.open("a") as log:
-        for chain_key in TARGETS:
+        for chain_key in (*TARGETS, *MERGE_TARGETS):
             chain = config.CHAINS[chain_key]
-            exchanges = {**scrape_candidates(chain_key), **eth_exchanges}
-            work = [("exchange", a) for a in exchanges] + [("sanctioned", a) for a in sanctioned]
+            merge = chain_key in MERGE_TARGETS
+            exchanges = eth_exchanges if merge else {**scrape_candidates(chain_key), **eth_exchanges}
+            work = [("exchange", a) for a in exchanges] + ([] if merge else [("sanctioned", a) for a in sanctioned])
             todo = [w for w in work if (chain_key, *w) not in done]
             print(f"{chain.name}: {len(exchanges)} exchange + {len(sanctioned)} sanctioned candidates, "
                   f"{len(todo)} left to check", flush=True)
-            with EtherscanClient(chain_id=chain.chain_id) as client:
+            opened = NoderealProbe() if chain_key in MERGE_TARGETS else EtherscanClient(chain_id=chain.chain_id)
+            with opened as client:
                 for i, (kind, address) in enumerate(todo, 1):
                     try:
                         result = check(client, address)
@@ -164,6 +187,21 @@ def main() -> int:
             print(f"  accepted {len(accepted)} exchange wallets {by_source}, "
                   f"{len(listed)} sanctioned accounts", flush=True)
             if args.dry_run:
+                continue
+            if chain_key in MERGE_TARGETS:
+                document = json.loads(chain.labels_path.read_text())
+                held = document["labels"]
+                added = {a: {k: v for k, v in m.items() if k != "source"}
+                         for a, m in accepted.items() if a not in held}
+                held.update(added)
+                document["labels"] = dict(sorted(held.items()))
+                document["_meta"]["ported_from_ethereum"] = (
+                    f"{len(added)} Ethereum-labelled exchange accounts added {today} by "
+                    "backend/scripts/port_evm_labels.py: each has no contract code on BNB Smart "
+                    "Chain and has sent a transaction there (nonce > 0), read through NodeReal."
+                )
+                chain.labels_path.write_text(json.dumps(document, indent=1) + "\n")
+                print(f"  added {len(added)} to {chain.labels_path.name}", flush=True)
                 continue
             chain.labels_path.write_text(json.dumps({
                 "_meta": {

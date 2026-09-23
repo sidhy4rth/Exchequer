@@ -1,205 +1,936 @@
 {
-  "_meta": {
-    "description": "Known centralised-exchange wallets on BNB Smart Chain. A match against one of these is what lets Exchequer say 'the funds were cashed out here'.",
-    "provenance": "Imported from brianleect/etherscan-labels @ 923aba72c7e2d0682f7ae6194b6140bd90668dc9, a published scrape of BscScan's own exchange label pages, by backend/scripts/seed_bsc_labels.py.",
-    "verification_note": "Every address below was confirmed against live BNB Smart Chain data to be economically active -- recent BNB or BEP-20 USDT transfers, or a non-trivial BNB balance. That proves the address is real and handles funds; it does NOT independently confirm which company operates it, since no free API exposes BscScan's label data. Re-verify on bscscan.com before evidentiary use.",
-    "chain": "bsc",
-    "chain_id": 56,
-    "last_reviewed": "2026-09-22",
-    "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels && then cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc",
-    "schema": "labels maps a lowercase address to {exchange, label, type}",
-    "supplemented_from": "8 further labels imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a newer published scrape of the same explorer label pages, and verified on chain the same way, by backend/scripts/import_eth_labels.py."
+ "_meta": {
+  "description": "Known centralised-exchange wallets on BNB Smart Chain. A match against one of these is what lets Exchequer say 'the funds were cashed out here'.",
+  "provenance": "Imported from brianleect/etherscan-labels @ 923aba72c7e2d0682f7ae6194b6140bd90668dc9, a published scrape of BscScan's own exchange label pages, by backend/scripts/seed_bsc_labels.py.",
+  "verification_note": "Every address below was confirmed against live BNB Smart Chain data to be economically active -- recent BNB or BEP-20 USDT transfers, or a non-trivial BNB balance. That proves the address is real and handles funds; it does NOT independently confirm which company operates it, since no free API exposes BscScan's label data. Re-verify on bscscan.com before evidentiary use.",
+  "chain": "bsc",
+  "chain_id": 56,
+  "last_reviewed": "2026-09-22",
+  "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels && then cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc",
+  "schema": "labels maps a lowercase address to {exchange, label, type}",
+  "supplemented_from": "8 further labels imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a newer published scrape of the same explorer label pages, and verified on chain the same way, by backend/scripts/import_eth_labels.py.",
+  "ported_from_ethereum": "146 Ethereum-labelled exchange accounts added 2026-09-23 by backend/scripts/port_evm_labels.py: each has no contract code on BNB Smart Chain and has sent a transaction there (nonce > 0), read through NodeReal."
+ },
+ "labels": {
+  "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
+   "exchange": "Nexo",
+   "label": "Nexo 3",
+   "type": "exchange_wallet"
   },
-  "labels": {
-    "0x986a2fca9eda0e06fbf7839b89bfc006ee2a23dd": {
-      "exchange": "AscendEX",
-      "label": "AscendEX Hot Wallet",
-      "type": "hot_wallet"
-    },
-    "0x540c428d67b6038c7e6199a02605cbb3b6626384": {
-      "exchange": "Azbit",
-      "label": "Azbit: Azbit 2",
-      "type": "exchange_wallet"
-    },
-    "0x01c952174c24e1210d26961d456a77a39e1f0bb0": {
-      "exchange": "Binance",
-      "label": "Binance Hot Wallet 10",
-      "type": "hot_wallet"
-    },
-    "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
-      "exchange": "Binance",
-      "label": "Binance: BUSD Stablecoin",
-      "type": "exchange_wallet"
-    },
-    "0x631fc1ea2270e98fbd9d92658ece0f5a269aa161": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet",
-      "type": "hot_wallet"
-    },
-    "0xeb2d2f1b8c558a40207669291fda468e50c8a0bb": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 10",
-      "type": "hot_wallet"
-    },
-    "0x161ba15a5f335c9f06bb5bbb0a9ce14076fbb645": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 11",
-      "type": "hot_wallet"
-    },
-    "0x515b72ed8a97f42c568d6a143232775018f133c8": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 12",
-      "type": "hot_wallet"
-    },
-    "0xbd612a3f30dca67bf60a39fd0d35e39b7ab80774": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 13",
-      "type": "hot_wallet"
-    },
-    "0x7a8a34db9acd10c3b6277473b192fe47192569ca": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 14",
-      "type": "hot_wallet"
-    },
-    "0xa180fe01b906a1be37be6c534a3300785b20d947": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 16",
-      "type": "hot_wallet"
-    },
-    "0x29bdfbf7d27462a2d115748ace2bd71a2646946c": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 17",
-      "type": "hot_wallet"
-    },
-    "0x73f5ebe90f27b46ea12e5795d16c4b408b19cc6f": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 18",
-      "type": "hot_wallet"
-    },
-    "0x1fbe2acee135d991592f167ac371f3dd893a508b": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 19",
-      "type": "hot_wallet"
-    },
-    "0xb1256d6b31e4ae87da1d56e5890c66be7f1c038e": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 2",
-      "type": "hot_wallet"
-    },
-    "0xf977814e90da44bfa03b6295a0616a897441acec": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 20",
-      "type": "hot_wallet"
-    },
-    "0x17b692ae403a8ff3a3b2ed7676cf194310dde9af": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 3",
-      "type": "hot_wallet"
-    },
-    "0x8ff804cc2143451f454779a40de386f913dcff20": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 4",
-      "type": "hot_wallet"
-    },
-    "0xad9ffffd4573b642959d3b854027735579555cbc": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 5",
-      "type": "hot_wallet"
-    },
-    "0x8894e0a0c962cb723c1976a4421c95949be2d4e3": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 6",
-      "type": "hot_wallet"
-    },
-    "0xe2fc31f816a9b94326492132018c3aecc4a93ae1": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 7",
-      "type": "hot_wallet"
-    },
-    "0x3c783c21a0383057d128bae431894a5c19f9cf06": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 8",
-      "type": "hot_wallet"
-    },
-    "0xdccf3b77da55107280bd850ea519df3705d1a75a": {
-      "exchange": "Binance",
-      "label": "Binance: Hot Wallet 9",
-      "type": "hot_wallet"
-    },
-    "0x8c128dba2cb66399341aa877315be1054be75da8": {
-      "exchange": "BitMart",
-      "label": "Bitmart: Wallet",
-      "type": "exchange_wallet"
-    },
-    "0x328130164d0f2b9d7a52edc73b3632e713ff0ec6": {
-      "exchange": "BitMart",
-      "label": "Bitmart: Wallet 2",
-      "type": "exchange_wallet"
-    },
-    "0x8c7efd5b04331efc618e8006f19019a3dc88973e": {
-      "exchange": "CoinDCX",
-      "label": "CoinDCX 2",
-      "type": "exchange_wallet"
-    },
-    "0x72a53cdbbcc1b9efa39c834a540550e23463aacb": {
-      "exchange": "Crypto.com",
-      "label": "Crypto.com",
-      "type": "exchange_wallet"
-    },
-    "0x4727250679294802377dd6ca6541b8e459077c95": {
-      "exchange": "FixedFloat",
-      "label": "FixedFloat: Hot Wallet",
-      "type": "hot_wallet"
-    },
-    "0x0d0707963952f2fba59dd06f2b425ace40b492fe": {
-      "exchange": "Gate.io",
-      "label": "Gate.io",
-      "type": "exchange_wallet"
-    },
-    "0x39aa02d6b499a76a70fab5f164e8be587c366141": {
-      "exchange": "Hotbit",
-      "label": "Hotbit",
-      "type": "hot_wallet"
-    },
-    "0xc7029e939075f48fa2d5953381660c7d01570171": {
-      "exchange": "Hotbit",
-      "label": "Hotbit 2",
-      "type": "hot_wallet"
-    },
-    "0xefdca55e4bce6c1d535cb2d0687b5567eef2ae83": {
-      "exchange": "Huobi / HTX",
-      "label": "Huobi 1",
-      "type": "exchange_wallet"
-    },
-    "0x53f78a071d04224b8e254e243fffc6d9f2f3fa23": {
-      "exchange": "KuCoin",
-      "label": "Kucoin: Hot Wallet 2",
-      "type": "hot_wallet"
-    },
-    "0x2e8f79ad740de90dc5f5a9f0d8d9661a60725e64": {
-      "exchange": "MEXC",
-      "label": "Mexc.com 3",
-      "type": "exchange_wallet"
-    },
-    "0x4982085c9e2f89f2ecb8131eca71afad896e89cb": {
-      "exchange": "MEXC",
-      "label": "mexc.com",
-      "type": "exchange_wallet"
-    },
-    "0xc6acb77befebff0359cc581973859eee8cbaeda1": {
-      "exchange": "MaskEX",
-      "label": "MaskEX 10",
-      "type": "exchange_wallet"
-    },
-    "0xd7aed730a7c4cf8dfe313b16712af3406f6dca5b": {
-      "exchange": "MaskEX",
-      "label": "MaskEX 12",
-      "type": "exchange_wallet"
-    },
-    "0x3dd878a95dcaef2800cd57bb065b5e8f2f438131": {
-      "exchange": "MaskEX",
-      "label": "MaskEX 3",
-      "type": "exchange_wallet"
-    }
+  "0x00799bbc833d5b168f0410312d2a8fd9e0e3079c": {
+   "exchange": "Binance",
+   "label": "Binance 31",
+   "type": "exchange_wallet"
+  },
+  "0x00bdb5699745f5b860228c8f939abf1b9ae374ed": {
+   "exchange": "Bitstamp",
+   "label": "Bitstamp 1",
+   "type": "exchange_wallet"
+  },
+  "0x01c952174c24e1210d26961d456a77a39e1f0bb0": {
+   "exchange": "Binance",
+   "label": "Binance Hot Wallet 10",
+   "type": "hot_wallet"
+  },
+  "0x0211f3cedbef3143223d3acf0e589747933e8527": {
+   "exchange": "MEXC",
+   "label": "MEXC 2",
+   "type": "exchange_wallet"
+  },
+  "0x0639556f03714a74a5feeaf5736a4a64ff70d206": {
+   "exchange": "Bitget",
+   "label": "Bitget 4",
+   "type": "exchange_wallet"
+  },
+  "0x09363887a4096b142f3f6b58a7eed2f1a0ff7343": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 6",
+   "type": "exchange_wallet"
+  },
+  "0x0b0f7ebf967146566799229394171fc47f1a765a": {
+   "exchange": "Bitstamp",
+   "label": "Bitstamp 7",
+   "type": "exchange_wallet"
+  },
+  "0x0d0707963952f2fba59dd06f2b425ace40b492fe": {
+   "exchange": "Gate.io",
+   "label": "Gate.io",
+   "type": "exchange_wallet"
+  },
+  "0x1074253202528777561f83817d413e91bfa671d4": {
+   "exchange": "Binance",
+   "label": "Binance: Deployer 3",
+   "type": "exchange_wallet"
+  },
+  "0x1619d743d7dc612e99d5d94ebd6b9695d46f0bf3": {
+   "exchange": "BTSE",
+   "label": "BTSE: WBTC Merchant",
+   "type": "exchange_wallet"
+  },
+  "0x161ba15a5f335c9f06bb5bbb0a9ce14076fbb645": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 11",
+   "type": "hot_wallet"
+  },
+  "0x1692e170361cefd1eb7240ec13d048fd9af6d667": {
+   "exchange": "KuCoin",
+   "label": "KuCoin 5",
+   "type": "exchange_wallet"
+  },
+  "0x176f3dab24a159341c0509bb36b833e7fdd0a132": {
+   "exchange": "Poloniex",
+   "label": "Poloniex 9",
+   "type": "exchange_wallet"
+  },
+  "0x17b692ae403a8ff3a3b2ed7676cf194310dde9af": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 3",
+   "type": "hot_wallet"
+  },
+  "0x183a6cf1fc6504138d92c9d663094ee774f80038": {
+   "exchange": "AlphaPo",
+   "label": "AlphaPo: Hot Wallet 2",
+   "type": "hot_wallet"
+  },
+  "0x1ab4973a48dc892cd9971ece8e01dcc7688f8f23": {
+   "exchange": "Bitget",
+   "label": "Bitget 6",
+   "type": "exchange_wallet"
+  },
+  "0x1c4b70a3968436b9a0a9cf5205c787eb81bb558c": {
+   "exchange": "Gate.io",
+   "label": "Gate.io 3",
+   "type": "exchange_wallet"
+  },
+  "0x1fbe2acee135d991592f167ac371f3dd893a508b": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 19",
+   "type": "hot_wallet"
+  },
+  "0x22af984f13dfb5c80145e3f9ee1050ae5a5fb651": {
+   "exchange": "Kraken",
+   "label": "Kraken: Cold Wallet",
+   "type": "cold_wallet"
+  },
+  "0x2407b9b9662d970ece2224a0403d3b15c7e4d1fe": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 2",
+   "type": "exchange_wallet"
+  },
+  "0x267be1c1d684f78cb4f6a176c4911b741e4ffdc0": {
+   "exchange": "Kraken",
+   "label": "Kraken 4",
+   "type": "hot_wallet"
+  },
+  "0x274f3c32c90517975e29dfc209a23f315c1e5fc7": {
+   "exchange": "Hotbit",
+   "label": "Hotbit 1",
+   "type": "hot_wallet"
+  },
+  "0x2864de013415b6c2c7a96333183b20f0f9cc7532": {
+   "exchange": "Korbit",
+   "label": "Korbit 2",
+   "type": "exchange_wallet"
+  },
+  "0x28c6c06298d514db089934071355e5743bf21d60": {
+   "exchange": "Binance",
+   "label": "Binance 14",
+   "type": "hot_wallet"
+  },
+  "0x292f04a44506c2fd49bac032e1ca148c35a478c8": {
+   "exchange": "CoinsPaid",
+   "label": "CoinsPaid 2",
+   "type": "exchange_wallet"
+  },
+  "0x29bdfbf7d27462a2d115748ace2bd71a2646946c": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 17",
+   "type": "hot_wallet"
+  },
+  "0x2d6323cc438b96f0ae942280762cc507b5398563": {
+   "exchange": "CoinW",
+   "label": "CoinW 19",
+   "type": "exchange_wallet"
+  },
+  "0x2e581a5ae722207aa59acd3939771e7c7052dd3d": {
+   "exchange": "Binance",
+   "label": "Binance 25",
+   "type": "exchange_wallet"
+  },
+  "0x2e8f79ad740de90dc5f5a9f0d8d9661a60725e64": {
+   "exchange": "MEXC",
+   "label": "Mexc.com 3",
+   "type": "exchange_wallet"
+  },
+  "0x2faf487a4414fe77e2327f0bf4ae2a264a776ad2": {
+   "exchange": "FTX",
+   "label": "FTX 1",
+   "type": "exchange_wallet"
+  },
+  "0x328130164d0f2b9d7a52edc73b3632e713ff0ec6": {
+   "exchange": "BitMart",
+   "label": "Bitmart: Wallet 2",
+   "type": "exchange_wallet"
+  },
+  "0x3339afcb8e237aa8aaf3e1040473173830efd09c": {
+   "exchange": "CoinEx",
+   "label": "CoinEx 8",
+   "type": "exchange_wallet"
+  },
+  "0x33a64dcdfa041befebc9161a3e0c6180cd94fa89": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 16",
+   "type": "exchange_wallet"
+  },
+  "0x3421230289980b8ea81781b170ef7d475673102b": {
+   "exchange": "ChangeNOW",
+   "label": "ChangeNOW 8",
+   "type": "exchange_wallet"
+  },
+  "0x345d8e3a1f62ee6b1d483890976fd66168e390f2": {
+   "exchange": "Binance",
+   "label": "Binance 23",
+   "type": "exchange_wallet"
+  },
+  "0x3727cfcbd85390bb11b3ff421878123adb866be8": {
+   "exchange": "Bitbank",
+   "label": "Bitbank 2",
+   "type": "exchange_wallet"
+  },
+  "0x39aa02d6b499a76a70fab5f164e8be587c366141": {
+   "exchange": "Hotbit",
+   "label": "Hotbit",
+   "type": "hot_wallet"
+  },
+  "0x3ab28ecedea6cdb6feed398e93ae8c7b316b1182": {
+   "exchange": "BitMart",
+   "label": "BitMart 3",
+   "type": "exchange_wallet"
+  },
+  "0x3c02290922a3618a4646e3bbca65853ea45fe7c6": {
+   "exchange": "Indodax",
+   "label": "Indodax 6",
+   "type": "exchange_wallet"
+  },
+  "0x3c783c21a0383057d128bae431894a5c19f9cf06": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 8",
+   "type": "hot_wallet"
+  },
+  "0x3cc936b795a188f0e246cbb2d74c5bd190aecf18": {
+   "exchange": "MEXC",
+   "label": "MEXC 3",
+   "type": "exchange_wallet"
+  },
+  "0x3d55ccb2a943d88d39dd2e62daf767c69fd0179f": {
+   "exchange": "OKX",
+   "label": "OKX 23",
+   "type": "exchange_wallet"
+  },
+  "0x3d8fc1cffaa110f7a7f9f8bc237b73d54c4abf61": {
+   "exchange": "Uphold",
+   "label": "Uphold 2",
+   "type": "exchange_wallet"
+  },
+  "0x3dd878a95dcaef2800cd57bb065b5e8f2f438131": {
+   "exchange": "MaskEX",
+   "label": "MaskEX 3",
+   "type": "exchange_wallet"
+  },
+  "0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be": {
+   "exchange": "Binance",
+   "label": "Binance 1",
+   "type": "hot_wallet"
+  },
+  "0x41772edd47d9ddf9ef848cdb34fe76143908c7ad": {
+   "exchange": "FTX",
+   "label": "FTX 4",
+   "type": "exchange_wallet"
+  },
+  "0x44592b81c05b4c35efb8424eb9d62538b949ebbf": {
+   "exchange": "Binance",
+   "label": "Binance 26",
+   "type": "exchange_wallet"
+  },
+  "0x46340b20830761efd32832a74d7169b29feb9758": {
+   "exchange": "Crypto.com",
+   "label": "Crypto.com 2",
+   "type": "hot_wallet"
+  },
+  "0x4727250679294802377dd6ca6541b8e459077c95": {
+   "exchange": "FixedFloat",
+   "label": "FixedFloat: Hot Wallet",
+   "type": "hot_wallet"
+  },
+  "0x4785e47ae7061632c2782384da28b9f68a5647a3": {
+   "exchange": "BitVenus",
+   "label": "BitVenus 6",
+   "type": "exchange_wallet"
+  },
+  "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503": {
+   "exchange": "Binance",
+   "label": "Binance: Binance-Peg Tokens",
+   "type": "exchange_wallet"
+  },
+  "0x4982085c9e2f89f2ecb8131eca71afad896e89cb": {
+   "exchange": "MEXC",
+   "label": "mexc.com",
+   "type": "exchange_wallet"
+  },
+  "0x4a41d76b0524a3989998380c033f12bfeb5f7201": {
+   "exchange": "Hotbit",
+   "label": "Hotbit 13",
+   "type": "hot_wallet"
+  },
+  "0x4b1a99467a284cc690e3237bc69105956816f762": {
+   "exchange": "AscendEX",
+   "label": "AscendEX 2",
+   "type": "exchange_wallet"
+  },
+  "0x4c2f150fc90fed3d8281114c2349f1906cde5346": {
+   "exchange": "Gemini",
+   "label": "Gemini: Deployer 2",
+   "type": "exchange_wallet"
+  },
+  "0x4d24eececb86041f47bca41265319e9f06ae2fcb": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 4",
+   "type": "exchange_wallet"
+  },
+  "0x5041ed759dd4afc3a72b8192c143f72f4724081a": {
+   "exchange": "OKX",
+   "label": "OKX 7",
+   "type": "exchange_wallet"
+  },
+  "0x50b0063161e507bec6c21cc23fd11ec2945b7b52": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 32",
+   "type": "exchange_wallet"
+  },
+  "0x515b72ed8a97f42c568d6a143232775018f133c8": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 12",
+   "type": "hot_wallet"
+  },
+  "0x51836a753e344257b361519e948ffcaf5fb8d521": {
+   "exchange": "Indodax",
+   "label": "Indodax 1",
+   "type": "exchange_wallet"
+  },
+  "0x53f78a071d04224b8e254e243fffc6d9f2f3fa23": {
+   "exchange": "KuCoin",
+   "label": "Kucoin: Hot Wallet 2",
+   "type": "hot_wallet"
+  },
+  "0x540c428d67b6038c7e6199a02605cbb3b6626384": {
+   "exchange": "Azbit",
+   "label": "Azbit: Azbit 2",
+   "type": "exchange_wallet"
+  },
+  "0x562680a4dc50ed2f14d75bf31f494cfe0b8d10a1": {
+   "exchange": "Hotbit",
+   "label": "Hotbit 9",
+   "type": "hot_wallet"
+  },
+  "0x56de1961fda5454e6f8e6d0e3124ff648fd69400": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 4",
+   "type": "exchange_wallet"
+  },
+  "0x5754284f345afc66a98fbb0a0afe71e0f007b949": {
+   "exchange": "Bitfinex",
+   "label": "Tether: Treasury",
+   "type": "exchange_wallet"
+  },
+  "0x5a52e96bacdabb82fd05763e25335261b270efcb": {
+   "exchange": "Binance",
+   "label": "Binance 28",
+   "type": "exchange_wallet"
+  },
+  "0x5bdf85216ec1e38d6458c870992a69e38e03f7ef": {
+   "exchange": "Bitget",
+   "label": "Bitget 5",
+   "type": "exchange_wallet"
+  },
+  "0x5f397b62502e255f68382791947d54c4b2d37f09": {
+   "exchange": "Deribit",
+   "label": "Deribit 8",
+   "type": "exchange_wallet"
+  },
+  "0x6025d96932d378be7d0a46343b437678a126ecca": {
+   "exchange": "HitBTC",
+   "label": "HitBTC: Hot Wallet 1",
+   "type": "hot_wallet"
+  },
+  "0x60f9e80d0d40b2958ac39006635de782096866c3": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 12",
+   "type": "exchange_wallet"
+  },
+  "0x6262998ced04146fa42253a5c0af90ca02dfd2a3": {
+   "exchange": "Crypto.com",
+   "label": "Crypto.com 1",
+   "type": "hot_wallet"
+  },
+  "0x631fc1ea2270e98fbd9d92658ece0f5a269aa161": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet",
+   "type": "hot_wallet"
+  },
+  "0x660e3bd3bcda11538fa331282666f1d001b87a42": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 21",
+   "type": "exchange_wallet"
+  },
+  "0x661bc014ba045a1918215cbe2af8121ada09638d": {
+   "exchange": "BTSE",
+   "label": "BTSE 5",
+   "type": "exchange_wallet"
+  },
+  "0x68841a1806ff291314946eebd0cda8b348e73d6d": {
+   "exchange": "OKX",
+   "label": "OKX 26",
+   "type": "exchange_wallet"
+  },
+  "0x6cc5f688a315f3dc28a7781717a9a798a59fda7b": {
+   "exchange": "OKX",
+   "label": "OKX 1",
+   "type": "hot_wallet"
+  },
+  "0x6dfc34609a05bc22319fa4cce1d1e2929548c0d7": {
+   "exchange": "AlphaPo",
+   "label": "AlphaPo 1",
+   "type": "exchange_wallet"
+  },
+  "0x72a53cdbbcc1b9efa39c834a540550e23463aacb": {
+   "exchange": "Crypto.com",
+   "label": "Crypto.com",
+   "type": "exchange_wallet"
+  },
+  "0x7344e478574acbe6dac9de1077430139e17eec3d": {
+   "exchange": "Nexo",
+   "label": "Nexo 4",
+   "type": "exchange_wallet"
+  },
+  "0x73f5ebe90f27b46ea12e5795d16c4b408b19cc6f": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 18",
+   "type": "hot_wallet"
+  },
+  "0x75e89d5979e4f6fba9f97c104c2f0afb3f1dcb88": {
+   "exchange": "MEXC",
+   "label": "MEXC 1",
+   "type": "exchange_wallet"
+  },
+  "0x7651fc1605a58fe9a99f1fe0d6db05d4182a9a93": {
+   "exchange": "Bitget",
+   "label": "Bitget 21",
+   "type": "exchange_wallet"
+  },
+  "0x768f2a7ccdfde9ebdfd5cea8b635dd590cb3a3f1": {
+   "exchange": "Hotbit",
+   "label": "Hotbit 11",
+   "type": "hot_wallet"
+  },
+  "0x77021d475e36b3ab1921a0e3a8380f069d3263de": {
+   "exchange": "Deribit",
+   "label": "Deribit 9",
+   "type": "exchange_wallet"
+  },
+  "0x77134cbc06cb00b66f4c7e623d5fdbf6777635ec": {
+   "exchange": "Bitfinex",
+   "label": "Bitfinex 4",
+   "type": "hot_wallet"
+  },
+  "0x7a8a34db9acd10c3b6277473b192fe47192569ca": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 14",
+   "type": "hot_wallet"
+  },
+  "0x7dafba1d69f6c01ae7567ffd7b046ca03b706f83": {
+   "exchange": "Kraken",
+   "label": "Kraken 245",
+   "type": "exchange_wallet"
+  },
+  "0x7dfe9a368b6cf0c0309b763bb8d16da326e8f46e": {
+   "exchange": "Binance",
+   "label": "Binance 22",
+   "type": "exchange_wallet"
+  },
+  "0x7eb6c83ab7d8d9b8618c0ed973cbef71d1921ef2": {
+   "exchange": "OKX",
+   "label": "OKX 20",
+   "type": "exchange_wallet"
+  },
+  "0x7ff8bbf9c8ab106db589e7863fb100525f61cce5": {
+   "exchange": "BloFin",
+   "label": "BloFin: Hot Wallet 1",
+   "type": "hot_wallet"
+  },
+  "0x8550e644d74536f1df38b17d5f69aa1bfe28ae86": {
+   "exchange": "Korbit",
+   "label": "Korbit 3",
+   "type": "exchange_wallet"
+  },
+  "0x85c0d1110c57a329ccd6cc91e50fb4666f2287c3": {
+   "exchange": "GMO Coin",
+   "label": "GMO Coin 4",
+   "type": "exchange_wallet"
+  },
+  "0x87eab4f119113e0e5920288936ad94c307b4849a": {
+   "exchange": "Bitvavo",
+   "label": "Bitvavo 9",
+   "type": "exchange_wallet"
+  },
+  "0x881368e08cc5353e0188b2ca0401b5de35f319f4": {
+   "exchange": "Dex-Trade",
+   "label": "Dex-Trade 2",
+   "type": "exchange_wallet"
+  },
+  "0x8894e0a0c962cb723c1976a4421c95949be2d4e3": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 6",
+   "type": "hot_wallet"
+  },
+  "0x892e9e24aea3f27f4c6e9360e312cce93cc98ebe": {
+   "exchange": "Binance",
+   "label": "Binance 30",
+   "type": "exchange_wallet"
+  },
+  "0x8958618332df62af93053cb9c535e26462c959b0": {
+   "exchange": "Cobinhood",
+   "label": "Cobinhood 1",
+   "type": "exchange_wallet"
+  },
+  "0x8c128dba2cb66399341aa877315be1054be75da8": {
+   "exchange": "BitMart",
+   "label": "Bitmart: Wallet",
+   "type": "exchange_wallet"
+  },
+  "0x8c7efd5b04331efc618e8006f19019a3dc88973e": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 2",
+   "type": "exchange_wallet"
+  },
+  "0x8ff804cc2143451f454779a40de386f913dcff20": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 4",
+   "type": "hot_wallet"
+  },
+  "0x9036b1eb7630d9a45720fd80d05d46262f460529": {
+   "exchange": "BTSE",
+   "label": "BTSE 2",
+   "type": "exchange_wallet"
+  },
+  "0x916ed5586bb328e0ec1a428af060dc3d10919d84": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 7",
+   "type": "exchange_wallet"
+  },
+  "0x91a0a3043f68986043d7083c4d85b558b21f0a7b": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 18",
+   "type": "exchange_wallet"
+  },
+  "0x9239df3e9996c776d539eb9f01a8ae8e7957b3c3": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 15",
+   "type": "exchange_wallet"
+  },
+  "0x92dbd8e0a46edd62aa42d1f7902d0e496bddc15a": {
+   "exchange": "Azbit",
+   "label": "Azbit",
+   "type": "exchange_wallet"
+  },
+  "0x975d9bd9928f398c7e01f6ba236816fa558cd94b": {
+   "exchange": "ChangeNOW",
+   "label": "ChangeNOW: Hot Wallet 1",
+   "type": "hot_wallet"
+  },
+  "0x97b9d2102a9a65a26e1ee82d59e42d1b73b68689": {
+   "exchange": "Bitget",
+   "label": "Bitget 3",
+   "type": "exchange_wallet"
+  },
+  "0x986a2fca9eda0e06fbf7839b89bfc006ee2a23dd": {
+   "exchange": "AscendEX",
+   "label": "AscendEX Hot Wallet",
+   "type": "hot_wallet"
+  },
+  "0x9a10da8ce77f26231860764a2caab36e70584c4b": {
+   "exchange": "AlphaPo",
+   "label": "AlphaPo: Hot Wallet 3",
+   "type": "hot_wallet"
+  },
+  "0x9ade1c17d25246c405604344f89e8f23f8c1c632": {
+   "exchange": "FTX",
+   "label": "FTX 6",
+   "type": "exchange_wallet"
+  },
+  "0x9b0c45d46d386cedd98873168c36efd0dcba8d46": {
+   "exchange": "Revolut",
+   "label": "Revolut 3",
+   "type": "exchange_wallet"
+  },
+  "0x9cbadd5ce7e14742f70414a6dcbd4e7bb8712719": {
+   "exchange": "Indodax",
+   "label": "Indodax 2",
+   "type": "exchange_wallet"
+  },
+  "0x9d5db4b86afd9fe80720ca0f5637d6b790ce5bcb": {
+   "exchange": "Bitvavo",
+   "label": "Bitvavo 12",
+   "type": "exchange_wallet"
+  },
+  "0xa180fe01b906a1be37be6c534a3300785b20d947": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 16",
+   "type": "hot_wallet"
+  },
+  "0xa20f10289248717374e9b7776dc368aa526cb6f2": {
+   "exchange": "CoinW",
+   "label": "CoinW 4",
+   "type": "exchange_wallet"
+  },
+  "0xa344c7ada83113b3b56941f6e85bf2eb425949f3": {
+   "exchange": "Binance",
+   "label": "Binance 27",
+   "type": "exchange_wallet"
+  },
+  "0xa6f617f873684ed062c9df281145250b3e4ee2d2": {
+   "exchange": "Firi",
+   "label": "Firi 2",
+   "type": "exchange_wallet"
+  },
+  "0xa7efae728d2936e78bda97dc267687568dd593f3": {
+   "exchange": "OKX",
+   "label": "OKX 3",
+   "type": "hot_wallet"
+  },
+  "0xa89a1278ac85367f38bdf6746658ce2b9875526e": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 9",
+   "type": "exchange_wallet"
+  },
+  "0xa96be652a08d9905f15b7fbe2255708709becd09": {
+   "exchange": "ChangeNOW",
+   "label": "ChangeNOW: Hot Wallet 2",
+   "type": "hot_wallet"
+  },
+  "0xa986266b60390e1d313ecd3b2311a9af74c57400": {
+   "exchange": "Hotbit",
+   "label": "Hotbit 12",
+   "type": "hot_wallet"
+  },
+  "0xaa9133eec3ae5f9440c1a1e61e2d2cc571675527": {
+   "exchange": "ABCC",
+   "label": "ABCC Exchange",
+   "type": "exchange_wallet"
+  },
+  "0xab782bc7d4a2b306825de5a7730034f8f63ee1bc": {
+   "exchange": "Bitvavo",
+   "label": "Bitvavo: Hot 3",
+   "type": "hot_wallet"
+  },
+  "0xad9ffffd4573b642959d3b854027735579555cbc": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 5",
+   "type": "hot_wallet"
+  },
+  "0xada1fa671651d335998c6a0de336a78f5b49ad3f": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 35",
+   "type": "exchange_wallet"
+  },
+  "0xb1256d6b31e4ae87da1d56e5890c66be7f1c038e": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 2",
+   "type": "hot_wallet"
+  },
+  "0xb18fbfe3d34fdc227eb4508cde437412b6233121": {
+   "exchange": "Hotbit",
+   "label": "Hotbit 10",
+   "type": "hot_wallet"
+  },
+  "0xb23360ccdd9ed1b15d45e5d3824bb409c8d7c460": {
+   "exchange": "Revolut",
+   "label": "Revolut 1",
+   "type": "exchange_wallet"
+  },
+  "0xb56f9e1aecb821413c9f14822d3918a363d83226": {
+   "exchange": "AltCoinTrader",
+   "label": "AltCoinTrader 7",
+   "type": "exchange_wallet"
+  },
+  "0xb79421720b92180487f71f13c5d5d8b9eca27bf1": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 16",
+   "type": "exchange_wallet"
+  },
+  "0xb8cda8d72da558ef8f76a0d928f9652d2b003e2e": {
+   "exchange": "Bitget",
+   "label": "Bitget 20",
+   "type": "exchange_wallet"
+  },
+  "0xb9ee1e551f538a464e8f8c41e9904498505b49b0": {
+   "exchange": "CoinEx",
+   "label": "Coinex",
+   "type": "exchange_wallet"
+  },
+  "0xbac051bbf79c5321c0f825ea9bca71f992144029": {
+   "exchange": "ChangeNOW",
+   "label": "ChangeNOW 11",
+   "type": "exchange_wallet"
+  },
+  "0xbb4d1dc5c1abec4ea11166ec97e714862863ad1d": {
+   "exchange": "BTSE",
+   "label": "BTSE 1",
+   "type": "exchange_wallet"
+  },
+  "0xbd612a3f30dca67bf60a39fd0d35e39b7ab80774": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 13",
+   "type": "hot_wallet"
+  },
+  "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8": {
+   "exchange": "Binance",
+   "label": "Binance 7",
+   "type": "cold_wallet"
+  },
+  "0xbe774bb4a11c033c68ff0cc515b3316e93e94465": {
+   "exchange": "DIFX",
+   "label": "DIFX 1",
+   "type": "exchange_wallet"
+  },
+  "0xbf94f0ac752c739f623c463b5210a7fb2cbb420b": {
+   "exchange": "OKX",
+   "label": "OKX 24",
+   "type": "exchange_wallet"
+  },
+  "0xc07b9ddc7f87e76e682a7a4f3859586eef1c7efd": {
+   "exchange": "Delta Exchange",
+   "label": "Delta Exchange 1",
+   "type": "exchange_wallet"
+  },
+  "0xc098b2a3aa256d2140208c3de6543aaef5cd3a94": {
+   "exchange": "FTX",
+   "label": "FTX 2",
+   "type": "exchange_wallet"
+  },
+  "0xc15dc0b4223b05588a257e48ed129fb59c6eb7e3": {
+   "exchange": "Bitvavo",
+   "label": "Bitvavo 13",
+   "type": "exchange_wallet"
+  },
+  "0xc21a1d213f64fedea3415737cce2be37eb59be81": {
+   "exchange": "Fastex",
+   "label": "Fastex 2",
+   "type": "exchange_wallet"
+  },
+  "0xc365c3315cf926351ccaf13fa7d19c8c4058c8e1": {
+   "exchange": "Binance",
+   "label": "Binance Pool",
+   "type": "exchange_wallet"
+  },
+  "0xc3c8e0a39769e2308869f7461364ca48155d1d9e": {
+   "exchange": "Binance",
+   "label": "Binance 24",
+   "type": "exchange_wallet"
+  },
+  "0xc58bb74606b73c5043b75d7aa25ebe1d5d4e7c72": {
+   "exchange": "AltCoinTrader",
+   "label": "AltCoinTrader 1",
+   "type": "exchange_wallet"
+  },
+  "0xc6acb77befebff0359cc581973859eee8cbaeda1": {
+   "exchange": "MaskEX",
+   "label": "MaskEX 10",
+   "type": "exchange_wallet"
+  },
+  "0xc7029e939075f48fa2d5953381660c7d01570171": {
+   "exchange": "Hotbit",
+   "label": "Hotbit 2",
+   "type": "hot_wallet"
+  },
+  "0xc882b111a75c0c657fc507c04fbfcd2cc984f071": {
+   "exchange": "Gate.io",
+   "label": "Gate.io 5",
+   "type": "exchange_wallet"
+  },
+  "0xcc282e2004428939ee5149a9e7872f0b4d5d5ec7": {
+   "exchange": "Kraken",
+   "label": "Kraken: Hot Wallet 3",
+   "type": "hot_wallet"
+  },
+  "0xcc5f916c45e7a3506186fff370fb985ba93a5167": {
+   "exchange": "Fairdesk",
+   "label": "Fairdesk 3",
+   "type": "exchange_wallet"
+  },
+  "0xcce8d59affdd93be338fc77fa0a298c2cb65da59": {
+   "exchange": "Bilaxy",
+   "label": "Bilaxy 2",
+   "type": "exchange_wallet"
+  },
+  "0xd24400ae8bfebb18ca49be86258a3c749cf46853": {
+   "exchange": "Gemini",
+   "label": "Gemini",
+   "type": "exchange_wallet"
+  },
+  "0xd2c82f2e5fa236e114a81173e375a73664610998": {
+   "exchange": "CoinList",
+   "label": "CoinList 3",
+   "type": "exchange_wallet"
+  },
+  "0xd2dd7b597fd2435b6db61ddf48544fd931e6869f": {
+   "exchange": "Kraken",
+   "label": "Kraken 246",
+   "type": "exchange_wallet"
+  },
+  "0xd6216fc19db775df9774a6e33526131da7d19a2c": {
+   "exchange": "KuCoin",
+   "label": "KuCoin 6",
+   "type": "exchange_wallet"
+  },
+  "0xd6e0f7da4480b3ad7a2c8b31bc5a19325355ca15": {
+   "exchange": "Korbit",
+   "label": "Korbit 5",
+   "type": "exchange_wallet"
+  },
+  "0xd7aed730a7c4cf8dfe313b16712af3406f6dca5b": {
+   "exchange": "MaskEX",
+   "label": "MaskEX 12",
+   "type": "exchange_wallet"
+  },
+  "0xd88b55467f58af508dbfdc597e8ebd2ad2de49b3": {
+   "exchange": "Binance",
+   "label": "Binance 21",
+   "type": "exchange_wallet"
+  },
+  "0xda07f1603a1c514b2f4362f3eae7224a9cdefaf9": {
+   "exchange": "CoinEx",
+   "label": "CoinEx 4",
+   "type": "exchange_wallet"
+  },
+  "0xdb6fdc30ab61c7cca742d4c13d1b035f3f82019a": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 10",
+   "type": "exchange_wallet"
+  },
+  "0xdbfc4549b325b6f00013a3861b87aab6696fdbee": {
+   "exchange": "Bitbank",
+   "label": "Bitbank 4",
+   "type": "exchange_wallet"
+  },
+  "0xdccf3b77da55107280bd850ea519df3705d1a75a": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 9",
+   "type": "hot_wallet"
+  },
+  "0xdce92f40cadde2c4e3ea78b8892c540e6bfe2f81": {
+   "exchange": "CoinsPaid",
+   "label": "CoinsPaid 1",
+   "type": "exchange_wallet"
+  },
+  "0xddaad971be05321fd541372cd710a7f0555972ed": {
+   "exchange": "BTSE",
+   "label": "BTSE 3",
+   "type": "exchange_wallet"
+  },
+  "0xde279a5cd86860cd3d039aa1b74bc29e74cabb12": {
+   "exchange": "BTSE",
+   "label": "BTSE 4",
+   "type": "exchange_wallet"
+  },
+  "0xe2fc31f816a9b94326492132018c3aecc4a93ae1": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 7",
+   "type": "hot_wallet"
+  },
+  "0xe59cd29be3be4461d79c0881d238cbe87d64595a": {
+   "exchange": "KuCoin",
+   "label": "Kucoin 7",
+   "type": "exchange_wallet"
+  },
+  "0xe66baa0b612003af308d78f066bbdb9a5e00ff6c": {
+   "exchange": "Coinhako",
+   "label": "Coinhako: Warm Wallet",
+   "type": "exchange_wallet"
+  },
+  "0xe8a0e282e6a3e8023465accd47fae39dd5db010b": {
+   "exchange": "Kryptono",
+   "label": "Kryptono 1",
+   "type": "exchange_wallet"
+  },
+  "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
+   "exchange": "Binance",
+   "label": "Binance: BUSD Stablecoin",
+   "type": "exchange_wallet"
+  },
+  "0xeb2d2f1b8c558a40207669291fda468e50c8a0bb": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 10",
+   "type": "hot_wallet"
+  },
+  "0xeea81c4416d71cef071224611359f6f99a4c4294": {
+   "exchange": "BitMEX",
+   "label": "BitMEX 1",
+   "type": "exchange_wallet"
+  },
+  "0xef7a2610a7c9cfb2537d68916b6a87fea8acfec3": {
+   "exchange": "BitVenus",
+   "label": "BitVenus 4",
+   "type": "exchange_wallet"
+  },
+  "0xefdca55e4bce6c1d535cb2d0687b5567eef2ae83": {
+   "exchange": "Huobi / HTX",
+   "label": "Huobi 1",
+   "type": "exchange_wallet"
+  },
+  "0xf0bc8fddb1f358cef470d63f96ae65b1d7914953": {
+   "exchange": "Korbit",
+   "label": "Korbit 8",
+   "type": "exchange_wallet"
+  },
+  "0xf2067abfab8bc621211935431519d41825d2f344": {
+   "exchange": "Coinstore",
+   "label": "Coinstore 3",
+   "type": "exchange_wallet"
+  },
+  "0xf22a4b9d9d1b20b44699e36a1e3903e78143f9da": {
+   "exchange": "Bilaxy",
+   "label": "Bilaxy 3",
+   "type": "exchange_wallet"
+  },
+  "0xf250ee103b8e4c5b9825a270e5c70ea0c113c854": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 41",
+   "type": "exchange_wallet"
+  },
+  "0xf35a6bd6e0459a4b53a27862c51a2a7292b383d1": {
+   "exchange": "CoinSpot",
+   "label": "CoinSpot 1",
+   "type": "exchange_wallet"
+  },
+  "0xf89d7b9c864f589bbf53a82105107622b35eaa40": {
+   "exchange": "Bybit",
+   "label": "Bybit 1",
+   "type": "hot_wallet"
+  },
+  "0xf9225f3288f6cb0d0f80a5561e73102565e8bd8c": {
+   "exchange": "Bitbank",
+   "label": "Bitbank 5",
+   "type": "exchange_wallet"
+  },
+  "0xf977814e90da44bfa03b6295a0616a897441acec": {
+   "exchange": "Binance",
+   "label": "Binance: Hot Wallet 20",
+   "type": "hot_wallet"
+  },
+  "0xfb8131c260749c7835a08ccbdb64728de432858e": {
+   "exchange": "BitMEX",
+   "label": "BitMEX 2",
+   "type": "exchange_wallet"
   }
+ }
 }

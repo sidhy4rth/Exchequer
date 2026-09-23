@@ -12,6 +12,7 @@ Endpoints:
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -285,6 +286,43 @@ def _direct_senders(graph: nx.DiGraph, seed: str) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+STATEMENT_ROWS = 25
+
+
+def _wallet_statement(client: Any, address: str) -> dict[str, Any] | None:
+    """The reported address's latest credits and debits, newest first.
+
+    Read from the same provider as the trace (the outgoing side is usually a
+    cache hit, since the walk just asked for it). A provider that cannot list
+    incoming transfers, or fails, costs the statement, never the trace.
+    """
+    def rows(txs: list[Any], counterparty: str) -> list[dict[str, Any]]:
+        return [{"tx": t.hash, "time": t.timestamp, "amount": round(t.value_native, 6),
+                 "counterparty": getattr(t, counterparty)} for t in txs[:STATEMENT_ROWS]]
+    try:
+        sent = client.get_outgoing_transactions(address, limit=STATEMENT_ROWS)
+        received = (client.get_incoming_transactions(address, limit=STATEMENT_ROWS)
+                    if hasattr(client, "get_incoming_transactions") else [])
+    except Exception as exc:  # noqa: BLE001 -- a statement is never worth a failed trace
+        logger.warning("Wallet statement for %s failed: %s", address, exc)
+        return None
+    debits, credits = rows(sent, "to_address"), rows(received, "from_address")
+    # Address poisoning: a stranger sends dust from an address whose first and
+    # last characters copy one this wallet really paid, hoping the owner later
+    # copies the lookalike from their history. Marked, never hidden.
+    paid = {(d["counterparty"] or "").lower() for d in debits}
+    shapes = {(p[:6], p[-4:]) for p in paid if p}
+    for row in credits:
+        c = (row["counterparty"] or "").lower()
+        row["lookalike"] = bool(c) and c not in paid and (c[:6], c[-4:]) in shapes
+    return {
+        "debits": debits,
+        "credits": credits,
+        "rows_per_side": STATEMENT_ROWS,
+        "lookalikes": sum(1 for r in credits if r["lookalike"]),
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     """Liveness probe, plus the configuration facts that break demos."""
@@ -481,6 +519,17 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             # Every provider response the trace was computed from, hashed on
             # arrival. Taken while the client is still open, after the last
             # call that could add to it (the balance reads above).
+            # The reported wallet's own statement: what it received and sent in
+            # this asset, whether or not anything could be followed onward.
+            statement = _wallet_statement(client, seed) if seed_window is None else None
+            # A provider that searches a block range (NodeReal) says how far
+            # back it looked when it found nothing, so "sent nothing" is never
+            # claimed for history the search did not reach.
+            searched_since = None
+            floor = (getattr(client, "searched_from", None) or {}).get(seed)
+            if floor is not None and hasattr(client, "block_time"):
+                searched_since = client.block_time(floor)
+            deep = (getattr(client, "deep_searched", None) or {}).get(seed)
             evidence = client.evidence.manifest() if hasattr(client, "evidence") else None
             # Whether contract-moved value was part of the data, for the
             # limitations paragraph. Only the Etherscan native path reads it.
@@ -557,12 +606,32 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         others = [chain.native_symbol] + [t.symbol for t in chain.tokens]
         others = [a for a in others if a != asset_symbol]
         alternatives = f" — try {' or '.join(others)}." if others else "."
-        if direction == OUTGOING:
+        since = (
+            f" since {datetime.fromtimestamp(searched_since, tz=timezone.utc):%d %b %Y}"
+            if searched_since else ""
+        )
+        if direction == OUTGOING and since:
+            message = (
+                f"No {asset_symbol} with value was sent by this address in the history "
+                f"searched ({chain.name}{since}). "
+                + ("Its earlier sends were located and read too, and none moved "
+                   f"{asset_symbol}. " if deep else "")
+                + "It may have only received funds, or the money may have moved as a "
+                "different asset" + alternatives
+            )
+        elif direction == OUTGOING:
             message = (
                 f"This address sent no {asset_symbol} with value, so there is "
                 f"nothing to trace in {asset_symbol}. It may have only received "
                 "funds, or the money may have moved as a different asset"
                 + alternatives
+            )
+        elif since:
+            message = (
+                f"No {asset_symbol} with value reached this address in the history "
+                f"searched ({chain.name}{since}). Earlier deposits are outside what a "
+                "reverse trace on this chain reads; a forward trace from the sender "
+                "finds them" + "."
             )
         else:
             message = (
@@ -666,6 +735,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "explorer_url": chain.explorer_url,
         "created_at": None,  # set with the case id
         "message": message,
+        "statement": statement,
         "exchange_address": primary.address if primary else None,
         "exchange_label": primary.label if primary else None,
         # True when the attribution names an inferred deposit address rather

@@ -466,6 +466,38 @@ export default function TraceView() {
                   ))}
                 </div>
               </div>
+
+              {result.statement && (result.statement.credits.length > 0 || result.statement.debits.length > 0) && (
+                <details className="card sec">
+                  <summary>
+                    <span className="micro">Wallet statement · {unit}</span>
+                    <span className="note">
+                      {result.statement.credits.length} in · {result.statement.debits.length} out · latest {result.statement.rows_per_side} each
+                      {result.statement.lookalikes > 0 && ` · ${result.statement.lookalikes} lookalike`}
+                    </span>
+                  </summary>
+                  <div className="feed">
+                    {[['credits', 'Money in', 'from', '+'], ['debits', 'Money out', 'to', '−']].map(([key, title, dir, sign]) => (
+                      <div key={key}>
+                        <p className="note" style={{ padding: '10px 12px 4px' }}><strong>{title}</strong>{result.statement[key].length === 0 ? ' — none found' : ''}</p>
+                        {result.statement[key].map((r) => (
+                          <div className="row" key={r.tx + key}>
+                            <div className="hop">{sign}</div>
+                            <div>
+                              <div className="pair"><span className="note">{dir}</span> <Address value={r.counterparty} head={8} tail={6} /></div>
+                              <div className="sub">
+                                <span>{when(r.time)}</span>
+                                {r.lookalike && <span className="pill red" title="A stranger's address copying the start and end of one this wallet really paid — address poisoning. Never copy an address from history.">lookalike · address poisoning</span>}
+                              </div>
+                            </div>
+                            <div className="amount">{num(r.amount)}<span className="unit">{unit}</span></div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
 
             <aside className="rail">

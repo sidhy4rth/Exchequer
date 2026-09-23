@@ -67,6 +67,22 @@ MAX_SCAN = 1_000
 # that costs nothing, since a trace is not interested in the last few seconds
 # of chain history anyway. The retry below covers the margin being wrong.
 INDEX_LAG_BLOCKS = 32
+
+# A wallet quiet for longer than the lookback is found through its nonce: the
+# count of transactions it has sent, readable at any past block. A binary search
+# over blocks finds when it last sent (about 27 cheap calls), and history is
+# read backwards from there for up to this many more windows. Only wallets the
+# recent search found nothing for pay this; busy ones never do.
+DEEP_WINDOWS = 20
+# Deep searches per client (one trace). The reported address is asked about
+# first, so it always gets one; a trace whose every quiet hop went deep would
+# take minutes, and a hop is already bounded by the time the funds arrived.
+DEEP_BUDGET = 1
+# A wallet this client has seen receive funds is searched forward from the
+# block they arrived in, for up to this many windows (~2.5 days at BSC's
+# ~0.45 s blocks): a trace follows money only after it arrived, so that is
+# the history that matters, and most of it moves on within days.
+ARRIVAL_WINDOWS = 5
 NOT_INDEXED = "not reached"
 
 
@@ -105,6 +121,13 @@ class NoderealClient:
         # chain's native currency.
         self.contract_addresses = [normalize_address(a) for a in (contract_addresses or [])]
         self.asset_symbol = asset_symbol or native_symbol
+        # address -> (lowest, highest) block of a nonce-located deep search, and
+        # address -> lowest block searched when nothing was found at all.
+        self.deep_searched: dict[str, tuple[int, int]] = {}
+        self.searched_from: dict[str, int] = {}
+        self._send_ranges: dict[str, tuple[int, int] | None] = {}
+        # address -> earliest block this client has seen it receive in.
+        self._arrived: dict[str, int] = {}
         self.lookback_blocks = (
             lookback_blocks if lookback_blocks is not None else config.NODEREAL_LOOKBACK_BLOCKS
         )
@@ -286,15 +309,84 @@ class NoderealClient:
             raise ValueError(f"Not a valid EVM address: {address!r}")
 
         cap = limit or config.TRACE_MAX_TXS_PER_ADDRESS
-        category = [CATEGORY_ERC20] if self.contract_addresses else [CATEGORY_NATIVE]
-
         head = self.head_block()
         floor = max(0, head - self.lookback_blocks)
+        collected = self._scan(address, direction_param, cap, head, floor)
+        lowest = floor
+        key = normalize_address(address)
+        arrived = self._arrived.get(key)
+        if not collected and direction_param == "fromAddress" and arrived is not None and arrived < floor:
+            top = min(floor - 1, arrived + ARRIVAL_WINDOWS * MAX_BLOCK_WINDOW)
+            collected = self._scan(address, direction_param, cap, top, arrived)
+            lowest = arrived
+        if not collected and (key in self._send_ranges or len(self._send_ranges) < DEEP_BUDGET):
+            sent = self.send_range(address)
+            if sent is not None and sent[1] < floor:
+                first, last = sent
+                # Money arrives before it is sent on, so a search for what the
+                # wallet received starts a little before its first send.
+                start = first if direction_param == "fromAddress" else first - 2 * MAX_BLOCK_WINDOW
+                lowest = max(0, start, last - DEEP_WINDOWS * MAX_BLOCK_WINDOW)
+                collected = self._scan(address, direction_param, cap, last, lowest)
+                self.deep_searched[normalize_address(address)] = (lowest, last)
+        if not collected:
+            self.searched_from[normalize_address(address)] = lowest
+        return collected
+
+    def _nonce(self, address: str, block: int) -> int:
+        return int(self._rpc("eth_getTransactionCount", [normalize_address(address), hex(block)]) or "0x0", 16)
+
+    def send_range(self, address: str) -> tuple[int, int] | None:
+        """Cached `_send_range` from the current head."""
+        key = normalize_address(address)
+        if key not in self._send_ranges:
+            self._send_ranges[key] = self._send_range(address, self.head_block())
+        return self._send_ranges[key]
+
+    def _send_range(self, address: str, head: int) -> tuple[int, int] | None:
+        """(block of first send, block of last send), or None if it never sent.
+
+        Read from the nonce at past blocks, which needs an archive node; if the
+        provider cannot answer, the wallet is treated as not found rather than
+        failing the trace.
+        """
+        try:
+            total = self._nonce(address, head)
+            if total == 0:
+                return None
+
+            def first_block_with(count: int) -> int:
+                lo, hi = 0, head
+                while hi - lo > 1:
+                    mid = (lo + hi) // 2
+                    if self._nonce(address, mid) >= count:
+                        hi = mid
+                    else:
+                        lo = mid
+                return hi
+
+            last = first_block_with(total)
+            first = first_block_with(1) if total > 1 else last
+            return first, last
+        except NoderealError as exc:
+            logger.warning("Could not locate past sends for %s: %s", address, exc)
+            return None
+
+    def block_time(self, block: int) -> int | None:
+        """A block's timestamp (s), for saying how far back a search reached."""
+        try:
+            return int(self._rpc("eth_getBlockByNumber", [hex(block), False])["timestamp"], 16)
+        except (NoderealError, KeyError, TypeError, ValueError):
+            return None
+
+    def _scan(self, address: str, direction_param: str, cap: int, top: int, floor: int) -> list[Transaction]:
+        """Transfers in blocks floor..top, newest first, in API-sized windows."""
+        category = [CATEGORY_ERC20] if self.contract_addresses else [CATEGORY_NATIVE]
         collected: list[Transaction] = []
         scanned = 0
-        window_end = head
+        window_end = top
 
-        while window_end > floor and len(collected) < cap and scanned < MAX_SCAN:
+        while window_end >= floor and len(collected) < cap and scanned < MAX_SCAN:
             window_start = max(floor, window_end - MAX_BLOCK_WINDOW + 1)
             page_key: str | None = None
 
@@ -332,6 +424,9 @@ class NoderealClient:
                     # money moving; the rest is noise the trace must not follow.
                     if tx and not tx.is_error and tx.value_wei > 0:
                         collected.append(tx)
+                        if tx.to_address:
+                            seen = self._arrived.get(tx.to_address)
+                            self._arrived[tx.to_address] = min(seen, tx.block_number) if seen else tx.block_number
 
                 page_key = result.get("pageKey")
                 if not page_key:

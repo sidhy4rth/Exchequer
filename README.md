@@ -42,13 +42,13 @@
 
 <table>
 <tr>
-<td align="center"><h3>44,857</h3>labelled addresses</td>
-<td align="center"><h3>25,362</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
+<td align="center"><h3>45,003</h3>labelled addresses</td>
+<td align="center"><h3>25,508</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>5</h3>chains, 14 assets</td>
-<td align="center"><h3>295</h3>tests, no network</td>
+<td align="center"><h3>300</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -73,7 +73,15 @@ Ethereum — an exchange's hot wallet is one private key, and one key controls t
 chain — and each address was kept only if it has no contract code on the new chain and has *sent* a
 transaction there, which only the key holder can do (`scripts/port_evm_labels.py`). That gives 139 wallets of
 53 exchanges on Polygon, 8 of them CoinDCX's, and 106 of 43 on Arbitrum, plus the sanctioned accounts that
-pass the same test (15 and 9). Base and Optimism need a paid plan and are not covered.
+pass the same test (15 and 9). The same check, read through NodeReal, added 146 wallets to BNB Smart Chain's
+38. Base and Optimism need a paid plan and are not covered.
+
+**Old wallets on BNB Smart Chain.** BSC's free provider (NodeReal) reads history in 100,000-block windows, and
+at today's ~0.45 s blocks the default reach is under three days. A reported wallet quieter than that is found
+through its nonce — the count of transactions it has sent, readable at any past block — and each wallet it paid
+is searched forward from the block the money arrived in. A month-old wallet traces in about a minute rather
+than a few seconds; a case shows the reported wallet's own **statement** (latest credits and debits) either
+way, with address-poisoning lookalikes marked.
 
 **The design principle is auditability.** Every attribution is an exact match against a published
 address in a data file you can open and read. Every laundering finding is a handful of arithmetic
@@ -87,7 +95,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | | |
 |---|---|
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
-| **Names the exchange** | Exact match against 25,362 exchange addresses on five chains, including **CoinDCX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
+| **Names the exchange** | Exact match against 25,508 exchange addresses on five chains, including **CoinDCX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
 | **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); and 8,953 wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
@@ -487,7 +495,7 @@ and matching one chain's address against the other's labels would manufacture an
 | File | Coverage |
 |---|---|
 | `exchange_labels.json` | **25,038 addresses / 92 exchanges** — 1,020 exchange wallets (the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX**, Bitget, Poloniex) plus **19,027 Bitget and 4,991 Binance deposit addresses** |
-| `exchange_labels_bsc.json` | **38 addresses / 13 exchanges** — Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat |
+| `exchange_labels_bsc.json` | **184 addresses / 56 exchanges** — the original 38 (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat) plus 146 Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`) |
 | `exchange_labels_tron.json` | **41 addresses / 19 exchanges** — read live from TronScan's own address tags |
 
 **A deposit address is the most useful label there is**: it names one customer account, which is exactly what a
@@ -842,7 +850,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         295 tests, no network or keys
+│   └── tests/                         300 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton
