@@ -46,7 +46,7 @@
 <td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>3</h3>chains, 8 assets</td>
-<td align="center"><h3>283</h3>tests, no network</td>
+<td align="center"><h3>286</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -511,7 +511,9 @@ labelled *"(TronScan tag, read live)"* so a reader always knows the source — a
 at any exchange; a tag naming a treasury, bridge, token or scam never counts, and one not recognised is listed, not
 guessed at. Every response is hashed into the evidence manifest, and the report states how many wallets were asked
 and what was found. A failed lookup costs an attribution, never the trace. It needs a free TronScan API key
-(`TRONSCAN_API_KEY`); without one it is off and the report says so. Router labels (**20 on Ethereum, 4 on
+(`TRONSCAN_API_KEY`); without one it is off and the report says so. Wallets beyond the nearest exchange the file
+already found are not asked about, since they could not give a nearer answer. On its first live run it attributed
+wallets paying Flipster, WestWallet and ONUS — none of them in the file — at confidence 1.00, one lookup each. Router labels (**20 on Ethereum, 4 on
 BSC**) must, the other way round, carry bytecode.
 
 ### Indian exchanges
@@ -824,7 +826,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         283 tests, no network or keys
+│   └── tests/                         286 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton

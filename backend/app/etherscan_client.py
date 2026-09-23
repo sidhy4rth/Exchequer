@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import random
+import hashlib
 import re
 import time
 from dataclasses import dataclass
@@ -54,8 +55,27 @@ def is_evm_address(address: str) -> bool:
     return bool(address) and bool(ADDRESS_RE.match(address.strip()))
 
 
+_BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+
 def is_tron_address(address: str) -> bool:
-    return bool(address) and bool(TRON_ADDRESS_RE.match(address.strip()))
+    """A Tron address in its Base58Check form, checksum included.
+
+    The shape alone lets a typo through, and TronGrid then refuses the address
+    with an error that reads like a provider outage. The last four bytes are a
+    double-SHA-256 checksum of the rest, so a mistyped character is caught
+    here and reported as an invalid address instead.
+    """
+    if not address or not TRON_ADDRESS_RE.match(address.strip()):
+        return False
+    number = 0
+    for char in address.strip():
+        number = number * 58 + _BASE58.index(char)
+    try:
+        raw = number.to_bytes(25, "big")
+    except OverflowError:
+        return False
+    return raw[0] == 0x41 and hashlib.sha256(hashlib.sha256(raw[:21]).digest()).digest()[:4] == raw[21:]
 
 
 def is_valid_address(address: str) -> bool:

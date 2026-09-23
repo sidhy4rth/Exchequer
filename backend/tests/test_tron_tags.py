@@ -140,3 +140,27 @@ def test_the_report_says_what_tronscan_named(tron_trace):
                 result_json=json.dumps(result, default=str))
     text = render_text_report(build_report(case))
     assert "TronScan tags read live" in text and EXCH in text
+
+
+def test_a_mistyped_tron_address_is_caught_by_its_checksum():
+    """A typo should read as an invalid address, not as a provider outage."""
+    from app.etherscan_client import is_tron_address
+    good = "TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts"
+    assert is_tron_address(good)
+    assert not is_tron_address(good[:-1] + ("t" if good[-1] != "t" else "u"))
+
+
+def test_a_mistyped_tron_address_is_a_400(monkeypatch):
+    from fastapi import HTTPException
+    with pytest.raises(HTTPException) as err:
+        run_trace(TraceRequest(address="TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3tu", chain="tron", asset="USDT"))
+    assert err.value.status_code == 400
+
+
+def test_the_sweep_skips_wallets_beyond_the_nearest_labelled_exchange():
+    far = "TXEsK1sEsKjZ1xtHitnyAAoqw3WLdYdRNW"
+    graph = make_graph([(SEED, HOP, 10.0), (HOP, EXCH, 9.0), (EXCH, far, 1.0)], seed=SEED)
+    tags = FakeTags({})
+    live = LiveTronExchanges(tags, is_labelled=lambda a: a == EXCH)
+    live.sweep(graph)
+    assert tags.asked == [HOP]

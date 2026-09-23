@@ -21,7 +21,7 @@ from conftest import addr
 
 TORNADO = addr("7047")
 LAZARUS = addr("1a2a")
-TRON_ADDR = "TKrEigqhGgTKDTL6Wm4mUAAWFEbHqsdMhu"
+TRON_ADDR = "TXEsK1sEsKjZ1xtHitnyAAoqw3WLdYdRNW"
 
 
 # Dedented once, at import, so substituting multi-line entries later cannot

@@ -28,6 +28,7 @@ import logging
 import re
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import httpx
@@ -73,6 +74,9 @@ CANONICAL: dict[str, str] = {
 # How many unlabelled wallets one trace will ask about. Each is a request, so
 # the cap bounds what a lookup can add to a trace; the most valuable go first.
 MAX_LOOKUPS_PER_TRACE = 60
+# Lookups after the walk run a few at a time; the shared throttle still spaces
+# the requests themselves, so this hides network wait without raising the rate.
+SWEEP_WORKERS = 4
 
 
 def tag_head(tag: str) -> str:
@@ -190,39 +194,57 @@ class LiveTronExchanges:
         self.found: dict[str, dict[str, str]] = {}
         self.unrecognised: dict[str, str] = {}
         self._asked: set[str] = set()
+        self._lock = threading.Lock()
 
     def is_exchange(self, address: str) -> bool:
         """For the traversal: stop at a wallet TronScan tags as an exchange."""
         if not self.tags.enabled or self.is_labelled(address):
             return False
-        if address not in self._asked and len(self._asked) < MAX_LOOKUPS_PER_TRACE:
+        if self._claim(address):
             self._ask(address)
         return address in self.found
 
     def sweep(self, graph) -> None:
         """After the walk: ask about the wallets the traversal never checked --
-        the last hop above all -- most valuable first, within the cap."""
+        the last hop above all -- most valuable first, within the cap.
+
+        Only wallets closer to the reported address than the nearest exchange
+        the label file already found are worth asking about: a tag further out
+        could not produce a nearer attribution, so asking would only cost time.
+        """
         if not self.tags.enabled:
             return
+        labelled_depths = [data.get("depth", 0) for n, data in graph.nodes(data=True)
+                           if not data.get("is_seed") and (self.is_labelled(n) or n in self.found)]
+        horizon = min(labelled_depths) if labelled_depths else None
         pending = [
             (sum(e.get("value_native", 0.0) for _, _, e in graph.in_edges(n, data=True)), n)
             for n, data in graph.nodes(data=True)
             if not data.get("is_seed") and n not in self._asked and not self.is_labelled(n)
+            and (horizon is None or data.get("depth", 0) < horizon)
         ]
-        for _, address in sorted(pending, reverse=True):
-            if len(self._asked) >= MAX_LOOKUPS_PER_TRACE:
-                break
-            self._ask(address)
+        todo = [a for _, a in sorted(pending, reverse=True) if self._claim(a)]
+        if todo:
+            with ThreadPoolExecutor(max_workers=SWEEP_WORKERS) as pool:
+                list(pool.map(self._ask, todo))
+
+    def _claim(self, address: str) -> bool:
+        """Reserve one lookup for `address` if it is new and the cap allows."""
+        with self._lock:
+            if address in self._asked or len(self._asked) >= MAX_LOOKUPS_PER_TRACE:
+                return False
+            self._asked.add(address)
+            return True
 
     def _ask(self, address: str) -> None:
-        self._asked.add(address)
         tag = self.tags.tag(address)
         exchange = exchange_for_tag(tag)
-        if exchange:
-            self.found[address] = {"exchange": exchange, "label": f"{tag} (TronScan tag, read live)",
-                                   "type": wallet_type(tag)}
-        elif tag:
-            self.unrecognised[address] = tag
+        with self._lock:
+            if exchange:
+                self.found[address] = {"exchange": exchange, "label": f"{tag} (TronScan tag, read live)",
+                                       "type": wallet_type(tag)}
+            elif tag:
+                self.unrecognised[address] = tag
 
     def summary(self) -> dict[str, Any]:
         return {
