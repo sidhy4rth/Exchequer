@@ -552,14 +552,14 @@ export default function TraceView() {
                         {c.shared.slice(0, 3).map((s) => (
                           <div className="row" key={s.address}>
                             <Address value={s.address} head={10} tail={8} />
-                            <span className="via">{s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}{num(s.value_in_native)} {c.asset}</span>
+                            <span className="via">{s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}{s.risk_category ? `${RISK_NAME[s.risk_category] ?? s.risk_category} · ` : ''}{num(s.value_in_native)} {s.after_swap_to ?? c.asset}{s.after_swap_to ? ' after a swap' : ''}</span>
                           </div>
                         ))}
                         {c.shared_count > 3 && <div className="ent">…and {c.shared_count - 3} more</div>}
                       </div>
                     ))}
                     {related.length > 8 && <p className="note">…and {related.length - 8} more related cases.</p>}
-                    <p className="note">Only unlabelled wallets and probable deposit addresses count; a shared exchange is a shared bank, not a shared offender.</p>
+                    <p className="note">Only wallets no list names count — unlabelled, probable deposit addresses, or flagged but unnamed (a Tether freeze, a warning tag). A shared exchange is a shared bank, not a shared offender.</p>
                   </div>
                 </details>
               ) : (

@@ -19,6 +19,13 @@ both ended at Binance 14 share nothing but a bank; two whose money reached the
 same unlabelled wallet, or the same deposit address, plausibly paid the same
 person. That is the difference between a coincidence and a lead.
 
+Two refinements since. A wallet a list flags without naming who holds it -- a
+Tether freeze, a stolen-funds tag, a TronScan warning -- is still somebody's
+wallet, and two complaints reaching it is a stronger lead, not a weaker one; only
+a sanctioned entity (already named) and a mixer (a service, not a person) are
+left out. And a case's follow-on traces -- the money after a swap into a
+stablecoin -- are searched too, since that is where swapped funds converge.
+
 Chains are kept apart. The same 0x string on Ethereum and BSC is two different
 ledgers, and matching across them would manufacture a link no transaction
 supports.
@@ -27,6 +34,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from typing import Any, Callable, Iterable
+
+# Flagged, but not an intermediary: a sanctioned entity is already named, and a
+# mixer is a service every user of it passes through.
+NOT_INTERMEDIARY_RISKS = frozenset({"sanctioned", "mixer"})
 
 # Decides whether (chain, address) is a labelled contract or wallet that must
 # never count as an intermediary. main.py passes the exchange and router
@@ -40,7 +51,7 @@ def _intermediaries(result: dict[str, Any], chain: str, excluded: Excluder | Non
     for node in result.get("graph", {}).get("nodes", []):
         if node.get("is_seed") or node.get("id") == seed:
             continue
-        if node.get("exchange") or node.get("is_router") or node.get("risk_category"):
+        if node.get("exchange") or node.get("is_router") or node.get("risk_category") in NOT_INTERMEDIARY_RISKS:
             continue
         # A contract that pays out to many addresses (WETH, a pool) is a
         # service every trace passes through; so is anything the label files
@@ -50,6 +61,15 @@ def _intermediaries(result: dict[str, Any], chain: str, excluded: Excluder | Non
         if excluded is not None and excluded(chain, node["id"]):
             continue
         out.append(node)
+    return out
+
+
+def _traces(result: dict[str, Any]) -> list[tuple[dict[str, Any], str | None]]:
+    """The case's own trace, then each follow-on (with the asset swapped into)."""
+    out: list[tuple[dict[str, Any], str | None]] = [(result, None)]
+    for follow in result.get("follow_ons") or []:
+        if follow.get("result"):
+            out.append((follow["result"], follow.get("asset")))
     return out
 
 
@@ -68,28 +88,33 @@ def correlate(
     """
     by_key: dict[tuple[str, str], dict[str, dict[str, Any]]] = defaultdict(dict)
     inferred: dict[tuple[str, str], str] = {}
+    flagged: dict[tuple[str, str], str] = {}
 
     for case in cases:
         result = case.result
         if not result:
             continue
         chain = result.get("chain") or "ethereum"
-        for node in _intermediaries(result, chain, excluded):
-            key = (chain, node["id"])
-            if node.get("inferred_exchange"):
-                inferred[key] = node["inferred_exchange"]
-            # One entry per case per address; a case that touches the same
-            # wallet twice is still one case.
-            by_key[key].setdefault(case.id, {
-                "case_id": case.id,
-                "reported_address": result.get("address") or case.address,
-                "direction": result.get("direction", "outgoing"),
-                "asset": result.get("asset"),
-                "traced_at": case.created_at,
-                "depth": node.get("depth"),
-                "value_in_native": node.get("total_in_native", 0.0),
-                "exchange": result.get("exchange"),
-            })
+        for trace, swapped_to in _traces(result):
+            for node in _intermediaries(trace, chain, excluded):
+                key = (chain, node["id"])
+                if node.get("inferred_exchange"):
+                    inferred[key] = node["inferred_exchange"]
+                if node.get("risk_category"):
+                    flagged[key] = node["risk_category"]
+                # One entry per case per address; a case that touches the same
+                # wallet twice is still one case.
+                by_key[key].setdefault(case.id, {
+                    "case_id": case.id,
+                    "reported_address": result.get("address") or case.address,
+                    "direction": result.get("direction", "outgoing"),
+                    "asset": result.get("asset"),
+                    "traced_at": case.created_at,
+                    "depth": node.get("depth"),
+                    "value_in_native": node.get("total_in_native", 0.0),
+                    "exchange": result.get("exchange"),
+                    "after_swap_to": swapped_to,
+                })
 
     clusters = []
     for (chain, address), members in by_key.items():
@@ -104,6 +129,7 @@ def correlate(
             "chain": chain,
             "address": address,
             "inferred_exchange": inferred.get((chain, address)),
+            "risk_category": flagged.get((chain, address)),
             "reported_addresses": sorted(reported),
             "case_count": len(members),
             "max_value_in_native": max(m["value_in_native"] for m in members.values()),
@@ -175,6 +201,8 @@ def related_cases(clusters: list[dict[str, Any]], case_id: str) -> list[dict[str
             entry["shared"].append({
                 "address": cluster["address"],
                 "inferred_exchange": cluster["inferred_exchange"],
+                "risk_category": cluster["risk_category"],
+                "after_swap_to": member["after_swap_to"],
                 "depth": member["depth"],
                 "value_in_native": member["value_in_native"],
             })

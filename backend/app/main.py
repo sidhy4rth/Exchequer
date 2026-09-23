@@ -972,9 +972,10 @@ def cases_correlate(
         # view shows it. Empty unless case_id was given.
         "related_cases": related_cases(clusters, case_id) if case_id else [],
         "rule": (
-            "An intermediary is any address in a stored trace other than the "
-            "reported address and other than a labelled exchange wallet, DEX router "
-            "or sanctioned entity. A cluster is an intermediary reached by traces "
+            "An intermediary is any address in a stored trace, or in its follow-on "
+            "traces after a swap, other than the reported address and other than a "
+            "labelled exchange wallet, DEX router, sanctioned entity or mixer; a wallet "
+            "Tether froze or an explorer flagged still counts. A cluster is an intermediary reached by traces "
             f"of at least {min_cases} different reported addresses on the same chain. "
             "Contracts recognised as services (a pool, WETH) and anything in the "
             "exchange or router label files are never intermediaries."

@@ -192,3 +192,32 @@ def test_related_cases_never_lists_the_same_reported_address_or_repeat_traces():
 
     assert [r["case_id"] for r in related] == ["c2"]
     assert related[0]["shared"][0]["value_in_native"] == 3.0
+
+
+def test_a_flagged_but_unnamed_wallet_still_links_complaints():
+    """A Tether-frozen or warning-tagged wallet is still somebody's; a sanctioned
+    entity or a mixer is not a shared offender."""
+    frozen, mixer = addr("f0"), addr("f1")
+    cases = [
+        a_case("c1", addr("1"), [{"id": frozen, "risk": "frozen"}, {"id": mixer, "risk": "mixer"}]),
+        a_case("c2", addr("2"), [{"id": frozen, "risk": "frozen"}, {"id": mixer, "risk": "mixer"}]),
+    ]
+    clusters = correlate(cases)
+    assert [c["address"] for c in clusters] == [frozen]
+    assert clusters[0]["risk_category"] == "frozen"
+
+
+def test_complaints_that_meet_only_after_a_swap_are_linked():
+    after = addr("a5")
+    c1 = a_case("c1", addr("1"), [])
+    result = c1.result
+    result["follow_ons"] = [{"asset": "USDT", "result": {
+        "address": addr("1"), "graph": {"nodes": [
+            {"id": addr("1"), "is_seed": True, "depth": 0},
+            {"id": after, "is_seed": False, "depth": 1, "total_in_native": 2400.0}], "edges": []}}}]
+    c1 = Case(id="c1", address=addr("1"), created_at=c1.created_at, result_json=json.dumps(result))
+    c2 = a_case("c2", addr("2"), [{"id": after}])
+    clusters = correlate([c1, c2])
+    assert [c["address"] for c in clusters] == [after]
+    swapped = next(m for m in clusters[0]["cases"] if m["case_id"] == "c1")
+    assert swapped["after_swap_to"] == "USDT"
