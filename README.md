@@ -17,6 +17,8 @@
 
 ![Ethereum](https://img.shields.io/badge/Ethereum-ETH_·_USDT_·_USDC-3C3C3D?logo=ethereum&logoColor=white)
 ![BNB Smart Chain](https://img.shields.io/badge/BNB_Smart_Chain-BNB_·_USDT_·_USDC-F0B90B?logo=bnbchain&logoColor=black)
+![Polygon](https://img.shields.io/badge/Polygon-POL_·_USDT_·_USDC-7B3FE4?logo=polygon&logoColor=white)
+![Arbitrum](https://img.shields.io/badge/Arbitrum-ETH_·_USDT_·_USDC-28A0F0)
 ![Tron](https://img.shields.io/badge/Tron-TRX_·_USDT-FF060A)
 ![SIH 2026](https://img.shields.io/badge/Smart_India_Hackathon_2026-SIH26183_·_MHA-FF9933)
 
@@ -40,13 +42,13 @@
 
 <table>
 <tr>
-<td align="center"><h3>44,588</h3>labelled addresses</td>
-<td align="center"><h3>25,117</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
+<td align="center"><h3>44,857</h3>labelled addresses</td>
+<td align="center"><h3>25,362</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
-<td align="center"><h3>3</h3>chains, 8 assets</td>
-<td align="center"><h3>286</h3>tests, no network</td>
+<td align="center"><h3>5</h3>chains, 14 assets</td>
+<td align="center"><h3>295</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -57,13 +59,21 @@ address it passes against sanctions lists, mixers and known theft, flags launder
 way, identifies the exchange where the funds landed — down to the customer deposit address where it
 can — and produces a report an investigator can attach to a legal request.
 
-**Why these three chains.** The choice follows the published evidence rather than a hunch: Chainalysis
+**Why Ethereum, BNB Chain and Tron.** The choice follows the published evidence rather than a hunch: Chainalysis
 measured stablecoins at 63% of illicit transaction volume in 2024 and 84% in 2025; TRM Labs measured 58%
 of 2024 illicit volume on Tron (a share that halved in 2025); and the UN Office on Drugs and Crime
 describes USDT on Tron as the "preferred choice" of the Southeast-Asian cyber-fraud operations that
 target Indian victims. No published source measures the cash-out rails for Indian scam proceeds
 specifically, so this README does not claim one. Every figure is quoted from its source in
 [RESEARCH.md](RESEARCH.md).
+
+**Polygon and Arbitrum** came later, and cheaply: they are the two chains besides Ethereum that the free
+Etherscan tier serves, so they run on the same key and the same code. Their labels are carried over from
+Ethereum — an exchange's hot wallet is one private key, and one key controls the same address on every EVM
+chain — and each address was kept only if it has no contract code on the new chain and has *sent* a
+transaction there, which only the key holder can do (`scripts/port_evm_labels.py`). That gives 139 wallets of
+53 exchanges on Polygon, 8 of them CoinDCX's, and 106 of 43 on Arbitrum, plus the sanctioned accounts that
+pass the same test (15 and 9). Base and Optimism need a paid plan and are not covered.
 
 **The design principle is auditability.** Every attribution is an exact match against a published
 address in a data file you can open and read. Every laundering finding is a handful of arithmetic
@@ -77,7 +87,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | | |
 |---|---|
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
-| **Names the exchange** | Exact match against 25,117 exchange addresses across 92 exchanges, including **CoinDCX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
+| **Names the exchange** | Exact match against 25,362 exchange addresses on five chains, including **CoinDCX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
 | **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); and 8,953 wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
@@ -406,7 +416,7 @@ number, so the score stays reproducible.
 
 ## Screening: sanctions, mixers and stolen funds
 
-Every address in a trace is checked against four kinds of list, with different authority behind them, and
+Every address in a trace is checked against four kinds of list (five on Tron), with different authority behind them, and
 every hit names the list it came from.
 
 | Category | Meaning | Source | Effect on the trace |
@@ -415,11 +425,14 @@ every hit names the list it came from.
 | `mixer` | A tumbler's pool or entry router | Etherscan / BscScan tags | **The trace stops here** |
 | `frozen` | Tether has frozen the address's USDT | The USDT contract's own blacklist events | Flagged; the trace continues |
 | `stolen` | A hacker's wallet, or a reported phishing / scam wallet | Etherscan / BscScan tags, ScamSniffer | Flagged; the trace continues — where the thief moved the money is the point |
+| `reported` | TronScan's own warning tag ("Suspicious", "Scam", a phishing tag) | TronScan, **read live** during a Tron trace | Flagged as the explorer's warning — the weakest of the five; a label-file entry always outranks it |
 
 | Chain | Sanctioned | Mixers | Frozen by Tether | Stolen funds |
 |---|---:|---:|---:|---:|
 | Ethereum | 139 | 40 | 2,633 | 8,380 |
 | BNB Smart Chain | 7 | 14 | — | 560 |
+| Polygon PoS | 15 | — | — | — |
+| Arbitrum One | 9 | — | — | — |
 | Tron | 915 | — | 6,759 | — |
 
 <sub>Counts are after overlap: an address on a government list is reported as sanctioned, and a mixer pool Tether
@@ -542,8 +555,11 @@ python -m scripts.verify_labels                                # re-check the Et
 One complaint gives one trace; the problem statement's real ask is the campaign. Every trace is stored with its
 full graph, so `GET /cases/correlate` is a query over what has been traced — no API calls, milliseconds.
 
-An *intermediary* is any address in a case's graph other than the reported address and anything with a label of
-its own — an exchange wallet, a DEX router, a screened address. One reached by traces of **two or more different
+An *intermediary* is any address in a case's graph — or in its follow-on traces after a swap — other than the
+reported address and anything with a name of its own: an exchange wallet, a DEX router, a sanctioned entity, a
+mixer. A wallet a list flags without naming its holder — a Tether freeze, a stolen-funds tag, a TronScan warning —
+still counts, and the related-cases panel says which flag it carries: two complaints meeting at a frozen wallet
+is a stronger lead, not a weaker one. One reached by traces of **two or more different
 reported addresses on the same chain** is a point of convergence, returned with the cases that reach it, their
 distance and the value that arrived. Exchange hot wallets are excluded on purpose: two victims whose money both
 ended at Binance 14 share a bank, not an offender.
@@ -826,7 +842,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         286 tests, no network or keys
+│   └── tests/                         295 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton

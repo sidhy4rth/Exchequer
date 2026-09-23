@@ -23,7 +23,7 @@ def test_health_reports_every_chain(client):
     body = client.get("/health").json()
 
     assert body["status"] == "ok"
-    assert set(body["chains"]) == {"ethereum", "bsc", "tron"}
+    assert set(body["chains"]) == {"ethereum", "bsc", "tron", "polygon", "arbitrum"}
     for chain in body["chains"].values():
         assert "exchange_labels" in chain
         assert set(chain["risk_labels"]) == {"sanctioned", "mixer", "frozen", "stolen"}

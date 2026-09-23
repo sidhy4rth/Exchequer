@@ -1,0 +1,100 @@
+{
+ "_meta": {
+  "description": "Sanctioned accounts screened on Arbitrum One.",
+  "provenance": "Ethereum addresses on OFAC's SDN list and other governments' lists, carried over because a designated account is the same key on every EVM chain. Built by backend/scripts/port_evm_labels.py.",
+  "verification_note": "Each has no contract code on Arbitrum One and has sent a transaction there.",
+  "chain": "arbitrum",
+  "last_reviewed": "2026-09-23"
+ },
+ "labels": {
+  "0x53b9b72dc6f96eb4b54143b211b22e2548e4cf5c": {
+   "category": "sanctioned",
+   "entity": "NBCTF seizure order ASO 22/25",
+   "label": "NBCTF seizure order ASO 22/25",
+   "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Arbitrum One)",
+   "authorities": [
+    "Israel"
+   ]
+  },
+  "0x9dd7fa4b4950154f7e75bdd8a77266b99b94ec08": {
+   "category": "sanctioned",
+   "entity": "Behzad MESRI",
+   "label": "Behzad MESRI",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Arbitrum One)",
+   "ofac_programs": [
+    "CYBER2",
+    "HRIT-IR"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xbb69e01921b17cd22080968bcc96ba6115da6062": {
+   "category": "sanctioned",
+   "entity": "CRYPTO HOME DMCC",
+   "label": "CRYPTO HOME DMCC",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Arbitrum One)",
+   "ofac_programs": [
+    "SDGT"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xd599ac04a1c786972b81e0fef6fb0c3e7b52f8a7": {
+   "category": "sanctioned",
+   "entity": "Byex Exchange Company Limited",
+   "label": "Byex Exchange Company Limited",
+   "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Global Human Rights Sanctions Regulations 2020, entry GHR0174 (listed as an Ethereum address; the same account on Arbitrum One)",
+   "authorities": [
+    "United Kingdom"
+   ]
+  },
+  "0xdcbeffbecce100cce9e4b153c4e15cb885643193": {
+   "category": "sanctioned",
+   "entity": "Roman SEMENOV",
+   "label": "Roman SEMENOV",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Arbitrum One)",
+   "ofac_programs": [
+    "DPRK3"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xe05f529f5284d75624eba386cb716928c3b54a2a": {
+   "category": "sanctioned",
+   "entity": "SHPS SHELBIT",
+   "label": "SHPS SHELBIT",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Arbitrum One)",
+   "ofac_programs": [
+    "SDGT"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xe3740c1b2fcda407027e2c80906306604e5260e7": {
+   "category": "sanctioned",
+   "entity": "NBCTF seizure order ASO 22/25",
+   "label": "NBCTF seizure order ASO 22/25",
+   "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Arbitrum One)",
+   "authorities": [
+    "Israel"
+   ]
+  },
+  "0xef85a6fafa5942a964dc618e94e230881d29ce2a": {
+   "category": "sanctioned",
+   "entity": "Arman KAHZADIAN",
+   "label": "Arman KAHZADIAN",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Arbitrum One)",
+   "ofac_programs": [
+    "CYBER4"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xf45ecc3a59c7911181c659ce9115854c6175be91": {
+   "category": "sanctioned",
+   "entity": "Behzad MESRI",
+   "label": "Behzad MESRI",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Arbitrum One)",
+   "ofac_programs": [
+    "CYBER2",
+    "HRIT-IR"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  }
+ }
+}

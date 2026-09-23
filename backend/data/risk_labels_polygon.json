@@ -1,0 +1,158 @@
+{
+ "_meta": {
+  "description": "Sanctioned accounts screened on Polygon PoS.",
+  "provenance": "Ethereum addresses on OFAC's SDN list and other governments' lists, carried over because a designated account is the same key on every EVM chain. Built by backend/scripts/port_evm_labels.py.",
+  "verification_note": "Each has no contract code on Polygon PoS and has sent a transaction there.",
+  "chain": "polygon",
+  "last_reviewed": "2026-09-23"
+ },
+ "labels": {
+  "0x0330070fd38ec3bb94f58fa55d40368271e9e54a": {
+   "category": "sanctioned",
+   "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+   "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "DPRK4"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0x1d19b52b54e7ef5ea1a4b40b616165e798eac9f8": {
+   "category": "sanctioned",
+   "entity": "Dmytro RASHEVSKYI",
+   "label": "Dmytro RASHEVSKYI",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "CYBER4"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0x2711d73d559f62f4f855ee21f38378f528e07985": {
+   "category": "sanctioned",
+   "entity": "FIRST VPN SERVICE",
+   "label": "FIRST VPN SERVICE",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "CYBER4"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0x530a64c0ce595026a4a556b703644228179e2d57": {
+   "category": "sanctioned",
+   "entity": "Xingbiao SHEN",
+   "label": "Xingbiao SHEN",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "ILLICIT-DRUGS-EO14059"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0x53b9b72dc6f96eb4b54143b211b22e2548e4cf5c": {
+   "category": "sanctioned",
+   "entity": "NBCTF seizure order ASO 22/25",
+   "label": "NBCTF seizure order ASO 22/25",
+   "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Polygon PoS)",
+   "authorities": [
+    "Israel"
+   ]
+  },
+  "0x56de1527136f76a809e5b14ded6103eecd072ba7": {
+   "category": "sanctioned",
+   "entity": "Keyvan Fayyaz Gareh BLAGH",
+   "label": "Keyvan Fayyaz Gareh BLAGH",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "CYBER4"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0x747afb5c7a7fc34b547cd0fdebf9b91759c5a52b": {
+   "category": "sanctioned",
+   "entity": "Hyon Sop SIM",
+   "label": "Hyon Sop SIM",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "NPWMD"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0x76ea76ca4eb727f18956ab93445a94c5280412b9": {
+   "category": "sanctioned",
+   "entity": "Hyon Sop SIM",
+   "label": "Hyon Sop SIM",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "NPWMD"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xae05eb856cb28c156d9722094f5eefd5693bc181": {
+   "category": "sanctioned",
+   "entity": "Byex Exchange Company Limited",
+   "label": "Byex Exchange Company Limited",
+   "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Global Human Rights Sanctions Regulations 2020, entry GHR0174 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "authorities": [
+    "United Kingdom"
+   ]
+  },
+  "0xbb69e01921b17cd22080968bcc96ba6115da6062": {
+   "category": "sanctioned",
+   "entity": "CRYPTO HOME DMCC",
+   "label": "CRYPTO HOME DMCC",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "SDGT"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xd04e33461fea8302c5e1e13895b60cee8aefda7f": {
+   "category": "sanctioned",
+   "entity": "Hyon Sop SIM",
+   "label": "Hyon Sop SIM",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "NPWMD"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xd599ac04a1c786972b81e0fef6fb0c3e7b52f8a7": {
+   "category": "sanctioned",
+   "entity": "Byex Exchange Company Limited",
+   "label": "Byex Exchange Company Limited",
+   "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Global Human Rights Sanctions Regulations 2020, entry GHR0174 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "authorities": [
+    "United Kingdom"
+   ]
+  },
+  "0xdcbeffbecce100cce9e4b153c4e15cb885643193": {
+   "category": "sanctioned",
+   "entity": "Roman SEMENOV",
+   "label": "Roman SEMENOV",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "DPRK3"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xef85a6fafa5942a964dc618e94e230881d29ce2a": {
+   "category": "sanctioned",
+   "entity": "Arman KAHZADIAN",
+   "label": "Arman KAHZADIAN",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "CYBER4"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  },
+  "0xfb3eff152ea55d1bfa04dbdd509a80fd7b72cdeb": {
+   "category": "sanctioned",
+   "entity": "Hyon Sop SIM",
+   "label": "Hyon Sop SIM",
+   "source": "OFAC SDN list, published 09/18/2026 (listed as an Ethereum address; the same account on Polygon PoS)",
+   "ofac_programs": [
+    "NPWMD"
+   ],
+   "ofac_id_type": "Digital Currency Address - ETH"
+  }
+ }
+}

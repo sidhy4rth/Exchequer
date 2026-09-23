@@ -128,7 +128,10 @@ that way; WazirX and ZebPay were not because no source met the standard. On Tron
 where the file holds 41 wallets, a trace also asks TronScan for its own tag on each
 unlabelled wallet it reaches; a tag naming a known exchange attributes it, marked
 "read live". Its first live run named wallets paying Flipster, WestWallet and ONUS —
-none of them in the file — at confidence 1.00. DEMO.md trace 12 is one of them.
+none of them in the file — at confidence 1.00. DEMO.md trace 12 is one of them. The same answer carries TronScan's red
+warning tag ("Suspicious", "Scam"), so a flagged wallet in the trace — or the reported
+address itself — is shown as a TronScan warning, worded as the explorer's warning and
+never as a designation; any government list or Tether freeze outranks it.
 
 **11. How would this be used under PMLA?**
 

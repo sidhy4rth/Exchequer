@@ -188,7 +188,7 @@ export default function Home() {
                     <option value="">Choose one of the twelve traces in DEMO.md…</option>
                     {DEMOS.map((d) => (
                       <option key={d.n} value={d.n} title={d.hook}>
-                        {d.n} · {d.title} · {d.chain === 'tron' ? 'Tron' : 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}
+                        {d.n} · {d.title} · {{ tron: 'Tron', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum' }[d.chain] ?? 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}
                       </option>
                     ))}
                   </select>

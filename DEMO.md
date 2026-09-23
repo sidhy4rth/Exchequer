@@ -504,7 +504,7 @@ cd ~/exchequer/frontend && npm run dev
 ```
 
 Open <http://localhost:5173> — use `localhost`, not `127.0.0.1`.
-Check the status line reads **3 chains** before you start.
+Check the status line reads **5 chains** before you start.
 
 If asked about the research behind the laundering claims: RESEARCH.md has
 every claim, the source read for it, the exact passage and a verdict; the
