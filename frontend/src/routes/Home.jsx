@@ -40,6 +40,8 @@ const DEMOS = [
     title: 'Three complaints, one operation', hook: 'Shares 60 and 46 intermediaries with two other stored phishing wallets — and all three reach the same known phishing wallet.' },
   { n: '11', address: 'TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
     title: 'Frozen by Tether', hook: 'A Tron wallet whose USDT Tether froze on 11 Sep 2026 — as it did the next wallet — splits 45,968 USDT onward; it reaches Binance-Hot 7 at 0.80.' },
+  { n: '12', address: 'TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
+    title: 'An exchange the file does not know', hook: 'Flipster is not among the 41 labelled Tron wallets; TronScan’s own tag, read live, names it at confidence 1.00.' },
 ]
 
 // The optional wall-clock cap, in seconds. 1:30 is long enough for any of
@@ -183,7 +185,7 @@ export default function Home() {
                   <span className="sep" />
                   <label htmlFor="example">Load a verified example</label>
                   <select id="example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
-                    <option value="">Choose one of the eleven traces in DEMO.md…</option>
+                    <option value="">Choose one of the twelve traces in DEMO.md…</option>
                     {DEMOS.map((d) => (
                       <option key={d.n} value={d.n} title={d.hook}>
                         {d.n} · {d.title} · {d.chain === 'tron' ? 'Tron' : 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}

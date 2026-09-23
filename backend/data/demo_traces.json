@@ -96,5 +96,12 @@
   "asset": "USDT",
   "direction": "outgoing",
   "max_depth": 2
+ },
+ {
+  "address": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+  "chain": "tron",
+  "asset": "USDT",
+  "direction": "outgoing",
+  "max_depth": 2
  }
 ]

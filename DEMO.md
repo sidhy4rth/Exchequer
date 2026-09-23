@@ -1,6 +1,6 @@
 # Exchequer — demo addresses
 
-Eleven traces. The first ten were re-verified **cold** (empty cache) on **23 September 2026**,
+Twelve traces. The first ten were re-verified **cold** (empty cache) on **23 September 2026**,
 after the label files grew (1,020 Ethereum exchange wallets across 92
 exchanges, up from 337 across 18) and screening gained other governments'
 sanctions lists, mixer pools and stolen-funds wallets. Every request count and
@@ -365,6 +365,30 @@ ask Tether what it knows, on a lawful request. It does not say why, and the
 alert says so. Meanwhile 45,968 USDT reached Binance's hot wallet two hops
 out, split across several wallets on the way: the request to Binance is the
 second letter. This is the demo for "why Tron", in three seconds.
+
+---
+
+## 12 — An exchange the label file does not know
+
+```
+TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja
+```
+Tron · USDT · 2 hops · **under 2 seconds**
+
+| | |
+|---|---|
+| Exchange | **Flipster** — `Flipster Exchange Hot Wallet (TronScan tag, read live)`, 1 hop |
+| Confidence | **1.00** |
+| In the label file? | **No** — the Tron file holds 41 wallets and Flipster is not among them |
+
+The label file can only hold the wallets someone imported. So a Tron trace also
+asks TronScan — the explorer that assigns Tron's public tags — what it calls each
+wallet no file names. Here the answer is Flipster's hot wallet, and the finding
+says it was read live from TronScan, so the source is never hidden. A tag naming a
+treasury, a bridge or a scam never counts, and every TronScan response is hashed
+into the evidence like any other. Before this, this trace ended "no exchange
+matched". If asked "how many Tron exchanges can you name?": 41 from the file, plus
+any TronScan tags — say that, and show this.
 
 ---
 

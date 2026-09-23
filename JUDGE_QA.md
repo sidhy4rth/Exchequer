@@ -1,4 +1,4 @@
-# Judge Q&A — fifteen questions and the answers the repo can back
+# Judge Q&A — eighteen questions and the answers the repo can back
 
 Every answer below is grounded in code that is in the repository or a number
 that was measured in it. Sources for the factual claims are in
@@ -124,7 +124,11 @@ one labelled hot wallet, the tool names it as a *probable* deposit address of
 that exchange, scores it lower than a label match, and says what would confirm
 it. Adding a label is a script that fetches from the explorer and verifies on
 chain — CoinDCX (29 wallets on Ethereum, and BSC) and Delta Exchange were added
-that way; WazirX and ZebPay were not because no source met the standard.
+that way; WazirX and ZebPay were not because no source met the standard. On Tron,
+where the file holds 41 wallets, a trace also asks TronScan for its own tag on each
+unlabelled wallet it reaches; a tag naming a known exchange attributes it, marked
+"read live". Its first live run named wallets paying Flipster, WestWallet and ONUS —
+none of them in the file — at confidence 1.00. DEMO.md trace 12 is one of them.
 
 **11. How would this be used under PMLA?**
 
@@ -135,9 +139,12 @@ entities that must register with FIU-IND and keep records that "enable it to
 reconstruct individual transactions" and identify the customer (PMLA s.12).
 The ED obtains those under s.50; state police by notice. Exchequer's output is
 the input to that request: the deposit address, the transaction hashes,
-amounts and times, in a form the exchange's compliance team can match. The
-report says on every attribution that only the exchange can link an address
-to a person.
+amounts and times, in a form the exchange's compliance team can match. A case
+now drafts that letter itself — to the exchange, and to Tether where USDT or a
+freeze is involved — filled from the case, with the officer's details and the
+legal provision left blank for the officer to complete: the tool suggests a
+provision, it never asserts one. The report says on every attribution that only
+the exchange can link an address to a person.
 
 **12. What is the biggest thing it gets wrong?**
 
@@ -180,3 +187,33 @@ incidents on the National Cyber Crime Reporting Portal that year. An
 Enforcement Directorate case reported in July 2026 traced ₹303 crore from fake
 job, investment and gaming scams through 216 mule accounts into cryptocurrency
 and froze 160,339 USDT. Those are the cases this tool is built to start.
+
+**16. Can the money still be frozen? What can Tether do?**
+
+Tether can freeze USDT at an address, and it does — after a sanctions match, a
+law-enforcement request or a theft. Every freeze is an event on the USDT contract
+itself, so Exchequer reads the list straight from the chain: 2,763 addresses on
+Ethereum and 7,589 on Tron are frozen today, a random sample checked against the
+contract's own `isBlackListed()`. A trace that touches one says "Frozen by Tether"
+and when; DEMO.md trace 11 is a Tron wallet Tether froze on 11 September whose
+USDT still reached Binance. The event does not say why, and the tool says so —
+it is the reason to write to Tether, and the case drafts that letter.
+
+**17. Sanctions lists are American. What about other countries?**
+
+Screening now covers six governments: the US (OFAC), the UK, the EU, Israel's
+counter-terror seizure orders, Japan and France. Of the 95 official lists
+OpenSanctions collects, those are the ones that
+publish crypto wallets; the others publish none, so there is nothing to screen
+against. Only measures in force count, and a wallet several governments list
+names all of them. Trace 7 is on the US, UK and Israeli lists at once.
+
+**18. What if the scammer converts ETH into USDT on an exchange like Uniswap?**
+
+The trace reads the swap's own receipt, so it knows what the money became. When
+it became USDT or USDC, Exchequer follows that stablecoin onward as a linked trace
+from the moment of the swap — transfers the wallet made in that coin before the
+swap are excluded, since they were not the swapped money. Each trace keeps its
+own amounts and score, because 1 ETH and 2,400 USDT cannot be added together. A
+swap into an obscure token, or a bridge to another chain, still ends the trail,
+and the report says so.
