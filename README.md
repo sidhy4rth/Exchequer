@@ -84,6 +84,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
 | **Follows the money through a swap** | A transfer into a known DEX router is read from its receipt; if it came back as USDT or USDC, that stablecoin is traced onward from the moment of the swap, as its own linked trace. |
 | **Links complaints** | Stored cases whose money converges on the same wallets are shown as one operation, with no new API calls. |
+| **Drafts the request** | One click drafts the letter to the exchange — the address to ask about, every hop with amounts, times and transaction hashes, the evidence hash — and, where USDT or a Tether freeze is involved, the letter to Tether. The officer's details and the legal provision are left blank to complete. |
 | **Seals the evidence** | Every provider response is hashed as it arrives; the report carries the manifest and a content hash, so a changed byte is detectable. |
 
 <table>
@@ -293,6 +294,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 |---|---|
 | `GET /trace/{case_id}` | Retrieve a stored case |
 | `GET /trace/{case_id}/report?format=text` | The investigator's report (`format=json` for structured): summary, finding and basis, the path hop by hop with amounts, times and hashes, every pattern with its thresholds, every inference with its evidence, screening hits with their sources, limitations, and an appendix of every address and transaction hash |
+| `GET /trace/{case_id}/letters` | Which request letters the case supports (to the exchange, to Tether) |
+| `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether) |
 | `GET /cases` | History of past traces |
 | `GET /cases/correlate` | Intermediaries shared by two or more stored cases — the campaign view (`?case_id=` narrows it) |
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |
@@ -717,6 +720,7 @@ staying silent on ordinary activity, because a false accusation is the expensive
 | `test_exchange_matcher.py` | Both label-file shapes, case-insensitive lookup, closest-match preference, degrading to "no attribution" |
 | `test_risk_matcher.py` | All four categories; a mixer ends a trace and keeps ending it whatever else lists it, a sanctioned, frozen or stolen-funds address does not; a government listing outranks an explorer tag; several governments are all named; unknown categories dropped |
 | `test_threat_import.py` | Thief and phishing tags accepted; "hackerspace" charities, AVS operators and hack *victims* rejected; only mixer pools and routers count, never governance or token contracts |
+| `test_request_letters.py` | The exchange letter names the address and every hop with its hashes; the legal basis is left for the officer; no exchange means no exchange letter; an attribution after a swap is written from the follow-on; the Tether letter lists each freeze; an ETH trace touching no USDT offers none |
 | `test_follow_swaps.py` | A swap into a stablecoin is traced to the exchange from the moment of the swap; transfers before it are excluded; the original trace keeps its asset and score; a swap into an untraced token is not followed; the switch turns it off; the report prints it |
 | `test_tether_freezes.py` | The replay: a release unfreezes, a re-freeze after a release counts, order within a block follows the log index, Tron addresses convert for the contract call |
 | `test_intl_sanctions_import.py` | The chain named before a free-text address decides where it is filed; a token name alone picks no EVM chain; a wallet named only in lifted seizure orders is left out |
@@ -775,6 +779,7 @@ exchequer/
 │   │   ├── scoring.py            confidence score
 │   │   ├── evidence.py           hash-and-timestamp of every provider response
 │   │   ├── report.py             the investigator's report
+│   │   ├── request_letters.py    draft letters to the exchange and to Tether
 │   │   ├── models.py             SQLite (SQLAlchemy) case store
 │   │   ├── api_budget.py         shared pacer + response cache
 │   │   └── warmup.py             traces the demos at startup

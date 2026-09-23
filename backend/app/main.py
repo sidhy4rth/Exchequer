@@ -22,7 +22,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import api_budget, chain_data, config, models, warmup
+from . import api_budget, chain_data, config, models, request_letters, warmup
 from .chain_data import (
     ProviderNotConfiguredError,
     UnknownAssetError,
@@ -860,6 +860,38 @@ def get_report(
             },
         )
     return report
+
+
+@app.get("/trace/{case_id}/letters")
+def list_letters(case_id: str) -> dict[str, Any]:
+    """Which request letters this case can support: to the exchange, to Tether."""
+    case = models.get_case(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
+    return {"case_id": case_id, "letters": request_letters.available(case.result)}
+
+
+@app.get("/trace/{case_id}/letter")
+def get_letter(
+    case_id: str,
+    to: str = Query(..., pattern="^(exchange|tether)$", description="exchange or tether"),
+) -> PlainTextResponse:
+    """A draft request letter, filled from the case, for the officer to complete.
+
+    A draft, never a sent document: the officer's details, the case reference
+    and the legal provision are left as marked blanks.
+    """
+    case = models.get_case(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
+    try:
+        text = request_letters.draft(case_id, case.result, to)
+    except request_letters.LetterNotApplicable as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return PlainTextResponse(
+        text,
+        headers={"Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}-request-{to}.txt"'},
+    )
 
 
 @app.get("/cases")

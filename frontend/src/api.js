@@ -147,3 +147,15 @@ export async function fetchReport(caseId, format = 'text') {
   if (!response.ok) throw await toError(response)
   return format === 'text' ? response.text() : response.json()
 }
+
+export async function fetchLetters(caseId) {
+  const response = await fetch(`${BASE}/trace/${encodeURIComponent(caseId)}/letters`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+export async function fetchLetter(caseId, to) {
+  const response = await fetch(`${BASE}/trace/${encodeURIComponent(caseId)}/letter?to=${encodeURIComponent(to)}`)
+  if (!response.ok) throw await toError(response)
+  return response.text()
+}
