@@ -220,6 +220,24 @@ this is the reason the paper's own peeling-chain tracking stops at them.
 **Verdict: supported** at the level the README uses it (a reason to stop the
 walk, not a quantitative claim).
 
+**Source I-2 (primary).** U.S. Department of the Treasury, *Tornado Cash
+Delisting*, press release SB0057, 21 March 2025.
+<https://home.treasury.gov/news/press-releases/sb0057>
+
+> "we have exercised our discretion to remove the economic sanctions against
+> Tornado Cash as reflected in Treasury's Monday filing in Van Loon v.
+> Department of the Treasury. We remain deeply concerned about the significant
+> state-sponsored hacking and money laundering campaign aimed at stealing,
+> acquiring, and deploying digital assets for the Democratic People's Republic
+> of Korea (DPRK)"
+
+**Verdict: supported.** This is why the README says a sanctions-only screen
+would never stop at Tornado Cash, and why the mixer category is built from the
+explorer's own tags rather than from OFAC. Delisting changed the pool's legal
+status in the U.S.; it did not change what a pool does to the link between a
+deposit and a withdrawal, which is the only property the stop rule relies on.
+(Read 23 September 2026.)
+
 ---
 
 ## Claim 7 — Scale of the problem in India (DEMO.md and JUDGE_QA.md)
@@ -264,6 +282,137 @@ Hyderabad City Police on X.
 issuer on request of law enforcement, and Indian police have seized USDT in
 cyber-fraud cases. **No Tether announcement naming an Indian scam specifically
 could be found**, so the project makes no such claim.
+
+---
+
+## Where the label data comes from
+
+The claims above are about laundering. This section applies the same standard
+to the *data*: every file a finding can come from, what published source it was
+built from, what that source says about itself, and what a match against it
+does and does not establish. Every source here was fetched and read on 22–23
+September 2026; the passages are copied from the documents. Counts are as built
+on 23 September 2026.
+
+### Government sanctions and seizure lists — category `sanctioned`
+
+**Source N (primary).** U.S. Treasury, OFAC *Specially Designated Nationals
+list*, XML, published 18 September 2026.
+<https://www.treasury.gov/ofac/downloads/sdn.xml> — read in full by
+`scripts/import_ofac_addresses.py`. Each crypto address is an `<id>` whose
+`idType` reads `Digital Currency Address - <code>`, recorded against the
+designated entity with its sanctions programs. The 18 September list added 52
+Tron addresses for XINBI GUARANTEE. **124 Ethereum, 334 Tron, 1 BSC.**
+
+**Source O (primary).** UK Foreign, Commonwealth & Development Office, *UK
+Sanctions List* (CSV), report date 21 September 2026.
+<https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv> — the UK list has
+no address field; addresses sit in the free-text *Other Information* and
+*Statement of Reasons*. For example, entry CTD0004:
+
+> "We have reasonable grounds to suspect that at least the following crypto
+> wallets are owned or controlled by AYASH or Gaza Now and are therefore also
+> subject to the asset freeze on AYASH: (1) ETH:
+> 0x175d44451403Edf28469dF03A9280c1197ADb92c (2) BNB: 0x175d4…"
+
+Each address is filed under the chain the text names before it. 56 address
+mentions (Xinbi, Gaza Now, Garantex, EXMO, Byex).
+
+**Source P (primary).** European Commission, *Consolidated list of persons,
+groups and entities subject to EU financial sanctions* (XML).
+<https://webgate.ec.europa.eu/fsd/fsf> — addresses sit in the entity's
+`<remark>`, e.g. for Garantex under Regulation 2025/389:
+
+> "Known Garantex blockchain wallet addresses: ETH:
+> 0x002471b8A185f9980708d0eAEC5B289714F56f8d BTC: bc1qwtz3zv95… BSC:
+> 0x3051Ca7cB7f6C599fA2f27385AD75010cf0f2bbF TRX:
+> TA1hsikRfsgGiW9nEBpT4tEXEySTNYLr2d"
+
+5 EVM/Tron addresses (Garantex, Grinex).
+
+**Source Q (secondary aggregator of primary documents).** OpenSanctions,
+*Israel Sanctioned Crypto Wallets List* (`il_mod_crypto`), and its Japan MOF and
+France DG Trésor datasets. <https://www.opensanctions.org/datasets/il_mod_crypto/>
+The dataset describes itself:
+
+> "Cryptocurrency wallets seized by the Israeli government using Administrative
+> Seizure Orders." … "A list of seizure orders issued by the Israeli government
+> against crypto wallets with the most regularly seen authrorization being the
+> Anti-Terrorism law 5776-2016. The NBCTF website uses scraping protection which
+> makes it impossible for us to update the data fully automatically. It is
+> periodically checked for freshness."
+
+Each wallet links to the seizure order (e.g. "ASO 56/23") and the NBCTF PDF it
+came from; 573 of the orders carry an end date, and a wallet named only in
+lifted orders is **excluded**. Japan: "Sanctions imposed by Japan under its
+Foreign Exchange and Foreign Trade Law" (8 Lazarus Group wallets and one other).
+France: "The register lists all persons, entities and vessels subject to asset
+freezing measures in force on French territory". **600 Israeli, 9 Japanese,
+3 French** addresses in force. OpenSanctions data is licensed **CC BY-NC 4.0**
+(non-commercial). Of 95 official lists in OpenSanctions' sanctions collection,
+only the US, Israel, Japan and France publish wallets as structured data; the
+EU, UK, UN, Canada, Australia and Switzerland publish none in that form.
+
+**What a match establishes:** that a government froze, designated or seized
+the address, as of the date read. **What it does not:** that a counterparty who
+received funds from it is culpable, or that the measure has force in Indian law.
+
+### Mixer pools and exploiter wallets — categories `mixer` and `stolen`
+
+**Source R.** dawsbot/eth-labels, "A public dataset of crypto addresses labeled
+(Ethereum and MANY more EVM chains)", pinned at commit `14247ba8`, 10 July 2026,
+MIT licence. <https://github.com/dawsbot/eth-labels> — a scrape of Etherscan's and
+BscScan's own label pages. Used for exchange wallets, for mixer pools (only tags
+naming a Tornado Cash, Typhoon or Privacy Pools *pool or router*: **40 Ethereum,
+14 BSC**) and for thief tags ("… Exploiter", "… Hacker", "… Attacker": the
+WazirX, Bybit, BingX, Ronin, Multichain and other incidents). Each address was
+confirmed to have been used on chain.
+
+**What a match establishes:** that the explorer publicly tags the address that
+way. **What it does not:** a government finding — the tag is the explorer's
+attribution, and the report says so.
+
+### Reported phishing and scam wallets — category `stolen`
+
+**Source S.** ScamSniffer, *Web3 Scam Database*, pinned at commit `753310a5`,
+21 September 2026, **GPL-3.0**. <https://github.com/scamsniffer/scam-database>
+
+> "Our mission is to provide comprehensive and up-to-date blacklists of
+> phishing domains and addresses to safeguard the crypto community." …
+> "**Daily Updates**: Our data is refreshed every 24 hours" … "**7-Day
+> Delay**: The open-source data is provided with a 7-day delay"
+
+2,530 EVM addresses; the list names no chain, so each was filed under every
+chain it has been used on.
+
+**Source T.** Etherscan's *Phish / Hack* label, through two independent
+mirrors, both MIT: dappcenter/etherscan-labels (commit `d547040b`, 5,594
+addresses — the same list DEMO.md uses for a judge's live pick) and Forta's
+labelled datasets (commit `40a9c2f2`).
+<https://github.com/forta-network/labelled-datasets> describes its phishing file
+as:
+
+> "Addresses involved in phishing scams. Data was extracted from the following
+> sources: Luabase `ethereum.tags` table: malicious addresses with etherscan
+> labels `phish-hack`"
+
+Together, 9,765 distinct reported addresses; 1,604 had never been used on
+Ethereum or BSC and were left out; **8,139 Ethereum and 518 BSC** were added.
+
+**What a match establishes:** that a security vendor or the explorer has
+publicly reported the wallet for phishing or theft. **What it does not:** that
+the report is correct, or that anyone who transacted with it took part. A scam
+list is that list's accusation, and each finding names the list.
+
+### Exchange deposit addresses
+
+**Source U.** Etherscan's "Bitget Dep: 0x…" tags, through Source R — 19,027
+addresses Etherscan attributes to Bitget customer deposit accounts. Every one
+was confirmed on chain to have at least one transaction or token transfer; all
+19,027 passed. **What a match establishes:** that the explorer attributes the
+address to a Bitget deposit account. **What it does not:** which customer —
+only Bitget can say, on a lawful request, which is exactly the request the
+report prepares.
 
 ---
 

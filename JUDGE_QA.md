@@ -86,9 +86,12 @@ they never move the confidence score.
 The trace stops and says so. A tumbler pays out from a commingled pool, so a
 transfer leaving it has no established link to the deposit that arrived;
 following it would manufacture a trail. That stop is a correctness rule, not a
-limitation, and it is tested. The mixer list is empty today because every mixer
-on the current OFAC list is a Bitcoin service and Tornado Cash was delisted in
-March 2025 — re-running the importer picks up any future designation.
+limitation, and it is tested. Tornado Cash left the OFAC list in March 2025 and
+every mixer OFAC still lists is a Bitcoin service, so the mixer list is built
+from Etherscan's own tags instead: 40 pools and routers on Ethereum, 14 on BSC
+(Tornado Cash, Typhoon, Privacy Pools). The alert names that source, not a
+government. DEMO.md trace 6 is a live hit: 10 ETH into Tornado Cash, three hops
+out.
 
 **8. Why not Bitcoin?**
 
@@ -112,15 +115,16 @@ overfit and hide that.
 **10. What if the exchange is not in your list?**
 
 Then the trace returns `exchange: null` with a message, never a guess.
-`GET /exchanges` shows exactly what is covered — 337 Ethereum, 30 BSC and 40
-Tron wallets today, every one read from the explorer's own label and checked on
-chain. The new deposit-address inference narrows the gap from the
+`GET /exchanges` shows exactly what is covered — 20,047 Ethereum addresses
+(1,020 exchange wallets across 92 exchanges plus 19,027 Bitget customer deposit
+addresses), 38 on BSC and 41 on Tron, every one read from the explorer's own
+label and checked on chain. The new deposit-address inference narrows the gap from the
 other side: when an unlabelled wallet's entire outgoing history is sweeps into
 one labelled hot wallet, the tool names it as a *probable* deposit address of
 that exchange, scores it lower than a label match, and says what would confirm
 it. Adding a label is a script that fetches from the explorer and verifies on
-chain — CoinDCX on BSC was added that way; WazirX and ZebPay were not because no
-source met the standard.
+chain — CoinDCX (29 wallets on Ethereum, and BSC) and Delta Exchange were added
+that way; WazirX and ZebPay were not because no source met the standard.
 
 **11. How would this be used under PMLA?**
 
