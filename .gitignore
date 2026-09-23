@@ -15,3 +15,17 @@ frontend/dist/
 
 # OS
 .DS_Store
+
+# Kept on this machine only: session briefs and notes, the TraceChain one-pager,
+# and the rejected first cut of the launch film (its music may be a stock track)
+_archive/
+
+# Video-tool installs (Hyperframes / brag skill)
+.agents/
+.claude/
+skills-lock.json
+
+# Local case-store backups, the demo-case keep list, import checkpoints
+backend/*.db.bak-*
+backend/keep13.txt
+backend/*_check.jsonl

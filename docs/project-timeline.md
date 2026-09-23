@@ -42,7 +42,7 @@ date is not recorded anywhere, the document says so rather than guessing.
   proprietary score. A conclusion that reaches a courtroom must be one an officer can
   re-check by hand: attribution is an exact match against a published wallet list,
   and every laundering finding is arithmetic that prints the thresholds it applied.
-- **4 September — the TraceChain one-pager** (`TraceChain-Overview.pdf`, 3 pages).
+- **4 September — the TraceChain one-pager** (a 3-page PDF, kept outside the repository).
   Ethereum only. 337 verified exchange wallets across 18 exchanges, 4 hops by
   default, a confidence score from three weighted factors (hop proximity 40%, amount
   correlation 35%, match directness 25%), peel-chain and amount-split rules, a bubble

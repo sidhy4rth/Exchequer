@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Exchequer — one red square</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "IBM Plex Mono"; font-weight: 400; src: url("assets/fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "IBM Plex Mono"; font-weight: 500; src: url("assets/fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); }
+      @font-face { font-family: "IBM Plex Mono"; font-weight: 600; src: url("assets/fonts/ibm-plex-mono-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "IBM Plex Sans"; font-weight: 400; src: url("assets/fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "IBM Plex Sans"; font-weight: 500; src: url("assets/fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); }
+      @font-face { font-family: "IBM Plex Sans"; font-weight: 600; src: url("assets/fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "IBM Plex Serif"; font-weight: 400; src: url("assets/fonts/ibm-plex-serif-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "IBM Plex Serif"; font-weight: 500; src: url("assets/fonts/ibm-plex-serif-latin-500-normal.woff2") format("woff2"); }
+      @font-face { font-family: "IBM Plex Serif"; font-weight: 600; src: url("assets/fonts/ibm-plex-serif-latin-600-normal.woff2") format("woff2"); }
+
+      :root {
+        --paper: #0b0c0e; --panel: #111316; --rule: #22262b; --rule-strong: #343940;
+        --ink: #ececea; --muted: #a0a5ab; --micro: #9aa0a6;
+        --green: #2fd3a2; --amber: #e0a44a; --red: #ff5c5c;
+        --card: #f5f4f0; --card-ink: #16191d; --card-muted: #5b6169; --card-rule: #d9d6cf; --card-red: #b3261e;
+        --sans: "IBM Plex Sans", sans-serif; --mono: "IBM Plex Mono", monospace; --serif: "IBM Plex Serif", serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+      .clip { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .in { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .micro { font-family: var(--mono); font-size: 17px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--micro); }
+      .mono { font-family: var(--mono); }
+      .serif { font-family: var(--serif); }
+      .h { font-family: var(--serif); font-weight: 600; color: var(--ink); line-height: 1.1; letter-spacing: -0.01em; }
+
+      /* ---------- persistent layers ---------- */
+      #bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+      #grid {
+        position: absolute; left: -60px; top: -60px; width: 2040px; height: 1200px;
+        background-image:
+          linear-gradient(rgba(236, 236, 234, 0.10) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(236, 236, 234, 0.10) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      #glow {
+        position: absolute; left: 0; top: 0; width: 900px; height: 900px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 92, 92, 0.26) 0%, rgba(255, 92, 92, 0.10) 32%, rgba(255, 92, 92, 0) 66%);
+      }
+      #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(11,12,14,0) 55%, rgba(11,12,14,0.75) 100%); }
+      #meta-tl { position: absolute; left: 60px; top: 44px; z-index: 6; }
+      #meta-tr { position: absolute; right: 60px; top: 44px; z-index: 6; }
+      #meta-tr .amber { color: var(--amber); }
+      .counter { position: absolute; left: 60px; bottom: 44px; }
+      .ghost { position: absolute; right: 40px; bottom: -70px; font-family: var(--serif); font-weight: 600; font-size: 420px; line-height: 1; color: rgba(236, 236, 234, 0.07); }
+      /* the money: one red square, present from the first beat to the last */
+      #money { position: absolute; left: 0; top: 0; width: 28px; height: 28px; background: var(--red); z-index: 10; box-shadow: 0 0 24px rgba(255, 92, 92, 0.55); opacity: 0; }
+
+      /* ---------- beat 1 ---------- */
+      /* the wall: the ledger the money disappears into, one field of addresses */
+      #wall { position: absolute; inset: 0; z-index: 1; opacity: 0; }
+      .wcol { position: absolute; top: 0; width: 290px; height: 100%; }
+      .wcell { position: absolute; left: 0; font-family: var(--mono); font-size: 24px; line-height: 30px; white-space: nowrap; }
+      #wall-scrim {
+        position: absolute; inset: 0; z-index: 2; opacity: 0;
+        background: linear-gradient(101deg, rgba(11,12,14,0.95) 0%, rgba(11,12,14,0.9) 34%, rgba(11,12,14,0.62) 66%, rgba(11,12,14,0.5) 100%);
+      }
+      #found { position: absolute; left: 1310px; top: 456px; z-index: 3; font-family: var(--mono); font-size: 24px; line-height: 30px; white-space: nowrap; color: rgba(236,236,234,0.62); }
+      #found-box { position: absolute; left: 1298px; top: 449px; width: 240px; height: 44px; z-index: 3; border: 2px solid var(--red); border-radius: 3px; opacity: 0; }
+      #wall-key { position: absolute; right: 60px; bottom: 44px; z-index: 5; display: flex; gap: 26px; opacity: 0; }
+      #wall-key span { display: flex; align-items: center; gap: 9px; }
+      #wall-key i { display: block; width: 11px; height: 11px; }
+      #b1-h1, #b1-h2, #b1-rule, #b1-lede, #b1-band, #b1-sub { z-index: 4; }
+      .counter { z-index: 5; }
+      #b1-h1, #b1-h2 { position: absolute; left: 120px; top: 300px; width: 1500px; font-size: 104px; }
+      #b1-h1 div, #b1-h2 div { display: block; }
+      #b1-h2 { opacity: 0; }
+      #b1-rule { position: absolute; left: 120px; top: 560px; width: 1500px; height: 2px; background: var(--rule-strong); }
+      #b1-lede { position: absolute; left: 120px; top: 590px; font-size: 30px; color: var(--muted); opacity: 0; }
+      #b1-band { position: absolute; left: 120px; top: 760px; height: 64px; display: flex; align-items: center; font-family: var(--mono); font-size: 64px; line-height: 1; color: var(--ink); white-space: nowrap; }
+      #b1-band .ch { display: inline-block; opacity: 0; }
+      #b1-band-ul { position: absolute; left: 120px; top: 838px; width: 1613px; height: 2px; background: var(--rule-strong); z-index: 4; }
+      #b1-sub { position: absolute; left: 120px; top: 866px; font-size: 26px; color: var(--muted); opacity: 0; }
+
+      /* ---------- beat 2 ---------- */
+      #b2-title { position: absolute; left: 120px; top: 96px; width: 1500px; font-size: 68px; }
+      #b2-title .l2 { color: var(--green); opacity: 0; }
+      #b2-svg { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+      .hop { position: absolute; top: 322px; width: 120px; margin-left: -60px; text-align: center; opacity: 0; }
+      #chip { position: absolute; left: 968px; top: 548px; padding: 10px 16px; border: 2px solid var(--green); border-radius: 3px; background: rgba(11, 12, 14, 0.9); font-family: var(--mono); font-size: 22px; color: var(--green); white-space: nowrap; opacity: 0; }
+      #chip small { display: block; margin-top: 4px; font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--micro); }
+      #dust { position: absolute; left: 596px; top: 780px; opacity: 0; }
+      .tile { position: absolute; top: 880px; width: 230px; opacity: 0; }
+      .tile .v { font-family: var(--mono); font-size: 64px; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+      .tile .k { margin-top: 10px; }
+      #t1 { left: 1170px; } #t2 { left: 1420px; } #t3 { left: 1670px; }
+      #b2-cap { position: absolute; left: 120px; top: 930px; width: 1000px; font-size: 30px; color: var(--muted); opacity: 0; }
+
+      /* ---------- beat 2b: the map ---------- */
+      #toggle { position: absolute; left: 1430px; top: 268px; width: 230px; height: 40px; border: 1px solid var(--rule-strong); border-radius: 3px; display: flex; font-family: var(--mono); font-size: 16px; opacity: 0; z-index: 4; }
+      #toggle span { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 2; }
+      #tg-hop { color: var(--ink); }
+      #tg-bub { color: var(--micro); }
+      #toggle-pill { position: absolute; left: 1px; top: 1px; width: 113px; height: 36px; background: rgba(236, 236, 234, 0.13); border-radius: 2px; z-index: 1; }
+      #cursor { position: absolute; left: 0; top: 0; width: 26px; height: 32px; z-index: 8; opacity: 0; }
+      .tip { position: absolute; width: 404px; background: rgba(17, 19, 22, 0.97); border: 1px solid var(--rule-strong); border-radius: 3px; padding: 20px 24px; z-index: 7; opacity: 0; }
+      .tip .t { font-family: var(--mono); font-size: 19px; color: var(--ink); margin-bottom: 14px; }
+      .tip .r { display: flex; justify-content: space-between; align-items: baseline; margin-top: 9px; }
+      .tip .r .k { font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--micro); }
+      .tip .r .v { font-family: var(--mono); font-size: 18px; color: var(--ink); }
+      .tip .r .v.green { color: var(--green); }
+      .tip .r .v.amber { color: var(--amber); }
+      #card1 { left: 1010px; top: 566px; }
+      #card2 { left: 1300px; top: 436px; }
+
+      /* ---------- beat 3 ---------- */
+      #b3-col { position: absolute; left: 100px; top: 100px; width: 990px; height: 900px; overflow: hidden; }
+      #b3-rows { position: absolute; left: 0; top: 0; width: 990px; }
+      .row { position: relative; height: 64px; display: flex; align-items: center; padding-left: 60px; font-family: var(--mono); font-size: 30px; color: rgba(236, 236, 234, 0.5); white-space: nowrap; }
+      .row.hit { color: rgba(236, 236, 234, 0.5); }
+      #scan { position: absolute; left: 0; top: 0; width: 990px; height: 64px; background: rgba(255, 92, 92, 0.12); border-top: 2px solid var(--red); opacity: 0; }
+      #hit-bg { position: absolute; left: 0; top: 0; width: 990px; height: 64px; background: rgba(255, 92, 92, 0.16); opacity: 0; }
+      #hit-chip { position: absolute; left: 822px; top: 0; height: 64px; display: flex; align-items: center; opacity: 0; }
+      #hit-chip span { padding: 6px 12px; border: 2px solid var(--red); border-radius: 3px; font-family: var(--mono); font-size: 16px; letter-spacing: 0.14em; color: var(--red); background: rgba(11,12,14,0.92); }
+      #b3-h { position: absolute; left: 1100px; top: 290px; width: 720px; font-size: 84px; }
+      #b3-facts { position: absolute; left: 1100px; top: 640px; opacity: 0; font-size: 20px; }
+      #b3-count { position: absolute; left: 1100px; top: 830px; opacity: 0; }
+      #b3-count .v { font-family: var(--mono); font-size: 64px; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+      #b3-count .k { margin-top: 10px; }
+      #b3-facts div { margin-top: 14px; }
+
+      /* ---------- beat 4 ---------- */
+      #b4-in { opacity: 0; }
+      #b4-h { position: absolute; left: 120px; top: 250px; width: 860px; font-size: 84px; }
+      #b4-sub { position: absolute; left: 120px; top: 600px; width: 800px; font-size: 30px; line-height: 1.4; color: var(--muted); opacity: 0; }
+      #card { position: absolute; left: 1060px; top: 232px; width: 740px; background: var(--card); color: var(--card-ink); border-radius: 4px; padding: 48px 56px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
+      #card .hd { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--card-muted); }
+      #card .rule { height: 2px; background: var(--card-rule); margin: 18px 0 22px; }
+      #card .k { font-family: var(--mono); font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--card-muted); }
+      #card .v { margin-top: 6px; margin-bottom: 20px; font-size: 27px; color: var(--card-ink); }
+      #card .v.mono { font-family: var(--mono); font-size: 23px; }
+      #card .v.big { font-family: var(--mono); font-size: 40px; padding-left: 44px; }
+      #card .hash { font-family: var(--mono); font-size: 18px; line-height: 1.4; color: var(--card-ink); word-break: break-all; width: 620px; }
+      #card .ul { position: absolute; left: 56px; height: 3px; background: var(--card-red); width: 620px; }
+      #ul-finding { top: 172px; } #ul-address { top: 244px; }
+      #card .hash .hc { display: inline-block; opacity: 0; }
+      #stamp { position: absolute; left: 1584px; top: 526px; padding: 8px 20px; border: 4px solid var(--card-red); border-radius: 4px; font-family: var(--serif); font-weight: 600; font-size: 54px; letter-spacing: 0.08em; color: var(--card-red); opacity: 0; }
+
+      /* ---------- beat 5 ---------- */
+      .stance { position: absolute; left: 120px; font-size: 124px; opacity: 0; }
+      #st1 { top: 250px; } #st2 { top: 400px; } #st3 { top: 550px; }
+      #st4 { position: absolute; left: 120px; top: 700px; font-family: var(--serif); font-weight: 600; font-size: 64px; line-height: 1.1; color: var(--ink); opacity: 0; }
+      #tick { display: inline-block; width: 46px; height: 46px; margin-left: 26px; vertical-align: -7px; }
+      #tick path { fill: none; stroke: var(--red); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+      #st-rule { position: absolute; left: 120px; top: 802px; width: 520px; height: 4px; background: var(--red); }
+      #b5-sub { position: absolute; left: 120px; top: 834px; font-family: var(--mono); font-size: 22px; color: var(--muted); letter-spacing: 0.02em; opacity: 0; }
+
+      /* ---------- beat 6 ---------- */
+      .cell { position: absolute; width: 42px; height: 42px; background: var(--ink); opacity: 0; }
+      #c00 { border-top-left-radius: 23px; } #c33 { border-bottom-right-radius: 23px; }
+      #wordmark { position: absolute; left: 772px; top: 478px; font-family: var(--serif); font-weight: 600; font-size: 122px; line-height: 1; color: var(--ink); letter-spacing: -0.01em; opacity: 0; }
+      #b6-tag { position: absolute; left: 0; right: 0; top: 690px; text-align: center; font-size: 32px; color: var(--muted); opacity: 0; }
+      #b6-stats .n { display: inline-block; text-align: right; font-variant-numeric: tabular-nums; }
+      #n1 { width: 1ch; } #n2 { width: 2ch; } #n3, #n4 { width: 3ch; }
+      #b6-stats { position: absolute; left: 0; right: 0; top: 770px; text-align: center; font-family: var(--mono); font-size: 20px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); opacity: 0; }
+      #b6-sih { position: absolute; left: 0; right: 0; bottom: 44px; text-align: center; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="37.94" data-fps="30">
+
+      <!-- persistent background: the counting cloth, the glow that follows the money, the frame -->
+      <div id="bg" data-layout-ignore>
+        <div id="grid"></div>
+        <div id="glow"></div>
+        <div id="vignette"></div>
+      </div>
+      <div id="meta-tl" class="micro">Restricted · Cyber Crime Cell</div>
+      <div id="meta-tr" class="micro"><span class="amber">Exchequer</span> · SIH26183</div>
+
+      <!-- 1 · the report -->
+      <section id="b1" class="clip" data-start="0" data-duration="5.28" data-track-index="0">
+        <div class="in" id="b1-in">
+          <div class="ghost" data-layout-ignore>01</div>
+          <div id="wall" data-layout-ignore aria-hidden="true"></div>
+          <div id="wall-scrim" data-layout-ignore></div>
+          <div id="found" data-layout-ignore>0x60d02e09…5c2533</div>
+          <div id="found-box" data-layout-ignore></div>
+          <div id="wall-key" class="micro">
+            <span><i style="background: #2fd3a2"></i>exchange</span>
+            <span><i style="background: #7cc0ff"></i>router</span>
+            <span><i style="background: #ff5c5c"></i>sanctioned</span>
+            <span><i style="background: rgba(236,236,234,0.62)"></i>unlabelled</span>
+          </div>
+          <div id="b1-h1" class="h"><div data-layout-allow-overlap>A scam takes</div><div data-layout-allow-overlap>someone's savings.</div></div>
+          <div id="b1-h2" class="h"><div data-layout-allow-overlap>The police get</div><div data-layout-allow-overlap>one thing back.</div></div>
+          <div id="b1-rule"></div>
+          <div id="b1-lede">A victim reports one wallet address. Exchequer starts there.</div>
+          <div id="b1-band" aria-label="0x60d02e0956e2f3795167c15ba61ab452c85c2533"></div>
+          <div id="b1-band-ul"></div>
+          <div id="b1-sub">Reported by a victim · Ethereum mainnet</div>
+          <div class="counter micro">01 / 06 — The report</div>
+        </div>
+      </section>
+
+      <!-- 2 · the trace, drawn -->
+      <section id="b2" class="clip" data-start="5.28" data-duration="12.11" data-track-index="1">
+        <div class="in" id="b2-in">
+          <div class="ghost" data-layout-ignore>02</div>
+          <svg id="b2-svg" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+          <div id="b2-title" class="h"><div class="l1" data-layout-allow-overlap>Exchequer follows it outward, hop by hop —</div><div class="l2" data-layout-allow-overlap>to the exchange it was cashed out through.</div></div>
+          <div class="hop micro" style="left:560px">Hop 1</div>
+          <div class="hop micro" style="left:940px">Hop 2</div>
+          <div class="hop micro" style="left:1320px">Hop 3</div>
+          <div class="hop micro" style="left:1700px">Hop 4</div>
+          <div id="dust" class="micro">dust · dropped</div>
+          <div id="chip">Binance 14 · published exchange wallet<small>exact match · label file, not a model</small></div>
+          <div class="tile" id="t1"><div class="v">0</div><div class="k micro">addresses</div></div>
+          <div class="tile" id="t2"><div class="v">0</div><div class="k micro">transfers</div></div>
+          <div class="tile" id="t3"><div class="v">0</div><div class="k micro">API calls</div></div>
+          <div id="toggle"><div id="toggle-pill"></div><span id="tg-hop">By hop</span><span id="tg-bub">Bubbles</span></div>
+          <svg id="cursor" viewBox="0 0 26 32" aria-hidden="true"><path d="M2 1 L2 25 L8.4 19.2 L12.4 28.6 L16.6 26.8 L12.8 17.8 L21 17.2 Z" fill="#ececea" stroke="#0b0c0e" stroke-width="1.6" stroke-linejoin="round" /></svg>
+          <div class="tip" id="card1">
+            <div class="t">0x28c6c06298…5743bf21d60</div>
+            <div class="r"><span class="k">Exchange</span><span class="v green">Binance</span></div>
+            <div class="r"><span class="k">Wallet</span><span class="v">Binance 14</span></div>
+            <div class="r"><span class="k">Depth</span><span class="v">2 hops from seed</span></div>
+            <div class="r"><span class="k">Received</span><span class="v">3.236427 ETH</span></div>
+            <div class="r"><span class="k">Transfers</span><span class="v">2</span></div>
+          </div>
+          <div class="tip" id="card2">
+            <div class="t">0xcf72351a45…dd24602edae</div>
+            <div class="r"><span class="k">Exchange</span><span class="v amber">Gate.io (inferred)</span></div>
+            <div class="r"><span class="k">Depth</span><span class="v">3 hops from seed</span></div>
+            <div class="r"><span class="k">Received</span><span class="v">20.869695 ETH</span></div>
+            <div class="r"><span class="k">Sent</span><span class="v">29.499002 ETH</span></div>
+            <div class="r"><span class="k">Transfers</span><span class="v">3</span></div>
+          </div>
+          <div id="b2-cap">Every attribution is an exact match against a published exchange wallet.</div>
+          <div class="counter micro" id="b2-cnt-a">02 / 06 — The trace</div>
+          <div class="counter micro" id="b2-cnt-b" style="opacity: 0">02 / 06 — The same case, as a map</div>
+        </div>
+      </section>
+
+      <!-- 3 · screened -->
+      <section id="b3" class="clip" data-start="17.39" data-duration="4.71" data-track-index="2">
+        <div class="in" id="b3-in">
+          <div class="ghost" data-layout-ignore>03</div>
+          <div id="b3-col" data-layout-allow-overflow>
+            <div id="scan"></div>
+            <div id="b3-rows"></div>
+          </div>
+          <div id="b3-h" class="h">Every hop is screened against the OFAC list.</div>
+          <div id="b3-facts" class="micro"><div>SDN list · 4 September 2026</div><div>124 Ethereum · 282 Tron · 1 BSC</div><div>a hit outranks every other finding</div></div>
+          <div id="b3-count"><div class="v">0</div><div class="k micro">addresses screened</div></div>
+          <div class="counter micro">03 / 06 — Screened</div>
+        </div>
+      </section>
+
+      <!-- 4 · the handoff -->
+      <section id="b4" class="clip" data-start="21.60" data-duration="6.84" data-track-index="3">
+        <div class="in" id="b4-in">
+          <div class="ghost" data-layout-ignore>04</div>
+          <div id="b4-h" class="h">Names the exchange, how sure, and the address to cite.</div>
+          <div id="b4-sub">A report an investigator can attach to a legal request — sealed with the hash of every response it was built from.</div>
+          <div id="card">
+            <div class="hd"><span>Exchequer · Report</span><span>Case 75fa7f6e…889438</span></div>
+            <div class="rule"></div>
+            <div class="k">Finding</div>
+            <div class="v">Binance — exact match · confidence 0.90 · 2 hops</div>
+            <div class="k">Address to cite in the request</div>
+            <div class="v mono">0x28c6c6c06298d514db089934071355e5743bf21d60</div>
+            <div class="k">Traced</div>
+            <div class="v big">3.236427 ETH</div>
+            <div class="k">Evidence</div>
+            <div class="v">53 provider responses, each hashed</div>
+            <div class="rule"></div>
+            <div class="k">SHA-256 of the evidence bundle</div>
+            <div class="hash" id="hash"></div>
+            <div class="ul" id="ul-finding"></div>
+            <div class="ul" id="ul-address"></div>
+          </div>
+          <div id="stamp" data-layout-allow-overlap>SEALED</div>
+          <div class="counter micro">04 / 06 — The handoff</div>
+        </div>
+      </section>
+
+      <!-- 5 · the stance -->
+      <section id="b5" class="clip" data-start="28.44" data-duration="5.6" data-track-index="4">
+        <div class="in" id="b5-in">
+          <div class="ghost" data-layout-ignore>05</div>
+          <div id="st1" class="stance h">No model.</div>
+          <div id="st2" class="stance h">No clustering.</div>
+          <div id="st3" class="stance h">No proprietary score.</div>
+          <div id="st4">But everything hand-checked.<svg id="tick" viewBox="0 0 40 40" aria-hidden="true"><path d="M6 21 L16 31 L34 9" /></svg></div>
+          <div id="st-rule"></div>
+          <div id="b5-sub">Measured on 88 real wallets · 1,416 provider requests · the inconvenient result is in the README</div>
+          <div class="counter micro">05 / 06 — The stance</div>
+        </div>
+      </section>
+
+      <!-- 6 · Exchequer -->
+      <section id="b6" class="clip" data-start="33.71" data-duration="4.23" data-track-index="5">
+        <div class="in" id="b6-in">
+          <div class="cell" id="c00"></div><div class="cell" id="c20"></div><div class="cell" id="c11"></div><div class="cell" id="c31"></div>
+          <div class="cell" id="c02"></div><div class="cell" id="c13"></div><div class="cell" id="c33"></div>
+          <div id="wordmark">Exchequer</div>
+          <div id="b6-tag">Traces cryptocurrency fraud from a reported wallet to the exchange it was cashed out through.</div>
+          <div id="b6-stats"><span class="n" id="n1">0</span> chains · <span class="n" id="n2">0</span> exchanges · <span class="n" id="n3">0</span> labels · <span class="n" id="n4">0</span> OFAC addresses</div>
+          <div id="b6-sih" class="micro">Smart India Hackathon 2026 · SIH26183 · Ministry of Home Affairs</div>
+          <div class="counter micro">06 / 06 — Exchequer</div>
+        </div>
+      </section>
+
+      <!-- the money -->
+      <div id="money" data-layout-ignore></div>
+
+      <!-- audio -->
+      <audio id="bed" src="assets/music/bed.wav" data-start="0" data-duration="37.94" data-track-index="10" data-volume="1"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.45,"v":0.42},{"t":0.75,"v":0.20},{"t":4.4,"v":0.20},{"t":4.75,"v":0.42},{"t":5.35,"v":0.42},{"t":5.6,"v":0.20},{"t":10.8,"v":0.20},{"t":11.2,"v":0.42},{"t":13.05,"v":0.42},{"t":13.35,"v":0.20},{"t":16.9,"v":0.20},{"t":17.15,"v":0.42},{"t":17.45,"v":0.42},{"t":17.65,"v":0.20},{"t":20.8,"v":0.20},{"t":21.15,"v":0.42},{"t":21.7,"v":0.42},{"t":21.9,"v":0.20},{"t":26.8,"v":0.20},{"t":27.15,"v":0.42},{"t":28.3,"v":0.42},{"t":28.5,"v":0.20},{"t":33.75,"v":0.20},{"t":33.85,"v":0.42},{"t":34.05,"v":0.22},{"t":36.0,"v":0.22},{"t":36.6,"v":0.55},{"t":37.9,"v":0}]}]}'></audio>
+      <!-- narration: Kokoro bf_emma. Beat 5's three "No" phrases are separate clips so each lands on its slam. -->
+      <audio id="vo1" src="assets/vo/vo1.wav" data-start="0.35" data-duration="3.95" data-track-index="40" data-volume="1"></audio>
+      <audio id="vo2" src="assets/vo/vo2.wav" data-start="5.55" data-duration="5.10" data-track-index="41" data-volume="1"></audio>
+      <audio id="vo2b" src="assets/vo/vo2b.wav" data-start="13.30" data-duration="3.54" data-track-index="49" data-volume="1"></audio>
+      <audio id="vo3" src="assets/vo/vo3.wav" data-start="17.59" data-duration="3.07" data-track-index="42" data-volume="1"></audio>
+      <audio id="vo4" src="assets/vo/vo4.wav" data-start="21.79" data-duration="4.86" data-track-index="43" data-volume="1"></audio>
+      <audio id="vo5a" src="assets/vo/vo5a.wav" data-start="28.46" data-duration="1.38" data-track-index="44" data-volume="1"></audio>
+      <audio id="vo5b" src="assets/vo/vo5b.wav" data-start="29.51" data-duration="1.17" data-track-index="45" data-volume="1"></audio>
+      <audio id="vo5c" src="assets/vo/vo5c.wav" data-start="30.60" data-duration="1.56" data-track-index="46" data-volume="1"></audio>
+      <audio id="vo5d" src="assets/vo/vo5d.wav" data-start="32.16" data-duration="1.60" data-track-index="47" data-volume="1"></audio>
+      <audio id="vo6" src="assets/vo/vo6.wav" data-start="33.94" data-duration="2.00" data-track-index="48" data-volume="1"></audio>
+      <audio id="sfx-typing" src="assets/sfx/typing.wav" data-start="3.18" data-duration="1.8" data-track-index="11" data-volume="0.75"></audio>
+      <audio id="sfx-found" src="assets/sfx/plate.ogg" data-start="0.62" data-duration="0.65" data-track-index="50" data-volume="0.45"></audio>
+      <audio id="sfx-swap" src="assets/sfx/cut.ogg" data-start="2.65" data-duration="0.2" data-track-index="12" data-volume="0.4"></audio>
+      <audio id="sfx-cut2" src="assets/sfx/cut.ogg" data-start="5.28" data-duration="0.2" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-d1" src="assets/sfx/drop1.ogg" data-start="5.62" data-duration="0.12" data-track-index="13" data-volume="0.4"></audio>
+      <audio id="sfx-d2" src="assets/sfx/drop2.ogg" data-start="5.78" data-duration="0.2" data-track-index="14" data-volume="0.4"></audio>
+      <audio id="sfx-d3" src="assets/sfx/drop3.ogg" data-start="5.94" data-duration="0.2" data-track-index="15" data-volume="0.4"></audio>
+      <audio id="sfx-d4" src="assets/sfx/drop1.ogg" data-start="6.10" data-duration="0.12" data-track-index="13" data-volume="0.4"></audio>
+      <audio id="sfx-d5" src="assets/sfx/drop2.ogg" data-start="6.78" data-duration="0.2" data-track-index="14" data-volume="0.4"></audio>
+      <audio id="sfx-d6" src="assets/sfx/drop3.ogg" data-start="6.94" data-duration="0.2" data-track-index="15" data-volume="0.4"></audio>
+      <audio id="sfx-d7" src="assets/sfx/drop1.ogg" data-start="7.10" data-duration="0.12" data-track-index="13" data-volume="0.4"></audio>
+      <audio id="sfx-bell1" src="assets/sfx/bell.ogg" data-start="8.44" data-duration="1.48" data-track-index="16" data-volume="0.5"></audio>
+      <audio id="sfx-chips1" src="assets/sfx/chips.ogg" data-start="9.50" data-duration="0.18" data-track-index="17" data-volume="0.4"></audio>
+      <audio id="sfx-chips2" src="assets/sfx/chips.ogg" data-start="9.66" data-duration="0.18" data-track-index="18" data-volume="0.4"></audio>
+      <audio id="sfx-chips3" src="assets/sfx/chips.ogg" data-start="9.82" data-duration="0.18" data-track-index="19" data-volume="0.4"></audio>
+      <audio id="sfx-toggle" src="assets/sfx/tick.ogg" data-start="12.95" data-duration="0.06" data-track-index="51" data-volume="0.5"></audio>
+      <audio id="sfx-hover1" src="assets/sfx/tick.ogg" data-start="14.75" data-duration="0.06" data-track-index="52" data-volume="0.34"></audio>
+      <audio id="sfx-hover2" src="assets/sfx/tick.ogg" data-start="15.95" data-duration="0.06" data-track-index="53" data-volume="0.34"></audio>
+      <audio id="sfx-cut3" src="assets/sfx/cut.ogg" data-start="17.39" data-duration="0.2" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-switch" src="assets/sfx/switch.ogg" data-start="17.59" data-duration="0.6" data-track-index="20" data-volume="0.35"></audio>
+      <audio id="sfx-plate" src="assets/sfx/plate.ogg" data-start="18.96" data-duration="0.65" data-track-index="21" data-volume="0.6"></audio>
+      <audio id="sfx-card" src="assets/sfx/card.ogg" data-start="21.64" data-duration="0.6" data-track-index="22" data-volume="0.55"></audio>
+      <audio id="sfx-stamp" src="assets/sfx/wood.ogg" data-start="23.34" data-duration="0.33" data-track-index="23" data-volume="0.6"></audio>
+      <audio id="sfx-slam1" src="assets/sfx/slam.ogg" data-start="28.44" data-duration="0.57" data-track-index="24" data-volume="0.5"></audio>
+      <audio id="sfx-slam2" src="assets/sfx/slam.ogg" data-start="29.49" data-duration="0.57" data-track-index="25" data-volume="0.5"></audio>
+      <audio id="sfx-slam3" src="assets/sfx/slam.ogg" data-start="30.55" data-duration="0.57" data-track-index="26" data-volume="0.5"></audio>
+      <audio id="sfx-rule" src="assets/sfx/tick.ogg" data-start="32.13" data-duration="0.06" data-track-index="27" data-volume="0.45"></audio>
+      <audio id="sfx-q1" src="assets/sfx/drop2.ogg" data-start="33.78" data-duration="0.2" data-track-index="28" data-volume="0.35"></audio>
+      <audio id="sfx-q2" src="assets/sfx/drop3.ogg" data-start="33.89" data-duration="0.2" data-track-index="29" data-volume="0.35"></audio>
+      <audio id="sfx-q3" src="assets/sfx/drop1.ogg" data-start="34.00" data-duration="0.12" data-track-index="30" data-volume="0.35"></audio>
+      <audio id="sfx-q4" src="assets/sfx/drop2.ogg" data-start="34.11" data-duration="0.2" data-track-index="31" data-volume="0.35"></audio>
+      <audio id="sfx-q5" src="assets/sfx/drop3.ogg" data-start="34.22" data-duration="0.2" data-track-index="32" data-volume="0.35"></audio>
+      <audio id="sfx-q6" src="assets/sfx/drop1.ogg" data-start="34.33" data-duration="0.12" data-track-index="33" data-volume="0.35"></audio>
+      <audio id="sfx-q7" src="assets/sfx/drop2.ogg" data-start="34.44" data-duration="0.2" data-track-index="34" data-volume="0.35"></audio>
+      <audio id="sfx-bell2" src="assets/sfx/bell.ogg" data-start="34.58" data-duration="1.48" data-track-index="35" data-volume="0.55"></audio>
+    </div>
+
+    <script>
+      // ------------------------------------------------------------------
+      // Setup: build the typed address, the ledger rows and the trace graph
+      // once, synchronously. Nothing here is measured from layout.
+      // ------------------------------------------------------------------
+      const ADDRESS = "0x60d02e0956e2f3795167c15ba61ab452c85c2533";
+      const band = document.getElementById("b1-band");
+      for (const ch of ADDRESS) { const s = document.createElement("span"); s.className = "ch"; s.textContent = ch; band.appendChild(s); }
+
+      // Beat 1's wall: a field of addresses, drawn from a fixed seed so every
+      // render is the same field. One cell is left blank — the reported address
+      // sits there on its own layer, above the scrim, so it can turn red alone.
+      const HEXD = "0123456789abcdef";
+      let _seed = 0x9e3779b9 >>> 0;
+      const rnd = () => { _seed ^= _seed << 13; _seed >>>= 0; _seed ^= _seed >>> 17; _seed ^= _seed << 5; _seed >>>= 0; return _seed / 4294967296; };
+      const hex = (n) => { let o = ""; for (let i = 0; i < n; i++) o += HEXD[Math.floor(rnd() * 16)]; return o; };
+      const wall = document.getElementById("wall");
+      const COLX = [30, 350, 670, 990, 1310, 1630], WROWS = 30, WROWH = 63, WROW0 = -300;
+      const FOUND_COL = 4, FOUND_ROW = 12;
+      // The columns shear past each other -- alternating directions, different
+      // speeds. The needle's column moves least so the red square can ride it.
+      const WDRIFT = [-210, 165, -240, 195, -55, -225];
+      // Colour is the console's own key, not decoration: what the label files
+      // know about each address. Most of a ledger is unlabelled.
+      const wallInk = () => {
+        const r = rnd(), a = (lo, hi) => (lo + rnd() * (hi - lo)).toFixed(2);
+        if (r < 0.42) return "rgba(236, 236, 234, " + a(0.34, 0.48) + ")";   // unlabelled
+        if (r < 0.68) return "rgba(47, 211, 162, " + a(0.56, 0.70) + ")";    // labelled exchange
+        if (r < 0.95) return "rgba(124, 192, 255, " + a(0.58, 0.72) + ")";   // router / service
+        return "rgba(255, 92, 92, " + a(0.52, 0.62) + ")";                    // sanctioned
+      };
+      COLX.forEach((x, ci) => {
+        const col = document.createElement("div");
+        col.className = "wcol"; col.id = "wc" + ci; col.style.left = x + "px";
+        for (let r = 0; r < WROWS; r++) {
+          if (ci === FOUND_COL && r === FOUND_ROW) { rnd(); rnd(); continue; } // the needle's slot
+          const cell = document.createElement("div");
+          cell.className = "wcell";
+          cell.style.top = (WROW0 + r * WROWH) + "px";
+          cell.style.color = wallInk();
+          if ((ci + r) % 7 === 3) cell.classList.add("flick");
+          cell.textContent = "0x" + hex(8) + "\u2026" + hex(4);
+          col.appendChild(cell);
+        }
+        wall.appendChild(col);
+      });
+
+      // Beat 2's ambient traffic: small squares moving along the branches the
+      // trace did not follow, so the network is alive while the red path is the
+      // story. Points are sampled once, here, never at tween time.
+      const FLOWS = [["e-R-A1", 0], ["e-R-A3", 0.34], ["e-A2-B1", 0.12], ["e-A2-B3", 0.52], ["e-B1-D1", 0.26]];
+      const flowPts = {};
+
+      // Beat 5's tick draws itself; its length is measured once at build time.
+      const tickPath = document.querySelector("#tick path");
+      const TICK_LEN = Math.ceil(tickPath.getTotalLength());
+      tickPath.setAttribute("stroke-dasharray", TICK_LEN);
+      tickPath.setAttribute("stroke-dashoffset", TICK_LEN);
+
+      // Beat 4: the hash types in while the narrator names the request
+      const HASH = "7e7e7f0ef2512d2d6693ac3545fc05977fffc3def379021463cdef2413fe8770";
+      const hashEl = document.getElementById("hash");
+      for (const ch of HASH) { const s = document.createElement("span"); s.className = "hc"; s.textContent = ch; hashEl.appendChild(s); }
+
+      // Beat 3 ledger: synthetic rows around one real designation (DEMO.md trace 7).
+      const ROWS = [
+        "0x9f1c7a4e2b83d0c6f5a1e9d3b7c2a4f6e8d0b1c3", "0x3b8e6d2f9a1c4b7e0d5f2a8c6e1b9d4f7a3c5e0b",
+        "0xd47a1c9e3f6b2d8a5c0e7f4b1d9a6c3e8f2b5d0a", "0x61e3b9d7a2c5f8e0b4d1a7c9e6f3b2d5a8c0e4f1",
+        "0xa8c2e5f1d9b3a6c0e4f7b2d8a1c5e9f3b6d0a4c7", "0x2d5f8a1c4e7b0d3a6c9e2f5b8d1a4c7e0f3b6d9a",
+        "0xf03b6d9a2c5e8f1b4d7a0c3e6f9b2d5a8c1e4f7b", "0x7c9e2f5b8d1a4c7e0f3b6d9a2c5e8f1b4d7a0c3e",
+        "0x21b8d56bda776bbe68655a16895afd96f5534fed", "0xb5d8a1c4e7f0b3d6a9c2e5f8b1d4a7c0e3f6b9d2",
+        "0x4e7a0c3f6b9d2a5c8e1f4b7d0a3c6e9f2b5d8a1c", "0xc6f9b2d5a8e1c4f7b0d3a6e9c2f5b8d1a4e7c0f3",
+        "0x8a1c4e7f0b3d6a9c2e5f8b1d4a7c0e3f6b9d2a5c", "0x5b8e1d4a7c0f3b6e9d2a5c8f1b4e7d0a3c6f9b2e",
+      ];
+      const rowsEl = document.getElementById("b3-rows");
+      const HIT_INDEX = 8;
+      ROWS.forEach((a, i) => {
+        const r = document.createElement("div");
+        r.className = "row" + (i === HIT_INDEX ? " hit" : "");
+        r.id = "row-" + i;
+        r.textContent = a;
+        rowsEl.appendChild(r);
+      });
+      // the hit row's own background band and chip live inside the scrolling list
+      const hitRow = document.getElementById("row-" + HIT_INDEX);
+      const hitBg = document.createElement("div"); hitBg.id = "hit-bg"; hitRow.prepend(hitBg);
+      const hitChip = document.createElement("div"); hitChip.id = "hit-chip"; hitChip.innerHTML = "<span>OFAC · SDGT</span>"; hitRow.appendChild(hitChip);
+      hitBg.style.left = "0"; hitBg.style.top = "0";
+
+      // Beat 2 graph geometry (the FlowView idea, drawn): columns by hop, S-curve edges.
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.getElementById("b2-svg");
+      const R = [190, 600];
+      const N = {
+        A1: [560, 470], A2: [560, 560], A3: [560, 660], A4: [560, 760],
+        B1: [940, 480], B2: [940, 600], B3: [940, 720], C1: [940, 830],
+        D1: [1320, 430], D2: [1320, 530], D3: [1320, 690], D4: [1320, 840],
+        E1: [1700, 500], E2: [1700, 650], E3: [1700, 800],
+      };
+      const EDGES = [ // [from, to, kind]  kind: traced | live | dust | far
+        ["R", "A2", "traced"], ["R", "A1", "live"], ["R", "A3", "live"], ["R", "A4", "dust"],
+        ["A2", "B2", "traced"], ["A2", "B1", "live"], ["A2", "B3", "live"], ["A3", "C1", "live"],
+        ["B1", "D1", "far"], ["B1", "D2", "far"], ["B3", "D3", "far"], ["C1", "D4", "far"],
+        ["D2", "E1", "far"], ["D3", "E2", "far"], ["D4", "E3", "far"],
+      ];
+      const P = (k) => (k === "R" ? R : N[k]);
+      const curve = (a, b) => { const mx = (a[0] + b[0]) / 2; return `M ${a[0]} ${a[1]} C ${mx} ${a[1]}, ${mx} ${b[1]}, ${b[0]} ${b[1]}`; };
+      // hairline hop columns
+      [560, 940, 1320, 1700].forEach((x, i) => {
+        const l = document.createElementNS(NS, "line");
+        l.setAttribute("x1", x); l.setAttribute("x2", x); l.setAttribute("y1", 360); l.setAttribute("y2", 870);
+        l.setAttribute("stroke", "rgba(236,236,234,0.16)"); l.setAttribute("stroke-width", "1"); l.setAttribute("class", "col"); l.id = "col-" + i;
+        svg.appendChild(l);
+      });
+      const edgeEls = {};
+      EDGES.forEach(([a, b, kind]) => {
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("d", curve(P(a), P(b)));
+        p.setAttribute("fill", "none");
+        p.setAttribute("stroke-linecap", "round");
+        if (kind === "traced") { p.setAttribute("stroke", "#ff5c5c"); p.setAttribute("stroke-width", "5"); }
+        else if (kind === "live") { p.setAttribute("stroke", "rgba(236,236,234,0.55)"); p.setAttribute("stroke-width", "2"); }
+        else if (kind === "dust") { p.setAttribute("stroke", "rgba(236,236,234,0.28)"); p.setAttribute("stroke-width", "1.5"); }
+        else { p.setAttribute("stroke", "rgba(236,236,234,0.30)"); p.setAttribute("stroke-width", "1.5"); }
+        p.id = "e-" + a + "-" + b;
+        p.setAttribute("class", "edge");
+        svg.appendChild(p);
+        const L = p.getTotalLength();
+        p.setAttribute("stroke-dasharray", L); p.setAttribute("stroke-dashoffset", L);
+        edgeEls[p.id] = { el: p, L, kind };
+      });
+      // comet path samples (deterministic geometry, sampled once)
+      const traced = [edgeEls["e-R-A2"], edgeEls["e-A2-B2"]];
+      const SAMPLES = [];
+      traced.forEach(({ el, L }) => { for (let i = 0; i <= 120; i++) { const pt = el.getPointAtLength((i / 120) * L); SAMPLES.push([pt.x, pt.y]); } });
+      const nodeEls = {};
+      Object.entries(N).forEach(([k, [x, y]]) => {
+        const c = document.createElementNS(NS, "circle");
+        c.setAttribute("cx", x); c.setAttribute("cy", y);
+        const traced = k === "A2"; const exch = k === "B2"; const far = /^[DE]/.test(k) || k === "C1";
+        c.setAttribute("r", exch ? 14 : traced ? 11 : 9);
+        c.setAttribute("fill", far ? "#343940" : k === "A4" ? "#22262b" : "#a0a5ab");
+        c.setAttribute("stroke", "#0b0c0e"); c.setAttribute("stroke-width", "3");
+        c.id = "n-" + k; c.setAttribute("class", "node");
+        svg.appendChild(c); nodeEls[k] = c;
+      });
+      // ---- the bubble view: the same case, laid out as the console's map.
+      // Positions are hand-set (the real view is a force layout); roles, values
+      // and labels are the case's own, read from the stored trace.
+      const BUB = {
+        R:  [470, 520, 30, "seed", "Reported"],
+        A1: [640, 370, 13, "node", null],
+        A2: [690, 520, 19, "node", null],
+        A3: [630, 670, 14, "node", null],
+        A4: [520, 760,  8, "node", null],
+        B1: [880, 300, 12, "node", null],
+        B2: [940, 520, 34, "exchange", "Binance 14"],
+        B3: [860, 680, 13, "node", null],
+        C1: [700, 800, 16, "service", null],
+        D1: [1150, 230, 10, "node", null],
+        D2: [1180, 400, 22, "inferred", "probable Gate.io deposit"],
+        D3: [1120, 660, 19, "inferred", "probable Crypto.com deposit"],
+        D4: [930, 800, 12, "service", null],
+        E1: [1370, 322, 20, "exchange", "Gate.io 1"],
+        E2: [1370, 520, 18, "exchange", "Crypto.com 5"],
+        E3: [1230, 790,  9, "node", null],
+      };
+      const ROLE_FILL = { seed: "#ececea", node: "#5b6167", service: "#4a5057", exchange: "#2fd3a2", inferred: "#e0a44a" };
+      const LABEL_FILL = { seed: "#ececea", exchange: "#2fd3a2", inferred: "#e0a44a" };
+
+      // halos behind the exchanges, the seed ring, extra bubbles, labels and
+      // the hover rings -- all built once, all invisible until the toggle.
+      const HOPR = {};
+      Object.keys(nodeEls).forEach((k) => { HOPR[k] = parseFloat(nodeEls[k].getAttribute("r")); });
+      Object.keys(BUB).forEach((k) => {
+        if (k === "R" || BUB[k][3] !== "exchange") return;
+        const h = document.createElementNS(NS, "circle");
+        h.setAttribute("cx", BUB[k][0]); h.setAttribute("cy", BUB[k][1]);
+        h.setAttribute("r", BUB[k][2] + 17);
+        h.setAttribute("fill", "rgba(47, 211, 162, 0.18)");
+        h.setAttribute("opacity", "0"); h.setAttribute("class", "halo"); h.id = "halo-" + k;
+        svg.insertBefore(h, svg.firstChild);
+      });
+      const seedRing = document.createElementNS(NS, "circle");
+      seedRing.setAttribute("cx", R[0]); seedRing.setAttribute("cy", R[1]); seedRing.setAttribute("r", "0");
+      seedRing.setAttribute("fill", "none"); seedRing.setAttribute("stroke", "#ececea");
+      seedRing.setAttribute("stroke-width", "3"); seedRing.setAttribute("opacity", "0"); seedRing.id = "seed-ring";
+      svg.appendChild(seedRing);
+      // the rest of the 129 addresses: small, unlabelled, scattered clear of the named ones
+      const taken = Object.values(BUB).map(([x, y, r]) => [x, y, r]);
+      let placed = 0, guard = 0;
+      while (placed < 30 && guard < 900) {
+        guard += 1;
+        const x = 330 + rnd() * 1300, y = 215 + rnd() * 615;
+        if (taken.some(([tx, ty, tr]) => Math.hypot(tx - x, ty - y) < tr + 46)) continue;
+        if (x > 1400 && x < 1690 && y > 244 && y < 332) continue;   // clear of the view toggle
+        taken.push([x, y, 10]);
+        const c = document.createElementNS(NS, "circle");
+        c.setAttribute("cx", x.toFixed(1)); c.setAttribute("cy", y.toFixed(1));
+        c.setAttribute("r", (4 + rnd() * 3.4).toFixed(1));
+        c.setAttribute("fill", rnd() < 0.22 ? "#4a5057" : "#5b6167");
+        c.setAttribute("opacity", "0"); c.setAttribute("class", "xnode");
+        svg.appendChild(c);
+        placed += 1;
+      }
+      Object.entries(BUB).forEach(([k, [x, y, r, role, label]]) => {
+        if (!label) return;
+        const t = document.createElementNS(NS, "text");
+        t.setAttribute("x", x); t.setAttribute("y", y + r + 27);
+        t.setAttribute("text-anchor", "middle");
+        t.setAttribute("font-family", '"IBM Plex Mono", monospace');
+        t.setAttribute("font-size", "17"); t.setAttribute("letter-spacing", "0.02em");
+        t.setAttribute("fill", LABEL_FILL[role] || "#a0a5ab");
+        t.setAttribute("opacity", "0"); t.setAttribute("class", "blabel"); t.id = "lb-" + k;
+        t.textContent = label;
+        svg.appendChild(t);
+      });
+      ["hr1", "hr2"].forEach((id, i) => {
+        const hr = document.createElementNS(NS, "circle");
+        const k = i === 0 ? "B2" : "D2";
+        hr.setAttribute("cx", BUB[k][0]); hr.setAttribute("cy", BUB[k][1]); hr.setAttribute("r", BUB[k][2] + 11);
+        hr.setAttribute("fill", "none"); hr.setAttribute("stroke", "rgba(236, 236, 234, 0.75)");
+        hr.setAttribute("stroke-width", "2.5"); hr.setAttribute("opacity", "0"); hr.id = id;
+        svg.appendChild(hr);
+      });
+
+      const ring = document.createElementNS(NS, "circle");
+      ring.setAttribute("cx", N.B2[0]); ring.setAttribute("cy", N.B2[1]); ring.setAttribute("r", 14);
+      ring.setAttribute("fill", "none"); ring.setAttribute("stroke", "#2fd3a2"); ring.setAttribute("stroke-width", "3"); ring.id = "ring";
+      svg.appendChild(ring);
+      // the traced path gets a second, lighter line of marching dashes: the
+      // funds still moving along the route after it has been found
+      ["e-R-A2", "e-A2-B2"].forEach((id, i) => {
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("d", edgeEls[id].el.getAttribute("d"));
+        p.setAttribute("fill", "none");
+        p.setAttribute("stroke", "#ffb4b4");
+        p.setAttribute("stroke-width", "3");
+        p.setAttribute("stroke-linecap", "round");
+        p.setAttribute("stroke-dasharray", "10 30");
+        p.setAttribute("opacity", "0");
+        p.id = "flowdash-" + i;
+        svg.appendChild(p);
+      });
+      FLOWS.forEach(([id]) => {
+        const { el, L } = edgeEls[id];
+        const pts = [];
+        for (let i = 0; i <= 48; i++) { const q = el.getPointAtLength((i / 48) * L); pts.push([q.x, q.y]); }
+        flowPts[id] = pts;
+        const r = document.createElementNS(NS, "rect");
+        r.setAttribute("width", "7"); r.setAttribute("height", "7");
+        r.setAttribute("fill", "rgba(236,236,234,0.6)");
+        r.setAttribute("opacity", "0");
+        r.id = "flow-" + id;
+        svg.appendChild(r);
+      });
+
+      const comet = document.createElementNS(NS, "g"); comet.id = "comet";
+      const tail = document.createElementNS(NS, "circle"); tail.setAttribute("r", 22); tail.setAttribute("fill", "rgba(255,92,92,0.28)");
+      const head = document.createElementNS(NS, "rect"); head.setAttribute("x", -9); head.setAttribute("y", -9); head.setAttribute("width", 18); head.setAttribute("height", 18); head.setAttribute("fill", "#ff5c5c");
+      comet.appendChild(tail); comet.appendChild(head); svg.appendChild(comet);
+
+      // ------------------------------------------------------------------
+      // The timeline. Global seconds; strong cues of the bed marked.
+      // ------------------------------------------------------------------
+      // The re-layout: one proxy drives every bubble, every edge and the seed
+      // ring, so the whole view is a single seekable value.
+      const morph = { p: 0 };
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const curPos = (k) => {
+        const h = P(k), b = BUB[k];
+        return [lerp(h[0], b[0], morph.p), lerp(h[1], b[1], morph.p)];
+      };
+      function applyMorph() {
+        Object.keys(BUB).forEach((k) => {
+          if (k === "R") return;
+          const [x, y] = curPos(k), el = nodeEls[k];
+          el.setAttribute("cx", x.toFixed(1));
+          el.setAttribute("cy", y.toFixed(1));
+          el.setAttribute("r", lerp(HOPR[k], BUB[k][2], morph.p).toFixed(2));
+        });
+        const [sx, sy] = curPos("R");
+        seedRing.setAttribute("cx", sx.toFixed(1));
+        seedRing.setAttribute("cy", sy.toFixed(1));
+        seedRing.setAttribute("r", lerp(0, BUB.R[2], morph.p).toFixed(2));
+        EDGES.forEach(([a, b]) => {
+          edgeEls["e-" + a + "-" + b].el.setAttribute("d", curve(curPos(a), curPos(b)));
+        });
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      const CUE = { swap: 2.65, type: 3.18, b2: 5.28, lock: 8.44, count: 9.5, bub: 12.95, b3: 17.39, snap: 18.96, b4: 21.60, seal: 23.34, b5: 28.44, s2: 29.49, s3: 30.55, rule: 32.13, b6: 33.71, end: 37.94 };
+      const GL = (mx, my) => ({ x: mx + 14 - 450, y: my + 14 - 450 }); // glow centred on the money
+
+      // --- persistent layers
+      tl.set("#money", { x: 1266, y: 457, scale: 1, transformOrigin: "0 0" }, 0);
+      tl.set("#glow", GL(1266, 457), 0);
+      tl.to("#grid", { x: -60, duration: 37.94, ease: "none" }, 0);
+      tl.fromTo("#glow", { scale: 0.94 }, { scale: 1.06, duration: 2.35, repeat: 15, yoyo: true, ease: "sine.inOut" }, 0);
+      tl.fromTo("#meta-tl", { opacity: 0 }, { opacity: 1, duration: 0.8 }, 0.2);
+      tl.fromTo("#meta-tr", { opacity: 0 }, { opacity: 1, duration: 0.8 }, 0.35);
+
+      // --- beat 1 · the report (0 – 5.28)
+      // the wall is already moving when the film starts: the camera does not wait
+      tl.fromTo("#wall", { opacity: 0, scale: 1.06, transformOrigin: "52% 46%" }, { opacity: 0.92, scale: 1, duration: 1.2, ease: "power2.out" }, 0);
+      WDRIFT.forEach((dy, i) => tl.to("#wc" + i, { y: dy, duration: 5.28, ease: "none" }, 0));
+      // the needle rides its own column, and the money rides the needle
+      tl.to("#found, #found-box", { y: WDRIFT[FOUND_COL], duration: 5.28, ease: "none" }, 0);
+      tl.to("#money", { y: 457 + WDRIFT[FOUND_COL] * (2.56 / 5.28), duration: 2.56, ease: "none" }, 0);
+      // and the field keeps refreshing itself, cell by cell
+      tl.to(".flick", { opacity: 0.28, duration: 0.42, repeat: 5, yoyo: true, ease: "sine.inOut", stagger: 0.21 }, 0.25);
+      tl.to("#wall", { scale: 1.03, duration: 4.0, ease: "sine.inOut" }, 1.2);
+      tl.fromTo("#wall-key", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 1.05);
+      tl.to("#wall-key", { opacity: 0, duration: 0.35, ease: "power2.in" }, 2.62);
+      tl.fromTo("#found", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "power2.out" }, 0.1);
+      // one of them is the one that was reported
+      tl.to("#found", { color: "#ff5c5c", duration: 0.18, ease: "none" }, 0.62);
+      tl.fromTo("#found-box", { opacity: 0, scale: 1.35, transformOrigin: "50% 50%" }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2.4)" }, 0.62);
+      tl.to("#money", { opacity: 1, duration: 0.3, ease: "power2.out" }, 0.62);
+      // the field recedes so the words can land
+      tl.fromTo("#wall-scrim", { opacity: 0.42 }, { opacity: 1, duration: 0.8, ease: "power2.inOut" }, 0.85);
+      tl.to("#wall", { opacity: 0.55, duration: 0.8, ease: "power2.inOut" }, 0.9);
+      tl.fromTo("#b1-h1", { x: -90, opacity: 0 }, { x: 0, opacity: 1, duration: 0.8, ease: "expo.out" }, 1.0);
+      tl.fromTo("#b1-rule", { scaleX: 0, transformOrigin: "0% 50%" }, { scaleX: 1, duration: 0.9, ease: "expo.out" }, 1.4);
+      tl.fromTo("#b1-lede", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 1.8);
+      tl.to("#b1-lede", { opacity: 0, duration: 0.25 }, CUE.type - 0.5);
+      tl.to("#b1-h1", { y: -70, opacity: 0, duration: 0.3, ease: "power3.in" }, CUE.swap - 0.28); // pulled out
+      tl.fromTo("#b1-h2", { y: 90, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power4.out" }, CUE.swap); // punches in
+      // the money leaves the field for the band, and becomes the caret
+      tl.to("#found, #found-box", { opacity: 0, duration: 0.35, ease: "power2.in" }, CUE.type - 0.6);
+      tl.to("#wall", { opacity: 0.24, duration: 0.7, ease: "power2.inOut" }, CUE.type - 0.55);
+      tl.to("#money", { y: 778, x: 120, duration: 0.56, ease: "power2.inOut" }, CUE.type - 0.62);
+      tl.to("#glow", { ...GL(600, 778), duration: 0.8, ease: "power2.inOut" }, CUE.type - 0.62);
+      const ADV = 64 * 0.6, STEP = 1.55 / (ADDRESS.length - 1);
+      tl.to("#b1-band .ch", { opacity: 1, duration: 0.001, stagger: STEP, ease: "none" }, CUE.type);
+      // GSAP steps(n) jumps at k/(n+1): a 43-step-long run started one step early puts jump k exactly on character k
+      tl.to("#money", { x: 120 + ADV * ADDRESS.length, duration: STEP * (ADDRESS.length + 1), ease: "steps(" + ADDRESS.length + ")" }, CUE.type - STEP);
+      tl.fromTo("#b1-band-ul", { scaleX: 0, transformOrigin: "0% 50%" }, { scaleX: 1, duration: 1.55, ease: "none" }, CUE.type);
+      tl.fromTo("#b1-sub", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, CUE.type + 1.6);
+      tl.to("#money", { opacity: 0.2, duration: 0.24, repeat: 1, yoyo: true, ease: "none" }, 4.8);
+      tl.fromTo("#b1 .ghost", { x: 40 }, { x: -20, duration: 5.2, ease: "none" }, 0);
+
+      // --- beat 2 · the trace (5.28 – 12.65)  hard cut, beat-locked: 5.28s
+      tl.set("#money", { x: R[0] - 14, y: R[1] - 14 }, CUE.b2);
+      tl.set("#glow", GL(R[0] - 14, R[1] - 14), CUE.b2);
+      tl.fromTo("#b2-in", { scale: 0.97 }, { scale: 1, duration: 0.8, ease: "power2.out", transformOrigin: "40% 55%" }, CUE.b2);
+      tl.fromTo("#b2-title .l1", { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, CUE.b2 + 0.05);
+      tl.fromTo(".col", { attr: { y2: 360 } }, { attr: { y2: 870 }, duration: 0.7, stagger: 0.08, ease: "power2.inOut" }, CUE.b2 + 0.1);
+      tl.to(".hop", { opacity: 1, duration: 0.3, stagger: 0.08 }, CUE.b2 + 0.4);
+      tl.set(".node", { scale: 0, transformOrigin: "50% 50%" }, 0);
+      const draw = (id, at, dur, ease = "power2.inOut") => tl.to("#" + id, { strokeDashoffset: 0, duration: dur, ease }, at);
+      const pop = (k, at) => tl.to("#n-" + k, { scale: 1, duration: 0.35, ease: "back.out(2.2)" }, at);
+      // hop 1
+      draw("e-R-A2", 5.42, 0.5); pop("A2", 5.62);
+      draw("e-R-A1", 5.55, 0.5); pop("A1", 5.78);
+      draw("e-R-A3", 5.68, 0.5); pop("A3", 5.94);
+      draw("e-R-A4", 5.82, 0.5); pop("A4", 6.10);
+      tl.to("#dust", { opacity: 1, duration: 0.3 }, 6.2);
+      // hop 2
+      draw("e-A2-B2", 6.55, 0.55); pop("B2", 6.78);
+      draw("e-A2-B1", 6.65, 0.5); pop("B1", 6.94);
+      draw("e-A2-B3", 6.75, 0.5); pop("B3", 7.10);
+      draw("e-A3-C1", 6.9, 0.5); pop("C1", 7.2);
+      // the comet runs the traced path
+      const cm = { p: 0 };
+      tl.set("#comet", { opacity: 0 }, 0);
+      tl.set("#ring", { opacity: 0 }, 0);
+      tl.to("#comet", { opacity: 1, duration: 0.15 }, 7.25);
+      tl.to(cm, { p: 1, duration: 1.15, ease: "power1.inOut", onUpdate: () => {
+        const i = Math.min(SAMPLES.length - 1, Math.floor(cm.p * (SAMPLES.length - 1)));
+        const [x, y] = SAMPLES[i]; gsap.set("#comet", { x, y });
+      } }, 7.25);
+      tl.to("#comet", { opacity: 0, duration: 0.2 }, CUE.lock);
+      // lock-in  beat-locked: 8.44s
+      tl.to("#n-B2", { attr: { fill: "#2fd3a2", r: 16 }, duration: 0.25, ease: "power2.out" }, CUE.lock);
+      tl.fromTo("#ring", { attr: { r: 16 }, opacity: 1 }, { attr: { r: 64 }, opacity: 0, duration: 0.9, ease: "power2.out" }, CUE.lock);
+      tl.fromTo("#chip", { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, CUE.lock + 0.05);
+      tl.fromTo("#b2-title .l2", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, CUE.lock + 0.1);
+      // the graph keeps going behind
+      draw("e-B1-D1", 8.7, 0.6, "power1.inOut"); pop("D1", 8.95);
+      draw("e-B1-D2", 8.85, 0.6, "power1.inOut"); pop("D2", 9.1);
+      draw("e-B3-D3", 9.0, 0.6, "power1.inOut"); pop("D3", 9.25);
+      draw("e-C1-D4", 9.15, 0.6, "power1.inOut"); pop("D4", 9.4);
+      draw("e-D2-E1", 9.6, 0.6, "power1.inOut"); pop("E1", 9.85);
+      draw("e-D3-E2", 9.75, 0.6, "power1.inOut"); pop("E2", 10.0);
+      draw("e-D4-E3", 9.9, 0.6, "power1.inOut"); pop("E3", 10.15);
+      // counters  beat-locked: 9.50s
+      const counts = [["#t1", 129], ["#t2", 144], ["#t3", 53]];
+      counts.forEach(([sel, target], i) => {
+        const o = { v: 0 }; const el = document.querySelector(sel + " .v");
+        tl.fromTo(sel, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, CUE.count + i * 0.16);
+        tl.to(o, { v: target, duration: 1.1, ease: "power2.out", onUpdate: () => { el.textContent = Math.round(o.v); } }, CUE.count + i * 0.16);
+      });
+      tl.fromTo("#b2-cap", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 9.7);
+      // breathe: the traced path pulses
+      tl.fromTo("#e-R-A2", { attr: { "stroke-width": 5 } }, { attr: { "stroke-width": 7 }, duration: 0.7, repeat: 3, yoyo: true, ease: "sine.inOut" }, 9.9);
+      tl.fromTo("#e-A2-B2", { attr: { "stroke-width": 5 } }, { attr: { "stroke-width": 7 }, duration: 0.7, repeat: 3, yoyo: true, ease: "sine.inOut" }, 10.0);
+      // the route keeps flowing after it is found
+      [0, 1].forEach((i) => {
+        tl.to("#flowdash-" + i, { opacity: 0.85, duration: 0.3 }, CUE.lock + 0.15 + i * 0.1);
+        tl.to("#flowdash-" + i, { strokeDashoffset: -160, duration: 1.05, ease: "none", repeat: 2 }, CUE.lock + 0.15 + i * 0.1);
+        tl.to("#flowdash-" + i, { opacity: 0, duration: 0.4 }, 12.2);
+      });
+      // and the branches it did not follow keep their own traffic
+      FLOWS.forEach(([id, phase]) => {
+        const pts = flowPts[id], sel = "#flow-" + id, o = { p: 0 };
+        tl.to(sel, { opacity: 1, duration: 0.3 }, 6.7 + phase);
+        tl.to(o, { p: 1, duration: 1.85, ease: "none", repeat: 2, onUpdate: () => {
+          const k = Math.min(pts.length - 1, Math.floor(o.p * (pts.length - 1)));
+          gsap.set(sel, { x: pts[k][0] - 3.5, y: pts[k][1] - 3.5 });
+        } }, 6.7 + phase);
+        tl.to(sel, { opacity: 0, duration: 0.4 }, 12.2);
+      });
+      tl.fromTo("#b2 .ghost", { x: 30 }, { x: -30, duration: 12.0, ease: "none" }, CUE.b2);
+      tl.to("#b2-in", { x: -28, duration: 6.4, ease: "sine.inOut" }, CUE.b2 + 0.9);
+
+      // --- beat 2b · the map (12.65 – 17.39) — the same case, re-laid-out,
+      // driven by a cursor: the toggle the console actually has.
+      tl.to("#toggle", { opacity: 1, duration: 0.4, ease: "power2.out" }, 5.95);
+      tl.set("#cursor", { x: 1700, y: 980, transformOrigin: "0% 0%" }, 0);
+      tl.to("#cursor", { opacity: 1, duration: 0.22 }, 12.56);
+      tl.to("#cursor", { x: 1548, y: 288, duration: 0.3, ease: "power2.inOut" }, 12.58);
+      tl.to("#cursor", { scale: 0.82, duration: 0.07, yoyo: true, repeat: 1, ease: "power2.inOut" }, CUE.bub - 0.07);
+      // the toggle flips
+      tl.to("#toggle-pill", { x: 114, duration: 0.32, ease: "power3.out" }, CUE.bub);
+      tl.to("#tg-hop", { color: "#9aa0a6", duration: 0.28 }, CUE.bub);
+      tl.to("#tg-bub", { color: "#ececea", duration: 0.28 }, CUE.bub);
+      tl.to("#b2-cnt-a", { opacity: 0, duration: 0.22 }, CUE.bub);
+      tl.to("#b2-cnt-b", { opacity: 1, duration: 0.28 }, CUE.bub + 0.18);
+      // the hop chrome goes, the layout re-forms
+      tl.to(".hop, .col, #chip, #dust", { opacity: 0, duration: 0.28, ease: "power2.in" }, CUE.bub);
+      tl.to("#b2-in", { x: 0, duration: 1.1, ease: "sine.inOut" }, CUE.bub);
+      tl.set(".edge", { strokeDasharray: "none" }, CUE.bub);
+      tl.to(morph, { p: 1, duration: 1.15, ease: "power2.inOut", onUpdate: applyMorph }, CUE.bub + 0.06);
+      tl.to("#seed-ring", { opacity: 1, duration: 0.5 }, CUE.bub + 0.3);
+      tl.to("#money", { x: BUB.R[0] - 14, y: BUB.R[1] - 14, duration: 1.1, ease: "power2.inOut" }, CUE.bub + 0.06);
+      tl.to("#glow", { ...GL(BUB.R[0] - 14, BUB.R[1] - 14), duration: 1.2, ease: "power2.inOut" }, CUE.bub + 0.06);
+      // role colour resolves as the bubbles settle
+      tl.to("#n-D2, #n-D3", { attr: { fill: "#e0a44a" }, duration: 0.5 }, CUE.bub + 0.35);
+      tl.to("#n-E1, #n-E2", { attr: { fill: "#2fd3a2" }, duration: 0.5 }, CUE.bub + 0.4);
+      tl.to("#n-C1, #n-D4", { attr: { fill: "#4a5057" }, duration: 0.5 }, CUE.bub + 0.45);
+      tl.to(".xnode", { opacity: 1, duration: 0.45, stagger: 0.019, ease: "power2.out" }, CUE.bub + 0.25);
+      tl.to(".halo", { opacity: 1, duration: 0.55, ease: "power2.out" }, CUE.bub + 0.75);
+      tl.to(".blabel", { opacity: 1, duration: 0.4, stagger: 0.06, ease: "power2.out" }, CUE.bub + 1.2);
+      // hover one: the answer. Everything but the wallet and who paid it dims.
+      const DIM1 = ".node:not(#n-B2):not(#n-A2), .edge:not(#e-A2-B2), .xnode, .blabel:not(#lb-B2), .halo:not(#halo-B2), #seed-ring";
+      const DIM2 = ".node:not(#n-D2):not(#n-B1):not(#n-E1), .edge:not(#e-B1-D2):not(#e-D2-E1), .xnode, .blabel:not(#lb-D2):not(#lb-E1), .halo:not(#halo-E1), #seed-ring";
+      const ALLB = ".node, .edge, .xnode, .blabel, .halo, #seed-ring";
+      tl.to("#cursor", { x: 952, y: 508, duration: 0.2, ease: "power2.inOut" }, 14.55);
+      tl.to(DIM1, { opacity: 0.12, duration: 0.28, ease: "power2.out" }, 14.75);
+      tl.fromTo("#hr1", { opacity: 0, attr: { r: BUB.B2[2] } }, { opacity: 1, attr: { r: BUB.B2[2] + 11 }, duration: 0.35, ease: "power3.out" }, 14.75);
+      tl.fromTo("#card1", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.32, ease: "power3.out" }, 14.8);
+      // hover two: the deposit address one hop short of Gate.io, and the wallet it paid
+      tl.to("#cursor", { x: 1192, y: 388, duration: 0.2, ease: "power2.inOut" }, 15.72);
+      tl.to("#card1", { opacity: 0, duration: 0.16 }, 15.74);
+      tl.to("#hr1", { opacity: 0, duration: 0.16 }, 15.74);
+      tl.to(ALLB, { opacity: 1, duration: 0.12 }, 15.78);
+      tl.to(DIM2, { opacity: 0.12, duration: 0.26, ease: "power2.out" }, 15.95);
+      tl.fromTo("#hr2", { opacity: 0, attr: { r: BUB.D2[2] } }, { opacity: 1, attr: { r: BUB.D2[2] + 11 }, duration: 0.35, ease: "power3.out" }, 15.95);
+      tl.fromTo("#card2", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.32, ease: "power3.out" }, 16.0);
+      // release
+      tl.to("#card2, #hr2", { opacity: 0, duration: 0.25 }, 16.9);
+      tl.to(ALLB, { opacity: 1, duration: 0.35, ease: "power2.out" }, 16.95);
+      tl.to("#cursor", { x: 1700, y: 980, opacity: 0, duration: 0.4, ease: "power2.in" }, 16.95);
+
+      // --- beat 3 · screened (12.65 – 16.86)  hard cut, beat-locked: 12.65s
+      const ROW_H = 64, SCROLL = 2 * ROW_H, HIT_Y = 100 + HIT_INDEX * ROW_H - SCROLL; // 484 (frame y of the hit row after the scroll)
+      tl.set("#money", { x: 108, y: HIT_Y + 18, opacity: 0 }, CUE.b3);
+      tl.set("#glow", GL(108, HIT_Y + 18), CUE.b3);
+      tl.fromTo("#b3-h", { x: 70, opacity: 0 }, { x: 0, opacity: 1, duration: 0.7, ease: "expo.out" }, CUE.b3 + 0.05);
+      tl.fromTo("#b3-rows", { y: 0 }, { y: -SCROLL, duration: 1.4, ease: "power2.inOut" }, CUE.b3 + 0.1);
+      tl.fromTo(".row", { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.03 }, CUE.b3);
+      tl.set("#scan", { y: 0 }, CUE.b3);
+      tl.to("#scan", { opacity: 1, duration: 0.2 }, CUE.b3 + 0.2);
+      tl.to("#scan", { y: HIT_Y - 100, duration: CUE.snap - (CUE.b3 + 0.2), ease: "power1.inOut" }, CUE.b3 + 0.2);
+      tl.to("#scan", { opacity: 0, duration: 0.15 }, CUE.snap); // beat-locked: 14.22s
+      tl.to("#hit-bg", { opacity: 1, duration: 0.1 }, CUE.snap);
+      tl.to("#row-8", { color: "#ff5c5c", duration: 0.12 }, CUE.snap);
+      tl.fromTo("#row-8", { scale: 1.06, transformOrigin: "0% 50%" }, { scale: 1, duration: 0.35, ease: "power3.out" }, CUE.snap);
+      tl.fromTo("#hit-chip", { x: 20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, CUE.snap + 0.05);
+      tl.to("#money", { opacity: 1, duration: 0.2 }, CUE.snap);
+      // each row brightens as the bar reaches it, then dims: checked, cleared
+      for (let i = 0; i <= HIT_INDEX; i++) {
+        const at = 17.69 + i * 0.155;
+        tl.to("#row-" + i, { color: "rgba(236, 236, 234, 0.92)", duration: 0.1, ease: "none" }, at);
+        if (i < HIT_INDEX) tl.to("#row-" + i, { color: "rgba(236, 236, 234, 0.4)", duration: 0.55, ease: "power2.out" }, at + 0.1);
+      }
+      const screened = { v: 0 }, screenedEl = document.querySelector("#b3-count .v");
+      tl.fromTo("#b3-count", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 17.69);
+      tl.to(screened, { v: 129, duration: 1.2, ease: "power1.out", onUpdate: () => { screenedEl.textContent = Math.round(screened.v); } }, 17.69);
+      tl.fromTo("#b3-facts", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, CUE.snap + 0.3);
+      tl.fromTo("#b3 .ghost", { x: 30 }, { x: -30, duration: 4.7, ease: "none" }, CUE.b3);
+      tl.to("#b3-in", { opacity: 0, duration: 0.5, ease: "power1.inOut" }, CUE.b4); // crossfade out
+
+      // --- beat 4 · the handoff (16.86 – 20.54)  crossfade with scale, beat-locked: 16.86s
+      const MONEY_CARD = { x: 1116, y: 543 };
+      tl.fromTo("#b4-in", { opacity: 0, scale: 0.96, transformOrigin: "50% 50%" }, { opacity: 1, scale: 1, duration: 0.55, ease: "power2.out" }, CUE.b4);
+      tl.to("#money", { x: MONEY_CARD.x, y: MONEY_CARD.y, duration: 0.7, ease: "expo.inOut" }, CUE.b4 + 0.2);
+      tl.to("#glow", { ...GL(MONEY_CARD.x, MONEY_CARD.y), duration: 0.8, ease: "power2.inOut" }, CUE.b4 + 0.1);
+      tl.fromTo("#b4-h", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, CUE.b4 + 0.1);
+      tl.fromTo("#b4-sub", { opacity: 0 }, { opacity: 1, duration: 0.5 }, CUE.b4 + 0.7);
+      tl.set("#card", { transformPerspective: 1100 }, 0);
+      tl.to("#card", { rotationY: -2.6, rotationX: 1.1, duration: 5.4, ease: "sine.inOut" }, CUE.b4 + 0.9);
+      tl.fromTo("#card", { x: 260, rotation: -3, opacity: 0 }, { x: 0, rotation: 0, opacity: 1, duration: 0.8, ease: "expo.out", transformOrigin: "50% 50%" }, CUE.b4 + 0.05);
+      tl.fromTo("#stamp", { scale: 1.7, rotation: -14, opacity: 0 }, { scale: 1, rotation: -8, opacity: 1, duration: 0.28, ease: "power4.in", transformOrigin: "50% 50%" }, CUE.seal - 0.28);
+      tl.to("#stamp", { rotation: -7.2, duration: 0.16, yoyo: true, repeat: 1, ease: "sine.inOut" }, CUE.seal); // beat-locked: 19.49s
+      tl.fromTo("#b4 .ghost", { x: 30 }, { x: -30, duration: 6.8, ease: "none" }, CUE.b4);
+      // "the exchange, how sure" → the finding line; "the address to name" → the address line
+      tl.set("#ul-finding, #ul-address", { scaleX: 0, transformOrigin: "0% 50%" }, 0);
+      tl.to("#ul-finding", { scaleX: 1, duration: 0.5, ease: "power3.out" }, 23.74);
+      tl.to("#ul-finding", { opacity: 0, duration: 0.3 }, 24.89);
+      tl.to("#ul-address", { scaleX: 1, duration: 0.5, ease: "power3.out" }, 24.99);
+      tl.to("#ul-address", { opacity: 0, duration: 0.3 }, 27.34);
+      tl.to("#hash .hc", { opacity: 1, duration: 0.001, stagger: 0.018, ease: "none" }, 26.64);
+      tl.fromTo("#money", { scale: 1 }, { scale: 1.25, duration: 0.5, repeat: 5, yoyo: true, ease: "sine.inOut", transformOrigin: "50% 50%" }, 23.74);
+
+      // --- beat 5 · the stance (20.54 – 24.23)  hard cut, beat-locked: 20.54s
+      const MONEY_B5 = { x: 60, y: 304 };
+      tl.set("#money", MONEY_B5, CUE.b5);
+      tl.set("#glow", GL(MONEY_B5.x, MONEY_B5.y), CUE.b5);
+      const slam = (sel, at) => tl.fromTo(sel, { scale: 1.22, opacity: 0, transformOrigin: "0% 50%" }, { scale: 1, opacity: 1, duration: 0.28, ease: "expo.out" }, at);
+      slam("#st1", CUE.b5); slam("#st2", CUE.s2); slam("#st3", CUE.s3); // beat-grid: 23.70 / 24.75 / 25.81
+      // the red square steps down the list as each line lands
+      tl.to("#money", { y: 454, duration: 0.2, ease: "power3.out" }, CUE.s2);
+      tl.to("#money", { y: 604, duration: 0.2, ease: "power3.out" }, CUE.s3);
+      tl.to("#money", { y: 721, duration: 0.3, ease: "power2.out" }, 32.16);
+      tl.fromTo("#st4", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, 32.16);
+      tl.to(tickPath, { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" }, 32.69);
+      tl.fromTo("#st-rule", { scaleX: 0, transformOrigin: "0% 50%" }, { scaleX: 1, duration: 0.5, ease: "power3.out" }, CUE.rule);
+      tl.fromTo("#b5-sub", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4 }, CUE.rule + 0.15);
+      tl.fromTo("#b5 .ghost", { x: 30 }, { x: -30, duration: 5.3, ease: "none" }, CUE.b5);
+      tl.to("#st1, #st2, #st3, #st4, #st-rule, #b5-sub, #b5 .counter, #b5 .ghost", { y: -40, opacity: 0, duration: 0.22, ease: "power3.in", stagger: 0.02 }, CUE.b6 - 0.22);
+
+      // --- beat 6 · Exchequer (24.23 – 28.2)  continuous, beat-locked: 24.23s
+      const X0 = 560, Y0 = 456, C = 42;
+      tl.to("#money", { x: X0 + 2 * C, y: Y0 + 2 * C, scale: 1.5, duration: 0.6, ease: "expo.inOut", transformOrigin: "0 0" }, CUE.b6);
+      tl.to("#glow", { ...GL(X0 + 2 * C + 7, Y0 + 2 * C + 7), duration: 0.7, ease: "power2.inOut" }, CUE.b6);
+      tl.to("#b6-in", { opacity: 1, duration: 0.01 }, CUE.b6);
+      const CELLS = { c00: [0, 0, -420, -300], c20: [2, 0, 260, -420], c11: [1, 1, -520, 80], c31: [3, 1, 560, -120], c02: [0, 2, -380, 420], c13: [1, 3, -160, 520], c33: [3, 3, 460, 380] };
+      const EASES = ["expo.out", "back.out(1.6)", "power4.out", "expo.out", "back.out(1.4)", "power4.out", "expo.out"];
+      Object.entries(CELLS).forEach(([id, [cx, cy, dx, dy]], i) => {
+        tl.set("#" + id, { left: X0 + cx * C, top: Y0 + cy * C }, 0);
+        tl.fromTo("#" + id, { x: dx, y: dy, opacity: 0 }, { x: 0, y: 0, opacity: 1, duration: 0.55, ease: EASES[i] }, CUE.b6 + 0.07 + i * 0.11);
+      });
+      tl.fromTo("#wordmark", { x: -50, opacity: 0 }, { x: 0, opacity: 1, duration: 0.8, ease: "expo.out" }, CUE.b6 + 0.32);
+      tl.fromTo("#b6-tag", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, CUE.b6 + 1.0);
+      tl.fromTo("#b6-stats", { opacity: 0 }, { opacity: 1, duration: 0.6 }, CUE.b6 + 1.3);
+      [["#n1", 3], ["#n2", 28], ["#n3", 407], ["#n4", 407]].forEach(([sel, target], i) => {
+        const o = { v: 0 }, el = document.querySelector(sel);
+        tl.to(o, { v: target, duration: 0.95, ease: "power2.out", onUpdate: () => { el.textContent = Math.round(o.v); } }, CUE.b6 + 1.35 + i * 0.13);
+      });
+      tl.to("#money", { boxShadow: "0 0 46px rgba(255, 92, 92, 0.8)", duration: 1.2, repeat: 1, yoyo: true, ease: "sine.inOut" }, 35.14);
+      tl.fromTo("#b6-sih", { opacity: 0 }, { opacity: 1, duration: 0.6 }, CUE.b6 + 1.45);
+      tl.fromTo("#b6 .counter", { opacity: 0 }, { opacity: 1, duration: 0.4 }, CUE.b6 + 1.45);
+      // the last frame is part of the film: nothing resets, the glow keeps breathing to the end
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
