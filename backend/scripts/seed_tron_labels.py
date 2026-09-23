@@ -39,7 +39,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -58,53 +57,9 @@ TRON = config.CHAINS["tron"]
 USDT = TRON.find_token("USDT")
 PAGE = 50  # TronScan's page size for both listings
 
-# Tags that name something other than a place funds are cashed out at.
-NOT_AN_EXCHANGE = re.compile(
-    r"(treasury|token|contract|bridge|foundation|team|burn|blackhole|justlend|sunswap|dao|"
-    r"multisig|deployer|staking|validator|sr\b|super representative)",
-    re.IGNORECASE,
-)
-
-# Tag prefixes (lower-cased, punctuation stripped) that name a centralised
-# exchange, folded to the company name. A tag whose head is not here is NOT
-# kept: it is printed for review. Adding an exchange means adding a line here
-# and re-running -- never typing an address.
-CANONICAL: dict[str, str] = {
-    "binance": "Binance", "okx": "OKX", "okex": "OKX", "bybit": "Bybit",
-    "huobi": "Huobi / HTX", "htx": "Huobi / HTX", "kucoin": "KuCoin",
-    "gate": "Gate.io", "gateio": "Gate.io", "mexc": "MEXC", "mxc": "MEXC",
-    "bitget": "Bitget", "poloniex": "Poloniex", "kraken": "Kraken",
-    "bitfinex": "Bitfinex", "coinbase": "Coinbase", "crypto": "Crypto.com",
-    "cryptocom": "Crypto.com", "bitmart": "BitMart", "coindcx": "CoinDCX",
-    "wazirx": "WazirX", "zebpay": "ZebPay", "giottus": "Giottus",
-    "whitebit": "WhiteBIT", "bingx": "BingX", "lbank": "LBank", "hitbtc": "HitBTC",
-    "upbit": "Upbit", "bithumb": "Bithumb", "coinex": "CoinEx", "xt": "XT.com",
-    "phemex": "Phemex", "deepcoin": "Deepcoin", "bitstamp": "Bitstamp",
-    "gemini": "Gemini", "bitkub": "Bitkub", "coinone": "Coinone", "korbit": "Korbit",
-    "bitrue": "Bitrue", "hotbit": "Hotbit", "ascendex": "AscendEX", "bittrex": "Bittrex",
-    "digifinex": "DigiFinex", "pionex": "Pionex", "toobit": "Toobit", "weex": "WEEX",
-    "bitvavo": "Bitvavo", "bitpanda": "Bitpanda", "nexo": "Nexo", "backpack": "Backpack",
-    "coinspot": "CoinSpot", "fixedfloat": "FixedFloat", "ueex": "UEEx",
-    "flipster": "Flipster", "ourbit": "OURBIT", "onus": "ONUS", "westwallet": "WestWallet",
-    "heleket": "Heleket",
-}
-
-
-def tag_head(tag: str) -> str:
-    head = re.split(r"[-:_(]| hot| cold| wallet| exchange| deposit|\d", tag, maxsplit=1, flags=re.I)[0]
-    head = re.sub(r"\.(com|io|net)$", "", head.strip().lower())
-    return re.sub(r"[^a-z]", "", head)
-
-
-def wallet_type(tag: str) -> str:
-    lowered = tag.lower()
-    if "cold" in lowered:
-        return "cold_wallet"
-    if "deposit" in lowered:
-        return "deposit_wallet"
-    if "hot" in lowered:
-        return "hot_wallet"
-    return "exchange_wallet"
+# The rules for "does this tag name an exchange" live with the live lookup, so
+# the importer and a running trace can never disagree about a tag.
+from app.tron_tags import CANONICAL, NOT_AN_EXCHANGE, tag_head, wallet_type  # noqa: E402,F401
 
 
 def tagged_rows(client: httpx.Client, url: str, params: dict, key: str, count: int) -> list[tuple[str, str]]:

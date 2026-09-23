@@ -51,6 +51,7 @@ from .graph_builder import (
 from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .report import build_report, render_text_report
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
+from .tron_tags import LiveTronExchanges, TronScanTags
 from .scoring import principal_path, score_case
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -416,8 +417,16 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     token = chain.find_token(asset_symbol)
     is_native = token is None
 
+    live: LiveTronExchanges | None = None
     try:
         with open_source(chain, asset_symbol) as client:
+            # On Tron, a wallet no label file names is asked about: TronScan's
+            # own tag, read live, attributes it when it names an exchange.
+            if chain.key == "tron":
+                live = LiveTronExchanges(
+                    TronScanTags(config.TRONSCAN_API_KEY, evidence=getattr(client, "evidence", None)),
+                    matcher.is_exchange,
+                )
             result = build_trace_graph(
                 seed,
                 client,
@@ -433,10 +442,17 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                 # transfers of its own to follow anyway.
                 is_terminal=lambda a: (
                     matcher.is_exchange(a) or risk_matcher.is_terminal(a) or routers.is_exchange(a)
+                    or (live is not None and live.is_exchange(a))
                 ),
                 direction=direction,
                 seed_window=seed_window,
             )
+            if live is not None:
+                # The last hop is never checked during the walk; ask now, then
+                # attribute against the file's labels plus what TronScan named.
+                live.sweep(result.graph)
+                if live.found:
+                    matcher = ExchangeMatcher({**matcher._labels, **live.found}, chain=chain.key)
             # Swaps. Reads one receipt per router-bound transfer (capped) so
             # the response can say what asset the money became.
             swaps = detect_swaps(
@@ -493,6 +509,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except InvalidDirectionError as exc:  # defensive; the request model validates it
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        if live is not None:
+            live.tags.close()
 
     graph = result.graph
 
@@ -666,6 +685,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         # showed it. The graph edge carries the same record as `swap`.
         "swaps": swaps,
         "swap_notes": [describe_swap(s) for s in swaps],
+        # Tron only: wallets attributed from TronScan's tag at trace time.
+        "live_tags": live.summary() if live is not None else None,
         # Traces that continued in the swap's output asset. Each carries its
         # own complete result, so its score and amounts stay in one asset.
         "follow_ons": follow_ons,

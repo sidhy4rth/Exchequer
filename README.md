@@ -46,7 +46,7 @@
 <td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>3</h3>chains, 8 assets</td>
-<td align="center"><h3>273</h3>tests, no network</td>
+<td align="center"><h3>283</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -142,8 +142,8 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 ## Quick start
 
 **Prerequisites:** Python 3.11+, Node.js 20+, and free API keys — **Etherscan** (Ethereum, required),
-**NodeReal** (BNB Smart Chain, optional) and **TronGrid** (Tron, optional; keyless requests are throttled
-to about one every 1.2 seconds).
+**NodeReal** (BNB Smart Chain, optional), **TronGrid** (Tron, optional; keyless requests are throttled
+to about one every 1.2 seconds) and **TronScan** (optional; lets Tron traces read TronScan's tags live).
 
 ```bash
 # backend
@@ -501,8 +501,17 @@ carrying an exchange's name but doing something else entirely:
 
 The router mattered most: funds passing through a swap router have been *traded*, not deposited.
 
-Tron labels are read **live from TronScan's own API** — the label comes from the explorer that assigns it — and
-each must have no contract bytecode and at least one received transfer. Router labels (**20 on Ethereum, 4 on
+Tron labels are read **from TronScan's own API** — the label comes from the explorer that assigns it — and
+each must have no contract bytecode and at least one received transfer.
+
+**Tron attribution beyond the file.** A fixed file can only hold the Tron wallets someone imported — 41. So a Tron
+trace also asks TronScan, for each wallet it reaches that no file names, what the explorer tags it (up to 60 wallets
+per trace, the most valuable first, the last hop included). A tag that names a known exchange attributes the wallet —
+labelled *"(TronScan tag, read live)"* so a reader always knows the source — and the trace stops there as it would
+at any exchange; a tag naming a treasury, bridge, token or scam never counts, and one not recognised is listed, not
+guessed at. Every response is hashed into the evidence manifest, and the report states how many wallets were asked
+and what was found. A failed lookup costs an attribution, never the trace. It needs a free TronScan API key
+(`TRONSCAN_API_KEY`); without one it is off and the report says so. Router labels (**20 on Ethereum, 4 on
 BSC**) must, the other way round, carry bytecode.
 
 ### Indian exchanges
@@ -724,6 +733,7 @@ staying silent on ordinary activity, because a false accusation is the expensive
 | `test_risk_matcher.py` | All four categories; a mixer ends a trace and keeps ending it whatever else lists it, a sanctioned, frozen or stolen-funds address does not; a government listing outranks an explorer tag; several governments are all named; unknown categories dropped |
 | `test_threat_import.py` | Thief and phishing tags accepted; "hackerspace" charities, AVS operators and hack *victims* rejected; only mixer pools and routers count, never governance or token contracts |
 | `test_request_letters.py` | The exchange letter names the address and every hop with its hashes; the legal basis is left for the officer; no exchange means no exchange letter; an attribution after a swap is written from the follow-on; the Tether letter lists each freeze; an ETH trace touching no USDT offers none |
+| `test_tron_tags.py` | Only a tag naming a known exchange attributes; treasuries, bridges and scam tags never do; a labelled wallet is never asked about; the last hop is swept; lookups are capped; no key means no lookups; a failed lookup leaves the trace intact; the report says what TronScan named |
 | `test_follow_swaps.py` | A swap into a stablecoin is traced to the exchange from the moment of the swap; transfers before it are excluded; the original trace keeps its asset and score; a time budget covers the follow-on too; a swap into an untraced token is not followed; the switch turns it off; the report prints it |
 | `test_tether_freezes.py` | The replay: a release unfreezes, a re-freeze after a release counts, order within a block follows the log index, Tron addresses convert for the contract call |
 | `test_intl_sanctions_import.py` | The chain named before a free-text address decides where it is filed; a token name alone picks no EVM chain; a wallet named only in lifted seizure orders is left out |
@@ -772,6 +782,7 @@ exchequer/
 │   │   ├── etherscan_client.py   Etherscan V2 (native, ERC-20, internal)
 │   │   ├── nodereal_client.py    NodeReal for BNB Smart Chain
 │   │   ├── tron_client.py        TronGrid for Tron (TRX + TRC-20)
+│   │   ├── tron_tags.py          TronScan tags read live during Tron traces
 │   │   ├── graph_builder.py      BFS traversal, both directions, six brakes
 │   │   ├── exchange_matcher.py   exact-match attribution
 │   │   ├── deposit_inference.py  probable exchange deposit addresses
@@ -813,7 +824,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         273 tests, no network or keys
+│   └── tests/                         283 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton

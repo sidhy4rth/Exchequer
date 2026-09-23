@@ -298,6 +298,10 @@ NODEREAL_API_KEY: str | None = os.getenv("NODEREAL_API_KEY") or None
 # TronGrid works without a key at a low rate limit; a free key raises it. Sent
 # as the TRON-PRO-API-KEY header.
 TRONGRID_API_KEY: str | None = os.getenv("TRONGRID_API_KEY") or None
+# TronScan's account endpoint, read during Tron traces for the explorer's own
+# address tag (app/tron_tags.py). Its own key, free from tronscan.org; without
+# one the live tag lookup is off and Tron attribution uses the label file only.
+TRONSCAN_API_KEY: str | None = os.getenv("TRONSCAN_API_KEY") or None
 # How far back a NodeReal-served trace looks. Its API caps one query at 100,000
 # blocks (~3.5 days on BSC), so this is walked in windows: 500,000 blocks is
 # roughly 17 days and at most five requests per address. Raising it widens

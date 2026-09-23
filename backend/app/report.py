@@ -175,6 +175,7 @@ def build_report(case: Case) -> dict[str, Any]:
         # arrived, and one hash over all of them. Absent on cases stored by an
         # earlier version.
         "evidence": result.get("evidence"),
+        "live_tags": result.get("live_tags"),
     }
 
 
@@ -570,6 +571,15 @@ def render_text_report(report: dict[str, Any]) -> str:
     # -- scope -----------------------------------------------------------------
     summary = report["graph_summary"]
     section("TRACE SCOPE")
+    live = report.get("live_tags")
+    if live is not None:
+        if live.get("enabled"):
+            add(f"TronScan tags read live    : {live.get('asked', 0)} unlabelled wallets asked, "
+                f"{len(live.get('found') or [])} tagged as an exchange")
+            for f in live.get("found") or []:
+                add(f"  - {f['address']} {f['label']}")
+        else:
+            add("TronScan tags read live    : off (no TRONSCAN_API_KEY configured)")
     add(f"Addresses examined         : {summary['addresses']}")
     add(f"Transfers (aggregated)     : {summary['transfers']}")
     if summary.get("individual_transactions"):
