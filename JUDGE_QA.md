@@ -1,4 +1,4 @@
-# Judge Q&A — eighteen questions and the answers the repo can back
+# Judge Q&A — nineteen questions and the answers the repo can back
 
 Every answer below is grounded in code that is in the repository or a number
 that was measured in it. Sources for the factual claims are in
@@ -220,3 +220,16 @@ swap are excluded, since they were not the swapped money. Each trace keeps its
 own amounts and score, because 1 ETH and 2,400 USDT cannot be added together. A
 swap into an obscure token, or a bridge to another chain, still ends the trail,
 and the report says so.
+
+**19. How do you know the money at the exchange is the victim's, and not someone else's?**
+
+We don't assume it. Money is fungible, and a wallet in the middle of a path may be
+moving other people's funds at the same time. So the tool uses pro-rata tracing, the
+standard method for mixed funds: at each wallet it reads everything that came in while
+the traced funds passed through, works out the victim's share, and carries only that
+share forward. The case shows the result as an amount — "about 9.42 of the 40 USDT
+likely arrived; 98 arrived in total, the rest from other sources" — and warns when the
+victim's funds were a small part of what a wallet moved. Every step is a public
+transaction a judge can check. It is an estimate, and the tool says what it leaves out:
+money a wallet already held beforehand is not counted, so it is an upper bound.
+

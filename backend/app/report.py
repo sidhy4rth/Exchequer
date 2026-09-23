@@ -116,6 +116,7 @@ def build_report(case: Case) -> dict[str, Any]:
             "inference_notes": result.get("inference_notes", []),
             "hop_count": result.get("hop_count"),
             "value_received_native": result.get("value_received_native"),
+            "prorata": result.get("prorata"),
             "value_currency": native_symbol,
             "all_matches": matches,
         },
@@ -386,9 +387,21 @@ def render_text_report(report: dict[str, Any]) -> str:
             + ("INFERRED from the wallet's behaviour, not a label-file match"
                if attribution.get("inferred") else "exact match against a published exchange label"))
         add(f"Hops from source : {attribution['hop_count']}")
-        if attribution.get("value_received_native") is not None:
-            label = "Value received  " if direction == "outgoing" else "Value sent      "
-            add(f"{label} : {attribution['value_received_native']} {symbol}")
+        prorata = attribution.get("prorata") or {}
+        if direction == "outgoing" and prorata.get("status") == "estimated":
+            add(f"Reported funds   : about {prorata['estimated']} of {prorata['sent']} {symbol} "
+                "likely arrived (pro-rata)")
+            add(f"Arrived in total : {prorata['arrived_total']} {symbol} along this path, "
+                "including funds from other sources")
+            for h in prorata.get("hops") or []:
+                add(f"  via {h['address']}: reported funds {round(h['victim_share'] * 100, 1)}% "
+                    f"of {h['received_in_window']} {symbol} received before it sent on")
+        elif attribution.get("value_received_native") is not None:
+            label = ("Arrived on path " if direction == "outgoing" else "Value sent      ")
+            add(f"{label} : {attribution['value_received_native']} {symbol}"
+                + (" (including any funds from other sources)" if direction == "outgoing" else ""))
+            if prorata.get("status") == "unknown":
+                add(f"Pro-rata         : not estimated -- {prorata.get('reason')}")
     elif direction == "outgoing":
         add("No known exchange wallet was reached within the traced depth.")
         add("This does not establish that the funds were not cashed out.")

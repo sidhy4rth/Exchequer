@@ -243,6 +243,28 @@ def _amount_correlation(
     )
 
 
+def _prorata_component(prorata: dict[str, Any], native_symbol: str) -> ScoreComponent:
+    """Amount correlation measured pro-rata (see prorata.py)."""
+    sent, est, ratio = prorata["sent"], prorata["estimated"], prorata["ratio"]
+    lines = [
+        f"Pro-rata estimate: about {est:,.4f} of the {sent:,.4f} {native_symbol} that left the "
+        f"reported address on this path likely reached the exchange ({ratio * 100:.1f}%)."
+    ]
+    for h in prorata.get("hops") or []:
+        lines.append(
+            f"At {h['address']} the traced funds were {h['victim_share'] * 100:.1f}% of the "
+            f"{h['received_in_window']:,.4f} {native_symbol} it received before sending on, so "
+            f"{h['victim_on']:,.4f} of the {h['sent_on']:,.4f} it passed along is counted as theirs."
+        )
+    arrived = prorata.get("arrived_total")
+    if arrived and arrived > est * 1.05:
+        lines.append(
+            f"{arrived:,.4f} {native_symbol} reached the exchange along this path in total; the rest "
+            f"came from other sources."
+        )
+    return ScoreComponent("amount_correlation", ratio, WEIGHT_AMOUNT_CORRELATION, " ".join(lines))
+
+
 def _match_directness(match: ExchangeMatch) -> ScoreComponent:
     """Exact hot-wallet match vs. a weaker attribution.
 
@@ -293,6 +315,7 @@ def score_case(
     native_symbol: str = "ETH",
     direction: str = OUTGOING,
     internal_transfers_read: bool = False,
+    prorata: dict[str, Any] | None = None,
 ) -> ConfidenceScore:
     """Compute the confidence score for one traced case.
 
@@ -329,7 +352,9 @@ def score_case(
 
     components = [
         _hop_proximity(primary_match.depth, max_depth, direction),
-        _amount_correlation(graph, seed, primary_match.address, native_symbol, direction),
+        (_prorata_component(prorata, native_symbol)
+         if prorata and prorata.get("status") == "estimated"
+         else _amount_correlation(graph, seed, primary_match.address, native_symbol, direction)),
         _match_directness(primary_match),
     ]
     score = round(sum(c.contribution for c in components), 4)
@@ -355,8 +380,33 @@ def score_case(
         components=components,
         summary=summary,
         caveats=_caveats(findings, truncated, matched=True, asset=native_symbol,
-                         internal_transfers_read=internal_transfers_read),
+                         internal_transfers_read=internal_transfers_read) + _prorata_caveats(prorata, native_symbol),
     )
+
+
+def _prorata_caveats(prorata: dict[str, Any] | None, native_symbol: str) -> list[str]:
+    if not prorata or prorata.get("status") == "not_applicable":
+        return []
+    if prorata.get("status") == "unknown":
+        return [
+            f"How much of the value at the exchange was the reported funds could not be "
+            f"estimated: {prorata.get('reason')}. The amount component compares the first and "
+            f"last hop only, which overstates the match when other money joined on the way."
+        ]
+    out = []
+    if prorata.get("diluted"):
+        low = min(prorata["hops"], key=lambda h: h["victim_share"])
+        out.append(
+            f"At {low['address']} the traced funds were only {low['victim_share'] * 100:.1f}% of "
+            f"what the wallet received before sending on; most of what it moved came from elsewhere."
+        )
+    if prorata.get("hops"):
+        out.append(
+            "The pro-rata estimate counts what each wallet received while the traced funds "
+            "passed through it, not money it already held; an older balance would lower the "
+            "estimate, so read it as an upper bound."
+        )
+    return out
 
 
 def _caveats(

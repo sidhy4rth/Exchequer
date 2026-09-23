@@ -53,6 +53,7 @@ from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .report import build_report, render_text_report
 from .risk_matcher import FROZEN, MIXER, REPORTED, SANCTIONED, STOLEN, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
+from .prorata import estimate as estimate_prorata
 from .scoring import principal_path, score_case
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -301,12 +302,16 @@ def _wallet_statement(client: Any, address: str) -> dict[str, Any] | None:
                  "counterparty": getattr(t, counterparty)} for t in txs[:STATEMENT_ROWS]]
     try:
         sent = client.get_outgoing_transactions(address, limit=STATEMENT_ROWS)
-        received = (client.get_incoming_transactions(address, limit=STATEMENT_ROWS)
+        # Read deeper than the rows shown: address-poisoning dust can arrive by
+        # the dozen and would otherwise push every real credit off the list.
+        received = (client.get_incoming_transactions(address, limit=STATEMENT_ROWS * 4)
                     if hasattr(client, "get_incoming_transactions") else [])
     except Exception as exc:  # noqa: BLE001 -- a statement is never worth a failed trace
         logger.warning("Wallet statement for %s failed: %s", address, exc)
         return None
-    debits, credits = rows(sent, "to_address"), rows(received, "from_address")
+    debits = rows(sent, "to_address")
+    credits = [{"tx": t.hash, "time": t.timestamp, "amount": round(t.value_native, 6),
+                "counterparty": t.from_address} for t in received]
     # Address poisoning: a stranger sends dust from an address whose first and
     # last characters copy one this wallet really paid, hoping the owner later
     # copies the lookalike from their history. Marked, never hidden.
@@ -315,11 +320,13 @@ def _wallet_statement(client: Any, address: str) -> dict[str, Any] | None:
     for row in credits:
         c = (row["counterparty"] or "").lower()
         row["lookalike"] = bool(c) and c not in paid and (c[:6], c[-4:]) in shapes
+    lookalikes = [r for r in credits if r["lookalike"]]
     return {
         "debits": debits,
-        "credits": credits,
+        "credits": [r for r in credits if not r["lookalike"]][:STATEMENT_ROWS],
+        "poisoning": lookalikes[:10],
         "rows_per_side": STATEMENT_ROWS,
-        "lookalikes": sum(1 for r in credits if r["lookalike"]),
+        "lookalikes": len(lookalikes),
     }
 
 
@@ -519,6 +526,17 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             # Every provider response the trace was computed from, hashed on
             # arrival. Taken while the client is still open, after the last
             # call that could add to it (the balance reads above).
+            # Pro-rata: how much of the reported funds likely reached the
+            # exchange, reading what else joined them in each wallet on the path.
+            prorata = None
+            lead = ExchangeMatcher.primary_match(matches + inferred)
+            if direction == OUTGOING and lead is not None and lead.address != seed:
+                try:
+                    lead_path = principal_path(result.graph, seed, lead.address)
+                except (nx.NetworkXNoPath, nx.NodeNotFound):
+                    lead_path = []
+                prorata = estimate_prorata(result.graph, lead_path,
+                                           getattr(client, "get_incoming_between", None))
             # The reported wallet's own statement: what it received and sent in
             # this asset, whether or not anything could be followed onward.
             statement = _wallet_statement(client, seed) if seed_window is None else None
@@ -589,6 +607,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         native_symbol=asset_symbol,
         direction=direction,
         internal_transfers_read=internal_read,
+        prorata=prorata,
     )
 
     # Swaps into a stablecoin this chain carries are followed as their own
@@ -736,6 +755,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "created_at": None,  # set with the case id
         "message": message,
         "statement": statement,
+        "prorata": prorata,
         "exchange_address": primary.address if primary else None,
         "exchange_label": primary.label if primary else None,
         # True when the attribution names an inferred deposit address rather

@@ -48,7 +48,7 @@
 <td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>5</h3>chains, 14 assets</td>
-<td align="center"><h3>300</h3>tests, no network</td>
+<td align="center"><h3>309</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -413,12 +413,29 @@ token output), a swap into a token the chain is not configured to trace, or a br
 | Component | Weight | What it measures |
 |---|---|---|
 | Hop proximity | 40% | Fewer hops = less room for the trail to be broken by a wallet we cannot see |
-| Amount correlation | 35% | How much of the value that left the reported address arrived |
+| Amount correlation | 35% | How much of the reported funds likely arrived, measured **pro-rata** (below) |
 | Match directness | 25% | 1.0 for an exact label, 0.5 for an inferred deposit address |
 
 **No exchange match scores 0.0 and reports "no attribution"** — never a low-but-nonzero number that might be
 over-read. Patterns, screening hits and truncation are reported as **caveats** rather than folded into the
 number, so the score stays reproducible.
+
+**Pro-rata: how much of it is the victim's money.** A wallet in the middle of a path may be moving other
+people's money at the same time, so "1,001.50 USDT reached Binance" says nothing about how much of it was the
+victim's 40. At each wallet on the path the tool reads **every** transfer into it between the traced funds
+arriving and the wallet sending on — not only the ones the trace followed — and carries the victim's share
+forward: *share = victim funds in ÷ all funds in; victim funds on = amount sent on × share*. The victim amount
+can only shrink along the path. The case, the report and Present mode show the result as its own figure —
+"≈ 9.42 of 40 USDT of the reported funds likely arrived (pro-rata); 98 arrived in total, the rest from other
+sources" — and a share under 25% at any wallet is called out. Money a wallet already held before the funds
+arrived is not counted, so the estimate is an upper bound; where a wallet received too much in the window to read
+in full, the case says "not estimated" instead of guessing. On the demos it changed nothing where the money moved
+cleanly, and cut the scores of the paths it should: two of DEMO.md trace 10's three phishing wallets (0.58 and 0.50), and a real BSC
+wallet whose 40 USDT was 9.6% of what the next wallet received (0.73 → 0.47).
+
+**The weights are judgement, not calibration.** 40/35/25 and the per-hop decay were chosen to be explainable,
+not fitted to labelled outcomes — there is no public ground-truth set of traced Indian fraud cases to fit them
+to. Read the score through its three components and caveats, which the case and report always show.
 
 ---
 
@@ -850,7 +867,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         300 tests, no network or keys
+│   └── tests/                         309 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton

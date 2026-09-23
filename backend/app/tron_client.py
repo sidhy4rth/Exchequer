@@ -285,6 +285,38 @@ class TronClient:
         """
         return self._get_directional_transactions(address, "only_to", limit)
 
+    def get_incoming_between(
+        self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,
+    ) -> tuple[list[Transaction], bool]:
+        """Every value-bearing transfer into `address` between two times (s).
+
+        TronGrid filters by timestamp, not block. Returns (transfers, complete);
+        complete is False if the window held more than MAX_SCAN records.
+        """
+        if self.contract_address:
+            path, parse = f"/v1/accounts/{address}/transactions/trc20", self._token_transfer
+        else:
+            path, parse = f"/v1/accounts/{address}/transactions", self._native_transfer
+        params: dict[str, Any] = {"only_to": "true", "limit": MAX_PAGE, "order_by": "block_timestamp,asc",
+                                  "min_timestamp": start_ts * 1000, "max_timestamp": end_ts * 1000}
+        if self.contract_address:
+            params["contract_address"] = self.contract_address
+        collected: list[Transaction] = []
+        scanned = 0
+        while scanned < MAX_SCAN:
+            body = self._get(path, params)
+            records = body.get("data") or []
+            scanned += len(records)
+            for raw in records:
+                tx = parse(raw)
+                if tx and tx.to_address == address and not tx.is_error and tx.value_wei > 0:
+                    collected.append(tx)
+            fingerprint = (body.get("meta") or {}).get("fingerprint")
+            if not fingerprint or not records:
+                return collected, True
+            params["fingerprint"] = fingerprint
+        return collected, False
+
     def _get_directional_transactions(
         self, address: str, direction_param: str, limit: int | None = None
     ) -> list[Transaction]:

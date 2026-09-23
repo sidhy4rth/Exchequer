@@ -335,7 +335,11 @@ export default function TraceView() {
                       ? <><strong>Inferred, not labelled</strong> — probable deposit address</>
                       : <><strong>Exact match</strong> · label <span className="mono">{result.exchange_label}</span></>}
                     {' · '}{result.hop_count} hop{result.hop_count === 1 ? '' : 's'}{reverse ? ' upstream' : ''}
-                    {' · '}<span className="num">{num(result.value_received_native ?? 0)} {unit}</span> {reverse ? 'sent' : 'arrived'}
+                    {' · '}{reverse
+                      ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> sent</>
+                      : result.prorata?.status === 'estimated'
+                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> of the reported funds likely arrived <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span></>
+                        : <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached it along this path, including any funds from other sources</>}
                   </div>
                   <div className="cite">
                     <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
@@ -477,10 +481,10 @@ export default function TraceView() {
                     </span>
                   </summary>
                   <div className="feed">
-                    {[['credits', 'Money in', 'from', '+'], ['debits', 'Money out', 'to', '−']].map(([key, title, dir, sign]) => (
+                    {[['credits', 'Money in', 'from', '+'], ['debits', 'Money out', 'to', '−'], ['poisoning', 'Address-poisoning dust (lookalike senders)', 'from', '!']].filter(([key]) => key !== 'poisoning' || (result.statement.poisoning ?? []).length > 0).map(([key, title, dir, sign]) => (
                       <div key={key}>
-                        <p className="note" style={{ padding: '10px 12px 4px' }}><strong>{title}</strong>{result.statement[key].length === 0 ? ' — none found' : ''}</p>
-                        {result.statement[key].map((r) => (
+                        <p className="note" style={{ padding: '10px 12px 4px' }}><strong>{title}</strong>{(result.statement[key] ?? []).length === 0 ? ' — none found' : ''}{key === 'poisoning' ? ` — ${result.statement.lookalikes} in all; never copy an address from wallet history` : ''}</p>
+                        {(result.statement[key] ?? []).map((r) => (
                           <div className="row" key={r.tx + key}>
                             <div className="hop">{sign}</div>
                             <div>

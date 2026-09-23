@@ -311,14 +311,21 @@ class NoderealClient:
         cap = limit or config.TRACE_MAX_TXS_PER_ADDRESS
         head = self.head_block()
         floor = max(0, head - self.lookback_blocks)
-        collected = self._scan(address, direction_param, cap, head, floor)
-        lowest = floor
         key = normalize_address(address)
         arrived = self._arrived.get(key)
-        if not collected and direction_param == "fromAddress" and arrived is not None and arrived < floor:
+        collected: list[Transaction] = []
+        lowest = floor
+        if direction_param == "fromAddress" and arrived is not None and arrived < floor:
+            # Funds that arrived before the recent window: what the trace
+            # follows is what moved after they arrived, so read that first. A
+            # wallet that moved them on costs these windows only; the recent
+            # search is skipped, since newer sends are not the traced money.
             top = min(floor - 1, arrived + ARRIVAL_WINDOWS * MAX_BLOCK_WINDOW)
             collected = self._scan(address, direction_param, cap, top, arrived)
             lowest = arrived
+        if not collected:
+            collected = self._scan(address, direction_param, cap, head, floor)
+            lowest = min(lowest, floor)
         if not collected and (key in self._send_ranges or len(self._send_ranges) < DEEP_BUDGET):
             sent = self.send_range(address)
             if sent is not None and sent[1] < floor:
@@ -332,6 +339,20 @@ class NoderealClient:
         if not collected:
             self.searched_from[normalize_address(address)] = lowest
         return collected
+
+    def get_incoming_between(
+        self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,
+    ) -> tuple[list[Transaction], bool]:
+        """Every value-bearing transfer into `address` in a block range.
+
+        Returns (transfers, complete). A range wider than DEEP_WINDOWS windows,
+        or one holding more records than a scan reads, is reported incomplete
+        rather than read in part.
+        """
+        if end_block - start_block > DEEP_WINDOWS * MAX_BLOCK_WINDOW:
+            return [], False
+        txs = self._scan(address, "toAddress", MAX_SCAN, end_block, start_block)
+        return txs, not self.last_scan_capped
 
     def _nonce(self, address: str, block: int) -> int:
         return int(self._rpc("eth_getTransactionCount", [normalize_address(address), hex(block)]) or "0x0", 16)
@@ -434,6 +455,8 @@ class NoderealClient:
 
             window_end = window_start - 1
 
+        # Whether the read stopped at a limit rather than at the range's end.
+        self.last_scan_capped = len(collected) >= cap or scanned >= MAX_SCAN
         return collected[:cap]
 
     def get_transaction_receipt(self, tx_hash: str) -> dict[str, Any] | None:

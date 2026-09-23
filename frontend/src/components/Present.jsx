@@ -61,7 +61,11 @@ export default function Present({ result, related = [], unit, onClose }) {
           <>
             <span className="pr-huge green">{result.exchange}</span>
             <p className="pr-lede">
-              <span className="num">{num(result.value_received_native ?? 0)} {unit}</span> {reverse ? 'reached the reported wallet from' : 'from the reported wallet reached'}{' '}
+              {reverse
+                ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached the reported wallet from{' '}</>
+                : result.prorata?.status === 'estimated'
+                  ? <>About <span className="num">{num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> from the reported wallet likely reached{' '}</>
+                  : <>Funds from the reported wallet reached{' '}</>}
               <span className="mono">{result.exchange_label ?? short(result.exchange_address)}</span>
               {result.attribution_inferred ? `, a wallet this tool infers to be a ${result.exchange} deposit address, ` : `, a wallet ${result.exchange} publicly operates, `}
               {result.hop_count} hop{result.hop_count === 1 ? '' : 's'} {reverse ? 'upstream' : 'away'}.

@@ -526,6 +526,35 @@ class EtherscanClient:
 
         return txs
 
+    def get_incoming_between(
+        self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,
+    ) -> tuple[list[Transaction], bool]:
+        """Every value-bearing transfer *into* `address` in a block range.
+
+        For pro-rata tracing: what joined the traced funds in a wallet between
+        their arrival and the wallet sending on. Returns (transfers, complete);
+        complete is False when the range held more than one page, so the
+        caller can say "unknown" instead of scoring from part of the picture.
+        """
+        page = 1000
+        params: dict[str, Any] = {
+            "module": "account",
+            "action": "tokentx" if self.contract_address else "txlist",
+            "address": normalize_address(address),
+            "startblock": start_block, "endblock": end_block,
+            "page": 1, "offset": page, "sort": "asc",
+        }
+        if self.contract_address:
+            params["contractaddress"] = self.contract_address
+        result = self._request(params)
+        if not isinstance(result, list):
+            result = []
+        parse = Transaction.from_token_api if self.contract_address else Transaction.from_api
+        target = normalize_address(address)
+        txs = [t for t in (parse(r) for r in result) if t is not None and t.to_address == target
+               and not t.is_error and t.value_wei > 0]
+        return txs, len(result) < page
+
     def get_outgoing_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
         """Only the transfers *sent by* `address` that actually moved value.
 

@@ -135,5 +135,7 @@ def test_the_statement_marks_address_poisoning_lookalikes():
             return [tx(fake, me, 0.000073), tx(real, me, 5.0)]
 
     statement = _wallet_statement(Source(), me)
-    assert [r["lookalike"] for r in statement["credits"]] == [True, False]
+    # The dust is listed apart, so it never pushes a real credit off the list.
+    assert [r["counterparty"] for r in statement["credits"]] == [real]
+    assert [r["counterparty"] for r in statement["poisoning"]] == [fake]
     assert statement["lookalikes"] == 1 and statement["debits"][0]["amount"] == 726.25
