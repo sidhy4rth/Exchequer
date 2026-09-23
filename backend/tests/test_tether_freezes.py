@@ -34,3 +34,10 @@ def test_order_within_a_block_follows_the_log_index():
 def test_a_tron_address_converts_to_its_abi_hex():
     # TR7NHq... is the USDT contract; its 20-byte body is a614f803...
     assert _tron_hex("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t") == "a614f803b6fd780986a42c78ec9c7f77e6ded13c"
+
+
+def test_burn_and_system_addresses_are_not_wallets():
+    from scripts.import_tether_freezes import is_system_address
+    assert is_system_address("0x" + "0" * 40)
+    assert is_system_address("0x" + "0" * 38 + "18")
+    assert not is_system_address("0x9faf5515f177f3a8a845d48c19032b33cc54c09c")

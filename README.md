@@ -40,13 +40,13 @@
 
 <table>
 <tr>
-<td align="center"><h3>44,613</h3>labelled addresses</td>
+<td align="center"><h3>44,588</h3>labelled addresses</td>
 <td align="center"><h3>25,117</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
-<td align="center"><h3>10,377</h3>addresses Tether<br>has frozen</td>
+<td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>3</h3>chains, 8 assets</td>
-<td align="center"><h3>270</h3>tests, no network</td>
+<td align="center"><h3>273</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -418,12 +418,12 @@ every hit names the list it came from.
 
 | Chain | Sanctioned | Mixers | Frozen by Tether | Stolen funds |
 |---|---:|---:|---:|---:|
-| Ethereum | 139 | 40 | 2,650 | 8,380 |
+| Ethereum | 139 | 40 | 2,633 | 8,380 |
 | BNB Smart Chain | 7 | 14 | — | 560 |
-| Tron | 915 | — | 6,767 | — |
+| Tron | 915 | — | 6,759 | — |
 
 <sub>Counts are after overlap: an address on a government list is reported as sanctioned, and a mixer pool Tether
-also froze stays a mixer. Before overlap the freeze list holds 2,780 Ethereum and 7,597 Tron addresses.</sub>
+also froze stays a mixer. Before overlap the freeze list holds 2,763 Ethereum and 7,589 Tron addresses.</sub>
 
 **Government lists** are loaded first and always win: where an address is also on an explorer's list, the
 government entry is the one reported, and an address several governments list names all of them — "designated
@@ -442,7 +442,9 @@ by the US, the UK and Israel" is a stronger finding than any one alone.
 a sanctions match, a law-enforcement request or a theft — and every freeze is an `AddedBlackList` event, every
 release a `RemovedBlackList`. Replaying them in order gives the addresses frozen today, with no dataset between the
 contract and the label; a random sample is checked against the contract's own `isBlackListed()` and the import
-refuses to write on any disagreement. A freeze says the issuer acted, not why — and a request to Tether can ask.
+refuses to write on any disagreement. Tether's list also holds the zero address and other tiny system addresses
+where tokens are burned; those are not wallets and are left out, so a burn in a trace is never read as a freeze.
+A freeze says the issuer acted, not why — and a request to Tether can ask.
 BNB Smart Chain's USDT is a Binance-issued peg with no Tether blacklist. `scripts/import_tether_freezes.py`
 
 **The mixer rule is a correctness rule.** A tumbler pays out from a commingled pool, so transfers leaving it have
@@ -722,7 +724,7 @@ staying silent on ordinary activity, because a false accusation is the expensive
 | `test_risk_matcher.py` | All four categories; a mixer ends a trace and keeps ending it whatever else lists it, a sanctioned, frozen or stolen-funds address does not; a government listing outranks an explorer tag; several governments are all named; unknown categories dropped |
 | `test_threat_import.py` | Thief and phishing tags accepted; "hackerspace" charities, AVS operators and hack *victims* rejected; only mixer pools and routers count, never governance or token contracts |
 | `test_request_letters.py` | The exchange letter names the address and every hop with its hashes; the legal basis is left for the officer; no exchange means no exchange letter; an attribution after a swap is written from the follow-on; the Tether letter lists each freeze; an ETH trace touching no USDT offers none |
-| `test_follow_swaps.py` | A swap into a stablecoin is traced to the exchange from the moment of the swap; transfers before it are excluded; the original trace keeps its asset and score; a swap into an untraced token is not followed; the switch turns it off; the report prints it |
+| `test_follow_swaps.py` | A swap into a stablecoin is traced to the exchange from the moment of the swap; transfers before it are excluded; the original trace keeps its asset and score; a time budget covers the follow-on too; a swap into an untraced token is not followed; the switch turns it off; the report prints it |
 | `test_tether_freezes.py` | The replay: a release unfreezes, a re-freeze after a release counts, order within a block follows the log index, Tron addresses convert for the contract call |
 | `test_intl_sanctions_import.py` | The chain named before a free-text address decides where it is filed; a token name alone picks no EVM chain; a wallet named only in lifted seizure orders is left out |
 | `test_ofac_import.py` | Chain assignment from OFAC's own idType; a Bitcoin address is skipped rather than misfiled |
@@ -811,7 +813,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         270 tests, no network or keys
+│   └── tests/                         273 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton

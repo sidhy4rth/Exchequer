@@ -25,7 +25,6 @@ like the chain has no transactions.
 from __future__ import annotations
 
 import logging
-import os
 from typing import Protocol, runtime_checkable
 
 from . import config

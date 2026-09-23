@@ -325,3 +325,12 @@ def test_a_mixer_keeps_stopping_the_trace_whatever_else_lists_it(tmp_path):
     assert matcher.lookup(MIXER_ADDR)["category"] == MIXER
     assert matcher.is_terminal(MIXER_ADDR) is True
     assert "USDT frozen by Tether" in matcher.lookup(MIXER_ADDR)["source"]
+
+
+def test_the_zero_address_is_never_flagged(tmp_path):
+    """A burn is not a party: no list may make the zero address a finding."""
+    path = tmp_path / "frozen.json"
+    zero = "0x" + "0" * 40
+    path.write_text(json.dumps({"labels": {zero: {
+        "category": "frozen", "entity": "Tether (USDT freeze)", "label": "USDT frozen by Tether"}}}))
+    assert RiskMatcher.from_file(path).lookup(zero) is None

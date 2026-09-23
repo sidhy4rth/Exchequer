@@ -28,14 +28,14 @@ import logging
 import random
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
 
 from . import config
 from .api_budget import ResponseCache, SharedPacer, get_cache, get_pacer
-from .evidence import EvidenceLog, utc_now_iso
+from .evidence import EvidenceLog
 
 logger = logging.getLogger(__name__)
 

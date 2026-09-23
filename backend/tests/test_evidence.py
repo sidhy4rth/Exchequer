@@ -9,7 +9,6 @@ report's content hash verifies -- and stops verifying if one byte changes.
 from __future__ import annotations
 
 import hashlib
-import json
 
 import httpx
 

@@ -83,7 +83,6 @@ import networkx as nx
 from . import config
 from .etherscan_client import (
     EtherscanClient,
-    EtherscanError,
     Transaction,
     is_valid_address,
     normalize_address,

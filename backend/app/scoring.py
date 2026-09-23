@@ -31,7 +31,7 @@ exchange match. If nothing matched, the score is 0.0 and the verdict is
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any
 
 import networkx as nx

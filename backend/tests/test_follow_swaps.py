@@ -129,3 +129,17 @@ def test_a_follow_on_that_finds_nothing_says_so_instead_of_asking_for_a_rerun(fa
     assert result["followed_attribution"] is None
     assert "reached no known exchange either" in result["message"]
     assert "re-run" not in result["message"]
+
+
+def test_a_time_budget_covers_the_follow_on_too(faked, monkeypatch):
+    """'Stop after 1:30' means the case, not each trace in it."""
+    real = main.build_trace_graph
+
+    def slow(*a, **k):
+        result = real(*a, **k)
+        result.seconds_elapsed = 85.0  # the original trace used almost all of 90 s
+        return result
+
+    monkeypatch.setattr(main, "build_trace_graph", slow)
+    (follow,) = run_trace(request(time_budget_seconds=90))["follow_ons"]
+    assert "time budget was spent" in follow["error"] and "result" not in follow

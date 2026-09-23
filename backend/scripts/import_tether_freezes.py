@@ -132,6 +132,17 @@ def tron_check(http: httpx.Client, address: str) -> bool:
 
 
 # -- shared ---------------------------------------------------------------------
+def is_system_address(hex20: str) -> bool:
+    """True for the zero address and the other tiny "addresses" Tether blacklisted.
+
+    Tether's blacklist includes 0x0000…0000 and a run of addresses like
+    0x0000…0018 -- values no private key could plausibly produce. They are
+    where tokens are burned and where protocol code lives, not wallets, and a
+    burn in any trace would otherwise be reported as a Tether freeze.
+    """
+    return int(hex20.removeprefix("0x") or "0", 16) < 2**64
+
+
 def replay(added: list, removed: list) -> dict[str, tuple]:
     """address -> the add event that left it frozen, for every address frozen now."""
     timeline = [(e[0], e[1], 1, e) for e in added] + [(e[0], e[1], 0, e) for e in removed]
@@ -159,7 +170,7 @@ def write(chain_key: str, frozen: dict[str, dict], counts: dict, dry_run: bool) 
                 "recent event is a freeze."
             ),
             "verification_note": (
-                f"A random sample of frozen and released addresses was checked against the "
+                "A random sample of frozen and released addresses was checked against the "
                 "contract's own isBlackListed(address) and every answer agreed with the replay. "
                 "A freeze establishes that Tether acted on the address; it does NOT say why "
                 "(sanctions, a law-enforcement request, a theft), and it is not a finding that a "
@@ -198,6 +209,7 @@ def main() -> int:
         with EtherscanClient(chain_id=1) as client:
             added, removed = eth_events(client, ADDED), eth_events(client, REMOVED)
             frozen = replay(added, removed)
+            frozen = {a: ev for a, ev in frozen.items() if not is_system_address(a)}
             print(f"Ethereum: {len(added)} freezes, {len(removed)} releases, {len(frozen)} frozen now")
             released = sorted({e[2] for e in removed} - set(frozen))
             sample = rng.sample(sorted(frozen), min(SAMPLE, len(frozen))) + rng.sample(released, min(5, len(released)))
@@ -222,6 +234,7 @@ def main() -> int:
             removed = tron_events(http, "RemovedBlackList")
             frozen = replay(added, removed)
             frozen.pop(TRON_USDT, None)  # Tether blacklisted its own contract; not a wallet
+            frozen = {a: ev for a, ev in frozen.items() if not is_system_address(_tron_hex(a))}
             print(f"Tron: {len(added)} freezes, {len(removed)} releases, {len(frozen)} frozen now")
             released = sorted({e[2] for e in removed} - set(frozen))
             sample = rng.sample(sorted(frozen), min(SAMPLE, len(frozen))) + rng.sample(released, min(5, len(released)))

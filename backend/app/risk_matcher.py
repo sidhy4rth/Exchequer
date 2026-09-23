@@ -330,6 +330,13 @@ def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
             )
             continue
 
+        # The zero address and its tiny neighbours are where tokens are burned,
+        # not anyone's wallet. No list may name one: a burn in a trace would
+        # otherwise read as a finding against a party that does not exist.
+        if address.startswith("0x") and len(address) == 42 and int(address[2:], 16) < 2**64:
+            logger.info("Risk entry for %s is a burn/system address, not a wallet; skipped", address)
+            continue
+
         entity = value.get("entity") or value.get("name")
         if not entity:
             logger.warning("Risk entry for %s names no entity; skipped", address)

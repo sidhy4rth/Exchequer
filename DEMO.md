@@ -355,7 +355,7 @@ Tether can freeze an address on its USDT contract, and it does — after a
 sanctions match, a law-enforcement request or a theft. It publishes nothing but
 the act, and the act is on chain: every freeze is an `AddedBlackList` event on
 the USDT contract. Exchequer replays those events and keeps the addresses
-frozen today — 7,597 on Tron and 2,780 on Ethereum as of 23 September, a random
+frozen today — 7,589 on Tron and 2,763 on Ethereum as of 23 September, a random
 sample checked against the contract's own `isBlackListed()` with no
 disagreement. No dataset sits between the chain and the label.
 
@@ -507,7 +507,7 @@ measures still in force count; a lifted Israeli seizure order is left out.
 Trace 7 is a live hit on three of those lists at once.
 
 Three more categories sit beside the sanctions lists, and the alert always says
-which source a hit came from. **Frozen by Tether** (2,780 Ethereum, 7,597 Tron
+which source a hit came from. **Frozen by Tether** (2,763 Ethereum, 7,589 Tron
 before overlap) — every address whose USDT Tether has frozen, replayed from the
 USDT contract's own blacklist events; trace 11 is a live hit. **Mixers** (40 Ethereum, 14 BSC: Tornado Cash,
 Typhoon, Privacy Pools pools and routers) — Tornado Cash left the OFAC list in

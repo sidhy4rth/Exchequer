@@ -22,7 +22,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import api_budget, chain_data, config, models, request_letters, warmup
+from . import api_budget, config, models, request_letters, warmup
 from .chain_data import (
     ProviderNotConfiguredError,
     UnknownAssetError,
@@ -33,7 +33,6 @@ from .etherscan_client import (
     EtherscanConfigError,
     EtherscanError,
     EtherscanRateLimitError,
-    is_valid_address,
     normalize_address,
 )
 from .correlation import correlate, related_cases
@@ -525,7 +524,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     # money went after it changed asset.
     follow_ons: list[dict[str, Any]] = []
     if direction == OUTGOING and request.follow_swaps and seed_window is None and swaps:
-        follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth)
+        follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth,
+                                   seconds_spent=result.seconds_elapsed or 0.0)
     followed = next((f for f in follow_ons if (f.get("result") or {}).get("exchange")), None)
 
     # Edge case: the address has never sent anything. Not an error -- a finding.
@@ -717,6 +717,7 @@ def _follow_swaps(
     graph: Any,
     swaps: list[dict[str, Any]],
     max_depth: int,
+    seconds_spent: float = 0.0,
 ) -> list[dict[str, Any]]:
     """Trace the output asset of each swap into a stablecoin this chain carries.
 
@@ -727,6 +728,10 @@ def _follow_swaps(
     everything the wallet sent in that asset afterwards, which may include
     money that was not the swap's output; the swap's amount is kept beside the
     result so a reader can compare. Follow-ons never follow further swaps.
+
+    A time budget covers the whole case, not each trace: follow-ons share what
+    the original trace left of it, and one that would start with less than the
+    minimum budget is recorded as not traced rather than run over the limit.
     """
     traceable = {t.symbol for t in chain.tokens}
     seen: set[tuple[str, str]] = set()
@@ -744,12 +749,20 @@ def _follow_swaps(
         depth_at = (graph.nodes.get(swap["sender"]) or {}).get("depth", 0)
         remaining = max(1, max_depth - depth_at)
         follow = {"swap": swap, "asset": asset_out, "address": swap["sender"], "max_depth": remaining}
+        budget = None
+        if request.time_budget_seconds:
+            budget = int(request.time_budget_seconds - seconds_spent)
+            if budget < 10:
+                follow["error"] = "not traced: the case's time budget was spent before this swap could be followed"
+                out.append(follow)
+                continue
         sub = TraceRequest(
             address=swap["sender"], chain=chain.key, asset=asset_out, max_depth=remaining,
-            direction=OUTGOING, time_budget_seconds=request.time_budget_seconds, follow_swaps=False,
+            direction=OUTGOING, time_budget_seconds=budget, follow_swaps=False,
         )
         try:
             follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"))
+            seconds_spent += follow["result"].get("seconds_elapsed") or 0.0
         except HTTPException as exc:
             # A follow-on that fails must not cost the trace that found it.
             follow["error"] = str(exc.detail)

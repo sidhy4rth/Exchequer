@@ -225,7 +225,7 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
             f"{asset} ends there."
         )
     else:
-        found = f" No wallet in the trace matched a publicly known exchange."
+        found = " No wallet in the trace matched a publicly known exchange."
 
     extra = ""
     if flags:

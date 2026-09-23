@@ -414,7 +414,10 @@ list is that list's accusation, and each finding names the list.
 `isBlackListed(address)`. Every event was read on 23 September 2026 (Ethereum
 through Etherscan's `getLogs`, Tron through TronGrid's event API) and replayed
 in block and log order: **Ethereum 3,133 freezes and 347 releases, 2,780 frozen
-now; Tron 8,584 freezes and 967 releases, 7,597 frozen now.** A random sample
+now; Tron 8,584 freezes and 967 releases, 7,597 frozen now.** Of those, 17 on
+Ethereum and 8 on Tron are not wallets — the zero address and other values
+below 2^64 that no private key could plausibly produce, where tokens are
+burned — and are left out, leaving **2,763 and 7,589**. A random sample
 of 25 frozen and 5 released addresses per chain was checked against
 `isBlackListed()`; all 60 agreed with the replay.
 
