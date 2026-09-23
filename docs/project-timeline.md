@@ -19,17 +19,17 @@ date is not recorded anywhere, the document says so rather than guessing.
 
 ## The project in numbers, over time
 
-| | 4 Sep<br>one-pager | 5 Sep<br>first commit | 15 Sep<br>research session | 18 Sep<br>pre-round | 24 Sep<br>now |
-|---|---:|---:|---:|---:|---:|
-| Name | TraceChain | TraceChain | TraceChain | Exchequer | Exchequer |
-| Chains traced | 1 (Ethereum) | 3 | 3 | 3 | 3 |
-| Exchange addresses labelled | 337 | 374 | 407 | 407 | **25,117** |
-| — customer deposit addresses | 0 | 0 | 0 | 0 | **24,018** |
-| Sanctioned addresses screened | 0 | 0 | 407 (OFAC) | 407 (OFAC) | **1,061** (6 governments) |
-| Tether-frozen, mixer, hack & scam addresses | 0 | 0 | 0 | 0 | **18,386** |
-| All labelled addresses | 337 | ~374 | ~840 | ~840 | **44,588** |
-| Tests | — | 0 | 140 → 172 | 234 | **273** |
-| Hosted | no | no | no | Railway (paused that day) | Railway, live |
+| | 4 Sep<br>one-pager | 5 Sep<br>first commit | 15 Sep<br>research session | 18 Sep<br>pre-round | 23 Sep<br>morning | 23 Sep<br>night |
+|---|---:|---:|---:|---:|---:|---:|
+| Name | TraceChain | TraceChain | TraceChain | Exchequer | Exchequer | Exchequer |
+| Chains traced | 1 (Ethereum) | 3 | 3 | 3 | 3 | **5** |
+| Exchange addresses labelled | 337 | 374 | 407 | 407 | **25,117** | **25,508** |
+| — customer deposit addresses | 0 | 0 | 0 | 0 | **24,018** | **24,018** |
+| Sanctioned addresses screened | 0 | 0 | 407 (OFAC) | 407 (OFAC) | **1,061** (6 governments) | **1,085** |
+| Tether-frozen, mixer, hack & scam addresses | 0 | 0 | 0 | 0 | **18,386** | **18,386** + TronScan warnings read live |
+| All labelled addresses | 337 | ~374 | ~840 | ~840 | **44,588** | **45,003** |
+| Tests | — | 0 | 140 → 172 | 234 | **273** | **311** |
+| Hosted | no | no | no | Railway (paused that day) | Railway, live | Railway, live |
 
 ---
 
@@ -193,9 +193,9 @@ pool that Tether froze losing its mixer label (fixed — a mixer label always wi
 a network drop mid-import while travelling (resumed from the checkpoint, nothing
 lost).
 
-## Phase 8 · Bug hunt — 23 to 24 September
+## Phase 8 · Bug hunt — 23 September (morning)
 
-**`0b46c4e` · 08:26** — *committed locally, not yet pushed or deployed.*
+**`0b46c4e` · 08:26** — pushed and deployed the same morning.
 
 Method: `ruff` over backend, scripts and tests; every endpoint run on 15 real cases
 including the error paths; every page walked in headless Brave with console and
@@ -213,33 +213,71 @@ were taken out before anything was pushed.
 
 ---
 
+## Phase 9 · Wider, and more honest about amounts — 23 September (afternoon and night)
+
+**`87e02bd` → `3e3fe05`**, 11 commits in 5 deployments, the site up throughout.
+
+1. **TronScan, read live** (`87e02bd`, `f9bd400`). A Tron trace asks TronScan for its own tag on
+   each wallet no label file names; its first live run attributed wallets paying
+   Flipster, WestWallet and ONUS, none of them in the file (DEMO.md trace 12). Mistyped
+   Tron addresses are now caught by their checksum instead of surfacing as a 502.
+2. **TronScan warning tags** (`5af080a`). The same reply carries TronScan's red tag
+   ("Suspicious", "Scam"); a tagged wallet is a screening hit, worded as the explorer's
+   warning and outranked by any government list or freeze.
+3. **Related cases, extended** (`2a5cba2`): follow-on traces after a swap are searched,
+   and a wallet Tether froze or an explorer flagged now links complaints.
+4. **Polygon and Arbitrum** (`a4a842a`) — the two chains besides Ethereum the free
+   Etherscan tier serves. Exchange labels carried over from Ethereum accounts, kept
+   only if the address has *sent* on the new chain (receiving proves nothing: spam is
+   airdropped to every famous address). 139 wallets on Polygon, 8 of them CoinDCX's;
+   106 on Arbitrum.
+5. **A real BSC wallet that found nothing** (`8df02c2`). BSC blocks had sped up to
+   ~0.45 s, so the provider's fixed lookback covered under three days. Quiet wallets
+   are now located by their nonce, hops are read from the block the money arrived in,
+   and 146 more exchange labels were confirmed on BSC (38 → 184). Every case gained a
+   wallet statement, with address-poisoning dust marked.
+6. **Pro-rata tracing** (`8558ab6`). "1,001.50 USDT reached Binance" said nothing about
+   how much was the victim's 40. The tool now reads everything each wallet on the path
+   received while the funds passed through and carries only the victim's share
+   forward. The same BSC wallet went from 0.73 to 0.47: about 9.42 of its 40 USDT likely
+   arrived. Clean demo paths kept their scores.
+7. **Demo health** (`b5eed01`, `3e3fe05`). Demo 3 had moved from Uphold to a probable
+   Binance deposit address between morning and evening. A GitHub Action now re-runs all
+   twelve demos against the live site every morning and fails if one drifts; the draft
+   letter to an exchange names the pro-rata amount.
+
+---
+
 ## What exists now
 
-- **Tracing:** Ethereum, BNB Smart Chain, Tron; ETH/BNB/TRX, USDT, USDC; forward and
+- **Tracing:** Ethereum, BNB Smart Chain, Polygon, Arbitrum, Tron; native coins, USDT, USDC; forward and
   reverse; the time rule; six traversal brakes; swaps detected and, into
   stablecoins, followed.
-- **Attribution:** 25,117 exchange addresses across 92 exchanges, including 24,018
-  customer deposit addresses; probable deposit addresses inferred and scored lower.
+- **Attribution:** 25,508 exchange addresses, including 24,018
+  customer deposit addresses; TronScan tags read live on Tron; probable deposit
+  addresses inferred and scored lower; a pro-rata estimate of how much of the
+  reported funds arrived.
 - **Screening:** six governments' sanctions and seizure lists; Tether's USDT freezes;
-  mixer pools (the trace stops); hack, phishing and scam wallets.
+  mixer pools (the trace stops); hack, phishing and scam wallets; TronScan warning tags.
 - **Findings:** peel chain and amount split, measured on 88 real wallets, never
-  scored; cross-case correlation.
+  scored; cross-case correlation; wallet statements with address-poisoning marked.
 - **Outputs:** a case view, Present mode, a sealed text report with an evidence
   manifest, and draft request letters.
 - **Evidence:** RESEARCH.md sources every claim and every data source; DEMO.md holds
-  eleven verified traces; JUDGE_QA.md fifteen answers; 273 tests; CI on every push.
+  twelve verified traces, re-checked every morning; JUDGE_QA.md nineteen answers;
+  311 tests; CI on every push.
 - **Deliverables outside the code:** the TraceChain one-pager, the Director proposal
   and Research Report PDFs, the 43-second launch film.
 
 ## Open items
 
-1. Push and deploy `0b46c4e` (the live site still has the zero-address false positive).
-2. Licences before any commercial use: OpenSanctions data is CC BY-NC 4.0; the
+1. Licences before any commercial use: OpenSanctions data is CC BY-NC 4.0; the
    ScamSniffer-derived entries carry GPL-3.0.
-3. Demo running order: skip trace 2, use trace 11 for "why Tron?".
-4. Draft letters: the legal provision is left blank for an officer to confirm.
-5. Still undone: live TronScan tag lookup during Tron traces; internal transactions
-   on BSC and Tron; Bitcoin; a PDF report renderer.
-6. Outside the code: SIH registration as Exchequer; the slide deck in Downloads still
-   says TraceChain; the launch film's 25-second social cut; the proposal PDFs and the
-   three film cuts are not committed; `railway down` when demos are over.
+2. Draft letters: the legal provision is left blank for an officer to confirm.
+3. Old BSC wallets trace in about a minute on the free provider; Base, Optimism and
+   Solana need paid plans or a different provider.
+4. Still undone: internal transactions on BSC and Tron; Bitcoin; a PDF report
+   renderer; pro-rata for reverse traces.
+5. Outside the code: the launch film's 25-second social cut; the lost sign-in
+   mockups; Railway's config format must be migrated before 1 December 2026.
+   The site stays up — judges can open it at any time.
