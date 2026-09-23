@@ -289,8 +289,16 @@ def build_trace_graph(
     cfg: TraceConfig | None = None,
     is_terminal: Callable[[str], bool] | None = None,
     direction: str = OUTGOING,
+    seed_window: int | None = None,
 ) -> TraceResult:
     """Breadth-first trace of funds to or from `seed_address`.
+
+    `seed_window` applies the time rule to the seed itself: only transfers the
+    seed made at or after that Unix time are followed. A reported address is
+    never windowed -- the trace cannot know when the victim's funds arrived --
+    but a follow-on trace after a swap does know: it starts when the swap's
+    output landed, and anything the wallet sent in that asset before then was
+    not the swapped money.
 
     `direction` is OUTGOING (where the money went) or INCOMING (who sent it).
     See the module docstring for why that choice is investigative rather than
@@ -332,7 +340,7 @@ def build_trace_graph(
     # When the traced funds passed through each address: the earliest arrival
     # when walking out, the latest departure when walking back. Set when the
     # address is first reached, read when it is expanded one level later.
-    window: dict[str, int] = {}
+    window: dict[str, int] = {seed: seed_window} if seed_window else {}
 
     # One level of the search at a time, so the addresses at a given depth can
     # be fetched together. See _fetch_level for why that matters.

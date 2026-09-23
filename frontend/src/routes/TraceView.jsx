@@ -207,6 +207,8 @@ export default function TraceView() {
   const riskMatches = result?.risk_matches ?? []
   const funders = result?.direct_senders ?? []
   const swaps = result?.swaps ?? []
+  const followOns = (result?.follow_ons ?? []).filter((f) => f.result)
+  const followed = result?.followed_attribution
   const inferred = result?.inferred_deposits ?? []
   const components = result?.confidence_detail?.components ?? []
   const serviceContracts = result?.graph.nodes.filter((n) => n.is_service_contract) ?? []
@@ -340,6 +342,20 @@ export default function TraceView() {
                     <Address value={result.exchange_address} head={22} tail={20} />
                   </div>
                 </>
+              ) : followed ? (
+                <>
+                  <h2 className="green">{followed.exchange}</h2>
+                  <div className="basis">
+                    <strong>After a swap to {followed.asset}</strong> · {followed.attribution_inferred ? 'probable deposit address' : <>label <span className="mono">{followed.exchange_label}</span></>}
+                    {' · '}{followed.hop_count} hop{followed.hop_count === 1 ? '' : 's'} in the {followed.asset} trace
+                    {' · '}confidence <span className="num">{followed.confidence?.toFixed(2)}</span> within that trace
+                  </div>
+                  <div className="cite">
+                    <span className="micro">{followed.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
+                    <Address value={followed.exchange_address} head={22} tail={20} />
+                  </div>
+                  <p className="note">No exchange was reached in {unit}; the money was swapped for {followed.asset}, and the {followed.asset} was followed from the swap. The two traces are scored separately — see the follow-on below.</p>
+                </>
               ) : (
                 <>
                   <h2 className="none">{reverse ? 'No source exchange matched' : 'No exchange matched'}</h2>
@@ -397,6 +413,19 @@ export default function TraceView() {
                   ? <FlowView data={result.graph} tracePath={result.trace_path} unit={unit} direction={result.direction} />
                   : <div className="stage"><GraphView data={result.graph} tracePath={result.trace_path} unit={unit} /></div>}
               </div>
+
+              {followOns.map((f) => (
+                <div className="card graph-card" key={`${f.address}-${f.asset}`}>
+                  <div className="head">
+                    <span className="micro">
+                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${f.result.exchange_label} · ${f.result.confidence?.toFixed(2)}` : 'no exchange reached'}
+                    </span>
+                    <span className="note">from <Address value={f.address} head={8} tail={6} /> · swap tx <Address value={f.swap?.tx} head={8} tail={6} /></span>
+                  </div>
+                  <FlowView data={f.result.graph} tracePath={f.result.trace_path} unit={f.asset} direction="outgoing" />
+                  {(f.result.risk_notes ?? []).map((note) => <p className="note risk-note" key={note}>{note}</p>)}
+                </div>
+              ))}
 
               <div className="card">
                 <div className="head">
@@ -496,7 +525,9 @@ export default function TraceView() {
                       <div className="swap" key={s.tx}>
                         <Address value={s.sender} head={8} tail={6} /> sent <span className="num">{num(s.amount_in)} {s.asset_in}</span> to <strong>{s.router_label}</strong>
                         {s.output_read
-                          ? <> and got <span className="num">{s.amount_out != null ? num(s.amount_out) : s.amount_out_units} {s.asset_out}</span> back. Re-run on {s.asset_out} from the sender to follow it further.</>
+                          ? <> and got <span className="num">{s.amount_out != null ? num(s.amount_out) : s.amount_out_units} {s.asset_out}</span> back. {followOns.some((f) => f.address === s.sender && f.asset === s.asset_out)
+                            ? <>The {s.asset_out} is followed from here — see <em>Continued in {s.asset_out}</em>.</>
+                            : <>Re-run on {s.asset_out} from the sender to follow it further.</>}</>
                           : <>. Nothing came back to the sender in the receipt — a swap into the native coin looks like this — so the output is unread, not guessed.</>}
                         <div className="grid">
                           <span className="k">tx</span><Address value={s.tx} head={12} tail={10} />

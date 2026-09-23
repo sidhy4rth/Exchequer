@@ -46,7 +46,7 @@
 <td align="center"><h3>10,377</h3>addresses Tether<br>has frozen</td>
 <td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>3</h3>chains, 8 assets</td>
-<td align="center"><h3>256</h3>tests, no network</td>
+<td align="center"><h3>263</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -82,7 +82,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); and 8,953 wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
-| **Follows a swap's receipt** | A transfer into a known DEX router is read from its receipt: what came back, how much, and where to re-run. |
+| **Follows the money through a swap** | A transfer into a known DEX router is read from its receipt; if it came back as USDT or USDC, that stablecoin is traced onward from the moment of the swap, as its own linked trace. |
 | **Links complaints** | Stored cases whose money converges on the same wallets are shown as one operation, with no new API calls. |
 | **Seals the evidence** | Every provider response is hashed as it arrives; the report carries the manifest and a content hash, so a changed byte is detectable. |
 
@@ -246,6 +246,7 @@ throttles still cap the request *rate*, so this shortens a trace without increas
 | `asset` | `ETH`/`USDT`/`USDC` on Ethereum, `BNB`/`USDT`/`USDC` on BSC, `TRX`/`USDT` on Tron |
 | `direction` | `outgoing` — where did the victim's money go? · `incoming` — who sent money to this address? |
 | `max_depth` | 1–6 hops (default 4) |
+| `follow_swaps` | default `true`: a swap into USDT/USDC is traced onward as a linked follow-on trace |
 | `time_budget_seconds` | optional, 10–600: stop expanding once spent and return what was reached |
 
 **One asset per trace, deliberately.** 1 BNB and 1 USDT are not comparable quantities, so a graph mixing
@@ -373,9 +374,18 @@ the match is exact instead.
 A trace follows one asset, so when a wallet sends 10 ETH to a Uniswap router the ETH trail ends there — but the
 wallet got the money back as USDT and carried on. When an outgoing transfer's recipient is in
 `router_labels*.json`, the trace reads that transaction's receipt and its ERC-20 `Transfer` events. The edge
-carries `swap: {router, asset_in, amount_in, asset_out, amount_out, tx}`, and when no exchange was reached the
-message says where to resume. The trace is **not** resumed automatically: that would mean defining amount
-correlation across 1 ETH → 2,400 USDT, which the one-asset rule exists to avoid.
+carries `swap: {router, asset_in, amount_in, asset_out, amount_out, tx}`.
+
+**When the output is a stablecoin the chain carries (USDT or USDC), the money is followed.** A *follow-on trace*
+starts from the wallet that swapped, in the swap's output asset, over the hops the original trace had left, and
+the time rule applies to that wallet from the swap onward — anything it sent in that asset *before* the swap was
+not the swapped money. (On a real Uniswap swap of 0.15 ETH into 426 USDC, that excluded 197 earlier USDC
+transfers.) Both traces are stored in one case and drawn one under the other; each keeps its own amounts and its
+own score, because amount correlation across 1 ETH → 2,400 USDT would be meaningless. If the original asset
+reached no exchange but the follow-on did, the case's finding is the follow-on's, labelled *"after a swap to
+USDT"* with the confidence stated as within that trace. At most two follow-ons per trace, one level deep;
+`"follow_swaps": false` turns it off. What it cannot do: follow a swap into the native coin (the receipt shows no
+token output), a swap into a token the chain is not configured to trace, or a bridge to another chain.
 
 ### Confidence score
 
@@ -630,9 +640,11 @@ background at startup, so demos never go cold on a hosted instance. `GET /health
 
 Stated plainly, and repeated in every exported report:
 
-- **One asset per trace.** A swap at a labelled DEX router is detected and the output asset named, but not
-  followed automatically; a swap into the native coin, a swap sent to a pool rather than a router, or a bridge to a
-  chain Exchequer does not cover still ends the trail.
+- **One asset per trace, one follow-on level.** A swap into USDT or USDC at a labelled router is followed as a
+  linked trace; a swap into the native coin or another token, a swap sent to a pool rather than a router, a second
+  swap inside a follow-on, or a bridge to a chain Exchequer does not cover still ends the trail. A follow-on
+  follows everything the wallet sent in the new asset after the swap, which can include money that was not the
+  swap's output — the swap's amount is shown beside it for comparison.
 - **An exchange match identifies where funds arrived, not who controls the account.** Only the exchange can link a
   deposit address to a customer identity, via a lawful request.
 - **Screening is only as complete as its lists.** An address absent from them is not thereby legitimate. A foreign
@@ -705,6 +717,7 @@ staying silent on ordinary activity, because a false accusation is the expensive
 | `test_exchange_matcher.py` | Both label-file shapes, case-insensitive lookup, closest-match preference, degrading to "no attribution" |
 | `test_risk_matcher.py` | All four categories; a mixer ends a trace and keeps ending it whatever else lists it, a sanctioned, frozen or stolen-funds address does not; a government listing outranks an explorer tag; several governments are all named; unknown categories dropped |
 | `test_threat_import.py` | Thief and phishing tags accepted; "hackerspace" charities, AVS operators and hack *victims* rejected; only mixer pools and routers count, never governance or token contracts |
+| `test_follow_swaps.py` | A swap into a stablecoin is traced to the exchange from the moment of the swap; transfers before it are excluded; the original trace keeps its asset and score; a swap into an untraced token is not followed; the switch turns it off; the report prints it |
 | `test_tether_freezes.py` | The replay: a release unfreezes, a re-freeze after a release counts, order within a block follows the log index, Tron addresses convert for the contract call |
 | `test_intl_sanctions_import.py` | The chain named before a free-text address decides where it is filed; a token name alone picks no EVM chain; a wallet named only in lifted seizure orders is left out |
 | `test_ofac_import.py` | Chain assignment from OFAC's own idType; a Bitcoin address is skipped rather than misfiled |
@@ -792,7 +805,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         256 tests, no network or keys
+│   └── tests/                         263 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton
@@ -827,8 +840,6 @@ exchequer/
 
 ## Roadmap
 
-- **Follow swaps into stablecoins automatically** — when a trace sees ETH swapped for USDT, start the USDT trace
-  from the same wallet and link the two in one case, keeping each asset's amounts separate.
 - **More deposit-address labels** — the `--deposits` importer takes any exchange Etherscan tags this way; Binance's
   5,000 tagged deposit addresses are next.
 - **Bitcoin** — a UTXO model, so its own adapter rather than another entry in the chain registry.

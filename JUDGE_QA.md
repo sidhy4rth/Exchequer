@@ -145,16 +145,18 @@ Until this week, time. It followed every transfer a wallet ever made,
 including ones made before the victim's money arrived, so a busy wallet's
 unrelated history could be reported as where the victim's funds went. That is
 fixed and tested: only transfers at or after the traced funds arrived are
-followed. The biggest remaining gap is that a trace follows one asset — a swap
-from ETH to USDT at a DEX ends the trail — and after that, that the fan-out
-limit follows the ten largest recipients, so a launderer who sends the real
+followed. A swap from ETH to USDT or USDC at a labelled DEX router no longer
+ends the trail: the stablecoin is traced onward from the moment of the swap as
+a linked trace, each keeping its own score. The biggest remaining gap is that
+the fan-out limit follows the ten largest recipients, so a launderer who sends the real
 money as the eleventh-largest transfer is not followed. Both are in the
 README's Limitations.
 
 **13. Can a launderer defeat it?**
 
-Yes, and the README lists how: split into eleven or more outputs, swap assets
-at a DEX, bridge to a chain we do not cover, or use a wallet with more than
+Yes, and the README lists how: split into eleven or more outputs, swap into
+the native coin or an obscure token (a swap into USDT or USDC is now followed),
+bridge to a chain we do not cover, or use a wallet with more than
 200 transfers so the relevant one is beyond what we read. We document these
 rather than hide them because the tool's value is in what it *can* establish
 cheaply and reproducibly, and an investigator has to know where its edge is.

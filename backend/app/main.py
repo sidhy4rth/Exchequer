@@ -163,6 +163,15 @@ class TraceRequest(BaseModel):
             "candidate victims of the same operation."
         ),
     )
+    follow_swaps: bool = Field(
+        True,
+        description=(
+            "When a forward trace finds the funds swapped at a DEX router into "
+            "a stablecoin this chain carries (USDT, USDC), also trace that "
+            "stablecoin from the wallet that swapped, starting at the swap. "
+            "Each trace keeps its own asset, amounts and score."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -350,8 +359,17 @@ def risk_labels(chain: str | None = Query(None, description="ethereum, bsc or tr
     }
 
 
-def run_trace(request: TraceRequest) -> dict[str, Any]:
+# How many swaps one trace will follow into another asset. Each follow-on is a
+# whole trace -- a second set of provider requests -- so it is capped the way
+# receipts are.
+MAX_FOLLOW_ONS = 2
+
+
+def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str, Any]:
     """Run one trace and return the full result, without storing it.
+
+    `seed_window` is set only for a follow-on trace after a swap: the time rule
+    then applies to the starting wallet too (see build_trace_graph).
 
     Everything the endpoint does except the case record: the endpoint gives
     the result a case id and saves it; the startup warm-up runs the demo
@@ -418,6 +436,7 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
                     matcher.is_exchange(a) or risk_matcher.is_terminal(a) or routers.is_exchange(a)
                 ),
                 direction=direction,
+                seed_window=seed_window,
             )
             # Swaps. Reads one receipt per router-bound transfer (capped) so
             # the response can say what asset the money became.
@@ -501,6 +520,14 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
         internal_transfers_read=internal_read,
     )
 
+    # Swaps into a stablecoin this chain carries are followed as their own
+    # traces, before the message is written, so the message can say where the
+    # money went after it changed asset.
+    follow_ons: list[dict[str, Any]] = []
+    if direction == OUTGOING and request.follow_swaps and seed_window is None and swaps:
+        follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth)
+    followed = next((f for f in follow_ons if (f.get("result") or {}).get("exchange")), None)
+
     # Edge case: the address has never sent anything. Not an error -- a finding.
     message: str | None = None
     if result.edge_count == 0:
@@ -535,6 +562,22 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
             "them would manufacture a trail. Routing funds through a mixer is "
             "itself a substantive finding and is grounds for escalation."
         )
+    elif primary is None and followed is not None:
+        # Edge case: no exchange in this asset, but the money changed asset
+        # and the follow-on trace found where it went. The answer is the
+        # follow-on's, scored within its own asset and said to be so.
+        swap, found = followed["swap"], followed["result"]
+        hops = found["hop_count"]
+        message = (
+            f"No exchange was reached in {asset_symbol}, but the funds were swapped: "
+            f"{swap['sender']} exchanged {swap['amount_in']:.4f} {asset_symbol} for "
+            f"{followed['asset']} at {swap['router_label']}. Exchequer followed the "
+            f"{followed['asset']} from the swap: it reached {found['exchange']} "
+            f"({found['exchange_label']}) in {hops} hop{'s' if hops != 1 else ''}, "
+            f"confidence {found['confidence']:.2f} — scored within the "
+            f"{followed['asset']} trace alone, since {asset_symbol} and "
+            f"{followed['asset']} amounts are not comparable."
+        )
     elif primary is None and any(s.get("output_read") for s in swaps):
         # Edge case: the trail did not go cold, it changed asset. Saying which
         # asset and where to resume is the whole point of detecting it.
@@ -545,8 +588,14 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
             f"{first['sender']} exchanged {first['amount_in']:.4f} {asset_symbol} for "
             f"{first['asset_out']} at {first['router_label']}"
             + (f" (and {others} more swap{'s' if others != 1 else ''} were found)" if others else "")
-            + f". This trace follows {asset_symbol} and ends there; re-run it on "
-            f"{first['asset_out']} from {first['sender']} to follow the money further."
+            + f". This trace follows {asset_symbol} and ends there; "
+            + (
+                f"Exchequer followed the {first['asset_out']} from the swap as its own trace "
+                "(see the follow-on) and it reached no known exchange either."
+                if any(f["address"] == first["sender"] and f["asset"] == first["asset_out"]
+                       and f.get("result") for f in follow_ons)
+                else f"re-run it on {first['asset_out']} from {first['sender']} to follow the money further."
+            )
         )
     elif primary is None and direction == INCOMING:
         # Edge case: no exchange upstream. On a reverse trace that is a minor
@@ -617,6 +666,23 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
         # showed it. The graph edge carries the same record as `swap`.
         "swaps": swaps,
         "swap_notes": [describe_swap(s) for s in swaps],
+        # Traces that continued in the swap's output asset. Each carries its
+        # own complete result, so its score and amounts stay in one asset.
+        "follow_ons": follow_ons,
+        "followed_attribution": (
+            {
+                "asset": followed["asset"],
+                "address": followed["address"],
+                "swap_tx": followed["swap"].get("tx"),
+                "exchange": followed["result"]["exchange"],
+                "exchange_label": followed["result"]["exchange_label"],
+                "exchange_address": followed["result"]["exchange_address"],
+                "attribution_inferred": followed["result"]["attribution_inferred"],
+                "confidence": followed["result"]["confidence"],
+                "hop_count": followed["result"]["hop_count"],
+            }
+            if followed else None
+        ),
         "confidence_detail": confidence.to_dict(),
         "trace_path": (
             _trace_path(graph, seed, primary.address, direction) if primary else []
@@ -642,6 +708,53 @@ def run_trace(request: TraceRequest) -> dict[str, Any]:
         "warnings": result.warnings,
     }
     return payload
+
+
+def _follow_swaps(
+    request: TraceRequest,
+    chain: config.Chain,
+    asset_symbol: str,
+    graph: Any,
+    swaps: list[dict[str, Any]],
+    max_depth: int,
+) -> list[dict[str, Any]]:
+    """Trace the output asset of each swap into a stablecoin this chain carries.
+
+    One follow-on per (wallet, output asset), at most MAX_FOLLOW_ONS, over the
+    hops the original trace had left beyond the swapping wallet (at least one).
+    The follow-on starts at the swap: the time rule excludes anything the
+    wallet sent in the new asset before the swap's output arrived. It follows
+    everything the wallet sent in that asset afterwards, which may include
+    money that was not the swap's output; the swap's amount is kept beside the
+    result so a reader can compare. Follow-ons never follow further swaps.
+    """
+    traceable = {t.symbol for t in chain.tokens}
+    seen: set[tuple[str, str]] = set()
+    out: list[dict[str, Any]] = []
+    for swap in swaps:
+        asset_out = swap.get("asset_out")
+        if not swap.get("output_read") or asset_out not in traceable or asset_out == asset_symbol:
+            continue
+        key = (swap["sender"], asset_out)
+        if key in seen:
+            continue
+        seen.add(key)
+        if len(out) >= MAX_FOLLOW_ONS:
+            break
+        depth_at = (graph.nodes.get(swap["sender"]) or {}).get("depth", 0)
+        remaining = max(1, max_depth - depth_at)
+        follow = {"swap": swap, "asset": asset_out, "address": swap["sender"], "max_depth": remaining}
+        sub = TraceRequest(
+            address=swap["sender"], chain=chain.key, asset=asset_out, max_depth=remaining,
+            direction=OUTGOING, time_budget_seconds=request.time_budget_seconds, follow_swaps=False,
+        )
+        try:
+            follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"))
+        except HTTPException as exc:
+            # A follow-on that fails must not cost the trace that found it.
+            follow["error"] = str(exc.detail)
+        out.append(follow)
+    return out
 
 
 @app.get("/ledger")

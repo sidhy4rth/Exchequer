@@ -135,6 +135,26 @@ def build_report(case: Case) -> dict[str, Any]:
         "patterns_detected": findings,
         "swaps": result.get("swaps", []),
         "swap_notes": result.get("swap_notes", []),
+        "follow_ons": [
+            {
+                "asset": f.get("asset"),
+                "address": f.get("address"),
+                "swap_tx": (f.get("swap") or {}).get("tx"),
+                "amount_out": (f.get("swap") or {}).get("amount_out"),
+                "max_depth": f.get("max_depth"),
+                "error": f.get("error"),
+                "exchange": (f.get("result") or {}).get("exchange"),
+                "exchange_label": (f.get("result") or {}).get("exchange_label"),
+                "exchange_address": (f.get("result") or {}).get("exchange_address"),
+                "confidence": (f.get("result") or {}).get("confidence"),
+                "hop_count": (f.get("result") or {}).get("hop_count"),
+                "message": (f.get("result") or {}).get("message"),
+                "trace_path": (f.get("result") or {}).get("trace_path", []),
+                "risk_notes": (f.get("result") or {}).get("risk_notes", []),
+                "manifest_hash": ((f.get("result") or {}).get("evidence") or {}).get("manifest_sha256"),
+            }
+            for f in result.get("follow_ons", [])
+        ],
         "graph_summary": {
             "addresses": len(graph.get("nodes", [])),
             "transfers": len(graph.get("edges", [])),
@@ -512,6 +532,39 @@ def render_text_report(report: dict[str, Any]) -> str:
         section("SWAPS (THE TRACE CHANGES ASSET HERE)")
         for note in report["swap_notes"]:
             para(note, bullet="* ")
+            add("")
+
+    # -- follow-on traces ----------------------------------------------------------
+    if report.get("follow_ons"):
+        section("FOLLOW-ON TRACES (THE MONEY AFTER A SWAP)")
+        para(
+            "Each trace below starts at a swap found above, in the asset the swap "
+            "returned, from the wallet that swapped, and follows only what that "
+            "wallet sent at or after the swap. It is scored within its own asset; "
+            "its amounts are never added to the trace above."
+        )
+        add("")
+        for f in report["follow_ons"]:
+            add(f"* {f['asset']} from {f['address']} (swap tx {f.get('swap_tx')}, "
+                f"up to {f.get('max_depth')} hops)")
+            if f.get("amount_out") is not None:
+                add(f"    swap returned       : {f['amount_out']:,.4f} {f['asset']}")
+            if f.get("error"):
+                add(f"    not traced          : {f['error']}")
+            elif f.get("exchange"):
+                add(f"    reached             : {f['exchange']} ({f['exchange_label']}) "
+                    f"{f['exchange_address']}")
+                add(f"    hops / confidence   : {f['hop_count']} / {f['confidence']}")
+            else:
+                para(f.get("message") or "No exchange was reached.", indent="    ")
+            for step in (f.get("trace_path") or [])[1:]:
+                named = f" ({step['label']})" if step.get("label") else ""
+                add(f"    hop {step.get('depth')}               : {step.get('address')}{named} "
+                    f"received {step.get('value_native', 0):,.4f} {f['asset']}")
+            for note in f.get("risk_notes") or []:
+                para(note, indent="    ", bullet="! ")
+            if f.get("manifest_hash"):
+                add(f"    evidence manifest   : {f['manifest_hash']}")
             add("")
 
     # -- scope -----------------------------------------------------------------

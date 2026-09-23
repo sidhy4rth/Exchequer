@@ -71,6 +71,19 @@ export default function Present({ result, related = [], unit, onClose }) {
               <span className="mono">{result.exchange_address}</span>
             </div>
           </>
+        ) : result.followed_attribution ? (
+          <>
+            <span className="pr-huge green">{result.followed_attribution.exchange}</span>
+            <p className="pr-lede">
+              The {unit} was swapped for {result.followed_attribution.asset}, and the {result.followed_attribution.asset} reached{' '}
+              <span className="mono">{result.followed_attribution.exchange_label ?? short(result.followed_attribution.exchange_address)}</span>{' '}
+              {result.followed_attribution.hop_count} hop{result.followed_attribution.hop_count === 1 ? '' : 's'} after the swap — confidence {result.followed_attribution.confidence?.toFixed(2)} within that trace.
+            </p>
+            <div className="pr-cite">
+              <span className="micro">{result.followed_attribution.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
+              <span className="mono">{result.followed_attribution.exchange_address}</span>
+            </div>
+          </>
         ) : (
           <>
             <span className="pr-huge none">{reverse ? 'No source exchange matched' : 'No exchange matched'}</span>
@@ -155,9 +168,9 @@ export default function Present({ result, related = [], unit, onClose }) {
     <div className="pr-screen pr-handoff" key="handoff">
       <div className="pr-main">
         <span className="micro">Hand it over</span>
-        <span className="pr-title">{result.exchange ? `Send the request to ${result.exchange}.` : 'Nothing to send yet.'}</span>
+        <span className="pr-title">{(result.exchange ?? result.followed_attribution?.exchange) ? `Send the request to ${result.exchange ?? result.followed_attribution.exchange}.` : 'Nothing to send yet.'}</span>
         <p className="pr-lede muted">
-          {result.exchange
+          {(result.exchange ?? result.followed_attribution?.exchange)
             ? 'The report names the address, the transaction hashes, amounts and times, and everything the tool did not look at. An exchange wallet identifies where the money went, not who received it; only the exchange can link it to a customer, on a lawful request (PMLA s.12, s.50).'
             : 'The report still lists every address and transaction in the trace, so each can be re-checked on a public explorer, and says exactly what was not looked at.'}
         </p>
