@@ -138,8 +138,7 @@ export default function Home() {
             : <><span className="dot" />CONNECTING</>}
         </span>
         <span className="grow" />
-        <span className="note">Smart India Hackathon 2026 · SIH26183 · Ministry of Home Affairs</span>
-        <button className="quiet" onClick={() => { signOut(); navigate('/signin') }} title="Back to the sign-in page">Sign out</button>
+        <button className="quiet" onClick={() => { signOut(); navigate('/signin/investigator') }} title="Back to the sign-in page">Sign out</button>
         <ThemeToggle />
       </header>
 

@@ -112,7 +112,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 </tr>
 <tr>
 <td width="50%"><img src="docs/assets/screen-home.png" alt="Home screen"><br><sub><b>Intake</b> — address, direction, chain, asset and depth; coverage per chain; stored cases that open without re-tracing.</sub></td>
-<td width="50%"><img src="docs/assets/screen-signin.png" alt="Sign-in page over the ledger"><br><sub><b>The ledger</b> — the demo sign-in drifts over the real addresses the tool knows: sanctioned and flagged in red, each exchange in its own colour.</sub></td>
+<td width="50%"><img src="docs/assets/screen-signin.png" alt="Sign-in page: a globe of the world's exchanges"><br><sub><b>The front door</b> — every exchange CoinGecko places in a country, on a turning globe, coloured by when it was founded; beside it, where they register and what the tool can see.</sub></td>
 </tr>
 </table>
 
@@ -178,7 +178,8 @@ npm install
 npm run dev                                           # → http://localhost:5173
 ```
 
-The first screen is a demo sign-in: **`admin` / `admin`**. It is a front door for the demonstration, not
+The first screen has two demo sign-ins, prefilled: investigators **`admin` / `admin`** (the tracing console)
+and citizens **`user` / `user`** (a page still to be built). They are front doors for the demonstration, not
 access control — the backend has no accounts and the API answers without it.
 
 <details>
@@ -216,10 +217,13 @@ inferred deposit addresses, patterns, swaps, related cases, funders and scope. *
 the case as four projector screens, stepped with the arrow keys; Esc returns to the console. Every address
 copies itself when clicked. Dark console skin by default; a paper case-file skin is one click away.
 
-Behind the sign-in form drifts the ledger the tool knows (`GET /ledger`), every address real — sanctioned and
-flagged addresses in red, each exchange's wallets in its own colour, probable deposit addresses dotted, stored
-cases' intermediaries in grey. Clicking an address traces it to the nearest exchange wallet, or says none was
-within reach.
+The sign-in page is a globe of the world's exchanges: every one CoinGecko lists against a country (304 of
+965 — decentralised venues have none), placed at that country's main financial city and coloured by when it was
+founded. It turns on its own and by hand; hovering an exchange names it, with its founding year and country.
+Beside it, the jurisdictions exchanges register in (hover one and the globe turns to it) and what the tool can
+see, read live from `GET /health`. Clicking the mark in the top bar opens the sign-in: the chequer flies into the
+globe, the globe collapses into it, and the card assembles from its squares. The exchange points are rebuilt
+with `backend/scripts/build_exchange_globe.py`.
 
 The mark is a chequer. The Exchequer was named for the chequered cloth on which the Crown's money was counted,
 square by square; one square is red — the sum being traced.
@@ -869,7 +873,7 @@ exchequer/
 │   │   └── check_etherscan.py         live API smoke test
 │   └── tests/                         309 tests, no network or keys
 ├── frontend/src/
-│   ├── routes/          SignIn.jsx · Home.jsx · TraceView.jsx
+│   ├── routes/          SignIn.jsx · Citizen.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton
 ├── docs/                proposal and research report PDFs, README assets
 ├── Dockerfile           Node builds the UI, FastAPI serves it

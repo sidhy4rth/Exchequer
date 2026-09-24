@@ -490,6 +490,9 @@ details.more summary:hover { color: var(--ink); }
   .coverage { grid-template-columns: 1fr; }
   .intake { grid-template-columns: 1fr; }
 }
+@media (max-width: 1180px) {
+  .globe-side { display: none; }
+}
 @media (max-width: 900px) {
   .split { grid-template-columns: 1fr; }
   .finding-bar { grid-template-columns: 1fr; }
@@ -528,45 +531,175 @@ details.more summary:hover { color: var(--ink); }
 .theme-toggle:hover { color: var(--ink); }
 
 /* =========================================================================
-   SIGN-IN: the ledger behind, one card in front.
+   SIGN-IN: two doors (investigator, citizen), one scene. Full-screen globe,
+   always on the dark console whatever the skin; the card comes out of it.
    ========================================================================= */
-.signin { position: relative; min-height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--paper); }
 .lattice { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.signin-top { position: absolute; left: 20px; right: 16px; top: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; }
-.signin-top .micro { color: var(--amber); }
-.signin-card {
-  position: relative; width: 400px; display: flex; flex-direction: column; gap: 22px; padding: 26px 30px 24px;
-  background: color-mix(in srgb, var(--panel) 76%, transparent);
-  border: 1px solid var(--rule-strong); border-top-color: var(--amber); border-radius: 4px;
-  backdrop-filter: blur(14px) saturate(120%); box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.04);
+.brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--serif); font-weight: 600; font-size: 17px; color: var(--ink); }
+.brand .mark { color: var(--ink); }
+
+.gate {
+  /* The dark skin's tokens, pinned: this page is always the console. */
+  --paper: #0b0c0e; --panel: #111316; --panel-2: #181b1f; --rule: #22262b; --rule-strong: #343940;
+  --ink: #ececea; --muted: #a0a5ab; --faint: #6b7178; --navy: #ececea; --navy-hover: #ffffff; --on-navy: #0b0c0e;
+  --green: #2fd3a2; --amber: #e0a44a; --red: #ff5c5c;
+  color-scheme: dark;
+  position: fixed; inset: 0; overflow: hidden; color: var(--ink);
+  background: radial-gradient(ellipse at 50% 46%, #0f161c 0%, #07090b 62%, #040506 100%);
 }
-.signin-card .card-head { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; padding-right: 96px; }
-.signin-card .card-head .mark { color: var(--ink); }
-.signin-card .card-title { display: flex; flex-direction: column; gap: 3px; }
-.signin-card .card-title .name { font-family: var(--serif); font-weight: 600; font-size: 24px; line-height: 1; color: var(--ink); letter-spacing: 0.01em; }
-.signin-card .signin-status { position: absolute; top: 18px; right: 18px; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
-.signin-card .signin-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); animation: breathe 2.4s ease-out infinite; }
-.signin-card .signin-status .micro { color: var(--amber); }
-@keyframes breathe { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--amber) 55%, transparent); } 100% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--amber) 0%, transparent); } }
-.signin-card .rule { height: 1px; background: linear-gradient(90deg, var(--rule-strong), transparent); }
-.signin-card .field { display: flex; flex-direction: column; gap: 8px; }
-.signin-card .field .micro { transition: color var(--fast) var(--ease); }
-.signin-card .field:focus-within .micro { color: var(--ink); }
-.signin-card .field input {
+.gate-top { position: absolute; top: 0; left: 0; right: 0; height: 68px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; z-index: 5; transition: opacity 300ms var(--ease); }
+.gate-doors, .portal-switch { display: inline-grid; grid-template-columns: 1fr 1fr; padding: 3px; border: 1px solid var(--rule-strong); border-radius: 999px; background: rgba(17, 19, 22, 0.7); backdrop-filter: blur(8px); }
+.gate-doors a, .portal-switch a { text-decoration: none; color: var(--muted); font-size: 12px; font-weight: 500; padding: 6px 16px; border-radius: 999px; text-align: center; transition: color var(--fast) var(--ease), background-color var(--fast) var(--ease); }
+.gate-doors a:hover, .portal-switch a:hover { color: var(--ink); }
+.gate-doors a.on, .portal-switch a.on { background: var(--ink); color: #0b0c0e; }
+.gate-open .gate-top, .gate-closing .gate-top { opacity: 0; pointer-events: none; }
+
+/* The globe. */
+.globe { position: absolute; inset: 0; }
+.globe-stage { position: absolute; inset: 0; }
+.globe-stage canvas { position: absolute; inset: 0; display: block; touch-action: none; }
+.globe > :not(.globe-stage) { transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
+.globe.is-open > :not(.globe-stage) { opacity: 0; pointer-events: none; }
+.globe.is-open 
+/* Hovering an exchange. */
+.globe-tip {
+  position: absolute; transform: translate(16px, -50%); pointer-events: none; z-index: 3; min-width: 190px;
+  display: flex; flex-direction: column; gap: 6px; padding: 10px 13px 11px; border-radius: 4px; white-space: nowrap;
+  background: rgba(10, 13, 16, 0.94); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 2px solid var(--era, var(--green));
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.8); animation: tip-in 160ms var(--ease) both;
+}
+.globe-tip b { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+.globe-tip dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: 12px; }
+.globe-tip dt { color: var(--faint); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 2px; }
+.globe-tip dd { margin: 0; color: #d6dadd; }
+@keyframes tip-in { from { opacity: 0; transform: translate(10px, -50%); } to { opacity: 1; transform: translate(16px, -50%); } }
+
+/* Under the globe: the way in. */
+.globe-hint { position: absolute; left: 50%; bottom: 7vh; transform: translateX(-50%); z-index: 3; }
+.gate-hint {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 22px;
+  background: none; border: none; color: var(--ink); font-size: 14px; letter-spacing: 0.01em;
+}
+.gate-hint:hover:not(:disabled) { background: none; border: none; }
+.gate-hint > span:last-child { position: relative; padding-bottom: 6px; }
+.gate-hint > span:last-child::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--red), transparent); animation: hint-scan 2.4s var(--ease) infinite; }
+.gate-hint .micro { color: var(--red); }
+.gate-citizen .gate-hint .micro { color: var(--green); }
+.gate-citizen .gate-hint > span:last-child::after { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+@keyframes hint-scan { 0%, 100% { opacity: 0.3; transform: scaleX(0.4); } 50% { opacity: 1; transform: scaleX(1); } }
+
+.globe-side { position: absolute; top: 50%; translate: 0 -50%; z-index: 3; width: min(290px, 22vw); display: flex; flex-direction: column; gap: 26px; }
+.globe-side.left { left: 40px; }
+.globe-side.right { right: 40px; }
+.globe-side header { display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.globe-side header p { margin: 0; font-size: 13px; color: var(--muted); }
+.globe-side header b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
+.juris { list-style: none; margin: -14px 0 0; padding: 0; display: flex; flex-direction: column; }
+.juris li { display: grid; grid-template-columns: 1fr 72px 28px; gap: 12px; align-items: center; padding: 6px 8px; margin: 0 -8px; border-radius: 3px; cursor: default; transition: background-color var(--fast) var(--ease); }
+.juris li:not(.other):hover, .juris li.on { background: rgba(255, 255, 255, 0.06); }
+.juris .name { font-size: 12.5px; color: #c9cdd1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.juris li:hover .name, .juris li.on .name { color: var(--ink); }
+.juris .bar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.juris .bar i { display: block; height: 100%; border-radius: 2px; background: rgba(236, 236, 234, 0.45); transition: background-color var(--fast) var(--ease); }
+.juris li:hover .bar i, .juris li.on .bar i { background: var(--ink); }
+.juris .n { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; }
+.juris li.other .name, .juris li.other .n { color: var(--faint); }
+.juris li.other .bar { background: none; }
+.eras { display: flex; flex-direction: column; gap: 10px; }
+.era-rows { margin: 0; }
+.era-rows .name { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; }
+.era-rows .name > i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.era-rows .name em { font-family: var(--sans); font-style: normal; font-size: 11.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; }
+.juris.era-rows .bar i { opacity: 0.75; }
+.juris.era-rows li:hover .bar i, .juris.era-rows li.on .bar i { opacity: 1; }
+.cover { margin: -8px 0 0; display: flex; flex-direction: column; gap: 14px; }
+.cover div { display: flex; flex-direction: column-reverse; gap: 1px; }
+.cover dt { font-size: 12px; color: var(--muted); }
+.cover dd { margin: 0; font-family: var(--mono); font-size: 22px; font-weight: 500; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
+.cover div:first-child dd { font-size: 30px; }
+.cover .risk dd { color: #e8e8e6; }
+.globe-side .chains { margin: -6px 0 0; font-size: 11px; color: var(--faint); letter-spacing: 0.02em; }
+.globe-src { position: absolute; right: 28px; top: 76px; z-index: 3; font-size: 10.5px; color: #4c5259; }
+
+/* The door: the card assembles from the chequer's sixteen squares, flipping
+   out from the red one, as the globe bursts behind it. */
+.portal { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; }
+.portal-scrim { position: absolute; inset: 0; }
+.portal-card { --t: 1500ms; position: relative; width: min(420px, 100%); perspective: 900px; }
+.portal-tiles { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
+.portal-tiles span {
+  background: rgba(15, 18, 21, 0.9); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(14px);
+  transform-origin: center; backface-visibility: hidden;
+  animation: tile-in 620ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both, tile-seal 400ms var(--ease) 1800ms both;
+  animation-delay: calc(960ms + var(--d) * 70ms), 1800ms;
+}
+.portal-tiles span:nth-child(1) { border-top-left-radius: 6px; }
+.portal-tiles span:nth-child(4) { border-top-right-radius: 6px; }
+.portal-tiles span:nth-child(13) { border-bottom-left-radius: 6px; }
+.portal-tiles span:nth-child(16) { border-bottom-right-radius: 6px; }
+.portal-tiles span.red { animation-name: tile-in, tile-red, tile-seal; animation-duration: 620ms, 1100ms, 400ms; animation-delay: 930ms, 930ms, 1800ms; animation-fill-mode: both, both, both; }
+@keyframes tile-seal { to { border-color: transparent; } }
+.portal-card::before { content: ''; position: absolute; inset: 0; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 92, 92, 0.06); opacity: 0; animation: portal-edge 400ms var(--ease) 1800ms both; pointer-events: none; }
+@keyframes portal-edge { to { opacity: 1; } }
+@keyframes tile-in {
+  0% { opacity: 0; transform: translate(calc((1.5 - var(--j)) * 100%), calc((1.5 - var(--i)) * 100%)) rotateX(180deg) rotateY(-180deg) scale(0.2); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes tile-red { 0%, 35% { background: var(--red); box-shadow: 0 0 40px var(--red); } 100% { background: rgba(15, 18, 21, 0.9); box-shadow: none; } }
+.portal-body { position: relative; padding: 26px 32px 30px; display: flex; flex-direction: column; animation: portal-body 480ms var(--ease) both; animation-delay: 1450ms; }
+@keyframes portal-body { from { opacity: 0; transform: translateY(10px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.portal-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; padding: 0; justify-content: center; background: transparent; border-color: transparent; color: var(--muted); }
+.portal-close:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); border-color: transparent; color: var(--ink); }
+.portal-switch { align-self: flex-start; margin-bottom: 26px; }
+.portal-head { display: flex; flex-direction: column; animation: rise 320ms var(--ease) both; }
+.portal-head .mark { color: var(--ink); margin-bottom: 16px; }
+.portal-head h1 { font-family: var(--serif); font-weight: 600; font-size: 30px; line-height: 1.1; letter-spacing: -0.01em; margin: 0 0 8px; }
+.portal-head p { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 0 0 26px; }
+.portal-card[data-shake="0"] { animation: shake-a 380ms var(--ease); }
+.portal-card[data-shake="1"] { animation: shake-b 380ms var(--ease); }
+@keyframes shake-a { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+@keyframes shake-b { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.gate-closing .portal { animation: portal-out 360ms var(--ease) both; }
+@keyframes portal-out { to { opacity: 0; transform: scale(0.9); filter: blur(6px); } }
+
+.door-form { display: flex; flex-direction: column; gap: 20px; }
+.door-form .field { display: flex; flex-direction: column; gap: 8px; }
+.door-form .field .micro { transition: color var(--fast) var(--ease); }
+.door-form .field:focus-within .micro { color: var(--ink); }
+.door-form .field input {
   font-family: var(--mono); font-size: 15px; color: var(--ink);
   background: transparent; border: none; border-bottom: 1px solid var(--rule-strong); border-radius: 0;
-  padding: 6px 0 10px; outline: none; transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+  padding: 6px 0 10px; outline: none; transition: border-color var(--fast) var(--ease);
 }
-.signin-card .field input::placeholder { color: var(--faint); opacity: 0.7; }
-.signin-card .field input:focus { border-bottom-color: var(--ink); box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--ink) 40%, transparent); }
-.signin-card .field input[aria-invalid="true"] { border-bottom-color: var(--red); }
-.signin-card button.enter { padding: 13px 16px; font-size: 13.5px; justify-content: center; gap: 10px; letter-spacing: 0.02em; transition: box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease); }
-.signin-card button.enter:hover:not(:disabled) { box-shadow: 0 12px 30px -10px color-mix(in srgb, var(--ink) 50%, transparent); transform: translateY(-1px); }
-.signin-card button.enter svg { transition: transform var(--fast) var(--ease); }
-.signin-card button.enter:hover:not(:disabled) svg { transform: translateX(3px); }
-.signin-error { font-size: 12px; color: var(--red); margin-top: -10px; }
-.signin-card .note { text-align: center; font-size: 11px; margin-top: -6px; }
-.signin-foot { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; }
+.door-form .field input::placeholder { color: var(--faint); opacity: 0.7; }
+.door-form .field input:focus { border-bottom-color: var(--ink); }
+.door-form .field input[aria-invalid="true"] { border-bottom-color: var(--red); }
+.door-form button.enter { margin-top: 6px; padding: 13px 16px; font-size: 13.5px; justify-content: center; gap: 10px; letter-spacing: 0.02em; transition: box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease), background-color var(--fast) var(--ease); }
+.door-form button.enter:hover:not(:disabled) { box-shadow: 0 12px 30px -10px rgba(236, 236, 234, 0.5); transform: translateY(-1px); }
+.door-form button.enter svg { transition: transform var(--fast) var(--ease); }
+.door-form button.enter:hover:not(:disabled) svg { transform: translateX(3px); }
+.signin-error { font-size: 12px; color: var(--red); margin-top: -8px; }
+
+@media (max-width: 900px) {
+        .globe-src { display: none; }
+            .globe-hint { bottom: 28px; }
+  .gate-top { padding: 0 16px; }
+  .gate-doors a { padding: 6px 12px; }
+  }
+@media (prefers-reduced-motion: reduce) {
+  .portal-tiles span, .portal-body { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+}
+
+/* The citizen's space: empty for now. */
+.citizen { min-height: 100%; display: flex; flex-direction: column; background: var(--paper); }
+.citizen-top { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--rule); }
+.citizen-actions { display: inline-flex; align-items: center; gap: 6px; }
+.citizen-body { flex: 1; display: grid; place-items: center; padding: 24px 16px; }
+.citizen-empty { max-width: 460px; text-align: center; display: flex; flex-direction: column; gap: 10px; padding: 40px 32px; border: 1px dashed var(--rule-strong); border-radius: 6px; }
+.citizen-empty .micro { color: var(--green); }
+.citizen-empty h1 { font-family: var(--serif); font-weight: 600; font-size: 26px; line-height: 1.2; margin: 0; color: var(--ink); }
+.citizen-empty p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
 
 /* =========================================================================
    PRESENT MODE: the case as four screens, one thing on each, sized for a
@@ -634,3 +767,11 @@ details.more summary:hover { color: var(--ink); }
   .pr-huge { font-size: 64px; }
   .pr-figures, .pr-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
 }
+
+/* The sign-in logo: its mark is drawn by the globe canvas into the slot. */
+.brand-door { background: none; border: none; padding: 6px 10px 6px 6px; margin-left: -6px; font-size: 17px; font-family: var(--serif); font-weight: 600; gap: 10px; border-radius: 6px; }
+.brand-door:hover:not(:disabled) { background: rgba(255, 255, 255, 0.04); border: none; }
+.brand-slot { position: relative; width: 26px; height: 26px; display: inline-block; }
+.brand-slot::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 1px solid rgba(255, 92, 92, 0.5); animation: slot-ping 2.6s var(--ease) infinite; pointer-events: none; }
+@keyframes slot-ping { 0% { transform: scale(0.7); opacity: 0.9; } 70%, 100% { transform: scale(1.5); opacity: 0; } }
+.gate-open .brand-slot::after, .gate-closing .brand-slot::after { display: none; }
