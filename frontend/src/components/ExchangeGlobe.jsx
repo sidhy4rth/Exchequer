@@ -185,6 +185,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
     let drag = null
     let velocity = { lon: CRUISE, lat: 0 }
     let lastNow = 0
+    let flung = false // coasting after a drag release
     // The glow colour eases toward the door's accent when the door changes.
     const glow = [...(liveRef.current.accent ?? ACCENTS[role] ?? ACCENTS.investigator)]
     let door = liveRef.current.open ? 1 : 0 // 0 shut .. 1 open
@@ -400,7 +401,10 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
         velocity = { lon: 0, lat: 0 }
       } else if (!drag) {
         const cruise = reduce ? 0 : CRUISE
-        const flung = Math.abs(velocity.lon - cruise) > 0.05 || Math.abs(velocity.lat) > 0.05
+        // "Flung" means still coasting from a drag release -- not merely
+        // moving at a different speed from the cruise, which is also true
+        // while a hover holds the globe still.
+        if (flung && Math.abs(velocity.lon - cruise) < 0.02 && Math.abs(velocity.lat) < 0.02) flung = false
         if (hovered && !flung) velocity = { lon: 0, lat: 0 }
         else {
           const decay = Math.pow(0.94, step)
@@ -564,7 +568,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
     // Which star is under the pointer. Run on every move and every frame,
     // because the globe turns stars under a cursor that is standing still.
     function pick() {
-      if (!pointerIn || drag || liveRef.current.open) return
+      if (!pointerIn || drag || flung || liveRef.current.open) return
       const hit = nearest(pointerIn.x, pointerIn.y, 10)
       const next = hit ? hit.p : null
       if (next !== hovered) {
@@ -587,6 +591,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
       const d = drag
       drag = null
       if (!d || liveRef.current.open) return
+      if (d.moved) flung = true
       if (!d.moved) {
         velocity = { lon: 0, lat: 0 }
         const { x, y } = local(event)
@@ -632,15 +637,6 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
     <section className={`globe ${open ? 'is-open' : ''}`} aria-label="The world's crypto exchanges on a globe">
       <div className="globe-stage" ref={wrapRef}>
         <canvas ref={canvasRef} />
-        {tip && (
-          <div className="globe-tip" style={{ left: tip.x, top: tip.y, '--era': (ERAS[eraOf(tip.year)] ?? ERAS[0]).color }}>
-            <b>{tip.name}</b>
-            <dl>
-              <dt>Established</dt><dd>{tip.year ?? 'Not stated'}</dd>
-              <dt>Headquarters</dt><dd>{tip.country}</dd>
-            </dl>
-          </div>
-        )}
       </div>
 
       <div className="globe-hint">
@@ -701,6 +697,17 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
         )}
         {coverage && <p className="chains">{coverage.chains.map((c) => CHAIN_NAMES[c] ?? c).join(' · ')}</p>}
       </aside>
+
+      {/* After the side panels, so a popup near the rim sits over them. */}
+      {tip && (
+        <div className="globe-tip" style={{ left: tip.x, top: tip.y, '--era': (ERAS[eraOf(tip.year)] ?? ERAS[0]).color }}>
+          <b>{tip.name}</b>
+          <dl>
+            <dt>Established</dt><dd>{tip.year ?? 'Not stated'}</dd>
+            <dt>Headquarters</dt><dd>{tip.country}</dd>
+          </dl>
+        </div>
+      )}
 
       <div className="globe-src">Exchanges: CoinGecko, {globeData.fetched} · drag to turn · hover a dot</div>
     </section>

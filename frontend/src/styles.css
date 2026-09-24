@@ -560,10 +560,12 @@ details.more summary:hover { color: var(--ink); }
 .globe-stage canvas { position: absolute; inset: 0; display: block; touch-action: none; }
 .globe > :not(.globe-stage) { transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
 .globe.is-open > :not(.globe-stage) { opacity: 0; pointer-events: none; }
-.globe.is-open 
+.globe.is-open .globe-side.left { transform: translateX(-24px); }
+.globe.is-open .globe-side.right { transform: translateX(24px); }
+
 /* Hovering an exchange. */
 .globe-tip {
-  position: absolute; transform: translate(16px, -50%); pointer-events: none; z-index: 3; min-width: 190px;
+  position: absolute; transform: translate(16px, -50%); pointer-events: none; z-index: 8; min-width: 190px;
   display: flex; flex-direction: column; gap: 6px; padding: 10px 13px 11px; border-radius: 4px; white-space: nowrap;
   background: rgba(10, 13, 16, 0.94); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 2px solid var(--era, var(--green));
   box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.8); animation: tip-in 160ms var(--ease) both;
