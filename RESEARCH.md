@@ -240,7 +240,7 @@ deposit and a withdrawal, which is the only property the stop rule relies on.
 
 ---
 
-## Claim 7 — Scale of the problem in India (DEMO.md and JUDGE_QA.md)
+## Claim 7 — Scale of the problem in India (DEMO.md)
 
 **Source K (primary).** Government of India, Ministry of Home Affairs, Lok
 Sabha Unstarred Question No. 432, answered 2 December 2025 by the Minister of

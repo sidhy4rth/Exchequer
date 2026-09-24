@@ -20,12 +20,10 @@
 ![Polygon](https://img.shields.io/badge/Polygon-POL_·_USDT_·_USDC-7B3FE4?logo=polygon&logoColor=white)
 ![Arbitrum](https://img.shields.io/badge/Arbitrum-ETH_·_USDT_·_USDC-28A0F0)
 ![Tron](https://img.shields.io/badge/Tron-TRX_·_USDT-FF060A)
-![SIH 2026](https://img.shields.io/badge/Smart_India_Hackathon_2026-SIH26183_·_MHA-FF9933)
 
 [**Live demo**](https://exchequer-production.up.railway.app) ·
 [**Demo guide**](DEMO.md) ·
-[**Research & sources**](RESEARCH.md) ·
-[**Judge Q&A**](JUDGE_QA.md)
+[**Research & sources**](RESEARCH.md)
 
 </div>
 
@@ -51,8 +49,6 @@
 <td align="center"><h3>309</h3>tests, no network</td>
 </tr>
 </table>
-
-Built for **Smart India Hackathon 2026**, problem statement **SIH26183** (Ministry of Home Affairs).
 
 A victim reports one wallet address. Exchequer follows the money outward hop by hop, screens every
 address it passes against sanctions lists, mixers and known theft, flags laundering shapes along the
@@ -755,6 +751,8 @@ provenance — what each source is, what it establishes and what it does not, wi
 > terms. A commercial deployment needs an OpenSanctions data licence (or the governments' own documents read
 > directly) and a decision on the GPL-derived entries.
 
+The code is under the [MIT licence](LICENSE); the data files keep the terms of their sources, as listed above.
+
 ---
 
 ## Tests
@@ -875,11 +873,10 @@ exchequer/
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Citizen.jsx · Home.jsx · TraceView.jsx
 │   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton
-├── docs/                proposal and research report PDFs, README assets
+├── docs/                README assets
 ├── Dockerfile           Node builds the UI, FastAPI serves it
 ├── DEMO.md              verified demo traces, with what to say
-├── RESEARCH.md          every claim, its source, the passage, a verdict
-└── JUDGE_QA.md          answers to the questions judges ask
+└── RESEARCH.md          every claim, its source, the passage, a verdict
 ```
 
 </details>
@@ -916,7 +913,6 @@ exchequer/
 
 <div align="center">
 <sub>
-Built for Smart India Hackathon 2026 · SIH26183 · Ministry of Home Affairs<br>
 Attribution identifies an exchange, never a person. Only the exchange can link an address to a customer, on a lawful request.
 </sub>
 </div>

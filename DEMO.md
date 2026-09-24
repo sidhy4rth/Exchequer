@@ -539,19 +539,7 @@ Check the status line reads **5 chains** before you start.
 
 If asked about the research behind the laundering claims: RESEARCH.md has
 every claim, the source read for it, the exact passage and a verdict; the
-README's *Validation against real wallets* has the measured numbers; and
-JUDGE_QA.md has the fifteen answers. The three sentences to have ready:
-
-1. "Every claim in the README has a source you can open, and where the source
-   said less than we did, we changed the README, not the source."
-2. "We measured our own rules on 88 real wallets and published the inconvenient
-   result: the shapes we look for appear near ordinary high-volume wallets too,
-   so a pattern is a reason to look closer and the tool has never scored it as
-   more. What it establishes with confidence is the exact-match attribution to
-   an exchange, and now the probable deposit address the request should name."
-3. "The one thing an evidentiary tool must not do is report money that was
-   never the victim's, and we found ours could -- by following transfers made
-   before the funds arrived. That is fixed, tested, and written down."
+README's *Validation against real wallets* has the measured numbers.
 
 If asked about sanctions screening: every address in every trace is checked
 against six governments' lists — the OFAC SDN list published 18 September
