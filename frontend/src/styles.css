@@ -771,9 +771,9 @@ details.more summary:hover { color: var(--ink); }
 }
 
 /* The sign-in logo: its mark is drawn by the globe canvas into the slot. */
-.brand-door { background: none; border: none; padding: 6px 10px 6px 6px; margin-left: -6px; font-size: 17px; font-family: var(--serif); font-weight: 600; gap: 10px; border-radius: 6px; }
+.brand-door { background: none; border: none; padding: 6px 10px 6px 6px; margin-left: -6px; font-size: 21px; font-family: var(--serif); font-weight: 600; gap: 10px; border-radius: 6px; }
 .brand-door:hover:not(:disabled) { background: rgba(255, 255, 255, 0.04); border: none; }
-.brand-slot { position: relative; width: 26px; height: 26px; display: inline-block; }
+.brand-slot { position: relative; width: 30px; height: 30px; display: inline-block; }
 .brand-slot::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 1px solid rgba(255, 92, 92, 0.5); animation: slot-ping 2.6s var(--ease) infinite; pointer-events: none; }
 @keyframes slot-ping { 0% { transform: scale(0.7); opacity: 0.9; } 70%, 100% { transform: scale(1.5); opacity: 0; } }
 .gate-open .brand-slot::after, .gate-closing .brand-slot::after { display: none; }

@@ -92,7 +92,7 @@ export default function SignIn({ as }) {
         hint={(
           <button type="button" className="gate-hint" onClick={openDoor}>
             <span className="micro">{door.who} access</span>
-            <span>Click the Exchequer mark to sign in</span>
+            <span>Click anywhere to log in</span>
           </button>
         )}
       />

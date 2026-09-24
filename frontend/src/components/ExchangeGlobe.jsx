@@ -382,7 +382,16 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
       // The globe spins up as it falls in and slows as it opens out.
       if (!reduce && door > 0 && door < 1) spin += 5 * Math.sin(Math.PI * door)
       brandHover += (brandTarget - brandHover) * 0.1
-      if (!reduce && door <= 0) brandSpin += brandHover * 0.09
+      if (!reduce && door <= 0) {
+        if (brandTarget) brandSpin += brandHover * 0.09
+        else {
+          // Hover over: settle back to the resting angle by the shorter way
+          // round (the board looks the same every full turn).
+          const home = Math.round(brandSpin / (Math.PI * 2)) * Math.PI * 2
+          brandSpin += (home - brandSpin) * 0.06
+          if (Math.abs(home - brandSpin) < 0.001) brandSpin = 0
+        }
+      }
 
       const overGlobe = pointerIn && !live.open && Math.hypot(pointerIn.x - cx, pointerIn.y - cy) < R
       hoverCore += ((overGlobe ? 1 : 0) - hoverCore) * 0.12
@@ -575,7 +584,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
         hovered = next
         setTip(hit ? { x: hit.x, y: hit.y, ...hit.p } : null)
       }
-      canvas.style.cursor = hit ? 'pointer' : Math.hypot(pointerIn.x - cx, pointerIn.y - cy) < R ? 'grab' : 'default'
+      canvas.style.cursor = hit ? 'pointer' : Math.hypot(pointerIn.x - cx, pointerIn.y - cy) < R ? 'grab' : 'pointer'
     }
 
     function down(event) {
@@ -587,15 +596,15 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
       setTip(null)
     }
 
-    function up(event) {
+    function up() {
       const d = drag
       drag = null
       if (!d || liveRef.current.open) return
       if (d.moved) flung = true
-      if (!d.moved) {
+      else {
+        // A click anywhere opens the door; only a drag is taken as turning.
         velocity = { lon: 0, lat: 0 }
-        const { x, y } = local(event)
-        if (Math.hypot(x - cx, y - cy) < R) liveRef.current.onOpen?.()
+        liveRef.current.onOpen?.()
       }
     }
 
