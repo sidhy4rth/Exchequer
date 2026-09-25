@@ -1,0 +1,90 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-09-23T04:20:03Z"
+ },
+ "title": "Exchequer \u2014 Project Timeline",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 794,
+   "h": 1123,
+   "title": "Cover",
+   "paper": "a4"
+  },
+  "Numbers.dc.html": {
+   "x": 874,
+   "y": 0,
+   "w": 794,
+   "h": 1123,
+   "title": "The project in numbers",
+   "paper": "a4"
+  },
+  "Arc.dc.html": {
+   "x": 1748,
+   "y": 0,
+   "w": 794,
+   "h": 1123,
+   "title": "The arc",
+   "paper": "a4"
+  },
+  "Phases-0-2.dc.html": {
+   "x": 2622,
+   "y": 0,
+   "w": 794,
+   "h": 1123,
+   "title": "Phases 0\u20132",
+   "paper": "a4"
+  },
+  "Phase-3.dc.html": {
+   "x": 0,
+   "y": 1243,
+   "w": 794,
+   "h": 1123,
+   "title": "Phase 3",
+   "paper": "a4"
+  },
+  "Phases-4-6.dc.html": {
+   "x": 874,
+   "y": 1243,
+   "w": 794,
+   "h": 1123,
+   "title": "Phases 4\u20136",
+   "paper": "a4"
+  },
+  "Phase-7.dc.html": {
+   "x": 1748,
+   "y": 1243,
+   "w": 794,
+   "h": 1123,
+   "title": "Phase 7",
+   "paper": "a4"
+  },
+  "Phase-8.dc.html": {
+   "x": 2622,
+   "y": 1243,
+   "w": 794,
+   "h": 1123,
+   "title": "Phase 8 \u00b7 now",
+   "paper": "a4"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Numbers.dc.html",
+  "Arc.dc.html",
+  "Phases-0-2.dc.html",
+  "Phase-3.dc.html",
+  "Phases-4-6.dc.html",
+  "Phase-7.dc.html",
+  "Phase-8.dc.html"
+ ],
+ "notes": {},
+ "designSystems": []
+}
