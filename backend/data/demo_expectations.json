@@ -33,9 +33,9 @@
   "max_depth": 3,
   "direction": "outgoing",
   "expect": {
-   "exchange": "Binance",
+   "exchange": "OKX",
    "followed_exchange": null,
-   "confidence": 0.3917
+   "confidence": 0.3923
   }
  },
  {

@@ -111,15 +111,15 @@ Ethereum · ETH · 3 hops · **~10 seconds**
 
 | | |
 |---|---|
-| Addresses traced | 32 |
-| Exchange | **Binance — probable deposit address (inferred)** `0xd6216065…c7154`, **2 hops** — 95 sweeps, all to Binance 14 |
+| Addresses traced | 42 |
+| Exchange | **OKX — probable deposit address (inferred)** `0x8abd362c…9b5bc`, **2 hops** — 3 sweeps, all to OKX 3 |
 | Confidence | **0.39** |
-| Pro-rata | **≈ 0.06 of 304.16 ETH** of the reported funds likely arrived; 1.08 ETH reached the address in total |
-| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): **Binance deposit at 0.39** |
-| Patterns | **peel chain** |
-| Transfers excluded by the time rule | **513** |
+| Pro-rata | **≈ 1.65 of 950.96 ETH** of the reported funds likely arrived; 18.37 ETH reached the address in total |
+| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: **OKX deposit at 0.39** |
+| Patterns | none |
+| Transfers excluded by the time rule | **348** |
 
-**Use this one to show honesty, not a clean result.** It has changed four
+**Use this one to show honesty, not a clean result.** It has changed five
 times, and every change has a reason the tool can state.
 
 On 4 September it reached Binance at 0.65. On 15 September, with the time
@@ -129,10 +129,12 @@ morning of 23 September it reached Uphold at 0.82 through a newly labelled
 wallet. By that evening the Uphold path was no longer in the graph — the
 wallets on it are busy, a trace reads each wallet's most recent transfers, and
 new activity changed what it read — and the closest attribution became a
-probable Binance deposit address two hops out.
+probable Binance deposit address two hops out. On 25 September the reported
+wallet itself had moved more ETH, and the closest attribution became a probable
+OKX deposit address, also two hops out.
 
-Then pro-rata puts the number in proportion: 304 ETH left the reported wallet
-on this path, only 1.08 ETH reached that deposit address, and about **0.06 ETH**
+Then pro-rata puts the number in proportion: 951 ETH left the reported wallet
+on this path, only 18.37 ETH reached that deposit address, and about **1.65 ETH**
 of it is likely the reported funds. The score (0.39) and the amount say the
 same thing: a real path, and a weak lead.
 
@@ -508,7 +510,8 @@ Pattern findings are threshold comparisons against a graph that reshapes as
 new transactions arrive. Trace 2 is the proof: its amount split fired on 15
 September and not on 23 September — a property of the method, not a defect,
 and worth saying out loud if asked. Attributions move too, for stated reasons:
-trace 3 lost one to the time rule and gained another from a new label.
+trace 3 lost one to the time rule, gained another from a new label, and has
+moved since as the wallets on its path kept transacting.
 
 Every trace is stored as a case, so a known-good result can be opened
 instantly and will look identical every time:
