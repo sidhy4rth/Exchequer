@@ -755,8 +755,6 @@ provenance — what each source is, what it establishes and what it does not, wi
 > terms. A commercial deployment needs an OpenSanctions data licence (or the governments' own documents read
 > directly) and a decision on the GPL-derived entries.
 
-The code is under the [MIT licence](LICENSE); the data files keep the terms of their sources, as listed above.
-
 ---
 
 ## Tests
