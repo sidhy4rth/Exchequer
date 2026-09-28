@@ -148,3 +148,54 @@ def test_a_trace_with_save_false_is_not_stored(client, monkeypatch):
     monkeypatch.setattr(models, "save_case", lambda *a, **k: saved.append(a))
     body = client.post("/trace", json={"address": "0x" + "1" * 40, "save": False}).json()
     assert body["case_id"] is None and saved == []
+
+
+def test_traces_past_the_running_ceiling_are_turned_away_at_once(client, monkeypatch):
+    """A full server says so immediately instead of queueing a request for minutes."""
+    import threading
+
+    from app import pipeline
+    from app.routes import cases
+
+    monkeypatch.setattr(cases, "_running", threading.BoundedSemaphore(1))
+    inside, release = threading.Event(), threading.Event()
+
+    def slow(request):
+        inside.set()
+        release.wait(5)
+        return {"address": request.address}
+
+    monkeypatch.setattr(pipeline, "run_trace", slow)
+    body = {"address": "0x" + "1" * 40, "save": False}
+    first = threading.Thread(target=lambda: client.post("/trace", json=body))
+    first.start()
+    assert inside.wait(5)
+    try:
+        busy = client.post("/trace", json=body)
+        assert busy.status_code == 429
+        assert busy.headers["retry-after"] == "30"
+        assert "already running" in busy.json()["detail"]
+    finally:
+        release.set()
+        first.join(5)
+    # The slot is given back once the first trace finishes.
+    assert client.post("/trace", json=body).status_code == 200
+
+
+def test_a_failed_trace_gives_its_slot_back(client, monkeypatch):
+    import threading
+
+    from fastapi import HTTPException
+
+    from app import pipeline
+    from app.routes import cases
+
+    monkeypatch.setattr(cases, "_running", threading.BoundedSemaphore(1))
+
+    def boom(request):
+        raise HTTPException(status_code=502, detail="provider down")
+
+    monkeypatch.setattr(pipeline, "run_trace", boom)
+    body = {"address": "0x" + "1" * 40, "save": False}
+    assert client.post("/trace", json=body).status_code == 502
+    assert client.post("/trace", json=body).status_code == 502  # not 429: the slot came back

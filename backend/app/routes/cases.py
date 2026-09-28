@@ -7,6 +7,7 @@ report, as draft request letters, or correlated with other cases."""
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -23,6 +24,9 @@ from ..report import build_report, render_text_report
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Traces in progress, server-wide; see config.TRACE_MAX_RUNNING.
+_running = threading.BoundedSemaphore(config.TRACE_MAX_RUNNING)
+
 
 @router.post("/trace")
 def trace(request: TraceRequest) -> dict[str, Any]:
@@ -32,7 +36,19 @@ def trace(request: TraceRequest) -> dict[str, Any]:
     sent money to this address", which on a scammer's wallet enumerates the
     other people who paid it.
     """
-    payload = pipeline.run_trace(request)
+    if not _running.acquire(blocking=False):
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                f"{config.TRACE_MAX_RUNNING} traces are already running. "
+                "Try again in a minute, or open a stored case in the meantime."
+            ),
+            headers={"Retry-After": "30"},
+        )
+    try:
+        payload = pipeline.run_trace(request)
+    finally:
+        _running.release()
     case_id = models.new_case_id()
     created_at = models.utc_now_iso()
     payload["case_id"] = case_id

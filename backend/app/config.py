@@ -349,6 +349,13 @@ TRACE_MAX_NODES: int = _int_env("TRACE_MAX_NODES", 400)
 # rate, so this overlaps network waiting without raising the load on the API.
 TRACE_CONCURRENCY: int = _int_env("TRACE_CONCURRENCY", 6)
 
+# How many traces may run at once across the whole server. Each holds a worker
+# thread for as long as it takes -- minutes, on a busy wallet -- so without a
+# ceiling a handful of simultaneous requests could leave the site unanswering
+# for the next visitor. Past it, POST /trace answers 429 at once. One presenter
+# never comes near four; the demo-health job traces one address at a time.
+TRACE_MAX_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES", 4)
+
 # Minimum spacing between Etherscan requests, in seconds.
 #
 # Etherscan documents ~5 req/s on the free tier. Measured against a live free
