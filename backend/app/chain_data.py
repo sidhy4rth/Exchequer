@@ -116,6 +116,7 @@ def open_source(chain: config.Chain, asset: str | None = None) -> TransactionSou
             native_symbol=chain.native_symbol,
             contract_addresses=[token.address] if token else None,
             asset_symbol=token.symbol if token else chain.native_symbol,
+            token_decimals=token.decimals if token else None,
         )
 
     if chain.provider == "etherscan":
@@ -130,6 +131,7 @@ def open_source(chain: config.Chain, asset: str | None = None) -> TransactionSou
             chain_id=chain.chain_id,
             contract_address=token.address if token else None,
             asset_symbol=token.symbol if token else chain.native_symbol,
+            token_decimals=token.decimals if token else None,
         )
 
     raise ProviderNotConfiguredError(

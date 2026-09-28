@@ -30,7 +30,7 @@ import hashlib
 import re
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -118,6 +118,23 @@ class EtherscanConfigError(EtherscanError):
     """Raised when no API key is configured."""
 
 
+def resolve_decimals(stated: Any, fallback: int | None) -> int | None:
+    """The precision to divide a token amount by, or None if it is unknowable.
+
+    The record's own figure wins; otherwise the fallback (the traced token's
+    on-chain `decimals()` from config). A negative or garbled figure is treated
+    as missing rather than trusted.
+    """
+    if stated not in (None, ""):
+        try:
+            value = int(stated)
+        except (TypeError, ValueError):
+            value = -1
+        if value >= 0:
+            return value
+    return fallback
+
+
 @dataclass(frozen=True)
 class Transaction:
     """One normal (external) native-currency transfer, normalized for our use.
@@ -173,7 +190,9 @@ class Transaction:
             return None
 
     @classmethod
-    def from_token_api(cls, raw: dict[str, Any]) -> "Transaction | None":
+    def from_token_api(
+        cls, raw: dict[str, Any], fallback_decimals: int | None = None
+    ) -> "Transaction | None":
         """Build a Transaction from one Etherscan `tokentx` record.
 
         Two differences from the native `txlist` shape matter:
@@ -185,18 +204,26 @@ class Transaction:
             factor of a trillion without anything appearing to fail.
           * There is no `isError` field, because a Transfer event only exists
             when the transaction succeeded. A reverted transfer emits nothing.
+
+        A record that arrives without `tokenDecimal` falls back to
+        `fallback_decimals` -- the precision confirmed on-chain for the token
+        being traced -- and is dropped if that is unknown too. Guessing 18 would
+        turn a USDT transfer into a trillionth of itself.
         """
         try:
             to_raw = raw.get("to") or ""
             if not to_raw:
                 return None
             units = int(raw.get("value", "0") or "0")
-            decimals = int(raw.get("tokenDecimal") or 18)
+            decimals = resolve_decimals(raw.get("tokenDecimal"), fallback_decimals)
+            if decimals is None:
+                logger.warning("Skipping token record with no known decimals: %r", raw)
+                return None
             return cls(
                 hash=raw.get("hash", ""),
                 from_address=normalize_address(raw.get("from", "")),
                 to_address=normalize_address(to_raw),
-                value_native=units / (10**decimals) if decimals >= 0 else float(units),
+                value_native=units / (10**decimals),
                 value_wei=units,
                 timestamp=int(raw.get("timeStamp", "0") or "0"),
                 block_number=int(raw.get("blockNumber", "0") or "0"),
@@ -243,6 +270,7 @@ class EtherscanClient:
         min_interval: float | None = None,  # None -> config.ETHERSCAN_MIN_INTERVAL
         contract_address: str | None = None,
         asset_symbol: str | None = None,
+        token_decimals: int | None = None,
         client: httpx.Client | None = None,
         include_internal: bool | None = None,  # None -> config.ETHERSCAN_INCLUDE_INTERNAL
     ) -> None:
@@ -259,6 +287,9 @@ class EtherscanClient:
             normalize_address(contract_address) if contract_address else None
         )
         self.asset_symbol = asset_symbol or "ETH"
+        # The traced token's confirmed precision, used only when a record
+        # omits its own.
+        self.token_decimals = token_decimals
         self.include_internal = (
             include_internal if include_internal is not None else config.ETHERSCAN_INCLUDE_INTERNAL
         )
@@ -499,9 +530,7 @@ class EtherscanClient:
                            params["action"], address, result)
             result = []
 
-        parse = (
-            Transaction.from_token_api if self.contract_address else Transaction.from_api
-        )
+        parse = self._parser()
         txs = [tx for tx in (parse(raw) for raw in result) if tx is not None]
 
         # Value moved by a contract call -- a multisig paying out, a
@@ -549,11 +578,17 @@ class EtherscanClient:
         result = self._request(params)
         if not isinstance(result, list):
             result = []
-        parse = Transaction.from_token_api if self.contract_address else Transaction.from_api
+        parse = self._parser()
         target = normalize_address(address)
         txs = [t for t in (parse(r) for r in result) if t is not None and t.to_address == target
                and not t.is_error and t.value_wei > 0]
         return txs, len(result) < page
+
+    def _parser(self) -> Callable[[dict[str, Any]], Transaction | None]:
+        """The record parser for the asset this client follows."""
+        if self.contract_address:
+            return lambda raw: Transaction.from_token_api(raw, self.token_decimals)
+        return Transaction.from_api
 
     def get_outgoing_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
         """Only the transfers *sent by* `address` that actually moved value.

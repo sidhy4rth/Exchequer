@@ -43,6 +43,7 @@ from .etherscan_client import (
     Transaction,
     is_valid_address,
     normalize_address,
+    resolve_decimals,
 )
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,7 @@ class NoderealClient:
         native_symbol: str = "BNB",
         contract_addresses: Iterable[str] | None = None,
         asset_symbol: str | None = None,
+        token_decimals: int | None = None,
         lookback_blocks: int | None = None,
         timeout: float = 30.0,
         max_retries: int = 3,
@@ -121,6 +123,9 @@ class NoderealClient:
         # chain's native currency.
         self.contract_addresses = [normalize_address(a) for a in (contract_addresses or [])]
         self.asset_symbol = asset_symbol or native_symbol
+        # The traced token's confirmed precision, used only when a record
+        # omits its own.
+        self.token_decimals = token_decimals
         # address -> (lowest, highest) block of a nonce-located deep search, and
         # address -> lowest block searched when nothing was found at all.
         self.deep_searched: dict[str, tuple[int, int]] = {}
@@ -249,9 +254,18 @@ class NoderealClient:
 
             raw_value = raw.get("value") or "0x0"
             units = int(raw_value, 16) if isinstance(raw_value, str) else int(raw_value)
-            # The token states its own precision; never assume 18.
-            decimals = int(raw.get("decimal") or 18)
-            amount = units / (10**decimals) if decimals >= 0 else float(units)
+            # The token states its own precision; never assume 18. Only the
+            # native coin is 18 by definition -- a token record without one
+            # falls back to the traced token's confirmed precision, or is
+            # dropped rather than misstated.
+            is_token = bool(raw.get("contractAddress"))
+            decimals = resolve_decimals(
+                raw.get("decimal"), self.token_decimals if is_token else 18
+            )
+            if decimals is None:
+                logger.warning("Skipping NodeReal transfer with no known decimals: %r", raw)
+                return None
+            amount = units / (10**decimals)
 
             block_raw = raw.get("blockNum") or "0x0"
             block = int(block_raw, 16) if isinstance(block_raw, str) else int(block_raw)
