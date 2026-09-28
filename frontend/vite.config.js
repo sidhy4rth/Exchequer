@@ -15,4 +15,10 @@ export default defineConfig({
       },
     },
   },
+  // Component tests run in jsdom. The canvas-heavy views (globe, graph) are
+  // stubbed per test; what is tested here is the logic around them.
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
 })
