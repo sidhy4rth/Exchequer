@@ -1,9 +1,14 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import Citizen from './routes/Citizen'
-import Home from './routes/Home'
-import SignIn from './routes/SignIn'
-import TraceView from './routes/TraceView'
 import { role } from './session'
+
+// Each page is its own chunk. The sign-in globe (map data, d3-geo) and the
+// trace graph (force layout) are the heavy parts and no page needs both, so a
+// visitor downloads only what the page in front of them draws.
+const Citizen = lazy(() => import('./routes/Citizen'))
+const Home = lazy(() => import('./routes/Home'))
+const SignIn = lazy(() => import('./routes/SignIn'))
+const TraceView = lazy(() => import('./routes/TraceView'))
 
 /** The demo front doors: each part of the app needs the tab to have passed
  * the matching sign-in once. Not security -- see session.js. */
@@ -17,6 +22,7 @@ function Gate({ as, children }) {
 
 export default function App() {
   return (
+    <Suspense fallback={null}>
     <Routes>
       <Route path="/signin" element={<Navigate to="/signin/investigator" replace />} />
       <Route path="/signin/investigator" element={<SignIn as="investigator" />} />
@@ -34,5 +40,6 @@ export default function App() {
       <Route path="/case/:caseId" element={<Gate as="investigator"><TraceView /></Gate>} />
       <Route path="*" element={<Gate as="investigator"><Home /></Gate>} />
     </Routes>
+    </Suspense>
   )
 }

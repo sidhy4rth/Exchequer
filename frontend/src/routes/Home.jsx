@@ -65,6 +65,10 @@ export default function Home() {
   const [capped, setCapped] = useState(false)
   const [touched, setTouched] = useState(false)
 
+  // Every path out of this page leads to a trace; fetch that page's code
+  // (the graph layout is most of it) before the button is pressed.
+  useEffect(() => { import('./TraceView') }, [])
+
   useEffect(() => {
     fetchHealth()
       .then((h) => {

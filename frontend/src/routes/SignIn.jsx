@@ -58,6 +58,10 @@ export default function SignIn({ as }) {
 
   const openDoor = useCallback(() => setPhase('open'), [])
 
+  // The console is the next page. Fetch its code while the globe spins so
+  // signing in never waits on a download.
+  useEffect(() => { import('./Home') }, [])
+
   useEffect(() => {
     if (phase !== 'closing') return undefined
     const id = setTimeout(() => setPhase('shut'), 380)

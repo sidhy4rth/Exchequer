@@ -18,15 +18,15 @@ function at(path) {
 }
 
 describe('the demo doors', () => {
-  it('sends a fresh tab to the investigator sign-in', () => {
+  it('sends a fresh tab to the investigator sign-in', async () => {
     at('/')
-    expect(screen.getByRole('button', { name: /open investigator sign-in/i })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /open investigator sign-in/i })).toBeInTheDocument()
   })
 
   it('returns an officer to the trace they asked for after signing in', async () => {
     const user = userEvent.setup()
     at('/case/abc123')
-    await user.click(screen.getByText(/click anywhere to log in/i))
+    await user.click(await screen.findByText(/click anywhere to log in/i))
     await user.click(screen.getByRole('button', { name: /open the console/i }))
     // TraceView asks for the stored case it was sent to, not the home page.
     await vi.waitFor(() =>
@@ -36,7 +36,7 @@ describe('the demo doors', () => {
   it('shakes off a wrong access code', async () => {
     const user = userEvent.setup()
     at('/signin/investigator')
-    await user.click(screen.getByText(/click anywhere to log in/i))
+    await user.click(await screen.findByText(/click anywhere to log in/i))
     const code = screen.getByLabelText(/access code/i)
     await user.clear(code)
     await user.type(code, 'wrong')
@@ -45,9 +45,11 @@ describe('the demo doors', () => {
     expect(code).toHaveAttribute('aria-invalid', 'true')
   })
 
-  it('keeps a citizen out of the investigator console', () => {
+  it('keeps a citizen out of the investigator console', async () => {
     sessionStorage.setItem('exchequer-demo-session', 'citizen')
     at('/')
+    // The citizen page renders; the console's address field never does.
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Reported wallet address')).not.toBeInTheDocument()
   })
 })
