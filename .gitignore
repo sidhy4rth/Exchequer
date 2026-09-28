@@ -29,3 +29,7 @@ skills-lock.json
 backend/*.db.bak-*
 backend/keep13.txt
 backend/*_check.jsonl
+
+# Playwright run output
+frontend/test-results/
+frontend/playwright-report/

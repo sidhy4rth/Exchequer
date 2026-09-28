@@ -20,5 +20,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
+    // e2e/ is Playwright's (npm run canary), against a running site.
+    include: ['src/**/*.test.{js,jsx}'],
   },
 })
