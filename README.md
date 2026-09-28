@@ -823,7 +823,9 @@ one trace makes 12–60 calls, so a public instance suits evaluation, not concur
 exchequer/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py               FastAPI app and routes
+│   │   ├── main.py               FastAPI app shell: startup, routers, frontend
+│   │   ├── pipeline.py           run_trace: graph → screening → attribution → score
+│   │   ├── routes/               coverage.py (/health, /ledger…) · cases.py (/trace, /cases…)
 │   │   ├── config.py             chains, assets, label files, environment
 │   │   ├── chain_data.py         picks the provider for a chain + asset
 │   │   ├── etherscan_client.py   Etherscan V2 (native, ERC-20, internal)
