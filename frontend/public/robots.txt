@@ -1,0 +1,11 @@
+# The front page may be indexed. Traces and stored cases are evidence about
+# real wallets and are not for search engines; the API is not a page.
+User-agent: *
+Allow: /$
+Disallow: /trace/
+Disallow: /case/
+Disallow: /cases
+Disallow: /health
+Disallow: /ledger
+Disallow: /exchanges
+Disallow: /risk-labels
