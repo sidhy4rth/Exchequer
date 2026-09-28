@@ -1,0 +1,83 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "How a trace works, end to end",
+  "description": "Follow one reported address from the Trace button to the request letter: fifteen stops, each a few lines of the real code.",
+  "isPrimary": true,
+  "steps": [
+    {
+      "file": "frontend/src/routes/Home.jsx",
+      "line": 127,
+      "description": "## 1 · The officer presses Trace\n\nThe form checks the address format for the chosen chain (the backend stays the authority) and opens a shareable URL: the address in the path, chain, asset, depth and direction in the query string. Nothing is traced yet."
+    },
+    {
+      "file": "frontend/src/api.js",
+      "line": 45,
+      "description": "## 2 · One request per trace\n\n`traceAddress` POSTs to `/trace`. An identical request already in flight is reused, because the backend cannot cancel a traversal it has started: a double-click must not cost a second trace."
+    },
+    {
+      "file": "backend/app/routes/cases.py",
+      "line": 32,
+      "description": "## 3 · The endpoint\n\nAt most four traces run at once server-wide (ADR-0009); past that the answer is an immediate 429. Then the pipeline runs and the result is saved as a case with its own id (ADR-0002)."
+    },
+    {
+      "file": "backend/app/pipeline.py",
+      "line": 273,
+      "description": "## 4 · The pipeline\n\nOne address in, one finished case out: build the graph, screen it, match exchanges, look for patterns and swaps, score it, estimate how much is the victim's. Nothing here knows about HTTP or storage."
+    },
+    {
+      "file": "backend/app/chain_data.py",
+      "line": 78,
+      "description": "## 5 · Which provider\n\nEtherscan, NodeReal or TronGrid, chosen by chain. The traced token's verified decimals travel with the client (ADR-0008)."
+    },
+    {
+      "file": "backend/app/api_budget.py",
+      "line": 250,
+      "description": "## 6 · Why a trace takes the time it does\n\nThe free tiers answer about two requests a second. One adaptive pacer and one response cache per API key keep concurrent traces from getting the key rate-limited (ADR-0003)."
+    },
+    {
+      "file": "backend/app/graph_builder.py",
+      "line": 285,
+      "description": "## 7 · Walking the chain\n\nBreadth-first, in either direction, with six brakes listed in the module docstring: depth, branches per wallet, a dust threshold, stopping at known exchanges, not expanding contracts that pay out to many addresses, and an optional time budget. One correctness rule on top: money cannot be forwarded before it arrives, so transfers that left earlier are never followed."
+    },
+    {
+      "file": "backend/app/exchange_matcher.py",
+      "line": 235,
+      "description": "## 8 · Exact attribution\n\nEvery label in these files proved itself on-chain before it was accepted (ADR-0006): inbound value, and no contract bytecode."
+    },
+    {
+      "file": "backend/app/deposit_inference.py",
+      "line": 87,
+      "description": "## 9 · The address a letter can name\n\nAn unlabelled wallet that only ever swept to one exchange wallet is a probable deposit address of that exchange. It scores lower than a label and says why (ADR-0004)."
+    },
+    {
+      "file": "backend/app/pattern_detection.py",
+      "line": 397,
+      "description": "## 10 · Patterns\n\nPeel chains and amount splits. Reported as caveats, never folded into the score, so the score stays reproducible."
+    },
+    {
+      "file": "backend/app/prorata.py",
+      "line": 49,
+      "description": "## 11 · How much of it is the victim's\n\nAt each wallet: share = victim funds in ÷ all funds in; carried forward, it can only shrink. Unknown is reported as unknown (ADR-0007)."
+    },
+    {
+      "file": "backend/app/scoring.py",
+      "line": 308,
+      "description": "## 12 · The confidence score\n\n40% hop proximity, 35% amount correlation, 25% match directness. Judgement, not calibration, and always shown with its parts."
+    },
+    {
+      "file": "backend/app/report.py",
+      "line": 73,
+      "description": "## 13 · The report\n\nThe stored case rendered for a reader, with the evidence hashes that let anyone check it was not altered."
+    },
+    {
+      "file": "backend/app/request_letters.py",
+      "line": 111,
+      "description": "## 14 · The request letter\n\nA draft to the exchange naming the deposit address and, where estimated, the pro-rata amount of the reported funds that likely arrived. The legal provision is left for the officer; one is only suggested."
+    },
+    {
+      "file": "frontend/src/routes/TraceView.jsx",
+      "line": 332,
+      "description": "## 15 · What the officer sees\n\nThe verdict, the score with its parts, the money-flow graph and the inferred deposit addresses, from the stored case, never a fresh trace."
+    }
+  ]
+}

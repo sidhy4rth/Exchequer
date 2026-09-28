@@ -906,6 +906,16 @@ exchequer/
 
 ---
 
+## Why it is built this way
+
+Each significant design choice has a one-page record in [`docs/adr/`](docs/adr/README.md): what was decided,
+what was turned down and what it costs, from serving the UI and API from one image to never guessing a token's
+decimals. For a guided walk through the code, open the repository in VS Code with the
+[CodeTour](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour) extension and start
+*How a trace works, end to end* (`.tours/`): fifteen stops from the Trace button to the request letter.
+
+---
+
 ## Roadmap
 
 - **Bitcoin** — a UTXO model, so its own adapter rather than another entry in the chain registry.
