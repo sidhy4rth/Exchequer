@@ -91,7 +91,7 @@ def test_cases_lists_stored_traces(client):
 def test_hops_covered_counts_addresses_found_not_expanded():
     """depth_reached is 0 on a one-hop trace because the addresses one hop out
     are found and never expanded -- reporting that reads as "0 hops"."""
-    from app.main import _hops_covered
+    from app.pipeline import _hops_covered
     from conftest import addr, make_graph
 
     seed = addr("5eed")
@@ -119,7 +119,7 @@ def test_ledger_lists_real_labelled_addresses(client):
 
 def test_the_statement_marks_address_poisoning_lookalikes():
     from types import SimpleNamespace
-    from app.main import _wallet_statement
+    from app.pipeline import _wallet_statement
     real, fake = "0xe47abfc8cf59ed425698600472526e846729d2fe", "0xe47a24cf165ece74a59c8afc5cd1cbc525f3d2fe"
     me = "0x" + "b3" * 20
 
@@ -142,8 +142,8 @@ def test_the_statement_marks_address_poisoning_lookalikes():
 
 
 def test_a_trace_with_save_false_is_not_stored(client, monkeypatch):
-    from app import main, models
-    monkeypatch.setattr(main, "run_trace", lambda request: {"address": request.address})
+    from app import models, pipeline
+    monkeypatch.setattr(pipeline, "run_trace", lambda request: {"address": request.address})
     saved = []
     monkeypatch.setattr(models, "save_case", lambda *a, **k: saved.append(a))
     body = client.post("/trace", json={"address": "0x" + "1" * 40, "save": False}).json()

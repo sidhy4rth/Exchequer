@@ -23,7 +23,7 @@ def demo_file(tmp_path, monkeypatch):
 
 
 def test_warm_once_runs_every_demo_and_stores_no_case(demo_file, monkeypatch):
-    import app.main as main
+    import app.pipeline as main
 
     seen = []
 
@@ -45,7 +45,7 @@ def test_warm_once_runs_every_demo_and_stores_no_case(demo_file, monkeypatch):
 
 
 def test_one_failing_demo_does_not_stop_the_rest(demo_file, monkeypatch):
-    import app.main as main
+    import app.pipeline as main
 
     calls = []
 
@@ -70,7 +70,7 @@ def test_warm_up_is_off_unless_configured(demo_file, monkeypatch):
 
 def test_the_shipped_demo_list_is_valid_trace_requests():
     """Every entry must be something POST /trace would accept as written."""
-    from app.main import TraceRequest
+    from app.pipeline import TraceRequest
 
     seeds = warmup.load_demo_requests()
     assert len(seeds) >= 10

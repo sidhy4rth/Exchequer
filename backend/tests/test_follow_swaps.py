@@ -13,9 +13,9 @@ from contextlib import contextmanager
 
 import pytest
 
-from app import main
+from app import pipeline as main
 from app.etherscan_client import Transaction
-from app.main import TraceRequest, run_trace
+from app.pipeline import TraceRequest, run_trace
 
 from conftest import addr
 

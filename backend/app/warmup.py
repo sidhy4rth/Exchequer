@@ -57,9 +57,9 @@ def load_demo_requests() -> list[dict[str, Any]]:
 
 def warm_once() -> list[dict[str, Any]]:
     """Run every demo trace once, storing nothing. Returns one record each."""
-    # Imported here: main imports this module, and the warm-up needs main's
-    # run_trace, so the import has to wait until both modules exist.
-    from .main import TraceRequest, run_trace
+    # Imported here: the pipeline is heavy to import and main imports this
+    # module at startup, so the import waits until a warm-up actually runs.
+    from .pipeline import TraceRequest, run_trace
 
     records: list[dict[str, Any]] = []
     for seed in load_demo_requests():

@@ -11,9 +11,9 @@ from contextlib import contextmanager
 
 import pytest
 
-from app import main
+from app import pipeline as main
 from app.etherscan_client import Transaction
-from app.main import TraceRequest, run_trace
+from app.pipeline import TraceRequest, run_trace
 from app.tron_tags import (MAX_LOOKUPS_PER_TRACE, LiveTronExchanges, exchange_for_tag,
                            tag_from_response, warning_from_response)
 
