@@ -13,7 +13,13 @@ history or makes a demo look like a repeat complaint. It compares, per demo:
   confidence           within +/- TOLERANCE of what DEMO.md quotes
 
 and exits 1 if anything drifted, which fails the scheduled GitHub Action and
-e-mails the repository owner. Standard library only, so the Action installs
+e-mails the repository owner.
+
+A demo marked `"volatile": true` in the expectations file is one whose whole
+point is that it moves (DEMO.md trace 3). A new exchange or score there is
+printed as a note, not a failure; it fails only if it stops reaching an
+exchange at all or cannot be traced. Otherwise it would e-mail every time the
+chain did the thing the demo exists to show. Standard library only, so the Action installs
 nothing and needs no API keys: the live site does the tracing.
 
     python backend/scripts/check_demos.py                  # check against expectations
@@ -44,6 +50,21 @@ def trace(base: str, demo: dict) -> dict:
         return json.loads(response.read())
 
 
+def trace_with_retry(base: str, demo: dict, wait: float = 15.0) -> dict:
+    """One retry for a request lost in transit.
+
+    The live site has answered a trace that never reached this script (a
+    one-off stall between the host's edge and the runner); failing the job and
+    e-mailing over that says nothing about the demo. A second failure does.
+    """
+    try:
+        return trace(base, demo)
+    except (urllib.error.URLError, TimeoutError) as exc:
+        print(f"  demo {demo['demo']:>2}  retrying after: {exc}")
+        time.sleep(wait)
+        return trace(base, demo)
+
+
 def observed(result: dict) -> dict:
     followed = result.get("followed_attribution") or {}
     return {
@@ -53,7 +74,15 @@ def observed(result: dict) -> dict:
     }
 
 
-def drift(expected: dict, seen: dict) -> list[str]:
+def drift(expected: dict, seen: dict, volatile: bool = False) -> list[str]:
+    """What stops this demo matching DEMO.md; empty when it still does.
+
+    For a volatile demo only losing the attribution altogether counts.
+    """
+    if volatile:
+        if expected.get("exchange") and not seen.get("exchange"):
+            return [f"exchange {expected['exchange']!r} -> None (a moving demo must still reach an exchange)"]
+        return []
     problems = []
     for key in ("exchange", "followed_exchange"):
         if expected.get(key) != seen.get(key):
@@ -75,9 +104,9 @@ def main() -> int:
     for demo in demos:
         started = time.monotonic()
         try:
-            seen = observed(trace(args.base, demo))
+            seen = observed(trace_with_retry(args.base, demo))
         except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-            print(f"✗ demo {demo['demo']:>2}  could not trace: {exc}")
+            print(f"✗ demo {demo['demo']:>2}  could not trace, twice: {exc}")
             failures += 1
             continue
         took = time.monotonic() - started
@@ -85,9 +114,13 @@ def main() -> int:
             demo["expect"] = seen
             print(f"• demo {demo['demo']:>2}  recorded {seen}  ({took:.0f}s)")
             continue
-        problems = drift(demo["expect"], seen)
-        mark = "✗" if problems else "✓"
+        volatile = bool(demo.get("volatile"))
+        problems = drift(demo["expect"], seen, volatile)
+        moved = volatile and not problems and drift(demo["expect"], seen)
+        mark = "✗" if problems else ("~" if moved else "✓")
         detail = "; ".join(problems) if problems else f"{seen['exchange'] or 'no exchange'} at {seen['confidence']}"
+        if moved:
+            detail += f"  (moved: {'; '.join(moved)} -- expected for this demo; refresh DEMO.md when convenient)"
         print(f"{mark} demo {demo['demo']:>2}  {detail}  ({took:.0f}s)")
         failures += bool(problems)
 

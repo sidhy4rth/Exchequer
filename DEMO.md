@@ -111,15 +111,15 @@ Ethereum · ETH · 3 hops · **~10 seconds**
 
 | | |
 |---|---|
-| Addresses traced | 42 |
-| Exchange | **OKX — probable deposit address (inferred)** `0x8abd362c…9b5bc`, **2 hops** — 3 sweeps, all to OKX 3 |
-| Confidence | **0.39** |
-| Pro-rata | **≈ 1.65 of 950.96 ETH** of the reported funds likely arrived; 18.37 ETH reached the address in total |
-| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: **OKX deposit at 0.39** |
+| Addresses traced | 38 |
+| Exchange | **Binance — probable deposit address (inferred)** `0x2f9379f0…538e4`, **1 hop** — 18 sweeps since October 2022, every one to Binance 14 |
+| Confidence | **0.875** |
+| Pro-rata | **2.01 of 2.01 ETH** — everything that reached the deposit address came straight from the reported wallet |
+| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: OKX deposit at 0.39 · 27 Sep: **Binance deposit at 0.875** |
 | Patterns | none |
-| Transfers excluded by the time rule | **348** |
+| Transfers excluded by the time rule | **450** |
 
-**Use this one to show honesty, not a clean result.** It has changed five
+**Use this one to show honesty, not a clean result.** It has changed six
 times, and every change has a reason the tool can state.
 
 On 4 September it reached Binance at 0.65. On 15 September, with the time
@@ -131,46 +131,21 @@ wallets on it are busy, a trace reads each wallet's most recent transfers, and
 new activity changed what it read — and the closest attribution became a
 probable Binance deposit address two hops out. On 25 September the reported
 wallet itself had moved more ETH, and the closest attribution became a probable
-OKX deposit address, also two hops out.
+OKX deposit address, also two hops out — a weak lead: pro-rata said only about
+1.65 of the 951 ETH on that path was likely the reported funds.
 
-Then pro-rata puts the number in proportion: 951 ETH left the reported wallet
-on this path, only 18.37 ETH reached that deposit address, and about **1.65 ETH**
-of it is likely the reported funds. The score (0.39) and the amount say the
-same thing: a real path, and a weak lead.
+On 27 September, between 00:41 and 05:34 IST, the reported wallet sent
+**2.01 ETH in nine transfers** directly to `0x2f9379f0…538e4` — a wallet that
+has only ever sent money to Binance 14, eighteen times since October 2022. One
+hop, and pro-rata has nothing to take away: all of it came from the reported
+wallet. The score (0.875) and the amount now say the same thing: a strong,
+small lead, and the deposit address a request to Binance should name.
 
 Say this out loud: on live blockchain data an attribution can move, and a
 tool that reports where money went has to say what changed and how much of
 the money it is talking about. Saved cases never move — the report reproduces
-exactly what was seen when the case was traced.
-
----|---|
-| Addresses traced | 34 |
-| Exchange | **Uphold** — exact label `0x1c727a55…6de5d`, **2 hops**, 53.28 ETH received |
-| Confidence | **0.82** |
-| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep: **Uphold at 0.82** |
-| Patterns | **peel chain** |
-| Transfers excluded by the time rule | **636** |
-
-This trace has now changed twice, each time for a reason you can state.
-
-On 4 September it reached Binance at 0.65. On 15 September, with the time
-rule in place, it reached nothing: the Binance path ran through transfers a
-wallet made *before* the traced funds arrived there — money that was never the
-reported wallet's. The tool lost an attribution the evidence did not support.
-
-On 23 September it reaches **Uphold**, an exchange and fiat gateway,
-two hops out, through a wallet Etherscan tags as Uphold's. That label was
-added on 22 September (from the newer published scrape of Etherscan's tags,
-and checked on chain before it was accepted); the path itself obeys the time
-rule — 636 pre-arrival transfers are still excluded. So the honest summary
-is: the tool dropped an unsupported attribution, and later found a supported
-one when it learned a wallet it had been walking past. Binance 14 still
-appears in the match list, at 3 hops.
-
-Say this out loud: a tool that reports where the victim's money went has to
-be able to lose an attribution when the evidence does not support it, and to
-say exactly what changed when it gains one. The peel-chain finding remains:
-single-use wallets forwarding declining amounts in sequence.
+exactly what was seen when the case was traced. The daily demo check expects
+this trace to move and only fails if it stops reaching an exchange at all.
 
 ---
 

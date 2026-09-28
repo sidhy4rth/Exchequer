@@ -23,7 +23,7 @@ const DEMOS = [
   { n: '02', address: '0xbc1ada2e98dd0087cf4cc0c8bd0e6276c82fadc9', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
     title: 'The pattern that stopped firing', hook: 'An amount split fired here on 15 Sep and not on 23 Sep — same rule, the chain moved. Why no pattern is ever scored.' },
   { n: '03', address: '0x536c4921d1aafde6a5cda882fb5ca046f3601c65', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
-    title: 'An attribution that keeps moving', hook: 'Changed four times on live data, each for a stated reason; now a probable Binance deposit at 0.39 — and pro-rata says only ≈ 0.06 of 304 ETH is the reported funds.' },
+    title: 'An attribution that keeps moving', hook: 'Changed six times on live data, each for a stated reason. Two days ago a weak OKX lead (≈ 1.65 of 951 ETH); now the wallet paid a Binance deposit address directly — 1 hop, 0.875.' },
   { n: '04', address: '0x536c4921d1aafde6a5cda882fb5ca046f3601c65', chain: 'ethereum', asset: 'ETH', depth: 1, direction: 'incoming',
     title: 'Who paid the offender', hook: 'The same wallet asked the other question: ten addresses funded it, none an exchange — ten candidate complaints.' },
   { n: '05', address: '0x60d02e0956e2f3795167c15ba61ab452c85c2533', chain: 'ethereum', asset: 'ETH', depth: 1, direction: 'incoming',
