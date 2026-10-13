@@ -795,3 +795,7 @@ details.more summary:hover { color: var(--ink); }
 .verify-facts dt { color: var(--muted); }
 .verify-facts dd { margin: 0; color: var(--ink); }
 .error-line { color: var(--red); font-size: 13px; margin: 0; }
+
+/* Live progress of a background trace. */
+.loading .progress-line { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.loading .bar.determinate span { animation: none; transition: width 300ms var(--ease); }

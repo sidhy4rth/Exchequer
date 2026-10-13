@@ -29,14 +29,10 @@ router = APIRouter()
 _running = threading.BoundedSemaphore(config.TRACE_MAX_RUNNING)
 
 
-@router.post("/trace")
-def trace(request: TraceRequest, http: Request) -> dict[str, Any]:
-    """Trace funds to or from a reported address.
-
-    Outgoing answers "where did the victim's money go"; incoming answers "who
-    sent money to this address", which on a scammer's wallet enumerates the
-    other people who paid it.
-    """
+def admit(http: Request) -> None:
+    """Refuse a trace this client may not start now: over its hourly limit,
+    or the server already running its maximum. On success the caller holds
+    a running slot and must release it with `_running.release()`."""
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
     wait = rate_limit.traces.check(client)
     if wait is not None:
@@ -58,10 +54,14 @@ def trace(request: TraceRequest, http: Request) -> dict[str, Any]:
             ),
             headers={"Retry-After": "30"},
         )
-    try:
-        payload = pipeline.run_trace(request)
-    finally:
-        _running.release()
+
+
+def release() -> None:
+    _running.release()
+
+
+def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | None) -> dict[str, Any]:
+    """Give a finished trace its case id and, unless asked not to, store it."""
     case_id = models.new_case_id()
     created_at = models.utc_now_iso()
     payload["case_id"] = case_id
@@ -71,17 +71,32 @@ def trace(request: TraceRequest, http: Request) -> dict[str, Any]:
         return payload
 
     try:
-        owner = ownership.owner_hash_from_headers(http.headers) or ownership.orphan_hash()
         models.save_case(case_id, payload["address"], payload, created_at=created_at,
-                         owner_hash=owner)
+                         owner_hash=owner or ownership.orphan_hash())
     except Exception:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
         payload.setdefault("warnings", []).append(
             "Result could not be saved to the case database; it is shown here "
             "but will not appear in the case history."
         )
-
     return payload
+
+
+@router.post("/trace")
+def trace(request: TraceRequest, http: Request) -> dict[str, Any]:
+    """Trace funds to or from a reported address.
+
+    Outgoing answers "where did the victim's money go"; incoming answers "who
+    sent money to this address", which on a scammer's wallet enumerates the
+    other people who paid it. The whole trace runs inside this request; the
+    app itself uses POST /trace/jobs, which runs it in the background.
+    """
+    admit(http)
+    try:
+        payload = pipeline.run_trace(request)
+    finally:
+        release()
+    return store_result(payload, request, ownership.owner_hash_from_headers(http.headers))
 
 
 _INDEX_HTML = config.BACKEND_DIR.parent / "frontend" / "dist" / "index.html"

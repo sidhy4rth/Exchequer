@@ -1,7 +1,8 @@
 """Exchequer FastAPI application.
 
 Endpoints:
-    POST /trace                     trace a reported address
+    POST /trace                     trace a reported address (waits for the result)
+    POST /trace/jobs                trace in the background; watch /trace/jobs/{id}/events
     GET  /trace/{case_id}           retrieve a stored case
     GET  /trace/{case_id}/report    exportable report (json or text)
     GET  /cases                     history of past traces
@@ -30,7 +31,7 @@ from .security_headers import SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import cases, coverage, verify
+from .routes import cases, coverage, jobs, verify
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -112,6 +113,8 @@ app.add_middleware(
 # /risk-labels, /ledger), then tracing and the case store (/trace, reports,
 # letters, /cases). Registered before the static catch-all below.
 app.include_router(coverage.router)
+# Jobs first: /trace/jobs/... must not be read as /trace/{case_id}/...
+app.include_router(jobs.router)
 app.include_router(cases.router)
 app.include_router(verify.router)
 

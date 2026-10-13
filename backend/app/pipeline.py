@@ -16,7 +16,7 @@ import networkx as nx
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-from . import config, log_safety
+from . import config, log_safety, progress
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
 from .etherscan_client import (
     EtherscanConfigError,
@@ -362,6 +362,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                     # A label file's entry always outranks the explorer's warning.
                     risk_matcher = RiskMatcher({**live.risk_labels(REPORTED), **risk_matcher._labels},
                                                chain=chain.key)
+            progress.report(stage="screening", addresses=result.graph.number_of_nodes())
             # Swaps. Reads one receipt per router-bound transfer (capped) so
             # the response can say what asset the money became.
             swaps = detect_swaps(
@@ -377,6 +378,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             # current balance as evidence (forward traces only: a reverse
             # trace fetches inflows, and the rule reads outflows).
             matches = matcher.annotate(result.graph, direction)
+            progress.report(stage="attributing")
             inferred = []
             if direction == OUTGOING:
                 inferred = infer_deposit_addresses(
@@ -742,6 +744,7 @@ def _follow_swaps(
             address=swap["sender"], chain=chain.key, asset=asset_out, max_depth=remaining,
             direction=OUTGOING, time_budget_seconds=budget, follow_swaps=False,
         )
+        progress.report(stage="following_swap", follow_asset=asset_out)
         try:
             follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"))
             seconds_spent += follow["result"].get("seconds_elapsed") or 0.0

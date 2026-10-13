@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { fetchCase, fetchRelatedCases, traceAddress } from '../api'
+import { fetchCase, fetchRelatedCases, runTrace } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
 import ThemeToggle from '../components/ThemeToggle'
@@ -88,6 +88,26 @@ function Address({ value, head = 10, tail = 8, className = '' }) {
   )
 }
 
+const STAGE_TEXT = {
+  starting: 'Starting',
+  screening: 'Walk finished · screening against sanctions, mixer and freeze lists',
+  attributing: 'Matching exchanges and inferring deposit addresses',
+  following_swap: 'Following the funds after a swap',
+  saving: 'Saving the case',
+}
+
+/** One line on what the background trace is doing right now. */
+function describeProgress(p) {
+  if (p.stage === 'walking') {
+    const hop = `Hop ${p.hop}${p.max_depth ? ` of ${p.max_depth}` : ''}`
+    const read = p.level_size > 1 ? ` · ${p.level_read ?? 0} of ${p.level_size} addresses read` : ''
+    const seen = p.addresses ? ` · ${p.addresses} address${p.addresses === 1 ? '' : 'es'} so far` : ''
+    return hop + read + seen
+  }
+  if (p.stage === 'following_swap') return `${STAGE_TEXT.following_swap}${p.follow_asset ? ` into ${p.follow_asset}` : ''}`
+  return STAGE_TEXT[p.stage] ?? ''
+}
+
 export default function TraceView() {
   // One component serves both routes. /trace/:address runs a fresh traversal;
   // /case/:caseId opens what was stored, without touching the chain.
@@ -112,6 +132,8 @@ export default function TraceView() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [elapsed, setElapsed] = useState(0)
+  // What the background trace reports as it runs: stage, hop, addresses read.
+  const [progress, setProgress] = useState(null)
   const [revealed, setRevealed] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState('flow') // 'flow' | 'bubbles'
@@ -140,9 +162,13 @@ export default function TraceView() {
       setResult(location.state.result); setLoading(false); clearInterval(tick)
       return undefined
     }
+    setProgress(null)
     const request = stored
       ? fetchCase(caseId)
-      : traceAddress(routeAddress, depth, chain, asset, requestedDirection, budget)
+      : runTrace(
+        { address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget },
+        (snap) => { if (!cancelled && snap?.progress) setProgress(snap.progress) },
+      )
     request
       .then((data) => {
         if (cancelled) return
@@ -290,7 +316,10 @@ export default function TraceView() {
             <div className="body loading">
               <span className="micro">{stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
               <span className="elapsed">{elapsed.toFixed(1)} s{!stored && budget ? <small> · stops expanding at {mmss(budget)}{elapsed > budget ? ' — finishing what it has' : ''}</small> : null}</span>
-              <div className="bar"><span /></div>
+              {!stored && progress && <span className="progress-line" aria-live="polite">{describeProgress(progress)}</span>}
+              {!stored && progress?.stage === 'walking' && progress.level_size > 0
+                ? <div className="bar determinate"><span style={{ width: `${Math.round(100 * Math.min(1, (progress.level_read ?? 0) / progress.level_size))}%` }} /></div>
+                : <div className="bar"><span /></div>}
               <p className="note">
                 {stored
                   ? 'Read from the case store; the chain is not consulted.'

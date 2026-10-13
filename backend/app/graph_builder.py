@@ -80,7 +80,7 @@ from typing import Callable, Iterable
 
 import networkx as nx
 
-from . import config
+from . import config, progress
 from .etherscan_client import (
     EtherscanClient,
     Transaction,
@@ -255,6 +255,8 @@ def _fetch_level(
             return [(fetch(address, limit=cfg.max_txs_per_address), None)]
         except Exception as exc:  # noqa: BLE001 -- classified by the caller
             return [([], exc)]
+        finally:
+            progress.report(level_read=1)
 
     def one(index: int, address: str):
         try:
@@ -262,6 +264,7 @@ def _fetch_level(
         except Exception as exc:  # noqa: BLE001 -- classified by the caller
             return index, [], exc
 
+    read = 0
     workers = min(cfg.max_concurrent_fetches, len(pending))
     batch_size = workers if deadline is not None else len(pending)
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="trace") as pool:
@@ -278,6 +281,8 @@ def _fetch_level(
             for future in as_completed(futures):
                 index, transfers, error = future.result()
                 results[index] = (transfers, error)
+                read += 1
+                progress.report(level_read=read)
 
     return results
 
@@ -381,6 +386,9 @@ def build_trace_graph(
             )
             break
 
+        progress.report(stage="walking", hop=pending[0][1] + 1, max_depth=cfg.max_depth,
+                        level_size=len(pending), level_read=0,
+                        addresses=graph.number_of_nodes())
         fetched = _fetch_level(pending, fetch, cfg, deadline=deadline if pending[0][1] > 0 else None)
         next_frontier: list[tuple[str, int]] = []
 

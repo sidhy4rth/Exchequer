@@ -66,3 +66,51 @@ describe('owner key', () => {
     expect(seen[1]).toBe(seen[0])
   })
 })
+
+describe('background traces', () => {
+  function server(routes) {
+    const calls = []
+    globalThis.fetch = vi.fn(async (url, init = {}) => {
+      const method = init.method || 'GET'
+      calls.push(`${method} ${url}`)
+      const handler = routes.find(([m, re]) => m === method && re.test(url))
+      if (!handler) return new Response('{}', { status: 404 })
+      const [status, body] = handler[2](calls)
+      return new Response(JSON.stringify(body), { status })
+    })
+    return calls
+  }
+
+  it('starts a job, reports progress and resolves with the result', async () => {
+    const calls = server([
+      ['POST', /\/trace\/jobs$/, () => [202, { job_id: 'j1', status: 'running', progress: { stage: 'starting' } }]],
+      ['GET', /\/trace\/jobs\/j1$/, () => [200, { job_id: 'j1', status: 'done', progress: { stage: 'done' }, result: { case_id: 'c1' } }]],
+    ])
+    const { runTrace } = await import('./api')
+    const seen = []
+    const result = await runTrace({ address: '0x' + '3'.repeat(40) }, (s) => seen.push(s.progress.stage))
+    expect(result).toEqual({ case_id: 'c1' })
+    expect(seen[0]).toBe('starting')
+    expect(calls.filter((c) => c.startsWith('POST'))).toHaveLength(1)
+  })
+
+  it('re-attaches to a job remembered from before a reload instead of starting another', async () => {
+    const address = '0x' + '4'.repeat(40)
+    sessionStorage.setItem(`exchequer-job:${JSON.stringify({ address })}`, 'j2')
+    const calls = server([
+      ['GET', /\/trace\/jobs\/j2$/, () => [200, { job_id: 'j2', status: 'done', progress: {}, result: { case_id: 'c2' } }]],
+    ])
+    const { runTrace } = await import('./api')
+    expect(await runTrace({ address })).toEqual({ case_id: 'c2' })
+    expect(calls.some((c) => c.startsWith('POST'))).toBe(false)
+  })
+
+  it('surfaces a failed job as an error with the backend detail', async () => {
+    server([
+      ['POST', /\/trace\/jobs$/, () => [202, { job_id: 'j3', status: 'running', progress: {} }]],
+      ['GET', /\/trace\/jobs\/j3$/, () => [200, { job_id: 'j3', status: 'failed', progress: {}, error: { status_code: 502, detail: 'provider down' } }]],
+    ])
+    const { runTrace } = await import('./api')
+    await expect(runTrace({ address: '0x' + '5'.repeat(40) })).rejects.toThrow('provider down')
+  })
+})
