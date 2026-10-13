@@ -146,7 +146,7 @@ SPLIT_GRID = {
 
 def grid_points(grid: dict) -> list[dict]:
     keys = list(grid)
-    return [dict(zip(keys, values)) for values in itertools.product(*grid.values())]
+    return [dict(zip(keys, values, strict=True)) for values in itertools.product(*grid.values())]
 
 
 def config_for(point: dict) -> PatternConfig:

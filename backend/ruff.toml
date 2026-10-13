@@ -1,0 +1,5 @@
+# Lint rules CI enforces (pyflakes, pycodestyle, bugbear). Long lines are
+# allowed: the docstrings and messages here are prose.
+[lint]
+select = ["E", "F", "B", "W"]
+ignore = ["E501"]

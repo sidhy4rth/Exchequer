@@ -9,7 +9,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from app.etherscan_client import EtherscanClient
+from app.etherscan_client import EtherscanClient, EtherscanRateLimitError
 
 
 def make_client(payload: dict, **kwargs) -> tuple[EtherscanClient, list]:
@@ -122,7 +122,7 @@ def test_rate_limit_widens_the_shared_interval():
     payload = {"status": "0", "message": "NOTOK", "result": "Max rate limit reached"}
     client, seen = make_client(payload, max_retries=1)
     before = client._pacer.interval
-    with pytest.raises(Exception):
+    with pytest.raises(EtherscanRateLimitError):
         client.get_transactions(ADDR)
     assert client._pacer.interval > before
     assert client._pacer.stats()["rate_limit_penalties"] >= 1

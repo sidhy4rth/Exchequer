@@ -152,7 +152,7 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
         lines += [
             "",
             f"   On a pro-rata estimate from the public records, about {prorata['estimated']:,.6f} {asset}",
-            f"   of the reported funds reached this address"
+            "   of the reported funds reached this address"
             + (f" ({prorata['arrived_total']:,.6f} {asset} arrived along this path in\n"
                f"   total; about {others:,.6f} came from other sources)." if others > prorata["estimated"] * 0.05 else "."),
             "   This is an estimate; your own records of the deposits are authoritative.",

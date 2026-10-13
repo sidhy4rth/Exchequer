@@ -56,7 +56,7 @@ def test_the_swap_output_is_the_transfer_back_to_the_sender():
 
 def test_transfers_to_other_parties_are_not_outputs():
     """The receipt holds six Transfer events; only one is to the sender."""
-    transfers = [l for l in RECEIPT["logs"] if l["topics"][0] == TRANSFER_TOPIC]
+    transfers = [log for log in RECEIPT["logs"] if log["topics"][0] == TRANSFER_TOPIC]
     assert len(transfers) > 1
     assert parse_swap_outputs(RECEIPT, addr("c1")) == []
 

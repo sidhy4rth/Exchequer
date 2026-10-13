@@ -110,14 +110,16 @@ def main() -> int:
 
         if chain_key == "ethereum":
             if not config.ETHERSCAN_API_KEY:
-                print("  ETHERSCAN_API_KEY is not set; cannot verify"); continue
+                print("  ETHERSCAN_API_KEY is not set; cannot verify")
+                continue
             client = EtherscanClient(chain_id=1)
-            check = lambda a: has_code_ethereum(client, a)  # noqa: E731
+            check = lambda a, c=client: has_code_ethereum(c, a)  # noqa: E731
         else:
             if not config.NODEREAL_API_KEY:
-                print("  NODEREAL_API_KEY is not set; cannot verify"); continue
+                print("  NODEREAL_API_KEY is not set; cannot verify")
+                continue
             client = NoderealClient(chain_slug="bsc-mainnet")
-            check = lambda a: has_code_bsc(client, a)  # noqa: E731
+            check = lambda a, c=client: has_code_bsc(c, a)  # noqa: E731
 
         labels: dict[str, dict[str, str]] = {}
         rejected: list[str] = []

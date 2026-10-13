@@ -75,7 +75,7 @@ async def lifespan(_app: FastAPI):
                 "screened against sanctions or mixer lists",
                 chain.name,
             )
-    for key, status in provider_status().items():
+    for status in provider_status().values():
         if status["ready"]:
             logger.info("%s: ready via %s", status["name"], status["provider"])
         else:

@@ -58,7 +58,7 @@ def _rows(result: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, 
     graph = result.get("graph") or {}
     asset = result.get("asset") or result.get("native_symbol") or ""
     path = [step.get("address") for step in result.get("trace_path") or []]
-    on_path = {(a, b) for a, b in zip(path, path[1:])}
+    on_path = {(a, b) for a, b in zip(path, path[1:], strict=False)}  # consecutive pairs
     nodes = [{
         "address": n.get("id"),
         "depth": n.get("depth"),

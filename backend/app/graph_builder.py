@@ -418,7 +418,7 @@ def build_trace_graph(
         fetched = _fetch_level(pending, fetch, cfg, deadline=deadline if pending[0][1] > 0 else None)
         next_frontier: list[tuple[str, int]] = []
 
-        for (address, depth), (transfers, error) in zip(pending, fetched):
+        for (address, depth), (transfers, error) in zip(pending, fetched, strict=True):
             if graph.number_of_nodes() >= cfg.max_nodes:
                 result.note_truncation(f"node limit of {cfg.max_nodes} addresses reached")
                 break
