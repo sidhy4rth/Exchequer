@@ -9,13 +9,17 @@ on:
     - cron: "30 1 * * *" # 07:00 IST
   workflow_dispatch:
 
+# The jobs only read the repository; the token gets nothing more.
+permissions:
+  contents: read
+
 jobs:
   demos:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Re-run the DEMO.md traces on the live site

@@ -8,6 +8,10 @@ on:
   push:
   pull_request:
 
+# The jobs only read the repository; the token gets nothing more.
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: backend tests
@@ -16,8 +20,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -32,8 +36,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -43,3 +47,35 @@ jobs:
       - run: npm run build
         env:
           VITE_API_BASE: ""
+
+  image:
+    name: docker image builds and runs as non-root
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t exchequer:ci .
+      # Start it the way Railway does -- as root, with a root-owned volume at
+      # /data -- and check the entrypoint handed the volume to the app user.
+      - name: Start the image with a volume
+        run: |
+          docker volume create data
+          docker run -d --name app -p 8000:8000 -v data:/data -e PORT=8000 -e EXCHEQUER_WARM_CACHE=0 exchequer:ci
+          for i in $(seq 1 30); do curl -fsS localhost:8000/health >/dev/null && break; sleep 2; done
+          curl -fsS localhost:8000/health
+      - name: The app runs as uid 10001 and owns its files on the volume
+        run: |
+          # The entrypoint execs all the way down, so PID 1 is uvicorn itself.
+          docker exec app cat /proc/1/cmdline | tr '\0' ' ' | grep uvicorn
+          uid=$(docker exec app awk '/^Uid:/{print $2}' /proc/1/status)
+          echo "uvicorn uid: $uid"
+          test "$uid" = "10001"
+          curl -fsS localhost:8000/signing-key >/dev/null
+          docker exec app stat -c '%u %n' /data/exchequer.db /data/report_signing_key.pem
+          test "$(docker exec app stat -c '%u' /data/report_signing_key.pem)" = "10001"
+      - name: Security headers are sent and API docs are off
+        run: |
+          curl -fsS -D - -o /dev/null localhost:8000/ | grep -i '^content-security-policy:'
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/docs)" != "200" || (echo "docs exposed" && exit 1)
+      - if: failure()
+        run: docker logs app

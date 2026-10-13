@@ -1,0 +1,23 @@
+# Weekly dependency updates, one grouped PR per ecosystem so a solo
+# maintainer reviews four PRs a week at most, not forty. Security fixes are
+# raised as soon as an advisory lands, whatever this schedule says.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule: { interval: weekly, day: monday }
+    groups:
+      python: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly, day: monday }
+    groups:
+      npm: { patterns: ["*"] }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      actions: { patterns: ["*"] }
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly, day: monday }
