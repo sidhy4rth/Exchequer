@@ -422,3 +422,13 @@ WARM_CACHE_AT_STARTUP: bool = (
 API_DOCS_ENABLED: bool = (
     os.getenv("EXCHEQUER_API_DOCS", "1").strip().lower() not in ("0", "false", "no", "off")
 )
+
+# How many traces one client may start per hour (0 = no limit). Each trace
+# spends the shared free-tier provider quota; see rate_limit.py.
+TRACES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_TRACES_PER_HOUR", 30)
+
+# Read the client address from X-Real-IP / X-Forwarded-For. Only behind a
+# proxy that sets them (Railway); the Docker image turns it on.
+TRUST_PROXY_HEADERS: bool = (
+    os.getenv("EXCHEQUER_TRUST_PROXY", "").strip().lower() in ("1", "true", "yes", "on")
+)

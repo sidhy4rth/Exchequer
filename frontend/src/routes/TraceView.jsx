@@ -579,16 +579,18 @@ export default function TraceView() {
                   <summary><span className="micro">Related cases · {related.length}</span><span className="note">same wallets, other complaints</span></summary>
                   <div className="body">
                     {related.slice(0, 8).map((c) => (
-                      <div className="related-case" key={c.case_id}>
+                      <div className="related-case" key={c.case_id ?? c.ref}>
                         <div className="top">
-                          <a href={`/case/${c.case_id}`} className="mono" title={c.reported_address}>{middle(c.reported_address, 10, 8)}</a>
+                          {c.hidden
+                            ? <span className="mono" title="Traced by someone else; only the wallets it shares with this case are shown">{c.ref}</span>
+                            : <a href={`/case/${c.case_id}`} className="mono" title={c.reported_address}>{middle(c.reported_address, 10, 8)}</a>}
                           <span className="st">{c.shared_count} shared wallet{c.shared_count === 1 ? '' : 's'}</span>
                         </div>
-                        <div className="ent">{c.exchange ? `reached ${c.exchange}` : 'no exchange matched'} · traced {String(c.traced_at).slice(0, 10)}</div>
+                        <div className="ent">{c.exchange ? `reached ${c.exchange}` : 'no exchange matched'}{c.traced_at ? ` · traced ${String(c.traced_at).slice(0, 10)}` : ''}</div>
                         {c.shared.slice(0, 3).map((s) => (
                           <div className="row" key={s.address}>
                             <Address value={s.address} head={10} tail={8} />
-                            <span className="via">{s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}{s.risk_category ? `${RISK_NAME[s.risk_category] ?? s.risk_category} · ` : ''}{num(s.value_in_native)} {s.after_swap_to ?? c.asset}{s.after_swap_to ? ' after a swap' : ''}</span>
+                            <span className="via">{s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}{s.risk_category ? `${RISK_NAME[s.risk_category] ?? s.risk_category} · ` : ''}{s.value_in_native == null ? (s.after_swap_to ? `after a swap to ${s.after_swap_to}` : c.asset) : `${num(s.value_in_native)} ${s.after_swap_to ?? c.asset}${s.after_swap_to ? ' after a swap' : ''}`}</span>
                           </div>
                         ))}
                         {c.shared_count > 3 && <div className="ent">…and {c.shared_count - 3} more</div>}

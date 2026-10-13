@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from .. import api_budget, config, models, warmup
+from .. import api_budget, config, models, ownership, warmup
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import FROZEN, MIXER, SANCTIONED, get_risk_matcher
@@ -128,7 +128,9 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
             add(address, "flagged", "", f"{prefix} · {meta.get('label', '')}"[:48])
     for address, meta in get_matcher(selected.key).entries():
         add(address, "exchange", meta.get("exchange", ""), (meta.get("label") or meta.get("exchange", ""))[:40])
-    for case in models.all_cases(limit=200):
+    # Only the public demo cases: this endpoint backs a page anyone can open,
+    # and another person's trace would put their reported address on it.
+    for case in models.list_cases(limit=200, public_addresses=ownership.demo_addresses()):
         result = case.result
         if result.get("chain") != selected.key:
             continue

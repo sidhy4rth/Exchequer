@@ -276,14 +276,14 @@ export default function Home() {
 
         <section>
           <div className="card">
-            <div className="head"><span className="micro">Stored cases · {cases.length}</span><span className="note">opening one does not re-trace</span></div>
-            {cases.length === 0 ? <p className="note" style={{ padding: 12 }}>No stored cases yet.</p> : (
+            <div className="head"><span className="micro">Stored cases · {cases.length}</span><span className="note">yours and the demos · only this browser sees yours · opening one does not re-trace</span></div>
+            {cases.length === 0 ? <p className="note" style={{ padding: 12 }}>No stored cases yet. Cases you trace are listed here, in this browser only.</p> : (
               <table className="cases-table">
                 <thead><tr><th>Reported address</th><th>Chain</th><th>Asset</th><th>Result</th><th style={{ textAlign: 'right' }}>Confidence</th><th style={{ textAlign: 'right' }}>Addresses</th><th>Flags</th><th>Traced</th></tr></thead>
                 <tbody>
                   {cases.map((c) => (
                     <tr className="row" key={c.case_id} onClick={() => navigate(`/case/${c.case_id}`)} title={`Open stored case for ${c.address}`}>
-                      <td className="mono">{middle(c.address, 12, 10)}{c.direction === 'incoming' && <span className="pill navy" style={{ marginLeft: 8 }}>reverse</span>}</td>
+                      <td className="mono">{middle(c.address, 12, 10)}{c.direction === 'incoming' && <span className="pill navy" style={{ marginLeft: 8 }}>reverse</span>}{c.demo && <span className="pill" style={{ marginLeft: 8 }}>demo</span>}</td>
                       <td>{c.chain}</td>
                       <td className="mono">{c.asset ?? '—'}</td>
                       <td className={c.exchange ? '' : 'none'}>{c.exchange ?? 'no match'}</td>

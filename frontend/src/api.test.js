@@ -50,3 +50,19 @@ describe('traceAddress', () => {
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ address: addr })
   })
 })
+
+describe('owner key', () => {
+  it('sends the same well-formed owner key on every request', async () => {
+    const seen = []
+    globalThis.fetch = vi.fn(async (url, init) => {
+      seen.push(init?.headers?.['X-Exchequer-Owner'])
+      return new Response(JSON.stringify({ count: 0, cases: [] }), { status: 200 })
+    })
+    const { fetchCases, fetchHealth } = await import('./api')
+    await fetchCases(5)
+    await fetchHealth().catch(() => {})
+    expect(seen).toHaveLength(2)
+    expect(seen[0]).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect(seen[1]).toBe(seen[0])
+  })
+})

@@ -32,7 +32,7 @@ def test_warm_once_runs_every_demo_and_stores_no_case(demo_file, monkeypatch):
         return {"exchange": "Binance", "evidence": {"from_cache": 3, "retrieved": 4}}
 
     monkeypatch.setattr(main, "run_trace", fake_run_trace)
-    before = len(models.list_cases(limit=500))
+    before = len(models.list_cases(limit=500, everyone=True))
 
     records = warmup.warm_once()
 
@@ -41,7 +41,7 @@ def test_warm_once_runs_every_demo_and_stores_no_case(demo_file, monkeypatch):
     assert all(r["ok"] for r in records)
     assert records[0]["exchange"] == "Binance"
     assert records[0]["retrieved"] == 4
-    assert len(models.list_cases(limit=500)) == before
+    assert len(models.list_cases(limit=500, everyone=True)) == before
 
 
 def test_one_failing_demo_does_not_stop_the_rest(demo_file, monkeypatch):

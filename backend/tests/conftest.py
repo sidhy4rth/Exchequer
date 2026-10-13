@@ -148,3 +148,12 @@ def _reset_api_budget(monkeypatch):
     api_budget.reset()
     yield
     api_budget.reset()
+
+
+@pytest.fixture(autouse=True)
+def _fresh_trace_rate_limit():
+    """The per-client trace limit is process-wide; the suite's TestClient is
+    one client, so without this the 31st trace in a run would be refused."""
+    from app import rate_limit
+    rate_limit.traces.reset()
+    yield

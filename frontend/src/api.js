@@ -1,3 +1,5 @@
+import { OWNER_HEADER, ownerKey } from './owner'
+
 // Calls to the Exchequer backend.
 //
 // Requests are relative, so the frontend works unchanged whether it is served
@@ -9,6 +11,11 @@
 // same-origin at the root and VITE_API_BASE is built as an empty string.
 // Either way the frontend never hardcodes a host.
 const BASE = import.meta.env.VITE_API_BASE ?? '/api'
+
+/** fetch() with this browser's owner key attached (see owner.js). */
+function apiFetch(url, init = {}) {
+  return fetch(url, { ...init, headers: { ...(init.headers || {}), [OWNER_HEADER]: ownerKey() } })
+}
 
 /** Turn a failed response into an Error carrying the backend's own message. */
 async function toError(response) {
@@ -63,7 +70,7 @@ export function traceAddress(address, maxDepth, chain, asset, direction, timeBud
   const request = (async () => {
     let response
     try {
-      response = await fetch(`${BASE}/trace`, {
+      response = await apiFetch(`${BASE}/trace`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
@@ -89,13 +96,13 @@ export function traceAddress(address, maxDepth, chain, asset, direction, timeBud
  * arrived. A stored case is the evidence as it stood when it was taken.
  */
 export async function fetchCase(caseId) {
-  const response = await fetch(`${BASE}/trace/${caseId}`)
+  const response = await apiFetch(`${BASE}/trace/${caseId}`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }
 
 export async function fetchCases(limit = 20) {
-  const response = await fetch(`${BASE}/cases?limit=${limit}`)
+  const response = await apiFetch(`${BASE}/cases?limit=${limit}`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }
@@ -105,34 +112,34 @@ export async function fetchCases(limit = 20) {
  * `caseId`. A query over the case store, so it never touches the chain.
  */
 export async function fetchRelatedCases(caseId) {
-  const response = await fetch(`${BASE}/cases/correlate?case_id=${encodeURIComponent(caseId)}`)
+  const response = await apiFetch(`${BASE}/cases/correlate?case_id=${encodeURIComponent(caseId)}`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }
 
 /** What the attribution database covers on one chain. */
 export async function fetchExchanges(chain) {
-  const response = await fetch(`${BASE}/exchanges?chain=${encodeURIComponent(chain)}`)
+  const response = await apiFetch(`${BASE}/exchanges?chain=${encodeURIComponent(chain)}`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }
 
 /** What sanctions and mixer screening covers on one chain. */
 export async function fetchRiskLabels(chain) {
-  const response = await fetch(`${BASE}/risk-labels?chain=${encodeURIComponent(chain)}`)
+  const response = await apiFetch(`${BASE}/risk-labels?chain=${encodeURIComponent(chain)}`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }
 
 /** The addresses the tool knows -- real, labelled -- for the sign-in backdrop. */
 export async function fetchLedger(limit = 1400) {
-  const response = await fetch(`${BASE}/ledger?limit=${limit}`)
+  const response = await apiFetch(`${BASE}/ledger?limit=${limit}`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }
 
 export async function fetchHealth() {
-  const response = await fetch(`${BASE}/health`)
+  const response = await apiFetch(`${BASE}/health`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }
@@ -143,19 +150,19 @@ export function reportUrl(caseId, format = 'text') {
 }
 
 export async function fetchReport(caseId, format = 'text') {
-  const response = await fetch(reportUrl(caseId, format))
+  const response = await apiFetch(reportUrl(caseId, format))
   if (!response.ok) throw await toError(response)
   return format === 'text' ? response.text() : response.json()
 }
 
 export async function fetchLetters(caseId) {
-  const response = await fetch(`${BASE}/trace/${encodeURIComponent(caseId)}/letters`)
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/letters`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }
 
 export async function fetchLetter(caseId, to) {
-  const response = await fetch(`${BASE}/trace/${encodeURIComponent(caseId)}/letter?to=${encodeURIComponent(to)}`)
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/letter?to=${encodeURIComponent(to)}`)
   if (!response.ok) throw await toError(response)
   return response.text()
 }

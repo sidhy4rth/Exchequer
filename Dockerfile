@@ -62,6 +62,10 @@ ENV EXCHEQUER_WARM_CACHE=1
 # Swagger UI needs a looser content policy than the app (security_headers.py).
 ENV EXCHEQUER_API_DOCS=0
 
+# Railway's proxy sets X-Real-IP / X-Forwarded-For; the per-client trace limit
+# (rate_limit.py) reads the client from them only when this is on.
+ENV EXCHEQUER_TRUST_PROXY=1
+
 WORKDIR /app/backend
 EXPOSE 8000
 

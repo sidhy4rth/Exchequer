@@ -10,10 +10,10 @@ import logging
 import threading
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 
-from .. import config, models, pipeline, request_letters
+from .. import config, models, ownership, pipeline, rate_limit, request_letters
 from ..correlation import correlate, related_cases
 from ..exchange_matcher import get_matcher, get_router_matcher
 from ..pipeline import TraceRequest
@@ -29,13 +29,25 @@ _running = threading.BoundedSemaphore(config.TRACE_MAX_RUNNING)
 
 
 @router.post("/trace")
-def trace(request: TraceRequest) -> dict[str, Any]:
+def trace(request: TraceRequest, http: Request) -> dict[str, Any]:
     """Trace funds to or from a reported address.
 
     Outgoing answers "where did the victim's money go"; incoming answers "who
     sent money to this address", which on a scammer's wallet enumerates the
     other people who paid it.
     """
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    wait = rate_limit.traces.check(client)
+    if wait is not None:
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                f"This connection has started {config.TRACES_PER_HOUR_PER_CLIENT} traces "
+                f"in the last hour. Try again in {int(wait // 60) + 1} min, or open a "
+                "stored case in the meantime."
+            ),
+            headers={"Retry-After": str(int(wait))},
+        )
     if not _running.acquire(blocking=False):
         raise HTTPException(
             status_code=429,
@@ -58,7 +70,9 @@ def trace(request: TraceRequest) -> dict[str, Any]:
         return payload
 
     try:
-        models.save_case(case_id, payload["address"], payload, created_at=created_at)
+        owner = ownership.owner_hash_from_headers(http.headers) or ownership.orphan_hash()
+        models.save_case(case_id, payload["address"], payload, created_at=created_at,
+                         owner_hash=owner)
     except Exception:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
         payload.setdefault("warnings", []).append(
@@ -134,14 +148,34 @@ def get_letter(
 
 
 @router.get("/cases")
-def cases(limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
-    """History of past traces, most recent first."""
-    records = models.list_cases(limit=limit)
-    return {"count": len(records), "cases": [c.summary() for c in records]}
+def cases(http: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
+    """History of past traces, most recent first: the caller's own cases (by
+    the owner key their browser sends) and the demo cases. See ownership.py."""
+    caller = ownership.owner_hash_from_headers(http.headers)
+    records = models.list_cases(limit=limit, owner_hash=caller,
+                                public_addresses=ownership.demo_addresses())
+    # The deployed store holds the demos several times over (seeded more than
+    # once); list each demo once, its newest trace. Records are newest first.
+    seen_demo: set[tuple[str, str]] = set()
+    kept = []
+    for c in records:
+        if ownership.is_public(c.owner_hash, c.address):
+            key = (c.address.lower(), c.result.get("direction", "outgoing"))
+            if key in seen_demo:
+                continue
+            seen_demo.add(key)
+        kept.append(c)
+    records = kept
+    return {
+        "count": len(records),
+        "cases": [{**c.summary(), "demo": ownership.is_public(c.owner_hash, c.address)}
+                  for c in records],
+    }
 
 
 @router.get("/cases/correlate")
 def cases_correlate(
+    http: Request,
     case_id: str | None = Query(None, description="only clusters that include this case"),
     min_cases: int = Query(2, ge=2, le=50),
 ) -> dict[str, Any]:
@@ -165,13 +199,21 @@ def cases_correlate(
 
     clusters = correlate(records, only_case=case_id, min_cases=min_cases,
                          excluded=known_contract_or_exchange)
+    # Every stored case counts towards a cluster, but only the caller's own,
+    # the demo cases and the one they asked about (they hold its link) are
+    # named; the rest are "another complaint". See ownership.py.
+    caller = ownership.owner_hash_from_headers(http.headers)
+    may_see = {c.id for c in records if ownership.visible_to(c.owner_hash, c.address, caller)}
+    if case_id:
+        may_see.add(case_id)
+    related = related_cases(clusters, case_id) if case_id else []
     return {
         "cases_examined": len(records),
         "cluster_count": len(clusters),
-        "clusters": clusters,
+        "clusters": ownership.redact_clusters(clusters, may_see),
         # The same answer grouped by the other case, which is how the trace
         # view shows it. Empty unless case_id was given.
-        "related_cases": related_cases(clusters, case_id) if case_id else [],
+        "related_cases": ownership.redact_related(related, may_see),
         "rule": (
             "An intermediary is any address in a stored trace, or in its follow-on "
             "traces after a swap, other than the reported address and other than a "

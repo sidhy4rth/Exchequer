@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import String, Text, create_engine, select
+from sqlalchemy import String, Text, create_engine, func, inspect, or_, select, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from . import config
@@ -37,6 +37,9 @@ class Case(Base):
     address: Mapped[str] = mapped_column(String(42), index=True)
     created_at: Mapped[str] = mapped_column(String(32))  # ISO-8601 UTC
     result_json: Mapped[str] = mapped_column(Text)
+    # SHA-256 of the owner key of the browser that traced it (ownership.py).
+    # NULL for cases stored before ownership existed.
+    owner_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True, default=None)
 
     # -- convenience -------------------------------------------------------
     @property
@@ -86,7 +89,22 @@ def init_db() -> None:
     """Create the schema if it does not exist. Safe to call repeatedly."""
     config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(_engine)
+    _add_missing_columns()
     logger.info("SQLite ready at %s", config.DB_PATH)
+
+
+def _add_missing_columns() -> None:
+    """Bring a store created by an older build up to the current table.
+
+    create_all() makes missing tables but never alters an existing one, and
+    the deployed store on the volume predates owner_hash. Additive only: a
+    nullable column, so old rows read as unowned."""
+    columns = {c["name"] for c in inspect(_engine).get_columns("cases")}
+    if "owner_hash" not in columns:
+        with _engine.begin() as conn:
+            conn.execute(text("ALTER TABLE cases ADD COLUMN owner_hash VARCHAR(64)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cases_owner_hash ON cases (owner_hash)"))
+        logger.info("Case store: added owner_hash column")
 
 
 def new_case_id() -> str:
@@ -97,13 +115,20 @@ def utc_now_iso() -> str:
     return datetime.now(tz=timezone.utc).isoformat(timespec="seconds")
 
 
-def save_case(case_id: str, address: str, result: dict[str, Any], created_at: str | None = None) -> Case:
+def save_case(
+    case_id: str,
+    address: str,
+    result: dict[str, Any],
+    created_at: str | None = None,
+    owner_hash: str | None = None,
+) -> Case:
     """Persist one completed trace."""
     case = Case(
         id=case_id,
         address=address,
         created_at=created_at or utc_now_iso(),
         result_json=json.dumps(result, default=str),
+        owner_hash=owner_hash,
     )
     with Session(_engine) as session:
         session.add(case)
@@ -135,10 +160,30 @@ def all_cases(limit: int = 2000) -> list[Case]:
         return cases
 
 
-def list_cases(limit: int = 50) -> list[Case]:
-    """Most recent cases first."""
+def list_cases(
+    limit: int = 50,
+    owner_hash: str | None = None,
+    public_addresses: frozenset[str] | None = None,
+    everyone: bool = False,
+) -> list[Case]:
+    """Most recent cases first: the owner's own plus the public demo cases.
+
+    `everyone=True` lists the whole store, for scripts on the server."""
     with Session(_engine) as session:
-        stmt = select(Case).order_by(Case.created_at.desc()).limit(limit)
+        stmt = select(Case)
+        if not everyone:
+            visible = []
+            if owner_hash:
+                visible.append(Case.owner_hash == owner_hash)
+            if public_addresses:
+                # Lowercased on both sides: EVM addresses are stored lowercase, Tron
+                # ones as spelled, and the demo list is compared case-blind.
+                visible.append(Case.owner_hash.is_(None)
+                               & func.lower(Case.address).in_(sorted(public_addresses)))
+            if not visible:
+                return []
+            stmt = stmt.where(or_(*visible))
+        stmt = stmt.order_by(Case.created_at.desc()).limit(limit)
         cases = list(session.scalars(stmt))
         for case in cases:
             session.expunge(case)
