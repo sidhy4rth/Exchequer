@@ -156,6 +156,9 @@ class TraceResult:
     # Addresses reached but never expanded because the time budget ran out.
     addresses_unexpanded_by_time: int = 0
     seconds_elapsed: float = 0.0
+    # Busy wallets whose newest page did not reach the funds' arrival, so they
+    # were also read from that block forward.
+    read_from_arrival: list[str] = field(default_factory=list)
 
     @property
     def node_count(self) -> int:
@@ -330,6 +333,27 @@ def build_trace_graph(
         else client.get_incoming_transactions
     )
 
+    # Walking out, a wallet whose newest page of transfers does not reach back
+    # to when the traced funds arrived is read again from that block forward
+    # (Etherscan only; see get_outgoing_transactions_since). Without it a
+    # busy wallet hid exactly the transfers that moved the funds on.
+    since = getattr(client, "get_outgoing_transactions_since", None) if direction == OUTGOING else None
+    newest_page = fetch
+
+    def fetch(address: str, limit: int | None = None) -> list[Transaction]:  # noqa: F811
+        transfers = newest_page(address, limit=limit)
+        start_block, arrived = window_block.get(address), window.get(address)
+        if (since is None or start_block is None or arrived is None or limit is None
+                or len(transfers) < limit or not transfers
+                or min(tx.timestamp for tx in transfers) <= arrived):
+            return transfers
+        later = since(address, start_block, limit=limit)
+        known = {(tx.hash, tx.to_address, tx.value_wei) for tx in transfers}
+        added = [tx for tx in later if (tx.hash, tx.to_address, tx.value_wei) not in known]
+        read_from_arrival.add(address)
+        return transfers + added
+
+    read_from_arrival: set[str] = set()
     seed = normalize_address(seed_address)
     graph = nx.DiGraph()
     graph.add_node(seed, address=seed, depth=0, is_seed=True, expanded=False)
@@ -345,6 +369,8 @@ def build_trace_graph(
     # when walking out, the latest departure when walking back. Set when the
     # address is first reached, read when it is expanded one level later.
     window: dict[str, int] = {seed: seed_window} if seed_window else {}
+    # The block of that arrival, for reading a busy wallet from it forward.
+    window_block: dict[str, int] = {}
 
     # One level of the search at a time, so the addresses at a given depth can
     # be fetched together. See _fetch_level for why that matters.
@@ -543,6 +569,11 @@ def build_trace_graph(
                             window[counterparty] = min(
                                 window.get(counterparty, arrived), arrived
                             )
+                            blocks = [tx.block_number for tx in txs if tx.block_number > 0]
+                            if blocks:
+                                window_block[counterparty] = min(
+                                    window_block.get(counterparty, min(blocks)), min(blocks)
+                                )
                         else:
                             left = max(stamps)
                             window[counterparty] = max(
@@ -591,6 +622,10 @@ def build_trace_graph(
 
     result.seconds_elapsed = round(time.monotonic() - started, 2)
     _annotate_node_totals(graph)
+    result.read_from_arrival = sorted(read_from_arrival)
+    for address in read_from_arrival:
+        if address in graph:
+            graph.nodes[address]["read_from_arrival"] = True
     return result
 
 

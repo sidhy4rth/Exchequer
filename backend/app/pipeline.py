@@ -683,6 +683,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "seconds_elapsed": result.seconds_elapsed,
         "addresses_unexpanded_by_time": result.addresses_unexpanded_by_time,
         "addresses_expanded": result.addresses_expanded,
+        # Busy wallets also read from when the funds arrived (graph_builder).
+        "read_from_arrival": result.read_from_arrival,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,
         "api_calls": result.api_calls,
         # Hash-and-timestamp of every response above; see app/evidence.py.

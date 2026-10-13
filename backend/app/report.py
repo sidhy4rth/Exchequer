@@ -167,7 +167,14 @@ def build_report(case: Case) -> dict[str, Any]:
             "warnings": result.get("warnings", []),
         },
         "limitations": confidence_detail.get("caveats", []),
-        "methodology": _methodology(native_symbol, direction),
+        "methodology": _methodology(native_symbol, direction)
+        + ([
+            f"{len(result['read_from_arrival'])} busy address(es) had more transfers since the "
+            "traced funds arrived than one page of the data provider returns, so each was "
+            "also read from the block of that arrival forward: "
+            + ", ".join(result["read_from_arrival"][:10])
+            + (" and others." if len(result["read_from_arrival"]) > 10 else ".")
+        ] if result.get("read_from_arrival") else []),
         "appendix": {
             "addresses": [n.get("id") for n in graph.get("nodes", [])],
             "transactions": result.get("transfers", []),

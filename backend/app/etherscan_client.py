@@ -620,6 +620,48 @@ class EtherscanClient:
             return signed
         return outgoing(self.get_transactions(address, limit=limit, include_internal=True))
 
+    def get_outgoing_transactions_since(
+        self, address: str, start_block: int, limit: int | None = None,
+    ) -> list[Transaction]:
+        """The first transfers `address` sent at or after `start_block`, oldest first.
+
+        get_outgoing_transactions reads the newest `limit` transfers. On a
+        wallet that has been busy since the traced funds arrived, those can
+        all be later than the transfers that moved the funds on, which the
+        trace then never sees. This reads from the arrival forward instead;
+        the graph builder asks for it only when the newest page did not reach
+        back that far.
+        """
+        target = normalize_address(address)
+        offset = limit or config.TRACE_MAX_TXS_PER_ADDRESS
+        params: dict[str, Any] = {
+            "module": "account",
+            "action": "tokentx" if self.contract_address else "txlist",
+            "address": target,
+            "startblock": max(0, int(start_block)),
+            "endblock": 99999999,
+            "page": 1,
+            "offset": offset,
+            "sort": "asc",
+        }
+        if self.contract_address:
+            params["contractaddress"] = self.contract_address
+
+        def sent(raws: Any, internal: bool = False) -> list[Transaction]:
+            if not isinstance(raws, list):
+                return []
+            parse = (lambda raw: Transaction.from_api(raw, internal=True)) if internal else self._parser()
+            return [
+                tx for tx in (parse(raw) for raw in raws)
+                if tx is not None and tx.from_address == target and tx.to_address is not None
+                and not tx.is_error and tx.value_wei > 0
+            ]
+
+        signed = sent(self._request(params))
+        if signed or self.contract_address or not self.include_internal:
+            return signed
+        return sent(self._request({**params, "action": "txlistinternal"}), internal=True)
+
     def get_incoming_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
         """Only the transfers *received by* `address` that actually moved value.
 
