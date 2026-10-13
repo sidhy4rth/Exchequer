@@ -58,6 +58,10 @@ RUN mkdir -p /data
 # request finds them cached rather than paying the cold cost.
 ENV EXCHEQUER_WARM_CACHE=1
 
+# No interactive API docs on the public site: they map every endpoint and
+# Swagger UI needs a looser content policy than the app (security_headers.py).
+ENV EXCHEQUER_API_DOCS=0
+
 WORKDIR /app/backend
 EXPOSE 8000
 

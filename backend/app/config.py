@@ -414,3 +414,11 @@ API_CACHE_PATH: Path | None = (
 WARM_CACHE_AT_STARTUP: bool = (
     os.getenv("EXCHEQUER_WARM_CACHE", "").strip().lower() in ("1", "true", "yes", "on")
 )
+
+# The interactive API docs (/docs, /redoc, /openapi.json). On for local
+# development; the Docker image turns them off, because on the public site
+# they are a ready-made map of every endpoint and Swagger UI needs a looser
+# content policy than the app does (see security_headers.py).
+API_DOCS_ENABLED: bool = (
+    os.getenv("EXCHEQUER_API_DOCS", "1").strip().lower() not in ("0", "false", "no", "off")
+)

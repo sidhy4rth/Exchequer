@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config, log_safety, models, warmup
+from .security_headers import SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
@@ -84,7 +85,12 @@ app = FastAPI(
     ),
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if config.API_DOCS_ENABLED else None,
+    redoc_url="/redoc" if config.API_DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if config.API_DOCS_ENABLED else None,
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # The React dev server runs on a different origin during development.
 app.add_middleware(
