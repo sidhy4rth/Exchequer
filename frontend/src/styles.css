@@ -19,7 +19,7 @@
 
   --ink: #16191d;
   --muted: #5b6169;
-  --faint: #8a9098;
+  --faint: #61676f; /* 4.5:1 or better on every light surface (WCAG AA) */
 
   --navy: #1f3a5f;
   --navy-soft: #e6ecf4;
@@ -52,7 +52,7 @@ html[data-theme="dark"] {
   --rule-strong: #343940;
   --ink: #ececea;
   --muted: #a0a5ab;
-  --faint: #6b7178;
+  --faint: #80868e; /* 4.5:1 or better on every dark surface (WCAG AA) */
   --navy: #ececea;
   --navy-hover: #ffffff;
   --on-navy: #0b0c0e;
@@ -356,6 +356,8 @@ details.more summary:hover { color: var(--ink); }
 .feed .amount { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.5px; text-align: right; white-space: nowrap; }
 .feed .amount .unit { color: var(--faint); font-size: 11px; margin-left: 4px; }
 .feed .row.on-path { background: var(--red-soft); }
+/* The red tint darkens the row; faint text on it falls below 4.5:1. */
+.feed .row.on-path .hop, .feed .row.on-path .sub span, .feed .row.on-path small { color: var(--muted); }
 
 /* Loading */
 .loading { display: flex; flex-direction: column; gap: 10px; padding: 26px 14px; align-items: flex-start; }
@@ -894,3 +896,6 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 @media (max-width: 1180px) {
   .globe-side { display: none; }
 }
+
+/* Click-to-copy addresses stacked in a list need a 24 px target (WCAG 2.5.8). */
+.related-case .row .addr, .rule-block .addr { min-height: 24px; display: inline-flex; align-items: center; }

@@ -42,7 +42,7 @@ export default function Batch() {
             <div className="batch-grid">
               <div className="card">
                 <div className="head"><span className="micro">Complaints · {batch.total}</span><span className="note">{batch.done} traced{batch.failed ? ` · ${batch.failed} failed` : ''}{batch.interrupted ? ` · ${batch.interrupted} interrupted by a restart` : ''}</span></div>
-                <table className="cases-table">
+                <table className="cases-table" tabIndex={0} aria-label="Complaints in this batch">
                   <thead><tr><th>#</th><th>Reference</th><th>Reported address</th><th>Chain</th><th>Result</th><th style={{ textAlign: 'right' }}>Confidence</th></tr></thead>
                   <tbody>
                     {batch.rows.map((r) => (

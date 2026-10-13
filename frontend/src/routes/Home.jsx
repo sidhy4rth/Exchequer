@@ -285,7 +285,7 @@ export default function Home() {
           <div className="card">
             <div className="head"><span className="micro">Stored cases · {cases.length}</span><span className="note">yours and the demos · only this browser sees yours · opening one does not re-trace</span></div>
             {cases.length === 0 ? <p className="note" style={{ padding: 12 }}>No stored cases yet. Cases you trace are listed here, in this browser only.</p> : (
-              <table className="cases-table">
+              <table className="cases-table" tabIndex={0} aria-label="Stored cases">
                 <thead><tr><th>Reported address</th><th>Chain</th><th>Asset</th><th>Result</th><th style={{ textAlign: 'right' }}>Confidence</th><th style={{ textAlign: 'right' }}>Addresses</th><th>Flags</th><th>Traced</th></tr></thead>
                 <tbody>
                   {cases.map((c) => (
