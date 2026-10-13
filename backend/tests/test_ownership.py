@@ -169,3 +169,16 @@ def test_repeated_demo_traces_are_listed_once(client):
     models.save_case("demo-rev", DEMO, {"address": DEMO, "direction": "incoming"},
                      created_at="2026-09-16T00:00:00+00:00")
     assert listed(client) == {"demo-new", "demo-rev"}
+
+
+def test_correlation_is_recomputed_once_a_case_is_stored(client, monkeypatch):
+    from app.routes import cases as routes
+    calls = []
+    real = routes.correlate
+    monkeypatch.setattr(routes, "correlate", lambda *a, **k: calls.append(1) or real(*a, **k))
+    client.get("/cases/correlate")
+    client.get("/cases/correlate")
+    assert len(calls) == 1  # second answer from the cache
+    trace(client, OTHER, ALICE)
+    client.get("/cases/correlate")
+    assert len(calls) == 2  # a new case invalidates it

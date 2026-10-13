@@ -84,6 +84,14 @@ class Case(Base):
 
 _engine = create_engine(f"sqlite:///{config.DB_PATH}", future=True)
 
+# Bumped on every save. Stored cases never change, so anything computed over
+# the whole store (correlation, the ledger) stays valid until this moves.
+_store_version = 0
+
+
+def store_version() -> int:
+    return _store_version
+
 
 def init_db() -> None:
     """Create the schema if it does not exist. Safe to call repeatedly."""
@@ -130,11 +138,13 @@ def save_case(
         result_json=json.dumps(result, default=str),
         owner_hash=owner_hash,
     )
+    global _store_version
     with Session(_engine) as session:
         session.add(case)
         session.commit()
         session.refresh(case)
         session.expunge(case)
+    _store_version += 1
     return case
 
 

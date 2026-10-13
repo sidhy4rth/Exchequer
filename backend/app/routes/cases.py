@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections import OrderedDict
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -173,6 +174,40 @@ def cases(http: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]
     }
 
 
+def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
+    try:
+        return bool(get_router_matcher(chain_key).lookup(address)
+                    or get_matcher(chain_key).lookup(address))
+    except config.UnknownChainError:
+        return False
+
+
+# Correlation reads and parses every stored case, and the answer only changes
+# when a case is added, so it is kept per (case, min_cases) until the store's
+# version moves. A handful of entries: the trace view asks once per case.
+_CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], list[dict[str, Any]]]]" = OrderedDict()
+_CLUSTER_CACHE_SIZE = 128
+_cluster_lock = threading.Lock()
+
+
+def _clusters(case_id: str | None, min_cases: int):
+    """(store, clusters): who owns each stored case, and the raw clusters."""
+    key = (case_id, min_cases, models.store_version())
+    with _cluster_lock:
+        if key in _CLUSTER_CACHE:
+            _CLUSTER_CACHE.move_to_end(key)
+            return _CLUSTER_CACHE[key]
+    records = models.all_cases()
+    clusters = correlate(records, only_case=case_id, min_cases=min_cases,
+                         excluded=_known_contract_or_exchange)
+    value = ([(c.id, c.owner_hash, c.address) for c in records], clusters)
+    with _cluster_lock:
+        _CLUSTER_CACHE[key] = value
+        while len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE:
+            _CLUSTER_CACHE.popitem(last=False)
+    return value
+
+
 @router.get("/cases/correlate")
 def cases_correlate(
     http: Request,
@@ -188,27 +223,17 @@ def cases_correlate(
     intermediaries: two victims who both cashed out at Binance share a bank,
     not an offender.
     """
-    records = models.all_cases()
-
-    def known_contract_or_exchange(chain_key: str, address: str) -> bool:
-        try:
-            return bool(get_router_matcher(chain_key).lookup(address)
-                        or get_matcher(chain_key).lookup(address))
-        except config.UnknownChainError:
-            return False
-
-    clusters = correlate(records, only_case=case_id, min_cases=min_cases,
-                         excluded=known_contract_or_exchange)
+    store, clusters = _clusters(case_id, min_cases)
     # Every stored case counts towards a cluster, but only the caller's own,
     # the demo cases and the one they asked about (they hold its link) are
     # named; the rest are "another complaint". See ownership.py.
     caller = ownership.owner_hash_from_headers(http.headers)
-    may_see = {c.id for c in records if ownership.visible_to(c.owner_hash, c.address, caller)}
+    may_see = {cid for cid, owner, address in store if ownership.visible_to(owner, address, caller)}
     if case_id:
         may_see.add(case_id)
     related = related_cases(clusters, case_id) if case_id else []
     return {
-        "cases_examined": len(records),
+        "cases_examined": len(store),
         "cluster_count": len(clusters),
         "clusters": ownership.redact_clusters(clusters, may_see),
         # The same answer grouped by the other case, which is how the trace

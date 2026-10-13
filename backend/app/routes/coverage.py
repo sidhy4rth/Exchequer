@@ -7,6 +7,7 @@ chain or the case store's contents."""
 from __future__ import annotations
 
 import logging
+import random
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -101,7 +102,7 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
 
     Every entry is real: the exchange wallets it attributes to, the
     sanctions list it screens against, the deposit addresses it has inferred
-    and the unlabelled intermediaries of the stored cases. Each carries only
+    and the unlabelled intermediaries of the demo cases. Each carries only
     what the case view would show -- the kind, the exchange, the label -- so
     the page can colour it the same way. Shuffled with a fixed seed so the
     sea looks the same on every load.
@@ -110,6 +111,23 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
         selected = config.get_chain(chain)
     except config.UnknownChainError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # The sign-in page asks on every load, and the answer is ~30,000 label
+    # entries plus the demo cases: built once per chain and kept until a case
+    # is stored. `limit` only slices the shuffled list.
+    key = (selected.key, models.store_version())
+    rows = _LEDGER_CACHE.get(key)
+    if rows is None:
+        rows = _build_ledger(selected.key)
+        if len(_LEDGER_CACHE) > 16:
+            _LEDGER_CACHE.clear()
+        _LEDGER_CACHE[key] = rows
+    return {"chain": selected.key, "count": len(rows), "entries": rows[:limit]}
+
+
+_LEDGER_CACHE: dict[tuple[str, int], list[dict[str, Any]]] = {}
+
+
+def _build_ledger(chain_key: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
 
@@ -119,20 +137,20 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
         seen.add(address)
         rows.append({"a": address, "k": kind, "e": exchange, "t": label})
 
-    for address, meta in get_risk_matcher(selected.key).entries():
+    for address, meta in get_risk_matcher(chain_key).entries():
         if meta["category"] == SANCTIONED and meta.get("source", "").startswith("OFAC"):
             add(address, "sanctioned", "", f"OFAC SDN · {meta.get('entity', '')}"[:48])
         else:
             prefix = {SANCTIONED: "Sanctioned", MIXER: "Mixer",
                       FROZEN: "Frozen by Tether"}.get(meta["category"], "Stolen funds")
             add(address, "flagged", "", f"{prefix} · {meta.get('label', '')}"[:48])
-    for address, meta in get_matcher(selected.key).entries():
+    for address, meta in get_matcher(chain_key).entries():
         add(address, "exchange", meta.get("exchange", ""), (meta.get("label") or meta.get("exchange", ""))[:40])
     # Only the public demo cases: this endpoint backs a page anyone can open,
     # and another person's trace would put their reported address on it.
     for case in models.list_cases(limit=200, public_addresses=ownership.demo_addresses()):
         result = case.result
-        if result.get("chain") != selected.key:
+        if result.get("chain") != chain_key:
             continue
         for match in result.get("inferred_deposits", []):
             add(match["address"], "inferred", match["exchange"], f"probable {match['exchange']} deposit")
@@ -140,6 +158,5 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
             if node.get("exchange") or node.get("risk_category") or node.get("is_router") or node.get("is_service_contract"):
                 continue
             add(node["id"], "wallet", "", "reported address" if node.get("is_seed") else "")
-    import random
     random.Random(4).shuffle(rows)
-    return {"chain": selected.key, "count": len(rows), "entries": rows[:limit]}
+    return rows
