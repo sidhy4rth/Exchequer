@@ -18,13 +18,17 @@ e-mails the repository owner.
 A demo marked `"volatile": true` in the expectations file is one whose whole
 point is that it moves (DEMO.md trace 3). A new exchange or score there is
 printed as a note, not a failure; it fails only if it stops reaching an
-exchange at all or cannot be traced. Otherwise it would e-mail every time the
+exchange at all or cannot be traced -- and, with --state, only when that
+happens on two runs in a row. A single day without an exchange is the demo
+doing what it demonstrates (a newer transfer pushed the cash-out out of the
+window the trace reads); it is printed as a warning and remembered. Otherwise it would e-mail every time the
 chain did the thing the demo exists to show. Standard library only, so the Action installs
 nothing and needs no API keys: the live site does the tracing.
 
     python backend/scripts/check_demos.py                  # check against expectations
     python backend/scripts/check_demos.py --record         # re-record after updating DEMO.md
     python backend/scripts/check_demos.py --base http://localhost:8000
+    python backend/scripts/check_demos.py --state demo_state.json   # the Action
 """
 from __future__ import annotations
 
@@ -93,13 +97,30 @@ def drift(expected: dict, seen: dict, volatile: bool = False) -> list[str]:
     return problems
 
 
+def load_state(path: Path | None) -> dict:
+    if path is None or not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except ValueError:
+        return {}
+
+
+def save_state(path: Path, state: dict) -> None:
+    path.write_text(json.dumps(state) + "\n")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base", default=LIVE)
     parser.add_argument("--record", action="store_true", help="overwrite expectations with what is seen now")
+    parser.add_argument("--state", type=Path, help="remember volatile misses between runs in this file")
     args = parser.parse_args()
 
     demos = json.loads(EXPECTATIONS.read_text())
+    state = load_state(args.state)
+    missed_before = set(state.get("volatile_misses", []))
+    missed_now: set[str] = set()
     failures = 0
     for demo in demos:
         started = time.monotonic()
@@ -116,6 +137,14 @@ def main() -> int:
             continue
         volatile = bool(demo.get("volatile"))
         problems = drift(demo["expect"], seen, volatile)
+        if volatile and problems and args.state is not None:
+            key = str(demo["demo"])
+            missed_now.add(key)
+            if key not in missed_before:
+                print(f"! demo {demo['demo']:>2}  {'; '.join(problems)} -- first miss, a warning; "
+                      f"fails if the next run misses too  ({took:.0f}s)")
+                print(f"::warning::Demo {demo['demo']} reached no exchange today (first miss)")
+                continue
         moved = volatile and not problems and drift(demo["expect"], seen)
         mark = "✗" if problems else ("~" if moved else "✓")
         detail = "; ".join(problems) if problems else f"{seen['exchange'] or 'no exchange'} at {seen['confidence']}"
@@ -128,6 +157,8 @@ def main() -> int:
         EXPECTATIONS.write_text(json.dumps(demos, indent=1, ensure_ascii=False) + "\n")
         print(f"\nWrote {EXPECTATIONS.name}. Check it against DEMO.md before committing.")
         return 0
+    if args.state is not None:
+        save_state(args.state, {"volatile_misses": sorted(missed_now)})
     print(f"\n{len(demos) - failures} of {len(demos)} demos as documented.")
     if failures:
         print("Update DEMO.md for what changed, then re-record with --record.")

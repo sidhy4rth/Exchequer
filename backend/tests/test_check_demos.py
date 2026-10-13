@@ -57,3 +57,34 @@ def test_a_request_lost_twice_is_a_failure(monkeypatch):
     monkeypatch.setattr(check_demos, "trace", down)
     with pytest.raises(TimeoutError):
         check_demos.trace_with_retry("x", {"demo": 4}, wait=0)
+
+
+def _run_main(monkeypatch, tmp_path, demo3_exchange, state_file):
+    """main() over a one-demo expectations file, demo 3 answering `demo3_exchange`."""
+    import json
+    import sys
+
+    expectations = tmp_path / "expect.json"
+    expectations.write_text(json.dumps([{
+        "demo": 3, "address": "0x" + "5" * 40, "chain": "ethereum", "asset": "ETH",
+        "max_depth": 3, "direction": "outgoing", "volatile": True,
+        "expect": {"exchange": "Binance", "followed_exchange": None, "confidence": 0.875},
+    }]))
+    monkeypatch.setattr(check_demos, "EXPECTATIONS", expectations)
+    monkeypatch.setattr(check_demos, "trace_with_retry",
+                        lambda base, demo: {"exchange": demo3_exchange, "confidence": 0.5})
+    monkeypatch.setattr(sys, "argv", ["check_demos", "--state", str(state_file)])
+    return check_demos.main()
+
+
+def test_a_moving_demo_warns_on_its_first_miss_and_fails_on_the_second(monkeypatch, tmp_path):
+    state = tmp_path / "state.json"
+    assert _run_main(monkeypatch, tmp_path, None, state) == 0   # day 1: warning
+    assert _run_main(monkeypatch, tmp_path, None, state) == 1   # day 2: fails
+
+
+def test_a_hit_clears_the_remembered_miss(monkeypatch, tmp_path):
+    state = tmp_path / "state.json"
+    assert _run_main(monkeypatch, tmp_path, None, state) == 0
+    assert _run_main(monkeypatch, tmp_path, "Binance", state) == 0
+    assert _run_main(monkeypatch, tmp_path, None, state) == 0   # a fresh first miss
