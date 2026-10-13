@@ -1,0 +1,59 @@
+name: Store backup
+
+# Pulls a snapshot of the live case store once a night and keeps it here,
+# encrypted, so losing the Railway volume does not lose the cases. The
+# snapshot is encrypted with age to a public key before it is stored; only the
+# holder of the matching private key can open it, and the plain copy never
+# leaves the runner. See docs/operations.md, "Backups".
+#
+# Needs the BACKUP_TOKEN secret (same value as EXCHEQUER_BACKUP_TOKEN on
+# Railway) and the BACKUP_AGE_RECIPIENT variable (the age public key). Until
+# both are set the job says so and stops without failing.
+on:
+  schedule:
+    - cron: "30 21 * * *" # 03:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+      RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      SITE: https://exchequer-production.up.railway.app
+    steps:
+      - name: Check the job is set up
+        id: setup
+        run: |
+          if [ -z "$BACKUP_TOKEN" ] || [ -z "$RECIPIENT" ]; then
+            echo "::notice::Backups not set up yet (BACKUP_TOKEN secret and BACKUP_AGE_RECIPIENT variable). Nothing pulled."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Pull, check and encrypt the snapshot
+        if: steps.setup.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq age sqlite3 > /dev/null
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          curl -fsS --max-time 300 -H "Authorization: Bearer $BACKUP_TOKEN" \
+            "$SITE/admin/backup" -o snapshot.db.gz
+          gunzip -c snapshot.db.gz > snapshot.db
+          test "$(sqlite3 snapshot.db 'PRAGMA integrity_check')" = ok
+          echo "cases: $(sqlite3 snapshot.db 'SELECT count(*) FROM cases')"
+          age -r "$RECIPIENT" -o "exchequer-$stamp.db.gz.age" snapshot.db.gz
+          rm -f snapshot.db snapshot.db.gz
+          echo "FILE=exchequer-$stamp.db.gz.age" >> "$GITHUB_ENV"
+      - name: Keep it for 30 days
+        if: steps.setup.outputs.ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: store-${{ github.run_id }}
+          path: ${{ env.FILE }}
+          retention-days: 30
+          if-no-files-found: error

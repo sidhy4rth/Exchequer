@@ -30,12 +30,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import batches as batch_runner
-from . import config, log_safety, models, warmup, watchlist
+from . import backups, config, log_safety, models, warmup, watchlist
 from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import batches, cases, coverage, jobs, requests, verify, watches
+from .routes import admin, batches, cases, coverage, jobs, requests, verify, watches
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -85,7 +85,10 @@ async def lifespan(_app: FastAPI):
     warmup.start_in_background()
     # Watched addresses are re-read on a schedule (off unless EXCHEQUER_WATCHER).
     watchlist.start_in_background()
+    # A daily snapshot of the store beside it (off unless EXCHEQUER_BACKUPS).
+    backups.start_in_background()
     yield
+    backups.stop()
     watchlist.stop()
 
 
@@ -130,6 +133,7 @@ app.include_router(verify.router)
 app.include_router(watches.router)
 app.include_router(requests.router)
 app.include_router(batches.router)
+app.include_router(admin.router)
 
 
 # ---------------------------------------------------------------------------

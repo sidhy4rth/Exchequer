@@ -75,6 +75,9 @@ ENV EXCHEQUER_TRUST_PROXY=1
 # Re-read watched addresses every 10 minutes (watchlist.py).
 ENV EXCHEQUER_WATCHER=1
 
+# A daily snapshot of the store on the volume, last 7 kept (backups.py).
+ENV EXCHEQUER_BACKUPS=1
+
 WORKDIR /app/backend
 EXPOSE 8000
 

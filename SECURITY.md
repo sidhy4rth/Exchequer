@@ -40,3 +40,8 @@ start beside the case store (`report_signing_key.pem`, mode 0600) or comes
 from `EXCHEQUER_SIGNING_KEY`. If a key may have leaked, rotate it at the
 provider and update the variable; for the signing key, previously issued
 reports will then verify only against the old public key.
+
+`GET /admin/backup` returns the whole store. It exists only when
+`EXCHEQUER_BACKUP_TOKEN` is set, compares the bearer token in constant time,
+and the nightly copy it feeds is encrypted before it is stored. See
+`docs/operations.md`, "Backups".

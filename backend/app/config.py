@@ -450,3 +450,13 @@ WATCHER_ENABLED: bool = (
 WATCH_INTERVAL_SECONDS: int = max(60, _int_env("EXCHEQUER_WATCH_INTERVAL", 600))
 # Hosts beyond Slack, Discord and Google Chat that alert webhooks may post to.
 WEBHOOK_EXTRA_HOSTS: str = os.getenv("EXCHEQUER_WEBHOOK_HOSTS", "")
+
+# Daily snapshots of the store beside it (backups.py): off unless
+# EXCHEQUER_BACKUPS is set; the image turns it on. The last
+# EXCHEQUER_BACKUP_KEEP are kept.
+BACKUPS_ENABLED: bool = (
+    os.getenv("EXCHEQUER_BACKUPS", "").strip().lower() in ("1", "true", "yes", "on")
+)
+BACKUP_KEEP: int = max(1, _int_env("EXCHEQUER_BACKUP_KEEP", 7))
+# Bearer token for GET /admin/backup. Unset = the endpoint does not exist.
+BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()

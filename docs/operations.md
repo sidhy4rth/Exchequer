@@ -22,6 +22,9 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_WATCHER` | off (on in the image) | Re-read watched addresses in the background. |
 | `EXCHEQUER_WATCH_INTERVAL` | 600 | Seconds between checks of one watch (minimum 60). |
 | `EXCHEQUER_WEBHOOK_HOSTS` | — | Comma-separated hosts alert webhooks may post to, beyond Slack, Discord and Google Chat. |
+| `EXCHEQUER_BACKUPS` | off (on in the image) | A daily snapshot of the store in `backups/` beside it. |
+| `EXCHEQUER_BACKUP_KEEP` | 7 | How many daily snapshots to keep. |
+| `EXCHEQUER_BACKUP_TOKEN` | — | Bearer token for `GET /admin/backup`. Unset, the endpoint answers 404. |
 | `EXCHEQUER_WARM_CACHE` | off (on in the image) | Trace the demo addresses at startup so they answer from cache. |
 
 ## Endpoints added in October 2026
@@ -35,6 +38,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `/watches`, `/alerts` | Watch an address; alerts when funds leave it. |
 | `/requests`, `GET /trace/{id}/requests` | Freeze requests sent about a case and their status. |
 | `/batches` | Trace up to 25 complaints and correlate them. |
+| `GET /admin/backup` | A snapshot of the store, for the nightly off-site copy. Needs `EXCHEQUER_BACKUP_TOKEN`. |
 
 ## Who sees what
 
@@ -65,6 +69,45 @@ tables by itself, and a signing key is created on the volume. Check
 `/health`, `/signing-key` and one stored case afterwards. The CI job
 "docker image builds and runs as non-root" builds and starts the image the
 way Railway does before anything is deployed.
+
+## Backups
+
+Two copies, for two different accidents:
+
+- **On the volume:** with `EXCHEQUER_BACKUPS` on (the image turns it on), the
+  server writes `backups/exchequer-YYYY-MM-DD.db.gz` beside the store once a
+  day and keeps the last 7. That covers a bad deploy, a broken migration or a
+  mistaken delete. It does not cover losing the volume.
+- **Off the server:** `.github/workflows/backup.yml` pulls a fresh snapshot
+  from `GET /admin/backup` every night at 03:00 IST, checks it opens, encrypts
+  it with [age](https://age-encryption.org) and keeps it as a workflow
+  artifact for 30 days. The plain copy never leaves the runner.
+
+The snapshot holds every case and the alert webhooks, so the off-site copy is
+encrypted to a public key and only the matching private key opens it. To
+switch it on:
+
+```sh
+age-keygen -o ~/.config/exchequer/backup-age-key.txt   # keep this file safe, offline too
+age-keygen -y ~/.config/exchequer/backup-age-key.txt   # prints the public key (age1...)
+gh variable set BACKUP_AGE_RECIPIENT --body 'age1...'
+token=$(openssl rand -hex 32)
+gh secret set BACKUP_TOKEN --body "$token"
+railway variables --set EXCHEQUER_BACKUP_TOKEN="$token"
+```
+
+Then run the workflow once by hand (Actions → Store backup → Run workflow).
+
+To restore, download the artifact and:
+
+```sh
+age -d -i ~/.config/exchequer/backup-age-key.txt exchequer-<stamp>.db.gz.age | gunzip > exchequer.db
+```
+
+and put `exchequer.db` where `EXCHEQUER_DB_PATH` points (on Railway,
+`/data/exchequer.db`, with the service stopped). The signing key is not in the
+backup; to survive losing the volume, set `EXCHEQUER_SIGNING_KEY` from the
+key file once.
 
 ## Keys
 
