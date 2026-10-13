@@ -12,6 +12,7 @@ Endpoints:
     GET  /signing-key               public key that signs exported reports
     POST /verify                    check a text report's hash and signature
     /watches, /alerts               watch an address; alerts when funds leave it
+    /requests                       freeze requests sent about a case, and their status
 
 This module is the application shell: startup checks, CORS, the routers and
 the built frontend. The endpoints live in app/routes/ (coverage.py, cases.py)
@@ -32,7 +33,7 @@ from .security_headers import SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import cases, coverage, jobs, verify, watches
+from .routes import cases, coverage, jobs, requests, verify, watches
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -122,6 +123,7 @@ app.include_router(jobs.router)
 app.include_router(cases.router)
 app.include_router(verify.router)
 app.include_router(watches.router)
+app.include_router(requests.router)
 
 
 # ---------------------------------------------------------------------------

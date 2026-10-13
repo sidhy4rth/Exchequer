@@ -4,6 +4,7 @@ import ThemeToggle from '../components/ThemeToggle'
 import Mark from '../components/Mark'
 import { fetchCases, fetchExchanges, fetchHealth, fetchRiskLabels } from '../api'
 import Watchlist from '../components/Watchlist'
+import OpenRequests from '../components/OpenRequests'
 import { signOut } from '../session'
 
 // Same rules the backend enforces, checked here only so an obvious typo gets
@@ -276,6 +277,7 @@ export default function Home() {
         </details>
 
         <Watchlist />
+        <OpenRequests />
 
         <section>
           <div className="card">

@@ -835,3 +835,19 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .alert-row .pill { flex-shrink: 0; }
 .alert-row small { color: var(--muted); font-size: 11px; }
 .alert-row a { color: inherit; }
+
+/* Freeze requests. */
+.request-row { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.request-row .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.request-row .nm { font-weight: 600; font-size: 13px; }
+.request-row .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+.request-row .fields .wide { grid-column: 1 / -1; }
+.request-row label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+.request-row select, .request-row input, .request-row textarea, .request-add input { font: inherit; font-size: 12px; padding: 5px 7px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--panel); color: var(--ink); min-width: 0; }
+.request-row textarea { resize: vertical; }
+.request-row .history { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--faint); align-items: center; }
+.request-row .history button { margin-left: auto; }
+.follow-up { font-size: 12px; color: var(--red); }
+.request-add { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.request-add .other { display: inline-flex; gap: 4px; flex: 1; min-width: 180px; }
+.request-add .other input { flex: 1; }

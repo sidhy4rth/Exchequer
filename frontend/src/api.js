@@ -354,3 +354,30 @@ export async function markAlertsRead(alertIds = null) {
     body: JSON.stringify({ alert_ids: alertIds }),
   }))
 }
+
+// ---------------------------------------------------------------------------
+// Freeze requests (backend/app/routes/requests.py)
+// ---------------------------------------------------------------------------
+export async function fetchCaseRequests(caseId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/requests`))
+}
+
+export async function fetchOpenRequests() {
+  return jsonOrThrow(await apiFetch(`${BASE}/requests?open=true`))
+}
+
+export async function logRequest(body) {
+  return jsonOrThrow(await apiFetch(`${BASE}/requests`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }))
+}
+
+export async function updateRequest(requestId, changes) {
+  return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes),
+  }))
+}
+
+export async function deleteRequest(requestId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' }))
+}

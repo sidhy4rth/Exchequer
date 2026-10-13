@@ -8,6 +8,7 @@ import Mark from '../components/Mark'
 import ExportButton from '../components/ExportButton'
 import Present from '../components/Present'
 import WatchPanel from '../components/WatchPanel'
+import RequestsPanel from '../components/RequestsPanel'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
 const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds', reported: 'TronScan warning' }
@@ -536,6 +537,7 @@ export default function TraceView() {
 
             <aside className="rail">
               {result.case_id && <WatchPanel result={result} />}
+              {result.case_id && <RequestsPanel result={result} />}
               {inferred.length > 0 && (
                 <details className="card sec" open={Boolean(result.attribution_inferred)}>
                   <summary><span className="micro">Inferred deposit addresses · {inferred.length}</span><span className="pill amber">inference</span></summary>

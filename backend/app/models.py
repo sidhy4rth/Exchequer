@@ -124,6 +124,28 @@ class Alert(Base):
     read: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class FreezeRequest(Base):
+    """A request sent about a case -- to an exchange, to Tether -- and what came of it."""
+
+    __tablename__ = "freeze_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    recipient: Mapped[str] = mapped_column(String(120))
+    kind: Mapped[str] = mapped_column(String(16))  # exchange | tether | other
+    status: Mapped[str] = mapped_column(String(16))
+    address: Mapped[str] = mapped_column(String(64), default="")
+    reference: Mapped[str] = mapped_column(String(120), default="")
+    sent_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    amount_frozen: Mapped[float | None] = mapped_column(Float, nullable=True)
+    asset: Mapped[str] = mapped_column(String(16), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
 _engine = create_engine(f"sqlite:///{config.DB_PATH}", future=True)
 
 # Bumped on every save. Stored cases never change, so anything computed over
