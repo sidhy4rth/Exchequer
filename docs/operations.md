@@ -56,11 +56,16 @@ users; nothing else changes.
 ## Deploying
 
 `railway up` uploads the working directory, not the last commit, so deploy
-from a clean checkout when the tree has uncommitted work:
+from a clean checkout when the tree has uncommitted work. A new worktree is
+not linked to a Railway project, and `railway up` in an unlinked folder
+creates a new, empty project instead of deploying, so link it first:
 
 ```sh
-git worktree add /tmp/exchequer-deploy main
-cd /tmp/exchequer-deploy && railway up --detach
+git worktree add /tmp/exchequer-deploy origin/main
+cd /tmp/exchequer-deploy
+railway link --project <project id> --environment production --service exchequer
+railway status            # must name the exchequer project before going on
+railway up --detach
 cd - && git worktree remove /tmp/exchequer-deploy
 ```
 
