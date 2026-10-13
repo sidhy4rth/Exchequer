@@ -197,3 +197,18 @@ describe('Export menu', () => {
     expect(await within(menu).findByRole('menuitem', { name: /Request to Binance/ })).toBeInTheDocument()
   })
 })
+
+describe('Exchange alerts', () => {
+  it('log a freeze request against the case in one click', async () => {
+    const calls = api({
+      'GET /watches': { body: { count: 1, watches: [{ watch_id: 'w1', address: '0x' + '7'.repeat(40), chain: 'ethereum', asset: 'ETH', case_id: 'case-1', unread_alerts: 1 }] } },
+      'GET /alerts': { body: { count: 1, alerts: [{ alert_id: 'a1', kind: 'exchange', exchange: 'OKX', case_id: 'case-1', value: 2, asset: 'ETH', counterparty: '0xdep', counterparty_label: 'probable OKX deposit address (inferred)', tx_time: 1700000000, tx_url: '', tx_hash: '0x1', read: false }] } },
+      'POST /requests': { status: 201, body: { request_id: 'r1' } },
+    })
+    const user = userEvent.setup()
+    inRouter(<Watchlist />)
+    await user.click(await screen.findByRole('button', { name: 'Log freeze request' }))
+    expect(await screen.findByRole('link', { name: 'request logged' })).toHaveAttribute('href', '/case/case-1')
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({ case_id: 'case-1', recipient: 'OKX', kind: 'exchange', address: '0xdep', asset: 'ETH' })
+  })
+})

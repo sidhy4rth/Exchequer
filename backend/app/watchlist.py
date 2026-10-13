@@ -164,9 +164,12 @@ def watch_summary(watch: models.Watch, unread: int = 0) -> dict[str, Any]:
     }
 
 
-def alert_summary(alert: models.Alert, chain_key: str | None = None) -> dict[str, Any]:
+def alert_summary(alert: models.Alert, chain_key: str | None = None,
+                  case_id: str | None = None) -> dict[str, Any]:
     return {
         "chain": chain_key,
+        "case_id": case_id,
+        "exchange": exchange_of(chain_key, alert.counterparty) if chain_key and alert.kind == "exchange" else None,
         "tx_url": tx_url(chain_key, alert.tx_hash) if chain_key else "",
         "alert_id": alert.id, "watch_id": alert.watch_id, "created_at": alert.created_at,
         "kind": alert.kind, "message": alert.message, "tx_hash": alert.tx_hash,
@@ -214,9 +217,9 @@ def list_alerts(owner: str, unread_only: bool = False, limit: int = 100) -> list
             stmt = stmt.where(models.Alert.read.is_(False))
         stmt = stmt.order_by(models.Alert.created_at.desc(), models.Alert.tx_time.desc()).limit(limit)
         alerts = list(s.scalars(stmt))
-        chains = dict(s.execute(select(models.Watch.id, models.Watch.chain).where(
-            models.Watch.id.in_({a.watch_id for a in alerts}))).all())
-        return [alert_summary(a, chains.get(a.watch_id)) for a in alerts]
+        watches = {w.id: (w.chain, w.case_id) for w in s.scalars(select(models.Watch).where(
+            models.Watch.id.in_({a.watch_id for a in alerts})))}
+        return [alert_summary(a, *watches.get(a.watch_id, (None, None))) for a in alerts]
 
 
 def mark_read(owner: str, alert_ids: list[str] | None = None) -> int:
@@ -237,6 +240,30 @@ def mark_read(owner: str, alert_ids: list[str] | None = None) -> int:
 Source = Callable[[config.Chain, str], Any]
 
 
+_inferred_cache: dict[str, Any] = {"version": None, "by_chain": {}}
+_inferred_lock = threading.Lock()
+
+
+def inferred_deposits(chain_key: str) -> dict[str, str]:
+    """address -> exchange, for every deposit address a stored case inferred.
+
+    Label files only name hot wallets and known deposit addresses; most
+    deposit addresses are found by inference during a trace. A watched wallet
+    paying one of those is paying an exchange, and should say so. Rebuilt
+    only when a case has been stored since."""
+    with _inferred_lock:
+        if _inferred_cache["version"] != models.store_version():
+            by_chain: dict[str, dict[str, str]] = {}
+            for case in models.all_cases():
+                result = case.result
+                chain = result.get("chain") or "ethereum"
+                for match in result.get("inferred_deposits") or []:
+                    if match.get("address") and match.get("exchange"):
+                        by_chain.setdefault(chain, {})[normalize_address(match["address"])] = match["exchange"]
+            _inferred_cache.update(version=models.store_version(), by_chain=by_chain)
+        return _inferred_cache["by_chain"].get(chain_key, {})
+
+
 def _classify(chain_key: str, counterparty: str) -> tuple[str, str]:
     """(kind, label) for where a transfer went."""
     risk = get_risk_matcher(chain_key).lookup(counterparty)
@@ -245,7 +272,23 @@ def _classify(chain_key: str, counterparty: str) -> tuple[str, str]:
     exch = get_matcher(chain_key).lookup(counterparty)
     if exch:
         return "exchange", exch.get("label") or exch.get("exchange") or "exchange"
+    inferred = inferred_deposits(chain_key).get(normalize_address(counterparty)) if counterparty else None
+    if inferred:
+        return "exchange", f"probable {inferred} deposit address (inferred)"
     return "moved", ""
+
+
+def exchange_of(chain_key: str, counterparty: str) -> str | None:
+    """The exchange a counterparty belongs to, by label file or inference."""
+    if not counterparty:
+        return None
+    try:
+        exch = get_matcher(chain_key).lookup(counterparty)
+    except config.UnknownChainError:
+        return None
+    if exch:
+        return exch.get("exchange")
+    return inferred_deposits(chain_key).get(normalize_address(counterparty))
 
 
 def check_watch(watch_id: str, source: Source = open_source,
@@ -264,6 +307,7 @@ def check_watch(watch_id: str, source: Source = open_source,
             return []
         address, asset, chain_key = watch.address, watch.asset, watch.chain
         owner, last_seen, hook = watch.owner_hash, watch.last_seen_block, watch.webhook_url
+        case_id = watch.case_id
     chain = config.get_chain(chain_key)
     try:
         with fresh_reads(), source(chain, asset) as client:
@@ -295,7 +339,7 @@ def check_watch(watch_id: str, source: Source = open_source,
                 counterparty=to, counterparty_label=label, read=False,
             ))
         seen_block = max(last_seen, newest) if fresh else last_seen
-    out = [alert_summary(a, chain.key) for a in new_alerts]
+    out = [alert_summary(a, chain.key, case_id) for a in new_alerts]
     if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts):
         return []  # removed while we were reading
 

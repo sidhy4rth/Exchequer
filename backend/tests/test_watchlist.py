@@ -172,3 +172,17 @@ def test_due_watches_are_the_unchecked_and_the_stale(store):
         s.get(models.Watch, w.id).last_checked_at = models.utc_now_iso()
         s.commit()
     assert watchlist.due_watch_ids(600) == []
+
+
+def test_a_transfer_to_an_inferred_deposit_address_counts_as_an_exchange(chain):
+    deposit = "0x" + "d" * 40
+    models.save_case("c1", WALLET, {"address": WALLET, "chain": "ethereum",
+                                    "inferred_deposits": [{"address": deposit, "exchange": "OKX"}]})
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH", case_id="c1")
+    watchlist.check_watch(w.id, source=chain)
+    chain.transfers = [tx(7, deposit, 2.0)]
+    (alert,) = watchlist.check_watch(w.id, source=chain)
+    assert alert["kind"] == "exchange" and "probable OKX deposit" in alert["message"]
+    assert alert["exchange"] == "OKX" and alert["case_id"] == "c1"
+    listed = watchlist.list_alerts(owner(ALICE))[0]
+    assert listed["exchange"] == "OKX" and listed["case_id"] == "c1"

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { checkWatchNow, fetchAlerts, fetchWatches, markAlertsRead, removeWatch } from '../api'
+import { checkWatchNow, fetchAlerts, fetchWatches, logRequest, markAlertsRead, removeWatch } from '../api'
 
 // The home page's watchlist: what this browser watches and what moved.
 // Refreshes every minute while open; the server checks on its own schedule.
@@ -27,6 +27,7 @@ export default function Watchlist() {
   const [running, setRunning] = useState(true)
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
+  const [logged, setLogged] = useState({})
 
   const load = useCallback(() => {
     fetchWatches().then((d) => { setWatches(d.watches ?? []); setRunning(d.running !== false) }).catch(() => {})
@@ -81,6 +82,15 @@ export default function Watchlist() {
                     {amount(a.value)} {a.asset} to <span className="mono">{a.counterparty_label || short(a.counterparty)}</span>
                     <small> · {new Date(a.tx_time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC · {a.tx_url ? <a href={a.tx_url} target="_blank" rel="noopener noreferrer">transaction</a> : short(a.tx_hash)}</small>
                   </span>
+                  {a.kind === 'exchange' && a.exchange && a.case_id && (
+                    logged[a.alert_id]
+                      ? <Link to={`/case/${a.case_id}`} className="quiet-link">request logged</Link>
+                      : <button className="quiet" disabled={busy !== null} title={`Log a freeze request to ${a.exchange} against the case, with this deposit address`}
+                          onClick={() => act(a.alert_id, async () => {
+                            await logRequest({ case_id: a.case_id, recipient: a.exchange, kind: 'exchange', address: a.counterparty, asset: a.asset })
+                            setLogged((m) => ({ ...m, [a.alert_id]: true }))
+                          })}>Log freeze request</button>
+                  )}
                 </div>
               ))}
             </div>
