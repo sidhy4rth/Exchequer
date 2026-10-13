@@ -483,12 +483,13 @@ details.more summary:hover { color: var(--ink); }
 .foot { border-top: 1px solid var(--rule); padding: 14px 20px; font-size: 11.5px; color: var(--faint); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
 /* =========================================================================
-   NARROWER SCREENS (1024 must still work; phones are out of scope)
+   NARROWER SCREENS (1024 must work; phones get a single column and no sideways scroll)
    ========================================================================= */
 @media (max-width: 1180px) {
   .split { grid-template-columns: minmax(0, 1fr) 340px; }
   .coverage { grid-template-columns: 1fr; }
-  .intake { grid-template-columns: 1fr; }
+  .intake { grid-template-columns: minmax(0, 1fr); }
+  .intake > * { min-width: 0; }
 }
 @media (max-width: 1180px) {
   .globe-side { display: none; }
@@ -497,7 +498,6 @@ details.more summary:hover { color: var(--ink); }
   .split { grid-template-columns: 1fr; }
   .finding-bar { grid-template-columns: 1fr; }
   .finding-bar > .sure { border-left: none; border-top: 1px solid var(--rule); }
-  .topbar .pills { display: none; }
   .intake .row { grid-template-columns: 1fr 1fr; }
   .intake .row .address-field { grid-column: 1 / -1; }
 }
@@ -864,3 +864,33 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .batch-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
 .batch-grid .cases-table td a { color: var(--ink); }
 @media (max-width: 900px) { .batch-grid { grid-template-columns: 1fr; } .batch-grid .cases-table { display: block; overflow-x: auto; } }
+
+/* Phone widths: the console bars wrap instead of pushing the page sideways.
+   Brand and theme toggle stay on the first line; the case subject, its pills
+   and the actions each take a line of their own. */
+@media (max-width: 960px) {
+  .topbar { height: auto; flex-wrap: wrap; padding: 8px 16px; row-gap: 8px; column-gap: 10px; }
+  .topbar .brand small { display: none; }
+  .topbar .grow { flex: 1 0 0; }
+  .topbar .subject { order: 3; flex: 1 1 100%; min-width: 0; }
+  .topbar .subject .micro { display: none; }
+  .topbar .pills { order: 4; flex: 1 1 100%; flex-wrap: wrap; overflow: visible; }
+  .topbar .actions { order: 5; flex: 1 1 100%; flex-wrap: wrap; }
+  .topbar .sysline { order: 3; flex: 1 1 100%; white-space: normal; font-size: 10px; }
+  .export-list { right: auto; left: 0; max-width: calc(100vw - 32px); }
+}
+@media (max-width: 720px) {
+  .intake .row { grid-template-columns: minmax(0, 1fr); }
+  .intake .row select { min-width: 0; }
+  .intake .lede { font-size: 19px; }
+  .examples { flex-wrap: wrap; min-width: 0; }
+  .home > main, .home main { min-width: 0; }
+  .cases-table { display: block; overflow-x: auto; }
+}
+
+/* Below 1180 px the globe's side panels have no room beside it. This rule
+   also sits in the "narrower screens" block above, but there it comes before
+   .globe-side's own display: flex and lost; here it wins. */
+@media (max-width: 1180px) {
+  .globe-side { display: none; }
+}
