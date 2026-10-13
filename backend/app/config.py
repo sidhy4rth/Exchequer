@@ -432,3 +432,11 @@ TRACES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_TRACES_PER_HOUR", 30)
 TRUST_PROXY_HEADERS: bool = (
     os.getenv("EXCHEQUER_TRUST_PROXY", "").strip().lower() in ("1", "true", "yes", "on")
 )
+
+# Where the report-signing private key is kept when EXCHEQUER_SIGNING_KEY is
+# not set: beside the case store, so on Railway it lives on the volume and
+# survives redeploys. See signing.py.
+_signing_raw = os.getenv("EXCHEQUER_SIGNING_KEY_PATH", "report_signing_key.pem").strip()
+SIGNING_KEY_PATH: Path = (
+    Path(_signing_raw) if Path(_signing_raw).is_absolute() else DB_PATH.parent / _signing_raw
+)

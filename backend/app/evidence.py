@@ -125,19 +125,31 @@ def build_manifest(records: list[EvidenceRecord]) -> dict[str, Any]:
 CONTENT_HASH_MARK = "CONTENT HASH"
 
 
-def seal_text(text: str) -> str:
-    """Append a content hash to a text report.
+def seal_text(text: str, sign: bool = True) -> str:
+    """Append a content hash, and this server's signature, to a text report.
 
     The hash covers every byte of `text` exactly as given. To verify: take the
     report up to (not including) the line that begins with `CONTENT HASH`,
-    strip the single newline before it, and SHA-256 the result.
+    strip the single newline before it, and SHA-256 the result. The signature
+    (signing.py) is Ed25519 over those same bytes: the hash shows the text is
+    unchanged, the signature that this server issued it.
     """
     digest = sha256_hex(text)
-    return (
-        f"{text}\n"
-        f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): {digest}\n"
-        "To verify: hash the report up to, not including, this line.\n"
-    )
+    lines = [text, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): {digest}"]
+    if sign:
+        from .signing import ALGORITHM, SIGNATURE_MARK, get_signer
+
+        signer = get_signer()
+        lines.append(f"{SIGNATURE_MARK} ({ALGORITHM} over the same bytes, key {signer.fingerprint}): "
+                     f"{signer.sign(text.encode('utf-8'))}")
+        how = ("To verify: paste this report at /verify on the server that issued it, or check "
+               "the signature with the public key from /signing-key.")
+        if not signer.persistent:
+            how += " (Signed with a temporary key: it verifies only until the server restarts.)"
+        lines.append(how)
+    else:
+        lines.append("To verify: hash the report up to, not including, this line.")
+    return "\n".join(lines) + "\n"
 
 
 def verify_sealed_text(sealed: str) -> bool:

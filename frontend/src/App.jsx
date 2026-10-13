@@ -9,6 +9,7 @@ const Citizen = lazy(() => import('./routes/Citizen'))
 const Home = lazy(() => import('./routes/Home'))
 const SignIn = lazy(() => import('./routes/SignIn'))
 const TraceView = lazy(() => import('./routes/TraceView'))
+const Verify = lazy(() => import('./routes/Verify'))
 
 /** The demo front doors: each part of the app needs the tab to have passed
  * the matching sign-in once. Not security -- see session.js. */
@@ -28,6 +29,8 @@ export default function App() {
       <Route path="/signin/investigator" element={<SignIn as="investigator" />} />
       <Route path="/signin/citizen" element={<SignIn as="citizen" />} />
       <Route path="/citizen" element={<Gate as="citizen"><Citizen /></Gate>} />
+      {/* Public: whoever receives a report checks it here, signed in or not. */}
+      <Route path="/verify" element={<Verify />} />
       <Route path="/" element={<Gate as="investigator"><Home /></Gate>} />
       {/* The address is the subject of the investigation, so it belongs in the
           path; chain, asset and depth are parameters of how it is traced and

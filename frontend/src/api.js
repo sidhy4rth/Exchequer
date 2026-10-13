@@ -166,3 +166,21 @@ export async function fetchLetter(caseId, to) {
   if (!response.ok) throw await toError(response)
   return response.text()
 }
+
+/** Check a text report's content hash and signature (public; nothing stored). */
+export async function verifyReport(text) {
+  const response = await apiFetch(`${BASE}/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    body: text,
+  })
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+/** The public key this server signs reports with. */
+export async function fetchSigningKey() {
+  const response = await apiFetch(`${BASE}/signing-key`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}

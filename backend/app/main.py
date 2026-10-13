@@ -8,6 +8,8 @@ Endpoints:
     GET  /exchanges                 what the label database covers
     GET  /ledger                    the addresses the tool knows, for the sign-in backdrop
     GET  /health                    liveness + configuration check
+    GET  /signing-key               public key that signs exported reports
+    POST /verify                    check a text report's hash and signature
 
 This module is the application shell: startup checks, CORS, the routers and
 the built frontend. The endpoints live in app/routes/ (coverage.py, cases.py)
@@ -28,7 +30,7 @@ from .security_headers import SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import cases, coverage
+from .routes import cases, coverage, verify
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -111,6 +113,7 @@ app.add_middleware(
 # letters, /cases). Registered before the static catch-all below.
 app.include_router(coverage.router)
 app.include_router(cases.router)
+app.include_router(verify.router)
 
 
 # ---------------------------------------------------------------------------

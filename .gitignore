@@ -33,3 +33,6 @@ backend/*_check.jsonl
 # Playwright run output
 frontend/test-results/
 frontend/playwright-report/
+
+# Report signing key (made on first start; see backend/app/signing.py)
+backend/*.pem
