@@ -59,10 +59,11 @@ def trace(request: TraceRequest) -> dict[str, Any]:
 
     try:
         models.save_case(case_id, payload["address"], payload, created_at=created_at)
-    except Exception as exc:  # storage must never lose a completed trace
+    except Exception:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
         payload.setdefault("warnings", []).append(
-            f"Result could not be saved to the case database: {exc}"
+            "Result could not be saved to the case database; it is shown here "
+            "but will not appear in the case history."
         )
 
     return payload

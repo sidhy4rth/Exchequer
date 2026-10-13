@@ -16,7 +16,7 @@ import networkx as nx
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-from . import config
+from . import config, log_safety
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
 from .etherscan_client import (
     EtherscanConfigError,
@@ -432,9 +432,16 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             ),
         ) from exc
     except EtherscanError as exc:
-        # Edge case: any other upstream failure.
+        # Edge case: any other upstream failure. The full message (which can
+        # quote the provider's response body) goes to the log; the caller gets
+        # the provider and the short reason only.
+        logger.warning("Provider failure on %s: %s", chain.key, log_safety.redact(str(exc)))
         raise HTTPException(
-            status_code=502, detail=f"Could not reach the blockchain data provider: {exc}"
+            status_code=502,
+            detail=(
+                "Could not reach the blockchain data provider "
+                f"({type(exc).__name__.removesuffix('Error')}). Try again in a minute."
+            ),
         ) from exc
     except InvalidAddressError as exc:  # defensive; validated above
         raise HTTPException(status_code=400, detail=str(exc)) from exc
