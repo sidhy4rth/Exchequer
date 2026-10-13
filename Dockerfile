@@ -9,7 +9,7 @@
 # runs on Railway, Fly, Render or any VM with Docker.
 
 # ---------- stage 1: build the frontend ----------
-FROM node:20-slim AS frontend
+FROM node:24-slim AS frontend
 
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
@@ -52,6 +52,12 @@ ENV EXCHEQUER_VERSION=${EXCHEQUER_VERSION}
 ENV EXCHEQUER_DB_PATH=/data/exchequer.db
 RUN mkdir -p /data
 
+# The app runs as this unprivileged user; docker-entrypoint.sh hands it the
+# volume and drops to it, falling back to root if the volume will not allow
+# that rather than failing to start.
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
+
 # The provider response cache also lives on the volume (beside the case
 # store, by default), so a redeploy does not forget every response; and the
 # demo addresses are traced in the background at startup so the first real
@@ -69,5 +75,6 @@ ENV EXCHEQUER_TRUST_PROXY=1
 WORKDIR /app/backend
 EXPOSE 8000
 
-# Bind 0.0.0.0 and honour the platform's $PORT; most hosts assign one.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Binds 0.0.0.0 and honours the platform's $PORT; most hosts assign one.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
