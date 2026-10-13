@@ -199,3 +199,16 @@ def test_a_failed_trace_gives_its_slot_back(client, monkeypatch):
     body = {"address": "0x" + "1" * 40, "save": False}
     assert client.post("/trace", json=body).status_code == 502
     assert client.post("/trace", json=body).status_code == 502  # not 429: the slot came back
+
+
+def test_opening_a_trace_link_in_a_browser_gets_the_app(client, monkeypatch, tmp_path):
+    """/trace/<address> is a page URL too; a reload must not show the API's 404."""
+    from app.routes import cases
+    index = tmp_path / "index.html"
+    index.write_text("<!doctype html><div id=root></div>")
+    monkeypatch.setattr(cases, "_INDEX_HTML", index)
+    url = "/trace/0x60d02e0956e2f3795167c15ba61ab452c85c2533"
+    page = client.get(url, headers={"sec-fetch-mode": "navigate", "accept": "text/html"})
+    assert page.status_code == 200 and "<div id=root>" in page.text
+    api = client.get(url, headers={"sec-fetch-mode": "cors", "accept": "*/*"})
+    assert api.status_code == 404 and api.json()["detail"].startswith("No case")
