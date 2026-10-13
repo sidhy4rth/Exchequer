@@ -30,3 +30,17 @@ def test_docs_page_skips_the_page_policy():
     if r.status_code == 200:  # disabled when EXCHEQUER_API_DOCS=0
         assert "content-security-policy" not in r.headers
         assert r.headers["x-content-type-options"] == "nosniff"
+
+
+def test_oversized_bodies_are_refused():
+    big = b"x" * 2_200_000
+    r = client.post("/batches", content=big, headers={"content-type": "application/json"})
+    assert r.status_code == 413
+    # Streamed without a length: refused once it crosses the limit.
+    def chunks():
+        for _ in range(30):
+            yield b"y" * 100_000
+    r = client.post("/verify", content=chunks())
+    assert r.status_code == 413
+    # Normal bodies pass.
+    assert client.post("/verify", content=b"hello").status_code == 200

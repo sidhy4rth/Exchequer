@@ -69,3 +69,66 @@ class SecurityHeadersMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_with_headers)
+
+
+class BodySizeLimitMiddleware:
+    """Refuse request bodies over `max_bytes` with 413, before they fill memory.
+
+    FastAPI reads a JSON body whole. Nothing this API accepts comes near the
+    limit -- the largest is a text report sent to /verify -- so anything over
+    it is refused: up front when Content-Length says so, or as soon as a
+    streamed body crosses it.
+    """
+
+    def __init__(self, app: Callable[[Scope, Receive, Send], Awaitable[None]], max_bytes: int = 2_100_000) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        for name, value in scope.get("headers", []):
+            if name == b"content-length":
+                try:
+                    too_big = int(value) > self.max_bytes
+                except ValueError:
+                    too_big = True
+                if too_big:
+                    await _send_413(send)
+                    return
+        received = 0
+        started = False
+
+        async def counting_receive() -> dict[str, Any]:
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_bytes:
+                    raise _TooLarge()
+            return message
+
+        async def tracking_send(message: dict[str, Any]) -> None:
+            nonlocal started
+            if message["type"] == "http.response.start":
+                started = True
+            await send(message)
+
+        try:
+            await self.app(scope, counting_receive, tracking_send)
+        except _TooLarge:
+            if not started:
+                await _send_413(send)
+
+
+class _TooLarge(Exception):
+    pass
+
+
+async def _send_413(send: Send) -> None:
+    body = b'{"detail":"Request body too large."}'
+    await send({"type": "http.response.start", "status": 413,
+                "headers": [(b"content-type", b"application/json"),
+                            (b"content-length", str(len(body)).encode())]})
+    await send({"type": "http.response.body", "body": body})

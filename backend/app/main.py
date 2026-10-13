@@ -31,7 +31,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import batches as batch_runner
 from . import config, log_safety, models, warmup, watchlist
-from .security_headers import SecurityHeadersMiddleware
+from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
@@ -102,6 +102,7 @@ app = FastAPI(
     openapi_url="/openapi.json" if config.API_DOCS_ENABLED else None,
 )
 
+app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # The React dev server runs on a different origin during development.
