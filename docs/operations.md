@@ -84,13 +84,13 @@ Two copies, for two different accidents:
   artifact for 30 days. The plain copy never leaves the runner.
 
 The snapshot holds every case and the alert webhooks, so the off-site copy is
-encrypted to a public key and only the matching private key opens it. To
-switch it on:
+encrypted to the public key in `.github/backup-recipient.txt`; only the
+matching private key (`~/.config/exchequer/backup-age-key.txt` on the
+maintainer's machine -- keep a second copy offline) opens it. A new key pair
+is `age-keygen -o <file>`, and `age-keygen -y <file>` prints the public half
+for the recipient file. To switch the nightly copy on:
 
 ```sh
-age-keygen -o ~/.config/exchequer/backup-age-key.txt   # keep this file safe, offline too
-age-keygen -y ~/.config/exchequer/backup-age-key.txt   # prints the public key (age1...)
-gh variable set BACKUP_AGE_RECIPIENT --body 'age1...'
 token=$(openssl rand -hex 32)
 gh secret set BACKUP_TOKEN --body "$token"
 railway variables --set EXCHEQUER_BACKUP_TOKEN="$token"

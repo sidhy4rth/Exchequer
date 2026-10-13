@@ -6,9 +6,9 @@ name: Store backup
 # holder of the matching private key can open it, and the plain copy never
 # leaves the runner. See docs/operations.md, "Backups".
 #
-# Needs the BACKUP_TOKEN secret (same value as EXCHEQUER_BACKUP_TOKEN on
-# Railway) and the BACKUP_AGE_RECIPIENT variable (the age public key). Until
-# both are set the job says so and stops without failing.
+# The public key is .github/backup-recipient.txt. The job needs the
+# BACKUP_TOKEN secret (same value as EXCHEQUER_BACKUP_TOKEN on Railway); until
+# it is set the job says so and stops without failing.
 on:
   schedule:
     - cron: "30 21 * * *" # 03:00 IST
@@ -23,14 +23,14 @@ jobs:
     timeout-minutes: 15
     env:
       BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
-      RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
       SITE: https://exchequer-production.up.railway.app
     steps:
+      - uses: actions/checkout@v7
       - name: Check the job is set up
         id: setup
         run: |
-          if [ -z "$BACKUP_TOKEN" ] || [ -z "$RECIPIENT" ]; then
-            echo "::notice::Backups not set up yet (BACKUP_TOKEN secret and BACKUP_AGE_RECIPIENT variable). Nothing pulled."
+          if [ -z "$BACKUP_TOKEN" ]; then
+            echo "::notice::Backups not set up yet (BACKUP_TOKEN secret). Nothing pulled."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -46,7 +46,7 @@ jobs:
           gunzip -c snapshot.db.gz > snapshot.db
           test "$(sqlite3 snapshot.db 'PRAGMA integrity_check')" = ok
           echo "cases: $(sqlite3 snapshot.db 'SELECT count(*) FROM cases')"
-          age -r "$RECIPIENT" -o "exchequer-$stamp.db.gz.age" snapshot.db.gz
+          age -R .github/backup-recipient.txt -o "exchequer-$stamp.db.gz.age" snapshot.db.gz
           rm -f snapshot.db snapshot.db.gz
           echo "FILE=exchequer-$stamp.db.gz.age" >> "$GITHUB_ENV"
       - name: Keep it for 30 days
