@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchGraph, fetchLetter, fetchLetters, fetchReport } from '../api'
 
-function save(text, type, filename) {
-  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }))
+function save(content, type, filename) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: `${type};charset=utf-8` })
+  const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
   link.download = filename
@@ -51,9 +52,10 @@ export default function ExportButton({ caseId, address }) {
     setError(null)
     try {
       const body = await fetchReport(caseId, format)
-      const text = format === 'json' ? JSON.stringify(body, null, 2) : body
-      const type = format === 'json' ? 'application/json' : 'text/plain'
-      save(text, type, `exchequer-${address.slice(0, 10)}-${caseId.slice(0, 8)}.${format === 'json' ? 'json' : 'txt'}`)
+      const content = format === 'json' ? JSON.stringify(body, null, 2) : body
+      const type = { json: 'application/json', pdf: 'application/pdf' }[format] ?? 'text/plain'
+      const ext = { json: 'json', pdf: 'pdf' }[format] ?? 'txt'
+      save(content, type, `exchequer-${address.slice(0, 10)}-${caseId.slice(0, 8)}.${ext}`)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -89,6 +91,9 @@ export default function ExportButton({ caseId, address }) {
       <details className="export-menu" ref={menu}>
         <summary role="button" aria-haspopup="menu">{busy ? 'Preparing…' : 'Export'}</summary>
         <div className="export-list" role="menu">
+          <button role="menuitem" onClick={pick(() => download('pdf'))} disabled={busy !== null}>
+            Report (.pdf)<small>summary page, then the signed text, attached</small>
+          </button>
           <button role="menuitem" onClick={pick(() => download('text'))} disabled={busy !== null}>
             Report (.txt)<small>signed; check it at /verify</small>
           </button>

@@ -152,6 +152,7 @@ export function reportUrl(caseId, format = 'text') {
 export async function fetchReport(caseId, format = 'text') {
   const response = await apiFetch(reportUrl(caseId, format))
   if (!response.ok) throw await toError(response)
+  if (format === 'pdf') return response.blob()
   return format === 'text' ? response.text() : response.json()
 }
 

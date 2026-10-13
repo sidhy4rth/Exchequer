@@ -19,6 +19,7 @@ from ..correlation import correlate, related_cases
 from ..exchange_matcher import get_matcher, get_router_matcher
 from ..pipeline import TraceRequest
 from ..report import build_report, render_text_report
+from ..report_pdf import render_pdf
 
 
 
@@ -128,7 +129,7 @@ def get_trace(case_id: str, http: Request) -> dict[str, Any] | FileResponse:
 @router.get("/trace/{case_id}/report")
 def get_report(
     case_id: str,
-    format: str = Query("json", pattern="^(json|text)$", description="json or text"),
+    format: str = Query("json", pattern="^(json|text|pdf)$", description="json, text or pdf"),
 ):
     """Exportable summary suitable for a law-enforcement handoff."""
     case = models.get_case(case_id)
@@ -136,6 +137,12 @@ def get_report(
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
 
     report = build_report(case)
+    if format == "pdf":
+        return Response(
+            render_pdf(report, render_text_report(report)),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}.pdf"'},
+        )
     if format == "text":
         return PlainTextResponse(
             render_text_report(report),
