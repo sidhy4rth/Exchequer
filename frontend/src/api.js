@@ -381,3 +381,27 @@ export async function updateRequest(requestId, changes) {
 export async function deleteRequest(requestId) {
   return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' }))
 }
+
+// ---------------------------------------------------------------------------
+// Bulk intake (backend/app/routes/batches.py)
+// ---------------------------------------------------------------------------
+export async function startBatch(name, rows) {
+  const response = await apiFetch(`${BASE}/batches`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rows }),
+  })
+  if (response.status === 400) {
+    const body = await response.json().catch(() => ({}))
+    const err = new Error(body.detail || 'Some rows cannot be traced.')
+    err.rowErrors = body.row_errors ?? []
+    throw err
+  }
+  return jsonOrThrow(response)
+}
+
+export async function fetchBatch(batchId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/batches/${encodeURIComponent(batchId)}`))
+}
+
+export async function fetchBatches() {
+  return jsonOrThrow(await apiFetch(`${BASE}/batches`))
+}

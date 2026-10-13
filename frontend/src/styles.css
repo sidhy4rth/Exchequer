@@ -851,3 +851,16 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .request-add { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .request-add .other { display: inline-flex; gap: 4px; flex: 1; min-width: 180px; }
 .request-add .other input { flex: 1; }
+
+/* Bulk intake and the batch page. */
+.bulk-text { width: 100%; box-sizing: border-box; padding: 10px; font-size: 12px; border: 1px solid var(--rule); border-radius: var(--r); background: var(--panel); color: var(--ink); resize: vertical; }
+.bulk-name { flex: 1; min-width: 160px; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--panel); color: var(--ink); }
+.row-errors { margin: 0; padding-left: 18px; font-size: 12px; color: var(--red); }
+.past-batches { display: flex; flex-direction: column; gap: 4px; font-size: 12px; border-top: 1px solid var(--rule); padding-top: 8px; }
+.past-batches a { color: var(--muted); }
+.batch-body { width: min(1240px, 100%); margin: 0 auto; padding: 28px 16px 48px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; }
+.batch-body h1 { font-family: var(--serif); font-weight: 600; font-size: 24px; margin: 0; }
+.batch-body .loading { padding: 0; }
+.batch-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+.batch-grid .cases-table td a { color: var(--ink); }
+@media (max-width: 900px) { .batch-grid { grid-template-columns: 1fr; } .batch-grid .cases-table { display: block; overflow-x: auto; } }

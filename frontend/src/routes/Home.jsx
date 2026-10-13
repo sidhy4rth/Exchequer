@@ -5,6 +5,7 @@ import Mark from '../components/Mark'
 import { fetchCases, fetchExchanges, fetchHealth, fetchRiskLabels } from '../api'
 import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
+import BulkIntake from '../components/BulkIntake'
 import { signOut } from '../session'
 
 // Same rules the backend enforces, checked here only so an obvious typo gets
@@ -276,6 +277,7 @@ export default function Home() {
           </div>
         </details>
 
+        <BulkIntake />
         <Watchlist />
         <OpenRequests />
 

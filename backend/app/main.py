@@ -13,6 +13,7 @@ Endpoints:
     POST /verify                    check a text report's hash and signature
     /watches, /alerts               watch an address; alerts when funds leave it
     /requests                       freeze requests sent about a case, and their status
+    /batches                        trace a list of complaints, then correlate them
 
 This module is the application shell: startup checks, CORS, the routers and
 the built frontend. The endpoints live in app/routes/ (coverage.py, cases.py)
@@ -28,12 +29,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import batches as batch_runner
 from . import config, log_safety, models, warmup, watchlist
 from .security_headers import SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import cases, coverage, jobs, requests, verify, watches
+from .routes import batches, cases, coverage, jobs, requests, verify, watches
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -49,6 +51,8 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     models.init_db()
+    # A restart stops running batches; say so on their rows.
+    batch_runner.mark_interrupted()
     for key, chain in config.CHAINS.items():
         matcher = get_matcher(key)
         if not len(matcher):
@@ -124,6 +128,7 @@ app.include_router(cases.router)
 app.include_router(verify.router)
 app.include_router(watches.router)
 app.include_router(requests.router)
+app.include_router(batches.router)
 
 
 # ---------------------------------------------------------------------------

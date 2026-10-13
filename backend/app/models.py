@@ -146,6 +146,19 @@ class FreezeRequest(Base):
     history_json: Mapped[str] = mapped_column(Text, default="[]")
 
 
+class Batch(Base):
+    """A list of reported addresses traced one after another (batches.py)."""
+
+    __tablename__ = "batches"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(120), default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16))  # running | done | interrupted
+    rows_json: Mapped[str] = mapped_column(Text)
+
+
 _engine = create_engine(f"sqlite:///{config.DB_PATH}", future=True)
 
 # Bumped on every save. Stored cases never change, so anything computed over

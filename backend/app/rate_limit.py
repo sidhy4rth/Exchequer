@@ -41,8 +41,10 @@ class SlidingWindowLimiter:
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
 
-    def check(self, key: str, now: float | None = None) -> float | None:
-        """Record a hit for `key`. None if allowed, else seconds until it would be."""
+    def check(self, key: str, now: float | None = None, cost: int = 1) -> float | None:
+        """Record `cost` hits for `key`. None if allowed, else seconds until it would be.
+
+        A cost above one (a batch of traces) is all or nothing."""
         if self.limit <= 0:
             return None
         now = time.monotonic() if now is None else now
@@ -50,13 +52,25 @@ class SlidingWindowLimiter:
             hits = self._hits[key]
             while hits and hits[0] <= now - self.window:
                 hits.popleft()
-            if len(hits) >= self.limit:
-                return max(1.0, hits[0] + self.window - now)
-            hits.append(now)
+            if cost > self.limit:
+                return float(self.window)
+            if len(hits) + cost > self.limit:
+                return max(1.0, hits[len(hits) + cost - self.limit - 1] + self.window - now)
+            hits.extend([now] * cost)
             if len(self._hits) > 10_000:  # forget idle clients
                 for stale in [k for k, v in self._hits.items() if not v]:
                     del self._hits[stale]
             return None
+
+    def remaining(self, key: str, now: float | None = None) -> int:
+        if self.limit <= 0:
+            return 10**6
+        now = time.monotonic() if now is None else now
+        with self._lock:
+            hits = self._hits[key]
+            while hits and hits[0] <= now - self.window:
+                hits.popleft()
+            return max(0, self.limit - len(hits))
 
     def reset(self) -> None:
         with self._lock:

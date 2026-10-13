@@ -10,6 +10,7 @@ const Home = lazy(() => import('./routes/Home'))
 const SignIn = lazy(() => import('./routes/SignIn'))
 const TraceView = lazy(() => import('./routes/TraceView'))
 const Verify = lazy(() => import('./routes/Verify'))
+const Batch = lazy(() => import('./routes/Batch'))
 
 /** The demo front doors: each part of the app needs the tab to have passed
  * the matching sign-in once. Not security -- see session.js. */
@@ -41,6 +42,7 @@ export default function App() {
           what was found at the time, including pattern findings that live data
           may no longer satisfy. */}
       <Route path="/case/:caseId" element={<Gate as="investigator"><TraceView /></Gate>} />
+      <Route path="/batch/:batchId" element={<Gate as="investigator"><Batch /></Gate>} />
       <Route path="*" element={<Gate as="investigator"><Home /></Gate>} />
     </Routes>
     </Suspense>
