@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import config, models, warmup
+from . import config, log_safety, models, warmup
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
@@ -34,6 +34,9 @@ from .routes import cases, coverage
 from .pipeline import TraceRequest, run_trace  # noqa: F401
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+# Before any provider is called: httpx would otherwise log request URLs, keys
+# included. See app/log_safety.py.
+log_safety.install()
 logger = logging.getLogger(__name__)
 
 
