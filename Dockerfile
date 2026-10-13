@@ -72,6 +72,9 @@ ENV EXCHEQUER_API_DOCS=0
 # (rate_limit.py) reads the client from them only when this is on.
 ENV EXCHEQUER_TRUST_PROXY=1
 
+# Re-read watched addresses every 10 minutes (watchlist.py).
+ENV EXCHEQUER_WATCHER=1
+
 WORKDIR /app/backend
 EXPOSE 8000
 

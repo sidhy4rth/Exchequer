@@ -310,3 +310,47 @@ export async function fetchGraph(caseId, format = 'graphml') {
   if (!response.ok) throw await toError(response)
   return response.text()
 }
+
+// ---------------------------------------------------------------------------
+// Watchlist (backend/app/routes/watches.py): this browser's watched addresses
+// and the alerts raised when funds leave them.
+// ---------------------------------------------------------------------------
+async function jsonOrThrow(response) {
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+export async function fetchWatches() {
+  return jsonOrThrow(await apiFetch(`${BASE}/watches`))
+}
+
+export async function addWatch({ address, chain, asset, note, caseId, webhookUrl }) {
+  return jsonOrThrow(await apiFetch(`${BASE}/watches`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      address, chain, asset, note: note ?? '', case_id: caseId ?? null,
+      ...(webhookUrl ? { webhook_url: webhookUrl } : {}),
+    }),
+  }))
+}
+
+export async function removeWatch(watchId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/watches/${encodeURIComponent(watchId)}`, { method: 'DELETE' }))
+}
+
+export async function checkWatchNow(watchId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/watches/${encodeURIComponent(watchId)}/check`, { method: 'POST' }))
+}
+
+export async function fetchAlerts(unread = false) {
+  return jsonOrThrow(await apiFetch(`${BASE}/alerts?unread=${unread ? 'true' : 'false'}`))
+}
+
+export async function markAlertsRead(alertIds = null) {
+  return jsonOrThrow(await apiFetch(`${BASE}/alerts/read`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alert_ids: alertIds }),
+  }))
+}

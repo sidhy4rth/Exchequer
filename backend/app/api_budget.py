@@ -38,6 +38,8 @@ import json
 import logging
 import sqlite3
 import threading
+from contextlib import contextmanager
+from contextvars import ContextVar
 import time
 from collections import OrderedDict
 from pathlib import Path
@@ -50,6 +52,23 @@ logger = logging.getLogger(__name__)
 # tests, or a deployment trusting a paid plan -- could otherwise be refused
 # forever without ever slowing down.
 MIN_PENALTY_INTERVAL = 0.05
+
+
+# Set by fresh_reads(): the watchlist must see transfers newer than the cache.
+_fresh: ContextVar[bool] = ContextVar("fresh_reads", default=False)
+
+
+@contextmanager
+def fresh_reads():
+    """Skip cached answers in this context (their replacements are still cached).
+
+    A trace is happy with a day-old answer -- history only grows at the end.
+    The watchlist exists to notice the end growing, so it must not be."""
+    token = _fresh.set(True)
+    try:
+        yield
+    finally:
+        _fresh.reset(token)
 
 
 class ResponseCache:
@@ -166,7 +185,12 @@ class ResponseCache:
 
     # -- public -------------------------------------------------------------
     def get(self, key: Hashable) -> tuple[bool, Any]:
-        """Return (hit, value). A miss and a cached None are distinguishable."""
+        """Return (hit, value). A miss and a cached None are distinguishable.
+
+        Inside `fresh_reads()` every lookup misses, so the provider is asked
+        and the answer replaces what was cached."""
+        if _fresh.get():
+            return False, None
         with self._lock:
             entry = self._entries.get(key)
             if entry is not None:

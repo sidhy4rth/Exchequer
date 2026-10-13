@@ -440,3 +440,13 @@ _signing_raw = os.getenv("EXCHEQUER_SIGNING_KEY_PATH", "report_signing_key.pem")
 SIGNING_KEY_PATH: Path = (
     Path(_signing_raw) if Path(_signing_raw).is_absolute() else DB_PATH.parent / _signing_raw
 )
+
+# The watchlist poller (watchlist.py): off unless EXCHEQUER_WATCHER is set, so
+# a laptop or the test suite never spends the key on it; the image turns it
+# on. Each due watch costs one or two provider requests per round.
+WATCHER_ENABLED: bool = (
+    os.getenv("EXCHEQUER_WATCHER", "").strip().lower() in ("1", "true", "yes", "on")
+)
+WATCH_INTERVAL_SECONDS: int = max(60, _int_env("EXCHEQUER_WATCH_INTERVAL", 600))
+# Hosts beyond Slack, Discord and Google Chat that alert webhooks may post to.
+WEBHOOK_EXTRA_HOSTS: str = os.getenv("EXCHEQUER_WEBHOOK_HOSTS", "")

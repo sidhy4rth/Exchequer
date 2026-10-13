@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import Mark from '../components/Mark'
 import { fetchCases, fetchExchanges, fetchHealth, fetchRiskLabels } from '../api'
+import Watchlist from '../components/Watchlist'
 import { signOut } from '../session'
 
 // Same rules the backend enforces, checked here only so an obvious typo gets
@@ -273,6 +274,8 @@ export default function Home() {
             </div>
           </div>
         </details>
+
+        <Watchlist />
 
         <section>
           <div className="card">

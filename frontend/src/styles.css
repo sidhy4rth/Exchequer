@@ -816,3 +816,22 @@ details.more summary:hover { color: var(--ink); }
 /* The pills give way before the actions do: at laptop widths the bar used to
    push its last buttons past the right edge. */
 .topbar .pills { flex-shrink: 1; min-width: 0; overflow: hidden; }
+
+/* Watchlist: the case-view panel and the home-page section. */
+.watch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; }
+.watch-row > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.watch-row .mono { font-size: 12px; }
+.watch-row small { font-size: 11px; color: var(--muted); }
+.watch-actions { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.quiet-link { font-size: 12px; color: var(--muted); padding: 4px 6px; }
+.quiet-link:hover { color: var(--ink); }
+.watch-hook { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+.watch-hook input { padding: 6px 8px; font-size: 12px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--panel); color: var(--ink); }
+button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
+.watchlist .alerts { border-top: 1px solid var(--rule); margin-top: 6px; padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.alerts-head { display: flex; justify-content: space-between; align-items: center; }
+.alert-row { display: flex; align-items: baseline; gap: 10px; font-size: 13px; color: var(--muted); }
+.alert-row.unread { color: var(--ink); }
+.alert-row .pill { flex-shrink: 0; }
+.alert-row small { color: var(--muted); font-size: 11px; }
+.alert-row a { color: inherit; }

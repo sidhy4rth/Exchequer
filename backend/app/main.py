@@ -11,6 +11,7 @@ Endpoints:
     GET  /health                    liveness + configuration check
     GET  /signing-key               public key that signs exported reports
     POST /verify                    check a text report's hash and signature
+    /watches, /alerts               watch an address; alerts when funds leave it
 
 This module is the application shell: startup checks, CORS, the routers and
 the built frontend. The endpoints live in app/routes/ (coverage.py, cases.py)
@@ -26,12 +27,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import config, log_safety, models, warmup
+from . import config, log_safety, models, warmup, watchlist
 from .security_headers import SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import cases, coverage, jobs, verify
+from .routes import cases, coverage, jobs, verify, watches
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -77,7 +78,10 @@ async def lifespan(_app: FastAPI):
     # After the providers are known to be configured: the demo addresses are
     # traced in the background so the first real request finds them cached.
     warmup.start_in_background()
+    # Watched addresses are re-read on a schedule (off unless EXCHEQUER_WATCHER).
+    watchlist.start_in_background()
     yield
+    watchlist.stop()
 
 
 app = FastAPI(
@@ -117,6 +121,7 @@ app.include_router(coverage.router)
 app.include_router(jobs.router)
 app.include_router(cases.router)
 app.include_router(verify.router)
+app.include_router(watches.router)
 
 
 # ---------------------------------------------------------------------------

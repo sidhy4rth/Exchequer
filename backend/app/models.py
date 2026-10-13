@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import String, Text, create_engine, func, inspect, or_, select, text
+from sqlalchemy import Boolean, Float, Integer, String, Text, create_engine, func, inspect, or_, select, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from . import config
@@ -80,6 +80,48 @@ class Case(Base):
             "hop_count": result.get("hop_count"),
             "node_count": len(result.get("graph", {}).get("nodes", [])),
         }
+
+
+class Watch(Base):
+    """An address the owner wants to hear about when funds leave it."""
+
+    __tablename__ = "watches"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    chain: Mapped[str] = mapped_column(String(16))
+    asset: Mapped[str] = mapped_column(String(16))
+    address: Mapped[str] = mapped_column(String(64), index=True)
+    note: Mapped[str] = mapped_column(String(200), default="")
+    case_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    webhook_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(32))
+    last_checked_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Newest block already seen; a transfer above it is news. NULL until the
+    # first check sets the baseline (history before the watch is not news).
+    last_seen_block: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class Alert(Base):
+    """One movement the watcher noticed."""
+
+    __tablename__ = "alerts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    watch_id: Mapped[str] = mapped_column(String(36), index=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[str] = mapped_column(String(32))
+    kind: Mapped[str] = mapped_column(String(16))  # exchange | risk | moved
+    message: Mapped[str] = mapped_column(Text)
+    tx_hash: Mapped[str] = mapped_column(String(80))
+    tx_time: Mapped[int] = mapped_column(Integer)
+    value: Mapped[float] = mapped_column(Float)
+    asset: Mapped[str] = mapped_column(String(16))
+    counterparty: Mapped[str] = mapped_column(String(64))
+    counterparty_label: Mapped[str] = mapped_column(String(200), default="")
+    read: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 _engine = create_engine(f"sqlite:///{config.DB_PATH}", future=True)
@@ -198,3 +240,8 @@ def list_cases(
         for case in cases:
             session.expunge(case)
         return cases
+
+
+def session() -> Session:
+    """A session on the case store, for modules with tables of their own here."""
+    return Session(_engine)
