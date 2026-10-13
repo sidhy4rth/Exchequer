@@ -255,51 +255,49 @@ def check_watch(watch_id: str, source: Source = open_source,
     Returns the new alerts. A provider failure is recorded on the watch and
     tried again next round, never raised."""
     post = post or post_webhook
+    # Read what the check needs, then let go of the database: the provider can
+    # take seconds (longer with retries), and an open SQLite transaction for
+    # that long would block every case being saved meanwhile.
     with models.session() as s:
         watch = s.get(models.Watch, watch_id)
         if watch is None or not watch.active:
             return []
-        chain = config.get_chain(watch.chain)
-        try:
-            with fresh_reads(), source(chain, watch.asset) as client:
-                transfers = client.get_outgoing_transactions(watch.address, limit=FETCH_LIMIT)
-        except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
-            watch.last_checked_at = _now()
-            watch.last_error = f"Could not read the address this round ({type(exc).__name__})."
-            s.commit()
-            logger.warning("Watch %s: provider failure: %s", watch.id, exc)
-            return []
+        address, asset, chain_key = watch.address, watch.asset, watch.chain
+        owner, last_seen, hook = watch.owner_hash, watch.last_seen_block, watch.webhook_url
+    chain = config.get_chain(chain_key)
+    try:
+        with fresh_reads(), source(chain, asset) as client:
+            transfers = client.get_outgoing_transactions(address, limit=FETCH_LIMIT)
+    except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
+        _finish_check(watch_id, error=f"Could not read the address this round ({type(exc).__name__}).")
+        logger.warning("Watch %s: provider failure: %s", watch_id, exc)
+        return []
 
-        newest = max((t.block_number for t in transfers), default=0)
-        new_alerts: list[models.Alert] = []
-        if watch.last_seen_block is None:
-            # First check: the baseline. History before the watch is not news.
-            watch.last_seen_block = newest
-        else:
-            fresh = sorted((t for t in transfers if t.block_number > watch.last_seen_block),
-                           key=lambda t: (t.block_number, t.hash))
-            for t in fresh:
-                to = t.to_address or ""
-                kind, label = _classify(chain.key, to)
-                where = f"{label} ({to})" if label else to
-                verb = {"exchange": "sent to exchange wallet", "risk": "sent to flagged address",
-                        "moved": "moved"}[kind]
-                message = (f"{watch.address} {verb}: {t.value_native:g} {watch.asset} to {where} "
-                           f"in tx {t.hash}")
-                new_alerts.append(models.Alert(
-                    id=str(uuid.uuid4()), watch_id=watch.id, owner_hash=watch.owner_hash,
-                    created_at=_now(), kind=kind, message=message, tx_hash=t.hash,
-                    tx_time=int(t.timestamp), value=float(t.value_native), asset=watch.asset,
-                    counterparty=to, counterparty_label=label, read=False,
-                ))
-            if fresh:
-                watch.last_seen_block = max(watch.last_seen_block, newest)
-        watch.last_checked_at = _now()
-        watch.last_error = None
-        s.add_all(new_alerts)
-        s.commit()
-        out = [alert_summary(a, chain.key) for a in new_alerts]
-        hook = watch.webhook_url
+    newest = max((t.block_number for t in transfers), default=0)
+    new_alerts: list[models.Alert] = []
+    if last_seen is None:
+        # First check: the baseline. History before the watch is not news.
+        seen_block = newest
+    else:
+        fresh = sorted((t for t in transfers if t.block_number > last_seen),
+                       key=lambda t: (t.block_number, t.hash))
+        for t in fresh:
+            to = t.to_address or ""
+            kind, label = _classify(chain.key, to)
+            where = f"{label} ({to})" if label else to
+            verb = {"exchange": "sent to exchange wallet", "risk": "sent to flagged address",
+                    "moved": "moved"}[kind]
+            message = f"{address} {verb}: {t.value_native:g} {asset} to {where} in tx {t.hash}"
+            new_alerts.append(models.Alert(
+                id=str(uuid.uuid4()), watch_id=watch_id, owner_hash=owner,
+                created_at=_now(), kind=kind, message=message, tx_hash=t.hash,
+                tx_time=int(t.timestamp), value=float(t.value_native), asset=asset,
+                counterparty=to, counterparty_label=label, read=False,
+            ))
+        seen_block = max(last_seen, newest) if fresh else last_seen
+    out = [alert_summary(a, chain.key) for a in new_alerts]
+    if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts):
+        return []  # removed while we were reading
 
     if hook and out:
         for alert in out[:10]:
@@ -310,6 +308,22 @@ def check_watch(watch_id: str, source: Source = open_source,
             except Exception as exc:  # noqa: BLE001 -- the alert is stored either way
                 logger.warning("Watch %s: webhook failed: %s", watch_id, type(exc).__name__)
     return out
+
+
+def _finish_check(watch_id: str, seen_block: int | None = None, error: str | None = None,
+                  alerts: list[models.Alert] | None = None) -> bool:
+    """Record a check's outcome in one short transaction. False if the watch is gone."""
+    with models.session() as s:
+        watch = s.get(models.Watch, watch_id)
+        if watch is None or not watch.active:
+            return False
+        watch.last_checked_at = _now()
+        watch.last_error = error
+        if error is None and seen_block is not None:
+            watch.last_seen_block = seen_block
+        s.add_all(alerts or [])
+        s.commit()
+        return True
 
 
 def post_webhook(url: str, payload: dict[str, Any]) -> None:

@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, Float, Integer, String, Text, create_engine, func, inspect, or_, select, text
+from sqlalchemy import Boolean, Float, Integer, String, Text, create_engine, event, func, inspect, or_, select, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from . import config
@@ -159,7 +161,25 @@ class Batch(Base):
     rows_json: Mapped[str] = mapped_column(Text)
 
 
-_engine = create_engine(f"sqlite:///{config.DB_PATH}", future=True)
+_engine = create_engine(
+    f"sqlite:///{config.DB_PATH}", future=True,
+    # Wait up to 15 s for a lock rather than failing at once: background
+    # traces, batches and the watchlist all write here.
+    connect_args={"timeout": 15},
+)
+
+
+@event.listens_for(Engine, "connect")
+def _sqlite_wal(dbapi_connection, _record) -> None:
+    """Write-ahead logging: readers no longer block the writer, or the reverse."""
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.DatabaseError:
+            pass  # a read-only or in-memory database keeps its own mode
+        finally:
+            cursor.close()
 
 # Bumped on every save. Stored cases never change, so anything computed over
 # the whole store (correlation, the ledger) stays valid until this moves.
