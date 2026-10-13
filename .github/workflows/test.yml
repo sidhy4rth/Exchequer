@@ -76,6 +76,9 @@ jobs:
       - name: Security headers are sent and API docs are off
         run: |
           curl -fsS -D - -o /dev/null localhost:8000/ | grep -i '^content-security-policy:'
-          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/docs)" != "200" || (echo "docs exposed" && exit 1)
+          # With docs off, /docs falls through to the app's own page (200),
+          # so look for Swagger UI and the schema rather than a status code.
+          if curl -s localhost:8000/docs | grep -qi swagger; then echo "docs exposed"; exit 1; fi
+          if curl -s localhost:8000/openapi.json | grep -q '"openapi"'; then echo "schema exposed"; exit 1; fi
       - if: failure()
         run: docker logs app
