@@ -302,3 +302,10 @@ export function runTrace({ address, maxDepth, chain, asset, direction, timeBudge
   jobsInFlight.set(body, { promise, listeners })
   return promise
 }
+
+/** The case's transfer graph as GraphML or CSV text. */
+export async function fetchGraph(caseId, format = 'graphml') {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/graph?format=${format}`)
+  if (!response.ok) throw await toError(response)
+  return response.text()
+}

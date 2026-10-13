@@ -12,9 +12,9 @@ from collections import OrderedDict
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 
-from .. import config, models, ownership, pipeline, rate_limit, request_letters
+from .. import config, graph_export, models, ownership, pipeline, rate_limit, request_letters
 from ..correlation import correlate, related_cases
 from ..exchange_matcher import get_matcher, get_router_matcher
 from ..pipeline import TraceRequest
@@ -146,6 +146,23 @@ def get_report(
             },
         )
     return report
+
+
+@router.get("/trace/{case_id}/graph")
+def export_graph(
+    case_id: str,
+    format: str = Query("graphml", pattern="^(graphml|csv)$", description="graphml or csv"),
+) -> Response:
+    """The case's transfer graph for Gephi, yEd, Maltego (GraphML) or a spreadsheet (CSV)."""
+    case = models.get_case(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
+    if format == "csv":
+        body, media, ext = graph_export.to_csv(case_id, case.result), "text/csv", "csv"
+    else:
+        body, media, ext = graph_export.to_graphml(case_id, case.result), "application/graphml+xml", "graphml"
+    return Response(body, media_type=media, headers={
+        "Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}-graph.{ext}"'})
 
 
 @router.get("/trace/{case_id}/letters")

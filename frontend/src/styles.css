@@ -799,3 +799,20 @@ details.more summary:hover { color: var(--ink); }
 /* Live progress of a background trace. */
 .loading .progress-line { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .loading .bar.determinate span { animation: none; transition: width 300ms var(--ease); }
+
+/* Export menu in the console bar. */
+.export-menu { position: relative; }
+.export-menu > summary { list-style: none; cursor: pointer; padding: 6px 12px; border: 1px solid var(--rule-strong); border-radius: 4px; font-size: 13px; color: var(--ink); background: var(--panel); white-space: nowrap; user-select: none; }
+.export-menu > summary::-webkit-details-marker { display: none; }
+.export-menu > summary::after { content: '▾'; margin-left: 6px; color: var(--muted); font-size: 11px; }
+.export-menu > summary:hover, .export-menu[open] > summary { border-color: var(--ink); background: var(--panel-2); }
+.export-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 40; min-width: 250px; display: flex; flex-direction: column; padding: 4px; background: var(--panel); border: 1px solid var(--rule-strong); border-radius: 6px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35); }
+.export-list > button, .export-list > a { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; border: none; background: none; padding: 7px 10px; border-radius: 4px; font-size: 13px; color: var(--ink); text-decoration: none; }
+.export-list > button:hover:not(:disabled), .export-list > a:hover { background: var(--panel-2); }
+.export-list small { font-size: 11px; color: var(--muted); }
+.export-list > a { border-top: 1px solid var(--rule); border-radius: 0 0 4px 4px; margin-top: 2px; color: var(--muted); }
+.export-row { display: flex; align-items: center; gap: 6px; }
+.export-group { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); padding: 8px 10px 2px; border-top: 1px solid var(--rule); margin-top: 2px; }
+/* The pills give way before the actions do: at laptop widths the bar used to
+   push its last buttons past the right edge. */
+.topbar .pills { flex-shrink: 1; min-width: 0; overflow: hidden; }
