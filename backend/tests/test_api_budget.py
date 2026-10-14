@@ -210,3 +210,16 @@ def test_budget_stats_reports_every_scope():
     stats = budget_stats()
     assert "p" in stats["pacers"]
     assert "c" in stats["caches"]
+
+
+def test_budget_stats_never_show_the_api_key():
+    """/health is public and lists every scope by name."""
+    from app.etherscan_client import EtherscanClient
+
+    reset()
+    key = "SECRETKEYQWERTYUIOPASDFGHJKLZXCVBN"  # no hex digits: a digest cannot collide
+    EtherscanClient(api_key=key, chain_id=1, min_interval=0.0).close()
+    names = " ".join(list(budget_stats()["pacers"]) + list(budget_stats()["caches"]))
+    assert "etherscan:" in names
+    for start in range(len(key) - 3):
+        assert key[start:start + 4] not in names

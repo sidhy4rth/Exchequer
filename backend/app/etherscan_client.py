@@ -302,8 +302,10 @@ class EtherscanClient:
         # built per trace, so pacing it per instance would let two concurrent
         # traces double the request rate against a limit that never doubled.
         # Both the pacer and the cache are therefore keyed by credential, not by
-        # client and not by chain.
-        scope = f"etherscan:{(self.api_key or 'anon')[:8]}"
+        # client and not by chain. The name is shown on the public /health
+        # page, so it carries a digest of the key rather than any of the key.
+        credential = hashlib.sha256((self.api_key or "anon").encode()).hexdigest()[:8]
+        scope = f"etherscan:{credential}"
         self._pacer = get_pacer(
             scope,
             lambda: SharedPacer(
