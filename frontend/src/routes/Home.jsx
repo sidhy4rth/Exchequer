@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import Mark from '../components/Mark'
-import { fetchCases, fetchExchanges, fetchHealth, fetchRiskLabels } from '../api'
+import { fetchCases, fetchExchanges, fetchHealth, fetchRecordedDemos, fetchRiskLabels } from '../api'
 import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
 import BulkIntake from '../components/BulkIntake'
@@ -67,6 +67,9 @@ export default function Home() {
   // reports what it reached -- for a live pick whose size nobody knows.
   const [capped, setCapped] = useState(false)
   const [touched, setTouched] = useState(false)
+  // The demo last loaded into the form, and which demos have a recording.
+  const [loadedDemo, setLoadedDemo] = useState(null)
+  const [recordings, setRecordings] = useState({})
 
   // Every path out of this page leads to a trace; fetch that page's code
   // (the graph layout is most of it) before the button is pressed.
@@ -89,6 +92,9 @@ export default function Home() {
       })
       .catch(() => setHealth({ status: 'down' }))
     fetchCases(20).then((d) => setCases(d.cases)).catch(() => {})
+    fetchRecordedDemos()
+      .then((d) => setRecordings(Object.fromEntries(d.demos.map((r) => [r.demo, r]))))
+      .catch(() => {})
   }, [])
 
   const chains = health?.chains ? Object.values(health.chains) : []
@@ -124,8 +130,14 @@ export default function Home() {
     const d = DEMOS.find((x) => x.n === n)
     if (!d) return
     setChain(d.chain); setAsset(d.asset); setDepth(d.depth); setDirection(d.direction)
-    setAddress(d.address); setTouched(false)
+    setAddress(d.address); setTouched(false); setLoadedDemo(d)
   }
+
+  // Shown while the form still holds the demo exactly as loaded: edit the
+  // address or the direction and it is no longer that demo.
+  const demoInForm = loadedDemo && loadedDemo.address === trimmed && loadedDemo.direction === direction
+    && loadedDemo.depth === depth && loadedDemo.chain === chain ? loadedDemo : null
+  const recording = demoInForm && recordings[Number(demoInForm.n)]
 
   function submit(event) {
     event.preventDefault()
@@ -198,6 +210,11 @@ export default function Home() {
                       </option>
                     ))}
                   </select>
+                  {recording && (
+                    <Link className="recorded-link" to={`/demo/${Number(demoInForm.n)}`} title="The trace as DEMO.md describes it, recorded on that date. Opens instantly; nothing is re-traced.">
+                      or open it as recorded · <span className="mono">{recording.recorded_at.slice(0, 10)}</span>
+                    </Link>
+                  )}
                 </div>
                 {showInvalid && (
                   <div className="banner warn">

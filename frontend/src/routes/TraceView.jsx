@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { fetchCase, fetchRelatedCases, runTrace } from '../api'
+import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
 import ThemeToggle from '../components/ThemeToggle'
@@ -111,17 +111,19 @@ function describeProgress(p) {
 }
 
 export default function TraceView() {
-  // One component serves both routes. /trace/:address runs a fresh traversal;
-  // /case/:caseId opens what was stored, without touching the chain.
-  const { address: routeAddress, caseId } = useParams()
+  // One component serves all three routes. /trace/:address runs a fresh
+  // traversal; /case/:caseId opens what was stored, and /demo/:demoNo a
+  // recorded DEMO.md trace, both without touching the chain.
+  const { address: routeAddress, caseId, demoNo } = useParams()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const stored = Boolean(caseId)
+  const recorded = Boolean(demoNo)
+  const stored = Boolean(caseId) || recorded
   // A trace that has just finished arrives here by redirect with its result
   // in the navigation state, so the case view does not fetch what it already
   // holds. Distinguished from an archived case only in the header pill.
-  const justTraced = stored && location.state?.result?.case_id === caseId
+  const justTraced = Boolean(caseId) && location.state?.result?.case_id === caseId
 
   const chain = params.get('chain') || 'ethereum'
   const asset = params.get('asset') || 'ETH'
@@ -165,7 +167,9 @@ export default function TraceView() {
       return undefined
     }
     setProgress(null)
-    const request = stored
+    const request = recorded
+      ? fetchRecordedDemo(demoNo)
+      : stored
       ? fetchCase(caseId)
       : runTrace(
         { address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget },
@@ -189,7 +193,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, routeAddress, chain, asset, depth, requestedDirection, budget]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -295,15 +299,16 @@ export default function TraceView() {
           {(!stored || result?.max_depth) && <span className="pill mono">{stored ? result.max_depth : depth} hops</span>}
           {reverse && <span className="pill navy" title="Incoming transfers walked backwards to the addresses that funded this one">Reverse trace</span>}
           {(result ? result.time_budget_seconds : budget) && <span className="pill mono" title="The walk stopped expanding once this much time was spent">{mmss(result ? result.time_budget_seconds : budget)} cap</span>}
-          {stored && !justTraced && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
+          {recorded && <span className="pill navy" title="A DEMO.md trace as it came out when recorded. Live data moves; Trace live runs it again now.">Recorded demo {String(demoNo).padStart(2, '0')}{tracedAt ? ` · ${tracedAt.slice(0, 10)}` : ''}</span>}
+          {stored && !recorded && !justTraced && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
           {justTraced && <span className="pill green" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
         </div>
         <span className="grow" />
         <div className="actions">
           {result && <button onClick={() => setPresenting(true)} title="The case as four big screens (P)"><Icon d={ICONS.present} />Present</button>}
-          {result && <ExportButton caseId={result.case_id} address={address} />}
+          {result?.case_id && <ExportButton caseId={result.case_id} address={address} />}
           {stored && result && (
-            <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />Re-trace</button>
+            <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />{recorded ? 'Trace live' : 'Re-trace'}</button>
           )}
           <button className="quiet" onClick={() => navigate('/')}><Icon d={ICONS.back} />New trace</button>
           <ThemeToggle />
@@ -316,14 +321,16 @@ export default function TraceView() {
         {loading && (
           <div className="card">
             <div className="body loading">
-              <span className="micro">{stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
+              <span className="micro">{recorded ? 'Opening recorded demo' : stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
               <span className="elapsed">{elapsed.toFixed(1)} s{!stored && budget ? <small> · stops expanding at {mmss(budget)}{elapsed > budget ? ' — finishing what it has' : ''}</small> : null}</span>
               {!stored && progress && <span className="progress-line" aria-live="polite">{describeProgress(progress)}</span>}
               {!stored && progress?.stage === 'walking' && progress.level_size > 0
                 ? <div className="bar determinate"><span style={{ width: `${Math.round(100 * Math.min(1, (progress.level_read ?? 0) / progress.level_size))}%` }} /></div>
                 : <div className="bar"><span /></div>}
               <p className="note">
-                {stored
+                {recorded
+                  ? 'Read from the recording; the chain is not consulted.'
+                  : stored
                   ? 'Read from the case store; the chain is not consulted.'
                   : 'One request per address, about two a second on a free key. Instant when the addresses have been seen before.'}
               </p>

@@ -178,12 +178,14 @@ export default function Present({ result, related = [], unit, onClose }) {
             ? 'The report names the address, the transaction hashes, amounts and times, and everything the tool did not look at. An exchange wallet identifies where the money went, not who received it; only the exchange can link it to a customer, on a lawful request (PMLA s.12, s.50).'
             : 'The report still lists every address and transaction in the trace, so each can be re-checked on a public explorer, and says exactly what was not looked at.'}
         </p>
-        <div className="pr-actions"><ExportButton caseId={result.case_id} address={result.address} /></div>
+        {result.case_id && <div className="pr-actions"><ExportButton caseId={result.case_id} address={result.address} /></div>}
       </div>
       <div className="pr-side">
         {result.evidence?.manifest_sha256 && <div className="pr-hash"><span className="micro">Evidence manifest</span><span className="mono">{result.evidence.manifest_sha256.slice(0, 20)}…</span></div>}
         <div className="pr-hash"><span className="micro">Traced</span><span className="mono">{String(result.created_at ?? '').replace('T', ' ').slice(0, 16)} UTC</span></div>
-        <div className="pr-hash"><span className="micro">Case</span><span className="mono">{result.case_id}</span></div>
+        {result.case_id
+          ? <div className="pr-hash"><span className="micro">Case</span><span className="mono">{result.case_id}</span></div>
+          : result.recorded_demo && <div className="pr-hash"><span className="micro">Recorded demo</span><span className="mono">{String(result.recorded_demo).padStart(2, '0')}</span></div>}
       </div>
     </div>,
   ]
@@ -191,7 +193,7 @@ export default function Present({ result, related = [], unit, onClose }) {
   return (
     <div className="present" role="dialog" aria-label="Present the case">
       <div className="pr-top">
-        <span className="pr-chrome"><span className="micro ink">Exchequer</span><span className="micro">Case {short(result.case_id ?? '')}</span><span className="micro">{short(result.address)}</span></span>
+        <span className="pr-chrome"><span className="micro ink">Exchequer</span><span className="micro">{result.case_id ? `Case ${short(result.case_id)}` : result.recorded_demo ? `Recorded demo ${String(result.recorded_demo).padStart(2, '0')}` : 'Case'}</span><span className="micro">{short(result.address)}</span></span>
         <span className="pr-chrome"><span className="micro amber">Restricted</span><span className="micro">{screen + 1} / {total}</span><button type="button" className="quiet" onClick={onClose} title="Back to the console (Esc)">Esc · console</button></span>
       </div>
       {screens[screen]}

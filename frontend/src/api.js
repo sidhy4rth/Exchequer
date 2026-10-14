@@ -101,6 +101,20 @@ export async function fetchCase(caseId) {
   return response.json()
 }
 
+/** Which DEMO.md traces have a recording, and when each was made. */
+export async function fetchRecordedDemos() {
+  const response = await apiFetch(`${BASE}/demos/recorded`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+/** A DEMO.md trace as recorded, served from a file: not a case, never re-traced. */
+export async function fetchRecordedDemo(n) {
+  const response = await apiFetch(`${BASE}/demos/recorded/${encodeURIComponent(n)}`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
 export async function fetchCases(limit = 20) {
   const response = await apiFetch(`${BASE}/cases?limit=${limit}`)
   if (!response.ok) throw await toError(response)

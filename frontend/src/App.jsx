@@ -42,6 +42,7 @@ export default function App() {
           what was found at the time, including pattern findings that live data
           may no longer satisfy. */}
       <Route path="/case/:caseId" element={<Gate as="investigator"><TraceView /></Gate>} />
+      <Route path="/demo/:demoNo" element={<Gate as="investigator"><TraceView /></Gate>} />
       <Route path="/batch/:batchId" element={<Gate as="investigator"><Batch /></Gate>} />
       <Route path="*" element={<Gate as="investigator"><Home /></Gate>} />
     </Routes>

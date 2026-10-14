@@ -21,6 +21,15 @@ USDT freeze list; all ten traces were re-checked afterwards and attribute
 exactly as below — the only change
 is the phishing flags noted in traces 6 and 10.
 
+Every trace also has a **recording**: the full result as it came out on the
+day it was recorded, in `backend/data/recorded_demos.json`. Pick a demo in the
+app and an "open it as recorded" link appears beside the picker; it opens at
+`/demo/<n>` instantly, consults no chain, and its **Trace live** button runs the
+same trace now. When a live answer has moved (trace 3 does, by design), the two
+can be shown side by side. Recordings are not cases, so they never show up as
+related complaints. Re-record with `python backend/scripts/record_demos.py`
+(or `--only 3`) after the deployed label files change.
+
 Those are cold numbers. On the hosted instance the backend traces this list
 in the background at startup and keeps the responses on disk, so on the day
 each of these answers from cache in well under a second — say "20–40 seconds

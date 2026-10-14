@@ -19,13 +19,16 @@ function Landed() {
   return <p data-testid="landed">{pathname + search}</p>
 }
 
+const recordings = { demos: [{ demo: 6, recorded_at: '2026-10-14T16:44:03+00:00', address: '0x00000000072d54638c2c2a3da3f715360269eea1', exchange: 'Binance', confidence: 0.875 }] }
+
 async function renderHome() {
-  stubFetch({ '/health': { body: health }, '/cases': { body: { count: 0, cases: [] } }, '/exchanges': { body: {} }, '/risk-labels': { body: {} } })
+  stubFetch({ '/health': { body: health }, '/cases': { body: { count: 0, cases: [] } }, '/exchanges': { body: {} }, '/risk-labels': { body: {} }, '/demos/recorded': { body: recordings } })
   render(
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/trace/:address" element={<Landed />} />
+        <Route path="/demo/:n" element={<Landed />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -63,5 +66,30 @@ describe('the trace form', () => {
     await user.tab()
     expect(field).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByRole('button', { name: /trace/i })).toBeDisabled()
+  })
+
+  it('offers the recording of a loaded demo, and drops it once the form is edited', async () => {
+    const user = userEvent.setup()
+    await renderHome()
+    await user.selectOptions(screen.getByLabelText('Load a verified example'), '06')
+    const link = await screen.findByRole('link', { name: /open it as recorded/i })
+    expect(link).toHaveTextContent('2026-10-14')
+    await user.type(screen.getByLabelText('Reported wallet address'), 'f')
+    expect(screen.queryByRole('link', { name: /open it as recorded/i })).not.toBeInTheDocument()
+  })
+
+  it('opens the recording without starting a trace', async () => {
+    const user = userEvent.setup()
+    await renderHome()
+    await user.selectOptions(screen.getByLabelText('Load a verified example'), '06')
+    await user.click(await screen.findByRole('link', { name: /open it as recorded/i }))
+    expect(screen.getByTestId('landed')).toHaveTextContent('/demo/6')
+  })
+
+  it('offers no recording for a demo that has none', async () => {
+    const user = userEvent.setup()
+    await renderHome()
+    await user.selectOptions(screen.getByLabelText('Load a verified example'), '01')
+    expect(screen.queryByRole('link', { name: /open it as recorded/i })).not.toBeInTheDocument()
   })
 })
