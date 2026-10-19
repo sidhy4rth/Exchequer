@@ -1,11 +1,11 @@
-fastapi==0.143.0
-starlette==1.7.0
+fastapi==0.143.2
+starlette==1.8.0
 uvicorn[standard]==0.54.0
 httpx==0.28.1
 networkx==3.7
 python-dotenv==1.2.4
 pydantic==2.14.1
-SQLAlchemy==2.0.54
+SQLAlchemy==2.1.4
 cryptography==50.0.2
 reportlab==5.0.1
-pypdf==6.20.1
+pypdf==6.21.0
