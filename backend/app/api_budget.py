@@ -107,6 +107,7 @@ class ResponseCache:
         self._disk_hits = 0
         self.path = Path(path) if path else None
         self._db: sqlite3.Connection | None = None
+        self._puts = 0
         if self.path is not None:
             self._open_disk()
 
@@ -115,21 +116,50 @@ class ResponseCache:
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             db = sqlite3.connect(str(self.path), check_same_thread=False)
+            # Only takes effect on a new file (or at the next VACUUM): lets the
+            # file give back the pages expired rows leave behind.
+            db.execute("PRAGMA auto_vacuum=INCREMENTAL")
             db.execute(
                 "CREATE TABLE IF NOT EXISTS responses ("
                 "key TEXT PRIMARY KEY, stored_at REAL NOT NULL, "
                 "value TEXT NOT NULL, meta TEXT)"
             )
             db.execute("CREATE INDEX IF NOT EXISTS responses_stored_at ON responses(stored_at)")
-            # Expired rows are dropped at open rather than on every read.
-            db.execute("DELETE FROM responses WHERE stored_at < ?", (time.time() - self.ttl_seconds,))
             db.commit()
+            self._prune_disk(db, at_open=True)
             self._db = db
             logger.info("Provider response cache on disk at %s", self.path)
         except (OSError, sqlite3.Error) as exc:
             # A cache that cannot be persisted is still a cache. Say so and go on.
             logger.warning("Response cache will not persist (%s): %s", self.path, exc)
             self._db = None
+
+    # Expired rows are dropped at open and again every this many writes. A
+    # server that stays up otherwise kept every response it ever cached: a
+    # 24-hour cache had grown its file to 420 MB.
+    PRUNE_EVERY_PUTS = 500
+
+    def _prune_disk(self, db: sqlite3.Connection, at_open: bool = False) -> None:
+        """Delete expired rows and give their space back to the filesystem.
+
+        Deleting alone never shrinks a SQLite file. A file made before
+        auto_vacuum was set is compacted once, at open, when most of it is
+        free pages; after that the incremental vacuum keeps it in step."""
+        try:
+            db.execute("DELETE FROM responses WHERE stored_at < ?", (time.time() - self.ttl_seconds,))
+            db.commit()
+            mode = db.execute("PRAGMA auto_vacuum").fetchone()[0]
+            if mode == 2:
+                # Frees one page per step, so it must be read to the end.
+                db.execute("PRAGMA incremental_vacuum").fetchall()
+                db.commit()
+            elif at_open:
+                free = db.execute("PRAGMA freelist_count").fetchone()[0]
+                pages = db.execute("PRAGMA page_count").fetchone()[0]
+                if pages and free * 4 >= pages:
+                    db.execute("VACUUM")  # also switches the file to incremental
+        except sqlite3.Error as exc:
+            logger.warning("Response cache prune failed: %s", exc)
 
     @staticmethod
     def _disk_key(key: Hashable) -> str:
@@ -174,6 +204,10 @@ class ResponseCache:
             self._db.commit()
         except sqlite3.Error as exc:
             logger.warning("Response cache write failed: %s", exc)
+            return
+        self._puts += 1
+        if self._puts % self.PRUNE_EVERY_PUTS == 0:
+            self._prune_disk(self._db)
 
     def _disk_count(self) -> int:
         if self._db is None:

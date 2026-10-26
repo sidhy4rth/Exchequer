@@ -223,3 +223,42 @@ def test_budget_stats_never_show_the_api_key():
     assert "etherscan:" in names
     for start in range(len(key) - 3):
         assert key[start:start + 4] not in names
+
+
+def test_the_disk_cache_drops_expired_rows_while_running_and_shrinks(tmp_path, monkeypatch):
+    import sqlite3
+    import time as _time
+
+    from app.api_budget import ResponseCache
+
+    path = tmp_path / "cache.db"
+    cache = ResponseCache(ttl_seconds=60, path=path)
+    monkeypatch.setattr(ResponseCache, "PRUNE_EVERY_PUTS", 50)
+    blob = "x" * 20_000
+    clock = [1_000_000.0]
+    monkeypatch.setattr(_time, "time", lambda: clock[0])
+    for i in range(49):
+        cache.put(("old", i), blob)
+    grown = path.stat().st_size
+    clock[0] += 3600  # all of those have expired
+    cache.put(("new", 0), blob)  # the 50th write prunes
+    rows = sqlite3.connect(path).execute("SELECT COUNT(*) FROM responses").fetchone()[0]
+    assert rows == 1
+    assert path.stat().st_size < grown / 4
+
+
+def test_an_old_bloated_cache_file_is_compacted_at_open(tmp_path):
+    import sqlite3
+
+    from app.api_budget import ResponseCache
+
+    path = tmp_path / "old.db"
+    db = sqlite3.connect(path)  # made the old way: no auto_vacuum
+    db.execute("CREATE TABLE responses (key TEXT PRIMARY KEY, stored_at REAL NOT NULL, value TEXT NOT NULL, meta TEXT)")
+    db.executemany("INSERT INTO responses VALUES (?, 0, ?, NULL)", [(str(i), "x" * 20_000) for i in range(100)])
+    db.commit()
+    db.close()
+    before = path.stat().st_size
+    ResponseCache(ttl_seconds=60, path=path).close()
+    assert path.stat().st_size < before / 10
+    assert sqlite3.connect(path).execute("PRAGMA auto_vacuum").fetchone()[0] == 2
