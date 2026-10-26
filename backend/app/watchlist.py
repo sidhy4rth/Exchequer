@@ -291,6 +291,22 @@ def exchange_of(chain_key: str, counterparty: str) -> str | None:
     return inferred_deposits(chain_key).get(normalize_address(counterparty))
 
 
+# Any real Tron timestamp is after this (2001); block numbers are far below it.
+_TRON_EPOCH_FLOOR = 1_000_000_000
+
+
+def _position_of(chain: config.Chain) -> Callable[[Any], int]:
+    """How far along the chain a transfer is, for "newer than last seen".
+
+    The block number on EVM chains. On Tron, the time: TronGrid's TRC-20
+    endpoint returns no block number (every USDT transfer reads as block 0),
+    so a block cursor would never see one as new. The watch's
+    last_seen_block column then holds a Unix time."""
+    if chain.address_family == "tron":
+        return lambda t: int(t.timestamp or 0)
+    return lambda t: int(t.block_number or 0)
+
+
 def check_watch(watch_id: str, source: Source = open_source,
                 post: Callable[[str, dict[str, Any]], None] | None = None) -> list[dict[str, Any]]:
     """Read one watch's newest outgoing transfers; store and send any new ones.
@@ -317,14 +333,17 @@ def check_watch(watch_id: str, source: Source = open_source,
         logger.warning("Watch %s: provider failure: %s", watch_id, exc)
         return []
 
-    newest = max((t.block_number for t in transfers), default=0)
+    position = _position_of(chain)
+    newest = max((position(t) for t in transfers), default=0)
     new_alerts: list[models.Alert] = []
-    if last_seen is None:
+    if last_seen is None or (chain.address_family == "tron" and last_seen < _TRON_EPOCH_FLOOR):
         # First check: the baseline. History before the watch is not news.
+        # A Tron watch whose cursor is below any real timestamp was baselined
+        # by block number, which TRC-20 transfers do not carry; start again.
         seen_block = newest
     else:
-        fresh = sorted((t for t in transfers if t.block_number > last_seen),
-                       key=lambda t: (t.block_number, t.hash))
+        fresh = sorted((t for t in transfers if position(t) > last_seen),
+                       key=lambda t: (position(t), t.hash))
         for t in fresh:
             to = t.to_address or ""
             kind, label = _classify(chain.key, to)

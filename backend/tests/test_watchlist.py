@@ -186,3 +186,36 @@ def test_a_transfer_to_an_inferred_deposit_address_counts_as_an_exchange(chain):
     assert alert["exchange"] == "OKX" and alert["case_id"] == "c1"
     listed = watchlist.list_alerts(owner(ALICE))[0]
     assert listed["exchange"] == "OKX" and listed["case_id"] == "c1"
+
+
+TRON_WALLET = "TNXoiAJ3dct8Fjg4M9fkLFh9S2v9TXc32G"
+
+
+def trc20(seconds, to=STRANGER, value=100.0):
+    # TronGrid's TRC-20 endpoint gives no block number: block_number is 0.
+    return Transaction(hash=f"{seconds:064x}", from_address=TRON_WALLET, to_address=to,
+                       value_native=value, value_wei=int(value * 1e6), timestamp=1_760_000_000 + seconds,
+                       block_number=0, is_error=False, asset="USDT")
+
+
+def test_a_tron_usdt_watch_sees_new_transfers_without_block_numbers(chain, monkeypatch):
+    monkeypatch.setattr(watchlist, "_classify", lambda chain_key, to: ("moved", ""))
+    w = watchlist.create_watch(owner(ALICE), TRON_WALLET, "tron", "USDT")
+    chain.transfers = [trc20(10)]
+    assert watchlist.check_watch(w.id, source=chain) == []  # baseline
+    chain.transfers = [trc20(10), trc20(70, value=250.0)]
+    alerts = watchlist.check_watch(w.id, source=chain)
+    assert len(alerts) == 1 and "250 USDT" in alerts[0]["message"]
+    assert watchlist.check_watch(w.id, source=chain) == []
+
+
+def test_a_tron_watch_baselined_by_block_starts_again_rather_than_flooding(chain, monkeypatch):
+    monkeypatch.setattr(watchlist, "_classify", lambda chain_key, to: ("moved", ""))
+    w = watchlist.create_watch(owner(ALICE), TRON_WALLET, "tron", "USDT")
+    with models.session() as s:  # what the old code stored: block 0
+        s.get(models.Watch, w.id).last_seen_block = 0
+        s.commit()
+    chain.transfers = [trc20(i) for i in range(1, 30)]
+    assert watchlist.check_watch(w.id, source=chain) == []
+    chain.transfers.append(trc20(99))
+    assert len(watchlist.check_watch(w.id, source=chain)) == 1
