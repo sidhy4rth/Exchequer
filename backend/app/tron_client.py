@@ -285,6 +285,18 @@ class TronClient:
         """
         return self._get_directional_transactions(address, "only_to", limit)
 
+    def get_outgoing_transactions_since_time(
+        self, address: str, since_ts: int, limit: int | None = None
+    ) -> list[Transaction]:
+        """The first transfers `address` sent at or after `since_ts` (s), oldest first.
+
+        The Tron counterpart of the Etherscan read from a block: TRC-20
+        transfers carry no block number, so the read starts from when the
+        traced funds arrived instead. The graph builder asks for it only when
+        the newest page did not reach back that far.
+        """
+        return self._get_directional_transactions(address, "only_from", limit, since_ts=since_ts)
+
     def get_incoming_between(
         self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,
     ) -> tuple[list[Transaction], bool]:
@@ -318,9 +330,11 @@ class TronClient:
         return collected, False
 
     def _get_directional_transactions(
-        self, address: str, direction_param: str, limit: int | None = None
+        self, address: str, direction_param: str, limit: int | None = None,
+        since_ts: int | None = None,
     ) -> list[Transaction]:
-        """Transfers with `address` at one end, newest first.
+        """Transfers with `address` at one end, newest first -- or, with
+        `since_ts`, oldest first from that time (s).
 
         `direction_param` is TronGrid's own filter flag -- `only_from` for
         transfers sent, `only_to` for transfers received. Pushing the filter to
@@ -352,8 +366,10 @@ class TronClient:
             params: dict[str, Any] = {
                 direction_param: "true",
                 "limit": page_size,
-                "order_by": "block_timestamp,desc",
+                "order_by": "block_timestamp,desc" if since_ts is None else "block_timestamp,asc",
             }
+            if since_ts is not None:
+                params["min_timestamp"] = int(since_ts) * 1000
             if self.contract_address:
                 params["contract_address"] = self.contract_address
             if fingerprint:

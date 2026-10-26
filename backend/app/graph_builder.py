@@ -335,9 +335,14 @@ def build_trace_graph(
 
     # Walking out, a wallet whose newest page of transfers does not reach back
     # to when the traced funds arrived is read again from that block forward
-    # (Etherscan only; see get_outgoing_transactions_since). Without it a
-    # busy wallet hid exactly the transfers that moved the funds on.
+    # (Etherscan; see get_outgoing_transactions_since), or from that time on
+    # Tron. Without it a busy wallet hid exactly the transfers that moved the
+    # funds on.
     since = getattr(client, "get_outgoing_transactions_since", None) if direction == OUTGOING else None
+    # Tron's TRC-20 transfers carry no block number; there the read starts
+    # from the arrival time instead (TronClient.get_outgoing_transactions_since_time).
+    since_time = (getattr(client, "get_outgoing_transactions_since_time", None)
+                  if direction == OUTGOING else None)
     page_info = getattr(client, "newest_page_info", None)
     newest_page = fetch
 
@@ -358,12 +363,20 @@ def build_trace_graph(
     def fetch(address: str, limit: int | None = None) -> list[Transaction]:  # noqa: F811
         transfers = newest_page(address, limit=limit)
         start_block, arrived = window_block.get(address), window.get(address)
-        if since is None or start_block is None or arrived is None or limit is None:
+        if arrived is None or limit is None:
+            return transfers
+        if since is not None and start_block is not None:
+            def read_later() -> list[Transaction]:
+                return since(address, start_block, limit=limit)
+        elif since_time is not None:
+            def read_later() -> list[Transaction]:
+                return since_time(address, arrived, limit=limit)
+        else:
             return transfers
         full, oldest = page_reach(address, transfers, limit)
         if not full or (oldest is not None and oldest <= arrived):
             return transfers
-        later = since(address, start_block, limit=limit)
+        later = read_later()
         known = {(tx.hash, tx.to_address, tx.value_wei) for tx in transfers}
         added = [tx for tx in later if (tx.hash, tx.to_address, tx.value_wei) not in known]
         read_from_arrival.add(address)

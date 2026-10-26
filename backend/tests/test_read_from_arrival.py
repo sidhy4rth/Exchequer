@@ -158,3 +158,51 @@ def test_the_etherscan_client_reports_a_full_page_whatever_its_direction():
     assert client.get_outgoing_transactions(me, limit=3) == []  # all incoming
     assert client.newest_page_info(me) == (True, 1_700_000_000)
     api_budget.reset()
+
+
+class BusyTronClient:
+    """Tron: TRC-20 transfers have no block number, so the re-read is by time."""
+
+    def __init__(self, later: int):
+        self.inner = BusyClient(later=later)
+        for txs in self.inner.history.values():
+            for i, t in enumerate(txs):
+                txs[i] = Transaction(hash=t.hash, from_address=t.from_address, to_address=t.to_address,
+                                     value_native=t.value_native, value_wei=t.value_wei, timestamp=t.timestamp,
+                                     block_number=0, is_error=False, asset="USDT")
+        self.since_calls: list[tuple[str, int]] = []
+
+    def get_outgoing_transactions(self, address, limit=None):
+        return self.inner.get_outgoing_transactions(address, limit)
+
+    def get_outgoing_transactions_since_time(self, address, since_ts, limit=None):
+        self.since_calls.append((address, since_ts))
+        oldest = sorted((t for t in self.inner.history.get(address, []) if t.timestamp >= since_ts),
+                        key=lambda t: t.timestamp)
+        return oldest[:limit] if limit else oldest
+
+
+def test_a_busy_tron_wallet_is_read_again_from_the_arrival_time():
+    client = BusyTronClient(later=8)
+    result = build_trace_graph(SEED, client, cfg=CFG, is_terminal=lambda a: a == EXCH, direction=OUTGOING)
+    assert result.graph.has_edge(MID, EXCH)
+    assert client.since_calls == [(MID, T0 + 100)]  # from the moment the funds arrived
+    assert result.read_from_arrival == [MID]
+
+
+def test_the_trongrid_request_reads_forward_from_the_time():
+    import httpx
+
+    from app.tron_client import TronClient
+
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params))
+        return httpx.Response(200, json={"data": [], "success": True, "meta": {}})
+
+    client = TronClient(contract_address="TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", asset_symbol="USDT",
+                        client=httpx.Client(transport=httpx.MockTransport(handler)))
+    client.get_outgoing_transactions_since_time("TNXoiAJ3dct8Fjg4M9fkLFh9S2v9TXc32G", 1_760_000_000, limit=200)
+    assert seen[0]["only_from"] == "true" and seen[0]["order_by"] == "block_timestamp,asc"
+    assert seen[0]["min_timestamp"] == "1760000000000"
