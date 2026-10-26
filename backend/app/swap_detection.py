@@ -191,14 +191,21 @@ def describe(swap: dict[str, Any]) -> str:
         amount = swap.get("amount_out")
         out = (
             f"{amount:,.4f} {swap['asset_out']}" if amount is not None
-            else f"{swap['amount_out_units']} units of {swap['asset_out']}"
+            else f"{swap['amount_out_units']} raw units of {swap['asset_out']} (decimals unknown, not converted)"
+        )
+        # A token without configured decimals is also one Exchequer cannot
+        # trace, so "re-run it on" that token would send the reader nowhere.
+        onward = (
+            f"to follow the money further, re-run it on {swap['asset_out']} from {swap['sender']}."
+            if amount is not None
+            else "Exchequer does not trace that token, so the trail stops here; its "
+                 "transfers can be followed on the block explorer."
         )
         return (
             f"{swap['sender']} sent {swap['amount_in']:.4f} {swap['asset_in']} to {where} "
             f"in transaction {swap['tx']} and received {out} back in the same "
             f"transaction: a swap, not a payment. This trace follows "
-            f"{swap['asset_in']} and ends here; to follow the money further, "
-            f"re-run it on {swap['asset_out']} from {swap['sender']}."
+            f"{swap['asset_in']} and ends here; {onward}"
         )
     return (
         f"{swap['sender']} sent {swap['amount_in']:.4f} {swap['asset_in']} to {where}, "

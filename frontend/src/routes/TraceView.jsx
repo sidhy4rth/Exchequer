@@ -601,9 +601,11 @@ export default function TraceView() {
                       <div className="swap" key={s.tx}>
                         <Address value={s.sender} head={8} tail={6} /> sent <span className="num">{num(s.amount_in)} {s.asset_in}</span> to <strong>{s.router_label}</strong>
                         {s.output_read
-                          ? <> and got <span className="num">{s.amount_out != null ? num(s.amount_out) : s.amount_out_units} {s.asset_out}</span> back. {followOns.some((f) => f.address === s.sender && f.asset === s.asset_out)
-                            ? <>The {s.asset_out} is followed from here — see <em>Continued in {s.asset_out}</em>.</>
-                            : <>Re-run on {s.asset_out} from the sender to follow it further.</>}</>
+                          ? s.amount_out != null
+                            ? <> and got <span className="num">{num(s.amount_out)} {s.asset_out}</span> back. {followOns.some((f) => f.address === s.sender && f.asset === s.asset_out)
+                              ? <>The {s.asset_out} is followed from here — see <em>Continued in {s.asset_out}</em>.</>
+                              : <>Re-run on {s.asset_out} from the sender to follow it further.</>}</>
+                            : <> and got <span className="num">{s.amount_out_units}</span> raw units of an unlisted token{s.asset_out_contract ? <> (<Address value={s.asset_out_contract} head={8} tail={6} />)</> : null} back. Its decimals are not known, so the amount is not converted, and Exchequer does not trace that token — the trail stops here.</>
                           : <>. Nothing came back to the sender in the receipt — a swap into the native coin looks like this — so the output is unread, not guessed.</>}
                         <div className="grid">
                           <span className="k">tx</span><Address value={s.tx} head={12} tail={10} />

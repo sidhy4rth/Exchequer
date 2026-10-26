@@ -146,11 +146,20 @@ def test_receipts_per_edge_are_capped():
     assert len(calls) == 2
 
 
-def test_the_sentence_says_where_to_resume():
+def test_the_sentence_never_sends_the_reader_to_re_run_on_an_untraceable_token():
+    # wstETH is not a configured token: its decimals are unknown and it cannot
+    # be traced, so the sentence says the trail stops rather than "re-run it".
     swaps = detect_swaps(router_graph(), routers(), lambda h: RECEIPT, ETHEREUM, "ETH")
     text = describe(swaps[0])
     assert "a swap, not a payment" in text
-    assert f"re-run it on token {WSTETH} from {SENDER}" in text
+    assert f"raw units of token {WSTETH} (decimals unknown, not converted)" in text
+    assert "re-run it on" not in text and "trail stops here" in text
+
+
+def test_the_sentence_says_where_to_resume_on_a_traceable_token():
+    swap = {"output_read": True, "router_label": "Uniswap", "router_address": "0xr", "sender": SENDER,
+            "amount_in": 1.0, "asset_in": "ETH", "tx": "0xt", "amount_out": 2500.0, "asset_out": "USDC"}
+    assert f"re-run it on USDC from {SENDER}" in describe(swap)
 
 
 # ---------------------------------------------------------------------------

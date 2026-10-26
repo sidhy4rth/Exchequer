@@ -189,13 +189,14 @@ a { color: var(--navy); }
 
 /* Sanctions: the loudest thing on the page, above the finding. */
 .alert {
-  display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start;
   padding: 12px 16px; border: 1px solid var(--red); border-left-width: 4px;
   background: var(--red-soft); border-radius: var(--r); color: var(--ink);
 }
 .alert .icon { stroke: var(--red); width: 18px; height: 18px; margin-top: 2px; }
 .alert .title { font-weight: 600; color: var(--red); font-size: 13.5px; }
-.alert .line { font-size: 12.5px; margin-top: 3px; }
+/* A source line ends in a full transaction hash; let it break, not widen the page. */
+.alert .line { font-size: 12.5px; margin-top: 3px; overflow-wrap: anywhere; }
 .alert .line + .line { margin-top: 6px; }
 
 /* Finding bar: the answer on the left, how sure on the right. Everything
@@ -318,7 +319,7 @@ details.more summary:hover { color: var(--ink); }
 /* Transfer feed */
 .feed { display: flex; flex-direction: column; }
 .feed .row {
-  display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: start;
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: start;
   padding: 10px 14px 10px 26px; border-top: 1px solid var(--rule); animation: rise 160ms var(--ease) both;
   position: relative;
 }
@@ -400,7 +401,9 @@ details.more summary:hover { color: var(--ink); }
 .funder .sub { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); }
 .funder .sub .pill { margin-left: 6px; }
 
-.swap { font-size: 12px; line-height: 1.55; padding: 8px 0; border-top: 1px solid var(--rule); }
+/* A token whose decimals are not known shows raw units and its contract. */
+.swap { font-size: 12px; line-height: 1.55; padding: 8px 0; border-top: 1px solid var(--rule); overflow-wrap: anywhere; }
+.swap .num { white-space: normal; }
 .swap:first-of-type { border-top: none; }
 .swap .grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-family: var(--mono); font-size: 11.5px; margin-top: 4px; }
 .swap .grid .k { color: var(--faint); font-family: var(--sans); }
