@@ -111,3 +111,50 @@ def test_the_etherscan_request_reads_forward_from_the_block_and_keeps_only_sends
     assert [t.to_address for t in out] == ["0xbbbb0000000000000000000000000000000000bb"]
     assert seen[0]["startblock"] == "18000000" and seen[0]["sort"] == "asc" and seen[0]["offset"] == "200"
     api_budget.reset()
+
+
+class CollectingClient(BusyClient):
+    """A scam wallet that mostly receives: after sending the funds on at T0+200
+    it took in many victim payments. Etherscan's page holds both directions, so
+    the newest page is full of inflows and carries no transfer MID sent."""
+
+    def __init__(self, inflows: int):
+        super().__init__(later=0)
+        self.inflows = [tx(NOISE, MID, 0.2, T0 + 1000 + i, BLOCK0 + 100 + i, i) for i in range(inflows)]
+
+    def get_outgoing_transactions(self, address, limit=None):
+        page = sorted(self.history.get(address, []) + (self.inflows if address == MID else []),
+                      key=lambda t: t.timestamp, reverse=True)[:limit]
+        self.page = {**getattr(self, "page", {}), address: (len(page) >= limit, min((t.timestamp for t in page), default=None))}
+        return [t for t in page if t.from_address == address]
+
+    def newest_page_info(self, address):
+        return self.page.get(address)
+
+
+def test_a_wallet_whose_page_is_full_of_inflows_is_still_read_from_the_arrival():
+    client = CollectingClient(inflows=8)
+    result = build_trace_graph(SEED, client, cfg=CFG, is_terminal=lambda a: a == EXCH, direction=OUTGOING)
+    assert result.graph.has_edge(MID, EXCH)
+    assert client.since_calls == [(MID, BLOCK0 + 10)]
+    # And its outgoing history is not called complete.
+    assert result.graph.nodes[MID]["outgoing_history_capped"] is True
+
+
+def test_the_etherscan_client_reports_a_full_page_whatever_its_direction():
+    import httpx
+
+    from app import api_budget
+    from app.etherscan_client import EtherscanClient
+
+    api_budget.reset()
+    me = "0xaaaa0000000000000000000000000000000000aa"
+    rows = [{"hash": f"0x{i:064x}", "from": "0xcccc0000000000000000000000000000000000cc", "to": me,
+             "value": "1", "timeStamp": str(1_700_000_000 + i), "blockNumber": str(18_000_000 + i),
+             "isError": "0", "txreceipt_status": "1", "input": "0x"} for i in range(3)]
+    client = EtherscanClient(api_key="k2", chain_id=1, min_interval=0.0, include_internal=False,
+                             client=httpx.Client(transport=httpx.MockTransport(
+                                 lambda r: httpx.Response(200, json={"status": "1", "message": "OK", "result": rows}))))
+    assert client.get_outgoing_transactions(me, limit=3) == []  # all incoming
+    assert client.newest_page_info(me) == (True, 1_700_000_000)
+    api_budget.reset()

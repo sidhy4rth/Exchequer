@@ -324,6 +324,10 @@ class EtherscanClient:
         )
         # Every response this client's trace was built from, hashed on arrival.
         self.evidence = EvidenceLog()
+        # address -> (the newest page came back full, its oldest record's time).
+        # The page holds both directions, so the count of transfers an address
+        # *sent* says nothing about whether older history went unread.
+        self._newest_page: dict[str, tuple[bool, int | None]] = {}
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -532,6 +536,12 @@ class EtherscanClient:
                            params["action"], address, result)
             result = []
 
+        if sort == "desc":
+            stamps = [int(raw.get("timeStamp") or 0) for raw in result if isinstance(raw, dict)]
+            self._newest_page[normalize_address(address)] = (
+                len(result) >= offset, min((t for t in stamps if t > 0), default=None),
+            )
+
         parse = self._parser()
         txs = [tx for tx in (parse(raw) for raw in result) if tx is not None]
 
@@ -556,6 +566,14 @@ class EtherscanClient:
             txs.sort(key=lambda t: t.timestamp, reverse=(sort == "desc"))
 
         return txs
+
+    def newest_page_info(self, address: str) -> tuple[bool, int | None] | None:
+        """Whether the last newest-first read of `address` filled its page, and
+        the time of the oldest record on it; None if it has not been read.
+
+        A full page means older history exists that was not read, however few
+        of the records on it were transfers the address sent."""
+        return self._newest_page.get(normalize_address(address))
 
     def get_incoming_between(
         self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,

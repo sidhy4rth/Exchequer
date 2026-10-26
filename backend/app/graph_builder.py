@@ -338,14 +338,30 @@ def build_trace_graph(
     # (Etherscan only; see get_outgoing_transactions_since). Without it a
     # busy wallet hid exactly the transfers that moved the funds on.
     since = getattr(client, "get_outgoing_transactions_since", None) if direction == OUTGOING else None
+    page_info = getattr(client, "newest_page_info", None)
     newest_page = fetch
+
+    def page_reach(address: str, transfers: list[Transaction], limit: int | None) -> tuple[bool, int | None]:
+        """(older history went unread, time of the oldest record read).
+
+        Asked of the client where it can say: Etherscan's page holds transfers
+        in both directions, so a wallet that mostly receives -- a scam wallet
+        collecting from many victims -- fills its page with inflows while
+        returning only a few outflows, and counting those would call its
+        history complete. Otherwise the transfers in hand are the page."""
+        info = page_info(address) if page_info is not None else None
+        if info is not None:
+            return info
+        full = limit is not None and len(transfers) >= limit
+        return full, min((tx.timestamp for tx in transfers), default=None)
 
     def fetch(address: str, limit: int | None = None) -> list[Transaction]:  # noqa: F811
         transfers = newest_page(address, limit=limit)
         start_block, arrived = window_block.get(address), window.get(address)
-        if (since is None or start_block is None or arrived is None or limit is None
-                or len(transfers) < limit or not transfers
-                or min(tx.timestamp for tx in transfers) <= arrived):
+        if since is None or start_block is None or arrived is None or limit is None:
+            return transfers
+        full, oldest = page_reach(address, transfers, limit)
+        if not full or (oldest is not None and oldest <= arrived):
             return transfers
         later = since(address, start_block, limit=limit)
         known = {(tx.hash, tx.to_address, tx.value_wei) for tx in transfers}
@@ -482,6 +498,7 @@ def build_trace_graph(
                 # this long means older history was not read.
                 graph.nodes[address]["outgoing_history_capped"] = (
                     len(transfers) >= cfg.max_txs_per_address
+                    or page_reach(address, transfers, cfg.max_txs_per_address)[0]
                 )
 
             # Time rule: only transfers on the right side of the moment the
