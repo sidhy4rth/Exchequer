@@ -559,7 +559,7 @@ export default function TraceView() {
                             <span className="tk">outgoing transfers</span><span className="tv">{e.sweep_count}{e.outgoing_history_capped ? ' (newest only)' : ''}</span>
                             <span className="tk">all to</span><span className="tv">{e.sweep_destination_label}</span>
                             <span className="tk">total swept</span><span className="tv">{num(e.total_swept_native ?? 0)} {unit}</span>
-                            {e.current_balance_native != null && <><span className="tk">current balance</span><span className="tv">{num(e.current_balance_native)} {unit}</span></>}
+                            {e.current_balance_native != null && <><span className="tk">current balance</span><span className="tv">{num(e.current_balance_native)} {e.current_balance_symbol ?? result?.chain_native_symbol ?? unit}</span></>}
                             {e.first_sweep && <><span className="tk">sweeps between</span><span className="tv">{when(e.first_sweep).slice(0, 10)} – {when(e.last_sweep).slice(0, 10)}</span></>}
                           </div>
                         </div>

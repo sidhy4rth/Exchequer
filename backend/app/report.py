@@ -94,6 +94,8 @@ def build_report(case: Case) -> dict[str, Any]:
             "chain_id": result.get("chain_id"),
             "asset": result.get("asset") or native_symbol,
             "native_currency": native_symbol,
+            # The chain's own coin (ETH on a USDT trace), for balances and gas.
+            "chain_currency": result.get("chain_native_symbol"),
             "block_explorer": result.get("explorer_url"),
             "direction": direction,
             "max_depth": result.get("max_depth"),
@@ -508,7 +510,9 @@ def render_text_report(report: dict[str, Any]) -> str:
             if e.get("first_sweep"):
                 add(f"    sweeps between      : {_when(e.get('first_sweep'))} and {_when(e.get('last_sweep'))}")
             if e.get("current_balance_native") is not None:
-                add(f"    current balance     : {e.get('current_balance_native')} {symbol}")
+                # The chain's coin, not the traced asset (older cases did not say which).
+                balance_unit = e.get("current_balance_symbol") or case.get("chain_currency") or symbol
+                add(f"    current balance     : {e.get('current_balance_native')} {balance_unit}")
             add(f"    thresholds applied  : {e.get('thresholds_applied')}")
             add("")
 

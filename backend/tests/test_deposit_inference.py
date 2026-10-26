@@ -191,3 +191,13 @@ def test_a_capped_history_is_said_to_be_most_recent_not_every():
     text = describe(found[0], "ETH")
     assert "most recent outgoing transfers (older history exists" in text
     assert "Every one of its 200 outgoing transfers went" not in text
+
+
+def test_the_balance_is_stated_in_the_chains_coin_on_a_token_trace():
+    # On a USDT trace the lookup reads the ETH left for gas; calling it USDT
+    # would misstate the evidence.
+    found = infer_deposit_addresses(sweep_graph(), matcher(), balance_of=lambda a: 0.0123,
+                                    native_symbol="ETH")
+    assert found[0].evidence["current_balance_symbol"] == "ETH"
+    text = describe(found[0], "ETH")
+    assert "0.0123 ETH" in text and "USDT" not in text

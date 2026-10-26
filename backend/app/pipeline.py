@@ -403,6 +403,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                 inferred = infer_deposit_addresses(
                     result.graph, matcher,
                     balance_of=getattr(client, "get_balance_native", None),
+                    native_symbol=chain.native_symbol,
                 )
             # Every provider response the trace was computed from, hashed on
             # arrival. Taken while the client is still open, after the last
@@ -651,7 +652,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         # sentence in `inference_notes`.
         "attribution_inferred": bool(primary and primary.inferred),
         "inferred_deposits": [m.to_dict() for m in inferred],
-        "inference_notes": [describe_inference(m, asset_symbol) for m in inferred],
+        "inference_notes": [describe_inference(m, chain.native_symbol) for m in inferred],
         "value_received_native": (
             round(primary.value_received_native, 6) if primary else None
         ),

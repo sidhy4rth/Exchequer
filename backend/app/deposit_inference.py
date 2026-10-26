@@ -139,6 +139,9 @@ def infer_deposit_addresses(
         if balance_of is not None:
             try:
                 evidence["current_balance_native"] = round(balance_of(node), 6)
+                # The chain's own coin, whatever asset the trace follows: on a
+                # USDT trace this is the ETH left for gas, not USDT.
+                evidence["current_balance_symbol"] = native_symbol
             except Exception as exc:  # noqa: BLE001 -- evidence, not a requirement
                 logger.warning("Balance lookup failed for %s: %s", node, exc)
                 evidence["current_balance_native"] = None
@@ -174,7 +177,8 @@ def describe(match: ExchangeMatch, native_symbol: str = "ETH") -> str:
     e = match.evidence or {}
     balance = e.get("current_balance_native")
     balance_text = (
-        f" Its current balance is {balance:.4f} {native_symbol}." if balance is not None else ""
+        f" Its current balance is {balance:.4f} {e.get('current_balance_symbol') or native_symbol}."
+        if balance is not None else ""
     )
     scope = (
         f"Every one of its {e.get('sweep_count')} most recent outgoing transfers (older "
