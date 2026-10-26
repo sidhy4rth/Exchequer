@@ -6,7 +6,7 @@ run at once; this caps how many one client may start per hour. In memory,
 per process: a restart forgets the counts, which is acceptable for a limit
 whose job is to stop a loop, not to bill anyone.
 
-Behind Railway's proxy every request arrives from the proxy, so the client
+Behind a host's proxy every request arrives from the proxy, so the client
 is read from the proxy's headers -- but only when EXCHEQUER_TRUST_PROXY is
 set (the Docker image sets it). Without a proxy in front, those headers are
 whatever the client chose to send.
@@ -22,7 +22,13 @@ from . import config
 
 def client_ip(headers: dict[str, str] | object, peer: str | None) -> str:
     """The caller's address: the proxy's view of it when trusted, else the peer."""
-    if config.TRUST_PROXY_HEADERS:
+    if config.TRUST_PROXY_HEADERS and config.PROXY_CLIENT_FIRST:
+        # Render: the proxy writes the address it saw first. Ignore X-Real-IP,
+        # which Render does not set, so a client could choose it.
+        forwarded = headers.get("x-forwarded-for")  # type: ignore[union-attr]
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    elif config.TRUST_PROXY_HEADERS:
         real = headers.get("x-real-ip")  # type: ignore[union-attr]
         if real:
             return real.strip()

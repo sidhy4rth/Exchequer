@@ -22,7 +22,7 @@ router = APIRouter()
 
 
 def _authorised(request: Request) -> None:
-    if not config.BACKUP_TOKEN:
+    if not config.BACKUP_TOKEN or config.DATABASE_URL:  # a SQLite snapshot only
         raise HTTPException(status_code=404, detail="Not Found")
     scheme, _, token = request.headers.get("authorization", "").partition(" ")
     if scheme.lower() != "bearer" or not hmac.compare_digest(

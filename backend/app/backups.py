@@ -65,8 +65,8 @@ def snapshot(dest: Path, source: Path | None = None) -> Path:
 
 def daily(now: datetime | None = None) -> Path | None:
     """Today's snapshot, if it is not there yet; then drop the oldest."""
-    if not config.DB_PATH.exists():
-        return None
+    if config.DATABASE_URL or not config.DB_PATH.exists():
+        return None  # a hosted Postgres keeps its own backups
     day = (now or datetime.now(tz=timezone.utc)).strftime("%Y-%m-%d")
     dest = backup_dir() / f"{PREFIX}{day}{SUFFIX}"
     made = None

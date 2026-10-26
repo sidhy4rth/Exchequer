@@ -34,12 +34,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-LIVE = "https://exchequer-production.up.railway.app"
+LIVE = os.environ.get("EXCHEQUER_URL") or "https://exchequer.onrender.com"
 EXPECTATIONS = Path(__file__).resolve().parent.parent / "data" / "demo_expectations.json"
 TOLERANCE = 0.05
 

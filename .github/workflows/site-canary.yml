@@ -19,6 +19,9 @@ jobs:
   canary:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Set the repository variable SITE_URL when the site moves host.
+      EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer.onrender.com' }}
     defaults:
       run:
         working-directory: frontend
@@ -31,10 +34,20 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      # After a push, wait out a redeploy (automatic or `railway up`) so the
-      # check is more likely to see the new build than the old one.
+      # After a push, wait out a redeploy (Render deploys main on push) so
+      # the check is more likely to see the new build than the old one.
       - if: github.event_name == 'push'
         run: sleep 240
+      # The free Render instance sleeps after 15 idle minutes and takes up to
+      # a minute or two to wake; knock first so the checks time the app, not
+      # the boot.
+      - name: Wake the site
+        run: |
+          for i in $(seq 1 24); do
+            curl -fsS -m 20 "$EXCHEQUER_URL/health" >/dev/null && exit 0
+            sleep 10
+          done
+          echo "site did not answer /health within 4 minutes"; exit 1
       - run: npm run canary
       - if: failure()
         uses: actions/upload-artifact@v7

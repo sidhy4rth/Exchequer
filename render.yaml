@@ -1,0 +1,46 @@
+# Render Blueprint: the same Docker image as before, on Render's free plan.
+#
+# New > Blueprint in the Render dashboard, pick this repository, and Render
+# asks once for every `sync: false` value below. The free plan has no disk:
+# the container's /data is wiped on each restart and after 15 idle minutes,
+# so the case store lives in Postgres (DATABASE_URL) instead. Leave it blank
+# and the site still runs, with a store that forgets.
+services:
+  - type: web
+    name: exchequer
+    runtime: docker
+    plan: free
+    # Closest Render region to India; it cannot be changed after creation.
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      # Provider keys (backend/.env.example says where each comes from).
+      - key: ETHERSCAN_API_KEY
+        sync: false
+      - key: NODEREAL_API_KEY
+        sync: false
+      - key: TRONGRID_API_KEY
+        sync: false
+      - key: TRONSCAN_API_KEY
+        sync: false
+      # postgres://… from a free Neon project (neon.tech); see models.py.
+      - key: DATABASE_URL
+        sync: false
+      # Render's 256-bit base64 value is exactly an Ed25519 seed, so reports
+      # signed today still verify after a restart (signing.py).
+      - key: EXCHEQUER_SIGNING_KEY
+        generateValue: true
+      # Render puts the client's address first in X-Forwarded-For.
+      - key: EXCHEQUER_TRUST_PROXY
+        value: render
+      # Each wake from sleep starts with an empty provider cache; re-tracing
+      # every demo then would spend the free quota and slow the first visitor
+      # on a tenth of a CPU. The recorded demos open instantly instead.
+      - key: EXCHEQUER_WARM_CACHE
+        value: "0"
+      # The daily snapshot copies a SQLite file on the volume; there is none.
+      - key: EXCHEQUER_BACKUPS
+        value: "0"

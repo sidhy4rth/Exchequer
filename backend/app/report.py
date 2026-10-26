@@ -33,13 +33,14 @@ def _read_tool_version() -> str:
     """The code that produced the report, so a reader can check out exactly
     what ran. `git describe` where there is a checkout; in the Docker image
     there is no git, so the commit comes from the environment instead --
-    EXCHEQUER_VERSION from the build, or the one Railway sets. Falls back cleanly, because a report must never fail over its own
+    EXCHEQUER_VERSION from the build, or the one Railway or Render sets. Falls back cleanly, because a report must never fail over its own
     footer."""
     baked = (
         os.getenv("EXCHEQUER_VERSION", "").strip()
-        # Railway injects the deployed commit; the short form is what a
+        # Railway and Render inject the deployed commit; the short form is what a
         # reader would type into `git checkout`.
         or os.getenv("RAILWAY_GIT_COMMIT_SHA", "").strip()[:12]
+        or os.getenv("RENDER_GIT_COMMIT", "").strip()[:12]
     )
     if baked:
         return baked

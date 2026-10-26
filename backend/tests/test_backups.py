@@ -65,3 +65,16 @@ def test_the_endpoint_needs_the_exact_token(store, monkeypatch, tmp_path):
     assert resp.headers["cache-control"] == "no-store"
     con = _restore(resp.content, tmp_path)
     assert con.execute("SELECT count(*) FROM cases").fetchone()[0] == 1
+
+
+def test_a_postgres_store_takes_no_sqlite_snapshot(store, monkeypatch):
+    monkeypatch.setattr(config, "DATABASE_URL", "postgres://u:p@db.example/x")
+    monkeypatch.setattr(config, "BACKUP_TOKEN", "t" * 32)
+    assert backups.daily() is None
+    assert TestClient(app).get("/admin/backup", headers={"Authorization": "Bearer " + "t" * 32}).status_code == 404
+
+
+def test_host_style_postgres_urls_name_the_driver():
+    assert models._postgres_url("postgres://u:p@h/db?sslmode=require") == "postgresql+psycopg://u:p@h/db?sslmode=require"
+    assert models._postgres_url("postgresql://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
+    assert models._postgres_url("postgresql+psycopg://u:p@h/db") == "postgresql+psycopg://u:p@h/db"

@@ -1,4 +1,4 @@
-"""SQLite persistence for traced cases.
+"""Persistence for traced cases: SQLite by default, Postgres when DATABASE_URL is set.
 
 Deliberately one table. A case is an immutable record of what the tool
 concluded at a point in time, stored as the exact JSON that was returned to
@@ -161,12 +161,29 @@ class Batch(Base):
     rows_json: Mapped[str] = mapped_column(Text)
 
 
-_engine = create_engine(
-    f"sqlite:///{config.DB_PATH}", future=True,
-    # Wait up to 15 s for a lock rather than failing at once: background
-    # traces, batches and the watchlist all write here.
-    connect_args={"timeout": 15},
-)
+def _postgres_url(url: str) -> str:
+    """Hosts hand out postgres:// URLs; SQLAlchemy wants the driver named."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
+def _make_engine() -> Engine:
+    if config.DATABASE_URL:
+        # A hosted Postgres closes idle connections (Neon suspends after a few
+        # minutes), so a pooled one is tested before use, never trusted.
+        return create_engine(_postgres_url(config.DATABASE_URL), future=True,
+                             pool_pre_ping=True, pool_recycle=300)
+    return create_engine(
+        f"sqlite:///{config.DB_PATH}", future=True,
+        # Wait up to 15 s for a lock rather than failing at once: background
+        # traces, batches and the watchlist all write here.
+        connect_args={"timeout": 15},
+    )
+
+
+_engine = _make_engine()
 
 
 @event.listens_for(Engine, "connect")
@@ -192,10 +209,14 @@ def store_version() -> int:
 
 def init_db() -> None:
     """Create the schema if it does not exist. Safe to call repeatedly."""
-    config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if _engine.dialect.name == "sqlite":
+        config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(_engine)
     _add_missing_columns()
-    logger.info("SQLite ready at %s", config.DB_PATH)
+    if _engine.dialect.name == "sqlite":
+        logger.info("SQLite ready at %s", config.DB_PATH)
+    else:
+        logger.info("Case store ready on %s at %s", _engine.dialect.name, _engine.url.host)
 
 
 def _add_missing_columns() -> None:

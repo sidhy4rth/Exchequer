@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 15
     env:
       BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
-      SITE: https://exchequer-production.up.railway.app
+      SITE: ${{ vars.SITE_URL || 'https://exchequer.onrender.com' }}
     steps:
       - uses: actions/checkout@v7
       - name: Check the job is set up

@@ -17,6 +17,8 @@ jobs:
   demos:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer.onrender.com' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -29,8 +31,18 @@ jobs:
           path: demo_state.json
           key: demo-health-state-${{ github.run_id }}
           restore-keys: demo-health-state-
+      # The free Render instance sleeps after 15 idle minutes and takes up to
+      # a minute or two to wake; knock first so the checks time the app, not
+      # the boot.
+      - name: Wake the site
+        run: |
+          for i in $(seq 1 24); do
+            curl -fsS -m 20 "$EXCHEQUER_URL/health" >/dev/null && exit 0
+            sleep 10
+          done
+          echo "site did not answer /health within 4 minutes"; exit 1
       - name: Re-run the DEMO.md traces on the live site
-        run: python backend/scripts/check_demos.py --state demo_state.json
+        run: python backend/scripts/check_demos.py --state demo_state.json --base "$EXCHEQUER_URL"
       - uses: actions/cache/save@v6
         if: always()
         with:

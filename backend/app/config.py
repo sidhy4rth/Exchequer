@@ -379,6 +379,11 @@ ETHERSCAN_INCLUDE_INTERNAL: bool = (
 )
 
 # SQLite location. Relative paths resolve against backend/.
+# A Postgres connection string (postgres://… or postgresql://…) keeps the store
+# off the local disk -- needed where the disk does not survive a restart, as on
+# Render's free tier. Unset, the store is the SQLite file at DB_PATH.
+DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
+
 _db_raw = os.getenv("EXCHEQUER_DB_PATH", "exchequer.db")
 DB_PATH: Path = Path(_db_raw) if Path(_db_raw).is_absolute() else BACKEND_DIR / _db_raw
 
@@ -427,11 +432,15 @@ API_DOCS_ENABLED: bool = (
 # spends the shared free-tier provider quota; see rate_limit.py.
 TRACES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_TRACES_PER_HOUR", 30)
 
-# Read the client address from X-Real-IP / X-Forwarded-For. Only behind a
-# proxy that sets them (Railway); the Docker image turns it on.
-TRUST_PROXY_HEADERS: bool = (
-    os.getenv("EXCHEQUER_TRUST_PROXY", "").strip().lower() in ("1", "true", "yes", "on")
-)
+# Read the client address from the proxy's headers. Only behind a proxy that
+# sets them; the Docker image turns it on. Proxies disagree on where the real
+# address goes: Railway sets X-Real-IP and appends to X-Forwarded-For ("1"),
+# while Render keeps whatever the client sent and puts the address it saw
+# FIRST in X-Forwarded-For, without setting X-Real-IP ("first"). Reading the
+# wrong end puts every visitor behind one proxy address, sharing one limit.
+_proxy_raw = os.getenv("EXCHEQUER_TRUST_PROXY", "").strip().lower()
+TRUST_PROXY_HEADERS: bool = _proxy_raw in ("1", "true", "yes", "on", "first", "render")
+PROXY_CLIENT_FIRST: bool = _proxy_raw in ("first", "render")
 
 # Where the report-signing private key is kept when EXCHEQUER_SIGNING_KEY is
 # not set: beside the case store, so on Railway it lives on the volume and

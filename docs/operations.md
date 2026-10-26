@@ -12,12 +12,13 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `TRONGRID_API_KEY` | — | Raises the Tron rate limit (Tron works without it). |
 | `TRONSCAN_API_KEY` | — | Live TronScan tag lookup on Tron traces. |
 | `EXCHEQUER_DB_PATH` | `exchequer.db` (`/data/exchequer.db` in the image) | The case store: cases, watches, alerts, freeze requests, batches. SQLite in WAL mode. |
+| `DATABASE_URL` | — | A `postgres://` URL moves the case store to Postgres (needed on a host without a disk, such as Render's free plan). Unset, the store is the SQLite file above. The volume backups and `/admin/backup` apply to SQLite only. |
 | `API_CACHE_PATH` | `provider_cache.db` beside the store | Provider response cache (24 h). `off` disables it. |
 | `EXCHEQUER_SIGNING_KEY` | — | Base64 32-byte Ed25519 seed for signing reports. Without it a key is made on first start at `report_signing_key.pem` beside the store (mode 0600). |
 | `EXCHEQUER_SIGNING_KEY_PATH` | `report_signing_key.pem` | Where that file lives. |
 | `EXCHEQUER_MAX_RUNNING_TRACES` | 4 | Traces running at once, server-wide. |
 | `EXCHEQUER_TRACES_PER_HOUR` | 30 | Traces one client may start per hour (a batch counts every row). `0` = no limit. |
-| `EXCHEQUER_TRUST_PROXY` | off (on in the image) | Read the client address from `X-Real-IP` / `X-Forwarded-For`. Only behind a proxy that sets them. |
+| `EXCHEQUER_TRUST_PROXY` | off (on in the image) | Read the client address from the proxy's headers. Only behind a proxy that sets them. `1`: `X-Real-IP`, else the last `X-Forwarded-For` entry (Railway). `render`: the first `X-Forwarded-For` entry. |
 | `EXCHEQUER_API_DOCS` | on (off in the image) | `/docs`, `/redoc`, `/openapi.json`. |
 | `EXCHEQUER_WATCHER` | off (on in the image) | Re-read watched addresses in the background. |
 | `EXCHEQUER_WATCH_INTERVAL` | 600 | Seconds between checks of one watch (minimum 60). |
@@ -54,6 +55,25 @@ open by link). Moving to real accounts later means mapping owner hashes to
 users; nothing else changes.
 
 ## Deploying
+
+### Render (current host, since 26 Oct 2026)
+
+`render.yaml` is a Blueprint for the free plan: Dashboard → New → Blueprint →
+this repository. Render asks once for the provider keys and `DATABASE_URL`,
+generates `EXCHEQUER_SIGNING_KEY` itself, and from then on deploys every push
+to `main`. The free instance has no disk and sleeps after 15 idle minutes, so:
+
+- the case store must be Postgres to keep anything: create a free project at
+  neon.tech and paste its connection string as `DATABASE_URL`;
+- the provider cache starts empty after each wake, and the warm-up is off
+  (the recorded demos open instantly instead);
+- the first visit after a sleep waits for the container to start; the
+  monitoring workflows knock on `/health` before they check anything.
+
+The monitors read the site address from the repository variable `SITE_URL`
+(`gh variable set SITE_URL --body https://<service>.onrender.com`).
+
+### Railway (until October 2026)
 
 `railway up` uploads the working directory, not the last commit, so deploy
 from a clean checkout when the tree has uncommitted work. A new worktree is
@@ -117,7 +137,7 @@ key file once.
 ## Keys
 
 If a provider key may have leaked, rotate it at the provider and update the
-Railway variable. Before October the HTTP client logged request URLs, keys
+host's environment variable. Before October the HTTP client logged request URLs, keys
 included, so keys used before then should be rotated once.
 
 If the signing key is replaced, reports signed with the old key stop
