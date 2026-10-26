@@ -48,6 +48,7 @@ def _run(job: jobs.Job, request: TraceRequest, owner: str | None) -> None:
 
 @router.post("/trace/jobs", status_code=202)
 def start_job(request: TraceRequest, http: Request) -> JSONResponse:
+    pipeline.check_request(request)  # a typo is refused before it costs the allowance
     cases.admit(http)  # holds a running slot from here until _run releases it
     try:
         job = jobs.store.create()

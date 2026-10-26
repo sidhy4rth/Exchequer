@@ -92,6 +92,7 @@ def trace(request: TraceRequest, http: Request) -> dict[str, Any]:
     other people who paid it. The whole trace runs inside this request; the
     app itself uses POST /trace/jobs, which runs it in the background.
     """
+    pipeline.check_request(request)
     admit(http)
     try:
         payload = pipeline.run_trace(request)

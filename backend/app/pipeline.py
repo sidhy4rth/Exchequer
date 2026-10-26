@@ -270,19 +270,12 @@ def _wallet_statement(client: Any, address: str) -> dict[str, Any] | None:
 MAX_FOLLOW_ONS = 2
 
 
-def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str, Any]:
-    """Run one trace and return the full result, without storing it.
-
-    `seed_window` is set only for a follow-on trace after a swap: the time rule
-    then applies to the starting wallet too (see build_trace_graph).
-
-    Everything the endpoint does except the case record: the endpoint gives
-    the result a case id and saves it; the startup warm-up runs the demo
-    addresses through this and keeps nothing, so the provider responses are
-    cached without a row appearing in the case store.
-    """
+def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
+    """The checks a trace can fail before it reads anything: the chain, the
+    address and the asset. Run by the endpoints before a trace is admitted,
+    so a typo is refused without spending the caller's hourly allowance,
+    and again by run_trace itself. Returns the chain and the stripped address."""
     address = request.address.strip()
-    direction = request.direction
 
     # Which chain. Never inferred from the address: an EVM address is valid on
     # every EVM chain, and the same address can hold funds on both Ethereum and
@@ -305,6 +298,32 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                 f"Expected {chain.address_hint()}."
             ),
         )
+
+    asset = (request.asset or chain.native_symbol).strip().upper()
+    if asset != chain.native_symbol.upper() and chain.find_token(asset) is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{chain.name} has no traceable asset called '{asset}'. "
+                f"Available: {chain.native_symbol}, " + ", ".join(t.symbol for t in chain.tokens)
+            ),
+        )
+    return chain, address
+
+
+def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str, Any]:
+    """Run one trace and return the full result, without storing it.
+
+    `seed_window` is set only for a follow-on trace after a swap: the time rule
+    then applies to the starting wallet too (see build_trace_graph).
+
+    Everything the endpoint does except the case record: the endpoint gives
+    the result a case id and saves it; the startup warm-up runs the demo
+    addresses through this and keeps nothing, so the provider responses are
+    cached without a row appearing in the case store.
+    """
+    chain, address = check_request(request)
+    direction = request.direction
 
     seed = normalize_address(address)
     matcher = get_matcher(chain.key)
