@@ -293,7 +293,9 @@ export default function TraceView() {
           <span className="micro">{reverse ? 'Reported address (funded by)' : 'Reported address'}</span>
           <Address value={address} head={12} tail={10} />
         </div>
-        <div className="pills">
+        {/* A stored case's pills describe it, so none until it has loaded: a
+            broken link must not look like an archived Ethereum case. */}
+        {(result || !stored) && <div className="pills">
           <span className="pill">{result?.chain_name ?? chain}</span>
           <span className="pill mono">{unit}</span>
           {(!stored || result?.max_depth) && <span className="pill mono">{stored ? result.max_depth : depth} hops</span>}
@@ -302,7 +304,7 @@ export default function TraceView() {
           {recorded && <span className="pill navy" title="A DEMO.md trace as it came out when recorded. Live data moves; Trace live runs it again now.">Recorded demo {String(demoNo).padStart(2, '0')}{tracedAt ? ` · ${tracedAt.slice(0, 10)}` : ''}</span>}
           {stored && !recorded && !justTraced && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
           {justTraced && <span className="pill green" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
-        </div>
+        </div>}
         <span className="grow" />
         <div className="actions">
           {result && <button onClick={() => setPresenting(true)} title="The case as four big screens (P)"><Icon d={ICONS.present} />Present</button>}
