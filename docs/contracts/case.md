@@ -32,7 +32,7 @@ Every v1 field is still there, unchanged. v2 adds:
 | Field | Type | Meaning |
 |---|---|---|
 | `contract_version` | `2` | This contract. |
-| `intake.mode` | `"address"` or `"payment"` | `address`: the trace followed a wallet's history from an address. `payment`: it started from the victim's payment transactions (R1, not shipped yet). |
+| `intake.mode` | `"address"` or `"payment"` | `address`: the trace followed a wallet's history from an address. `payment`: it started from the victim's payment transactions (R1, behind the flag `EXCHEQUER_TX_INTAKE`; send `payments` and optionally `ncrp_ack` with `POST /trace`). |
 | `intake.payments[]` | list | Each payment: `tx_hash`, `chain`, `asset`, `amount`, `from`, `to`, `block`, `timestamp`, `found_by` (`victim` or `officer_search`). Empty in address mode. |
 | `intake.ncrp_ack` | string or null | The NCRP complaint acknowledgement number, when known. |
 | `reported_amount` | number or null | What the victim paid, in the traced asset. **Null in address mode**: nobody reported an amount, so nothing may be described as "the reported funds". |

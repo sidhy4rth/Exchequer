@@ -19,6 +19,14 @@ from pydantic import BaseModel, Field
 from . import config, log_safety, progress
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
 from .contracts import upgrade as upgrade_to_contract
+from .payment_intake import (
+    PaymentError,
+    PaymentRef,
+    intake_record,
+    reported_amount,
+    resolve_payments,
+    window_start,
+)
 from .etherscan_client import (
     EtherscanConfigError,
     EtherscanError,
@@ -108,6 +116,21 @@ class TraceRequest(BaseModel):
             "false, so re-running the demos never fills the case history or "
             "makes a demo look like a repeat complaint."
         ),
+    )
+    payments: list[PaymentRef] = Field(
+        default_factory=list,
+        max_length=20,
+        description=(
+            "The victim's payments, by transaction hash (R1, behind "
+            "EXCHEQUER_TX_INTAKE). Each must be an incoming transfer to "
+            "`address` in the traced asset; the trace then starts when the "
+            "first one arrived, and reported_amount is their sum. Outgoing "
+            "traces only."
+        ),
+    )
+    ncrp_ack: str | None = Field(
+        None, max_length=64,
+        description="The NCRP complaint acknowledgement number, recorded with the case.",
     )
 
 
@@ -312,6 +335,19 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
                 f"Available: {chain.native_symbol}, " + ", ".join(t.symbol for t in chain.tokens)
             ),
         )
+    # Payments (R1) are checked here too, before anything is spent: the flag
+    # must be on, and a payment starts a trace of where the money went.
+    if request.payments:
+        if not config.TX_INTAKE:
+            raise HTTPException(
+                status_code=400,
+                detail="Tracing from payment hashes is not switched on (EXCHEQUER_TX_INTAKE).",
+            )
+        if request.direction != OUTGOING:
+            raise HTTPException(
+                status_code=400,
+                detail="Payments start a trace of where the money went: use direction 'outgoing'.",
+            )
     return chain, address
 
 
@@ -355,6 +391,20 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                     TronScanTags(config.TRONSCAN_API_KEY, evidence=getattr(client, "evidence", None)),
                     matcher.is_exchange,
                 )
+            # R1: read the victim's payments from the chain first. They must be
+            # incoming transfers to the reported wallet, and the walk then reads
+            # that wallet only from when the first one arrived.
+            intake = None
+            if request.payments:
+                try:
+                    payments = resolve_payments(
+                        client, seed, request.payments, chain_key=chain.key,
+                        asset=asset_symbol, limit=config.TX_INTAKE_LOOKUP_LIMIT,
+                    )
+                except PaymentError as exc:
+                    raise HTTPException(status_code=400, detail=str(exc)) from exc
+                intake = intake_record(payments, request.ncrp_ack)
+                seed_window = window_start(payments)
             result = build_trace_graph(
                 seed,
                 client,
@@ -717,6 +767,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "truncation_reasons": result.truncation_reasons,
         "warnings": result.warnings,
     }
+    if intake is not None:
+        payload["intake"] = intake
+        payload["reported_amount"] = reported_amount(intake["payments"])
     # Every result leaves here under the case contract (contracts/case_v2.py):
     # the v1 fields above, untouched, plus the v2 fields the other lanes read.
     return upgrade_to_contract(payload)

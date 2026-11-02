@@ -488,6 +488,10 @@ BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
 # Lane A: trace engine
 # ---------------------------------------------------------------------------
 
+# Transaction-first intake (R1, payment_intake.py): how many of the reported
+# wallet's newest incoming transfers are searched for the victim's payments.
+TX_INTAKE_LOOKUP_LIMIT: int = _int_env("EXCHEQUER_TX_INTAKE_LOOKUP_LIMIT", 1000)
+
 
 # ---------------------------------------------------------------------------
 # Lane B: evidence and intelligence
@@ -529,3 +533,6 @@ def flag(env_name: str, about: str) -> bool:
     on = os.getenv(env_name, "").strip().lower() in ("1", "true", "yes", "on")
     FLAGS[env_name] = {"on": on, "about": about}
     return on
+
+
+TX_INTAKE: bool = flag("EXCHEQUER_TX_INTAKE", "Lane A, R1: trace from a payment tx hash")
