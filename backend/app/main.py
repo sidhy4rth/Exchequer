@@ -31,6 +31,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import batches as batch_runner
 from . import backups, config, log_safety, models, warmup, watchlist
+from .access import DemoCodeMiddleware
 from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
@@ -105,6 +106,9 @@ app = FastAPI(
     openapi_url="/openapi.json" if config.API_DOCS_ENABLED else None,
 )
 
+# Added first, so innermost: its refusals still pass through the security
+# headers and CORS added after it. See access.py.
+app.add_middleware(DemoCodeMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 

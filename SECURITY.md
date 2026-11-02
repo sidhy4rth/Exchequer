@@ -20,6 +20,12 @@ Exchequer has no accounts. What it does instead:
 - **Starting traces is rate limited** per client (30 an hour by default) and
   capped server-wide, because every trace spends the deployment's provider
   quota. See `backend/app/rate_limit.py`.
+- **A public deployment can require a demo code** (`EXCHEQUER_DEMO_CODE`) for
+  everything that spends the provider quota or keeps running afterwards: live
+  traces, batches and watches. Reading -- recorded demos, a stored case by its
+  link -- stays open. The code is compared in constant time and a client gets
+  10 wrong tries an hour. It is a shared demo secret, not an account. Creating
+  watches is also rate limited per client. See `backend/app/access.py`.
 - **Reports are signed.** Every text report ends in a SHA-256 content hash and
   an Ed25519 signature made with the server's key. Anyone can check one at
   `/verify` or offline with the key from `/signing-key`. See

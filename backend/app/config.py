@@ -498,6 +498,13 @@ BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
 # Lane C: platform and product
 # ---------------------------------------------------------------------------
 
+# The demo code (access.py). Set, a live trace, a batch or a watch needs it,
+# sent as X-Exchequer-Demo-Code; unset, nothing is guarded. A shared secret
+# for a public demo, not an account.
+DEMO_CODE: str = os.getenv("EXCHEQUER_DEMO_CODE", "").strip()
+# Watches one client may create per hour (0 = no limit). Each is re-read on
+# a schedule for as long as it exists, spending the provider quota.
+WATCHES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR", 20)
 
 # ---------------------------------------------------------------------------
 # FLAGS: unfinished behaviour, off unless its environment variable is set

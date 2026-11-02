@@ -18,6 +18,8 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_SIGNING_KEY_PATH` | `report_signing_key.pem` | Where that file lives. |
 | `EXCHEQUER_MAX_RUNNING_TRACES` | 4 | Traces running at once, server-wide. |
 | `EXCHEQUER_TRACES_PER_HOUR` | 30 | Traces one client may start per hour (a batch counts every row). `0` = no limit. |
+| `EXCHEQUER_DEMO_CODE` | — | Set, a live trace, a batch or a watch needs this code in the `X-Exchequer-Demo-Code` header; reading stays open. After 10 wrong codes in an hour a client is refused (429). Unset, nothing is guarded. See `backend/app/access.py`. |
+| `EXCHEQUER_WATCHES_PER_HOUR` | 20 | Watches one client may create per hour. `0` = no limit. |
 | `EXCHEQUER_TRUST_PROXY` | off (on in the image) | Read the client address from the proxy's headers. Only behind a proxy that sets them. `1`: `X-Real-IP`, else the last `X-Forwarded-For` entry (Railway). `render`: the first `X-Forwarded-For` entry. |
 | `EXCHEQUER_API_DOCS` | on (off in the image) | `/docs`, `/redoc`, `/openapi.json`. |
 | `EXCHEQUER_WATCHER` | off (on in the image) | Re-read watched addresses in the background. |
