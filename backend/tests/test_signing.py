@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import os
 
+import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
 
@@ -13,6 +14,9 @@ from app.main import app
 
 client = TestClient(app)
 REPORT = "EXCHEQUER CASE REPORT\nSent 9.5 ETH to Binance 14\n"
+# Windows ignores POSIX file modes: chmod sets only a read-only flag. CI and the
+# deployed image are Linux, so these still run where the key is actually kept.
+posix_only = pytest.mark.skipif(os.name == "nt", reason="Windows does not apply POSIX file modes")
 
 
 def test_a_sealed_report_is_signed_and_verifies():
@@ -70,13 +74,20 @@ def test_verify_and_signing_key_endpoints():
     assert client.post("/verify", content=b"x" * 2_000_001).status_code == 413
 
 
-def test_key_is_created_once_with_owner_only_permissions(tmp_path, monkeypatch):
+def test_key_is_created_once(tmp_path, monkeypatch):
     monkeypatch.delenv("EXCHEQUER_SIGNING_KEY", raising=False)
     monkeypatch.setattr(config, "SIGNING_KEY_PATH", tmp_path / "k.pem")
     first = signing._load()
     second = signing._load()
     assert first.source == second.source == "file"
     assert first.fingerprint == second.fingerprint
+
+
+@posix_only
+def test_key_is_created_with_owner_only_permissions(tmp_path, monkeypatch):
+    monkeypatch.delenv("EXCHEQUER_SIGNING_KEY", raising=False)
+    monkeypatch.setattr(config, "SIGNING_KEY_PATH", tmp_path / "k.pem")
+    signing._load()
     assert oct(os.stat(tmp_path / "k.pem").st_mode & 0o777) == "0o600"
 
 
@@ -86,6 +97,16 @@ def test_key_from_the_environment(monkeypatch):
     assert signing._load().source == "environment"
 
 
+def assert_marked_as_temporary(signer):
+    assert signer.source == "ephemeral" and not signer.persistent
+    signing.reset_for_tests(signer)
+    try:
+        assert "temporary key" in seal_text(REPORT)
+    finally:
+        signing.reset_for_tests(signing.Signer(Ed25519PrivateKey.generate(), "file"))
+
+
+@posix_only
 def test_unwritable_key_path_falls_back_to_a_marked_temporary_key(tmp_path, monkeypatch):
     monkeypatch.delenv("EXCHEQUER_SIGNING_KEY", raising=False)
     blocked = tmp_path / "ro"
@@ -96,9 +117,13 @@ def test_unwritable_key_path_falls_back_to_a_marked_temporary_key(tmp_path, monk
         signer = signing._load()
     finally:
         blocked.chmod(0o700)
-    assert signer.source == "ephemeral" and not signer.persistent
-    signing.reset_for_tests(signer)
-    try:
-        assert "temporary key" in seal_text(REPORT)
-    finally:
-        signing.reset_for_tests(signing.Signer(Ed25519PrivateKey.generate(), "file"))
+    assert_marked_as_temporary(signer)
+
+
+def test_a_key_path_that_cannot_be_created_falls_back_to_a_marked_temporary_key(tmp_path, monkeypatch):
+    """No OS can make a folder under a file, so this fallback is checked everywhere."""
+    monkeypatch.delenv("EXCHEQUER_SIGNING_KEY", raising=False)
+    a_file = tmp_path / "not-a-folder"
+    a_file.write_text("x")
+    monkeypatch.setattr(config, "SIGNING_KEY_PATH", a_file / "k.pem")
+    assert_marked_as_temporary(signing._load())

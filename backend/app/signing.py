@@ -8,7 +8,9 @@ key, so a signed report that verifies was produced here, unchanged.
 The key:
 * EXCHEQUER_SIGNING_KEY, the 32-byte private seed in base64, if set; else
 * a PEM file beside the case store (on Railway, the /data volume), made on
-  first start with owner-only permissions; else, if that cannot be written,
+  first start with owner-only permissions on Linux (Windows ignores the mode,
+  so there the file takes its folder's permissions); else, if that cannot be
+  written,
 * a key for this process only. Reports it signs say so, because they stop
   verifying against the published key after a restart.
 
