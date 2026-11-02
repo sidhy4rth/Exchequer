@@ -84,6 +84,11 @@ CODE_TO_CHAIN = {
     "ARB": None,       # Arbitrum, not traced
 }
 
+# The chains this importer writes. Polygon and Arbitrum are not among them: OFAC
+# names neither, and their risk files are carried over by port_evm_labels.py, so
+# writing them here would replace those entries with nothing.
+OFAC_CHAINS = tuple(key for key in config.CHAINS if key in CODE_TO_CHAIN.values())
+
 # Designated entities that operate as tumblers. Matching is on the entity name
 # OFAC publishes. See the module docstring: this split is editorial, the
 # sanctions designation behind it is not.
@@ -279,7 +284,7 @@ def main() -> int:
     print(f"\nOFAC SDN list published {published}")
     print(f"Found {total} addresses on chains Exchequer traces:\n")
 
-    for chain_key in config.CHAINS:
+    for chain_key in OFAC_CHAINS:
         write_chain_file(chain_key, by_chain.get(chain_key, {}), published, args.dry_run)
 
     if skipped:
