@@ -441,12 +441,12 @@ def render_text_report(report: dict[str, Any]) -> str:
         add(f"Hops from source : {attribution['hop_count']}")
         prorata = attribution.get("prorata") or {}
         if direction == "outgoing" and prorata.get("status") == "estimated":
-            add(f"Reported funds   : about {prorata['estimated']} of {prorata['sent']} {symbol} "
-                "likely arrived (pro-rata)")
+            add(f"Likely arrived   : about {prorata['estimated']} of {prorata['sent']} {symbol} "
+                "sent from the reported address (pro-rata)")
             add(f"Arrived in total : {prorata['arrived_total']} {symbol} along this path, "
                 "including funds from other sources")
             for h in prorata.get("hops") or []:
-                add(f"  via {h['address']}: reported funds {round(h['victim_share'] * 100, 1)}% "
+                add(f"  via {h['address']}: traced funds {round(h['victim_share'] * 100, 1)}% "
                     f"of {h['received_in_window']} {symbol} received before it sent on")
         elif attribution.get("value_received_native") is not None:
             label = ("Arrived on path " if direction == "outgoing" else "Value sent      ")

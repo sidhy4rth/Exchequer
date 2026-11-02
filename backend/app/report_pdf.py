@@ -152,7 +152,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
         ]
         prorata = attribution.get("prorata") or {}
         if prorata.get("status") == "estimated":
-            facts.append(("Reported funds that likely arrived (pro-rata)",
+            facts.append(("Sent from the reported address that likely arrived (pro-rata)",
                           f"≈ {_num(prorata.get('estimated'))} of {_num(prorata.get('sent'))} "
                           f"{attribution.get('value_currency', '')}", False))
     if confidence.get("score") is not None:
