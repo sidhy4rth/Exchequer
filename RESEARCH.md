@@ -520,6 +520,30 @@ address or it does not.
 
 ---
 
+## What each data source allows
+
+Read on 3 November 2026 from the source named. This records what each source says
+about itself and where the team has a decision to make. It is not legal advice, and
+no one on the team has yet had it reviewed. A licence on a GitHub repository covers
+what that repository's authors can license; it does not settle what the site its
+data was scraped from allows.
+
+| Source | Feeds | What the source says | Open |
+|---|---|---|---|
+| OFAC SDN list | `risk_labels*.json` | No licence statement found on the SDN data-format pages read. | Confirm it; a U.S. government publication may need none. |
+| UK Sanctions List | `intl_sanctions*.json` | The gov.uk publication page: content under the Open Government Licence v3.0 "except where otherwise stated". | Confirm that covers the CSV, and how to attribute it. |
+| EU consolidated list | `intl_sanctions*.json` | Not retrieved: the page did not render without a browser. | Read it. |
+| OpenSanctions (Israel, Japan, France) | `intl_sanctions*.json`: 24 of 28 Ethereum, 5 of 6 BSC, 586 of 634 Tron entries | Its site: Creative Commons 4.0 Attribution NonCommercial. It offers commercial licences and has a non-commercial use page. | **Decide:** apply for its non-commercial or academic terms, or read those three governments' lists directly. |
+| ScamSniffer `scam-database` | `threat_labels*.json`: 1,562 Ethereum, 518 BSC entries | GPL-3.0, per its repository licence file. | **Decide** before any paid use, as the Solutions Plan asks. |
+| Etherscan and BscScan labels, via `dawsbot/eth-labels`, `brianleect/etherscan-labels`, `dappcenter/etherscan-labels` | `exchange_labels.json` (25,038), `exchange_labels_bsc.json`, the ported Polygon and Arbitrum files, and `threat_labels*.json`: 6,910 Ethereum, 56 BSC entries | Those three repositories are MIT. **Etherscan's own terms restrict automated collection, and restrict "reproduction of any content posted (such as public labels or name tags)" without its consent.** | **Highest priority: ask a lawyer**, and consider asking Etherscan for permission. This reaches most of the exchange labels. |
+| `forta-network/labelled-datasets` | `threat_labels*.json` | MIT, per its repository licence file. | Check where its own labels came from. |
+| TronScan tags | `exchange_labels_tron.json` (41) and live tags during Tron traces | Not retrieved: the terms page did not render without a browser. | Read them. |
+
+The Solutions Plan (R16) wants the README to state the position on every source. That
+waits for the decisions above, and the README belongs to Lane C.
+
+---
+
 ## Sources that could not be retrieved
 
 - FATF, *Targeted Update on Implementation of the FATF Standards on Virtual
