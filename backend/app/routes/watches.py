@@ -17,7 +17,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from .. import ownership, watchlist
+from .. import config, ownership, rate_limit, watchlist
 
 router = APIRouter()
 
@@ -45,6 +45,14 @@ def _owner(http: Request) -> str:
 @router.post("/watches", status_code=201)
 def add_watch(body: WatchRequest, http: Request) -> dict[str, Any]:
     owner = _owner(http)
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    wait = rate_limit.watches.check(client)
+    if wait is not None:
+        raise HTTPException(
+            status_code=429,
+            detail=f"This connection has created {config.WATCHES_PER_HOUR_PER_CLIENT} watches in the last hour.",
+            headers={"Retry-After": str(int(wait))},
+        )
     try:
         watch = watchlist.create_watch(owner, body.address, body.chain, body.asset,
                                        body.note, body.case_id, body.webhook_url)
