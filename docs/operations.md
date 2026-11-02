@@ -22,7 +22,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_WATCHES_PER_HOUR` | 20 | Watches one client may create per hour. `0` = no limit. |
 | `EXCHEQUER_TRUST_PROXY` | off (on in the image) | Read the client address from the proxy's headers. Only behind a proxy that sets them. `1`: `X-Real-IP`, else the last `X-Forwarded-For` entry (Railway). `render`: the first `X-Forwarded-For` entry. |
 | `EXCHEQUER_API_DOCS` | on (off in the image) | `/docs`, `/redoc`, `/openapi.json`. |
-| `EXCHEQUER_WATCHER` | off (on in the image) | Re-read watched addresses in the background. |
+| `EXCHEQUER_WATCHER` | off (on in the image; off in `render.yaml`) | Re-read watched addresses in the background. Only worth it on a host that stays awake: on one that sleeps when idle (Render's free plan) the watcher sleeps too. The watchlist and `/health/detail` report the last check and call it stale after three missed intervals. |
 | `EXCHEQUER_WATCH_INTERVAL` | 600 | Seconds between checks of one watch (minimum 60). |
 | `EXCHEQUER_WEBHOOK_HOSTS` | — | Comma-separated hosts alert webhooks may post to, beyond Slack, Discord and Google Chat. |
 | `EXCHEQUER_BACKUPS` | off (on in the image) | A daily snapshot of the store in `backups/` beside it. |

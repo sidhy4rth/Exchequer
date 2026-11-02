@@ -417,6 +417,42 @@ def seconds_since_check(watch: models.Watch) -> float | None:
     return (datetime.now(tz=timezone.utc) - datetime.fromisoformat(watch.last_checked_at)).total_seconds()
 
 
+# How many missed intervals make the watcher "stale": long enough to ride out
+# a slow round, short enough to say so within half an hour at the default.
+STALE_AFTER_INTERVALS = 3
+
+
+def watcher_status() -> dict[str, Any]:
+    """What the watcher has actually done, not what it is set to do (R30).
+
+    On a host that sleeps when idle, as Render's free plan does, the watcher
+    sleeps with it: a watch set at noon is not checked overnight, and the
+    panel used to say "checked about every ten minutes" regardless. This reads
+    the newest check from the store, so it survives a restart, and calls it
+    stale when watches exist, checks are on, and none has run for three
+    intervals -- or, for a watch never checked, since it was made."""
+    interval = config.WATCH_INTERVAL_SECONDS
+    with models.session() as s:
+        active = models.Watch.active.is_(True)
+        count = s.scalar(select(func.count()).select_from(models.Watch).where(active)) or 0
+        last = s.scalar(select(func.max(models.Watch.last_checked_at)).where(active))
+        never = s.scalar(select(func.min(models.Watch.created_at)).where(active)
+                         .where(models.Watch.last_checked_at.is_(None)))
+    # The newest check; with none yet, the oldest watch still waiting for one.
+    # (ISO-8601 UTC strings in one format, so they compare as text.)
+    reference = last or never
+    stale = bool(config.WATCHER_ENABLED and count and reference
+                 and reference < _iso_ago(STALE_AFTER_INTERVALS * interval))
+    return {
+        "enabled": config.WATCHER_ENABLED,
+        "running": _thread is not None and _thread.is_alive(),
+        "interval_seconds": interval,
+        "active_watches": count,
+        "last_check_at": last,
+        "stale": stale,
+    }
+
+
 # ---------------------------------------------------------------------------
 # The background poller
 # ---------------------------------------------------------------------------

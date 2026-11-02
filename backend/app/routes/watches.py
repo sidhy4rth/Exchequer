@@ -67,7 +67,9 @@ def get_watches(http: Request) -> dict[str, Any]:
     watches = watchlist.list_watches(owner) if owner else []
     return {"count": len(watches), "watches": watches,
             "interval_seconds": watchlist.config.WATCH_INTERVAL_SECONDS,
-            "running": watchlist.config.WATCHER_ENABLED}
+            "running": watchlist.config.WATCHER_ENABLED,
+            # What the watcher has actually done, for the panel to say (R30).
+            "watcher": watchlist.watcher_status()}
 
 
 @router.delete("/watches/{watch_id}")
