@@ -1,36 +1,29 @@
-// A demonstration front door, nothing more. The backend has no accounts:
-// this remembers, for this browser tab, which of the two demo sign-ins
-// someone passed, so the console has a threshold to cross on stage. It is not
-// access control and the README does not call it that.
-//
-// Investigators get the tracing console. Citizens get their own space, which
-// is empty for now.
+// Demo mode. Exchequer has no accounts yet (R23 brings them), so there is
+// nothing to sign in with: this remembers, for this browser tab, which view
+// someone chose at the front door -- the investigator's console or the
+// citizen's page -- so the app knows which to show. It grants nothing, and
+// the backend never sees it. Live tracing on a public site is guarded by the
+// demo code instead (demoCode.js, backend/app/access.py).
 
 const KEY = 'exchequer-demo-session'
-const ACCOUNTS = {
-  investigator: { user: 'admin', pass: 'admin' },
-  citizen: { user: 'user', pass: 'user' },
-}
-
-export function demoAccount(role) {
-  return ACCOUNTS[role]
-}
+export const ROLES = ['investigator', 'citizen']
 
 /** 'investigator', 'citizen', or null. */
 export function role() {
   let value
   try { value = sessionStorage.getItem(KEY) } catch { return 'investigator' }
-  if (value === '1') return 'investigator' // tabs signed in before there were two doors
-  return value === 'investigator' || value === 'citizen' ? value : null
+  if (value === '1') return 'investigator' // tabs that entered before there were two views
+  return ROLES.includes(value) ? value : null
 }
 
-export function signIn(asRole, user, pass) {
-  const account = ACCOUNTS[asRole]
-  if (!account || user.trim() !== account.user || pass !== account.pass) return false
-  try { sessionStorage.setItem(KEY, asRole) } catch { /* private mode: still admitted */ }
+/** Choose a view for this tab. */
+export function enterAs(asRole) {
+  if (!ROLES.includes(asRole)) return false
+  try { sessionStorage.setItem(KEY, asRole) } catch { /* private mode: still shown */ }
   return true
 }
 
-export function signOut() {
+/** Back to the front door. */
+export function leave() {
   try { sessionStorage.removeItem(KEY) } catch { /* nothing to remove */ }
 }

@@ -1,0 +1,10 @@
+/* The demo-mode notice on the front door's card (SignIn.jsx). */
+.door-form .demo-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}

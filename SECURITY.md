@@ -36,8 +36,11 @@ Exchequer has no accounts. What it does instead:
   headers; the interactive API docs are off on the deployed image; the app
   runs as an unprivileged user.
 
-The sign-in page (admin / admin) is a demonstration front door, not access
-control. Anyone who can reach the site can run a trace.
+There are no accounts yet, and the site says so: the front door and a banner
+on every page read "Demo mode", and choosing the investigator or citizen view
+grants nothing. Without `EXCHEQUER_DEMO_CODE`, anyone who can reach the site
+can run a trace; with it, live tracing needs the code. Accounts and roles
+come with R23.
 
 ## Keys and secrets
 

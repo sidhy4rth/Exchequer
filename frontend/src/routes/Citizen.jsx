@@ -1,19 +1,16 @@
-import { useNavigate } from 'react-router-dom'
 import Mark from '../components/Mark'
 import ThemeToggle from '../components/ThemeToggle'
-import { signOut } from '../session'
 
 // The citizen's side of Exchequer. Deliberately empty: it is to be built
-// during the 24-hour in-person hackathon; only the way back out exists.
+// during the 24-hour in-person hackathon; the demo banner (App.jsx) is the
+// way back out.
 export default function Citizen() {
-  const navigate = useNavigate()
   return (
     <div className="citizen">
       <header className="citizen-top">
         <span className="brand"><Mark size={20} /><span>Exchequer</span></span>
         <span className="citizen-actions">
           <ThemeToggle />
-          <button className="quiet" onClick={() => { signOut(); navigate('/signin/citizen') }}>Sign out</button>
         </span>
       </header>
       <main className="citizen-body">

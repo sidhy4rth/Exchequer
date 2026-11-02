@@ -12,8 +12,8 @@ function watchForErrors(page) {
   return errors
 }
 
-async function signIn(page) {
-  await page.getByText(/click anywhere to log in/i).click()
+async function enter(page) {
+  await page.getByText(/click anywhere to enter/i).click()
   await page.getByRole('button', { name: /open the console/i }).click()
 }
 
@@ -28,12 +28,12 @@ test('the API is up and the label files are loaded', async ({ request }) => {
   expect(notReady, 'chains that cannot be traced').toEqual([])
 })
 
-test('sign-in opens the console with the system operational', async ({ page }) => {
+test('the front door opens the console with the system operational', async ({ page }) => {
   const errors = watchForErrors(page)
   const started = Date.now()
   await page.goto('/')
   await expect(page).toHaveURL(/\/signin\/investigator/)
-  await signIn(page)
+  await enter(page)
   await expect(page.getByLabel('Reported wallet address')).toBeVisible()
   await expect(page.getByText(/SYSTEM OPERATIONAL/)).toBeVisible()
   const loadMs = Date.now() - started
@@ -52,7 +52,7 @@ test('a stored case opens without re-tracing', async ({ page, request }) => {
   page.on('request', (req) => { if (req.method() === 'POST' && req.url().includes('/trace')) traced.push(req.url()) })
 
   await page.goto('/signin/investigator')
-  await signIn(page)
+  await enter(page)
   await page.goto(`/case/${known.case_id}`)
   await expect(page.getByRole('heading', { name: known.exchange }).first()).toBeVisible()
   expect(traced, 'opening a stored case must not start a new trace').toEqual([])

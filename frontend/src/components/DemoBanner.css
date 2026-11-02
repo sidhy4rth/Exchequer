@@ -1,0 +1,17 @@
+/* The demo-mode strip above every page behind the front door (DemoBanner.jsx). */
+.demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 6px 16px;
+  background: var(--amber-soft);
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+  font-size: 12.5px;
+}
+
+.demo-banner strong { color: var(--amber); }
+
+.demo-banner-actions { display: flex; gap: 8px; }
