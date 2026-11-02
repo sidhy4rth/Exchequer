@@ -254,22 +254,24 @@ def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
         return False
 
 
-# Correlation reads and parses every stored case, and the answer only changes
-# when a case is added, so it is kept per (case, min_cases) until the store's
-# version moves. A handful of entries: the trace view asks once per case.
+# Correlation reads and parses every case the caller may see, and the answer
+# only changes when a case is added, so it is kept per (caller, case,
+# min_cases) until the store's version moves. The caller is part of the key:
+# without it, one person's answer would be served to the next. A handful of
+# entries: the trace view asks once per case.
 _CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], list[dict[str, Any]]]]" = OrderedDict()
 _CLUSTER_CACHE_SIZE = 128
 _cluster_lock = threading.Lock()
 
 
-def _clusters(case_id: str | None, min_cases: int):
-    """(store, clusters): who owns each stored case, and the raw clusters."""
-    key = (case_id, min_cases, models.store_version())
+def _clusters(caller: str | None, case_id: str | None, min_cases: int):
+    """(store, clusters): who owns each case examined, and the raw clusters."""
+    key = (caller, case_id, min_cases, models.store_version())
     with _cluster_lock:
         if key in _CLUSTER_CACHE:
             _CLUSTER_CACHE.move_to_end(key)
             return _CLUSTER_CACHE[key]
-    records = models.all_cases()
+    records = ownership.correlatable_cases(caller, case_id)
     clusters = correlate(records, only_case=case_id, min_cases=min_cases,
                          excluded=_known_contract_or_exchange)
     value = ([(c.id, c.owner_hash, c.address) for c in records], clusters)
@@ -286,7 +288,7 @@ def cases_correlate(
     case_id: str | None = Query(None, description="only clusters that include this case"),
     min_cases: int = Query(2, ge=2, le=50),
 ) -> dict[str, Any]:
-    """Intermediary addresses shared by two or more stored cases.
+    """Intermediary addresses shared by two or more of the caller's cases.
 
     The campaign view: separate complaints whose traced funds converge on the
     same unlabelled wallet or the same inferred deposit address. A query over
@@ -294,12 +296,13 @@ def cases_correlate(
     wallets, routers and sanctioned entities are never counted as shared
     intermediaries: two victims who both cashed out at Binance share a bank,
     not an offender.
+
+    Only the caller's own cases, the demo cases and the one they asked about
+    (they hold its link) are examined; nobody else's case is read. See
+    ownership.py.
     """
-    store, clusters = _clusters(case_id, min_cases)
-    # Every stored case counts towards a cluster, but only the caller's own,
-    # the demo cases and the one they asked about (they hold its link) are
-    # named; the rest are "another complaint". See ownership.py.
     caller = ownership.owner_hash_from_headers(http.headers)
+    store, clusters = _clusters(caller, case_id, min_cases)
     may_see = {cid for cid, owner, address in store if ownership.visible_to(owner, address, caller)}
     if case_id:
         may_see.add(case_id)

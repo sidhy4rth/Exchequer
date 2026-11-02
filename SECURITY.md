@@ -14,8 +14,9 @@ Exchequer has no accounts. What it does instead:
   random owner key; the history list shows only that browser's cases plus the
   demo cases. A case id is a random UUID and a link to it works as the
   permission to read it, so share case links only with people who should see
-  the case. Correlation still counts every stored case but names only the ones
-  you may see. See `backend/app/ownership.py`.
+  the case. Correlation reads only your own cases, the demo cases and the one
+  whose link you hold; nobody else's case enters it, so none of it can show.
+  See `backend/app/ownership.py`.
 - **Starting traces is rate limited** per client (30 an hour by default) and
   capped server-wide, because every trace spends the deployment's provider
   quota. See `backend/app/rate_limit.py`.

@@ -319,7 +319,7 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /trace/{case_id}/letters` | Which request letters the case supports (to the exchange, to Tether) |
 | `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether) |
 | `GET /cases` | History of past traces |
-| `GET /cases/correlate` | Intermediaries shared by two or more stored cases — the campaign view (`?case_id=` narrows it) |
+| `GET /cases/correlate` | Intermediaries shared by two or more of your stored cases (plus the demos) — the campaign view (`?case_id=` narrows it) |
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |
 | `GET /risk-labels?chain=bsc` | What that chain's screening covers, by category: sanctioned, mixer, stolen |
 | `GET /ledger?chain=ethereum` | The labelled addresses the sign-in backdrop draws |
@@ -592,6 +592,10 @@ is a stronger lead, not a weaker one. One reached by traces of **two or more dif
 reported addresses on the same chain** is a point of convergence, returned with the cases that reach it, their
 distance and the value that arrived. Exchange hot wallets are excluded on purpose: two victims whose money both
 ended at Binance 14 share a bank, not an offender.
+
+Correlation reads only the caller's own cases, the demo cases and the one whose link they hold. Without accounts every
+visitor is a stranger, so complaints traced in different browsers do not meet; correlation across officers returns
+with accounts and units (see `backend/app/ownership.py`).
 
 Three wallets on Etherscan's phishing list (`0x000000000532…`, `0x0000000009324…`, `0x00000000bf02…`) share **60 and 46
 intermediaries** with the third, four of them inferred Binance deposit addresses — and all three reach the **same reported
