@@ -13,6 +13,7 @@ from app.main import app
 
 ALICE = "a" * 32
 BOB = "b" * 32
+CAROL = "c" * 32
 DEMO = "0x60d02e0956e2f3795167c15ba61ab452c85c2533"  # in data/demo_traces.json
 OTHER = "0x" + "1" * 40
 
@@ -108,6 +109,86 @@ def test_other_peoples_cases_are_anonymised_in_correlation():
     assert entry["case_id"] is None and entry["reported_address"] is None
     assert entry["ref"] == "Another complaint #1" and entry["exchange"] == "Binance"
     assert entry["shared"][0] == {"address": "0xshared", "value_in_native": None}
+
+
+# Two reported addresses whose money met at one unlabelled wallet.
+SHARED = "0x" + "5e" * 20
+A1, A2, B1 = "0x" + "a1" * 20, "0x" + "a2" * 20, "0x" + "b1" * 20
+
+
+def save_converging(case_id, reported, value, owner):
+    models.save_case(case_id, reported, {
+        "address": reported, "chain": "ethereum", "asset": "ETH",
+        "graph": {"nodes": [{"id": reported, "is_seed": True},
+                            {"id": SHARED, "depth": 2, "total_in_native": value}]},
+    }, owner_hash=ownership.owner_hash(owner) if owner else None)
+
+
+def correlate_as(client, owner=None, case_id=None):
+    headers = {ownership.OWNER_HEADER: owner} if owner else {}
+    query = f"?case_id={case_id}" if case_id else ""
+    response = client.get(f"/cases/correlate{query}", headers=headers)
+    assert response.status_code == 200, response.text
+    return response
+
+
+def test_correlation_shows_a_stranger_nothing_of_other_peoples_cases(client):
+    save_converging("alice-case", A1, 3.25, ALICE)
+    save_converging("bob-case", B1, 1.75, BOB)
+    for stranger in (None, CAROL):
+        response = correlate_as(client, stranger)
+        assert response.json()["clusters"] == []
+        assert response.json()["cases_examined"] == 0  # not even how many exist
+        # The whole body, not named fields: a field added later cannot leak either.
+        for secret in (SHARED, A1, B1, "alice-case", "bob-case", "3.25", "1.75"):
+            assert secret not in response.text
+
+
+def test_correlating_your_own_case_reveals_nothing_of_anyone_elses(client):
+    save_converging("alice-case", A1, 3.25, ALICE)
+    save_converging("bob-case", B1, 1.75, BOB)
+    body = correlate_as(client, BOB, "bob-case")
+    assert body.json()["cases_examined"] == 1
+    assert body.json()["clusters"] == [] and body.json()["related_cases"] == []
+    for secret in (A1, "alice-case", "3.25"):
+        assert secret not in body.text
+
+
+def test_a_case_link_opens_that_case_not_its_owners_other_cases(client):
+    save_converging("alice-1", A1, 3.25, ALICE)
+    save_converging("alice-2", A2, 0.5, ALICE)
+    response = correlate_as(client, BOB, "alice-1")
+    assert response.json()["clusters"] == []
+    assert "alice-2" not in response.text and A2 not in response.text
+
+
+def test_one_callers_cached_correlation_is_never_served_to_another(client):
+    save_converging("alice-1", A1, 3.25, ALICE)
+    save_converging("alice-2", A2, 0.5, ALICE)
+    assert correlate_as(client, ALICE).json()["cluster_count"] == 1  # now cached
+    response = correlate_as(client, BOB)
+    assert response.json()["cluster_count"] == 0
+    assert "alice-1" not in response.text and SHARED not in response.text
+
+
+def test_your_own_cases_still_correlate_in_full(client):
+    save_converging("alice-1", A1, 3.25, ALICE)
+    save_converging("alice-2", A2, 0.5, ALICE)
+    body = correlate_as(client, ALICE, "alice-1").json()
+    [cluster] = body["clusters"]
+    assert cluster["address"] == SHARED
+    assert cluster["reported_addresses"] == [A1, A2]
+    assert {m["value_in_native"] for m in cluster["cases"]} == {3.25, 0.5}
+    assert not any(m.get("hidden") for m in cluster["cases"])
+    [related] = body["related_cases"]
+    assert related["case_id"] == "alice-2" and related["hidden"] is False
+
+
+def test_demo_cases_still_correlate_with_anyones_case(client):
+    save_converging("demo-case", DEMO, 2.0, None)
+    save_converging("carol-case", B1, 1.75, CAROL)
+    [cluster] = correlate_as(client, CAROL).json()["clusters"]
+    assert cluster["reported_addresses"] == sorted([DEMO, B1])
 
 
 # -- the ledger ----------------------------------------------------------------

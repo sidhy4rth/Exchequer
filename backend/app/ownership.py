@@ -11,9 +11,11 @@ stored case to anyone who asked. Now:
 * A case id is a random UUID, so a link to a case works as the permission to
   read it: /trace/{id}, the report and the letters open for whoever holds
   the link, as they always have. Nothing lists ids that are not yours.
-* Correlation still runs over every stored case -- that is the point of it --
-  but another person's case appears as "another complaint", without its id,
-  reported address or amounts.
+* Correlation runs only over the cases the caller may see: their own, the
+  demo cases and the one whose link they hold. It once ran over every stored
+  case and hid other people's afterwards, and the hiding missed fields (a
+  cluster's largest amount, the size of the store). A case that never enters
+  the computation cannot leak through any field, including ones added later.
 
 Demo cases are the ones stored before ownership existed whose address is one
 of the demo traces (data/demo_traces.json). They stay public so the console
@@ -32,7 +34,7 @@ import secrets
 from functools import lru_cache
 from typing import Any, Mapping
 
-from . import config
+from . import config, models
 
 OWNER_HEADER = "x-exchequer-owner"
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{22,128}$")
@@ -75,7 +77,27 @@ def visible_to(owner: str | None, address: str | None, caller: str | None) -> bo
 
 
 # ---------------------------------------------------------------------------
-# Correlation output, with other people's cases redacted
+# Correlation input: only the caller's cases go in
+# ---------------------------------------------------------------------------
+def correlatable_cases(caller: str | None, case_id: str | None = None,
+                       limit: int = 2000) -> list[models.Case]:
+    """The stored cases `caller` may correlate, newest first: their own, the
+    demo cases, and `case_id` if given (holding its link is the permission to
+    read that one case, not the rest of its owner's). Nobody else's row is
+    read from the store at all."""
+    records = models.list_cases(limit=limit, owner_hash=caller,
+                                public_addresses=demo_addresses())
+    if case_id and all(c.id != case_id for c in records):
+        linked = models.get_case(case_id)
+        if linked is not None:
+            records.append(linked)
+    return records
+
+
+# ---------------------------------------------------------------------------
+# Correlation output, with other people's cases redacted. Since correlation
+# reads only correlatable_cases() there are none left to hide; this stays as
+# a second lock and keeps the response's shape (hidden, other_complaints).
 # ---------------------------------------------------------------------------
 def redact_clusters(clusters: list[dict[str, Any]], may_see: set[str]) -> list[dict[str, Any]]:
     """Clusters with members outside `may_see` (case ids) anonymised."""
