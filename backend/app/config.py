@@ -475,3 +475,47 @@ BACKUPS_ENABLED: bool = (
 BACKUP_KEEP: int = max(1, _int_env("EXCHEQUER_BACKUP_KEEP", 7))
 # Bearer token for GET /admin/backup. Unset = the endpoint does not exist.
 BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
+
+
+# ===========================================================================
+# Settings by lane. Everything above predates the lanes and stays where it
+# is; add a new setting only inside your own lane's section below, and a
+# feature flag only in FLAGS (CLAUDE.md rule 4). Keeping each lane to its own
+# block keeps three people's changes to this file from colliding.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Lane A: trace engine
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Lane B: evidence and intelligence
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Lane C: platform and product
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# FLAGS: unfinished behaviour, off unless its environment variable is set
+# (CLAUDE.md rule 6), so main is always deployable. One line per flag:
+#
+#     TX_INTAKE: bool = flag("EXCHEQUER_TX_INTAKE", "Lane A, R1: trace from a payment tx hash")
+#
+# There is no "on by default": work that is ready needs no flag. Each flag
+# records itself in FLAGS, so /health can show which are on. Delete a flag,
+# and the branches it guards, once its work ships.
+# ---------------------------------------------------------------------------
+FLAGS: dict[str, dict[str, bool | str]] = {}
+
+
+def flag(env_name: str, about: str) -> bool:
+    """Whether the flag `env_name` is on; registers it in FLAGS."""
+    if env_name in FLAGS:
+        raise ValueError(f"Flag {env_name} is defined twice")
+    on = os.getenv(env_name, "").strip().lower() in ("1", "true", "yes", "on")
+    FLAGS[env_name] = {"on": on, "about": about}
+    return on
