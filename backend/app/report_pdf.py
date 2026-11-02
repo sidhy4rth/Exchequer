@@ -28,6 +28,7 @@ from reportlab.platypus import (
 from xml.sax.saxutils import escape
 
 from .evidence import CONTENT_HASH_MARK
+from .report import _when_iso
 from .signing import SIGNATURE_MARK
 
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
@@ -141,7 +142,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     facts = [
         ("Reported address", case["reported_address"], True),
         ("Chain · asset · direction", f"{case['chain']} · {case['asset']} · {case['direction']}", False),
-        ("Traced at", case.get("traced_at", ""), False),
+        ("Traced at", _when_iso(case.get("traced_at")), False),
     ]
     if exchange:
         facts += [

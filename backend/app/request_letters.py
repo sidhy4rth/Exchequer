@@ -19,7 +19,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from .report import _when
+from .report import IST, _when, _when_iso
 
 EXCHANGE = "exchange"
 TETHER = "tether"
@@ -75,7 +75,7 @@ def _path_lines(trace: dict[str, Any], asset: str) -> list[str]:
             f"  Hop {step.get('depth')}: {step.get('address')}{named}\n"
             f"         received {step.get('value_native', 0):,.6f} {asset} in "
             f"{step.get('tx_count', 0)} transfer(s), {_when(step.get('first_seen'))}"
-            + (f" to {_when(step.get('last_seen'))}" if step.get("last_seen") != step.get("first_seen") else "")
+            + (f"\n         to {_when(step.get('last_seen'))}" if step.get("last_seen") != step.get("first_seen") else "")
         )
         hashes = step.get("tx_hashes") or []
         for tx in hashes[:10]:
@@ -86,8 +86,12 @@ def _path_lines(trace: dict[str, Any], asset: str) -> list[str]:
     return lines
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _header(case_id: str, result: dict[str, Any], to_line: str, subject: str) -> list[str]:
-    today = datetime.now(timezone.utc).strftime("%d %B %Y")
+    today = _utc_now().astimezone(IST).strftime("%d %B %Y")  # the officer's date, whatever the server's clock says
     manifest = (result.get("evidence") or {}).get("manifest_sha256")
     return [
         "DRAFT — for the investigating officer to review, complete and sign.",
@@ -100,7 +104,7 @@ def _header(case_id: str, result: dict[str, Any], to_line: str, subject: str) ->
         "",
         f"Subject   : {subject}",
         "",
-        f"Exchequer case {case_id}, traced {str(result.get('created_at') or '').replace('T', ' ')[:16]} UTC,",
+        f"Exchequer case {case_id}, traced {_when_iso(result.get('created_at'))},",
         f"{result.get('chain_name')} · asset {result.get('asset')} · reported address {result.get('address')}.",
         (f"Evidence manifest SHA-256: {manifest}" if manifest else
          "This case was stored before evidence hashing; the report says so."),
@@ -159,7 +163,7 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
         ]
     lines += [
         "",
-        "3. The transfers, hop by hop (all times UTC):",
+        "3. The transfers, hop by hop:",
         f"  Reported address: {trace.get('address')}",
         *_path_lines(trace, asset),
         "",
@@ -216,7 +220,7 @@ def _tether_letter(case_id: str, result: dict[str, Any]) -> str:
         n += 1
     for trace in usdt:
         found = trace.get("exchange")
-        lines += [f"{n}. USDT on {trace.get('chain_name')} moved from {trace.get('address')} as follows (UTC):",
+        lines += [f"{n}. USDT on {trace.get('chain_name')} moved from {trace.get('address')} as follows:",
                   *_path_lines(trace, "USDT")]
         if found:
             lines.append(f"   It reached {found} at {trace.get('exchange_address')}.")
