@@ -179,6 +179,9 @@ export default function TraceView() {
       .then((data) => {
         if (cancelled) return
         if (stored) { setResult(data); setLoading(false); return }
+        // Not stored (the store is full, or the save failed): there is no
+        // case page to open, so show the result here with its warning.
+        if (!data.case_id) { setResult(data); setLoading(false); return }
         // The trace is stored the moment it completes, so the URL becomes the
         // case's own. A refresh or the back button then reopens the stored
         // case instead of running the traversal again -- another wait on the
@@ -336,6 +339,19 @@ export default function TraceView() {
                   ? 'Read from the case store; the chain is not consulted.'
                   : 'One request per address, about two a second on a free key. Instant when the addresses have been seen before.'}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* A live trace that came back without a case id was not stored (the
+            store is full, or the save failed): say so where it cannot be missed,
+            since the result is gone once the page is left. */}
+        {result && !stored && !result.case_id && (
+          <div className="alert unsaved" role="status">
+            <Icon d={ICONS.alert} />
+            <div>
+              <div className="title">Not saved</div>
+              {(result.warnings ?? []).filter((w) => /not saved|could not be saved/i.test(w)).map((w) => <div className="line" key={w}>{w}</div>)}
             </div>
           </div>
         )}

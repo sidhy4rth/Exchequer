@@ -71,11 +71,26 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
         payload["case_id"] = None
         return payload
 
+    if config.MAX_STORED_CASES and models.case_count() >= config.MAX_STORED_CASES:
+        logger.warning("Case store full (%d cases); trace of %s not stored",
+                       config.MAX_STORED_CASES, payload["address"])
+        payload["case_id"] = None
+        payload.setdefault("warnings", []).append(
+            f"The case store is full ({config.MAX_STORED_CASES:,} cases), so this result is "
+            "shown here but was not saved: it will not appear in the case history and "
+            "cannot be exported or reopened later. Ask the operator to raise "
+            "EXCHEQUER_MAX_STORED_CASES."
+        )
+        return payload
+
     try:
         models.save_case(case_id, payload["address"], payload, created_at=created_at,
                          owner_hash=owner or ownership.orphan_hash())
     except Exception:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
+        # No id for a case that does not exist: the page would open it, find
+        # nothing, and lose the result the officer just waited for.
+        payload["case_id"] = None
         payload.setdefault("warnings", []).append(
             "Result could not be saved to the case database; it is shown here "
             "but will not appear in the case history."

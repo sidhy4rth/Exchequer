@@ -200,3 +200,23 @@ def test_correlation_is_recomputed_once_a_case_is_stored(client, monkeypatch):
     trace(client, OTHER, ALICE)
     client.get("/cases/correlate")
     assert len(calls) == 2  # a new case invalidates it
+
+
+# -- the store's cap ------------------------------------------------------------
+def test_a_full_store_still_returns_the_trace_but_does_not_save_it(client, monkeypatch):
+    from app import config
+    monkeypatch.setattr(config, "MAX_STORED_CASES", 2)
+    assert trace(client, OTHER) and trace(client, OTHER)
+    third = client.post("/trace", json={"address": OTHER}).json()
+    assert third["case_id"] is None
+    assert any("case store is full" in w for w in third["warnings"])
+    assert models.case_count() == 2  # nothing deleted to make room
+
+
+def test_a_failed_save_hands_back_no_case_id(client, monkeypatch):
+    def broken(*args, **kwargs):
+        raise RuntimeError("disk full")
+    monkeypatch.setattr(models, "save_case", broken)
+    body = client.post("/trace", json={"address": OTHER}).json()
+    assert body["case_id"] is None  # the page must not open a case that does not exist
+    assert any("could not be saved" in w for w in body["warnings"])

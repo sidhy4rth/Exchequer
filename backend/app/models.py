@@ -266,6 +266,11 @@ def save_case(
     return case
 
 
+def case_count() -> int:
+    with Session(_engine) as session:
+        return int(session.scalar(select(func.count()).select_from(Case)) or 0)
+
+
 def get_case(case_id: str) -> Case | None:
     with Session(_engine) as session:
         case = session.get(Case, case_id)

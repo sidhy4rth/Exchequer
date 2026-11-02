@@ -198,6 +198,10 @@ a { color: var(--navy); }
 /* A source line ends in a full transaction hash; let it break, not widen the page. */
 .alert .line { font-size: 12.5px; margin-top: 3px; overflow-wrap: anywhere; }
 .alert .line + .line { margin-top: 6px; }
+/* A result that was not stored: a warning, not a designation, so amber. */
+.alert.unsaved { border-color: var(--amber); background: var(--amber-soft, transparent); }
+.alert.unsaved .icon { stroke: var(--amber); }
+.alert.unsaved .title { color: var(--amber); }
 
 /* Finding bar: the answer on the left, how sure on the right. Everything
    else on the page is evidence for these two things and opens on demand. */

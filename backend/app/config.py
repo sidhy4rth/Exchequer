@@ -356,6 +356,12 @@ TRACE_CONCURRENCY: int = _int_env("TRACE_CONCURRENCY", 6)
 # never comes near four; the demo-health job traces one address at a time.
 TRACE_MAX_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES", 4)
 
+# The most cases the store keeps (0 = no cap). Anyone can save a trace, and a
+# free hosted Postgres holds 0.5 GB; a stored case averages ~32 KB, so 5,000 is
+# ~160 MB. Once full, a trace still runs and shows its result -- it is just not
+# stored. Nothing already stored is ever deleted to make room.
+MAX_STORED_CASES: int = _int_env("EXCHEQUER_MAX_STORED_CASES", 5000)
+
 # Minimum spacing between Etherscan requests, in seconds.
 #
 # Etherscan documents ~5 req/s on the free tier. Measured against a live free
