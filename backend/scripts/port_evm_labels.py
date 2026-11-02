@@ -35,6 +35,7 @@ does NOT establish: that the target-chain activity is the exchange's own --
 it almost always is, since only the key holder can send from it.
 
     cd backend && .venv/bin/python -m scripts.port_evm_labels --checkpoint port.jsonl
+    cd backend && .venv/bin/python -m scripts.port_evm_labels --sanctions-only
 """
 from __future__ import annotations
 
@@ -142,11 +143,63 @@ def check(client: EtherscanClient, address: str) -> str:
     return "ok" if is_account(client, address) else "contract"
 
 
+def write_risk_labels(chain_key: str, listed: dict[str, dict[str, str]], today: str) -> None:
+    chain = config.CHAINS[chain_key]
+    chain.risk_labels_path.write_text(json.dumps({
+        "_meta": {
+            "description": f"Sanctioned accounts screened on {chain.name}.",
+            "provenance": (
+                "Ethereum addresses on OFAC's SDN list and other governments' lists, carried over "
+                "because a designated account is the same key on every EVM chain. Built by "
+                "backend/scripts/port_evm_labels.py."
+            ),
+            "verification_note": f"Each has no contract code on {chain.name} and has sent a transaction there.",
+            "chain": chain_key, "last_reviewed": today,
+        },
+        "labels": {a: {**m, "source": f"{m['source']} (listed as an Ethereum address; "
+                                      f"the same account on {chain.name})"}
+                   for a, m in sorted(listed.items())},
+    }, indent=1) + "\n")
+
+
+def sanctions_only(dry_run: bool) -> int:
+    """Re-check the sanctioned accounts and rewrite only the risk files.
+
+    The full port also re-checks about a thousand exchange wallets and rewrites
+    the exchange files, which is too much for a nightly run. Unlike the full
+    port, a check that fails stops the run: counting it as "not accepted" would
+    un-list a designated party because of a rate limit.
+    """
+    sanctioned = sanctioned_candidates()
+    today = datetime.now(timezone.utc).date().isoformat()
+    for chain_key in TARGETS:
+        chain = config.CHAINS[chain_key]
+        listed: dict[str, dict[str, str]] = {}
+        with EtherscanClient(chain_id=chain.chain_id) as client:
+            for address, meta in sanctioned.items():
+                try:
+                    result = check(client, address)
+                except EtherscanError as exc:
+                    print(f"{chain.name}: could not check {address} ({str(exc)[:80]}); stopping", flush=True)
+                    return 1
+                if result == "ok":
+                    listed[address] = meta
+        print(f"{chain.name}: {len(listed)} of {len(sanctioned)} sanctioned accounts accepted", flush=True)
+        if not dry_run:
+            write_risk_labels(chain_key, listed, today)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--checkpoint", type=Path, default=Path("port_evm.jsonl"))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--sanctions-only", action="store_true",
+                        help="re-check only sanctioned accounts; stop on any failed check")
     args = parser.parse_args()
+
+    if args.sanctions_only:
+        return sanctions_only(args.dry_run)
 
     done: dict[tuple[str, str, str], str] = {}
     if args.checkpoint.exists():
@@ -222,21 +275,7 @@ def main() -> int:
                 "labels": {a: {k: v for k, v in m.items() if k != "source"}
                            for a, m in sorted(accepted.items())},
             }, indent=1) + "\n")
-            chain.risk_labels_path.write_text(json.dumps({
-                "_meta": {
-                    "description": f"Sanctioned accounts screened on {chain.name}.",
-                    "provenance": (
-                        "Ethereum addresses on OFAC's SDN list and other governments' lists, carried over "
-                        "because a designated account is the same key on every EVM chain. Built by "
-                        "backend/scripts/port_evm_labels.py."
-                    ),
-                    "verification_note": f"Each has no contract code on {chain.name} and has sent a transaction there.",
-                    "chain": chain_key, "last_reviewed": today,
-                },
-                "labels": {a: {**m, "source": f"{m['source']} (listed as an Ethereum address; "
-                                              f"the same account on {chain.name})"}
-                           for a, m in sorted(listed.items())},
-            }, indent=1) + "\n")
+            write_risk_labels(chain_key, listed, today)
     return 0
 
 
