@@ -1,0 +1,10 @@
+/* Lane A additions to the case view, kept beside it rather than in styles.css. */
+.finding-bar .intake {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+.finding-bar .intake.exploratory {
+  opacity: 0.75;
+  font-style: italic;
+}

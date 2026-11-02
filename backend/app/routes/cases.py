@@ -121,6 +121,15 @@ def _is_page_load(http: Request) -> bool:
     return "text/html" in http.headers.get("accept", "")
 
 
+@router.get("/trace/intake")
+def trace_intake() -> dict[str, Any]:
+    """What the trace form may offer: whether a trace can start from the victim's
+    payment hashes (R1, EXCHEQUER_TX_INTAKE), and how many of the reported
+    wallet's incoming transfers are searched for them. Registered before
+    /trace/{case_id}, which would otherwise read "intake" as a case id."""
+    return {"payments": config.TX_INTAKE, "lookup_limit": config.TX_INTAKE_LOOKUP_LIMIT}
+
+
 @router.get("/trace/{case_id}", response_model=None)
 def get_trace(case_id: str, http: Request) -> dict[str, Any] | FileResponse:
     """Retrieve a previously traced case.

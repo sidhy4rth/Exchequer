@@ -9,6 +9,7 @@ import ExportButton from '../components/ExportButton'
 import Present from '../components/Present'
 import WatchPanel from '../components/WatchPanel'
 import RequestsPanel from '../components/RequestsPanel'
+import './TraceView.css'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
 const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds', reported: 'TronScan warning' }
@@ -131,6 +132,10 @@ export default function TraceView() {
   const requestedDirection = params.get('direction') || 'outgoing'
   // Optional wall-clock cap, in seconds; absent means the trace runs its course.
   const budget = Number(params.get('budget')) || null
+  // R1: the victim's payment hashes, from the URL; the NCRP number only ever
+  // travels in the navigation state (see TraceForm).
+  const pay = params.get('pay') || ''
+  const ncrpAck = location.state?.ncrpAck || null
 
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -172,7 +177,10 @@ export default function TraceView() {
       : stored
       ? fetchCase(caseId)
       : runTrace(
-        { address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget },
+        {
+          address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
+          payments: pay ? pay.split(',') : [], ncrpAck,
+        },
         (snap) => { if (!cancelled && snap?.progress) setProgress(snap.progress) },
       )
     request
@@ -196,7 +204,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -236,6 +244,10 @@ export default function TraceView() {
 
   const address = routeAddress ?? result?.address ?? ''
   const reverse = (result?.direction ?? requestedDirection) === 'incoming'
+  // Contract v2 (docs/contracts/case.md): a payment trace started from the
+  // victim's payments; anything else followed the wallet's own history.
+  const paymentTrace = result?.intake?.mode === 'payment'
+  const payments = result?.intake?.payments ?? []
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
   const findings = result?.findings ?? []
@@ -383,6 +395,16 @@ export default function TraceView() {
             {/* The answer */}
             <div className="answer">
               <span className="q">{reverse ? 'Where the money came from' : 'Where the money went'}</span>
+              {!reverse && (paymentTrace ? (
+                <span className="intake" title="The trace read the reported wallet only from when the first payment arrived.">
+                  From the victim's <span className="num">{num(result.reported_amount)} {unit}</span> in {payments.length} payment{payments.length === 1 ? '' : 's'}
+                  {result.intake.ncrp_ack ? <> · NCRP <span className="mono">{result.intake.ncrp_ack}</span></> : null}
+                </span>
+              ) : (
+                <span className="intake exploratory" title="Traced from the address alone: it follows the wallet's whole recent history, which can include other people's money. Start from the victim's payment hashes to trace their money only.">
+                  Exploratory · traced from the address, not from a reported payment
+                </span>
+              ))}
               {result.exchange ? (
                 <>
                   <h2 className="green">{result.exchange}</h2>
@@ -394,7 +416,9 @@ export default function TraceView() {
                     {' · '}{reverse
                       ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> sent</>
                       : result.prorata?.status === 'estimated'
-                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> of the reported funds likely arrived <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span></>
+                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> {paymentTrace
+                            ? <>sent on after the victim's payment likely arrived</>
+                            : <>sent from this wallet likely arrived</>} <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span></>
                         : <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached it along this path, including any funds from other sources</>}
                   </div>
                   <div className="cite">

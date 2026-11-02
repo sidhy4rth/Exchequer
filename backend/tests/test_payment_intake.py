@@ -149,3 +149,20 @@ def test_a_failed_transaction_is_not_a_payment():
     with pytest.raises(PaymentError):
         resolve_payments(Client(), SCAMMER, [PaymentRef(tx_hash=failed.hash)],
                          chain_key="ethereum", asset="ETH", limit=100)
+
+
+# ---------------------------------------------------------------- what the form is told
+def test_the_form_is_told_whether_payment_intake_is_on(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        monkeypatch.setattr(config, "TX_INTAKE", False)
+        off = client.get("/trace/intake")
+        monkeypatch.setattr(config, "TX_INTAKE", True)
+        on = client.get("/trace/intake")
+    # Not read as a case id by GET /trace/{case_id}.
+    assert off.status_code == on.status_code == 200
+    assert off.json()["payments"] is False and on.json()["payments"] is True
+    assert on.json()["lookup_limit"] == config.TX_INTAKE_LOOKUP_LIMIT
