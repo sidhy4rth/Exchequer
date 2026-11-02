@@ -9,10 +9,16 @@ times and transaction hashes, and the evidence hash that ties the letter to
 the sealed report.
 
 It drafts; it does not decide. Everything that is the officer's to supply is
-left as a marked blank: who is writing, the case and FIR reference, and the
-legal provision the request is issued under. The tool suggests a provision in
-brackets and never asserts one, because which power applies depends on the
-case, the authority and the stage of the investigation.
+left as a marked blank: who is writing, the case and FIR reference, the victim's
+payments, and the legal provision the request is issued under. The tool suggests
+a provision in brackets and never asserts one, because which power applies
+depends on the case, the authority and the stage of the investigation.
+
+What an exchange letter may ask depends on what the case holds about the address
+(report.attribution_kind): about the customer behind a labelled deposit address;
+whether an inferred one is theirs, then about the customer; about the accounts
+behind the listed transactions for a wallet the exchange runs itself, never KYC
+on the wallet; and, for an explorer's tag, only whether the address is theirs.
 """
 from __future__ import annotations
 
@@ -20,7 +26,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 from . import config
-from .report import IST, _when, _when_iso
+from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
+                     _when, _when_iso, attribution_kind)
 from .risk_matcher import _list_meta
 
 EXCHANGE = "exchange"
@@ -30,13 +37,7 @@ LETTERS = (EXCHANGE, TETHER)
 BLANK = "[____________________]"
 USDT_CHAINS = {"ethereum", "tron"}  # where USDT is Tether's own contract, with a blacklist
 
-# What the case holds about the address it reached decides what a letter may ask.
-LABELLED_DEPOSIT = "labelled_deposit"  # one customer: ask about that customer
-INFERRED_DEPOSIT = "inferred_deposit"  # probably one customer: ask to confirm, then about them
-EXCHANGE_WALLET = "exchange_wallet"    # the company's own: ask about the transactions, never KYC on it
-EXPLORER_TAG = "explorer_tag"          # a third party's word: ask whether it is theirs first
 COMPANY_WALLET_KINDS = {EXCHANGE_WALLET, EXPLORER_TAG}  # the transaction list is the question
-TAG_WORDING = " (TronScan tag, read live)"  # tron_tags.py's label suffix; meaningless to a compliance team
 
 
 class LetterNotApplicable(ValueError):
@@ -75,22 +76,6 @@ def available(result: dict[str, Any]) -> list[dict[str, str]]:
     if _frozen(result) or _usdt_traces(result):
         out.append({"to": TETHER, "title": "Request to Tether"})
     return out
-
-
-def attribution_kind(trace: dict[str, Any]) -> str:
-    """What the case actually holds about the address it reached.
-
-    The one place that reads this from a trace: when case contract v2 lands, this
-    becomes a lookup of its attribution.kind and nothing below changes. A case
-    that does not say gets the kind that assumes least: no single customer.
-    """
-    address = trace.get("exchange_address")
-    if trace.get("attribution_inferred"):
-        return INFERRED_DEPOSIT
-    if any(found.get("address") == address for found in (trace.get("live_tags") or {}).get("found") or []):
-        return EXPLORER_TAG
-    match = next((m for m in trace.get("matches") or [] if m.get("address") == address), {})
-    return LABELLED_DEPOSIT if match.get("wallet_type") == "deposit_wallet" else EXCHANGE_WALLET
 
 
 def _opening(result: dict[str, Any]) -> list[str]:
@@ -321,7 +306,7 @@ def _tether_letter(case_id: str, result: dict[str, Any]) -> str:
 
     lines = _header(
         case_id, result,
-        f"Tether Operations Limited — law-enforcement requests team {BLANK} (Tether's published law-enforcement channel)",
+        f"Tether Operations Limited — law-enforcement requests team {BLANK} (officer to find and confirm the right channel)",
         "Request for information and preservation relating to USDT addresses in a fraud investigation",
     )
     lines += [*_opening(result), ""]

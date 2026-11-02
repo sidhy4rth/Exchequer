@@ -28,7 +28,7 @@ from reportlab.platypus import (
 from xml.sax.saxutils import escape
 
 from .evidence import CONTENT_HASH_MARK
-from .report import _when_iso
+from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso
 from .signing import SIGNATURE_MARK
 
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
@@ -146,8 +146,10 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     ]
     if exchange:
         facts += [
-            ("Address to ask the exchange about", attribution.get("exchange_address", ""), True),
-            ("Wallet", attribution.get("exchange_wallet_label") or "", False),
+            ({EXPLORER_TAG: "Address to ask the exchange to confirm",
+              EXCHANGE_WALLET: "Wallet the funds reached"}.get(attribution.get("kind"), "Address to ask the exchange about"),
+             attribution.get("exchange_address", ""), True),
+            ("Wallet", _shown_label(attribution.get("exchange_wallet_label")), False),
             ("Hops from the reported address", attribution.get("hop_count", ""), False),
         ]
         prorata = attribution.get("prorata") or {}
@@ -169,7 +171,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     story += [Spacer(1, 10), table]
 
     if confidence.get("summary"):
-        story += [_p("HOW SURE", st["micro"]), _p(confidence["summary"], st["cell"])]
+        story += [_p("HOW SURE", st["micro"]), _p(_shown_label(confidence["summary"]), st["cell"])]
 
     # -- how to verify --------------------------------------------------------
     verify = Table([[Paragraph(
@@ -221,9 +223,9 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
         route = [[_p("Hop", st["small"]), _p("Address", st["small"]), _p("Label", st["small"]),
                   _p("Received", st["small"])]]
         for step in path:
-            label = step.get("label") or step.get("exchange") or ""
+            label = _shown_label(step.get("label") or step.get("exchange"))
             if not label and step.get("address") == attribution.get("exchange_address"):
-                label = attribution.get("exchange_wallet_label") or ""
+                label = _shown_label(attribution.get("exchange_wallet_label"))
             if not label and step.get("depth") == 0:
                 label = "reported address"
             amount = step.get("value_native")
@@ -247,7 +249,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     if limits:
         story.append(_p("READ WITH THESE LIMITATIONS", st["micro"]))
         for item in limits[:3]:
-            story.append(Paragraph(f"• {escape(item)}", st["small"]))
+            story.append(Paragraph(f"• {escape(_shown_label(item))}", st["small"]))
         if len(limits) > 3:
             story.append(_p(f"…{len(limits) - 3} more in Part 2.", st["small"]))
 
