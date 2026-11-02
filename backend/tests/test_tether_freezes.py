@@ -6,6 +6,10 @@ release must come back.
 """
 from __future__ import annotations
 
+import httpx
+import pytest
+
+from scripts import import_tether_freezes as freezes
 from scripts.import_tether_freezes import _tron_hex, replay
 
 
@@ -34,6 +38,47 @@ def test_order_within_a_block_follows_the_log_index():
 def test_a_tron_address_converts_to_its_abi_hex():
     # TR7NHq... is the USDT contract; its 20-byte body is a614f803...
     assert _tron_hex("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t") == "a614f803b6fd780986a42c78ec9c7f77e6ded13c"
+
+
+def tron_client(*responses):
+    """An httpx client that answers each request in turn; no network."""
+    answers = iter(responses)
+    return httpx.Client(transport=httpx.MockTransport(lambda _request: next(answers)))
+
+
+EVENT = {"result": {"_user": "0x" + "ab" * 20}, "block_number": 5, "event_index": 0,
+         "transaction_id": "tx1", "block_timestamp": 1_700_000_000_000}
+
+
+def test_every_page_of_tron_events_is_read(monkeypatch):
+    monkeypatch.setattr(freezes.time, "sleep", lambda _seconds: None)
+    client = tron_client(
+        httpx.Response(200, json={"success": True, "data": [EVENT], "meta": {"fingerprint": "next"}}),
+        httpx.Response(200, json={"success": True, "data": [EVENT], "meta": {}}),
+    )
+    assert len(freezes.tron_events(client, "AddedBlackList")) == 2
+
+
+@pytest.mark.parametrize("response", [
+    httpx.Response(429, json={"Error": "rate limited"}),
+    httpx.Response(500, text="server error"),
+    httpx.Response(200, json={"success": False, "error": "busy"}),
+    httpx.Response(200, json={"message": "no data key at all"}),
+])
+def test_a_bad_answer_stops_the_import_rather_than_looking_like_the_last_page(response):
+    """A rate limit used to end the read quietly, so a freeze list came out short."""
+    with pytest.raises((httpx.HTTPError, freezes.TronReadError)):
+        freezes.tron_events(tron_client(response), "AddedBlackList")
+
+
+def test_a_bad_answer_partway_through_also_stops_the_import(monkeypatch):
+    monkeypatch.setattr(freezes.time, "sleep", lambda _seconds: None)
+    client = tron_client(
+        httpx.Response(200, json={"success": True, "data": [EVENT], "meta": {"fingerprint": "next"}}),
+        httpx.Response(429, json={"Error": "rate limited"}),
+    )
+    with pytest.raises(httpx.HTTPError):
+        freezes.tron_events(client, "AddedBlackList")
 
 
 def test_burn_and_system_addresses_are_not_wallets():
