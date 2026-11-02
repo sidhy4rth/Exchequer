@@ -1,0 +1,108 @@
+"""Schema migrations (backend/migrations/): every kind of store reaches the
+same schema, the one app/models.py describes, without losing a row.
+
+Runs against throwaway SQLite files; CI runs the same upgrade on Postgres.
+"""
+from __future__ import annotations
+
+import pytest
+from alembic import command
+from alembic.autogenerate import compare_metadata
+from alembic.config import Config
+from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
+from sqlalchemy import create_engine, inspect, text
+
+from app import config, models
+
+ALEMBIC_INI = str(config.BACKEND_DIR / "alembic.ini")
+ADDRESS = "0x" + "1" * 40
+
+
+@pytest.fixture
+def engine(tmp_path, monkeypatch):
+    engine = create_engine(f"sqlite:///{tmp_path / 'store.db'}", future=True)
+    monkeypatch.setattr(models, "_engine", engine)
+    return engine
+
+
+def drift(engine) -> list:
+    """What differs between the database and app/models.py; [] when nothing."""
+    with engine.connect() as conn:
+        return compare_metadata(MigrationContext.configure(conn), models.Base.metadata)
+
+
+def revision(engine) -> str | None:
+    with engine.connect() as conn:
+        return MigrationContext.configure(conn).get_current_revision()
+
+
+def head() -> str:
+    return ScriptDirectory.from_config(Config(ALEMBIC_INI)).get_current_head()
+
+
+def test_there_is_exactly_one_migration_head():
+    # Two heads means two branches each added a migration: rebase and renumber.
+    assert len(ScriptDirectory.from_config(Config(ALEMBIC_INI)).get_heads()) == 1
+
+
+def test_an_empty_database_gets_the_whole_schema(engine):
+    models.init_db()
+    assert revision(engine) == head()
+    assert drift(engine) == []
+
+
+def test_a_store_made_before_migrations_is_adopted_untouched(engine):
+    # What every deployed or local store is today: create_all(), no version.
+    models.Base.metadata.create_all(engine)
+    models.save_case("kept", ADDRESS, {"address": ADDRESS}, owner_hash="h" * 64)
+    models.init_db()
+    assert revision(engine) == head()
+    assert drift(engine) == []
+    kept = models.get_case("kept")
+    assert kept.result == {"address": ADDRESS} and kept.owner_hash == "h" * 64
+
+
+def test_a_store_older_than_ownership_gains_owner_hash_and_keeps_its_cases(engine):
+    models.Base.metadata.create_all(engine, tables=[t for t in models.Base.metadata.sorted_tables
+                                                    if t.name != "cases"])
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE cases (id VARCHAR(36) NOT NULL PRIMARY KEY, "
+                          "address VARCHAR(42) NOT NULL, created_at VARCHAR(32) NOT NULL, "
+                          "result_json TEXT NOT NULL)"))
+        conn.execute(text("CREATE INDEX ix_cases_address ON cases (address)"))
+        conn.execute(text("INSERT INTO cases VALUES ('old', :a, 't', '{}')"), {"a": ADDRESS})
+    models.init_db()
+    assert drift(engine) == []
+    assert models.get_case("old").owner_hash is None  # an old case reads as unowned
+
+
+def test_running_it_again_changes_nothing(engine):
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"address": ADDRESS})
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    assert models.get_case("kept") is not None
+
+
+def test_the_baseline_refuses_to_be_downgraded(engine):
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"address": ADDRESS})
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        with pytest.raises(RuntimeError, match="drop every stored case"):
+            command.downgrade(settings, "base")
+    assert "cases" in inspect(engine).get_table_names()
+    assert models.get_case("kept") is not None
+
+
+def test_migrating_at_startup_leaves_the_apps_logging_alone(engine):
+    # Alembic's usual env.py calls fileConfig(), which silences every logger
+    # that already exists -- log_safety's included -- unless told not to.
+    import logging
+    before = {name for name, lg in logging.Logger.manager.loggerDict.items()
+              if isinstance(lg, logging.Logger) and not lg.disabled}
+    models.init_db()
+    assert not logging.getLogger("app.models").disabled
+    assert all(not logging.getLogger(name).disabled for name in before)

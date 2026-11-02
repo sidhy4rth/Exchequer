@@ -95,6 +95,31 @@ tables by itself, and a signing key is created on the volume. Check
 "docker image builds and runs as non-root" builds and starts the image the
 way Railway does before anything is deployed.
 
+## Database schema
+
+The schema lives in numbered Alembic migrations in `backend/migrations/`,
+never in a hand-written `ALTER`. The app runs `alembic upgrade head` itself
+at startup (`models.init_db`), so a deploy needs no extra step, on SQLite or
+Postgres.
+
+- **An existing store needs nothing done.** The baseline, `0001`, adopts any
+  store an earlier build made: it creates only the tables, columns and
+  indexes that are missing, and adds `cases.owner_hash` to a store older
+  than ownership. Do **not** `alembic stamp` a store instead: on the oldest
+  kind it would record a column without adding it.
+- **The baseline cannot be downgraded.** Undoing it would drop every stored
+  case; it raises instead.
+- **Changing the schema** (from `backend/`): change `app/models.py`, then
+  `alembic revision --autogenerate --rev-id 0002 -m "add x to y"`, read the
+  generated file, and run `alembic upgrade head && alembic check`. Never edit
+  a migration that has merged.
+- **Two heads** (`alembic heads` prints two lines) means two branches each
+  added a migration. The later one rebases, renumbers its `revision` and
+  sets `down_revision` to the other. CI fails until there is one head.
+
+CI runs the suite's migration tests on SQLite and the same migrations on a
+real Postgres, including adopting a store made before migrations.
+
 ## Backups
 
 Two copies, for two different accidents:

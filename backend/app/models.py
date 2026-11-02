@@ -17,7 +17,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, Float, Integer, String, Text, create_engine, event, func, inspect, or_, select, text
+from sqlalchemy import Boolean, Float, Integer, String, Text, create_engine, event, func, or_, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
@@ -207,30 +207,36 @@ def store_version() -> int:
     return _store_version
 
 
-def init_db() -> None:
-    """Create the schema if it does not exist. Safe to call repeatedly."""
+def engine() -> Engine:
+    """The store's engine, for the migrations (migrations/env.py)."""
+    return _engine
+
+
+def ensure_storage_dir() -> None:
+    """The SQLite file's folder must exist before the first connection."""
     if _engine.dialect.name == "sqlite":
         config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    Base.metadata.create_all(_engine)
-    _add_missing_columns()
+
+
+def init_db() -> None:
+    """Bring the store to the current schema. Safe to call repeatedly.
+
+    The schema is defined by the migrations in backend/migrations/, never
+    created from the models directly: every change is a numbered migration,
+    so every store -- an empty one, or one made by an older build -- reaches
+    the same tables the same way. See migrations/versions/0001_baseline.py."""
+    from alembic import command
+    from alembic.config import Config
+
+    ensure_storage_dir()
+    settings = Config(str(config.BACKEND_DIR / "alembic.ini"))
+    with _engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.upgrade(settings, "head")
     if _engine.dialect.name == "sqlite":
         logger.info("SQLite ready at %s", config.DB_PATH)
     else:
         logger.info("Case store ready on %s at %s", _engine.dialect.name, _engine.url.host)
-
-
-def _add_missing_columns() -> None:
-    """Bring a store created by an older build up to the current table.
-
-    create_all() makes missing tables but never alters an existing one, and
-    the deployed store on the volume predates owner_hash. Additive only: a
-    nullable column, so old rows read as unowned."""
-    columns = {c["name"] for c in inspect(_engine).get_columns("cases")}
-    if "owner_hash" not in columns:
-        with _engine.begin() as conn:
-            conn.execute(text("ALTER TABLE cases ADD COLUMN owner_hash VARCHAR(64)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cases_owner_hash ON cases (owner_hash)"))
-        logger.info("Case store: added owner_hash column")
 
 
 def new_case_id() -> str:
