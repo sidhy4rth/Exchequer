@@ -114,6 +114,20 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     story.append(_p(f"Case {case_id}", st["small"]))
     story.append(Spacer(1, 8))
 
+    # -- an old screening list, before anything that relies on the screening ---
+    screening_lists = report.get("screening_lists") or {}
+    if screening_lists.get("warning"):
+        stale = Table([[Paragraph(
+            f"<font name='Plex-Bold' color='{RED.hexval()}'>WARNING.</font> "
+            f"<font color='{RED.hexval()}'>{escape(screening_lists['warning'])}</font>", st["cell"])]],
+            colWidths=[None])
+        stale.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 1, RED),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story += [stale, Spacer(1, 8)]
+
     # -- the finding --------------------------------------------------------
     exchange = attribution.get("exchange")
     heading = exchange or "No exchange reached"
@@ -179,8 +193,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     if not screening.get("screened"):
         story.append(_p("This chain has no screening lists loaded; no screening was done.", st["cell"]))
     elif not matches:
-        story.append(_p("No address in the trace is on a sanctions, mixer, Tether-freeze or stolen-funds list.",
-                        st["cell"]))
+        story.append(_p("No address in the trace is on the lists below.", st["cell"]))
     else:
         for m in matches[:8]:
             colour = RED if m.get("category") in ("sanctioned", "mixer") else AMBER
@@ -190,6 +203,15 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
             story.append(Paragraph(line, st["cell"]))
         if len(matches) > 8:
             story.append(_p(f"…and {len(matches) - 8} more, listed in Part 2.", st["small"]))
+
+    # -- the lists and their dates ----------------------------------------------
+    if screening_lists.get("lists"):
+        story.append(_p("LISTS SCREENED AGAINST", st["micro"]))
+        for entry in screening_lists["lists"]:
+            published = f", published {entry['published']}" if entry.get("published") else ""
+            note = f" {entry['note']}" if entry.get("note") else ""
+            story.append(_p(f"{entry['name']}: checked {entry['checked'] or 'no date recorded'}{published}.{note}",
+                            st["small"]))
 
     # -- the route ------------------------------------------------------------
     path = report.get("trace_path") or []

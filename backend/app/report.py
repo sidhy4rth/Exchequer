@@ -22,10 +22,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import config
 from .evidence import seal_text
 from .models import Case
+from .risk_matcher import list_freshness
 
-REPORT_VERSION = "2.0"
+REPORT_VERSION = "2.1"
 TOOL_NAME = "Exchequer"
 
 
@@ -136,6 +138,7 @@ def build_report(case: Case) -> dict[str, Any]:
             "matches": result.get("risk_matches", []),
             "notes": result.get("risk_notes", []),
         },
+        "screening_lists": _screening_lists(case, result),
         "patterns_detected": findings,
         "swaps": result.get("swaps", []),
         "swap_notes": result.get("swap_notes", []),
@@ -188,6 +191,18 @@ def build_report(case: Case) -> dict[str, Any]:
         "evidence": result.get("evidence"),
         "live_tags": result.get("live_tags"),
     }
+
+
+def _screening_lists(case: Case, result: dict[str, Any]) -> dict[str, Any] | None:
+    """How old each list was when this case was traced; None if the chain is unknown here."""
+    try:
+        traced = datetime.fromisoformat(str(case.created_at).replace("Z", "+00:00")).date()
+    except ValueError:
+        traced = datetime.now(tz=timezone.utc).date()
+    try:
+        return list_freshness(result.get("chain"), traced)
+    except config.UnknownChainError:
+        return None
 
 
 def _summary(case: Case, result: dict[str, Any]) -> str:
@@ -378,6 +393,10 @@ def render_text_report(report: dict[str, Any]) -> str:
     if case.get("block_explorer"):
         add(f"Verify at        : {case['block_explorer']}")
     add("")
+    screening_lists = report.get("screening_lists")
+    if screening_lists and screening_lists.get("warning"):
+        para(f"WARNING: {screening_lists['warning']}")
+        add("")
 
     # -- summary ---------------------------------------------------------------
     section("SUMMARY")
@@ -525,13 +544,30 @@ def render_text_report(report: dict[str, Any]) -> str:
             add("")
     else:
         add("No address in this trace appeared on the screened lists.")
-        add("Screening is an exact match against digital currency addresses")
-        add("on the U.S. Treasury SDN list and on UK, EU, Israeli, Japanese and")
-        add("French sanctions and seizure lists, Tether's USDT freeze list, and")
-        add("mixer pools and hack or phishing wallets tagged by the block")
-        add("explorer; an address absent from those lists is not thereby")
-        add("established as legitimate.")
+        add("Screening is an exact match against the lists named in the next")
+        add("section; an address absent from them is not thereby established")
+        add("as legitimate.")
         add("")
+
+    # -- lists -----------------------------------------------------------------
+    section("LISTS SCREENED AGAINST")
+    if screening_lists:
+        para("The lists this server held when this report was generated, compared "
+             f"with {screening_lists['as_of']}, the day this case was traced. A date "
+             "is when the list was last checked against its source.")
+        add("")
+        for entry in screening_lists.get("lists") or []:
+            para(entry["name"], indent="  ")
+            add(f"    {entry['file']}: checked {entry['checked'] or 'no date recorded'}"
+                + (f", published {entry['published']}" if entry.get("published") else ""))
+            if entry.get("note"):
+                para(entry["note"], indent="    ")
+        if screening_lists.get("not_held"):
+            add("")
+            para(f"Not loaded for this chain, so not screened: {', '.join(screening_lists['not_held'])}.")
+    else:
+        add("The lists for this chain could not be determined.")
+    add("")
 
     # -- patterns --------------------------------------------------------------
     section("LAUNDERING PATTERNS DETECTED")

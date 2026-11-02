@@ -61,6 +61,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from datetime import date, datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -309,6 +310,106 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
         chain=chain.key,
         extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, chain.threat_labels_path),
     )
+
+
+# -- how old each list was -------------------------------------------------------
+# (chain attribute, name, whether an age limit means anything). The last two are
+# fixed snapshots, not refreshed nightly, so a warning on them could never clear.
+LISTS = (
+    ("risk_labels_path", "OFAC SDN list", True),
+    ("intl_sanctions_path", "Other governments' sanctions lists", True),
+    ("frozen_labels_path", "Tether USDT freezes", True),
+    ("threat_labels_path", "Mixer and stolen-funds tags", False),
+    ("labels_path", "Exchange wallet labels", False),
+)
+# OFAC names neither chain; scripts/port_evm_labels.py builds their risk files.
+CARRIED_CHAINS = {"polygon", "arbitrum"}
+CARRIED_NAME = "OFAC and other governments' sanctions lists, carried over from Ethereum"
+
+UPDATED_NOTE = ("Updated after this case was traced: the trace used an earlier version this "
+                "report cannot name. Re-run it to screen against this one.")
+SNAPSHOT_NOTE = "A fixed snapshot, not refreshed nightly, so no age limit applies."
+
+
+def is_stale(list_date: date | None, as_of: date) -> bool:
+    """Was this list more than config.LIST_STALE_DAYS old on `as_of`?
+
+    A list with no date counts as stale: it cannot show it was checked. Exactly
+    the limit is not yet over it, and a list newer than `as_of` has no age to count.
+    """
+    if list_date is None:
+        return True
+    return (as_of - list_date).days > config.LIST_STALE_DAYS
+
+
+def _iso_date(value: Any) -> date | None:
+    """`last_reviewed` is ISO; OFAC publishes MM/DD/YYYY, which reads the other way round in India."""
+    for layout in ("%Y-%m-%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(str(value), layout).date()
+        except ValueError:
+            continue
+    return None
+
+
+@lru_cache(maxsize=None)
+def _list_meta(path: Path) -> dict[str, Any] | None:
+    """A list file's `_meta`, or None if it is missing or unreadable. Cached: some are megabytes."""
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return (document.get("_meta") or {}) if isinstance(document, dict) else None
+
+
+def list_freshness(chain_key: str | None, as_of: date) -> dict[str, Any]:
+    """Each list this chain is screened against, and how old it was on `as_of`.
+
+    `as_of` is the day the case was traced. These are the files this server holds
+    now, so a list dated after the trace is reported as such, never as what the
+    trace used.
+    """
+    chain = config.get_chain(chain_key)
+    lists: list[dict[str, Any]] = []
+    not_held: list[str] = []
+    overdue: list[str] = []
+    for attribute, name, has_age_limit in LISTS:
+        path = getattr(chain, attribute)
+        meta = _list_meta(path) if path else None
+        if meta is None:
+            not_held.append(name)
+            continue
+        if attribute == "risk_labels_path" and chain.key in CARRIED_CHAINS:
+            name = CARRIED_NAME
+        authorities = (meta.get("counts") or {}).get("by_authority")
+        if authorities:
+            name = f"{name} ({', '.join(sorted(authorities))})"
+        checked, published = _iso_date(meta.get("last_reviewed")), _iso_date(meta.get("ofac_publish_date"))
+
+        state, note = "current", ""
+        if checked and checked > as_of:
+            state, note = "updated_since_trace", UPDATED_NOTE
+        elif not has_age_limit:
+            state, note = "fixed_snapshot", SNAPSHOT_NOTE
+        elif is_stale(checked, as_of):
+            state, note = "stale", f"Over {config.LIST_STALE_DAYS} days old when this case was traced."
+            overdue.append(f"{name} ({f'checked {checked}' if checked else 'no date recorded'})")
+        lists.append({
+            "name": name,
+            "file": path.name,
+            "checked": checked.isoformat() if checked else None,
+            "published": published.isoformat() if published else None,
+            "state": state,
+            "note": note,
+        })
+    return {
+        "as_of": as_of.isoformat(),
+        "stale_after_days": config.LIST_STALE_DAYS,
+        "lists": lists,
+        "not_held": not_held,
+        "warning": (f"Screening may have missed addresses listed recently. Over {config.LIST_STALE_DAYS} "
+                    f"days old when this case was traced: {'; '.join(overdue)}.") if overdue else None,
+    }
 
 
 def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
