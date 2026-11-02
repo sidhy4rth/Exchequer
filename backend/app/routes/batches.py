@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .. import batches, config, ownership, pipeline, rate_limit
-from . import cases
+from . import casebook, cases
 
 router = APIRouter()
 
@@ -71,4 +71,4 @@ def get_batch(batch_id: str, http: Request) -> dict[str, Any]:
     batch = batches.get(_owner(http), batch_id)
     if batch is None:
         raise HTTPException(status_code=404, detail="No such batch.")
-    return batches.summary(batch, with_correlation=True, excluded=cases._known_contract_or_exchange)
+    return batches.summary(batch, with_correlation=True, excluded=casebook._known_contract_or_exchange)
