@@ -9,4 +9,4 @@ SQLAlchemy==2.0.54
 psycopg[binary]==3.3.6
 cryptography==50.0.2
 reportlab==5.0.1
-pypdf==6.21.2
+pypdf==6.21.4
