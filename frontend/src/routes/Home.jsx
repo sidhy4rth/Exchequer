@@ -8,8 +8,7 @@ import TraceForm from '../components/TraceForm'
 import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
 import BulkIntake from '../components/BulkIntake'
-import { demoCode, forgetDemoCode } from '../demoCode'
-import { signOut } from '../session'
+import { demoCode } from '../demoCode'
 
 const middle = (a, head = 10, tail = 8) => (a && a.length > head + tail + 1 ? `${a.slice(0, head)}…${a.slice(-tail)}` : a)
 
@@ -62,7 +61,6 @@ export default function Home() {
             : <><span className="dot" />CONNECTING</>}
         </span>
         <span className="grow" />
-        <button className="quiet" onClick={() => { signOut(); forgetDemoCode(); navigate('/signin/investigator') }} title="Back to the sign-in page">Sign out</button>
         <ThemeToggle />
       </header>
 

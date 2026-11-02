@@ -178,9 +178,10 @@ npm install
 npm run dev                                           # → http://localhost:5173
 ```
 
-The first screen has two demo sign-ins, prefilled: investigators **`admin` / `admin`** (the tracing console)
-and citizens **`user` / `user`** (a page still to be built). They are front doors for the demonstration, not
-access control — the backend has no accounts and the API answers without it.
+The first screen is the front door, in **demo mode**: there are no accounts yet, so there is nothing to sign in
+with. Anyone can enter as an investigator (the tracing console) or a citizen (a page still to be built), and a
+banner on every page says so and switches between the two. A public deployment can ask for a demo code before
+live tracing (`EXCHEQUER_DEMO_CODE`, see `docs/operations.md`).
 
 <details>
 <summary><b>Getting an Etherscan key, and other setup notes</b></summary>

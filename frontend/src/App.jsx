@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import DemoBanner from './components/DemoBanner'
 import { role } from './session'
 
 // Each page is its own chunk. The sign-in globe (map data, d3-geo) and the
@@ -12,12 +13,13 @@ const TraceView = lazy(() => import('./routes/TraceView'))
 const Verify = lazy(() => import('./routes/Verify'))
 const Batch = lazy(() => import('./routes/Batch'))
 
-/** The demo front doors: each part of the app needs the tab to have passed
- * the matching sign-in once. Not security -- see session.js. */
+/** The demo front doors: each part of the app needs the tab to have chosen
+ * the matching view once, and says on every page that it is a demo with no
+ * accounts. Not security -- see session.js. */
 function Gate({ as, children }) {
   const location = useLocation()
   const current = role()
-  if (current === as) return children
+  if (current === as) return <><DemoBanner as={as} />{children}</>
   if (current) return <Navigate to={current === 'citizen' ? '/citizen' : '/'} replace />
   return <Navigate to={`/signin/${as}`} replace state={{ from: location.pathname + location.search }} />
 }
