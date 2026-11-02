@@ -31,6 +31,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import batches as batch_runner
 from . import backups, config, log_safety, models, warmup, watchlist
+from . import access
 from .access import DemoCodeMiddleware
 from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
@@ -130,6 +131,7 @@ app.add_middleware(
 # /risk-labels, /ledger), then tracing and the case store (/trace, reports,
 # letters, /cases). Registered before the static catch-all below.
 app.include_router(coverage.router)
+app.include_router(access.router)
 # Jobs first: /trace/jobs/... must not be read as /trace/{case_id}/...
 app.include_router(jobs.router)
 app.include_router(cases.router)

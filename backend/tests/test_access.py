@@ -107,3 +107,22 @@ def test_one_client_cannot_create_watches_without_end(client, monkeypatch):
         assert post(client, "/watches", {"address": "0x" + str(n + 2) * 40}).status_code == 201
     refused = post(client, "/watches", {"address": "0x" + "9" * 40})
     assert refused.status_code == 429 and int(refused.headers["retry-after"]) > 0
+
+
+# -- what the console asks before showing the trace form ------------------------------
+def test_the_console_can_ask_whether_a_code_is_needed(client, monkeypatch):
+    assert client.get("/access").json() == {"demo_code_required": False}
+    monkeypatch.setattr(config, "DEMO_CODE", CODE)
+    assert client.get("/access").json() == {"demo_code_required": True}
+
+
+def test_checking_a_code_goes_through_the_same_gate(client, code_set):
+    assert post(client, "/access/check", None).status_code == 403
+    assert post(client, "/access/check", None, code="nope").status_code == 403
+    assert post(client, "/access/check", None, code=CODE).json() == {"ok": True}
+
+
+def test_checking_codes_counts_towards_the_guess_limit(client, code_set):
+    for _ in range(10):
+        post(client, "/access/check", None, code="guess")
+    assert post(client, "/access/check", None, code=CODE).status_code == 429

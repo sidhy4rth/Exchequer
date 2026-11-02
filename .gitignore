@@ -8,6 +8,9 @@ backend/.env
 
 # Local database
 *.db
+# SQLite's write-ahead log and its index, beside every store in WAL mode.
+*.db-shm
+*.db-wal
 
 # Node
 frontend/node_modules/

@@ -37,6 +37,11 @@ services:
       # read it in the dashboard. Public /health says only up or down.
       - key: EXCHEQUER_HEALTH_TOKEN
         generateValue: true
+      # The demo code (access.py): set, the public site shows recorded demos
+      # and live tracing needs the code; blank, everything stays open. Keep
+      # the repository secret DEMO_CODE equal to it for the Demo health job.
+      - key: EXCHEQUER_DEMO_CODE
+        sync: false
       # Render puts the client's address first in X-Forwarded-For.
       - key: EXCHEQUER_TRUST_PROXY
         value: render

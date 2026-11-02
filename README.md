@@ -326,6 +326,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /health` | Up or down, nothing else |
 | `GET /chains` | Per-chain readiness, assets and label counts |
 | `GET /health/detail` | Operator only (bearer `EXCHEQUER_HEALTH_TOKEN`): key status, per-chain detail, API budget, warm-cache status |
+| `GET /access` | Whether this site asks for a demo code before live tracing |
+| `POST /access/check` | Checks a demo code (sent as `X-Exchequer-Demo-Code`); 403 if wrong, 429 after 10 wrong tries an hour |
 
 ---
 

@@ -98,6 +98,18 @@ tables by itself, and a signing key is created on the volume. Check
 "docker image builds and runs as non-root" builds and starts the image the
 way Railway does before anything is deployed.
 
+## A public demo
+
+To put the site in front of the public without letting anyone spend the
+provider quota, set `EXCHEQUER_DEMO_CODE` in Render's environment and the
+same value as the repository secret `DEMO_CODE` (the Demo health job sends
+it). Visitors then see the recorded demos, which open exactly as recorded,
+and a box for the code; with it, the console traces as before. The code
+stays in that browser tab only (`sessionStorage`) and is forgotten on sign
+out. Share it with the people presenting, and change it after an event.
+`scripts/check_demos.py` must send it (Lane A) before the code is set, or
+Demo health fails.
+
 ## Database schema
 
 The schema lives in numbered Alembic migrations in `backend/migrations/`,

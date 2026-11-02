@@ -9,6 +9,7 @@ X-Exchequer-Demo-Code:
     POST /trace, /trace/jobs     a live trace
     POST /batches                up to 25 of them
     POST /watches, /watches/{id}/check    re-reading an address on a schedule
+    POST /access/check           whether a code is right, for the console's code box
 
 Unset (a laptop, the test suite), nothing is guarded. The code is a shared
 secret for a demo, not an account: R23 brings accounts.
@@ -24,6 +25,8 @@ import json
 import re
 from typing import Any, Awaitable, Callable
 
+from fastapi import APIRouter
+
 from . import config, rate_limit
 
 CODE_HEADER = "x-exchequer-demo-code"
@@ -34,6 +37,9 @@ GUARDED: list[tuple[str, re.Pattern[str]]] = [
     ("POST", re.compile(r"^/batches/?$")),
     ("POST", re.compile(r"^/watches/?$")),
     ("POST", re.compile(r"^/watches/[^/]+/check/?$")),
+    # Guarded like the rest, so checking a code in the console gets the same
+    # constant-time comparison and the same limit on guesses.
+    ("POST", re.compile(r"^/access/check/?$")),
 ]
 
 # Wrong codes per client: enough for typos, too few to guess one.
@@ -85,3 +91,20 @@ async def _refuse(send: Send, status: int, detail: str, extra: dict[str, str] | 
     headers += [(k.encode(), v.encode()) for k, v in (extra or {}).items()]
     await send({"type": "http.response.start", "status": status, "headers": headers})
     await send({"type": "http.response.body", "body": body})
+
+
+router = APIRouter()
+
+
+@router.get("/access")
+def access() -> dict[str, bool]:
+    """Whether this deployment asks for a demo code, so the console knows
+    to show the recorded demos and a code box instead of the trace form."""
+    return {"demo_code_required": bool(config.DEMO_CODE)}
+
+
+@router.post("/access/check")
+def check_code() -> dict[str, bool]:
+    """Reached only with the right code (or none configured): the middleware
+    above answers every other case."""
+    return {"ok": True}

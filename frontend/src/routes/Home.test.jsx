@@ -93,3 +93,55 @@ describe('the trace form', () => {
     expect(screen.queryByRole('link', { name: /open it as recorded/i })).not.toBeInTheDocument()
   })
 })
+
+describe('a public site that asks for a demo code', () => {
+  async function renderPublicHome(check = { status: 403, body: { detail: 'That demo code is not right.' } }) {
+    const fetch = stubFetch({
+      '/chains': { body: health }, '/cases': { body: { count: 0, cases: [] } }, '/demos/recorded': { body: recordings },
+      '/access': { body: { demo_code_required: true } }, '/access/check': check,
+    })
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/demo/:n" element={<Landed />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    await screen.findByLabelText('Demo code')
+    return fetch
+  }
+
+  it('shows the recorded demos and no way to start a trace, batch or watch', async () => {
+    const user = userEvent.setup()
+    await renderPublicHome()
+    expect(screen.queryByLabelText('Reported wallet address')).not.toBeInTheDocument()
+    expect(screen.queryByText('Bulk intake')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Watchlist/)).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('link', { name: /reached Binance/ }))
+    expect(screen.getByTestId('landed')).toHaveTextContent('/demo/6')
+  })
+
+  it('keeps the site locked and remembers nothing when the code is wrong', async () => {
+    const user = userEvent.setup()
+    await renderPublicHome()
+    await user.type(screen.getByLabelText('Demo code'), 'guess{Enter}')
+    expect(await screen.findByRole('alert')).toHaveTextContent('not right')
+    expect(screen.queryByLabelText('Reported wallet address')).not.toBeInTheDocument()
+    expect(sessionStorage.getItem('exchequer-demo-code')).toBeNull()
+  })
+
+  it('unlocks live tracing with the right code and sends it from then on', async () => {
+    const user = userEvent.setup()
+    const fetch = await renderPublicHome({ body: { ok: true } })
+    await user.type(screen.getByLabelText('Demo code'), 'river-otter-42{Enter}')
+    expect(await screen.findByLabelText('Reported wallet address')).toBeInTheDocument()
+    expect(screen.getByText('Bulk intake')).toBeInTheDocument()
+    expect(sessionStorage.getItem('exchequer-demo-code')).toBe('river-otter-42')
+    // Requests after the check itself, which carries the typed code by design.
+    const checked = fetch.mock.calls.findIndex(([url]) => String(url).includes('/access/check'))
+    const after = fetch.mock.calls.slice(checked + 1)
+    expect(after.length).toBeGreaterThan(0)
+    for (const [, init] of after) expect(new Headers(init.headers).get('X-Exchequer-Demo-Code')).toBe('river-otter-42')
+  })
+})
