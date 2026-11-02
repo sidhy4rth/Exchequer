@@ -49,7 +49,10 @@ export default function Home() {
   // spend the provider quota or keep running (batches, watches).
   const locked = Boolean(access?.demo_code_required) && !unlocked
 
-  const totalLabels = chains.reduce((sum, c) => sum + (c.exchange_labels || 0), 0)
+  // The exchanges' own wallets and their customers' deposit addresses, apart:
+  // one total read as that many exchange wallets (R14). Both from /chains.
+  const totalWallets = chains.reduce((sum, c) => sum + (c.exchange_wallets || 0), 0)
+  const totalDeposits = chains.reduce((sum, c) => sum + (c.deposit_addresses || 0), 0)
 
   return (
     <div className="home">
@@ -69,7 +72,7 @@ export default function Home() {
           {locked ? <Showroom onUnlock={() => setUnlocked(true)} /> : <TraceForm health={health} />}
 
           <div className="card">
-            <div className="head"><span className="micro">Coverage</span><span className="note">{health ? `${totalLabels} exchange labels` : ''}</span></div>
+            <div className="head"><span className="micro">Coverage</span><span className="note">{health ? `${totalWallets} exchange wallets · ${totalDeposits} deposit addresses` : ''}</span></div>
             <div className="body status">
               {!health && <span className="note">Connecting…</span>}
               {backendDown && <div className="line"><span className="dot down" /><span>Backend unreachable</span><span /></div>}
@@ -77,7 +80,7 @@ export default function Home() {
                 <div className="line" key={c.key}>
                   <span className={`dot ${c.ready ? 'live' : 'down'}`} />
                   <span>{c.name}</span>
-                  <span className="n">{c.exchange_labels} labels · {Object.values(c.risk_labels ?? {}).reduce((a, b) => a + b, 0)} screened</span>
+                  <span className="n">{c.exchange_wallets} wallets{c.deposit_addresses ? ` · ${c.deposit_addresses} deposit addresses` : ''} · {Object.values(c.risk_labels ?? {}).reduce((a, b) => a + b, 0)} screened</span>
                 </div>
               ))}
             </div>
@@ -90,17 +93,19 @@ export default function Home() {
             <div>
               <div className="head"><span className="micro">Exchange labels</span><span className="note">exact-match attribution</span></div>
               <table>
-                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Wallets</th><th>Exchanges</th></tr></thead>
+                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Exchange wallets</th><th style={{ textAlign: 'right' }}>Deposit addresses</th><th>Exchanges</th></tr></thead>
                 <tbody>
                   {chains.map((c) => (
                     <tr key={c.key}>
                       <td>{c.name}</td>
-                      <td className="num">{coverage[c.key]?.exchanges?.count ?? c.exchange_labels}</td>
+                      <td className="num">{c.exchange_wallets}</td>
+                      <td className="num">{c.deposit_addresses}</td>
                       <td className="exchanges">{coverage[c.key]?.exchanges?.exchanges?.join(', ') ?? '…'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <p className="note" style={{ padding: '8px 14px' }}>A deposit address belongs to one customer's account at the exchange. A match names the exchange that holds the account, never the customer: only the exchange can say whose it is.</p>
             </div>
             <div>
               <div className="head"><span className="micro">Risk screening</span><span className="note">US, UK, EU, Israel, Japan, France · Tether freezes · explorer-tagged hacks and mixers</span></div>

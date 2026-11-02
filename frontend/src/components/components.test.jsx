@@ -212,3 +212,19 @@ describe('Exchange alerts', () => {
     expect(calls.find((c) => c.method === 'POST').body).toEqual({ case_id: 'case-1', recipient: 'OKX', kind: 'exchange', address: '0xdep', asset: 'ETH' })
   })
 })
+
+describe('the front door figures (R14)', () => {
+  it('counts exchange wallets apart from customer deposit addresses', async () => {
+    const { coverageFromChains } = await import('./ExchangeGlobe')
+    const figures = coverageFromChains({
+      ethereum: { exchange_labels: 25038, exchange_wallets: 975, deposit_addresses: 24063, risk_labels: { sanctioned: 127, mixer: 0, frozen: 2828, stolen: 11 } },
+      tron: { exchange_labels: 41, exchange_wallets: 40, deposit_addresses: 1, risk_labels: { sanctioned: 915, frozen: 6759 } },
+    })
+    expect(figures).toEqual({ wallets: 1015, deposits: 24064, sanctioned: 1042, frozen: 9587, stolen: 11, mixer: 0, chains: ['ethereum', 'tron'] })
+  })
+
+  it('reads nothing when the backend has nothing', async () => {
+    const { coverageFromChains } = await import('./ExchangeGlobe')
+    expect(coverageFromChains(undefined)).toEqual({ wallets: 0, deposits: 0, sanctioned: 0, frozen: 0, stolen: 0, mixer: 0, chains: [] })
+  })
+})
