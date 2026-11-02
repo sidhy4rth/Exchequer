@@ -192,7 +192,7 @@ The free tier allows ~5 requests/second and 100,000/day. Exchequer self-throttle
 automatically, so a demo will not die mid-trace. It uses Etherscan's **V2** multi-chain endpoint
 (`api.etherscan.io/v2/api?chainid=1`); the old V1 per-chain hosts are retired.
 
-- Check the backend: <http://127.0.0.1:8000/health> — `etherscan_key_configured` must be `true`.
+- Check the backend: <http://127.0.0.1:8000/chains> — Ethereum must show `"ready": true`.
   Interactive API docs: <http://127.0.0.1:8000/docs>.
 - Use `localhost`, not `127.0.0.1`, for the frontend: Vite binds to IPv6 `[::1]` by default. Run
   `npm run dev -- --host 127.0.0.1` if you need IPv4.
@@ -221,7 +221,7 @@ The sign-in page is a globe of the world's exchanges: every one CoinGecko lists 
 965 — decentralised venues have none), placed at that country's main financial city and coloured by when it was
 founded. It turns on its own and by hand; hovering an exchange names it, with its founding year and country.
 Beside it, the jurisdictions exchanges register in (hover one and the globe turns to it) and what the tool can
-see, read live from `GET /health`. Clicking the mark in the top bar opens the sign-in: the chequer flies into the
+see, read live from `GET /chains`. Clicking the mark in the top bar opens the sign-in: the chequer flies into the
 globe, the globe collapses into it, and the card assembles from its squares. The exchange points are rebuilt
 with `backend/scripts/build_exchange_globe.py`.
 
@@ -323,7 +323,9 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |
 | `GET /risk-labels?chain=bsc` | What that chain's screening covers, by category: sanctioned, mixer, stolen |
 | `GET /ledger?chain=ethereum` | The labelled addresses the sign-in backdrop draws |
-| `GET /health` | Liveness, per-chain readiness, label counts, API budget and warm-cache status |
+| `GET /health` | Up or down, nothing else |
+| `GET /chains` | Per-chain readiness, assets and label counts |
+| `GET /health/detail` | Operator only (bearer `EXCHEQUER_HEALTH_TOKEN`): key status, per-chain detail, API budget, warm-cache status |
 
 ---
 
@@ -697,8 +699,8 @@ cached answer can lag the newest blocks but never contradict them:
 | Either direction, again | **0** | **0.03 s** |
 
 With `EXCHEQUER_WARM_CACHE=1` (on in the Docker image) the backend traces the `DEMO.md` addresses in the
-background at startup, so demos never go cold on a hosted instance. `GET /health` reports `api_budget` and
-`warm_cache`.
+background at startup, so demos never go cold on a hosted instance. `GET /health/detail` (operator token) reports
+`api_budget` and `warm_cache`.
 
 ---
 
@@ -898,14 +900,14 @@ exchequer/
 
 | Symptom | Fix |
 |---|---|
-| `/health` shows `etherscan_key_configured: false` | `backend/.env` is missing or has no key. Copy `.env.example`, add the key, restart. |
+| `/chains` shows Ethereum `"ready": false` | `backend/.env` is missing or has no key. Copy `.env.example`, add the key, restart. |
 | Frontend says "Cannot reach the Exchequer backend" | The backend is not running on port 8000. |
 | The UI loads from port 8000 but every request fails | The bundle was built without `VITE_API_BASE`. Rebuild with `VITE_API_BASE="" npm run build`. |
 | `http://127.0.0.1:5173` refuses to connect | Vite binds to IPv6. Use `http://localhost:5173`. |
 | Trace returns 429 | Provider rate limit. Wait a few seconds; reduce the hop count. |
 | BSC shows "unavailable" | `NODEREAL_API_KEY` is not set. Ethereum is unaffected. |
 | BSC trace finds nothing on an active address | Its activity may predate the lookback window. Raise `NODEREAL_LOOKBACK_BLOCKS`. |
-| Traces feel slow | Expected on a free key. Check `api_budget` in `/health`: climbing `rate_limit_penalties` means the key is being refused; re-running an address should be instant from cache. |
+| Traces feel slow | Expected on a free key. Check `api_budget` in `/health/detail`: climbing `rate_limit_penalties` means the key is being refused; re-running an address should be instant from cache. |
 | A trace returns stale data | Responses are cached for `API_CACHE_TTL_SECONDS` (a day). Lower it, or delete `backend/provider_cache.db`. |
 | Exchange is `null` on a real address | The funds may not have reached an exchange within the hop limit, or it is not in the label file. Check `GET /exchanges`. |
 

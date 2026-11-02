@@ -22,7 +22,7 @@ function Landed() {
 const recordings = { demos: [{ demo: 6, recorded_at: '2026-10-14T16:44:03+00:00', address: '0x00000000072d54638c2c2a3da3f715360269eea1', exchange: 'Binance', confidence: 0.875 }] }
 
 async function renderHome() {
-  stubFetch({ '/health': { body: health }, '/cases': { body: { count: 0, cases: [] } }, '/exchanges': { body: {} }, '/risk-labels': { body: {} }, '/demos/recorded': { body: recordings } })
+  stubFetch({ '/chains': { body: health }, '/cases': { body: { count: 0, cases: [] } }, '/exchanges': { body: {} }, '/risk-labels': { body: {} }, '/demos/recorded': { body: recordings } })
   render(
     <MemoryRouter initialEntries={['/']}>
       <Routes>

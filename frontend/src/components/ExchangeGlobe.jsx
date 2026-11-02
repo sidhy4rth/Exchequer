@@ -3,7 +3,7 @@ import { geoEquirectangular, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import land110 from 'world-atlas/land-110m.json'
 import globeData from '../data/exchange_globe.json'
-import { fetchHealth } from '../api'
+import { fetchChains } from '../api'
 
 // The sign-in scene: a see-through globe with every exchange CoinGecko lists
 // against a country, placed there. It turns slowly on its axis; a drag
@@ -143,7 +143,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
   const [coverage, setCoverage] = useState(null)
   useEffect(() => {
     let alive = true
-    fetchHealth().then((h) => {
+    fetchChains().then((h) => {
       if (!alive) return
       const chains = Object.values(h.chains ?? {})
       const sum = (f) => chains.reduce((s, c) => s + f(c), 0)

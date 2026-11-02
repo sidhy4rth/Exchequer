@@ -33,6 +33,10 @@ services:
       # signed today still verify after a restart (signing.py).
       - key: EXCHEQUER_SIGNING_KEY
         generateValue: true
+      # Bearer token for /health/detail, the operator's view (coverage.py);
+      # read it in the dashboard. Public /health says only up or down.
+      - key: EXCHEQUER_HEALTH_TOKEN
+        generateValue: true
       # Render puts the client's address first in X-Forwarded-For.
       - key: EXCHEQUER_TRUST_PROXY
         value: render
