@@ -31,10 +31,22 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+# The label type of a customer's deposit address at an exchange, as opposed
+# to the exchange's own hot, cold or contract wallets. Counted apart because
+# one matched deposit address names one customer account, and because on
+# Ethereum they are most of the labels: a single total read as "25,000
+# exchange wallets" when the exchanges' own wallets number about a thousand.
+DEPOSIT_TYPE = "deposit_wallet"
+
+
 def _chains() -> dict[str, dict[str, Any]]:
     chains = provider_status()
     for key, status in chains.items():
-        status["exchange_labels"] = len(get_matcher(key))
+        matcher = get_matcher(key)
+        deposits = sum(1 for _, meta in matcher.entries() if meta.get("type") == DEPOSIT_TYPE)
+        status["exchange_labels"] = len(matcher)
+        status["exchange_wallets"] = len(matcher) - deposits
+        status["deposit_addresses"] = deposits
         status["risk_labels"] = get_risk_matcher(key).counts_by_category()
     return chains
 

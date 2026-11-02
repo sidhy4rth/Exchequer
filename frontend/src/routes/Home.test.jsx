@@ -145,3 +145,43 @@ describe('a public site that asks for a demo code', () => {
     for (const [, init] of after) expect(new Headers(init.headers).get('X-Exchequer-Demo-Code')).toBe('river-otter-42')
   })
 })
+
+describe('the headline numbers (R14)', () => {
+  const counted = {
+    status: 'ok',
+    default_chain: 'ethereum',
+    chains: {
+      ethereum: { key: 'ethereum', name: 'Ethereum', ready: true, address_family: 'evm', assets: [{ symbol: 'ETH' }],
+        exchange_labels: 25038, exchange_wallets: 975, deposit_addresses: 24063,
+        risk_labels: { sanctioned: 127, mixer: 0, frozen: 2828, stolen: 11 } },
+      tron: { key: 'tron', name: 'Tron', ready: true, address_family: 'tron', assets: [{ symbol: 'USDT' }],
+        exchange_labels: 41, exchange_wallets: 40, deposit_addresses: 1,
+        risk_labels: { sanctioned: 915, mixer: 0, frozen: 6759, stolen: 0 } },
+    },
+  }
+
+  it('shows only numbers that /chains gives, and never one total as exchange wallets', async () => {
+    stubFetch({ '/chains': { body: counted }, '/cases': { body: { count: 0, cases: [] } }, '/demos/recorded': { body: recordings } })
+    render(<MemoryRouter><Home /></MemoryRouter>)
+    await screen.findByText(/1015 exchange wallets/)
+    const chains = Object.values(counted.chains)
+    const sum = (f) => chains.reduce((s, c) => s + f(c), 0)
+    const allowed = new Set([
+      sum((c) => c.exchange_wallets), sum((c) => c.deposit_addresses),
+      ...chains.flatMap((c) => [c.exchange_wallets, c.deposit_addresses, ...Object.values(c.risk_labels),
+        Object.values(c.risk_labels).reduce((a, b) => a + b, 0)]),
+    ])
+    const card = screen.getByText('Coverage').closest('.card')
+    const tables = screen.getByText('What the label files cover').closest('details')
+    // Text node by text node: textContent would run neighbouring cells together.
+    const shown = []
+    for (const root of [card, tables]) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+      while (walker.nextNode()) shown.push(...(walker.currentNode.nodeValue.match(/\d+/g) ?? []).map(Number))
+    }
+    expect(shown.length).toBeGreaterThan(10)
+    for (const n of shown) expect(allowed, `${n} is not from /chains`).toContain(n)
+    expect(document.body.textContent).not.toContain('25038')
+    expect(card).toHaveTextContent('1015 exchange wallets · 24064 deposit addresses')
+  })
+})

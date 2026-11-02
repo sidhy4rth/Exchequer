@@ -62,3 +62,18 @@ def test_health_detail_gives_the_operator_everything(client, monkeypatch):
     assert body["status"] == "ok"
     assert {"etherscan_key_configured", "api_budget", "warm_cache", "chains"} <= set(body)
     assert all("detail" in chain for chain in body["chains"].values())
+
+
+# -- R14: wallets and deposit addresses counted apart -----------------------------
+def test_chains_counts_exchange_wallets_apart_from_customer_deposit_addresses(client):
+    import json
+
+    for key, chain in client.get("/chains").json()["chains"].items():
+        # Read the label file directly, not through the code under test.
+        labels = json.loads(config.CHAINS[key].labels_path.read_text())["labels"]
+        deposits = sum(1 for v in labels.values() if isinstance(v, dict) and v.get("type") == "deposit_wallet")
+        assert chain["deposit_addresses"] == deposits, key
+        assert chain["exchange_wallets"] + chain["deposit_addresses"] == chain["exchange_labels"], key
+    # The case that made the single number misleading: most of Ethereum's are deposits.
+    ethereum = client.get("/chains").json()["chains"]["ethereum"]
+    assert ethereum["deposit_addresses"] > ethereum["exchange_wallets"] > 0

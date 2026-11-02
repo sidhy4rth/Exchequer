@@ -110,6 +110,24 @@ function doorShape(k) {
 // green for citizens, matching the access label under the globe.
 const ACCENTS = { investigator: [255, 92, 92], citizen: [47, 211, 162] }
 
+/** The front door's figures, summed across chains from GET /chains. The
+ * exchanges' own wallets and their customers' deposit addresses are counted
+ * apart: on Ethereum the second outnumber the first more than twenty to one,
+ * and one total read as that many exchange wallets. */
+export function coverageFromChains(byKey) {
+  const chains = Object.values(byKey ?? {})
+  const sum = (f) => chains.reduce((s, c) => s + (f(c) ?? 0), 0)
+  return {
+    wallets: sum((c) => c.exchange_wallets),
+    deposits: sum((c) => c.deposit_addresses),
+    sanctioned: sum((c) => c.risk_labels?.sanctioned),
+    frozen: sum((c) => c.risk_labels?.frozen),
+    stolen: sum((c) => c.risk_labels?.stolen),
+    mixer: sum((c) => c.risk_labels?.mixer),
+    chains: Object.keys(byKey ?? {}),
+  }
+}
+
 export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'investigator' }) {
   const wrapRef = useRef(null)
   const canvasRef = useRef(null)
@@ -144,17 +162,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
   useEffect(() => {
     let alive = true
     fetchChains().then((h) => {
-      if (!alive) return
-      const chains = Object.values(h.chains ?? {})
-      const sum = (f) => chains.reduce((s, c) => s + f(c), 0)
-      setCoverage({
-        exchange: sum((c) => c.exchange_labels ?? 0),
-        sanctioned: sum((c) => c.risk_labels?.sanctioned ?? 0),
-        frozen: sum((c) => c.risk_labels?.frozen ?? 0),
-        stolen: sum((c) => c.risk_labels?.stolen ?? 0),
-        mixer: sum((c) => c.risk_labels?.mixer ?? 0),
-        chains: Object.keys(h.chains ?? {}),
-      })
+      if (alive) setCoverage(coverageFromChains(h.chains))
     }).catch(() => { if (alive) setCoverage(false) })
     return () => { alive = false }
   }, [])
@@ -697,7 +705,8 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
         </header>
         {coverage && (
           <dl className="cover">
-            <div><dt>Exchange wallets labelled</dt><dd><CountUp to={coverage.exchange} /></dd></div>
+            <div><dt>Exchange wallets labelled</dt><dd><CountUp to={coverage.wallets} /></dd></div>
+            <div><dt>Customer deposit addresses</dt><dd><CountUp to={coverage.deposits} /></dd></div>
             <div className="risk"><dt>Reported stolen or phishing</dt><dd><CountUp to={coverage.stolen} /></dd></div>
             <div className="risk"><dt>Frozen by Tether</dt><dd><CountUp to={coverage.frozen} /></dd></div>
             <div className="risk"><dt>Under government sanctions</dt><dd><CountUp to={coverage.sanctioned} /></dd></div>
