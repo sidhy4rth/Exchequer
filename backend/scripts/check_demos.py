@@ -33,6 +33,7 @@ nothing and needs no API keys: the live site does the tracing.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import time
@@ -40,7 +41,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-LIVE = os.environ.get("EXCHEQUER_URL") or "https://exchequer.onrender.com"
+LIVE = os.environ.get("EXCHEQUER_URL") or "https://exchequer-6gnl.onrender.com"
 EXPECTATIONS = Path(__file__).resolve().parent.parent / "data" / "demo_expectations.json"
 TOLERANCE = 0.05
 
@@ -63,7 +64,7 @@ def trace_with_retry(base: str, demo: dict, wait: float = 15.0) -> dict:
     """
     try:
         return trace(base, demo)
-    except (urllib.error.URLError, TimeoutError) as exc:
+    except (urllib.error.URLError, TimeoutError, http.client.HTTPException, ConnectionError) as exc:
         print(f"  demo {demo['demo']:>2}  retrying after: {exc}")
         time.sleep(wait)
         return trace(base, demo)

@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer.onrender.com' }}
+      EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer-6gnl.onrender.com' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

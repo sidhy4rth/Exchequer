@@ -8,7 +8,7 @@
 ### Trace a reported crypto-fraud wallet to the exchange it was cashed out through — with every step a human can re-check by hand.
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
-[![Live demo](https://img.shields.io/badge/live_demo-railway-0B0D0E?logo=railway&logoColor=white)](https://exchequer-production.up.railway.app)
+[![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer-6gnl.onrender.com)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -22,7 +22,7 @@
 ![Tron](https://img.shields.io/badge/Tron-TRX_·_USDT-FF060A)
 ![SIH 2026](https://img.shields.io/badge/Smart_India_Hackathon_2026-SIH26183_·_MHA-FF9933)
 
-[**Live demo**](https://exchequer-production.up.railway.app) ·
+[**Live demo**](https://exchequer-6gnl.onrender.com) ·
 [**Demo guide**](DEMO.md) ·
 [**Research & sources**](RESEARCH.md) ·
 [**Judge Q&A**](JUDGE_QA.md)
@@ -809,9 +809,11 @@ docker build -t exchequer .
 docker run -p 8000:8000 --env-file backend/.env -v exchequer-data:/data exchequer
 ```
 
-The same image runs on Railway, Fly, Render or any VM; `railway.json` adds a health check on `/health`. Mount a
-volume at `/data` so the case store and API cache survive a redeploy. On Railway: `railway up --detach` deploys
-the working tree; `railway down` removes the deployment but keeps the project, variables and volume.
+The same image runs on Render, Railway, Fly or any VM. The live demo runs on Render's free plan from
+`render.yaml` (Dashboard → New → Blueprint), which deploys every push to `main`. That plan has no disk, so set
+`DATABASE_URL` to a Postgres connection string (a free Neon project works) to keep cases across restarts;
+elsewhere, mount a volume at `/data` and the SQLite store and API cache survive a redeploy. See
+`docs/operations.md`.
 
 **Hosting publicly:** the free API tiers allow roughly two requests per second across the whole deployment, and
 one trace makes 12–60 calls, so a public instance suits evaluation, not concurrent use.
