@@ -29,6 +29,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_BACKUP_KEEP` | 7 | How many daily snapshots to keep. |
 | `EXCHEQUER_BACKUP_TOKEN` | — | Bearer token for `GET /admin/backup`. Unset, the endpoint answers 404. |
 | `EXCHEQUER_HEALTH_TOKEN` | — (Render generates one) | Bearer token for `GET /health/detail`: key status, per-chain detail, API budget, warm-cache status. Unset, the endpoint answers 404. Public `/health` says only `{"status": "ok"}`; `/chains` is the public list of what the site can trace. |
+| `EXCHEQUER_TEMPORARY_DISK` | on when Render sets `RENDER=true`, else off | Whether a restart wipes the disk. `/health/detail` → `storage` then marks a SQLite case store and the provider cache as temporary: on Render's free plan, an empty `DATABASE_URL` means every stored case is lost when the instance sleeps. `0` or `1` overrides the guess. |
 | `EXCHEQUER_WARM_CACHE` | off (on in the image) | Trace the demo addresses at startup so they answer from cache. |
 
 ## Endpoints added in October 2026

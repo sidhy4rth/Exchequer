@@ -24,9 +24,9 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import batches as batch_runner
@@ -165,27 +165,42 @@ if FRONTEND_DIR.is_dir():
         StaticFiles(directory=FRONTEND_DIR / "assets"),
         name="assets",
     )
-
-    @app.get("/{full_path:path}", include_in_schema=False)
-    def spa(full_path: str):
-        """Serve the single-page app for any path the API did not claim.
-
-        The UI routes on the client (/trace/0x…, /case/<id>), so a deep link
-        opened directly or reloaded must still return index.html rather than a
-        404 -- the router then reads the URL and renders the right screen.
-        """
-        # A real file (favicon, manifest) is served as itself.
-        candidate = (FRONTEND_DIR / full_path).resolve()
-        if full_path and candidate.is_file() and FRONTEND_DIR.resolve() in candidate.parents:
-            return FileResponse(candidate)
-        # The shell must never be cached: a stale index.html keeps pointing at
-        # asset hashes from a previous build, and the old bundle then calls the
-        # wrong API base and reports the backend as unreachable.
-        return FileResponse(
-            FRONTEND_DIR / "index.html",
-            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
-        )
-
     logger.info("Serving frontend from %s", FRONTEND_DIR)
 else:
     logger.info("No built frontend at %s -- API only", FRONTEND_DIR)
+
+
+def _is_page_load(request: Request) -> bool:
+    """A browser opening the URL, as opposed to fetch(), curl or a script.
+
+    The same test routes/cases.py applies to /trace/{id}: browsers send
+    Sec-Fetch-Mode, and an older one still asks for text/html."""
+    mode = request.headers.get("sec-fetch-mode")
+    if mode:
+        return mode == "navigate"
+    return "text/html" in request.headers.get("accept", "")
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def spa(full_path: str, request: Request):
+    """The single-page app for a browser opening any path the API did not
+    claim; a JSON 404 for anything else.
+
+    The UI routes on the client (/trace/0x…, /case/<id>), so a deep link
+    opened directly or reloaded must still return index.html -- the router
+    then reads the URL and renders the right screen. But a fetch() or a
+    script asking for a path the API does not have used to get that page
+    too, with a 200: a mistyped call, or a build with the wrong API base,
+    then failed as "backend unreachable" instead of as a 404.
+    """
+    index = FRONTEND_DIR / "index.html"
+    # A real file (favicon, manifest) is served as itself.
+    candidate = (FRONTEND_DIR / full_path).resolve()
+    if full_path and candidate.is_file() and FRONTEND_DIR.resolve() in candidate.parents:
+        return FileResponse(candidate)
+    if not index.is_file() or not _is_page_load(request):
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    # The shell must never be cached: a stale index.html keeps pointing at
+    # asset hashes from a previous build, and the old bundle then calls the
+    # wrong API base and reports the backend as unreachable.
+    return FileResponse(index, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
