@@ -17,6 +17,7 @@ import pytest
 from pypdf import PdfReader
 
 from app import config
+from app.models import Case
 from app.report import build_report, render_text_report
 from app.report_pdf import render_pdf
 from app.request_letters import attribution_kind, available, draft
@@ -154,6 +155,64 @@ def test_reports_do_not_claim_funds_nobody_reported_either():
     assert "about 9.5 of 10.0 ETH sent from the reported address" in " ".join(text.split())
     assert "eported funds" not in text
     assert "eported funds" not in "".join(p.extract_text() for p in PdfReader(io.BytesIO(render_pdf(report, text))).pages)
+
+
+def report_of(result: dict) -> dict:
+    return build_report(Case(id="c1", address=result["address"], created_at=result["created_at"],
+                             result_json=json.dumps(result)))
+
+
+def test_a_report_never_says_an_exchange_operates_a_wallet_on_the_strength_of_a_tag():
+    report = report_of(EXPLORER_TAG)
+    text = " ".join(render_text_report(report).split())
+    assert report["attribution"]["kind"] == "explorer_tag"
+    assert "publicly operates" not in report["summary"]
+    assert "TronScan" in report["summary"] and "only Flipster can confirm" in report["summary"]
+    assert "exact match against a published exchange label" not in text
+    assert "a TronScan tag, not confirmed by the exchange" in text
+
+
+def test_a_labelled_wallet_keeps_its_stronger_basis():
+    report = report_of(HOT_WALLET)
+    assert report["attribution"]["kind"] == "exchange_wallet"
+    assert "publicly operates" in report["summary"]
+    assert "exact match against a published exchange label" in render_text_report(report)
+
+
+def test_a_report_does_not_call_a_cached_tag_read_live():
+    text = render_text_report(report_of(EXPLORER_TAG))
+    assert "(TronScan tag, read live)" not in text
+    assert "(TronScan tag)" in text
+    assert "from this server's cache" in " ".join(text.split())  # demo 12 made no live request
+
+
+def test_a_tag_read_afresh_is_not_described_as_cached():
+    result = {**EXPLORER_TAG, "live_tags": {**EXPLORER_TAG["live_tags"], "requests": 2}}
+    assert "from this server's cache" not in " ".join(render_text_report(report_of(result)).split())
+
+
+def test_the_method_names_the_lists_rather_than_only_ofac():
+    flat = " ".join(render_text_report(report_of(HOT_WALLET)).split())
+    assert "against the lists named under LISTS SCREENED AGAINST" in flat
+    assert "published on the U.S. Treasury's Specially" not in flat
+
+
+@pytest.mark.parametrize("result, wanted, unwanted", [
+    (EXPLORER_TAG, "Address to ask the exchange to confirm", "Address to ask the exchange about"),
+    (HOT_WALLET, "Wallet the funds reached", "Address to ask the exchange about"),
+    (INFERRED, "Address to ask the exchange about", "Wallet the funds reached"),
+])
+def test_page_one_says_what_to_do_with_this_kind_of_address(result, wanted, unwanted):
+    report = report_of(result)
+    page = PdfReader(io.BytesIO(render_pdf(report, render_text_report(report)))).pages[0].extract_text()
+    flat = " ".join(page.split())
+    assert wanted in flat and unwanted not in flat
+    assert "read live" not in flat
+
+
+def test_the_tether_letter_does_not_claim_a_channel_either():
+    assert "published law-enforcement channel" not in draft(
+        "case-1", case(chain="tron", chain_name="Tron", asset="USDT"), "tether")
 
 
 def test_the_letters_offered_are_unchanged():

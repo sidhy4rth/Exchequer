@@ -67,6 +67,35 @@ def tool_version() -> str:
     return _TOOL_VERSION
 
 
+# What a case holds about the address it reached decides what may be claimed about it.
+LABELLED_DEPOSIT = "labelled_deposit"  # one customer: ask about that customer
+INFERRED_DEPOSIT = "inferred_deposit"  # probably one customer: ask to confirm, then about them
+EXCHANGE_WALLET = "exchange_wallet"    # the company's own: ask about the transactions, never KYC on it
+EXPLORER_TAG = "explorer_tag"          # a third party's word: ask whether it is theirs first
+TAG_WORDING = " (TronScan tag, read live)"  # tron_tags.py's label suffix
+
+
+def attribution_kind(trace: dict[str, Any]) -> str:
+    """What the case actually holds about the address it reached.
+
+    The one place that reads this from a trace: when case contract v2 lands, this
+    becomes a lookup of its attribution.kind and nothing else changes. A case that
+    does not say gets the kind that assumes least: no single customer.
+    """
+    address = trace.get("exchange_address")
+    if trace.get("attribution_inferred"):
+        return INFERRED_DEPOSIT
+    if any(found.get("address") == address for found in (trace.get("live_tags") or {}).get("found") or []):
+        return EXPLORER_TAG
+    match = next((m for m in trace.get("matches") or [] if m.get("address") == address), {})
+    return LABELLED_DEPOSIT if match.get("wallet_type") == "deposit_wallet" else EXCHANGE_WALLET
+
+
+def _shown_label(label: str | None) -> str:
+    """A label for a reader. "Read live" can be untrue: the tag may have come from cache."""
+    return (label or "").replace(TAG_WORDING, " (TronScan tag)")
+
+
 # India has one offset and no daylight saving, so this needs no time-zone
 # database, and a report cannot fail for want of one.
 IST = timezone(timedelta(hours=5, minutes=30), "IST")
@@ -139,6 +168,7 @@ def build_report(case: Case) -> dict[str, Any]:
             "exchange": result.get("exchange"),
             "exchange_address": result.get("exchange_address"),
             "exchange_wallet_label": result.get("exchange_label"),
+            "kind": attribution_kind(result) if result.get("exchange") else None,
             "inferred": result.get("attribution_inferred", False),
             "inferred_deposit_addresses": result.get("inferred_deposits", []),
             "inference_notes": result.get("inference_notes", []),
@@ -259,6 +289,20 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
             f"to be a {exchange} deposit address, {hops} hop{'s' if hops != 1 else ''} away; "
             f"that inference is explained below and only {exchange} can confirm it."
         )
+    elif exchange and attribution_kind(result) == EXPLORER_TAG:
+        plain = (result.get("exchange_label") or "").removesuffix(TAG_WORDING)
+        distance = f"{hops} hop{'s' if hops != 1 else ''} {'away' if direction == 'outgoing' else 'upstream'}"
+        found = (
+            f" {'The funds reached' if direction == 'outgoing' else 'Part of the money came from'} "
+            f"{result.get('exchange_address')}, which TronScan, the Tron block explorer, tags as "
+            f"{plain}, {distance}; the tag is the explorer's and only {exchange} can confirm it."
+        )
+    elif exchange and attribution_kind(result) == LABELLED_DEPOSIT:
+        distance = f"{hops} hop{'s' if hops != 1 else ''} {'away' if direction == 'outgoing' else 'upstream'}"
+        found = (
+            f" {'The funds reached' if direction == 'outgoing' else 'Part of the money came from'} "
+            f"a deposit address publicly labelled as {exchange}'s ({result.get('exchange_label')}), {distance}."
+        )
     elif exchange:
         found = (
             f" The funds reached a wallet that {exchange} publicly operates "
@@ -352,9 +396,8 @@ def _methodology(native_symbol: str = "ETH", direction: str = "outgoing") -> lis
         "address whose every outgoing transfer went to one labelled exchange "
         "wallet was reported as a probable deposit address of that exchange, "
         "marked as an inference and scored lower than an exact match.",
-        "Every address was also screened, by exact match, against digital "
-        "currency addresses published on the U.S. Treasury's Specially "
-        "Designated Nationals list. A trace is stopped at any address "
+        "Every address was also screened, by exact match, against the lists "
+        "named under LISTS SCREENED AGAINST. A trace is stopped at any address "
         "identified as a mixer: its payouts come from a commingled pool, so "
         "transfers leaving it have no established link to the deposit traced.",
         "A transfer into a publicly labelled DEX router was recorded as a swap, "
@@ -386,7 +429,7 @@ def render_text_report(report: dict[str, Any]) -> str:
         rule("-")
 
     def para(text: str, indent: str = "", bullet: str = "") -> None:
-        for line in _wrap(text, indent=indent, bullet=bullet):
+        for line in _wrap(_shown_label(text), indent=indent, bullet=bullet):
             add(line)
 
     case = report["case"]
@@ -434,10 +477,12 @@ def render_text_report(report: dict[str, Any]) -> str:
         add(f"Exchange         : {attribution['exchange']}")
         add(f"Address          : {attribution['exchange_address']}")
         if attribution.get("exchange_wallet_label"):
-            add(f"Address label    : {attribution['exchange_wallet_label']}")
+            add(f"Address label    : {_shown_label(attribution['exchange_wallet_label'])}")
+        basis = ("a TronScan tag, not confirmed by the exchange" if attribution.get("kind") == EXPLORER_TAG
+                 else "exact match against a published exchange label")
         add("Basis            : "
             + ("INFERRED from the wallet's behaviour, not a label-file match"
-               if attribution.get("inferred") else "exact match against a published exchange label"))
+               if attribution.get("inferred") else basis))
         add(f"Hops from source : {attribution['hop_count']}")
         prorata = attribution.get("prorata") or {}
         if direction == "outgoing" and prorata.get("status") == "estimated":
@@ -510,7 +555,7 @@ def render_text_report(report: dict[str, Any]) -> str:
         section("PATH THE MONEY TOOK" + (" (reported address -> exchange)" if direction == "outgoing"
                                           else " (exchange -> reported address)"))
         for i, step in enumerate(report["trace_path"]):
-            label = f"  [{step['label']}]" if step.get("label") else ""
+            label = f"  [{_shown_label(step['label'])}]" if step.get("label") else ""
             if i == 0:
                 add(f"  1. {step['address']}{label}")
                 continue
@@ -650,7 +695,7 @@ def render_text_report(report: dict[str, Any]) -> str:
             else:
                 para(f.get("message") or "No exchange was reached.", indent="    ")
             for step in (f.get("trace_path") or [])[1:]:
-                named = f" ({step['label']})" if step.get("label") else ""
+                named = f" ({_shown_label(step['label'])})" if step.get("label") else ""
                 add(f"    hop {step.get('depth')}               : {step.get('address')}{named} "
                     f"received {step.get('value_native', 0):,.4f} {f['asset']}")
             for note in f.get("risk_notes") or []:
@@ -668,8 +713,11 @@ def render_text_report(report: dict[str, Any]) -> str:
             add(f"TronScan tags read live    : {live.get('asked', 0)} unlabelled wallets asked, "
                 f"{len(live.get('found') or [])} tagged as an exchange, "
                 f"{len(live.get('warnings') or [])} carrying a TronScan warning")
+            if live.get("asked") and live.get("requests") == 0:
+                para("All were answered from this server's cache, not a fresh request. "
+                     "When each was first read is in Appendix C.", indent="  ")
             for f in live.get("found") or []:
-                add(f"  - {f['address']} {f['label']}")
+                add(f"  - {f['address']} {_shown_label(f['label'])}")
             for w in live.get("warnings") or []:
                 add(f"  ! {w['address']} warning tag \u201c{w['warning']}\u201d")
         else:
