@@ -1,0 +1,40 @@
+{
+ "fixtures": {
+  "deposit_inferred.json": {
+   "demo": 3,
+   "exchange": "Binance",
+   "kind": "deposit_inferred",
+   "label": "probable Binance deposit address (inferred)",
+   "recorded_at": "2026-10-14T16:52:11+00:00",
+   "source": "inference"
+  },
+  "exchange_wallet.json": {
+   "demo": 9,
+   "exchange": "Binance",
+   "kind": "exchange_wallet",
+   "label": "Binance-Hot 7",
+   "recorded_at": "2026-10-14T16:52:15+00:00",
+   "source": "label_file"
+  },
+  "exchange_wallet.live_tag.json": {
+   "demo": 12,
+   "exchange": "Flipster",
+   "kind": "exchange_wallet",
+   "label": "Flipster Exchange Hot Wallet (TronScan tag, read live)",
+   "recorded_at": "2026-10-14T16:52:20+00:00",
+   "source": "live_tag"
+  },
+  "no_attribution.json": {
+   "demo": 1,
+   "exchange": null,
+   "kind": null,
+   "label": null,
+   "recorded_at": "2026-10-14T16:52:10+00:00",
+   "source": null
+  }
+ },
+ "generated_from": "backend/data/recorded_demos.json",
+ "kinds_without_a_recorded_example": [
+  "deposit_label"
+ ]
+}

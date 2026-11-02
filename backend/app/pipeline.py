@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from . import config, log_safety, progress
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
+from .contracts import upgrade as upgrade_to_contract
 from .etherscan_client import (
     EtherscanConfigError,
     EtherscanError,
@@ -169,6 +170,9 @@ def _all_transfers(graph: nx.DiGraph) -> list[dict[str, Any]]:
                 "value_native": round(tx.get("value_native", 0.0), 6),
                 "timestamp": tx.get("timestamp"),
                 "internal": bool(tx.get("internal", False)),
+                # The block lets a reader re-find the transfer on any node
+                # (case contract v2, docs/contracts/case.md).
+                "block": tx.get("block_number"),
             })
     rows.sort(key=lambda r: (r["timestamp"] or 0, r["hash"] or ""))
     return rows
@@ -713,7 +717,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "truncation_reasons": result.truncation_reasons,
         "warnings": result.warnings,
     }
-    return payload
+    # Every result leaves here under the case contract (contracts/case_v2.py):
+    # the v1 fields above, untouched, plus the v2 fields the other lanes read.
+    return upgrade_to_contract(payload)
 
 
 def _follow_swaps(
