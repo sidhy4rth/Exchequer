@@ -1,16 +1,17 @@
 """What Exchequer can see, and whether it is up.
 
-/health, /exchanges, /risk-labels and /ledger: read-only answers about the
+/health, /chains, /exchanges, /risk-labels and /ledger: read-only answers about the
 label files, the screening lists and the providers. None of them touches a
 chain or the case store's contents."""
 
 from __future__ import annotations
 
+import hmac
 import logging
 import random
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from .. import api_budget, config, models, ownership, warmup
 from ..chain_data import provider_status
@@ -23,22 +24,56 @@ router = APIRouter()
 
 
 @router.get("/health")
-def health() -> dict[str, Any]:
-    """Liveness probe, plus the configuration facts that break demos."""
+def health() -> dict[str, str]:
+    """Liveness, for the host's health check and the uptime monitors: up or
+    not, and nothing else. What the site can trace is /chains; how it is
+    configured is /health/detail, for the operator."""
+    return {"status": "ok"}
+
+
+def _chains() -> dict[str, dict[str, Any]]:
     chains = provider_status()
     for key, status in chains.items():
         status["exchange_labels"] = len(get_matcher(key))
         status["risk_labels"] = get_risk_matcher(key).counts_by_category()
+    return chains
+
+
+@router.get("/chains")
+def chains() -> dict[str, Any]:
+    """What a visitor can trace: each chain, its assets, whether it is ready,
+    and how many labels it is screened and attributed against. Public facts --
+    the README publishes them -- without the reason a chain is not ready,
+    which names the server's missing keys."""
+    listed = _chains()
+    for status in listed.values():
+        status.pop("detail", None)
+    return {
+        "default_chain": config.DEFAULT_CHAIN.key,
+        "max_depth": config.TRACE_MAX_DEPTH,
+        "chains": listed,
+    }
+
+
+@router.get("/health/detail", include_in_schema=False)
+def health_detail(request: Request) -> dict[str, Any]:
+    """The configuration facts that break demos, for the operator: answers 404
+    unless EXCHEQUER_HEALTH_TOKEN is set, and 401 to anything but that bearer
+    token, as /admin/backup does."""
+    if not config.HEALTH_TOKEN:
+        raise HTTPException(status_code=404, detail="Not Found")
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not hmac.compare_digest(token.strip().encode(), config.HEALTH_TOKEN.encode()):
+        raise HTTPException(status_code=401, detail="Not authorised.")
     return {
         "status": "ok",
         "etherscan_key_configured": bool(config.ETHERSCAN_API_KEY),
         "default_chain": config.DEFAULT_CHAIN.key,
         "chain_id": config.DEFAULT_CHAIN.chain_id,
         "max_depth": config.TRACE_MAX_DEPTH,
-        # Kept for the existing frontend status line: labels on the default chain.
         "exchange_labels_loaded": len(get_matcher()),
         "risk_labels_loaded": len(get_risk_matcher()),
-        "chains": chains,
+        "chains": _chains(),
         # Why a trace was slow. On the free tiers the provider, not the
         # traversal, is what costs the seconds: a high `rate_limit_penalties`
         # means the key is being refused and every refusal costs a backoff,

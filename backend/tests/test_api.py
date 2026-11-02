@@ -19,10 +19,11 @@ def client():
         yield c
 
 
-def test_health_reports_every_chain(client):
-    body = client.get("/health").json()
+def test_chains_reports_every_chain(client):
+    # Was /health until R26 cut public /health down to up-or-down.
+    body = client.get("/chains").json()
 
-    assert body["status"] == "ok"
+    assert body["default_chain"]
     assert set(body["chains"]) == {"ethereum", "bsc", "tron", "polygon", "arbitrum"}
     for chain in body["chains"].values():
         assert "exchange_labels" in chain

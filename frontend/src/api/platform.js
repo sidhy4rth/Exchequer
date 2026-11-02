@@ -39,6 +39,14 @@ export async function fetchLedger(limit = 1400) {
   return response.json()
 }
 
+/** Each chain the site can trace: its assets, readiness and label counts. */
+export async function fetchChains() {
+  const response = await apiFetch(`${BASE}/chains`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+/** Up or not, and nothing else (the operator's detail is behind a token). */
 export async function fetchHealth() {
   const response = await apiFetch(`${BASE}/health`)
   if (!response.ok) throw await toError(response)

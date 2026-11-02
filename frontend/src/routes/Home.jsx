@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import Mark from '../components/Mark'
-import { fetchCases, fetchExchanges, fetchHealth, fetchRiskLabels } from '../api'
+import { fetchCases, fetchChains, fetchExchanges, fetchRiskLabels } from '../api'
 import TraceForm from '../components/TraceForm'
 import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
@@ -22,7 +22,7 @@ export default function Home() {
   useEffect(() => { import('./TraceView') }, [])
 
   useEffect(() => {
-    fetchHealth()
+    fetchChains()
       .then((h) => {
         setHealth(h)
         // Coverage per chain: what the label files and screening lists hold.

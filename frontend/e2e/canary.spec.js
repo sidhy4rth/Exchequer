@@ -18,13 +18,13 @@ async function signIn(page) {
 }
 
 test('the API is up and the label files are loaded', async ({ request }) => {
-  const health = await (await request.get('/health')).json()
-  expect(health.status).toBe('ok')
+  expect(await (await request.get('/health')).json()).toEqual({ status: 'ok' })
+  const { chains } = await (await request.get('/chains')).json()
   // Well below today's counts; this catches a deploy that shipped without
   // its data files, not ordinary growth or pruning.
-  expect(health.exchange_labels_loaded).toBeGreaterThan(10_000)
-  expect(health.risk_labels_loaded).toBeGreaterThan(5_000)
-  const notReady = Object.values(health.chains).filter((c) => !c.ready).map((c) => c.name)
+  expect(chains.ethereum.exchange_labels).toBeGreaterThan(10_000)
+  expect(Object.values(chains.ethereum.risk_labels).reduce((a, b) => a + b, 0)).toBeGreaterThan(5_000)
+  const notReady = Object.values(chains).filter((c) => !c.ready).map((c) => c.name)
   expect(notReady, 'chains that cannot be traced').toEqual([])
 })
 

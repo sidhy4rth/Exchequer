@@ -14,7 +14,7 @@ vi.mock('./components/ExchangeGlobe', () => ({
 const health = { status: 'ok', default_chain: 'ethereum', chains: {} }
 
 function at(path) {
-  stubFetch({ '/health': { body: health }, '/cases': { body: { count: 0, cases: [] } } })
+  stubFetch({ '/chains': { body: health }, '/cases': { body: { count: 0, cases: [] } } })
   return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
 }
 
@@ -39,7 +39,7 @@ describe('the demo doors', () => {
     const recorded = recordings.find((r) => r.demo === 9)
     // The graph sizes itself with ResizeObserver, which jsdom lacks.
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
-    stubFetch({ '/health': { body: health }, '/demos/recorded/9': { body: { ...recorded.result, case_id: null, created_at: recorded.recorded_at, recorded_demo: 9 } } })
+    stubFetch({ '/chains': { body: health }, '/demos/recorded/9': { body: { ...recorded.result, case_id: null, created_at: recorded.recorded_at, recorded_demo: 9 } } })
     render(<MemoryRouter initialEntries={['/demo/9']}><App /></MemoryRouter>)
     await user.click(await screen.findByText(/click anywhere to log in/i))
     await user.click(screen.getByRole('button', { name: /open the console/i }))
