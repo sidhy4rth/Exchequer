@@ -16,8 +16,8 @@ Endpoints:
     /batches                        trace a list of complaints, then correlate them
 
 This module is the application shell: startup checks, CORS, the routers and
-the built frontend. The endpoints live in app/routes/ (coverage.py, cases.py)
-and the trace itself in app/pipeline.py.
+the built frontend. The endpoints live in app/routes/ (coverage.py, cases.py,
+evidence.py, casebook.py and others) and the trace itself in app/pipeline.py.
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import admin, batches, cases, coverage, demos, jobs, requests, verify, watches
+from .routes import admin, batches, casebook, cases, coverage, demos, evidence, jobs, requests, verify, watches
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -129,6 +129,8 @@ app.include_router(coverage.router)
 # Jobs first: /trace/jobs/... must not be read as /trace/{case_id}/...
 app.include_router(jobs.router)
 app.include_router(cases.router)
+app.include_router(evidence.router)
+app.include_router(casebook.router)
 app.include_router(demos.router)
 app.include_router(verify.router)
 app.include_router(watches.router)

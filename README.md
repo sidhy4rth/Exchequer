@@ -831,7 +831,7 @@ exchequer/
 │   ├── app/
 │   │   ├── main.py               FastAPI app shell: startup, routers, frontend
 │   │   ├── pipeline.py           run_trace: graph → screening → attribution → score
-│   │   ├── routes/               coverage.py (/health, /ledger…) · cases.py (/trace, /cases…)
+│   │   ├── routes/               coverage.py (/health…) · cases.py (/trace) · evidence.py (reports) · casebook.py (/cases)
 │   │   ├── config.py             chains, assets, label files, environment
 │   │   ├── chain_data.py         picks the provider for a chain + asset
 │   │   ├── etherscan_client.py   Etherscan V2 (native, ERC-20, internal)
@@ -882,7 +882,8 @@ exchequer/
 │   └── tests/                         309 tests, no network or keys
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Citizen.jsx · Home.jsx · TraceView.jsx
-│   └── components/      FlowView · GraphView · Present · Ledger · Mark · ExportButton
+│   ├── api/             client · trace · evidence · platform (api.js re-exports them)
+│   └── components/      TraceForm · FlowView · GraphView · Present · Ledger · Mark · ExportButton
 ├── docs/                proposal and research report PDFs, README assets
 ├── Dockerfile           Node builds the UI, FastAPI serves it
 ├── DEMO.md              verified demo traces, with what to say
