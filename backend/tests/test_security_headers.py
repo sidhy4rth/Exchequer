@@ -44,3 +44,10 @@ def test_oversized_bodies_are_refused():
     assert r.status_code == 413
     # Normal bodies pass.
     assert client.post("/verify", content=b"hello").status_code == 200
+
+
+def test_the_policy_trusts_no_other_origin():
+    # The fonts are served from the app itself (R27): no Google, no CDN.
+    csp = client.get("/health").headers["content-security-policy"]
+    assert "https://" not in csp and "http://" not in csp
+    assert "font-src 'self';" in csp + ";"
