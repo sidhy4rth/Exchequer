@@ -114,3 +114,19 @@ describe('background traces', () => {
     await expect(runTrace({ address: '0x' + '5'.repeat(40) })).rejects.toThrow('provider down')
   })
 })
+
+describe('the demo code', () => {
+  it('is sent only once the visitor has entered one', async () => {
+    const { fetchCases } = await import('./api')
+    const { forgetDemoCode, rememberDemoCode } = await import('./demoCode')
+    const fetch = stubFetch({ '/cases': { body: { count: 0, cases: [] } } })
+    await fetchCases()
+    expect(new Headers(fetch.mock.calls[0][1].headers).has('X-Exchequer-Demo-Code')).toBe(false)
+    rememberDemoCode('river-otter-42')
+    await fetchCases()
+    expect(new Headers(fetch.mock.calls[1][1].headers).get('X-Exchequer-Demo-Code')).toBe('river-otter-42')
+    forgetDemoCode()
+    await fetchCases()
+    expect(new Headers(fetch.mock.calls[2][1].headers).has('X-Exchequer-Demo-Code')).toBe(false)
+  })
+})

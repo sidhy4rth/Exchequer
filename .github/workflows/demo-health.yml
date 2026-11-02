@@ -42,6 +42,11 @@ jobs:
           done
           echo "site did not answer /health within 4 minutes"; exit 1
       - name: Re-run the DEMO.md traces on the live site
+        # The live site may ask for a demo code (backend/app/access.py); the
+        # repository secret DEMO_CODE holds the same value as Render's
+        # EXCHEQUER_DEMO_CODE. Empty when unset, which an open site ignores.
+        env:
+          EXCHEQUER_DEMO_CODE: ${{ secrets.DEMO_CODE }}
         run: python backend/scripts/check_demos.py --state demo_state.json --base "$EXCHEQUER_URL"
       - uses: actions/cache/save@v6
         if: always()

@@ -1,4 +1,7 @@
 import { OWNER_HEADER, ownerKey } from '../owner'
+import { demoCode } from '../demoCode'
+
+const DEMO_CODE_HEADER = 'X-Exchequer-Demo-Code'
 
 // Shared by every lane's API file: the base URL, the owner key on every
 // request, and the backend's own error messages. Lane C.
@@ -15,9 +18,14 @@ import { OWNER_HEADER, ownerKey } from '../owner'
 // Either way the frontend never hardcodes a host.
 export const BASE = import.meta.env.VITE_API_BASE ?? '/api'
 
-/** fetch() with this browser's owner key attached (see owner.js). */
+/** fetch() with this browser's owner key attached (see owner.js), and the
+ * demo code when the visitor has entered one (see demoCode.js). */
 export function apiFetch(url, init = {}) {
-  return fetch(url, { ...init, headers: { ...(init.headers || {}), [OWNER_HEADER]: ownerKey() } })
+  const code = demoCode()
+  return fetch(url, {
+    ...init,
+    headers: { ...(init.headers || {}), [OWNER_HEADER]: ownerKey(), ...(code ? { [DEMO_CODE_HEADER]: code } : {}) },
+  })
 }
 
 /** Turn a failed response into an Error carrying the backend's own message. */

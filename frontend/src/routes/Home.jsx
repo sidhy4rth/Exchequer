@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import Mark from '../components/Mark'
-import { fetchCases, fetchChains, fetchExchanges, fetchRiskLabels } from '../api'
+import { fetchAccess, fetchCases, fetchChains, fetchExchanges, fetchRiskLabels } from '../api'
+import Showroom from '../components/Showroom'
 import TraceForm from '../components/TraceForm'
 import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
 import BulkIntake from '../components/BulkIntake'
+import { demoCode, forgetDemoCode } from '../demoCode'
 import { signOut } from '../session'
 
 const middle = (a, head = 10, tail = 8) => (a && a.length > head + tail + 1 ? `${a.slice(0, head)}…${a.slice(-tail)}` : a)
@@ -16,6 +18,11 @@ export default function Home() {
   const [health, setHealth] = useState(null)
   const [cases, setCases] = useState([])
   const [coverage, setCoverage] = useState({})
+  // Whether this site asks for a demo code (backend/app/access.py). Until it
+  // answers, or if it cannot, the form shows: the backend refuses a trace
+  // without the code either way, so the worst case is its message.
+  const [access, setAccess] = useState(null)
+  const [unlocked, setUnlocked] = useState(() => Boolean(demoCode()))
 
   // Every path out of this page leads to a trace; fetch that page's code
   // (the graph layout is most of it) before the button is pressed.
@@ -34,10 +41,14 @@ export default function Home() {
       })
       .catch(() => setHealth({ status: 'down' }))
     fetchCases(20).then((d) => setCases(d.cases)).catch(() => {})
+    fetchAccess().then(setAccess).catch(() => setAccess({ demo_code_required: false }))
   }, [])
 
   const chains = health?.chains ? Object.values(health.chains) : []
   const backendDown = health?.status === 'down'
+  // A public site without the code: recorded demos only, nothing that would
+  // spend the provider quota or keep running (batches, watches).
+  const locked = Boolean(access?.demo_code_required) && !unlocked
 
   const totalLabels = chains.reduce((sum, c) => sum + (c.exchange_labels || 0), 0)
 
@@ -51,13 +62,13 @@ export default function Home() {
             : <><span className="dot" />CONNECTING</>}
         </span>
         <span className="grow" />
-        <button className="quiet" onClick={() => { signOut(); navigate('/signin/investigator') }} title="Back to the sign-in page">Sign out</button>
+        <button className="quiet" onClick={() => { signOut(); forgetDemoCode(); navigate('/signin/investigator') }} title="Back to the sign-in page">Sign out</button>
         <ThemeToggle />
       </header>
 
       <div className="home-body">
         <section className="intake">
-          <TraceForm health={health} />
+          {locked ? <Showroom onUnlock={() => setUnlocked(true)} /> : <TraceForm health={health} />}
 
           <div className="card">
             <div className="head"><span className="micro">Coverage</span><span className="note">{health ? `${totalLabels} exchange labels` : ''}</span></div>
@@ -125,8 +136,8 @@ export default function Home() {
           </div>
         </details>
 
-        <BulkIntake />
-        <Watchlist />
+        {!locked && <BulkIntake />}
+        {!locked && <Watchlist />}
         <OpenRequests />
 
         <section>

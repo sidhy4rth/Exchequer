@@ -1,0 +1,50 @@
+/* The public console's recorded demos and code box (Showroom.jsx). Colours
+   come from the theme tokens in styles.css, so dark mode follows. */
+
+.showroom .showroom-demos {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.showroom .showroom-demos li {
+  border-bottom: 1px solid var(--rule);
+}
+
+.showroom .showroom-demos a {
+  display: grid;
+  grid-template-columns: 2.5em minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 4px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.showroom .showroom-demos a:hover,
+.showroom .showroom-demos a:focus-visible {
+  background: var(--panel-2);
+}
+
+.showroom .showroom-demos .note {
+  color: var(--muted);
+}
+
+.showroom .showroom-code {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.showroom .showroom-code input {
+  flex: 1 1 12em;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .showroom .showroom-demos a {
+    grid-template-columns: 2.5em minmax(0, 1fr);
+  }
+}

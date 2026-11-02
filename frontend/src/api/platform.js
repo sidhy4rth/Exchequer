@@ -116,3 +116,22 @@ export async function fetchBatch(batchId) {
 export async function fetchBatches() {
   return jsonOrThrow(await apiFetch(`${BASE}/batches`))
 }
+
+// ---------------------------------------------------------------------------
+// The demo code (backend/app/access.py)
+// ---------------------------------------------------------------------------
+
+/** Whether this site asks for a demo code before live tracing. */
+export async function fetchAccess() {
+  const response = await apiFetch(`${BASE}/access`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+/** Check a code before remembering it: resolves if right, throws the backend's reason if not.
+ * Plain fetch, not apiFetch: that would add any code already stored, over this one. */
+export async function checkDemoCode(code) {
+  const response = await fetch(`${BASE}/access/check`, { method: 'POST', headers: { 'X-Exchequer-Demo-Code': code } })
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
