@@ -9,14 +9,19 @@ a labelled deposit address, so that kind uses the placeholder fixture.
 """
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
 import pytest
+from pypdf import PdfReader
 
 from app import config
+from app.report import build_report, render_text_report
+from app.report_pdf import render_pdf
 from app.request_letters import attribution_kind, available, draft
 
+from test_report import full_result, stored
 from test_request_letters import DEPOSIT, SEED, TX, case
 
 DEMOS = {d["demo"]: d["result"] for d in json.loads(
@@ -139,6 +144,16 @@ def test_the_tether_letter_no_longer_says_who_reported_what():
     assert "victim reported" not in text
     assert "The victim's payments: [____" in text
     assert TX in text
+
+
+def test_reports_do_not_claim_funds_nobody_reported_either():
+    prorata = {"status": "estimated", "estimated": 9.5, "sent": 10.0, "arrived_total": 12.0,
+               "hops": [{"address": "0xhop", "victim_share": 0.8, "received_in_window": 12.0}]}
+    report = build_report(stored({**full_result(), "prorata": prorata}))
+    text = render_text_report(report)
+    assert "about 9.5 of 10.0 ETH sent from the reported address" in " ".join(text.split())
+    assert "eported funds" not in text
+    assert "eported funds" not in "".join(p.extract_text() for p in PdfReader(io.BytesIO(render_pdf(report, text))).pages)
 
 
 def test_the_letters_offered_are_unchanged():
