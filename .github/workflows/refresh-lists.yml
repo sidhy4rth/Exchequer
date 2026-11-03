@@ -18,6 +18,12 @@ on:
 permissions:
   contents: read
 
+# A run started by hand while the nightly one is going would race it to the
+# same bot branch; the second waits instead.
+concurrency:
+  group: refresh-lists
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
