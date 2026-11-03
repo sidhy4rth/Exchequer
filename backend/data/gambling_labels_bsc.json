@@ -1,0 +1,15 @@
+{
+ "_meta": {
+  "description": "Wallets controlled by gambling platforms (casino/betting hot wallets and the per-user deposit addresses that sweep into them). A match is an attribution, like an exchange: the platform holds the account and can identify its holder on a lawful request.",
+  "provenance": "Hot wallets: block explorer gambling tags via dawsbot/eth-labels. Deposit addresses: on-chain sweeps (>=2) of USDT/USDC into those hot wallets. Built by backend/scripts/import_gambling_labels.py.",
+  "verification_note": "Each deposit row cites a sample sweep transaction. Not a designation and not a finding of wrongdoing by anyone.",
+  "chain": "bsc",
+  "last_reviewed": "2026-11-04",
+  "counts": {
+   "gambling": 0
+  },
+  "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
+  "schema": "labels maps an address to {category, entity, label, source}"
+ },
+ "labels": {}
+}

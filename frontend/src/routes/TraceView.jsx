@@ -11,7 +11,7 @@ import WatchPanel from '../components/WatchPanel'
 import RequestsPanel from '../components/RequestsPanel'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds', reported: 'TronScan warning' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform' }
 const COMPONENT_NAME = {
   hop_proximity: 'Hop proximity',
   amount_correlation: 'Amount correlation',

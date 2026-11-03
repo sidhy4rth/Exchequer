@@ -17,20 +17,20 @@ import { forceCollide } from 'd3-force-3d'
 // have to compete for attention with the tool's own inferences.
 const PALETTES = {
   light: {
-    seed: '#16191d', risk: '#b3261e', exchange: '#1d7a4c', inferred: '#9a5b00',
+    seed: '#16191d', risk: '#b3261e', exchange: '#1d7a4c', inferred: '#9a5b00', gambling: '#6b3fa0',
     service: '#b9b5ac', flagged: '#c98a1e', node: '#8a9098',
     link: 'rgba(22,25,29,0.16)', linkPath: '#1d7a4c', linkFlagged: '#c98a1e',
     text: '#16191d', dim: '#5b6169', background: '#ffffff',
-    haloExchange: 'rgba(29,122,76,0.16)', haloRisk: 'rgba(179,38,30,0.16)',
+    haloExchange: 'rgba(29,122,76,0.16)', haloRisk: 'rgba(179,38,30,0.16)', haloGambling: 'rgba(107,63,160,0.16)',
     ring: 'rgba(255,255,255,0.8)', ringInk: 'rgba(22,25,29,0.6)', ringSelected: 'rgba(22,25,29,0.85)',
     labelBox: 'rgba(255,255,255,0.88)',
   },
   dark: {
-    seed: '#ececea', risk: '#ff5c5c', exchange: '#2fd3a2', inferred: '#e0a44a',
+    seed: '#ececea', risk: '#ff5c5c', exchange: '#2fd3a2', inferred: '#e0a44a', gambling: '#b388ff',
     service: '#4a5057', flagged: '#e0a44a', node: '#5b6167',
     link: 'rgba(236,236,234,0.13)', linkPath: '#2fd3a2', linkFlagged: '#e0a44a',
     text: '#ececea', dim: '#9a9fa6', background: '#111316',
-    haloExchange: 'rgba(47,211,162,0.18)', haloRisk: 'rgba(255,92,92,0.2)',
+    haloExchange: 'rgba(47,211,162,0.18)', haloRisk: 'rgba(255,92,92,0.2)', haloGambling: 'rgba(179,136,255,0.2)',
     ring: 'rgba(17,19,22,0.9)', ringInk: 'rgba(236,236,234,0.6)', ringSelected: 'rgba(236,236,234,0.9)',
     labelBox: 'rgba(17,19,22,0.85)',
   },
@@ -47,7 +47,7 @@ const MAX_RADIUS = 22
 // exchanges: a sanctioned wallet that moved dust is still the most important
 // bubble on the canvas, and sizing it by value alone buries it.
 const FLOOR_RADIUS = 8
-const ANSWER_ROLES = new Set(['seed', 'exchange', 'inferred', 'risk'])
+const ANSWER_ROLES = new Set(['seed', 'exchange', 'inferred', 'risk', 'gambling'])
 
 // How far a non-highlighted element fades when something is highlighted.
 const DIMMED_ALPHA = 0.12
@@ -68,10 +68,11 @@ const HIT_PAD = 9
 const LINK_HIT_PAD = 4
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds', reported: 'TronScan warning' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform' }
 const ROLE_NAME = {
   seed: 'Reported address',
   risk: 'Sanctioned / mixer / frozen / stolen funds',
+  gambling: 'Gambling platform wallet',
   exchange: 'Labelled exchange wallet',
   inferred: 'Probable deposit address (inferred)',
   service: 'Service contract or router, not expanded',
@@ -81,6 +82,9 @@ const ROLE_NAME = {
 
 function roleOf(node) {
   if (node.is_seed) return 'seed'
+  // A gambling platform is an attribution, like an exchange -- not a risk-list
+  // hit -- so it gets its own colour instead of borrowing sanctions red.
+  if (node.risk_category === 'gambling') return 'gambling'
   if (node.risk_category) return 'risk'
   if (node.exchange && !node.inferred_exchange) return 'exchange'
   if (node.inferred_exchange) return 'inferred'
@@ -465,7 +469,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
   // Risk leads for the same reason it owns red -- an outside designation
   // outranks the tool's own matches -- then shallowest, then largest.
   const landmarks = useMemo(() => {
-    const rank = { risk: 0, exchange: 1, inferred: 2 }
+    const rank = { risk: 0, gambling: 1, exchange: 2, inferred: 3 }
     return graphData.nodes
       .filter((n) => rank[roleOf(n)] !== undefined)
       .sort((a, b) =>
@@ -526,6 +530,12 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
       ctx.fillStyle = COLORS.haloRisk
       ctx.fill()
     }
+    if (role === 'gambling') {
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
+      ctx.fillStyle = COLORS.haloGambling
+      ctx.fill()
+    }
 
     ctx.beginPath()
     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI)
@@ -548,7 +558,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (node.risk_category) {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 2.2, 0, 2 * Math.PI)
-      ctx.strokeStyle = COLORS.risk
+      ctx.strokeStyle = node.risk_category === 'gambling' ? COLORS.gambling : COLORS.risk
       ctx.lineWidth = 1.6 / globalScale
       ctx.stroke()
     }
@@ -588,7 +598,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
       return
     }
 
-    const text = role === 'risk' && node.risk_entity ? node.risk_entity
+    const text = (role === 'risk' || role === 'gambling') && node.risk_entity ? node.risk_entity
       : role === 'exchange' && node.label ? node.label
       : role === 'inferred' ? `${node.inferred_exchange}? ${short(node.address)}`
       : short(node.address)
@@ -747,7 +757,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
                   >
                     <span className="swatch" style={{ background: COLORS[role] }} />
                     <span className="name">
-                      {role === 'risk'
+                      {role === 'risk' || role === 'gambling'
                         ? node.risk_entity ?? RISK_NAME[node.risk_category] ?? 'Listed'
                         : role === 'inferred' ? `${node.inferred_exchange} deposit (inferred)`
                         : node.label ?? node.exchange}
@@ -767,6 +777,10 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
             <div className="item">
               <span className="swatch" style={{ background: COLORS.risk }} />
               Sanctioned / mixer
+            </div>
+            <div className="item">
+              <span className="swatch" style={{ background: COLORS.gambling }} />
+              Gambling platform wallet
             </div>
             <div className="item">
               <span className="swatch" style={{ background: COLORS.exchange }} />
