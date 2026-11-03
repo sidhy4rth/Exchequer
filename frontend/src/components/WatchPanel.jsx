@@ -14,7 +14,8 @@ export default function WatchPanel({ result }) {
   const [hook, setHook] = useState('')
   const [showHook, setShowHook] = useState(false)
 
-  const load = () => fetchWatches().then((d) => setWatches(d.watches ?? [])).catch(() => {})
+  const [automatic, setAutomatic] = useState(true)
+  const load = () => fetchWatches().then((d) => { setWatches(d.watches ?? []); setAutomatic(d.watcher?.enabled ?? d.running !== false) }).catch(() => {})
   useEffect(() => { load() }, [result?.case_id])
 
   if (!result?.address) return null
@@ -41,6 +42,7 @@ export default function WatchPanel({ result }) {
     <details className="card sec" open>
       <summary><span className="micro">Watch for movement</span><span className="note">alerts when funds leave</span></summary>
       <div className="body watch-panel">
+        {!automatic && <p className="note">Automatic checks are off on this site: a watch is checked only when someone presses Check now in the watchlist.</p>}
         {candidates.map((c) => {
           const w = watching(c.address)
           return (

@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { checkWatchNow, fetchAlerts, fetchWatches, logRequest, markAlertsRead, removeWatch } from '../api'
 
 // The home page's watchlist: what this browser watches and what moved.
-// Refreshes every minute while open; the server checks on its own schedule.
+// Refreshes every minute while open; the server checks on its own schedule,
+// and the panel says what that schedule actually did (watchlist.watcher_status):
+// on a host that sleeps when idle, the watcher sleeps too.
 
 const KIND = {
   exchange: { pill: 'green', text: 'into an exchange' },
@@ -24,13 +26,13 @@ const ago = (iso) => {
 export default function Watchlist() {
   const [watches, setWatches] = useState([])
   const [alerts, setAlerts] = useState([])
-  const [running, setRunning] = useState(true)
+  const [watcher, setWatcher] = useState(null)
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
   const [logged, setLogged] = useState({})
 
   const load = useCallback(() => {
-    fetchWatches().then((d) => { setWatches(d.watches ?? []); setRunning(d.running !== false) }).catch(() => {})
+    fetchWatches().then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) }).catch(() => {})
     fetchAlerts().then((d) => setAlerts(d.alerts ?? [])).catch(() => {})
   }, [])
   useEffect(() => {
@@ -52,9 +54,17 @@ export default function Watchlist() {
       <div className="card watchlist">
         <div className="head">
           <span className="micro">Watchlist · {watches.length}{unread ? <span className="pill red" style={{ marginLeft: 8 }}>{unread} new</span> : null}</span>
-          <span className="note">{running ? 'checked about every ten minutes · this browser only' : 'the server is not checking watches right now'}</span>
+          <span className="note">{watcher?.enabled === false
+            ? 'automatic checks are off on this site · press Check now · this browser only'
+            : `checked automatically about every ${Math.round((watcher?.interval_seconds ?? 600) / 60)} min · last check ${ago(watcher?.last_check_at)} · this browser only`}</span>
         </div>
         <div className="body">
+          {watcher?.stale && (
+            <div className="banner warn" role="alert">
+              {watcher.last_check_at ? `The last automatic check was ${ago(watcher.last_check_at)}.` : 'No watch has been checked yet.'}{' '}
+              The server may have been asleep: press Check now before relying on a watch.
+            </div>
+          )}
           {watches.map((w) => (
             <div className="watch-row" key={w.watch_id}>
               <div>

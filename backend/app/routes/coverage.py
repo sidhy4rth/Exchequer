@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import api_budget, config, models, ownership, warmup
+from .. import api_budget, config, models, ownership, warmup, watchlist
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import FROZEN, MIXER, SANCTIONED, get_risk_matcher
@@ -95,6 +95,9 @@ def health_detail(request: Request) -> dict[str, Any]:
         # background so they answer from cache. A trace during `in_progress`
         # shares the key's rate with the warm-up.
         "warm_cache": warmup.status(),
+        # When watches were last checked, and whether that was too long ago:
+        # on a host that sleeps when idle, the watcher sleeps too (R30).
+        "watcher": watchlist.watcher_status(),
     }
 
 

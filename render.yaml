@@ -50,6 +50,13 @@ services:
       # on a tenth of a CPU. The recorded demos open instantly instead.
       - key: EXCHEQUER_WARM_CACHE
         value: "0"
+      # The free plan sleeps after 15 idle minutes and the watcher sleeps with
+      # it, so a watch set at noon would go unchecked all night while the panel
+      # promised every ten minutes. Off: watches are checked when someone
+      # presses Check now, and the panel says so (watchlist.watcher_status).
+      # Turn it on with a host that stays awake.
+      - key: EXCHEQUER_WATCHER
+        value: "0"
       # The daily snapshot copies a SQLite file on the volume; there is none.
       - key: EXCHEQUER_BACKUPS
         value: "0"

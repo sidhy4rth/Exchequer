@@ -228,3 +228,49 @@ describe('the front door figures (R14)', () => {
     expect(coverageFromChains(undefined)).toEqual({ wallets: 0, deposits: 0, sanctioned: 0, frozen: 0, stolen: 0, mixer: 0, chains: [] })
   })
 })
+
+describe('what the watchlist says about the watcher (R30)', () => {
+  const minutesAgo = (m) => new Date(Date.now() - m * 60_000).toISOString()
+  const oneWatch = (watcher) => api({
+    'GET /watches': { body: { count: 1, watcher, watches: [{ watch_id: 'w1', address: '0x' + '7'.repeat(40), chain: 'ethereum', asset: 'ETH', note: '', last_checked_at: watcher.last_check_at, unread_alerts: 0 }] } },
+    'GET /alerts': { body: { count: 0, alerts: [] } },
+  })
+
+  it('says when automatic checks are off', async () => {
+    oneWatch({ enabled: false, interval_seconds: 600, last_check_at: null, stale: false })
+    inRouter(<Watchlist />)
+    expect(await screen.findByText(/automatic checks are off on this site/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('says when the last check was, and stays calm when it was recent', async () => {
+    oneWatch({ enabled: true, interval_seconds: 600, last_check_at: minutesAgo(4), stale: false })
+    inRouter(<Watchlist />)
+    expect(await screen.findByText(/about every 10 min · last check 4 min ago/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('warns when no check has run for too long', async () => {
+    oneWatch({ enabled: true, interval_seconds: 600, last_check_at: minutesAgo(180), stale: true })
+    inRouter(<Watchlist />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/last automatic check was 3 h ago.*press Check now/)
+  })
+})
+
+describe('the watch panel when automatic checks are off (R30)', () => {
+  const result = { case_id: 'c1', address: '0x' + '1'.repeat(40), chain: 'ethereum', asset: 'ETH', direction: 'outgoing' }
+
+  it('says a watch will be checked only by hand', async () => {
+    api({ 'GET /watches': { body: { count: 0, watches: [], watcher: { enabled: false } } } })
+    inRouter(<WatchPanel result={result} />)
+    expect(await screen.findByText(/Automatic checks are off on this site/)).toBeInTheDocument()
+  })
+
+  it('says nothing of the kind when they are on', async () => {
+    api({ 'GET /watches': { body: { count: 0, watches: [], watcher: { enabled: true } } } })
+    inRouter(<WatchPanel result={result} />)
+    await screen.findByText('Watch for movement')
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.queryByText(/Automatic checks are off/)).not.toBeInTheDocument()
+  })
+})
