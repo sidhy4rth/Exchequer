@@ -13,7 +13,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
-from .. import config, models, ownership, pipeline, rate_limit
+from .. import audit, config, models, ownership, pipeline, rate_limit
+from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 
 
@@ -92,8 +93,26 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
     return payload
 
 
+def record_trace(payload: dict[str, Any]) -> None:
+    """Audit a finished trace (CLAUDE.md rule 5): what kind of trace, not whose.
+
+    No address and no NCRP number goes into the detail: until R24 the audit
+    trail is a log line, and logs are no place for a complaint's particulars.
+    """
+    intake = payload.get("intake") or {}
+    audit.record("case.trace", case_id=payload.get("case_id"), detail={
+        "chain": payload.get("chain"),
+        "asset": payload.get("asset"),
+        "direction": payload.get("direction"),
+        "mode": intake.get("mode", "address"),
+        "payments": len(intake.get("payments") or []),
+        "saved": bool(payload.get("case_id")),
+        "exchange_reached": bool(payload.get("exchange")),
+    })
+
+
 @router.post("/trace")
-def trace(request: TraceRequest, http: Request) -> dict[str, Any]:
+def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, Any]:
     """Trace funds to or from a reported address.
 
     Outgoing answers "where did the victim's money go"; incoming answers "who
@@ -107,7 +126,9 @@ def trace(request: TraceRequest, http: Request) -> dict[str, Any]:
         payload = pipeline.run_trace(request)
     finally:
         release()
-    return store_result(payload, request, ownership.owner_hash_from_headers(http.headers))
+    stored = store_result(payload, request, user.owner_hash)
+    record_trace(stored)
+    return stored
 
 
 _INDEX_HTML = config.BACKEND_DIR.parent / "frontend" / "dist" / "index.html"
