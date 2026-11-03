@@ -106,8 +106,10 @@ class Transfer(_Strict):
     timestamp: int | None
     internal: bool = False
     block: int | None = None
-    # Position of a token transfer's event in its transaction. None where the
-    # provider client does not read it yet (follow-up to A-0).
+    # Position of a token transfer's event in its transaction. None in a trace
+    # by design: no provider's transfer list returns it, and a receipt per
+    # transfer would double a trace's cost. Identify a transfer by hash, from,
+    # to and value; verify_case (R18) may fill it from the cited receipts.
     log_index: int | None = None
 
 

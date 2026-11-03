@@ -46,7 +46,7 @@ Every v1 field is still there, unchanged. v2 adds:
 | `estimates.fifo`, `.libr` | null | Other tracing methods, added by R4. |
 | `estimates.conservative` | number or null | The smallest available estimate. **The figure a letter states.** |
 | `transfers[].block` | int or null | The block the transfer is in. Filled for every new trace; null in cases stored before v2. |
-| `transfers[].log_index` | int or null | A token transfer's event position in its transaction. Null until the provider clients read it (follow-up to A-0). |
+| `transfers[].log_index` | int or null | A token transfer's event position in its transaction. **Null in a trace, by design**: none of the providers' transfer lists (Etherscan `tokentx`, NodeReal, TronGrid TRC-20) returns it, and reading every receipt would roughly double a trace's API calls. Identify a transfer by `hash`, `from`, `to` and `value_native`; `verify_case` (R18, Lane B) may fill `log_index` from the receipt of each transfer a letter cites. |
 
 Each trace in `follow_ons[].result` (the money after a swap) is a full v2 case
 of its own, with its own `attribution` and `estimates` in its own asset.
