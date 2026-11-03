@@ -8,11 +8,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 // one bold red line -- the money under investigation -- and everything else is thin.
 //
 // Colour carries meaning exactly as elsewhere: green for a labelled exchange,
-// amber for an inference or a fired pattern, red for a sanctions or mixer hit.
+// amber for an inference or a fired pattern, red for a sanctions or mixer hit,
+// purple for a gambling platform's wallet (an attribution, not a designation).
 
 const ROLE_NAME = {
   seed: 'Reported address',
   risk: 'Sanctioned / mixer',
+  gambling: 'Gambling platform wallet',
   exchange: 'Labelled exchange wallet',
   inferred: 'Probable deposit address (inferred)',
   service: 'Service contract or router, not expanded',
@@ -20,13 +22,14 @@ const ROLE_NAME = {
   node: 'Traced address',
 }
 const ROLE_VAR = {
-  seed: 'var(--ink)', risk: 'var(--red)', exchange: 'var(--green)', inferred: 'var(--amber)',
+  seed: 'var(--ink)', risk: 'var(--red)', gambling: 'var(--purple)', exchange: 'var(--green)', inferred: 'var(--amber)',
   service: 'var(--rule-strong)', flagged: 'var(--amber)', node: 'var(--faint)',
 }
-const RADIUS = { seed: 7, risk: 6.5, exchange: 6.5, inferred: 6, service: 4, flagged: 4.5, node: 3.5 }
+const RADIUS = { seed: 7, risk: 6.5, gambling: 6.5, exchange: 6.5, inferred: 6, service: 4, flagged: 4.5, node: 3.5 }
 
 function roleOf(node) {
   if (node.is_seed) return 'seed'
+  if (node.risk_category === 'gambling') return 'gambling'
   if (node.risk_category) return 'risk'
   if (node.exchange && !node.inferred_exchange) return 'exchange'
   if (node.inferred_exchange) return 'inferred'
@@ -42,7 +45,7 @@ const num = (value) =>
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
 
-const RISK_WORD = { sanctioned: 'sanctioned', mixer: 'mixer', frozen: 'frozen by Tether', stolen: 'stolen funds', reported: 'TronScan warning' }
+const RISK_WORD = { sanctioned: 'sanctioned', mixer: 'mixer', frozen: 'frozen by Tether', stolen: 'stolen funds', reported: 'TronScan warning', gambling: 'gambling platform' }
 
 /** What a node is called on the canvas: the label if it has one, else nothing. */
 function captionOf(node, role) {
@@ -50,6 +53,7 @@ function captionOf(node, role) {
   if (role === 'exchange') return node.label ?? node.exchange
   if (role === 'inferred') return `probable ${node.inferred_exchange} deposit`
   if (role === 'risk') return node.risk_entity ?? node.risk_label ?? RISK_WORD[node.risk_category] ?? 'flagged'
+  if (role === 'gambling') return node.risk_entity ?? 'gambling platform'
   if (role === 'service') return node.router ?? node.label ?? null
   return null
 }
@@ -399,9 +403,9 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
             onMouseLeave={() => setHover(null)}
             onClick={() => { if (!drag.current?.moved) copy(p.node.id) }}
           >
-            {(p.role === 'exchange' || p.role === 'risk' || p.node.risk_category) && <circle cx={p.x} cy={p.y} r={(p.r + 5) * counter} className="halo" vectorEffect="non-scaling-stroke" style={p.node.risk_category ? { stroke: 'var(--red)' } : undefined} />}
+            {(p.role === 'exchange' || p.role === 'risk' || p.role === 'gambling' || p.node.risk_category) && <circle cx={p.x} cy={p.y} r={(p.r + 5) * counter} className="halo" vectorEffect="non-scaling-stroke" style={p.node.risk_category ? { stroke: p.node.risk_category === 'gambling' ? 'var(--purple)' : 'var(--red)' } : undefined} />}
             <circle cx={p.x} cy={p.y} r={(p.r + 6) * counter} fill="transparent" />
-            <circle cx={p.x} cy={p.y} r={p.r * counter} fill={p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]} vectorEffect="non-scaling-stroke" />
+            <circle cx={p.x} cy={p.y} r={p.r * counter} fill={p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]} vectorEffect="non-scaling-stroke" />
             {p.caption && (
               <text
                 className="flow-cap"
@@ -410,7 +414,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
                 y={p.column === 0 || p.column === maxColumn ? p.y : p.y - (p.r + 5) * counter}
                 textAnchor={p.column === 0 ? 'start' : p.column === maxColumn ? 'end' : 'middle'}
                 dominantBaseline={p.column === 0 || p.column === maxColumn ? 'middle' : 'auto'}
-                fill={p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]}
+                fill={p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]}
               >{p.caption}</text>
             )}
           </g>
@@ -454,7 +458,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
       )}
 
       <div className="flow-legend">
-        {['seed', 'exchange', 'inferred', 'risk', 'flagged', 'service'].map((r) => (
+        {['seed', 'exchange', 'inferred', 'risk', 'gambling', 'flagged', 'service'].map((r) => (
           <span key={r}><i style={{ background: ROLE_VAR[r] }} />{ROLE_NAME[r].replace(' (inferred)', '').replace(', not expanded', '')}</span>
         ))}
         <span><i className="line" />the traced funds (attributed path)</span>

@@ -77,9 +77,13 @@ SANCTIONED = "sanctioned"
 MIXER = "mixer"
 STOLEN = "stolen"
 FROZEN = "frozen"
+# A gambling platform's wallet (hot wallet or per-user deposit address). Not a
+# designation and not a dead end: like an exchange, the platform holds the
+# account behind the deposit, so the next step is a lawful request to it.
+GAMBLING = "gambling"
 # Read live during a Tron trace, never from a label file, so not in CATEGORIES.
 REPORTED = "reported"
-CATEGORIES = (SANCTIONED, MIXER, FROZEN, STOLEN)
+CATEGORIES = (SANCTIONED, MIXER, FROZEN, STOLEN, GAMBLING)
 
 # Categories whose addresses end a trace. See the module docstring: a mixer
 # breaks the link between deposit and withdrawal, so anything past it is not
@@ -92,7 +96,7 @@ class RiskMatch:
     """One address in the trace that appears on a risk list."""
 
     address: str
-    category: str  # sanctioned | mixer | frozen | stolen
+    category: str  # sanctioned | mixer | frozen | stolen | gambling
     entity: str  # the designated entity or mixer service
     label: str  # human-readable, e.g. "Tornado Cash: 10 ETH pool"
     source: str  # which published list, and when it was read
@@ -151,6 +155,14 @@ class RiskMatch:
                 f"TronScan, the Tron block explorer ({self.source}). {placement}. "
                 f"This is the explorer's warning, not a designation or a finding "
                 f"that anyone took part in anything; it is a reason to look closer."
+            )
+        if self.category == GAMBLING:
+            return (
+                f"Gambling platform: {self.address} is {named}, per {self.source}. "
+                f"{placement}. The funds reached a wallet that a gambling platform "
+                f"controls; the platform holds the account behind it and can identify "
+                f"the account holder on a lawful request. This is an attribution of "
+                f"the wallet, not a finding that any counterparty broke the law."
             )
         if self.category == STOLEN:
             return (
@@ -307,7 +319,8 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
     return RiskMatcher.from_file(
         chain.risk_labels_path,
         chain=chain.key,
-        extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, chain.threat_labels_path),
+        extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, chain.threat_labels_path,
+                     chain.gambling_labels_path),
     )
 
 
