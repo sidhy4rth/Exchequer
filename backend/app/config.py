@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Mapping
 
 from dotenv import load_dotenv
 
@@ -508,6 +509,18 @@ WATCHES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR", 20)
 # Bearer token for GET /health/detail, the operator's view of keys, quota
 # and warm-up. Unset = the endpoint does not exist (404); /health stays public.
 HEALTH_TOKEN: str = os.getenv("EXCHEQUER_HEALTH_TOKEN", "").strip()
+# Whether this host's disk is wiped on restart, as on Render's free plan (no
+# disk; the instance also restarts after 15 idle minutes). /health/detail then
+# says a SQLite store and the provider cache are temporary. Render sets RENDER
+# in every service; EXCHEQUER_TEMPORARY_DISK=0 or 1 overrides it either way.
+def temporary_disk(environ: Mapping[str, str]) -> bool:
+    raw = environ.get("EXCHEQUER_TEMPORARY_DISK", "").strip().lower()
+    if raw:
+        return raw in ("1", "true", "yes", "on")
+    return environ.get("RENDER", "").strip().lower() == "true"
+
+
+TEMPORARY_DISK: bool = temporary_disk(os.environ)
 
 # ---------------------------------------------------------------------------
 # FLAGS: unfinished behaviour, off unless its environment variable is set

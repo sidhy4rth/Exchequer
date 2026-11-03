@@ -125,9 +125,11 @@ jobs:
           test "$(docker exec app stat -c '%u' /data/report_signing_key.pem)" = "10001"
       - name: Security headers are sent and API docs are off
         run: |
-          curl -fsS -D - -o /dev/null localhost:8000/ | grep -i '^content-security-policy:'
-          # With docs off, /docs falls through to the app's own page (200),
-          # so look for Swagger UI and the schema rather than a status code.
+          # Asked as a browser asks: anything else gets a JSON 404 for a path
+          # the API does not have (main.py), and -f would fail on it.
+          curl -fsS -H 'Sec-Fetch-Mode: navigate' -D - -o /dev/null localhost:8000/ | grep -i '^content-security-policy:'
+          # With docs off, /docs is not an API path: a browser gets the app's
+          # page and curl a 404. Look for Swagger UI and the schema either way.
           if curl -s localhost:8000/docs | grep -qi swagger; then echo "docs exposed"; exit 1; fi
           if curl -s localhost:8000/openapi.json | grep -q '"openapi"'; then echo "schema exposed"; exit 1; fi
       - if: failure()

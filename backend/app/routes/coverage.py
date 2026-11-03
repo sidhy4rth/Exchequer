@@ -98,6 +98,20 @@ def health_detail(request: Request) -> dict[str, Any]:
         # When watches were last checked, and whether that was too long ago:
         # on a host that sleeps when idle, the watcher sleeps too (R30).
         "watcher": watchlist.watcher_status(),
+        # Which unfinished features are switched on here (config.FLAGS).
+        "flags": config.FLAGS,
+        # What a restart wipes. On a host without a lasting disk a SQLite case
+        # store loses every case, and the provider cache starts cold.
+        "storage": _storage(),
+    }
+
+
+def _storage() -> dict[str, dict[str, Any]]:
+    engine = models.engine().dialect.name
+    cache = config.API_CACHE_PATH is not None
+    return {
+        "case_store": {"engine": engine, "temporary": config.TEMPORARY_DISK and engine == "sqlite"},
+        "provider_cache": {"enabled": cache, "temporary": config.TEMPORARY_DISK and cache},
     }
 
 
