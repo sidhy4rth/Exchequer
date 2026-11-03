@@ -231,3 +231,8 @@ def test_the_workflow_stages_only_named_list_files():
     for careless in ("git add .", "git add -A", "git add --all", "git commit -a"):
         assert careless not in text
     assert "pull_request_target" not in text
+
+
+def test_two_refresh_runs_never_race_to_the_same_branch():
+    text = (Path(__file__).resolve().parents[2] / ".github/workflows/refresh-lists.yml").read_text()
+    assert "concurrency:\n  group: refresh-lists\n  cancel-in-progress: false" in text
