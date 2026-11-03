@@ -1,8 +1,9 @@
 """Security headers on every response.
 
 The app serves its own frontend (see main.py), so one policy covers both the
-page and the API. The page loads nothing from other origins except Google
-Fonts; React's style={} attributes need inline styles; the sign-in globe draws
+page and the API. The page loads nothing from other origins, its fonts
+included (they are bundled: frontend/src/main.jsx); React's style={}
+attributes need inline styles; the sign-in globe draws
 to a canvas and the exports are made from blob: URLs. Nothing else is allowed,
 and the page may not be framed by another site.
 
@@ -16,8 +17,8 @@ from typing import Any, Awaitable, Callable
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data: blob:",
     "connect-src 'self'",
     "object-src 'none'",

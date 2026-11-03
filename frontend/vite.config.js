@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Vite inlines small assets as data: URLs. The content policy allows
+    // fonts only from this site (font-src 'self', security_headers.py), so
+    // an inlined font would be blocked in production: always emit fonts as files.
+    assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
+  },
   server: {
     port: 5173,
     // Proxy API calls to the FastAPI backend so the frontend can use relative

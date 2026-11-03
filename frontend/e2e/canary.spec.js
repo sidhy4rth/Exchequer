@@ -34,12 +34,31 @@ test('the front door opens the console with the system operational', async ({ pa
   await page.goto('/')
   await expect(page).toHaveURL(/\/signin\/investigator/)
   await enter(page)
-  await expect(page.getByLabel('Reported wallet address')).toBeVisible()
+  // With EXCHEQUER_DEMO_CODE set, the public console asks for the code instead.
+  await expect(page.getByLabel('Reported wallet address').or(page.getByLabel('Demo code'))).toBeVisible()
   await expect(page.getByText(/SYSTEM OPERATIONAL/)).toBeVisible()
   const loadMs = Date.now() - started
   test.info().annotations.push({ type: 'load', description: `${loadMs} ms to a usable console` })
   expect(loadMs, 'time from first request to a usable console').toBeLessThan(20_000)
   expect(errors).toEqual([])
+})
+
+test('the front door and the console load nothing from another site', async ({ page, baseURL }) => {
+  // R27: fonts included. A request elsewhere tells that site who opened a
+  // police tracing tool, and fails on networks that block outside hosts.
+  const own = new URL(baseURL).origin
+  const elsewhere = []
+  page.on('request', (req) => {
+    const url = new URL(req.url())
+    if (url.protocol.startsWith('http') && url.origin !== own) elsewhere.push(req.url())
+  })
+  await page.goto('/')
+  await enter(page)
+  await expect(page.getByLabel('Reported wallet address').or(page.getByLabel('Demo code'))).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  // The bundled fonts are the ones in use, not a fallback.
+  expect(await page.evaluate(() => document.fonts.check('13px "IBM Plex Sans"') && document.fonts.check('13px "IBM Plex Mono"'))).toBe(true)
+  expect(elsewhere).toEqual([])
 })
 
 test('a stored case opens without re-tracing', async ({ page, request }) => {
