@@ -8,3 +8,11 @@
   opacity: 0.75;
   font-style: italic;
 }
+.finding-bar .score-working,
+.hint-rate {
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+.hint-rate {
+  opacity: 0.8;
+}

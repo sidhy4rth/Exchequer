@@ -372,7 +372,9 @@ def score_case(
             f"{primary_match.exchange} at {primary_match.address}, {hops} "
             f"upstream"
         )
-    summary = f"{band.capitalize()} confidence ({score:.2f}) that {claim}."
+    # The band, not the decimal: the weights are judgement, so "0.80" would read as
+    # a measured probability it is not (R10). The number stays in `score`.
+    summary = f"{band.capitalize()} confidence that {claim}."
 
     return ConfidenceScore(
         score=score,

@@ -10,6 +10,7 @@ import Present from '../components/Present'
 import WatchPanel from '../components/WatchPanel'
 import RequestsPanel from '../components/RequestsPanel'
 import './TraceView.css'
+import { BAND_RULE, bandLabel, bandOf, validationLine } from '../components/confidence'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
 const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by Tether', stolen: 'Stolen funds', reported: 'TronScan warning' }
@@ -432,7 +433,7 @@ export default function TraceView() {
                   <div className="basis">
                     <strong>After a swap to {followed.asset}</strong> · {followed.attribution_inferred ? 'probable deposit address' : <>label <span className="mono">{followed.exchange_label}</span></>}
                     {' · '}{followed.hop_count} hop{followed.hop_count === 1 ? '' : 's'} in the {followed.asset} trace
-                    {' · '}confidence <span className="num">{followed.confidence?.toFixed(2)}</span> within that trace
+                    {' · '}{bandOf(followed.confidence) ?? 'no'} confidence within that trace
                   </div>
                   <div className="cite">
                     <span className="micro">{followed.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
@@ -456,8 +457,8 @@ export default function TraceView() {
               ) : (
                 <>
                   <div className="score">
-                    <span className={`big ${result.confidence_detail?.band ?? ''}`}>{result.confidence.toFixed(2)}</span>
-                    <span className="band">{String(result.confidence_detail?.band ?? '').replace(/^./, (c) => c.toUpperCase())}</span>
+                    <span className={`big ${result.confidence_detail?.band ?? ''}`}>{bandLabel(result.confidence_detail?.band ?? bandOf(result.confidence))}</span>
+                    <span className="band">a rule of three inputs, not a probability</span>
                   </div>
                   <div className="components">
                     {components.map((c) => (
@@ -472,6 +473,7 @@ export default function TraceView() {
                     <summary>How the score is built</summary>
                     <div className="why-list">
                       {components.map((c) => <p key={c.name}><strong>{COMPONENT_NAME[c.name] ?? c.name}.</strong> {c.explanation}</p>)}
+                      <p className="score-working">Score <span className="num">{result.confidence.toFixed(2)}</span>, the sum of each input × its weight. {BAND_RULE}</p>
                       <p className="note">The score is the weighted sum of these three inputs and nothing else. A pattern never moves it. An exchange match identifies where funds arrived, not who controls the account; only the exchange can link an address to a customer, on a lawful request (PMLA s.12, s.50).</p>
                       {primaryInference && <p className="confirm">{primaryInference.evidence?.confirmation}</p>}
                     </div>
@@ -612,13 +614,14 @@ export default function TraceView() {
               )}
 
               {findings.length > 0 ? (
-                <details className="card sec" open>
-                  <summary><span className="micro">Patterns · {findings.length}</span><span className="pill amber">reason to look closer</span></summary>
+                <details className="card sec">
+                  <summary><span className="micro">Hints · {findings.length}</span><span className="pill amber">a shape, not evidence</span></summary>
                   <div className="body">
                     {findings.map((f) => (
                       <div className="rule-block" key={f.pattern}>
-                        <div className="top"><span className="nm amber">{PATTERN_NAME[f.pattern] ?? f.pattern}</span><span className="st">strength {f.strength}</span></div>
+                        <div className="top"><span className="nm amber">{PATTERN_NAME[f.pattern] ?? f.pattern}</span></div>
                         <div className="desc">{f.description}</div>
+                        {validationLine(f.pattern) && <p className="hint-rate">{validationLine(f.pattern)}</p>}
                         {f.evidence?.thresholds_applied && (
                           <div className="thresholds">
                             {Object.entries(f.evidence.thresholds_applied).map(([k, v]) => (
@@ -628,11 +631,11 @@ export default function TraceView() {
                         )}
                       </div>
                     ))}
-                    <p className="note">A pattern is a shape, not a verdict, and never moves the score.</p>
+                    <p className="note">A hint is a reason to look closer, not a finding: it never moves the score and should not appear in a request as evidence.</p>
                   </div>
                 </details>
               ) : (
-                <div className="card sec flat"><span className="micro">Patterns · none</span><span className="note">no peel chain or amount split</span></div>
+                <div className="card sec flat"><span className="micro">Hints · none</span><span className="note">no peel chain or amount split</span></div>
               )}
 
               {swaps.length > 0 && (

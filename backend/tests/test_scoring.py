@@ -247,3 +247,29 @@ def test_an_unattributed_reverse_trace_says_the_senders_are_the_result():
 
     assert result.score is None
     assert "senders found are still the substantive result" in result.summary
+
+
+def test_the_summary_states_the_band_not_the_decimal():
+    # R10: the weights are judgement, so a sentence a reader quotes carries the
+    # band; the number stays in `score` and in the components.
+    import re
+
+    graph = make_graph([(SEED, EXCHANGE, 10.0)], seed=SEED)
+    result = score_case(graph, SEED, a_match(depth=1), max_depth=4)
+    assert result.summary.startswith("High confidence that ")
+    assert not re.search(r"\d\.\d\d", result.summary)
+    assert result.score == 1.0
+
+
+def test_the_interface_uses_the_same_band_thresholds():
+    # frontend/src/components/confidence.js mirrors BAND_THRESHOLDS; if one
+    # changes without the other, the case view and the report disagree.
+    import re
+    from pathlib import Path
+
+    from app.scoring import BAND_THRESHOLDS
+
+    js = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "components" / "confidence.js").read_text()
+    line = next(row for row in js.splitlines() if row.startswith("export const BAND_THRESHOLDS"))
+    pairs = re.findall(r"\[([0-9.]+), '([a-z ]+)'\]", line)
+    assert [(float(t), n) for t, n in pairs] == list(BAND_THRESHOLDS)

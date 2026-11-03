@@ -33,13 +33,13 @@ const DEMOS = [
   { n: '08', address: '0x4655b7ad0b5f5bacb9cf960bbffceb3f0e51f363', chain: 'ethereum', asset: 'ETH', depth: 2, direction: 'outgoing',
     title: 'The trail changes asset', hook: '2,000 ETH into 1inch, returned as wstETH. The swap is read from the receipt; the trace says where to re-run.' },
   { n: '09', address: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
-    title: 'Tron, in under a second', hook: 'USDT-TRC20 to Binance-Hot 7 in one hop, 26,405 USDT, confidence 1.00 — against 41 verified Tron labels.' },
+    title: 'Tron, in under a second', hook: 'USDT-TRC20 to Binance-Hot 7 in one hop, 26,405 USDT, high confidence — against 41 verified Tron labels.' },
   { n: '10', address: '0x000000000532b45f47779fce440748893b257865', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
     title: 'Three complaints, one operation', hook: 'Shares 60 and 46 intermediaries with two other stored phishing wallets — and all three reach the same known phishing wallet.' },
   { n: '11', address: 'TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
     title: 'Frozen by Tether', hook: 'A Tron wallet whose USDT Tether froze on 11 Sep 2026 — as it did the next wallet — splits 45,968 USDT onward; it reaches Binance-Hot 7 at 0.80.' },
   { n: '12', address: 'TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
-    title: 'An exchange the file does not know', hook: 'Flipster is not among the 41 labelled Tron wallets; TronScan’s own tag, read live, names it at confidence 1.00.' },
+    title: 'An exchange the file does not know', hook: 'Flipster is not among the 41 labelled Tron wallets; TronScan’s own tag, read live, names it with high confidence.' },
 ]
 
 // The optional wall-clock cap, in seconds. 1:30 is long enough for any of

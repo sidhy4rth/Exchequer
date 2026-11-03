@@ -1,0 +1,53 @@
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { describe, expect, it, vi } from 'vitest'
+import TraceView from './TraceView'
+import recordings from '../../../backend/data/recorded_demos.json'
+import { stubFetch } from '../test/setup'
+
+// Demo 11: Tron USDT, frozen by Tether, Binance-Hot 7 at score 0.80 (high),
+// with one amount-split pattern. Traced from the address alone.
+const demo = recordings.find((r) => r.demo === 11)
+
+async function openDemo11() {
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+  stubFetch({ '/demos/recorded/11': { body: { ...demo.result, case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
+  render(
+    <MemoryRouter initialEntries={['/demo/11']}>
+      <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
+    </MemoryRouter>,
+  )
+  await screen.findByText(/Recorded demo 11/)
+}
+
+describe('how sure the case is (R10)', () => {
+  it('leads with the band, and says it is not a probability', async () => {
+    await openDemo11()
+    expect(demo.result.confidence).toBeCloseTo(0.8)
+    const big = document.querySelector('.sure .big')
+    expect(big).toHaveTextContent('High')
+    expect(big.textContent).not.toMatch(/\d/)
+    expect(screen.getByText('a rule of three inputs, not a probability')).toBeInTheDocument()
+  })
+
+  it('keeps the exact score in the working, beside the band rule', async () => {
+    await openDemo11()
+    const working = document.querySelector('.score-working')
+    expect(working).toHaveTextContent('Score 0.80')
+    expect(working).toHaveTextContent('read the band, not the decimal')
+  })
+
+  it('folds patterns into hints with their measured hit rates', async () => {
+    await openDemo11()
+    expect(screen.getByText('Hints · 1')).toBeInTheDocument()
+    expect(screen.queryByText(/^Patterns ·/)).not.toBeInTheDocument()
+    expect(screen.getByText(/6 of 32 documented fraud wallets and 5 of 47 ordinary ones/)).toBeInTheDocument()
+    expect(screen.queryByText(/strength/)).not.toBeInTheDocument()
+    expect(document.querySelector('details.card.sec:not([open]) .hint-rate')).not.toBeNull()
+  })
+
+  it('marks an address-only trace as exploratory', async () => {
+    await openDemo11()
+    expect(screen.getByText(/Exploratory · traced from the address/)).toBeInTheDocument()
+  })
+})
