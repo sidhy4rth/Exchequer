@@ -90,27 +90,31 @@ def test_health_detail_lists_every_flag(client, monkeypatch):
     assert detail(client, monkeypatch)["flags"]["EXCHEQUER_TEST_ONLY_FLAG"] == {"on": True, "about": "a test"}
 
 
-def test_a_sqlite_store_on_a_temporary_disk_says_so(client, monkeypatch):
+# The two below call _storage() itself: the engine they swap in is never
+# connected, and /health/detail also reads the store (the watcher's status).
+def test_a_sqlite_store_on_a_temporary_disk_says_so(monkeypatch):
     from sqlalchemy import create_engine
 
     from app import models
+    from app.routes import coverage
     monkeypatch.setattr(models, "_engine", create_engine("sqlite://", future=True))
     monkeypatch.setattr(config, "TEMPORARY_DISK", True)
     monkeypatch.setattr(config, "API_CACHE_PATH", config.BACKEND_DIR / "provider_cache.db")
-    storage = detail(client, monkeypatch)["storage"]
+    storage = coverage._storage()
     assert storage["case_store"] == {"engine": "sqlite", "temporary": True}
     assert storage["provider_cache"] == {"enabled": True, "temporary": True}
 
 
-def test_a_postgres_store_outlives_the_disk(client, monkeypatch):
+def test_a_postgres_store_outlives_the_disk(monkeypatch):
     from sqlalchemy import create_engine
 
     from app import models
+    from app.routes import coverage
     # Never connected: only the dialect is read.
     monkeypatch.setattr(models, "_engine", create_engine("postgresql+psycopg://u:p@localhost/x", future=True))
     monkeypatch.setattr(config, "TEMPORARY_DISK", True)
     monkeypatch.setattr(config, "API_CACHE_PATH", None)
-    storage = detail(client, monkeypatch)["storage"]
+    storage = coverage._storage()
     assert storage["case_store"] == {"engine": "postgresql", "temporary": False}
     assert storage["provider_cache"] == {"enabled": False, "temporary": False}
 
