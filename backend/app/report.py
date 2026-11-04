@@ -26,6 +26,7 @@ from . import config
 from .evidence import seal_text
 from .models import Case
 from .risk_matcher import list_freshness
+from .scoring import BAND_THRESHOLDS
 
 REPORT_VERSION = "2.1"
 TOOL_NAME = "Exchequer"
@@ -89,6 +90,13 @@ def attribution_kind(trace: dict[str, Any]) -> str:
         return EXPLORER_TAG
     match = next((m for m in trace.get("matches") or [] if m.get("address") == address), {})
     return LABELLED_DEPOSIT if match.get("wallet_type") == "deposit_wallet" else EXCHANGE_WALLET
+
+
+def _band_word(score: float | None) -> str:
+    """'High', 'Moderate', 'Low' or 'Very low' for a score (R10): scoring.py's thresholds."""
+    if score is None:
+        return "n/a"
+    return next((name for threshold, name in BAND_THRESHOLDS if score >= threshold), "very low").capitalize()
 
 
 def _shown_label(label: str | None) -> str:
@@ -535,8 +543,11 @@ def render_text_report(report: dict[str, Any]) -> str:
     # -- confidence ------------------------------------------------------------
     section("CONFIDENCE")
     score = confidence.get("score")
+    # R10: lead with the band. The score stays here, beside how it was reached,
+    # and nowhere else: it is a rule of three inputs, not a probability.
+    add(f"Band             : {(confidence.get('band') or 'n/a').capitalize()}")
     add(f"Score            : {score if score is not None else 'n/a'}"
-        f"  ({confidence.get('band', 'n/a')})")
+        "  (a rule of three inputs, not a probability; read the band)")
     if confidence.get("summary"):
         add("")
         para(confidence["summary"])
@@ -691,7 +702,7 @@ def render_text_report(report: dict[str, Any]) -> str:
             elif f.get("exchange"):
                 add(f"    reached             : {f['exchange']} ({f['exchange_label']}) "
                     f"{f['exchange_address']}")
-                add(f"    hops / confidence   : {f['hop_count']} / {f['confidence']}")
+                add(f"    hops / confidence   : {f['hop_count']} / {_band_word(f['confidence'])}")
             else:
                 para(f.get("message") or "No exchange was reached.", indent="    ")
             for step in (f.get("trace_path") or [])[1:]:

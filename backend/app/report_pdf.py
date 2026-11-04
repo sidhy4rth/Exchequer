@@ -158,7 +158,9 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
                           f"≈ {_num(prorata.get('estimated'))} of {_num(prorata.get('sent'))} "
                           f"{attribution.get('value_currency', '')}", False))
     if confidence.get("score") is not None:
-        facts.append(("Confidence", f"{confidence['score']:.2f} ({confidence.get('band', '')})", False))
+        # R10: the band, not the decimal; the score's working is in the signed text.
+        band = (confidence.get("band") or "").capitalize() or "n/a"
+        facts.append(("Confidence", f"{band} (a rule of three inputs, not a probability)", False))
     rows = [[_p(label, st["small"]), _p(value, st["cellmono"] if mono else st["cell"])]
             for label, value, mono in facts]
     table = Table(rows, colWidths=[52 * mm, None])

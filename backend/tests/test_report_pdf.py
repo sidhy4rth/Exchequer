@@ -30,7 +30,9 @@ def test_pdf_has_summary_and_signed_text():
     pdf = render_pdf(REPORT, TEXT)
     reader = PdfReader(io.BytesIO(pdf))
     first = reader.pages[0].extract_text()
-    assert "Binance" in first and "0xbin" in first and "0.88 (high)" in first
+    assert "Binance" in first and "0xbin" in first
+    # R10: the summary page shows the band, never the decimal.
+    assert "High (a rule of three inputs, not a probability)" in first and "0.88" not in first
     assert "Tornado Cash" in first
     everything = "".join(p.extract_text() for p in reader.pages)
     assert "Part 2" in everything and "CONTENT HASH" in everything
