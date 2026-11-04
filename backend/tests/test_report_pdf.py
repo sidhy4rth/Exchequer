@@ -44,6 +44,34 @@ def test_the_attached_text_is_byte_exact_and_verifies():
     assert verify_report(data.decode())["signature_ok"]
 
 
+LISTS = {"as_of": "2026-10-13", "stale_after_days": 7, "not_held": [], "warning": None, "lists": [
+    {"name": "OFAC SDN list", "file": "risk_labels.json", "checked": "2026-10-12", "published": "2026-10-10",
+     "state": "current", "note": ""}]}
+RED_INK = b".701961 .14902 .117647"  # report_pdf.RED, as the page's drawing commands write it
+
+
+def first_page(report: dict) -> tuple[str, bytes]:
+    page = PdfReader(io.BytesIO(render_pdf(report, TEXT))).pages[0]
+    return page.extract_text(), page.get_contents().get_data()
+
+
+def test_page_one_prints_the_list_dates_and_no_red_when_they_are_fresh():
+    report = {**REPORT, "screening_lists": LISTS, "risk_screening": {"screened": True, "matches": []}}
+    text, drawing = first_page(report)
+    assert "OFAC SDN list" in text and "2026-10-12" in text
+    assert "WARNING" not in text
+    assert RED_INK not in drawing
+
+
+def test_an_old_list_puts_a_red_warning_on_page_one():
+    warning = "Screening may have missed addresses listed recently."
+    report = {**REPORT, "screening_lists": {**LISTS, "warning": warning},
+              "risk_screening": {"screened": True, "matches": []}}
+    text, drawing = first_page(report)
+    assert "WARNING" in text and "may have missed" in text
+    assert RED_INK in drawing
+
+
 def test_a_case_with_no_exchange_still_renders():
     report = {**REPORT, "attribution": {}, "confidence": {}, "trace_path": [],
               "risk_screening": {"screened": False}}

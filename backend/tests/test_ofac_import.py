@@ -10,10 +10,12 @@ call is needed to test the logic that reads it.
 """
 from __future__ import annotations
 
+import sys
 import textwrap
 
 import pytest
 
+from scripts import import_ofac_addresses as ofac
 from scripts.import_ofac_addresses import parse
 from app.risk_matcher import MIXER, SANCTIONED
 
@@ -164,3 +166,14 @@ def test_entries_without_a_crypto_address_are_ignored(sdn_file):
 
     assert by_chain == {}
     assert skipped == {}
+
+
+def test_main_writes_only_the_chains_ofac_names(sdn_file, monkeypatch):
+    """Polygon and Arbitrum come from port_evm_labels; writing them here would empty them."""
+    path = sdn_file(an_entry("LAZARUS GROUP", "DPRK3", "Digital Currency Address - ETH", LAZARUS))
+    written = []
+    monkeypatch.setattr(ofac, "write_chain_file", lambda chain_key, *_: written.append(chain_key))
+    monkeypatch.setattr(sys, "argv", ["import_ofac_addresses", "--sdn-file", str(path)])
+
+    assert ofac.main() == 0
+    assert set(written) == {"ethereum", "bsc", "tron"}

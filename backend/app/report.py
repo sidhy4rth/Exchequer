@@ -18,14 +18,16 @@ from __future__ import annotations
 
 import os
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from . import config
 from .evidence import seal_text
 from .models import Case
+from .risk_matcher import list_freshness
 
-REPORT_VERSION = "2.0"
+REPORT_VERSION = "2.1"
 TOOL_NAME = "Exchequer"
 
 
@@ -65,10 +67,62 @@ def tool_version() -> str:
     return _TOOL_VERSION
 
 
+# What a case holds about the address it reached decides what may be claimed about it.
+LABELLED_DEPOSIT = "labelled_deposit"  # one customer: ask about that customer
+INFERRED_DEPOSIT = "inferred_deposit"  # probably one customer: ask to confirm, then about them
+EXCHANGE_WALLET = "exchange_wallet"    # the company's own: ask about the transactions, never KYC on it
+EXPLORER_TAG = "explorer_tag"          # a third party's word: ask whether it is theirs first
+TAG_WORDING = " (TronScan tag, read live)"  # tron_tags.py's label suffix
+
+
+def attribution_kind(trace: dict[str, Any]) -> str:
+    """What the case actually holds about the address it reached.
+
+    The one place that reads this from a trace: when case contract v2 lands, this
+    becomes a lookup of its attribution.kind and nothing else changes. A case that
+    does not say gets the kind that assumes least: no single customer.
+    """
+    address = trace.get("exchange_address")
+    if trace.get("attribution_inferred"):
+        return INFERRED_DEPOSIT
+    if any(found.get("address") == address for found in (trace.get("live_tags") or {}).get("found") or []):
+        return EXPLORER_TAG
+    match = next((m for m in trace.get("matches") or [] if m.get("address") == address), {})
+    return LABELLED_DEPOSIT if match.get("wallet_type") == "deposit_wallet" else EXCHANGE_WALLET
+
+
+def _shown_label(label: str | None) -> str:
+    """A label for a reader. "Read live" can be untrue: the tag may have come from cache."""
+    return (label or "").replace(TAG_WORDING, " (TronScan tag)")
+
+
+# India has one offset and no daylight saving, so this needs no time-zone
+# database, and a report cannot fail for want of one.
+IST = timezone(timedelta(hours=5, minutes=30), "IST")
+
+
+def _both_zones(moment: datetime) -> str:
+    """'21:40 IST (16:10 UTC)' with its date; the UTC date only when it differs from India's."""
+    ist, utc = moment.astimezone(IST), moment.astimezone(timezone.utc)
+    utc_part = utc.strftime("%H:%M UTC") if utc.date() == ist.date() else utc.strftime("%Y-%m-%d %H:%M UTC")
+    return f"{ist.strftime('%Y-%m-%d %H:%M')} IST ({utc_part})"
+
+
 def _when(ts: int | None) -> str:
     if not ts:
         return "time unknown"
-    return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return _both_zones(datetime.fromtimestamp(int(ts), tz=timezone.utc))
+
+
+def _when_iso(value: str | None) -> str:
+    """A stored ISO timestamp for a reader. One that cannot be read prints as it is, never guessed at."""
+    if not value:
+        return "time unknown"
+    try:
+        moment = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return str(value)
+    return _both_zones(moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc))
 
 
 def build_report(case: Case) -> dict[str, Any]:
@@ -114,6 +168,7 @@ def build_report(case: Case) -> dict[str, Any]:
             "exchange": result.get("exchange"),
             "exchange_address": result.get("exchange_address"),
             "exchange_wallet_label": result.get("exchange_label"),
+            "kind": attribution_kind(result) if result.get("exchange") else None,
             "inferred": result.get("attribution_inferred", False),
             "inferred_deposit_addresses": result.get("inferred_deposits", []),
             "inference_notes": result.get("inference_notes", []),
@@ -136,6 +191,7 @@ def build_report(case: Case) -> dict[str, Any]:
             "matches": result.get("risk_matches", []),
             "notes": result.get("risk_notes", []),
         },
+        "screening_lists": _screening_lists(case, result),
         "patterns_detected": findings,
         "swaps": result.get("swaps", []),
         "swap_notes": result.get("swap_notes", []),
@@ -190,6 +246,18 @@ def build_report(case: Case) -> dict[str, Any]:
     }
 
 
+def _screening_lists(case: Case, result: dict[str, Any]) -> dict[str, Any] | None:
+    """How old each list was when this case was traced; None if the chain is unknown here."""
+    try:
+        traced = datetime.fromisoformat(str(case.created_at).replace("Z", "+00:00")).date()
+    except ValueError:
+        traced = datetime.now(tz=timezone.utc).date()
+    try:
+        return list_freshness(result.get("chain"), traced)
+    except config.UnknownChainError:
+        return None
+
+
 def _summary(case: Case, result: dict[str, Any]) -> str:
     """One paragraph in plain English: what was asked, what was found."""
     asset = result.get("asset") or result.get("native_symbol", "ETH")
@@ -220,6 +288,20 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
             f" The funds reached {result.get('exchange_address')}, which this tool infers "
             f"to be a {exchange} deposit address, {hops} hop{'s' if hops != 1 else ''} away; "
             f"that inference is explained below and only {exchange} can confirm it."
+        )
+    elif exchange and attribution_kind(result) == EXPLORER_TAG:
+        plain = (result.get("exchange_label") or "").removesuffix(TAG_WORDING)
+        distance = f"{hops} hop{'s' if hops != 1 else ''} {'away' if direction == 'outgoing' else 'upstream'}"
+        found = (
+            f" {'The funds reached' if direction == 'outgoing' else 'Part of the money came from'} "
+            f"{result.get('exchange_address')}, which TronScan, the Tron block explorer, tags as "
+            f"{plain}, {distance}; the tag is the explorer's and only {exchange} can confirm it."
+        )
+    elif exchange and attribution_kind(result) == LABELLED_DEPOSIT:
+        distance = f"{hops} hop{'s' if hops != 1 else ''} {'away' if direction == 'outgoing' else 'upstream'}"
+        found = (
+            f" {'The funds reached' if direction == 'outgoing' else 'Part of the money came from'} "
+            f"a deposit address publicly labelled as {exchange}'s ({result.get('exchange_label')}), {distance}."
         )
     elif exchange:
         found = (
@@ -314,9 +396,8 @@ def _methodology(native_symbol: str = "ETH", direction: str = "outgoing") -> lis
         "address whose every outgoing transfer went to one labelled exchange "
         "wallet was reported as a probable deposit address of that exchange, "
         "marked as an inference and scored lower than an exact match.",
-        "Every address was also screened, by exact match, against digital "
-        "currency addresses published on the U.S. Treasury's Specially "
-        "Designated Nationals list. A trace is stopped at any address "
+        "Every address was also screened, by exact match, against the lists "
+        "named under LISTS SCREENED AGAINST. A trace is stopped at any address "
         "identified as a mixer: its payouts come from a commingled pool, so "
         "transfers leaving it have no established link to the deposit traced.",
         "A transfer into a publicly labelled DEX router was recorded as a swap, "
@@ -348,7 +429,7 @@ def render_text_report(report: dict[str, Any]) -> str:
         rule("-")
 
     def para(text: str, indent: str = "", bullet: str = "") -> None:
-        for line in _wrap(text, indent=indent, bullet=bullet):
+        for line in _wrap(_shown_label(text), indent=indent, bullet=bullet):
             add(line)
 
     case = report["case"]
@@ -371,13 +452,17 @@ def render_text_report(report: dict[str, Any]) -> str:
     add("Direction        : "
         + ("outgoing (where the funds went)" if direction == "outgoing"
            else "incoming (who funded this address)"))
-    add(f"Traced at        : {case['traced_at']}")
-    add(f"Report generated : {report['generated_at']}")
+    add(f"Traced at        : {_when_iso(case['traced_at'])}")
+    add(f"Report generated : {_when_iso(report['generated_at'])}")
     add(f"Tool version     : {TOOL_NAME} {report.get('tool_version', 'unknown')} "
         f"(report format v{report['report_version']})")
     if case.get("block_explorer"):
         add(f"Verify at        : {case['block_explorer']}")
     add("")
+    screening_lists = report.get("screening_lists")
+    if screening_lists and screening_lists.get("warning"):
+        para(f"WARNING: {screening_lists['warning']}")
+        add("")
 
     # -- summary ---------------------------------------------------------------
     section("SUMMARY")
@@ -392,19 +477,21 @@ def render_text_report(report: dict[str, Any]) -> str:
         add(f"Exchange         : {attribution['exchange']}")
         add(f"Address          : {attribution['exchange_address']}")
         if attribution.get("exchange_wallet_label"):
-            add(f"Address label    : {attribution['exchange_wallet_label']}")
+            add(f"Address label    : {_shown_label(attribution['exchange_wallet_label'])}")
+        basis = ("a TronScan tag, not confirmed by the exchange" if attribution.get("kind") == EXPLORER_TAG
+                 else "exact match against a published exchange label")
         add("Basis            : "
             + ("INFERRED from the wallet's behaviour, not a label-file match"
-               if attribution.get("inferred") else "exact match against a published exchange label"))
+               if attribution.get("inferred") else basis))
         add(f"Hops from source : {attribution['hop_count']}")
         prorata = attribution.get("prorata") or {}
         if direction == "outgoing" and prorata.get("status") == "estimated":
-            add(f"Reported funds   : about {prorata['estimated']} of {prorata['sent']} {symbol} "
-                "likely arrived (pro-rata)")
+            add(f"Likely arrived   : about {prorata['estimated']} of {prorata['sent']} {symbol} "
+                "sent from the reported address (pro-rata)")
             add(f"Arrived in total : {prorata['arrived_total']} {symbol} along this path, "
                 "including funds from other sources")
             for h in prorata.get("hops") or []:
-                add(f"  via {h['address']}: reported funds {round(h['victim_share'] * 100, 1)}% "
+                add(f"  via {h['address']}: traced funds {round(h['victim_share'] * 100, 1)}% "
                     f"of {h['received_in_window']} {symbol} received before it sent on")
         elif attribution.get("value_received_native") is not None:
             label = ("Arrived on path " if direction == "outgoing" else "Value sent      ")
@@ -468,19 +555,20 @@ def render_text_report(report: dict[str, Any]) -> str:
         section("PATH THE MONEY TOOK" + (" (reported address -> exchange)" if direction == "outgoing"
                                           else " (exchange -> reported address)"))
         for i, step in enumerate(report["trace_path"]):
-            label = f"  [{step['label']}]" if step.get("label") else ""
+            label = f"  [{_shown_label(step['label'])}]" if step.get("label") else ""
             if i == 0:
                 add(f"  1. {step['address']}{label}")
                 continue
             amount = step.get("value_native")
-            when = ""
-            if step.get("first_seen"):
-                when = f" between {_when(step['first_seen'])} and {_when(step['last_seen'])}" \
-                    if step.get("last_seen") and step["last_seen"] != step["first_seen"] \
-                    else f" on {_when(step['first_seen'])}"
             add(f"     sent {amount} {symbol}"
-                + (f" in {step['tx_count']} transfers" if step.get("tx_count", 0) > 1 else "")
-                + f"{when} to")
+                + (f" in {step['tx_count']} transfers" if step.get("tx_count", 0) > 1 else ""))
+            if step.get("first_seen"):
+                if step.get("last_seen") and step["last_seen"] != step["first_seen"]:
+                    add(f"       between {_when(step['first_seen'])}")
+                    add(f"       and {_when(step['last_seen'])}")
+                else:
+                    add(f"       on {_when(step['first_seen'])}")
+            add("     to")
             add(f"  {i + 1}. {step['address']}{label}")
             for h in (step.get("tx_hashes") or [])[:5]:
                 add(f"        tx {h}")
@@ -508,7 +596,8 @@ def render_text_report(report: dict[str, Any]) -> str:
             add(f"    destination label   : {e.get('sweep_destination_label')}")
             add(f"    total swept         : {e.get('total_swept_native')} {symbol}")
             if e.get("first_sweep"):
-                add(f"    sweeps between      : {_when(e.get('first_sweep'))} and {_when(e.get('last_sweep'))}")
+                add(f"    sweeps between      : {_when(e.get('first_sweep'))}")
+                add(f"                      and {_when(e.get('last_sweep'))}")
             if e.get("current_balance_native") is not None:
                 # The chain's coin, not the traced asset (older cases did not say which).
                 balance_unit = e.get("current_balance_symbol") or case.get("chain_currency") or symbol
@@ -525,13 +614,30 @@ def render_text_report(report: dict[str, Any]) -> str:
             add("")
     else:
         add("No address in this trace appeared on the screened lists.")
-        add("Screening is an exact match against digital currency addresses")
-        add("on the U.S. Treasury SDN list and on UK, EU, Israeli, Japanese and")
-        add("French sanctions and seizure lists, Tether's USDT freeze list, and")
-        add("mixer pools and hack or phishing wallets tagged by the block")
-        add("explorer; an address absent from those lists is not thereby")
-        add("established as legitimate.")
+        add("Screening is an exact match against the lists named in the next")
+        add("section; an address absent from them is not thereby established")
+        add("as legitimate.")
         add("")
+
+    # -- lists -----------------------------------------------------------------
+    section("LISTS SCREENED AGAINST")
+    if screening_lists:
+        para("The lists this server held when this report was generated, compared "
+             f"with {screening_lists['as_of']} (UTC), the day this case was traced. A date "
+             "is when the list was last checked against its source.")
+        add("")
+        for entry in screening_lists.get("lists") or []:
+            para(entry["name"], indent="  ")
+            add(f"    {entry['file']}: checked {entry['checked'] or 'no date recorded'}"
+                + (f", published {entry['published']}" if entry.get("published") else ""))
+            if entry.get("note"):
+                para(entry["note"], indent="    ")
+        if screening_lists.get("not_held"):
+            add("")
+            para(f"Not loaded for this chain, so not screened: {', '.join(screening_lists['not_held'])}.")
+    else:
+        add("The lists for this chain could not be determined.")
+    add("")
 
     # -- patterns --------------------------------------------------------------
     section("LAUNDERING PATTERNS DETECTED")
@@ -589,7 +695,7 @@ def render_text_report(report: dict[str, Any]) -> str:
             else:
                 para(f.get("message") or "No exchange was reached.", indent="    ")
             for step in (f.get("trace_path") or [])[1:]:
-                named = f" ({step['label']})" if step.get("label") else ""
+                named = f" ({_shown_label(step['label'])})" if step.get("label") else ""
                 add(f"    hop {step.get('depth')}               : {step.get('address')}{named} "
                     f"received {step.get('value_native', 0):,.4f} {f['asset']}")
             for note in f.get("risk_notes") or []:
@@ -607,8 +713,11 @@ def render_text_report(report: dict[str, Any]) -> str:
             add(f"TronScan tags read live    : {live.get('asked', 0)} unlabelled wallets asked, "
                 f"{len(live.get('found') or [])} tagged as an exchange, "
                 f"{len(live.get('warnings') or [])} carrying a TronScan warning")
+            if live.get("asked") and live.get("requests") == 0:
+                para("All were answered from this server's cache, not a fresh request. "
+                     "When each was first read is in Appendix C.", indent="  ")
             for f in live.get("found") or []:
-                add(f"  - {f['address']} {f['label']}")
+                add(f"  - {f['address']} {_shown_label(f['label'])}")
             for w in live.get("warnings") or []:
                 add(f"  ! {w['address']} warning tag \u201c{w['warning']}\u201d")
         else:
@@ -647,13 +756,15 @@ def render_text_report(report: dict[str, Any]) -> str:
     section("APPENDIX B - EVERY TRANSACTION IN THE TRACE")
     transactions = appendix.get("transactions") or []
     if transactions:
-        add("Each line can be opened on the block explorer named in the header.")
+        add("Each hash can be opened on the block explorer named in the header.")
         add("")
-        add(f"{'time (UTC)':<17} {'value ' + symbol:>16}  from -> to (i = moved by a contract call)")
+        para(f"Each gives its time, then its value in {symbol} and from -> to "
+             "(i = moved by a contract call), then its hash.")
         add("-" * 78)
         for tx in transactions:
             flag = "i" if tx.get("internal") else " "
-            add(f"{_when(tx.get('timestamp')):<17} {tx.get('value_native', 0):>16,.4f} {flag} "
+            add(_when(tx.get("timestamp")))
+            add(f"{tx.get('value_native', 0):>16,.4f} {flag} "
                 f"{(tx.get('from') or '')[:10]}.. -> {(tx.get('to') or '')[:10]}..")
             add(f"    {tx.get('hash')}")
     else:

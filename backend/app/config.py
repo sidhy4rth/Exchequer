@@ -520,6 +520,8 @@ BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
 # ---------------------------------------------------------------------------
 # Lane B: evidence and intelligence
 # ---------------------------------------------------------------------------
+# A screening list older than this when a case was traced gets a warning in its report.
+LIST_STALE_DAYS: int = 7
 
 
 # ---------------------------------------------------------------------------

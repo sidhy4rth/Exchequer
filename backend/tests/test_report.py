@@ -73,7 +73,8 @@ def test_the_text_report_carries_every_section_an_officer_needs():
     assert "infers to be a Binance deposit address" in flat
     assert "INFERRED from the wallet's behaviour" in text
     assert "PATH THE MONEY TOOK" in text
-    assert "sent 9.5 ETH in 2 transfers between 2023-11-14 22:13 UTC and 2023-11-16 02:00 UTC to" in flat
+    assert ("sent 9.5 ETH in 2 transfers between 2023-11-15 03:43 IST (2023-11-14 22:13 UTC) "
+            "and 2023-11-16 07:30 IST (02:00 UTC) to") in flat
     assert "tx 0xaaa" in text
     assert "INFERRED DEPOSIT ADDRESSES" in text
     assert f"outgoing transfers : 3, all to {HOT}" in flat

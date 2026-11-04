@@ -6,7 +6,13 @@ there. Both must be refused.
 """
 from __future__ import annotations
 
+import json
+from types import SimpleNamespace
+
+import pytest
+
 from app import config
+from app.etherscan_client import EtherscanError
 from scripts import port_evm_labels as port
 
 
@@ -34,6 +40,64 @@ def test_only_an_account_that_has_sent_on_the_chain_is_carried_over():
 def test_deposit_and_contract_wallets_are_never_candidates():
     candidates = port.ethereum_candidates()
     assert candidates and not any(m["type"] in port.SKIP_TYPES for m in candidates.values())
+
+
+@pytest.fixture
+def two_chains(tmp_path, monkeypatch):
+    """Polygon and Arbitrum writing to temporary files, with one sanctioned candidate."""
+    listed = "0x" + "4" * 40
+    monkeypatch.setattr(port, "sanctioned_candidates", lambda: {
+        listed: {"category": "sanctioned", "entity": "E", "label": "E", "source": "OFAC SDN list"}})
+    chains = {}
+    for key in port.TARGETS:
+        chains[key] = SimpleNamespace(name=key, chain_id=1, risk_labels_path=tmp_path / f"risk_{key}.json",
+                                      labels_path=tmp_path / f"labels_{key}.json")
+    monkeypatch.setattr(config, "CHAINS", chains)
+    return chains, listed
+
+
+class ClientContext:
+    def __init__(self, *_, **__):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+
+def test_sanctions_only_writes_the_risk_files_and_leaves_the_exchange_files(two_chains, monkeypatch):
+    chains, listed = two_chains
+    monkeypatch.setattr(port, "EtherscanClient", ClientContext)
+    monkeypatch.setattr(port, "check", lambda _client, _address: "ok")
+
+    assert port.sanctions_only(dry_run=False) == 0
+    for chain in chains.values():
+        assert listed in json.loads(chain.risk_labels_path.read_text())["labels"]
+        assert not chain.labels_path.exists()
+
+
+def test_sanctions_only_stops_on_a_failed_check_rather_than_dropping_the_address(two_chains, monkeypatch):
+    """A rate limit must not read as "not used on this chain" and un-list a designated party."""
+    chains, _ = two_chains
+    monkeypatch.setattr(port, "EtherscanClient", ClientContext)
+
+    def rate_limited(_client, _address):
+        raise EtherscanError("Max rate limit reached")
+
+    monkeypatch.setattr(port, "check", rate_limited)
+    assert port.sanctions_only(dry_run=False) == 1
+    assert not any(chain.risk_labels_path.exists() for chain in chains.values())
+
+
+def test_an_address_not_used_on_the_chain_is_still_left_out(two_chains, monkeypatch):
+    chains, listed = two_chains
+    monkeypatch.setattr(port, "EtherscanClient", ClientContext)
+    monkeypatch.setattr(port, "check", lambda _client, _address: "inactive")
+
+    assert port.sanctions_only(dry_run=False) == 0
+    assert listed not in json.loads(chains["polygon"].risk_labels_path.read_text())["labels"]
 
 
 def test_polygon_and_arbitrum_are_etherscan_chains_with_their_own_stablecoins():

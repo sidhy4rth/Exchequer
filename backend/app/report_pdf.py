@@ -28,6 +28,7 @@ from reportlab.platypus import (
 from xml.sax.saxutils import escape
 
 from .evidence import CONTENT_HASH_MARK
+from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso
 from .signing import SIGNATURE_MARK
 
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
@@ -114,6 +115,20 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     story.append(_p(f"Case {case_id}", st["small"]))
     story.append(Spacer(1, 8))
 
+    # -- an old screening list, before anything that relies on the screening ---
+    screening_lists = report.get("screening_lists") or {}
+    if screening_lists.get("warning"):
+        stale = Table([[Paragraph(
+            f"<font name='Plex-Bold' color='{RED.hexval()}'>WARNING.</font> "
+            f"<font color='{RED.hexval()}'>{escape(screening_lists['warning'])}</font>", st["cell"])]],
+            colWidths=[None])
+        stale.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 1, RED),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story += [stale, Spacer(1, 8)]
+
     # -- the finding --------------------------------------------------------
     exchange = attribution.get("exchange")
     heading = exchange or "No exchange reached"
@@ -127,17 +142,19 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     facts = [
         ("Reported address", case["reported_address"], True),
         ("Chain · asset · direction", f"{case['chain']} · {case['asset']} · {case['direction']}", False),
-        ("Traced at", case.get("traced_at", ""), False),
+        ("Traced at", _when_iso(case.get("traced_at")), False),
     ]
     if exchange:
         facts += [
-            ("Address to ask the exchange about", attribution.get("exchange_address", ""), True),
-            ("Wallet", attribution.get("exchange_wallet_label") or "", False),
+            ({EXPLORER_TAG: "Address to ask the exchange to confirm",
+              EXCHANGE_WALLET: "Wallet the funds reached"}.get(attribution.get("kind"), "Address to ask the exchange about"),
+             attribution.get("exchange_address", ""), True),
+            ("Wallet", _shown_label(attribution.get("exchange_wallet_label")), False),
             ("Hops from the reported address", attribution.get("hop_count", ""), False),
         ]
         prorata = attribution.get("prorata") or {}
         if prorata.get("status") == "estimated":
-            facts.append(("Reported funds that likely arrived (pro-rata)",
+            facts.append(("Sent from the reported address that likely arrived (pro-rata)",
                           f"≈ {_num(prorata.get('estimated'))} of {_num(prorata.get('sent'))} "
                           f"{attribution.get('value_currency', '')}", False))
     if confidence.get("score") is not None:
@@ -154,7 +171,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     story += [Spacer(1, 10), table]
 
     if confidence.get("summary"):
-        story += [_p("HOW SURE", st["micro"]), _p(confidence["summary"], st["cell"])]
+        story += [_p("HOW SURE", st["micro"]), _p(_shown_label(confidence["summary"]), st["cell"])]
 
     # -- how to verify --------------------------------------------------------
     verify = Table([[Paragraph(
@@ -179,8 +196,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     if not screening.get("screened"):
         story.append(_p("This chain has no screening lists loaded; no screening was done.", st["cell"]))
     elif not matches:
-        story.append(_p("No address in the trace is on a sanctions, mixer, Tether-freeze or stolen-funds list.",
-                        st["cell"]))
+        story.append(_p("No address in the trace is on the lists below.", st["cell"]))
     else:
         for m in matches[:8]:
             colour = RED if m.get("category") in ("sanctioned", "mixer") else AMBER
@@ -191,6 +207,15 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
         if len(matches) > 8:
             story.append(_p(f"…and {len(matches) - 8} more, listed in Part 2.", st["small"]))
 
+    # -- the lists and their dates ----------------------------------------------
+    if screening_lists.get("lists"):
+        story.append(_p("LISTS SCREENED AGAINST", st["micro"]))
+        for entry in screening_lists["lists"]:
+            published = f", published {entry['published']}" if entry.get("published") else ""
+            note = f" {entry['note']}" if entry.get("note") else ""
+            story.append(_p(f"{entry['name']}: checked {entry['checked'] or 'no date recorded'}{published}.{note}",
+                            st["small"]))
+
     # -- the route ------------------------------------------------------------
     path = report.get("trace_path") or []
     if len(path) > 1:
@@ -198,9 +223,9 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
         route = [[_p("Hop", st["small"]), _p("Address", st["small"]), _p("Label", st["small"]),
                   _p("Received", st["small"])]]
         for step in path:
-            label = step.get("label") or step.get("exchange") or ""
+            label = _shown_label(step.get("label") or step.get("exchange"))
             if not label and step.get("address") == attribution.get("exchange_address"):
-                label = attribution.get("exchange_wallet_label") or ""
+                label = _shown_label(attribution.get("exchange_wallet_label"))
             if not label and step.get("depth") == 0:
                 label = "reported address"
             amount = step.get("value_native")
@@ -224,7 +249,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     if limits:
         story.append(_p("READ WITH THESE LIMITATIONS", st["micro"]))
         for item in limits[:3]:
-            story.append(Paragraph(f"• {escape(item)}", st["small"]))
+            story.append(Paragraph(f"• {escape(_shown_label(item))}", st["small"]))
         if len(limits) > 3:
             story.append(_p(f"…{len(limits) - 3} more in Part 2.", st["small"]))
 
