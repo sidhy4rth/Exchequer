@@ -6,7 +6,7 @@
   "chain": "arbitrum",
   "last_reviewed": "2026-11-04",
   "counts": {
-   "gambling": 601
+   "gambling": 599
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
   "schema": "labels maps an address to {category, entity, label, source}"
@@ -1110,12 +1110,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 4x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x077abd625849a2c8795384c2ecd3df416f4ae861d1a90dbdafed9462bb9fbffc, 2025-11-11)"
   },
-  "0x4b2cad10b86c42fb79518d0ee4905d2868a77d42": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury hot wallet",
-   "source": "Block explorer gambling tag \u201cBetFury 2\u201d (via dawsbot/eth-labels)"
-  },
   "0x4b6ca8b6ad6e71ae9f4bbe70390a9375947e89c1": {
    "category": "gambling",
    "entity": "1xBet",
@@ -1223,12 +1217,6 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 9x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x94c29ad033826f1c7a96a57496d4094c1233b11b93ef76206a2a59d6b6ceb92e, 2025-12-01)"
-  },
-  "0x52a21eab91f82886e95a5a69ab69fc09d29fc4f8": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x4b2cad10b86c42fb79518d0ee4905d2868a77d42 (sample tx 0x5b0e82c9feb9a047912318cd8a5156c2e0cbceeb09c8fb05524d20b1404f8d72, 2024-12-25)"
   },
   "0x52a258ed593c793251a89bfd36cae158ee9fc4f8": {
    "category": "gambling",

@@ -6,18 +6,12 @@
   "chain": "polygon",
   "last_reviewed": "2026-11-04",
   "counts": {
-   "gambling": 2687
+   "gambling": 2670
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
   "schema": "labels maps an address to {category, entity, label, source}"
  },
  "labels": {
-  "0x0000000000000000000000000000000000000000": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 16x USDT into BetFury hot wallet 0x4b2cad10b86c42fb79518d0ee4905d2868a77d42 (sample tx 0xab895dbf90ff090191f17633a2f449a4f2cd1e918879d550537a6c9b590b770e, 2023-02-13)"
-  },
   "0x00026e725cd1939cad59ce1c2b543ca3f1b03d0e": {
    "category": "gambling",
    "entity": "BetFury",
@@ -2802,18 +2796,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x194d626af7d0d40fdf92caa7feef4155fc0ca5f38f0a4e70a4bb9d47a1d84611, 2025-10-14)"
   },
-  "0x2baf06d8e5b054f35308c681282d732d6ef8f24e": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 86x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x3de4f0cf5bb10203f33a14d65ebaeab28578a858c0c99387b6c30fa36c8f9528, 2026-05-07)"
-  },
-  "0x2baf09d45999c7cce3d6f2c7f99682aac441f24e": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 2x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x5d9afedf196992f6e5e717eff708a277a9257ec1f3b0ae7bc6bafbe995083d8c, 2026-03-14)"
-  },
   "0x2bb4f0a1beb6706a399b906d8ac5e044f22e4194": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -5436,12 +5418,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 21x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x8e226058c865c207443b36d97fe7c7ea1bb62ccd5f4d1735ba778f21a713caf8, 2025-10-15)"
   },
-  "0x52a21eab91f82886e95a5a69ab69fc09d29fc4f8": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 13x USDC into BetFury hot wallet 0x4b2cad10b86c42fb79518d0ee4905d2868a77d42 (sample tx 0x1ca08d6ecac71142b900d8df1ee339306ffb75a560fd46da5a73b81109172967, 2025-03-11)"
-  },
   "0x52a258ed593c793251a89bfd36cae158ee9fc4f8": {
    "category": "gambling",
    "entity": "BetFury",
@@ -7818,18 +7794,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5e009c43975e003f6c77a291d4e942332737a787b160be2d1b443174be09151d, 2026-11-02)"
   },
-  "0x796110356828bf4817ae538366767a7f9e37416a": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 2x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x1e0f90e99aaec745395f7fc9f3447fd5c670dfe441df82209024c9f1f4fa3129, 2026-03-14)"
-  },
-  "0x7961dea61da09085afa9dbfe2b8143a119f3416a": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 48x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x2a44b9cc6713a1ea191ad8d9bcb06f845a868f37344605dff2ed88dabdc9df98, 2026-05-05)"
-  },
   "0x799518ca0b5980c307ffa10e5eed3a846159349f": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -8507,12 +8471,6 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 25x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xfca81cfcbd7cdd3aa082bb6412410904afef1bcf292df844c637bd6580f76ddd, 2025-10-15)"
-  },
-  "0x84f7c7f5413eab4d7e179b68be4ae380c77de949": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x4b2cad10b86c42fb79518d0ee4905d2868a77d42 (sample tx 0x0e5dc5eaeca719b166d091795a3e45ed43185f7311c6136b6d97b3c3ddf9a939, 2026-04-30)"
   },
   "0x850c53d8ae602954043679eebcc220302d08764b": {
    "category": "gambling",
@@ -9864,18 +9822,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 2x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xf0d8a61d5e82ae2adcc0e3ae6804a5e0df88aac34cdddaabcef19889e21ce92a, 2025-10-07)"
   },
-  "0x9b491e32ceaedc9780928c3944d9a2257fdfbdc6": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 2x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x52de87ee82f6f31ee042405616298e1347d459fd4654453f05eed69849f26d92, 2026-03-14)"
-  },
-  "0x9b4961648daeb686590734feed7877a4538bbdc6": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 42x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x4a4d07c298f43950df8d566d9cd28af99ca056c1ec684115bb39624bff3e8396, 2026-05-07)"
-  },
   "0x9b5b2a2537d535cd09b282995fbbf37a3f178a6a": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -10223,18 +10169,6 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x76c15265fa17bc428d7cc8e8f69bf5df0614948e912fcb5189aeb0fb45baa97f, 2025-10-09)"
-  },
-  "0xa0c4248ddcced073940302536bc5e7aa4ffe86b4": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 5x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xc070154baa607a6973e4041cec3ce006e203aa5d0063d4db538d96608dc14ab2, 2025-10-12)"
-  },
-  "0xa0c4a7c5266d2072ebb18c5c9440977b53f786b4": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x7aae2aeb76e81e4da1da25836d5bd9efc3de441de73ce218ac60be5df1a5e3e2, 2025-10-08)"
   },
   "0xa0ce8b577a629f770e4bcd7aa868fe7ab9d8ae84": {
    "category": "gambling",
@@ -11922,18 +11856,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xc9ca2cf6c2b7be2e4adacaf095adf21b9b44255d4251aec21570cb120e81b4a3, 2026-07-20)"
   },
-  "0xbc3514ab31a5c78e239af71f2c0cc8159a35b640": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xd4526f10348ea458f1b03d482875f8f2aac009512c9837a86082facfd0412cfe, 2026-08-17)"
-  },
-  "0xbc35a0f1910a93f77eba1fec07b65a74e7a3b640": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xef1463487bd1d8fe067eb140e02dd6f23b6fd7b5422cb05518d75044617e7b56, 2026-10-12)"
-  },
   "0xbc4c6907a4742d40e9e068de76fa16e3dd44432a": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -12197,18 +12119,6 @@
    "entity": "wolf.bet",
    "label": "wolf.bet deposit address",
    "source": "Swept 5x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x97960ed303cd4d45144c23b0c0a0b06d196d9560d751e18bf164fa2da70aebb3, 2024-06-24)"
-  },
-  "0xc0af7c2f54d13157c5e33cc53aead903dc24c79a": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 10x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x98223d2557ddebc1319abe6d603310bde9b3191a986cb771343dc80ff05b029e, 2026-03-18)"
-  },
-  "0xc0afbbc8a92390412f27c9fbb1181c66613ec79a": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 2x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x70bc9224295ec232f9b3a5e2d0f4a7af9e900f49586911d0dcea0dd217a1c740, 2026-03-14)"
   },
   "0xc0c7797b90091f72f8b9d12cb5569b9bbf532333": {
    "category": "gambling",
@@ -15737,18 +15647,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3e9f681cb951cd54bc1facc209c33ccc784d61dc1b19f2417a04b13c0e5ef9ed, 2026-11-01)"
-  },
-  "0xfb9b1ffc5e27cb2248b1b54bd0dbcaa7b927c8a8": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 122x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0xce2e80a104c2c72b9043ce1ef7ca096a635876672ef19a35187a05875d9e7ad1, 2026-05-06)"
-  },
-  "0xfb9b326d7a5384fe1e38838d0576622afdedc8a8": {
-   "category": "gambling",
-   "entity": "Bitcasino",
-   "label": "Bitcasino deposit address",
-   "source": "Swept 3x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x48eb0622c5fd728384c5a41e8d88d1e63c017e8674b87ade0e9bc0cb49b4ba8d, 2026-03-14)"
   },
   "0xfbb4c6939ff05dc0ded81a9b2b2afeda3e49fd6d": {
    "category": "gambling",

@@ -137,7 +137,15 @@ def main() -> int:
     for chain, (_, ex_file) in CHAIN_FILES.items():
         p = DATA / ex_file
         exchange[chain] = set(json.loads(p.read_text()).get("labels", {})) if p.exists() else set()
+    # Deposit "sweeps" that were really address-poisoning (zero/dust transfers from lookalikes of genuine
+    # deposit addresses, or addresses on our poisoning lists) must never be labelled as gambling.
+    sp = hunt / "raw/gambling_suspect_poisoners.json"
+    suspects = set(json.loads(sp.read_text())) if sp.exists() else set()
+    deposits = [d for d in deposits if (d.get("address") or "").lower() not in suspects]
     built = build(seeds, deposits, tron_rows, exchange)
+    for chain_labels in built.values():
+        for a in [a for a in chain_labels if a in suspects]:
+            del chain_labels[a]
     for chain, labels in built.items():
         fname = CHAIN_FILES[chain][0]
         doc = {
