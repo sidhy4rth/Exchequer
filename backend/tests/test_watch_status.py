@@ -31,6 +31,16 @@ def ago(minutes: float) -> str:
     return (datetime.now(tz=timezone.utc) - timedelta(minutes=minutes)).isoformat(timespec="seconds")
 
 
+def about(stamp: str, minutes: float) -> bool:
+    """`stamp` is `minutes` ago, give or take the seconds the test itself took.
+
+    ago() is second-granular and called again at assert time, so comparing the
+    strings fails whenever the clock ticks over a second in between.
+    """
+    want = datetime.now(tz=timezone.utc) - timedelta(minutes=minutes)
+    return abs((datetime.fromisoformat(stamp) - want).total_seconds()) <= 2
+
+
 def add_watch(watch_id: str, checked: float | None, created: float = 0, active: bool = True) -> None:
     with models.session() as s:
         s.add(models.Watch(
@@ -52,7 +62,7 @@ def test_a_recent_check_is_reported_and_not_stale(store):
     add_watch("w2", checked=12)
     status = watchlist.watcher_status()
     assert status["active_watches"] == 2
-    assert status["last_check_at"] == ago(4)
+    assert about(status["last_check_at"], 4)
     assert status["stale"] is False
 
 
@@ -92,6 +102,6 @@ def test_the_panel_and_the_operator_both_see_it(store, monkeypatch):
     monkeypatch.setattr(config, "HEALTH_TOKEN", TOKEN)
     client = TestClient(app)
     panel = client.get("/watches", headers={ownership.OWNER_HEADER: OWNER}).json()
-    assert panel["watcher"]["stale"] is True and panel["watcher"]["last_check_at"] == ago(45)
+    assert panel["watcher"]["stale"] is True and about(panel["watcher"]["last_check_at"], 45)
     detail = client.get("/health/detail", headers={"authorization": f"Bearer {TOKEN}"}).json()
     assert detail["watcher"]["stale"] is True
