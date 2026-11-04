@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchBatch } from '../api'
+import { bandLabel, bandOf } from '../components/confidence'
 import Mark from '../components/Mark'
 import ThemeToggle from '../components/ThemeToggle'
 
@@ -52,7 +53,7 @@ export default function Batch() {
                         <td className="mono">{r.case_id ? <Link to={`/case/${r.case_id}`}>{short(r.address)}</Link> : short(r.address)}</td>
                         <td>{r.chain} · {r.asset}</td>
                         <td className={r.exchange ? '' : 'none'}>{r.status === 'done' ? (r.exchange ?? 'no match') : <span title={r.error ?? ''}>{STATUS[r.status] ?? r.status}{r.error ? `: ${r.error}` : ''}</span>}</td>
-                        <td className="num">{r.confidence == null ? '' : r.confidence.toFixed(2)}</td>
+                        <td>{r.confidence == null ? '' : bandLabel(bandOf(r.confidence))}</td>
                       </tr>
                     ))}
                   </tbody>
