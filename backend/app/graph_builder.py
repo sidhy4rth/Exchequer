@@ -30,7 +30,12 @@ a deliberate, documented investigative choice, not an arbitrary cap:
         goes deeper is simply not followed -- the README says so.
   2. max_branches_per_node (default 10)
         We follow the highest-value destinations first. Laundering follows the
-        money; dust and airdrop spam do not carry the stolen funds.
+        money; dust and airdrop spam do not carry the stolen funds. A split
+        into more parts than this hides the smallest, so with R5's flag on
+        the rule becomes "every destination carrying at least
+        branch_min_share of what the address sent", capped at
+        max_branches_hard. Either way the value not followed is recorded in
+        TraceResult.untraced and reported, never dropped silently.
   3. min_value_native (default 0.001)
         Below this, a transfer is dust/spam rather than a real movement of
         value, and following it wastes API budget.
@@ -76,7 +81,7 @@ import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 
 import networkx as nx
 
@@ -112,6 +117,11 @@ class TraceConfig:
     max_nodes: int = config.TRACE_MAX_NODES
     max_txs_per_address: int = config.TRACE_MAX_TXS_PER_ADDRESS
     max_branches_per_node: int = 10
+    # R5, taint-driven expansion: when set, brake 2 follows every counterparty
+    # carrying at least this share of what the address sent, instead of the
+    # top `max_branches_per_node`; `max_branches_hard` caps it for cost.
+    branch_min_share: float | None = None
+    max_branches_hard: int = 50
     min_value_native: float = 0.001
     # How many addresses at one depth may be in flight at once. This is not a
     # fifth brake: it changes how long the same requests take, never which
@@ -159,6 +169,9 @@ class TraceResult:
     # Busy wallets whose newest page did not reach the funds' arrival, so they
     # were also read from that block forward.
     read_from_arrival: list[str] = field(default_factory=list)
+    # Value an address sent that the walk did not follow (brake 2), one entry
+    # per address: {address, counterparties, value_native, share_of_outflow, rule}.
+    untraced: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def node_count(self) -> int:
@@ -172,6 +185,55 @@ class TraceResult:
         self.truncated = True
         if reason not in self.truncation_reasons:
             self.truncation_reasons.append(reason)
+
+
+def _choose_branches(
+    branches: list[tuple[str, list[Transaction]]], address: str, cfg: TraceConfig, result: TraceResult,
+) -> list[tuple[str, list[Transaction]]]:
+    """Which counterparties of `address` the walk follows (brake 2), largest first.
+
+    Top-N (the default): the `max_branches_per_node` largest. A launderer who
+    splits the money into more parts than that hides the smallest ones.
+
+    Share-based (R5, `branch_min_share` set): every counterparty that received
+    at least that share of what `address` sent in the window, up to a hard
+    safety cap of `max_branches_hard` so one wallet cannot spend the trace's
+    API budget. Splitting 40 into twelve parts of 3.33 no longer hides any.
+
+    Either way, what was not followed is recorded in `result.untraced` with
+    its value, so a report states the untraced remainder instead of dropping
+    it silently.
+    """
+    def value(item: tuple[str, list[Transaction]]) -> float:
+        return sum(tx.value_native for tx in item[1])
+
+    if cfg.branch_min_share is None:
+        kept = branches[: cfg.max_branches_per_node]
+        if len(branches) > len(kept):
+            result.note_truncation(
+                f"fan-out limit of {cfg.max_branches_per_node} counterparties "
+                f"per address applied at {address[:10]}..."
+            )
+    else:
+        total = sum(value(b) for b in branches)
+        carrying = [b for b in branches if total > 0 and value(b) >= cfg.branch_min_share * total]
+        kept = carrying[: cfg.max_branches_hard]
+        if len(carrying) > len(kept):
+            result.note_truncation(
+                f"safety cap of {cfg.max_branches_hard} counterparties per address applied at "
+                f"{address[:10]}..., each carrying at least {cfg.branch_min_share:.0%} of what it sent"
+            )
+    followed = {counterparty for counterparty, _ in kept}
+    left = [b for b in branches if b[0] not in followed]
+    if left:
+        result.untraced.append({
+            "address": address,
+            "counterparties": len(left),
+            "value_native": round(sum(value(b) for b in left), 6),
+            "share_of_outflow": round(sum(value(b) for b in left) / (sum(value(b) for b in branches) or 1), 4),
+            "rule": "top_n" if cfg.branch_min_share is None else "min_share",
+        })
+    return kept
 
 
 def _aggregate_by_counterparty(
@@ -554,12 +616,7 @@ def build_trace_graph(
 
             # Brake 2: follow the money -- highest total value first.
             branches.sort(key=lambda item: sum(tx.value_native for tx in item[1]), reverse=True)
-            if len(branches) > cfg.max_branches_per_node:
-                result.note_truncation(
-                    f"fan-out limit of {cfg.max_branches_per_node} counterparties "
-                    f"per address applied at {address[:10]}..."
-                )
-                branches = branches[: cfg.max_branches_per_node]
+            branches = _choose_branches(branches, address, cfg, result)
 
             for counterparty, txs in branches:
                 total_value = sum(tx.value_native for tx in txs)

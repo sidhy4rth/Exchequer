@@ -63,6 +63,13 @@ export async function fetchCase(caseId) {
   return response.json()
 }
 
+/** What the trace form may offer: { payments: bool, lookup_limit: int } (R1). */
+export async function fetchTraceIntake() {
+  const response = await apiFetch(`${BASE}/trace/intake`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
 /** Which DEMO.md traces have a recording, and when each was made. */
 export async function fetchRecordedDemos() {
   const response = await apiFetch(`${BASE}/demos/recorded`)
@@ -153,7 +160,7 @@ function watchJob(jobId, onProgress) {
  * `onProgress(snapshot)` receives { status, progress: { stage, hop, max_depth,
  * level_size, level_read, addresses }, elapsed } as the trace moves.
  */
-export function runTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds }, onProgress) {
+export function runTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments, ncrpAck }, onProgress) {
   const body = JSON.stringify({
     address,
     ...(maxDepth ? { max_depth: maxDepth } : {}),
@@ -161,6 +168,10 @@ export function runTrace({ address, maxDepth, chain, asset, direction, timeBudge
     ...(asset ? { asset } : {}),
     ...(direction ? { direction } : {}),
     ...(timeBudgetSeconds ? { time_budget_seconds: timeBudgetSeconds } : {}),
+    // R1: start from the victim's payments. The backend checks each one is an
+    // incoming transfer to `address`, and reads the wallet from the first.
+    ...(payments?.length ? { payments: payments.map((h) => ({ tx_hash: h })) } : {}),
+    ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}),
   })
   const existing = jobsInFlight.get(body)
   if (existing) { existing.listeners.add(onProgress); return existing.promise }

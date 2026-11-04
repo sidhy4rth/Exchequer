@@ -71,3 +71,15 @@ def test_nodereal_native_coin_is_still_18_decimals():
     client = NoderealClient(api_key="k")
     raw = _nodereal_record(value=hex(3 * 10**18), decimal=None, contractAddress=None, asset="BNB")
     assert client._to_transaction(raw).value_native == 3
+
+
+def test_each_chain_publishes_its_native_coin_decimals():
+    # Problem O6: TRX was published with 18 decimals; it has 6.
+    from app import config
+    from app.tron_client import SUN_PER_TRX
+
+    published = {key: chain.to_dict()["assets"][0] for key, chain in config.CHAINS.items()}
+    assert published["tron"] == {"symbol": "TRX", "address": None, "decimals": 6, "native": True}
+    assert 10 ** published["tron"]["decimals"] == SUN_PER_TRX
+    for key in ("ethereum", "bsc", "polygon", "arbitrum"):
+        assert published[key]["decimals"] == 18, key

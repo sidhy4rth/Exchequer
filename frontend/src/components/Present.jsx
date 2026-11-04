@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import FlowView from './FlowView'
 import GraphView from './GraphView'
 import ExportButton from './ExportButton'
+import { bandLabel, bandOf } from './confidence'
 
 // Present mode: the same case as four screens, one thing on each, big
 // enough to read from the back of a room. Nothing is computed here that the
@@ -104,8 +105,8 @@ export default function Present({ result, related = [], unit, onClose }) {
           </>
         ) : (
           <>
-            <span className="pr-big green">{result.confidence.toFixed(2)}</span>
-            <span className="pr-note">{band} · three inputs, nothing else</span>
+            <span className="pr-big green">{band || bandLabel(bandOf(result.confidence))}</span>
+            <span className="pr-note">three inputs, nothing else · a rule, not a probability</span>
             <div className="pr-bars">
               {components.map((c) => (
                 <div className="pr-bar" key={c.name}>
@@ -162,7 +163,7 @@ export default function Present({ result, related = [], unit, onClose }) {
       </div>
       <div className="pr-facts">
         <span><b>Sanctions</b> · {risk.length ? `${risk.length} listed address${risk.length === 1 ? '' : 'es'}` : 'no listed address'} · US, UK, EU, IL, JP, FR lists</span>
-        <span><b>Patterns</b> · {findings.length ? findings.map((f) => f.pattern.replace('_', ' ')).join(', ') : 'none matched'}</span>
+        <span><b>Hints</b> · {findings.length ? findings.map((f) => f.pattern.replace('_', ' ')).join(', ') : 'none matched'}</span>
         <span><b>Inferred deposits</b> · {inferred.length ? `${inferred.length} · probable ${inferred[0].exchange}, ${inferred[0].depth} hop${inferred[0].depth === 1 ? '' : 's'}` : 'none'}{swaps.length ? ` · ${swaps.length} swap${swaps.length === 1 ? '' : 's'}` : ''}</span>
         <span><b>Scope</b> · {result.api_calls} requests · depth {result.depth_reached} of {result.max_depth ?? '—'}{result.seconds_elapsed ? ` · ${result.seconds_elapsed} s` : ''}{result.time_budget_seconds ? ' · time cap' : ''}</span>
       </div>

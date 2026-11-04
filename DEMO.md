@@ -122,7 +122,7 @@ Ethereum · ETH · 3 hops · **~10 seconds**
 |---|---|
 | Addresses traced | 38 |
 | Exchange | **Binance — probable deposit address (inferred)** `0x2f9379f0…538e4`, **1 hop** — 18 sweeps since October 2022, every one to Binance 14 |
-| Confidence | **0.875** |
+| Confidence | **High** (0.875 when this was written). The recording of 14 October shows **Low** (0.40) at a different Binance deposit address: this demo moves, which is the point of it. The daily check only requires it to still reach an exchange. Say the band on screen, not this table's number. |
 | Pro-rata | **2.01 of 2.01 ETH** — everything that reached the deposit address came straight from the reported wallet |
 | History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: OKX deposit at 0.39 · 27 Sep: **Binance deposit at 0.875** |
 | Patterns | none |
@@ -327,6 +327,13 @@ see RESEARCH.md for both.
 0x000000000532b45f47779fce440748893b257865
 ```
 Ethereum · ETH · 3 hops · **~3 seconds, 26 API calls** (then open the stored case)
+
+> **How to show it now.** Correlation reads only the cases this browser traced
+> (R22, so a stranger can't see where complaints converge). The *Related cases*
+> panel therefore appears only after all three phishing addresses have been
+> traced live **in the same browser**, and never on the recorded demo, which is
+> not a stored case. Before presenting: trace `0x000000000532…`,
+> `0x0000000009324…` and `0x00000000bf02…` (3 hops each), then open this one.
 
 | | |
 |---|---|

@@ -1,0 +1,30 @@
+/* The payment fields of the trace form (R1). Lane A: kept beside the component
+   rather than in styles.css, per CLAUDE.md. */
+.payments {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.payments label {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+}
+.payments label small {
+  color: var(--muted, inherit);
+  opacity: 0.8;
+  font-weight: normal;
+}
+.payments textarea {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+}
+.payments textarea[aria-invalid="true"] {
+  outline: 1px solid var(--warn, #b45309);
+}
+.payments .ncrp input {
+  max-width: 22rem;
+}

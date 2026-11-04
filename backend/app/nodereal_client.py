@@ -368,6 +368,22 @@ class NoderealClient:
         txs = self._scan(address, "toAddress", MAX_SCAN, end_block, start_block)
         return txs, not self.last_scan_capped
 
+    def get_flows_between(
+        self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,
+    ) -> tuple[list[Transaction], list[Transaction], bool]:
+        """Every value-bearing transfer into and out of `address` in a block range.
+
+        For FIFO and LIBR (app/tracing_methods.py). Two scans, one per
+        direction; complete only if both are. Same range limit as
+        get_incoming_between.
+        """
+        if end_block - start_block > DEEP_WINDOWS * MAX_BLOCK_WINDOW:
+            return [], [], False
+        incoming = self._scan(address, "toAddress", MAX_SCAN, end_block, start_block)
+        complete_in = not self.last_scan_capped
+        outgoing = self._scan(address, "fromAddress", MAX_SCAN, end_block, start_block)
+        return incoming, outgoing, complete_in and not self.last_scan_capped
+
     def _nonce(self, address: str, block: int) -> int:
         return int(self._rpc("eth_getTransactionCount", [normalize_address(address), hex(block)]) or "0x0", 16)
 
