@@ -99,6 +99,20 @@ def test_categories_map_to_exchequer_ones_and_weak_ones_are_left_out():
     assert rows[0][0] == b"\x41" + bytes.fromhex("a6" * 20)
 
 
+def test_a_poisoning_row_is_on_chain_detection_unless_a_published_list_is_its_only_source():
+    """A row from our own detectors whose text is not "lookalike of …" (e.g. a Tron operator
+    expansion row) is still on-chain detection; only a list someone else published is tier 3."""
+    ours = row(address="0x" + "b7" * 20, chain="tron", category="address poisoning",
+               entity_or_incident="lookalike sent by verified poisoning operator T… (operator-level check)",
+               sources="Tron operator expansion (Mukesh, operator-level verification) ; "
+                       "Tron poisoning via BigQuery full-history scan (base58 4+4 lookalike)")
+    published = row(address=addr("7e57"), chain="ethereum", category="address poisoning",
+                    entity_or_incident="Address-poisoning phishing address (Etherscan+Forta labelled)",
+                    sources="Poison-Hunter CCS24 ground truth")
+    assert map_row(ours)[0][0][-1] == 4
+    assert map_row(published)[0][0][-1] == 3
+
+
 def test_a_lookup_cites_its_evidence_and_its_tier(store_path):
     store = LabelStore(store_path)
     hit = store.lookup("ethereum", POISONER.upper().replace("0X", "0x"))
