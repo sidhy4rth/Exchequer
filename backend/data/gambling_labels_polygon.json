@@ -6,7 +6,7 @@
   "chain": "polygon",
   "last_reviewed": "2026-11-04",
   "counts": {
-   "gambling": 2670
+   "gambling": 2630
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
   "schema": "labels maps an address to {category, entity, label, source}"
@@ -110,15 +110,15 @@
   },
   "0x019d0706d65c4768ec8081ed7ce41f59eef9b86c": {
    "category": "gambling",
-   "entity": "Cloudbet",
-   "label": "Cloudbet deposit address",
-   "source": "Swept 8x USDT into Cloudbet hot wallet 0x61870030c041b9b283e64e69ae80e5716d217b5f (sample tx 0x922dcb740aea5f1d092e3834244e0434923573ebb06d81ff66545d26517b9625, 2024-07-16)"
+   "entity": "Stake.com",
+   "label": "Stake.com hot wallet",
+   "source": "Block explorer gambling tag \u201cStake.com 9\u201d (via dawsbot/eth-labels)"
   },
   "0x01a26cf950d2433652b4ca0f71e14ad64efc9933": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x88ca902c205d46bec140d6838369f276ed7f9e69f8e3fc13ecbf230c378e22b9, 2026-11-03)"
+   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf1be475cf9b926122d9a6a650627b1148a201f0c06f7d1c1fd97ff7f9259be65, 2026-11-04)"
   },
   "0x01b037be0c2d7e0b71cc65458ccda85552b5e7d0": {
    "category": "gambling",
@@ -130,7 +130,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x53b1378c8186055eecff3e2d55c93565191160517772f5ed0bafd1e5cb5be969, 2026-10-26)"
+   "source": "Swept 4x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xd634229e779fc841985e3f26fda743163ae54e4a2a800f5b44ef29e4b2ad5f00, 2026-11-04)"
   },
   "0x01c131f82106dd34f9010187d4a8030d4e7e8163": {
    "category": "gambling",
@@ -172,7 +172,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 14x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc9a3efb1295cc8eefca7d6f05108a5a7e795630e2aab9e1ee027b7b2b3d72532, 2026-11-01)"
+   "source": "Swept 9x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc9a3efb1295cc8eefca7d6f05108a5a7e795630e2aab9e1ee027b7b2b3d72532, 2026-11-01)"
   },
   "0x02759541f206801872c7d568738a9c03925f8fc7": {
    "category": "gambling",
@@ -222,12 +222,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3bbc790f47d661a58e31274fd76e3ac4d354f8dd3697766e6ab8e6ca08b99263, 2026-11-03)"
   },
-  "0x030e07ed990da74289f2229bb748f6bd7d52846d": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x0efb6564b58fdedc8585c7fb864f1257ac8b6cd9ce72650188972e252a74216c, 2026-11-02)"
-  },
   "0x03154573268413d11eedcdffd3552fedd8125ecc": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -268,13 +262,13 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xfaf820e772054acdda54fcdef0f662fda788a547160d7de380fedb63db3abc18, 2026-11-02)"
+   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1710aab7fe00f3278aa29276ceecaec0eebdd991502d55e9d2c876f6b8e33c8d, 2026-11-03)"
   },
   "0x03c1232978f0bbdbdecd576ffe279f18cd7b9b25": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x004687f77a35dc57cf6580b8e2f8c24902eaa3cce88073466fc07125207e3655, 2026-11-02)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x004687f77a35dc57cf6580b8e2f8c24902eaa3cce88073466fc07125207e3655, 2026-11-02)"
   },
   "0x03d64b87e209111fbca897a9cf0895580c841e33": {
    "category": "gambling",
@@ -286,7 +280,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x0a63ac33859baa547d803276e3fbfddf6fdb340c3c641da9324ecb07568e84e7, 2026-11-02)"
+   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4fa959b9f8a938938d5d689f1ca19dc58c6b49a0fe31f6a324aabe45a103edb9, 2026-11-04)"
   },
   "0x03e2e3ee5338880876c78939159430fb7f15ff88": {
    "category": "gambling",
@@ -364,7 +358,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x597057731a1b980275e4d275d869f8b5c63ebc31930ab2ec158dad531e4a4acb, 2026-10-30)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x792358257a73a67e29e1b069bf42a715d607853626f3cc19245f7a4f224efa03, 2026-10-29)"
   },
   "0x04d15f174ac07252ff7d2c44547a55b086d27335": {
    "category": "gambling",
@@ -424,7 +418,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd9b605e077d5ad7525351bbe296a99e72709f1544575ea1eccd62d19fc8d5869, 2026-11-01)"
+   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd9b605e077d5ad7525351bbe296a99e72709f1544575ea1eccd62d19fc8d5869, 2026-11-01)"
   },
   "0x059d84f9bc80429e6d013febdea4ebdac4a41e9b": {
    "category": "gambling",
@@ -454,7 +448,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 16x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4f93ff560332076039ab2e55c89fc04b0f8dd66eee699f0fd88d4bbcb05814bb, 2026-11-03)"
+   "source": "Swept 15x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4f93ff560332076039ab2e55c89fc04b0f8dd66eee699f0fd88d4bbcb05814bb, 2026-11-03)"
   },
   "0x05df396b71202fa317f72ce3cc3a18f23e156e06": {
    "category": "gambling",
@@ -484,7 +478,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x5b44f0ae2196d5ae5b48e5d4ad95e0ab3df0dff6f3e440c4e26e0e93caf7c146, 2026-08-04)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xf8eb370a0449b769e849560b2a0b280fc056e184cb267bc26cec948471cb874e, 2026-07-31)"
   },
   "0x06ce9dd2558e80ffd344c4a9d9f6216b11a573ce": {
    "category": "gambling",
@@ -496,7 +490,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 11x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xe116d62278f22097ddbd296e19ec9fea6923774dcc6b426a3c2e4079c55b33d4, 2026-11-02)"
+   "source": "Swept 11x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa166cc86eb0bbcdd967c34ade0e063146d3df6490d19c2c11e1021eb066d0aab, 2026-11-03)"
   },
   "0x06feffaf6de584f5f32a986558905c247f0ae2a6": {
    "category": "gambling",
@@ -702,12 +696,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 2x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x056134e9f3471221d684462044ef036d92fc857173198c291b23e7f7e950de0f, 2025-10-04)"
   },
-  "0x0a1b4579e43a2c381e7be33829c7fcb9d944494a": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x599fc68e38cdb16355d16219fe436d63ee6583c468ef08d987a72d849571bffc, 2026-10-29)"
-  },
   "0x0a73dc6f820b298a46f0d6ae44e7980f88fa8220": {
    "category": "gambling",
    "entity": "1xBet",
@@ -738,12 +726,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 4x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x4a5d49f3b3155c95bf5856b1615bc18778461699522a94d6173aae529802c597, 2025-10-10)"
   },
-  "0x0adddc3e8ffbe8625a99c2f25dfa4fd3c5d920b5": {
-   "category": "gambling",
-   "entity": "wolf.bet",
-   "label": "wolf.bet deposit address",
-   "source": "Swept 2x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x258d23eab2fd58f869320488789df014ba81f7ee6d4cb06285f817d274dd51be, 2024-06-30)"
-  },
   "0x0b018a640e68833338f47efdbea49bc818b1aa7c": {
    "category": "gambling",
    "entity": "1xBet",
@@ -760,7 +742,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x14e8488e449cd4be8f812069434bf9b4cfa26b7534924241d17197cdcefe31f0, 2026-11-03)"
+   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x54b233dc05bd973a627f7ff40c0553b7f536563dfe651337ffc882ed6c64ee1b, 2026-11-04)"
   },
   "0x0b3d66495ea8edcda48b2871b097bf79b59ef14f": {
    "category": "gambling",
@@ -910,7 +892,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x17b5f71f2500f204f701f9cbea1901eb7e9e0d156e862c5e26b0fda6f154260e, 2026-11-02)"
+   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x17b5f71f2500f204f701f9cbea1901eb7e9e0d156e862c5e26b0fda6f154260e, 2026-11-02)"
   },
   "0x0d919443dff7abe83e327e8951c83d50a4049973": {
    "category": "gambling",
@@ -934,7 +916,7 @@
    "category": "gambling",
    "entity": "wolf.bet",
    "label": "wolf.bet deposit address",
-   "source": "Swept 11x USDC into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x5538fabc584a3beff20b15071d44440204cf9e6d6b1c926c535cce2a8120209e, 2024-12-17)"
+   "source": "Swept 10x USDC into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x5538fabc584a3beff20b15071d44440204cf9e6d6b1c926c535cce2a8120209e, 2024-12-17)"
   },
   "0x0e0f31c59d422ced616930a923f205c0b584d2cf": {
    "category": "gambling",
@@ -1018,7 +1000,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdc9f527092912b59dd2563b17e487689974dcd33889ace75292ea211f2a2c48f, 2026-11-02)"
+   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc09626fd7f97c2db6b85910b4067fd1454c9c5adad9ec79dc507f486716cf8fd, 2026-11-03)"
   },
   "0x0fb91c87885c4451d2954d81c3884a66d69b874c": {
    "category": "gambling",
@@ -1096,13 +1078,13 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x10edbbec3a9267e5ae68ef9c17dd6ab3337fdebe47fcc49000ac83eaf2d9f361, 2026-10-29)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x10edbbec3a9267e5ae68ef9c17dd6ab3337fdebe47fcc49000ac83eaf2d9f361, 2026-10-29)"
   },
   "0x10bee1633b8783050076e8256e88e4c4df9cd7a4": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 9x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xd5deacb88f535a36cf27ddeb60ff5b12caeda188be9a1e8f189c16f30aefea1e, 2026-10-30)"
+   "source": "Swept 9x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x0efa715f1efcbf7d66dc2c55de75b3ad6eee11f629229201669fc58614b43274, 2026-11-04)"
   },
   "0x10dfa04e3aca919c2ca95ee2ef98f15c633ca3aa": {
    "category": "gambling",
@@ -1132,13 +1114,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x50a9d74084b32cca10a85e3cd739efe3e35d5216df7207711c1c32eb78a05832, 2026-11-02)"
-  },
-  "0x117f3cebf959f7ef4c76671dba7cc8a569fce4a0": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xd5cb5558930f35629f5a4c27c4f5f305f1cba16ef908b278eaaece639ce79be4, 2026-11-03)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x814de3fe325b9be71b9f1c1d0b90d4034117a56b757b68a8ac6a84146cb5206e, 2026-11-03)"
   },
   "0x118683a6031f2b7e6ab50ab5b06e6d8810c2c0ec": {
    "category": "gambling",
@@ -1150,7 +1126,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 12x USDT into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xa0387b328d288df2bab4044cb11404dbd6ac982264dea4d5ba9fdfcb0e1028e6, 2026-09-25)"
+   "source": "Swept 11x USDT into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x2bae391b7fd6a339dabad0b9e44546a47a3c5b38873853a999843dd7e0859b69, 2026-09-17)"
   },
   "0x119a1e3235de4122ccdcfaa69525713d722c3315": {
    "category": "gambling",
@@ -1162,7 +1138,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 3x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x18a15d1e31f3f2e8e4d13561e792dcff8787c1069c64815cbca82682efdee6bf, 2026-10-20)"
+   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x18a15d1e31f3f2e8e4d13561e792dcff8787c1069c64815cbca82682efdee6bf, 2026-10-20)"
   },
   "0x11d4e65bcd7be2ded92752d3b39e1ea2588c6b6c": {
    "category": "gambling",
@@ -1210,7 +1186,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 10x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x0b6a4297774b24c3b2b2388f40f3f37049008fa49a02f7dc5c5448ad325f04b9, 2026-11-02)"
+   "source": "Swept 11x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1f8fb847b2435120058a7350ff05e883487f0fdc07e6aac6df60f6c93bace685, 2026-11-03)"
   },
   "0x12c64881edfba564576d05f6e346544afb565939": {
    "category": "gambling",
@@ -1252,13 +1228,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x74c2ecf3dff1aadc62fca929b8cfac8c5a1d8856d0a244e187100ea8f647ce98, 2026-11-01)"
-  },
-  "0x1374d426b8cae423977232bb173c50d6bab23133": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x1d4378333cc9b31c58feb4196d0db2e43bd7234f23088707220eef9530cdd95c, 2026-11-01)"
+   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x74c2ecf3dff1aadc62fca929b8cfac8c5a1d8856d0a244e187100ea8f647ce98, 2026-11-01)"
   },
   "0x1393cf274979928ecccf1adeb0927ba267bdcdd5": {
    "category": "gambling",
@@ -1354,7 +1324,7 @@
    "category": "gambling",
    "entity": "wolf.bet",
    "label": "wolf.bet deposit address",
-   "source": "Swept 4x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0xec1fe6cc61a4ce0abc38a1014b27f39bff8fbff38e892768b2796195537394ed, 2025-01-09)"
+   "source": "Swept 3x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x9741ae8108d90350e678747bf2d4f033f87fe5bddfc9fedbd98e3472ec355665, 2024-06-25)"
   },
   "0x14d6df1d789d04cb118cb053d3254a55b583dcc1": {
    "category": "gambling",
@@ -1384,7 +1354,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2945d8bef896a12c8a8e772dab1dfe2fef8e4470a2fa0f974c6c8afb33a279d0, 2026-10-31)"
+   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2945d8bef896a12c8a8e772dab1dfe2fef8e4470a2fa0f974c6c8afb33a279d0, 2026-10-31)"
   },
   "0x151a51cbd8929ce4c6d0e6b5aca85f7cc93fc477": {
    "category": "gambling",
@@ -1421,18 +1391,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x36a22111c5f8fc0ed12a4e2dabc153a2548f9106429ddd0621cf24dceada7dc6, 2026-10-31)"
-  },
-  "0x15ba39b01e0a15b9ef901e06d5008142e63e8551": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x808857eb42bd46f38afa02920fcb8afb872427ef8c720c5f1111f4f5eb14b54b, 2025-10-15)"
-  },
-  "0x15bf08c0eb4706ea602d29afb498f780fdb909fe": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xcbd419f0352047018f3832942b0cf3abcc7721336f9aa1b6024d406280ae02a8, 2025-10-12)"
   },
   "0x15c82f9d76942220e64432ea3da105d2413378db": {
    "category": "gambling",
@@ -1516,7 +1474,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa0f51e25e86515df59df57acd937e44efd26008687c57cc68461c5fbc2a7d2bc, 2026-10-30)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x541393422345c312964e0792c532b3b95b87a6b33409f2e4043c6eab8f3c8ff3, 2026-11-03)"
   },
   "0x16e584d019e720596543b2086949e4421e526de9": {
    "category": "gambling",
@@ -1582,7 +1540,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x328010b42d6c6d26f59f8845ea26979900b9d437bcdc8f9d1829f4233f09a96c, 2026-10-28)"
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x328010b42d6c6d26f59f8845ea26979900b9d437bcdc8f9d1829f4233f09a96c, 2026-10-28)"
   },
   "0x177cc59fb376ddf1654e07e071929f30879dc579": {
    "category": "gambling",
@@ -1738,7 +1696,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5183d8addc13cfcbefbaf65356597632090f8f6a7b934989ce5fccb09e5405ea, 2026-11-02)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5183d8addc13cfcbefbaf65356597632090f8f6a7b934989ce5fccb09e5405ea, 2026-11-02)"
   },
   "0x1a7f59efcf108205266964c43e576a02be5f270f": {
    "category": "gambling",
@@ -1762,7 +1720,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xcaf67e368171b13860013bdbb11f6396ef12463730e617984738f3dae49719d2, 2026-10-30)"
+   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xcaf67e368171b13860013bdbb11f6396ef12463730e617984738f3dae49719d2, 2026-10-30)"
   },
   "0x1baede66df44a67aafdd8f7f45d577c8888d6eeb": {
    "category": "gambling",
@@ -1854,17 +1812,11 @@
    "label": "1xBet deposit address",
    "source": "Swept 4x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xec4e6a76f4da6868b5675037d4dd8d113d57f788e4ffd50e74f0273d9bd1b8a0, 2025-10-14)"
   },
-  "0x1d0d2d8c85441050abc9eb654399fa198fbd5722": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDC.e into 1xBet hot wallet 0x777f415324d56e1d54fa832902d8797db7a4c57c (sample tx 0xd2aae7196455c600ca8759a37e10d917ab89e96d5ba5514161828e6d31b4973a, 2023-10-05)"
-  },
   "0x1d2060e54cb00d3cb9202ee5e58a87c1d7a58a65": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 8x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1d51e663c650b34e718fdef4ca2b94cf43fc7350af88fd8a274b493ee87f0e43, 2026-11-01)"
+   "source": "Swept 7x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1d51e663c650b34e718fdef4ca2b94cf43fc7350af88fd8a274b493ee87f0e43, 2026-11-01)"
   },
   "0x1d2a2e964612e9fb9555ece14f12e31c6af9dc49": {
    "category": "gambling",
@@ -1962,6 +1914,12 @@
    "label": "1xBet deposit address",
    "source": "Swept 6x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x5214c60ea6e018785e12fcc4fecf6c24da8447a8501582a8b029c9ec19864595, 2025-10-15)"
   },
+  "0x1e37018c97b8e404d3e6ab9d1050e8f9594e5e90": {
+   "category": "gambling",
+   "entity": "BetFury",
+   "label": "BetFury deposit address",
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2e3b147158ed2ee1780b02ec0e8681259b07e5f29df0cc41ef5fe26edc709c80, 2026-11-03)"
+  },
   "0x1e3d9b9c3b23ce6caffba840cd1c569700894783": {
    "category": "gambling",
    "entity": "1xBet",
@@ -1998,6 +1956,12 @@
    "label": "Stake.com deposit address",
    "source": "Swept 8x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa76da64339635aeec944c6b63f097e6bd618af21941ba29ce229f93c1bc573c9, 2026-11-03)"
   },
+  "0x1f150d8473fe6e44d889ff9744924f970698546b": {
+   "category": "gambling",
+   "entity": "Stake.com",
+   "label": "Stake.com deposit address",
+   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x763f23c4447b5ee32748d6eb117697d09e3979fd96ac43087fb230b574f1234a, 2026-11-03)"
+  },
   "0x1f167f3343e5b61cfee322eeea97b5b173232633": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -2015,12 +1979,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 9x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xfda4a8b9b29b5e4263f25eb2da0f62a8d5272729bc69d3db15bc6403f7825f8e, 2026-10-30)"
-  },
-  "0x1f60978f8d9ddb7accc45f4228c7cba15286c388": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x63a91046c5166622cbbedf20270a234f57538eec9f5108adceac9c898b809bbc, 2026-10-28)"
   },
   "0x1f63ae4c29be8e8ca49f5ff3f5c5d5733aee9928": {
    "category": "gambling",
@@ -2086,7 +2044,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xee22014e25b17ea12092cb9e9c0d3c3ec8cbcb545d73fc722e4b3e7cff3a5d57, 2026-10-31)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xee22014e25b17ea12092cb9e9c0d3c3ec8cbcb545d73fc722e4b3e7cff3a5d57, 2026-10-31)"
   },
   "0x20a8fd6cba06bdf1c71e0e0321218da8b45f1aa2": {
    "category": "gambling",
@@ -2098,7 +2056,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb3368692376a32b18618c08b427d4772d1c2b9fb0d2e4a806a1c48a08eb09ebb, 2026-11-03)"
+   "source": "Swept 6x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xe1f27f1340976cec2f26f61523b5a39a5ff049c188dbb1b1d98efdff6469228c, 2026-11-04)"
   },
   "0x20ae3abff49cf5c897bc20b4127f0c9360016484": {
    "category": "gambling",
@@ -2280,6 +2238,12 @@
    "label": "Bitcasino deposit address",
    "source": "Swept 4x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x3552fcf3139f840e73599ae37251cb473ecb0fdf45879ff83ecd7ef3919e49c5, 2026-04-04)"
   },
+  "0x23173519a39121d1e6625ec6c63f68d5d9b6c51b": {
+   "category": "gambling",
+   "entity": "BetFury",
+   "label": "BetFury deposit address",
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x10bb9a39a128f36c98c8a518bc35a501eb5aaa3048edfc6bf207bbd4430b0782, 2026-11-03)"
+  },
   "0x232769e45a9c7db3f2c9ce53af349062df14b0dc": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -2392,7 +2356,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x72e5d99b5035137ae7f998421ce7922db03a293c115ee55d32bdae47ceb805cf, 2026-10-30)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x72e5d99b5035137ae7f998421ce7922db03a293c115ee55d32bdae47ceb805cf, 2026-10-30)"
   },
   "0x24f659efd66601a002cd242a6c95eb6d04a52ed1": {
    "category": "gambling",
@@ -2410,7 +2374,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb0484238f171fbd2a71282dbec915fa06553c42196d09ca4cb83441091db0484, 2026-11-02)"
+   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb0484238f171fbd2a71282dbec915fa06553c42196d09ca4cb83441091db0484, 2026-11-02)"
   },
   "0x2551e76e0ec5ada01b2e00b40e464d4b1cc04432": {
    "category": "gambling",
@@ -2422,7 +2386,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 11x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3de6d3b2ea8f7954ed3c7f7094eb208fdb0a40e859f8614bc2e03608169918ac, 2026-11-02)"
+   "source": "Swept 10x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3de6d3b2ea8f7954ed3c7f7094eb208fdb0a40e859f8614bc2e03608169918ac, 2026-11-02)"
   },
   "0x255fb3e2dca58ebd49a5dec19aace1662f74a1b7": {
    "category": "gambling",
@@ -2638,7 +2602,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5ddb3f1266469290cef28a5df870117cf38af1e1dcdcc1417cfbbc1a9ed57191, 2026-11-02)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x975e928ef12b8455a799b01da50bd1dc9921ca11bbf8469e9b17f31966d34e09, 2026-11-03)"
   },
   "0x294698b1823635b30db1eb7a570990fa08ec3ac7": {
    "category": "gambling",
@@ -2704,7 +2668,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x0a19ec9ef31258b310f95e5eca95f0d748334fe3622e84ee4f586d8aacf40f6a, 2026-10-30)"
+   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x0a19ec9ef31258b310f95e5eca95f0d748334fe3622e84ee4f586d8aacf40f6a, 2026-10-30)"
   },
   "0x2a549e7adcb0243b7e3154d75d2842b78c0147ab": {
    "category": "gambling",
@@ -2776,13 +2740,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 10x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2931595d517dd273e1312687eafb9d2d68117a1dd9641b5ff6244a0fbcc82a4e, 2026-11-03)"
+   "source": "Swept 9x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2931595d517dd273e1312687eafb9d2d68117a1dd9641b5ff6244a0fbcc82a4e, 2026-11-03)"
   },
   "0x2b45dd50f4de5ce19683c854148b804b822260db": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8c3821a81c3ec00a543bfc024c427e29074d4bc07faa69af0a45fc923890274d, 2026-11-02)"
+   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xbc600d738fed4e0d07669b5cc3433a3b23461d35387d11866e4a37f7b177fdfb, 2026-11-03)"
   },
   "0x2b9623aebc4bb8ad71be5eea6c9087acaf02e652": {
    "category": "gambling",
@@ -2926,7 +2890,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xe5ad7390a24abfc8c63de675f508081a9f8458d16d673d357cf83ca0df735df1, 2026-11-02)"
+   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xebb4a904dbc3981c21420c3eb9f95546e27ecd36584c30caad76100ab89c42b0, 2026-11-03)"
   },
   "0x2de663b63ef289836f52f8b7a0d278d8d7904dcc": {
    "category": "gambling",
@@ -2950,7 +2914,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc2977a8c77c2caa600b30a580680361fdee04b7e317cafc954523592d059bce4, 2026-10-30)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc2977a8c77c2caa600b30a580680361fdee04b7e317cafc954523592d059bce4, 2026-10-30)"
   },
   "0x2e267413e15617aaa0354c733a5671d66b648ea8": {
    "category": "gambling",
@@ -3034,7 +2998,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 11x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xf871a434b49b1765c73921dda15bae59e0905d2069f7eb392c79f74ac3bd1a40, 2026-11-03)"
+   "source": "Swept 11x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5eea0fa5fe45a29325413b47ce506efc241b1cc311ec59c47a86a3b18649f7e8, 2026-11-03)"
   },
   "0x2f89ebd8e8c6f9a0fac004728321a65dd01e85d7": {
    "category": "gambling",
@@ -3064,7 +3028,7 @@
    "category": "gambling",
    "entity": "wolf.bet",
    "label": "wolf.bet deposit address",
-   "source": "Swept 7x USDC into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x965faa7add6b05390c4fd4e1dbe5c59d520860c01956a3d7fe3c9ec548e9379a, 2024-05-13)"
+   "source": "Swept 6x USDC into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x965faa7add6b05390c4fd4e1dbe5c59d520860c01956a3d7fe3c9ec548e9379a, 2024-05-13)"
   },
   "0x2fe9ddc0a78791cfc4a25c4afad69adefa0aea75": {
    "category": "gambling",
@@ -3112,7 +3076,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xf994b1985c1aeb9776d9d62771e4cfcf5ab7c6e488980cb64fbc66931a18fbd7, 2026-11-01)"
+   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5d8327c861c923a8b6dfc97e15716b7039b1fff8dcc582f309742dae0544ad1f, 2026-11-03)"
   },
   "0x30dc0ab078c642adb04db4db4675bc3fefd3e889": {
    "category": "gambling",
@@ -3250,7 +3214,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xac9094bcf6d813561b0073cca7f65788babccd0bf7ce6738ce62fafe5d94a20c, 2026-11-01)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x41dda46c4e0441d2b6ba8eee3317a7835a41a67dfd2f0f8291f603ddba802261, 2026-11-03)"
   },
   "0x339fbd8c4048876d8c78dea2cfc66dd325a7039b": {
    "category": "gambling",
@@ -3268,7 +3232,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x3c49473dbd9336b27eb72c5c89ad6b8215035cdd97c5e030095f1a3e5dfd3f68, 2026-10-25)"
+   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9052d2f61e1787e63f753fbd62634dc5d49f312ea020ffe5fd47add3a576e2e2, 2026-11-03)"
   },
   "0x33c651617d13320983fc06a0200f123301d88248": {
    "category": "gambling",
@@ -3460,7 +3424,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf78e9a917218967c25950da921f9e52506a77e1b85334e55a7c315574fa10d5e, 2026-11-03)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x98f5cb8f76e4c294335487ed9e92641c4704caec7b9cdbfa868145dae1f099b0, 2026-11-04)"
   },
   "0x36bf2f91c526e6e435dcd9138f9452061335518b": {
    "category": "gambling",
@@ -3599,12 +3563,6 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 4x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x0cd06e8f1dd85ce8e637d8cc4bf8a0542b189def495e45cb837b053eddb3df2d, 2025-10-12)"
-  },
-  "0x38e7314870325cdb532c8845c1e35b3ec3d5a904": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x881cca6887ddf6d424c3004d2a9e6a891db07f5872745c38122d778df54c3c66, 2026-10-26)"
   },
   "0x38f5804ecbb4658acbeefa8100a5f47b400ddcb6": {
    "category": "gambling",
@@ -3760,7 +3718,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 18x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb95fa87a5002da1a2b885793cdda5aa2b1dda1e4beab2d22262d1250964ffa1b, 2026-11-01)"
+   "source": "Swept 16x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb95fa87a5002da1a2b885793cdda5aa2b1dda1e4beab2d22262d1250964ffa1b, 2026-11-01)"
   },
   "0x3b02c94bba76814020195f564114ef3f7db2e561": {
    "category": "gambling",
@@ -4012,7 +3970,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x19a4df8405383df91518d4d46bed6f59bbf2c160ffc8a492d370273561fc78c7, 2026-11-02)"
+   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x19a4df8405383df91518d4d46bed6f59bbf2c160ffc8a492d370273561fc78c7, 2026-11-02)"
   },
   "0x3e6d557ff9ce59a60ddebb6b69a8aa9e8350e890": {
    "category": "gambling",
@@ -4048,7 +4006,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd39138fe2cad02f78d1461635a2e844792622c199dfd528c5b6a8d707c96755e, 2026-11-02)"
+   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd39138fe2cad02f78d1461635a2e844792622c199dfd528c5b6a8d707c96755e, 2026-11-02)"
   },
   "0x3f4f4843d26aa3b779cdb531054f549137f9dd96": {
    "category": "gambling",
@@ -4162,7 +4120,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4cec264911d836352285b7f89b2c4ed9574edcdb008f4636fca030fa435f9d1b, 2026-11-02)"
+   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xee51f81abbed04721dfc94b93db8aa4ead19692613a4e9fecc3d89133c9cf3e4, 2026-11-03)"
   },
   "0x413ad0e27c5e2db6a8ea3a5b49a986ad096e94c5": {
    "category": "gambling",
@@ -4186,7 +4144,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8fc073f51293391218f66a4490f855b27f3e4e5aac6e359008942c301ce581f1, 2026-10-31)"
+   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x18710c73860b2ebe73360a2e8fa7b49aec81dbef55f84c68ba381c38eea7ad8c, 2026-11-03)"
   },
   "0x418923e72a78f3a30e28b2d99b537ec00cf47433": {
    "category": "gambling",
@@ -4480,7 +4438,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xe8b3c6800bc29816b740b4df531582557ecb5f6eb851a2747fc4cd1c7a089d42, 2026-10-24)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x85dedff7d04625fdc07c4821272d3f25f743d51cb3d80d3110a485d117259eb0, 2026-11-04)"
   },
   "0x459feb7e37cf4d6b56f37e9fa6e47bce07ad9744": {
    "category": "gambling",
@@ -4498,7 +4456,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 16x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xf8a394e7e1bab918fd58f9a46764499ab9cae6dc2f79c09eb05e3f74c2aa907c, 2026-09-30)"
+   "source": "Swept 11x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xd37a4cde9f8c254b201249b597386a80f187568f7138f2b123ddd76e59f27e1e, 2026-09-30)"
   },
   "0x45cb540e777e670cdc61d34167ec3375a6f34180": {
    "category": "gambling",
@@ -4510,7 +4468,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x7f4e25adec1cf3d6eb4b0da3ef9e1b60a26d4a77b465acf0a8708d9287390bbb, 2026-10-30)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf234053794af4a2f1fd75033cac094a4b74065be0fb9112d3eb2bd0fe2c00d8f, 2026-11-03)"
   },
   "0x45cd4ccd776490eafb5ecc18601deb5beb454a77": {
    "category": "gambling",
@@ -4534,7 +4492,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 3x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa6bfcb84217893008d7a94df43764c1561fe061903d3c8d0a1758cfc18f3a536, 2026-11-03)"
+   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa6bfcb84217893008d7a94df43764c1561fe061903d3c8d0a1758cfc18f3a536, 2026-11-03)"
   },
   "0x4603b05c8cc43fbbc16f66b21443fd70cd5936ba": {
    "category": "gambling",
@@ -4654,7 +4612,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x54c12886fc437079afdfe5c9c31d9fc6f073b92e0c590c29758c089e4e4441c4, 2026-10-24)"
+   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x54c12886fc437079afdfe5c9c31d9fc6f073b92e0c590c29758c089e4e4441c4, 2026-10-24)"
   },
   "0x47552eae3409e2a170324d04402e3ff1f10c33d7": {
    "category": "gambling",
@@ -4720,7 +4678,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf5a3fec3af40ddadea14f05a9aa81b7ad4efe31efc8bf8310160b8c8f827c6fc, 2026-11-01)"
+   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf5a3fec3af40ddadea14f05a9aa81b7ad4efe31efc8bf8310160b8c8f827c6fc, 2026-11-01)"
   },
   "0x486ee57d5119fd0e1a08c84eb837683c21c382f8": {
    "category": "gambling",
@@ -4836,12 +4794,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x515437c70d41819eac8d58745e82cf0fcc9b7c7536fe63b3c9a417f1c9cfb6a0, 2026-11-03)"
   },
-  "0x49d9113c0b62913d1054f7947499df484940e2bc": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xbc51e698613b4abdfb51279dae14fc2f751a2ae94858cc270906fe8b4b64ba53, 2026-09-23)"
-  },
   "0x49e942f5ef9f30672410febb281ef47d6c31e60d": {
    "category": "gambling",
    "entity": "Bitcasino",
@@ -4938,12 +4890,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x950dd666ca85509290c305ea4b5675bead77f0445ad6e2ecad7776cd7ec72c3f, 2026-10-22)"
   },
-  "0x4b14a27ff0ad06364ac02d02970cd9d80cc1f8fb": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 4x USDT into Stake.com hot wallet 0x974caa59e49682cda0ad2bbe82983419a2ecc400 (sample tx 0xbc70c49b4bb3c35530be90ec6dc0edd482d8b0a60187b027f28191f9dc50b5d8, 2025-10-07)"
-  },
   "0x4b2bd868d5a939295fc6697b81e876996740f955": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -4960,7 +4906,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xda5bf6625b12e3f0062ec326834f2361d75837eb26d3878b71774fdde4a3da3f, 2026-11-02)"
+   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x25a9f843b9e1af78aa3b7c41686c57c519e07d019a9f42b331e2e60ae6544ee7, 2026-11-03)"
   },
   "0x4b5359629783411411fbebeee865959d7452546a": {
    "category": "gambling",
@@ -4991,12 +4937,6 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 5x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xa121d2987be500ec330d26a3ffdde6719102c1d3ce5cdc26de253419acc16ec6, 2025-10-16)"
-  },
-  "0x4bc41940e19372261739bdd1d6af6b2484370ac4": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xbb4ecb70787537c2137d949ea17c0e02798c8e552745b4c66b6543f55f49747b, 2026-11-01)"
   },
   "0x4bcaa5b2e60be3ff78382d484b441e2303f08183": {
    "category": "gambling",
@@ -5038,19 +4978,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 59x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x09473c55b5bc8ac48b49bfa4c4de1f0f885999dd94fafecf1be9c6e4bf559515, 2026-11-02)"
+   "source": "Swept 56x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x09473c55b5bc8ac48b49bfa4c4de1f0f885999dd94fafecf1be9c6e4bf559515, 2026-11-02)"
   },
   "0x4c26fa77c632b65a9633fb44fc1641ec9a7b7aa0": {
    "category": "gambling",
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 12x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x6a0223184fa35aae7b27c4899abfdd762be36ea69bbc926746490c1c33f574ce, 2025-10-15)"
-  },
-  "0x4c382d61aab6303c0732b1a9f8788bf1f72218c0": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xfaa1f11f3f1f2cb7b8295e24d76967a6aad23a9255b078e825dec78721c1a690, 2026-10-25)"
   },
   "0x4c554a36c611283867de7d974c7b9bd288adf691": {
    "category": "gambling",
@@ -5068,7 +5002,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x64ab90f5edcf6b48063293cc14cb6c1b948099e9c27b37e70ac6743970d9ac50, 2026-11-03)"
+   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x64ab90f5edcf6b48063293cc14cb6c1b948099e9c27b37e70ac6743970d9ac50, 2026-11-03)"
   },
   "0x4cd1a84a0c5e5fe409a9bafe5aecaf57e8f8eb8f": {
    "category": "gambling",
@@ -5254,7 +5188,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 10x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x41c866e13cf13d0f52485a999e7b23a09573dd466b270e480bc9f4e757dc0ba8, 2026-11-03)"
+   "source": "Swept 11x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xe4c8a79a63302483e9895f18d065117fa2abbdb85a420ced77062a42b0f7650e, 2026-11-03)"
   },
   "0x5055060eb92883afe3a8504d4fe4a04ae6226932": {
    "category": "gambling",
@@ -5309,12 +5243,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x943864ddecbeaccdfcbb39d6d65f060a5faef826f3cabf3f937645b87823b2b6, 2026-11-03)"
-  },
-  "0x50ff6c01efa8bb5fb1652e18507247beff224b05": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd1acabd65bfb6f71c83fac55f5806ae1ac2fdbdc175ff1fcfc7aa02a329f9986, 2026-10-30)"
   },
   "0x5125984730aabd55fde78bc66bdd106e78c8cc9f": {
    "category": "gambling",
@@ -5512,7 +5440,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 9x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x006afd6cdc4b188de8cc574b80561ad283634baf561f0b7e5a64eb2861bd80f0, 2026-11-02)"
+   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x006afd6cdc4b188de8cc574b80561ad283634baf561f0b7e5a64eb2861bd80f0, 2026-11-02)"
   },
   "0x5403953e34a22810f1bc2d29433c865b6b95ab33": {
    "category": "gambling",
@@ -5554,7 +5482,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x237d2507d1bfa0b5b4310c38145a9fdc5c301e3c3949c3f613476f76b4ce3852, 2026-11-01)"
+   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdc172e37423baaccf9988c2a50d40067a27b67c34ea3ba4df6276b130f791b9f, 2026-11-03)"
   },
   "0x548c13d6f8bfac31da6b273c382b2bd7946417fb": {
    "category": "gambling",
@@ -5644,7 +5572,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x969060fd085a188e73183b1c0869993dd45ba68a7626c8c098e962afb0565e82, 2026-11-03)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xef66d35981b0cc47fc79037a3fd060744dceecc88ad611d3711735f5133b85a5, 2026-11-03)"
   },
   "0x561abbd18d857b46abd4a24b112e100935133ce4": {
    "category": "gambling",
@@ -5710,7 +5638,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa471749d5c73be4d22afda50f1b90bfdc60ab565d06d3d5f35019ee006feb43c, 2026-11-02)"
+   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa471749d5c73be4d22afda50f1b90bfdc60ab565d06d3d5f35019ee006feb43c, 2026-11-02)"
   },
   "0x56dd0519711f79e41522df51a83f49849128c121": {
    "category": "gambling",
@@ -5752,7 +5680,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 18x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x413776fd3eb2a258c555c3e43b7d021a6ec7f9afd49acab3750d1653fd44306b, 2026-11-02)"
+   "source": "Swept 17x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x86b5cc4f424b78199981141e6a7367cdf9160fab0e2f21c2c9af4b45add80366, 2026-11-04)"
   },
   "0x57354e219707e8030c37b1de54409b74feb77658": {
    "category": "gambling",
@@ -6042,12 +5970,6 @@
    "label": "BetFury deposit address",
    "source": "Swept 12x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x37f43194ecc17fa420da04d1389fd1ee782b700f53dea043ddf42d1e59aaffbf, 2026-11-01)"
   },
-  "0x5b69db046002c092014f4e5fcc9b1433aed7dfbc": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 19x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc81f49f3f026b11d266f87eb233360a36c3ad5e536aad2b3dcb464460d7c40ab, 2026-11-03)"
-  },
   "0x5b6fe800a7b12b07699788b28e23ae043c06c3b4": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -6126,6 +6048,12 @@
    "label": "Stake.com deposit address",
    "source": "Swept 9x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x296ef7b828be51af89ed7c38f09f039fb94fa2918894c4aea83eb55f12c8f9fe, 2026-11-03)"
   },
+  "0x5c7944d0de290d97a1d30bf4f5859c398378ab9d": {
+   "category": "gambling",
+   "entity": "BetFury",
+   "label": "BetFury deposit address",
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc828c7a2b5a3d426091847df3d8e533ae6c1083c1d07cf258f427bd583d0b144, 2026-11-04)"
+  },
   "0x5cb0eebae64e11b90024f25be7816f8d509577ae": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -6156,12 +6084,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xe84f600bb378dbdb344aa335d4ca8a35afe97050de265f4661532ac2a6954873, 2026-10-31)"
   },
-  "0x5d2059cabb4ee380c4a8cf2005cc22eebbefeb17": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x776439ec3076fb50365b7b58c9f4ee5c189a35cb79cfebc96f9d382a8ef83201, 2026-10-30)"
-  },
   "0x5d4aa5669348d896e3a11049b2d7b32ee885dfb0": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -6172,7 +6094,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 12x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xcc86aed1bf3156c13f135d86fd966c498b26b93ffbaf829ab6762808f3d6d1da, 2026-11-02)"
+   "source": "Swept 11x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xcc86aed1bf3156c13f135d86fd966c498b26b93ffbaf829ab6762808f3d6d1da, 2026-11-02)"
   },
   "0x5d6ac2a0f896124e0014f1758bdeaf3aee1c6e63": {
    "category": "gambling",
@@ -6262,7 +6184,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x93a6f3359e66024bbccd11b11cf0a47a7abf8c7214b7cf1dfae9cf7b941b37a6, 2026-11-02)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xdd9cd171f254addeb89aa8b8f761a1f694291e90210fefc5e8cab290965a5759, 2026-11-04)"
   },
   "0x5f5cb850bc4e98c0380fa26aa171c7f11152abc8": {
    "category": "gambling",
@@ -6377,12 +6299,6 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 2x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x24ebe87c9fbecb44de24ea0fa6905dd21e2673a1b7adb6db94e2a1aa86350935, 2025-10-13)"
-  },
-  "0x61870030c041b9b283e64e69ae80e5716d217b5f": {
-   "category": "gambling",
-   "entity": "Cloudbet",
-   "label": "Cloudbet hot wallet",
-   "source": "Block explorer gambling tag \u201cCloudbet: Hot Wallet (https://dappradar.com/dapp/cloudbet)\u201d (via dawsbot/eth-labels)"
   },
   "0x61a380b6e13fd36e31736747d9a4d7ca965d1c45": {
    "category": "gambling",
@@ -6562,7 +6478,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x4fae0fd889b8b529af74f6e7d2d59837fd126a335660441f0f927033d1f0970b, 2026-11-02)"
+   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x4fae0fd889b8b529af74f6e7d2d59837fd126a335660441f0f927033d1f0970b, 2026-11-02)"
   },
   "0x650f53abc715f22b1d91d2dedebe5c1f09b2348b": {
    "category": "gambling",
@@ -6600,12 +6516,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 20x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x579f9f821616b2ea91318643e5519406906219b3fafb7f421f6067feb7525ea2, 2026-11-01)"
   },
-  "0x659f1fc5625783a8005abee9ebf2010fe2fac1a0": {
-   "category": "gambling",
-   "entity": "wolf.bet",
-   "label": "wolf.bet deposit address",
-   "source": "Swept 2x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0xa83e2cf918f9b45f3c9407d8aa911e2885ba7bd90c12c5a42cd4c7a1d0cc40c1, 2024-06-27)"
-  },
   "0x65adb308265aa783864d1ca10f3a3ac05c1a4b75": {
    "category": "gambling",
    "entity": "1xBet",
@@ -6629,12 +6539,6 @@
    "entity": "BetFury",
    "label": "BetFury deposit address",
    "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x301aa53631f1ba16aa9fb57cf3e3757f9e8cb5e9818a6e5e14a456229b3ed796, 2026-10-24)"
-  },
-  "0x663810d081781df6dd75794f51675705b048c198": {
-   "category": "gambling",
-   "entity": "wolf.bet",
-   "label": "wolf.bet deposit address",
-   "source": "Swept 2x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0xa5adda13049ef23705dd7f25874a12d21c8d5e32ecce00de74ab5a43eb53bc9f, 2024-06-27)"
   },
   "0x664059e59736d3c9ab70928e026971c49c8a6a30": {
    "category": "gambling",
@@ -6676,7 +6580,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd51221787dcd98a628c8d51acbc4728107c4cd996f72112fd2f8b2a06cc34bdf, 2026-10-22)"
+   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x27942f23daf8f992afcb95ea9dc6c31af6b75adf984b32d394ee1d179de56cff, 2026-11-03)"
   },
   "0x673205710383aaac2301b79854fa569aaeda9b5a": {
    "category": "gambling",
@@ -6766,7 +6670,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc4a4b9dbe622e5202154477068b55033996b646abf313f161a971f28f05e027a, 2026-10-26)"
+   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x1738ea6991a249f2e3cd298c9fc3798bcc13d9c7ba779ebdb3331f21e248023f, 2026-11-03)"
   },
   "0x67ea9721184016c9f1429a1619ebcd1188d7ecd1": {
    "category": "gambling",
@@ -6779,6 +6683,12 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x74fc821084d50f185332cda08e00937291ca111c12c391bf55a5d9aba006f923, 2025-10-15)"
+  },
+  "0x6816f16d94225420e1365c35296c7cd1cefac530": {
+   "category": "gambling",
+   "entity": "BetFury",
+   "label": "BetFury deposit address",
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x644556cab4c5bf11649c2506bb9cd08db760b047bd5bb15edd278b538dedf2d4, 2026-11-04)"
   },
   "0x68211b86f956558a0e45cd2370ee00b799610ecb": {
    "category": "gambling",
@@ -6826,7 +6736,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xfde7a602f1e7d78eeb86af26b42e58028e31e0b8e2476947c0dfa49fd6943b18, 2026-11-02)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xfde7a602f1e7d78eeb86af26b42e58028e31e0b8e2476947c0dfa49fd6943b18, 2026-11-02)"
   },
   "0x69bec5de8573c4525791e4c1d08ea9f130c75ef2": {
    "category": "gambling",
@@ -6862,7 +6772,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xf8e6e6d1bf80216b3ef4a2fbc7bfae916aabe83135fe96469ed937aea99d99cc, 2026-11-02)"
+   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xf8e6e6d1bf80216b3ef4a2fbc7bfae916aabe83135fe96469ed937aea99d99cc, 2026-11-02)"
   },
   "0x6a3efbf880d361e3536795f327a346c93a918996": {
    "category": "gambling",
@@ -6910,7 +6820,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 22x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x9b4ad238a18868c48f2766592cb2b9ae8c10e3a66e2f0f730fb57f5f37973090, 2026-11-01)"
+   "source": "Swept 21x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x9b4ad238a18868c48f2766592cb2b9ae8c10e3a66e2f0f730fb57f5f37973090, 2026-11-01)"
   },
   "0x6b7a2217f0f38a28cc8b64096c4b477101ca84c5": {
    "category": "gambling",
@@ -6966,12 +6876,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdf2782bdfda76e2cadcf13f4bf2b3db42d68edecb4f793d9335091e22b47577b, 2026-11-02)"
   },
-  "0x6c8781ccd57edea80dfb48f66c8b9a4cafbcaa95": {
-   "category": "gambling",
-   "entity": "wolf.bet",
-   "label": "wolf.bet deposit address",
-   "source": "Swept 2x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x617d584e0a10522f5afd1b55cfbe824226441ccf82faac980993885d2c9ebf69, 2024-06-27)"
-  },
   "0x6cc7f85341b8af14ebb0c075128cae25b8f5468a": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -6982,7 +6886,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8233da20f72a9d2e4afe0a5a6dff0b734a28e247c80b1d7b9b33dd97ec9a9ebd, 2026-11-03)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8233da20f72a9d2e4afe0a5a6dff0b734a28e247c80b1d7b9b33dd97ec9a9ebd, 2026-11-03)"
   },
   "0x6cf4ca607832245433762ef0b655204d8ee07c3f": {
    "category": "gambling",
@@ -7068,12 +6972,6 @@
    "label": "BetFury deposit address",
    "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x88bda9777d569858a63499552329e206bf1982d4102a24e980beaeb2ebbab1ee, 2026-10-27)"
   },
-  "0x6e11f86c9da64d764f5bb1c9e6c4e2a344d359c6": {
-   "category": "gambling",
-   "entity": "wolf.bet",
-   "label": "wolf.bet deposit address",
-   "source": "Swept 2x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x530e276b2d8e12fbb6cbdfc7c994d86179561c578f2b65589312e4ecbc26ef58, 2024-06-27)"
-  },
   "0x6e1ae1ad1e3c0d1860543449ed428adf6d711d44": {
    "category": "gambling",
    "entity": "BetFury",
@@ -7138,7 +7036,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x9edea77e89e071091325f7c48e9a36cf73d3c88e0baf22873c48ffb7d785e46f, 2026-10-25)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x458255ffff8e594b1a0a0357d00420a31a01d2c6915701bae8db450eb3407eff, 2026-11-03)"
   },
   "0x6eba87d80a28d57d5603d6c26c0466f8c17639b9": {
    "category": "gambling",
@@ -7163,6 +7061,12 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x08fb06bd886acbe74cca98ef79acc0ea8022d5215c2e9123ad673a77df277172, 2026-10-30)"
+  },
+  "0x6f19cfbb5a9379dc2effd559261d465047e6d1ee": {
+   "category": "gambling",
+   "entity": "BetFury",
+   "label": "BetFury deposit address",
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xe49a93c2f02d6b0277a5c753b0d6b023f637c58346963c7cf1e4fcab33f807ae, 2026-11-04)"
   },
   "0x6f3efd9ce47fc71aae2f499f98a012abd9846ad3": {
    "category": "gambling",
@@ -7252,7 +7156,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x393761f244c436780d676d725df267702119db35d0e96015b5ca2b595706c8f7, 2026-10-25)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xd0250fe1ab55b9c1ab51cbf0f100a3075e7a0e786bf63b67c22b5b2ce7d04358, 2026-10-22)"
   },
   "0x7102a79e563e7686b4d84e680652a899d097143e": {
    "category": "gambling",
@@ -7265,12 +7169,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 23x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x54bcd42095a9b925962e0cfd8afe9fb4576c729e97b9344fc8170ac4ef93b7b8, 2026-10-30)"
-  },
-  "0x712d0583c77b6d282cf55a4b1c47b5f90856e3e4": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xff179717e838fac0c774407619b38d42816195e5aef64255af2233e391e97d14, 2026-11-03)"
   },
   "0x7141b28d5da3aa4951bd1228961fa251ce33b528": {
    "category": "gambling",
@@ -7288,7 +7186,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xec89f060cf1c9ad912687e35137a6a10df960d5808a109bb3d50c22a701f127a, 2026-11-02)"
+   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xec89f060cf1c9ad912687e35137a6a10df960d5808a109bb3d50c22a701f127a, 2026-11-02)"
   },
   "0x71b8f57817e8def06f6c2a57b0b5f6dd64167b87": {
    "category": "gambling",
@@ -7330,19 +7228,13 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 6x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x442c4d6016cbe0a1662190c064377a9a7b5d49ec49b822ab24ce3fb92eb5c7f9, 2026-10-31)"
+   "source": "Swept 5x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x442c4d6016cbe0a1662190c064377a9a7b5d49ec49b822ab24ce3fb92eb5c7f9, 2026-10-31)"
   },
   "0x72a6e1594c95495275b296625a04aa4ff77950ba": {
    "category": "gambling",
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 10x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xaa1329c67203221640aa3ae793ce156cef68b9ce761e72622928d171b8e1927d, 2025-10-13)"
-  },
-  "0x72eb933007dc2daa3013ac1adc900e8a1c428ba7": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x8b4e7bc9d93cd60f7d8d7497864d9a4ab21b17a3e5c22e45741f84c2c1c82f41, 2026-10-30)"
   },
   "0x72eef9f4458ed728bb514922ec6121c5c634c738": {
    "category": "gambling",
@@ -7432,7 +7324,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd54c3e858c639162904cc7aa46c409731ed3f64c98703bd2be94483540877026, 2026-11-02)"
+   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd54c3e858c639162904cc7aa46c409731ed3f64c98703bd2be94483540877026, 2026-11-02)"
   },
   "0x73872d88511bd60a8e03a471f1eade3700cae4d0": {
    "category": "gambling",
@@ -7534,7 +7426,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xce7aa9c99163d6c6b0077f817b091407fa19e71f972e4e0ba6bc7c3b8f7b8d00, 2026-10-31)"
+   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xb36857de759268c972a58ebbdb0d699b05278dee6cf7ad665a842c4b6e59fa27, 2026-11-03)"
   },
   "0x753deeb062362b33e184ac66b4e731bd509318db": {
    "category": "gambling",
@@ -7600,13 +7492,13 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x32be6797f5edbea735718e1d886d06c13ddea0333da6b7dca7ba3e5ca1601e55, 2026-10-24)"
+   "source": "Swept 3x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xbf49bda264554e4066fcf76f07f4cfdfdd92dc3db6271e3d880efa5395c7cc44, 2026-11-04)"
   },
   "0x7670d5f247d95dd4edea608f4276f683a8c3104f": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x135f9bce2e6623b0bf10d94497175ebfc79a4556f8070c3b737fbc8cbe253ea5, 2026-10-30)"
+   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x135f9bce2e6623b0bf10d94497175ebfc79a4556f8070c3b737fbc8cbe253ea5, 2026-10-30)"
   },
   "0x76904b1d59332d963c579145394a24456513ab4d": {
    "category": "gambling",
@@ -7650,12 +7542,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2830dc3735d17ed27b5365e8d71abd6142618503453a679fe6485d883c1b8b45, 2026-11-01)"
   },
-  "0x777f415324d56e1d54fa832902d8797db7a4c57c": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet hot wallet",
-   "source": "Block explorer gambling tag \u201c1xBet\u201d (via dawsbot/eth-labels)"
-  },
   "0x779d83cd16ac21d13ed82c2462e0aa5c633747a6": {
    "category": "gambling",
    "entity": "Bitcasino",
@@ -7690,7 +7576,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xca084e9b8edcb71d4ae77fc25a4915545b3ba56ae951c8800ff57603613a5cc9, 2026-11-01)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xca084e9b8edcb71d4ae77fc25a4915545b3ba56ae951c8800ff57603613a5cc9, 2026-11-01)"
   },
   "0x780cc838f831340af3c952e5562a374e76e6e69c": {
    "category": "gambling",
@@ -7846,7 +7732,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdfa0b33cac13c41734d7ae4fdbc99d008bf668aab2b450ba72e1874a94fa6c83, 2026-11-03)"
+   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdfa0b33cac13c41734d7ae4fdbc99d008bf668aab2b450ba72e1874a94fa6c83, 2026-11-03)"
   },
   "0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b": {
    "category": "gambling",
@@ -7858,7 +7744,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x979b29490cfe9605db9000660a2244e1057c2bf2ff298ba1a7196a384555cc66, 2026-10-30)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x979b29490cfe9605db9000660a2244e1057c2bf2ff298ba1a7196a384555cc66, 2026-10-30)"
   },
   "0x7a945b46aced2717dd56c2c489322892ab26dcf6": {
    "category": "gambling",
@@ -7894,7 +7780,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xee5e70dea83eb28832d48d9e31c991fa70290615366f4e20d4c0fc04dba034c6, 2026-10-31)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xee5e70dea83eb28832d48d9e31c991fa70290615366f4e20d4c0fc04dba034c6, 2026-10-31)"
   },
   "0x7b1c45c5425b84b2714fb652cf992674f268da74": {
    "category": "gambling",
@@ -7918,7 +7804,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xcaa0361ff23b92be98576e46d55e86fb88d5ff3ef48e708d641ce16eb5baa93b, 2026-10-29)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xcaa0361ff23b92be98576e46d55e86fb88d5ff3ef48e708d641ce16eb5baa93b, 2026-10-29)"
   },
   "0x7b703f0e4e348b465d595f42f53f4e70f7fd014d": {
    "category": "gambling",
@@ -7984,7 +7870,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x82013a06ca93d740cff626ff4a2775c7dafe37ea12db70c0ba6e556f47214953, 2026-10-31)"
+   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa240f34677e46577557f00c70367887d021ab2b890708480a0f43d6de2e69a90, 2026-11-03)"
   },
   "0x7c36d805c852ad08819a0315377fe5adcf96c8a4": {
    "category": "gambling",
@@ -7997,18 +7883,6 @@
    "entity": "Bitcasino",
    "label": "Bitcasino deposit address",
    "source": "Swept 15x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x00ce1be13ab40a3a1467e47d4afacf0190fb8902aa3abc9b73d65f22bd5913c1, 2026-04-26)"
-  },
-  "0x7cca491099c408ff268e049ab48d0846ccd83e01": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xf51a13487968d77e63a27c6bb4752c1f3ade972b6f874257d43bd730ce105812, 2026-11-02)"
-  },
-  "0x7cd83d12878fd19e030354e320c675a4592e7fcb": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xb8e0cd33f7b7fa93371060086764acd515307cafe98b55c492347f766aff828f, 2026-10-31)"
   },
   "0x7d20327663cf91d3b4d565bfcc1b2088cf0dbc66": {
    "category": "gambling",
@@ -8188,7 +8062,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc48a3c96bc527f15091b359856336e0f51f2cc0b65ece372c8b4b1dd7e09392d, 2026-11-03)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc48a3c96bc527f15091b359856336e0f51f2cc0b65ece372c8b4b1dd7e09392d, 2026-11-03)"
   },
   "0x80d4b8a5bcc7c7d0fb46985eec8fd26bf54baf73": {
    "category": "gambling",
@@ -8284,7 +8158,7 @@
    "category": "gambling",
    "entity": "wolf.bet",
    "label": "wolf.bet deposit address",
-   "source": "Swept 183x USDC into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0xb500df2e9c721b790494256b81f036ed32a2c05aa5d272339a8f311d803cb11d, 2024-12-13)"
+   "source": "Swept 181x USDC into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0xb500df2e9c721b790494256b81f036ed32a2c05aa5d272339a8f311d803cb11d, 2024-12-13)"
   },
   "0x81e5dd355854ed362358b14e8f844f373e80ea9f": {
    "category": "gambling",
@@ -8326,7 +8200,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x3fe48274a10ba1e60a2d315bda2eb8fc49762ed4ad4fb49bdede96e53384e86d, 2026-11-02)"
+   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x3fe48274a10ba1e60a2d315bda2eb8fc49762ed4ad4fb49bdede96e53384e86d, 2026-11-02)"
   },
   "0x8301d8cfecc1ef732286658b9bd10bd1533e0957": {
    "category": "gambling",
@@ -8464,7 +8338,7 @@
    "category": "gambling",
    "entity": "wolf.bet",
    "label": "wolf.bet deposit address",
-   "source": "Swept 14x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x91dd96f56eb61a45987df9c663658982a083ee32727dc7786d5c44f06f005359, 2025-01-09)"
+   "source": "Swept 13x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x389e44105f065a79997c927b2ba4cf607e830e57d3148b3dc3985367e1736f74, 2024-10-08)"
   },
   "0x84eeb5875274d422fe462314f4d80f12b6f6288b": {
    "category": "gambling",
@@ -8494,7 +8368,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 15x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x3aa21e79580027b0c1afbb88f2ff4d23832bf79306921dda5817de8b7d03c733, 2026-11-02)"
+   "source": "Swept 16x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x095aa7ea2a477552b7ada0e19a919c2ca6f02031ad1f2759cf2ecbddb4ed2f41, 2026-11-04)"
   },
   "0x855190afa8132c7f1b90436079221639eca3c21a": {
    "category": "gambling",
@@ -8578,7 +8452,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd6946c610f7f3800a79900ee5a038fca2b32cea1a513a4642d9dabbc00b30c6a, 2026-11-02)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x535ac093a05363a5c2cba18886baf9457ee1b364938349008b185ae20aecc934, 2026-11-03)"
   },
   "0x86fcdfcd49ccf6018d3b4eb2f7c68ca3e9fe1379": {
    "category": "gambling",
@@ -8608,7 +8482,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xbf9a241d4b7f9db2013bc053d97e1634747df8bd7de22bc5f5a26d262bb1a239, 2026-11-02)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb90505ee9f7ec9cd5af5570718fdcb04e296897c9b32c51ddc00b8dc7ed1abbe, 2026-11-03)"
   },
   "0x87b85fe8a4fc6bf035df171bf6edcdcf9e9eb6ed": {
    "category": "gambling",
@@ -8650,7 +8524,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x633d4ff29a5607e68aefd7eed4cc03b77e2d0c8bc50346f07e0251514586dd18, 2026-11-02)"
+   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x633d4ff29a5607e68aefd7eed4cc03b77e2d0c8bc50346f07e0251514586dd18, 2026-11-02)"
   },
   "0x887d0e82a17c04939f21dff29aa8248892ab7c0c": {
    "category": "gambling",
@@ -8686,7 +8560,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 19x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xa9be0b22d0158308bd23111d582d22dc7612c70a04fe7b6b1d74f6b6cbbaf617, 2026-11-01)"
+   "source": "Swept 18x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xa9be0b22d0158308bd23111d582d22dc7612c70a04fe7b6b1d74f6b6cbbaf617, 2026-11-01)"
   },
   "0x895e22ae72abb61bf487013371dc94f9122f3e93": {
    "category": "gambling",
@@ -8716,7 +8590,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd672c56ffd59a2a7c5fb2637a14b8af7994287b0cb6fd038ade40b547ab240be, 2026-10-26)"
+   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd672c56ffd59a2a7c5fb2637a14b8af7994287b0cb6fd038ade40b547ab240be, 2026-10-26)"
+  },
+  "0x89cc9c7cc2dbbb122b3c232525d8735a52a2e3e4": {
+   "category": "gambling",
+   "entity": "Stake.com",
+   "label": "Stake.com deposit address",
+   "source": "Swept 2x USDC.e into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc680bb6ec33ecaa8f7e82c8f0cf2c72b16c6a6970aa285ce64028f03bf13875e, 2026-11-03)"
   },
   "0x89ccb30b4672a883cf27c3ad4d76a638cca1e283": {
    "category": "gambling",
@@ -8842,7 +8722,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5782ecf4dba44fb94302e2cf93d503b0f4dc76b40811b821ad502945be865a8f, 2026-10-30)"
+   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x39fb0053950fd534c9ce1d8e6fec49455fa0ed3787d42166818d071d03b7bbe5, 2026-10-29)"
   },
   "0x8bce1a31d7ac9742449bedec7187ff4fb7f12191": {
    "category": "gambling",
@@ -8878,7 +8758,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x91b6cf6a864e124b78395ab014d7f7b112a8cd7a125f61c3d1fdcaeef8349944, 2026-11-01)"
+   "source": "Swept 9x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x1b79873f3145d9ce9312d2b555a6d8d83c9f434ce5c6b0a579bf255a1849d7c1, 2026-11-03)"
   },
   "0x8c35bc6859d951ec904127c716a841e7bf0195eb": {
    "category": "gambling",
@@ -8998,7 +8878,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2b88433e29cc9e3c699d81e71640fe076d796443d10112c356b97a822ea6441d, 2026-11-02)"
+   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2b88433e29cc9e3c699d81e71640fe076d796443d10112c356b97a822ea6441d, 2026-11-02)"
   },
   "0x8df314ff3e3e451fb90588e003b3f7ab30fc1795": {
    "category": "gambling",
@@ -9256,7 +9136,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x088789f3e011644062bf88e7759b089f68de16419e260b281532e00ed713602f, 2026-10-31)"
+   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x088789f3e011644062bf88e7759b089f68de16419e260b281532e00ed713602f, 2026-10-31)"
   },
   "0x927df1cdde028277e79e5d52fc3841a3a2835b58": {
    "category": "gambling",
@@ -9358,7 +9238,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3ca9a3105b0104566d368262e144420c37442cbac39ac53b5cf771d25f0bbbf2, 2026-11-03)"
+   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3ca9a3105b0104566d368262e144420c37442cbac39ac53b5cf771d25f0bbbf2, 2026-11-03)"
   },
   "0x93bc4b892d03454ccba40275209a4d2f12fcf51a": {
    "category": "gambling",
@@ -9376,7 +9256,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 27x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1a68bcac49ebe1d54879bbf4791e84e94be0ee2d472f3eb864b87238fd9027f2, 2026-11-02)"
+   "source": "Swept 27x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x6a68ccc0ebddf64197b89dcd39d905d072e41ce1626f2c02edcfc09546332d0d, 2026-11-04)"
   },
   "0x93e964ea89328939bd82f9b8356d5f34c771cbeb": {
    "category": "gambling",
@@ -9532,7 +9412,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd9207ab77b0db4a75a56807e9213493c1d350d0fd96023a4809dc95a7084ca64, 2026-11-03)"
+   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd9207ab77b0db4a75a56807e9213493c1d350d0fd96023a4809dc95a7084ca64, 2026-11-03)"
   },
   "0x9650f04b0f7b3ea7aa2b9c8fd4b9772ca6c5fda8": {
    "category": "gambling",
@@ -9598,7 +9478,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 13x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x86f5a3bd2fd342c035b5ca02952eb936c885ffee87c073dc2e6e3e70d9665d41, 2026-11-03)"
+   "source": "Swept 13x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4b0eb7f7864dc5fb290da5141e02d82927d950e571661a6e7a8cdad3238fb504, 2026-11-04)"
   },
   "0x96f2091a09d46bf0229adbdb9a1a22f6cbd921af": {
    "category": "gambling",
@@ -9616,7 +9496,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 23x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xbe3085ca80661a038008b430bf35edcc6a8b8007ba04c6941665c7b762eb6910, 2026-11-02)"
+   "source": "Swept 23x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf46cf8cf2002ad97e1a47b446a0a278011cb6be1b35fd4de62e5c594336a1c78, 2026-11-04)"
   },
   "0x9741b1ac593ef183e5ff47a9fc4f12d24c7592e5": {
    "category": "gambling",
@@ -9730,7 +9610,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xe8bab906401bb07a1dd0c313dd676c25776f98b2ae08ecdcfb2240f6d6a40ab1, 2026-11-02)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xe8bab906401bb07a1dd0c313dd676c25776f98b2ae08ecdcfb2240f6d6a40ab1, 2026-11-02)"
   },
   "0x996f9a7bfbac4a044d061ac5d764d70e609160a2": {
    "category": "gambling",
@@ -9784,7 +9664,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 8x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf3f9028bb3b04fe6ef84aab60cb66b6045779df59d54cfc82289e7aa9a8373d5, 2026-11-03)"
+   "source": "Swept 8x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x7eba28c87df96495fa72bdc34ec8b7bb05b3e57a13a2c14eeab4c4a877ef07ac, 2026-11-04)"
   },
   "0x9a9f4654cc8ac7e91fad6265e1f64972267779b6": {
    "category": "gambling",
@@ -9796,7 +9676,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9d8be6188d474c9c5a909e4b46864f786a877213640e7249729520eaf99c31fc, 2026-10-30)"
+   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x88997ad5bbe8ea1c9626cece3c94294c868c633f430ccf5e09c1a92f8f32b6f9, 2026-11-03)"
   },
   "0x9ab93c80684114ba2291a82c563c5227ca4c34b0": {
    "category": "gambling",
@@ -9827,12 +9707,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x0dda45d4dbbd5b1d60d21ddae0a195722c49beff70a6313e146a8565923497eb, 2026-11-03)"
-  },
-  "0x9b65f58bf2361ad24e3126c8c3d7183efeccd620": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa93aa447d4a8b4f46281c523e22668415b07bfc0177785a7e7e10d1dcbee0207, 2026-11-02)"
   },
   "0x9b6a2d90f79fea12c5c9be2cd9a15fa7e17312c4": {
    "category": "gambling",
@@ -9869,12 +9743,6 @@
    "entity": "BetFury",
    "label": "BetFury deposit address",
    "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x12ca8abb90064adc01e405497e36c5a0125909216d563ef5d327e46971005ae0, 2026-11-03)"
-  },
-  "0x9bc17d025e066ab8112ff66e41e50ed19cc6c927": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x236fcfeb51c40b953e8675c9521f152caacf59ec509cd502f4254fe5e9fb8a59, 2026-10-25)"
   },
   "0x9bcf1894b2fa2289c83f7030cc6991bb492cdfaa": {
    "category": "gambling",
@@ -9940,7 +9808,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x251e0ffb3d2f2c197764779372e28cc105ecb31da1caedd9dffe6837b27c5d0e, 2026-10-31)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9cbb0223937116e101803ecd3eb3e24a4d7b218c43a9761e71eaf86501bca228, 2026-11-03)"
   },
   "0x9ceabb9b306413ef5d612668dc1a23c6b781d638": {
    "category": "gambling",
@@ -10102,7 +9970,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x0fcd787dd6ab87ddae0b984fb2c8d3795d3889152cd3562791aca74b031fe700, 2026-10-31)"
+   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8665098f60d0552b219884697860330d6c85cf85d373ef3c7de57ef2a1f9bc9c, 2026-11-03)"
   },
   "0x9ff2d0fc296a9b3949023004a28fe7b61758e726": {
    "category": "gambling",
@@ -10126,13 +9994,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 9x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa666aea45aec6d589aa33de052d3e7caf892409b17d580bf7c30408b6b291e2b, 2026-11-03)"
+   "source": "Swept 10x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xaed4b11b14e008d17bc0b42360a62d4fbd04519592a63073611d3c3bba598358, 2026-11-03)"
   },
   "0x9ffea5a8312a532055a6f3ce298b33b5e720db1a": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 19x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x76e5075760cd021319772c5bfd6b95a257e3cd49587ecd28958eb20df6a4e63f, 2026-11-02)"
+   "source": "Swept 17x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x76e5075760cd021319772c5bfd6b95a257e3cd49587ecd28958eb20df6a4e63f, 2026-11-02)"
   },
   "0xa002702a68728584645f0c637ccb4a68e57c870f": {
    "category": "gambling",
@@ -10264,7 +10132,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x6a74c0019ce64e1333e44ed97f1745335333cb2635d01b8a286145da85f8bea2, 2026-11-03)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x6a74c0019ce64e1333e44ed97f1745335333cb2635d01b8a286145da85f8bea2, 2026-11-03)"
   },
   "0xa1e847214128ea9fe25c6dac56c029d6d08f34e0": {
    "category": "gambling",
@@ -10276,7 +10144,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf2cd79e51beee2889f85b32a760886149488543f766983c8f14908c0318f5547, 2026-10-31)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x720d1f9b47ea4e148047074f575cc2be1330dde4689a32780d35de96bfd3f549, 2026-11-03)"
   },
   "0xa208595a872f159e07e06219d8a237f95c1c1c58": {
    "category": "gambling",
@@ -10288,7 +10156,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8432ddd057a6586e9b42e25228bae8dfe4fd270556dece19d912dc2a4aaefab3, 2026-10-29)"
+   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x30498c5c8bbbd699cfd512389d47768db4650e6d6e351b3ef071f6dfd9dbf9d9, 2026-11-03)"
   },
   "0xa22f2ae14580546e9110137d87eb70ac552eb454": {
    "category": "gambling",
@@ -10360,7 +10228,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 9x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2b08bcac6d50c93e89a9c6c3d868501b660a9b4b3b3f95420895edf79e16d1cb, 2026-10-31)"
+   "source": "Swept 8x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2b08bcac6d50c93e89a9c6c3d868501b660a9b4b3b3f95420895edf79e16d1cb, 2026-10-31)"
   },
   "0xa3899e8d419a3b2e06b5accc2f38624ddcfa1a58": {
    "category": "gambling",
@@ -10462,7 +10330,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x7ea8313680bf2efe3167b8f2ed7c3b2a66d01a98f9d312607ac216578badf74d, 2026-11-03)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2bc6035eb5db5304def186087f84aee74274de4a3ab2dce9162814bd8ed4144c, 2026-11-04)"
   },
   "0xa56d5e36a173ed79980ed8aa912a632fc8db616a": {
    "category": "gambling",
@@ -10547,12 +10415,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd2c06be09278582efa13fa1be55daf0b86a5532bc41d29626ab84319416649fe, 2026-11-02)"
-  },
-  "0xa6efbf07e0eaf3683a14af16c3abb4f46599ee49": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x23d1643da6724ebd98f199b27f09202dcf4bb2a21cf07dab5bd76e420013b810, 2026-11-02)"
   },
   "0xa701bb41e9725c8b9bbe56b9a0620ba6e7660349": {
    "category": "gambling",
@@ -10642,7 +10504,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x390ea44b04e1b80912e4c7f9f1e050bd92f1b10888d00c88fea114d97ea38e51, 2026-11-02)"
+   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x390ea44b04e1b80912e4c7f9f1e050bd92f1b10888d00c88fea114d97ea38e51, 2026-11-02)"
   },
   "0xa86652da9a31a7e0eb723080daa08cfa9db6814a": {
    "category": "gambling",
@@ -10696,7 +10558,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xae110592e5e8c7773dcdd8bffe68d480fa4030119adbd2fce65d87b55f40a345, 2026-11-01)"
+   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xed18b071da57f86b0b8cbb7e75c5621eef496036b53f326f967e1484b5e309a1, 2026-11-04)"
   },
   "0xa9487c82eb03a955af6bfc0eb028687904aa577e": {
    "category": "gambling",
@@ -10738,7 +10600,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x942a60cdb8c11bc539cf6216c4cf8aa462c86d610b39e7564ad16c4ba5e4839e, 2026-10-26)"
+   "source": "Swept 8x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xcaba7fe2fa3f7501e193ec1fb3f209e72a3934fca23a6ec151e87e8b2b0e8f17, 2026-11-03)"
   },
   "0xa9b808ea63e4012f629f7dd170f22ac3ed2a607d": {
    "category": "gambling",
@@ -10768,7 +10630,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x4b1383ae5f8ddd036f02ee9d50d1f538271d6e88e238c1b0b73314d4a519b851, 2026-11-02)"
+   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8cdf6ed73f32a5b3cf0878e157159a679e1e162c46ca505b8d3a783c316c6bba, 2026-11-01)"
   },
   "0xaa91c8bbf2afc0d8072a524cce48970f629af62a": {
    "category": "gambling",
@@ -10936,7 +10798,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xf3b0638c5f258d5a81a60b9651de238ec5774af8a8daa7c87551620db8c3cc66, 2026-11-03)"
+   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xf3b0638c5f258d5a81a60b9651de238ec5774af8a8daa7c87551620db8c3cc66, 2026-11-03)"
   },
   "0xad57b44126e1bf56b67778211570e7e46165af92": {
    "category": "gambling",
@@ -11008,7 +10870,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 9x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8a3d3e7155d7964540f297cb2911b5dc043b8cef3b35da5458888798067bd579, 2026-11-02)"
+   "source": "Swept 8x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8a3d3e7155d7964540f297cb2911b5dc043b8cef3b35da5458888798067bd579, 2026-11-02)"
   },
   "0xae93bebd3c3ea13efbe9bdd74c2cd1b58fcaab4e": {
    "category": "gambling",
@@ -11056,7 +10918,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 13x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x43f2d4e9fdae94ea3be8290fa58a6cf692028c7aa337c9e12f9eda1d7e52b93f, 2026-11-03)"
+   "source": "Swept 12x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x43f2d4e9fdae94ea3be8290fa58a6cf692028c7aa337c9e12f9eda1d7e52b93f, 2026-11-03)"
   },
   "0xaf2486f3e67090e32589f8cd48ae8709cb203ea0": {
    "category": "gambling",
@@ -11284,7 +11146,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x6380765667d8613c5578863f60426a8fdf83c21d2a6fd1ae0a526381198daf61, 2026-11-03)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x6380765667d8613c5578863f60426a8fdf83c21d2a6fd1ae0a526381198daf61, 2026-11-03)"
   },
   "0xb33722a86fe0fda20203ab5caac242a39d13dda2": {
    "category": "gambling",
@@ -11370,12 +11232,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 4x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xb40a182532c9cd3d7947b49f5321ae15afac8a8a29f177cc1a59360019f45d33, 2025-10-08)"
   },
-  "0xb50729e170e8971e02fd9f750950f268e0445695": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x5b27fecf03f35d0d8cc00287086e1184da31e097f4cce36f3c9c81804d4083b4, 2026-10-30)"
-  },
   "0xb516727a3640912cd673ead35f9f90f317ebbcdb": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -11404,7 +11260,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5fa6888a86706049d8528675d81d5a37319565d86b6685f824f59dbdef51e00b, 2026-11-03)"
+   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x5fa6888a86706049d8528675d81d5a37319565d86b6685f824f59dbdef51e00b, 2026-11-03)"
+  },
+  "0xb5ce32b300cbbec6f103d76865562ea46324e9bf": {
+   "category": "gambling",
+   "entity": "Stake.com",
+   "label": "Stake.com deposit address",
+   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xb032154946c13e968bd30c5fde7651ff8296eca8259f144e18ab1d76b461cbd1, 2026-11-03)"
   },
   "0xb5d447ee2e562c5e18c6202f66bc8c1ef069bddc": {
    "category": "gambling",
@@ -11452,7 +11314,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x7edeb108cff7b1cc33ee0f1d5b118dc3ba67ce1fb3c3434fdd318dce96e9c2c2, 2026-10-27)"
+   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x7edeb108cff7b1cc33ee0f1d5b118dc3ba67ce1fb3c3434fdd318dce96e9c2c2, 2026-10-27)"
   },
   "0xb6491e4a574aef4a07cb5fd0572171ac75819213": {
    "category": "gambling",
@@ -11506,7 +11368,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 6x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf305bcbe5e137c1bd747ef5b3199025a1b2802f03f104ace8c1c52237dd03199, 2026-11-03)"
+   "source": "Swept 7x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa3b5a1372c500d502e5468339081e986ea0328c83e9cccac62443ddc73b32fd3, 2026-11-04)"
   },
   "0xb7156649eb546280d81e4938b073c2abae761fc4": {
    "category": "gambling",
@@ -11536,7 +11398,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x53467a406a5c89b83d07d470394748dfa7debd5b3bde2afa910b4f2d24c2e150, 2026-10-30)"
+   "source": "Swept 3x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1456cb0dce77f31ec3907f6388224270a9581e4c8f1ba28e217e5dd91a57f33f, 2026-11-03)"
   },
   "0xb75e830e961161135fdf04cf975b5258a02a4b09": {
    "category": "gambling",
@@ -11548,7 +11410,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x49bd13940716d2864f018afea97c6807e8972597476a522c5e5a6d4a618411d5, 2026-11-02)"
+   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xaa4f3e867e2ea20238aff2c1da69b76e3fbe6d2168e43d5112973c227c04d0f1, 2026-11-03)"
   },
   "0xb78d2ba73c9c9759cf2d3ee6edd8f707ce13857d": {
    "category": "gambling",
@@ -11592,12 +11454,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 5x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x3182d302bff856eefb86ebc2d3321fa153677ef4af12cf2875ac4f9c1b5c5ee2, 2025-10-13)"
   },
-  "0xb84d711bd940f5f73ab956c656b5111a55049332": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x48bf3ac3f6ff1f0ec21302437a959d98f9c8b40c757f5cf08a6c48ec98eccee7, 2026-10-27)"
-  },
   "0xb856c398f1ad684b0521b92d900ad67404552cad": {
    "category": "gambling",
    "entity": "1xBet",
@@ -11614,7 +11470,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdbdb5322a4acd4ca18d343bffc36236cb8bb84360b4ce8c9385cb71f52e835b1, 2026-11-01)"
+   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdbdb5322a4acd4ca18d343bffc36236cb8bb84360b4ce8c9385cb71f52e835b1, 2026-11-01)"
   },
   "0xb8851e2a0913e91f4fdc5d2fea0170067d21bd2c": {
    "category": "gambling",
@@ -11716,7 +11572,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 10x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xb7c9310592f79237741d385fdffdea0937a3360a40160e540cc98f0a2e925c20, 2026-11-03)"
+   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xb7c9310592f79237741d385fdffdea0937a3360a40160e540cc98f0a2e925c20, 2026-11-03)"
   },
   "0xb9c421f7138168d6016c4d365d647f9590bfb717": {
    "category": "gambling",
@@ -11796,6 +11652,12 @@
    "label": "Bitcasino deposit address",
    "source": "Swept 3x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0xb2b940ba0748a534081153a5989211e1f5b51a8b759e9f06e8e8462da0641df7, 2026-05-02)"
   },
+  "0xbb423d2255409404063353766c49ce3acc94ba63": {
+   "category": "gambling",
+   "entity": "BetFury",
+   "label": "BetFury deposit address",
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4f48958398cd264749700f6bc485ece2a2074d982b563a599d4c149d43276fd6, 2026-11-03)"
+  },
   "0xbb49a553ba4860bfc012bcae40bf52c988993899": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -11849,12 +11711,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 12x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x654705c01a101a771e2ce0b3cc3a0647e63359022f8800455e206904205016fd, 2026-11-01)"
-  },
-  "0xbc31658770e3f22cbc983f4b9b9bb270b384b640": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xc9ca2cf6c2b7be2e4adacaf095adf21b9b44255d4251aec21570cb120e81b4a3, 2026-07-20)"
   },
   "0xbc4c6907a4742d40e9e068de76fa16e3dd44432a": {
    "category": "gambling",
@@ -11922,12 +11778,6 @@
    "label": "BetFury deposit address",
    "source": "Swept 8x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xce77674cf2e017b67e1064897261121f5d000f11fc7a388977d0a2039d2a000f, 2026-10-31)"
   },
-  "0xbd418684ba8d84bb65b067c77d61e6c826c01588": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x89c142a6068e5cb18a43d974de1e7efb132beeca920128bdf773fbc15d1b7d9e, 2026-07-27)"
-  },
   "0xbd541a9c77f36268a59835b0321af2b901e3137d": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -11968,13 +11818,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 11x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x0f0c1ad478d8d8548f8ad7165f80c852c9d77c5e1acb7a0f8f88764152711ad0, 2026-11-03)"
+   "source": "Swept 10x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x0f0c1ad478d8d8548f8ad7165f80c852c9d77c5e1acb7a0f8f88764152711ad0, 2026-11-03)"
   },
   "0xbdcef5e15fa746b63bddbe2a8e5c1ff84a572031": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 12x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc4dcffb4ca5bdc279d2c6eb7194ad7fca26695fad3971b79d4bfabec43b89301, 2026-11-03)"
+   "source": "Swept 11x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc4dcffb4ca5bdc279d2c6eb7194ad7fca26695fad3971b79d4bfabec43b89301, 2026-11-03)"
   },
   "0xbddbfdfd66d1c8db79983d62e0c713c28743cc8e": {
    "category": "gambling",
@@ -12154,7 +12004,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xe6f0086b32aab75e519976fc926d0ea180006d533886cf73c990dca13d09ee89, 2026-11-03)"
+   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x042f22a4fdd75d231f96651801d094389015e7e3666ec0684b03dfb038ce2c80, 2026-11-03)"
   },
   "0xc16412d3104a19e6f3b1c5695fdca34f4cc33675": {
    "category": "gambling",
@@ -12208,7 +12058,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x806d9afaf5afe46bea87d458296f5483f23b5cec9504ec381d9fa7b94882f60b, 2026-10-28)"
+   "source": "Swept 8x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x0985f7b6e0d9371c640c9c7e2ee5f015c55bf6aed2871a3e986299780163f55c, 2026-11-03)"
   },
   "0xc219506f6718dced61835e4fce9403862a6f1f58": {
    "category": "gambling",
@@ -12256,7 +12106,7 @@
    "category": "gambling",
    "entity": "wolf.bet",
    "label": "wolf.bet deposit address",
-   "source": "Swept 46x USDC into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0xafaed344a8be78e698d84b8fa8c859c9c3b458a1d8d86fc3a7e769777f151e47, 2024-12-17)"
+   "source": "Swept 44x USDC into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0xafaed344a8be78e698d84b8fa8c859c9c3b458a1d8d86fc3a7e769777f151e47, 2024-12-17)"
   },
   "0xc325fc0129c0d65f47c95c670465dd14c49422c4": {
    "category": "gambling",
@@ -12300,12 +12150,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0xb1c8c03cc4082c9ae553b29f38a5dabee1142df3c47f97fe3960f4967dc08e1a, 2025-10-05)"
   },
-  "0xc3c07849468dca3b8e7afdcb0a2535d3a302e441": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x75d9a98b523f0e62e9722b076a2ff065b15afc4e1dcd36ff7db494ba8a46bac6, 2026-10-24)"
-  },
   "0xc3d2f39d9581aefc291b85ca31019d9763414017": {
    "category": "gambling",
    "entity": "wolf.bet",
@@ -12316,7 +12160,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdbca9bcd47849b5120f61f3e6fa2507db3ece54db37c6e6f681084c192cc0e48, 2026-11-03)"
+   "source": "Swept 9x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x6738b9b87e42b8ed6eef70850027c819cbbaa3ec3ac04448d1998d714f34c108, 2026-11-03)"
   },
   "0xc3fda52b178e58d62604e24f18d602311a75287d": {
    "category": "gambling",
@@ -12340,7 +12184,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 16x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc789843fa3083c1ec023200f05e6a487878886d3fc9d73a923c745a30862e85b, 2026-11-01)"
+   "source": "Swept 14x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc789843fa3083c1ec023200f05e6a487878886d3fc9d73a923c745a30862e85b, 2026-11-01)"
   },
   "0xc4745a8402606580f83b45594ea882d3fd5ecf83": {
    "category": "gambling",
@@ -12352,7 +12196,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xd812aae0b43c30ca2d30740f5517e347d6e5017ad3d0357415b3b62bfb1beb1b, 2026-10-31)"
+   "source": "Swept 3x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xd812aae0b43c30ca2d30740f5517e347d6e5017ad3d0357415b3b62bfb1beb1b, 2026-10-31)"
   },
   "0xc4e062115a2e46344ce8f5c7ac030b12d3ed3815": {
    "category": "gambling",
@@ -12388,7 +12232,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xfe1a73a871add3f2da5c42a86720d5cd575ddc33825a7eadcd33d9e3ceb25df0, 2026-11-02)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa659688a732ecbabff6b0bd7a5697f8aba547ef394079a892168149b1d515e33, 2026-11-03)"
   },
   "0xc55938030a5108bdc7ae1a87ceefe2cd2f7588c8": {
    "category": "gambling",
@@ -12461,12 +12305,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x7dc2d9090a6f04d01907ff871d239c7c642ae55b9b79e50712cf2967349bf4f6, 2026-09-21)"
-  },
-  "0xc6f0b49c50f8852c7817575c6fa50564497c641a": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xea7a8becde2b621e66bb4c30fb7e9145391a36618371c3a94752b49ed0bb0662, 2026-10-30)"
   },
   "0xc6fb76ca1d33c0ab024120a9a210309f4d45683d": {
    "category": "gambling",
@@ -12562,7 +12400,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xecac8414fcc41d9170ac1b189f85ed9db7cca838241d603a1ed1aeddaef5df0d, 2026-10-28)"
+   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xecac8414fcc41d9170ac1b189f85ed9db7cca838241d603a1ed1aeddaef5df0d, 2026-10-28)"
   },
   "0xc86b6ff1b7e02510ea065e8c51a4b3a6ebb9dee0": {
    "category": "gambling",
@@ -12580,7 +12418,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x92ecafa646682e141757d75304ce58d079e5231a367024314cd1e2730f4c361b, 2026-11-01)"
+   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x7817817a78e1b9b2c3e41bf5bf760354f7f1195c6fb377b7aecc370ce22cfe38, 2026-11-03)"
   },
   "0xc8c1af8e55e8e61f0deb7a15edcacbe7a6f1695b": {
    "category": "gambling",
@@ -12624,17 +12462,23 @@
    "label": "Stake.com deposit address",
    "source": "Swept 3x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xfd2df59e02b63362aa5dcc122a68badf653c7b7a9fd3013901b225799a87e384, 2026-09-30)"
   },
+  "0xc9a7bc163af428a6d3bde0ea0c9fbb05b81932ea": {
+   "category": "gambling",
+   "entity": "BetFury",
+   "label": "BetFury deposit address",
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x3fa8f63ee7ad6126c3a5084ac3f9e4e05bc5e6ee75ee33e863dd2df006f92f0e, 2026-11-03)"
+  },
   "0xc9ac20faaca749a494fd6393236976aa81ef333f": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x5924c8d10162dde66570046fbd74b1ea1535312bf8fb85d44f2c448f166f6d10, 2026-11-02)"
+   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x279eb4226398a45cff4659f4e42c585b5e3a8ebdb2e021725e1ee1303f048b44, 2026-11-04)"
   },
   "0xc9b351b405b909bb11beb1ea52bd74ae645fc99a": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x7cca0a9ceeea0d5c588fbcc18f9b2526ff1229716d3ffea163add437598fd35c, 2026-11-02)"
+   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x7cca0a9ceeea0d5c588fbcc18f9b2526ff1229716d3ffea163add437598fd35c, 2026-11-02)"
   },
   "0xc9cad05f05c9fe54974484ba5989f6f1ddacbfbd": {
    "category": "gambling",
@@ -12832,7 +12676,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x8192589d854586d9379de271497f0cae736faad45a35ea0c49f8ecd592e62f6a, 2026-10-26)"
+   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x8192589d854586d9379de271497f0cae736faad45a35ea0c49f8ecd592e62f6a, 2026-10-26)"
   },
   "0xcd54f439599876c2c1090226a3c684ff3d0910be": {
    "category": "gambling",
@@ -12862,7 +12706,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 9x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x2a31019d8423d3122531ea9ba2c18b3eee4f952b9028b6b30ac0aa02701a02c9, 2026-09-03)"
+   "source": "Swept 8x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x2a31019d8423d3122531ea9ba2c18b3eee4f952b9028b6b30ac0aa02701a02c9, 2026-09-03)"
   },
   "0xce1d51591366e9f01b3b95f1bbc295f1df42ce59": {
    "category": "gambling",
@@ -12916,7 +12760,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x24cc5705a69bac4a73b872b50b9fc806951734089c0bedec5456e2ab6936f7ed, 2026-11-03)"
+   "source": "Swept 7x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x039272de6e620591cbdfe0ec5dd64b00d8e3bbb3f3e1a9c11d0831ae8c06fa38, 2026-11-03)"
   },
   "0xcef7c64636937ec0d726986c200e46cca4d84fd1": {
    "category": "gambling",
@@ -12982,7 +12826,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x4cff06b5a1b49f7a6a8d66af68f146c7f2e8ff8a4227165b51e07b2463a66ede, 2026-11-03)"
+   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xdcd1e11b31cabc9f08889f7f168784518aa6a62329051ce195fa53f269600893, 2026-11-04)"
   },
   "0xcfbfebf5bd350b7ae73d7c21840c19ac7559e210": {
    "category": "gambling",
@@ -13116,6 +12960,12 @@
    "label": "1xBet deposit address",
    "source": "Swept 4x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x920ace728906b023a5c8ca2116a4d3b2e63c46f05d943b7832c92034fa936041, 2025-10-15)"
   },
+  "0xd169591cdef225517eaf5c3ce9e75c46dec872df": {
+   "category": "gambling",
+   "entity": "Stake.com",
+   "label": "Stake.com deposit address",
+   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x6e3ce2cc180a8d7f8c45d9da69c86267c0e25e4077c2a038fade2200d7861dc0, 2026-11-03)"
+  },
   "0xd16f2908c019fdc29983f13b57672e891fe39455": {
    "category": "gambling",
    "entity": "1xBet",
@@ -13168,7 +13018,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 12x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x091ae12436011933ebfeb0ba77b91f7de2f5d063ae1b118f2fb780d6b13442ef, 2026-11-03)"
+   "source": "Swept 12x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x5f11b3982f90cf53b1b68fb51be49e4bed925b1d016e85209049724a6248bdcc, 2026-11-04)"
   },
   "0xd2a729cda88ce9863a3ece82cf7acf5b90b9ef88": {
    "category": "gambling",
@@ -13306,7 +13156,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x9139ab388128bef57f88fdbf8b16bfd9a648de2560fa92596a56ebf7f0fe226d, 2026-11-02)"
+   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x8413ee2b77fdf95d7163e9575d8c7be0d1fab2d517cac72c7dac89210edce31c, 2026-11-03)"
   },
   "0xd435ca5b46f82849d82b4c6f4bd678a1bb7ac362": {
    "category": "gambling",
@@ -13432,7 +13282,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x26ed5d16428b403d67492700871d66398ff393bf2da29d96da8e5bb43a25ee14, 2026-11-02)"
+   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x26ed5d16428b403d67492700871d66398ff393bf2da29d96da8e5bb43a25ee14, 2026-11-02)"
   },
   "0xd6076fa00490d14cd56874f3df655171bd96e8dd": {
    "category": "gambling",
@@ -13456,7 +13306,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2f32e06e686edfa2521f6c68af99677eae5c6bfffd682b0eb93f6bc47951f197, 2026-11-02)"
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1e01bd0c23faa0f949f31cd238f2fdc6e4da8bdaea1ea322a7b231f0a2ff8c8a, 2026-11-03)"
   },
   "0xd63f604a696f87cebe8c3e8547a108fb5bd1ef52": {
    "category": "gambling",
@@ -13540,19 +13390,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 9x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc09beb58d104b966c9c1ead2769ea46a3b65e83454ee11cedb37890cfce75d7e, 2026-11-02)"
+   "source": "Swept 10x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x1c4f144c4320ae2987efa7e887d0a9fced41f3ddb30f279c1ae646b5b33a35a5, 2026-11-03)"
   },
   "0xd73c13e87330be4ae497973aff585245b57ee054": {
    "category": "gambling",
    "entity": "Bitcasino",
    "label": "Bitcasino deposit address",
    "source": "Swept 2x USDC into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0xc8197e9c3688c60d0068e7f63f6ce8871374f22a819b2d734578c086eed6f983, 2026-04-20)"
-  },
-  "0xd749ffb37605b6edc06352a00be1aa6398343de1": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x58655da1ae0d4b26a413003132a5d1bec4eb485d2296a171bdab64956ddc86eb, 2026-10-23)"
   },
   "0xd74bbffda1bfb12790d959a9e25a34fbd7662e50": {
    "category": "gambling",
@@ -13596,12 +13440,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 21x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xf9adca746a3413114d0f00900ebac2ecebe7e301f6c2e34c742de8ba4a682486, 2026-10-30)"
   },
-  "0xd817033e4b695d162ff8090aaa3375d301b3a965": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xca41b19693781a756d8eb4118e6160a3bc5f0a305303c4afa61e8c5de06e41be, 2026-11-03)"
-  },
   "0xd83cd4ec7d9fbdd1bf0f6ab1ae8ec83a13a9bc49": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -13642,13 +13480,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 10x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x39dfc1493dc0c6253c37ce532dcff3b069c438004e602d4211917388dd90ef75, 2026-11-02)"
+   "source": "Swept 11x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x4884482e5f23aabf790ffc5ccaadf36c0761a78d50f17740ccb160a273770270, 2026-11-03)"
   },
   "0xd8ed6c8737fa143147ff11af6024e6d0166c2623": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa7adc7c68c6665743d403bb5524b1ea45305f9ec09152f3e257bfa2b3228f2b2, 2026-11-02)"
+   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x30d3a3efafdb9ddb31fe5b8ecb1b99739cba051bee580a34d417bad2ad7d4dca, 2026-11-03)"
   },
   "0xd8fe817195ceb1c29bc24dc1bd9bba3af9d1de04": {
    "category": "gambling",
@@ -13698,12 +13536,6 @@
    "label": "Bitcasino deposit address",
    "source": "Swept 4x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x561f116eab60549d86d86d6b9fd96d2260b31d39729b2d62f288f167227cb48f, 2026-04-12)"
   },
-  "0xda0fed252642e449947139866ca8a37c2a5ea756": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa230f167473d36523ef112099c4dcdeb3bf69f55ca179d6481e92bf850c50bb4, 2026-10-19)"
-  },
   "0xda1d6ecdba033b308dc7a5da1f89fc69edb0a0fb": {
    "category": "gambling",
    "entity": "1xBet",
@@ -13720,19 +13552,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3d2b205df5e1af6600db553982b418ba86341edf8ff7898ccd7b94b516d817b2, 2026-11-03)"
+   "source": "Swept 5x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xfbdc410316fa56e83b0242971972777bc35cc7da57848e2e752ddfd0ff1e2500, 2026-11-03)"
   },
   "0xda6a062dd0f36663301dd34754f01f316c750fa8": {
    "category": "gambling",
    "entity": "Bitcasino",
    "label": "Bitcasino deposit address",
    "source": "Swept 4x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0xee0d23dbd622ae5d0583f0575d62d25de2f5be7309b074af099cf60b207504db, 2026-04-02)"
-  },
-  "0xdac383192c9a1e985ec37480cce9d7c378996842": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x159fcc0fc8cc7f12dd075e7de6cbe28d7c314a7200c7a1d27f7d32aca487086a, 2025-09-30)"
   },
   "0xdb20bacc49dc30d53a035a4c90881ae87393570b": {
    "category": "gambling",
@@ -13763,12 +13589,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 21x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xc164ac567d542d94d9417cfef3db9f1459d1591c50435a32e9e13fbac705bef3, 2026-10-31)"
-  },
-  "0xdba6078973a108c043403d5ec81e9b99fc3f8a85": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x760fb6eaaac87195ceacc9bfdb0b75fb6409292605efab3742033c29802a38c4, 2026-10-17)"
   },
   "0xdbc8e3b380ba944d25be3754551d3f6234274a8d": {
    "category": "gambling",
@@ -13908,6 +13728,12 @@
    "label": "Bitcasino deposit address",
    "source": "Swept 6x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x6c21721cd6579df2780f0568b9f13fa5298e2b53c71b97a11bc158adb8e9d22a, 2026-05-01)"
   },
+  "0xdf84cdc8c05c06a1a210ecd7a989eaa75823e707": {
+   "category": "gambling",
+   "entity": "BetFury",
+   "label": "BetFury deposit address",
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa7cccb197502263a2ee4b0a0afb9e050e0354766b2bc5402f5af4ab072ab112c, 2026-11-03)"
+  },
   "0xdf9a28e8ce6bc98a63e60508cec28614e1aff68d": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -13924,13 +13750,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 13x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x8fd5d61d85c27831dd3bdfc755eaf505a255c8dd500e92d32556783116b602db, 2026-11-02)"
-  },
-  "0xdfcd06bac8caaa6c010290d9765017af7d7c78b8": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xc19d84bfd91305e3c8a3773c4e62b1bf77cf5d573006397c1df12971f7808719, 2026-09-18)"
+   "source": "Swept 13x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x879e9494b3774dbabca9bd63107fef207dd2b6f8c06c7cc38c2ed0377a75894d, 2026-11-03)"
   },
   "0xdfd188bcdbd005ebd9ec564d270d42a9fc4ed3df": {
    "category": "gambling",
@@ -13942,7 +13762,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2a082010a12e9dd4bf7899d90a5f81726baa0bb96b3158f6e7fab220b2935aa2, 2026-10-28)"
+   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xed8983fadcd133a2faae04b466248fd6757dc94513570cbee2c602530fd8c53b, 2026-11-03)"
   },
   "0xdfe713e8d36bc0aebbd0b6c700789f4d7f5ac3d6": {
    "category": "gambling",
@@ -13966,13 +13786,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa4e9957573ef5a1f99ab035a762861695d667ac646df436b560eecc341b13066, 2026-11-03)"
+   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa4e9957573ef5a1f99ab035a762861695d667ac646df436b560eecc341b13066, 2026-11-03)"
   },
   "0xe02eb59c0ba5c34491dee894b078ec62acfe8ddd": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa1ed647871946618ae1d73b07545ef2d4ee733f7d21b3a4cb242472b721b42ee, 2026-11-02)"
+   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd42e0181ef8f936dd07b0ab90a02bdb8770d9cfd5017da6b2e9db6f5fc7f4f80, 2026-11-03)"
   },
   "0xe031ca61ac3b32981adedfc588aed0f7f2753a58": {
    "category": "gambling",
@@ -14098,7 +13918,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 10x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf3068a7c9f1a73ec6634cb6801d280cc3b46bc27c6daaf8e303c89bed0e9a47e, 2026-11-01)"
+   "source": "Swept 9x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf3068a7c9f1a73ec6634cb6801d280cc3b46bc27c6daaf8e303c89bed0e9a47e, 2026-11-01)"
   },
   "0xe19932cf9c68fc1091206eeee8c51ecaffd948a7": {
    "category": "gambling",
@@ -14106,23 +13926,11 @@
    "label": "Stake.com deposit address",
    "source": "Swept 20x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x1112a6d466165d4455b6a9c55e3f90df78646ce8bd5a7cbeb8a4eabdcf4dfda0, 2026-11-01)"
   },
-  "0xe19e7f38a48b5c7fa13fb63ef06fa3bd1202d7ca": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x43265ef14b3243179193730df4d387762f842f0e4767cc44b7c235e9c1cea0bd, 2026-10-29)"
-  },
   "0xe1c1122bf60ce1010ceee0b3c1c7c9feca072628": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x16debbf46dd6bc1b2f8a988c38510c04ef3bd11ae67d11e2bd6eb2b04192773e, 2026-11-02)"
-  },
-  "0xe1c69bc078933ef80c0b26c1f70e15528f7a4dbc": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2a9d04d439e9c72236bcfd4074c36a05c149a918d97094801324162bd29ced25, 2026-10-30)"
   },
   "0xe1f5af91ac2771e652768dfe5761d0e1f883780b": {
    "category": "gambling",
@@ -14206,7 +14014,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 20x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x8f63c1c6396e41c32a4f1a412a52a27b758df584340f6ba77f029f450d1ce919, 2026-11-03)"
+   "source": "Swept 21x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf1dd56c9d4c865cd5a313cd1889c4bb5f25ae7b22758fe52e9011f971b7a958c, 2026-11-04)"
   },
   "0xe354855091764704c4c784979bbfd8eef413a47a": {
    "category": "gambling",
@@ -14268,12 +14076,6 @@
    "label": "Bitcasino deposit address",
    "source": "Swept 5x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x71d46797a37c7a350dc8c367b8c4aafbb8a4f68a6ae720d1935dd8564f8a0924, 2026-05-05)"
   },
-  "0xe452f59eb0e51d2d4156624ea1da20309402c7d1": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xc216ef277b5c4e2dc00e9604a6845ce6f95b8ded1e7ddac88ef03d4b191a5443, 2026-10-17)"
-  },
   "0xe45305824689c8122b50f65b97974da4afbe09fb": {
    "category": "gambling",
    "entity": "1xBet",
@@ -14290,13 +14092,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 9x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x278e6d4b0eb1eb2a2d464a300ad7c7dd7316dad8221a6e515222a7576f49020c, 2026-11-01)"
-  },
-  "0xe4b98509f5bd387dbc74fe97c84c8f2ec5d237cf": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x0019379ecaad3a62322de520887de1ed3c6db56fd2e3b9406f595b03cd6e2db7, 2026-11-01)"
+   "source": "Swept 8x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x278e6d4b0eb1eb2a2d464a300ad7c7dd7316dad8221a6e515222a7576f49020c, 2026-11-01)"
   },
   "0xe4eec617032cd11d81e96989bcdd2ffd9c589bfc": {
    "category": "gambling",
@@ -14320,19 +14116,19 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 13x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2dccd4d62f9c91707ff90ac50b41491b732eb06e5eb1f610c634036455fc8423, 2026-10-28)"
+   "source": "Swept 12x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2dccd4d62f9c91707ff90ac50b41491b732eb06e5eb1f610c634036455fc8423, 2026-10-28)"
   },
   "0xe58c7bf71f74d06ecae02b69db24a34002a5caa3": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x7141ecbab671ca0b73c1340628359afdab51840dcf23d96a524da561c0d8d97f, 2026-11-02)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x897be4e12f68c7a63eef9294a88b616693df2fa2624b2c8e3c7f9f3d6afb2168, 2026-10-26)"
   },
   "0xe5bdf728d0eddcf09ef9d5b5541368ab19fca67a": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xff0f40522411b9fbdaa13bd272a1500fcb0a0344e494ca6d7a4a059f245e23d1, 2026-11-02)"
+   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xff0f40522411b9fbdaa13bd272a1500fcb0a0344e494ca6d7a4a059f245e23d1, 2026-11-02)"
   },
   "0xe5dc9757c9e23c79be5be3188ddca8f12c89cc24": {
    "category": "gambling",
@@ -14398,7 +14194,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x219877916dc201e7189f416d0ad4471dfbe0a4bcf00cdaea722641cf68d0690f, 2026-10-24)"
+   "source": "Swept 3x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x219877916dc201e7189f416d0ad4471dfbe0a4bcf00cdaea722641cf68d0690f, 2026-10-24)"
   },
   "0xe6a98fbfe4b7282e75decd5c497101f61f05278d": {
    "category": "gambling",
@@ -14470,7 +14266,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x38fc13ae51312c1d2f27d66459193230dcbd814c35968408bc96100f3f8db06a, 2026-11-03)"
+   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x38fc13ae51312c1d2f27d66459193230dcbd814c35968408bc96100f3f8db06a, 2026-11-03)"
   },
   "0xe824956d7e2be75512bb4be4873eaf1c225e383b": {
    "category": "gambling",
@@ -14502,12 +14298,6 @@
    "label": "Stake.com deposit address",
    "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xc43bb93d53703fa867ac4cc71394578c84b2cbc2012f4d9945439f851921c4ef, 2026-10-26)"
   },
-  "0xe87324cbe00e370a1b7c2835f1ce9d10b20f8105": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xb28cccbcd9dd3821bc6438b86cbede8171afd2a68651ad6266bb242d7dcdf63d, 2026-10-29)"
-  },
   "0xe87f5d185ddf49fa0b399486903e47e249f96ad5": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -14518,7 +14308,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 10x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x9f7555e2dfc75bd40abe1d1350d372f479132fbdc60cbc10b2122419b22dee69, 2026-11-03)"
+   "source": "Swept 9x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x9f7555e2dfc75bd40abe1d1350d372f479132fbdc60cbc10b2122419b22dee69, 2026-11-03)"
   },
   "0xe8df1e743988bbb421d0a61b202d5591dd4a557c": {
    "category": "gambling",
@@ -14550,12 +14340,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x2d0b6e94c0eb08864a6f8ad886d4351bc9839eba5ef561c4b020c4730cf4719f, 2025-10-15)"
   },
-  "0xe98a3fd1d9665835637e456d01719d55fb58e29b": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xd534aa0fc56b7f2a50fe181f70204f63d24d19c846f8c985e7e4d8acea92b914, 2026-10-31)"
-  },
   "0xe9abc372831a93187fdf0395a1f00d8d46592f0b": {
    "category": "gambling",
    "entity": "wolf.bet",
@@ -14572,13 +14356,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3c92275d3c05a379631ebc13a59e4cadb0ce86ff4202aa74ff0c5a59dbf6d962, 2026-11-03)"
+   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x3c92275d3c05a379631ebc13a59e4cadb0ce86ff4202aa74ff0c5a59dbf6d962, 2026-11-03)"
   },
   "0xe9d05ded939a76138d31931db012c2a5394bcd80": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4ee849774fac01adb98ef267d4808ebd3a7029927395f823d0361f6936ed0df8, 2026-10-31)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x792cd44f535ab2a97489017fcb20c7b7a9bfd3553efe216d0e41ef2e6650a24f, 2026-10-28)"
   },
   "0xe9d65c025cc4027d65847b24cce64c5709e408fb": {
    "category": "gambling",
@@ -14602,13 +14386,13 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 8x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xd9bb9948746db10f65a1fe3849cdf7b246a43be9fcaa9792f1906387e716be0a, 2026-10-25)"
+   "source": "Swept 7x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xd9bb9948746db10f65a1fe3849cdf7b246a43be9fcaa9792f1906387e716be0a, 2026-10-25)"
   },
   "0xea0efc6f3b0c870fb352dd9f862bc2888b68d3f9": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa6bc3557ecbb2beb45ee2eaded714b71dae74a8ac22960e4b490b4eaced43977, 2026-10-31)"
+   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa6bc3557ecbb2beb45ee2eaded714b71dae74a8ac22960e4b490b4eaced43977, 2026-10-31)"
   },
   "0xea10a3f2440a462ce232ef57a63112793b4df355": {
    "category": "gambling",
@@ -14638,7 +14422,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 13x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x21823fc0794fa76f4aeb93e62b2d1977d28983743bed9a0db3785dee5a44e199, 2026-10-18)"
+   "source": "Swept 12x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x21823fc0794fa76f4aeb93e62b2d1977d28983743bed9a0db3785dee5a44e199, 2026-10-18)"
   },
   "0xea75d1d8a29dd39e5a0e722855a7c12e044cb60e": {
    "category": "gambling",
@@ -14710,7 +14494,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 8x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x0affd6b03fcc95b0f7d2471d3f78225ad878357609c26ba3399d75d804bc616f, 2026-11-02)"
+   "source": "Swept 9x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xcc2f2066dbffa5e18c10ceab79a440caa8dedff941e534211e279ae42450dc76, 2026-11-03)"
   },
   "0xeba64a0a5e94f0000d8b959bf3c48f3de1e5f78e": {
    "category": "gambling",
@@ -14722,7 +14506,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 9x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x190149ffc7bf4ea5fbc7f88ca21388f29540c8c0b2351c55ca8588fb88c49711, 2026-11-02)"
+   "source": "Swept 8x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x190149ffc7bf4ea5fbc7f88ca21388f29540c8c0b2351c55ca8588fb88c49711, 2026-11-02)"
   },
   "0xebd52bee09a6feed395ff8af5a7593e805d0bb92": {
    "category": "gambling",
@@ -14836,7 +14620,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 16x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf3ba90a54e5f765264b91bf1ff98e1b12254e7d1b0f9cb6792faf72ce43e5bdd, 2026-11-02)"
+   "source": "Swept 16x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x168bfbc0d10152fdd66e230300a17c6ce7b886881a08666e02b29a6e9e0525a0, 2026-11-04)"
   },
   "0xed61c8573ee5588484231c10ebade7bd31174f4e": {
    "category": "gambling",
@@ -14860,7 +14644,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x0372e05f77b31c795372117cf2d3e755bea857093d00f5e3c7a1daa6f18f54bd, 2026-11-03)"
+   "source": "Swept 4x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x0372e05f77b31c795372117cf2d3e755bea857093d00f5e3c7a1daa6f18f54bd, 2026-11-03)"
   },
   "0xede5dd73c1852f1cb5adf67e80ae6dc2837519a2": {
    "category": "gambling",
@@ -14884,7 +14668,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x25dae92d69d4f53667a6ecdfb6b0143255511d3dbd1bfd0a0da9610f61a90457, 2026-11-01)"
+   "source": "Swept 2x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x25dae92d69d4f53667a6ecdfb6b0143255511d3dbd1bfd0a0da9610f61a90457, 2026-11-01)"
   },
   "0xee739348127a126ced0c2ce7ddac6c406a5dab5e": {
    "category": "gambling",
@@ -14920,7 +14704,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 5x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xb8e69caaa0b94c11aeb1dbbdbb2618a02a45cf0c3eecbf9a42b0ed47ee0d428b, 2026-10-25)"
+   "source": "Swept 4x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xb8e69caaa0b94c11aeb1dbbdbb2618a02a45cf0c3eecbf9a42b0ed47ee0d428b, 2026-10-25)"
   },
   "0xef05d0dc65ea96f8eeecb52242ba9ae423212a10": {
    "category": "gambling",
@@ -15034,7 +14818,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 33x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x20a743c47d5abd3bacfc66a8c7da7fdb671e3be7b4682a5a2f59386668c9fc8c, 2026-11-02)"
+   "source": "Swept 32x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x20a743c47d5abd3bacfc66a8c7da7fdb671e3be7b4682a5a2f59386668c9fc8c, 2026-11-02)"
   },
   "0xf06d794398e195ef6b5ce0f8fe379d5267652690": {
    "category": "gambling",
@@ -15088,7 +14872,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x849a79061a8cf8d9b140981eb02dfb0f68a3dd21b7b8204828ed13c57bfa89d9, 2026-10-30)"
+   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x28c47e3724ba8a9245186f8fb17ca5650330d651fc25a37928c0bc1ad0948f43, 2026-11-03)"
   },
   "0xf1f8dcf7e89406cbf9d1079ff94513a847e7aa20": {
    "category": "gambling",
@@ -15112,7 +14896,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 21x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0xf2688cc2b9c5a2b4d327a0e731ba7d3bf8bb6b161f66fdb65cdb378a8f0ca3b4, 2026-10-25)"
+   "source": "Swept 17x USDC into Stake.com hot wallet 0x758be77a3ee14e7193730560daa07dd3fcbfd200 (sample tx 0x2a8fb836b8a7599cb821adda3fcb63cc597608db878391170c9cf875a926cde9, 2026-10-22)"
   },
   "0xf24cfb4c748f1fb4327670e08f02bfc23495ce30": {
    "category": "gambling",
@@ -15148,7 +14932,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x92969528ac061dd1ac94cb856552d9d6947abf9fc2910693f160d78e7eb618a8, 2026-11-01)"
+   "source": "Swept 8x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x35f3fe6081dd6fec6bf938d2d313603c858f98fbf0e17fd875ee68e2ea8cc614, 2026-11-04)"
   },
   "0xf2e7fb15ae92dfea1e4d588cbbb62c1d3b6583f7": {
    "category": "gambling",
@@ -15184,7 +14968,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xaa5daf9f2a40d7694753c8766e7ae241b9d4b8b0b70d6fa85d611bf47778243b, 2026-11-02)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x75e4db8db9921814ac6cd13c2bcf0b49768c52084c16f87f9520fe0322641658, 2026-11-01)"
   },
   "0xf36c4a4a933eed787f6d1d2ce3d0fc61c194c541": {
    "category": "gambling",
@@ -15246,12 +15030,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 15x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x77090ab55b8e78648621ec3b3d008e1b4010166fe858c90dbe70c4da44dfc753, 2025-10-15)"
   },
-  "0xf47ad3d2f77cf2f796c68a9e02921f61a33cc305": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4e38ab0ab9319500c829d7ee6519ba6fccaa8876f2eafd1e7b7b529ad825f4a0, 2026-10-28)"
-  },
   "0xf47be5a6df4d96fc384a45647b2c749dc66d74c8": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -15310,7 +15088,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 6x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xf4454a04c4bbfa0bfe2b311456168eda0224e2827f34226573d6a861a53e9004, 2026-10-29)"
+   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x55e71c7eb23984c20cd879a38a7436b2b078a38dec40ecf2676af3a16db46398, 2026-11-03)"
   },
   "0xf57088adc1dfb51230181cd8d30adcac3bf6757f": {
    "category": "gambling",
@@ -15352,7 +15130,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x244cb7f2e3d935e15738f704d160318efb782de4a23984350c3a892d2180ff60, 2026-11-03)"
+   "source": "Swept 4x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x20cf6eadb61dfe631e51355df98c9cfbdc40731ef14e0ab322850bdfa5baa3cb, 2026-11-03)"
   },
   "0xf6608757ddd4311b8be8cd0c451240e19b6d684a": {
    "category": "gambling",
@@ -15370,7 +15148,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xd493f7a7ced7ef78439a1ef631a61fe6428f99fcda4b1c29eb8b978739c25582, 2026-11-02)"
+   "source": "Swept 8x USDC into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x2fae40d979c09d9328d7d89ad3b01892ebcc7361006a2e16ba7206173c38962c, 2026-11-03)"
   },
   "0xf6783385a34ff9a16acd3b85a5b1c66919428682": {
    "category": "gambling",
@@ -15430,13 +15208,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 17x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa9e13b410b5777eba5f17d43ec8925d7dfe8e42c625cd6f435c61f91169ceaed, 2026-11-03)"
-  },
-  "0xf803468e6fddb09828dd12703b4b800c8d944f43": {
-   "category": "gambling",
-   "entity": "wolf.bet",
-   "label": "wolf.bet deposit address",
-   "source": "Swept 2x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0xe6cd188232366567829c0c459ee3d32199505911e158caf01d9916a9f678b6f9, 2024-06-27)"
+   "source": "Swept 16x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa9e13b410b5777eba5f17d43ec8925d7dfe8e42c625cd6f435c61f91169ceaed, 2026-11-03)"
   },
   "0xf849d333317a07c7d2cd158fb050e31fc9cb5206": {
    "category": "gambling",
@@ -15528,12 +15300,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x678fedff22d828e8e2ae2939cc80d9c4db476c60dcbe3db5e008607964ec0917, 2025-10-11)"
   },
-  "0xf9d1bd3650ab129165750045617f935da4942741": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0xfa500178de024bf43cfa69b7e636a28ab68f2741 (sample tx 0x337b1d095f4d6da60952a89364004c597e11ac643cdf1989589eeeef4afbbc79, 2026-02-22)"
-  },
   "0xf9d8ced3988930a1e82ffc8d7db6bf6d0650f878": {
    "category": "gambling",
    "entity": "BetFury",
@@ -15551,12 +15317,6 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 6x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x37958fdb1a55eb8eaed6b33fbf71482cdb99e6255662f3951c3d12f5c7745e27, 2026-10-31)"
-  },
-  "0xfa500178de024bf43cfa69b7e636a28ab68f2741": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com hot wallet",
-   "source": "Block explorer gambling tag \u201cStake.com 6\u201d (via dawsbot/eth-labels)"
   },
   "0xfa5f30b1c245f54d9875a904035471aa9c470da4": {
    "category": "gambling",
@@ -15694,7 +15454,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 8x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9c69bc7cd170fb886fffb2f2c325e1a3248f81bf37d4176714d74d9712f01bf3, 2026-11-02)"
+   "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9c69bc7cd170fb886fffb2f2c325e1a3248f81bf37d4176714d74d9712f01bf3, 2026-11-02)"
   },
   "0xfc31e6c349f3e4a54468dcff0ef78cecfa5944ea": {
    "category": "gambling",
@@ -15874,7 +15634,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 20x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9af79b21ec594cefca970aefc5f4fde1ce83234ae7c77891f06b74581f6c6b55, 2026-11-03)"
+   "source": "Swept 19x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x69565143f9b27aa7f491bd3fd9a418544dd42abf05ca813ceb57eedff714cb89, 2026-11-03)"
   },
   "0xfe7fffa726113d0d5e4e96c68c55f2a93b0e351e": {
    "category": "gambling",
@@ -15940,7 +15700,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x65f3d64ed5fc8fa35005006d242751b0d6e4d52740e781d5b0017489df213210, 2026-11-02)"
+   "source": "Swept 2x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0x65f3d64ed5fc8fa35005006d242751b0d6e4d52740e781d5b0017489df213210, 2026-11-02)"
   },
   "0xff31e180909447dce42b79c19ed05c8b98abf219": {
    "category": "gambling",
@@ -15982,7 +15742,7 @@
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
-   "source": "Swept 7x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xb3453e083c10f4f32048915549cf68e485485f36a59b4252690c76cc580428a4, 2026-11-02)"
+   "source": "Swept 3x USDT into Stake.com hot wallet 0x019d0706d65c4768ec8081ed7ce41f59eef9b86c (sample tx 0xa977e0d4778a4cae4649593deaca9e91d10e79c5026ea2212e86e39a1de97426, 2026-10-31)"
   },
   "0xffab07c79d4f9c905a7e65392730b3a517290b4a": {
    "category": "gambling",
