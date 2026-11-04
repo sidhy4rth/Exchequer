@@ -116,6 +116,9 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--holders", type=int, default=600, help="largest USDT-TRC20 holders to inspect")
     parser.add_argument("--accounts", type=int, default=300, help="largest TRX accounts to inspect")
+    parser.add_argument("--extra", type=Path, default=None,
+                        help="JSON {address: TronScan tag} of more candidates (e.g. a tag scan of the most "
+                             "active USDT accounts); held to exactly the same checks")
     args = parser.parse_args()
 
     scan_headers = {"User-Agent": "Exchequer/1.0", "Accept": "application/json"}
@@ -130,6 +133,11 @@ def main() -> int:
         print(f"Reading tags of the {args.accounts} largest TRX accounts ...")
         rows += tagged_rows(scan, f"{TRONSCAN}/api/account/list",
                             {"sort": "-balance"}, "data", args.accounts)
+
+    if args.extra:
+        extra = json.loads(args.extra.expanduser().read_text())
+        extra = extra.get("all_tags", extra)
+        rows += [(a, t) for a, t in extra.items() if is_tron_address(a) and isinstance(t, str) and t]
 
     candidates: dict[str, str] = {}
     for address, tag in rows:
@@ -162,6 +170,19 @@ def main() -> int:
                 continue
             kept[address] = {"exchange": company, "label": tag, "type": wallet_type(tag)}
             print(f"  KEEP  {address}  {tag}")
+
+    # A wallet verified on an earlier run keeps its label: TronGrid's inbound
+    # check sometimes answers empty for the busiest accounts, and a transient
+    # empty answer must not silently delete a cash-out attribution. Only a tag
+    # now classed as not-an-exchange removes one.
+    retained = 0
+    dropped = {line.split()[0] for line in not_exchange}
+    if TRON.labels_path.exists():
+        for address, meta in json.loads(TRON.labels_path.read_text()).get("labels", {}).items():
+            if address not in kept and address not in dropped:
+                kept[address] = meta
+                retained += 1
+    print(f"retained {retained} labels verified on an earlier run")
 
     by_exchange: dict[str, int] = {}
     for meta in kept.values():
@@ -205,7 +226,8 @@ def main() -> int:
                 "named exchanges as of the review date. That is the explorer's own "
                 "attribution, not an inference by this tool. Each address was then "
                 "checked on chain: no contract bytecode (TronGrid wallet/getcontract) "
-                "and at least one received USDT-TRC20 or TRX transfer. It does NOT "
+                "and at least one received USDT-TRC20 or TRX transfer (a label verified "
+                "on an earlier run is kept). It does NOT "
                 "establish who controls the funds -- only the exchange can link a "
                 "deposit address to a customer, via lawful request. Tags naming "
                 "issuers, bridges, protocols or contracts were excluded, and tags "
