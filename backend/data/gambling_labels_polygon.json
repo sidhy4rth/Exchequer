@@ -6,7 +6,7 @@
   "chain": "polygon",
   "last_reviewed": "2026-11-04",
   "counts": {
-   "gambling": 2686
+   "gambling": 2687
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
   "schema": "labels maps an address to {category, entity, label, source}"
@@ -116,9 +116,9 @@
   },
   "0x019d0706d65c4768ec8081ed7ce41f59eef9b86c": {
    "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com hot wallet",
-   "source": "Block explorer gambling tag \u201cStake.com 9\u201d (via dawsbot/eth-labels)"
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 8x USDT into Cloudbet hot wallet 0x61870030c041b9b283e64e69ae80e5716d217b5f (sample tx 0x922dcb740aea5f1d092e3834244e0434923573ebb06d81ff66545d26517b9625, 2024-07-16)"
   },
   "0x01a26cf950d2433652b4ca0f71e14ad64efc9933": {
    "category": "gambling",
@@ -6401,6 +6401,12 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 2x USDT into 1xBet hot wallet 0xc7f02435dbfbcf16d6a31427c830bea1f5a78b19 (sample tx 0x24ebe87c9fbecb44de24ea0fa6905dd21e2673a1b7adb6db94e2a1aa86350935, 2025-10-13)"
+  },
+  "0x61870030c041b9b283e64e69ae80e5716d217b5f": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet hot wallet",
+   "source": "Block explorer gambling tag \u201cCloudbet: Hot Wallet (https://dappradar.com/dapp/cloudbet)\u201d (via dawsbot/eth-labels)"
   },
   "0x61a380b6e13fd36e31736747d9a4d7ca965d1c45": {
    "category": "gambling",

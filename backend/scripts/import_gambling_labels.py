@@ -104,6 +104,9 @@ def main() -> int:
     args = ap.parse_args()
     hunt = Path(args.hunt_dir).expanduser()
     seeds = json.loads((hunt / "raw/gambling_seeds.json").read_text())
+    extra = hunt / "raw/gambling_seeds_extra.json"   # platform wallets found later (e.g. Cloudbet via DappRadar)
+    if extra.exists():
+        seeds += json.loads(extra.read_text())
     deposits: list[dict] = []
     for f in sorted(glob.glob(str(hunt / "raw/gambling_evm_run*.json"))):
         deposits += list(json.loads(Path(f).read_text()).values())
