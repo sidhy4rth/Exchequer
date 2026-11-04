@@ -2,34 +2,38 @@
   "_meta": {
     "description": "Known centralised-exchange wallets on Tron. A match against one of these is what lets Exchequer say 'the funds were cashed out here'.",
     "provenance": "Each label is TronScan's own published address tag, read from its public API (the addressTag on /api/token_trc20/holders and /api/account/list) by backend/scripts/seed_tron_labels.py. Candidates are the largest USDT-TRC20 holders and TRX accounts, since exchanges dominate both lists.",
-    "verification_note": "TronScan publicly identifies these addresses as belonging to the named exchanges as of the review date. That is the explorer's own attribution, not an inference by this tool. Each address was then checked on chain: no contract bytecode (TronGrid wallet/getcontract) and at least one received USDT-TRC20 or TRX transfer. It does NOT establish who controls the funds -- only the exchange can link a deposit address to a customer, via lawful request. Tags naming issuers, bridges, protocols or contracts were excluded, and tags not recognised as an exchange were listed for review, not kept.",
+    "verification_note": "TronScan publicly identifies these addresses as belonging to the named exchanges as of the review date. That is the explorer's own attribution, not an inference by this tool. Each address was then checked on chain: no contract bytecode (TronGrid wallet/getcontract) and at least one received USDT-TRC20 or TRX transfer (a label verified on an earlier run is kept). It does NOT establish who controls the funds -- only the exchange can link a deposit address to a customer, via lawful request. Tags naming issuers, bridges, protocols or contracts were excluded, and tags not recognised as an exchange were listed for review, not kept.",
     "chain": "tron",
-    "last_reviewed": "2026-09-22",
+    "last_reviewed": "2026-11-04",
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
     "schema": "labels maps a Base58 address to {exchange, label, type}",
     "counts": {
-      "labels": 41,
-      "exchanges": 19,
+      "labels": 68,
+      "exchanges": 23,
       "by_exchange": {
-        "Binance": 12,
+        "Binance": 23,
         "Bitfinex": 1,
         "Bitget": 1,
         "Bithumb": 1,
-        "Bitpanda": 1,
-        "Bybit": 1,
+        "Bybit": 2,
         "CoinSpot": 1,
         "Coinone": 1,
         "FixedFloat": 1,
+        "Flipster": 1,
         "Gate.io": 1,
         "Heleket": 1,
-        "Huobi / HTX": 8,
         "Kraken": 1,
         "KuCoin": 3,
         "MEXC": 2,
+        "MaskEX": 12,
         "OKX": 1,
+        "OURBIT": 1,
         "Poloniex": 2,
         "UEEx": 1,
-        "Upbit": 1
+        "Upbit": 1,
+        "WhiteBIT": 1,
+        "Bitpanda": 1,
+        "Huobi / HTX": 8
       }
     },
     "excluded_not_exchange": [
@@ -37,9 +41,15 @@
       "TKHuVq1oKVruCGLvqVexFs6dawKv6fQgFs  Tether Treasury"
     ],
     "unrecognised_tags": [
+      "TGqLY6MH9iGAAdSBpFRVs7QcZCTUssckX5  8MAX Hot Wallet 33",
+      "TPH2HdoyD4HTYHi2wMjc6bjvbXExJyZ18B  8MAX Hot Wallet 34",
+      "TSWUmWFUUKUnNa6JDsg3Jp1WeAwXpcSyQy  8MAX Hot Wallet 35",
+      "TCTSGYpsV7hjvaFDrjzcvWr9UU7pWyjHnR  Cobo Custody",
+      "TJYWMjBdqdNvKrE5V6ZpEEjC4h7Qzsn5Tp  DTCPay Hot Wallet 3",
       "TK8v6HPniRKYixj6Egby712nr5R3xrYYCT  SunX: VaultColdWallet 2",
       "TA3fr8DX9EJjE1LunfWZcrHmz6qVbhtwLA  TronLucky DepositAndWithdraw 1",
       "TU5zwe3736jK1y2kZvQbi8YiPWg28LHss1  TronLucky DepositAndWithdraw 2",
+      "TYR4w7SWcaWCHHoTvvR5aVWh6y7pa6wgdK  VIR8 Hot Wallet 1",
       "TCGVFGDd62LSrfZEaz3M3fYifWWdSDHRL8  Vaneck",
       "TQgxyP1jDXGBvmgwqnJ7jKkEqWEogfRM5V  Well Wallet Hot 2"
     ],
@@ -49,6 +59,11 @@
     "TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm": {
       "exchange": "Binance",
       "label": "Binance 2",
+      "type": "exchange_wallet"
+    },
+    "TJCo98saj6WND61g1uuKwJ9GMWMT9WkJFo": {
+      "exchange": "Binance",
+      "label": "Binance 3",
       "type": "exchange_wallet"
     },
     "TWd4WrZ9wn84f5x1hZhL4DHvk738ns5jwb": {
@@ -69,6 +84,56 @@
     "TJqwA7SoZnERE4zW5uDEiPkbz4B66h9TFj": {
       "exchange": "Binance",
       "label": "Binance-Hot 11",
+      "type": "hot_wallet"
+    },
+    "TJTKCzQpsG19CSMYF9TPtxz6wSHPSyeKfa": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 12",
+      "type": "hot_wallet"
+    },
+    "TYLRgzUKgLHw5wCYox2xRUkCQaWo9koP6K": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 13",
+      "type": "hot_wallet"
+    },
+    "TCQ8X6x9GiK4khydWVKfLJvm8H6WK3RE8B": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 14",
+      "type": "hot_wallet"
+    },
+    "TTU4bhRuPEtaSWPXvvRQ7CVnyHs6cGu24e": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 15",
+      "type": "hot_wallet"
+    },
+    "TE4mtETxcuHHbprQmQkyVSaCC48Q5yk21i": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 16",
+      "type": "hot_wallet"
+    },
+    "TGpTXS67vXyPERWMC2iQSG27TosfD13HLZ": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 17",
+      "type": "hot_wallet"
+    },
+    "TADfh7Q4KA9LD6WfjjjcPMNra33gNRrCkb": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 18",
+      "type": "hot_wallet"
+    },
+    "TDB1RpAHPQdGqfb1qi8J2jLY2oGe2jSy8A": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 19",
+      "type": "hot_wallet"
+    },
+    "TGnBDu95RaJEaw7dJpqzHt8Sy7faayBGvj": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 20",
+      "type": "hot_wallet"
+    },
+    "TNiXZSD38dwRjZ5fXKn1im8crWkfqzskvH": {
+      "exchange": "Binance",
+      "label": "Binance-Hot 21",
       "type": "hot_wallet"
     },
     "TYASr5UV6HEcXatwdFQfmLVUqQQQMUxHLS": {
@@ -131,6 +196,11 @@
       "label": "Bybit",
       "type": "exchange_wallet"
     },
+    "TTH75Z9rfRgzCLNDDYBaR2WjUvuSDRtSMg": {
+      "exchange": "Bybit",
+      "label": "Bybit Cold",
+      "type": "cold_wallet"
+    },
     "TBfJhtGydsNkGt3VVN1mwcXLec9RExMRav": {
       "exchange": "CoinSpot",
       "label": "CoinSpot Exchange Wallet",
@@ -144,6 +214,11 @@
     "TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf": {
       "exchange": "FixedFloat",
       "label": "FixedFloat Exchange Hot Wallet",
+      "type": "hot_wallet"
+    },
+    "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8": {
+      "exchange": "Flipster",
+      "label": "Flipster Exchange Hot Wallet",
       "type": "hot_wallet"
     },
     "TBA6CypYJizwA9XdC7Ubgc5F1bxrQ7SqPt": {
@@ -226,10 +301,75 @@
       "label": "MXC 2",
       "type": "exchange_wallet"
     },
+    "THWbgqyaWSNxGWUmPTw3hSBKpthSv9v34P": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 16",
+      "type": "hot_wallet"
+    },
+    "TJGR5aajzMzr9kde6MUfcmvbtFLkGWLRSy": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 17",
+      "type": "hot_wallet"
+    },
+    "TCXoXGB3Sci1iBnyXv4pEXfT2YKyR52VxQ": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 18",
+      "type": "hot_wallet"
+    },
+    "TE9mPFsjDTbjH2cVjwxZzQXykrNcHoCZjC": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 19",
+      "type": "hot_wallet"
+    },
+    "TSotn4h9vBAkxpidjt21tvNyxEFvZVXwi5": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 20",
+      "type": "hot_wallet"
+    },
+    "TThgg5xjdusd56K9EFKYCEqHyiKLYeUtoA": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 21",
+      "type": "hot_wallet"
+    },
+    "TTeC2C533LBj4YSpt9uYFQoN3koFow9AQm": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 22",
+      "type": "hot_wallet"
+    },
+    "TQY1jwUd1wLMpCgEqgi7hM9zw5CgqodM9Q": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 23",
+      "type": "hot_wallet"
+    },
+    "TE1Va6e7akUNqKF7HmSoyyX1fGhCZtAJV8": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 24",
+      "type": "hot_wallet"
+    },
+    "TBuewzfShUacG3T7C78P5oaQF8xV31iB79": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 25",
+      "type": "hot_wallet"
+    },
+    "TDsc2EGLnf53CTGNeNXkuxeCi9iD4Ln6n1": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 26",
+      "type": "hot_wallet"
+    },
+    "TV2STaXmzBkZT9gN2GG2Bu3QcHzQgDTp6g": {
+      "exchange": "MaskEX",
+      "label": "MaskEX Hot Wallet 27",
+      "type": "hot_wallet"
+    },
     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": {
       "exchange": "OKX",
       "label": "OKX Hot Wallet 8",
       "type": "hot_wallet"
+    },
+    "TJP6zoGwWwUmANvMdrtqYq9iWA8qMAAY4q": {
+      "exchange": "OURBIT",
+      "label": "OURBIT Exchange Reserves",
+      "type": "exchange_wallet"
     },
     "TUgSgCQL6pMSy9zByn4sgxqrJa95sZExBG": {
       "exchange": "Poloniex",
@@ -250,6 +390,11 @@
       "exchange": "Upbit",
       "label": "Upbit Exchange Hot Wallet",
       "type": "hot_wallet"
+    },
+    "TWBPGLwQw2EbqYLLw1DJnTDt2ZQ9yJW1JJ": {
+      "exchange": "WhiteBIT",
+      "label": "WhiteBIT",
+      "type": "exchange_wallet"
     }
   }
 }
