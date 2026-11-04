@@ -10,7 +10,7 @@
 # runs on Railway, Fly, Render or any VM with Docker.
 
 # ---------- stage 1: build the frontend ----------
-FROM node:24-slim AS frontend
+FROM node:26-slim AS frontend
 
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
