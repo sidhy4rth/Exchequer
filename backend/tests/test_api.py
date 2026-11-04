@@ -27,7 +27,7 @@ def test_chains_reports_every_chain(client):
     assert set(body["chains"]) == {"ethereum", "bsc", "tron", "polygon", "arbitrum"}
     for chain in body["chains"].values():
         assert "exchange_labels" in chain
-        assert set(chain["risk_labels"]) == {"sanctioned", "mixer", "frozen", "stolen", "gambling"}
+        assert set(chain["risk_labels"]) == {"sanctioned", "mixer", "frozen", "stolen", "gambling", "poisoning", "scam", "laundering"}
 
 
 def test_exchanges_lists_what_attribution_covers(client):
@@ -47,7 +47,7 @@ def test_risk_labels_says_whether_screening_ran_at_all(client):
 
     assert body["chain"] == "ethereum"
     assert body["screened"] is (body["count"] > 0)
-    assert set(body["counts_by_category"]) == {"sanctioned", "mixer", "frozen", "stolen", "gambling"}
+    assert set(body["counts_by_category"]) == {"sanctioned", "mixer", "frozen", "stolen", "gambling", "poisoning", "scam", "laundering"}
 
 
 def test_an_unknown_chain_is_a_400_on_both_label_endpoints(client):

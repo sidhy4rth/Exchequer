@@ -708,7 +708,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
             <div><dt>Exchange wallets labelled</dt><dd><CountUp to={coverage.wallets} /></dd></div>
             <div><dt>Customer deposit addresses</dt><dd><CountUp to={coverage.deposits} /></dd></div>
             <div className="risk"><dt>Reported stolen or phishing</dt><dd><CountUp to={coverage.stolen} /></dd></div>
-            <div className="risk"><dt>Frozen by Tether</dt><dd><CountUp to={coverage.frozen} /></dd></div>
+            <div className="risk"><dt>Frozen by issuer</dt><dd><CountUp to={coverage.frozen} /></dd></div>
             <div className="risk"><dt>Under government sanctions</dt><dd><CountUp to={coverage.sanctioned} /></dd></div>
             <div className="risk"><dt>Mixer pools</dt><dd><CountUp to={coverage.mixer} /></dd></div>
           </dl>

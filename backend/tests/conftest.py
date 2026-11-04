@@ -26,6 +26,9 @@ from app.graph_builder import _annotate_node_totals  # noqa: E402
 # real case store or read one a previous run left. Set at import, before any
 # module-scoped TestClient starts the app.
 config.API_CACHE_PATH = None
+# Nor may it screen against a label store built on this machine: the suite
+# must give the same answers here as on CI, where no store exists.
+config.LABEL_STORE_PATH = None
 
 # Reports are signed; the suite signs with a key of its own rather than
 # creating report_signing_key.pem beside the real case store.
