@@ -6,7 +6,7 @@
   "chain": "ethereum",
   "last_reviewed": "2026-11-04",
   "counts": {
-   "gambling": 13616
+   "gambling": 13674
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
   "schema": "labels maps an address to {category, entity, label, source}"
@@ -113,6 +113,12 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 12x USDC into Stake.com hot wallet 0x974caa59e49682cda0ad2bbe82983419a2ecc400 (sample tx 0xc7d534ffbaa83c5c6b4e75f6751e8c7f1bf81d0a3f43f2e686e3814afc7d54d8, 2026-10-03)"
+  },
+  "0x005af88b0cc40553469f6c8ab0440c17b79c6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 8x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x749787643b24b3fcfcf82ef521a80b046f1aeaf28d0b83fab89b0c979c39d17b, 2026-05-09)"
   },
   "0x005cab298ef97f5d2fa0ea697df7adca5331ac72": {
    "category": "gambling",
@@ -2063,6 +2069,12 @@
    "entity": "wolf.bet",
    "label": "wolf.bet deposit address",
    "source": "Swept 20x USDT into wolf.bet hot wallet 0x7a7f78a2af5aef01a889e8713083ab77dcc9fc9b (sample tx 0x43c772894868353f876680e09e876cfe951db1bd63052b5a047664cf1e69ead7, 2023-03-15)"
+  },
+  "0x05ace508f52195c515b8797ecc49302178c26cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 11x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xcf42df3344ba3bf7be7f99a626f1c5e0db831fd17ffd9f13d768442e9d9c96fd, 2026-05-03)"
   },
   "0x05be6520c6d944e34deb84a4e0c0de55005a8e59": {
    "category": "gambling",
@@ -7602,6 +7614,12 @@
    "label": "Bitsler.com deposit address",
    "source": "Swept 3x USDT into Bitsler.com hot wallet 0x8758559975f35dd7d6f05fd59d3948eb43802d4a (sample tx 0xdc24630ae1641e8fd0753ba0a5d41e0f3c0a45618a6483ac9efefcb8afc32e36, 2021-03-04)"
   },
+  "0x155f16487000c813e72c90a3b62c0dc418106570": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 15x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x40a2c1647a8d6d76f9ccf33a703819c8120df0b0808b83b235db45a555565c9e, 2026-10-30)"
+  },
   "0x15627ec7718bb69bb79ab2a7a79123792587b43e": {
    "category": "gambling",
    "entity": "Roobet",
@@ -10451,6 +10469,12 @@
    "entity": "Gamdom",
    "label": "Gamdom deposit address",
    "source": "Swept 2x USDT into Gamdom hot wallet 0xd5fbda4c79f38920159fe5f22df9655fde292d47 (sample tx 0xf79e3bb256e7319fd7ce38be11f4ae6632da57edda975250e0b829dea6e07f9f, 2025-06-03)"
+  },
+  "0x1db356fecefd9248acea5b7046648fa6665be665": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x3c92cc3de9d702314e68b06f7833e09f4d90f2b0c6f822982fc780016e6de43c, 2026-09-30)"
   },
   "0x1db42cf9b21ca5bbf8341f73968e7eca4f0a4558": {
    "category": "gambling",
@@ -13937,6 +13961,12 @@
    "entity": "Roobet",
    "label": "Roobet deposit address",
    "source": "Swept 4x USDT into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0x0bdb3fa2df701df4c9c5ffa2f62021c7c8d6327205432149ad1cfdbdbd1565e3, 2026-10-09)"
+  },
+  "0x282fb83344e36e7b906c4bfb615ad8f8351fb644": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0x61870030c041b9b283e64e69ae80e5716d217b5f (sample tx 0x76a6fa4a5f4ba37bdcdd7b194132a87dffb622785951b79dec219a899fe8c1d9, 2026-07-04)"
   },
   "0x2843b8ee5978d86ee1a7f5f631d2ec694935486b": {
    "category": "gambling",
@@ -27936,6 +27966,12 @@
    "label": "Roobet deposit address",
    "source": "Swept 2x USDC into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0x233a9fdb684996dcc38860f6e0594e7c69673a269c9c4421806c7761f6424f07, 2026-10-01)"
   },
+  "0x51cb99efb60213cfd663693923221a4a93bb6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x67e3efd867395fdf6a029f476cd7f3ee44a549cb3eb3f3277f96e09f1bdaa7fc, 2026-05-19)"
+  },
   "0x51cbc789aee5d85ffcfb100e4bc2ad6e2706feea": {
    "category": "gambling",
    "entity": "Bitsler.com",
@@ -28673,6 +28709,12 @@
    "entity": "Gamdom",
    "label": "Gamdom deposit address",
    "source": "Swept 8x USDT into Gamdom hot wallet 0xd5fbda4c79f38920159fe5f22df9655fde292d47 (sample tx 0x41f10e98634be9801c6c9ede9f7fc4c1e7e2aa9dc00add6ad21b0211844e00d9, 2025-06-10)"
+  },
+  "0x53cb566cfeb87ffffff1932954943990ac896cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x37eab7ddf7c6480ed680edddd5483cebba1baf317a3b265ac8269ed106a4d450, 2026-05-18)"
   },
   "0x53cdd47bbffd8dbb7314a3c53b3ae50f44317f43": {
    "category": "gambling",
@@ -30048,6 +30090,12 @@
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDC into Stake.com hot wallet 0x974caa59e49682cda0ad2bbe82983419a2ecc400 (sample tx 0x25a3a4379fa6c75d39688353c8afc599da4ff7b778408bbc4a65aac62e96f711, 2026-11-03)"
   },
+  "0x57cb38289330addc427f6053821fd69b5f056cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 4x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x6d8121363543fc055bff5fe0ca600f5a3bda9d2c5605b3426ee834ae0262190e, 2026-05-19)"
+  },
   "0x57d1aa5dbd66f159af5297504670fcdbeba09ede": {
    "category": "gambling",
    "entity": "Roobet",
@@ -30372,6 +30420,12 @@
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDT into Stake.com hot wallet 0xdebfbe80c8aeba98a32968278463ccb639c6c4e3 (sample tx 0x810d0043f587f68f14c4336649d08e63dd6e3964e9b47488f9164c9f3f4f2f63, 2022-08-07)"
   },
+  "0x58cbeb071f4cb0643a1064f79a239f4b3b206cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 4x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x315785567aebef3f3575a5c491b30f47a7be7b441af7e7c679d7734479a69999, 2026-05-19)"
+  },
   "0x58cdd02b1561762f72c6b1f89e6415dee5dfe94b": {
    "category": "gambling",
    "entity": "Rollbit",
@@ -30570,6 +30624,12 @@
    "label": "BetFury deposit address",
    "source": "Swept 6x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x45cc8ee28ee1f106811cc276c4522d51301e474ce043b5fd2840e9062066decb, 2026-10-01)"
   },
+  "0x596e2ce0bb38433d49200c38c9de593a99ad1a77": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet hot wallet",
+   "source": "Block explorer gambling tag \u201cCloudbet: Hot Wallet (https://dappradar.com/dapp/cloudbet)\u201d (via dawsbot/eth-labels)"
+  },
   "0x59734799d6c2f5be7221e2c764c64661715f3f0d": {
    "category": "gambling",
    "entity": "Roobet",
@@ -30690,6 +30750,12 @@
    "label": "Roobet deposit address",
    "source": "Swept 11x USDT into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0xd2d4b07f59f55718337a122c6b0ed5bc4beb4d721e0ee9d671b6cf0f47776d41, 2026-10-04)"
   },
+  "0x59cbdcabd4f3ae92e826c8e1d20ab9b0cdd06cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 4x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xe8eb381bf2170fb65b8e1cd5cd311010ab8af0ff354bd8800223d7d0a76b04ff, 2026-06-08)"
+  },
   "0x59d3c0425e1440a2ac128aba65614e5f06f57f49": {
    "category": "gambling",
    "entity": "Bitcasino",
@@ -30749,6 +30815,18 @@
    "entity": "Roobet",
    "label": "Roobet deposit address",
    "source": "Swept 6x USDT into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0xe9c41077c41cb28908a8a7ccabfc218d5862cb5c28c47a78f44e23b425fd2829, 2026-10-29)"
+  },
+  "0x5a08da09b45505e4883042e03a4cbd0b7ddc6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x9ea86fec52ca0a782e8fdeeeb23c9951ba542ce003983cf7831dd2620f6ab140, 2026-05-04)"
+  },
+  "0x5a0b69a197b0f6a4f55108bc467fcaf002eb6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x43ede9bfa6eb833d0bbf20792d8bdcbf7a2d8282b60a35dab3a23572b60b5382, 2026-05-19)"
   },
   "0x5a0b80fa4fbb72550dbac31026dab5d000dfce0e": {
    "category": "gambling",
@@ -30840,6 +30918,12 @@
    "label": "Bitcasino deposit address",
    "source": "Swept 2x USDC into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x6a642385b2da42da60b8fddfa8cc0b04b9701fed0480730ea46eb2d64e2bdd50, 2026-04-09)"
   },
+  "0x5a5b6b868e2bf0e739c8458ccc4341ccafa56cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x12f86b0bbfa7015b82d6e2efb72197323a81cec74760b2e3da4538994f10b030, 2026-05-18)"
+  },
   "0x5a5c941aa65d4e593d10bc8f5936df09beca9d34": {
    "category": "gambling",
    "entity": "1xBet",
@@ -30857,6 +30941,18 @@
    "entity": "Bitcasino",
    "label": "Bitcasino deposit address",
    "source": "Swept 2x USDT into Bitcasino hot wallet 0x094b4cf43908f0adb3dbdb5025f52470aac3b160 (sample tx 0x67bfc1be21de7fed2f012f043a7b69deb3061f110f2cc9f0a190138377f8888b, 2026-04-30)"
+  },
+  "0x5a6bd0cd21dab045feb94ef7d42557ce55016cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 4x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xc038e8a02cb55ca0240c0f10d553d9abe64e4f15589aa55cc8b6657f615d6417, 2026-05-19)"
+  },
+  "0x5a7bfc74ecb9fa6de82c3fe546bc2fd13cff6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xadab58b044f4afbda125e56f4d28257a26b92b5df5412775f6bb4fecb65daab4, 2026-05-19)"
   },
   "0x5a7cbdad6fc136d686ef1dde9c27a38172ad0228": {
    "category": "gambling",
@@ -30948,11 +31044,185 @@
    "label": "Roobet deposit address",
    "source": "Swept 3x USDT into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0xb7daf161f9079ab82727ddf7a2962f1e7aca8493a9b399d2ffbcf42f7ab76f8d, 2026-10-01)"
   },
+  "0x5ac277cc0e9246de24447dd17e5b3ad619096cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xcb273d31f40971106087a0d360ba83d0bd9e52b4d153ad1412ee404293a654eb, 2026-05-18)"
+  },
+  "0x5ac3debfc46ffadc0a9ecb8375f48d59e75c6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x71291b2010a4c072c7da83ab7857f6636b05c59d4700a3f364a831219eb1ada6, 2026-05-18)"
+  },
   "0x5ac4e9b8b9f7d797a4a0ddc73521012387f72950": {
    "category": "gambling",
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 21x USDT into Stake.com hot wallet 0x974caa59e49682cda0ad2bbe82983419a2ecc400 (sample tx 0x3bee4fd251413ad33eb556c957140d65b15a5941662a7eb856f2add68849b4ff, 2026-10-02)"
+  },
+  "0x5ac7f2cd19c2b407e4ebc10eff715f7d71626cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xc2e377a5a2f0ae25556e792c6a72ed8ba7f4cb82eebb9bcdfd2d0fdbb96777b3, 2026-05-19)"
+  },
+  "0x5ac88b428701d92523b6227922d71c73a4686cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x556f4a1eef9e9a92ad42171b0a29b22681411ba774236f676cf02256fa0f8175, 2026-05-19)"
+  },
+  "0x5acb0d3a729439e8fc3a27154f16077bc14364ab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x41f2fd65662b956817cb27a24f8ce017e84ad1e452afa4ecbb01004aa8c8845c, 2026-05-19)"
+  },
+  "0x5acb4609d81c453d88703598493e5cc149122cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xd206449e4e782ea265e3bd7380448946e7fe1bb5551d172d41ca846c66c7c1b4, 2026-05-19)"
+  },
+  "0x5acb4983fea7d3789d280135e203a235728dfcab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xa735dbd6d54987a63b225e67e3aeb5a61103f5890cd96883c165bb02815b869c, 2026-05-19)"
+  },
+  "0x5acb4c464b2045de36f2e79f4a0ceaa14e958cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x358ed6355db875cecb0ab25ed33829e320b54c3059de6e2869d52bde8f31c69a, 2026-05-19)"
+  },
+  "0x5acb5823f8b29d7dd2a70dff1411a0204b446c2b": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xc683b973117548455e79f851849878f9a61000e579c309844d73e15df4acf5e4, 2026-05-19)"
+  },
+  "0x5acb74e2f9a03c7003743c3633088acd7c8b6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 66x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x587e13c48d7018d11ad35ad3d0133bbf5d06493d4944b8d82cae0b0927968029, 2026-10-03)"
+  },
+  "0x5acb791006c9e1107e7620beb89d9eb900206fab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x21b9679e3197ff46708047228b6b1990fb2cd768c226142c5f079b74adacdec2, 2026-05-19)"
+  },
+  "0x5acb84ed769326ca4e6e86cea646c33303bf66ab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x13e38918b4f264446ded70f5da32b8b85142830e2829958f00a1e80ac9213f76, 2026-05-19)"
+  },
+  "0x5acb863068e0acfe7a1c9b572ec5acac4e906cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 242x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x434ea468635a97df8f2ed86b01c553d7ca69759fe63ccecf06bcb097ded81568, 2026-08-24)"
+  },
+  "0x5acb8904a6813de365bde6f6249b20076e5a6aab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x5f76dfbfe8efbbcbbe1ba3a5efadcce26640f9dfc1a308951468b57f272912a1, 2026-06-08)"
+  },
+  "0x5acb89f254095a791cfa884ceef4bff111e86eab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 5x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x0f927a857a226a7b03e142a0699096eefad17e9345d0f2a055318858c58b1ae2, 2026-05-19)"
+  },
+  "0x5acb95d4f6c4cc315ae8fec82893cd4cfe236c7b": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xb676a799ba1b3d48d79af5cc2d1f26001c331e346deee738bd2bfaed7a2e5c7a, 2026-05-19)"
+  },
+  "0x5acb9f394cf2d4170ee69dee358929f7915e6ccb": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x53ea47a7c6c08929980cad97aa5b10ad8259d27a633432d87ea4ae92c1a34295, 2026-05-19)"
+  },
+  "0x5acbb423833862a22fc4e97ad3386d811fbbccab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xb536ccdbf964186e48687299dca6a0f14fc9aecc6f457a5d06c09ae40e0803e4, 2026-05-19)"
+  },
+  "0x5acbbc1756b6dfa7d95fc07f6a6069bde43c6c3b": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x3e8fa60eed7a9849e90746b5794ee052a8a6244f9d2ac1a29138033b22b05197, 2026-05-19)"
+  },
+  "0x5acbd45a231c62e553133b5c2883beba67dc6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 477x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x2e4cc7dfe45f7f1dbf5c0039ce1062bd136795862251977ed39d68ea182cf202, 2026-10-30)"
+  },
+  "0x5acbd570ccdf5b5770f24b57fae93e0260ac6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x150d84b14224ec26e34d569b34da98ce024edf7b90afff1eed63cd7e3bbfcd93, 2026-09-30)"
+  },
+  "0x5acbd77716552d60dccd4884b3725a60ee3e67ab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x30e9b154cece0f36ab302b415ba617fd32068aa8e5077dd0efdee84161c7b0ae, 2026-05-18)"
+  },
+  "0x5acbdc3b891e0a94af5112db629d41ebc0ad61ab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x2a2c0b3af5e38df1129934798b1aa9fa469186192fac6e68bae1098b3606c89b, 2026-05-19)"
+  },
+  "0x5acbe7fff6bbb7c95d9fbc6cd27dbccdd6729cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x2b030a3f0fc4f6cb0ac345ec81ccb3b2a90824baacfe490fe3a76677e0346cc9, 2026-06-08)"
+  },
+  "0x5acbfd027ffa929d6da89d6e10f2d980331c6c4b": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x8847140ce10be6261d9b185747eef5ea3bf8d4d8cdf270de6eea730950e48c61, 2026-05-19)"
+  },
+  "0x5accaf8290f49be5f24b4d4fc37f06e4ef6f6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xf719777a4fac9d3d67c724e90716e2a06bc16664f846f227e4fa474c0a46ee8d, 2026-06-08)"
+  },
+  "0x5acdab11ad895c8db06a04e684f6ca0a7b776cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 4x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x75ef623e297d74dad186accae06e1e24d6255cb3dbad924a0194b0b70b294122, 2026-05-19)"
+  },
+  "0x5ace3dd12a6ba1857237583c8d3fd92d30b46cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x601531a51e0e7572e51e26c071df8906fd49a59bc762c0794d2ef580e7eef51f, 2026-05-18)"
+  },
+  "0x5acf9ea00741f6afc7c06fb73e181910d46a6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 6x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x91b1ec24b3e14bc223ef05394f7ccdb1adebbbb0858b16d42f8538bcb1ad337f, 2026-05-19)"
   },
   "0x5adeb290e565f46103f3546bf41fa91220a08314": {
    "category": "gambling",
@@ -30983,6 +31253,12 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDT into Stake.com hot wallet 0x974caa59e49682cda0ad2bbe82983419a2ecc400 (sample tx 0xf0db8b7baa3064f6b1c1389d69e9c127aa76040e95c6d50c5a5d3b9bce6a01f3, 2026-10-06)"
+  },
+  "0x5afbd19ccad245baf62cbfbefbfd4884360d6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xb6b0712a084530395adfce5bbcba0d32c73c8b68028f56cbe2195c16dd0c315e, 2026-05-18)"
   },
   "0x5afea36df7234edb5afa6ce3f6b512e8e5ff646c": {
    "category": "gambling",
@@ -31211,6 +31487,12 @@
    "entity": "Bitcasino.io",
    "label": "Bitcasino.io hot wallet",
    "source": "Block explorer gambling tag \u201cBitcasino.io: Hot Wallet\u201d (via dawsbot/eth-labels)"
+  },
+  "0x5bcbf39fef4c95750e3e2e090a276ecd7d556cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x2bec7d56ff91092940c6a9efb60b4a4302fc1497a4b7a49749fb6be18c8e5f04, 2026-06-08)"
   },
   "0x5bcc8aca54c9dbf62361fd6d4ecdfcf50ea04f72": {
    "category": "gambling",
@@ -32172,6 +32454,12 @@
    "label": "Bitcasino deposit address",
    "source": "Swept 5x USDT into Bitcasino hot wallet 0x62983b602745df89953a89e14707c12081cdc43d (sample tx 0xf30f593695fb9bedf9a53bd972fd9a2783140bf95384a7290af483e15e4784e6, 2021-12-07)"
   },
+  "0x5ecb6ee2a95577958ef005547e07255705cb6cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x1447c700b456a6b7e5e98be63d8ffa10ba07c6a2a25c7ce08cf34f374d831041, 2026-05-18)"
+  },
   "0x5ed55bb53d32c05652314b78ac0477dc1a5fccf5": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -32435,6 +32723,12 @@
    "entity": "Bitcasino.io",
    "label": "Bitcasino.io deposit address",
    "source": "Swept 3x USDT into Bitcasino.io hot wallet 0xe48c9a989438606a79a7560cfba3d34bafbac38e (sample tx 0x1c982877ee029c256a25bb6f7cbfd98337d3a261b957ad6e93824ea3bb0a055b, 2021-07-21)"
+  },
+  "0x5fcb58ac370a8ea7ee711eab071b413818b36cab": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 3x USDT into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x40988bf2885c691576207591955211468921b43e9eb412a6e0e41f2716eb8cf2, 2026-05-19)"
   },
   "0x5fd6761b63c2fd1c9ab6c7eafddf0be792c8cc54": {
    "category": "gambling",
@@ -32987,6 +33281,12 @@
    "entity": "Stake.com",
    "label": "Stake.com deposit address",
    "source": "Swept 2x USDT into Stake.com hot wallet 0xdebfbe80c8aeba98a32968278463ccb639c6c4e3 (sample tx 0xec296549eb51f644004d10541f73f8ffc011a6f690175e2a40d35bfb5caa5b99, 2022-08-13)"
+  },
+  "0x61870030c041b9b283e64e69ae80e5716d217b5f": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet hot wallet",
+   "source": "Block explorer gambling tag \u201cCloudbet: Hot Wallet (https://dappradar.com/dapp/cloudbet)\u201d (via dawsbot/eth-labels)"
   },
   "0x619242d1214bbfbcb7ed9b332f086fbb612f5c38": {
    "category": "gambling",
@@ -38711,6 +39011,12 @@
    "entity": "Bitcasino.io",
    "label": "Bitcasino.io deposit address",
    "source": "Swept 2x USDT into Bitcasino.io hot wallet 0x5bcbdfb6cc624b959c39a2d16110d1f2d9204f72 (sample tx 0x4db5029dec57b3f4540ee54cc8732dbee08521b24f654e61b918f087c35fbfc1, 2026-09-25)"
+  },
+  "0x74aa5387681505c806ff1e972b12cdfd01406828": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDT into Cloudbet hot wallet 0x61870030c041b9b283e64e69ae80e5716d217b5f (sample tx 0x7354a04f5364e70c22f5619bd0a9fffec94d8254ec5dd3c185dad7c7b18bd717, 2026-07-07)"
   },
   "0x74ad8a4c20d19653c7a25e3b4078542a35168feb": {
    "category": "gambling",
@@ -46998,6 +47304,18 @@
    "label": "Roobet deposit address",
    "source": "Swept 17x USDC into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0xab56c1af897d2797d5e0671843c4465401fe3f095a54ad1d32f53ea1af4002af, 2026-10-15)"
   },
+  "0x8f700f5eef4971c2de671c44f254bf695fa00417": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 7x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x779bb85c5c17119acd1617373301defc1c7845b62bb5d435536d59589a3c033d, 2026-05-15)"
+  },
+  "0x8f702c9685a2ec6de8aeec854608deca4a560417": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 5x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xd7445d7aa0b0c2aa73869a66e2567a8ed187e8c2e650422572148b192b360511, 2026-05-15)"
+  },
   "0x8f70a2773a1d549a256535b0652ae824418ab5ca": {
    "category": "gambling",
    "entity": "Roobet",
@@ -49328,9 +49646,9 @@
   },
   "0x974caa59e49682cda0ad2bbe82983419a2ecc400": {
    "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com hot wallet",
-   "source": "Block explorer gambling tag \u201cStake.com\u201d (via dawsbot/eth-labels)"
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 6x USDC into Cloudbet hot wallet 0x61870030c041b9b283e64e69ae80e5716d217b5f (sample tx 0x89f16d61fdcc85c37a11457bcfb21efb54376ce979927777b0a0f012c9e1708a, 2025-06-04)"
   },
   "0x97518db70dd835ff2462d475b426f3f32000e884": {
    "category": "gambling",
@@ -71142,6 +71460,12 @@
    "label": "Rollbit deposit address",
    "source": "Swept 29x USDC into Rollbit hot wallet 0xef8801eaf234ff82801821ffe2d78d60a0237f97 (sample tx 0xb558cd7edc2ee3e451cd82e2a8c66e2b24a448f820501fc35e756922b46ab6d0, 2026-08-12)"
   },
+  "0xddbb70e4a514be5239a91d12208de320afaf3c54": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet hot wallet",
+   "source": "Block explorer gambling tag \u201cCloudbet: Hot Wallet (https://dappradar.com/dapp/cloudbet)\u201d (via dawsbot/eth-labels)"
+  },
   "0xddbc5e8b6360a047939bcb56d2eeed526ef7b30c": {
    "category": "gambling",
    "entity": "Rollbit",
@@ -71741,6 +72065,12 @@
    "entity": "Roobet",
    "label": "Roobet deposit address",
    "source": "Swept 3x USDT into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0xfde490525de5ede77ea31b7527173cc6486f231ba46b7a3965119ffe0de95d5b, 2026-10-04)"
+  },
+  "0xdfaa75323fb721e5f29d43859390f62cc4b600b8": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 2x USDC into Cloudbet hot wallet 0x596e2ce0bb38433d49200c38c9de593a99ad1a77 (sample tx 0xc482bddda886c32c49395dde5b55c7483466be50fd9ce5648026faa745c57a82, 2025-01-29)"
   },
   "0xdfaf5ee93091f9e256da32cb6d593eb8caa79e3d": {
    "category": "gambling",
@@ -74765,6 +75095,24 @@
    "entity": "Roobet",
    "label": "Roobet deposit address",
    "source": "Swept 2x USDC into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0xa9abffad72f13a89c3b6f36aa04199e2c2f2f596a92c8cdcd01e4f743a6931ee, 2026-10-12)"
+  },
+  "0xea613fe0261156f1231e0069fcfdd1fda1bc3b91": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 35x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x5614b11b7826adc3858ac004673dad88e579469793fcd8655fba72f17bbc2378, 2026-08-23)"
+  },
+  "0xea617cc4a628eef173b433a935e94c6582b73b91": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 8x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0x657e64209e340d3a297c800b5dd5e0acb73e84e0cb9f9db313535138f820ba1e, 2026-08-23)"
+  },
+  "0xea6368f3a9d68561c016e4ab24ba1294e4473b91": {
+   "category": "gambling",
+   "entity": "Cloudbet",
+   "label": "Cloudbet deposit address",
+   "source": "Swept 39x USDC into Cloudbet hot wallet 0xddbb70e4a514be5239a91d12208de320afaf3c54 (sample tx 0xf4f4a228aabc7fc8f7cb19cc0cf7216808a34df94aef0dd6f3661a96e138559e, 2026-08-23)"
   },
   "0xea6894d0a4599bfa3fb0b10c071ceefc15b5b3c0": {
    "category": "gambling",
