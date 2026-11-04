@@ -6,7 +6,7 @@
   "chain": "arbitrum",
   "last_reviewed": "2026-11-04",
   "counts": {
-   "gambling": 599
+   "gambling": 586
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
   "schema": "labels maps an address to {category, entity, label, source}"
@@ -150,12 +150,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x00df37128249e3c752713e071cc8a0649e9ff55f898603d5388201d8cfa674ee, 2025-10-28)"
   },
-  "0x0a784fe42da2eb1e8522e9d49cd5865aeb77d6e6": {
-   "category": "gambling",
-   "entity": "BetFury",
-   "label": "BetFury deposit address",
-   "source": "Swept 2x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xffdaf48655478e77956b9c6f314237cc6fcd59910af0af0e6ba62cdfbe73c60d, 2026-10-24)"
-  },
   "0x0c179a356a0818e51bc2a1e95e88b9a7b20ce185": {
    "category": "gambling",
    "entity": "1xBet",
@@ -166,7 +160,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 19x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x70be43c0a5b2a502ed5a86a833cb2883b0a2b326443459c82aed04d1ffdbfd14, 2026-11-02)"
+   "source": "Swept 19x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb4c2659eb694c45caac08284dc833f0f774c3c64510092b8f37b10c8d22be02f, 2026-11-04)"
   },
   "0x0c2e81f4e864910f361da266e8f614cf1215ad40": {
    "category": "gambling",
@@ -430,7 +424,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 4x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1ace34d9909d1a3eb730b4409424f21fdafb772631060d8991cee02b6468d624, 2026-09-17)"
+   "source": "Swept 3x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1ace34d9909d1a3eb730b4409424f21fdafb772631060d8991cee02b6468d624, 2026-09-17)"
   },
   "0x1f7ae8e7466926463b73365e69f67811b032572d": {
    "category": "gambling",
@@ -544,7 +538,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 6x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2ba11a0f6220e6ca222396538e2c7dd95a9165bc2f95868e93d3cd50c25abec2, 2026-11-01)"
+   "source": "Swept 7x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x3f4a0eaf7ecc8f08058c72efb9fe423791e37c15182751c0d8d06962da8a13f2, 2026-11-03)"
   },
   "0x2598b0a69c0542694fa2886e96fb9fe884cee58f": {
    "category": "gambling",
@@ -850,7 +844,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4ffce1b7672fcd888dccdf8b8e5647f621361415e2f327636d88e01f91e4ad6b, 2026-07-19)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4ffce1b7672fcd888dccdf8b8e5647f621361415e2f327636d88e01f91e4ad6b, 2026-07-19)"
   },
   "0x38b21fe078a0b2eff4d86b43f622c885df26899b": {
    "category": "gambling",
@@ -1348,7 +1342,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x537367400d5200b0169c9d637de92744b6b7b9595652ec1c1853a1fa935a0461, 2026-11-03)"
+   "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x550f701b6521771f5e261cb21bb16de5a2d09206bd5fbcd636a707970626621a, 2026-11-03)"
   },
   "0x5d58ff68188d43ed3df729055dbe9cf0f3361c02": {
    "category": "gambling",
@@ -1397,12 +1391,6 @@
    "entity": "BetFury",
    "label": "BetFury deposit address",
    "source": "Swept 7x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9b481125e7760b02026bc8a5dabe6d3dbf81fc45ea5db9388d0b79149b58abd2, 2026-09-21)"
-  },
-  "0x5fa51b051aa59e31375cd96765ce39abd7ac8763": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 5x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x9627bacf2d07bf58535195140f06309daa898fe973c263fbcd1d5a72c47e6d1b, 2025-10-25)"
   },
   "0x60096f0d4bb9323d2b391f6c479951c544b86c4c": {
    "category": "gambling",
@@ -1470,12 +1458,6 @@
    "label": "BetFury deposit address",
    "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xa6a115067c400bbcc50479fb206c0c0e702b4c83e1af079a7cdce45788b122ec, 2026-10-15)"
   },
-  "0x63e9112abcb2c734ba0ee64b9a4756dcba98d657": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0xa022a4e5172066ad1d22c8e963f2bbb644ddce3a107e2c05fe5eeb8dee40c431, 2025-10-25)"
-  },
   "0x647727f739aab491c30f0c8a91860b7cb190b453": {
    "category": "gambling",
    "entity": "1xBet",
@@ -1486,7 +1468,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 92x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xf227d6833b683160a02d827945d26dff129ed20e11cfdfc44d929b015002cce3, 2026-11-03)"
+   "source": "Swept 94x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xe251f9b1c2c21e5da419f4c8be33f2f3d883a7fd3367a416634eb45472e37f70, 2026-11-04)"
   },
   "0x64de9459f15c5c1a9a649c86b4f31dcc1a0c32e2": {
    "category": "gambling",
@@ -1600,7 +1582,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x7f0092fb798830846101d2d1788353695927c517faa0edc6e31422d38db9123d, 2026-08-16)"
+   "source": "Swept 6x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x7f0092fb798830846101d2d1788353695927c517faa0edc6e31422d38db9123d, 2026-08-16)"
   },
   "0x6d09c5ad4d7d52b028fd2c7ab7d16b3432b7a6e6": {
    "category": "gambling",
@@ -1614,23 +1596,11 @@
    "label": "BetFury deposit address",
    "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x843f1995b9713b75e70a897d7d4a352eb1666de76fe95826417e11cf8cfa1c57, 2026-10-18)"
   },
-  "0x6e0f12ce1d5b02c987041c97ad44ea1efff15470": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x346b30ac77da8fa9a0a8b8237449a4dba7ce3b87d3723ee078fe114af4817b10, 2025-11-05)"
-  },
   "0x6ef70dafd3334a21fb1d5327f0ccc16b0bf6611f": {
    "category": "gambling",
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x0a28b40816e0044c1256abb44c23e4016654b2176f78887015d4092a284b8e50, 2025-11-14)"
-  },
-  "0x705c3ef949b318706cea2bf41c66f9964c724523": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x7467307493edadcaa61ce5babb69dcaa22d2be9c2c3d114cfdbe47b2ef23f1e8, 2025-11-09)"
   },
   "0x706e9d1c4ede69a3e20a784b9badd58b3357c38e": {
    "category": "gambling",
@@ -1696,7 +1666,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 65x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb657fcdfd8ba66f72541dce9223331cb1ee9459bb6dba1a6ee69f04c8d2fa966, 2026-11-01)"
+   "source": "Swept 66x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x4ac35c45651dc865b0fd2c561d5b2c30f712b2b276ee9686c7a32196eb1078a8, 2026-11-03)"
   },
   "0x768cadc1a0515558482752d2ab780bd92aeaa967": {
    "category": "gambling",
@@ -1726,7 +1696,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 127x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x204c12797069a5b10d0e7dde24f799b81d6792368e30bb7bd103fe87e425dbcb, 2026-11-03)"
+   "source": "Swept 127x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x5f45d1c5d0e67752d655dbdf119665aee9b060f21860b41242e102f6c0e914dc, 2026-11-04)"
   },
   "0x776ae3aaa1f536f348555fe98c35219bc7251606": {
    "category": "gambling",
@@ -1908,12 +1878,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 4x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x4d6794e6ad5e487a278d9dd28262e0ed65f9660cb7f26e081954ef3c1d5d27ee, 2025-11-13)"
   },
-  "0x84de8d5a0be8e50147e7c46a299899a5a085b22c": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 3x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0xada24fcd27c2aa08c58088e553caa5bf131e8f813e13d077d8bc31e9254a815e, 2025-10-27)"
-  },
   "0x84f734a0fed2ae582ff90a7b674c8020efc5e949": {
    "category": "gambling",
    "entity": "BetFury",
@@ -1986,12 +1950,6 @@
    "label": "BetFury deposit address",
    "source": "Swept 3x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xd8e27fddb021f2a6846e555decd707b0c7833f8c22d1bcbab1ccd5ca46093428, 2026-09-19)"
   },
-  "0x8aea711dbdab6810a3ed30ea13f088a0bf0cf260": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x69951cb5b1978911407ad5a293a435bf25e9b800acaad9b3dfd7619fcdeb327e, 2025-11-09)"
-  },
   "0x8c1f7619bfafbcbf1bbb43e74e8a2dd29f860151": {
    "category": "gambling",
    "entity": "1xBet",
@@ -2020,13 +1978,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 7x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x3cc334afb55606434948f5736f0661f15fbb7621d0f87117a232d8a07e3eb510, 2026-09-22)"
-  },
-  "0x8eabad8dc646026117060d246fac89bad34e515f": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0xe826f36374d0be05be295662509a7bbf2c7d383ca3410f2931d94d549be323a5, 2025-11-09)"
+   "source": "Swept 8x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x50471c09b7dfb0ff468447c9bcd56e6ee37a4b5a4b00710cc58d4d22f40a9c68, 2026-11-04)"
   },
   "0x8eb3f282f0c2a15aea722d607ef83e6c9584f29e": {
    "category": "gambling",
@@ -2051,12 +2003,6 @@
    "entity": "BetFury",
    "label": "BetFury deposit address",
    "source": "Swept 6x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x6f58b306fda4ecf07b119d8bd0f79e20766353e733c8e62b384c63e91a61cfeb, 2026-09-24)"
-  },
-  "0x8f0ac96a578300f24421fac33a473938fa27e10c": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0xf553014bd4013abff01db96f9236ccadd874615d3a16e79d8bfeb353ec7f626e, 2025-10-23)"
   },
   "0x8f209056816ed67ae14c711340958bdebe549806": {
    "category": "gambling",
@@ -2104,7 +2050,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 17x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x79a3f5538292873e6eb130bcd9df851b83fdd881e41fac09af3334cd0ba438b3, 2026-10-22)"
+   "source": "Swept 18x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x001b25b633bc951dbf23730695ca7b1ee0c133cfedeadd90eb823c6df33108f8, 2026-11-04)"
   },
   "0x90d154976b3e82f3007d89e51ef290895a8b86ec": {
    "category": "gambling",
@@ -2140,7 +2086,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 8x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x27067d9893c6defb377c8aa1982ff5df6d037a8b3fc0683b6e0e93d278043ac5, 2026-09-28)"
+   "source": "Swept 7x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x27067d9893c6defb377c8aa1982ff5df6d037a8b3fc0683b6e0e93d278043ac5, 2026-09-28)"
   },
   "0x927230b7f200ea49efae33dc835b599c19467f7c": {
    "category": "gambling",
@@ -2374,7 +2320,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 127x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x388960eee46cc639130627835ea8232c768700c80eaf3b8df63d926dc8fdf406, 2026-11-03)"
+   "source": "Swept 127x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9f26125947ab42b330a4ba137c2e97edea0c6f97087fca8f1ba8dfa4d864f0c3, 2026-11-04)"
   },
   "0xa7a62336940f54df50857ad4248b292f534eb75c": {
    "category": "gambling",
@@ -2562,12 +2508,6 @@
    "label": "BetFury deposit address",
    "source": "Swept 2x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x5f1ef223fb55e320e2fd87bb317b3f99b99adae0a244e2da3309f95a876b97bc, 2026-10-15)"
   },
-  "0xb6ff491e622bd834b7737ef9cad378ce81a5a663": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x5e7395a3a3f942c3f859fbcc2c449203d164a661f825cb5d2f7650f3cf954e44, 2025-11-07)"
-  },
   "0xb7424187dfc141409fa2a1cac3e83be5540b43b2": {
    "category": "gambling",
    "entity": "BetFury",
@@ -2650,7 +2590,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 291x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb42dc1b00e790c848b398f60397119a2a83b859e237f5f98a199ca64f314655c, 2026-11-03)"
+   "source": "Swept 290x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0xb42dc1b00e790c848b398f60397119a2a83b859e237f5f98a199ca64f314655c, 2026-11-03)"
   },
   "0xbe08824d725a7aef643bdd711831a97896087ecf": {
    "category": "gambling",
@@ -3052,7 +2992,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 13x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2ac167441e13cb4f9d3c2ca342320787e9afdee67741679ad94a7473481336c9, 2026-10-26)"
+   "source": "Swept 12x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x2ac167441e13cb4f9d3c2ca342320787e9afdee67741679ad94a7473481336c9, 2026-10-26)"
   },
   "0xdb8b8bea22ff26da4238444fd645332bcbbda47a": {
    "category": "gambling",
@@ -3148,7 +3088,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 50x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9a1fd5e5dcfe633a8df62e5424336e34ec9e4c41dfe5254d1b6d2fe791a269d8, 2026-11-03)"
+   "source": "Swept 49x USDT into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x9a1fd5e5dcfe633a8df62e5424336e34ec9e4c41dfe5254d1b6d2fe791a269d8, 2026-11-03)"
   },
   "0xe0489272096219f137bddc52f0e1ad0b15e79ebf": {
    "category": "gambling",
@@ -3156,17 +3096,11 @@
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x58189fe787c5d39d3d324f7636d8513ad4e2e3317700377bac74e21e1f85107c, 2025-11-08)"
   },
-  "0xe06d3293f1ca93187265689a99ecc2c9d466e270": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0xf51aee49a1ddced784bcbe2b1b735e1be9cb67031a03dee421d166b591538260, 2025-11-10)"
-  },
   "0xe0963bced9f95551cc218fc8a09d87a31acfd8db": {
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 5x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1d13c1912fe5b411dc32ce3c71532677c471c6949328450752306f5d0484d3e1, 2026-07-12)"
+   "source": "Swept 4x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x1d13c1912fe5b411dc32ce3c71532677c471c6949328450752306f5d0484d3e1, 2026-07-12)"
   },
   "0xe1aa4eb5a9e73babd294d3a6e9b1b45bc784af07": {
    "category": "gambling",
@@ -3246,12 +3180,6 @@
    "label": "1xBet deposit address",
    "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x33028b06ea0d86e254776cd56c693290a045ecc2a8018526e629a974066ef9bd, 2025-11-09)"
   },
-  "0xe622e7d22e79d6f996cc81c70c14724c68484815": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 3x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x07c5881d526017137462a192d5015408c68afcf53d21aa71f8490c9512c31699, 2025-11-08)"
-  },
   "0xe62b368085374818058b73e63f4a4ca12411d6c1": {
    "category": "gambling",
    "entity": "1xBet",
@@ -3311,12 +3239,6 @@
    "entity": "1xBet",
    "label": "1xBet deposit address",
    "source": "Swept 3x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x68ac0409eceaa2505345f342fd2630a72594c7a74e9d502d4641f7116ff1195c, 2025-11-21)"
-  },
-  "0xeb90f7bcaf49c8f61cf60b0192ab084009b8899f": {
-   "category": "gambling",
-   "entity": "1xBet",
-   "label": "1xBet deposit address",
-   "source": "Swept 2x USDT into 1xBet hot wallet 0x41acf0e6ec627bdb3747b9ed6799c2b469f77c5f (sample tx 0x411e2cb92f5ff51f8db6f66807ca6aec9532536bbd47f898cb92a405562ac8eb, 2025-10-27)"
   },
   "0xeb97350b2d8e5414e18aa072f383efd0bec50b0d": {
    "category": "gambling",
@@ -3526,7 +3448,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 82x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x65a7140a00fc605adca601ed03f3161279cbc512b26b97c495aec8dc1f03a273, 2026-10-08)"
+   "source": "Swept 81x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x65a7140a00fc605adca601ed03f3161279cbc512b26b97c495aec8dc1f03a273, 2026-10-08)"
   },
   "0xfbd7473eb879aae9da5b8387a8c13626c56e22ef": {
    "category": "gambling",
@@ -3574,7 +3496,7 @@
    "category": "gambling",
    "entity": "BetFury",
    "label": "BetFury deposit address",
-   "source": "Swept 29x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x27dd5f2506270c277ed693166cc8aa2a003fcf3e033491ab0fbce7321d3e2df3, 2026-10-26)"
+   "source": "Swept 30x USDC into BetFury hot wallet 0x52a258ed593c793251a89bfd36cae158ee9fc4f8 (sample tx 0x6dff57c09dbe37e6951e98907553ed0a4649df0d95bdffaa9e6ecd9df5b20e02, 2026-11-04)"
   },
   "0xff2a289fc8d1d73afd74739e348b5adc790d1f25": {
    "category": "gambling",
