@@ -107,6 +107,27 @@ def main() -> int:
     deposits: list[dict] = []
     for f in sorted(glob.glob(str(hunt / "raw/gambling_evm_run*.json"))):
         deposits += list(json.loads(Path(f).read_text()).values())
+    # BigQuery sweep graph: level 1 = deposits of known hot wallets; level 2 = deposits of sibling hot wallets
+    # (receivers that many level-1 deposit addresses also sweep into). Platform is inherited from the seed;
+    # siblings are named "<platform> (sibling wallet)" via the level-1 deposit that links them.
+    seed_platform = {s["address"].lower(): platform_of(s.get("nameTag", "")) for s in seeds}
+    for f in sorted(glob.glob(str(hunt / "raw/bq_gambling_eth_*.json"))):
+        rows = json.loads(Path(f).read_text())
+        dep_platform = {r["address"]: seed_platform.get(r["hot_wallet"]) for r in rows.values() if r.get("level") == 1}
+        sib_platform: dict[str, str] = {}
+        for r in rows.values():
+            if r.get("level") == 1:
+                deposits.append({**r, "platform": seed_platform.get(r["hot_wallet"], "Gambling platform")})
+        # a sibling's platform: majority platform of the level-1 deposits that also sweep into it is not in the
+        # output, so fall back to the generic name; the source line still cites the sweep evidence.
+        ok_path = hunt / "raw/gambling_siblings_ok.json"
+        sib_ok = set(json.loads(ok_path.read_text())) if ok_path.exists() else set()
+        for r in rows.values():
+            # level 2 only for sibling wallets that were vetted (not an exchange, not a contract/router)
+            if r.get("level") == 2 and r["hot_wallet"] in sib_ok:
+                plat = sib_platform.setdefault(r["hot_wallet"], dep_platform.get(r["address"]) or "Gambling platform")
+                deposits.append({**r, "platform": plat,
+                                 "sibling": True})
     tron_path = hunt / "mukesh/gambling_tron.json"
     tron_rows = json.loads(tron_path.read_text()) if tron_path.exists() else {}
     exchange = {}
