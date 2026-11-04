@@ -17,7 +17,7 @@ What version 2 adds (docs/contracts/case.md has the full description):
   ``kind`` (a customer deposit address or the exchange's own wallet) and
   ``source`` (the label file, an inference, or a live explorer tag).
 * ``estimates``: how much of the funds reached the exchange, one figure per
-  tracing method. Only pro-rata exists until R4.
+  tracing method. Pro-rata always; FIFO and LIBR when R4's flag is on.
 * ``block`` and ``log_index`` on every transfer, so each can be cited and
   re-read later.
 
@@ -89,7 +89,11 @@ class Attribution(_Strict):
 
 
 class Estimates(_Strict):
-    """Amount of the traced funds reaching the exchange, per method (R4)."""
+    """Amount of the traced funds reaching the exchange, per method (R4).
+
+    The working for FIFO and LIBR (each wallet's figures) is in the
+    ``tracing_methods`` field beside ``prorata``; see app/tracing_methods.py.
+    """
 
     fifo: float | None = None
     prorata: float | None = None
@@ -194,15 +198,15 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def _estimates(result: dict[str, Any]) -> dict[str, Any]:
-    prorata = result.get("prorata") or {}
-    value = prorata.get("estimated") if prorata.get("status") == "estimated" else None
-    figures = [v for v in (value,) if v is not None]
-    return {
-        "fifo": None,
-        "prorata": value,
-        "libr": None,
-        "conservative": min(figures) if figures else None,
-    }
+    def figure(method: dict[str, Any] | None) -> float | None:
+        method = method or {}
+        return method.get("estimated") if method.get("status") == "estimated" else None
+
+    methods = result.get("tracing_methods") or {}  # R4, when EXCHEQUER_TRACING_METHODS is on
+    found = {"fifo": figure(methods.get("fifo")), "prorata": figure(result.get("prorata")),
+             "libr": figure(methods.get("libr"))}
+    figures = [v for v in found.values() if v is not None]
+    return {**found, "conservative": min(figures) if figures else None}
 
 
 def _transfer(row: dict[str, Any]) -> dict[str, Any]:

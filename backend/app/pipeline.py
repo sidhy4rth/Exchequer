@@ -50,6 +50,7 @@ from .risk_matcher import MIXER, REPORTED, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
 from .prorata import estimate as estimate_prorata
 from .scoring import principal_path, score_case
+from .tracing_methods import compare as compare_methods
 
 
 logger = logging.getLogger(__name__)
@@ -465,6 +466,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             # Pro-rata: how much of the reported funds likely reached the
             # exchange, reading what else joined them in each wallet on the path.
             prorata = None
+            methods = None
             lead = ExchangeMatcher.primary_match(matches + inferred)
             if direction == OUTGOING and lead is not None and lead.address != seed:
                 try:
@@ -473,6 +475,11 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                     lead_path = []
                 prorata = estimate_prorata(result.graph, lead_path,
                                            getattr(client, "get_incoming_between", None))
+                # R4: FIFO and LIBR beside pro-rata, on the same path. Before
+                # the evidence manifest below, so their reads are in it.
+                if config.TRACING_METHODS and lead_path:
+                    methods = compare_methods(result.graph, lead_path,
+                                              getattr(client, "get_flows_between", None), prorata)
             # The reported wallet's own statement: what it received and sent in
             # this asset, whether or not anything could be followed onward.
             statement = _wallet_statement(client, seed) if seed_window is None else None
@@ -699,6 +706,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "message": message,
         "statement": statement,
         "prorata": prorata,
+        # R4, behind EXCHEQUER_TRACING_METHODS: FIFO and LIBR beside pro-rata.
+        # The contract reads its figures into `estimates`.
+        "tracing_methods": methods,
         "exchange_address": primary.address if primary else None,
         "exchange_label": primary.label if primary else None,
         # True when the attribution names an inferred deposit address rather

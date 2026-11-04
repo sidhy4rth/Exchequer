@@ -541,3 +541,5 @@ def flag(env_name: str, about: str) -> bool:
 
 
 TX_INTAKE: bool = flag("EXCHEQUER_TX_INTAKE", "Lane A, R1: trace from a payment tx hash")
+TRACING_METHODS: bool = flag("EXCHEQUER_TRACING_METHODS",
+                             "Lane A, R4: FIFO and LIBR beside pro-rata (one more read per hop)")

@@ -51,3 +51,35 @@ describe('how sure the case is (R10)', () => {
     expect(screen.getByText(/Exploratory · traced from the address/)).toBeInTheDocument()
   })
 })
+
+describe('three tracing rules side by side (R4)', () => {
+  async function openWith(methods) {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+    stubFetch({ '/demos/recorded/11': { body: { ...demo.result, tracing_methods: methods, case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
+    render(
+      <MemoryRouter initialEntries={['/demo/11']}>
+        <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
+      </MemoryRouter>,
+    )
+    await screen.findByText(/Recorded demo 11/)
+  }
+
+  it('shows the range and the figure a letter states', async () => {
+    await openWith({ figures: { fifo: 40, prorata: 20, libr: 0 }, range: { low: 0, high: 40 }, conservative: 0, conservative_method: 'libr' })
+    const line = document.querySelector('.method-range')
+    expect(line).toHaveTextContent('By tracing rule')
+    expect(line).toHaveTextContent('FIFO 40')
+    expect(line).toHaveTextContent('LIBR 0')
+    expect(line).toHaveTextContent('a letter states the smallest')
+  })
+
+  it('says so when the rules agree', async () => {
+    await openWith({ figures: { fifo: 5, prorata: 5, libr: 5 }, range: { low: 5, high: 5 }, conservative: 5, conservative_method: 'fifo' })
+    expect(document.querySelector('.method-range')).toHaveTextContent('All 3 tracing rules agree')
+  })
+
+  it('shows nothing when the trace ran pro-rata alone', async () => {
+    await openWith(null)
+    expect(document.querySelector('.method-range')).toBeNull()
+  })
+})

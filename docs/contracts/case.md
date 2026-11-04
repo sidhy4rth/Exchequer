@@ -43,8 +43,8 @@ Every v1 field is still there, unchanged. v2 adds:
 | `attribution.wallet_type` | string or null | The matcher's own type (`hot_wallet`, `cold_wallet`, `exchange_wallet`, `contract_wallet`, `deposit_wallet`, `inferred_deposit`), kept so nothing is lost. |
 | `attribution.depth` | int or null | Hops from the reported address. |
 | `estimates.prorata` | number or null | Pro-rata estimate of the traced funds reaching the exchange (the v1 `prorata.estimated`). |
-| `estimates.fifo`, `.libr` | null | Other tracing methods, added by R4. |
-| `estimates.conservative` | number or null | The smallest available estimate. **The figure a letter states.** |
+| `estimates.fifo`, `.libr` | number or null | FIFO (money leaves in the order it arrived) and LIBR (the victim's money leaves only when the balance falls below it), R4. Filled only when the flag `EXCHEQUER_TRACING_METHODS` is on and the wallets' windows could be read in full; null otherwise and in older cases. The per-wallet working is in `tracing_methods` (v1-style, beside `prorata`); worked examples in `backend/app/tracing_methods.py`. |
+| `estimates.conservative` | number or null | The smallest available estimate across the three methods. **The figure a letter states.** With the flag off it equals `estimates.prorata`. |
 | `transfers[].block` | int or null | The block the transfer is in. Filled for every new trace; null in cases stored before v2. |
 | `transfers[].log_index` | int or null | A token transfer's event position in its transaction. **Null in a trace, by design**: none of the providers' transfer lists (Etherscan `tokentx`, NodeReal, TronGrid TRC-20) returns it, and reading every receipt would roughly double a trace's API calls. Identify a transfer by `hash`, `from`, `to` and `value_native`; `verify_case` (R18, Lane B) may fill `log_index` from the receipt of each transfer a letter cites. |
 

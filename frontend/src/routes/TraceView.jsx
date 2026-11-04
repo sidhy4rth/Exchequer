@@ -112,6 +112,26 @@ function describeProgress(p) {
   return STAGE_TEXT[p.stage] ?? ''
 }
 
+const METHOD_NAME = { fifo: 'FIFO', prorata: 'pro-rata', libr: 'LIBR' }
+
+// R4: how much reached the exchange by each tracing rule, and the figure a
+// letter states. Shown only when the trace computed more than one method.
+function MethodRange({ methods, unit }) {
+  const figures = methods?.figures ?? {}
+  const names = ['fifo', 'prorata', 'libr'].filter((m) => figures[m] != null)
+  if (names.length < 2 || !methods.range) return null
+  const same = methods.range.low === methods.range.high
+  return (
+    <div className="method-range">
+      {same
+        ? <>All {names.length} tracing rules agree: <span className="num">{num(methods.range.low)} {unit}</span></>
+        : <>By tracing rule: <span className="num">{num(methods.range.low)} to {num(methods.range.high)} {unit}</span></>}
+      {' · '}{names.map((m) => `${METHOD_NAME[m]} ${num(figures[m])}`).join(' · ')}
+      {!same && <span className="note"> · a letter states the smallest, {num(methods.conservative)} {unit} ({METHOD_NAME[methods.conservative_method]})</span>}
+    </div>
+  )
+}
+
 export default function TraceView() {
   // One component serves all three routes. /trace/:address runs a fresh
   // traversal; /case/:caseId opens what was stored, and /demo/:demoNo a
@@ -422,6 +442,7 @@ export default function TraceView() {
                             : <>sent from this wallet likely arrived</>} <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span></>
                         : <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached it along this path, including any funds from other sources</>}
                   </div>
+                  {!reverse && <MethodRange methods={result.tracing_methods} unit={unit} />}
                   <div className="cite">
                     <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
                     <Address value={result.exchange_address} head={22} tail={20} />

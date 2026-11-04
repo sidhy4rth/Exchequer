@@ -16,3 +16,7 @@
 .hint-rate {
   opacity: 0.8;
 }
+.finding-bar .method-range {
+  font-size: 12px;
+  margin-top: 4px;
+}
