@@ -744,6 +744,12 @@ export default function TraceView() {
                     <span className={`n ${serviceContracts.length ? '' : 'zero'}`}>{serviceContracts.length}</span>
                     <span className="t">service contracts not expanded<small>WETH, pools, routers: their payouts are other people's money.</small></span>
                   </div>
+                  {result.untraced?.length > 0 && (
+                    <div className="exclusion untraced">
+                      <span className="n num">{num(result.untraced.reduce((sum, u) => sum + u.value_native, 0))}</span>
+                      <span className="t">{unit} sent on but not followed<small>{result.untraced.reduce((sum, u) => sum + u.counterparties, 0)} smaller destinations of {result.untraced.length} address{result.untraced.length === 1 ? '' : 'es'}: {result.untraced.some((u) => u.rule === 'top_n') ? 'the walk follows the ten largest of each' : 'each carried less than the share the walk follows'}. Where these went is not in this case.</small></span>
+                    </div>
+                  )}
                   {result.addresses_unexpanded_by_time > 0 && (
                     <div className="exclusion">
                       <span className="n">{result.addresses_unexpanded_by_time}</span>

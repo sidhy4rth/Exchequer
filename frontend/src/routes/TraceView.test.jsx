@@ -83,3 +83,21 @@ describe('three tracing rules side by side (R4)', () => {
     expect(document.querySelector('.method-range')).toBeNull()
   })
 })
+
+describe('what the walk did not follow (R5)', () => {
+  it('states the untraced value under scope and evidence', async () => {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+    const untraced = [{ address: demo.result.address, counterparties: 2, value_native: 6, share_of_outflow: 0.13, rule: 'top_n' }]
+    stubFetch({ '/demos/recorded/11': { body: { ...demo.result, untraced, case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
+    render(
+      <MemoryRouter initialEntries={['/demo/11']}>
+        <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
+      </MemoryRouter>,
+    )
+    await screen.findByText(/Recorded demo 11/)
+    const row = document.querySelector('.exclusion.untraced')
+    expect(row).toHaveTextContent('sent on but not followed')
+    expect(row).toHaveTextContent('2 smaller destinations of 1 address')
+    expect(row).toHaveTextContent('the ten largest')
+  })
+})

@@ -372,6 +372,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     routers = get_router_matcher(chain.key)
     trace_config = TraceConfig(
         max_depth=request.max_depth or config.TRACE_MAX_DEPTH,
+        # R5: every branch carrying a share of the funds, not the top ten.
+        branch_min_share=config.TRACE_BRANCH_MIN_SHARE_PERCENT / 100 if config.TAINT_EXPANSION else None,
+        max_branches_hard=config.TRACE_MAX_BRANCHES_HARD,
         time_budget_seconds=float(request.time_budget_seconds) if request.time_budget_seconds else None,
     )
 
@@ -769,6 +772,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "addresses_expanded": result.addresses_expanded,
         # Busy wallets also read from when the funds arrived (graph_builder).
         "read_from_arrival": result.read_from_arrival,
+        # What the walk did not follow, with its value (brake 2; R5).
+        "untraced": result.untraced,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,
         "api_calls": result.api_calls,
         # Hash-and-timestamp of every response above; see app/evidence.py.

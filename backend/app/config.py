@@ -497,6 +497,12 @@ BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
 # wallet's newest incoming transfers are searched for the victim's payments.
 TX_INTAKE_LOOKUP_LIMIT: int = _int_env("EXCHEQUER_TX_INTAKE_LOOKUP_LIMIT", 1000)
 
+# Taint-driven expansion (R5, graph_builder._choose_branches): with the flag on,
+# the walk follows every counterparty that received at least this percentage of
+# what an address sent, capped at TRACE_MAX_BRANCHES_HARD counterparties.
+TRACE_BRANCH_MIN_SHARE_PERCENT: int = _int_env("EXCHEQUER_TRACE_BRANCH_MIN_SHARE_PERCENT", 1)
+TRACE_MAX_BRANCHES_HARD: int = _int_env("EXCHEQUER_TRACE_MAX_BRANCHES_HARD", 50)
+
 
 # ---------------------------------------------------------------------------
 # Lane B: evidence and intelligence
@@ -543,3 +549,5 @@ def flag(env_name: str, about: str) -> bool:
 TX_INTAKE: bool = flag("EXCHEQUER_TX_INTAKE", "Lane A, R1: trace from a payment tx hash")
 TRACING_METHODS: bool = flag("EXCHEQUER_TRACING_METHODS",
                              "Lane A, R4: FIFO and LIBR beside pro-rata (one more read per hop)")
+TAINT_EXPANSION: bool = flag("EXCHEQUER_TAINT_EXPANSION",
+                             "Lane A, R5: follow every branch carrying a share of the funds, not the top ten")

@@ -51,6 +51,15 @@ Every v1 field is still there, unchanged. v2 adds:
 Each trace in `follow_ons[].result` (the money after a swap) is a full v2 case
 of its own, with its own `attribution` and `estimates` in its own asset.
 
+Two v1-style fields hold the working behind these figures; read them as data,
+they are not typed by the model. `tracing_methods` (R4) is FIFO's and LIBR's
+per-wallet working, null when the flag is off. `untraced` (R5) lists, per
+address, the value the walk did not follow: `{address, counterparties,
+value_native, share_of_outflow, rule}`, where `rule` is `top_n` (the ten
+largest destinations, the default) or `min_share` (flag
+`EXCHEQUER_TAINT_EXPANSION`). An empty list means nothing above dust was left
+behind. A report that states where the money went should state this too.
+
 ## Attribution kinds
 
 | `kind` | What it is | What a request letter can ask |
