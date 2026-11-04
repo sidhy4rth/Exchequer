@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from app.risk_matcher import FROZEN, GAMBLING, MIXER, SANCTIONED, STOLEN, RiskMatcher
+from app.risk_matcher import FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, STOLEN, RiskMatcher
 
 from conftest import addr, make_graph
 
@@ -50,7 +50,7 @@ def test_loads_both_categories(risk_file):
     matcher = RiskMatcher.from_file(risk_file)
 
     assert len(matcher) == 2
-    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, FROZEN: 0, STOLEN: 0, GAMBLING: 0}
+    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, FROZEN: 0, STOLEN: 0, GAMBLING: 0, POISONING: 0, SCAM: 0, LAUNDERING: 0}
     assert matcher.entities == ["LAZARUS GROUP", "TORNADO CASH"]
 
 
@@ -127,7 +127,7 @@ def threat_file(tmp_path):
 def test_the_threat_file_adds_stolen_funds_wallets(risk_file, threat_file):
     matcher = RiskMatcher.from_file(risk_file, extra_paths=(threat_file,))
 
-    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, FROZEN: 0, STOLEN: 1, GAMBLING: 0}
+    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, FROZEN: 0, STOLEN: 1, GAMBLING: 0, POISONING: 0, SCAM: 0, LAUNDERING: 0}
     assert matcher.lookup(HACK_ADDR)["source"] == "Etherscan label"
 
 

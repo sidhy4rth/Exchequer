@@ -110,7 +110,7 @@ export default function Home() {
             <div>
               <div className="head"><span className="micro">Risk screening</span><span className="note">US, UK, EU, Israel, Japan, France · Tether freezes · explorer-tagged hacks and mixers</span></div>
               <table>
-                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th><th style={{ textAlign: 'right' }}>Frozen by Tether</th><th style={{ textAlign: 'right' }}>Stolen funds</th></tr></thead>
+                <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th><th style={{ textAlign: 'right' }}>Frozen</th><th style={{ textAlign: 'right' }}>Stolen funds</th></tr></thead>
                 <tbody>
                   {chains.map((c) => (
                     <tr key={c.key}>

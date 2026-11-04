@@ -380,7 +380,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                 if live.warnings:
                     # A label file's entry always outranks the explorer's warning.
                     risk_matcher = RiskMatcher({**live.risk_labels(REPORTED), **risk_matcher._labels},
-                                               chain=chain.key)
+                                               chain=chain.key, store=risk_matcher.store)
             progress.report(stage="screening", addresses=result.graph.number_of_nodes())
             # Swaps. Reads one receipt per router-bound transfer (capped) so
             # the response can say what asset the money became.

@@ -16,7 +16,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from .. import api_budget, config, models, ownership, warmup, watchlist
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
-from ..risk_matcher import FROZEN, MIXER, SANCTIONED, get_risk_matcher
+from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, STOLEN,
+                            get_risk_matcher)
 
 
 logger = logging.getLogger(__name__)
@@ -205,8 +206,10 @@ def _build_ledger(chain_key: str) -> list[dict[str, Any]]:
         if meta["category"] == SANCTIONED and meta.get("source", "").startswith("OFAC"):
             add(address, "sanctioned", "", f"OFAC SDN · {meta.get('entity', '')}"[:48])
         else:
-            prefix = {SANCTIONED: "Sanctioned", MIXER: "Mixer",
-                      FROZEN: "Frozen by Tether"}.get(meta["category"], "Stolen funds")
+            prefix = {SANCTIONED: "Sanctioned", MIXER: "Mixer", FROZEN: "Frozen",
+                      STOLEN: "Stolen funds", GAMBLING: "Gambling platform",
+                      POISONING: "Address poisoning", SCAM: "Reported scam",
+                      LAUNDERING: "Laundering"}.get(meta["category"], "Flagged")
             add(address, "flagged", "", f"{prefix} · {meta.get('label', '')}"[:48])
     for address, meta in get_matcher(chain_key).entries():
         add(address, "exchange", meta.get("exchange", ""), (meta.get("label") or meta.get("exchange", ""))[:40])

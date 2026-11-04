@@ -5,7 +5,7 @@ This answers a different question from `exchange_matcher`. That module asks
 "what did the money touch on the way", which is what determines whether a case
 is ordinary fraud or something an investigator must escalate.
 
-Three categories, with very different investigative meaning:
+The categories, with very different investigative meaning:
 
   sanctioned  The address is on a published sanctions list. For an Indian
               investigator this is the point at which a fraud case acquires an
@@ -31,6 +31,15 @@ Three categories, with very different investigative meaning:
               ("Suspicious", "Scam", a phishing tag). The weakest of the five
               -- an explorer's warning, not a designation, a freeze or a named
               theft -- and worded that way.
+
+  gambling    A casino or betting platform's wallet: an attribution, like an
+              exchange, not a designation.
+
+  poisoning   From the on-disk label store (app/label_store.py), with
+  scam        the evidence behind each row: an address-poisoning lookalike
+  laundering  (on-chain detection), a wallet a report or court record ties to
+              a scam, or one named as moving illicit proceeds. The store is
+              consulted only for addresses no label file names.
 
 The authority behind them is not the same. A sanctioned address is on a
 government list -- OFAC's, or another government's (the international file:
@@ -70,6 +79,7 @@ import networkx as nx
 from . import config
 from .etherscan_client import normalize_address
 from .graph_builder import OUTGOING
+from .label_store import LabelStore, get_label_store
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +91,21 @@ FROZEN = "frozen"
 # designation and not a dead end: like an exchange, the platform holds the
 # account behind the deposit, so the next step is a lawful request to it.
 GAMBLING = "gambling"
+# The three below come from the on-disk label store (app/label_store.py),
+# though a label file may use them too.
+# A lookalike address planted in a victim's history by an address-poisoning
+# scam, found by on-chain detection: funds arriving were most likely sent to
+# the scammer by mistake.
+POISONING = "poisoning"
+# A wallet a published report, scam database or court record attributes to a
+# scam, phishing drainer or fraudulent platform.
+SCAM = "scam"
+# A wallet a court filing or published investigation names as moving illicit
+# proceeds.
+LAUNDERING = "laundering"
 # Read live during a Tron trace, never from a label file, so not in CATEGORIES.
 REPORTED = "reported"
-CATEGORIES = (SANCTIONED, MIXER, FROZEN, STOLEN, GAMBLING)
+CATEGORIES = (SANCTIONED, MIXER, FROZEN, STOLEN, GAMBLING, POISONING, SCAM, LAUNDERING)
 
 # Categories whose addresses end a trace. See the module docstring: a mixer
 # breaks the link between deposit and withdrawal, so anything past it is not
@@ -96,7 +118,7 @@ class RiskMatch:
     """One address in the trace that appears on a risk list."""
 
     address: str
-    category: str  # sanctioned | mixer | frozen | stolen | gambling
+    category: str  # one of CATEGORIES, or reported
     entity: str  # the designated entity or mixer service
     label: str  # human-readable, e.g. "Tornado Cash: 10 ETH pool"
     source: str  # which published list, and when it was read
@@ -143,11 +165,38 @@ class RiskMatch:
                 f"{self.source}. {placement}."
             )
         if self.category == FROZEN:
+            # The USDT blacklist file is Tether's; the label store adds other
+            # issuers' freezes (Circle's USDC, PayPal's PYUSD, ...), whose label
+            # names the token.
+            issuer = "Tether" if "tether" in f"{self.label} {self.source}".lower() else "the token's issuer"
             return (
-                f"Frozen by Tether: {self.address} — {self.label}, per {self.source}. "
+                f"Frozen by {issuer}: {self.address} — {self.label}, per {self.source}. "
                 f"{placement}. The issuer acted on this address; the freeze does not "
                 f"say why, and it is not a finding that any counterparty took part in "
-                f"anything. Tether can say, on a lawful request."
+                f"anything. {issuer[0].upper() + issuer[1:]} can say, on a lawful request."
+            )
+        if self.category == POISONING:
+            return (
+                f"Address poisoning: {self.address} is a lookalike address used in an "
+                f"address-poisoning scam ({self.label}), per {self.source}. {placement}. "
+                f"The scam plants a near-identical address in a victim's transaction "
+                f"history so that it is copied by mistake; funds sent here most likely "
+                f"went to the scammer in error. This is an on-chain detection, not a "
+                f"designation."
+            )
+        if self.category == SCAM:
+            return (
+                f"Reported scam: {self.address} is attributed as {named} by "
+                f"{self.source}. {placement}. The source ties the wallet to a scam or "
+                f"fraud; it is not a sanctions designation, and not a finding that any "
+                f"other counterparty took part in it."
+            )
+        if self.category == LAUNDERING:
+            return (
+                f"Laundering: {self.address} is identified as {named} by "
+                f"{self.source}. {placement}. The source names the wallet as moving "
+                f"illicit proceeds; it is not a sanctions designation, and not a "
+                f"finding that any other counterparty took part in it."
             )
         if self.category == REPORTED:
             return (
@@ -187,9 +236,13 @@ class RiskMatcher:
         self,
         labels: dict[str, dict[str, str]] | None = None,
         chain: str | None = None,
+        store: LabelStore | None = None,
     ) -> None:
         self._labels: dict[str, dict[str, str]] = labels or {}
         self.chain = chain or config.DEFAULT_CHAIN.key
+        # The on-disk store is consulted only for addresses no file names, so
+        # a curated or government label always outranks a scan result.
+        self.store = store
 
     # -- loading -----------------------------------------------------------
     @classmethod
@@ -198,6 +251,7 @@ class RiskMatcher:
         path: Path | None = None,
         chain: str | None = None,
         extra_paths: tuple[Path | None, ...] = (),
+        store: LabelStore | None = None,
     ) -> "RiskMatcher":
         """Load one chain's risk labels.
 
@@ -231,11 +285,11 @@ class RiskMatcher:
                     and meta["source"] not in held["source"]
                 ):
                     held["source"] = f"{held['source']}; also {meta['source']}"
-        return cls(labels, chain=chain)
+        return cls(labels, chain=chain, store=store)
 
     # -- lookup ------------------------------------------------------------
     def __len__(self) -> int:
-        return len(self._labels)
+        return len(self._labels) + (sum(self.store.counts(self.chain).values()) if self.store else 0)
 
     @property
     def entities(self) -> list[str]:
@@ -246,17 +300,30 @@ class RiskMatcher:
         counts = {category: 0 for category in CATEGORIES}
         for meta in self._labels.values():
             counts[meta["category"]] = counts.get(meta["category"], 0) + 1
+        if self.store:
+            # The store's figures are counted when it is built; an address a
+            # file also names is counted twice, a small overstatement of
+            # coverage that never changes what a trace reports.
+            for category, n in self.store.counts(self.chain).items():
+                counts[category] = counts.get(category, 0) + n
         return counts
 
     def lookup(self, address: str) -> dict[str, str] | None:
-        return self._labels.get(normalize_address(address))
+        address = normalize_address(address)
+        meta = self._labels.get(address)
+        if meta is None and self.store is not None:
+            meta = self.store.lookup(self.chain, address)
+            if meta is not None and meta["category"] not in CATEGORIES:
+                return None
+        return meta
 
     def entries(self) -> list[tuple[str, dict[str, str]]]:
-        """Every (address, record) pair, for anything that lists the database."""
+        """Every (address, record) pair in the label files, for anything that
+        lists the database. The on-disk store is not listed: it holds millions."""
         return list(self._labels.items())
 
     def is_flagged(self, address: str) -> bool:
-        return normalize_address(address) in self._labels
+        return self.lookup(address) is not None
 
     def is_terminal(self, address: str) -> bool:
         """True if a trace must stop expanding at `address`.
@@ -321,6 +388,7 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
         chain=chain.key,
         extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, chain.threat_labels_path,
                      chain.gambling_labels_path),
+        store=get_label_store(),
     )
 
 

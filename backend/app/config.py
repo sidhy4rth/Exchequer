@@ -410,6 +410,17 @@ DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
 _db_raw = os.getenv("EXCHEQUER_DB_PATH", "exchequer.db")
 DB_PATH: Path = Path(_db_raw) if Path(_db_raw).is_absolute() else BACKEND_DIR / _db_raw
 
+# The on-disk risk-label store (app/label_store.py): millions of scan-derived
+# labels, too many for the in-memory JSON files. Built by
+# scripts/build_label_store.py and never committed (it is far past GitHub's
+# file limit). No file at this path means screening uses the JSON files only.
+_store_raw = os.getenv("EXCHEQUER_LABEL_STORE", "data/label_store.db").strip()
+LABEL_STORE_PATH: Path | None = (
+    None if _store_raw.lower() in ("", "off", "none", "0", "false")
+    else Path(_store_raw) if Path(_store_raw).is_absolute()
+    else BACKEND_DIR / _store_raw
+)
+
 # Default-chain label file. Per-chain callers should use Chain.labels_path.
 EXCHANGE_LABELS_PATH: Path = DEFAULT_CHAIN.labels_path
 
