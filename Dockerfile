@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Exchequer — one image, one service.
 #
 # Stage 1 builds the React bundle; stage 2 runs FastAPI and serves that bundle
@@ -36,6 +37,19 @@ COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY backend/ ./backend/
+
+# The risk-label store: millions of hunt addresses, kept in a PRIVATE release
+# rather than in git (too large, and not for publishing). Fetched here with a
+# read-only token from a build secret -- on Render, a Secret File named
+# label_store_token -- so the token never enters a layer. No token: the step
+# prints why and the image screens against the label files only, as before.
+# A new store = a new release tag + sha256 here. See backend/scripts/fetch_label_store.py.
+ARG LABEL_STORE_REPO="sidhy4rth/exchequer-labels"
+ARG LABEL_STORE_TAG="labels-2026-11-04"
+ARG LABEL_STORE_SHA256="2204d7e93c13b65ebe590719d7737caca510170cecd1c629e022dbe9ccbc6a34"
+RUN --mount=type=secret,id=label_store_token,required=false \
+    cd backend && LABEL_STORE_REPO="$LABEL_STORE_REPO" LABEL_STORE_TAG="$LABEL_STORE_TAG" \
+    LABEL_STORE_SHA256="$LABEL_STORE_SHA256" python -m scripts.fetch_label_store
 COPY --from=frontend /build/dist ./frontend/dist
 
 # The image has no .git, so the report's "tool version" line is baked in at
