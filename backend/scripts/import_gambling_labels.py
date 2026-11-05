@@ -40,6 +40,16 @@ CHAIN_FILES = {
     "tron": ("gambling_labels_tron.json", "exchange_labels_tron.json"),
 }
 ROUTER_FILES = {"ethereum": "router_labels.json", "bsc": "router_labels_bsc.json"}
+# DEX pools carry every user's swap, so a few users swapping into a casino through
+# one must not make it a casino deposit. These five Uniswap USDT pools were read as
+# Stake.com deposits (factory() verified on-chain, 5 Nov 2026). Never label them.
+NEVER_GAMBLING = frozenset({
+    "0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852",  # Uniswap V2 WETH/USDT
+    "0x11b815efb8f581194ae79006d24e0d814b7697f6",  # Uniswap V3 WETH/USDT 0.05%
+    "0x3416cf6c708da44db2624d63ea0aaef7113527c6",  # Uniswap V3 USDC/USDT 0.01%
+    "0x9db9e0e53058c89e5b94e29621a205198648425b",  # Uniswap V3 WBTC/USDT 0.3%
+    "0xc5af84701f98fa483ece78af83f11b6c38aca71d",  # Uniswap V3 WETH/USDT 1%
+})
 EVM = re.compile(r"^0x[0-9a-fA-F]{40}$")
 TRON = re.compile(r"^T[1-9A-HJ-NP-Za-km-z]{33}$")
 
@@ -143,6 +153,7 @@ def main() -> int:
         rp = DATA / ROUTER_FILES.get(chain, "")
         if chain in ROUTER_FILES and rp.exists():
             exchange[chain] |= {k.lower() for k in json.loads(rp.read_text()).get("labels", {})}
+        exchange[chain] |= NEVER_GAMBLING
     # Deposit "sweeps" that were really address-poisoning (zero/dust transfers from lookalikes of genuine
     # deposit addresses, or addresses on our poisoning lists) must never be labelled as gambling.
     sp = hunt / "raw/gambling_suspect_poisoners.json"

@@ -54,6 +54,8 @@ export default function Home() {
   // one total read as that many exchange wallets (R14). Both from /chains.
   const totalWallets = chains.reduce((sum, c) => sum + (c.exchange_wallets || 0), 0)
   const totalDeposits = chains.reduce((sum, c) => sum + (c.deposit_addresses || 0), 0)
+  const totalFlagged = chains.reduce((sum, c) => sum + Object.values(c.risk_labels ?? {}).reduce((a, b) => a + (b || 0), 0), 0)
+  const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 
   return (
     <div className="home">
@@ -73,7 +75,7 @@ export default function Home() {
           {locked ? <Showroom onUnlock={() => setUnlocked(true)} /> : <TraceForm health={health} />}
 
           <div className="card">
-            <div className="head"><span className="micro">Coverage</span><span className="note">{health ? `${totalWallets} exchange wallets · ${totalDeposits} deposit addresses` : ''}</span></div>
+            <div className="head"><span className="micro">Coverage</span><span className="note">{health ? <><strong className="flagged">{compact.format(totalFlagged)} flagged addresses screened</strong> · {totalWallets.toLocaleString('en')} exchange wallets · {totalDeposits.toLocaleString('en')} deposit addresses</> : ''}</span></div>
             <div className="body status">
               {!health && <span className="note">Connecting…</span>}
               {backendDown && <div className="line"><span className="dot down" /><span>Backend unreachable</span><span /></div>}
@@ -81,7 +83,7 @@ export default function Home() {
                 <div className="line" key={c.key}>
                   <span className={`dot ${c.ready ? 'live' : 'down'}`} />
                   <span>{c.name}</span>
-                  <span className="n">{c.exchange_wallets} wallets{c.deposit_addresses ? ` · ${c.deposit_addresses} deposit addresses` : ''} · {Object.values(c.risk_labels ?? {}).reduce((a, b) => a + b, 0)} screened</span>
+                  <span className="n">{c.exchange_wallets} wallets{c.deposit_addresses ? ` · ${c.deposit_addresses} deposit addresses` : ''} · {Object.values(c.risk_labels ?? {}).reduce((a, b) => a + b, 0).toLocaleString('en')} screened</span>
                 </div>
               ))}
             </div>

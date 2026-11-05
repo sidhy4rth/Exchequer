@@ -124,6 +124,9 @@ export function coverageFromChains(byKey) {
     frozen: sum((c) => c.risk_labels?.frozen),
     stolen: sum((c) => c.risk_labels?.stolen),
     mixer: sum((c) => c.risk_labels?.mixer),
+    poisoning: sum((c) => c.risk_labels?.poisoning),
+    // Every flagged address a trace is screened against, from every list and the label store.
+    flagged: sum((c) => Object.values(c.risk_labels ?? {}).reduce((a, b) => a + (b ?? 0), 0)),
     chains: Object.keys(byKey ?? {}),
   }
 }
@@ -705,6 +708,8 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
         </header>
         {coverage && (
           <dl className="cover">
+            {coverage.flagged > 0 && <div className="hero"><dt>Flagged addresses screened, live</dt><dd><CountUp to={coverage.flagged} compact /></dd></div>}
+            {coverage.poisoning > 0 && <div className="risk"><dt>Address-poisoning wallets, found on-chain</dt><dd><CountUp to={coverage.poisoning} compact /></dd></div>}
             <div><dt>Exchange wallets labelled</dt><dd><CountUp to={coverage.wallets} /></dd></div>
             <div><dt>Customer deposit addresses</dt><dd><CountUp to={coverage.deposits} /></dd></div>
             <div className="risk"><dt>Reported stolen or phishing</dt><dd><CountUp to={coverage.stolen} /></dd></div>
@@ -733,7 +738,9 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
 }
 
 /** A number that counts up once when it first appears, then holds still. */
-function CountUp({ to, ms = 1200 }) {
+const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+
+function CountUp({ to, ms = 1200, compact = false }) {
   const [value, setValue] = useState(0)
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setValue(to); return undefined }
@@ -747,5 +754,5 @@ function CountUp({ to, ms = 1200 }) {
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [to, ms])
-  return value.toLocaleString('en-IN')
+  return compact && value >= 100000 ? COMPACT.format(value) : value.toLocaleString('en-IN')
 }
