@@ -69,18 +69,18 @@ class DemoCodeMiddleware:
         client = rate_limit.client_ip(headers, peer[0] if peer else None)
         if wrong_codes.remaining(client) == 0:
             wait = wrong_codes.check(client) or 60.0
-            await _refuse(send, 429, "Too many wrong demo codes from this connection. Try again later.",
+            await _refuse(send, 429, "Too many wrong access codes from this connection. Try again later.",
                           {"retry-after": str(int(wait))})
             return
         given = headers.get(CODE_HEADER, "")
         if not given:
-            await _refuse(send, 403, "Live tracing on this site needs a demo code. "
-                                     "The recorded demos and stored cases open without one.")
+            await _refuse(send, 403, "Live tracing on this site needs an access code. "
+                                     "The verified examples and stored cases open without one.")
             return
         # Constant time: how long a comparison takes must not say how much of a guess was right.
         if not hmac.compare_digest(given.encode(), config.DEMO_CODE.encode()):
             wrong_codes.check(client)
-            await _refuse(send, 403, "That demo code is not right.")
+            await _refuse(send, 403, "That access code is not right.")
             return
         await self.app(scope, receive, send)
 

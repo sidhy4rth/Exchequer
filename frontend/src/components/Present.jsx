@@ -186,7 +186,7 @@ export default function Present({ result, related = [], unit, onClose }) {
         <div className="pr-hash"><span className="micro">Traced</span><span className="mono">{String(result.created_at ?? '').replace('T', ' ').slice(0, 16)} UTC</span></div>
         {result.case_id
           ? <div className="pr-hash"><span className="micro">Case</span><span className="mono">{result.case_id}</span></div>
-          : result.recorded_demo && <div className="pr-hash"><span className="micro">Recorded demo</span><span className="mono">{String(result.recorded_demo).padStart(2, '0')}</span></div>}
+          : result.recorded_demo && <div className="pr-hash"><span className="micro">Verified example</span><span className="mono">{String(result.recorded_demo).padStart(2, '0')}</span></div>}
       </div>
     </div>,
   ]
@@ -194,7 +194,7 @@ export default function Present({ result, related = [], unit, onClose }) {
   return (
     <div className="present" role="dialog" aria-label="Present the case">
       <div className="pr-top">
-        <span className="pr-chrome"><span className="micro ink">Exchequer</span><span className="micro">{result.case_id ? `Case ${short(result.case_id)}` : result.recorded_demo ? `Recorded demo ${String(result.recorded_demo).padStart(2, '0')}` : 'Case'}</span><span className="micro">{short(result.address)}</span></span>
+        <span className="pr-chrome"><span className="micro ink">Exchequer</span><span className="micro">{result.case_id ? `Case ${short(result.case_id)}` : result.recorded_demo ? `Verified example ${String(result.recorded_demo).padStart(2, '0')}` : 'Case'}</span><span className="micro">{short(result.address)}</span></span>
         <span className="pr-chrome"><span className="micro amber">Restricted</span><span className="micro">{screen + 1} / {total}</span><button type="button" className="quiet" onClick={onClose} title="Back to the console (Esc)">Esc · console</button></span>
       </div>
       {screens[screen]}

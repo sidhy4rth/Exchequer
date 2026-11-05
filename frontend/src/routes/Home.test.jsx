@@ -32,7 +32,7 @@ async function renderHome() {
       </Routes>
     </MemoryRouter>,
   )
-  await screen.findByText(/SYSTEM OPERATIONAL/)
+  await screen.findByText(/Live · \d+ chains?$/)
 }
 
 describe('the trace form', () => {
@@ -95,7 +95,7 @@ describe('the trace form', () => {
 })
 
 describe('a public site that asks for a demo code', () => {
-  async function renderPublicHome(check = { status: 403, body: { detail: 'That demo code is not right.' } }) {
+  async function renderPublicHome(check = { status: 403, body: { detail: 'That access code is not right.' } }) {
     const fetch = stubFetch({
       '/chains': { body: health }, '/cases': { body: { count: 0, cases: [] } }, '/demos/recorded': { body: recordings },
       '/access': { body: { demo_code_required: true } }, '/access/check': check,
@@ -108,7 +108,7 @@ describe('a public site that asks for a demo code', () => {
         </Routes>
       </MemoryRouter>,
     )
-    await screen.findByLabelText('Demo code')
+    await screen.findByLabelText('Access code')
     return fetch
   }
 
@@ -116,6 +116,7 @@ describe('a public site that asks for a demo code', () => {
     const user = userEvent.setup()
     await renderPublicHome()
     expect(screen.queryByLabelText('Reported wallet address')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Bulk intake' })).not.toBeInTheDocument()
     expect(screen.queryByText('Bulk intake')).not.toBeInTheDocument()
     expect(screen.queryByText(/^Watchlist/)).not.toBeInTheDocument()
     await user.click(await screen.findByRole('link', { name: /reached Binance/ }))
@@ -125,7 +126,7 @@ describe('a public site that asks for a demo code', () => {
   it('keeps the site locked and remembers nothing when the code is wrong', async () => {
     const user = userEvent.setup()
     await renderPublicHome()
-    await user.type(screen.getByLabelText('Demo code'), 'guess{Enter}')
+    await user.type(screen.getByLabelText('Access code'), 'guess{Enter}')
     expect(await screen.findByRole('alert')).toHaveTextContent('not right')
     expect(screen.queryByLabelText('Reported wallet address')).not.toBeInTheDocument()
     expect(sessionStorage.getItem('exchequer-demo-code')).toBeNull()
@@ -134,9 +135,9 @@ describe('a public site that asks for a demo code', () => {
   it('unlocks live tracing with the right code and sends it from then on', async () => {
     const user = userEvent.setup()
     const fetch = await renderPublicHome({ body: { ok: true } })
-    await user.type(screen.getByLabelText('Demo code'), 'river-otter-42{Enter}')
+    await user.type(screen.getByLabelText('Access code'), 'river-otter-42{Enter}')
     expect(await screen.findByLabelText('Reported wallet address')).toBeInTheDocument()
-    expect(screen.getByText('Bulk intake')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Bulk intake' })).toBeInTheDocument()
     expect(sessionStorage.getItem('exchequer-demo-code')).toBe('river-otter-42')
     // Requests after the check itself, which carries the typed code by design.
     const checked = fetch.mock.calls.findIndex(([url]) => String(url).includes('/access/check'))
@@ -163,18 +164,18 @@ describe('the headline numbers (R14)', () => {
   it('shows only numbers that /chains gives, and never one total as exchange wallets', async () => {
     stubFetch({ '/chains': { body: counted }, '/cases': { body: { count: 0, cases: [] } }, '/demos/recorded': { body: recordings } })
     render(<MemoryRouter><Home /></MemoryRouter>)
-    await screen.findByText(/1,015 exchange wallets/)
+    await screen.findByText(/Live · 2 chains/)
     const chains = Object.values(counted.chains)
     const sum = (f) => chains.reduce((s, c) => s + f(c), 0)
     const flagged = sum((c) => Object.values(c.risk_labels).reduce((a, b) => a + b, 0))
     const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(flagged)
     const allowed = new Set([
-      sum((c) => c.exchange_wallets), sum((c) => c.deposit_addresses), flagged,
+      sum((c) => c.exchange_wallets), sum((c) => c.deposit_addresses), flagged, chains.length,
       ...chains.flatMap((c) => [c.exchange_wallets, c.deposit_addresses, ...Object.values(c.risk_labels),
         Object.values(c.risk_labels).reduce((a, b) => a + b, 0)]),
     ])
-    const card = screen.getByText('Coverage').closest('.card')
-    const tables = screen.getByText('What the label files cover').closest('details')
+    const card = screen.getByLabelText('Flagged addresses screened')
+    const tables = document.querySelector('.tab-panel .coverage')
     // Text node by text node: textContent would run neighbouring cells together.
     const shown = []
     for (const root of [card, tables]) {
@@ -190,6 +191,7 @@ describe('the headline numbers (R14)', () => {
     expect(shown.length).toBeGreaterThan(10)
     for (const n of shown) expect(allowed, `${n} is not from /chains`).toContain(n)
     expect(document.body.textContent).not.toContain('25038')
-    expect(card).toHaveTextContent(`${compact} flagged addresses screened · 1,015 exchange wallets · 24,064 deposit addresses`)
+    expect(card).toHaveTextContent(`${compact}flagged addresses`)
+    expect(card).toHaveTextContent(`${flagged.toLocaleString('en')} · screened on every hop`)
   })
 })

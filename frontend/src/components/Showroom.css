@@ -33,6 +33,7 @@
 
 .showroom .showroom-code {
   display: flex;
+  flex-direction: row; /* .intake form stacks its children; this one is a row */
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
@@ -47,4 +48,21 @@
   .showroom .showroom-demos a {
     grid-template-columns: 2.5em minmax(0, 1fr);
   }
+}
+
+/* Phones: number and address on the first line, result and date under them. */
+@media (max-width: 560px) {
+  .showroom .showroom-demos a {
+    grid-template-columns: 2.5em minmax(0, 1fr) auto;
+    row-gap: 2px;
+  }
+  .showroom .showroom-demos a > span:nth-child(3) { grid-column: 2; }
+  .showroom .showroom-demos a > span:nth-child(4) { grid-column: 3; grid-row: 2; }
+}
+
+/* The short address only where the long one would wrap. */
+.showroom .addr-short { display: none; }
+@media (max-width: 480px) {
+  .showroom .addr-long { display: none; }
+  .showroom .addr-short { display: inline; }
 }

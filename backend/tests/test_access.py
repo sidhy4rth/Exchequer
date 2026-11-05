@@ -58,7 +58,7 @@ def test_without_a_configured_code_tracing_stays_open(client):
 def test_anonymous_post_trace_is_refused(client, code_set):
     response = post(client, "/trace", GUARDED[0][1])
     assert response.status_code == 403
-    assert "demo code" in response.json()["detail"]
+    assert "access code" in response.json()["detail"]
     assert client.traced == []  # refused before the route ran
 
 

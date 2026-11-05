@@ -40,19 +40,16 @@ export default function Showroom({ onUnlock }) {
   return (
     <div className="card showroom">
       <div className="body">
-        <p className="lede">Follow a reported wallet's money to the exchange it left through.</p>
-        <p className="note">
-          This public site shows recorded traces. Each opens exactly as it was recorded; nothing is traced again.
-          Live tracing needs a demo code.
-        </p>
-        <ul className="showroom-demos" aria-label="Recorded demos">
-          {demos === null && <li className="note">Loading the recorded demos…</li>}
-          {demos?.length === 0 && <li className="note">No recorded demos on this site.</li>}
+        <h2 className="lede">Verified examples</h2>
+        <p className="note">Each opens as recorded. Live tracing needs an access code.</p>
+        <ul className="showroom-demos" aria-label="Verified examples">
+          {demos === null && <li className="note">Loading the verified examples…</li>}
+          {demos?.length === 0 && <li className="note">No verified examples on this site.</li>}
           {demos?.map((d) => (
             <li key={d.demo}>
               <Link to={`/demo/${d.demo}`}>
                 <span className="mono">{String(d.demo).padStart(2, '0')}</span>
-                <span className="mono">{middle(d.address)}</span>
+                <span className="mono"><span className="addr-long">{middle(d.address)}</span><span className="addr-short" aria-hidden="true">{middle(d.address, 6, 4)}</span></span>
                 <span>{d.exchange ? `reached ${d.exchange}` : 'no exchange matched'}</span>
                 <span className="note">recorded {String(d.recorded_at).slice(0, 10)}</span>
               </Link>
@@ -60,7 +57,7 @@ export default function Showroom({ onUnlock }) {
           ))}
         </ul>
         <form className="showroom-code" onSubmit={submit}>
-          <label htmlFor="demo-code">Demo code</label>
+          <label htmlFor="demo-code">Access code</label>
           <input
             id="demo-code" type="password" value={code} onChange={(e) => setCode(e.target.value)}
             autoComplete="off" spellCheck={false}

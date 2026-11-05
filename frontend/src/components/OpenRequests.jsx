@@ -4,9 +4,10 @@ import { fetchOpenRequests } from '../api'
 import { STATUS } from './RequestsPanel'
 
 // Home page: requests still waiting on someone, oldest silence first.
-export default function OpenRequests() {
+export default function OpenRequests({ onCount } = {}) {
   const [items, setItems] = useState([])
   useEffect(() => { fetchOpenRequests().then((d) => setItems(d.requests ?? [])).catch(() => {}) }, [])
+  useEffect(() => { onCount?.(items.length) }, [onCount, items.length])
   if (items.length === 0) return null
   const sorted = [...items].sort((a, b) => (b.days_waiting ?? -1) - (a.days_waiting ?? -1))
   const overdue = items.filter((r) => r.follow_up).length

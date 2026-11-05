@@ -26,8 +26,8 @@ export default function DemoBanner({ as }) {
   }
 
   return (
-    <div className="demo-banner" role="note" aria-label="Demo mode">
-      <span><strong>Demo mode</strong> · no accounts yet · viewing as {VIEWS[as].name}</span>
+    <div className="demo-banner" role="note" aria-label="Preview">
+      <span><strong>Preview</strong> · no accounts yet · viewing as {VIEWS[as].name}</span>
       <span className="demo-banner-actions">
         <button type="button" className="quiet" onClick={switchView}>Switch to {VIEWS[other].name.toLowerCase()} view</button>
         <button type="button" className="quiet" onClick={exit}>Leave</button>

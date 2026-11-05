@@ -23,7 +23,7 @@ const ago = (iso) => {
   return `${Math.round(s / 86400)} d ago`
 }
 
-export default function Watchlist() {
+export default function Watchlist({ onCount } = {}) {
   const [watches, setWatches] = useState([])
   const [alerts, setAlerts] = useState([])
   const [watcher, setWatcher] = useState(null)
@@ -40,6 +40,7 @@ export default function Watchlist() {
     const t = setInterval(load, 60_000)
     return () => clearInterval(t)
   }, [load])
+  useEffect(() => { onCount?.(watches.length) }, [onCount, watches.length])
 
   if (watches.length === 0 && alerts.length === 0) return null
   const unread = alerts.filter((a) => !a.read).length

@@ -17,7 +17,7 @@ async function openDemo11() {
       <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
     </MemoryRouter>,
   )
-  await screen.findByText(/Recorded demo 11/)
+  await screen.findByText(/Verified example 11/)
 }
 
 describe('how sure the case is (R10)', () => {
@@ -61,7 +61,7 @@ describe('three tracing rules side by side (R4)', () => {
         <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
       </MemoryRouter>,
     )
-    await screen.findByText(/Recorded demo 11/)
+    await screen.findByText(/Verified example 11/)
   }
 
   it('shows the range and the figure a letter states', async () => {
@@ -94,7 +94,7 @@ describe('what the walk did not follow (R5)', () => {
         <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
       </MemoryRouter>,
     )
-    await screen.findByText(/Recorded demo 11/)
+    await screen.findByText(/Verified example 11/)
     const row = document.querySelector('.exclusion.untraced')
     expect(row).toHaveTextContent('sent on but not followed')
     expect(row).toHaveTextContent('2 smaller destinations of 1 address')

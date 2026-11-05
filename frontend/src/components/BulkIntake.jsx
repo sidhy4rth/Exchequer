@@ -6,7 +6,7 @@ import { complaintsFromCsv } from '../csv'
 // Home page: paste or open a CSV of complaints and trace them as one batch.
 const SAMPLE = 'reference,address,chain,asset\nNCRP-2026-0001,0x…,ethereum,ETH\nNCRP-2026-0002,T…,tron,USDT'
 
-export default function BulkIntake() {
+export default function BulkIntake({ defaultOpen = false } = {}) {
   const navigate = useNavigate()
   const [text, setText] = useState('')
   const [name, setName] = useState('')
@@ -34,7 +34,7 @@ export default function BulkIntake() {
   }
 
   return (
-    <details className="card sec bulk">
+    <details className="card sec bulk" open={defaultOpen || undefined}>
       <summary><span className="micro">Bulk intake</span><span className="note">trace up to 25 complaints from a CSV, then see what they share</span></summary>
       <div className="body">
         <p className="note">One row per reported address. Columns are matched by name: <span className="mono">address</span> (or wallet), <span className="mono">chain</span>, <span className="mono">asset</span>, <span className="mono">direction</span>, <span className="mono">depth</span>, <span className="mono">reference</span> (complaint or acknowledgement number). Without a header, the first column is the address.</p>
