@@ -937,7 +937,6 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 
 /* ---- Investigator console v2 (Home): glows behind frosted glass ---- */
 .home.console { position: relative; isolation: isolate; background: transparent; }
-.glow-bg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
 .console .glass, .console .card {
   background: var(--glass); border-color: var(--glass-rule);
   -webkit-backdrop-filter: blur(14px) saturate(130%); backdrop-filter: blur(14px) saturate(130%);

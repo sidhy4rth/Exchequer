@@ -8,7 +8,7 @@ import TraceForm, { SHORT_CHAIN } from '../components/TraceForm'
 import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
 import BulkIntake from '../components/BulkIntake'
-import GlowBackground from '../components/GlowBackground'
+import GlobeBackground from '../components/GlobeBackground'
 import { demoCode } from '../demoCode'
 import { bandLabel, bandOf } from '../components/confidence'
 
@@ -78,7 +78,7 @@ export default function Home() {
 
   return (
     <div className="home console">
-      <GlowBackground />
+      <GlobeBackground />
       <header className="topbar glass">
         <Link to="/" className="brand"><Mark size={18} />Exchequer</Link>
         <span className="status-chip">

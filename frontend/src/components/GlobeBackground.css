@@ -1,0 +1,19 @@
+/* The console backdrop (GlobeBackground.jsx). The canvas sits behind the
+   frosted cards and takes no pointer events; the globe listens on the window. */
+.globe-bg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+
+body.globe-grab { cursor: grab; }
+body.globe-grabbing { cursor: grabbing; user-select: none; }
+body.globe-point { cursor: pointer; }
+
+.globe-tip {
+  position: fixed; z-index: 60; pointer-events: none;
+  transform: translate(14px, -50%);
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; border-radius: 10px;
+  background: var(--glass); border: 1px solid var(--glass-rule);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  font-size: 13px; color: var(--ink); white-space: nowrap;
+}
+.globe-tip span { font-family: var(--mono); font-size: 11px; color: var(--muted); }

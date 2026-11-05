@@ -161,98 +161,128 @@ export default function TraceForm({ health }) {
   }
 
   return (
-    <div className="card">
+    <div className="card trace-card">
       <div className="body">
         <h2 className="lede">Where did the money go?</h2>
-        <form onSubmit={submit}>
-          <div className="row">
-            <input
-              className={`address-field ${showInvalid ? 'invalid' : ''}`}
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              onBlur={() => setTouched(true)}
-              placeholder={`Reported wallet address (${family === 'tron' ? 'T…' : '0x…'})`}
-              spellCheck={false} autoComplete="off"
-              aria-label="Reported wallet address" aria-invalid={showInvalid}
-            />
+        <form onSubmit={submit} className="fgrid">
+          <label className={`fld addr ${showInvalid ? 'invalid' : ''}`} style={{ gridColumn: 'span 12' }}>
+            <SearchIcon />
+            <span className="col">
+              <span className="k">Reported wallet</span>
+              <input
+                className="address-field mono"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                onBlur={() => setTouched(true)}
+                placeholder="Paste the address from the complaint"
+                spellCheck={false} autoComplete="off"
+                aria-label="Reported wallet address" aria-invalid={showInvalid}
+              />
+            </span>
+            <span className="fmt" aria-hidden="true"><span>0x… EVM</span><span>T… Tron</span></span>
+          </label>
+          <label className="fld" style={{ gridColumn: 'span 3' }}>
+            <span className="k">Direction</span>
             <select value={direction} onChange={(e) => setDirection(e.target.value)} aria-label="Trace direction" title="Outgoing follows where this address sent funds. Incoming finds the addresses that paid it.">
-              <option value="outgoing">Where funds went</option>
-              <option value="incoming">Who sent funds here</option>
+              <option value="outgoing">Where it went</option>
+              <option value="incoming">Who paid in</option>
             </select>
+            <Chevron />
+          </label>
+          <label className="fld" style={{ gridColumn: 'span 3' }}>
+            <span className="k">Chain</span>
             <select value={chain} onChange={(e) => changeChain(e.target.value)} aria-label="Blockchain" title="The same address can exist on several chains; it is never inferred.">
               {chains.map((c) => <option key={c.key} value={c.key} disabled={!c.ready} title={c.name}>{SHORT_CHAIN[c.key] ?? c.name}{c.ready ? '' : ' (off)'}</option>)}
             </select>
+            <Chevron />
+          </label>
+          <label className="fld" style={{ gridColumn: 'span 2' }}>
+            <span className="k">Asset</span>
             <select value={asset} onChange={(e) => setAsset(e.target.value)} aria-label="Asset" title="One asset per trace — amounts in different assets are not comparable.">
               {assets.map((a) => <option key={a.symbol} value={a.symbol}>{a.symbol}</option>)}
             </select>
+            <Chevron />
+          </label>
+          <label className="fld" style={{ gridColumn: 'span 2' }}>
+            <span className="k">Depth</span>
             <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} aria-label="Trace depth" title="How many hops to follow. More finds more and takes longer.">
               {[1, 2, 3, 4, 5, 6].map((d) => <option key={d} value={d}>{d} hop{d === 1 ? '' : 's'}</option>)}
             </select>
-            <button type="submit" className="primary" disabled={!valid || badHashes.length > 0 || backendDown}>
-              {direction === 'outgoing' ? 'Trace' : 'Trace back'}
-            </button>
-          </div>
-          {paymentMode && !showPayments && (
-            <button type="button" className="quiet add-payments" onClick={() => setShowPayments(true)}>+ Victim's payments</button>
-          )}
+            <Chevron />
+          </label>
+          <button type="submit" className="go" style={{ gridColumn: 'span 2' }} disabled={!valid || badHashes.length > 0 || backendDown}>
+            {direction === 'outgoing' ? 'Trace' : 'Trace back'}<ArrowIcon />
+          </button>
           {paymentMode && showPayments && (
-            <div className="payments">
-              <label htmlFor="payment-hashes">
-                Victim's payment transaction hash{hashes.length === 1 ? '' : 'es'}
-                <small>Optional. With them, the trace starts when the money arrived and the case records what the victim paid. Without them, it follows the wallet's whole recent history and is marked exploratory.</small>
+            <>
+              <label className="fld" htmlFor="payment-hashes" style={{ gridColumn: 'span 9' }}>
+                <span className="k">Victim's payment transaction hash{hashes.length === 1 ? '' : 'es'}</span>
+                <textarea
+                  id="payment-hashes" rows={2} value={paymentText} className="mono"
+                  onChange={(e) => setPaymentText(e.target.value)}
+                  placeholder={family === 'tron' ? 'One per line: 64 hex characters' : 'One per line: 0x followed by 64 hex characters'}
+                  spellCheck={false} autoComplete="off" aria-invalid={badHashes.length > 0}
+                />
               </label>
-              <textarea
-                id="payment-hashes" rows={2} value={paymentText}
-                onChange={(e) => setPaymentText(e.target.value)}
-                placeholder={family === 'tron' ? 'One per line: 64 hex characters' : 'One per line: 0x followed by 64 hex characters'}
-                spellCheck={false} autoComplete="off" aria-invalid={badHashes.length > 0}
-              />
-              {hashes.length > 0 && (
-                <label htmlFor="ncrp-ack" className="ncrp">
-                  NCRP acknowledgement number
-                  <input id="ncrp-ack" value={ncrpAck} onChange={(e) => setNcrpAck(e.target.value)}
-                    maxLength={64} spellCheck={false} autoComplete="off" placeholder="Optional" />
-                </label>
-              )}
-            </div>
+              <label className="fld" htmlFor="ncrp-ack" style={{ gridColumn: 'span 3' }}>
+                <span className="k">NCRP acknowledgement number</span>
+                <input id="ncrp-ack" className="mono" value={ncrpAck} onChange={(e) => setNcrpAck(e.target.value)}
+                  maxLength={64} spellCheck={false} autoComplete="off" placeholder="Optional" disabled={hashes.length === 0} />
+              </label>
+              <p className="note pay-note" style={{ gridColumn: 'span 12' }}>Optional. With them, the trace starts when the money arrived and the case records what the victim paid. Without them, it follows the wallet's whole recent history and is marked exploratory.</p>
+            </>
           )}
-          <div className="examples">
-            <label className="toggle" title="With this on, the trace stops expanding after 1 minute 30 seconds and reports what it reached, marked truncated. Off, it runs until the depth, fan-out and size limits stop it -- which on a busy wallet at 4 hops can take several minutes.">
+          <div className="frow" style={{ gridColumn: 'span 12' }}>
+            <label className="tog" title="With this on, the trace stops expanding after 1 minute 30 seconds and reports what it reached, marked truncated. Off, it runs until the depth, fan-out and size limits stop it -- which on a busy wallet at 4 hops can take several minutes.">
               <input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} />
-              <span className="switch" aria-hidden="true" />
+              <span className="track" aria-hidden="true"><span className="knob" /></span>
               <span>Stop after <span className="mono">1:30</span></span>
             </label>
-            <span className="sep" />
-            <label htmlFor="example">Example</label>
-            <select id="example" aria-label="Load a verified example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
-              <option value="">Load a verified example…</option>
-              {DEMOS.map((d) => (
-                <option key={d.n} value={d.n} title={d.hook}>
-                  {d.n} · {d.title} · {{ tron: 'Tron', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum' }[d.chain] ?? 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}
-                </option>
-              ))}
-            </select>
+            {paymentMode && (
+              <button type="button" className="pill-btn" aria-expanded={showPayments} onClick={() => setShowPayments((v) => !v)}>
+                <PlusIcon />Victim's payments
+              </button>
+            )}
+            <label className="fld slim" htmlFor="example">
+              <StarIcon />
+              <select id="example" aria-label="Load a verified example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
+                <option value="">Load a verified example</option>
+                {DEMOS.map((d) => (
+                  <option key={d.n} value={d.n} title={d.hook}>
+                    {d.n} · {d.title} · {{ tron: 'Tron', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum' }[d.chain] ?? 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}
+                  </option>
+                ))}
+              </select>
+              <Chevron />
+            </label>
             {recording && (
-              <Link className="recorded-link" to={`/demo/${Number(demoInForm.n)}`} title="The trace as DEMO.md describes it, recorded on that date. Opens instantly; nothing is re-traced.">
-                or open it as recorded · <span className="mono">{recording.recorded_at.slice(0, 10)}</span>
+              <Link className="recorded-link" to={`/demo/${Number(demoInForm.n)}`} title="The trace as recorded on that date. Opens instantly; nothing is re-traced.">
+                Open as recorded · <span className="mono">{recording.recorded_at.slice(0, 10)}</span>
               </Link>
             )}
           </div>
           {showInvalid && (
-            <div className="banner warn">
+            <div className="banner warn" style={{ gridColumn: 'span 12' }}>
               Not a valid {active?.name ?? 'wallet'} address — expected {family === 'tron' ? 'T followed by 33 Base58 characters' : '0x followed by 40 hexadecimal characters'}.
             </div>
           )}
           {badHashes.length > 0 && (
-            <div className="banner warn">
+            <div className="banner warn" style={{ gridColumn: 'span 12' }}>
               Not a valid {active?.name ?? ''} transaction hash: <span className="mono">{badHashes[0]}</span>{badHashes.length > 1 ? ` and ${badHashes.length - 1} more` : ''}.
             </div>
           )}
           {backendDown && (
-            <div className="banner error">Cannot reach the backend. Start it with <span className="mono">uvicorn app.main:app --reload --port 8000</span>.</div>
+            <div className="banner error" style={{ gridColumn: 'span 12' }}>Cannot reach the backend. Start it with <span className="mono">uvicorn app.main:app --reload --port 8000</span>.</div>
           )}
         </form>
       </div>
     </div>
   )
 }
+
+const svg = { fill: 'none', stroke: 'currentColor', strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
+const Chevron = () => <svg className="chev" width="12" height="12" viewBox="0 0 12 12" strokeWidth="1.5" {...svg}><path d="M3 4.5l3 3 3-3" /></svg>
+const SearchIcon = () => <svg className="lead" width="18" height="18" viewBox="0 0 24 24" strokeWidth="1.6" {...svg}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+const ArrowIcon = () => <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.6" {...svg}><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+const PlusIcon = () => <svg width="12" height="12" viewBox="0 0 12 12" strokeWidth="1.5" {...svg}><path d="M6 2v8M2 6h8" /></svg>
+const StarIcon = () => <svg className="lead" width="15" height="15" viewBox="0 0 24 24" strokeWidth="1.6" {...svg}><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z" /></svg>
