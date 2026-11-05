@@ -5,10 +5,16 @@
   <img alt="Exchequer — cryptocurrency fraud tracing" src="docs/assets/exchequer-banner-light.svg" width="560">
 </picture>
 
+<a href="https://exchequer-6gnl.onrender.com"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/stickers/sticker-10m-wide-dark.svg">
+  <img alt="10.9M flagged addresses, screened live on five chains" src="docs/assets/stickers/sticker-10m-wide-light.svg" width="420">
+</picture></a>
+
 ### Trace a reported crypto-fraud wallet to the exchange it was cashed out through — with every step a human can re-check by hand.
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
 [![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer-6gnl.onrender.com)
+[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-10.9M-C0392B)](https://exchequer-6gnl.onrender.com/risk-labels?chain=tron)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -42,11 +48,12 @@
 
 <table>
 <tr>
-<td align="center"><h3>45,003</h3>labelled addresses</td>
+<td align="center"><h3>10.9M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
+<td align="center"><h3>10.8M</h3>address-poisoning<br>wallets<br><sub>found by on-chain scans</sub></td>
 <td align="center"><h3>25,508</h3>exchange addresses<br><sub>incl. 24,025 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
-<td align="center"><h3>8,953</h3>hack, phishing and<br>scam wallets</td>
+<td align="center"><h3>65,000+</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>5</h3>chains, 14 assets</td>
 <td align="center"><h3>560+</h3>tests, no network</td>
 </tr>
@@ -97,7 +104,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
 | **Names the exchange** | Exact match against 25,508 exchange addresses on five chains, including **CoinDCX** and **Delta Exchange** — and 24,025 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
-| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); and 8,953 wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing. |
+| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **10.9-million-address label store**: hack proceeds, scams, stablecoin freezes and 10.8M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
 | **Follows the money through a swap** | A transfer into a known DEX router is read from its receipt; if it came back as USDT or USDC, that stablecoin is traced onward from the moment of the swap, as its own linked trace. |
