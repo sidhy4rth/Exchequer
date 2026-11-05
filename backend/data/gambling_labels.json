@@ -6,7 +6,7 @@
   "chain": "ethereum",
   "last_reviewed": "2026-11-04",
   "counts": {
-   "gambling": 19682
+   "gambling": 19681
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
   "schema": "labels maps an address to {category, entity, label, source}"
@@ -8135,12 +8135,6 @@
    "entity": "Roobet",
    "label": "Roobet deposit address",
    "source": "Swept 2x USDT into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0xb07df78211a775e3dfbb25892d5bf64ef47baed5946645f1019344c312b4c06e, 2026-09-06)"
-  },
-  "0x1111111254fb6c44bac0bed2854e76f90643097d": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0xf598b81ef8c7b52a7f2a89253436e72ec6dc871f (sample tx 0x46fad601a97749b7f4f4a84dedc279947dea44ed5a771caf5f22a6dccdcac51e, 2022-07-23)"
   },
   "0x11139369d602861a68a1ae85b33667344ecae904": {
    "category": "gambling",
