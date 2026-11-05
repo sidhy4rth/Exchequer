@@ -5,11 +5,6 @@
   <img alt="Exchequer — cryptocurrency fraud tracing" src="docs/assets/exchequer-banner-light.svg" width="560">
 </picture>
 
-<a href="https://exchequer-6gnl.onrender.com"><picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/stickers/sticker-10m-wide-dark.svg">
-  <img alt="10.9M flagged addresses, screened live on five chains" src="docs/assets/stickers/sticker-10m-wide-light.svg" width="420">
-</picture></a>
-
 ### Trace a reported crypto-fraud wallet to the exchange it was cashed out through — with every step a human can re-check by hand.
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
