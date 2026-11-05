@@ -18,6 +18,15 @@ from pydantic import BaseModel, Field
 
 from . import config, log_safety, progress
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
+from .contracts import upgrade as upgrade_to_contract
+from .payment_intake import (
+    PaymentError,
+    PaymentRef,
+    intake_record,
+    reported_amount,
+    resolve_payments,
+    window_start,
+)
 from .etherscan_client import (
     EtherscanConfigError,
     EtherscanError,
@@ -41,6 +50,7 @@ from .risk_matcher import MIXER, REPORTED, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
 from .prorata import estimate as estimate_prorata
 from .scoring import principal_path, score_case
+from .tracing_methods import compare as compare_methods
 
 
 logger = logging.getLogger(__name__)
@@ -108,6 +118,21 @@ class TraceRequest(BaseModel):
             "makes a demo look like a repeat complaint."
         ),
     )
+    payments: list[PaymentRef] = Field(
+        default_factory=list,
+        max_length=20,
+        description=(
+            "The victim's payments, by transaction hash (R1, behind "
+            "EXCHEQUER_TX_INTAKE). Each must be an incoming transfer to "
+            "`address` in the traced asset; the trace then starts when the "
+            "first one arrived, and reported_amount is their sum. Outgoing "
+            "traces only."
+        ),
+    )
+    ncrp_ack: str | None = Field(
+        None, max_length=64,
+        description="The NCRP complaint acknowledgement number, recorded with the case.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +194,9 @@ def _all_transfers(graph: nx.DiGraph) -> list[dict[str, Any]]:
                 "value_native": round(tx.get("value_native", 0.0), 6),
                 "timestamp": tx.get("timestamp"),
                 "internal": bool(tx.get("internal", False)),
+                # The block lets a reader re-find the transfer on any node
+                # (case contract v2, docs/contracts/case.md).
+                "block": tx.get("block_number"),
             })
     rows.sort(key=lambda r: (r["timestamp"] or 0, r["hash"] or ""))
     return rows
@@ -308,6 +336,19 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
                 f"Available: {chain.native_symbol}, " + ", ".join(t.symbol for t in chain.tokens)
             ),
         )
+    # Payments (R1) are checked here too, before anything is spent: the flag
+    # must be on, and a payment starts a trace of where the money went.
+    if request.payments:
+        if not config.TX_INTAKE:
+            raise HTTPException(
+                status_code=400,
+                detail="Tracing from payment hashes is not switched on (EXCHEQUER_TX_INTAKE).",
+            )
+        if request.direction != OUTGOING:
+            raise HTTPException(
+                status_code=400,
+                detail="Payments start a trace of where the money went: use direction 'outgoing'.",
+            )
     return chain, address
 
 
@@ -331,6 +372,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     routers = get_router_matcher(chain.key)
     trace_config = TraceConfig(
         max_depth=request.max_depth or config.TRACE_MAX_DEPTH,
+        # R5: every branch carrying a share of the funds, not the top ten.
+        branch_min_share=config.TRACE_BRANCH_MIN_SHARE_PERCENT / 100 if config.TAINT_EXPANSION else None,
+        max_branches_hard=config.TRACE_MAX_BRANCHES_HARD,
         time_budget_seconds=float(request.time_budget_seconds) if request.time_budget_seconds else None,
     )
 
@@ -351,6 +395,20 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                     TronScanTags(config.TRONSCAN_API_KEY, evidence=getattr(client, "evidence", None)),
                     matcher.is_exchange,
                 )
+            # R1: read the victim's payments from the chain first. They must be
+            # incoming transfers to the reported wallet, and the walk then reads
+            # that wallet only from when the first one arrived.
+            intake = None
+            if request.payments:
+                try:
+                    payments = resolve_payments(
+                        client, seed, request.payments, chain_key=chain.key,
+                        asset=asset_symbol, limit=config.TX_INTAKE_LOOKUP_LIMIT,
+                    )
+                except PaymentError as exc:
+                    raise HTTPException(status_code=400, detail=str(exc)) from exc
+                intake = intake_record(payments, request.ncrp_ack)
+                seed_window = window_start(payments)
             result = build_trace_graph(
                 seed,
                 client,
@@ -411,6 +469,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             # Pro-rata: how much of the reported funds likely reached the
             # exchange, reading what else joined them in each wallet on the path.
             prorata = None
+            methods = None
             lead = ExchangeMatcher.primary_match(matches + inferred)
             if direction == OUTGOING and lead is not None and lead.address != seed:
                 try:
@@ -419,6 +478,11 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                     lead_path = []
                 prorata = estimate_prorata(result.graph, lead_path,
                                            getattr(client, "get_incoming_between", None))
+                # R4: FIFO and LIBR beside pro-rata, on the same path. Before
+                # the evidence manifest below, so their reads are in it.
+                if config.TRACING_METHODS and lead_path:
+                    methods = compare_methods(result.graph, lead_path,
+                                              getattr(client, "get_flows_between", None), prorata)
             # The reported wallet's own statement: what it received and sent in
             # this asset, whether or not anything could be followed onward.
             statement = _wallet_statement(client, seed) if seed_window is None else None
@@ -645,6 +709,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "message": message,
         "statement": statement,
         "prorata": prorata,
+        # R4, behind EXCHEQUER_TRACING_METHODS: FIFO and LIBR beside pro-rata.
+        # The contract reads its figures into `estimates`.
+        "tracing_methods": methods,
         "exchange_address": primary.address if primary else None,
         "exchange_label": primary.label if primary else None,
         # True when the attribution names an inferred deposit address rather
@@ -705,6 +772,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "addresses_expanded": result.addresses_expanded,
         # Busy wallets also read from when the funds arrived (graph_builder).
         "read_from_arrival": result.read_from_arrival,
+        # What the walk did not follow, with its value (brake 2; R5).
+        "untraced": result.untraced,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,
         "api_calls": result.api_calls,
         # Hash-and-timestamp of every response above; see app/evidence.py.
@@ -713,7 +782,12 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "truncation_reasons": result.truncation_reasons,
         "warnings": result.warnings,
     }
-    return payload
+    if intake is not None:
+        payload["intake"] = intake
+        payload["reported_amount"] = reported_amount(intake["payments"])
+    # Every result leaves here under the case contract (contracts/case_v2.py):
+    # the v1 fields above, untouched, plus the v2 fields the other lanes read.
+    return upgrade_to_contract(payload)
 
 
 def _follow_swaps(

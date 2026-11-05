@@ -604,6 +604,36 @@ class EtherscanClient:
                and not t.is_error and t.value_wei > 0]
         return txs, len(result) < page
 
+    def get_flows_between(
+        self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,
+    ) -> tuple[list[Transaction], list[Transaction], bool]:
+        """Every value-bearing transfer into and out of `address` in a block range.
+
+        For FIFO and LIBR (app/tracing_methods.py), which need the order of
+        everything the wallet did, not only what joined the traced funds. One
+        request: the account list holds both directions. Returns (in, out,
+        complete); complete is False when the range held more than one page.
+        """
+        page = 1000
+        params: dict[str, Any] = {
+            "module": "account",
+            "action": "tokentx" if self.contract_address else "txlist",
+            "address": normalize_address(address),
+            "startblock": start_block, "endblock": end_block,
+            "page": 1, "offset": page, "sort": "asc",
+        }
+        if self.contract_address:
+            params["contractaddress"] = self.contract_address
+        result = self._request(params)
+        if not isinstance(result, list):
+            result = []
+        parse = self._parser()
+        target = normalize_address(address)
+        moved = [t for t in (parse(r) for r in result) if t is not None and not t.is_error and t.value_wei > 0]
+        incoming = [t for t in moved if t.to_address == target]
+        outgoing = [t for t in moved if t.from_address == target and t.to_address is not None]
+        return incoming, outgoing, len(result) < page
+
     def _parser(self) -> Callable[[dict[str, Any]], Transaction | None]:
         """The record parser for the asset this client follows."""
         if self.contract_address:

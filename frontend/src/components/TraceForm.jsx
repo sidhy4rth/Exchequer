@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { fetchRecordedDemos } from '../api'
+import { fetchRecordedDemos, fetchTraceIntake } from '../api'
+import './TraceForm.css'
 
 // Same rules the backend enforces, checked here only so an obvious typo gets
 // immediate feedback instead of a round trip. The backend remains the
@@ -32,13 +33,13 @@ const DEMOS = [
   { n: '08', address: '0x4655b7ad0b5f5bacb9cf960bbffceb3f0e51f363', chain: 'ethereum', asset: 'ETH', depth: 2, direction: 'outgoing',
     title: 'The trail changes asset', hook: '2,000 ETH into 1inch, returned as wstETH. The swap is read from the receipt; the trace says where to re-run.' },
   { n: '09', address: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
-    title: 'Tron, in under a second', hook: 'USDT-TRC20 to Binance-Hot 7 in one hop, 26,405 USDT, confidence 1.00 — against 41 verified Tron labels.' },
+    title: 'Tron, in under a second', hook: 'USDT-TRC20 to Binance-Hot 7 in one hop, 26,405 USDT, high confidence — against 41 verified Tron labels.' },
   { n: '10', address: '0x000000000532b45f47779fce440748893b257865', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
     title: 'Three complaints, one operation', hook: 'Shares 60 and 46 intermediaries with two other stored phishing wallets — and all three reach the same known phishing wallet.' },
   { n: '11', address: 'TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
     title: 'Frozen by Tether', hook: 'A Tron wallet whose USDT Tether froze on 11 Sep 2026 — as it did the next wallet — splits 45,968 USDT onward; it reaches Binance-Hot 7 at 0.80.' },
   { n: '12', address: 'TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
-    title: 'An exchange the file does not know', hook: 'Flipster is not among the 41 labelled Tron wallets; TronScan’s own tag, read live, names it at confidence 1.00.' },
+    title: 'An exchange the file does not know', hook: 'Flipster is not among the 41 labelled Tron wallets; TronScan’s own tag, read live, names it with high confidence.' },
 ]
 
 // The optional wall-clock cap, in seconds. 1:30 is long enough for any of
@@ -48,6 +49,15 @@ const TIME_BUDGET_SECONDS = 90
 /** The intake card: a reported address, how to trace it, and the DEMO.md
  * examples to fill it from. `health` is GET /health as the page loaded it
  * (null while connecting, { status: 'down' } when unreachable). */
+// A payment's transaction hash: 0x and 64 hex characters on EVM chains; Tron's
+// are 64 hex characters, often pasted with a 0x the explorer does not show.
+const HASH_RE = { evm: /^0x[0-9a-fA-F]{64}$/, tron: /^(0x)?[0-9a-fA-F]{64}$/ }
+
+/** Hashes from what the officer pasted: one per line, or separated by commas or spaces. */
+export function parseHashes(text) {
+  return [...new Set(text.split(/[\s,]+/).map((h) => h.trim()).filter(Boolean))]
+}
+
 export default function TraceForm({ health }) {
   const navigate = useNavigate()
   const [address, setAddress] = useState('')
@@ -62,6 +72,11 @@ export default function TraceForm({ health }) {
   // The demo last loaded into the form, and which demos have a recording.
   const [loadedDemo, setLoadedDemo] = useState(null)
   const [recordings, setRecordings] = useState({})
+  // R1: whether the backend can start a trace from payment hashes, and the
+  // hashes and NCRP number the officer entered.
+  const [intake, setIntake] = useState(null)
+  const [paymentText, setPaymentText] = useState('')
+  const [ncrpAck, setNcrpAck] = useState('')
 
   // Trace on the deployment's default chain once /health names it.
   useEffect(() => {
@@ -69,6 +84,10 @@ export default function TraceForm({ health }) {
     setChain(health.default_chain)
     setAsset(health.chains?.[health.default_chain]?.assets?.[0]?.symbol ?? 'ETH')
   }, [health])
+
+  useEffect(() => {
+    fetchTraceIntake().then(setIntake).catch(() => setIntake(null))
+  }, [])
 
   useEffect(() => {
     fetchRecordedDemos()
@@ -86,6 +105,12 @@ export default function TraceForm({ health }) {
   const valid = (ADDRESS_RE[family] ?? ADDRESS_RE.evm).test(trimmed)
   const showInvalid = touched && trimmed.length > 0 && !valid
 
+  // Payments start a trace of where the money went, so they are offered only
+  // for that direction, and only when the backend has them switched on.
+  const paymentMode = Boolean(intake?.payments) && direction === 'outgoing'
+  const hashes = paymentMode ? parseHashes(paymentText) : []
+  const badHashes = hashes.filter((h) => !(HASH_RE[family] ?? HASH_RE.evm).test(h))
+
   // Switching chain resets the asset: BNB does not exist on Ethereum, so the
   // symbol cannot be carried across.
   const changeChain = useCallback((next) => {
@@ -99,8 +124,13 @@ export default function TraceForm({ health }) {
       depth: String(opts.depth ?? depth), direction: opts.direction ?? direction,
     })
     if (opts.capped ?? capped) q.set('budget', String(TIME_BUDGET_SECONDS))
-    navigate(`/trace/${addr}?${q}`)
-  }, [navigate, chain, asset, depth, direction, capped])
+    // Payment hashes are public chain data and make the link reproducible, so
+    // they go in the URL. The NCRP number is a complaint reference: it travels
+    // in the navigation state, which never reaches history, logs or a shared link.
+    if (hashes.length) q.set('pay', hashes.join(','))
+    const ack = hashes.length ? ncrpAck.trim() : ''
+    navigate(`/trace/${addr}?${q}`, ack ? { state: { ncrpAck: ack } } : undefined)
+  }, [navigate, chain, asset, depth, direction, capped, hashes, ncrpAck])
 
   // Fill the form from one of the verified DEMO.md traces. The trace is not
   // started: the officer still presses the same button they would for a real
@@ -110,6 +140,8 @@ export default function TraceForm({ health }) {
     if (!d) return
     setChain(d.chain); setAsset(d.asset); setDepth(d.depth); setDirection(d.direction)
     setAddress(d.address); setTouched(false); setLoadedDemo(d)
+    // A demo is an address-only trace: payments typed for another case don't carry over.
+    setPaymentText(''); setNcrpAck('')
   }
 
   // Shown while the form still holds the demo exactly as loaded: edit the
@@ -121,7 +153,7 @@ export default function TraceForm({ health }) {
   function submit(event) {
     event.preventDefault()
     setTouched(true)
-    if (valid) open(trimmed)
+    if (valid && badHashes.length === 0) open(trimmed)
   }
 
   return (
@@ -152,10 +184,31 @@ export default function TraceForm({ health }) {
             <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} aria-label="Trace depth" title="How many hops to follow. More finds more and takes longer.">
               {[1, 2, 3, 4, 5, 6].map((d) => <option key={d} value={d}>{d} hop{d === 1 ? '' : 's'}</option>)}
             </select>
-            <button type="submit" className="primary" disabled={!valid || backendDown}>
+            <button type="submit" className="primary" disabled={!valid || badHashes.length > 0 || backendDown}>
               {direction === 'outgoing' ? 'Trace' : 'Trace back'}
             </button>
           </div>
+          {paymentMode && (
+            <div className="payments">
+              <label htmlFor="payment-hashes">
+                Victim's payment transaction hash{hashes.length === 1 ? '' : 'es'}
+                <small>Optional. With them, the trace starts when the money arrived and the case records what the victim paid. Without them, it follows the wallet's whole recent history and is marked exploratory.</small>
+              </label>
+              <textarea
+                id="payment-hashes" rows={2} value={paymentText}
+                onChange={(e) => setPaymentText(e.target.value)}
+                placeholder={family === 'tron' ? 'One per line: 64 hex characters' : 'One per line: 0x followed by 64 hex characters'}
+                spellCheck={false} autoComplete="off" aria-invalid={badHashes.length > 0}
+              />
+              {hashes.length > 0 && (
+                <label htmlFor="ncrp-ack" className="ncrp">
+                  NCRP acknowledgement number
+                  <input id="ncrp-ack" value={ncrpAck} onChange={(e) => setNcrpAck(e.target.value)}
+                    maxLength={64} spellCheck={false} autoComplete="off" placeholder="Optional" />
+                </label>
+              )}
+            </div>
+          )}
           <div className="examples">
             <label className="toggle" title="With this on, the trace stops expanding after 1 minute 30 seconds and reports what it reached, marked truncated. Off, it runs until the depth, fan-out and size limits stop it -- which on a busy wallet at 4 hops can take several minutes.">
               <input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} />
@@ -181,6 +234,11 @@ export default function TraceForm({ health }) {
           {showInvalid && (
             <div className="banner warn">
               Not a valid {active?.name ?? 'wallet'} address — expected {family === 'tron' ? 'T followed by 33 Base58 characters' : '0x followed by 40 hexadecimal characters'}.
+            </div>
+          )}
+          {badHashes.length > 0 && (
+            <div className="banner warn">
+              Not a valid {active?.name ?? ''} transaction hash: <span className="mono">{badHashes[0]}</span>{badHashes.length > 1 ? ` and ${badHashes.length - 1} more` : ''}.
             </div>
           )}
           {backendDown && (

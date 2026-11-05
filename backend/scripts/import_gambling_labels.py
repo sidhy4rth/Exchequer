@@ -39,6 +39,7 @@ CHAIN_FILES = {
     "arbitrum": ("gambling_labels_arbitrum.json", "exchange_labels_arbitrum.json"),
     "tron": ("gambling_labels_tron.json", "exchange_labels_tron.json"),
 }
+ROUTER_FILES = {"ethereum": "router_labels.json", "bsc": "router_labels_bsc.json"}
 EVM = re.compile(r"^0x[0-9a-fA-F]{40}$")
 TRON = re.compile(r"^T[1-9A-HJ-NP-Za-km-z]{33}$")
 
@@ -137,6 +138,11 @@ def main() -> int:
     for chain, (_, ex_file) in CHAIN_FILES.items():
         p = DATA / ex_file
         exchange[chain] = set(json.loads(p.read_text()).get("labels", {})) if p.exists() else set()
+        # A DEX router carries every user's swap, so users sweeping into a casino
+        # through it must not make it a casino deposit (the 1inch v4 router did).
+        rp = DATA / ROUTER_FILES.get(chain, "")
+        if chain in ROUTER_FILES and rp.exists():
+            exchange[chain] |= {k.lower() for k in json.loads(rp.read_text()).get("labels", {})}
     # Deposit "sweeps" that were really address-poisoning (zero/dust transfers from lookalikes of genuine
     # deposit addresses, or addresses on our poisoning lists) must never be labelled as gambling.
     sp = hunt / "raw/gambling_suspect_poisoners.json"

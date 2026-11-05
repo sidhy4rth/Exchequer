@@ -77,3 +77,19 @@ def test_every_traceable_chain_has_a_gambling_file_configured(chain_key):
     chain = config.get_chain(chain_key)
     assert chain.gambling_labels_path is not None
     assert chain.gambling_labels_path.name.startswith("gambling_labels")
+
+
+@pytest.mark.parametrize("chain_key", ["ethereum", "bsc", "polygon", "arbitrum", "tron"])
+def test_no_gambling_label_sits_on_an_exchange_wallet_or_a_router(chain_key):
+    """A router or an exchange wallet carries every user's money, so a few users
+    sweeping into a casino through it must not label it a casino deposit (the
+    1inch v4 router once read "Stake.com deposit address")."""
+    from app.exchange_matcher import get_matcher, get_router_matcher
+
+    chain = config.get_chain(chain_key)
+    if chain.gambling_labels_path is None or not chain.gambling_labels_path.exists():
+        pytest.skip("no gambling file for this chain")
+    raw = json.loads(chain.gambling_labels_path.read_text())
+    gambling = {k.lower() if k.startswith("0x") else k for k in raw.get("labels", raw) if not k.startswith("_")}
+    services = {a for a, _ in get_matcher(chain_key).entries()} | {a for a, _ in get_router_matcher(chain_key).entries()}
+    assert not gambling & services

@@ -1,0 +1,430 @@
+{
+ "address": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+ "addresses_expanded": 1,
+ "addresses_unexpanded_by_time": 0,
+ "api_calls": 1,
+ "asset": "USDT",
+ "asset_contract": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+ "asset_is_native": false,
+ "attribution": {
+  "address": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+  "depth": 1,
+  "exchange": "Flipster",
+  "kind": "exchange_wallet",
+  "label": "Flipster Exchange Hot Wallet (TronScan tag, read live)",
+  "source": "live_tag",
+  "wallet_type": "hot_wallet"
+ },
+ "attribution_inferred": false,
+ "case_id": null,
+ "chain": "tron",
+ "chain_id": 0,
+ "chain_name": "Tron",
+ "chain_native_symbol": "TRX",
+ "confidence": 1.0,
+ "confidence_detail": {
+  "band": "high",
+  "caveats": [
+   "An exchange match identifies where funds arrived, not who controls the receiving account. Only the exchange can link a deposit address to a customer identity, via a lawful request.",
+   "Only direct USDT transfers were followed. Value that moved as a different asset (for example after a swap into another token), through an internal contract call, or across a bridge to another chain is not covered."
+  ],
+  "components": [
+   {
+    "contribution": 0.4,
+    "explanation": "The exchange wallet received funds directly from the reported address, with no intermediary.",
+    "name": "hop_proximity",
+    "raw_value": 1.0,
+    "weight": 0.4
+   },
+   {
+    "contribution": 0.35,
+    "explanation": "Pro-rata estimate: about 3,712.5211 of the 3,712.5211 USDT that left the reported address on this path likely reached the exchange (100.0%).",
+    "name": "amount_correlation",
+    "raw_value": 1.0,
+    "weight": 0.35
+   },
+   {
+    "contribution": 0.25,
+    "explanation": "Exact match: TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8 is a labelled Flipster hot wallet (Flipster Exchange Hot Wallet (TronScan tag, read live)) in the attribution database.",
+    "name": "match_directness",
+    "raw_value": 1.0,
+    "weight": 0.25
+   }
+  ],
+  "score": 1.0,
+  "summary": "High confidence (1.00) that funds from the reported address reached Flipster at TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8, 1 hop from the source."
+ },
+ "contract_version": 2,
+ "created_at": "2026-10-14T16:52:20+00:00",
+ "depth_reached": 0,
+ "direct_senders": [],
+ "direction": "outgoing",
+ "estimates": {
+  "conservative": 3712.5211,
+  "fifo": null,
+  "libr": null,
+  "prorata": 3712.5211
+ },
+ "evidence": {
+  "algorithm": "sha256",
+  "count": 5,
+  "first_retrieved_at": "2026-10-14T16:44:57Z",
+  "from_cache": 2,
+  "last_retrieved_at": "2026-10-14T16:52:20Z",
+  "manifest_sha256": "5cbadd981672227efbcb167e5b18a65de6a7da5ee34793009d7aef85f6705261",
+  "providers": [
+   "trongrid",
+   "tronscan"
+  ],
+  "records": [
+   {
+    "bytes": 12629,
+    "from_cache": true,
+    "provider": "tronscan",
+    "request": "GET https://apilist.tronscanapi.com/api/accountv2?address=TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "retrieved_at": "2026-10-14T16:44:57Z",
+    "sha256": "01837241a25a2856304e7a0d404756b1e3e2bc7db1834c45d8af276392e8c118"
+   },
+   {
+    "bytes": 3187,
+    "from_cache": true,
+    "provider": "tronscan",
+    "request": "GET https://apilist.tronscanapi.com/api/accountv2?address=TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+    "retrieved_at": "2026-10-14T16:44:58Z",
+    "sha256": "342426f13302a4bfc0d72520df19357fb53bf1e9fbef42fc8f3326e8497c2d79"
+   },
+   {
+    "bytes": 1832,
+    "from_cache": false,
+    "provider": "trongrid",
+    "request": "GET https://api.trongrid.io/v1/accounts/TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja/transactions/trc20?contract_address=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&limit=200&only_from=true&order_by=block_timestamp,desc",
+    "retrieved_at": "2026-10-14T16:52:19Z",
+    "sha256": "090068a8e371c23426dbbf8484f018421cf14ca358eb9953c9748b3117772d92"
+   },
+   {
+    "bytes": 2879,
+    "from_cache": false,
+    "provider": "trongrid",
+    "request": "GET https://api.trongrid.io/v1/accounts/TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja/transactions/trc20?contract_address=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&limit=100&only_to=true&order_by=block_timestamp,desc",
+    "retrieved_at": "2026-10-14T16:52:20Z",
+    "sha256": "8b336009f178b03018e591f58c572b326a80bc56d5245863c5d25ac520daa6a9"
+   },
+   {
+    "bytes": 1832,
+    "from_cache": false,
+    "provider": "trongrid",
+    "request": "GET https://api.trongrid.io/v1/accounts/TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja/transactions/trc20?contract_address=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&limit=25&only_from=true&order_by=block_timestamp,desc",
+    "retrieved_at": "2026-10-14T16:52:20Z",
+    "sha256": "427222ad29e7ea7a489ee06580954d91455bf82826a156042a0a1d2cead04c06"
+   }
+  ],
+  "retrieved": 3
+ },
+ "exchange": "Flipster",
+ "exchange_address": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+ "exchange_label": "Flipster Exchange Hot Wallet (TronScan tag, read live)",
+ "explorer_url": "https://tronscan.org",
+ "findings": [],
+ "flags": [],
+ "follow_ons": [],
+ "followed_attribution": null,
+ "graph": {
+  "edges": [
+   {
+    "first_seen": 1787288829,
+    "flags": [],
+    "internal_tx_count": 0,
+    "last_seen": 1790144562,
+    "source": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+    "swap": null,
+    "target": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "tx_count": 5,
+    "value_native": 3712.5211
+   }
+  ],
+  "nodes": [
+   {
+    "activity_count": 5,
+    "address": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+    "depth": 0,
+    "exchange": null,
+    "excluded_by_time": 0,
+    "flags": [],
+    "id": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+    "inferred_exchange": null,
+    "is_router": false,
+    "is_seed": true,
+    "is_service_contract": false,
+    "is_terminal": false,
+    "label": null,
+    "risk_category": null,
+    "risk_entity": null,
+    "risk_label": null,
+    "router": null,
+    "total_in_native": 0,
+    "total_out_native": 3712.5211,
+    "window_end": null,
+    "window_start": null
+   },
+   {
+    "activity_count": 5,
+    "address": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "depth": 1,
+    "exchange": "Flipster",
+    "excluded_by_time": 0,
+    "flags": [],
+    "id": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "inferred_exchange": null,
+    "is_router": false,
+    "is_seed": false,
+    "is_service_contract": false,
+    "is_terminal": true,
+    "label": "Flipster Exchange Hot Wallet (TronScan tag, read live)",
+    "risk_category": null,
+    "risk_entity": null,
+    "risk_label": null,
+    "router": null,
+    "total_in_native": 3712.5211,
+    "total_out_native": 0,
+    "window_end": null,
+    "window_start": null
+   }
+  ]
+ },
+ "hop_count": 1,
+ "inference_notes": [],
+ "inferred_deposits": [],
+ "intake": {
+  "mode": "address",
+  "ncrp_ack": null,
+  "payments": []
+ },
+ "live_tags": {
+  "asked": 2,
+  "enabled": true,
+  "failures": 0,
+  "found": [
+   {
+    "address": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "exchange": "Flipster",
+    "label": "Flipster Exchange Hot Wallet (TronScan tag, read live)",
+    "type": "hot_wallet"
+   }
+  ],
+  "requests": 0,
+  "unrecognised_tags": [],
+  "warnings": []
+ },
+ "matches": [
+  {
+   "address": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+   "depth": 1,
+   "exchange": "Flipster",
+   "inferred": false,
+   "label": "Flipster Exchange Hot Wallet (TronScan tag, read live)",
+   "value_received_native": 3712.5211,
+   "wallet_type": "hot_wallet"
+  }
+ ],
+ "max_depth": 2,
+ "message": null,
+ "native_symbol": "USDT",
+ "prorata": {
+  "arrived_total": 3712.5211,
+  "diluted": false,
+  "estimated": 3712.5211,
+  "hops": [],
+  "lowest_share": 1.0,
+  "ratio": 1.0,
+  "sent": 3712.5211,
+  "status": "estimated"
+ },
+ "read_from_arrival": [],
+ "reported_amount": null,
+ "risk_flags": [],
+ "risk_matches": [],
+ "risk_notes": [],
+ "seconds_elapsed": 0.16,
+ "statement": {
+  "credits": [
+   {
+    "amount": 2581.261685,
+    "counterparty": "TN12qS4gM6qs3B2R4XjuT2zf6BomaDGdRY",
+    "lookalike": false,
+    "time": 1790067417,
+    "tx": "7167641555317cc720557412477207b05d521ec9557a7df6bfff872cd882a11a"
+   },
+   {
+    "amount": 286.804292,
+    "counterparty": "TN12qS4gM6qs3B2R4XjuT2zf6BomaDGdRY",
+    "lookalike": false,
+    "time": 1790053344,
+    "tx": "b684a22dd479f0bfb90902b6132ebd69c3d2f8edfa82c8b837db9cdfccd10e94"
+   },
+   {
+    "amount": 725.744186,
+    "counterparty": "TN12qS4gM6qs3B2R4XjuT2zf6BomaDGdRY",
+    "lookalike": false,
+    "time": 1789715592,
+    "tx": "5ab427b711257b849b75362ec091559681a221fb8c7ffa78a075ca4c8fbdfea1"
+   },
+   {
+    "amount": 1.0,
+    "counterparty": "TN12qS4gM6qs3B2R4XjuT2zf6BomaDGdRY",
+    "lookalike": false,
+    "time": 1789715199,
+    "tx": "283e7216fb321a2b34d36160820fa933398ae28538f670f4da32d2d30c0995ab"
+   },
+   {
+    "amount": 100.0,
+    "counterparty": "TN12qS4gM6qs3B2R4XjuT2zf6BomaDGdRY",
+    "lookalike": false,
+    "time": 1787629695,
+    "tx": "d953bc6939a4da860cacbcccfe7c2a39afad0751babfc612db531c79294ac518"
+   },
+   {
+    "amount": 16.710936,
+    "counterparty": "TN12qS4gM6qs3B2R4XjuT2zf6BomaDGdRY",
+    "lookalike": false,
+    "time": 1787288652,
+    "tx": "470d7510535f356361b3d3031363d8a47d534bac785288f780826e7745afc252"
+   },
+   {
+    "amount": 1.0,
+    "counterparty": "TN12qS4gM6qs3B2R4XjuT2zf6BomaDGdRY",
+    "lookalike": false,
+    "time": 1786681671,
+    "tx": "8ae6ee74072747c1d5ef03776060514690f068da191166f8d9f807c280b3a0b5"
+   },
+   {
+    "amount": 1e-06,
+    "counterparty": "TN12qS4gM6qs3B2R4XjuT2zf6BomaDGdRY",
+    "lookalike": false,
+    "time": 1786680444,
+    "tx": "a5221632e4958568a24504c609dcf433e96c6c22fa6d18701af4f97695a4d266"
+   }
+  ],
+  "debits": [
+   {
+    "amount": 2581.261685,
+    "counterparty": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "time": 1790144562,
+    "tx": "647b1839e8b94fbf81cb92473747338daa3f286ee4efd1265ccf6b179b96c6af"
+   },
+   {
+    "amount": 286.804292,
+    "counterparty": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "time": 1790053392,
+    "tx": "dc5d45362d0638a6347f30021b702086d0a15f92ee1a8b8b8b2e82c7267e7780"
+   },
+   {
+    "amount": 726.744186,
+    "counterparty": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "time": 1789715640,
+    "tx": "3363e43c50eae068570cf9b3580d531bfabc53c94a9e7e70a8a970a68e4c1409"
+   },
+   {
+    "amount": 100.0,
+    "counterparty": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "time": 1787629782,
+    "tx": "5be697896de0a63af3fd8aef8b716b400a456e50565dc77ff8895ae35cbacd14"
+   },
+   {
+    "amount": 17.710937,
+    "counterparty": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "time": 1787288829,
+    "tx": "4687694d8de0125b6ece47ea951d3e500f4ab082ba3cf39d958c91f4d092f718"
+   }
+  ],
+  "lookalikes": 0,
+  "poisoning": [],
+  "rows_per_side": 25
+ },
+ "swap_notes": [],
+ "swaps": [],
+ "time_budget_seconds": null,
+ "trace_path": [
+  {
+   "address": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+   "depth": 0,
+   "exchange": null,
+   "flags": [],
+   "label": null
+  },
+  {
+   "address": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+   "depth": 1,
+   "exchange": "Flipster",
+   "first_seen": 1787288829,
+   "flags": [],
+   "label": "Flipster Exchange Hot Wallet (TronScan tag, read live)",
+   "last_seen": 1790144562,
+   "tx_count": 5,
+   "tx_hashes": [
+    "647b1839e8b94fbf81cb92473747338daa3f286ee4efd1265ccf6b179b96c6af",
+    "dc5d45362d0638a6347f30021b702086d0a15f92ee1a8b8b8b2e82c7267e7780",
+    "3363e43c50eae068570cf9b3580d531bfabc53c94a9e7e70a8a970a68e4c1409",
+    "5be697896de0a63af3fd8aef8b716b400a456e50565dc77ff8895ae35cbacd14",
+    "4687694d8de0125b6ece47ea951d3e500f4ab082ba3cf39d958c91f4d092f718"
+   ],
+   "value_native": 3712.5211
+  }
+ ],
+ "transfers": [
+  {
+   "block": null,
+   "from": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+   "hash": "4687694d8de0125b6ece47ea951d3e500f4ab082ba3cf39d958c91f4d092f718",
+   "internal": false,
+   "log_index": null,
+   "timestamp": 1787288829,
+   "to": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+   "value_native": 17.710937
+  },
+  {
+   "block": null,
+   "from": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+   "hash": "5be697896de0a63af3fd8aef8b716b400a456e50565dc77ff8895ae35cbacd14",
+   "internal": false,
+   "log_index": null,
+   "timestamp": 1787629782,
+   "to": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+   "value_native": 100.0
+  },
+  {
+   "block": null,
+   "from": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+   "hash": "3363e43c50eae068570cf9b3580d531bfabc53c94a9e7e70a8a970a68e4c1409",
+   "internal": false,
+   "log_index": null,
+   "timestamp": 1789715640,
+   "to": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+   "value_native": 726.744186
+  },
+  {
+   "block": null,
+   "from": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+   "hash": "dc5d45362d0638a6347f30021b702086d0a15f92ee1a8b8b8b2e82c7267e7780",
+   "internal": false,
+   "log_index": null,
+   "timestamp": 1790053392,
+   "to": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+   "value_native": 286.804292
+  },
+  {
+   "block": null,
+   "from": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+   "hash": "647b1839e8b94fbf81cb92473747338daa3f286ee4efd1265ccf6b179b96c6af",
+   "internal": false,
+   "log_index": null,
+   "timestamp": 1790144562,
+   "to": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+   "value_native": 2581.261685
+  }
+ ],
+ "transfers_excluded_by_time": 0,
+ "truncated": false,
+ "truncation_reasons": [],
+ "value_received_native": 3712.5211,
+ "warnings": []
+}

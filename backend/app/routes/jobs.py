@@ -18,7 +18,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .. import jobs, ownership, pipeline, progress
+from .. import jobs, pipeline, progress
+from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 from . import cases
 
@@ -34,7 +35,9 @@ def _run(job: jobs.Job, request: TraceRequest, owner: str | None) -> None:
     try:
         payload = pipeline.run_trace(request)
         jobs.store.report(job, {"stage": "saving"})
-        jobs.store.finish(job, result=cases.store_result(payload, request, owner))
+        stored = cases.store_result(payload, request, owner)
+        cases.record_trace(stored)
+        jobs.store.finish(job, result=stored)
     except HTTPException as exc:
         jobs.store.finish(job, error={"status_code": exc.status_code, "detail": exc.detail})
     except Exception:  # noqa: BLE001 -- a job must always end, and say how
@@ -47,12 +50,12 @@ def _run(job: jobs.Job, request: TraceRequest, owner: str | None) -> None:
 
 
 @router.post("/trace/jobs", status_code=202)
-def start_job(request: TraceRequest, http: Request) -> JSONResponse:
+def start_job(request: TraceRequest, http: Request, user: CurrentUser) -> JSONResponse:
     pipeline.check_request(request)  # a typo is refused before it costs the allowance
     cases.admit(http)  # holds a running slot from here until _run releases it
     try:
         job = jobs.store.create()
-        owner = ownership.owner_hash_from_headers(http.headers)
+        owner = user.owner_hash
         threading.Thread(target=_run, args=(job, request, owner),
                          name=f"trace-job-{job.id[:8]}", daemon=True).start()
     except Exception:

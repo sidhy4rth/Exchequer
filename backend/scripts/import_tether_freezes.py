@@ -93,14 +93,27 @@ def eth_is_blacklisted(client: EtherscanClient, address: str) -> bool:
 
 
 # -- Tron -----------------------------------------------------------------------
+class TronReadError(RuntimeError):
+    """TronGrid answered with something other than a page of events."""
+
+
 def tron_events(http: httpx.Client, name: str) -> list[tuple[int, int, str, str, int]]:
-    """(block, index, address, tx, timestamp ms) for every event with this name."""
+    """(block, index, address, tx, timestamp ms) for every event with this name.
+
+    A rate limit or an error page has no fingerprint, so read loosely it looks just
+    like the last page and leaves the freeze list short. Anything that is not a page
+    of events stops the import instead.
+    """
     url = f"{TRONGRID}/v1/contracts/{TRON_USDT}/events"
     params = {"event_name": name, "limit": 200, "order_by": "block_timestamp,asc"}
     out = []
     while True:
-        body = http.get(url, params=params).json()
-        for event in body.get("data") or []:
+        response = http.get(url, params=params)
+        response.raise_for_status()
+        body = response.json()
+        if body.get("success") is False or not isinstance(body.get("data"), list):
+            raise TronReadError(f"TronGrid did not return events for {name}: {str(body)[:120]}")
+        for event in body["data"]:
             raw = (event.get("result") or {}).get("_user") or (event.get("result") or {}).get("0") or ""
             address = hex_to_base58("41" + raw[2:] if raw.startswith("0x") else raw)
             out.append((event["block_number"], event.get("event_index", 0), address,

@@ -9,6 +9,8 @@ import ExportButton from '../components/ExportButton'
 import Present from '../components/Present'
 import WatchPanel from '../components/WatchPanel'
 import RequestsPanel from '../components/RequestsPanel'
+import './TraceView.css'
+import { BAND_RULE, bandLabel, bandOf, validationLine } from '../components/confidence'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
 const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }
@@ -110,6 +112,26 @@ function describeProgress(p) {
   return STAGE_TEXT[p.stage] ?? ''
 }
 
+const METHOD_NAME = { fifo: 'FIFO', prorata: 'pro-rata', libr: 'LIBR' }
+
+// R4: how much reached the exchange by each tracing rule, and the figure a
+// letter states. Shown only when the trace computed more than one method.
+function MethodRange({ methods, unit }) {
+  const figures = methods?.figures ?? {}
+  const names = ['fifo', 'prorata', 'libr'].filter((m) => figures[m] != null)
+  if (names.length < 2 || !methods.range) return null
+  const same = methods.range.low === methods.range.high
+  return (
+    <div className="method-range">
+      {same
+        ? <>All {names.length} tracing rules agree: <span className="num">{num(methods.range.low)} {unit}</span></>
+        : <>By tracing rule: <span className="num">{num(methods.range.low)} to {num(methods.range.high)} {unit}</span></>}
+      {' · '}{names.map((m) => `${METHOD_NAME[m]} ${num(figures[m])}`).join(' · ')}
+      {!same && <span className="note"> · a letter states the smallest, {num(methods.conservative)} {unit} ({METHOD_NAME[methods.conservative_method]})</span>}
+    </div>
+  )
+}
+
 export default function TraceView() {
   // One component serves all three routes. /trace/:address runs a fresh
   // traversal; /case/:caseId opens what was stored, and /demo/:demoNo a
@@ -131,6 +153,10 @@ export default function TraceView() {
   const requestedDirection = params.get('direction') || 'outgoing'
   // Optional wall-clock cap, in seconds; absent means the trace runs its course.
   const budget = Number(params.get('budget')) || null
+  // R1: the victim's payment hashes, from the URL; the NCRP number only ever
+  // travels in the navigation state (see TraceForm).
+  const pay = params.get('pay') || ''
+  const ncrpAck = location.state?.ncrpAck || null
 
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -172,7 +198,10 @@ export default function TraceView() {
       : stored
       ? fetchCase(caseId)
       : runTrace(
-        { address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget },
+        {
+          address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
+          payments: pay ? pay.split(',') : [], ncrpAck,
+        },
         (snap) => { if (!cancelled && snap?.progress) setProgress(snap.progress) },
       )
     request
@@ -196,7 +225,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -236,6 +265,10 @@ export default function TraceView() {
 
   const address = routeAddress ?? result?.address ?? ''
   const reverse = (result?.direction ?? requestedDirection) === 'incoming'
+  // Contract v2 (docs/contracts/case.md): a payment trace started from the
+  // victim's payments; anything else followed the wallet's own history.
+  const paymentTrace = result?.intake?.mode === 'payment'
+  const payments = result?.intake?.payments ?? []
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
   const findings = result?.findings ?? []
@@ -383,6 +416,16 @@ export default function TraceView() {
             {/* The answer */}
             <div className="answer">
               <span className="q">{reverse ? 'Where the money came from' : 'Where the money went'}</span>
+              {!reverse && (paymentTrace ? (
+                <span className="intake" title="The trace read the reported wallet only from when the first payment arrived.">
+                  From the victim's <span className="num">{num(result.reported_amount)} {unit}</span> in {payments.length} payment{payments.length === 1 ? '' : 's'}
+                  {result.intake.ncrp_ack ? <> · NCRP <span className="mono">{result.intake.ncrp_ack}</span></> : null}
+                </span>
+              ) : (
+                <span className="intake exploratory" title="Traced from the address alone: it follows the wallet's whole recent history, which can include other people's money. Start from the victim's payment hashes to trace their money only.">
+                  Exploratory · traced from the address, not from a reported payment
+                </span>
+              ))}
               {result.exchange ? (
                 <>
                   <h2 className="green">{result.exchange}</h2>
@@ -394,9 +437,12 @@ export default function TraceView() {
                     {' · '}{reverse
                       ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> sent</>
                       : result.prorata?.status === 'estimated'
-                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> of the reported funds likely arrived <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span></>
+                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> {paymentTrace
+                            ? <>sent on after the victim's payment likely arrived</>
+                            : <>sent from this wallet likely arrived</>} <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span></>
                         : <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached it along this path, including any funds from other sources</>}
                   </div>
+                  {!reverse && <MethodRange methods={result.tracing_methods} unit={unit} />}
                   <div className="cite">
                     <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
                     <Address value={result.exchange_address} head={22} tail={20} />
@@ -408,7 +454,7 @@ export default function TraceView() {
                   <div className="basis">
                     <strong>After a swap to {followed.asset}</strong> · {followed.attribution_inferred ? 'probable deposit address' : <>label <span className="mono">{followed.exchange_label}</span></>}
                     {' · '}{followed.hop_count} hop{followed.hop_count === 1 ? '' : 's'} in the {followed.asset} trace
-                    {' · '}confidence <span className="num">{followed.confidence?.toFixed(2)}</span> within that trace
+                    {' · '}{bandOf(followed.confidence) ?? 'no'} confidence within that trace
                   </div>
                   <div className="cite">
                     <span className="micro">{followed.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
@@ -432,8 +478,8 @@ export default function TraceView() {
               ) : (
                 <>
                   <div className="score">
-                    <span className={`big ${result.confidence_detail?.band ?? ''}`}>{result.confidence.toFixed(2)}</span>
-                    <span className="band">{String(result.confidence_detail?.band ?? '').replace(/^./, (c) => c.toUpperCase())}</span>
+                    <span className={`big ${result.confidence_detail?.band ?? ''}`}>{bandLabel(result.confidence_detail?.band ?? bandOf(result.confidence))}</span>
+                    <span className="band">a rule of three inputs, not a probability</span>
                   </div>
                   <div className="components">
                     {components.map((c) => (
@@ -448,6 +494,7 @@ export default function TraceView() {
                     <summary>How the score is built</summary>
                     <div className="why-list">
                       {components.map((c) => <p key={c.name}><strong>{COMPONENT_NAME[c.name] ?? c.name}.</strong> {c.explanation}</p>)}
+                      <p className="score-working">Score <span className="num">{result.confidence.toFixed(2)}</span>, the sum of each input × its weight. {BAND_RULE}</p>
                       <p className="note">The score is the weighted sum of these three inputs and nothing else. A pattern never moves it. An exchange match identifies where funds arrived, not who controls the account; only the exchange can link an address to a customer, on a lawful request (PMLA s.12, s.50).</p>
                       {primaryInference && <p className="confirm">{primaryInference.evidence?.confirmation}</p>}
                     </div>
@@ -588,13 +635,14 @@ export default function TraceView() {
               )}
 
               {findings.length > 0 ? (
-                <details className="card sec" open>
-                  <summary><span className="micro">Patterns · {findings.length}</span><span className="pill amber">reason to look closer</span></summary>
+                <details className="card sec">
+                  <summary><span className="micro">Hints · {findings.length}</span><span className="pill amber">a shape, not evidence</span></summary>
                   <div className="body">
                     {findings.map((f) => (
                       <div className="rule-block" key={f.pattern}>
-                        <div className="top"><span className="nm amber">{PATTERN_NAME[f.pattern] ?? f.pattern}</span><span className="st">strength {f.strength}</span></div>
+                        <div className="top"><span className="nm amber">{PATTERN_NAME[f.pattern] ?? f.pattern}</span></div>
                         <div className="desc">{f.description}</div>
+                        {validationLine(f.pattern) && <p className="hint-rate">{validationLine(f.pattern)}</p>}
                         {f.evidence?.thresholds_applied && (
                           <div className="thresholds">
                             {Object.entries(f.evidence.thresholds_applied).map(([k, v]) => (
@@ -604,11 +652,11 @@ export default function TraceView() {
                         )}
                       </div>
                     ))}
-                    <p className="note">A pattern is a shape, not a verdict, and never moves the score.</p>
+                    <p className="note">A hint is a reason to look closer, not a finding: it never moves the score and should not appear in a request as evidence.</p>
                   </div>
                 </details>
               ) : (
-                <div className="card sec flat"><span className="micro">Patterns · none</span><span className="note">no peel chain or amount split</span></div>
+                <div className="card sec flat"><span className="micro">Hints · none</span><span className="note">no peel chain or amount split</span></div>
               )}
 
               {swaps.length > 0 && (
@@ -696,6 +744,12 @@ export default function TraceView() {
                     <span className={`n ${serviceContracts.length ? '' : 'zero'}`}>{serviceContracts.length}</span>
                     <span className="t">service contracts not expanded<small>WETH, pools, routers: their payouts are other people's money.</small></span>
                   </div>
+                  {result.untraced?.length > 0 && (
+                    <div className="exclusion untraced">
+                      <span className="n num">{num(result.untraced.reduce((sum, u) => sum + u.value_native, 0))}</span>
+                      <span className="t">{unit} sent on but not followed<small>{result.untraced.reduce((sum, u) => sum + u.counterparties, 0)} smaller destinations of {result.untraced.length} address{result.untraced.length === 1 ? '' : 'es'}: {result.untraced.some((u) => u.rule === 'top_n') ? 'the walk follows the ten largest of each' : 'each carried less than the share the walk follows'}. Where these went is not in this case.</small></span>
+                    </div>
+                  )}
                   {result.addresses_unexpanded_by_time > 0 && (
                     <div className="exclusion">
                       <span className="n">{result.addresses_unexpanded_by_time}</span>

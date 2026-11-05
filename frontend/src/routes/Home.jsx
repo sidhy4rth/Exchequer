@@ -9,6 +9,7 @@ import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
 import BulkIntake from '../components/BulkIntake'
 import { demoCode } from '../demoCode'
+import { bandLabel, bandOf } from '../components/confidence'
 
 const middle = (a, head = 10, tail = 8) => (a && a.length > head + tail + 1 ? `${a.slice(0, head)}…${a.slice(-tail)}` : a)
 
@@ -60,7 +61,7 @@ export default function Home() {
         <Link to="/" className="brand"><Mark size={18} />Exchequer<small>Cryptocurrency fraud tracing</small></Link>
         <span className="sysline mono">
           {backendDown ? <><span className="dot down" />BACKEND UNREACHABLE</>
-            : health ? <><span className="dot live" />SYSTEM OPERATIONAL · {chains.filter((c) => c.ready).length} CHAINS · SOURCE: LIVE BLOCKCHAIN APIS</>
+            : health ? <><span className="dot live" />SYSTEM OPERATIONAL · {chains.filter((c) => c.ready).length} {chains.filter((c) => c.ready).length === 1 ? 'CHAIN' : 'CHAINS'} · SOURCE: LIVE BLOCKCHAIN APIS</>
             : <><span className="dot" />CONNECTING</>}
         </span>
         <span className="grow" />
@@ -156,7 +157,7 @@ export default function Home() {
                       <td>{c.chain}</td>
                       <td className="mono">{c.asset ?? '—'}</td>
                       <td className={c.exchange ? '' : 'none'}>{c.exchange ?? 'no match'}</td>
-                      <td className="num">{c.confidence == null ? 'n/a' : c.confidence.toFixed(2)}</td>
+                      <td>{c.confidence == null ? 'n/a' : bandLabel(bandOf(c.confidence))}</td>
                       <td className="num">{c.node_count}</td>
                       <td>{(c.flags ?? []).map((f) => <span className="pill amber" key={f} style={{ marginRight: 4 }}>{f.replace('_', ' ')}</span>)}</td>
                       <td className="mono">{String(c.created_at).slice(0, 10)}</td>
