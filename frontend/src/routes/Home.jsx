@@ -4,7 +4,7 @@ import ThemeToggle from '../components/ThemeToggle'
 import Mark from '../components/Mark'
 import { fetchAccess, fetchCases, fetchChains, fetchExchanges, fetchRiskLabels } from '../api'
 import Showroom from '../components/Showroom'
-import TraceForm from '../components/TraceForm'
+import TraceForm, { SHORT_CHAIN } from '../components/TraceForm'
 import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
 import BulkIntake from '../components/BulkIntake'
@@ -107,7 +107,7 @@ export default function Home() {
               <ul className="chain-bars">
                 {perChain.map((c) => (
                   <li key={c.key}>
-                    <span className="name"><ChainDot chain={c.key} />{c.name}</span>
+                    <span className="name" title={c.name}><ChainDot chain={c.key} />{SHORT_CHAIN[c.key] ?? c.name}</span>
                     <span className="n mono">{c.flagged.toLocaleString('en')}</span>
                     <span className="bar" aria-hidden="true"><i style={{ width: `${Math.max(1.5, (c.flagged / top) * 100)}%`, background: chainColour(c.key) }} /></span>
                   </li>
@@ -125,7 +125,7 @@ export default function Home() {
           </div>
 
           <div className="tab-panel" role="tabpanel" hidden={current !== 'cases'}>
-            {cases.length === 0 ? <p className="note empty">No stored cases yet. Cases you trace are listed here, in this browser only.</p> : (
+            {cases.length === 0 ? <p className="note empty">No cases yet. Cases you trace show here, in this browser only.</p> : (
               <table className="cases-table" tabIndex={0} aria-label="Stored cases">
                 <thead><tr><th>Reported address</th><th>Chain</th><th>Asset</th><th>Result</th><th style={{ textAlign: 'right' }}>Confidence</th><th style={{ textAlign: 'right' }}>Addresses</th><th>Flags</th><th>Traced</th></tr></thead>
                 <tbody>
@@ -144,7 +144,7 @@ export default function Home() {
                 </tbody>
               </table>
             )}
-            <p className="note foot-note">Only this browser sees your cases. Opening one does not re-trace.</p>
+            {cases.length > 0 && <p className="note foot-note">Only this browser sees your cases. Opening one does not re-trace.</p>}
           </div>
 
           {!locked && (
@@ -174,7 +174,7 @@ export default function Home() {
                   <tbody>
                     {chains.map((c) => (
                       <tr key={c.key}>
-                        <td><ChainDot chain={c.key} />{c.name}</td>
+                        <td title={c.name}><ChainDot chain={c.key} />{SHORT_CHAIN[c.key] ?? c.name}</td>
                         <td className="num">{c.exchange_wallets}</td>
                         <td className="num">{c.deposit_addresses}</td>
                         <td className="exchanges">{coverage[c.key]?.exchanges?.exchanges?.join(', ') ?? '…'}</td>
@@ -191,7 +191,7 @@ export default function Home() {
                   <tbody>
                     {chains.map((c) => (
                       <tr key={c.key}>
-                        <td><ChainDot chain={c.key} />{c.name}</td>
+                        <td title={c.name}><ChainDot chain={c.key} />{SHORT_CHAIN[c.key] ?? c.name}</td>
                         <td className="num">{coverage[c.key]?.risk?.counts_by_category?.sanctioned ?? c.risk_labels?.sanctioned ?? 0}</td>
                         <td className="num">{coverage[c.key]?.risk?.counts_by_category?.mixer ?? c.risk_labels?.mixer ?? 0}</td>
                         <td className="num">{coverage[c.key]?.risk?.counts_by_category?.frozen ?? c.risk_labels?.frozen ?? 0}</td>

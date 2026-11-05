@@ -58,6 +58,9 @@ export function parseHashes(text) {
   return [...new Set(text.split(/[\s,]+/).map((h) => h.trim()).filter(Boolean))]
 }
 
+// Short names for the chain picker; the full name stays in its tooltip.
+export const SHORT_CHAIN = { ethereum: 'Ethereum', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum', tron: 'Tron' }
+
 export default function TraceForm({ health }) {
   const navigate = useNavigate()
   const [address, setAddress] = useState('')
@@ -177,7 +180,7 @@ export default function TraceForm({ health }) {
               <option value="incoming">Who sent funds here</option>
             </select>
             <select value={chain} onChange={(e) => changeChain(e.target.value)} aria-label="Blockchain" title="The same address can exist on several chains; it is never inferred.">
-              {chains.map((c) => <option key={c.key} value={c.key} disabled={!c.ready}>{c.name}{c.ready ? '' : ' — unavailable'}</option>)}
+              {chains.map((c) => <option key={c.key} value={c.key} disabled={!c.ready} title={c.name}>{SHORT_CHAIN[c.key] ?? c.name}{c.ready ? '' : ' (off)'}</option>)}
             </select>
             <select value={asset} onChange={(e) => setAsset(e.target.value)} aria-label="Asset" title="One asset per trace — amounts in different assets are not comparable.">
               {assets.map((a) => <option key={a.symbol} value={a.symbol}>{a.symbol}</option>)}
@@ -220,9 +223,9 @@ export default function TraceForm({ health }) {
               <span>Stop after <span className="mono">1:30</span></span>
             </label>
             <span className="sep" />
-            <label htmlFor="example">Load a verified example</label>
-            <select id="example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
-              <option value="">Choose one of the twelve verified traces…</option>
+            <label htmlFor="example">Example</label>
+            <select id="example" aria-label="Load a verified example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
+              <option value="">Load a verified example…</option>
               {DEMOS.map((d) => (
                 <option key={d.n} value={d.n} title={d.hook}>
                   {d.n} · {d.title} · {{ tron: 'Tron', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum' }[d.chain] ?? 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}

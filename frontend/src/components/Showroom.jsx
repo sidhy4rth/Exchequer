@@ -40,11 +40,8 @@ export default function Showroom({ onUnlock }) {
   return (
     <div className="card showroom">
       <div className="body">
-        <p className="lede">Follow a reported wallet's money to the exchange it left through.</p>
-        <p className="note">
-          This public site shows recorded traces. Each opens exactly as it was recorded; nothing is traced again.
-          Live tracing needs an access code.
-        </p>
+        <h2 className="lede">Verified examples</h2>
+        <p className="note">Each opens as recorded. Live tracing needs an access code.</p>
         <ul className="showroom-demos" aria-label="Verified examples">
           {demos === null && <li className="note">Loading the verified examples…</li>}
           {demos?.length === 0 && <li className="note">No verified examples on this site.</li>}
