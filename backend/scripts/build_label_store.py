@@ -54,6 +54,9 @@ LOOKALIKE = re.compile(r"^lookalike of (\S+)")
 TX = re.compile(r"\btx (?:0x)?([0-9a-fA-F]{64})\b")
 POISONING_OPERATOR = "Address-poisoning operator"
 POISONING_TOKEN = "Fake token contract used in address poisoning"
+# Our own detectors (the BigQuery scans, the Etherscan/Tenderly/Alchemy/TronGrid runs and the Tron
+# operator expansion) are on-chain detection; only a list someone else published is threat intelligence.
+ON_CHAIN_DETECTOR = re.compile(r"poisoning (?:detection|via)|operator expansion", re.I)
 
 
 def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
@@ -85,7 +88,9 @@ def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
         elif entity_text.startswith("fake token"):
             entity = POISONING_TOKEN
         else:
-            entity, tier = entity_text or POISONING_OPERATOR, 3  # a published poisoning list
+            entity = entity_text or POISONING_OPERATOR
+            if not ON_CHAIN_DETECTOR.search(row.get("sources") or ""):
+                tier = 3  # a published poisoning list
     else:
         entity = entity_text or row.get("category", "")
     refs = (row.get("source_refs") or "").strip()
