@@ -193,6 +193,5 @@ describe('the headline numbers (R14)', () => {
     expect(document.body.textContent).not.toContain('25038')
     expect(card).toHaveTextContent(`${compact}flagged addresses`)
     expect(card).toHaveTextContent(`${flagged.toLocaleString('en')} · screened on every hop`)
-    expect(card).toHaveTextContent('Live coverage · 2 chains')
   })
 })

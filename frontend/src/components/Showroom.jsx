@@ -49,7 +49,7 @@ export default function Showroom({ onUnlock }) {
             <li key={d.demo}>
               <Link to={`/demo/${d.demo}`}>
                 <span className="mono">{String(d.demo).padStart(2, '0')}</span>
-                <span className="mono">{middle(d.address)}</span>
+                <span className="mono"><span className="addr-long">{middle(d.address)}</span><span className="addr-short" aria-hidden="true">{middle(d.address, 6, 4)}</span></span>
                 <span>{d.exchange ? `reached ${d.exchange}` : 'no exchange matched'}</span>
                 <span className="note">recorded {String(d.recorded_at).slice(0, 10)}</span>
               </Link>

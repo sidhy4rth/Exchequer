@@ -98,7 +98,6 @@ export default function Home() {
 
           <div className="card glass flagged-card" aria-label="Flagged addresses screened">
             <div className="body">
-              <span className="micro">Live coverage · {chains.length} {chains.length === 1 ? 'chain' : 'chains'}</span>
               <div className="flagged-total">
                 <strong>{health && !backendDown ? compact.format(totalFlagged) : '—'}</strong>
                 <span>flagged addresses</span>
