@@ -72,17 +72,17 @@ describe('the trace form', () => {
     const user = userEvent.setup()
     await renderHome()
     await user.selectOptions(screen.getByLabelText('Load a verified example'), '06')
-    const link = await screen.findByRole('link', { name: /open it as recorded/i })
+    const link = await screen.findByRole('link', { name: /open as recorded/i })
     expect(link).toHaveTextContent('2026-10-14')
     await user.type(screen.getByLabelText('Reported wallet address'), 'f')
-    expect(screen.queryByRole('link', { name: /open it as recorded/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /open as recorded/i })).not.toBeInTheDocument()
   })
 
   it('opens the recording without starting a trace', async () => {
     const user = userEvent.setup()
     await renderHome()
     await user.selectOptions(screen.getByLabelText('Load a verified example'), '06')
-    await user.click(await screen.findByRole('link', { name: /open it as recorded/i }))
+    await user.click(await screen.findByRole('link', { name: /open as recorded/i }))
     expect(screen.getByTestId('landed')).toHaveTextContent('/demo/6')
   })
 
@@ -90,7 +90,7 @@ describe('the trace form', () => {
     const user = userEvent.setup()
     await renderHome()
     await user.selectOptions(screen.getByLabelText('Load a verified example'), '01')
-    expect(screen.queryByRole('link', { name: /open it as recorded/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /open as recorded/i })).not.toBeInTheDocument()
   })
 })
 
