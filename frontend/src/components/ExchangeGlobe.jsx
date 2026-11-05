@@ -39,8 +39,9 @@ export const ERAS = [
 const CHAIN_NAMES = { ethereum: 'Ethereum', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum', tron: 'Tron' }
 const eraOf = (year) => ERAS.findIndex((e) => e.test(year ?? 0))
 
-/** Land as evenly spaced dots, found by rasterising the land polygons once. */
-function landDots() {
+/** Land as evenly spaced dots, found by rasterising the land polygons once.
+ * `step` is the spacing in degrees; the console backdrop uses a coarser one. */
+export function landDots(step = 1.3) {
   const W = 720, H = 360
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -53,7 +54,6 @@ function landDots() {
   ctx.fill()
   const pixels = ctx.getImageData(0, 0, W, H).data
   const land = [], sea = []
-  const step = 1.3
   let row = 0
   for (let lat = -84; lat <= 84; lat += step, row += 1) {
     const lonStep = step / Math.max(0.12, Math.cos(lat * RAD))
