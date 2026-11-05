@@ -124,7 +124,7 @@ export default function SignIn({ as }) {
               </div>
               <form className="door-form" onSubmit={submit} key={`form-${as}`}>
                 <p className="demo-mode">
-                  <span className="micro">Demo mode</span>
+                  <span className="micro">Preview</span>
                   Exchequer has no accounts yet, so there is nothing to sign in with: anyone can look
                   around as an investigator or as a citizen. Accounts for police units come later.
                 </p>

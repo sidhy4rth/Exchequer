@@ -18,11 +18,11 @@ const stored = {
 }
 
 describe('the console in bands (R10)', () => {
-  it('shows a stored case as High, not 0.88, and says 1 CHAIN', async () => {
+  it('shows a stored case as High, not 0.88, and says 1 chain', async () => {
     stubFetch({ '/chains': { body: oneChain }, '/cases': { body: stored }, '/exchanges': { body: {} },
                 '/risk-labels': { body: {} }, '/demos/recorded': { body: { demos: [] } } })
     render(<MemoryRouter initialEntries={['/']}><Routes><Route path="/" element={<Home />} /></Routes></MemoryRouter>)
-    expect(await screen.findByText(/SYSTEM OPERATIONAL · 1 CHAIN ·/)).toBeInTheDocument()
+    expect(await screen.findByText(/Live · 1 chain$/)).toBeInTheDocument()
     expect(await screen.findByText('High')).toBeInTheDocument()
     expect(screen.queryByText('0.88')).not.toBeInTheDocument()
   })

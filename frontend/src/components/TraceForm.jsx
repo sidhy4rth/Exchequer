@@ -77,6 +77,7 @@ export default function TraceForm({ health }) {
   const [intake, setIntake] = useState(null)
   const [paymentText, setPaymentText] = useState('')
   const [ncrpAck, setNcrpAck] = useState('')
+  const [showPayments, setShowPayments] = useState(false)
 
   // Trace on the deployment's default chain once /health names it.
   useEffect(() => {
@@ -159,7 +160,7 @@ export default function TraceForm({ health }) {
   return (
     <div className="card">
       <div className="body">
-        <p className="lede">Follow a reported wallet's money to the exchange it left through.</p>
+        <h2 className="lede">Where did the money go?</h2>
         <form onSubmit={submit}>
           <div className="row">
             <input
@@ -188,7 +189,10 @@ export default function TraceForm({ health }) {
               {direction === 'outgoing' ? 'Trace' : 'Trace back'}
             </button>
           </div>
-          {paymentMode && (
+          {paymentMode && !showPayments && (
+            <button type="button" className="quiet add-payments" onClick={() => setShowPayments(true)}>+ Victim's payments</button>
+          )}
+          {paymentMode && showPayments && (
             <div className="payments">
               <label htmlFor="payment-hashes">
                 Victim's payment transaction hash{hashes.length === 1 ? '' : 'es'}
@@ -218,7 +222,7 @@ export default function TraceForm({ health }) {
             <span className="sep" />
             <label htmlFor="example">Load a verified example</label>
             <select id="example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
-              <option value="">Choose one of the twelve traces in DEMO.md…</option>
+              <option value="">Choose one of the twelve verified traces…</option>
               {DEMOS.map((d) => (
                 <option key={d.n} value={d.n} title={d.hook}>
                   {d.n} · {d.title} · {{ tron: 'Tron', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum' }[d.chain] ?? 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}

@@ -43,11 +43,11 @@ export default function Showroom({ onUnlock }) {
         <p className="lede">Follow a reported wallet's money to the exchange it left through.</p>
         <p className="note">
           This public site shows recorded traces. Each opens exactly as it was recorded; nothing is traced again.
-          Live tracing needs a demo code.
+          Live tracing needs an access code.
         </p>
-        <ul className="showroom-demos" aria-label="Recorded demos">
-          {demos === null && <li className="note">Loading the recorded demos…</li>}
-          {demos?.length === 0 && <li className="note">No recorded demos on this site.</li>}
+        <ul className="showroom-demos" aria-label="Verified examples">
+          {demos === null && <li className="note">Loading the verified examples…</li>}
+          {demos?.length === 0 && <li className="note">No verified examples on this site.</li>}
           {demos?.map((d) => (
             <li key={d.demo}>
               <Link to={`/demo/${d.demo}`}>
@@ -60,7 +60,7 @@ export default function Showroom({ onUnlock }) {
           ))}
         </ul>
         <form className="showroom-code" onSubmit={submit}>
-          <label htmlFor="demo-code">Demo code</label>
+          <label htmlFor="demo-code">Access code</label>
           <input
             id="demo-code" type="password" value={code} onChange={(e) => setCode(e.target.value)}
             autoComplete="off" spellCheck={false}

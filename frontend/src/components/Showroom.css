@@ -33,6 +33,7 @@
 
 .showroom .showroom-code {
   display: flex;
+  flex-direction: row; /* .intake form stacks its children; this one is a row */
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;

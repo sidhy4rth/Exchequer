@@ -337,7 +337,7 @@ export default function TraceView() {
           {(!stored || result?.max_depth) && <span className="pill mono">{stored ? result.max_depth : depth} hops</span>}
           {reverse && <span className="pill navy" title="Incoming transfers walked backwards to the addresses that funded this one">Reverse trace</span>}
           {(result ? result.time_budget_seconds : budget) && <span className="pill mono" title="The walk stopped expanding once this much time was spent">{mmss(result ? result.time_budget_seconds : budget)} cap</span>}
-          {recorded && <span className="pill navy" title="A DEMO.md trace as it came out when recorded. Live data moves; Trace live runs it again now.">Recorded demo {String(demoNo).padStart(2, '0')}{tracedAt ? ` · ${tracedAt.slice(0, 10)}` : ''}</span>}
+          {recorded && <span className="pill navy" title="A verified trace as it came out when recorded. Live data moves; Trace live runs it again now.">Verified example {String(demoNo).padStart(2, '0')}{tracedAt ? ` · ${tracedAt.slice(0, 10)}` : ''}</span>}
           {stored && !recorded && !justTraced && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
           {justTraced && <span className="pill green" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
         </div>}
@@ -359,7 +359,7 @@ export default function TraceView() {
         {loading && (
           <div className="card">
             <div className="body loading">
-              <span className="micro">{recorded ? 'Opening recorded demo' : stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
+              <span className="micro">{recorded ? 'Opening verified example' : stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
               <span className="elapsed">{elapsed.toFixed(1)} s{!stored && budget ? <small> · stops expanding at {mmss(budget)}{elapsed > budget ? ' — finishing what it has' : ''}</small> : null}</span>
               {!stored && progress && <span className="progress-line" aria-live="polite">{describeProgress(progress)}</span>}
               {!stored && progress?.stage === 'walking' && progress.level_size > 0

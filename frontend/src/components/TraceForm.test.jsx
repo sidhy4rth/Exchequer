@@ -39,12 +39,14 @@ describe('payment hashes on the trace form (R1)', () => {
     await renderForm({ payments: false })
     await new Promise((r) => setTimeout(r, 0))
     expect(screen.queryByLabelText(/payment transaction hash/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: "+ Victim's payments" })).not.toBeInTheDocument()
   })
 
   it('go into the trace URL; the NCRP number does not', async () => {
     const user = userEvent.setup()
     await renderForm({ payments: true })
     await user.type(screen.getByLabelText('Reported wallet address'), ADDR)
+    await user.click(await screen.findByRole('button', { name: "+ Victim's payments" }))
     await user.type(await screen.findByLabelText(/payment transaction hash/i), HASH)
     await user.type(screen.getByLabelText(/NCRP acknowledgement number/i), '31911250012345')
     await user.click(screen.getByRole('button', { name: /^trace$/i }))
@@ -58,6 +60,7 @@ describe('payment hashes on the trace form (R1)', () => {
     const user = userEvent.setup()
     await renderForm({ payments: true })
     await user.type(screen.getByLabelText('Reported wallet address'), ADDR)
+    await user.click(await screen.findByRole('button', { name: "+ Victim's payments" }))
     await user.type(await screen.findByLabelText(/payment transaction hash/i), '0x1234')
     expect(screen.getByText(/Not a valid Ethereum transaction hash/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^trace$/i })).toBeDisabled()
@@ -66,9 +69,11 @@ describe('payment hashes on the trace form (R1)', () => {
   it('are only offered for a trace of where the money went', async () => {
     const user = userEvent.setup()
     await renderForm({ payments: true })
+    await user.click(await screen.findByRole('button', { name: "+ Victim's payments" }))
     await screen.findByLabelText(/payment transaction hash/i)
     await user.selectOptions(screen.getByLabelText('Trace direction'), 'incoming')
     expect(screen.queryByLabelText(/payment transaction hash/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: "+ Victim's payments" })).not.toBeInTheDocument()
   })
 })
 

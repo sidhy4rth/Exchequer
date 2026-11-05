@@ -11,6 +11,15 @@
    and off-white on the console. Nothing else is coloured. */
 
 :root {
+  /* Each chain's own colour, for its dot and bar on the investigator console only. */
+  --c-tron: #e0050a;
+  --c-eth: #4f6bd8;
+  --c-arb: #1b86cf;
+  --c-poly: #7b3fe4;
+  --c-bnb: #c99400;
+  --glass: rgba(255, 255, 255, 0.46);
+  --glass-rule: rgba(22, 25, 29, 0.10);
+  --glass-input: rgba(240, 238, 233, 0.88);
   --paper: #f5f4f0;
   --panel: #ffffff;
   --panel-2: #f0eee9;
@@ -46,6 +55,14 @@
 }
 
 html[data-theme="dark"] {
+  --c-tron: #ff060a;
+  --c-eth: #627eea;
+  --c-arb: #28a0f0;
+  --c-poly: #8247e5;
+  --c-bnb: #f0b90b;
+  --glass: rgba(17, 19, 22, 0.40);
+  --glass-rule: rgba(236, 236, 234, 0.10);
+  --glass-input: rgba(24, 27, 31, 0.82);
   --paper: #0b0c0e;
   --panel: #111316;
   --panel-2: #181b1f;
@@ -917,3 +934,63 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 
 /* The headline figure on the investigator's coverage card. */
 .card .head .note .flagged { color: var(--red); font-weight: 600; }
+
+/* ---- Investigator console v2 (Home): glows behind frosted glass ---- */
+.home.console { position: relative; isolation: isolate; background: transparent; }
+.glow-bg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+.console .glass, .console .card {
+  background: var(--glass); border-color: var(--glass-rule);
+  -webkit-backdrop-filter: blur(14px) saturate(130%); backdrop-filter: blur(14px) saturate(130%);
+}
+.console .card .card { background: transparent; border: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.console .topbar { position: sticky; top: 0; z-index: 5; border-bottom: 1px solid var(--glass-rule); }
+.console input, .console select, .console textarea { background: var(--glass-input); }
+.status-chip { display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px; border: 1px solid var(--glass-rule); border-radius: 999px; font-size: 12px; color: var(--muted); }
+.status-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rule-strong); }
+.status-chip .dot.live { background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent); }
+.status-chip .dot.down { background: var(--red); }
+
+.console .home-body { gap: 18px; padding-top: 22px; }
+.console .intake { grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.console .intake .lede { font-size: 30px; margin-bottom: 8px; }
+.console .intake .row { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; }
+.console .intake .row select { min-width: 0; }
+.console .intake .row .primary { min-width: 110px; }
+.console .intake .address-field { font-size: 15px; padding: 13px 14px; grid-column: 1 / -1; }
+.add-payments { align-self: flex-start; }
+
+.flagged-card > .body { gap: 6px; padding: 16px 18px; }
+.flagged-total { display: flex; flex-direction: column; gap: 0; margin-top: 2px; }
+.flagged-total strong { font-family: var(--sans); font-size: 56px; font-weight: 650; line-height: 1; color: var(--red); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.flagged-total span { font-size: 15px; color: var(--ink); margin-top: 4px; }
+.flagged-card .exact { font-size: 11.5px; color: var(--faint); }
+.chain-bars { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.chain-bars li { display: grid; grid-template-columns: 1fr auto; row-gap: 4px; font-size: 13px; }
+.chain-bars .name { display: inline-flex; align-items: center; color: var(--ink); }
+.chain-bars .n { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chain-bars .bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--glass-rule); overflow: hidden; }
+.chain-bars .bar i { display: block; height: 100%; border-radius: 2px; opacity: 0.85; }
+.chain-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; vertical-align: 1px; }
+
+.tabbed { padding: 0; }
+.tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--glass-rule); overflow-x: auto; }
+.tabs button { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 10px 12px 9px; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.tabs button:hover { color: var(--ink); }
+.tabs button.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.tab-panel { padding: 4px 0 8px; }
+.tab-panel > section > .card > .head, .tab-panel .card.sec > summary { display: none; }
+.tab-panel .card.sec[open] > summary + * { border-top: none; }
+.tab-panel .empty { padding: 18px 16px; margin: 0; }
+.tab-panel .foot-note { padding: 6px 16px 4px; margin: 0; }
+.console .foot { justify-content: center; border-top: 1px solid var(--glass-rule); background: transparent; }
+
+@media (max-width: 900px) {
+  .console .intake { grid-template-columns: 1fr; }
+  .console .intake .row { grid-template-columns: 1fr 1fr; }
+  .console .intake .row .primary { grid-column: 1 / -1; }
+  .console .examples { flex-wrap: wrap; }
+  .console .examples select { flex: 1 1 100%; min-width: 0; }
+  .console .examples .sep { display: none; }
+  .console .intake .lede { font-size: 23px; }
+  .flagged-total strong { font-size: 44px; }
+}

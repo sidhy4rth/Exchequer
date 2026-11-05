@@ -43,7 +43,7 @@ describe('the demo doors', () => {
     render(<MemoryRouter initialEntries={['/demo/9']}><App /></MemoryRouter>)
     await user.click(await screen.findByText(/click anywhere to enter/i))
     await user.click(screen.getByRole('button', { name: /open the console/i }))
-    expect(await screen.findByText(/Recorded demo 09/)).toBeInTheDocument()
+    expect(await screen.findByText(/Verified example 09/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /trace live/i })).toBeInTheDocument()
     // No case id, so nothing that reads or writes a case is offered.
     expect(screen.queryByText('Export')).not.toBeInTheDocument()
@@ -66,10 +66,10 @@ describe('the demo doors', () => {
     const user = userEvent.setup()
     sessionStorage.setItem('exchequer-demo-session', 'investigator')
     at('/')
-    expect(await screen.findByRole('note', { name: 'Demo mode' })).toHaveTextContent(/no accounts yet · viewing as Investigator/)
+    expect(await screen.findByRole('note', { name: 'Preview' })).toHaveTextContent(/no accounts yet · viewing as Investigator/)
     await user.click(screen.getByRole('button', { name: /switch to citizen view/i }))
     expect(await screen.findByText(/This page is still to be built/)).toBeInTheDocument()
-    expect(screen.getByRole('note', { name: 'Demo mode' })).toHaveTextContent(/viewing as Citizen/)
+    expect(screen.getByRole('note', { name: 'Preview' })).toHaveTextContent(/viewing as Citizen/)
   })
 
   it('forgets the view and the demo code on leaving', async () => {
