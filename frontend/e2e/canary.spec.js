@@ -28,15 +28,16 @@ test('the API is up and the label files are loaded', async ({ request }) => {
   expect(notReady, 'chains that cannot be traced').toEqual([])
 })
 
-test('the front door opens the console with the system operational', async ({ page }) => {
+test('the front door opens the console with every chain live', async ({ page }) => {
   const errors = watchForErrors(page)
   const started = Date.now()
   await page.goto('/')
   await expect(page).toHaveURL(/\/signin\/investigator/)
   await enter(page)
-  // With EXCHEQUER_DEMO_CODE set, the public console asks for the code instead.
-  await expect(page.getByLabel('Reported wallet address').or(page.getByLabel('Demo code'))).toBeVisible()
-  await expect(page.getByText(/SYSTEM OPERATIONAL/)).toBeVisible()
+  // With EXCHEQUER_DEMO_CODE set, the public console asks for the access code instead.
+  await expect(page.getByLabel('Reported wallet address').or(page.getByLabel('Access code'))).toBeVisible()
+  // The status chip: "Live · 5 chains" (console v2).
+  await expect(page.getByText(/^Live · \d+ chains?$/)).toBeVisible()
   const loadMs = Date.now() - started
   test.info().annotations.push({ type: 'load', description: `${loadMs} ms to a usable console` })
   expect(loadMs, 'time from first request to a usable console').toBeLessThan(20_000)
@@ -54,7 +55,7 @@ test('the front door and the console load nothing from another site', async ({ p
   })
   await page.goto('/')
   await enter(page)
-  await expect(page.getByLabel('Reported wallet address').or(page.getByLabel('Demo code'))).toBeVisible()
+  await expect(page.getByLabel('Reported wallet address').or(page.getByLabel('Access code'))).toBeVisible()
   await page.waitForLoadState('networkidle')
   // The bundled fonts are the ones in use, not a fallback.
   expect(await page.evaluate(() => document.fonts.check('13px "IBM Plex Sans"') && document.fonts.check('13px "IBM Plex Mono"'))).toBe(true)
