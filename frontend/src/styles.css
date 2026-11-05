@@ -949,24 +949,24 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .status-chip .dot.live { background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent); }
 .status-chip .dot.down { background: var(--red); }
 
-.console .home-body { gap: 18px; padding-top: 22px; }
-.console .intake { grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.console .home-body { gap: 20px; padding: 32px 24px 48px; max-width: 1200px; }
+.console .intake { grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
 .console .intake-form, .console .intake-form > .card { min-width: 0; }
 .console .examples select { max-width: none; }
 .console .intake .row .primary:disabled { background: var(--navy); color: var(--on-navy); border-color: var(--navy); opacity: 0.5; }
-.console .intake .lede { font-size: 30px; margin-bottom: 8px; }
+.console .intake .lede { font-size: 28px; margin-bottom: 8px; }
 .console .intake .row { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; }
 .console .intake .row select { min-width: 0; }
 .console .intake .row .primary { min-width: 110px; }
 .console .intake .address-field { font-size: 15px; padding: 13px 14px; grid-column: 1 / -1; }
 .add-payments { align-self: flex-start; }
 
-.flagged-card > .body { gap: 4px; padding: 14px 18px; }
+.flagged-card > .body { gap: 4px; padding: 24px; }
 .flagged-total { display: flex; flex-direction: column; gap: 0; margin-top: 2px; }
-.flagged-total strong { font-family: var(--serif); font-size: 58px; font-weight: 600; line-height: 1; color: var(--ink); letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; }
+.flagged-total strong { font-family: var(--serif); font-size: 48px; font-weight: 600; line-height: 1; color: var(--ink); letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; }
 .flagged-total span { font-size: 15px; color: var(--ink); margin-top: 4px; }
 .flagged-card .exact { font-size: 11.5px; color: var(--faint); }
-.chain-bars { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.chain-bars { list-style: none; margin: 10px 0 0; padding: 14px 0 0; border-top: 1px solid var(--glass-rule); display: flex; flex-direction: column; gap: 10px; }
 .chain-bars li { display: grid; grid-template-columns: 1fr auto; row-gap: 4px; font-size: 13px; }
 .chain-bars .name { display: inline-flex; align-items: center; color: var(--ink); }
 .chain-bars .n { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
