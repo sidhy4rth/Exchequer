@@ -6,7 +6,7 @@
   "chain": "ethereum",
   "last_reviewed": "2026-11-04",
   "counts": {
-   "gambling": 19681
+   "gambling": 19676
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt dir>",
   "schema": "labels maps an address to {category, entity, label, source}"
@@ -6396,12 +6396,6 @@
    "label": "Roobet deposit address",
    "source": "Swept 5x USDC into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0x28326c6aa3bc1e4e077be4b211816155cc6ba9235a1e766b5f361ef8a23b0de3, 2026-09-07)"
   },
-  "0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0xb04c0eb29c72cebc467b9d4944d29116fa02c44a (sample tx 0xa55d3393d81112b2d74a3a8e9fe65da034d73b9db59353a171c789283727885f, 2022-07-26)"
-  },
   "0x0d4c7ca287fc2f0f6aaadf957d8b3970b7abea09": {
    "category": "gambling",
    "entity": "Stake.com",
@@ -8459,12 +8453,6 @@
    "entity": "Roobet",
    "label": "Roobet deposit address",
    "source": "Swept 2x USDC into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0x05ab2ef07da0ec4cd64f8d03c66372fee1290db0a511864169f8f40c1ae93973, 2026-10-21)"
-  },
-  "0x11b815efb8f581194ae79006d24e0d814b7697f6": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 12x USDT into Stake.com hot wallet 0xf598b81ef8c7b52a7f2a89253436e72ec6dc871f (sample tx 0x395859ac900a8fb03f192344fdb5100b10b6a39f06d1e0c367285f979de5defe, 2022-07-23)"
   },
   "0x11babb55fead29d33593058f28ae6efe5af7d03d": {
    "category": "gambling",
@@ -25343,12 +25331,6 @@
    "entity": "Cloudbet",
    "label": "Cloudbet deposit address",
    "source": "Swept 2x USDT into Cloudbet hot wallet 0xe6ba08ebcf791eb7b3622fc90a69882d37701752 (sample tx 0xf5dff63729a3f64fd9270f702f080167ebc7c216d480f55e512b4a79e6573b00, 2024-01-25)"
-  },
-  "0x3416cf6c708da44db2624d63ea0aaef7113527c6": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 6x USDT into Stake.com hot wallet 0xf598b81ef8c7b52a7f2a89253436e72ec6dc871f (sample tx 0x98eca132a0ce4010ea99e6f48f1512b7f249a253c078e00541a6766aa4911042, 2022-07-23)"
   },
   "0x34172683227a359c70ee598de0f9fb059fe54baa": {
    "category": "gambling",
@@ -73632,12 +73614,6 @@
    "label": "Roobet deposit address",
    "source": "Swept 5x USDC into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0x0dafc1f721553efdb1f941692f76a95865228c68a87d9287ccfce7a2b824f98e, 2026-09-01)"
   },
-  "0x9db9e0e53058c89e5b94e29621a205198648425b": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0xf598b81ef8c7b52a7f2a89253436e72ec6dc871f (sample tx 0xc3f7af166b9820f3892ccfe817b3eb924f5e01571f9e8a62335917c865f36ba7, 2022-07-23)"
-  },
   "0x9dc04979d3a9a8b8fedc4446a6c9272d2c17e69d": {
    "category": "gambling",
    "entity": "Roobet",
@@ -91751,12 +91727,6 @@
    "entity": "Roobet",
    "label": "Roobet deposit address",
    "source": "Swept 2x USDT into Roobet hot wallet 0xa26148ae51fa8e787df319c04137602cc018b521 (sample tx 0xe618167e7864ceb7cb216d9755e3bb090192684939248cd1042a1dc559cd6f52, 2026-09-28)"
-  },
-  "0xc5af84701f98fa483ece78af83f11b6c38aca71d": {
-   "category": "gambling",
-   "entity": "Stake.com",
-   "label": "Stake.com deposit address",
-   "source": "Swept 2x USDT into Stake.com hot wallet 0xf598b81ef8c7b52a7f2a89253436e72ec6dc871f (sample tx 0xd148f46cfd455b1b0a85d77a84182b4ce3183e705c86879925e8a8d27b3d3c3b, 2022-07-23)"
   },
   "0xc5b1907383efedaad4246e8f42bb564cd905166e": {
    "category": "gambling",

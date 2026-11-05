@@ -163,11 +163,13 @@ describe('the headline numbers (R14)', () => {
   it('shows only numbers that /chains gives, and never one total as exchange wallets', async () => {
     stubFetch({ '/chains': { body: counted }, '/cases': { body: { count: 0, cases: [] } }, '/demos/recorded': { body: recordings } })
     render(<MemoryRouter><Home /></MemoryRouter>)
-    await screen.findByText(/1015 exchange wallets/)
+    await screen.findByText(/1,015 exchange wallets/)
     const chains = Object.values(counted.chains)
     const sum = (f) => chains.reduce((s, c) => s + f(c), 0)
+    const flagged = sum((c) => Object.values(c.risk_labels).reduce((a, b) => a + b, 0))
+    const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(flagged)
     const allowed = new Set([
-      sum((c) => c.exchange_wallets), sum((c) => c.deposit_addresses),
+      sum((c) => c.exchange_wallets), sum((c) => c.deposit_addresses), flagged,
       ...chains.flatMap((c) => [c.exchange_wallets, c.deposit_addresses, ...Object.values(c.risk_labels),
         Object.values(c.risk_labels).reduce((a, b) => a + b, 0)]),
     ])
@@ -177,11 +179,17 @@ describe('the headline numbers (R14)', () => {
     const shown = []
     for (const root of [card, tables]) {
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-      while (walker.nextNode()) shown.push(...(walker.currentNode.nodeValue.match(/\d+/g) ?? []).map(Number))
+      while (walker.nextNode()) {
+        for (const m of walker.currentNode.nodeValue.match(/\d[\d,]*(?:\.\d+)?[KMB]?/g) ?? []) {
+          // A compact figure ("10.9M") must be the flagged total, rounded; anything else is a plain count.
+          if (/[KMB]$/.test(m)) expect(m).toBe(compact)
+          else shown.push(Number(m.replace(/,/g, '')))
+        }
+      }
     }
     expect(shown.length).toBeGreaterThan(10)
     for (const n of shown) expect(allowed, `${n} is not from /chains`).toContain(n)
     expect(document.body.textContent).not.toContain('25038')
-    expect(card).toHaveTextContent('1015 exchange wallets · 24064 deposit addresses')
+    expect(card).toHaveTextContent(`${compact} flagged addresses screened · 1,015 exchange wallets · 24,064 deposit addresses`)
   })
 })

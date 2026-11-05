@@ -93,3 +93,10 @@ def test_no_gambling_label_sits_on_an_exchange_wallet_or_a_router(chain_key):
     gambling = {k.lower() if k.startswith("0x") else k for k in raw.get("labels", raw) if not k.startswith("_")}
     services = {a for a, _ in get_matcher(chain_key).entries()} | {a for a, _ in get_router_matcher(chain_key).entries()}
     assert not gambling & services
+
+
+def test_known_dex_pools_are_never_gambling():
+    from scripts.import_gambling_labels import NEVER_GAMBLING
+
+    raw = json.loads(config.get_chain("ethereum").gambling_labels_path.read_text())
+    assert not NEVER_GAMBLING & set(raw.get("labels", raw))
