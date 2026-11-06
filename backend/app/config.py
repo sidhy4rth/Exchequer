@@ -529,6 +529,9 @@ CACHE_DISK_BYTES: int = _int_env("EXCHEQUER_CACHE_DISK_MB", 256) * 1024 * 1024
 # The largest provider response read at all. A page of 200 transactions with
 # large calldata was 52 MB; nothing a trace needs comes near this.
 PROVIDER_MAX_RESPONSE_BYTES: int = _int_env("EXCHEQUER_PROVIDER_MAX_RESPONSE_BYTES", 8 * 1024 * 1024)
+# The NodeReal and TronGrid caches hold smaller, rarer answers (whole quiet
+# windows and pages): a smaller memory share each, beside Etherscan's.
+CACHE_SMALL_MEMORY_BYTES: int = _int_env("EXCHEQUER_CACHE_SMALL_MEMORY_MB", 16) * 1024 * 1024
 
 # Where cached responses are kept between restarts. Beside the case store by
 # default (so a /data volume holds both); an empty value or "off" keeps the

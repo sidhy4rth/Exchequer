@@ -36,7 +36,7 @@ import json
 
 import httpx
 
-from .api_budget import ResponseTooLarge, SharedPacer, get_pacer, read_capped
+from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache, get_pacer, read_capped
 from .evidence import EvidenceLog
 
 from . import config
@@ -100,6 +100,10 @@ NOT_INDEXED = "not reached"
 # pacer spaces requests by what they cost, in units of one transfer read.
 METHOD_CU = {"nr_getAssetTransfers": 250, "eth_getTransactionCount": 25, "eth_blockNumber": 5}
 TRANSFER_CU = METHOD_CU["nr_getAssetTransfers"]
+
+# The fields of a transfer record _to_transaction reads; only these are cached.
+TRANSFER_FIELDS = ("hash", "from", "to", "value", "decimal", "blockNum", "blockTimeStamp",
+                   "receiptsStatus", "asset", "contractAddress")
 
 
 class NoderealError(EtherscanError):
@@ -198,6 +202,13 @@ class NoderealClient:
             interval = floor = min_interval
         self._pacer = get_pacer(f"nodereal:{credential}", lambda: SharedPacer(
             interval=interval, min_interval=floor, max_interval=max(interval * 6, 1.0)))
+        # Answers about blocks at least INDEX_LAG_BLOCKS deep are history: a
+        # re-trace of the same address, both directions and the deep search
+        # read the same closed windows again (aligned, so the keys repeat).
+        # Shared by every key: the answer is the chain's, not the caller's.
+        self._cache = get_cache("nodereal:responses", lambda: ResponseCache(
+            ttl_seconds=config.API_CACHE_TTL_SECONDS, path=config.API_CACHE_PATH,
+            max_bytes=config.CACHE_SMALL_MEMORY_BYTES))
 
     # -- lifecycle ---------------------------------------------------------
     @property
@@ -227,6 +238,15 @@ class NoderealClient:
             )
 
         payload = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
+        request_desc = (f"POST {self.url.split('/v1/')[0]}/v1/<key> {method} "
+                        f"{json.dumps(params, sort_keys=True)}")
+        cache_key = (self.chain_slug, method, json.dumps(params, sort_keys=True))
+        cacheable = method != "eth_blockNumber"  # the tip is never history
+        if cacheable:
+            hit, cached = self._cache.get(cache_key)
+            if hit:
+                self.evidence.record_cached("nodereal", request_desc, self._cache.meta(cache_key))
+                return cached
         last_error: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
@@ -275,17 +295,48 @@ class NoderealClient:
                     continue
                 raise NoderealError(f"NodeReal error: {message}")
 
-            self.evidence.record(
-                "nodereal",
-                f"POST {self.url.split('/v1/')[0]}/v1/<key> {method} {json.dumps(params, sort_keys=True)}",
-                response.content,
-            )
+            rec = self.evidence.record("nodereal", request_desc, response.content)
             self._pacer.reward()
-            return body.get("result")
+            result = body.get("result")
+            ttl = self._cache_ttl(method, params, result) if cacheable else 0
+            if ttl:
+                self._cache.put(cache_key, self._slim(method, result), ttl=ttl, meta={
+                    "sha256": rec.sha256, "retrieved_at": rec.retrieved_at, "bytes": rec.bytes})
+            return result
 
         raise NoderealError(
             f"NodeReal request failed after {self.max_retries + 1} attempts: {last_error}"
         )
+
+    def _cache_ttl(self, method: str, params: list[Any], result: Any) -> float:
+        """How long an answer may be reused. Every block this client asks
+        about is at least INDEX_LAG_BLOCKS deep, so its answer is history; a
+        window that reaches the head keeps for minutes, as it is the one
+        whose key repeats only while the head stands still. A paged answer is
+        not kept, since a page key may not outlive the query that made it.
+        A null answer (a block or receipt the node does not have yet) is
+        asked again next time."""
+        if result is None:
+            return 0
+        if method == "nr_getAssetTransfers":
+            query = params[0] if params and isinstance(params[0], dict) else {}
+            if "pageKey" in query or not isinstance(result, dict) or result.get("pageKey"):
+                return 0
+            with self._state_lock:
+                head = self._head_block
+            to_block = int(query.get("toBlock", "0x0"), 16)
+            return config.API_CACHE_TTL_SECONDS if head and to_block < head else config.API_CACHE_OPEN_TTL_SECONDS
+        return config.API_CACHE_TTL_SECONDS  # nonces, receipts and blocks at a fixed past height
+
+    @staticmethod
+    def _slim(method: str, result: Any) -> Any:
+        if method != "nr_getAssetTransfers" or not isinstance(result, dict):
+            return result
+        transfers = result.get("transfers")
+        if not isinstance(transfers, list):
+            return result
+        return {**result, "transfers": [
+            {k: t[k] for k in TRANSFER_FIELDS if k in t} if isinstance(t, dict) else t for t in transfers]}
 
     def _backoff(self, attempt: int, reason: str) -> None:
         if attempt >= self.max_retries:
@@ -397,7 +448,9 @@ class NoderealClient:
         cap = limit or config.TRACE_MAX_TXS_PER_ADDRESS
         head = self.head_block()
         # The lookback's oldest block, inclusive: `lookback_blocks` blocks in all.
-        floor = max(0, head - self.lookback_blocks + 1)
+        # Rounded down to a window boundary, so every window but the newest is
+        # a whole, aligned one whose answer a later trace can reuse.
+        floor = max(0, head - self.lookback_blocks + 1) // MAX_BLOCK_WINDOW * MAX_BLOCK_WINDOW
         key = normalize_address(address)
         with self._state_lock:
             arrived = self._arrived.get(key)
@@ -531,7 +584,10 @@ class NoderealClient:
 
         guard_stopped = False
         while window_end >= floor and len(collected) < cap and scanned < MAX_SCAN and not guard_stopped:
-            window_start = max(floor, window_end - MAX_BLOCK_WINDOW + 1)
+            # Windows end on fixed boundaries (multiples of the API's maximum),
+            # not relative to the head, so the same block range is the same
+            # request -- and the same cached answer -- from one trace to the next.
+            window_start = max(floor, window_end - window_end % MAX_BLOCK_WINDOW)
             page_key: str | None = None
             seen_keys: set[str] = set()
             pages = 0

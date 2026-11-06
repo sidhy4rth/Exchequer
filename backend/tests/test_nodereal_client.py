@@ -168,8 +168,11 @@ def _quiet_level_rpc(jitter: bool):
 def test_a_concurrent_level_never_deep_searches_a_hop():
     from app.graph_builder import TraceConfig, build_trace_graph
 
+    from app import api_budget
+
     runs = []
     for _ in range(3):
+        api_budget.reset()  # each run reads the provider, not the last run's cache
         seed, quiet, rpc, calls = _quiet_level_rpc(jitter=True)
         http = httpx.Client(transport=httpx.MockTransport(rpc.handler))
         client = NoderealClient(api_key="k", client=http, min_interval=0.01)
@@ -197,12 +200,81 @@ def test_a_client_never_told_deep_searches_nothing():
     assert "eth_getTransactionCount" not in calls
 
 
-def test_the_lookback_is_inclusive_so_a_quiet_wallet_costs_exactly_its_windows():
+def test_a_quiet_wallet_is_read_in_aligned_windows_covering_the_whole_lookback():
+    seen = []
     rpc = _Rpc([], endless=False)
-    client = NoderealClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(rpc.handler)),
+
+    def handler(request):
+        body = json.loads(request.content)
+        if body["method"] == "nr_getAssetTransfers":
+            q = body["params"][0]
+            seen.append((int(q["fromBlock"], 16), int(q["toBlock"], 16)))
+        return rpc.handler(request)
+    client = NoderealClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(handler)),
                             min_interval=0, lookback_blocks=500_000)
     client.get_outgoing_transactions(ADDRESS)
-    assert rpc.transfer_calls == 5
+    head = HEAD - 32
+    assert seen[0] == (head - head % 100_000, head)  # the newest window ends at the head
+    assert all(lo % 100_000 == 0 and hi == lo + 99_999 for lo, hi in seen[1:])  # the rest are whole
+    assert min(lo for lo, _ in seen) <= head - 500_000 + 1  # the lookback is covered in full
+    assert len(seen) == 6
+
+
+def test_a_re_trace_reads_only_the_window_at_the_new_head():
+    """Two traces of the same quiet address, the head having moved on: the
+    closed windows are history, read once."""
+    import app.nodereal_client as nr
+
+    calls = []
+
+    def make(head):
+        def handler(request):
+            body = json.loads(request.content)
+            calls.append(body["method"])
+            if body["method"] == "eth_blockNumber":
+                return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": hex(head)})
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": {"transfers": []}})
+        return NoderealClient(api_key="k", min_interval=0, client=httpx.Client(transport=httpx.MockTransport(handler)))
+    first = make(HEAD)
+    first.get_outgoing_transactions(ADDRESS)
+    reads = calls.count("nr_getAssetTransfers")
+    calls.clear()
+    second = make(HEAD + 20)  # the head moved, inside the same 100k window
+    second.get_outgoing_transactions(ADDRESS)
+    assert reads == 6 and calls.count("nr_getAssetTransfers") == 1
+    assert sum(r.from_cache for r in second.evidence.records) == 5
+    assert nr.INDEX_LAG_BLOCKS == 32
+    # Across a window boundary the old top window is now closed: read once more, then kept.
+    calls.clear()
+    third = make(HEAD + 60)
+    third.get_outgoing_transactions(ADDRESS)
+    assert calls.count("nr_getAssetTransfers") == 2
+
+
+def test_an_empty_answer_is_not_kept():
+    """A block or receipt the node does not have yet (null) is asked again."""
+    calls = []
+
+    def handler(request):
+        body = json.loads(request.content)
+        calls.append(body["method"])
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": None})
+    for _ in range(2):
+        client = NoderealClient(api_key="k", min_interval=0, client=httpx.Client(transport=httpx.MockTransport(handler)))
+        assert client.block_time(HEAD) is None
+        assert client.get_transaction_receipt("0x" + "11" * 32) is None
+    assert calls.count("eth_getBlockByNumber") == 2 and calls.count("eth_getTransactionReceipt") == 2
+
+
+def test_the_cache_keeps_only_the_fields_a_transfer_is_read_from():
+    """Kept answers are slimmed; a transfer read back from the cache parses the same."""
+    from app.nodereal_client import NoderealClient as C
+
+    raw = {**_record(1, hex(10**18)), "category": "external", "extra": "x" * 5000}
+    slim = C._slim("nr_getAssetTransfers", {"transfers": [raw, "junk"]})
+    assert "extra" not in slim["transfers"][0] and slim["transfers"][1] == "junk"
+    client = NoderealClient(api_key="k", min_interval=0)
+    assert client._to_transaction(slim["transfers"][0]) == client._to_transaction(raw)
 
 
 def test_a_hop_whose_funds_arrived_in_the_recent_window_is_not_deep_searched():

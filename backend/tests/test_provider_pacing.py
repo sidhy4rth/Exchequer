@@ -36,8 +36,12 @@ def _rpc(answer=None):
     return httpx.Client(transport=httpx.MockTransport(handler))
 
 
+_calls = iter(range(10**6))
+
+
 def _transfers(client):
-    client._rpc("nr_getAssetTransfers", [{"fromBlock": "0x1", "toBlock": "0x2"}])
+    n = next(_calls)  # a different window each time: these are not cache hits
+    client._rpc("nr_getAssetTransfers", [{"fromBlock": hex(n), "toBlock": hex(n)}])
 
 
 def test_two_nodereal_clients_on_one_key_share_the_compute_unit_spacing(monkeypatch):
