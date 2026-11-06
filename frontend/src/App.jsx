@@ -37,7 +37,9 @@ export default function App() {
       <Route path="/" element={<Gate as="investigator"><Home /></Gate>} />
       {/* The address is the subject of the investigation, so it belongs in the
           path; chain, asset and depth are parameters of how it is traced and
-          ride in the query string. That makes a trace a shareable URL. */}
+          ride in the query string. Opened from a link, the page shows what it
+          would run and waits for a click (TraceView's ConfirmTrace); share a
+          finished trace by its /case link instead. */}
       <Route path="/trace/:address" element={<Gate as="investigator"><TraceView /></Gate>} />
       {/* A stored case is addressed by its own id. Opening one must never
           re-run the traversal: the point of the case store is that it holds

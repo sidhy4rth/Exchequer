@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace, stopTraceJob } from '../api'
+import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace, stopTraceJob, traceJobRemembered } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
 import ThemeToggle from '../components/ThemeToggle'
@@ -62,6 +62,16 @@ function txUrl(explorer, chain, hash) {
   if (!explorer || !hash) return null
   return chain === 'tron' ? `${explorer}/#/transaction/${hash.replace(/^0x/, '')}` : `${explorer}/tx/${hash}`
 }
+// A whole number from the URL, kept within the backend's range; `fallback`
+// when absent or not a number.
+function clampInt(raw, lo, hi, fallback) {
+  const n = raw == null || raw === '' ? NaN : Math.trunc(Number(raw))
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback
+}
+// A payment hash as the backend accepts it.
+const PAY_HASH = /^(0x)?[0-9a-fA-F]{64}$/
+// The cap the confirmation card offers, as on the trace form.
+const LINK_BUDGET_SECONDS = 90
 const mmss = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
@@ -138,6 +148,47 @@ function MethodRange({ methods, unit }) {
   )
 }
 
+/** What a /trace link would run, with a button to run it. Shown instead of
+ * starting the trace when the link was opened rather than started here. */
+function ConfirmTrace({ address, chain, asset, depth, direction, budget, hashes, onRun }) {
+  const [capped, setCapped] = useState(!budget)
+  const bad = hashes.filter((h) => !PAY_HASH.test(h))
+  return (
+    <section className="card confirm-trace" aria-labelledby="confirm-trace-title">
+      <div className="body">
+        <span className="micro">This link asks for a new trace</span>
+        <h2 id="confirm-trace-title">Run this trace?</h2>
+        <p className="note">Opening a trace link does not start it. A trace reads the chain under this browser's key and counts against the hourly allowance, so check what it will do first.</p>
+        <div className="kv"><span className="k">Address</span><span className="v mono confirm-address">{address}</span></div>
+        <div className="kv"><span className="k">Chain</span><span className="v">{chain} · {asset}</span></div>
+        <div className="kv"><span className="k">Direction</span><span className="v">{direction === 'incoming' ? 'Who paid in' : 'Where it went'}</span></div>
+        <div className="kv"><span className="k">Depth</span><span className="v">{depth} hop{depth === 1 ? '' : 's'}</span></div>
+        {budget && <div className="kv"><span className="k">Time limit</span><span className="v mono">{mmss(budget)}</span></div>}
+        {hashes.length > 0 && (
+          <div className="kv">
+            <span className="k">Payments</span>
+            <ul className="v confirm-hashes">
+              {hashes.map((h) => (
+                <li key={h} className="mono">{middle(h)}{bad.includes(h) ? <span className="error-line"> · not a transaction hash</span> : null}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {!budget && (
+          <label className="confirm-cap">
+            <input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} />
+            Stop after <span className="mono">1:30</span>
+          </label>
+        )}
+        <div className="verify-actions">
+          <button className="primary" disabled={bad.length > 0} onClick={() => onRun(capped)}>Run this trace</button>
+          <Link to="/" className="quiet-link">Back to the console</Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function TraceView() {
   // One component serves all three routes. /trace/:address runs a fresh
   // traversal; /case/:caseId opens what was stored, and /demo/:demoNo a
@@ -155,15 +206,25 @@ export default function TraceView() {
 
   const chain = params.get('chain') || 'ethereum'
   const asset = params.get('asset') || 'ETH'
-  const depth = Number(params.get('depth') || 4)
+  const depth = clampInt(params.get('depth'), 1, 6, 4)
   const requestedDirection = params.get('direction') || 'outgoing'
   // Optional wall-clock cap, in seconds; absent means the trace runs its course.
-  const budget = Number(params.get('budget')) || null
+  const budget = Number(params.get('budget')) > 0 ? clampInt(params.get('budget'), 10, 600, null) : null
   // R1: the victim's payment hashes, from the URL; the NCRP number and the
   // victim's own wallet only ever travel in the navigation state (see TraceForm).
   const pay = params.get('pay') || ''
   const ncrpAck = location.state?.ncrpAck || null
   const victimAddress = location.state?.victimAddress || null
+  // A trace link alone never starts a trace: it would run under whoever opens
+  // it (their key, their access code, their hourly allowance) with whatever
+  // the link asks for. The form and Re-trace say they started it here; a
+  // reload of a trace this tab is running re-attaches without asking.
+  const startedHere = location.state?.startedHere === true
+  const traceParams = {
+    address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
+    payments: pay ? pay.split(',').filter(Boolean) : [], ncrpAck, victimAddress,
+  }
+  const needsConfirm = !stored && !justTraced && !startedHere && !traceJobRemembered(traceParams)
 
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -203,15 +264,13 @@ export default function TraceView() {
       return undefined
     }
     setProgress(null); setJobId(null); setStopping(false)
+    if (needsConfirm) { setLoading(false); clearInterval(tick); return undefined }
     const request = recorded
       ? fetchRecordedDemo(demoNo)
       : stored
       ? fetchCase(caseId)
       : runTrace(
-        {
-          address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
-          payments: pay ? pay.split(',') : [], ncrpAck, victimAddress,
-        },
+        traceParams,
         (snap) => {
           if (cancelled) return
           if (snap?.job_id) setJobId(snap.job_id)
@@ -239,7 +298,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay, needsConfirm]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -338,8 +397,21 @@ export default function TraceView() {
       depth: String(result.max_depth ?? result.depth_reached ?? 3), direction: result.direction ?? 'outgoing',
     })
     if (result.time_budget_seconds) q.set('budget', String(result.time_budget_seconds))
-    navigate(`/trace/${result.address}?${q}`)
+    // A payment case is re-traced from the same payments (public chain data).
+    const hashes = [...new Set((result.intake?.mode === 'payment' ? result.intake.payments ?? [] : []).map((p) => p.tx_hash))]
+    if (hashes.length) q.set('pay', hashes.join(','))
+    navigate(`/trace/${result.address}?${q}`, { state: { startedHere: true } })
   }, [navigate, result])
+
+  // Run the trace a link asked for, once the officer has seen what it does.
+  const confirmRun = useCallback((capped) => {
+    const q = new URLSearchParams(params)
+    q.set('depth', String(depth))
+    if (budget) q.set('budget', String(budget))
+    else if (capped) q.set('budget', String(LINK_BUDGET_SECONDS))
+    else q.delete('budget')
+    navigate(`${location.pathname}?${q}`, { replace: true, state: { ...(location.state ?? {}), startedHere: true } })
+  }, [navigate, params, depth, budget, location.pathname, location.state])
 
 
   return (
@@ -377,6 +449,13 @@ export default function TraceView() {
 
       <div className="results-body">
         {error && <div className="banner error">{error}</div>}
+
+        {needsConfirm && (
+          <ConfirmTrace
+            address={routeAddress} chain={chain} asset={asset} depth={depth} direction={requestedDirection}
+            budget={budget} hashes={traceParams.payments} onRun={confirmRun}
+          />
+        )}
 
         {loading && (
           <div className="card">

@@ -184,13 +184,10 @@ export async function stopTraceJob(jobId) {
   return response.json()
 }
 
-/**
- * Run a trace as a background job and resolve with its result.
- * `onProgress(snapshot)` receives { status, progress: { stage, hop, max_depth,
- * level_size, level_read, addresses }, elapsed } as the trace moves.
- */
-export function runTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments, ncrpAck, victimAddress }, onProgress) {
-  const trace = {
+// The trace a job runs, without the complaint's particulars: what a running
+// job is remembered under for the tab, and in sessionStorage across a reload.
+function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments }) {
+  return {
     address,
     ...(maxDepth ? { max_depth: maxDepth } : {}),
     ...(chain ? { chain } : {}),
@@ -201,16 +198,40 @@ export function runTrace({ address, maxDepth, chain, asset, direction, timeBudge
     // incoming transfer to `address`, and reads the wallet from the first.
     ...(payments?.length ? { payments: payments.map((h) => ({ tx_hash: h })) } : {}),
   }
-  const body = JSON.stringify({
-    ...trace,
+}
+
+// What identifies the trace in this tab: everything but the complaint's
+// particulars (the NCRP number and the victim's own wallet), which go to the
+// server in the POST body only and are never kept in sessionStorage.
+function jobKey(params) {
+  return JSON.stringify(jobTrace(params))
+}
+
+function jobBody(params) {
+  const { payments, ncrpAck, victimAddress } = params
+  return JSON.stringify({
+    ...jobTrace(params),
     ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}),
     // The victim's own wallet: the backend compares each payment's sender with it.
     ...(victimAddress && payments?.length ? { victim_address: victimAddress } : {}),
   })
-  // What identifies the trace in this tab, and is kept in sessionStorage so a
-  // reload re-attaches: everything but the complaint's particulars (the NCRP
-  // number and the victim's own wallet).
-  const key = JSON.stringify(trace)
+}
+
+/** Whether this tab already runs (or ran until a reload) this exact trace, so
+ * opening its page again re-attaches to the job instead of asking first. */
+export function traceJobRemembered(params) {
+  const key = jobKey(params)
+  return jobsInFlight.has(key) || Boolean(recalledJob(key))
+}
+
+/**
+ * Run a trace as a background job and resolve with its result.
+ * `onProgress(snapshot)` receives { status, progress: { stage, hop, max_depth,
+ * level_size, level_read, addresses }, elapsed } as the trace moves.
+ */
+export function runTrace(params, onProgress) {
+  const body = jobBody(params)
+  const key = jobKey(params)
   const existing = jobsInFlight.get(key)
   if (existing) { existing.listeners.add(onProgress); return existing.promise }
   const listeners = new Set([onProgress])

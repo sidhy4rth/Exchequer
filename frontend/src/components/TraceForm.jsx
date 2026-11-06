@@ -147,8 +147,9 @@ export default function TraceForm({ health }) {
     // another browser's view of the case (backend/app/case_privacy.py). The
     // victim's wallet is the complaint's too, so it travels the same way.
     if (hashes.length) q.set('pay', hashes.join(','))
-    const state = { ...(ack ? { ncrpAck: ack } : {}), ...(victim ? { victimAddress: victim } : {}) }
-    navigate(`/trace/${addr}?${q}`, Object.keys(state).length ? { state } : undefined)
+    // startedHere: the trace page runs it at once; a link opened from elsewhere asks first.
+    const state = { startedHere: true, ...(ack ? { ncrpAck: ack } : {}), ...(victim ? { victimAddress: victim } : {}) }
+    navigate(`/trace/${addr}?${q}`, { state })
   }, [navigate, chain, asset, depth, direction, capped, hashes, ack, victim])
 
   // Fill the form from one of the verified DEMO.md traces. The trace is not

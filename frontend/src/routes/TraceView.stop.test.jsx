@@ -26,7 +26,7 @@ describe('stopping a running trace', () => {
       return json({ detail: 'not stubbed' }, 404)
     }))
     render(
-      <MemoryRouter initialEntries={['/trace/0x' + '1'.repeat(40)]}>
+      <MemoryRouter initialEntries={[{ pathname: '/trace/0x' + '1'.repeat(40), state: { startedHere: true } }]}>
         <Routes><Route path="/trace/:address" element={<TraceView />} /></Routes>
       </MemoryRouter>,
     )

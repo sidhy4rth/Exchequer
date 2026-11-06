@@ -117,3 +117,17 @@ test('the site signs reports with an official Exchequer key', async ({ request }
   expect(current, 'the live key is the current official key').toContain(live.fingerprint_sha256)
   expect(live.persistent, 'the live key survives a restart').toBe(true)
 })
+
+test('a trace link asks before it runs, and nothing is traced', async ({ page }) => {
+  const errors = watchForErrors(page)
+  const traced = []
+  // Refused here whatever the deployed page does, so this check can never
+  // start a trace (the canary is read-only).
+  await page.route('**/trace/jobs', (route) => { traced.push(route.request().url()); return route.abort() })
+  await page.goto('/signin/investigator')
+  await enter(page)
+  await page.goto('/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing')
+  await expect(page.getByRole('button', { name: 'Run this trace' })).toBeVisible()
+  expect(traced, 'opening a trace link must not start a trace').toEqual([])
+  expect(errors).toEqual([])
+})

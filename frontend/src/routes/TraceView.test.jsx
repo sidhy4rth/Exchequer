@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import TraceView from './TraceView'
 import recordings from '../../../backend/data/recorded_demos.json'
@@ -211,11 +212,27 @@ describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
     stubFetch({ '/demos/recorded/11': { body: { ...demo.result, intake, reported_amount: 4005, explorer_url: 'https://etherscan.io', chain: 'ethereum', case_id: null, created_at: demo.recorded_at, recorded_demo: 11, ...extra } } })
     render(
       <MemoryRouter initialEntries={['/demo/11']}>
-        <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
+        <Routes>
+          <Route path="/demo/:demoNo" element={<TraceView />} />
+          <Route path="/trace/:address" element={<Landed />} />
+        </Routes>
       </MemoryRouter>,
     )
     await screen.findByText(/Verified example 11/)
   }
+
+  function Landed() {
+    const { pathname, search, state } = useLocation()
+    return <p data-testid="landed" data-started={String(state?.startedHere === true)}>{pathname + search}</p>
+  }
+
+  it('Trace live re-traces from the same payments, started here', async () => {
+    await openPaymentCase()
+    await userEvent.setup().click(screen.getByRole('button', { name: /Trace live/ }))
+    const landed = screen.getByTestId('landed')
+    expect(landed.textContent).toContain(`pay=${encodeURIComponent(`${H1},${H2}`)}`)
+    expect(landed).toHaveAttribute('data-started', 'true')
+  })
 
   it('counts payments by hash, not by transfer, and marks the NCRP number as entered', async () => {
     await openPaymentCase()

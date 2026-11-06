@@ -18,7 +18,7 @@ const HASH = '0x' + 'cd'.repeat(32)
 
 function Landed() {
   const { pathname, search, state } = useLocation()
-  return <p data-testid="landed" data-ncrp={state?.ncrpAck ?? ''} data-victim={state?.victimAddress ?? ''}>{pathname + search}</p>
+  return <p data-testid="landed" data-ncrp={state?.ncrpAck ?? ''} data-victim={state?.victimAddress ?? ''} data-started={String(state?.startedHere === true)}>{pathname + search}</p>
 }
 
 async function renderForm({ payments }) {
@@ -54,6 +54,8 @@ describe('payment hashes on the trace form (R1)', () => {
     expect(landed).toHaveTextContent(`/trace/${ADDR}?chain=ethereum&asset=ETH&depth=4&direction=outgoing&pay=${HASH}`)
     expect(landed.textContent).not.toContain('31911250012345')
     expect(landed).toHaveAttribute('data-ncrp', '31911250012345')
+    // The trace page runs a trace started here at once; a pasted link asks first (3-5).
+    expect(landed).toHaveAttribute('data-started', 'true')
   })
 
   it('refuse a malformed hash and keep the button disabled', async () => {
