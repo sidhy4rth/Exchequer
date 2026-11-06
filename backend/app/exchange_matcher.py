@@ -28,7 +28,7 @@ from typing import Any
 import networkx as nx
 
 from . import config
-from .etherscan_client import normalize_address
+from .etherscan_client import is_valid_address, normalize_address
 from .graph_builder import OUTGOING
 
 logger = logging.getLogger(__name__)
@@ -75,6 +75,10 @@ class ExchangeMatch:
         return out
 
 
+def _text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
 class ExchangeMatcher:
     """Exact-match lookup of addresses against the labelled exchange database."""
 
@@ -102,29 +106,37 @@ class ExchangeMatcher:
                 path,
             )
             return cls({}, chain=chain)
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             logger.error("Exchange label file at %s is not valid JSON: %s", path, exc)
             return cls({}, chain=chain)
 
         # Accept both the documented simple shape {"0x..": "Binance"} and the
         # richer shape {"0x..": {"exchange": ..., "label": ..., "type": ...}}.
-        entries = raw.get("labels", raw) if isinstance(raw, dict) else {}
+        # One bad entry is logged and skipped, never raised: the lifespan
+        # loads every chain's file, so an exception would stop the site.
+        entries = raw.get("labels", raw) if isinstance(raw, dict) else None
+        if not isinstance(entries, dict):
+            logger.error("Exchange label file at %s: labels is not an object; file not used", path)
+            return cls({}, chain=chain)
         labels: dict[str, dict[str, str]] = {}
         for address, value in entries.items():
-            if address.startswith("_"):  # metadata keys
+            if not isinstance(address, str) or address.startswith("_"):  # metadata keys
                 continue
             key = normalize_address(address)
-            if isinstance(value, str):
-                labels[key] = {"exchange": value, "label": value, "type": "unknown"}
+            if not is_valid_address(key):
+                logger.warning("Label entry key %r is not an address; skipped", address)
+                continue
+            if isinstance(value, str) and value.strip():
+                labels[key] = {"exchange": value.strip(), "label": value.strip(), "type": "unknown"}
             elif isinstance(value, dict):
-                exchange = value.get("exchange") or value.get("name")
+                exchange = _text(value.get("exchange")) or _text(value.get("name"))
                 if not exchange:
                     logger.warning("Label entry for %s has no exchange name; skipped", address)
                     continue
                 labels[key] = {
                     "exchange": exchange,
-                    "label": value.get("label", exchange),
-                    "type": value.get("type", "unknown"),
+                    "label": _text(value.get("label")) or exchange,
+                    "type": _text(value.get("type")) or "unknown",
                 }
             else:
                 logger.warning("Unrecognised label entry for %s; skipped", address)
@@ -225,7 +237,6 @@ class ExchangeMatcher:
                                            -m.value_received_native))
 
 
-@lru_cache(maxsize=None)
 def get_router_matcher(chain_key: str | None = None) -> ExchangeMatcher:
     """DEX routers for one chain, in the same file shape as exchange labels.
 
@@ -234,18 +245,30 @@ def get_router_matcher(chain_key: str | None = None) -> ExchangeMatcher:
     always "router". A chain with no router file gets an empty matcher, so
     swaps simply go undetected there rather than failing the trace.
     """
-    chain = config.get_chain(chain_key)
-    if chain.router_labels_path is None:
-        return ExchangeMatcher({}, chain=chain.key)
-    return ExchangeMatcher.from_file(chain.router_labels_path, chain=chain.key)
+    return _router_matcher(config.get_chain(chain_key).key)
 
 
-@lru_cache(maxsize=None)
 def get_matcher(chain_key: str | None = None) -> ExchangeMatcher:
     """Matcher for one chain. Cached so each label file is read once.
 
     Called with no argument it serves the default chain, which keeps every
     existing caller working unchanged.
     """
-    chain = config.get_chain(chain_key)
+    return _matcher(config.get_chain(chain_key).key)
+
+
+# Cached on the chain's own key, never on what the caller typed: None, "eth"
+# and "ethereum" are one chain, and each spelling used to hold its own copy of
+# that chain's label files (tens of MB on a 512 MB host).
+@lru_cache(maxsize=None)
+def _router_matcher(key: str) -> ExchangeMatcher:
+    chain = config.get_chain(key)
+    if chain.router_labels_path is None:
+        return ExchangeMatcher({}, chain=chain.key)
+    return ExchangeMatcher.from_file(chain.router_labels_path, chain=chain.key)
+
+
+@lru_cache(maxsize=None)
+def _matcher(key: str) -> ExchangeMatcher:
+    chain = config.get_chain(key)
     return ExchangeMatcher.from_file(chain.labels_path, chain=chain.key)

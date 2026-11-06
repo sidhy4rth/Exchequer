@@ -82,7 +82,7 @@ from typing import Any
 import networkx as nx
 
 from . import config
-from .etherscan_client import normalize_address
+from .etherscan_client import is_tron_address, is_valid_address, normalize_address
 from .graph_builder import OUTGOING
 from .label_store import LabelStore, get_label_store
 
@@ -443,10 +443,16 @@ class RiskMatcher:
         return matches
 
 
-@lru_cache(maxsize=None)
 def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
     """Risk matcher for one chain. Cached so each label file is read once."""
-    chain = config.get_chain(chain_key)
+    return _risk_matcher(config.get_chain(chain_key).key)
+
+
+# Cached on the chain's own key, not on the caller's spelling of it (None,
+# "eth", "ethereum"), so a chain's files are held once.
+@lru_cache(maxsize=None)
+def _risk_matcher(key: str) -> RiskMatcher:
+    chain = config.get_chain(key)
     return RiskMatcher.from_file(
         chain.risk_labels_path,
         chain=chain.key,
@@ -454,6 +460,13 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
                      chain.gambling_labels_path),
         store=get_label_store(),
     )
+
+
+def clear_label_caches() -> None:
+    """Forget every loaded label file, so the next call reads them again (tests)."""
+    from . import exchange_matcher
+    for cached in (_risk_matcher, _list_meta, exchange_matcher._matcher, exchange_matcher._router_matcher):
+        cached.cache_clear()
 
 
 # -- how old each list was -------------------------------------------------------
@@ -556,8 +569,43 @@ def list_freshness(chain_key: str | None, as_of: date) -> dict[str, Any]:
     }
 
 
+_BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+
+def is_system_address(address: str) -> bool:
+    """The zero address and its tiny neighbours, on an EVM chain or on Tron.
+
+    Their 20-byte body is below 2**64: values no private key plausibly
+    produces. Tokens are burned there and protocol code lives there; they are
+    no one's wallet. A Tron address is that body in Base58Check (T9yD14Nj...
+    is the zero address).
+    """
+    address = normalize_address(address)
+    if address.startswith("0x"):
+        body = address[2:]
+    elif is_tron_address(address):
+        number = 0
+        for char in address:
+            number = number * 58 + _BASE58.index(char)
+        body = number.to_bytes(25, "big")[1:21].hex()
+    else:
+        return False
+    try:
+        return int(body or "0", 16) < 2**64
+    except ValueError:
+        return False
+
+
+def _text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
 def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
-    """Validated {address: record} from one label file; {} if it is unusable."""
+    """Validated {address: record} from one label file; {} if it is unusable.
+
+    One bad entry is logged and skipped, never raised: the lifespan loads every
+    chain's files, so an exception here would stop the site from starting.
+    """
     try:
         raw = json.loads(path.read_text())
     except FileNotFoundError:
@@ -565,49 +613,68 @@ def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
         log("No risk label file at %s -- traces on this chain will not be "
             "screened against it", path)
         return {}
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         logger.error("Risk label file at %s is not valid JSON: %s", path, exc)
         return {}
 
-    entries = raw.get("labels", raw) if isinstance(raw, dict) else {}
-    default_source = (raw.get("_meta") or {}).get("source", "unspecified list")
+    entries = raw.get("labels", raw) if isinstance(raw, dict) else None
+    if not isinstance(entries, dict):
+        logger.error("Risk label file at %s: labels is not an object; file not used", path)
+        return {}
+    meta = raw.get("_meta")
+    default_source = _text(meta.get("source")) if isinstance(meta, dict) else ""
+    default_source = default_source or "unspecified list"
 
     labels: dict[str, dict[str, str]] = {}
     for address, value in entries.items():
-        if address.startswith("_"):  # metadata keys
+        try:
+            record = _read_entry(address, value, default_source)
+        except (TypeError, ValueError, AttributeError) as exc:
+            logger.warning("Risk entry for %r is malformed (%s); skipped", address, exc)
             continue
-        if not isinstance(value, dict):
-            logger.warning("Risk entry for %s is not an object; skipped", address)
-            continue
-
-        category = (value.get("category") or "").strip().lower()
-        if category not in CATEGORIES:
-            # An unrecognised category must not silently become a warning
-            # of the wrong kind. Dropping it is the safe failure.
-            logger.warning(
-                "Risk entry for %s has unknown category %r; skipped", address, category
-            )
-            continue
-
-        # The zero address and its tiny neighbours are where tokens are burned,
-        # not anyone's wallet. No list may name one: a burn in a trace would
-        # otherwise read as a finding against a party that does not exist.
-        if address.startswith("0x") and len(address) == 42 and int(address[2:], 16) < 2**64:
-            logger.info("Risk entry for %s is a burn/system address, not a wallet; skipped", address)
-            continue
-
-        entity = value.get("entity") or value.get("name")
-        if not entity:
-            logger.warning("Risk entry for %s names no entity; skipped", address)
-            continue
-
-        labels[normalize_address(address)] = {
-            "category": category,
-            "entity": entity,
-            "label": value.get("label", entity),
-            "source": value.get("source", default_source),
-            "origin": path.name,
-        }
+        if record is not None:
+            record["origin"] = path.name  # which file said so (request_letters names the issuer from it)
+            labels[normalize_address(address)] = record
 
     logger.info("Loaded %d risk labels from %s", len(labels), path)
     return labels
+
+
+def _read_entry(address: Any, value: Any, default_source: str) -> dict[str, str] | None:
+    """One validated record, or None (logged) if the entry must be skipped."""
+    if not isinstance(address, str) or address.startswith("_"):  # metadata keys
+        return None
+    if not is_valid_address(normalize_address(address)):
+        logger.warning("Risk entry key %r is not an address; skipped", address)
+        return None
+    if not isinstance(value, dict):
+        logger.warning("Risk entry for %s is not an object; skipped", address)
+        return None
+
+    category = _text(value.get("category")).lower()
+    if category not in CATEGORIES:
+        # An unrecognised category must not silently become a warning
+        # of the wrong kind. Dropping it is the safe failure.
+        logger.warning(
+            "Risk entry for %s has unknown category %r; skipped", address, value.get("category")
+        )
+        return None
+
+    # The zero address and its tiny neighbours are where tokens are burned,
+    # not anyone's wallet. No list may name one: a burn in a trace would
+    # otherwise read as a finding against a party that does not exist.
+    if is_system_address(address):
+        logger.info("Risk entry for %s is a burn/system address, not a wallet; skipped", address)
+        return None
+
+    entity = _text(value.get("entity")) or _text(value.get("name"))
+    if not entity:
+        logger.warning("Risk entry for %s names no entity; skipped", address)
+        return None
+
+    return {
+        "category": category,
+        "entity": entity,
+        "label": _text(value.get("label")) or entity,
+        "source": _text(value.get("source")) or default_source,
+    }
