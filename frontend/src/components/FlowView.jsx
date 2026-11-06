@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { plain } from '../text'
 
 // The money flow as a layered diagram: one column per hop, the reported
 // address at one end and whatever it reached at the other, every arrow
@@ -131,7 +132,7 @@ function layout(data, tracePath, direction, width) {
       placed.set(n.id, {
         node: n, role, x, y: top + (row.get(n.id) + 0.5) * rowGap,
         r: onPath.has(n.id) ? Math.max(RADIUS[role], 5) : RADIUS[role],
-        onPath: onPath.has(n.id), caption: captionOf(n, role), column: c,
+        onPath: onPath.has(n.id), caption: plain(captionOf(n, role)), column: c,
       })
     })
     // Adjacent addresses with the same caption would print it on top of

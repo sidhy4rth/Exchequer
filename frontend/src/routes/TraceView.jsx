@@ -10,6 +10,7 @@ import Present from '../components/Present'
 import WatchPanel from '../components/WatchPanel'
 import RequestsPanel from '../components/RequestsPanel'
 import './TraceView.css'
+import { plain } from '../text'
 import { BAND_RULE, bandLabel, bandOf, validationLine } from '../components/confidence'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
@@ -252,7 +253,7 @@ export default function TraceView() {
           // How far from the reported address this transfer sits: the far end
           // of the edge, which is the sender on a reverse trace.
           hop: (backwards ? from.depth : to.depth) ?? 1,
-          toLabel: to.label,
+          toLabel: plain(to.label),
           toKind: to.risk_category ? 'red' : to.exchange ? 'green' : '',
           onPath: onPath.has(`${e.source}>${e.target}`),
         }
@@ -417,7 +418,7 @@ export default function TraceView() {
               </div>
               {riskMatches.map((m) => (
                 <div className="line" key={m.address}>
-                  <strong>{RISK_NAME[m.category] ?? m.category}:</strong> {m.entity} — <Address value={m.address} />
+                  <strong>{RISK_NAME[m.category] ?? m.category}:</strong> {plain(m.entity)} — <Address value={m.address} />
                   {' · '}{m.depth === 0 ? 'the reported address itself' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away, ${num(m.value_received_native)} ${unit} reached it`}
                   {' · '}<span className="mono">{unambiguousDate(m.source)}</span>
                   {m.is_terminal && ' · A mixer pays out from a commingled pool, so transfers leaving it have no established link to the funds that arrived.'}
@@ -449,7 +450,7 @@ export default function TraceView() {
                   <div className="basis">
                     {result.attribution_inferred
                       ? <><strong>Inferred, not labelled</strong> — probable deposit address</>
-                      : <><strong>Exact match</strong> · label <span className="mono">{result.exchange_label}</span></>}
+                      : <><strong>Exact match</strong> · label <span className="mono">{plain(result.exchange_label)}</span></>}
                     {' · '}{result.hop_count} hop{result.hop_count === 1 ? '' : 's'}{reverse ? ' upstream' : ''}
                     {' · '}{reverse
                       ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> sent</>
@@ -475,7 +476,7 @@ export default function TraceView() {
                 <>
                   <h2 className="green">{followed.exchange}</h2>
                   <div className="basis">
-                    <strong>After a swap to {followed.asset}</strong> · {followed.attribution_inferred ? 'probable deposit address' : <>label <span className="mono">{followed.exchange_label}</span></>}
+                    <strong>After a swap to {followed.asset}</strong> · {followed.attribution_inferred ? 'probable deposit address' : <>label <span className="mono">{plain(followed.exchange_label)}</span></>}
                     {' · '}{followed.hop_count} hop{followed.hop_count === 1 ? '' : 's'} in the {followed.asset} trace
                     {' · '}{bandOf(followed.confidence) ?? 'no'} confidence within that trace
                   </div>
@@ -550,7 +551,7 @@ export default function TraceView() {
                 <div className="card graph-card" key={`${f.address}-${f.asset}`}>
                   <div className="head">
                     <span className="micro">
-                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${f.result.exchange_label} · ${f.result.confidence?.toFixed(2)}` : 'no exchange reached'}
+                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${plain(f.result.exchange_label)} · ${f.result.confidence?.toFixed(2)}` : 'no exchange reached'}
                     </span>
                     <span className="note">from <Address value={f.address} head={8} tail={6} /> · swap tx <Address value={f.swap?.tx} head={8} tail={6} /></span>
                   </div>

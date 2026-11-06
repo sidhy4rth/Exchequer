@@ -1,6 +1,7 @@
 import { currentTheme } from '../theme'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
+import { plain } from '../text'
 import { forceCollide } from 'd3-force-3d'
 
 // Kept in sync with the custom properties in styles.css. The canvas paints in
@@ -117,7 +118,7 @@ const esc = (value) =>
 const rows = (pairs) =>
   pairs
     .filter(([, v]) => v !== null && v !== undefined && v !== '')
-    .map(([k, v]) => `<div class="r"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`)
+    .map(([k, v]) => `<div class="r"><span class="k">${esc(k)}</span><span class="v">${esc(plain(v))}</span></div>`)
     .join('')
 
 /** Everything known about an address, without having to click it. */
@@ -598,8 +599,8 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
       return
     }
 
-    const text = (role === 'risk' || role === 'gambling') && node.risk_entity ? node.risk_entity
-      : role === 'exchange' && node.label ? node.label
+    const text = (role === 'risk' || role === 'gambling') && node.risk_entity ? plain(node.risk_entity)
+      : role === 'exchange' && node.label ? plain(node.label)
       : role === 'inferred' ? `${node.inferred_exchange}? ${short(node.address)}`
       : short(node.address)
     const fontSize = Math.max(10 / globalScale, 2.2)
@@ -758,9 +759,9 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
                     <span className="swatch" style={{ background: COLORS[role] }} />
                     <span className="name">
                       {role === 'risk' || role === 'gambling'
-                        ? node.risk_entity ?? RISK_NAME[node.risk_category] ?? 'Listed'
+                        ? plain(node.risk_entity) ?? RISK_NAME[node.risk_category] ?? 'Listed'
                         : role === 'inferred' ? `${node.inferred_exchange} deposit (inferred)`
-                        : node.label ?? node.exchange}
+                        : plain(node.label ?? node.exchange)}
                     </span>
                     <span className="addr">{short(node.address)}</span>
                   </button>

@@ -3,6 +3,7 @@ import FlowView from './FlowView'
 import GraphView from './GraphView'
 import ExportButton from './ExportButton'
 import { bandLabel, bandOf } from './confidence'
+import { plain } from '../text'
 
 // Present mode: the same case as four screens, one thing on each, big
 // enough to read from the back of a room. Nothing is computed here that the
@@ -54,7 +55,7 @@ export default function Present({ result, related = [], unit, onClose }) {
     <div className="pr-screen pr-finding" key="finding">
       {risk.length > 0 && (
         <div className="pr-alert">
-          {risk.map((m) => <span key={m.address}>{{ seized: 'Seizure order', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }[m.category] ?? (m.source?.startsWith('OFAC') ? 'OFAC-listed' : 'Sanctioned')} · {m.entity} · {m.depth === 0 ? 'the reported address' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away`}</span>)}
+          {risk.map((m) => <span key={m.address}>{{ seized: 'Seizure order', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }[m.category] ?? (m.source?.startsWith('OFAC') ? 'OFAC-listed' : 'Sanctioned')} · {plain(m.entity)} · {m.depth === 0 ? 'the reported address' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away`}</span>)}
         </div>
       )}
       <div className="pr-main">
@@ -70,7 +71,7 @@ export default function Present({ result, related = [], unit, onClose }) {
                   : result.prorata?.status === 'unknown'
                     ? <>Funds moved from the reported wallet to{' '}</>
                     : <>Funds from the reported wallet reached{' '}</>}
-              <span className="mono">{result.exchange_label ?? short(result.exchange_address)}</span>
+              <span className="mono">{plain(result.exchange_label) ?? short(result.exchange_address)}</span>
               {result.attribution_inferred ? `, a wallet this tool infers to be a ${result.exchange} deposit address, ` : `, a wallet ${result.exchange} publicly operates, `}
               {result.hop_count} hop{result.hop_count === 1 ? '' : 's'} {reverse ? 'upstream' : 'away'}
               {!reverse && result.prorata?.status === 'unknown' ? ' (amount not estimated).' : '.'}
@@ -85,7 +86,7 @@ export default function Present({ result, related = [], unit, onClose }) {
             <span className="pr-huge green">{result.followed_attribution.exchange}</span>
             <p className="pr-lede">
               The {unit} was swapped for {result.followed_attribution.asset}, and the {result.followed_attribution.asset} reached{' '}
-              <span className="mono">{result.followed_attribution.exchange_label ?? short(result.followed_attribution.exchange_address)}</span>{' '}
+              <span className="mono">{plain(result.followed_attribution.exchange_label) ?? short(result.followed_attribution.exchange_address)}</span>{' '}
               {result.followed_attribution.hop_count} hop{result.followed_attribution.hop_count === 1 ? '' : 's'} after the swap — confidence {result.followed_attribution.confidence?.toFixed(2)} within that trace.
             </p>
             <div className="pr-cite">
@@ -146,7 +147,7 @@ export default function Present({ result, related = [], unit, onClose }) {
         {path.slice(1).map((s, i) => (
           <div className="pr-hop" key={s.address}>
             <span className="red">Hop {i + 1}</span>
-            <span className="mono">{short(path[i].address)} <span className="faint">→</span> {s.exchange ? <span className="green">{s.label ?? s.exchange}</span> : short(s.address)}</span>
+            <span className="mono">{short(path[i].address)} <span className="faint">→</span> {s.exchange ? <span className="green">{plain(s.label ?? s.exchange)}</span> : short(s.address)}</span>
             <span className="mono">{num(s.value_native ?? 0)} {unit}</span>
           </div>
         ))}

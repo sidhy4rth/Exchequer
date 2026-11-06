@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { plain } from '../text'
 import { checkWatchNow, fetchAlerts, fetchWatches, logRequest, markAlertsRead, removeWatch } from '../api'
 
 // The home page's watchlist: what this browser watches and what moved.
@@ -90,7 +91,7 @@ export default function Watchlist({ onCount } = {}) {
                 <div className={`alert-row${a.read ? '' : ' unread'}`} key={a.alert_id}>
                   <span className={`pill ${KIND[a.kind]?.pill ?? ''}`}>{KIND[a.kind]?.text ?? a.kind}</span>
                   <span className="msg">
-                    {amount(a.value)} {a.asset} to <span className="mono">{a.counterparty_label || short(a.counterparty)}</span>
+                    {amount(a.value)} {a.asset} to <span className="mono">{plain(a.counterparty_label) || short(a.counterparty)}</span>
                     <small> · {new Date(a.tx_time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC · {a.tx_url ? <a href={a.tx_url} target="_blank" rel="noopener noreferrer">transaction</a> : short(a.tx_hash)}</small>
                   </span>
                   {a.kind === 'exchange' && a.exchange && a.case_id && (

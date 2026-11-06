@@ -108,6 +108,8 @@ body {
 
 /* ---------- primitives ---------- */
 .mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-variant-ligatures: none; }
+/* A name from outside (a tag, a label list) never reorders the text around it. */
+.mono, .feed .pair .to { unicode-bidi: isolate; }
 .num { white-space: nowrap; }
 
 .micro {
