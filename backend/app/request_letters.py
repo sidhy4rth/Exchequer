@@ -22,6 +22,7 @@ on the wallet; and, for an explorer's tag, only whether the address is theirs.
 """
 from __future__ import annotations
 
+import textwrap
 from datetime import datetime, timezone
 from typing import Any
 
@@ -45,14 +46,81 @@ class LetterNotApplicable(ValueError):
 
 
 def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
-    """The trace (original or follow-on) that reached an exchange, if any."""
+    """The trace (original or follow-on) that reached an exchange, if any.
+
+    `route` is a follow-on's path from the reported address to the swapping
+    wallet, in the original asset; None for a case stored before it was kept."""
     if result.get("exchange"):
-        return {"trace": result, "asset": result.get("asset"), "via_swap": None}
+        return {"trace": result, "asset": result.get("asset"), "via_swap": None, "route": None}
     for follow in result.get("follow_ons") or []:
         found = follow.get("result") or {}
         if found.get("exchange"):
-            return {"trace": found, "asset": follow.get("asset"), "via_swap": follow.get("swap")}
+            return {"trace": found, "asset": follow.get("asset"), "via_swap": follow.get("swap"),
+                    "route": follow.get("route")}
     return None
+
+
+METHOD_NAME = {"fifo": "FIFO", "libr": "LIBR", "prorata": "pro-rata"}
+
+
+def _letter_amount(result: dict[str, Any], found: dict[str, Any]) -> dict[str, Any] | None:
+    """The one amount a letter states, or None when the case has none.
+
+    The smallest figure the tracing rules gave (estimates.conservative, which
+    the case view promises is what a letter states), else the pro-rata
+    estimate; never more than the victim reported paying (an intake trace) or
+    than the swap returned (a follow-on), whatever an older stored case holds.
+    """
+    trace = found["trace"]
+    prorata = trace.get("prorata") or {}
+    methods = trace.get("tracing_methods") or {}
+    amount = (trace.get("estimates") or {}).get("conservative")
+    method = methods.get("conservative_method") if amount is not None else None
+    if amount is None and methods.get("conservative") is not None:
+        amount, method = methods["conservative"], methods.get("conservative_method")
+    if amount is None and prorata.get("status") == "estimated":
+        amount, method = prorata["estimated"], "prorata"
+    if amount is None:
+        return None
+    swap = found["via_swap"]
+    cap, basis = None, None
+    if swap and swap.get("amount_out") is not None:
+        cap, basis = float(swap["amount_out"]), "swap_output"
+    elif not swap and result.get("reported_amount"):
+        cap, basis = float(result["reported_amount"]), "reported_amount"
+    rng = methods.get("range") if methods.get("range") and methods["range"]["low"] != methods["range"]["high"] else None
+    return {"amount": min(float(amount), cap) if cap is not None else float(amount),
+            "method": method or "prorata", "range": rng, "cap": cap, "basis": basis,
+            "arrived": prorata.get("arrived_total") if prorata.get("status") == "estimated" else None}
+
+
+def _amount_lines(asset: str, stated: dict[str, Any]) -> list[str]:
+    """The letter's amount paragraph, worded for what the figure is."""
+    x = f"{stated['amount']:,.6f}"
+    how = (f" (by {METHOD_NAME.get(stated['method'], stated['method'])}, the smallest of the tracing rules "
+           f"applied; they give {stated['range']['low']:,.6f} to {stated['range']['high']:,.6f})"
+           if stated["range"] else "")
+    lead = "On a pro-rata estimate" if stated["method"] == "prorata" else "On an estimate"
+    if stated["basis"] == "swap_output":
+        text = (f"{lead} from the public records, of the {stated['cap']:,.6f} {asset} the swap returned, "
+                f"about {x} {asset}{how} reached this address")
+    elif stated["basis"] == "reported_amount":
+        text = (f"{lead} from the public records, about {x} of the {stated['cap']:,.6f} {asset} the victim "
+                f"reported paying{how} reached this address")
+    else:
+        # Address-only: the start is everything the reported wallet sent.
+        text = (f"{lead} from the public records, about {x} {asset}{how} of everything the reported address "
+                "sent along this route reached this address. That figure can include other people's money, "
+                "not only the complainant's")
+    arrived = stated["arrived"]
+    if arrived is not None and arrived - stated["amount"] > stated["amount"] * 0.05:
+        rest = ("came from other sources" if stated["method"] == "prorata" and not stated["cap"]
+                else "is not counted in that figure")
+        text += (f" ({arrived:,.6f} {asset} arrived along this path in total; about "
+                 f"{arrived - stated['amount']:,.6f} {rest})")
+    return ["", *textwrap.wrap(text + ".", width=95, initial_indent="   ", subsequent_indent="   ",
+                               break_long_words=False, break_on_hyphens=False),
+            "   This is an estimate; your own records of the deposits are authoritative."]
 
 
 def _all_traces(result: dict[str, Any]) -> list[dict[str, Any]]:
@@ -236,10 +304,15 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
         f"{exchange} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
         subjects[kind],
     )
+    sender = (swap or {}).get("sender")
+    moved = (f"{swap.get('asset_in')} moving from that address and, after a swap at\n"
+             f"   {swap.get('router_label')} (tx {swap.get('tx')}),\n"
+             f"   {asset} moving from {'it' if sender == result.get('address') else sender} to the address"
+             if swap else f"{asset} moving from that address to the address")
     lines += [
         *_opening(result),
         "",
-        f"2. Public blockchain records show {asset} moving from that address to the address",
+        f"2. Public blockchain records show {moved}",
         f"   {address}, {_claim(kind, trace, exchange)}",
     ]
     if kind == INFERRED_DEPOSIT:
@@ -252,30 +325,28 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
             f"   from public records, which only {exchange} can confirm.",
         ]
     if swap:
+        returned = (f"{swap['amount_out']:,.6f} {asset}" if swap.get("amount_out") is not None else asset)
         lines += [
             "",
-            f"   On the way, {swap.get('sender')} exchanged {swap.get('amount_in', 0):,.6f} {swap.get('asset_in')}",
-            f"   for {asset} at {swap.get('router_label')} (tx {swap.get('tx')}); the {asset} was followed",
+            f"   On the way, {sender} exchanged {swap.get('amount_in', 0):,.6f} {swap.get('asset_in')}",
+            f"   for {returned} at {swap.get('router_label')} (tx {swap.get('tx')}); the {asset} was followed",
             "   from that swap.",
         ]
-    prorata = trace.get("prorata") or {}
-    if prorata.get("status") == "estimated":
-        others = prorata["arrived_total"] - prorata["estimated"]
-        lines += [
-            "",
-            f"   On a pro-rata estimate from the public records, about {prorata['estimated']:,.6f} {asset}",
-            "   sent from the reported address reached this address"
-            + (f" ({prorata['arrived_total']:,.6f} {asset} arrived along this path in\n"
-               f"   total; about {others:,.6f} came from other sources)." if others > prorata["estimated"] * 0.05 else "."),
-            "   This is an estimate; your own records of the deposits are authoritative.",
-        ]
+    stated = _letter_amount(result, found)
+    if stated is not None:
+        lines += _amount_lines(asset, stated)
     listed = _transfers_into(trace, address) if kind in COMPANY_WALLET_KINDS else []
-    lines += [
-        "",
-        "3. The transfers, hop by hop:",
-        f"  Reported address: {trace.get('address')}",
-        *_path_lines(trace, asset, list_all=kind in COMPANY_WALLET_KINDS, leave_out=address if listed else None),
-    ]
+    path = _path_lines(trace, asset, list_all=kind in COMPANY_WALLET_KINDS, leave_out=address if listed else None)
+    lines += ["", "3. The transfers, hop by hop:", f"  Reported address: {result.get('address')}"]
+    if swap:
+        # The reported address's own route to the swap, in the asset it sent;
+        # then the follow-on from the swapping wallet, in the asset it became.
+        if sender != result.get("address"):
+            lines += (_path_lines({"trace_path": found["route"]}, swap.get("asset_in") or "") if found["route"]
+                      else ["  Route to the swapping wallet: see the attached report"])
+        lines.append(f"  Swapping wallet (follow-on start): {sender}"
+                     + (" (the reported address itself)" if sender == result.get("address") else ""))
+    lines += path
     if listed:
         lines += ["", f"   Every transfer into {address} in this trace:"]
         for transfer in listed:

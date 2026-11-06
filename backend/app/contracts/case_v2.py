@@ -98,7 +98,9 @@ class Estimates(_Strict):
     fifo: float | None = None
     prorata: float | None = None
     libr: float | None = None
-    # The smallest figure available: what a letter states.
+    # The smallest figure available: what a letter states (request_letters
+    # ._letter_amount), never above the victim's reported payments or, on a
+    # follow-on, what the swap returned.
     conservative: float | None = None
 
 
