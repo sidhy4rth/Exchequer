@@ -83,3 +83,46 @@ def test_each_chain_publishes_its_native_coin_decimals():
     assert 10 ** published["tron"]["decimals"] == SUN_PER_TRX
     for key in ("ethereum", "bsc", "polygon", "arbitrum"):
         assert published[key]["decimals"] == 18, key
+
+
+# Tron (r2-g2-documented-claims-vs-code-7-7): the TRC-20 parser used to guess
+# 6 when token_info had no decimals, use the raw integer when the figure was
+# negative (5 USDT read as 5,000,000), and take a stated 18 over the
+# configured 6 (5 USDT read as 5e-12).
+USDT_TRON = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+
+
+def _trc20(info):
+    return {"transaction_id": "t1", "type": "Transfer", "from": "TSFFxCbDLh6nP1x4BcyqkbEFJyx3zSGY2r",
+            "to": "TD5gsCnXYaDzd6CwT1aT6XsPX5q8tBfTbY", "value": "5000000",
+            "block_timestamp": 1_700_000_000_000, "token_info": info}
+
+
+def _tron(decimals=6):
+    from app.tron_client import TronClient
+    return TronClient(api_key="k", contract_address=USDT_TRON, asset_symbol="USDT", token_decimals=decimals)
+
+
+def test_tron_token_without_decimals_uses_the_configured_precision():
+    assert _tron()._token_transfer(_trc20({"address": USDT_TRON})).value_native == 5.0
+
+
+def test_tron_negative_decimals_fall_back_to_config_not_raw_units():
+    assert _tron()._token_transfer(_trc20({"address": USDT_TRON, "decimals": -1})).value_native == 5.0
+
+
+def test_tron_record_disagreeing_with_config_is_dropped():
+    assert _tron()._token_transfer(_trc20({"address": USDT_TRON, "decimals": 18})) is None
+    assert _tron()._token_transfer(_trc20({"address": USDT_TRON, "decimals": 6})).value_native == 5.0
+
+
+def test_tron_token_with_no_known_decimals_is_dropped():
+    assert _tron(decimals=None)._token_transfer(_trc20({"address": USDT_TRON})) is None
+
+
+def test_open_source_gives_tron_the_configured_decimals():
+    from app import config
+    from app.chain_data import open_source
+
+    with open_source(config.CHAINS["tron"], "USDT") as client:
+        assert client.token_decimals == 6

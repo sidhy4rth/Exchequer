@@ -35,7 +35,7 @@ import httpx
 from .evidence import EvidenceLog
 
 from . import config
-from .etherscan_client import EtherscanError, ProviderResponseError, Transaction, is_tron_address
+from .etherscan_client import EtherscanError, ProviderResponseError, Transaction, is_tron_address, resolve_decimals
 
 logger = logging.getLogger(__name__)
 
@@ -139,11 +139,14 @@ class TronClient:
         max_retries: int = 3,
         min_interval: float | None = None,
         client: httpx.Client | None = None,
+        token_decimals: int | None = None,
     ) -> None:
         self.api_key = api_key if api_key is not None else config.TRONGRID_API_KEY
         # When set, this TRC-20 contract is followed instead of native TRX.
         self.contract_address = contract_address
         self.asset_symbol = asset_symbol
+        # The traced token's confirmed precision (config), as on the EVM chains.
+        self.token_decimals = token_decimals
         self.base_url = base_url.rstrip("/")
         self.max_retries = max_retries
         # Without a key TronGrid rate-limits aggressively (observed: 429 within
@@ -249,13 +252,19 @@ class TronClient:
             token = info.get("address")
             if self.contract_address and token and token != self.contract_address:
                 return None
-            decimals = int(info.get("decimals", 6))
+            # ADR-0008: the record's own figure, else the configured one, else
+            # drop it -- never a guess. A stated figure that disagrees with the
+            # configured precision of the traced token is not trusted either.
+            decimals = resolve_decimals(info.get("decimals"), self.token_decimals)
+            if decimals is None or (self.token_decimals is not None and decimals != self.token_decimals):
+                logger.warning("Skipping TRC-20 record with unknown or unexpected decimals: %r", str(raw)[:120])
+                return None
             units = int(raw.get("value", "0") or "0")
             return Transaction(
                 hash=raw.get("transaction_id", ""),
                 from_address=(raw.get("from") or "").strip(),
                 to_address=(raw.get("to") or "").strip() or None,
-                value_native=units / (10**decimals) if decimals >= 0 else float(units),
+                value_native=units / (10**decimals),
                 value_wei=units,
                 # TronGrid reports milliseconds; the rest of Exchequer uses seconds.
                 timestamp=int(raw.get("block_timestamp", 0)) // 1000,

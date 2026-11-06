@@ -103,6 +103,7 @@ def open_source(chain: config.Chain, asset: str | None = None) -> TransactionSou
         return TronClient(
             contract_address=token.address if token else None,
             asset_symbol=token.symbol if token else chain.native_symbol,
+            token_decimals=token.decimals if token else None,
         )
 
     ready, missing = provider_ready(chain)

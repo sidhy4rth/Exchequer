@@ -19,6 +19,11 @@ first, then the traced token's precision confirmed on-chain in `config.py`, and
 otherwise drops the record with a warning. The native coin stays 18 by
 definition. Tested in `tests/test_token_decimals.py`.
 
+The Tron TRC-20 parser (`app/tron_client.py`) follows the same rule. It used to
+guess 6 when `token_info` had no decimals, read a negative figure as raw units
+and take a stated figure over the configured one; now a record whose stated
+precision differs from the traced token's configured precision is dropped too.
+
 ## Alternatives Considered
 
 ### Keep the default of 18
