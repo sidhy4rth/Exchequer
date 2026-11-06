@@ -256,3 +256,18 @@ def test_a_provider_row_with_no_hash_never_matches():
     with pytest.raises(PaymentError):
         resolve_payments(Client(), SCAMMER, [PaymentRef.model_construct(tx_hash="  ", found_by="victim")],
                          chain_key="ethereum", asset="ETH", limit=100)
+
+
+# ---------------------------------------------------------------- the statement (5-1)
+def test_a_payment_trace_keeps_the_wallet_statement(chain):
+    statement = run_trace(request())["statement"]
+    assert statement is not None and statement["window_start"] == PAID_AT
+    debits = {r["tx"]: r for r in statement["debits"]}
+    assert debits[SENT_BEFORE.hash]["before_window"] is True, "marked, never hidden"
+    assert debits[SENT_AFTER.hash]["before_window"] is False
+
+
+def test_an_address_only_statement_is_unchanged(chain):
+    statement = run_trace(request(payments=[]))["statement"]
+    assert "window_start" not in statement
+    assert all("before_window" not in r for r in statement["debits"] + statement["credits"])

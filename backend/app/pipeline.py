@@ -279,12 +279,16 @@ def _direct_senders(graph: nx.DiGraph, seed: str) -> list[dict[str, Any]]:
 STATEMENT_ROWS = 25
 
 
-def _wallet_statement(client: Any, address: str) -> dict[str, Any] | None:
+def _wallet_statement(client: Any, address: str, window_start: int | None = None) -> dict[str, Any] | None:
     """The reported address's latest credits and debits, newest first.
 
     Read from the same provider as the trace (the outgoing side is usually a
     cache hit, since the walk just asked for it). A provider that cannot list
     incoming transfers, or fails, costs the statement, never the trace.
+
+    `window_start` (a payment trace) marks each row from before the first
+    payment arrived with `before_window`: shown, never hidden, since the
+    officer may still want to see what the wallet did beforehand.
     """
     def rows(txs: list[Any], counterparty: str) -> list[dict[str, Any]]:
         return [{"tx": t.hash, "time": t.timestamp, "amount": round(t.value_native, 6),
@@ -310,13 +314,18 @@ def _wallet_statement(client: Any, address: str) -> dict[str, Any] | None:
         c = (row["counterparty"] or "").lower()
         row["lookalike"] = bool(c) and c not in paid and (c[:6], c[-4:]) in shapes
     lookalikes = [r for r in credits if r["lookalike"]]
-    return {
+    statement = {
         "debits": debits,
         "credits": [r for r in credits if not r["lookalike"]][:STATEMENT_ROWS],
         "poisoning": lookalikes[:10],
         "rows_per_side": STATEMENT_ROWS,
         "lookalikes": len(lookalikes),
     }
+    if window_start is not None:
+        statement["window_start"] = window_start
+        for row in debits + credits:
+            row["before_window"] = (row["time"] or 0) < window_start
+    return statement
 
 
 # How many swaps one trace will follow into another asset. Each follow-on is a
@@ -441,15 +450,20 @@ _PROVIDER_NAMES = {"etherscan": "Etherscan", "nodereal": "NodeReal", "trongrid":
 
 def run_trace(request: TraceRequest, seed_window: int | None = None,
               budget: TraceBudget | None = None, depth_offset: int = 0,
-              seed_amount: float | None = None, seed_amount_basis: str | None = None) -> dict[str, Any]:
+              seed_amount: float | None = None, seed_amount_basis: str | None = None,
+              *, is_follow_on: bool = False) -> dict[str, Any]:
     """Run one trace and return the full result, without storing it.
 
-    `seed_window` is set only for a follow-on trace after a swap: the time rule
-    then applies to the starting wallet too (see build_trace_graph).
-    `depth_offset` is then the swapping wallet's hops from the reported
-    address, so the follow-on's hop proximity counts from there, and
-    `seed_amount` what the swap returned: the follow-on's amounts are capped
-    at it, because the wallet may have sent on money that was not the swap's.
+    `seed_window` is a time rule for the starting wallet (see
+    build_trace_graph): a follow-on after a swap passes the swap's time, and a
+    payment trace sets it from the first payment. `is_follow_on` says this
+    trace follows a swap: it then keeps no wallet statement and follows no
+    further swaps. The two were once one test (`seed_window is None`), which
+    switched both off for every payment trace too. For a follow-on,
+    `depth_offset` is the swapping wallet's hops from the reported address, so
+    the follow-on's hop proximity counts from there, and `seed_amount` what the
+    swap returned: the follow-on's amounts are capped at it, because the wallet
+    may have sent on money that was not the swap's.
 
     Everything the endpoint does except the case record: the endpoint gives
     the result a case id and saves it; the startup warm-up runs the demo
@@ -621,7 +635,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                     methods = compare_methods(result.graph, lead_path, flows, prorata, seed_cap=cap)
             # The reported wallet's own statement: what it received and sent in
             # this asset, whether or not anything could be followed onward.
-            statement = _wallet_statement(client, seed) if seed_window is None else None
+            statement = (None if is_follow_on else
+                         _wallet_statement(client, seed, window_start=seed_window if intake else None))
             # A provider that searches a block range (NodeReal) says how far
             # back it looked when it found nothing, so "sent nothing" is never
             # claimed for history the search did not reach.
@@ -728,7 +743,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     # traces, before the message is written, so the message can say where the
     # money went after it changed asset.
     follow_ons: list[dict[str, Any]] = []
-    if direction == OUTGOING and request.follow_swaps and seed_window is None and swaps:
+    if direction == OUTGOING and request.follow_swaps and not is_follow_on and swaps:
         follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth,
                                    budget=budget, seed=seed)
     followed = next((f for f in follow_ons if (f.get("result") or {}).get("exchange")), None)
@@ -1033,7 +1048,7 @@ def _follow_swaps(
         try:
             follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"), budget=budget,
                                          depth_offset=depth_at, seed_amount=swap.get("amount_out"),
-                                         seed_amount_basis="swap_output")
+                                         seed_amount_basis="swap_output", is_follow_on=True)
         except HTTPException as exc:
             if budget is not None and budget.cancelled:
                 raise  # a stop ends the whole case, follow-ons included

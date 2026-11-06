@@ -240,3 +240,38 @@ def test_every_configured_output_is_followed_once(faked, monkeypatch):
     follows = run_trace(request())["follow_ons"]
     assert [(f["asset"], f["swap"]["asset_out"], f["swap"]["amount_out"]) for f in follows] == [
         ("USDT", "USDT", 2400.0), ("USDC", "USDC", 300.0)]
+
+
+PAID = tx(addr("71c"), SEED, 1.0, SWAP_AT - 60, "ETH")
+
+
+class PaidClient(FakeClient):
+    """The same wallet, entered by the victim's payment into it."""
+
+    def get_incoming_transactions(self, address, limit=None):
+        return [PAID] if address == SEED and self.history is HISTORY["ETH"] else []
+
+
+@pytest.fixture
+def paid(monkeypatch, faked):
+    from app import config
+
+    @contextmanager
+    def open_source(chain, asset):
+        yield PaidClient(HISTORY[asset])
+
+    monkeypatch.setattr(main, "open_source", open_source)
+    monkeypatch.setattr(config, "TX_INTAKE", True)
+
+
+def test_a_payment_trace_still_follows_the_swap(paid):
+    result = run_trace(request(payments=[{"tx_hash": PAID.hash}]))
+    assert result["intake"]["mode"] == "payment"
+    (follow,) = result["follow_ons"]
+    assert follow["result"]["exchange"] == "Binance"
+    assert result["followed_attribution"]["exchange"] == "Binance"
+
+
+def test_a_follow_on_never_follows_again(faked):
+    result = run_trace(request(), seed_window=SWAP_AT - 1, is_follow_on=True)
+    assert result["follow_ons"] == [] and result["statement"] is None
