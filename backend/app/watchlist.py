@@ -148,7 +148,8 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
         s.commit()
         s.refresh(watch)
         s.expunge(watch)
-        return watch
+    nudge()  # a parked watcher takes its baseline now
+    return watch
 
 
 def watch_summary(watch: models.Watch, unread: int = 0) -> dict[str, Any]:
@@ -476,20 +477,47 @@ def watcher_status() -> dict[str, Any]:
 # The background poller
 # ---------------------------------------------------------------------------
 _stop = threading.Event()
+# Set when a watch is created (nudge) or the watcher stops: wakes a watcher
+# parked because there was nothing to watch.
+_wake = threading.Event()
 _thread: threading.Thread | None = None
 
 
+def nudge() -> None:
+    _wake.set()
+
+
+def _round(interval: float) -> int:
+    """Check every due watch, unchecked first, then the longest unchecked.
+    Returns how many watches are active. One query to find them."""
+    cutoff = _iso_ago(interval)
+    with models.session() as s:
+        active = s.execute(select(models.Watch.id, models.Watch.last_checked_at)
+                           .where(models.Watch.active)).all()
+    due = sorted((w for w in active if w.last_checked_at is None or w.last_checked_at <= cutoff),
+                 key=lambda w: (w.last_checked_at is not None, w.last_checked_at or ""))
+    for watch_id, _ in due:
+        if _stop.is_set():
+            break
+        check_watch(watch_id)
+    return len(active)
+
+
 def _loop(interval: float) -> None:
+    """Rounds a full interval apart; with no watch at all, no query until one
+    is created. A free hosted Postgres scales to zero after a few idle
+    minutes, and a query every minute kept it awake for as long as the site was."""
     logger.info("Watchlist: checking watched addresses every %d s", interval)
     while not _stop.is_set():
+        _wake.clear()  # before the round: a watch created during it wakes the next
+        active = None
         try:
-            for watch_id in due_watch_ids(interval):
-                if _stop.is_set():
-                    break
-                check_watch(watch_id)
+            active = _round(interval)
         except Exception:  # noqa: BLE001 -- the loop must outlive one bad round
             logger.exception("Watchlist round failed")
-        _stop.wait(min(60.0, interval))
+        if _stop.is_set():
+            break
+        _wake.wait(None if active == 0 else interval)
 
 
 def start_in_background() -> None:
@@ -504,4 +532,5 @@ def start_in_background() -> None:
 
 def stop() -> None:
     _stop.set()
+    _wake.set()
 
