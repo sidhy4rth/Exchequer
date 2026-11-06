@@ -112,6 +112,18 @@ export default function Verify() {
                   {!result.signature_ok && (result.claimed_key || result.key_fingerprint) && <><dt>claimed key (not checked)</dt><dd>{result.claimed_key || result.key_fingerprint}</dd></>}
                 </dl>
               )}
+              {result.finding && (
+                <>
+                  <span className="micro">What the signed report says</span>
+                  <dl className="verify-facts mono">
+                    <dt>case</dt><dd>{result.finding.case_id}</dd>
+                    <dt>exchange</dt><dd>{result.finding.exchange || 'none reached'}</dd>
+                    {result.finding.address && <><dt>address</dt><dd>{result.finding.address}</dd></>}
+                    {(result.finding.likely_arrived || result.finding.arrived_on_path) && <><dt>amount</dt><dd>{result.finding.likely_arrived || result.finding.arrived_on_path}</dd></>}
+                  </dl>
+                  <p className="note">A PDF&apos;s summary page is not covered by the signature: before acting on it, check that it says exactly this.</p>
+                </>
+              )}
             </div>
           </div>
         )}

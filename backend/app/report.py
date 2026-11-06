@@ -875,6 +875,47 @@ def render_text_report(report: dict[str, Any]) -> str:
     return seal_text("\n".join(out))
 
 
+_FINDING_FIELDS = {"Exchange         : ": "exchange", "Address          : ": "address",
+                   "Address label    : ": "label", "Likely arrived   : ": "likely_arrived",
+                   "Arrived on path  : ": "arrived_on_path"}
+
+
+def signed_finding(text: str) -> dict[str, str | None] | None:
+    """The FINDING section's facts as a text report prints them, or None.
+
+    Read by position, not by searching: the header's lines are all the
+    server's own, the SUMMARY is one paragraph (which never holds an empty
+    line), and FINDING is the section right after it. A label inside the
+    summary, however it is shaped, cannot be taken for the finding."""
+    lines = text.replace("\r\n", "\n").split("\n")
+    rule = "-" * 78
+    if len(lines) < 4 or not lines[3].startswith("Case ID          : "):
+        return None
+    try:
+        i = next(n for n in range(1, len(lines) - 1)
+                 if lines[n] == "SUMMARY" and lines[n - 1] == lines[n + 1] == rule)
+    except StopIteration:
+        return None
+    i += 2
+    summary_from = i
+    while i < len(lines) and lines[i]:  # the summary paragraph
+        i += 1
+    summary = " ".join(lines[summary_from:i])
+    while i < len(lines) and not lines[i]:
+        i += 1
+    if lines[i:i + 3] != [rule, "FINDING", rule]:
+        return None
+    found: dict[str, str | None] = {"case_id": lines[3][len("Case ID          : "):], "summary": summary,
+                                    **{key: None for key in _FINDING_FIELDS.values()}}
+    for line in lines[i + 3:]:
+        if not line:
+            break
+        for prefix, key in _FINDING_FIELDS.items():
+            if line.startswith(prefix) and found[key] is None:
+                found[key] = line[len(prefix):]
+    return found
+
+
 def _wrap(text: str, width: int = 78, indent: str = "", bullet: str = "") -> list[str]:
     """Wrap `text` to `width`, honouring an optional bullet and indent."""
     import textwrap

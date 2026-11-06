@@ -118,6 +118,14 @@ describe('Verify page', () => {
     expect(s).toHaveTextContent("in Exchequer's published list")
   })
 
+  it('shows what the signed report says, to hold against a PDF summary page', async () => {
+    const s = await verdictFor({ status: 'genuine', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: true, detail: 'Genuine.', finding: { case_id: 'case-1', exchange: 'Binance', address: '0x' + 'a'.repeat(40), likely_arrived: 'about 9.5 of 10 ETH sent from the reported address (pro-rata)' } })
+    expect(s).toHaveTextContent('What the signed report says')
+    expect(s).toHaveTextContent('0x' + 'a'.repeat(40))
+    expect(s).toHaveTextContent('about 9.5 of 10 ETH')
+    expect(s).toHaveTextContent('not covered by the signature')
+  })
+
   it('shows a report signed with an earlier official key as genuine', async () => {
     const earlier = await verdictFor({ status: 'genuine_earlier_key', sealed: true, hash_ok: true, signed: true, signature_ok: true, official: true, detail: 'Earlier key.' })
     expect(earlier).toHaveClass('green')

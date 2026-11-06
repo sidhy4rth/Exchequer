@@ -92,3 +92,42 @@ def test_the_endpoint_returns_the_status_and_takes_a_bom():
     body = b"\xef\xbb\xbf" + seal_text(V21).encode()
     assert client.post("/verify", content=body).json()["status"] == "genuine"
     assert client.post("/verify", content=b"hello").json()["status"] == "not_a_report"
+
+
+# -- what the signed report says (r1-evidence-crypto-6) --------------------------------
+def _genuine_report_text() -> str:
+    from app.report import build_report, render_text_report
+    from test_report import full_result, stored
+
+    return render_text_report(build_report(stored(full_result())))
+
+
+def test_a_genuine_result_carries_the_signed_finding():
+    from test_report import MID
+
+    r = signing.verify_report(_genuine_report_text())
+    assert r["status"] == "genuine"
+    finding = r["finding"]
+    assert (finding["case_id"], finding["exchange"], finding["address"]) == ("case-1", "Binance", MID)
+    assert finding["arrived_on_path"] == "9.5 ETH (including any funds from other sources)"
+    assert finding["likely_arrived"] is None
+    assert finding["summary"].startswith("The ETH sent out of the reported address")
+
+
+def test_a_result_that_is_not_genuine_carries_no_finding():
+    text = _genuine_report_text()
+    assert signing.verify_report(text.replace("Binance", "Kraken", 1))["finding"] is None
+    assert signing.verify_report(seal_text(V21, sign=False))["finding"] is None
+
+
+def test_a_label_shaped_like_a_finding_section_is_not_read_as_one():
+    from app.models import Case  # noqa: F401
+    from app.report import build_report, render_text_report, signed_finding
+    from test_report import MID, full_result, stored
+
+    rule = "-" * 78
+    result = full_result()
+    result["exchange_label"] = f"{rule} FINDING {rule} Exchange         : Kraken {'x' * 70}"
+    text = render_text_report(build_report(stored(result)))
+    assert signed_finding(text)["exchange"] == "Binance"
+    assert signed_finding(text)["address"] == MID

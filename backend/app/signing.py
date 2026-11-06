@@ -302,7 +302,7 @@ def verify_report(text: str) -> dict:
     if seal is None:
         return {"status": "not_a_report", "sealed": False, "hash_ok": False, "signed": False,
                 "signature_ok": False, "signature_checked": False, "genuine": False,
-                "extra_content": False, "detail": DETAILS["not_a_report"]}
+                "extra_content": False, "finding": None, "detail": DETAILS["not_a_report"]}
     body = seal.body
     claimed = seal.hash_line.rsplit(": ", 1)[-1].strip()
     hash_ok = sha256_hex(body) == claimed
@@ -331,12 +331,19 @@ def verify_report(text: str) -> dict:
         "issued_by": None,
         "this_server_key": signer.fingerprint,
         "this_server_key_sha256": signer.fingerprint_sha256,
+        "finding": None,
     }
 
     def done(status: str, detail: str | None = None) -> dict:
         result["status"] = status
         result["genuine"] = status == "genuine"
         result["detail"] = detail or DETAILS[status]
+        if status in ("genuine", "genuine_earlier_key"):
+            # What the signed report says, so a reader can hold it against the
+            # PDF's summary page, which no signature covers.
+            from .report import signed_finding
+
+            result["finding"] = signed_finding(body)
         if seal.bom_removed:
             result["detail"] += " (A byte-order mark added by an editor was ignored.)"
         return result

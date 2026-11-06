@@ -103,3 +103,30 @@ def test_page_one_states_a_capped_figure_as_capped():
         "seed_cap": {"amount": 2.0, "basis": "reported_amount", "applied": True}}}}
     text = " ".join(first_page(report)[0].split())
     assert "at most what the victim reported paying" in text and "≈ 2 of 2" in text
+
+
+# -- page 1 is a reading aid, and says so (r1-evidence-crypto-6) ----------------------
+def _real_report() -> tuple[dict, str]:
+    from app.report import build_report, render_text_report
+    from test_report import full_result, stored
+
+    report = build_report(stored(full_result()))
+    return report, render_text_report(report)
+
+
+def test_page_one_says_it_is_not_signed():
+    report, text = _real_report()
+    first = " ".join(PdfReader(io.BytesIO(render_pdf(report, text))).pages[0].extract_text().split())
+    assert "NOT SIGNED" in first
+    assert "not covered by the signature" in first
+    assert "any edit breaks the signature" not in first
+
+
+def test_page_one_prints_the_signed_finding_not_a_different_one():
+    report, text = _real_report()
+    genuine = report["attribution"]["exchange_address"]
+    forged = {**report, "attribution": {**report["attribution"], "exchange": "Kraken",
+                                        "exchange_address": "0x" + "f0" * 20}}
+    first = PdfReader(io.BytesIO(render_pdf(forged, text))).pages[0].extract_text()
+    assert genuine in first and "0x" + "f0" * 20 not in first
+    assert "Binance" in first and "Kraken" not in first

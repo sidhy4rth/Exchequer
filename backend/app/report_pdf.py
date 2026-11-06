@@ -7,6 +7,11 @@ way to file and print it, and the text is what the content hash and the
 signature cover. Every page's footer carries the case id, the content hash
 and the signing key, so a single printed page can be matched to its report.
 
+Only the attached text is signed: anyone can edit a PDF's pages without
+touching it. Part 1 says so at the top, takes the exchange, the address and
+the amount from the signed text (never from anything else), and tells the
+reader to check them against what /verify says the attached file states.
+
 Typeset in IBM Plex (app/fonts, SIL Open Font Licence), the app's own family.
 """
 from __future__ import annotations
@@ -30,8 +35,8 @@ from reportlab.platypus.doctemplate import LayoutError
 from xml.sax.saxutils import escape
 
 from .display_text import one_line, short
-from .evidence import CONTENT_HASH_MARK
-from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso
+from .evidence import CONTENT_HASH_MARK, read_issuer
+from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso, signed_finding
 from .scoring import CAP_WORDING
 from .signing import SIGNATURE_MARK
 
@@ -119,7 +124,8 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     digest, key = _seal_facts(sealed_text)
     case_id = report["case"]["case_id"]
     try:
-        pdf = _build(_part_one(report, st, digest, key) + _part_two(sealed_text, st), case_id, digest, key)
+        pdf = _build(_part_one(report, st, digest, key, sealed_text) + _part_two(sealed_text, st),
+                     case_id, digest, key)
     except LayoutError:
         # Part 1 is a reading aid; the signed report must still be issued.
         logger.warning("Case %s: the PDF summary page could not be laid out; issuing Part 2 only", case_id)
@@ -130,16 +136,39 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     return _attach(pdf, _attachment_name(case_id), sealed_text.encode("utf-8"))
 
 
-def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str, key: str | None) -> list[Any]:
+def _signed_facts(report: dict[str, Any], sealed_text: str) -> dict[str, Any]:
+    """Exchange, address, label, amount and summary as the signed text states them.
+
+    The page must show what the signature covers. They come from the same
+    report, so they agree; if they ever do not, the signed text wins."""
+    attribution = report.get("attribution") or {}
+    signed = signed_finding(sealed_text)
+    if signed is None:  # not a full text report (a test's stand-in): nothing better to read
+        return {"exchange": attribution.get("exchange"), "address": attribution.get("exchange_address"),
+                "label": attribution.get("exchange_wallet_label"), "likely_arrived": None,
+                "summary": report.get("summary", "")}
+    if (signed["exchange"], signed["address"]) != (attribution.get("exchange"), attribution.get("exchange_address")):
+        logger.warning("Case %s: the PDF summary disagrees with the signed text; printing the signed finding",
+                       report["case"]["case_id"])
+    return signed
+
+
+def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str, key: str | None,
+              sealed_text: str = "") -> list[Any]:
     case = report["case"]
     attribution = report.get("attribution") or {}
     confidence = report.get("confidence") or {}
     screening = report.get("risk_screening") or {}
     case_id = case["case_id"]
+    signed = _signed_facts(report, sealed_text)
+    issuer = read_issuer(sealed_text.split(f"\n{CONTENT_HASH_MARK} (", 1)[0]) or {}
 
     story: list[Any] = []
     story.append(_p("EXCHEQUER · CRYPTOCURRENCY TRACE REPORT", st["micro"]))
     story.append(_p(f"Case {case_id}", st["small"]))
+    story.append(Paragraph(
+        f"<font name='Plex-Bold' color='{AMBER.hexval()}'>SUMMARY: NOT SIGNED.</font> The signed record is the "
+        "attached text file, also printed as Part 2. This page is a copy for reading.", st["small"]))
     story.append(Spacer(1, 8))
 
     # -- an old screening list, before anything that relies on the screening ---
@@ -157,13 +186,13 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
         story += [stale, Spacer(1, 8)]
 
     # -- the finding --------------------------------------------------------
-    exchange = attribution.get("exchange")
+    exchange = signed["exchange"]
     heading = exchange or "No exchange reached"
     story.append(_p("WHERE THE MONEY WENT" if case["direction"] == "outgoing" else "WHO FUNDED THE ADDRESS",
                     st["micro"]))
     finding = ParagraphStyle("f2", parent=st["finding"], textColor=GREEN if exchange else INK)
     story.append(_p(heading, finding))
-    story.append(_p(report.get("summary", ""), st["lede"]))
+    story.append(_p(signed["summary"], st["lede"]))
 
     # -- key facts ----------------------------------------------------------
     facts = [
@@ -175,17 +204,20 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
         facts += [
             ({EXPLORER_TAG: "Address to ask the exchange to confirm",
               EXCHANGE_WALLET: "Wallet the funds reached"}.get(attribution.get("kind"), "Address to ask the exchange about"),
-             attribution.get("exchange_address", ""), True),
-            ("Wallet", _label(attribution.get("exchange_wallet_label")), False),
+             signed["address"] or "", True),
+            ("Wallet", _label(signed["label"]), False),
             ("Hops from the reported address", attribution.get("hop_count", ""), False),
         ]
         prorata = attribution.get("prorata") or {}
         cap = prorata.get("seed_cap") or {}
-        if prorata.get("status") == "estimated" and cap.get("applied"):
-            facts.append((f"Likely arrived (pro-rata; at most what "
-                          f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')})",
-                          f"≈ {_num(prorata.get('estimated'))} of {_num(cap.get('amount'))} "
-                          f"{attribution.get('value_currency', '')}", False))
+        if signed["likely_arrived"]:
+            # The signed text's own line, so Part 1 can never state another figure;
+            # it already says what the estimate is capped at (r1-attribution-integrity-7).
+            caption = (f"Likely arrived (pro-rata; at most what "
+                       f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')})"
+                       if prorata.get("status") == "estimated" and cap.get("applied")
+                       else "Sent from the reported address that likely arrived (pro-rata)")
+            facts.append((caption, signed["likely_arrived"], False))
         elif prorata.get("status") == "estimated":
             facts.append(("Sent from the reported address that likely arrived (pro-rata)",
                           f"≈ {_num(prorata.get('estimated'))} of {_num(prorata.get('sent'))} "
@@ -213,14 +245,18 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
 
     # -- how to verify --------------------------------------------------------
     verify = Table([[Paragraph(
-        "<font name='Plex-Bold'>Checking this report.</font> The signed text report is attached to "
-        f"this PDF as <font name='PlexMono'>{escape(_attachment_name(case_id))}</font> (your PDF reader's "
-        "attachments panel) and printed in Part 2. Its last lines carry a SHA-256 content hash and an "
-        "Ed25519 signature made with the issuing server's key. Check the attached file at "
-        "<font name='PlexMono'>/verify</font> on that server: any edit breaks the signature. Text copied "
-        "from the printed pages will not verify, because copying from a PDF changes line breaks.<br/>"
+        "<font name='Plex-Bold'>Checking this report.</font> Only the attached text file is signed: "
+        f"<font name='PlexMono'>{escape(_attachment_name(case_id))}</font> (your PDF reader's attachments "
+        "panel). This page, the printed Part 2 and the footer are copies for reading: they are not covered "
+        "by the signature and can be edited without breaking it. Before acting on this page, check the "
+        f"attached file at <font name='PlexMono'>{escape(_verify_at(issuer.get('issued_by')))}</font>: it "
+        "shows the exchange, the address and the amount the signed report states, which must match this "
+        "page. Text copied from the printed pages will not verify, because copying from a PDF changes "
+        "line breaks.<br/>"
         f"<font name='PlexMono' size='7.5'>content SHA-256 {escape(digest)}<br/>"
-        f"signing key {escape(key or 'none (unsigned)')}</font>", st["small"])]], colWidths=[None])
+        f"signing key {escape(key or 'none (unsigned)')}"
+        + (f"<br/>issued by {escape(one_line(issuer['issued_by']))}" if issuer.get("issued_by") else "")
+        + "</font>", st["small"])]], colWidths=[None])
     verify.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), PANEL), ("BOX", (0, 0), (-1, -1), 0.4, RULE),
         ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
@@ -324,6 +360,10 @@ def _build(story: list[Any], case_id: str, digest: str, key: str | None) -> byte
     )
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     return buffer.getvalue()
+
+
+def _verify_at(issued_by: str | None) -> str:
+    return f"{one_line(issued_by)}/verify" if issued_by else "/verify on the server that issued it"
 
 
 def _attachment_name(case_id: str) -> str:
