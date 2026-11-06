@@ -94,3 +94,30 @@ def test_the_exchange_letter_names_the_pro_rata_amount():
     letter = draft("c1", result, "exchange")
     assert "about 9.420000 USDT" in letter and "98.000000 USDT arrived" in letter
     assert "your own records of the deposits are authoritative" in letter
+
+
+def test_recycled_value_is_never_called_other_sources():
+    # Audit r1-attribution-integrity-5: W bounced the victim's 10,000 through
+    # H nine times before sending it on. Nobody else's money joined, so the
+    # letter must not say 9,000 "came from other sources".
+    import networkx as nx
+
+    from app.prorata import estimate
+
+    class Row:
+        def __init__(self, value, hash_, frm, to, block):
+            self.value_native, self.hash, self.from_address, self.to_address = value, hash_, frm, to
+            self.block_number = self.timestamp = block
+
+    g = nx.DiGraph()
+    g.add_edge("V", "W", value_native=10_000.0, transactions=[
+        {"hash": "vw", "value_native": 10_000.0, "block_number": 100, "timestamp": 100}])
+    g.add_edge("W", "X", value_native=10_000.0, transactions=[
+        {"hash": "wx", "value_native": 10_000.0, "block_number": 200, "timestamp": 200}])
+    out = [Row(10_000.0, f"o{i}", "W", "H", 110 + 2 * i) for i in range(9)]
+    back = [Row(10_000.0, f"b{i}", "H", "W", 111 + 2 * i) for i in range(9)]
+    prorata = estimate(g, ["V", "W", "X"], None, flows_between=lambda *a: (
+        [Row(10_000.0, "vw", "V", "W", 100), *back], [*out, Row(10_000.0, "wx", "W", "X", 200)], True))
+    letter = " ".join(draft("c1", case(asset="USDT", prorata=prorata), "exchange").split())
+    assert "about 10,000.000000 USDT" in letter
+    assert "other sources" not in letter

@@ -14,8 +14,15 @@ from app.scoring import score_case
 
 
 class Tx:
-    def __init__(self, value):
+    """A provider row. Hash, ends and block are optional, as the oldest fixtures had none."""
+
+    def __init__(self, value, hash=None, from_address=None, to_address=None, block=None):
         self.value_native = value
+        self.hash = hash
+        self.from_address = from_address
+        self.to_address = to_address
+        self.block_number = block
+        self.timestamp = block
 
 
 def edge(graph, a, b, value, block, ts=None):
@@ -154,3 +161,88 @@ def test_a_hop_diluted_before_an_unknown_one_is_still_called_out():
     assert result["diluted"] is True and result["lowest_share"] == 0.04
     from app.scoring import _prorata_caveats
     assert any("only 4.0%" in c and "M1" in c for c in _prorata_caveats(result, "USDT"))
+
+
+
+# ---------------------------------------------------------------------------
+# What counts as other people's money (audit r1-attribution-integrity-5, -6)
+# ---------------------------------------------------------------------------
+def _hop_wallet(onward=10_000.0):
+    """V -> W 10,000 at block 100; W -> X `onward` at block 200."""
+    g = nx.DiGraph()
+    edge(g, "V", "W", 10_000.0, 100)
+    edge(g, "W", "X", onward, 200)
+    return g
+
+
+VICTIM_ROW = Tx(10_000.0, hash="VW", from_address="V", to_address="W", block=100)
+ONWARD_ROW = Tx(10_000.0, hash="WX", from_address="W", to_address="X", block=200)
+
+
+def test_a_self_send_does_not_dilute():
+    # Nine sends of the same 10,000 from W to W, for gas only.
+    selfs = [Tx(10_000.0, hash=f"s{i}", from_address="W", to_address="W", block=110 + i) for i in range(9)]
+    result = estimate(_hop_wallet(), ["V", "W", "X"], lambda *a: ([VICTIM_ROW, *selfs], True))
+    hop = result["hops"][0]
+    assert result["estimated"] == 10_000.0 and not result["diluted"]
+    assert hop["self_transfers"] == 90_000.0 and hop["received_in_window"] == 10_000.0
+
+
+def test_a_round_trip_through_a_helper_is_netted():
+    # W -> X2 -> W nine times: no third party's money ever joined.
+    out = [Tx(10_000.0, hash=f"o{i}", from_address="W", to_address="H", block=110 + 2 * i) for i in range(9)]
+    back = [Tx(10_000.0, hash=f"b{i}", from_address="H", to_address="W", block=111 + 2 * i) for i in range(9)]
+    flows = lambda *a: ([VICTIM_ROW, *back], [*out, ONWARD_ROW], True)  # noqa: E731
+    result = estimate(_hop_wallet(), ["V", "W", "X"], None, flows_between=flows)
+    hop = result["hops"][0]
+    assert result["status"] == "estimated" and result["estimated"] == 10_000.0
+    assert hop["recycled_in_window"] == 90_000.0 and hop["recycled_via"][0]["address"] == "H"
+    assert not result["diluted"]
+
+
+def test_a_refund_before_any_payment_is_not_netted():
+    # H paid W first and W paid H back later: H's money did join W.
+    came = Tx(10_000.0, hash="h1", from_address="H", to_address="W", block=110)
+    went = Tx(10_000.0, hash="w1", from_address="W", to_address="H", block=120)
+    flows = lambda *a: ([VICTIM_ROW, came], [went, ONWARD_ROW], True)  # noqa: E731
+    result = estimate(_hop_wallet(), ["V", "W", "X"], None, flows_between=flows)
+    assert result["hops"][0]["recycled_in_window"] == 0.0
+    assert result["estimated"] == 5_000.0
+
+
+def test_the_denominator_is_the_union_of_the_route_and_the_read():
+    # The route's own 10 arrived by internal transfer, which the provider's
+    # list does not carry; a stranger's 10 is in it. Half was the victim's.
+    g = nx.DiGraph()
+    edge(g, "V", "W", 10.0, 100)
+    edge(g, "W", "X", 10.0, 200)
+    stranger = Tx(10.0, hash="st", from_address="S", to_address="W", block=150)
+    result = estimate(g, ["V", "W", "X"], lambda *a: ([stranger], True))
+    assert result["hops"][0]["victim_share"] == 0.5 and result["estimated"] == 5.0
+
+
+def test_the_routes_own_transfer_is_not_counted_twice():
+    g = nx.DiGraph()
+    edge(g, "V", "W", 10.0, 100)
+    edge(g, "W", "X", 10.0, 200)
+    listed = Tx(10.0, hash="VW", from_address="V", to_address="W", block=100)
+    result = estimate(g, ["V", "W", "X"], lambda *a: ([listed], True))
+    assert result["hops"][0]["victim_share"] == 1.0 and result["estimated"] == 10.0
+
+
+def test_a_row_without_a_hash_matches_the_route_by_value():
+    # Never double-counted: a hashless row of the route's value is that transfer.
+    g = nx.DiGraph()
+    edge(g, "V", "W", 10.0, 100)
+    edge(g, "W", "X", 10.0, 200)
+    result = estimate(g, ["V", "W", "X"], lambda *a: ([Tx(10.0)], True))
+    assert result["hops"][0]["victim_share"] == 1.0
+
+
+def test_netted_value_is_said_in_the_caveats():
+    from app.scoring import _prorata_caveats
+    selfs = [Tx(10_000.0, hash=f"s{i}", from_address="W", to_address="W", block=110 + i) for i in range(9)]
+    result = estimate(_hop_wallet(), ["V", "W", "X"], lambda *a: ([VICTIM_ROW, *selfs], True))
+    text = " ".join(_prorata_caveats(result, "USDT"))
+    assert "W sent 90,000.0000 USDT to itself" in text and "netted out" in text
+    assert "upper bound" not in text

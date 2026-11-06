@@ -52,7 +52,7 @@ from .risk_matcher import MIXER, REPORTED, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
 from .prorata import estimate as estimate_prorata
 from .scoring import principal_path, reach_bottlenecks, score_case, seed_outflow
-from .tracing_methods import compare as compare_methods
+from .tracing_methods import compare as compare_methods, read_once
 
 
 logger = logging.getLogger(__name__)
@@ -535,13 +535,17 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                     lead_path = principal_path(result.graph, seed, lead.address)
                 except (nx.NetworkXNoPath, nx.NodeNotFound):
                     lead_path = []
+                # One read of each wallet's flows in its window, shared by
+                # pro-rata and R4: pro-rata needs what the wallet paid out too,
+                # to net out coins it got back (W -> X -> W).
+                flows = getattr(client, "get_flows_between", None)
+                flows = read_once(flows) if flows else None
                 prorata = estimate_prorata(result.graph, lead_path,
-                                           getattr(client, "get_incoming_between", None))
+                                           getattr(client, "get_incoming_between", None), flows_between=flows)
                 # R4: FIFO and LIBR beside pro-rata, on the same path. Before
                 # the evidence manifest below, so their reads are in it.
                 if config.TRACING_METHODS and lead_path:
-                    methods = compare_methods(result.graph, lead_path,
-                                              getattr(client, "get_flows_between", None), prorata)
+                    methods = compare_methods(result.graph, lead_path, flows, prorata)
             # The reported wallet's own statement: what it received and sent in
             # this asset, whether or not anything could be followed onward.
             statement = _wallet_statement(client, seed) if seed_window is None else None

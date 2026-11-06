@@ -15,8 +15,9 @@ from app.prorata import estimate as estimate_prorata
 from app.tracing_methods import FIFO, LIBR, compare
 
 
-def tx(hash_, value, block, ts=None):
-    return SimpleNamespace(hash=hash_, value_native=value, block_number=block, timestamp=ts or block)
+def tx(hash_, value, block, ts=None, frm=None, to=None):
+    return SimpleNamespace(hash=hash_, value_native=value, block_number=block, timestamp=ts or block,
+                           from_address=frm, to_address=to)
 
 
 def edge(graph, a, b, *txs):
@@ -212,3 +213,44 @@ def test_a_method_never_finds_more_than_was_sent(method):
     g, flows = one_hop([tx("v1", 40.0, 1)], [tx("x1", 1000.0, 3)], others_in=[tx("o1", 960.0, 2)])
     result = compare(g, ["V", "M", "X"], flows)[method]
     assert result["estimated"] <= result["sent"] and result["ratio"] <= 1.0
+
+
+
+# ---------------------------------------------------------------------------
+# Recycled coins are not new money (audit r1-attribution-integrity-5)
+# ---------------------------------------------------------------------------
+def _round_trips(n=9):
+    """V pays M 10,000; M bounces it through H n times; M pays X 10,000."""
+    victim = tx("v1", 10_000.0, 1, frm="V", to="M")
+    onward = tx("x1", 10_000.0, 100, frm="M", to="X")
+    out = [tx(f"o{i}", 10_000.0, 2 + 2 * i, frm="M", to="H") for i in range(n)]
+    back = [tx(f"b{i}", 10_000.0, 3 + 2 * i, frm="H", to="M") for i in range(n)]
+    g = nx.DiGraph()
+    edge(g, "V", "M", victim)
+    edge(g, "M", "X", onward)
+    return g, reader([victim, *back], [*out, onward])
+
+
+def test_fifo_carries_the_victims_coins_through_a_round_trip():
+    g, flows = _round_trips()
+    fifo, libr, _ = figures(g, flows)
+    assert fifo == 10_000.0 and libr == 10_000.0
+
+
+def test_self_sends_are_not_lots():
+    victim = tx("v1", 10_000.0, 1, frm="V", to="M")
+    onward = tx("x1", 10_000.0, 100, frm="M", to="X")
+    selfs = [tx(f"s{i}", 10_000.0, 2 + i, frm="M", to="M") for i in range(9)]
+    g = nx.DiGraph()
+    edge(g, "V", "M", victim)
+    edge(g, "M", "X", onward)
+    fifo, libr, result = figures(g, reader([victim, *selfs], [*selfs, onward]))
+    assert fifo == libr == 10_000.0
+    assert result[FIFO]["hops"][0]["received_in_window"] == 10_000.0
+
+
+def test_conservative_is_not_zeroed_by_recycling():
+    g, flows = _round_trips()
+    prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows)
+    result = compare(g, ["V", "M", "X"], flows, prorata)
+    assert result["conservative"] == 10_000.0

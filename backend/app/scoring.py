@@ -549,11 +549,23 @@ def _prorata_caveats(prorata: dict[str, Any] | None, native_symbol: str) -> list
             f"At {low['address']} the traced funds were only {low['victim_share'] * 100:.1f}% of "
             f"what the wallet received before sending on; most of what it moved came from elsewhere."
         )
+    for h in prorata.get("hops") or []:
+        netted = (h.get("self_transfers") or 0.0) + (h.get("recycled_in_window") or 0.0)
+        if netted > 0:
+            parts = []
+            if h.get("self_transfers"):
+                parts.append(f"sent {h['self_transfers']:,.4f} {native_symbol} to itself")
+            if h.get("recycled_in_window"):
+                via = ", ".join(v["address"] for v in h.get("recycled_via") or [])
+                parts.append(f"got {h['recycled_in_window']:,.4f} {native_symbol} back from wallets it had "
+                             f"paid in the window ({via})")
+            out.append(f"{h['address']} {' and '.join(parts)}; that was its own money moving, not anyone "
+                       "else's, and was netted out of what it received.")
     if prorata.get("status") == "estimated" and prorata.get("hops"):
         out.append(
             "The pro-rata estimate counts what each wallet received while the traced funds "
-            "passed through it, not money it already held; an older balance would lower the "
-            "estimate, so read it as an upper bound."
+            "passed through it. Money a wallet already held before they arrived is not counted; "
+            "counting it would lower the estimate."
         )
     return out
 

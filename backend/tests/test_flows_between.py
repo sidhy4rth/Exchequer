@@ -214,9 +214,11 @@ def test_with_the_flag_on_the_case_carries_all_three_figures(traced):
 
 
 def test_with_the_flag_off_nothing_changes_and_nothing_extra_is_read(traced):
+    # Pro-rata reads each hop wallet's flows once (it nets out coins the wallet
+    # got back from wallets it paid), the same one read R4 shares when on.
     result, chain = traced(False)
     case = read_case(result)
     assert result["tracing_methods"] is None
     assert (case.estimates.fifo, case.estimates.libr) == (None, None)
     assert case.estimates.prorata == case.estimates.conservative == 20.0
-    assert chain.flow_reads == []
+    assert chain.flow_reads == [MID]

@@ -438,9 +438,11 @@ arriving and the wallet sending on — not only the ones the trace followed — 
 forward: *share = victim funds in ÷ all funds in; victim funds on = amount sent on × share*. The victim amount
 can only shrink along the path. The case, the report and Present mode show the result as its own figure —
 "≈ 9.42 of 40 USDT of the reported funds likely arrived (pro-rata); 98 arrived in total, the rest from other
-sources" — and a share under 25% at any wallet is called out. Money a wallet already held before the funds
-arrived is not counted, so the estimate is an upper bound; where a wallet received too much in the window to read
-in full, the case says "not estimated" instead of guessing. On the demos it changed nothing where the money moved
+sources" — and a share under 25% at any wallet is called out. "All funds in" is new money only: the route's own
+transfer counts once, and a wallet paying itself or getting back coins it had just paid out (W → X → W) is netted
+out and said so. Money a wallet already held before the funds arrived is not counted; counting it would lower the
+estimate. Where a wallet received too much in the window to read in full, the case says "not estimated" instead of
+guessing, and the amount earns no credit in the score. On the demos it changed nothing where the money moved
 cleanly, and cut the scores of the paths it should: two of DEMO.md trace 10's three phishing wallets (0.58 and 0.50), and a real BSC
 wallet whose 40 USDT was 9.6% of what the next wallet received (0.73 → 0.47).
 
