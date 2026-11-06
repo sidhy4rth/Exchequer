@@ -42,7 +42,7 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       # After a push, wait out a redeploy (Render deploys main on push) so
       # the check is more likely to see the new build than the old one.

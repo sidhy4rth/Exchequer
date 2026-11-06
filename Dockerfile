@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.27.1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # Exchequer — one image, one service.
 #
 # Stage 1 builds the React bundle; stage 2 runs FastAPI and serves that bundle
@@ -9,12 +9,18 @@
 # A plain Dockerfile rather than a platform-specific config so the same image
 # runs on Railway, Fly, Render or any VM with Docker.
 
+# Each base image (and the syntax line above) names its version and the digest
+# that version had when it was pinned, so every build starts from the same
+# bytes; Dependabot proposes digest bumps, which run through CI like any change.
+
 # ---------- stage 1: build the frontend ----------
-FROM node:24-slim AS frontend
+FROM node:24.22.2-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS frontend
 
 WORKDIR /build
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
+# No dependency's install hook runs: none is needed (vite's native parts ship
+# as prebuilt packages), and a hook is how a hijacked release runs code.
+RUN npm ci --ignore-scripts
 
 COPY frontend/ ./
 # Empty base = same-origin requests (/health, /trace). In development this is
@@ -23,7 +29,7 @@ ENV VITE_API_BASE=""
 RUN npm run build
 
 # ---------- stage 2: the application ----------
-FROM python:3.12-slim AS app
+FROM python:3.12.16-slim-trixie@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54 AS app
 
 # Unbuffered so logs appear in the platform's log viewer immediately rather
 # than sitting in a pipe buffer.
