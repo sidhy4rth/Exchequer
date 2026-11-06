@@ -171,3 +171,28 @@ def test_health_detail_reports_the_label_store(client, monkeypatch, tmp_path):
             "required": True, "loaded": False, "rows": 0, "tag": "labels-test"}
     finally:
         get_label_store.cache_clear()
+
+
+@pytest.mark.parametrize("keys", [True, False])
+def test_chain_readiness_builds_no_provider_client(client, monkeypatch, keys):
+    """/chains is public and uncached; it used to build (and close) an httpx
+    client, TLS context and all, for every chain on every request just to
+    learn whether a key was set (r1-providers-8)."""
+    import httpx
+
+    from app.chain_data import provider_status
+
+    for name in ("ETHERSCAN_API_KEY", "NODEREAL_API_KEY"):
+        monkeypatch.setattr(config, name, "k" if keys else None)
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("a provider client was built")
+
+    monkeypatch.setattr(httpx.Client, "__init__", refuse)
+    status = provider_status()
+    assert status["tron"]["ready"] is True  # TronGrid answers without a key
+    for key in ("ethereum", "polygon", "arbitrum", "bsc"):
+        assert status[key]["ready"] is keys
+        assert (status[key]["detail"] is None) is keys
+    body = client.get("/chains").json()
+    assert {k: c["ready"] for k, c in body["chains"].items()} == {k: s["ready"] for k, s in status.items()}

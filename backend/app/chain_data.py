@@ -105,12 +105,11 @@ def open_source(chain: config.Chain, asset: str | None = None) -> TransactionSou
             asset_symbol=token.symbol if token else chain.native_symbol,
         )
 
+    ready, missing = provider_ready(chain)
+    if not ready:
+        raise ProviderNotConfiguredError(missing)
+
     if chain.provider == "nodereal":
-        if not config.NODEREAL_API_KEY:
-            raise ProviderNotConfiguredError(
-                f"NODEREAL_API_KEY is not set, so {chain.name} cannot be traced. "
-                "Add a free key from https://nodereal.io to backend/.env."
-            )
         return NoderealClient(
             chain_slug="bsc-mainnet" if chain.key == "bsc" else "eth-mainnet",
             native_symbol=chain.native_symbol,
@@ -120,11 +119,6 @@ def open_source(chain: config.Chain, asset: str | None = None) -> TransactionSou
         )
 
     if chain.provider == "etherscan":
-        if not config.ETHERSCAN_API_KEY:
-            raise ProviderNotConfiguredError(
-                "ETHERSCAN_API_KEY is not set. Copy backend/.env.example to "
-                "backend/.env and add a free key from https://etherscan.io/apis"
-            )
         # `tokentx` is on the same free key as `txlist`, so following USDT or
         # USDC here costs nothing extra.
         return EtherscanClient(
@@ -139,18 +133,37 @@ def open_source(chain: config.Chain, asset: str | None = None) -> TransactionSou
     )
 
 
+def provider_ready(chain: config.Chain) -> tuple[bool, str | None]:
+    """(whether `chain` can be traced, what to do if not), from configuration
+    alone. open_source and /chains share it; no client is built to answer."""
+    if chain.provider == "trongrid":
+        # TronGrid answers without a key at a reduced rate limit, so Tron is
+        # usable out of the box; a key only raises throughput.
+        return True, None
+    if chain.provider == "nodereal":
+        if config.NODEREAL_API_KEY:
+            return True, None
+        return False, (f"NODEREAL_API_KEY is not set, so {chain.name} cannot be traced. "
+                       "Add a free key from https://nodereal.io to backend/.env.")
+    if chain.provider == "etherscan":
+        if config.ETHERSCAN_API_KEY:
+            return True, None
+        return False, ("ETHERSCAN_API_KEY is not set. Copy backend/.env.example to "
+                       "backend/.env and add a free key from https://etherscan.io/apis")
+    return False, f"Unknown provider '{chain.provider}' configured for {chain.name}."
+
+
 def provider_status() -> dict[str, dict[str, object]]:
     """Per-chain readiness, for /health.
 
     Reported up front because "which chains can I actually trace right now" is
-    the question that otherwise gets answered by a failed trace mid-demo.
+    the question that otherwise gets answered by a failed trace mid-demo. A
+    configuration check only: /chains is public and asks this on every
+    request, and building a provider client (an httpx client and its TLS
+    context) per chain per request cost most of its CPU.
     """
     status: dict[str, dict[str, object]] = {}
     for key, chain in config.CHAINS.items():
-        try:
-            open_source(chain).close()
-            ready, detail = True, None
-        except ProviderNotConfiguredError as exc:
-            ready, detail = False, str(exc)
+        ready, detail = provider_ready(chain)
         status[key] = {**chain.to_dict(), "ready": ready, "detail": detail}
     return status
