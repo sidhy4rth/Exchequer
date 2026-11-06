@@ -675,7 +675,9 @@ class NoderealClient:
         Walks forward from after+1 to the indexed head in API-sized windows,
         at most SINCE_WINDOWS of them, one ascending page each. Never runs
         the nonce search a trace uses for quiet wallets: a dormant watched
-        wallet costs the head read and a window or two."""
+        wallet costs the head read and a window or two. A page that is one
+        block alone is followed through that block, so nothing in it after
+        the page counts as read unseen."""
         if not is_valid_address(address):
             raise ValueError(f"Not a valid EVM address: {address!r}")
         head = self.head_block()
@@ -693,19 +695,64 @@ class NoderealClient:
             }
             if self.contract_addresses:
                 params["contractAddresses"] = self.contract_addresses
-            result = self._rpc("nr_getAssetTransfers", [params]) or {}
-            raws = [r for r in (result.get("transfers") or []) if isinstance(r, dict)]
-            txs = [self._to_transaction(r) for r in raws]
-            sent += [t for t in txs if t and not t.is_error and t.value_wei > 0]
-            if result.get("pageKey") and raws:
+            try:
+                raws, page_key = self._since_page(params)
+            except NoderealError as exc:
+                # The index is further behind than its margin: step back, as _scan does.
+                if NOT_INDEXED not in str(exc).lower() or end <= start:
+                    raise
+                end = head = max(start, end - 256)
+                self._head_block = min(self._head_block or end, end)
+                params["toBlock"] = hex(end)
+                raws, page_key = self._since_page(params)
+            if page_key and not raws:
+                # "More" with nothing on the page: the window was not read.
+                raise NoderealError("NodeReal offered more transfers but returned none")
+            if page_key:
                 # More in this window than one page: stop inside it.
                 blocks = [_block_of(r) for r in raws]
                 through, _ = split_page(blocks, after, full=True)
-                return SinceRead([t for t in sent if t.block_number <= through], max(through, after), False)
+                cut = None
+                if min(blocks) == max(blocks):
+                    raws, whole = self._whole_block(params, blocks[0])
+                    through, cut = blocks[0], (None if whole else blocks[0])
+                sent += self._kept(raws)
+                return SinceRead([t for t in sent if t.block_number <= through], max(through, after), False, cut)
+            sent += self._kept(raws)
             through, start = end, end + 1
             if len(sent) >= limit:
                 break
         return SinceRead(sent, through, start > head)
+
+    def _since_page(self, params: dict[str, Any]) -> tuple[list[dict[str, Any]], str | None]:
+        """One page for a watch read: (records, pageKey). An answer that is no
+        transfer list is a failed read, never an empty one: read as empty it
+        would move the watch's cursor over blocks nobody read."""
+        result = self._rpc("nr_getAssetTransfers", [params])
+        if not isinstance(result, dict):
+            raise NoderealError("NodeReal returned no transfer list")
+        return [r for r in (result.get("transfers") or []) if isinstance(r, dict)], result.get("pageKey")
+
+    def _whole_block(self, params: dict[str, Any], block: int) -> tuple[list[dict[str, Any]], bool]:
+        """Every record of one block the address sent, page after page, and
+        whether that was all of them (False: the pages ran out first)."""
+        query = {**params, "fromBlock": hex(block), "toBlock": hex(block), "maxCount": hex(MAX_COUNT)}
+        raws: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for _ in range(MAX_PAGES_PER_WINDOW):
+            page, key = self._since_page(query)
+            raws += page
+            if not key:
+                return raws, True
+            if not page or key in seen:
+                break
+            seen.add(key)
+            query["pageKey"] = key
+        return raws, False
+
+    def _kept(self, raws: list[dict[str, Any]]) -> list[Transaction]:
+        txs = (self._to_transaction(r) for r in raws)
+        return [t for t in txs if t and not t.is_error and t.value_wei > 0]
 
     def get_transaction_receipt(self, tx_hash: str) -> dict[str, Any] | None:
         """One transaction's receipt and event logs, for reading swap outputs."""

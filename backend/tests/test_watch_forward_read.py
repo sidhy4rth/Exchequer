@@ -37,9 +37,10 @@ def store(tmp_path, monkeypatch):
 class Etherscan:
     """txlist / tokentx / txlistinternal over `records`, as Etherscan pages them."""
 
-    def __init__(self):
+    def __init__(self, head=HEAD):
         self.records: list[dict] = []
         self.requests: list[dict] = []
+        self.head = head
 
     def add(self, block, frm, to, value, token=False, n=0):
         rec = {"blockNumber": str(block), "timeStamp": str(1_800_000_000 + block), "from": frm, "to": to,
@@ -52,7 +53,7 @@ class Etherscan:
         q = dict(request.url.params)
         self.requests.append(q)
         if q.get("module") == "proxy":
-            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": hex(HEAD)})
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": hex(self.head)})
         if q["action"] == "txlistinternal":
             return httpx.Response(200, json={"status": "0", "message": "No transactions found", "result": []})
         token = q["action"] == "tokentx"
@@ -155,3 +156,44 @@ def test_a_check_on_a_dormant_wallet_costs_one_request(store):
     assert watchlist.check_watch(w.id, source=eth.source()) == []
     assert len(eth.requests) == 1 and eth.requests[0]["sort"] == "asc"
     assert eth.requests[0]["startblock"] == str(HEAD + 1)
+
+
+def test_a_block_that_fills_a_page_on_its_own_is_read_whole(store):
+    # One transaction can emit fifty token records into the wallet, and the
+    # cash-out can sit in the same block after them: the page is that block
+    # alone. It used to count as read, and the cash-out was never seen.
+    eth = Etherscan()
+    w = watch(eth, "USDT")
+    for n in range(50):
+        eth.add(200, "0x" + f"{n + 1:040x}", W, 1, token=True, n=n)
+    eth.add(200, W, BINANCE_14, 25_000 * 10**6, token=True, n=99)
+    alerts = watchlist.check_watch(w.id, source=eth.source(token=True))
+    assert [(a["kind"], a["value"]) for a in alerts] == [("exchange", 25_000.0)]
+    assert cursor_of(w) == 200
+
+
+def test_a_watch_reads_blocks_above_one_hundred_million(store):
+    # Arbitrum One passed block 99,999,999 in 2023: a read capped there asked
+    # for an empty range from the head on, and the watch never saw anything.
+    eth = Etherscan(head=400_000_000)
+    w = watch(eth)
+    assert cursor_of(w) == 400_000_000
+    eth.add(400_000_050, W, BINANCE_14, 25 * 10**18)
+    assert [a["kind"] for a in watchlist.check_watch(w.id, source=eth.source())] == ["exchange"]
+    assert int(eth.requests[-1]["endblock"]) > 10**9
+
+
+def test_a_block_too_full_to_read_whole_is_counted_as_read_and_said_so(store, monkeypatch):
+    # More records in one block than a read of that block can return: the
+    # cursor must move past it (or it would stall), and the watch must say
+    # some may be missing rather than miss them quietly.
+    from app import etherscan_client
+    monkeypatch.setattr(etherscan_client, "WHOLE_BLOCK", 60)
+    eth = Etherscan()
+    w = watch(eth, "USDT")
+    for n in range(70):
+        eth.add(200, "0x" + f"{n + 1:040x}", W, 1, token=True, n=n)
+    alerts = watchlist.check_watch(w.id, source=eth.source(token=True))
+    assert [a["kind"] for a in alerts] == ["more"]
+    assert "block 200" in alerts[0]["message"] and "may be missing" in alerts[0]["message"]
+    assert cursor_of(w) == 200

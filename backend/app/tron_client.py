@@ -584,9 +584,10 @@ class TronClient:
         """What `address` sent after `after` (Unix seconds), oldest first, for a watch.
 
         Confirmed records only, ascending from after+1 s, page after page until
-        `limit` transfers or MAX_SCAN records. Every record read counts toward
-        `through` -- failed and zero-value ones too, so a burst of dust can
-        neither hide a transfer nor hold the cursor back."""
+        `limit` transfers (and past the first second) or MAX_SCAN records.
+        Every record read counts toward `through` -- failed and zero-value
+        ones too, so a burst of dust can neither hide a transfer nor hold the
+        cursor back."""
         if not is_tron_address(address):
             raise ValueError(f"Not a valid Tron address: {address!r}")
         if self.contract_address:
@@ -600,6 +601,7 @@ class TronClient:
             params["contract_address"] = self.contract_address
         sent: list[Transaction] = []
         stamps: list[int] = []
+        cut = None
         while True:
             body = self._get(path, params)
             records = [r for r in (body.get("data") or []) if isinstance(r, dict)]
@@ -612,11 +614,15 @@ class TronClient:
             if not fingerprint or not records:
                 through, complete = split_page(stamps, after, full=False)
                 break
-            if len(sent) >= limit or len(stamps) >= MAX_SCAN:
+            # Stop at the limit only once the read has left its first second:
+            # a second filled by one block's sends is read to its end.
+            if (len(sent) >= limit and min(stamps) != max(stamps)) or len(stamps) >= MAX_SCAN:
                 through, complete = split_page(stamps, after, full=True)
+                if min(stamps) == max(stamps):
+                    cut = through  # one second held more than MAX_SCAN records
                 break
             params["fingerprint"] = fingerprint
-        return SinceRead([t for t in sent if after < t.timestamp <= through], through, complete)
+        return SinceRead([t for t in sent if after < t.timestamp <= through], through, complete, cut)
 
     def get_transactions(self, address: str, limit: int | None = None, sort: str = "desc"):
         """Present for interface parity; callers pick a direction explicitly."""

@@ -561,10 +561,11 @@ def _read(client: Any, chain: config.Chain, address: str, cursor: int | None,
     forward = getattr(client, "read_outgoing_since", None)
     if cursor is not None and forward is not None:
         got: list[Any] = []
-        after, complete = cursor, False
+        after, complete, cut = cursor, False, None
         for _ in range(MAX_PAGES_PER_CHECK):
             page = forward(address, after=after, limit=FETCH_LIMIT)
             got += [t for t in page.transfers if after < position(t) <= page.through]
+            cut = getattr(page, "cut", None) or cut
             if page.through <= after:
                 complete = page.complete
                 break
@@ -572,10 +573,16 @@ def _read(client: Any, chain: config.Chain, address: str, cursor: int | None,
             if page.complete:
                 complete = True
                 break
-        notice = None if complete else (
-            f"Not everything since the last check was read in one go: this check reached "
-            f"{_reached(chain, after)}. Press Check now again to read on, or re-trace the wallet.")
-        return got, after, notice
+        notes = []
+        if cut is not None:
+            # A block too full to read whole counts as read, or the cursor
+            # would stall on it: say so rather than miss it quietly.
+            notes.append(f"More records than one read returns sat at {_reached(chain, cut)}: some "
+                         "transfers there may be missing here; re-trace the wallet to see them all.")
+        if not complete:
+            notes.append(f"Not everything since the last check was read in one go: this check reached "
+                         f"{_reached(chain, after)}. Press Check now again to read on, or re-trace the wallet.")
+        return got, after, " ".join(notes) or None
 
     transfers = client.get_outgoing_transactions(address, limit=FETCH_LIMIT)
     page_info = getattr(client, "newest_page_info", None)
