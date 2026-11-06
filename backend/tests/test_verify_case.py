@@ -121,3 +121,79 @@ def test_the_command_line_replays_a_recording_with_no_network(monkeypatch, capsy
                                       str(FIXTURES / "demo_12_tron.json")])
     assert vc.main() == 0
     assert "5 transfers: 5 confirmed, 0 mismatch, 0 unchecked" in capsys.readouterr().out
+
+
+# -- JSON-RPC errors are failures, not answers (r1-scripts-6) -----------------------
+RATE_LIMITED = {"jsonrpc": "2.0", "id": 1, "error": {"code": -32005, "message": "rate limited"}}
+
+
+def nodes(*bodies_per_node):
+    """An httpx client whose Ethereum nodes answer in turn: node i gives bodies_per_node[i](method)."""
+    def handle(request: httpx.Request) -> httpx.Response:
+        index = vc.ETHEREUM_NODES.index(str(request.url).rstrip("/"))
+        method = json.loads(request.content)["method"]
+        return httpx.Response(200, json=bodies_per_node[index](method))
+    return httpx.Client(transport=httpx.MockTransport(handle))
+
+
+def live(http: httpx.Client):
+    return lambda chain, digest, token: vc.read_live(http, chain, digest, token)
+
+
+def recorded_eth(digest: str) -> dict:
+    return answers("demo_1_ethereum.json")[digest]
+
+
+def test_nodes_that_only_rate_limit_leave_the_transfer_unchecked_not_mismatched():
+    report = _demo_report(1)
+    report["appendix"]["transactions"] = report["appendix"]["transactions"][:1]
+    checks = verify(report, live(nodes(lambda _m: RATE_LIMITED, lambda _m: RATE_LIMITED)))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+    assert exit_code(checks) == 2
+
+
+def test_one_node_without_history_and_one_rate_limited_is_unchecked():
+    report = _demo_report(1)
+    report["appendix"]["transactions"] = report["appendix"]["transactions"][:1]
+    checks = verify(report, live(nodes(lambda _m: {"jsonrpc": "2.0", "id": 1, "result": None},
+                                       lambda _m: RATE_LIMITED)))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_both_nodes_saying_null_is_still_a_mismatch():
+    report = _demo_report(1)
+    report["appendix"]["transactions"] = report["appendix"]["transactions"][:1]
+    null = {"jsonrpc": "2.0", "id": 1, "result": None}
+    checks = verify(report, live(nodes(lambda _m: null, lambda _m: null)))
+    assert [c.outcome for c in checks] == [MISMATCH]
+
+
+def test_a_native_transfer_whose_receipt_was_rate_limited_is_never_confirmed():
+    report = _demo_report(1)
+    first = report["appendix"]["transactions"][0]
+    report["appendix"]["transactions"] = [first]
+    saved = recorded_eth(first["hash"])
+
+    def node(method):
+        if method == "eth_getTransactionByHash":
+            return {"jsonrpc": "2.0", "id": 1, "result": saved["transaction"]}
+        return RATE_LIMITED
+
+    checks = verify(report, live(nodes(node, node)))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_a_native_transfer_with_no_receipt_is_unchecked():
+    report = _demo_report(1)
+    first = report["appendix"]["transactions"][0]["hash"]
+    saved = answers("demo_1_ethereum.json")
+    saved[first] = {**saved[first], "receipt": None}
+    assert outcomes(report, saved)[0] == UNCHECKED
+
+
+def test_a_receipt_without_a_status_is_unchecked():
+    report = _demo_report(1)
+    first = report["appendix"]["transactions"][0]["hash"]
+    saved = answers("demo_1_ethereum.json")
+    saved[first] = {**saved[first], "receipt": {k: v for k, v in saved[first]["receipt"].items() if k != "status"}}
+    assert outcomes(report, saved)[0] == UNCHECKED

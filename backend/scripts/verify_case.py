@@ -121,13 +121,17 @@ def check_ethereum(transfer: dict[str, Any], answer: dict[str, Any], token: Asse
         return Check(digest, MISMATCH, "the second provider does not have this transaction")
     if transfer.get("internal"):
         return Check(digest, UNCHECKED, "the transaction exists, but it was moved by a contract call")
-    if receipt and receipt.get("status") == "0x0":
+    if not receipt:
+        # Without the receipt, success cannot be shown: a reverted transfer
+        # carries the same from, to and value as one that went through.
+        return Check(digest, UNCHECKED, "the second provider returned no receipt, so success cannot be confirmed")
+    if receipt.get("status") == "0x0":
         return Check(digest, MISMATCH, "the transaction failed on chain")
+    if receipt.get("status") != "0x1":
+        return Check(digest, UNCHECKED, "the receipt does not say whether the transaction succeeded")
     if token.native:
         problem = _names(transfer, tx.get("from"), tx.get("to"), Decimal(int(tx.get("value", "0x0"), 16)) / 10**token.decimals)
         return Check(digest, MISMATCH, problem) if problem else Check(digest, CONFIRMED)
-    if not receipt:
-        return Check(digest, UNCHECKED, "the second provider returned no receipt for this token transfer")
     closest = "no matching Transfer event in the transaction"
     for log in receipt.get("logs") or []:
         topics = log.get("topics") or []
@@ -170,20 +174,29 @@ CHECKERS: dict[str, Callable[[dict[str, Any], dict[str, Any], Asset], Check]] = 
 
 # -- reading ---------------------------------------------------------------------
 def _ethereum_rpc(http: httpx.Client, method: str, digest: str) -> dict[str, Any] | None:
-    """The first node with an answer: one without old history returns null for a real transaction."""
-    errors = 0
+    """The first node with an answer: one without old history returns null for a real transaction.
+
+    None only when every node gave a clean null. A JSON-RPC error (how public
+    nodes answer when they rate-limit, with HTTP 200) is a failed node, not
+    "no such transaction": if any node failed and none answered, this raises,
+    and the transfer is unchecked rather than a mismatch."""
+    failures: list[str] = []
     for node in ETHEREUM_NODES:
         try:
             response = http.post(node, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": [digest]})
             response.raise_for_status()
-            result = response.json().get("result")
-        except (httpx.HTTPError, ValueError):
-            errors += 1
+            body = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            failures.append(f"{node}: {type(exc).__name__}")
             continue
-        if result:
-            return result
-    if errors == len(ETHEREUM_NODES):
-        raise httpx.HTTPError(f"no node answered {method}")
+        if not isinstance(body, dict) or "error" in body or "result" not in body:
+            error = body.get("error") if isinstance(body, dict) else None
+            failures.append(f"{node}: {error.get('message') if isinstance(error, dict) else 'no result'}")
+            continue
+        if body["result"]:
+            return body["result"]
+    if failures:
+        raise httpx.HTTPError(f"{method}: no clean answer ({'; '.join(failures)})")
     return None
 
 
