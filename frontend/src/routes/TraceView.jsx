@@ -344,7 +344,23 @@ export default function TraceView() {
   const payments = result?.intake?.payments ?? []
   // A hash that carried several transfers has one entry per transfer (leg),
   // so payments are counted by hash.
-  const paymentCount = new Set(payments.map((p) => p.tx_hash)).size
+  const paidByHash = useMemo(() => {
+    const byHash = new Map()
+    for (const p of payments) {
+      const row = byHash.get(p.tx_hash) ?? { tx_hash: p.tx_hash, timestamp: p.timestamp, amount: 0, legs: 0, senders: [], labels: [], checks: [], found_by: p.found_by }
+      row.amount += p.amount || 0
+      row.legs += 1
+      if (p.from && !row.senders.includes(p.from)) row.senders.push(p.from)
+      if (p.payer_label && !row.labels.includes(p.payer_label)) row.labels.push(p.payer_label)
+      row.checks.push(p.payer_is_victim)
+      byHash.set(p.tx_hash, row)
+    }
+    // Any leg from another wallet marks the payment; all from the victim's clears it.
+    return [...byHash.values()].map((r) => ({
+      ...r, payerIsVictim: r.checks.includes(false) ? false : r.checks.length && r.checks.every((c) => c === true) ? true : null,
+    }))
+  }, [payments])
+  const paymentCount = paidByHash.length
   const windowStart = payments.length ? Math.min(...payments.map((p) => p.timestamp || Infinity)) : null
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
@@ -697,23 +713,25 @@ export default function TraceView() {
                     <span className="note">confirm each against the complaint{windowStart && windowStart !== Infinity ? ` · the trace reads the wallet from ${when(windowStart)} UTC` : ''}</span>
                   </summary>
                   <div className="feed">
-                    {payments.map((p) => {
+                    {paidByHash.map((p) => {
                       const link = txUrl(result.explorer_url, result.chain, p.tx_hash)
                       return (
-                        <div className="row" key={`${p.tx_hash}:${p.leg ?? 0}`}>
+                        <div className="row" key={p.tx_hash}>
                           <div className="hop">PAY</div>
                           <div>
                             <div className="pair">
                               <Address value={p.tx_hash} head={10} tail={8} />
                               {link && <a className="note" href={link} target="_blank" rel="noreferrer">explorer</a>}
-                              {p.leg != null && <span className="note">transfer {p.leg + 1} of this hash</span>}
+                              {p.legs > 1 && <span className="note">{p.legs} transfers</span>}
                             </div>
                             <div className="sub">
                               <span>{when(p.timestamp)}</span>
-                              <span>from <Address value={p.from} head={8} tail={6} /></span>
-                              {p.payer_label && <span className="pill">{p.payer_label}</span>}
-                              {p.payer_is_victim === true && <span className="pill green">the victim's wallet</span>}
-                              {p.payer_is_victim === false && <span className="pill amber" title="The sender is not the victim's wallet entered with the complaint">not the victim's wallet</span>}
+                              <span>from {p.senders.length
+                                ? p.senders.map((a) => <Address key={a} value={a} head={8} tail={6} />)
+                                : <span className="note">hidden</span>}</span>
+                              {p.labels.map((l) => <span className="pill" key={l}>{l}</span>)}
+                              {p.payerIsVictim === true && <span className="pill green">the victim's wallet</span>}
+                              {p.payerIsVictim === false && <span className="pill red" title="A sender is not the victim's wallet entered with the complaint">not the victim's wallet</span>}
                               {p.found_by === 'officer_search' && <span className="pill">found by the officer</span>}
                             </div>
                           </div>
@@ -721,6 +739,7 @@ export default function TraceView() {
                         </div>
                       )
                     })}
+                    <p className="note" style={{ padding: '8px 12px' }}>Check these against the complaint before sending letters: the trace reads the wallet from the first one.</p>
                   </div>
                 </details>
               )}

@@ -246,13 +246,22 @@ describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
     const card = document.querySelector('.payments-card')
     expect(card).toHaveTextContent("Victim's payments · 2")
     expect(card).toHaveTextContent('confirm each against the complaint')
+    expect(card).toHaveTextContent('Check these against the complaint before sending letters')
     const rows = card.querySelectorAll('.row')
-    expect(rows).toHaveLength(3)
+    expect(rows).toHaveLength(2)
     expect(rows[0]).toHaveTextContent('Binance 14')
     expect(rows[0]).toHaveTextContent("not the victim's wallet")
-    expect(rows[0]).toHaveTextContent('transfer 1 of this hash')
-    expect(rows[2]).toHaveTextContent("the victim's wallet")
-    expect(rows[2].querySelector('a')).toHaveAttribute('href', `https://etherscan.io/tx/${H2}`)
+    expect(rows[0]).toHaveTextContent('2 transfers')
+    expect(rows[0].querySelector('.amount')).toHaveTextContent(/^4,?000/)
+    expect(rows[1]).toHaveTextContent("the victim's wallet")
+    expect(rows[1].querySelector('a')).toHaveAttribute('href', `https://etherscan.io/tx/${H2}`)
+  })
+
+  it('renders a payment whose sender is withheld', async () => {
+    const intake = { mode: 'payment', payments: [pay({ tx_hash: H2, amount: 5, timestamp: 1_700_000_000, from: null })] }
+    await openPaymentCase({ intake })
+    const row = document.querySelector('.payments-card .row')
+    expect(row).toHaveTextContent('from hidden')
   })
 
   it("greys statement rows from before the victim's first payment", async () => {
