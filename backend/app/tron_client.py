@@ -209,9 +209,19 @@ class TronClient:
 
     # -- parsing -----------------------------------------------------------
     def _token_transfer(self, raw: dict[str, Any]) -> Transaction | None:
-        """One TRC-20 transfer from /transactions/trc20."""
+        """One TRC-20 transfer from /transactions/trc20, or None.
+
+        That endpoint also returns approval records (`type` "Approval"): an
+        approve() moves nothing, but read as a transfer it became an edge of
+        up to 2**256-1 units to the spender. Only rows that do not say they
+        are something else are transfers, and only of the token asked for."""
+        if raw.get("type", "Transfer") != "Transfer":
+            return None
         try:
             info = raw.get("token_info") or {}
+            token = info.get("address")
+            if self.contract_address and token and token != self.contract_address:
+                return None
             decimals = int(info.get("decimals", 6))
             units = int(raw.get("value", "0") or "0")
             return Transaction(
@@ -326,7 +336,10 @@ class TronClient:
             path, parse = f"/v1/accounts/{address}/transactions/trc20", self._token_transfer
         else:
             path, parse = f"/v1/accounts/{address}/transactions", self._native_transfer
-        params: dict[str, Any] = {direction_param: "true", "limit": MAX_PAGE, "order_by": "block_timestamp,asc",
+        # only_confirmed: TronGrid otherwise also returns records not yet in
+        # a block, which evidence must never rest on.
+        params: dict[str, Any] = {direction_param: "true", "only_confirmed": "true",
+                                  "limit": MAX_PAGE, "order_by": "block_timestamp,asc",
                                   "min_timestamp": start_ts * 1000, "max_timestamp": end_ts * 1000}
         if self.contract_address:
             params["contract_address"] = self.contract_address
@@ -386,6 +399,7 @@ class TronClient:
         while len(collected) < cap and scanned < MAX_SCAN:
             params: dict[str, Any] = {
                 direction_param: "true",
+                "only_confirmed": "true",  # never unconfirmed records (see _between)
                 "limit": page_size,
                 "order_by": "block_timestamp,desc" if since_ts is None else "block_timestamp,asc",
             }

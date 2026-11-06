@@ -94,7 +94,8 @@ def test_tron_reads_each_direction_once_in_the_window():
     incoming, outgoing, complete = client.get_flows_between(wallet, 0, 0, 1_700_000_000, 1_700_000_100)
     assert complete is True
     assert [t.to_address for t in incoming] == [wallet] and [t.from_address for t in outgoing] == [wallet]
-    assert {"only_to", "only_from"} == {k for p in seen for k in p if k.startswith("only_")}
+    assert {"only_to", "only_from"} == {k for p in seen for k in p if k in ("only_to", "only_from")}
+    assert all(p.get("only_confirmed") == "true" for p in seen)  # never unconfirmed records
     assert all(p["min_timestamp"] == str(1_700_000_000_000) for p in seen)
 
 
