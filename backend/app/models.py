@@ -171,15 +171,23 @@ def _postgres_url(url: str) -> str:
     return url
 
 
+# A hosted Postgres closes idle connections (Neon suspends after a few
+# minutes), so a pooled one is tested before use, never trusted. Every
+# connect gives up after 5 s and a request waits at most 10 s for a pooled
+# connection: an unreachable store used to hang each connect for the TCP retry
+# period (about 2 minutes) and each request 30 s, until every worker thread
+# was stuck. Ten connections stay well inside the free plan's limit.
+POSTGRES_ENGINE_OPTIONS: dict = dict(pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=5,
+                                     pool_timeout=10, connect_args={"connect_timeout": 5})
+
+
 def _make_engine() -> Engine:
     # hide_parameters: a database error's text then names the statement but
     # not its values -- an address, a case's JSON, an officer's note -- and
     # that text reaches the platform's logs.
     if config.DATABASE_URL:
-        # A hosted Postgres closes idle connections (Neon suspends after a few
-        # minutes), so a pooled one is tested before use, never trusted.
-        return create_engine(_postgres_url(config.DATABASE_URL), future=True,
-                             pool_pre_ping=True, pool_recycle=300, hide_parameters=True)
+        return create_engine(_postgres_url(config.DATABASE_URL), future=True, hide_parameters=True,
+                             **POSTGRES_ENGINE_OPTIONS)
     return create_engine(
         f"sqlite:///{config.DB_PATH}", future=True, hide_parameters=True,
         # Wait up to 15 s for a lock rather than failing at once: background

@@ -27,12 +27,16 @@ router = APIRouter()
 # HEAD too: uptime monitors and keep-awake pingers often send HEAD, and 405
 # read as "down".
 @router.api_route("/health", methods=["GET", "HEAD"])
-def health() -> dict[str, str]:
+async def health() -> dict[str, str]:
     """Liveness, for the host's health check and the uptime monitors: up or
     not, and whether anyone may start live traces ("open"), only holders of
     the demo code ("code"), or nobody ("closed") -- what GET /access already
     tells the console, where a monitor sees it. What the site can trace is
-    /chains; how it is configured is /health/detail, for the operator."""
+    /chains; how it is configured is /health/detail, for the operator.
+
+    async, so it runs on the event loop: a sync route needs one of the 40
+    worker threads, and when a slow database had them all, the host's health
+    check failed and restarted a site that was only busy."""
     return {"status": "ok", "access": access.state()}
 
 

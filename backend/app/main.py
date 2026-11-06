@@ -33,6 +33,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import InterfaceError, OperationalError
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from . import batches as batch_runner
 from . import backups, config, log_safety, models, rate_limit, warmup, watchlist
@@ -163,8 +164,10 @@ app = FastAPI(
 
 @app.exception_handler(OperationalError)
 @app.exception_handler(InterfaceError)
+@app.exception_handler(PoolTimeoutError)
 async def store_unavailable(_request: Request, exc: Exception) -> JSONResponse:
-    """The database could not be reached: say so, rather than a bare 500."""
+    """The database could not be reached, or every pooled connection is busy
+    (PoolTimeoutError): say so, rather than a bare 500."""
     logger.error("Case store unavailable: %s", _short(exc))
     return JSONResponse(status_code=503, headers={"Retry-After": "60"},
                         content={"detail": "The case store is unavailable right now. Try again in a minute."})
