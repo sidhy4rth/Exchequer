@@ -245,6 +245,9 @@ def seal_text(text: str, sign: bool = True) -> str:
     if sign and (text.startswith(SEAL_MARKS[0]) or f"\n{SEAL_MARKS[0]}" in text):
         # Signed, it would verify as changed: never issue that.
         raise ValueError("The report body contains a CONTENT HASH line of its own; refusing to sign it.")
+    if sign and "\r\n" in text:
+        # read_seal turns CRLF into LF before hashing, so this could never verify.
+        raise ValueError("The report body contains a CRLF line ending; refusing to sign it.")
     if not sign:
         return "\n".join([text, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): "
                                 f"{sha256_hex(text)}", UNSIGNED_HOW]) + "\n"

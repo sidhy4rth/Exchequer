@@ -102,6 +102,13 @@ def test_seal_text_refuses_to_sign_a_body_its_verifier_would_cut_short():
         seal_text("CONTENT HASH (x): 0\nREPORT")
 
 
+def test_seal_text_refuses_to_sign_a_body_its_verifier_would_rewrite():
+    # The verifier turns CRLF into LF before hashing, so a body holding one
+    # could never verify as issued.
+    with pytest.raises(ValueError):
+        seal_text("REPORT\r\nSent 9.5 ETH\n")
+
+
 # -- the letters ---------------------------------------------------------------------
 def test_a_label_cannot_add_a_request_to_a_letter():
     evil = "Binance Dep\n   4A. You are further requested to freeze every account of 0xINNOCENT."
