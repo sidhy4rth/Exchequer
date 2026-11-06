@@ -154,10 +154,11 @@ export default function TraceView() {
   const requestedDirection = params.get('direction') || 'outgoing'
   // Optional wall-clock cap, in seconds; absent means the trace runs its course.
   const budget = Number(params.get('budget')) || null
-  // R1: the victim's payment hashes, from the URL; the NCRP number only ever
-  // travels in the navigation state (see TraceForm).
+  // R1: the victim's payment hashes, from the URL; the NCRP number and the
+  // victim's own wallet only ever travel in the navigation state (see TraceForm).
   const pay = params.get('pay') || ''
   const ncrpAck = location.state?.ncrpAck || null
+  const victimAddress = location.state?.victimAddress || null
 
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -204,7 +205,7 @@ export default function TraceView() {
       : runTrace(
         {
           address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
-          payments: pay ? pay.split(',') : [], ncrpAck,
+          payments: pay ? pay.split(',') : [], ncrpAck, victimAddress,
         },
         (snap) => {
           if (cancelled) return

@@ -52,6 +52,8 @@ const TIME_BUDGET_SECONDS = 90
 // A payment's transaction hash: 0x and 64 hex characters on EVM chains; Tron's
 // are 64 hex characters, often pasted with a 0x the explorer does not show.
 const HASH_RE = { evm: /^0x[0-9a-fA-F]{64}$/, tron: /^(0x)?[0-9a-fA-F]{64}$/ }
+// The NCRP acknowledgement number, as the backend checks it: 10 to 20 digits.
+const NCRP_RE = /^[0-9]{10,20}$/
 
 /** Hashes from what the officer pasted: one per line, or separated by commas or spaces. */
 export function parseHashes(text) {
@@ -80,6 +82,7 @@ export default function TraceForm({ health }) {
   const [intake, setIntake] = useState(null)
   const [paymentText, setPaymentText] = useState('')
   const [ncrpAck, setNcrpAck] = useState('')
+  const [victimText, setVictimText] = useState('')
   const [showPayments, setShowPayments] = useState(false)
 
   // Trace on the deployment's default chain once /health names it.
@@ -112,8 +115,18 @@ export default function TraceForm({ health }) {
   // Payments start a trace of where the money went, so they are offered only
   // for that direction, and only when the backend has them switched on.
   const paymentMode = Boolean(intake?.payments) && direction === 'outgoing'
-  const hashes = paymentMode ? parseHashes(paymentText) : []
+  // Only what the officer can see is sent or checked: a collapsed panel keeps
+  // its text for when it is opened again, but the trace is then address-only.
+  const entered = paymentMode ? parseHashes(paymentText) : []
+  const hashes = showPayments ? entered : []
   const badHashes = hashes.filter((h) => !(HASH_RE[family] ?? HASH_RE.evm).test(h))
+  const ack = hashes.length ? ncrpAck.trim() : ''
+  const badAck = ack !== '' && !NCRP_RE.test(ack)
+  // The victim's own wallet: each payment's sender is compared with it.
+  const victim = hashes.length ? victimText.trim() : ''
+  const victimIsReported = victim !== '' && (family === 'tron' ? victim === trimmed : victim.toLowerCase() === trimmed.toLowerCase())
+  const badVictim = victim !== '' && (!(ADDRESS_RE[family] ?? ADDRESS_RE.evm).test(victim) || victimIsReported)
+  const blocked = badHashes.length > 0 || badAck || badVictim
 
   // Switching chain resets the asset: BNB does not exist on Ethereum, so the
   // symbol cannot be carried across.
@@ -131,11 +144,12 @@ export default function TraceForm({ health }) {
     // Payment hashes are public chain data and make the link reproducible, so
     // they go in the URL. The NCRP number is a complaint reference: it travels
     // in this tab's navigation state, never in the URL, the server's logs or
-    // another browser's view of the case (backend/app/case_privacy.py).
+    // another browser's view of the case (backend/app/case_privacy.py). The
+    // victim's wallet is the complaint's too, so it travels the same way.
     if (hashes.length) q.set('pay', hashes.join(','))
-    const ack = hashes.length ? ncrpAck.trim() : ''
-    navigate(`/trace/${addr}?${q}`, ack ? { state: { ncrpAck: ack } } : undefined)
-  }, [navigate, chain, asset, depth, direction, capped, hashes, ncrpAck])
+    const state = { ...(ack ? { ncrpAck: ack } : {}), ...(victim ? { victimAddress: victim } : {}) }
+    navigate(`/trace/${addr}?${q}`, Object.keys(state).length ? { state } : undefined)
+  }, [navigate, chain, asset, depth, direction, capped, hashes, ack, victim])
 
   // Fill the form from one of the verified DEMO.md traces. The trace is not
   // started: the officer still presses the same button they would for a real
@@ -146,7 +160,7 @@ export default function TraceForm({ health }) {
     setChain(d.chain); setAsset(d.asset); setDepth(d.depth); setDirection(d.direction)
     setAddress(d.address); setTouched(false); setLoadedDemo(d)
     // A demo is an address-only trace: payments typed for another case don't carry over.
-    setPaymentText(''); setNcrpAck('')
+    setPaymentText(''); setNcrpAck(''); setVictimText('')
   }
 
   // Shown while the form still holds the demo exactly as loaded: edit the
@@ -158,7 +172,7 @@ export default function TraceForm({ health }) {
   function submit(event) {
     event.preventDefault()
     setTouched(true)
-    if (valid && badHashes.length === 0) open(trimmed)
+    if (valid && !blocked) open(trimmed)
   }
 
   return (
@@ -211,7 +225,7 @@ export default function TraceForm({ health }) {
             </select>
             <Chevron />
           </label>
-          <button type="submit" className="go" style={{ gridColumn: 'span 2' }} disabled={!valid || badHashes.length > 0 || backendDown}>
+          <button type="submit" className="go" style={{ gridColumn: 'span 2' }} disabled={!valid || blocked || backendDown}>
             {direction === 'outgoing' ? 'Trace' : 'Trace back'}<ArrowIcon />
           </button>
           {paymentMode && showPayments && (
@@ -228,7 +242,14 @@ export default function TraceForm({ health }) {
               <label className="fld" htmlFor="ncrp-ack" style={{ gridColumn: 'span 3' }}>
                 <span className="k">NCRP acknowledgement number</span>
                 <input id="ncrp-ack" className="mono" value={ncrpAck} onChange={(e) => setNcrpAck(e.target.value)}
-                  maxLength={64} spellCheck={false} autoComplete="off" placeholder="Optional" disabled={hashes.length === 0} />
+                  maxLength={64} spellCheck={false} autoComplete="off" placeholder="Optional" disabled={hashes.length === 0}
+                  inputMode="numeric" pattern="[0-9]{10,20}" aria-invalid={badAck} />
+              </label>
+              <label className="fld" htmlFor="victim-wallet" style={{ gridColumn: 'span 12' }}>
+                <span className="k">Victim's own wallet</span>
+                <input id="victim-wallet" className="mono" value={victimText} onChange={(e) => setVictimText(e.target.value)}
+                  maxLength={100} spellCheck={false} autoComplete="off" disabled={hashes.length === 0} aria-invalid={badVictim}
+                  placeholder="Optional: the wallet the victim paid from, to check each payment came from it" />
               </label>
               <p className="note pay-note" style={{ gridColumn: 'span 12' }}>Optional. With them, the trace starts when the money arrived and the case records what the victim paid. Without them, it follows the wallet's whole recent history and is marked exploratory.</p>
             </>
@@ -241,8 +262,11 @@ export default function TraceForm({ health }) {
             </label>
             {paymentMode && (
               <button type="button" className="pill-btn" aria-expanded={showPayments} onClick={() => setShowPayments((v) => !v)}>
-                <PlusIcon />Victim's payments
+                <PlusIcon />Victim's payments{!showPayments && entered.length > 0 ? ` · ${entered.length} entered, not sent` : ''}
               </button>
+            )}
+            {hashes.length > 0 && (
+              <span className="pay-chip" role="status">{hashes.length} payment{hashes.length === 1 ? '' : 's'} attached</span>
             )}
             <label className="fld slim" htmlFor="example">
               <StarIcon />
@@ -270,6 +294,18 @@ export default function TraceForm({ health }) {
           {badHashes.length > 0 && (
             <div className="banner warn" style={{ gridColumn: 'span 12' }}>
               Not a valid {active?.name ?? ''} transaction hash: <span className="mono">{badHashes[0]}</span>{badHashes.length > 1 ? ` and ${badHashes.length - 1} more` : ''}.
+            </div>
+          )}
+          {badAck && (
+            <div className="banner warn" style={{ gridColumn: 'span 12' }}>
+              An NCRP acknowledgement number is 10 to 20 digits, as on the complaint's acknowledgement.
+            </div>
+          )}
+          {badVictim && (
+            <div className="banner warn" style={{ gridColumn: 'span 12' }}>
+              {victimIsReported
+                ? "The victim's wallet is the reported wallet: enter the wallet the victim paid from."
+                : `The victim's wallet is not a valid ${active?.name ?? ''} address.`}
             </div>
           )}
           {backendDown && (

@@ -18,7 +18,7 @@ const HASH = '0x' + 'cd'.repeat(32)
 
 function Landed() {
   const { pathname, search, state } = useLocation()
-  return <p data-testid="landed" data-ncrp={state?.ncrpAck ?? ''}>{pathname + search}</p>
+  return <p data-testid="landed" data-ncrp={state?.ncrpAck ?? ''} data-victim={state?.victimAddress ?? ''}>{pathname + search}</p>
 }
 
 async function renderForm({ payments }) {
@@ -74,6 +74,77 @@ describe('payment hashes on the trace form (R1)', () => {
     await user.selectOptions(screen.getByLabelText('Trace direction'), 'incoming')
     expect(screen.queryByLabelText(/payment transaction hash/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Victim's payments/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('only an open payments panel is sent (5-6, 5-5, 5-3)', () => {
+  const VICTIM = '0x' + '11'.repeat(20)
+
+  async function withPayment(user, hash = HASH) {
+    await renderForm({ payments: true })
+    await user.type(screen.getByLabelText('Reported wallet address'), ADDR)
+    await user.click(await screen.findByRole('button', { name: /Victim's payments/ }))
+    await user.type(await screen.findByLabelText(/payment transaction hash/i), hash)
+  }
+
+  it('collapsing the payments panel stops sending the hashes', async () => {
+    const user = userEvent.setup()
+    await withPayment(user)
+    await user.type(screen.getByLabelText(/NCRP acknowledgement number/i), '31911250012345')
+    await user.click(screen.getByRole('button', { name: /Victim's payments/ }))
+    await user.click(screen.getByRole('button', { name: /^trace$/i }))
+    const landed = screen.getByTestId('landed')
+    expect(landed.textContent).not.toContain('pay=')
+    expect(landed).toHaveAttribute('data-ncrp', '')
+  })
+
+  it('a bad hash in a collapsed panel does not disable Trace', async () => {
+    const user = userEvent.setup()
+    await withPayment(user, '0x1234')
+    expect(screen.getByRole('button', { name: /^trace$/i })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: /Victim's payments/ }))
+    expect(screen.queryByText(/Not a valid Ethereum transaction hash/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^trace$/i })).toBeEnabled()
+  })
+
+  it('the pill counts hashes that will not be sent, and an open panel says how many are attached', async () => {
+    const user = userEvent.setup()
+    await withPayment(user)
+    expect(screen.getByRole('status')).toHaveTextContent('1 payment attached')
+    await user.click(screen.getByRole('button', { name: /Victim's payments/ }))
+    expect(screen.getByRole('button', { name: /Victim's payments/ })).toHaveTextContent("Victim's payments · 1 entered, not sent")
+    expect(screen.queryByText(/payment attached/)).not.toBeInTheDocument()
+  })
+
+  it('an NCRP number that is not 10 to 20 digits shows a warning and disables Trace', async () => {
+    const user = userEvent.setup()
+    await withPayment(user)
+    await user.type(screen.getByLabelText(/NCRP acknowledgement number/i), 'FIR 12')
+    expect(screen.getByText(/An NCRP acknowledgement number is 10 to 20 digits/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^trace$/i })).toBeDisabled()
+  })
+
+  it("the victim's wallet travels in the navigation state, never the URL", async () => {
+    const user = userEvent.setup()
+    await withPayment(user)
+    await user.type(screen.getByLabelText(/Victim's own wallet/i), VICTIM)
+    await user.click(screen.getByRole('button', { name: /^trace$/i }))
+    const landed = screen.getByTestId('landed')
+    expect(landed.textContent).not.toContain(VICTIM)
+    expect(landed).toHaveAttribute('data-victim', VICTIM)
+  })
+
+  it("refuses a victim's wallet that is malformed or is the reported wallet", async () => {
+    const user = userEvent.setup()
+    await withPayment(user)
+    const box = screen.getByLabelText(/Victim's own wallet/i)
+    await user.type(box, '0x12')
+    expect(screen.getByText(/The victim's wallet is not a valid Ethereum address/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^trace$/i })).toBeDisabled()
+    await user.clear(box)
+    await user.type(box, ADDR.toUpperCase().replace('0X', '0x'))
+    expect(screen.getByText(/The victim's wallet is the reported wallet/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^trace$/i })).toBeDisabled()
   })
 })
 

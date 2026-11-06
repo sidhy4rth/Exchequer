@@ -119,12 +119,15 @@ describe('background traces', () => {
       return new Response(JSON.stringify({ job_id: 'j9', status: 'done', progress: {}, result: { case_id: 'c9' } }))
     })
     const { runTrace } = await import('./api')
-    const running = runTrace({ address, payments: ['0x' + 'a'.repeat(64)], ncrpAck: '31911250012345' })
+    const victim = '0x' + 'b1c7'.repeat(10)
+    const running = runTrace({ address, payments: ['0x' + 'a'.repeat(64)], ncrpAck: '31911250012345', victimAddress: victim })
     const stored = () => Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i))
       .map((k) => k + sessionStorage.getItem(k)).join('|')
     await vi.waitFor(() => expect(stored()).toContain('j9'))
     expect(posted[0].ncrp_ack).toBe('31911250012345')  // the server still gets it
     expect(stored()).not.toContain('31911250012345')
+    expect(posted[0].victim_address).toBe(victim)  // the victim's wallet is a particular too
+    expect(stored()).not.toContain(victim)
     resolveJob()
     expect(await running).toEqual({ case_id: 'c9' })
   })
@@ -186,6 +189,23 @@ describe('background traces', () => {
     ])
     const { runTrace } = await import('./api')
     await expect(runTrace({ address: '0x' + '5'.repeat(40) })).rejects.toThrow('provider down')
+  })
+})
+
+describe("the victim's wallet (5-3)", () => {
+  it('goes to the backend with the payments, and never without them', async () => {
+    const bodies = []
+    globalThis.fetch = vi.fn(async (url, init = {}) => {
+      if ((init.method || 'GET') === 'POST') { bodies.push(JSON.parse(init.body)); return new Response(JSON.stringify({ job_id: `v${bodies.length}`, status: 'running' }), { status: 202 }) }
+      return new Response(JSON.stringify({ status: 'done', result: { case_id: 'c' } }), { status: 200 })
+    })
+    const { runTrace } = await import('./api')
+    const victim = '0x' + '1'.repeat(40)
+    const hash = '0x' + 'c'.repeat(64)
+    await runTrace({ address: '0x' + '8'.repeat(40), payments: [hash], ncrpAck: '31911250012345', victimAddress: victim })
+    await runTrace({ address: '0x' + '9'.repeat(40), victimAddress: victim })
+    expect(bodies[0]).toMatchObject({ payments: [{ tx_hash: hash }], ncrp_ack: '31911250012345', victim_address: victim })
+    expect(bodies[1]).not.toHaveProperty('victim_address')
   })
 })
 

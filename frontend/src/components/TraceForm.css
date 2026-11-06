@@ -102,6 +102,7 @@ html[data-theme="dark"] .trace-card {
 .trace-card .pill-btn[aria-expanded="true"] { border-color: var(--on-rule); }
 .trace-card .recorded-link { font-size: 13px; }
 .trace-card .pay-note { margin: -2px 2px 0; font-size: 12px; }
+.trace-card .pay-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--on-rule); background: var(--on); font-size: 12px; }
 .trace-card .banner { margin: 0; }
 
 @media (max-width: 760px) {

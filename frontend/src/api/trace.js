@@ -189,7 +189,7 @@ export async function stopTraceJob(jobId) {
  * `onProgress(snapshot)` receives { status, progress: { stage, hop, max_depth,
  * level_size, level_read, addresses }, elapsed } as the trace moves.
  */
-export function runTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments, ncrpAck }, onProgress) {
+export function runTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments, ncrpAck, victimAddress }, onProgress) {
   const trace = {
     address,
     ...(maxDepth ? { max_depth: maxDepth } : {}),
@@ -201,9 +201,15 @@ export function runTrace({ address, maxDepth, chain, asset, direction, timeBudge
     // incoming transfer to `address`, and reads the wallet from the first.
     ...(payments?.length ? { payments: payments.map((h) => ({ tx_hash: h })) } : {}),
   }
-  const body = JSON.stringify({ ...trace, ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}) })
+  const body = JSON.stringify({
+    ...trace,
+    ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}),
+    // The victim's own wallet: the backend compares each payment's sender with it.
+    ...(victimAddress && payments?.length ? { victim_address: victimAddress } : {}),
+  })
   // What identifies the trace in this tab, and is kept in sessionStorage so a
-  // reload re-attaches: everything but the NCRP number, a complaint reference.
+  // reload re-attaches: everything but the complaint's particulars (the NCRP
+  // number and the victim's own wallet).
   const key = JSON.stringify(trace)
   const existing = jobsInFlight.get(key)
   if (existing) { existing.listeners.add(onProgress); return existing.promise }
