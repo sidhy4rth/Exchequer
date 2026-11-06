@@ -25,6 +25,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -181,7 +182,17 @@ def _is_page_load(request: Request) -> bool:
     return "text/html" in request.headers.get("accept", "")
 
 
-@app.get("/{full_path:path}", include_in_schema=False)
+@app.exception_handler(RequestValidationError)
+async def invalid_request(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    """What was wrong with a request, without echoing what it sent: the input
+    may be a victim's details, and a NaN or Infinity in it cannot be written
+    as JSON at all (the default reply then failed with a 500)."""
+    errors = [{"loc": list(e.get("loc", ())), "msg": e.get("msg", ""), "type": e.get("type", "")}
+              for e in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors})
+
+
+@app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
 def spa(full_path: str, request: Request):
     """The single-page app for a browser opening any path the API did not
     claim; a JSON 404 for anything else.
@@ -195,8 +206,12 @@ def spa(full_path: str, request: Request):
     """
     index = FRONTEND_DIR / "index.html"
     # A real file (favicon, manifest) is served as itself.
-    candidate = (FRONTEND_DIR / full_path).resolve()
-    if full_path and candidate.is_file() and FRONTEND_DIR.resolve() in candidate.parents:
+    try:
+        candidate = (FRONTEND_DIR / full_path).resolve()
+        is_file = bool(full_path) and candidate.is_file()
+    except (OSError, ValueError):  # a NUL byte, a segment too long for the filesystem
+        is_file = False
+    if is_file and FRONTEND_DIR.resolve() in candidate.parents:
         return FileResponse(candidate)
     if not index.is_file() or not _is_page_load(request):
         return JSONResponse({"detail": "Not Found"}, status_code=404)

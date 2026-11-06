@@ -34,7 +34,8 @@ class RequestChange(BaseModel):
     reference: str | None = Field(None, max_length=120)
     notes: str | None = Field(None, max_length=4000)
     sent_at: str | None = Field(None, max_length=32)
-    amount_frozen: float | None = None
+    # Finite only: a NaN or Infinity cannot be written back out as JSON.
+    amount_frozen: float | None = Field(None, allow_inf_nan=False)
 
 
 def _owner(user: User) -> str:

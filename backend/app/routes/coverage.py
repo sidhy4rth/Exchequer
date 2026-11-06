@@ -24,7 +24,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/health")
+# HEAD too: uptime monitors and keep-awake pingers often send HEAD, and 405
+# read as "down".
+@router.api_route("/health", methods=["GET", "HEAD"])
 def health() -> dict[str, str]:
     """Liveness, for the host's health check and the uptime monitors: up or
     not, and nothing else. What the site can trace is /chains; how it is

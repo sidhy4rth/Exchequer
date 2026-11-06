@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
 
+from . import config
+
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
     "script-src 'self'",
@@ -56,7 +58,10 @@ class SecurityHeadersMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        is_docs = scope.get("path", "").startswith(_DOCS_PATHS)
+        # Only the docs pages themselves, and only when they exist: with docs
+        # off, /docs is the app like any other path and keeps the page policy.
+        path = scope.get("path", "")
+        is_docs = config.API_DOCS_ENABLED and (path in _DOCS_PATHS or path.startswith("/docs/"))
 
         async def send_with_headers(message: dict[str, Any]) -> None:
             if message["type"] == "http.response.start":
