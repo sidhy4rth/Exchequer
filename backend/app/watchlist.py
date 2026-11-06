@@ -42,7 +42,7 @@ from urllib.parse import urlsplit
 import httpx
 from sqlalchemy import and_, case, delete, func, select, update
 
-from . import config, models, ownership
+from . import config, models, ownership, webhook_vault
 from .api_budget import TraceBudget, fresh_reads
 from .chain_data import open_source
 from .etherscan_client import normalize_address
@@ -257,13 +257,14 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
                         .where(models.Watch.owner_hash == owner, models.Watch.active))
         if mine >= MAX_WATCHES_PER_OWNER:
             raise WatchError(f"This browser already watches {MAX_WATCHES_PER_OWNER} addresses; remove one first.")
+        sealed = webhook_vault.seal(hook)
         existing = s.scalar(select(models.Watch).where(
             models.Watch.owner_hash == owner, models.Watch.active, models.Watch.address == address,
             models.Watch.chain == chain.key, models.Watch.asset == asset_symbol))
         if existing is not None:
             existing.touched_at = created
             if hook:
-                existing.webhook_url = hook
+                existing.webhook_url = sealed
             s.commit()
             s.refresh(existing)
             s.expunge(existing)
@@ -284,7 +285,7 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
             raise WatchError("The server is watching as many addresses as it can. Try again later.")
         watch = models.Watch(
             id=str(uuid.uuid4()), owner_hash=owner, chain=chain.key, asset=asset_symbol,
-            address=address, note=(note or "")[:200], case_id=case_id, webhook_url=hook,
+            address=address, note=(note or "")[:200], case_id=case_id, webhook_url=sealed,
             created_at=created, last_seen_block=start, active=True,
             client_hash=connection, touched_at=created,
         )
@@ -297,6 +298,7 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
 
 
 def watch_summary(watch: models.Watch, unread: int = 0) -> dict[str, Any]:
+    hook = webhook_vault.reveal(watch.webhook_url)
     return {
         "watch_id": watch.id,
         "address": watch.address,
@@ -304,7 +306,9 @@ def watch_summary(watch: models.Watch, unread: int = 0) -> dict[str, Any]:
         "asset": watch.asset,
         "note": watch.note,
         "case_id": watch.case_id,
-        "webhook": mask_webhook(watch.webhook_url),
+        "webhook": mask_webhook(hook),
+        # Sealed under a key this server no longer has: it must be entered again.
+        "webhook_unreadable": bool(watch.webhook_url) and hook is None,
         "created_at": watch.created_at,
         "last_checked_at": watch.last_checked_at,
         "baseline_set": watch.last_seen_block is not None,
@@ -360,6 +364,34 @@ def remove_watch(owner: str, watch_id: str) -> bool:
         watch.webhook_url = None
         s.commit()
         return True
+
+
+def clear_webhook(owner: str, watch_id: str) -> models.Watch | None:
+    """Stop posting a watch's alerts anywhere, and forget the URL; the watch
+    goes on. None if the owner has no such watch."""
+    with models.session() as s:
+        watch = s.get(models.Watch, watch_id)
+        if watch is None or watch.owner_hash != owner or not watch.active:
+            return None
+        watch.webhook_url = None
+        s.commit()
+        s.refresh(watch)
+        s.expunge(watch)
+        return watch
+
+
+def seal_legacy_hooks() -> int:
+    """Seal the webhook URLs stored before sealing (or before the key was
+    set). Run at startup; returns how many were sealed."""
+    if not webhook_vault.sealing():
+        return 0
+    with models.session() as s:
+        rows = list(s.scalars(select(models.Watch).where(
+            models.Watch.webhook_url.is_not(None), models.Watch.webhook_url.not_like(webhook_vault.PREFIX + "%"))))
+        for watch in rows:
+            watch.webhook_url = webhook_vault.seal(watch.webhook_url) if watch.active else None
+        s.commit()
+        return len(rows)
 
 
 def list_alerts(owner: str, unread_only: bool = False, limit: int = 100) -> list[dict[str, Any]]:
@@ -578,7 +610,8 @@ def check_watch(watch_id: str, source: Source = open_source,
         if watch is None or not watch.active:
             return []
         address, asset, chain_key = watch.address, watch.asset, watch.chain
-        owner, last_seen, hook = watch.owner_hash, watch.last_seen_block, watch.webhook_url
+        owner, last_seen = watch.owner_hash, watch.last_seen_block
+        hook = webhook_vault.reveal(watch.webhook_url)  # None if it cannot be read
         case_id, created_at = watch.case_id, watch.created_at
     try:
         chain = config.get_chain(chain_key)

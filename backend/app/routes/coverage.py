@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import access, api_budget, config, label_store, models, ownership, rate_limit, signing, warmup, watchlist
+from .. import access, api_budget, config, label_store, models, ownership, rate_limit, signing, warmup, watchlist, webhook_vault
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, SEIZED, STOLEN,
@@ -129,6 +129,8 @@ def health_detail(request: Request) -> dict[str, Any]:
         # When watches were last checked, and whether that was too long ago:
         # on a host that sleeps when idle, the watcher sleeps too (R30).
         "watcher": watchlist.watcher_status(),
+        # Whether watch webhook URLs are sealed at rest (EXCHEQUER_WEBHOOK_KEY).
+        "webhooks_sealed": webhook_vault.sealing(),
         # Which unfinished features are switched on here (config.FLAGS).
         "flags": config.FLAGS,
         # What this instance actually runs with: the host's environment can

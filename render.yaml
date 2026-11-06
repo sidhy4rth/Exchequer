@@ -41,6 +41,10 @@ services:
       # read it in the dashboard. Public /health says only up or down.
       - key: EXCHEQUER_HEALTH_TOKEN
         generateValue: true
+      # Seals watch webhook URLs at rest (webhook_vault.py). Generated once;
+      # changing it means every officer re-enters their webhook.
+      - key: EXCHEQUER_WEBHOOK_KEY
+        generateValue: true
       # The demo code (access.py): set, the public site shows recorded demos
       # and live tracing needs the code. LEFT BLANK, THE SITE IS OPEN: anyone
       # can spend the provider quota. Every start then logs an error and

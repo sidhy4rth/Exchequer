@@ -4,6 +4,7 @@
     GET    /watches                    this browser's watches, with unread counts
     DELETE /watches/{id}               stop watching
     POST   /watches/{id}/check         check now, at most once a minute
+    DELETE /watches/{id}/webhook       stop posting this watch's alerts to a webhook
     GET    /alerts                     this browser's alerts, newest first
     POST   /alerts/read                mark some or all read
 
@@ -30,7 +31,8 @@ class WatchRequest(BaseModel):
     asset: OneLine | None = Field(None, max_length=16)
     note: OneLine = Field("", max_length=200)
     case_id: OneLine | None = Field(None, max_length=36)
-    webhook_url: OneLine | None = Field(None, max_length=500)
+    # 300 characters sealed (webhook_vault) still fit the 500-character column.
+    webhook_url: OneLine | None = Field(None, max_length=300)
 
 
 class ReadRequest(BaseModel):
@@ -88,6 +90,16 @@ def delete_watch(watch_id: str, http: Request) -> dict[str, Any]:
     if not watchlist.remove_watch(_owner(http), watch_id):
         raise HTTPException(status_code=404, detail="No such watch.")
     return {"removed": watch_id}
+
+
+@router.delete("/watches/{watch_id}/webhook")
+def delete_webhook(watch_id: str, http: Request) -> dict[str, Any]:
+    """A leaked or unwanted webhook can be dropped without losing the watch.
+    Not charged against the watch allowance: it only removes."""
+    watch = watchlist.clear_webhook(_owner(http), watch_id)
+    if watch is None:
+        raise HTTPException(status_code=404, detail="No such watch.")
+    return watchlist.watch_summary(watch)
 
 
 # A manual check reads the provider fresh, past the cache, so it is bounded

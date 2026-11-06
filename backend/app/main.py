@@ -36,7 +36,7 @@ from sqlalchemy.exc import DataError, InterfaceError, OperationalError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from . import batches as batch_runner
-from . import backups, config, log_safety, models, rate_limit, warmup, watchlist
+from . import backups, config, log_safety, models, rate_limit, warmup, watchlist, webhook_vault
 from . import access
 from .access import DemoCodeMiddleware
 from .input_rules import ControlCharMiddleware
@@ -86,6 +86,12 @@ def _open_store() -> bool:
         batch_runner.mark_interrupted()
     except Exception as exc:  # noqa: BLE001 -- a read-only store still serves cases
         logger.error("Could not mark interrupted batches: %s", _short(exc))
+    try:
+        sealed = watchlist.seal_legacy_hooks()
+        if sealed:
+            logger.info("Sealed %d stored webhook URLs", sealed)
+    except Exception as exc:  # noqa: BLE001 -- the hooks still work unsealed
+        logger.error("Could not seal stored webhook URLs: %s", _short(exc))
     return True
 
 
@@ -142,6 +148,7 @@ async def lifespan(_app: FastAPI):
     # traced in the background so the first real request finds them cached.
     warmup.start_in_background()
     # Watched addresses are re-read on a schedule (off unless EXCHEQUER_WATCHER).
+    webhook_vault.warn_if_unsealed()
     watchlist.start_in_background()
     # A daily snapshot of the store beside it (off unless EXCHEQUER_BACKUPS).
     backups.start_in_background()

@@ -628,6 +628,9 @@ WATCHER_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_WATCHER")
 WATCH_INTERVAL_SECONDS: int = max(60, _int_env("EXCHEQUER_WATCH_INTERVAL", 600))
 # Hosts beyond Slack, Discord and Google Chat that alert webhooks may post to.
 WEBHOOK_EXTRA_HOSTS: str = os.getenv("EXCHEQUER_WEBHOOK_HOSTS", "")
+# Seals watch webhook URLs at rest (webhook_vault.py). Any secret; keep it
+# with the signing key: changing it makes every stored webhook unreadable.
+WEBHOOK_KEY: str = os.getenv("EXCHEQUER_WEBHOOK_KEY", "").strip()
 
 # Daily snapshots of the store beside it (backups.py): off unless
 # EXCHEQUER_BACKUPS is set, and off on a temporary disk, where the snapshot

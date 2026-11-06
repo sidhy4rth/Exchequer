@@ -231,6 +231,31 @@ describe('Watchlist on the home page', () => {
     expect(screen.getByText(/Not everything since the last check/)).toBeInTheDocument()
   })
 
+  it("removes a watch's webhook and keeps the watch", async () => {
+    let watch = { watch_id: 'w1', address: '0x' + '7'.repeat(40), chain: 'ethereum', asset: 'ETH', last_checked_at: null, unread_alerts: 0, webhook: 'https://hooks.slack.com/…' }
+    const calls = api({
+      'GET /watches': () => ({ body: { count: 1, watches: [watch] } }),
+      'GET /alerts': { body: { count: 0, alerts: [] } },
+      'DELETE /watches/w1/webhook': () => { watch = { ...watch, webhook: null }; return { body: watch } },
+    })
+    const user = userEvent.setup()
+    inRouter(<Watchlist />)
+    expect(await screen.findByText(/posts to hooks.slack.com/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Remove webhook' }))
+    await waitFor(() => expect(screen.queryByText(/posts to hooks.slack.com/)).not.toBeInTheDocument())
+    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/watches/w1/webhook')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Check now' })).toBeInTheDocument()
+  })
+
+  it('says when a webhook must be entered again', async () => {
+    api({
+      'GET /watches': { body: { count: 1, watches: [{ watch_id: 'w1', address: '0x' + '7'.repeat(40), chain: 'ethereum', asset: 'ETH', last_checked_at: null, unread_alerts: 0, webhook: null, webhook_unreadable: true }] } },
+      'GET /alerts': { body: { count: 0, alerts: [] } },
+    })
+    inRouter(<Watchlist />)
+    expect(await screen.findByText(/webhook needs re-entering/)).toBeInTheDocument()
+  })
+
   it('renders nothing when this browser watches nothing', async () => {
     api({ 'GET /watches': { body: { count: 0, watches: [] } }, 'GET /alerts': { body: { count: 0, alerts: [] } } })
     const { container } = inRouter(<Watchlist />)

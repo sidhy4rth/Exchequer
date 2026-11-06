@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { plain } from '../text'
-import { checkWatchNow, fetchAlerts, fetchWatches, logRequest, markAlertsRead, removeWatch } from '../api'
+import { checkWatchNow, fetchAlerts, fetchWatches, logRequest, markAlertsRead, removeWatch, removeWatchHook } from '../api'
 
 // The home page's watchlist: what this browser watches and what moved.
 // Refreshes every minute while open; the server checks on its own schedule,
@@ -80,10 +80,11 @@ export default function Watchlist({ onCount } = {}) {
             <div className="watch-row" key={w.watch_id}>
               <div>
                 <span className="mono">{short(w.address)}</span>
-                <small>{w.chain} · {w.asset}{w.note ? ` · ${w.note}` : ''} · checked {ago(w.last_checked_at)}{w.webhook ? ` · posts to ${w.webhook.replace('https://', '').replace('/…', '')}` : ''}{w.last_error ? ` · ${w.last_error}` : ''}</small>
+                <small>{w.chain} · {w.asset}{w.note ? ` · ${w.note}` : ''} · checked {ago(w.last_checked_at)}{w.webhook ? ` · posts to ${w.webhook.replace('https://', '').replace('/…', '')}` : ''}{w.webhook_unreadable ? ' · webhook needs re-entering' : ''}{w.last_error ? ` · ${w.last_error}` : ''}</small>
               </div>
               <span className="watch-actions">
                 {w.case_id && <Link to={`/case/${w.case_id}`} className="quiet-link">case</Link>}
+                {(w.webhook || w.webhook_unreadable) && <button className="quiet" disabled={busy !== null} onClick={() => act(w.watch_id, () => removeWatchHook(w.watch_id))}>Remove webhook</button>}
                 <button className="quiet" disabled={busy !== null} onClick={() => act(w.watch_id, () => checkWatchNow(w.watch_id))}>{busy === w.watch_id ? 'Checking…' : 'Check now'}</button>
                 <button className="quiet" disabled={busy !== null} onClick={() => act(w.watch_id, () => removeWatch(w.watch_id))}>Stop</button>
               </span>
