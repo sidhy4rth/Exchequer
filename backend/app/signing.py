@@ -15,7 +15,10 @@ The key:
   verifying against the published key after a restart.
 
 The public half is served at GET /signing-key, and POST /verify checks a
-report against it. Offline, with OpenSSL:
+report against it. Since report format v2.2 the signed body itself names the
+issuing server and the key's full SHA-256 fingerprint (evidence.issuer_block),
+so a report from a clone of this repo that claims this server is told apart.
+Offline, with OpenSSL:
 
     openssl pkeyutl -verify -pubin -inkey exchequer.pub.pem -rawin \\
         -in body.txt -sigfile sig.bin
@@ -63,7 +66,12 @@ class Signer:
     @property
     def fingerprint(self) -> str:
         """First 16 hex digits of SHA-256 over the raw public key."""
-        return hashlib.sha256(self.public_raw).hexdigest()[:16]
+        return self.fingerprint_sha256[:16]
+
+    @property
+    def fingerprint_sha256(self) -> str:
+        """SHA-256 over the raw public key, all 64 hex digits: what reports sign and publish."""
+        return hashlib.sha256(self.public_raw).hexdigest()
 
     @property
     def public_pem(self) -> str:
@@ -170,10 +178,10 @@ def _load_file() -> Signer:
 # ---------------------------------------------------------------------------
 # Verification
 # ---------------------------------------------------------------------------
-# The SIGNATURE line as seal_text writes it; anything else is damaged. A strict
-# pattern, so a fingerprint with a look-alike or invisible character cannot
-# pass as a foreign key.
-_SIG = re.compile(r"SIGNATURE \(Ed25519 over the same bytes, key (?P<fp>[0-9a-f]{16})\): "
+# The SIGNATURE line as seal_text writes it (a 64-hex key since v2.2, 16 before);
+# anything else is damaged. A strict pattern, so a fingerprint with a look-alike
+# or invisible character cannot pass as a foreign key.
+_SIG = re.compile(r"SIGNATURE \(Ed25519 over the same bytes, key (?P<fp>[0-9a-f]{64}|[0-9a-f]{16})\): "
                   r"(?P<sig>[A-Za-z0-9+/]{86}==)")
 # Every report in this format or later is signed when issued (8fdbdbc), so one
 # without a signature had it removed. The version sits in text a forger can
@@ -192,22 +200,30 @@ DETAILS = {
                     "checked here. Do not rely on it."),
     "damaged": "The SIGNATURE line is damaged, so the signature cannot be checked. Do not rely on it.",
     "genuine": "Genuine and unchanged: signed by this server, and nothing was added below the signature.",
+    "forged_issuer": ("Claims to be issued by this server but is not signed with any key it has used. Treat it "
+                      "as forged."),
+    "key_mismatch": ("The signed 'Signing key' line names a different key from the one that made the signature. "
+                     "Do not rely on it."),
 }
 
 
 def _declares_signed_format(body: str) -> bool:
-    return any((int(a), int(b)) >= SIGNED_FROM for a, b in _FORMAT.findall(body))
+    from .evidence import read_issuer
+
+    return any((int(a), int(b)) >= SIGNED_FROM for a, b in _FORMAT.findall(body)) or read_issuer(body) is not None
 
 
 def verify_report(text: str) -> dict:
     """Check a sealed (and possibly signed) text report.
 
     `status` is the one verdict to act on: genuine, text_added, changed,
-    signature_missing, unsigned, unknown_key, damaged or not_a_report; the
-    page shows it as given. `genuine` is True only for "genuine". The hash and
-    the signature cover only the text above the CONTENT HASH line, so a line
-    added below it is text nobody signed (`extra_content`)."""
-    from .evidence import read_seal, sha256_hex
+    signature_missing, unsigned, unknown_key, forged_issuer, damaged or
+    not_a_report; the page shows it as given. `genuine` is True only for
+    "genuine". The hash and the signature cover only the text above the
+    CONTENT HASH line, so a line added below it is text nobody signed
+    (`extra_content`). `issued_by` is read from the signed ISSUER block, and
+    only once the signature has verified."""
+    from .evidence import read_issuer, read_seal, sha256_hex
 
     seal = read_seal(text)
     if seal is None:
@@ -236,8 +252,11 @@ def verify_report(text: str) -> dict:
         "extra_lines": extra,
         "bom_removed": seal.bom_removed,
         "key_fingerprint": None,
+        "key_fingerprint_sha256": None,
         "claimed_key": None,
+        "issued_by": None,
         "this_server_key": signer.fingerprint,
+        "this_server_key_sha256": signer.fingerprint_sha256,
     }
 
     def done(status: str, detail: str | None = None) -> dict:
@@ -258,16 +277,24 @@ def verify_report(text: str) -> dict:
     if match is None:
         return done("damaged")
     fingerprint = match.group("fp")
-    if fingerprint != signer.fingerprint:
+    if fingerprint not in (signer.fingerprint, signer.fingerprint_sha256):
         result["claimed_key"] = fingerprint
+        issuer = read_issuer(body)
+        if config.PUBLIC_URL and issuer and issuer["issued_by"] == config.PUBLIC_URL:
+            return done("forged_issuer")
         return done("unknown_key")
-    result["key_fingerprint"] = fingerprint
+    full = signer.fingerprint_sha256
+    result["key_fingerprint"], result["key_fingerprint_sha256"] = full[:16], full
     result["signature_checked"] = True
     try:
         signer.public.verify(base64.b64decode(match.group("sig"), validate=True), body.encode("utf-8"))
         result["signature_ok"] = True
     except (InvalidSignature, binascii.Error, ValueError):
         return done("changed")
+    issuer = read_issuer(body)
+    if issuer is not None and issuer["signing_key"] != full:
+        return done("damaged", DETAILS["key_mismatch"])
+    result["issued_by"] = issuer["issued_by"] if issuer else None
     if not hash_ok:
         return done("changed", "The signature matches but the CONTENT HASH line was edited.")
     if extra:

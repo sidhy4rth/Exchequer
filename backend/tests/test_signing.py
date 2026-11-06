@@ -101,11 +101,13 @@ def test_key_from_the_environment(monkeypatch):
 
 def assert_marked_as_temporary(signer):
     assert signer.source == "ephemeral" and not signer.persistent
+    previous = signing.get_signer()
     signing.reset_for_tests(signer)
     try:
         assert "temporary key" in seal_text(REPORT)
     finally:
-        signing.reset_for_tests(signing.Signer(Ed25519PrivateKey.generate(), "file"))
+        # Put the suite's key back: text other modules sealed at import must still verify.
+        signing.reset_for_tests(previous)
 
 
 @posix_only

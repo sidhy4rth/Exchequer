@@ -622,6 +622,20 @@ TRACE_MAX_BRANCHES_HARD: int = _int_env("EXCHEQUER_TRACE_MAX_BRANCHES_HARD", 50)
 LIST_STALE_DAYS: int = 7
 
 
+def _public_url(environ: Mapping[str, str]) -> str:
+    """The address this server is reached at, as signed into every report
+    ("Issued by"). Render sets RENDER_EXTERNAL_URL itself; any other host sets
+    EXCHEQUER_PUBLIC_URL. Anything that is not a plain http(s) URL is ignored."""
+    raw = (environ.get("EXCHEQUER_PUBLIC_URL", "").strip() or environ.get("RENDER_EXTERNAL_URL", "").strip())
+    url = raw.rstrip("/")
+    if url.startswith(("https://", "http://")) and url.isprintable() and " " not in url:
+        return url
+    return ""
+
+
+PUBLIC_URL: str = _public_url(os.environ)
+
+
 # ---------------------------------------------------------------------------
 # Lane C: platform and product
 # ---------------------------------------------------------------------------

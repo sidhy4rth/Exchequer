@@ -313,7 +313,7 @@ def _build(story: list[Any], case_id: str, digest: str, key: str | None) -> byte
         canvas.setFont("PlexMono", 6.5)
         canvas.setFillColor(MUTED)
         canvas.drawString(18 * mm, 10 * mm,
-                          f"Exchequer case {case_id[:8]} · SHA-256 {digest[:16]}… · key {key or 'unsigned'}")
+                          f"Exchequer case {case_id[:8]} · SHA-256 {digest[:16]}… · key {(key or 'unsigned')[:16]}")
         canvas.drawRightString(A4[0] - 18 * mm, 10 * mm, f"page {doc.page}")
         canvas.restoreState()
 

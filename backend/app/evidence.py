@@ -26,6 +26,7 @@ as cached. That is not a second retrieval and must not be presented as one.
 from __future__ import annotations
 
 import hashlib
+import re
 import threading
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -129,11 +130,54 @@ CONTENT_HASH_MARK = "CONTENT HASH"
 SEAL_MARKS = (CONTENT_HASH_MARK + " (", "SIGNATURE (")
 
 # The only lines seal_text writes below the hash line, besides the signature.
+# Append-only: every line ever issued must stay accepted, or the reports that
+# carry it stop verifying. Since report format v2.2 a signed report has no
+# line after its signature: the how-to is in the signed ISSUER block above.
 UNSIGNED_HOW = "To verify: hash the report up to, not including, this line."
 SIGNED_HOW = ("To verify: paste this report at /verify on the server that issued it, or check "
               "the signature with the public key from /signing-key.")
 TEMPORARY_KEY_NOTE = " (Signed with a temporary key: it verifies only until the server restarts.)"
-HOW_LINES = (UNSIGNED_HOW, SIGNED_HOW, SIGNED_HOW + TEMPORARY_KEY_NOTE)
+SIGNED_HOW_LINES = (SIGNED_HOW, SIGNED_HOW + TEMPORARY_KEY_NOTE)
+HOW_LINES = (UNSIGNED_HOW, *SIGNED_HOW_LINES)
+
+# The ISSUER block: the last lines of a signed body (v2.2 on), so the server
+# that issued a report and the full fingerprint of its key are signed with it.
+ISSUED_BY = "Issued by        : "
+SIGNING_KEY = "Signing key      : "
+TO_VERIFY = "To verify        : "
+# Where the official key fingerprints are published, outside any server.
+KEYS_PUBLISHED_AT = "https://github.com/sidhy4rth/Exchequer/blob/main/SECURITY.md#report-signing-key"
+_OLD_SIGNATURE = re.compile(r"key [0-9a-f]{16}\): ")
+_KEY_VALUE = re.compile(r"Ed25519, SHA-256 fingerprint (?P<fp>[0-9a-f]{64})(?: \(a temporary key: .*\))?")
+
+
+def issuer_block(public_url: str, fingerprint_sha256: str, persistent: bool) -> list[str]:
+    """The lines seal_text signs below a report: who issued it, with which key."""
+    where = f"{public_url}/verify" if public_url else "/verify on the server that issued it"
+    key = f"Ed25519, SHA-256 fingerprint {fingerprint_sha256}"
+    if not persistent:
+        key += " (a temporary key: it verifies only until this server restarts)"
+    return ([ISSUED_BY + public_url] if public_url else []) + [
+        SIGNING_KEY + key,
+        TO_VERIFY + f"paste this whole file at {where} and compare the key",
+        " " * len(TO_VERIFY) + f"above with the one Exchequer publishes at {KEYS_PUBLISHED_AT}",
+    ]
+
+
+def read_issuer(body: str) -> dict[str, str | None] | None:
+    """{"issued_by", "signing_key"} from a signed body's ISSUER block, or None.
+
+    Read only from the last lines, where seal_text writes it -- never searched
+    for in the body, which holds third-party text. A Signing key line that is
+    not exactly what seal_text writes gives signing_key "" (it then matches no key)."""
+    tail = body.split("\n")[-4:]
+    for i, line in enumerate(tail):
+        if line.startswith(SIGNING_KEY):
+            match = _KEY_VALUE.fullmatch(line[len(SIGNING_KEY):])
+            above = tail[i - 1] if i > 0 else ""
+            return {"issued_by": above[len(ISSUED_BY):] if above.startswith(ISSUED_BY) else None,
+                    "signing_key": match.group("fp") if match else ""}
+    return None
 
 
 @dataclass(frozen=True)
@@ -154,9 +198,10 @@ def read_seal(text: str) -> Seal | None:
     """Split a report at its first CONTENT HASH line; None if it has none.
 
     Below that line only the exact lines seal_text writes are accepted -- the
-    SIGNATURE line, then one known "To verify" line -- in that order. Trailing
-    spaces, line endings and blank lines at the end are forgiven, since copy
-    and paste change them; any other line is extra."""
+    SIGNATURE line, then (in reports before v2.2) the "To verify" line that
+    goes with it: the signed one after a signature, the unsigned one without.
+    Trailing spaces, line endings and blank lines at the end are forgiven,
+    since copy and paste change them; any other line is extra."""
     from .signing import SIGNATURE_MARK
 
     text = text.replace("\r\n", "\n")
@@ -175,7 +220,13 @@ def read_seal(text: str) -> Seal | None:
     signature_line = None
     if rest and rest[0].startswith(SIGNATURE_MARK + " ("):
         signature_line, rest = rest[0], rest[1:]
-    if rest and rest[0] in HOW_LINES:
+    # The how-line goes with how the report was sealed: the unsigned one with
+    # no signature, the signed one only after a 16-hex key (before v2.2).
+    if signature_line is None:
+        accepted: tuple[str, ...] = (UNSIGNED_HOW,)
+    else:
+        accepted = SIGNED_HOW_LINES if _OLD_SIGNATURE.search(signature_line) else ()
+    if rest and rest[0] in accepted:
         rest = rest[1:]
     return Seal(text[:idx], hash_line, signature_line, tuple(rest), bom)
 
@@ -183,26 +234,28 @@ def read_seal(text: str) -> Seal | None:
 def seal_text(text: str, sign: bool = True) -> str:
     """Append a content hash, and this server's signature, to a text report.
 
-    The hash covers every byte of `text` exactly as given. To verify: take the
-    report up to (not including) the line that begins with `CONTENT HASH`,
-    strip the single newline before it, and SHA-256 the result. The signature
-    (signing.py) is Ed25519 over those same bytes: the hash shows the text is
-    unchanged, the signature that this server issued it.
+    Signed, the ISSUER block (issuer_block) is added to `text` first, so the
+    issuing server and its full key fingerprint are covered too, and nothing
+    follows the signature. The hash covers every byte above it. To verify:
+    take the report up to (not including) the line that begins with `CONTENT
+    HASH`, strip the single newline before it, and SHA-256 the result. The
+    signature (signing.py) is Ed25519 over those same bytes: the hash shows the
+    text is unchanged, the signature that this server issued it.
     """
     if sign and (text.startswith(SEAL_MARKS[0]) or f"\n{SEAL_MARKS[0]}" in text):
         # Signed, it would verify as changed: never issue that.
         raise ValueError("The report body contains a CONTENT HASH line of its own; refusing to sign it.")
-    digest = sha256_hex(text)
-    lines = [text, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): {digest}"]
-    if sign:
-        from .signing import ALGORITHM, SIGNATURE_MARK, get_signer
+    if not sign:
+        return "\n".join([text, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): "
+                                f"{sha256_hex(text)}", UNSIGNED_HOW]) + "\n"
+    from . import config
+    from .signing import ALGORITHM, SIGNATURE_MARK, get_signer
 
-        signer = get_signer()
-        lines.append(f"{SIGNATURE_MARK} ({ALGORITHM} over the same bytes, key {signer.fingerprint}): "
-                     f"{signer.sign(text.encode('utf-8'))}")
-        lines.append(SIGNED_HOW if signer.persistent else SIGNED_HOW + TEMPORARY_KEY_NOTE)
-    else:
-        lines.append(UNSIGNED_HOW)
+    signer = get_signer()
+    text = "\n".join([text, *issuer_block(config.PUBLIC_URL, signer.fingerprint_sha256, signer.persistent)])
+    lines = [text, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): {sha256_hex(text)}",
+             f"{SIGNATURE_MARK} ({ALGORITHM} over the same bytes, key {signer.fingerprint_sha256}): "
+             f"{signer.sign(text.encode('utf-8'))}"]
     return "\n".join(lines) + "\n"
 
 

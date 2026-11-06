@@ -302,8 +302,18 @@ def _header(case_id: str, result: dict[str, Any], to_line: str, subject: str) ->
         f"{result.get('chain_name')} · asset {result.get('asset')} · reported address {result.get('address')}.",
         (f"Evidence manifest SHA-256: {manifest}" if manifest else
          "This case was stored before evidence hashing; the report says so."),
+        *_verify_lines(),
         "",
     ]
+
+
+def _verify_lines() -> list[str]:
+    """Where the attached report can be checked, and the key it must carry."""
+    from .signing import get_signer
+
+    where = f"{config.PUBLIC_URL}/verify" if config.PUBLIC_URL else "/verify on the server that issued it"
+    return [f"Check the attached report only at {where}; it must be signed with the",
+            f"Ed25519 key whose SHA-256 fingerprint is {get_signer().fingerprint_sha256}."]
 
 
 def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:

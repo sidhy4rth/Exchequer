@@ -24,8 +24,12 @@ SEED = bytes(range(32))
 def no_env_key(monkeypatch, tmp_path):
     monkeypatch.delenv("EXCHEQUER_SIGNING_KEY", raising=False)
     monkeypatch.setattr(config, "SIGNING_KEY_PATH", tmp_path / "k.pem")
+    previous = signing.get_signer()
     yield
-    signing.reset_for_tests(None)
+    # The suite's key, not None: None would make the next test load (or
+    # create) a key file beside the real case store, and text sealed at import
+    # would stop verifying.
+    signing.reset_for_tests(previous)
 
 
 def test_a_file_key_on_a_temporary_disk_is_temporary(no_env_key, monkeypatch):
@@ -67,12 +71,13 @@ def test_the_operator_view_says_whether_the_key_survives_a_restart(monkeypatch):
     from app.main import app
     monkeypatch.setattr(config, "HEALTH_TOKEN", "t" * 40)
     temporary = signing.Signer(signing.Ed25519PrivateKey.from_private_bytes(SEED), "ephemeral")
+    previous = signing.get_signer()
     signing.reset_for_tests(temporary)
     try:
         with TestClient(app) as client:
             detail = client.get("/health/detail", headers={"authorization": "Bearer " + "t" * 40}).json()
     finally:
-        signing.reset_for_tests(None)
+        signing.reset_for_tests(previous)
     assert detail["signing_key"] == {"fingerprint": temporary.fingerprint, "source": "ephemeral", "persistent": False}
 
 

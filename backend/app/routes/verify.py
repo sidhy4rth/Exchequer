@@ -12,6 +12,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 
+from .. import config
+from ..evidence import KEYS_PUBLISHED_AT
 from ..signing import ALGORITHM, get_signer, verify_report
 
 router = APIRouter()
@@ -21,13 +23,20 @@ MAX_REPORT_BYTES = 2_000_000  # the largest real reports are ~200 KB
 
 @router.get("/signing-key")
 def signing_key() -> dict[str, Any]:
-    """The public half of the key that signs this server's reports."""
+    """The public half of the key that signs this server's reports.
+
+    Compare `fingerprint_sha256` with the one published at
+    `keys_published_at`, which no server controls."""
     signer = get_signer()
     return {
         "algorithm": ALGORITHM,
         "fingerprint": signer.fingerprint,
+        "fingerprint_sha256": signer.fingerprint_sha256,
         "public_key_pem": signer.public_pem,
         "persistent": signer.persistent,
+        "source": signer.source,
+        "issued_by": config.PUBLIC_URL or None,
+        "keys_published_at": KEYS_PUBLISHED_AT,
     }
 
 

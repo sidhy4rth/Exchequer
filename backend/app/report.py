@@ -30,7 +30,9 @@ from .models import Case
 from .risk_matcher import freeze_parts, is_tether_usdt_freeze, list_freshness
 from .scoring import BAND_THRESHOLDS, CAP_WORDING
 
-REPORT_VERSION = "2.1"
+# 2.2: the signed body ends in an ISSUER block (issuing server, full key
+# fingerprint) and nothing follows the signature; earlier reports still verify.
+REPORT_VERSION = "2.2"
 TOOL_NAME = "Exchequer"
 
 

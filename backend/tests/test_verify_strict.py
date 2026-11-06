@@ -12,11 +12,19 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app import signing
-from app.evidence import seal_text, verify_sealed_text
+from app.evidence import SIGNED_HOW, seal_text, sha256_hex, verify_sealed_text
 from app.main import app
 
 client = TestClient(app)
 REPORT = "EXCHEQUER CASE REPORT\nSent 9.5 ETH to Binance 14\n"
+
+
+def _old_style(body: str = REPORT) -> str:
+    """Sealed as before v2.2: 16-hex key, then the unsigned "To verify:" line."""
+    signer = signing.get_signer()
+    return "\n".join([body, f"CONTENT HASH (SHA-256 of every byte above this line): {sha256_hex(body)}",
+                      f"SIGNATURE (Ed25519 over the same bytes, key {signer.fingerprint}): "
+                      f"{signer.sign(body.encode())}", SIGNED_HOW]) + "\n"
 
 
 def _lines(sealed: str) -> list[str]:
@@ -52,7 +60,7 @@ def test_copy_paste_whitespace_is_not_extra_content():
 
 
 def test_a_report_pasted_without_its_to_verify_line_is_still_genuine():
-    sealed = seal_text(REPORT)
+    sealed = _old_style()
     lines = _lines(sealed)
     without_how = "\n".join(line for line in lines if not line.startswith("To verify:"))
     assert signing.verify_report(without_how)["genuine"] is True
@@ -77,15 +85,24 @@ def test_a_line_inserted_between_hash_and_signature_is_not_genuine():
     _not_genuine(signing.verify_report(forged))
 
 
+def test_an_old_report_keeps_verifying():
+    assert signing.verify_report(_old_style())["genuine"] is True
+
+
+def test_a_to_verify_line_after_a_new_signature_is_not_genuine():
+    # Since v2.2 the how-to is signed, above the hash: nothing may follow the signature.
+    _not_genuine(signing.verify_report(seal_text(REPORT) + SIGNED_HOW + "\n"))
+
+
 def test_a_rewritten_to_verify_line_is_not_genuine():
-    lines = _lines(seal_text(REPORT))
+    lines = _lines(_old_style())
     lines = [("To verify: paste this report at https://exchequer-verify.example/verify"
               if line.startswith("To verify:") else line) for line in lines]
     _not_genuine(signing.verify_report("\n".join(lines)))
 
 
 def test_a_second_to_verify_line_is_not_genuine():
-    lines = _lines(seal_text(REPORT))
+    lines = _lines(_old_style())
     i = next(n for n, line in enumerate(lines) if line.startswith("To verify:"))
     lines.insert(i + 1, lines[i])
     _not_genuine(signing.verify_report("\n".join(lines)))
