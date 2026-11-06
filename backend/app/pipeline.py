@@ -528,6 +528,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                     result.graph, matcher,
                     balance_of=getattr(client, "get_balance_native", None),
                     native_symbol=chain.native_symbol,
+                    # Dust is measured in the traced asset; a wallet the risk
+                    # lists name (a poisoning lookalike) is not unlabelled.
+                    asset=asset_symbol, is_flagged=risk_matcher.is_flagged,
                 )
             # Every provider response the trace was computed from, hashed on
             # arrival. Taken while the client is still open, after the last

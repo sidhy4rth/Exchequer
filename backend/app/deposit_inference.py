@@ -19,8 +19,11 @@ unlabelled, and it does other things with its money.
 The rule, stated plainly. An address is inferred to be a deposit address of
 exchange E when all of the following hold:
 
-  1. It is not the reported address and carries no label of its own.
-  2. It made at least `min_sweeps` outgoing transfers.
+  1. It is not the reported address and carries no label of its own --
+     neither an exchange label nor a risk label (a poisoning lookalike, a
+     scam or stolen-funds wallet, a freeze, a warning tag).
+  2. It made at least `min_sweeps` outgoing transfers, together worth more
+     than dust in the traced asset (DUST_FLOOR).
   3. Every one of them went to a single address H that the label file records
      as an E hot wallet (or exchange/contract/cold wallet) -- never to a
      labelled *deposit* wallet, because deposits sweep to hot wallets, and
@@ -60,6 +63,18 @@ logger = logging.getLogger(__name__)
 SWEEP_DESTINATION_TYPES = frozenset({"hot_wallet", "exchange_wallet", "cold_wallet"})
 
 
+# Below this much in all, an address moved dust and its pattern is not
+# evidence. Per asset, at roughly the same value (a dollar or a few): one
+# floor in every asset's own units was 0.001 ETH (about $3) but 0.001 USDT, a
+# fraction of a cent, so a poisoning lookalike's dust sends to a hot wallet
+# passed as sweeps.
+DUST_FLOOR = {"ETH": 0.001, "BNB": 0.005, "POL": 2.0, "TRX": 10.0, "USDT": 1.0, "USDC": 1.0}
+
+
+def dust_floor(asset: str | None) -> float:
+    return DUST_FLOOR.get((asset or "").upper(), DUST_FLOOR["ETH"])
+
+
 @dataclass(frozen=True)
 class DepositInferenceConfig:
     """Every threshold the inference uses, in one place."""
@@ -68,7 +83,8 @@ class DepositInferenceConfig:
     # to the same hot wallet and nothing else, is the sweep pattern.
     min_sweeps: int = 2
     # Below this the address moved dust, and the pattern is not evidence.
-    min_total_native: float = 0.001
+    # None: the traced asset's own floor (DUST_FLOOR).
+    min_total_native: float | None = None
 
 
 def _sweep_destination(
@@ -90,6 +106,8 @@ def infer_deposit_addresses(
     cfg: DepositInferenceConfig | None = None,
     balance_of: Callable[[str], float] | None = None,
     native_symbol: str = "ETH",
+    asset: str | None = None,
+    is_flagged: Callable[[str], bool] | None = None,
 ) -> list[ExchangeMatch]:
     """Return one inferred match per address that satisfies the rule.
 
@@ -98,8 +116,13 @@ def infer_deposit_addresses(
     transfers the time rule later left out of the graph): the question here is
     what the address does with money in general, not what it did with the
     traced funds.
+
+    `asset` is the traced asset (its dust floor applies; the chain's coin
+    `native_symbol` when not given). `is_flagged` is the risk screening's
+    lookup: a wallet it names is not unlabelled.
     """
     cfg = cfg or DepositInferenceConfig()
+    floor = cfg.min_total_native if cfg.min_total_native is not None else dust_floor(asset or native_symbol)
     inferred: list[ExchangeMatch] = []
 
     for node, data in graph.nodes(data=True):
@@ -111,10 +134,12 @@ def infer_deposit_addresses(
         (destination, stats), = outflows.items()
         if stats.get("count", 0) < cfg.min_sweeps:
             continue
-        if stats.get("total", 0.0) < cfg.min_total_native:
+        if stats.get("total", 0.0) < floor:
             continue
         meta = _sweep_destination(matcher, destination)
         if meta is None:
+            continue
+        if is_flagged is not None and is_flagged(node):
             continue
 
         evidence: dict[str, Any] = {
@@ -132,7 +157,7 @@ def infer_deposit_addresses(
             "last_sweep": stats.get("last"),
             "thresholds_applied": {
                 "min_sweeps": cfg.min_sweeps,
-                "min_total_native": cfg.min_total_native,
+                "min_total_native": floor,
                 "required_share_to_one_destination": 1.0,
             },
         }

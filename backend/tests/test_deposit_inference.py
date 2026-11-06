@@ -201,3 +201,71 @@ def test_the_balance_is_stated_in_the_chains_coin_on_a_token_trace():
     assert found[0].evidence["current_balance_symbol"] == "ETH"
     text = describe(found[0], "ETH")
     assert "0.0123 ETH" in text and "USDT" not in text
+
+
+# ---------------------------------------------------------------------------
+# Dust is dust in every asset, and a flagged wallet is not unlabelled
+# (audit r2-g2-documented-claims-vs-code-7-6)
+# ---------------------------------------------------------------------------
+def test_usdt_dust_sweeps_are_not_evidence():
+    # 0.0012 USDT is a fraction of a cent: a poisoning lookalike's dust sends
+    # to a hot wallet, not a deposit address's sweeps.
+    graph = sweep_graph()
+    graph.nodes[DEPOSIT]["outflows_by_counterparty"] = outflows(**{HOT: (2, 0.0012)})
+    assert infer_deposit_addresses(graph, matcher(), asset="USDT") == []
+    assert infer_deposit_addresses(graph, matcher(), asset="TRX") == []
+
+
+def test_real_usdt_sweeps_still_are():
+    graph = sweep_graph()
+    graph.nodes[DEPOSIT]["outflows_by_counterparty"] = outflows(**{HOT: (2, 2400.0)})
+    (found,) = infer_deposit_addresses(graph, matcher(), asset="USDT")
+    assert found.evidence["thresholds_applied"]["min_total_native"] == 1.0
+
+
+def test_the_floor_is_the_assets_own():
+    from app.deposit_inference import dust_floor
+    assert dust_floor("ETH") == 0.001 and dust_floor("USDT") == 1.0 and dust_floor("TRX") == 10.0
+
+
+def test_a_risk_flagged_wallet_is_never_inferred():
+    # A wallet the screening lists flag (here, an address-poisoning lookalike)
+    # has a label of its own: the rule is for unlabelled wallets.
+    graph = sweep_graph()
+    found = infer_deposit_addresses(graph, matcher(), asset="ETH", is_flagged=lambda a: a == DEPOSIT)
+    assert found == []
+    assert not graph.nodes[DEPOSIT].get("inferred_exchange")
+
+
+def test_a_usdt_trace_does_not_name_a_dust_sweeping_lookalike(monkeypatch):
+    """The finding's case as a whole trace: 5,000 USDT to lookalike L, whose
+    only USDT outflows are two 0.0006 dust sends to Binance 14."""
+    from contextlib import contextmanager
+
+    from app import pipeline
+    from app.etherscan_client import Transaction
+    from app.pipeline import TraceRequest
+
+    lookalike = addr("100ca1")
+
+    def tx(n, src, dst, value):
+        return Transaction(hash=f"0x{n:064x}", from_address=src, to_address=dst, value_native=value,
+                           value_wei=int(value * 1e6), timestamp=1_700_000_000 + n, block_number=100 + n,
+                           is_error=False, asset="USDT")
+
+    history = [tx(1, SEED, lookalike, 5000.0), tx(2, lookalike, HOT, 0.0006), tx(3, lookalike, HOT, 0.0006)]
+
+    class Client:
+        def get_outgoing_transactions(self, address, limit=None):
+            return [t for t in history if t.from_address == address]
+
+    @contextmanager
+    def open_source(_chain, _asset):
+        yield Client()
+
+    monkeypatch.setattr(pipeline, "open_source", open_source)
+    monkeypatch.setattr(pipeline, "get_matcher", lambda key: matcher())
+    monkeypatch.setattr(pipeline, "detect_swaps", lambda *a, **k: [])
+    result = pipeline.run_trace(TraceRequest(address=SEED, chain="ethereum", asset="USDT", max_depth=3))
+    assert result["inferred_deposits"] == []
+    assert result["exchange_address"] != lookalike

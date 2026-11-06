@@ -387,8 +387,10 @@ there, and the exchange later sweeps it to a hot wallet. That unlabelled deposit
 request has to name — a hot wallet receives from thousands of customers and identifies nobody.
 `backend/app/deposit_inference.py` calls an unlabelled wallet a **probable deposit address of exchange E** when:
 
-1. It is not the reported address and has no label of its own.
-2. It made **at least 2** outgoing transfers.
+1. It is not the reported address and has no label of its own — no exchange label and no risk label (a poisoning
+   lookalike, a scam wallet, a freeze, a warning tag).
+2. It made **at least 2** outgoing transfers, worth more than dust in the traced asset (0.001 ETH, 0.005 BNB,
+   2 POL, 10 TRX, 1 USDT or USDC in all).
 3. **Every one** went to the **same** labelled E wallet (never a labelled *deposit* wallet) and nowhere else.
 4. Where cheap, its current balance is recorded as evidence — but never required, since an unswept deposit is
    still a deposit address.
