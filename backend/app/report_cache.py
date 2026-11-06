@@ -6,8 +6,8 @@ a hundred times the cost of a plain page, on an instance with a tenth of a CPU.
 Every request for one used to do all of that again, for any case id, public demo
 ids included.
 
-So the text report and the PDF of a case are rendered once and kept (in memory,
-bounded in bytes), and every format of a case carries the same `generated_at`:
+So the text report, the PDF and the graph exports of a case are rendered once
+and kept (in memory, bounded in bytes), and every format carries the same `generated_at`:
 later downloads are the same bytes, and the text, the JSON and the PDF's
 attachment are one report. Only a PDF that is not kept yet costs a render, and
 those are limited per client and site-wide and done one at a time; a text render
@@ -136,6 +136,20 @@ def cached_pdf(case: Case) -> bytes | None:
 
 def store_pdf(case: Case, pdf: bytes) -> None:
     _cache.put(_key(case, "pdf"), pdf)
+
+
+def graph(case: Case, fmt: str) -> str:
+    """The case's graph as GraphML or CSV, rendered once."""
+    from . import graph_export
+
+    key = _key(case, f"graph-{fmt}")
+    cached = _cache.get(key)
+    if isinstance(cached, str):
+        return cached
+    result = case.result
+    rendered = graph_export.to_csv(case.id, result) if fmt == "csv" else graph_export.to_graphml(case.id, result)
+    _cache.put(key, rendered)
+    return rendered
 
 
 def reset() -> None:

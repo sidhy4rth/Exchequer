@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
-from .. import audit, graph_export, models, rate_limit, report_cache, request_letters
+from .. import audit, models, rate_limit, report_cache, request_letters
 from ..auth import CurrentUser
 from ..report_pdf import render_pdf
 
@@ -97,13 +97,11 @@ def export_graph(
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
-    if format == "csv":
-        body, media, ext = graph_export.to_csv(case_id, case.result), "text/csv", "csv"
-    else:
-        body, media, ext = graph_export.to_graphml(case_id, case.result), "application/graphml+xml", "graphml"
+    media, ext = ("text/csv", "csv") if format == "csv" else ("application/graphml+xml", "graphml")
+    body = report_cache.graph(case, format)
     audit.record("case.graph_export", case_id=case_id, detail={"format": format})
     return Response(body, media_type=media, headers={
-        "Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}-graph.{ext}"'})
+        "Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}-graph.{ext}"', **KEEP})
 
 
 @router.get("/trace/{case_id}/letters")

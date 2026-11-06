@@ -134,3 +134,15 @@ def test_the_cache_is_bounded_in_bytes(monkeypatch):
 def test_a_missing_case_is_still_a_404(client):
     assert pdf(client, "nope").status_code == 404
     assert json.loads(client.get("/trace/nope/report?format=text").text)["detail"]
+
+
+def test_a_graph_export_is_rendered_once(client, monkeypatch):
+    from app import graph_export
+
+    calls = []
+    real = graph_export.to_graphml
+    monkeypatch.setattr(graph_export, "to_graphml", lambda *a: calls.append(a[0]) or real(*a))
+    first = client.get("/trace/case-0/graph?format=graphml")
+    second = client.get("/trace/case-0/graph?format=graphml")
+    assert first.content == second.content and calls == ["case-0"]
+    assert second.headers["cache-control"] == "private, max-age=3600"
