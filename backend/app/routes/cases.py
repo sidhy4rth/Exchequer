@@ -90,6 +90,17 @@ def release(client: str | None = None) -> None:
     _running.release()
 
 
+def _count(query, *args) -> int:
+    """A count for the caps, read before the save. One that cannot be read
+    counts as room: a store that is really down then fails the save, which
+    keeps the result with a warning. Storage must never lose a completed trace."""
+    try:
+        return query(*args)
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not count stored cases; saving anyway", exc_info=True)
+        return 0
+
+
 def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | None) -> dict[str, Any]:
     """Give a finished trace its case id and, unless asked not to, store it."""
     case_id = models.new_case_id()
@@ -100,7 +111,9 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
         payload["case_id"] = None
         return payload
 
-    if owner and config.MAX_CASES_PER_OWNER and models.case_count_for(owner) >= config.MAX_CASES_PER_OWNER:
+    mine = _count(models.case_count_for, owner) if owner and config.MAX_CASES_PER_OWNER else 0
+    stored = _count(models.case_count) if config.MAX_STORED_CASES else 0
+    if owner and config.MAX_CASES_PER_OWNER and mine >= config.MAX_CASES_PER_OWNER:
         payload["case_id"] = None
         payload.setdefault("warnings", []).append(
             f"This browser already keeps {config.MAX_CASES_PER_OWNER:,} cases, so this result is "
@@ -108,7 +121,6 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
         )
         return payload
 
-    stored = models.case_count() if config.MAX_STORED_CASES else 0
     if config.MAX_STORED_CASES and stored + 1 == int(config.MAX_STORED_CASES * 0.8):
         logger.warning("Case store is 80%% full (%d of %d cases)", stored + 1, config.MAX_STORED_CASES)
     if config.MAX_STORED_CASES and stored >= config.MAX_STORED_CASES:
@@ -156,6 +168,15 @@ def record_trace(payload: dict[str, Any]) -> None:
     })
 
 
+def record_trace_safely(payload: dict[str, Any]) -> None:
+    """record_trace, for a trace that has already finished: an audit sink that
+    fails is logged, never a reason to lose the result."""
+    try:
+        record_trace(payload)
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not audit case %s", payload.get("case_id"))
+
+
 @router.post("/trace")
 def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, Any]:
     """Trace funds to or from a reported address.
@@ -172,7 +193,7 @@ def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, 
     finally:
         release(slot)
     stored = store_result(payload, request, user.owner_hash)
-    record_trace(stored)
+    record_trace_safely(stored)
     return stored
 
 

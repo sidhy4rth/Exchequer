@@ -38,8 +38,17 @@ def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | No
         with api_budget.using(job.budget):
             payload = pipeline.run_trace(request)
         jobs.store.report(job, {"stage": "saving"})
-        stored = cases.store_result(payload, request, owner)
-        cases.record_trace(stored)
+        # From here the trace is done and its provider calls are spent: a
+        # failure to store or audit it is a warning on the result, never "failed".
+        try:
+            stored = cases.store_result(payload, request, owner)
+        except Exception:  # noqa: BLE001
+            logger.exception("Trace job %s finished but could not be stored", job.id)
+            stored = {**payload, "case_id": None}
+            stored.setdefault("warnings", []).append(
+                "Result could not be saved to the case database; it is shown here "
+                "but will not appear in the case history.")
+        cases.record_trace_safely(stored)
         jobs.store.finish(job, result=stored)
     except HTTPException as exc:
         jobs.store.finish(job, error={"status_code": exc.status_code, "detail": exc.detail})
