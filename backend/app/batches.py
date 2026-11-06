@@ -101,7 +101,8 @@ def validate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             errors.append({"row": n, "error": str(exc)})
             continue
         if not chain.validate_address(address):
-            errors.append({"row": n, "error": f"'{address[:60]}' is not a valid {chain.name} address."})
+            errors.append({"row": n, "error": f"'{address[:60]}' is not a valid {chain.name} address. "
+                                              f"Expected {chain.address_hint(address)}."})
             continue
         asset = str(raw.get("asset") or chain.native_symbol).strip().upper()
         if asset != chain.native_symbol.upper() and chain.find_token(asset) is None:

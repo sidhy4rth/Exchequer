@@ -62,6 +62,27 @@ def is_evm_address(address: str) -> bool:
     return bool(address) and bool(ADDRESS_RE.match(address.strip()))
 
 
+def evm_checksum_ok(address: str) -> bool:
+    """True unless `address` mixes upper and lower case against its EIP-55 checksum.
+
+    Mixed case is EIP-55: each letter is upper case exactly when the matching
+    nibble of keccak256(lowercase hex) is 8 or more, which is what catches a
+    mistyped character. An all-lowercase or all-uppercase address carries no
+    checksum and passes. Only addresses a person submits are held to this;
+    provider records are not.
+    """
+    body = address.strip()[2:]
+    if body == body.lower() or body == body.upper():
+        return True
+    from .keccak import keccak256
+
+    digest = keccak256(body.lower().encode("ascii")).hex()
+    return all(
+        char.isdigit() or char.isupper() == (int(nibble, 16) >= 8)
+        for char, nibble in zip(body, digest, strict=False)
+    )
+
+
 _BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 

@@ -194,17 +194,29 @@ class Chain:
                       + [{**t.to_dict(), "native": False} for t in self.tokens],
         }
 
-    def validate_address(self, address: str) -> bool:
-        """True if `address` is well formed *for this chain*."""
-        from .etherscan_client import is_evm_address, is_tron_address
+    def validate_address(self, address: str, checksum: bool = True) -> bool:
+        """True if `address` is well formed *for this chain*.
 
-        checker = is_tron_address if self.address_family == "tron" else is_evm_address
-        return checker(address)
+        An EVM address typed in mixed case must also match its EIP-55
+        checksum (`checksum=False` for list importers, which keep an entry
+        as published)."""
+        from .etherscan_client import evm_checksum_ok, is_evm_address, is_tron_address
 
-    def address_hint(self) -> str:
-        """What a valid address looks like here, for an error message."""
+        if self.address_family == "tron":
+            return is_tron_address(address)
+        return is_evm_address(address) and (not checksum or evm_checksum_ok(address))
+
+    def address_hint(self, address: str | None = None) -> str:
+        """What a valid address looks like here, for an error message --
+        or, for a well-formed EVM address whose checksum fails, what that means."""
         if self.address_family == "tron":
             return "T followed by 33 Base58 characters"
+        from .etherscan_client import is_evm_address
+
+        if address and is_evm_address(address):
+            return ("a correct EIP-55 checksum: this address mixes upper and lower case, but the "
+                    "pattern does not match, which usually means a character was mistyped. "
+                    "Check it against the original")
         return "0x followed by 40 hexadecimal characters"
 
     def find_token(self, symbol: str) -> "Token | None":

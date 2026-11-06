@@ -114,7 +114,7 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
         raise WatchError(str(exc)) from exc
     address = address.strip()
     if not chain.validate_address(address):
-        raise WatchError(f"'{address}' is not a valid {chain.name} address. Expected {chain.address_hint()}.")
+        raise WatchError(f"'{address}' is not a valid {chain.name} address. Expected {chain.address_hint(address)}.")
     asset_symbol = (asset or chain.native_symbol).strip().upper()
     if asset_symbol != chain.native_symbol.upper() and chain.find_token(asset_symbol) is None:
         raise WatchError(f"{chain.name} has no traceable asset called '{asset_symbol}'.")

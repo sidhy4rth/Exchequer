@@ -162,7 +162,7 @@ def parse(sdn_xml: Path) -> tuple[dict[str, dict], dict[str, int], str]:
                     continue
 
             chain = config.CHAINS.get(chain_key)
-            if chain is None or not chain.validate_address(address):
+            if chain is None or not chain.validate_address(address, checksum=False):
                 skipped[code] += 1
                 continue
 

@@ -326,7 +326,7 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
             status_code=400,
             detail=(
                 f"'{address}' is not a valid {chain.name} address. "
-                f"Expected {chain.address_hint()}."
+                f"Expected {chain.address_hint(address)}."
             ),
         )
 
