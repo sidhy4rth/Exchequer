@@ -332,3 +332,43 @@ def test_a_store_only_non_pool_does_not_stop_the_walk(tmp_path):
     client = FakeClient({SEED: [tx(SEED, registry, 5.0)], registry: [tx(registry, beyond, 5.0)]})
     graph = build_trace_graph(SEED, client, is_terminal=matcher.is_terminal).graph
     assert beyond in graph
+
+
+# -- r1-labels-data-1: a store row never labels infrastructure at run time ------
+BINANCE_14 = "0x28c6c06298d514db089934071355e5743bf21d60"     # exchange_labels.json: hot wallet
+DEPOSIT = "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7"        # exchange_labels.json: deposit wallet
+ROUTER_1INCH = "0x11111112542d85b3ef69ae05771c2dccff4faa26"   # router_labels.json
+USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"           # config: a traced token
+WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"           # data/never_flag_tokens.txt
+CLOUDBET = "TAJ3SYGtVjGqm61qoGzZN9bQY6MST2JQVL"               # gambling_labels_tron.json
+
+
+def test_a_store_row_on_infrastructure_reads_as_nothing(tmp_path):
+    binance_raw = "0x" + "77" * 20
+    rows = [row(address=binance_raw, chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}", sources=DETECTOR),
+            row(address=SCAMMER, chain="ethereum", category="mixer", entity_or_incident="Tornado.Cash: 0.1 WBTC",
+                sources="Explorer tag via dawsbot/eth-labels @d9b21ae")]
+    store = old_store(tmp_path, rows)
+    # Point the two rows at real infrastructure, as an older or mistaken build might.
+    db = sqlite3.connect(store.path)
+    db.execute("UPDATE labels SET address=? WHERE address=?", (encode_address(BINANCE_14), encode_address(binance_raw)))
+    db.execute("UPDATE labels SET address=? WHERE address=?", (encode_address(ROUTER_1INCH), encode_address(SCAMMER)))
+    for address in (USDT, WETH, DEPOSIT, "0x" + "0" * 40):
+        db.execute("INSERT INTO labels SELECT ?, chain, category, entity, label, peer, tx, date, source, tier "
+                   "FROM labels WHERE address=?", (encode_address(address), encode_address(BINANCE_14)))
+    db.execute("INSERT INTO labels SELECT ?, ?, category, entity, label, peer, tx, date, source, tier "
+               "FROM labels WHERE address=?", (encode_address(CLOUDBET), label_store.CHAIN_IDS["tron"],
+                                                encode_address(BINANCE_14)))
+    db.commit()
+    db.close()
+    store = LabelStore(store.path)
+    matcher = RiskMatcher({}, chain="ethereum", store=store)
+    for address in (BINANCE_14, USDT, WETH, DEPOSIT, "0x" + "0" * 40, ROUTER_1INCH):
+        assert matcher.lookup(address) is None, address
+    assert not matcher.is_terminal(ROUTER_1INCH)  # a mixer row on a router no longer ends the trace
+    # The gambling file outranks the store at run time; the store alone would still say poisoning.
+    assert store.lookup("tron", CLOUDBET)["category"] == "poisoning"
+    # A label file's own entry on the same address still applies.
+    filed = {BINANCE_14: {"category": SANCTIONED, "entity": "x", "label": "x", "source": "OFAC"}}
+    assert RiskMatcher(filed, chain="ethereum", store=store).lookup(BINANCE_14)["category"] == SANCTIONED

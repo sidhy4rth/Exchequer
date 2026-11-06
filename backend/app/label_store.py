@@ -9,8 +9,10 @@ thousand rows or ten million.
 
 It is an overlay, never an authority over the files. RiskMatcher asks the
 files first and consults the store only for an address they do not name, so a
-government designation can never be displaced by a scan result. Without the
-file a trace runs exactly as it did before: no store, no extra screening.
+government designation can never be displaced by a scan result. Nor does it
+ever label an exchange wallet, router, token contract or burn address
+(app/never_flag.py). Without the file a trace runs exactly as it did before:
+no store, no extra screening.
 
 Rows are stored compactly -- addresses, lookalike targets and sample
 transactions as raw bytes, repeated text (entities, sources) once in a side
@@ -133,6 +135,12 @@ class LabelStore:
                                     or not label_rules.mixer_service(self._texts.get(entity_id, ""))):
             # Only a mixer's own pool ends a trace, and only on the chain its
             # tag was read on. Anything else is left out: the walk goes on.
+            return None
+        from .never_flag import blocks, kind  # never_flag imports this module
+
+        if blocks(kind(chain, address), category):
+            # An exchange, router, token contract or burn address: a scan or
+            # list that names one is wrong, whatever it says (never_flag.py).
             return None
         label = label_rules.clean_text(label)
         if not label and peer is not None:
