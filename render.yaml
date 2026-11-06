@@ -46,7 +46,10 @@ services:
       # the repository secret DEMO_CODE equal to it for the Demo health job.
       - key: EXCHEQUER_DEMO_CODE
         sync: false
-      # Render puts the client's address first in X-Forwarded-For.
+      # Render behind Cloudflare: the client is CF-Connecting-IP, which the
+      # edge overwrites. Render keeps a client-sent X-Forwarded-For and only
+      # appends, so its leftmost entry is never trusted once measured: see
+      # /health/detail "client_ip" and set EXCHEQUER_PROXY_HOPS from it.
       - key: EXCHEQUER_TRUST_PROXY
         value: render
       # Each wake from sleep starts with an empty provider cache; re-tracing

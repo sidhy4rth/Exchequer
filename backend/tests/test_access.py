@@ -101,6 +101,21 @@ def test_guessing_the_code_is_cut_off_after_ten_wrong_tries(client, code_set):
     assert blocked.status_code == 429 and int(blocked.headers["retry-after"]) > 0
 
 
+def test_rotating_the_leftmost_forwarded_entry_does_not_reset_the_guess_limit(client, code_set, monkeypatch):
+    monkeypatch.setattr(config, "TRUST_PROXY_HEADERS", True)
+    monkeypatch.setattr(config, "PROXY_CLIENT_FIRST", True)
+    monkeypatch.setattr(config, "CLIENT_IP_HEADER", "cf-connecting-ip")
+    for n in range(11):
+        headers = {access.CODE_HEADER: "guess", "cf-connecting-ip": "49.36.1.1",
+                   "x-forwarded-for": f"10.9.{n}.1, 49.36.1.1, 104.22.17.40"}
+        status = client.post("/access/check", headers=headers).status_code
+    assert status == 429
+    # ...and nobody can lock out another address by writing it there.
+    victim = {access.CODE_HEADER: "guess", "cf-connecting-ip": "49.36.7.7",
+              "x-forwarded-for": "49.36.1.1, 49.36.7.7, 104.22.17.40"}
+    assert client.post("/access/check", headers=victim).status_code == 403
+
+
 # -- watch creation is rate limited, code or not ----------------------------------------
 def test_one_client_cannot_create_watches_without_end(client, monkeypatch):
     monkeypatch.setattr(rate_limit, "watches", rate_limit.SlidingWindowLimiter(2, 3600))

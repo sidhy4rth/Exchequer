@@ -503,15 +503,38 @@ TRACES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_TRACES_PER_HOUR", 30)
 # able to set; this one cannot be dodged, so it bounds the provider quota.
 TRACES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_TRACES_PER_HOUR_TOTAL", 120)
 
-# Read the client address from the proxy's headers. Only behind a proxy that
-# sets them; the Docker image turns it on. Proxies disagree on where the real
-# address goes: Railway sets X-Real-IP and appends to X-Forwarded-For ("1"),
-# while Render keeps whatever the client sent and puts the address it saw
-# FIRST in X-Forwarded-For, without setting X-Real-IP ("first"). Reading the
-# wrong end puts every visitor behind one proxy address, sharing one limit.
-_proxy_raw = os.getenv("EXCHEQUER_TRUST_PROXY", "").strip().lower()
+# Read the client address from the proxy's headers (rate_limit.client_ip),
+# which every per-client limit is keyed on. Only behind a proxy that sets
+# them: without one, those headers are whatever the client chose to send.
+#   unset   Render (RENDER=true) means "render", Railway means "1", else none
+#   "1"     Railway: X-Real-IP, else the last X-Forwarded-For entry
+#   render  Render behind Cloudflare. Render keeps whatever X-Forwarded-For
+#           the client sent and appends to it, so its leftmost entry can be
+#           chosen by the client. The key is CLIENT_IP_HEADER when the edge
+#           sent it, else the PROXY_HOPS-th entry from the right, else (not
+#           measured yet) the leftmost entry -- which a client can choose, but
+#           which never puts every visitor behind one edge address the way a
+#           wrong hop count would. /health/detail measures it; see client_ip.
+def proxy_mode(environ: Mapping[str, str]) -> str:
+    raw = environ.get("EXCHEQUER_TRUST_PROXY", "").strip().lower()
+    if raw:
+        return raw
+    if environ.get("RENDER", "").strip().lower() == "true":
+        return "render"
+    return "1" if environ.get("RAILWAY_ENVIRONMENT") else ""
+
+
+_proxy_raw = proxy_mode(os.environ)
 TRUST_PROXY_HEADERS: bool = _proxy_raw in ("1", "true", "yes", "on", "first", "render")
 PROXY_CLIENT_FIRST: bool = _proxy_raw in ("first", "render")
+# A header the edge itself sets to the address that connected to it,
+# overwriting any the client sent: Cloudflare's CF-Connecting-IP. "none" turns
+# it off, so a client-sent copy is ignored on a host without that edge.
+_ip_header = os.getenv("EXCHEQUER_CLIENT_IP_HEADER", "cf-connecting-ip").strip().lower()
+CLIENT_IP_HEADER: str = "" if _ip_header in ("", "0", "none", "off") else _ip_header
+# How many proxies append to X-Forwarded-For after the client, counted from
+# the right (0 = not measured). Set it only from the /health/detail probe.
+PROXY_HOPS: int = max(0, _int_env("EXCHEQUER_PROXY_HOPS", 0))
 
 # Where the report-signing private key is kept when EXCHEQUER_SIGNING_KEY is
 # not set: beside the case store, so on Railway it lives on the volume and

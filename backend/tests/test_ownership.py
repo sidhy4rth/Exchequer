@@ -252,12 +252,14 @@ def test_client_ip_trusts_proxy_headers_only_when_told(monkeypatch):
     assert rate_limit.client_ip({"x-real-ip": "198.51.100.4", **headers}, "10.0.0.1") == "198.51.100.4"
 
 
-def test_client_ip_reads_the_first_forwarded_entry_behind_render(monkeypatch):
+def test_client_ip_behind_render_believes_the_edge_not_the_client(monkeypatch):
     monkeypatch.setattr(config, "TRUST_PROXY_HEADERS", True)
     monkeypatch.setattr(config, "PROXY_CLIENT_FIRST", True)
-    # Render puts the address it saw first and does not set X-Real-IP, so a
-    # client-sent X-Real-IP must not be believed.
-    headers = {"x-forwarded-for": "203.0.113.9, 10.1.2.3", "x-real-ip": "6.6.6.6"}
+    monkeypatch.setattr(config, "CLIENT_IP_HEADER", "cf-connecting-ip")
+    # Render keeps a client-sent X-Forwarded-For and does not set X-Real-IP,
+    # so neither a forged leftmost entry nor X-Real-IP may decide the key.
+    headers = {"x-forwarded-for": "6.6.6.6, 203.0.113.9, 104.22.17.40", "x-real-ip": "6.6.6.6",
+               "cf-connecting-ip": "203.0.113.9"}
     assert rate_limit.client_ip(headers, "10.0.0.1") == "203.0.113.9"
     assert rate_limit.client_ip({}, "10.0.0.1") == "10.0.0.1"
 

@@ -35,7 +35,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import InterfaceError, OperationalError
 
 from . import batches as batch_runner
-from . import backups, config, log_safety, models, warmup, watchlist
+from . import backups, config, log_safety, models, rate_limit, warmup, watchlist
 from . import access
 from .access import DemoCodeMiddleware
 from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
@@ -126,6 +126,7 @@ async def lifespan(_app: FastAPI):
                 "screened against sanctions or mixer lists",
                 chain.name,
             )
+    logger.info("Per-client limits key on %s", rate_limit.rule())
     for status in provider_status().values():
         if status["ready"]:
             logger.info("%s: ready via %s", status["name"], status["provider"])

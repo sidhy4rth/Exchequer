@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import api_budget, config, label_store, models, ownership, signing, warmup, watchlist
+from .. import api_budget, config, label_store, models, ownership, rate_limit, signing, warmup, watchlist
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, STOLEN,
@@ -114,6 +114,10 @@ def health_detail(request: Request) -> dict[str, Any]:
         "signing_key": {"fingerprint": signing.get_signer().fingerprint,
                         "source": signing.get_signer().source,
                         "persistent": signing.get_signer().persistent},
+        # Which address this request was counted against, and which header
+        # gave it -- as fingerprints, never addresses. Send your own address
+        # as X-Exchequer-Probe-Me to measure the proxy chain (rate_limit.probe).
+        "client_ip": rate_limit.probe(request.headers, request.client.host if request.client else None),
     }
 
 

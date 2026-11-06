@@ -7,37 +7,155 @@ per process: a restart forgets the counts, which is acceptable for a limit
 whose job is to stop a loop, not to bill anyone.
 
 Behind a host's proxy every request arrives from the proxy, so the client
-is read from the proxy's headers -- but only when EXCHEQUER_TRUST_PROXY is
-set (the Docker image sets it). Without a proxy in front, those headers are
-whatever the client chose to send.
+is read from the proxy's headers -- but only as config.proxy_mode says, and
+never from a value the client could have written when the edge says who it
+is. Without a proxy in front, those headers are whatever the client chose.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
+import ipaddress
+import logging
+import secrets
 import threading
 import time
 from collections import defaultdict, deque
+from typing import Any
 
 from . import config
 
+logger = logging.getLogger(__name__)
+
+PROBE_ME = "x-exchequer-probe-me"
+
+
+def _key(raw: str | None) -> str | None:
+    """A client key from one address: IPv4 as itself, IPv6 by its /64 (one
+    subscriber's whole allocation, so rotating within it buys nothing), and
+    nothing for a value that is not an address."""
+    if not raw:
+        return None
+    try:
+        ip = ipaddress.ip_address(raw.strip()[:64])
+        if isinstance(ip, ipaddress.IPv6Address):
+            if ip.ipv4_mapped is not None:
+                return str(ip.ipv4_mapped)
+            return str(ipaddress.ip_network(f"{ip.exploded}/64", strict=False))
+        return str(ip)
+    except ValueError:
+        return None
+
+
+def _hops(headers: Any) -> list[str]:
+    forwarded = headers.get("x-forwarded-for") or ""
+    return [h.strip() for h in forwarded.split(",") if h.strip()]
+
+
+_warned_leftmost = False
+
+
+def _choose(headers: Any) -> tuple[str | None, str, bool]:
+    """(address, which header gave it, whether the client could have chosen it)."""
+    if config.TRUST_PROXY_HEADERS and config.PROXY_CLIENT_FIRST:
+        if config.CLIENT_IP_HEADER and headers.get(config.CLIENT_IP_HEADER):
+            return headers.get(config.CLIENT_IP_HEADER), config.CLIENT_IP_HEADER, False
+        hops = _hops(headers)
+        if config.PROXY_HOPS:
+            if len(hops) < config.PROXY_HOPS:
+                return None, "peer", False
+            return hops[-config.PROXY_HOPS], f"x-forwarded-for[-{config.PROXY_HOPS}]", False
+        # Not measured: the leftmost entry can be forged, but a guessed hop
+        # count could key every visitor on one edge address instead.
+        return (hops[0] if hops else None), "x-forwarded-for[0]", True
+    if config.TRUST_PROXY_HEADERS:
+        if headers.get("x-real-ip"):
+            return headers.get("x-real-ip"), "x-real-ip", False
+        hops = _hops(headers)
+        # The proxy appends the address it saw; anything to its left came
+        # from the client and could be invented.
+        return (hops[-1] if hops else None), "x-forwarded-for[-1]", False
+    return None, "peer", False
+
 
 def client_ip(headers: dict[str, str] | object, peer: str | None) -> str:
-    """The caller's address: the proxy's view of it when trusted, else the peer."""
+    """The caller's key: the proxy's view of its address when trusted, else
+    the peer. Always short, whatever the headers held."""
+    global _warned_leftmost
+    raw, source, choosable = _choose(headers)
+    key = _key(raw)
+    if key is None:
+        return _key(peer) or (peer or "unknown")[:64]
+    if choosable and not _warned_leftmost:
+        _warned_leftmost = True
+        logger.warning("Client addresses come from the leftmost X-Forwarded-For entry, which a "
+                       "client can choose: measure with /health/detail and set EXCHEQUER_PROXY_HOPS "
+                       "or EXCHEQUER_CLIENT_IP_HEADER")
+    return key
+
+
+def rule() -> str:
+    """The rule in force, in words, for the startup log and /health/detail."""
     if config.TRUST_PROXY_HEADERS and config.PROXY_CLIENT_FIRST:
-        # Render: the proxy writes the address it saw first. Ignore X-Real-IP,
-        # which Render does not set, so a client could choose it.
-        forwarded = headers.get("x-forwarded-for")  # type: ignore[union-attr]
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-    elif config.TRUST_PROXY_HEADERS:
-        real = headers.get("x-real-ip")  # type: ignore[union-attr]
-        if real:
-            return real.strip()
-        forwarded = headers.get("x-forwarded-for")  # type: ignore[union-attr]
-        if forwarded:
-            # The proxy appends the address it saw; anything to the left of it
-            # came from the client and could be invented.
-            return forwarded.split(",")[-1].strip()
-    return peer or "unknown"
+        parts = [config.CLIENT_IP_HEADER] if config.CLIENT_IP_HEADER else []
+        parts.append(f"x-forwarded-for, entry {config.PROXY_HOPS} from the right" if config.PROXY_HOPS
+                     else "the leftmost x-forwarded-for entry (a client can choose it)")
+        return ", else ".join(parts) + ", else the connection's peer"
+    if config.TRUST_PROXY_HEADERS:
+        return "x-real-ip, else the last x-forwarded-for entry, else the connection's peer"
+    return "the connection's peer (no proxy headers trusted)"
+
+
+# A per-process secret, so the probe can show which values are equal
+# without showing any of them.
+_PROBE_SECRET = secrets.token_bytes(16)
+
+
+def _fp(key: str | None) -> str | None:
+    return hmac.new(_PROBE_SECRET, key.encode(), hashlib.sha256).hexdigest()[:10] if key else None
+
+
+def probe(headers: Any, peer: str | None) -> dict[str, Any]:
+    """What arrived and what was chosen, for the operator to measure the
+    proxy chain after a deploy. No address is shown: each is a fingerprint
+    (equal values, equal fingerprints, until a restart), and `is_me` says
+    whether it equals the address sent as X-Exchequer-Probe-Me."""
+    me = _key(headers.get(PROBE_ME))
+
+    def show(raw: str | None) -> dict[str, Any] | None:
+        if raw is None:
+            return None
+        key = _key(raw)
+        return {"fp": _fp(key) or "not an address", "is_me": (key == me) if me else None}
+
+    hops = _hops(headers)
+    raw, source, choosable = _choose(headers)
+    chosen = client_ip(headers, peer)
+    out: dict[str, Any] = {
+        "mode": config._proxy_raw or "none",
+        "rule": rule(),
+        "source": source if _key(raw) else "peer",
+        "client_can_choose_key": choosable and _key(raw) is not None,
+        "chosen": {"fp": _fp(chosen), "is_me": (chosen == me) if me else None},
+        "candidates": {
+            "peer": show(peer),
+            **{name: show(headers.get(name)) for name in
+               ("cf-connecting-ip", "true-client-ip", "x-real-ip", "forwarded")},
+            "x-forwarded-for": [show(h) for h in hops],
+        },
+    }
+    if not me:
+        out["advice"] = f"Send your public address as {PROBE_ME} to compare."
+    elif chosen == me:
+        out["advice"] = "The key is your address: the rule is right for this route to the site."
+    elif any(_key(h) == me for h in hops):
+        k = len(hops) - max(i for i, h in enumerate(hops) if _key(h) == me)
+        out["advice"] = (f"Your address is entry {k} from the right of x-forwarded-for: "
+                         f"set EXCHEQUER_PROXY_HOPS={k} (and EXCHEQUER_CLIENT_IP_HEADER=none if "
+                         "cf-connecting-ip is not you). Check from a second network first.")
+    else:
+        out["advice"] = "Your address is in no header: keep the current rule and compare again."
+    return out
 
 
 class SlidingWindowLimiter:
