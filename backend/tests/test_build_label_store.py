@@ -128,3 +128,63 @@ def test_the_owners_never_flag_lists_apply_too(tmp_path):
     report = build(src, tmp_path / "label_store.db", listed=[tokens], no_poisoning=[services])
     assert report["rows"] == 1  # the freeze on the service, which only poisoning labels may not name
     assert report["skipped"] == {"never-flag: listed": 2, "never-flag: never-poison": 1}
+
+
+# -- r1-scripts-7: two rows for one address keep the stronger evidence -----------
+def stored_rows(out):
+    import sqlite3
+
+    db = sqlite3.connect(out)
+    try:
+        return db.execute("SELECT category, tier FROM labels").fetchall()
+    finally:
+        db.close()
+
+
+WALLET = addr("d0b1e")
+FBI_ROW = {"address": WALLET, "chain": "ethereum", "category": "hack proceeds (FBI)",
+           "entity_or_incident": "Lazarus Group", "sources": "FBI alert 31 Oct 2026"}
+
+
+def test_the_strongest_tier_wins_whatever_the_csv_order(tmp_path):
+    for order in ([poisoning(WALLET), FBI_ROW], [FBI_ROW, poisoning(WALLET)]):
+        out = tmp_path / "label_store.db"
+        report = build(write_csv(tmp_path / "flagged.csv", order), out)
+        assert stored_rows(out) == [("stolen", 1)]
+        assert report["duplicates"] == 1 and report["conflicts"] == 1
+
+
+def test_a_tie_never_makes_an_address_a_mixer(tmp_path):
+    mixer = {"address": WALLET, "chain": "ethereum", "category": "mixer",
+             "entity_or_incident": "Tornado.Cash: 0.1 WBTC", "sources": "Explorer tag via dawsbot/eth-labels @d9b21ae"}
+    scam = {**SCAM, "address": WALLET}
+    out = tmp_path / "label_store.db"
+    build(write_csv(tmp_path / "flagged.csv", [mixer, scam]), out)
+    assert stored_rows(out) == [("scam", 3)]
+
+
+def test_a_strong_conflict_fails_the_build_unless_allowed(tmp_path, capsys):
+    src = write_csv(tmp_path / "flagged.csv", [poisoning(WALLET), FBI_ROW])
+    out = tmp_path / "label_store.db"
+    assert build_label_store.main([str(src), "--out", str(out)]) == 1
+    assert WALLET in capsys.readouterr().out and not out.exists()
+    assert build_label_store.main([str(src), "--out", str(out), "--allow-conflicts"]) == 0
+
+
+def test_checksummed_and_lowercase_forms_are_one_row(tmp_path):
+    checksummed = "0x" + WALLET[2:].upper()
+    out = tmp_path / "label_store.db"
+    report = build(write_csv(tmp_path / "flagged.csv", [{**SCAM, "address": WALLET},
+                                                        {**SCAM, "address": checksummed}]), out)
+    assert report["rows"] == 1 and report["duplicates"] == 1 and report["conflicts"] == 0
+
+
+def test_tron_hex_and_base58_forms_are_one_row(tmp_path):
+    from app.label_store import decode_address
+
+    body = bytes.fromhex("ab" * 20)
+    base58 = decode_address(b"\x41" + body)
+    rows = [{**poisoning(base58, "tron"), "sources": "Tron poisoning via BigQuery full-history scan"},
+            {**poisoning("0x" + body.hex(), "tron"), "sources": "Tron poisoning via BigQuery full-history scan"}]
+    report = build(write_csv(tmp_path / "flagged.csv", rows), tmp_path / "label_store.db")
+    assert report["rows"] == 1 and report["duplicates"] == 1 and report["conflicts"] == 0

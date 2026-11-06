@@ -29,7 +29,7 @@ from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 
 from app import label_rules, never_flag
-from app.label_store import CHAIN_IDS, SCHEMA_VERSION, encode_address, encode_tx
+from app.label_store import CHAIN_IDS, SCHEMA_VERSION, decode_address, encode_address, encode_tx
 
 DEFAULT_OUT = Path(__file__).resolve().parent.parent / "data" / "label_store.db"
 
@@ -58,6 +58,11 @@ TX = re.compile(r"\btx (?:0x)?([0-9a-fA-F]{64})\b")
 POISONING_OPERATOR = "Address-poisoning operator"
 POISONING_TOKEN = "Fake token contract used in address poisoning"
 NEVER_FLAG = "never-flag: "
+# Two rows for one address on one chain: the stronger tier wins; at an equal
+# tier, the more specific category. A mixer sits below a scam, so a tie never
+# makes an address end a trace.
+PRIORITY = {"stolen": 0, "laundering": 1, "frozen": 2, "scam": 3, "mixer": 4, "poisoning": 5}
+STRONG_SHOWN = 20
 
 
 def map_row(row: dict[str, str], never: dict[str, dict[bytes, str]] | None = None,
@@ -212,6 +217,34 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
     skipped: collections.Counter = collections.Counter()
     unknown: collections.Counter = collections.Counter()
     refused = {"rows": 0, "tier1": 0}
+    merged = {"duplicates": 0, "conflicts": 0, "strong": 0}
+    strong: list[str] = []
+    names = {v: k for k, v in CHAIN_IDS.items()}
+
+    def insert(rows: list[tuple]) -> None:
+        cur = db.executemany("INSERT OR IGNORE INTO labels VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
+        if cur.rowcount == len(rows):
+            return
+        # Rare: an address already held on this chain (a checksummed and a
+        # lowercase form, Tron hex and base58, overlapping chain lists). The
+        # stronger evidence wins whatever the CSV order, and it is counted.
+        merged["duplicates"] += len(rows) - cur.rowcount
+        for r in rows:
+            held = db.execute("SELECT category, entity, label, peer, tx, date, source, tier FROM labels "
+                              "WHERE address=? AND chain=?", r[:2]).fetchone()
+            if held == tuple(r[2:]):
+                continue  # this row, or an identical twin, is the one held
+            if held[0] != r[2]:
+                merged["conflicts"] += 1
+                if min(held[7], r[9]) <= 2:
+                    merged["strong"] += 1
+                    if len(strong) < STRONG_SHOWN:
+                        strong.append(f"{names[r[1]]} {decode_address(r[0])}: {held[0]} (tier {held[7]}) "
+                                      f"and {r[2]} (tier {r[9]})")
+            if (r[9], PRIORITY[r[2]]) < (held[7], PRIORITY[held[0]]):
+                db.execute("UPDATE labels SET category=?, entity=?, label=?, peer=?, tx=?, date=?, source=?, "
+                           "tier=? WHERE address=? AND chain=?", (*r[2:], *r[:2]))
+
     written = 0
     started = time.time()
     batch: list[tuple] = []
@@ -235,13 +268,12 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
                 break
             batch.append((raw, chain_id, category, tid(entity), label, peer, tx, date, tid(source), tier))
             if len(batch) >= 100_000:
-                db.executemany("INSERT OR IGNORE INTO labels VALUES (?,?,?,?,?,?,?,?,?,?)", batch)
+                insert(batch)
                 written += len(batch)
                 batch.clear()
                 print(f"  {written:,} rows ({time.time() - started:.0f}s)", flush=True)
-    db.executemany("INSERT OR IGNORE INTO labels VALUES (?,?,?,?,?,?,?,?,?,?)", batch)
+    insert(batch)
     db.executemany("INSERT INTO texts VALUES (?,?)", [(i, t) for t, i in text_ids.items()])
-    names = {v: k for k, v in CHAIN_IDS.items()}
     counts = db.execute("SELECT chain, category, COUNT(*) FROM labels GROUP BY 1, 2").fetchall()
     db.executemany("INSERT INTO counts VALUES (?,?,?)", [(names[c], cat, n) for c, cat, n in counts])
     db.executemany("INSERT INTO meta VALUES (?,?)", [
@@ -249,6 +281,8 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         ("built_from", csv_path.name),
         ("built_at", time.strftime("%Y-%m-%dT%H:%M:%S")),
         ("never_flag_refused", str(refused["rows"])),
+        ("duplicates", str(merged["duplicates"])),
+        ("conflicts", str(merged["conflicts"])),
     ])
     db.commit()
     db.execute("VACUUM")
@@ -262,6 +296,10 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         "refused": refused["rows"],
         "refused_tier1": refused["tier1"],
         "refused_out": str(refused_out) if refused["rows"] else None,
+        "duplicates": merged["duplicates"],
+        "conflicts": merged["conflicts"],
+        "strong_conflicts": merged["strong"],
+        "strong_conflicts_shown": strong,
         "size_mb": round(out.stat().st_size / 1e6, 1),
     }
     return report
@@ -276,6 +314,10 @@ def problems(report: dict, args: argparse.Namespace) -> list[str]:
     if not args.accept_refusals and report["refused"] > args.max_refused:
         found.append(f"{report['refused']:,} rows name infrastructure (more than --max-refused "
                      f"{args.max_refused:,}): a detector or list may be misfiring; read {report['refused_out']}")
+    if report["strong_conflicts"] and not args.allow_conflicts:
+        found.append(f"{report['strong_conflicts']:,} addresses carry a government, court or issuer record "
+                     "and a different category; the stronger was kept, but check them: "
+                     + "; ".join(report["strong_conflicts_shown"]))
     if report["unknown_sources"] and not args.allow_unknown_sources:
         found.append("sources app/label_rules.SOURCE_TIERS does not place (add each, with its tier): "
                      + "; ".join(f"{p!r} ({n:,} rows)" for p, n in list(report["unknown_sources"].items())[:20]))
@@ -297,6 +339,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="where refused rows are listed (default: beside the CSV)")
     ap.add_argument("--max-refused", type=int, default=1000,
                     help="refuse the build when more rows than this name infrastructure")
+    ap.add_argument("--allow-conflicts", action="store_true",
+                    help="after checking them: release with a strong record and another category on one address")
     ap.add_argument("--accept-refusals", action="store_true",
                     help="after reading the refused list: release even with court records or many refusals in it")
     args = ap.parse_args(argv)
@@ -310,6 +354,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  skipped {n:,}: {reason}")
     if report["refused"]:
         print(f"  {report['refused']:,} rows naming infrastructure refused, listed in {report['refused_out']}")
+    if report["duplicates"]:
+        print(f"  {report['duplicates']:,} duplicate rows merged (stronger evidence kept), "
+              f"{report['conflicts']:,} with different categories")
     found = problems(report, args)
     if found:
         # Nothing is left to release by mistake; the build is repeatable.
