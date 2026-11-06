@@ -210,3 +210,29 @@ def test_existing_freeze_requests_start_at_version_one_and_still_update(engine):
     assert freeze_requests.update("o", "r", {"status": "sent"})["status"] == "sent"
     with engine.connect() as conn:
         assert conn.execute(text("SELECT row_version FROM freeze_requests")).scalar() == 2
+
+
+def test_sec6_watch_1_fills_inferred_deposits_from_the_cases_already_stored(engine):
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.upgrade(settings, "0001")
+        rows = [
+            ("good", '{"chain": "ethereum", "inferred_deposits": [{"address": "0xABC1", "exchange": "OKX"},'
+                     ' {"address": "0xabc1", "exchange": "OKX"}, {"address": "bad addr", "exchange": "X"}]}'),
+            ("corrupt", '{"inferred_deposits": [ not json'),
+            ("none", '{"chain": "ethereum", "inferred_deposits": []}'),
+            ("plain", '{"chain": "ethereum"}'),
+        ]
+        for case_id, body in rows:
+            conn.execute(text("INSERT INTO cases (id, address, created_at, result_json, owner_hash) "
+                              "VALUES (:i, :a, 't', :r, :o)"), {"i": case_id, "a": ADDRESS, "r": body, "o": "h" * 64})
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    with engine.connect() as conn:
+        got = conn.execute(text("SELECT case_id, chain, address, exchange, owner_hash, seed_address "
+                                "FROM inferred_deposits")).all()
+    assert got == [("good", "ethereum", "0xabc1", "OKX", "h" * 64, ADDRESS)]
+    models.init_db()  # nothing runs twice
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM inferred_deposits")).scalar() == 1

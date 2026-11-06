@@ -192,8 +192,10 @@ def test_due_watches_are_the_unchecked_and_the_stale(store):
 
 def test_a_transfer_to_an_inferred_deposit_address_counts_as_an_exchange(chain):
     deposit = "0x" + "d" * 40
+    # Alice's own case: only her own and the demo cases may label her alerts.
     models.save_case("c1", WALLET, {"address": WALLET, "chain": "ethereum",
-                                    "inferred_deposits": [{"address": deposit, "exchange": "OKX"}]})
+                                    "inferred_deposits": [{"address": deposit, "exchange": "OKX"}]},
+                     owner_hash=owner(ALICE))
     w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH", case_id="c1")
     watchlist.check_watch(w.id, source=chain)
     chain.transfers = [tx(7, deposit, 2.0)]
@@ -215,7 +217,7 @@ def trc20(seconds, to=STRANGER, value=100.0):
 
 
 def test_a_tron_usdt_watch_sees_new_transfers_without_block_numbers(chain, monkeypatch):
-    monkeypatch.setattr(watchlist, "_classify", lambda chain_key, to: ("moved", ""))
+    monkeypatch.setattr(watchlist, "_classify", lambda *a, **k: ("moved", ""))
     w = watchlist.create_watch(owner(ALICE), TRON_WALLET, "tron", "USDT")
     chain.transfers = [trc20(10)]
     assert watchlist.check_watch(w.id, source=chain) == []  # baseline
@@ -226,7 +228,7 @@ def test_a_tron_usdt_watch_sees_new_transfers_without_block_numbers(chain, monke
 
 
 def test_a_tron_watch_baselined_by_block_starts_again_rather_than_flooding(chain, monkeypatch):
-    monkeypatch.setattr(watchlist, "_classify", lambda chain_key, to: ("moved", ""))
+    monkeypatch.setattr(watchlist, "_classify", lambda *a, **k: ("moved", ""))
     w = watchlist.create_watch(owner(ALICE), TRON_WALLET, "tron", "USDT")
     with models.session() as s:  # what the old code stored: block 0
         s.get(models.Watch, w.id).last_seen_block = 0

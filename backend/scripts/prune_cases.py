@@ -156,6 +156,8 @@ def main(argv: list[str] | None = None) -> int:
         for chunk in _chunks(to_delete):
             session.execute(update(models.Watch).where(models.Watch.case_id.in_(chunk)).values(case_id=None))
             session.execute(delete(models.Case).where(models.Case.id.in_(chunk)))
+            # A removed case must not go on labelling watch alerts.
+            session.execute(delete(models.InferredDeposit).where(models.InferredDeposit.case_id.in_(chunk)))
     print(f"deleted {len(to_delete)} cases; {len(ids) - len(to_delete)} remain")
     return 0
 

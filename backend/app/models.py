@@ -19,12 +19,13 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import (BigInteger, Boolean, Float, Integer, String, Text, create_engine, event, func, or_, select,
-                        text)
+from sqlalchemy import (BigInteger, Boolean, Float, Index, Integer, String, Text, create_engine, event, func, or_,
+                        select, text)
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from . import config
+from .input_rules import plain_text
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,29 @@ class Alert(Base):
     read: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class InferredDeposit(Base):
+    """A deposit address a stored case inferred: one row per case and address.
+
+    Written with its case, in the same transaction, so a watch alert can ask
+    "is this counterparty a probable exchange deposit address?" with one
+    indexed query, and only of the cases its owner may see (ownership.py),
+    instead of loading every stored case to find out."""
+
+    __tablename__ = "inferred_deposits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    # The case's owner and reported address: whose inference it is, and
+    # whether it is one of the public demo cases.
+    owner_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
+    seed_address: Mapped[str] = mapped_column(String(64))
+    chain: Mapped[str] = mapped_column(String(16))
+    address: Mapped[str] = mapped_column(String(64))
+    exchange: Mapped[str] = mapped_column(String(64))
+
+    __table_args__ = (Index("ix_inferred_deposits_chain_address", "chain", "address"),)
+
+
 class FreezeRequest(Base):
     """A request sent about a case -- to an exchange, to Tether -- and what came of it."""
 
@@ -223,7 +247,9 @@ def _sqlite_wal(dbapi_connection, _record) -> None:
 
 # Bumped on every save. Stored cases never change, so anything computed over
 # the whole store (correlation, the ledger) stays valid until this moves.
+# Read it before computing, and stamp the result with that value.
 _store_version = 0
+_store_version_lock = threading.Lock()
 
 
 def store_version() -> int:
@@ -297,7 +323,7 @@ def save_case(
     created_at: str | None = None,
     owner_hash: str | None = None,
 ) -> Case:
-    """Persist one completed trace."""
+    """Persist one completed trace, and the deposit addresses it inferred."""
     case = Case(
         id=case_id,
         address=address,
@@ -308,11 +334,39 @@ def save_case(
     global _store_version
     with Session(_engine) as session:
         session.add(case)
+        session.add_all(inferred_deposit_rows(case_id, owner_hash, address, result))
         session.commit()
         session.refresh(case)
         session.expunge(case)
-    _store_version += 1
+    with _store_version_lock:
+        _store_version += 1
     return case
+
+
+def inferred_deposit_rows(case_id: str, owner_hash: str | None, seed: str,
+                          result: dict[str, Any]) -> list[InferredDeposit]:
+    """The InferredDeposit rows for one case's result["inferred_deposits"]."""
+    try:
+        chain = config.get_chain(result.get("chain") or "ethereum").key
+    except config.UnknownChainError:
+        return []
+    matches = result.get("inferred_deposits")
+    rows: list[InferredDeposit] = []
+    seen: set[str] = set()
+    for match in matches if isinstance(matches, list) else []:
+        if not isinstance(match, dict):
+            continue
+        address, exchange = match.get("address"), match.get("exchange")
+        if not (isinstance(address, str) and isinstance(exchange, str) and address.strip() and exchange.strip()):
+            continue
+        address = address.strip()
+        address = address.lower() if address.startswith("0x") else address  # etherscan_client.normalize_address
+        if len(address) > 64 or not address.isalnum() or address in seen:
+            continue
+        seen.add(address)
+        rows.append(InferredDeposit(case_id=case_id, owner_hash=owner_hash, seed_address=(seed or "")[:64],
+                                    chain=chain, address=address, exchange=plain_text(exchange, 64)))
+    return rows
 
 
 def case_count() -> int:
