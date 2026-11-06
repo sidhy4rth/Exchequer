@@ -21,7 +21,10 @@ evidence.py, casebook.py and others) and the trace itself in app/pipeline.py.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import threading
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -29,6 +32,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import InterfaceError, OperationalError
 
 from . import batches as batch_runner
 from . import backups, config, log_safety, models, warmup, watchlist
@@ -51,11 +55,55 @@ log_safety.install()
 logger = logging.getLogger(__name__)
 
 
+# The case store at startup: tried this many times (seconds to wait before
+# each try), well inside the host's boot window. If it still cannot be
+# reached the site starts without it -- the UI, /health, the recorded demos
+# and /verify need no store -- and a background thread retries every
+# DB_RETRY_SECONDS. A database outage used to stop the whole site at its next wake.
+DB_STARTUP_DELAYS = (0.0, 2.0, 5.0)
+DB_RETRY_SECONDS = 60.0
+
+
+def _short(exc: Exception) -> str:
+    """The error's type and first line: enough to diagnose, never a connection string."""
+    first = str(exc).splitlines()[0] if str(exc) else ""
+    return f"{type(exc).__name__}: {first[:200]}"
+
+
+def _open_store() -> bool:
+    """Bring the store to the current schema, then mark batches a restart cut
+    short. False if the store cannot be reached."""
+    try:
+        models.init_db()
+    except Exception as exc:  # noqa: BLE001 -- the site must start without its store
+        logger.error("Case store unavailable: %s", _short(exc))
+        return False
+    try:
+        # A restart stops running batches; say so on their rows.
+        batch_runner.mark_interrupted()
+    except Exception as exc:  # noqa: BLE001 -- a read-only store still serves cases
+        logger.error("Could not mark interrupted batches: %s", _short(exc))
+    return True
+
+
+def _retry_store_in_background() -> None:
+    def loop() -> None:
+        while not _open_store():
+            time.sleep(DB_RETRY_SECONDS)
+        logger.info("Case store reachable again")
+    threading.Thread(target=loop, name="store-retry", daemon=True).start()
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    models.init_db()
-    # A restart stops running batches; say so on their rows.
-    batch_runner.mark_interrupted()
+    for delay in DB_STARTUP_DELAYS:
+        if delay:
+            await asyncio.sleep(delay)
+        if _open_store():
+            break
+    else:
+        logger.error("Starting without the case store; its routes answer 503 until it is back")
+        _retry_store_in_background()
     for key, chain in config.CHAINS.items():
         matcher = get_matcher(key)
         if not len(matcher):
@@ -107,6 +155,15 @@ app = FastAPI(
     redoc_url="/redoc" if config.API_DOCS_ENABLED else None,
     openapi_url="/openapi.json" if config.API_DOCS_ENABLED else None,
 )
+
+@app.exception_handler(OperationalError)
+@app.exception_handler(InterfaceError)
+async def store_unavailable(_request: Request, exc: Exception) -> JSONResponse:
+    """The database could not be reached: say so, rather than a bare 500."""
+    logger.error("Case store unavailable: %s", _short(exc))
+    return JSONResponse(status_code=503, headers={"Retry-After": "60"},
+                        content={"detail": "The case store is unavailable right now. Try again in a minute."})
+
 
 # Added first, so innermost: its refusals still pass through the security
 # headers and CORS added after it. See access.py.
