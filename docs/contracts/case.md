@@ -61,6 +61,14 @@ largest destinations, the default) or `min_share` (flag
 `EXCHEQUER_TAINT_EXPANSION`). An empty list means nothing above dust was left
 behind. A report that states where the money went should state this too.
 
+`provenance` (v1-style, optional, read with `.get`) is what the trace ran with,
+so a report rendered after a deploy can say so (`backend/app/provenance.py`):
+`tool_version`, `captured_at`, `lists` (for each screening and label list: its
+`file`, `sha256` and the `_meta` dates the report prints), `label_store`, and
+`settings` (`follow_swaps`, `max_follow_ons`, `live_tags`, `tx_intake`,
+`taint_expansion`, `tracing_methods`). Absent in cases stored before it; their
+reports say their version and lists were not recorded.
+
 ## Attribution kinds
 
 | `kind` | What it is | What a request letter can ask |
