@@ -66,7 +66,18 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
         payload["case_id"] = None
         return payload
 
-    if config.MAX_STORED_CASES and models.case_count() >= config.MAX_STORED_CASES:
+    if owner and config.MAX_CASES_PER_OWNER and models.case_count_for(owner) >= config.MAX_CASES_PER_OWNER:
+        payload["case_id"] = None
+        payload.setdefault("warnings", []).append(
+            f"This browser already keeps {config.MAX_CASES_PER_OWNER:,} cases, so this result is "
+            "shown here but was not saved: export what you need from it now."
+        )
+        return payload
+
+    stored = models.case_count() if config.MAX_STORED_CASES else 0
+    if config.MAX_STORED_CASES and stored + 1 == int(config.MAX_STORED_CASES * 0.8):
+        logger.warning("Case store is 80%% full (%d of %d cases)", stored + 1, config.MAX_STORED_CASES)
+    if config.MAX_STORED_CASES and stored >= config.MAX_STORED_CASES:
         logger.warning("Case store full (%d cases); trace of %s not stored",
                        config.MAX_STORED_CASES, payload["address"])
         payload["case_id"] = None

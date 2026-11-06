@@ -277,6 +277,12 @@ def case_count() -> int:
         return int(session.scalar(select(func.count()).select_from(Case)) or 0)
 
 
+def case_count_for(owner_hash: str) -> int:
+    with Session(_engine) as session:
+        stmt = select(func.count()).select_from(Case).where(Case.owner_hash == owner_hash)
+        return int(session.scalar(stmt) or 0)
+
+
 def get_case(case_id: str) -> Case | None:
     with Session(_engine) as session:
         case = session.get(Case, case_id)

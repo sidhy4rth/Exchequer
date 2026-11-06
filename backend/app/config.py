@@ -383,6 +383,9 @@ TRACE_MAX_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES", 4)
 # ~160 MB. Once full, a trace still runs and shows its result -- it is just not
 # stored. Nothing already stored is ever deleted to make room.
 MAX_STORED_CASES: int = _int_env("EXCHEQUER_MAX_STORED_CASES", 5000)
+# The most of those one owner key may keep (0 = no quota), so one browser
+# cannot fill the store and stop everyone else's cases from being saved.
+MAX_CASES_PER_OWNER: int = _int_env("EXCHEQUER_MAX_CASES_PER_OWNER", 200)
 
 # Minimum spacing between Etherscan requests, in seconds.
 #
