@@ -114,6 +114,12 @@ class EtherscanRateLimitError(EtherscanError):
     """Raised when Etherscan keeps rate-limiting us after all retries."""
 
 
+class ProviderQuotaError(EtherscanRateLimitError):
+    """A provider's daily or monthly allowance is spent. Unlike a momentary rate
+    limit, waiting seconds cannot help, so it is never retried and never slows
+    the shared pacer; the officer is told the quota is used up."""
+
+
 class EtherscanConfigError(EtherscanError):
     """Raised when no API key is configured."""
 
@@ -246,6 +252,9 @@ _EMPTY_MESSAGES = (
 )
 
 # Phrases that mean "slow down" -- worth retrying with backoff.
+# A spent allowance, checked before the rate-limit phrases ("Max daily rate
+# limit reached ... calls per day" contains "rate limit" too).
+_QUOTA_MESSAGES = ("daily", "per day", "monthly", "quota", "compute unit", "cu limit")
 _RATE_LIMIT_MESSAGES = (
     "rate limit",
     "max rate limit reached",
@@ -259,6 +268,10 @@ class EtherscanClient:
     Thread-safe: the internal throttle is guarded by a lock so the client can
     be shared across FastAPI's worker threads.
     """
+
+    # The case's wall clock (api_budget.TraceBudget), set by pipeline.run_trace;
+    # None outside a trace (scripts, the watcher).
+    budget = None
 
     def __init__(
         self,
@@ -400,9 +413,11 @@ class EtherscanClient:
         last_error: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
+            if self.budget is not None:
+                self.budget.check()  # the case's wall clock, before every attempt
             self._throttle()
             try:
-                response = self._client.get(self.base_url, params=query)
+                response = self._client.get(self.base_url, params=query, **self._timeout())
             except httpx.RequestError as exc:  # DNS failure, timeout, reset...
                 last_error = EtherscanError(f"Network error contacting Etherscan: {exc}")
                 self._backoff(attempt, reason=str(exc))
@@ -458,7 +473,11 @@ class EtherscanClient:
                 self._record(request_desc, cache_key, response, [])
                 return []
 
-            # 2. Rate limited -- back off and retry.
+            # 2a. The day's allowance is spent -- retrying cannot help.
+            if any(phrase in haystack for phrase in _QUOTA_MESSAGES):
+                raise ProviderQuotaError(f"Etherscan quota spent: {message} {result}")
+
+            # 2b. Rate limited -- back off and retry.
             if any(phrase in haystack for phrase in _RATE_LIMIT_MESSAGES):
                 last_error = EtherscanRateLimitError(
                     f"Etherscan rate limit hit: {message} {result}"
@@ -483,7 +502,10 @@ class EtherscanClient:
         )
 
     def _backoff(self, attempt: int, reason: str) -> None:
-        """Exponential backoff with jitter: ~0.5s, 1s, 2s, 4s."""
+        """Exponential backoff with jitter: ~0.5s, 1s, 2s, 4s. None after the
+        last attempt: nothing follows it to wait for."""
+        if attempt >= self.max_retries:
+            return
         delay = (0.5 * (2**attempt)) + random.uniform(0, 0.25)
         logger.warning(
             "Etherscan retry %d/%d in %.2fs (%s)",
@@ -492,7 +514,13 @@ class EtherscanClient:
             delay,
             reason,
         )
-        time.sleep(delay)
+        if self.budget is not None:
+            self.budget.sleep(delay)  # never past the case's deadline
+        else:
+            time.sleep(delay)
+
+    def _timeout(self) -> dict[str, float]:
+        return {"timeout": self.budget.timeout(20.0)} if self.budget is not None else {}
 
     # -- public API --------------------------------------------------------
     def get_transactions(

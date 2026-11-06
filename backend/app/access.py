@@ -35,6 +35,8 @@ CODE_HEADER = "x-exchequer-demo-code"
 GUARDED: list[tuple[str, re.Pattern[str]]] = [
     ("POST", re.compile(r"^/trace/?$")),
     ("POST", re.compile(r"^/trace/jobs/?$")),
+    # Stopping a trace is owner-checked in the route; guarded like starting one.
+    ("DELETE", re.compile(r"^/trace/jobs/[^/]+/?$")),
     ("POST", re.compile(r"^/batches/?$")),
     ("POST", re.compile(r"^/watches/?$")),
     ("POST", re.compile(r"^/watches/[^/]+/check/?$")),

@@ -35,6 +35,10 @@ class Job:
     result: dict[str, Any] | None = None
     error: dict[str, Any] | None = None
     version: int = 0
+    # Who may stop it (the owner hash of the browser that started it) and the
+    # trace's clock, which a stop cancels (api_budget.TraceBudget).
+    owner: str | None = None
+    budget: Any = None
 
     def snapshot(self, with_result: bool = False) -> dict[str, Any]:
         end = self.finished or time.time()
@@ -56,8 +60,8 @@ class JobStore:
         self._jobs: dict[str, Job] = {}
         self._lock = threading.Lock()
 
-    def create(self) -> Job:
-        job = Job(id=str(uuid.uuid4()))
+    def create(self, owner: str | None = None, budget: Any = None) -> Job:
+        job = Job(id=str(uuid.uuid4()), owner=owner, budget=budget)
         with self._lock:
             self._prune()
             self._jobs[job.id] = job

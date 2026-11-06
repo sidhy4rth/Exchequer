@@ -132,14 +132,36 @@ def test_a_follow_on_that_finds_nothing_says_so_instead_of_asking_for_a_rerun(fa
 
 
 def test_a_time_budget_covers_the_follow_on_too(faked, monkeypatch):
-    """'Stop after 1:30' means the case, not each trace in it."""
+    """'Stop after 1:30' means the case, not each trace in it: one clock
+    (api_budget.TraceBudget) is shared by the trace and its follow-ons."""
+    from app.api_budget import TraceBudget
+    now = [0.0]
+    budget = TraceBudget(90, 60, clock=lambda: now[0])
     real = main.build_trace_graph
 
     def slow(*a, **k):
         result = real(*a, **k)
-        result.seconds_elapsed = 85.0  # the original trace used almost all of 90 s
+        now[0] += 95.0  # the original trace used all of its 90 s
         return result
 
     monkeypatch.setattr(main, "build_trace_graph", slow)
-    (follow,) = run_trace(request(time_budget_seconds=90))["follow_ons"]
+    (follow,) = run_trace(request(time_budget_seconds=90), budget=budget)["follow_ons"]
     assert "time budget was spent" in follow["error"] and "result" not in follow
+
+
+def test_a_follow_on_that_crashes_keeps_the_trace_that_found_it(faked, monkeypatch):
+    """Only HTTP errors were caught: any other failure in the follow-on threw
+    away the finished original trace."""
+    real = main.run_trace
+
+    def flaky(sub, seed_window=None, budget=None):
+        if sub.asset == "USDT":
+            raise RuntimeError("provider answered something odd")
+        return real(sub, seed_window=seed_window, budget=budget)
+
+    monkeypatch.setattr(main, "run_trace", flaky)
+    result = real(request())
+    (follow,) = result["follow_ons"]
+    assert "result" not in follow and "could not be traced" in follow["error"]
+    assert "provider answered" not in follow["error"]  # a fixed sentence, never raw text
+    assert result["asset"] == "ETH"

@@ -34,6 +34,8 @@ than at whatever constant was guessed in advance.
 """
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import json
 import logging
 import sqlite3
@@ -436,3 +438,107 @@ def reset() -> None:
         for cache in _caches.values():
             cache.close()
         _caches.clear()
+
+
+# ---------------------------------------------------------------------------
+# One case's wall clock
+#
+# Nothing used to bound how long a trace ran: the time budget was optional and
+# checked only between fetch batches, never inside a fetch (retries, backoff,
+# pagination) or in the reads after the walk. One TraceBudget per case now
+# holds a walk deadline and a hard deadline (the walk plus a grace for the
+# later reads); every provider client checks it before each attempt and waits
+# out its backoff through it, and follow-on traces share it.
+# ---------------------------------------------------------------------------
+class TraceStopped(Exception):
+    """A trace stopped by its own limits. `reason` is a fixed sentence, safe for a report."""
+
+    reason = "the trace was stopped"
+
+
+class DeadlineReached(TraceStopped):
+    reason = "time limit"
+
+
+class Cancelled(TraceStopped):
+    reason = "stop requested by the person who started it"
+
+
+class TraceBudget:
+    def __init__(self, walk_seconds: float, grace_seconds: float,
+                 clock: Callable[[], float] = time.monotonic) -> None:
+        self.walk_seconds = float(walk_seconds)
+        self.grace_seconds = float(grace_seconds)
+        self._clock = clock
+        self.started = clock()
+        self.walk_deadline = self.started + self.walk_seconds
+        self.hard_deadline = self.walk_deadline + self.grace_seconds
+        self.stopped = False
+        self._cancel = threading.Event()
+
+    def cancel(self) -> None:
+        """Stop the trace at its next provider request or backoff (DELETE /trace/jobs/{id})."""
+        self._cancel.set()
+
+    @property
+    def cancelled(self) -> bool:
+        return self._cancel.is_set()
+
+    @classmethod
+    def for_request(cls, requested_seconds: float | None) -> TraceBudget:
+        """The server's default when none is asked for, never above its maximum."""
+        from . import config
+
+        walk = min(requested_seconds or config.TRACE_TIME_BUDGET_DEFAULT, config.TRACE_TIME_BUDGET_MAX)
+        return cls(walk, config.TRACE_POST_WALK_SECONDS)
+
+    def remaining(self) -> float:
+        return self.hard_deadline - self._clock()
+
+    def walk_over(self) -> bool:
+        return self._clock() >= self.walk_deadline
+
+    def walk_remaining(self) -> float:
+        """Seconds the walk may still expand, by this budget's own clock."""
+        return max(0.0, self.walk_deadline - self._clock())
+
+    def check(self) -> None:
+        """Raise Cancelled once a stop was asked for, DeadlineReached once the hard deadline has passed."""
+        if self._cancel.is_set():
+            self.stopped = True
+            raise Cancelled()
+        if self.remaining() <= 0:
+            self.stopped = True
+            raise DeadlineReached()
+
+    def timeout(self, default: float) -> float:
+        """A request timeout that cannot outlast the case."""
+        return max(1.0, min(default, self.remaining()))
+
+    def sleep(self, seconds: float) -> None:
+        """A retry backoff that never sleeps past the deadline."""
+        if seconds >= self.remaining():
+            self.stopped = True
+            raise DeadlineReached()
+        if self._cancel.wait(seconds):  # a stop ends the wait at once
+            self.stopped = True
+            raise Cancelled()
+
+
+# The budget a background job runs its trace under, handed to run_trace on the
+# job's own thread (routes/jobs.py). Provider clients get theirs explicitly:
+# the fetch threads do not inherit context.
+_current: contextvars.ContextVar[TraceBudget | None] = contextvars.ContextVar("trace_budget", default=None)
+
+
+def current_budget() -> TraceBudget | None:
+    return _current.get()
+
+
+@contextlib.contextmanager
+def using(budget: TraceBudget):
+    token = _current.set(budget)
+    try:
+        yield budget
+    finally:
+        _current.reset(token)

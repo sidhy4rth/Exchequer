@@ -111,6 +111,10 @@ class TronClient:
         client.get_outgoing_transactions(address) -> list[Transaction]
     """
 
+    # The case's wall clock (api_budget.TraceBudget), set by pipeline.run_trace;
+    # None outside a trace (scripts, the watcher).
+    budget = None
+
     def __init__(
         self,
         api_key: str | None = None,
@@ -168,9 +172,12 @@ class TronClient:
     def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
+            if self.budget is not None:
+                self.budget.check()  # the case's wall clock, before every attempt
             self._throttle()
             try:
-                response = self._client.get(f"{self.base_url}{path}", params=params)
+                response = self._client.get(f"{self.base_url}{path}", params=params,
+                                            **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
             except httpx.RequestError as exc:
                 last_error = TronError(f"Network error contacting TronGrid: {exc}")
                 self._backoff(attempt, str(exc))
@@ -202,10 +209,12 @@ class TronClient:
         )
 
     def _backoff(self, attempt: int, reason: str) -> None:
+        if attempt >= self.max_retries:
+            return  # nothing follows the last attempt to wait for
         delay = (0.5 * (2**attempt)) + random.uniform(0, 0.25)
         logger.warning("TronGrid retry %d/%d in %.2fs (%s)",
                        attempt + 1, self.max_retries + 1, delay, reason)
-        time.sleep(delay)
+        (self.budget.sleep(delay) if self.budget is not None else time.sleep(delay))
 
     # -- parsing -----------------------------------------------------------
     def _token_transfer(self, raw: dict[str, Any]) -> Transaction | None:

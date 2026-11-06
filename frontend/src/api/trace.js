@@ -155,6 +155,15 @@ function watchJob(jobId, onProgress) {
   })
 }
 
+/** Ask the server to stop a running trace job. Only the browser that started
+ * it may (the owner key goes with every request); the job then ends as failed
+ * with a "stopped" error, which runTrace's promise rejects with. */
+export async function stopTraceJob(jobId) {
+  const response = await apiFetch(`${BASE}/trace/jobs/${encodeURIComponent(jobId)}`, { method: 'DELETE' })
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
 /**
  * Run a trace as a background job and resolve with its result.
  * `onProgress(snapshot)` receives { status, progress: { stage, hop, max_depth,

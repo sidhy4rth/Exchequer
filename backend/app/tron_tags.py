@@ -142,6 +142,10 @@ def tag_from_response(body: Any) -> str | None:
 class TronScanTags:
     """Per-trace reader of TronScan address tags, cached across traces."""
 
+    # The case's wall clock (api_budget.TraceBudget), set by pipeline.run_trace;
+    # None outside a trace (scripts, the watcher).
+    budget = None
+
     def __init__(self, api_key: str | None, evidence: EvidenceLog | None = None,
                  client: httpx.Client | None = None, min_interval: float = 0.25,
                  timeout: float = 15.0) -> None:
@@ -192,8 +196,11 @@ class TronScanTags:
             return value
         self._throttle()
         self.lookups += 1
+        if self.budget is not None and self.budget.remaining() <= 0:
+            return None  # the case's time is spent: a tag lookup is never worth waiting for
         try:
-            response = self._client.get(f"{TRONSCAN}/api/accountv2", params={"address": address})
+            response = self._client.get(f"{TRONSCAN}/api/accountv2", params={"address": address},
+                                        **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
             response.raise_for_status()
             body = response.json()
         except (httpx.HTTPError, ValueError) as exc:

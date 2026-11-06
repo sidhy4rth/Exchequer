@@ -51,6 +51,8 @@ from typing import Any, Callable, Iterable
 
 import networkx as nx
 
+from .provider_errors import public_reason
+
 FIFO = "fifo"
 LIBR = "libr"
 METHODS = (FIFO, LIBR)
@@ -134,7 +136,7 @@ def _trace(graph: nx.DiGraph, path: list[str], flows_between: FlowsBetween | Non
         try:
             incoming, outgoing, complete = flows_between(wallet, start_block, end_block, start_ts, end_ts)
         except Exception as exc:  # noqa: BLE001 -- an estimate is never worth a failed trace
-            return _unknown(sent, hops, f"{wallet}'s transfers could not be read ({exc})")
+            return _unknown(sent, hops, f"{wallet}'s transfers could not be read ({public_reason(exc)})")
         if not complete:
             return _unknown(sent, hops, f"{wallet} moved too many transfers in the window to read in full")
 

@@ -363,6 +363,14 @@ NODEREAL_LOOKBACK_BLOCKS: int = _int_env("NODEREAL_LOOKBACK_BLOCKS", 500_000)
 
 # Traversal safety limits -- a busy wallet must never make a trace run forever.
 TRACE_MAX_DEPTH: int = _int_env("TRACE_MAX_DEPTH", 4)
+# Every trace's wall clock (api_budget.TraceBudget): the walk stops expanding
+# after TRACE_TIME_BUDGET_DEFAULT seconds unless the request asks for less,
+# never later than TRACE_TIME_BUDGET_MAX, and the reads after the walk get
+# TRACE_POST_WALK_SECONDS more. Without it one slow trace held a slot for as
+# long as the provider let it.
+TRACE_TIME_BUDGET_DEFAULT: int = _int_env("EXCHEQUER_TRACE_TIME_BUDGET", 180)
+TRACE_TIME_BUDGET_MAX: int = _int_env("EXCHEQUER_TRACE_TIME_BUDGET_MAX", 300)
+TRACE_POST_WALK_SECONDS: int = _int_env("EXCHEQUER_TRACE_POST_WALK_SECONDS", 60)
 TRACE_MAX_TXS_PER_ADDRESS: int = _int_env("TRACE_MAX_TXS_PER_ADDRESS", 200)
 TRACE_MAX_NODES: int = _int_env("TRACE_MAX_NODES", 400)
 # How many addresses at one depth are fetched concurrently. Providers answer in

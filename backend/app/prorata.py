@@ -32,6 +32,8 @@ from typing import Any, Callable
 
 import networkx as nx
 
+from .provider_errors import public_reason
+
 # A share below this at any wallet is called out: the victim's funds were a
 # small part of what that wallet was moving.
 DILUTED = 0.25
@@ -86,7 +88,7 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
             received, complete = incoming_between(wallet, start_block, end_block, start_ts, end_ts)
         except Exception as exc:  # noqa: BLE001 -- an estimate is never worth a failed trace
             return {"status": "unknown", "sent": sent, "hops": hops,
-                    "reason": f"{wallet}'s incoming transfers could not be read ({exc})"}
+                    "reason": f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})"}
         if not complete:
             return {"status": "unknown", "sent": sent, "hops": hops,
                     "reason": f"{wallet} received too many transfers in the window to read in full"}

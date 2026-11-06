@@ -17,6 +17,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
 from . import config, log_safety, progress
+from .api_budget import Cancelled, TraceBudget, TraceStopped, current_budget
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
 from .contracts import upgrade as upgrade_to_contract
 from .payment_intake import (
@@ -28,6 +29,7 @@ from .payment_intake import (
     window_start,
 )
 from .etherscan_client import (
+    ProviderQuotaError,
     EtherscanConfigError,
     EtherscanError,
     EtherscanRateLimitError,
@@ -352,7 +354,8 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
     return chain, address
 
 
-def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str, Any]:
+def run_trace(request: TraceRequest, seed_window: int | None = None,
+              budget: TraceBudget | None = None) -> dict[str, Any]:
     """Run one trace and return the full result, without storing it.
 
     `seed_window` is set only for a follow-on trace after a swap: the time rule
@@ -370,12 +373,16 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     matcher = get_matcher(chain.key)
     risk_matcher = get_risk_matcher(chain.key)
     routers = get_router_matcher(chain.key)
+    # Every trace has a wall clock (api_budget.TraceBudget): the server's default
+    # unless the request asks for less, never above its maximum.
+    budget = budget or current_budget() or TraceBudget.for_request(request.time_budget_seconds)
     trace_config = TraceConfig(
         max_depth=request.max_depth or config.TRACE_MAX_DEPTH,
         # R5: every branch carrying a share of the funds, not the top ten.
         branch_min_share=config.TRACE_BRANCH_MIN_SHARE_PERCENT / 100 if config.TAINT_EXPANSION else None,
         max_branches_hard=config.TRACE_MAX_BRANCHES_HARD,
-        time_budget_seconds=float(request.time_budget_seconds) if request.time_budget_seconds else None,
+        # The walk stops at the case's walk deadline, shared with any follow-on.
+        time_budget_seconds=max(0.001, budget.walk_remaining()),
     )
 
     # Which asset this trace follows. Everything downstream -- edge values,
@@ -388,6 +395,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     live: LiveTronExchanges | None = None
     try:
         with open_source(chain, asset_symbol) as client:
+            try:
+                client.budget = budget  # checked before every request the client makes
+            except AttributeError:
+                pass
             # On Tron, a wallet no label file names is asked about: TronScan's
             # own tag, read live, attributes it when it names an exchange.
             if chain.key == "tron":
@@ -395,6 +406,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                     TronScanTags(config.TRONSCAN_API_KEY, evidence=getattr(client, "evidence", None)),
                     matcher.is_exchange,
                 )
+                live.tags.budget = budget
             # R1: read the victim's payments from the chain first. They must be
             # incoming transfers to the reported wallet, and the walk then reads
             # that wallet only from when the first one arrived.
@@ -498,6 +510,17 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             # Whether contract-moved value was part of the data, for the
             # limitations paragraph. Only the Etherscan native path reads it.
             internal_read = bool(getattr(client, "include_internal", False)) and is_native
+    except Cancelled as exc:
+        raise HTTPException(status_code=409, detail="The trace was stopped by the person who started it.") from exc
+    except TraceStopped as exc:
+        # The reported address itself could not be read before the case's
+        # time ran out (deeper addresses just truncate the walk). A fixed
+        # sentence: never provider text.
+        raise HTTPException(
+            status_code=503,
+            detail=(f"The reported address could not be read before the trace's {exc.reason} "
+                    f"of {budget.walk_seconds:g} s. Try again in a few minutes."),
+        ) from exc
     except UnknownAssetError as exc:
         # Edge case: the request named an asset this chain does not carry.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -508,6 +531,14 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     except EtherscanConfigError as exc:
         # Edge case: no API key configured.
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ProviderQuotaError as exc:
+        # The provider's daily or monthly allowance is spent: waiting seconds
+        # will not help, and the officer should know what still works.
+        raise HTTPException(
+            status_code=503,
+            detail=(f"The {chain.name} data provider's quota is used up for now, so live tracing on "
+                    f"{chain.name} is paused until it resets. Stored cases and the verified examples still open."),
+        ) from exc
     except EtherscanRateLimitError as exc:
         # Edge case: Etherscan rate limit survived all retries.
         raise HTTPException(
@@ -569,7 +600,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     follow_ons: list[dict[str, Any]] = []
     if direction == OUTGOING and request.follow_swaps and seed_window is None and swaps:
         follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth,
-                                   seconds_spent=result.seconds_elapsed or 0.0)
+                                   budget=budget)
     followed = next((f for f in follow_ons if (f.get("result") or {}).get("exchange")), None)
 
     # Edge case: the address has never sent anything. Not an error -- a finding.
@@ -767,6 +798,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         # The clock, if the caller set one, and what it cost: how long the walk
         # took and how many reached addresses it left unexpanded.
         "time_budget_seconds": request.time_budget_seconds,
+        # The limit this trace actually ran under, and whether it cut the walk short.
+        "time_limit_seconds": budget.walk_seconds,
+        "stopped_by": "time" if (budget.stopped or result.addresses_unexpanded_by_time) else None,
         "seconds_elapsed": result.seconds_elapsed,
         "addresses_unexpanded_by_time": result.addresses_unexpanded_by_time,
         "addresses_expanded": result.addresses_expanded,
@@ -797,7 +831,7 @@ def _follow_swaps(
     graph: Any,
     swaps: list[dict[str, Any]],
     max_depth: int,
-    seconds_spent: float = 0.0,
+    budget: TraceBudget | None = None,
 ) -> list[dict[str, Any]]:
     """Trace the output asset of each swap into a stablecoin this chain carries.
 
@@ -829,23 +863,26 @@ def _follow_swaps(
         depth_at = (graph.nodes.get(swap["sender"]) or {}).get("depth", 0)
         remaining = max(1, max_depth - depth_at)
         follow = {"swap": swap, "asset": asset_out, "address": swap["sender"], "max_depth": remaining}
-        budget = None
-        if request.time_budget_seconds:
-            budget = int(request.time_budget_seconds - seconds_spent)
-            if budget < 10:
-                follow["error"] = "not traced: the case's time budget was spent before this swap could be followed"
-                out.append(follow)
-                continue
+        # One clock for the whole case: a follow-on uses what is left of it.
+        if budget is not None and budget.walk_over():
+            follow["error"] = "not traced: the case's time budget was spent before this swap could be followed"
+            out.append(follow)
+            continue
         sub = TraceRequest(
             address=swap["sender"], chain=chain.key, asset=asset_out, max_depth=remaining,
-            direction=OUTGOING, time_budget_seconds=budget, follow_swaps=False,
+            direction=OUTGOING, follow_swaps=False,
         )
         progress.report(stage="following_swap", follow_asset=asset_out)
         try:
-            follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"))
-            seconds_spent += follow["result"].get("seconds_elapsed") or 0.0
+            follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"), budget=budget)
         except HTTPException as exc:
+            if budget is not None and budget.cancelled:
+                raise  # a stop ends the whole case, follow-ons included
             # A follow-on that fails must not cost the trace that found it.
             follow["error"] = str(exc.detail)
+        except Exception:  # noqa: BLE001 -- nor may any other failure
+            logger.exception("Follow-on trace of %s after a swap failed", asset_out)
+            follow["error"] = ("not traced: the follow-on could not be traced because of an unexpected "
+                               "error; the original trace above is complete")
         out.append(follow)
     return out

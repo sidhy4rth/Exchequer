@@ -170,7 +170,9 @@ def test_a_failed_read_is_unknown_and_never_raises():
         raise RuntimeError("provider down")
     g, _ = one_hop([tx("v1", 40.0, 1)], [tx("x1", 40.0, 2)])
     result = compare(g, ["V", "M", "X"], boom)
-    assert result[LIBR]["status"] == "unknown" and "provider down" in result[LIBR]["reason"]
+    assert result[LIBR]["status"] == "unknown" and "could not be read" in result[LIBR]["reason"]
+    # A fixed sentence: exception text can quote a provider's response body.
+    assert "provider down" not in result[LIBR]["reason"]
 
 
 def test_sending_on_before_the_money_arrived_is_unknown():

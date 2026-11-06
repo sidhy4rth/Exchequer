@@ -39,7 +39,9 @@ from .evidence import EvidenceLog
 
 from . import config
 from .etherscan_client import (
+    _QUOTA_MESSAGES,
     EtherscanError,
+    ProviderQuotaError,
     Transaction,
     is_valid_address,
     normalize_address,
@@ -61,6 +63,8 @@ MAX_COUNT = 1_000
 # through in full, since only kept transfers count against the cap. Pages are
 # sized to the trace cap (200 by default), so this is five pages.
 MAX_SCAN = 1_000
+# Pages one block window may take before the scan gives up on it (see _scan).
+MAX_PAGES_PER_WINDOW = MAX_SCAN // 100 + 2
 
 # NodeReal's transfer index trails the chain head by a few blocks, and asking
 # for a block it has not indexed yet fails the whole query with "blockNum not
@@ -95,12 +99,20 @@ class NoderealError(EtherscanError):
     """
 
 
+class NoderealQuotaError(NoderealError, ProviderQuotaError):
+    """NodeReal's monthly compute units are spent: not retried."""
+
+
 class NoderealClient:
     """Transaction source for BNB Smart Chain.
 
     Satisfies the same contract the graph builder relies on:
         client.get_outgoing_transactions(address) -> list[Transaction]
     """
+
+    # The case's wall clock (api_budget.TraceBudget), set by pipeline.run_trace;
+    # None outside a trace (scripts, the watcher).
+    budget = None
 
     def __init__(
         self,
@@ -180,9 +192,12 @@ class NoderealClient:
         last_error: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
+            if self.budget is not None:
+                self.budget.check()  # the case's wall clock, before every attempt
             self._throttle()
             try:
-                response = self._client.post(self.url, json=payload)
+                response = self._client.post(self.url, json=payload,
+                                             **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
             except httpx.RequestError as exc:
                 last_error = NoderealError(f"Network error contacting NodeReal: {exc}")
                 self._backoff(attempt, str(exc))
@@ -205,6 +220,8 @@ class NoderealClient:
             if body.get("error"):
                 message = str(body["error"].get("message", body["error"]))
                 # Rate limiting arrives as a JSON-RPC error, not an HTTP status.
+                if any(phrase in message.lower() for phrase in _QUOTA_MESSAGES):
+                    raise NoderealQuotaError(f"NodeReal quota spent: {message}")
                 if "limit" in message.lower() or "too many" in message.lower():
                     last_error = NoderealError(f"NodeReal rate limit: {message}")
                     self._backoff(attempt, "rate limit")
@@ -223,10 +240,12 @@ class NoderealClient:
         )
 
     def _backoff(self, attempt: int, reason: str) -> None:
+        if attempt >= self.max_retries:
+            return  # nothing follows the last attempt to wait for
         delay = (0.4 * (2**attempt)) + random.uniform(0, 0.2)
         logger.warning("NodeReal retry %d/%d in %.2fs (%s)",
                        attempt + 1, self.max_retries, delay, reason)
-        time.sleep(delay)
+        (self.budget.sleep(delay) if self.budget is not None else time.sleep(delay))
 
     def head_block(self) -> int:
         """Highest block safe to query, cached for the life of the client.
@@ -437,9 +456,12 @@ class NoderealClient:
         scanned = 0
         window_end = top
 
-        while window_end >= floor and len(collected) < cap and scanned < MAX_SCAN:
+        guard_stopped = False
+        while window_end >= floor and len(collected) < cap and scanned < MAX_SCAN and not guard_stopped:
             window_start = max(floor, window_end - MAX_BLOCK_WINDOW + 1)
             page_key: str | None = None
+            seen_keys: set[str] = set()
+            pages = 0
 
             while len(collected) < cap and scanned < MAX_SCAN:
                 params: dict[str, Any] = {
@@ -479,14 +501,23 @@ class NoderealClient:
                             seen = self._arrived.get(tx.to_address)
                             self._arrived[tx.to_address] = min(seen, tx.block_number) if seen else tx.block_number
 
+                pages += 1
                 page_key = result.get("pageKey")
                 if not page_key:
                     break
+                # An empty page that still offers more, a key seen before, or
+                # more pages than the scan ceiling allows: the provider is not
+                # converging. Stop, and mark the read incomplete so "sent
+                # nothing" is never claimed from it.
+                if not transfers or page_key in seen_keys or pages >= MAX_PAGES_PER_WINDOW:
+                    guard_stopped = True
+                    break
+                seen_keys.add(page_key)
 
             window_end = window_start - 1
 
         # Whether the read stopped at a limit rather than at the range's end.
-        self.last_scan_capped = len(collected) >= cap or scanned >= MAX_SCAN
+        self.last_scan_capped = len(collected) >= cap or scanned >= MAX_SCAN or guard_stopped
         return collected[:cap]
 
     def get_transaction_receipt(self, tx_hash: str) -> dict[str, Any] | None:

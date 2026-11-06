@@ -162,3 +162,41 @@ def test_a_stream_ends_after_its_lifetime_and_the_browser_reconnects(client, mon
     gate.set()
     assert time.monotonic() - start < 3
     assert "retry:" in text and "event: done" not in text
+
+
+def _slow_job(client, monkeypatch, owner):
+    # A trace that keeps reading until it is told to stop, as a slow provider does.
+    def slow(request, seed_window=None, budget=None):
+        from app import api_budget
+        budget = budget or api_budget.current_budget()
+        for _ in range(200):
+            budget.sleep(0.05)
+        return {"address": request.address, "chain": "ethereum"}
+    monkeypatch.setattr(pipeline, "run_trace", slow)
+    return client.post("/trace/jobs", json={"address": ADDR}, headers={ownership.OWNER_HEADER: owner}).json()["job_id"]
+
+
+def test_the_owner_can_stop_a_running_job_and_its_slot_is_freed(client, monkeypatch):
+    owner = "o" * 32
+    job_id = _slow_job(client, monkeypatch, owner)
+    stopped = client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: owner})
+    assert stopped.status_code == 202
+    deadline = time.monotonic() + 3
+    while client.get(f"/trace/jobs/{job_id}").json()["status"] == "running" and time.monotonic() < deadline:
+        time.sleep(0.05)
+    job = client.get(f"/trace/jobs/{job_id}").json()
+    assert job["status"] == "failed" and job["error"]["status_code"] == 409
+    assert "stopped" in job["error"]["detail"].lower()
+    assert cases._running.acquire(blocking=False) and cases._running.acquire(blocking=False)
+
+
+def test_someone_else_cannot_stop_your_job(client, monkeypatch):
+    job_id = _slow_job(client, monkeypatch, "o" * 32)
+    other = client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "x" * 32})
+    assert other.status_code == 403
+    assert client.delete(f"/trace/jobs/{job_id}").status_code == 403  # no owner key at all
+    client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "o" * 32})
+
+
+def test_stopping_an_unknown_job_is_a_404(client):
+    assert client.delete("/trace/jobs/nope", headers={ownership.OWNER_HEADER: "o" * 32}).status_code == 404

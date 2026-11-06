@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace } from '../api'
+import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace, stopTraceJob } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
 import ThemeToggle from '../components/ThemeToggle'
@@ -164,6 +164,9 @@ export default function TraceView() {
   const [elapsed, setElapsed] = useState(0)
   // What the background trace reports as it runs: stage, hop, addresses read.
   const [progress, setProgress] = useState(null)
+  // The running job, so the person who started the trace can stop it.
+  const [jobId, setJobId] = useState(null)
+  const [stopping, setStopping] = useState(false)
   const [revealed, setRevealed] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState('flow') // 'flow' | 'bubbles'
@@ -192,7 +195,7 @@ export default function TraceView() {
       setResult(location.state.result); setLoading(false); clearInterval(tick)
       return undefined
     }
-    setProgress(null)
+    setProgress(null); setJobId(null); setStopping(false)
     const request = recorded
       ? fetchRecordedDemo(demoNo)
       : stored
@@ -202,7 +205,11 @@ export default function TraceView() {
           address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
           payments: pay ? pay.split(',') : [], ncrpAck,
         },
-        (snap) => { if (!cancelled && snap?.progress) setProgress(snap.progress) },
+        (snap) => {
+          if (cancelled) return
+          if (snap?.job_id) setJobId(snap.job_id)
+          if (snap?.progress) setProgress(snap.progress)
+        },
       )
     request
       .then((data) => {
@@ -362,6 +369,11 @@ export default function TraceView() {
               <span className="micro">{recorded ? 'Opening verified example' : stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
               <span className="elapsed">{elapsed.toFixed(1)} s{!stored && budget ? <small> · stops expanding at {mmss(budget)}{elapsed > budget ? ' — finishing what it has' : ''}</small> : null}</span>
               {!stored && progress && <span className="progress-line" aria-live="polite">{describeProgress(progress)}</span>}
+              {!stored && jobId && (
+                <button className="quiet" disabled={stopping} onClick={() => { setStopping(true); stopTraceJob(jobId).catch((err) => { setStopping(false); setError(err.message) }) }}>
+                  {stopping ? 'Stopping…' : 'Stop this trace'}
+                </button>
+              )}
               {!stored && progress?.stage === 'walking' && progress.level_size > 0
                 ? <div className="bar determinate"><span style={{ width: `${Math.round(100 * Math.min(1, (progress.level_read ?? 0) / progress.level_size))}%` }} /></div>
                 : <div className="bar"><span /></div>}

@@ -85,13 +85,15 @@ from typing import Any, Callable, Iterable
 
 import networkx as nx
 
-from . import config, progress
+from . import config, log_safety, progress
+from .api_budget import Cancelled, TraceStopped
 from .etherscan_client import (
     EtherscanClient,
     Transaction,
     is_valid_address,
     normalize_address,
 )
+from .provider_errors import public_reason
 
 logger = logging.getLogger(__name__)
 
@@ -514,7 +516,9 @@ def build_trace_graph(
                 result.note_truncation(f"node limit of {cfg.max_nodes} addresses reached")
                 break
 
-            if isinstance(error, TimeBudgetExceeded):
+            if isinstance(error, Cancelled):
+                raise error  # a stop ends the whole trace, not just this branch
+            if isinstance(error, (TimeBudgetExceeded, TraceStopped)) and depth > 0:
                 # Brake 6, mid-level: reached, never read. Not a failure of
                 # the provider and not this address's fault; counted so the
                 # report can say how much of the frontier the clock cut off.
@@ -536,9 +540,9 @@ def build_trace_graph(
                 # is also a truncation: everything past that address is
                 # missing, and the report must say so rather than present the
                 # partial graph as the complete picture.
-                logger.warning("Could not fetch %s: %s", address, error)
+                logger.warning("Could not fetch %s: %s", address, log_safety.redact(str(error)))
                 result.warnings.append(
-                    f"Could not fetch transactions for {address}: {error}"
+                    f"Could not fetch transactions for {address}: {public_reason(error)}"
                 )
                 result.note_truncation(
                     f"transactions of {address[:10]}... could not be fetched, so "

@@ -20,7 +20,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .. import jobs, pipeline, progress
+from .. import api_budget, jobs, pipeline, progress
 from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 from . import cases
@@ -35,13 +35,18 @@ POLL_SECONDS = 0.3
 def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | None = None) -> None:
     token = progress.listen(lambda fields: jobs.store.report(job, fields))
     try:
-        payload = pipeline.run_trace(request)
+        with api_budget.using(job.budget):
+            payload = pipeline.run_trace(request)
         jobs.store.report(job, {"stage": "saving"})
         stored = cases.store_result(payload, request, owner)
         cases.record_trace(stored)
         jobs.store.finish(job, result=stored)
     except HTTPException as exc:
         jobs.store.finish(job, error={"status_code": exc.status_code, "detail": exc.detail})
+    except api_budget.Cancelled:
+        jobs.store.finish(job, error={"status_code": 409, "detail": "The trace was stopped by the person who started it."})
+    except api_budget.TraceStopped as exc:
+        jobs.store.finish(job, error={"status_code": 503, "detail": f"The trace stopped at its {exc.reason}."})
     except Exception:  # noqa: BLE001 -- a job must always end, and say how
         logger.exception("Trace job %s failed", job.id)
         jobs.store.finish(job, error={"status_code": 500,
@@ -56,8 +61,8 @@ def start_job(request: TraceRequest, http: Request, user: CurrentUser) -> JSONRe
     pipeline.check_request(request)  # a typo is refused before it costs the allowance
     slot = cases.admit(http)  # holds a running slot from here until _run releases it
     try:
-        job = jobs.store.create()
         owner = user.owner_hash
+        job = jobs.store.create(owner=owner, budget=api_budget.TraceBudget.for_request(request.time_budget_seconds))
         threading.Thread(target=_run, args=(job, request, owner, slot),
                          name=f"trace-job-{job.id[:8]}", daemon=True).start()
     except Exception:
@@ -68,6 +73,18 @@ def start_job(request: TraceRequest, http: Request, user: CurrentUser) -> JSONRe
         "status_url": f"/trace/jobs/{job.id}",
         "events_url": f"/trace/jobs/{job.id}/events",
     })
+
+
+@router.delete("/trace/jobs/{job_id}", status_code=202)
+def stop_job(job_id: str, user: CurrentUser) -> dict[str, Any]:
+    """Stop a running trace: only the browser that started it may. The trace
+    ends at its next provider request or backoff, and its slot is freed."""
+    job = _job_or_404(job_id)
+    if user.owner_hash is None or user.owner_hash != job.owner:
+        raise HTTPException(status_code=403, detail="Only the browser that started this trace can stop it.")
+    if job.status == jobs.RUNNING and job.budget is not None:
+        job.budget.cancel()
+    return {"job_id": job.id, "stopping": job.status == jobs.RUNNING}
 
 
 def _job_or_404(job_id: str) -> jobs.Job:
