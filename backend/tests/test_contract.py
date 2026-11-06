@@ -131,3 +131,44 @@ def test_an_exchange_funder_typed_deposit_is_an_exchange_wallet():
               "matches": [{"address": "0xfun", "wallet_type": "deposit_wallet", "label": "Binance: Deposit Funder",
                            "depth": 1}]}
     assert read_case(result).attribution.kind == "exchange_wallet"
+
+
+# -- the contract's kind and the report's kind agree (r2-g2-documented-claims-vs-code-7-10)
+def test_a_live_tag_saying_deposit_is_not_a_deposit_label():
+    """TronScan's word is not a checked label: a tag reading 'Deposit' must not
+    become a KYC-grade deposit_label, which case.md says asks for the customer."""
+    result = {"exchange": "Binance", "exchange_address": "Tdep", "exchange_label": "Binance Deposit (TronScan tag, read live)",
+              "attribution_inferred": False, "transfers": [],
+              "matches": [{"address": "Tdep", "wallet_type": "deposit_wallet", "depth": 1}],
+              "live_tags": {"enabled": True, "found": [{"address": "Tdep", "label": "Binance Deposit"}]}}
+    attr = read_case(result).attribution
+    assert (attr.kind, attr.source, attr.wallet_type) == ("exchange_wallet", "live_tag", "deposit_wallet")
+
+
+# The contract's (kind, source) read as the report's kind: one table, both ways.
+REPORT_KIND = {("deposit_inferred", "inference"): "inferred_deposit",
+               ("deposit_label", "label_file"): "labelled_deposit",
+               ("exchange_wallet", "label_file"): "exchange_wallet",
+               ("exchange_wallet", "live_tag"): "explorer_tag"}
+
+
+def _parity_cases():
+    deposit_tag = {"exchange": "Binance", "exchange_address": "Tdep", "attribution_inferred": False,
+                   "transfers": [], "matches": [{"address": "Tdep", "wallet_type": "deposit_wallet"}],
+                   "live_tags": {"found": [{"address": "Tdep", "label": "Binance Deposit"}]}}
+    labelled = {"exchange": "Bitget", "exchange_address": "0xdep", "attribution_inferred": False, "transfers": [],
+                "matches": [{"address": "0xdep", "wallet_type": "deposit_wallet"}]}
+    fixtures = [json.loads(p.read_text()) for p in sorted(FIXTURES.glob("*.json")) if p.name != "index.json"]
+    return [*BY_DEMO.values(), *fixtures, deposit_tag, labelled]
+
+
+@pytest.mark.parametrize("result", _parity_cases())
+def test_the_contract_and_the_report_name_the_same_kind(result):
+    from app.report import attribution_kind
+
+    attr = read_case({k: v for k, v in result.items() if k != "attribution"}).attribution
+    if attr is None:
+        assert not result.get("exchange")
+        return
+    assert REPORT_KIND[(attr.kind, attr.source)] == attribution_kind(
+        {k: v for k, v in result.items() if k != "attribution"})

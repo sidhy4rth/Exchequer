@@ -73,7 +73,8 @@ class Intake(_Strict):
 
 
 class Attribution(_Strict):
-    # deposit_label: a deposit address an explorer labels as the exchange's.
+    # deposit_label: a deposit address a checked label file names as the
+    #   exchange's (never from a live explorer tag: see _attribution).
     # deposit_inferred: an unlabelled address whose outflows sweep to one
     #   exchange wallet (deposit_inference.py).
     # exchange_wallet: the exchange's own wallet (hot, cold, contract, or a
@@ -179,13 +180,6 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
     wallet_type = match.get("wallet_type")
     inferred = bool(result.get("attribution_inferred")) or wallet_type == INFERRED_DEPOSIT
 
-    if inferred:
-        kind = "deposit_inferred"
-    elif wallet_type == DEPOSIT_WALLET and _says_deposit(match.get("label")):
-        kind = "deposit_label"  # the same test as report.attribution_kind
-    else:
-        kind = "exchange_wallet"
-
     live = result.get("live_tags") or {}
     live_addresses = {f.get("address") for f in live.get("found") or []}
     if inferred:
@@ -194,6 +188,17 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
         source = "live_tag"
     else:
         source = "label_file"
+
+    if inferred:
+        kind = "deposit_inferred"
+    elif wallet_type == DEPOSIT_WALLET and source == "label_file" and _says_deposit(match.get("label")):
+        kind = "deposit_label"  # the same test as report.attribution_kind
+    else:
+        # The exchange's own wallet -- or an explorer's tag, whatever it says:
+        # a tag reading "Deposit" is TronScan's word, not a checked label, so
+        # it never supports a request for the customer (report.attribution_kind
+        # calls it explorer_tag; the letter asks the exchange to confirm first).
+        kind = "exchange_wallet"
 
     return {
         "kind": kind,

@@ -65,13 +65,16 @@ behind. A report that states where the money went should state this too.
 
 | `kind` | What it is | What a request letter can ask |
 |---|---|---|
-| `deposit_label` | A deposit address an explorer labels as the exchange's (for example Etherscan's "Bitget Dep" tags). | The account holder, KYC and statement for that address. |
+| `deposit_label` | A deposit address the checked label file names as the exchange's (for example Etherscan's "Bitget Dep" tags, imported into it). Never from a live explorer tag. | The account holder, KYC and statement for that address. |
 | `deposit_inferred` | An unlabelled address whose every outflow swept to one exchange wallet: probably a customer deposit address. | First, whether the exchange issued the address; then the same as above. |
 | `exchange_wallet` | The exchange's own wallet: hot, cold, a contract, or a label that doesn't say which. It belongs to no customer. | **Not** KYC for the wallet. List the transfers by hash, amount and time, and ask which customer accounts they were credited to. |
 
 A `live_tag` source means the address was attributed from the explorer's tag at
 trace time, not from a checked label file: the letter asks the exchange to
-confirm the address is theirs before anything else.
+confirm the address is theirs before anything else. Its `kind` is always
+`exchange_wallet`, even when the tag reads "Deposit" (`wallet_type` keeps
+`deposit_wallet`): an explorer's word never supports a request for the
+customer. The report calls this pair `explorer_tag`.
 
 ## Fixtures
 
