@@ -422,3 +422,10 @@ def test_an_entry_past_its_valid_until_is_not_matched(intl_file, today):
     assert matcher.lookup(ORDER_ADDR) is None
     assert RiskMatcher.from_file(intl_file).lookup(ORDER_ADDR) is None  # nor is it loaded again
     assert matcher.lookup(SDN_ADDR) is not None  # an order with no end date still matches
+
+
+def test_the_load_log_counts_the_orders_left_out_as_ended(intl_file, today, caplog):
+    today.today_is = risk_matcher.date(2027, 1, 1)
+    with caplog.at_level("INFO", logger="app.risk_matcher"):
+        RiskMatcher.from_file(intl_file)
+    assert "Loaded 1 risk labels" in caplog.text and "1 past their end date, left out" in caplog.text

@@ -187,6 +187,21 @@ def test_the_stale_warning_says_listings_may_have_been_lifted(lists_dated):
     assert "Other governments' sanctions lists and seizure orders (checked 2026-08-01)" in warning
 
 
+def test_a_list_says_how_many_of_its_orders_had_ended_by_the_trace(lists_dated):
+    """An order past its valid_until is not matched; the report says how many were left out (r1-labels-data-3)."""
+    chain = lists_dated()
+    labels = {f"T{c * 33}": {"category": "seized", "entity": "NBCTF 1", "valid_until": until}
+              for c, until in (("A", "2026-09-01"), ("B", "2026-09-14"), ("C", "2026-09-15"), ("D", None))}
+    chain.intl_sanctions_path.write_text(json.dumps({"_meta": {"last_reviewed": FRESH}, "labels": labels}))
+    risk_matcher.clear_label_caches()
+    intl = entry(list_freshness("ethereum", TRACED), "Other governments")
+    assert intl["lapsed"] == 2  # 1 and 14 September; the 15th was still its last day
+    assert "2 listings in it had ended by 2026-09-15 and were not matched" in intl["note"]
+    assert entry(list_freshness("ethereum", TRACED), "OFAC")["lapsed"] == 0
+    flat = " ".join(render_text_report(build_report(stored(full_result()))).split())
+    assert "2 listings in it had ended by 2026-09-15" in flat
+
+
 # -- every source a trace screens against is named (audit r1-labels-data-9) --------
 STORE = "Flagged-address label store"
 

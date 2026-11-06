@@ -78,6 +78,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from bisect import bisect_left
 from dataclasses import dataclass
 from datetime import date, datetime
 from functools import lru_cache
@@ -490,7 +491,8 @@ def _risk_matcher(key: str) -> RiskMatcher:
 def clear_label_caches() -> None:
     """Forget every loaded label file, so the next call reads them again (tests)."""
     from . import exchange_matcher
-    for cached in (_risk_matcher, _list_meta, exchange_matcher._matcher, exchange_matcher._router_matcher):
+    for cached in (_risk_matcher, _list_meta, _list_ends, exchange_matcher._matcher,
+                   exchange_matcher._router_matcher):
         cached.cache_clear()
 
 
@@ -550,6 +552,20 @@ def _list_meta(path: Path) -> dict[str, Any] | None:
     return (document.get("_meta") or {}) if isinstance(document, dict) else None
 
 
+@lru_cache(maxsize=None)
+def _list_ends(path: Path) -> tuple[str, ...]:
+    """Every valid_until in a list file, sorted: the last days of its dated orders."""
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ()
+    entries = document.get("labels", document) if isinstance(document, dict) else None
+    if not isinstance(entries, dict):
+        return ()
+    ends = (_iso_date(v.get("valid_until")) for v in entries.values() if isinstance(v, dict) and v.get("valid_until"))
+    return tuple(sorted(d.isoformat() for d in ends if d))
+
+
 def list_freshness(chain_key: str | None, as_of: date, store: Any = _HELD) -> dict[str, Any]:
     """Each list this chain is screened against, and how old it was on `as_of`.
 
@@ -584,14 +600,23 @@ def list_freshness(chain_key: str | None, as_of: date, store: Any = _HELD) -> di
         elif is_stale(checked, as_of):
             state, note = "stale", f"Over {config.LIST_STALE_DAYS} days old when this case was traced."
             overdue.append(f"{name} ({f'checked {checked}' if checked else 'no date recorded'})")
-        lists.append({
+        entry = {
             "name": name,
             "file": path.name,
             "checked": checked.isoformat() if checked else None,
             "published": published.isoformat() if published else None,
             "state": state,
             "note": note,
-        })
+        }
+        if has_age_limit:
+            # Dated orders past their last day were held but not matched (_read_labels).
+            entry["lapsed"] = bisect_left(_list_ends(path), as_of.isoformat())
+            if entry["lapsed"]:
+                ended = (f"{entry['lapsed']:,} listings in it had ended by {as_of.isoformat()} and were not matched."
+                         if entry["lapsed"] > 1 else
+                         f"1 listing in it had ended by {as_of.isoformat()} and was not matched.")
+                entry["note"] = f"{note} {ended}".strip()
+        lists.append(entry)
     recorded = store is not _HELD
     if not recorded:
         store = label_store_entry(get_label_store(), chain.key)
@@ -698,17 +723,23 @@ def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
     default_source = default_source or "unspecified list"
 
     labels: dict[str, dict[str, str]] = {}
+    today, lapsed = date.today(), 0
     for address, value in entries.items():
         try:
             record = _read_entry(address, value, default_source)
         except (TypeError, ValueError, AttributeError) as exc:
             logger.warning("Risk entry for %r is malformed (%s); skipped", address, exc)
             continue
-        if record is not None:
+        if record is not None and _lapsed(record, today):
+            # Its order has ended: not matched, whether or not a refresh has removed it yet.
+            logger.debug("Risk entry for %s lapsed on %s; skipped", address, record["valid_until"])
+            lapsed += 1
+        elif record is not None:
             record["origin"] = path.name  # which file said so (request_letters names the issuer from it)
             labels[normalize_address(address)] = record
 
-    logger.info("Loaded %d risk labels from %s", len(labels), path)
+    logger.info("Loaded %d risk labels from %s%s", len(labels), path,
+                f"; {lapsed} past their end date, left out" if lapsed else "")
     return labels
 
 
@@ -750,12 +781,8 @@ def _read_entry(address: Any, value: Any, default_source: str) -> dict[str, str]
         "label": _text(value.get("label")) or entity,
         "source": _text(value.get("source")) or default_source,
     }
-    # The last day a dated order is in force (import_intl_sanctions); past it,
-    # the entry is not matched, whether or not a refresh has removed it yet.
+    # The last day a dated order is in force (import_intl_sanctions).
     until = _iso_date(value.get("valid_until")) if value.get("valid_until") else None
     if until:
         record["valid_until"] = until.isoformat()
-        if _lapsed(record, date.today()):
-            logger.info("Risk entry for %s lapsed on %s; skipped", address, until)
-            return None
     return record
