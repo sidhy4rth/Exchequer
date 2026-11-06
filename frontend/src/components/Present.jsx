@@ -47,6 +47,7 @@ export default function Present({ result, related = [], unit, onClose }) {
   const serviceContracts = result.graph.nodes.filter((n) => n.is_service_contract).length
   const components = result.confidence_detail?.components ?? []
   const band = String(result.confidence_detail?.band ?? '').replace(/^./, (c) => c.toUpperCase())
+  const capped = result.prorata?.seed_cap?.applied ? result.prorata.seed_cap : null
 
   const screens = [
     // 1 — the finding
@@ -65,11 +66,14 @@ export default function Present({ result, related = [], unit, onClose }) {
               {reverse
                 ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached the reported wallet from{' '}</>
                 : result.prorata?.status === 'estimated'
-                  ? <>About <span className="num">{num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> from the reported wallet likely reached{' '}</>
-                  : <>Funds from the reported wallet reached{' '}</>}
+                  ? <>About <span className="num">{num(result.prorata.estimated)} of {num(capped ? capped.amount : result.prorata.sent)} {unit}</span> {capped ? (capped.basis === 'swap_output' ? 'the swap returned' : 'the victim reported paying') : 'from the reported wallet'} likely reached{' '}</>
+                  : result.prorata?.status === 'unknown'
+                    ? <>Funds moved from the reported wallet to{' '}</>
+                    : <>Funds from the reported wallet reached{' '}</>}
               <span className="mono">{result.exchange_label ?? short(result.exchange_address)}</span>
               {result.attribution_inferred ? `, a wallet this tool infers to be a ${result.exchange} deposit address, ` : `, a wallet ${result.exchange} publicly operates, `}
-              {result.hop_count} hop{result.hop_count === 1 ? '' : 's'} {reverse ? 'upstream' : 'away'}.
+              {result.hop_count} hop{result.hop_count === 1 ? '' : 's'} {reverse ? 'upstream' : 'away'}
+              {!reverse && result.prorata?.status === 'unknown' ? ' (amount not estimated).' : '.'}
             </p>
             <div className="pr-cite">
               <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>

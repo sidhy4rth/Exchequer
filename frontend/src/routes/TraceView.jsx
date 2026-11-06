@@ -286,6 +286,10 @@ export default function TraceView() {
   const followed = result?.followed_attribution
   const inferred = result?.inferred_deposits ?? []
   const components = result?.confidence_detail?.components ?? []
+  // What the score cannot see, as the report lists it under its limitations.
+  const caveats = result?.confidence_detail?.caveats ?? []
+  // Pro-rata started from at most the victim's payments or the swap's output.
+  const capped = result?.prorata?.seed_cap?.applied ? result.prorata.seed_cap : null
   const serviceContracts = result?.graph.nodes.filter((n) => n.is_service_contract) ?? []
   const path = result?.trace_path ?? []
   const pathHashes = path.reduce((n, step) => n + (step.tx_hashes?.length ?? 0), 0)
@@ -449,11 +453,17 @@ export default function TraceView() {
                     {' · '}{reverse
                       ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> sent</>
                       : result.prorata?.status === 'estimated'
-                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> {paymentTrace
-                            ? <>sent on after the victim's payment likely arrived</>
-                            : <>sent from this wallet likely arrived</>} <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span></>
+                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(capped ? capped.amount : result.prorata.sent)} {unit}</span> {capped
+                            ? <>{capped.basis === 'swap_output' ? 'the swap returned' : 'the victim reported paying'} likely arrived</>
+                            : paymentTrace
+                              ? <>sent on after the victim's payment likely arrived</>
+                              : <>this wallet sent on this route likely arrived</>} <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span>
+                            {!capped && !paymentTrace && <span className="note"> · may include other people's money, not only the complainant's</span>}</>
                         : <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached it along this path, including any funds from other sources</>}
                   </div>
+                  {!reverse && result.prorata?.status === 'unknown' && (
+                    <p className="note prorata-unknown">Pro-rata: not estimated — {result.prorata.reason}. The score gives the amount no credit.</p>
+                  )}
                   {!reverse && <MethodRange methods={result.tracing_methods} unit={unit} />}
                   <div className="cite">
                     <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
@@ -509,6 +519,8 @@ export default function TraceView() {
                       <p className="score-working">Score <span className="num">{result.confidence.toFixed(2)}</span>, the sum of each input × its weight. {BAND_RULE}</p>
                       <p className="note">The score is the weighted sum of these three inputs and nothing else. A pattern never moves it. An exchange match identifies where funds arrived, not who controls the account; only the exchange can link an address to a customer, on a lawful request (PMLA s.12, s.50).</p>
                       {primaryInference && <p className="confirm">{primaryInference.evidence?.confirmation}</p>}
+                      {caveats.length > 0 && <p className="limitations-head"><strong>Limitations.</strong></p>}
+                      {caveats.map((c) => <p className="note limitation" key={c}>{c}</p>)}
                     </div>
                   </details>
                 </>

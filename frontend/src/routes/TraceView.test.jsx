@@ -101,3 +101,49 @@ describe('what the walk did not follow (R5)', () => {
     expect(row).toHaveTextContent('the ten largest')
   })
 })
+
+describe('what the amount is, and when it was not measured', () => {
+  async function openWithResult(over) {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+    stubFetch({ '/demos/recorded/11': { body: { ...demo.result, ...over, case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
+    render(
+      <MemoryRouter initialEntries={['/demo/11']}>
+        <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
+      </MemoryRouter>,
+    )
+    await screen.findByText(/Verified example 11/)
+  }
+
+  // Audit r2-g2-documented-claims-vs-code-7-2.
+  it('shows "not estimated" with the reason', async () => {
+    await openWithResult({ prorata: { status: 'unknown', reason: 'TXgo received too many transfers in the window to read in full' } })
+    const chip = document.querySelector('.prorata-unknown')
+    expect(chip).toHaveTextContent('Pro-rata: not estimated')
+    expect(chip).toHaveTextContent('too many transfers')
+  })
+
+  it('renders the confidence caveats', async () => {
+    await openWithResult({})
+    const limits = [...document.querySelectorAll('.limitation')].map((p) => p.textContent)
+    expect(limits).toEqual(demo.result.confidence_detail.caveats)
+  })
+
+  // Audit r1-attribution-integrity-7.
+  it('says an address-only figure can include other people\'s money', async () => {
+    await openWithResult({})
+    const basis = document.querySelector('.finding-bar .basis')
+    expect(basis).toHaveTextContent('this wallet sent on this route likely arrived')
+    expect(basis).toHaveTextContent("may include other people's money")
+  })
+
+  it('a payment trace never shows more than the victim reported', async () => {
+    await openWithResult({
+      intake: { mode: 'payment', payments: [{ tx_hash: '0xaa', amount: 100 }], ncrp_ack: null },
+      reported_amount: 100,
+      prorata: { ...demo.result.prorata, estimated: 100, seed_cap: { amount: 100, basis: 'reported_amount', applied: true } },
+    })
+    const basis = document.querySelector('.finding-bar .basis')
+    expect(basis).toHaveTextContent('≈ 100 of 100 USDT the victim reported paying likely arrived')
+    expect(basis).not.toHaveTextContent('of 635')
+  })
+})
