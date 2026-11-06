@@ -281,8 +281,10 @@ def test_correlation_is_recomputed_once_a_case_is_stored(client, monkeypatch):
     client.get("/cases/correlate")
     assert len(calls) == 1  # second answer from the cache
     trace(client, OTHER, ALICE)
+    client.get("/cases/correlate", headers={ownership.OWNER_HEADER: ALICE})
+    assert len(calls) == 2  # Alice's new case changes what she can correlate
     client.get("/cases/correlate")
-    assert len(calls) == 2  # a new case invalidates it
+    assert len(calls) == 2  # but not what a stranger can
 
 
 # -- the store's cap ------------------------------------------------------------

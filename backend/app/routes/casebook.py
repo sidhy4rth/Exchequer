@@ -3,6 +3,7 @@ share (/cases/correlate). Queries over what is already stored -- no tracing."""
 
 from __future__ import annotations
 
+import hashlib
 import threading
 from collections import OrderedDict
 from typing import Any
@@ -50,19 +51,35 @@ def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
         return False
 
 
-# Correlation reads and parses every case the caller may see, and the answer
-# only changes when a case is added, so it is kept per (caller, case,
-# min_cases) until the store's version moves. The caller is part of the key:
-# without it, one person's answer would be served to the next. A handful of
-# entries: the trace view asks once per case.
+# Correlation reads and parses every case the caller may see. Stored cases
+# never change, so the answer depends only on which cases go in: it is kept
+# per (the set of case ids examined, case, min_cases). Callers who see the
+# same cases -- every visitor with none of their own sees just the demos --
+# share one answer, a fresh owner key costs one id-only read, and a save
+# changes only the answers of those who can see the new case. The key is
+# what the answer was really computed from, never what was asked for, so one
+# set's answer is never served to another. A case id that matches no case
+# never reaches the cache: nothing can include it.
 _CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], list[dict[str, Any]]]]" = OrderedDict()
 _CLUSTER_CACHE_SIZE = 128
 _cluster_lock = threading.Lock()
 
 
+def _key(ids, case_id: str | None, min_cases: int) -> tuple:
+    digest = hashlib.sha256("\n".join(sorted(ids)).encode()).digest()
+    return (digest, case_id, min_cases, models.engine())  # ids are unique within one store
+
+
 def _clusters(caller: str | None, case_id: str | None, min_cases: int):
     """(store, clusters): who owns each case examined, and the raw clusters."""
-    key = (caller, case_id, min_cases, models.store_version())
+    refs = ownership.correlatable_refs(caller)
+    ids = [r[0] for r in refs]
+    if case_id and case_id not in ids:
+        linked = models.get_case(case_id)
+        if linked is None:
+            return refs, []
+        ids.append(linked.id)
+    key = _key(ids, case_id, min_cases)
     with _cluster_lock:
         if key in _CLUSTER_CACHE:
             _CLUSTER_CACHE.move_to_end(key)
@@ -72,7 +89,7 @@ def _clusters(caller: str | None, case_id: str | None, min_cases: int):
                          excluded=_known_contract_or_exchange)
     value = ([(c.id, c.owner_hash, c.address) for c in records], clusters)
     with _cluster_lock:
-        _CLUSTER_CACHE[key] = value
+        _CLUSTER_CACHE[_key([c.id for c in records], case_id, min_cases)] = value
         while len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE:
             _CLUSTER_CACHE.popitem(last=False)
     return value

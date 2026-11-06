@@ -94,6 +94,21 @@ def correlatable_cases(caller: str | None, case_id: str | None = None,
     return records
 
 
+def correlatable_refs(caller: str | None, limit: int = 2000) -> list[tuple[str, str | None, str]]:
+    """(id, owner, address) of the cases correlatable_cases() would read,
+    without their results: what a cache of the answer is keyed on."""
+    from sqlalchemy import func, or_, select
+
+    case = models.Case
+    visible = [case.owner_hash.is_(None) & func.lower(case.address).in_(sorted(demo_addresses()))]
+    if caller:
+        visible.append(case.owner_hash == caller)
+    stmt = (select(case.id, case.owner_hash, case.address).where(or_(*visible))
+            .order_by(case.created_at.desc()).limit(limit))
+    with models.session() as s:
+        return [(row[0], row[1], row[2]) for row in s.execute(stmt)]
+
+
 # ---------------------------------------------------------------------------
 # Correlation output, with other people's cases redacted. Since correlation
 # reads only correlatable_cases() there are none left to hide; this stays as

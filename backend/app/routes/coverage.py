@@ -200,9 +200,11 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
     except config.UnknownChainError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     # The sign-in page asks on every load, and the answer is ~30,000 label
-    # entries plus the demo cases: built once per chain and kept until a case
-    # is stored. `limit` only slices the shuffled list.
-    key = (selected.key, models.store_version())
+    # entries plus the public demo cases: built once per chain (and store).
+    # A saved trace never changes it: store_result always gives a case an
+    # owner, and only owner-less demo rows are read here. `limit` only slices
+    # the shuffled list.
+    key = (selected.key, models.engine())
     rows = _LEDGER_CACHE.get(key)
     if rows is None:
         rows = _build_ledger(selected.key)
@@ -212,7 +214,7 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
     return {"chain": selected.key, "count": len(rows), "entries": rows[:limit]}
 
 
-_LEDGER_CACHE: dict[tuple[str, int], list[dict[str, Any]]] = {}
+_LEDGER_CACHE: dict[tuple[str, Any], list[dict[str, Any]]] = {}
 
 
 def _build_ledger(chain_key: str) -> list[dict[str, Any]]:
