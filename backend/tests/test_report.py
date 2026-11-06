@@ -162,3 +162,12 @@ def test_a_tether_freeze_still_says_tether():
               "label": "USDT frozen by Tether on 2021-08-05", "source": "Tether USDT contract on Ethereum"}
     summary = build_report(stored({**full_result(), "risk_flags": ["frozen"], "risk_matches": [tether]}))["summary"]
     assert "had its USDT frozen by Tether" in summary
+
+
+def test_a_seizure_only_case_does_not_say_sanctions_list():
+    """A government seizure order is not a designation (audit r1-labels-data-12)."""
+    result = full_result()
+    result["risk_flags"] = ["seized"]
+    summary = build_report(stored(result))["summary"]
+    assert "seizure or forfeiture order, which is not a sanctions designation" in summary
+    assert "on a published sanctions list" not in summary

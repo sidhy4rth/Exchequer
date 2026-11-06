@@ -68,10 +68,10 @@ const HIT_PAD = 9
 const LINK_HIT_PAD = 4
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', seized: 'Seizure order', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }
 const ROLE_NAME = {
   seed: 'Reported address',
-  risk: 'Sanctioned / mixer / frozen / stolen / scam / poisoning',
+  risk: 'Sanctioned / seized / mixer / frozen / stolen / scam / poisoning',
   gambling: 'Gambling platform wallet',
   exchange: 'Labelled exchange wallet',
   inferred: 'Probable deposit address (inferred)',

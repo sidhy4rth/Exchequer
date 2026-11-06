@@ -35,9 +35,10 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Callable, Iterable
 
-# Flagged, but not an intermediary: a sanctioned entity is already named, and a
-# mixer is a service every user of it passes through.
-NOT_INTERMEDIARY_RISKS = frozenset({"sanctioned", "mixer"})
+# Flagged, but not an intermediary: a sanctioned entity is already named (so is a
+# wallet a government seizure order names), and a mixer is a service every user
+# of it passes through.
+NOT_INTERMEDIARY_RISKS = frozenset({"sanctioned", "seized", "mixer"})
 
 # Decides whether (chain, address) is a labelled contract or wallet that must
 # never count as an intermediary. main.py passes the exchange and router

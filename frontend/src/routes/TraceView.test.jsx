@@ -117,6 +117,18 @@ describe('what the amount is, and when it was not measured', () => {
   async function openWithResult(over) {
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
     stubFetch({ '/demos/recorded/11': { body: { ...demo.result, ...over, case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
+
+
+describe('a government seizure order (audit r1-labels-data-12)', () => {
+  const seized = {
+    address: 'TAR2KrCfTST5BQXs7D7N4HYHx6FBt4bzLh', category: 'seized', entity: 'NBCTF order FO 05/24',
+    label: 'NBCTF order FO 05/24', source: 'Israel NBCTF seizure or forfeiture order FO 05/24 (via OpenSanctions)',
+    depth: 1, value_received_native: 10, is_terminal: false,
+  }
+
+  async function openWithSeized() {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+    stubFetch({ '/demos/recorded/11': { body: { ...demo.result, risk_matches: [seized], case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
     render(
       <MemoryRouter initialEntries={['/demo/11']}>
         <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
@@ -156,5 +168,19 @@ describe('what the amount is, and when it was not measured', () => {
     const basis = document.querySelector('.finding-bar .basis')
     expect(basis).toHaveTextContent('≈ 100 of 100 USDT the victim reported paying likely arrived')
     expect(basis).not.toHaveTextContent('of 635')
+
+
+  it('is labelled a seizure order, never a sanctioned entity', async () => {
+    await openWithSeized()
+    const alert = document.querySelector('.alert')
+    expect(alert).toHaveTextContent('Seizure order:')
+    expect(alert).not.toHaveTextContent('Sanctioned')
+  })
+
+  it('is a seizure order in present mode too, not the "Sanctioned" fallback', async () => {
+    await openWithSeized()
+    screen.getByRole('button', { name: /Present/ }).click()
+    const alert = await screen.findByText(/Seizure order · NBCTF order FO 05\/24/)
+    expect(alert.closest('.pr-alert')).not.toHaveTextContent('Sanctioned')
   })
 })

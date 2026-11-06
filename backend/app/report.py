@@ -337,6 +337,11 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
         )
     if "sanctioned" in risk:
         extra += " At least one address in the trace is on a published sanctions list."
+    if "seized" in risk:
+        extra += (
+            " At least one address in the trace is named in a government seizure or "
+            "forfeiture order, which is not a sanctions designation."
+        )
     if "mixer" in risk:
         extra += " The trace stopped at a mixer, whose payouts cannot be linked to its deposits."
     frozen = [m for m in result.get("risk_matches") or [] if m.get("category") == "frozen"]

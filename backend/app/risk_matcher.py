@@ -12,6 +12,11 @@ The categories, with very different investigative meaning:
               international dimension, because the counterparty is a
               designated entity rather than an anonymous wallet.
 
+  seized      A government seizure or forfeiture order names the wallet
+              (Israel's NBCTF orders): one government's measure against it,
+              often time-limited, not a sanctions designation. A dated order
+              carries valid_until and is not matched after that day.
+
   mixer       The address is a tumbler: it pools deposits from many users and
               pays out from that pool, deliberately severing the link between
               input and output.
@@ -46,7 +51,7 @@ The categories, with very different investigative meaning:
 
 The authority behind them is not the same. A sanctioned address is on a
 government list -- OFAC's, or another government's (the international file:
-UK, EU, Israel, Japan, France); mixer pools and stolen-funds wallets come
+UK, EU, Japan, France; Israel's orders are seized); mixer pools and stolen-funds wallets come
 from the explorer's own public tags (the threat file), a strong attribution
 but not a designation. Each match carries its source so a report never
 blurs the two, and where an address is in both, the government entry is kept.
@@ -89,6 +94,8 @@ from .label_store import LabelStore, get_label_store
 logger = logging.getLogger(__name__)
 
 SANCTIONED = "sanctioned"
+# A government seizure or forfeiture order on the wallet: a measure, not a designation.
+SEIZED = "seized"
 MIXER = "mixer"
 STOLEN = "stolen"
 FROZEN = "frozen"
@@ -110,7 +117,9 @@ SCAM = "scam"
 LAUNDERING = "laundering"
 # Read live during a Tron trace, never from a label file, so not in CATEGORIES.
 REPORTED = "reported"
-CATEGORIES = (SANCTIONED, MIXER, FROZEN, STOLEN, GAMBLING, POISONING, SCAM, LAUNDERING)
+CATEGORIES = (SANCTIONED, SEIZED, MIXER, FROZEN, STOLEN, GAMBLING, POISONING, SCAM, LAUNDERING)
+# Categories a government list gives: an address several such lists name keeps every source.
+GOVERNMENT = frozenset({SANCTIONED, SEIZED})
 
 # Categories whose addresses end a trace. See the module docstring: a mixer
 # breaks the link between deposit and withdrawal, so anything past it is not
@@ -215,6 +224,16 @@ class RiskMatch:
             return (
                 f"Sanctioned entity: {self.address} is listed as {named} on "
                 f"{self.source}. {placement}."
+            )
+        if self.category == SEIZED:
+            # The entity is the holder's name when the order gives one, else the order id.
+            holder = "" if self.entity.startswith("NBCTF ") else f" Listed holder: {named}."
+            return (
+                f"Government seizure order: {self.address} is named in {self.source}.{holder} "
+                f"{placement}. A seizure or forfeiture order is one "
+                f"government's measure against the wallet, often time-limited, not a "
+                f"sanctions designation; it is not a finding that any counterparty took "
+                f"part in anything."
             )
         if self.category == FROZEN:
             # The USDT blacklist file is Tether's; the label store adds other
@@ -338,7 +357,7 @@ class RiskMatcher:
                     continue
                 if (
                     held is not meta
-                    and held["category"] == meta["category"] == SANCTIONED
+                    and held["category"] in GOVERNMENT and meta["category"] in GOVERNMENT
                     and meta["source"] not in held["source"]
                 ):
                     held["source"] = f"{held['source']}; also {meta['source']}"
@@ -368,6 +387,8 @@ class RiskMatcher:
     def lookup(self, address: str) -> dict[str, str] | None:
         address = normalize_address(address)
         meta = self._labels.get(address)
+        if meta is not None and _lapsed(meta, date.today()):
+            meta = None  # its order ended after this process loaded the file
         if meta is None and self.store is not None:
             meta = self.store.lookup(self.chain, address)
             if meta is not None and meta["category"] not in CATEGORIES:
@@ -474,7 +495,7 @@ def clear_label_caches() -> None:
 # fixed snapshots, not refreshed nightly, so a warning on them could never clear.
 LISTS = (
     ("risk_labels_path", "OFAC SDN list", True),
-    ("intl_sanctions_path", "Other governments' sanctions lists", True),
+    ("intl_sanctions_path", "Other governments' sanctions lists and seizure orders", True),
     ("frozen_labels_path", "Tether USDT freezes", True),
     ("threat_labels_path", "Mixer and stolen-funds tags", False),
     ("labels_path", "Exchange wallet labels", False),
@@ -564,7 +585,8 @@ def list_freshness(chain_key: str | None, as_of: date) -> dict[str, Any]:
         "stale_after_days": config.LIST_STALE_DAYS,
         "lists": lists,
         "not_held": not_held,
-        "warning": (f"Screening may have missed addresses listed recently. Over {config.LIST_STALE_DAYS} "
+        "warning": (f"Screening may have missed addresses listed recently, and may still name "
+                    f"addresses whose listing has since been lifted. Over {config.LIST_STALE_DAYS} "
                     f"days old when this case was traced: {'; '.join(overdue)}.") if overdue else None,
     }
 
@@ -598,6 +620,12 @@ def is_system_address(address: str) -> bool:
 
 def _text(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
+
+
+def _lapsed(meta: dict[str, str], today: date) -> bool:
+    """A dated government order whose last day has passed."""
+    until = meta.get("valid_until")
+    return bool(until) and until < today.isoformat()
 
 
 def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
@@ -672,9 +700,18 @@ def _read_entry(address: Any, value: Any, default_source: str) -> dict[str, str]
         logger.warning("Risk entry for %s names no entity; skipped", address)
         return None
 
-    return {
+    record = {
         "category": category,
         "entity": entity,
         "label": _text(value.get("label")) or entity,
         "source": _text(value.get("source")) or default_source,
     }
+    # The last day a dated order is in force (import_intl_sanctions); past it,
+    # the entry is not matched, whether or not a refresh has removed it yet.
+    until = _iso_date(value.get("valid_until")) if value.get("valid_until") else None
+    if until:
+        record["valid_until"] = until.isoformat()
+        if _lapsed(record, date.today()):
+            logger.info("Risk entry for %s lapsed on %s; skipped", address, until)
+            return None
+    return record

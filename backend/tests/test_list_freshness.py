@@ -176,3 +176,11 @@ def test_a_chain_this_build_does_not_know_still_renders(monkeypatch):
     report = build_report(stored(full_result()))
     assert report["screening_lists"] is None
     assert "could not be determined" in render_text_report(report)
+
+
+def test_the_stale_warning_says_listings_may_have_been_lifted(lists_dated):
+    """A stale list misses new listings and may still name lifted ones (r1-labels-data-3)."""
+    lists_dated(intl=OLD)
+    warning = list_freshness("ethereum", TRACED)["warning"]
+    assert "may still name addresses whose listing has since been lifted" in warning
+    assert "Other governments' sanctions lists and seizure orders (checked 2026-08-01)" in warning

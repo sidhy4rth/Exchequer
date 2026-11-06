@@ -286,6 +286,11 @@ describe('the front door figures (R14)', () => {
     expect(figures.flagged).toBe(9883182)
     expect(figures.poisoning).toBe(9861922)
   })
+
+  it('counts seizure orders with the government listings (r1-labels-data-12)', async () => {
+    const { coverageFromChains } = await import('./ExchangeGlobe')
+    expect(coverageFromChains({ tron: { risk_labels: { sanctioned: 49, seized: 488 } } }).sanctioned).toBe(537)
+  })
 })
 
 describe('what the watchlist says about the watcher (R30)', () => {
