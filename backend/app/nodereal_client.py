@@ -35,6 +35,7 @@ import json
 
 import httpx
 
+from .api_budget import ResponseTooLarge, read_capped
 from .evidence import EvidenceLog
 
 from . import config
@@ -219,8 +220,10 @@ class NoderealClient:
                 self.budget.check()  # the case's wall clock, before every attempt
             self._throttle()
             try:
-                response = self._client.post(self.url, json=payload,
-                                             **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
+                response = read_capped(self._client, "POST", self.url, json=payload,
+                                       **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
+            except ResponseTooLarge as exc:
+                raise NoderealResponseError(f"NodeReal response too large: {exc}") from exc
             except httpx.RequestError as exc:
                 last_error = NoderealError(f"Network error contacting NodeReal: {exc}")
                 self._backoff(attempt, str(exc))

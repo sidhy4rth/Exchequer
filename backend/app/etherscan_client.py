@@ -35,7 +35,7 @@ from typing import Any, Callable
 import httpx
 
 from . import config
-from .api_budget import ResponseCache, SharedPacer, get_cache, get_pacer
+from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache, get_pacer, read_capped
 from .evidence import EvidenceLog
 
 logger = logging.getLogger(__name__)
@@ -292,6 +292,24 @@ class Transaction:
             return None
 
 
+# The fields of an account-list record (txlist, tokentx, txlistinternal) the
+# parsers read. Only these are cached: the rest -- calldata (`input`) above
+# all, which a sender controls -- is never read and was most of a cached page.
+RECORD_FIELDS = ("hash", "from", "to", "value", "timeStamp", "blockNumber", "isError",
+                 "contractAddress", "tokenDecimal", "tokenSymbol")
+_LIST_ACTIONS = ("txlist", "tokentx", "txlistinternal")
+
+
+def slim_records(params: dict[str, Any], result: Any) -> Any:
+    """An account-list result cut down to RECORD_FIELDS; anything else as it came."""
+    if params.get("module") != "account" or params.get("action") not in _LIST_ACTIONS:
+        return result
+    if not isinstance(result, list):
+        return result
+    return [{k: raw[k] for k in RECORD_FIELDS if k in raw} if isinstance(raw, dict) else raw
+            for raw in result]
+
+
 # Etherscan phrases that mean "your query was fine, there is simply no data".
 # These are successful empty results, not errors.
 _EMPTY_MESSAGES = (
@@ -426,7 +444,8 @@ class EtherscanClient:
 
     def _record(self, request_desc: str, cache_key: tuple, response: httpx.Response, result: Any) -> None:
         """Hash the bytes this answer came from, store them with the cached
-        value, and log them as evidence for this trace."""
+        value, and log them as evidence for this trace. The hash is of the
+        whole raw body; the cached value is only what the parsers read."""
         rec = self.evidence.record("etherscan", request_desc, response.content)
         self._cache.put(cache_key, result, meta={
             "sha256": rec.sha256, "retrieved_at": rec.retrieved_at, "bytes": rec.bytes,
@@ -465,7 +484,9 @@ class EtherscanClient:
                 self.budget.check()  # the case's wall clock, before every attempt
             self._throttle()
             try:
-                response = self._client.get(self.base_url, params=query, **self._timeout())
+                response = read_capped(self._client, "GET", self.base_url, params=query, **self._timeout())
+            except ResponseTooLarge as exc:
+                raise ProviderResponseError(f"Etherscan response too large: {exc}") from exc
             except httpx.RequestError as exc:  # DNS failure, timeout, reset...
                 last_error = EtherscanError(f"Network error contacting Etherscan: {exc}")
                 self._backoff(attempt, reason=str(exc))
@@ -509,6 +530,7 @@ class EtherscanClient:
 
             if status == "1":
                 self._pacer.reward()
+                result = slim_records(params, result)
                 self._record(request_desc, cache_key, response, result)
                 return result
 

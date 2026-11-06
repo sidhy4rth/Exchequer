@@ -247,11 +247,12 @@ class TronScanTags:
         if self.budget is not None and self.budget.remaining() <= 0:
             return None  # the case's time is spent: a tag lookup is never worth waiting for
         try:
-            response = self._client.get(f"{TRONSCAN}/api/accountv2", params={"address": address},
-                                        **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
+            response = api_budget.read_capped(self._client, "GET", f"{TRONSCAN}/api/accountv2",
+                                              params={"address": address},
+                                              **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
             response.raise_for_status()
             body = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
+        except (httpx.HTTPError, ValueError, api_budget.ResponseTooLarge) as exc:
             self.failures += 1
             logger.warning("TronScan tag lookup failed for %s: %s", address, exc)
             return None

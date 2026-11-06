@@ -509,6 +509,14 @@ EXCHANGE_LABELS_PATH: Path = DEFAULT_CHAIN.labels_path
 # afternoon; set it in seconds.
 API_CACHE_TTL_SECONDS: float = float(os.getenv("API_CACHE_TTL_SECONDS", str(24 * 3600)))
 
+# What one provider cache may hold, in bytes, in memory and on disk. Counted
+# entries alone let 2,048 raw pages pin ~0.7 GB on a 512 MB instance.
+CACHE_MEMORY_BYTES: int = _int_env("EXCHEQUER_CACHE_MEMORY_MB", 48) * 1024 * 1024
+CACHE_DISK_BYTES: int = _int_env("EXCHEQUER_CACHE_DISK_MB", 256) * 1024 * 1024
+# The largest provider response read at all. A page of 200 transactions with
+# large calldata was 52 MB; nothing a trace needs comes near this.
+PROVIDER_MAX_RESPONSE_BYTES: int = _int_env("EXCHEQUER_PROVIDER_MAX_RESPONSE_BYTES", 8 * 1024 * 1024)
+
 # Where cached responses are kept between restarts. Beside the case store by
 # default (so a /data volume holds both); an empty value or "off" keeps the
 # cache in memory only. Without this a redeploy forgets every response and the

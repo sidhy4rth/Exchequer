@@ -33,6 +33,7 @@ from typing import Any
 
 import httpx
 
+from .api_budget import ResponseTooLarge, read_capped
 from .evidence import EvidenceLog
 
 from . import config
@@ -202,8 +203,10 @@ class TronClient:
                 self.budget.check()  # the case's wall clock, before every attempt
             self._throttle()
             try:
-                response = self._client.request(method, f"{self.base_url}{path}", **kwargs,
-                                                **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
+                response = read_capped(self._client, method, f"{self.base_url}{path}", **kwargs,
+                                       **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
+            except ResponseTooLarge as exc:
+                raise TronResponseError(f"TronGrid response too large: {exc}") from exc
             except httpx.RequestError as exc:
                 last_error = TronError(f"Network error contacting TronGrid: {exc}")
                 self._backoff(attempt, str(exc))
