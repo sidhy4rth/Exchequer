@@ -42,6 +42,13 @@ logger = logging.getLogger(__name__)
 
 WEI_PER_UNIT = 10**18
 
+# The `endblock` of every open-ended read: above any chain's height, so
+# Etherscan stops at its newest indexed block. It was 99,999,999, which
+# Arbitrum passed in 2023 -- its reads then ended in 2023, and a read from an
+# arrival above that block asked for an inverted range. A constant rather
+# than the head, so the request (and its cache key) is the same every time.
+ENDBLOCK_LATEST = 9_999_999_999
+
 # An EVM address: 0x followed by 40 hex characters. Identical on Ethereum
 # and BNB Smart Chain.
 ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
@@ -570,7 +577,7 @@ class EtherscanClient:
             "action": "tokentx" if self.contract_address else "txlist",
             "address": normalize_address(address),
             "startblock": 0,
-            "endblock": 99999999,
+            "endblock": ENDBLOCK_LATEST,
             "page": 1,
             "offset": offset,
             "sort": sort,
@@ -739,7 +746,7 @@ class EtherscanClient:
             "action": "tokentx" if self.contract_address else "txlist",
             "address": target,
             "startblock": max(0, int(start_block)),
-            "endblock": 99999999,
+            "endblock": ENDBLOCK_LATEST,
             "page": 1,
             "offset": offset,
             "sort": "asc",
