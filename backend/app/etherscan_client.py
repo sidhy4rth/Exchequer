@@ -144,6 +144,34 @@ def normalize_address(address: str) -> str:
     return stripped.lower() if stripped.startswith("0x") else stripped
 
 
+@dataclass(frozen=True)
+class SinceRead:
+    """What a watch read forward from its cursor (read_outgoing_since).
+
+    `transfers`: value-bearing transfers the address sent, oldest first, each
+    after the cursor and at or below `through`. `through`: every record at or
+    below this position (block, or Unix time on Tron) has been read, whatever
+    its direction or value, so the cursor may move there and no further.
+    `complete`: nothing more up to the chain's head."""
+
+    transfers: list["Transaction"]
+    through: int
+    complete: bool
+
+
+def split_page(blocks: list[int], after: int, full: bool) -> tuple[int, bool]:
+    """(through, complete) for an ascending page whose records sat at `blocks`.
+
+    A short page read everything there is. A full one may have cut its last
+    block in two, so that block is left for the next read -- unless the whole
+    page is one block, which then counts as read (the caller says more may
+    be missing) so the cursor can never stall."""
+    if not full:
+        return max([after, *blocks]), True
+    first, last = min(blocks), max(blocks)
+    return (last if first == last else last - 1), False
+
+
 class EtherscanError(RuntimeError):
     """Any non-recoverable problem talking to Etherscan."""
 
@@ -908,6 +936,50 @@ class EtherscanClient:
         if signed or self.contract_address or not self.include_internal:
             return signed
         return sent(self._request({**params, "action": "txlistinternal"}), internal=True)
+
+    def read_outgoing_since(self, address: str, after: int, limit: int) -> SinceRead:
+        """What `address` sent after block `after`, oldest first, for a watch.
+
+        One ascending page from after+1. The page holds both directions and
+        zero-value records, and every one of them counts toward `through`:
+        incoming dust or spam can fill a page but never hides the transfer
+        before it, and never holds the cursor back. Internal transfers are
+        read over the same span when the signed list shows no send, as in
+        get_outgoing_transactions."""
+        target = normalize_address(address)
+        params: dict[str, Any] = {
+            "module": "account",
+            "action": "tokentx" if self.contract_address else "txlist",
+            "address": target,
+            "startblock": int(after) + 1,
+            "endblock": 99999999,
+            "page": 1,
+            "offset": limit,
+            "sort": "asc",
+        }
+        if self.contract_address:
+            params["contractaddress"] = self.contract_address
+
+        def page(raws: Any, parse: Callable[[dict[str, Any]], Transaction | None]
+                 ) -> tuple[list[Transaction], list[int], bool]:
+            rows = [r for r in raws if isinstance(r, dict)] if isinstance(raws, list) else []
+            blocks = [int(r.get("blockNumber") or 0) for r in rows]
+            sent = [t for t in (parse(r) for r in rows) if t is not None and t.from_address == target
+                    and t.to_address is not None and not t.is_error and t.value_wei > 0]
+            return sent, blocks, bool(rows) and len(rows) >= limit
+
+        sent, blocks, full = page(self._request(params), self._parser())
+        through, complete = split_page(blocks, after, full)
+        if not sent and not self.contract_address and self.include_internal:
+            span = {**params, "action": "txlistinternal"}
+            if not complete:
+                span["endblock"] = through
+            sent, iblocks, ifull = page(self._request(span),
+                                        lambda raw: Transaction.from_api(raw, internal=True))
+            ithrough, icomplete = split_page(iblocks, after, ifull)
+            through = ithrough if not icomplete else max(through, ithrough)
+            complete = complete and icomplete
+        return SinceRead([t for t in sent if after < t.block_number <= through], through, complete)
 
     def get_incoming_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
         """Only the transfers *received by* `address` that actually moved value.

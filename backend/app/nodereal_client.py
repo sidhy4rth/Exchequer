@@ -45,10 +45,12 @@ from .etherscan_client import (
     EtherscanError,
     ProviderQuotaError,
     ProviderResponseError,
+    SinceRead,
     Transaction,
     is_valid_address,
     normalize_address,
     resolve_decimals,
+    split_page,
 )
 
 logger = logging.getLogger(__name__)
@@ -94,6 +96,9 @@ DEEP_WINDOWS = 20
 # ~0.45 s blocks): a trace follows money only after it arrived, so that is
 # the history that matters, and most of it moves on within days.
 ARRIVAL_WINDOWS = 5
+# Block windows one watch read walks forward before it stops and says so
+# (~5 days at BSC's ~0.45 s blocks); the next check carries on from there.
+SINCE_WINDOWS = 10
 NOT_INDEXED = "not reached"
 
 # Compute units per method (NodeReal's published table; others at 25). The
@@ -104,6 +109,14 @@ TRANSFER_CU = METHOD_CU["nr_getAssetTransfers"]
 # The fields of a transfer record _to_transaction reads; only these are cached.
 TRANSFER_FIELDS = ("hash", "from", "to", "value", "decimal", "blockNum", "blockTimeStamp",
                    "receiptsStatus", "asset", "contractAddress")
+
+
+def _block_of(raw: dict[str, Any]) -> int:
+    value = raw.get("blockNum") or "0x0"
+    try:
+        return int(value, 16) if isinstance(value, str) else int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 class NoderealError(EtherscanError):
@@ -655,6 +668,44 @@ class NoderealClient:
         # Whether the read stopped at a limit rather than at the range's end.
         capped = len(collected) >= cap or scanned >= MAX_SCAN or guard_stopped
         return collected[:cap], capped
+
+    def read_outgoing_since(self, address: str, after: int, limit: int) -> SinceRead:
+        """What `address` sent after block `after`, oldest first, for a watch.
+
+        Walks forward from after+1 to the indexed head in API-sized windows,
+        at most SINCE_WINDOWS of them, one ascending page each. Never runs
+        the nonce search a trace uses for quiet wallets: a dormant watched
+        wallet costs the head read and a window or two."""
+        if not is_valid_address(address):
+            raise ValueError(f"Not a valid EVM address: {address!r}")
+        head = self.head_block()
+        category = [CATEGORY_ERC20] if self.contract_addresses else [CATEGORY_NATIVE]
+        sent: list[Transaction] = []
+        start, through = int(after) + 1, int(after)
+        for _ in range(SINCE_WINDOWS):
+            if start > head:
+                return SinceRead(sent, through, True)
+            end = min(head, start + MAX_BLOCK_WINDOW - 1)
+            params: dict[str, Any] = {
+                "category": category, "fromBlock": hex(start), "toBlock": hex(end),
+                "fromAddress": normalize_address(address),
+                "maxCount": hex(min(MAX_COUNT, limit)), "order": "asc",
+            }
+            if self.contract_addresses:
+                params["contractAddresses"] = self.contract_addresses
+            result = self._rpc("nr_getAssetTransfers", [params]) or {}
+            raws = [r for r in (result.get("transfers") or []) if isinstance(r, dict)]
+            txs = [self._to_transaction(r) for r in raws]
+            sent += [t for t in txs if t and not t.is_error and t.value_wei > 0]
+            if result.get("pageKey") and raws:
+                # More in this window than one page: stop inside it.
+                blocks = [_block_of(r) for r in raws]
+                through, _ = split_page(blocks, after, full=True)
+                return SinceRead([t for t in sent if t.block_number <= through], max(through, after), False)
+            through, start = end, end + 1
+            if len(sent) >= limit:
+                break
+        return SinceRead(sent, through, start > head)
 
     def get_transaction_receipt(self, tx_hash: str) -> dict[str, Any] | None:
         """One transaction's receipt and event logs, for reading swap outputs."""

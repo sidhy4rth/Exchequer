@@ -36,7 +36,8 @@ from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache,
 from .evidence import EvidenceLog
 
 from . import config
-from .etherscan_client import EtherscanError, ProviderResponseError, Transaction, is_tron_address, resolve_decimals
+from .etherscan_client import (EtherscanError, ProviderResponseError, SinceRead, Transaction, is_tron_address,
+                               resolve_decimals, split_page)
 
 logger = logging.getLogger(__name__)
 
@@ -578,6 +579,44 @@ class TronClient:
         if body.get("Error"):
             return None
         return bool(body.get("bytecode"))
+
+    def read_outgoing_since(self, address: str, after: int, limit: int) -> SinceRead:
+        """What `address` sent after `after` (Unix seconds), oldest first, for a watch.
+
+        Confirmed records only, ascending from after+1 s, page after page until
+        `limit` transfers or MAX_SCAN records. Every record read counts toward
+        `through` -- failed and zero-value ones too, so a burst of dust can
+        neither hide a transfer nor hold the cursor back."""
+        if not is_tron_address(address):
+            raise ValueError(f"Not a valid Tron address: {address!r}")
+        if self.contract_address:
+            path, parse = f"/v1/accounts/{address}/transactions/trc20", self._token_transfer
+        else:
+            path, parse = f"/v1/accounts/{address}/transactions", self._native_transfer
+        params: dict[str, Any] = {"only_from": "true", "only_confirmed": "true",
+                                  "limit": min(MAX_PAGE, limit), "order_by": "block_timestamp,asc",
+                                  "min_timestamp": (int(after) + 1) * 1000}
+        if self.contract_address:
+            params["contract_address"] = self.contract_address
+        sent: list[Transaction] = []
+        stamps: list[int] = []
+        while True:
+            body = self._get(path, params)
+            records = [r for r in (body.get("data") or []) if isinstance(r, dict)]
+            stamps += [int(r.get("block_timestamp") or 0) // 1000 for r in records]
+            for raw in records:
+                tx = parse(raw)
+                if tx and tx.to_address and not tx.is_error and tx.value_wei > 0:
+                    sent.append(tx)
+            fingerprint = (body.get("meta") or {}).get("fingerprint")
+            if not fingerprint or not records:
+                through, complete = split_page(stamps, after, full=False)
+                break
+            if len(sent) >= limit or len(stamps) >= MAX_SCAN:
+                through, complete = split_page(stamps, after, full=True)
+                break
+            params["fingerprint"] = fingerprint
+        return SinceRead([t for t in sent if after < t.timestamp <= through], through, complete)
 
     def get_transactions(self, address: str, limit: int | None = None, sort: str = "desc"):
         """Present for interface parity; callers pick a direction explicitly."""
