@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .. import audit, batches, config, ownership, pipeline, rate_limit
+from ..input_rules import OneLine
 from . import casebook, cases
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,8 @@ router = APIRouter()
 
 
 class BatchRequest(BaseModel):
-    name: str = Field("", max_length=120)
+    # Checked here, before the route charges the trace allowance for the rows.
+    name: OneLine = Field("", max_length=120)
     rows: list[dict[str, Any]] = Field(..., max_length=batches.MAX_ROWS * 4)
 
 

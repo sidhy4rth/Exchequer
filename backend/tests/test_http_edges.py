@@ -52,15 +52,17 @@ def test_a_nan_amount_is_refused_not_stored(client):
 @pytest.mark.parametrize("path", ["/" + "a" * 300, "/x%00y"])
 def test_odd_paths_never_fail_and_keep_the_security_headers(client, monkeypatch, tmp_path, path, built):
     # An over-long segment or a NUL byte used to raise in the file lookup: a
-    # 500 with a traceback and no security headers. Without a built frontend
-    # it is a 404; with one, a browser gets the app shell like any deep link.
-    # The build folder is set here so a local frontend/dist cannot change it.
+    # 500 with a traceback and no security headers. A NUL is now refused before
+    # routing (input_rules.ControlCharMiddleware): a 400. An over-long segment is
+    # a 404 without a built frontend; with one, a browser gets the app shell like
+    # any deep link. The build folder is set here so a local frontend/dist cannot
+    # change it.
     from app import main
     if built:
         (tmp_path / "index.html").write_text("<!doctype html><title>x</title>")
     monkeypatch.setattr(main, "FRONTEND_DIR", tmp_path)
     r = client.get(path, headers={"sec-fetch-mode": "navigate"})
-    assert r.status_code == (200 if built else 404)
+    assert r.status_code == (400 if "%00" in path else 200 if built else 404)
     assert "x-content-type-options" in r.headers
 
 

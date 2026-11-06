@@ -15,25 +15,26 @@ from pydantic import BaseModel, Field
 
 from .. import audit, freeze_requests, rate_limit
 from ..auth import CurrentUser, User
+from ..input_rules import NoNul, OneLine
 
 router = APIRouter()
 
 
 class NewRequest(BaseModel):
-    case_id: str = Field(..., max_length=36)
-    recipient: str = Field(..., max_length=120)
-    kind: str = Field("exchange", max_length=16)
-    address: str = Field("", max_length=64)
-    asset: str = Field("", max_length=16)
-    status: str = Field("drafted", max_length=16)
+    case_id: OneLine = Field(..., max_length=36)
+    recipient: OneLine = Field(..., max_length=120)
+    kind: OneLine = Field("exchange", max_length=16)
+    address: OneLine = Field("", max_length=64)
+    asset: OneLine = Field("", max_length=16)
+    status: OneLine = Field("drafted", max_length=16)
 
 
 class RequestChange(BaseModel):
-    status: str | None = Field(None, max_length=16)
-    note: str | None = Field(None, max_length=500)
-    reference: str | None = Field(None, max_length=120)
-    notes: str | None = Field(None, max_length=4000)
-    sent_at: str | None = Field(None, max_length=32)
+    status: OneLine | None = Field(None, max_length=16)
+    note: NoNul | None = Field(None, max_length=500)
+    reference: OneLine | None = Field(None, max_length=120)
+    notes: NoNul | None = Field(None, max_length=4000)
+    sent_at: OneLine | None = Field(None, max_length=32)
     # Finite only: a NaN or Infinity cannot be written back out as JSON.
     amount_frozen: float | None = Field(None, allow_inf_nan=False)
 

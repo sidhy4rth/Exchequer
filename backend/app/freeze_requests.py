@@ -151,7 +151,9 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any]) -> dict[s
                 raise RequestError("sent_at must be a date like 2026-10-13.") from exc
             if parsed.tzinfo is None:
                 parsed = parsed.replace(tzinfo=timezone.utc)
-            r.sent_at = parsed.isoformat(timespec="seconds")
+            # Stored in UTC: an offset with seconds (+05:30:15.123456) would
+            # otherwise be written back longer than the 32-character column.
+            r.sent_at = parsed.astimezone(timezone.utc).isoformat(timespec="seconds")
         if "amount_frozen" in changes:
             value = changes["amount_frozen"]
             if value is not None and (not isinstance(value, (int, float)) or value < 0):

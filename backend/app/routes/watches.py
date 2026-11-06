@@ -19,21 +19,22 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from .. import config, ownership, rate_limit, watchlist
+from ..input_rules import OneLine
 
 router = APIRouter()
 
 
 class WatchRequest(BaseModel):
-    address: str = Field(..., max_length=80)
-    chain: str | None = Field(None, max_length=16)
-    asset: str | None = Field(None, max_length=16)
-    note: str = Field("", max_length=200)
-    case_id: str | None = Field(None, max_length=36)
-    webhook_url: str | None = Field(None, max_length=500)
+    address: OneLine = Field(..., max_length=80)
+    chain: OneLine | None = Field(None, max_length=16)
+    asset: OneLine | None = Field(None, max_length=16)
+    note: OneLine = Field("", max_length=200)
+    case_id: OneLine | None = Field(None, max_length=36)
+    webhook_url: OneLine | None = Field(None, max_length=500)
 
 
 class ReadRequest(BaseModel):
-    alert_ids: list[str] | None = Field(None, max_length=500)
+    alert_ids: list[OneLine] | None = Field(None, max_length=500)
 
 
 def _owner(http: Request) -> str:

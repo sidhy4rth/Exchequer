@@ -32,13 +32,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.exc import InterfaceError, OperationalError
+from sqlalchemy.exc import DataError, InterfaceError, OperationalError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from . import batches as batch_runner
 from . import backups, config, log_safety, models, rate_limit, warmup, watchlist
 from . import access
 from .access import DemoCodeMiddleware
+from .input_rules import ControlCharMiddleware
 from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
@@ -173,9 +174,20 @@ async def store_unavailable(_request: Request, exc: Exception) -> JSONResponse:
                         content={"detail": "The case store is unavailable right now. Try again in a minute."})
 
 
+@app.exception_handler(DataError)
+async def cannot_store(_request: Request, exc: DataError) -> JSONResponse:
+    """A value the store refused (a NUL, a string past its column): the
+    caller's input, so a 400. The edge rules (input_rules.py) catch the known
+    cases first; this is the net under them."""
+    logger.warning("Store refused a value: %s", _short(exc.orig if exc.orig is not None else exc))
+    return JSONResponse(status_code=400, content={"detail": "That input cannot be stored."})
+
+
 # Added first, so innermost: its refusals still pass through the security
 # headers and CORS added after it. See access.py.
 app.add_middleware(DemoCodeMiddleware)
+# Control characters in a path or query are refused before any route runs.
+app.add_middleware(ControlCharMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
