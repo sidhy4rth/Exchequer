@@ -227,6 +227,10 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
             note = f" {entry['note']}" if entry.get("note") else ""
             story.append(_p(f"{entry['name']}: checked {entry['checked'] or 'no date recorded'}{published}.{note}",
                             st["small"]))
+    if screening_lists.get("not_held"):
+        # Said here too: a summary that names only what was held reads as if nothing was left out.
+        story.append(_p(f"Not loaded for this chain, so not screened: {', '.join(screening_lists['not_held'])}.",
+                        st["small"]))
 
     # -- the route ------------------------------------------------------------
     path = report.get("trace_path") or []

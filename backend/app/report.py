@@ -265,6 +265,8 @@ def _screening_lists(case: Case, result: dict[str, Any]) -> dict[str, Any] | Non
     except ValueError:
         traced = datetime.now(tz=timezone.utc).date()
     try:
+        if "label_store" in result:  # recorded by the trace; an older case can only name today's
+            return list_freshness(result.get("chain"), traced, store=result["label_store"])
         return list_freshness(result.get("chain"), traced)
     except config.UnknownChainError:
         return None

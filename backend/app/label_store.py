@@ -174,6 +174,12 @@ class LabelStore:
     def __len__(self) -> int:
         return sum(sum(c.values()) for c in self._counts.values())
 
+    def build_info(self) -> dict[str, str]:
+        """When the store was built and from which file, as scripts/build_label_store.py recorded."""
+        with self._lock:
+            rows = self._db.execute("SELECT key, value FROM meta WHERE key IN ('built_at', 'built_from')").fetchall()
+        return {key: str(value) for key, value in rows}
+
 
 @lru_cache(maxsize=1)
 def get_label_store() -> LabelStore | None:

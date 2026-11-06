@@ -848,6 +848,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         "risk_matches": [m.to_dict() for m in risk_matches],
         "risk_flags": sorted({m.category for m in risk_matches}),
         "risk_notes": [m.describe(asset_symbol) for m in risk_matches],
+        # The label-store build this trace screened against (None: it had
+        # none), so a later report names the build that made, or missed, a flag.
+        "label_store": risk_matcher.store_entry(),
         "findings": [f.to_dict() for f in findings],
         # Transfers into DEX routers, with what came back where the receipt
         # showed it. The graph edge carries the same record as `swap`.

@@ -65,6 +65,14 @@ def test_page_one_prints_the_list_dates_and_no_red_when_they_are_fresh():
     assert RED_INK not in drawing
 
 
+def test_page_one_names_what_was_not_screened():
+    """A summary that names only what was held reads as if nothing was left out (r1-labels-data-9)."""
+    report = {**REPORT, "screening_lists": {**LISTS, "not_held": ["Flagged-address label store"]},
+              "risk_screening": {"screened": True, "matches": []}}
+    text = " ".join(first_page(report)[0].split())
+    assert "so not screened: Flagged-address label store" in text
+
+
 def test_an_old_list_puts_a_red_warning_on_page_one():
     warning = "Screening may have missed addresses listed recently."
     report = {**REPORT, "screening_lists": {**LISTS, "warning": warning},

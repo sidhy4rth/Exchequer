@@ -384,6 +384,10 @@ class RiskMatcher:
                 counts[category] = counts.get(category, 0) + n
         return counts
 
+    def store_entry(self) -> dict[str, Any] | None:
+        """The label store this matcher screens against, as a case records it; None without one."""
+        return label_store_entry(self.store, self.chain)
+
     def lookup(self, address: str) -> dict[str, str] | None:
         address = normalize_address(address)
         meta = self._labels.get(address)
@@ -498,8 +502,14 @@ LISTS = (
     ("intl_sanctions_path", "Other governments' sanctions lists and seizure orders", True),
     ("frozen_labels_path", "Tether USDT freezes", True),
     ("threat_labels_path", "Mixer and stolen-funds tags", False),
+    ("gambling_labels_path", "Gambling platform wallets", False),
     ("labels_path", "Exchange wallet labels", False),
 )
+# The on-disk store (label_store.py) is screened too, after the files. It is a
+# build, replaced with each release, so it is named by when and from what it
+# was built rather than by a list date.
+STORE_LIST = "Flagged-address label store"
+_HELD = object()  # list_freshness: the store this server holds, not one a case recorded
 # OFAC names neither chain; scripts/port_evm_labels.py builds their risk files.
 CARRIED_CHAINS = {"polygon", "arbitrum"}
 CARRIED_NAME = "OFAC and other governments' sanctions lists, carried over from Ethereum"
@@ -540,19 +550,21 @@ def _list_meta(path: Path) -> dict[str, Any] | None:
     return (document.get("_meta") or {}) if isinstance(document, dict) else None
 
 
-def list_freshness(chain_key: str | None, as_of: date) -> dict[str, Any]:
+def list_freshness(chain_key: str | None, as_of: date, store: Any = _HELD) -> dict[str, Any]:
     """Each list this chain is screened against, and how old it was on `as_of`.
 
     `as_of` is the day the case was traced. These are the files this server holds
     now, so a list dated after the trace is reported as such, never as what the
-    trace used.
+    trace used. `store` is the label store the trace recorded
+    (RiskMatcher.store_entry, None if it ran without one); left out, it is the
+    one this server holds.
     """
     chain = config.get_chain(chain_key)
     lists: list[dict[str, Any]] = []
     not_held: list[str] = []
     overdue: list[str] = []
     for attribute, name, has_age_limit in LISTS:
-        path = getattr(chain, attribute)
+        path = getattr(chain, attribute, None)
         meta = _list_meta(path) if path else None
         if meta is None:
             not_held.append(name)
@@ -580,6 +592,13 @@ def list_freshness(chain_key: str | None, as_of: date) -> dict[str, Any]:
             "state": state,
             "note": note,
         })
+    recorded = store is not _HELD
+    if not recorded:
+        store = label_store_entry(get_label_store(), chain.key)
+    if isinstance(store, dict) and store.get("rows"):
+        lists.append(_store_freshness(store, as_of, recorded))
+    else:
+        not_held.append(STORE_LIST)  # no store, or nothing in it for this chain
     return {
         "as_of": as_of.isoformat(),
         "stale_after_days": config.LIST_STALE_DAYS,
@@ -589,6 +608,31 @@ def list_freshness(chain_key: str | None, as_of: date) -> dict[str, Any]:
                     f"addresses whose listing has since been lifted. Over {config.LIST_STALE_DAYS} "
                     f"days old when this case was traced: {'; '.join(overdue)}.") if overdue else None,
     }
+
+
+def label_store_entry(store: LabelStore | None, chain_key: str) -> dict[str, Any] | None:
+    """Which label-store build screens `chain_key`: when and from what it was built, and its rows here."""
+    if store is None:
+        return None
+    info = store.build_info()
+    return {"name": STORE_LIST, "file": store.path.name, "built_at": info.get("built_at"),
+            "built_from": info.get("built_from"), "rows": sum(store.counts(chain_key).values())}
+
+
+def _store_freshness(store: dict[str, Any], as_of: date, recorded: bool) -> dict[str, Any]:
+    built_at = str(store.get("built_at") or "")
+    built = _iso_date(built_at[:10])
+    note = (f"Built {built_at or 'at an unrecorded time'} from {store.get('built_from') or 'an unrecorded file'}; "
+            f"{store['rows']:,} addresses on this chain. A build, replaced with each release, so no age limit "
+            "applies.")
+    state = "fixed_snapshot"
+    if recorded:
+        note += " Recorded when this case was traced."
+    elif built and built > as_of:
+        state, note = "updated_since_trace", f"{note} {UPDATED_NOTE}"
+    return {"name": STORE_LIST, "file": store.get("file") or "label_store.db",
+            "checked": built.isoformat() if built else None, "published": None, "state": state, "note": note,
+            "built_at": built_at or None, "built_from": store.get("built_from"), "rows": store["rows"]}
 
 
 _BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
