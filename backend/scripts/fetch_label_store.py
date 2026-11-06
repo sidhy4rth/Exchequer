@@ -27,6 +27,8 @@ import os
 import shutil
 import sys
 import tempfile
+import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -50,10 +52,34 @@ def install(gz_path: Path, sha256: str, out: Path) -> None:
     tmp.replace(out)
 
 
+class _HttpsOnlyRedirect(urllib.request.HTTPRedirectHandler):
+    """Follows a redirect only to https: the asset download is a 302 to a pre-signed CDN URL."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urllib.parse.urlsplit(newurl).scheme != "https":
+            raise urllib.error.HTTPError(newurl, code, "refusing a non-https redirect", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(_HttpsOnlyRedirect)
+
+
+def _request(url: str, token: str, accept: str) -> urllib.request.Request:
+    """A request carrying the token to the GitHub API, and to no other host.
+
+    An ordinary header is copied onto every redirect, whatever its host; the
+    CDN the asset redirects to is pre-signed and needs no token, so the token
+    is an unredirected header and never leaves the API.
+    """
+    if not url.startswith(API + "/"):
+        raise ValueError(f"refusing to send the token to {urllib.parse.urlsplit(url).netloc}")
+    req = urllib.request.Request(url, headers={"Accept": accept, "User-Agent": "exchequer-build"})
+    req.add_unredirected_header("Authorization", f"Bearer {token}")
+    return req
+
+
 def _get(url: str, token: str, accept: str) -> urllib.request.addinfourl:
-    req = urllib.request.Request(url, headers={
-        "Authorization": f"Bearer {token}", "Accept": accept, "User-Agent": "exchequer-build"})
-    return urllib.request.urlopen(req, timeout=120)
+    return _OPENER.open(_request(url, token, accept), timeout=120)
 
 
 def main() -> int:
@@ -74,6 +100,8 @@ def main() -> int:
         asset = next((a for a in release.get("assets", []) if a.get("name") == ASSET), None)
         if asset is None:
             raise LookupError(f"release {tag} has no {ASSET}")
+        if not str(asset.get("url", "")).startswith(f"{API}/repos/{repo}/releases/assets/"):
+            raise LookupError(f"release {tag} lists {ASSET} at an unexpected URL")
         with tempfile.TemporaryDirectory() as tmpdir:
             gz = Path(tmpdir) / ASSET
             with _get(asset["url"], token, "application/octet-stream") as r, open(gz, "wb") as fh:
