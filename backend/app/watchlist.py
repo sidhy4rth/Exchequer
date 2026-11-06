@@ -32,7 +32,7 @@ from typing import Any, Callable
 from urllib.parse import urlsplit
 
 import httpx
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 
 from . import config, models
 from .api_budget import fresh_reads
@@ -363,8 +363,8 @@ def check_watch(watch_id: str, source: Source = open_source,
             ))
         seen_block = max(last_seen, newest) if fresh else last_seen
     out = [alert_summary(a, chain.key, case_id) for a in new_alerts]
-    if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts):
-        return []  # removed while we were reading
+    if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts, expected=last_seen):
+        return []  # removed while we were reading, or another check got there first
 
     if hook and out:
         for alert in out[:10]:
@@ -378,16 +378,24 @@ def check_watch(watch_id: str, source: Source = open_source,
 
 
 def _finish_check(watch_id: str, seen_block: int | None = None, error: str | None = None,
-                  alerts: list[models.Alert] | None = None) -> bool:
-    """Record a check's outcome in one short transaction. False if the watch is gone."""
+                  alerts: list[models.Alert] | None = None, expected: int | None = None) -> bool:
+    """Record a check's outcome in one short transaction. False if the watch is
+    gone, or if its cursor is no longer `expected` (what this check read).
+
+    Two checks of one watch can overlap: the watcher's round and a Check now,
+    or two instances during a deploy. Both read the same cursor and the same
+    new transfers; the cursor moves only from the value this check read
+    (compare-and-set), so the second stores and posts nothing and a slower
+    check can never move the cursor back."""
     with models.session() as s:
-        watch = s.get(models.Watch, watch_id)
-        if watch is None or not watch.active:
-            return False
-        watch.last_checked_at = _now()
-        watch.last_error = error
+        stmt = (update(models.Watch).where(models.Watch.id == watch_id, models.Watch.active.is_(True))
+                .values(last_checked_at=_now(), last_error=error))
         if error is None and seen_block is not None:
-            watch.last_seen_block = seen_block
+            stmt = (stmt.where(models.Watch.last_seen_block.is_not_distinct_from(expected))
+                    .values(last_seen_block=seen_block))
+        if s.execute(stmt.execution_options(synchronize_session=False)).rowcount != 1:
+            s.rollback()
+            return False
         s.add_all(alerts or [])
         s.flush()
         if alerts:

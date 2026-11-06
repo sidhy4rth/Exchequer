@@ -239,3 +239,86 @@ def test_a_busy_watch_keeps_only_its_newest_alerts(chain, monkeypatch):
         assert s.scalar(select(func.count()).select_from(models.Alert)) == 30
     # The newest survive.
     assert max(stored) == max(t.timestamp for t in chain.transfers)
+
+
+class ScriptedChain:
+    """A source whose answer, and when it gives it, each test thread decides."""
+
+    def __init__(self, answer):
+        self.answer = answer  # (thread name) -> list of transfers, after any waiting
+
+    def __call__(self, chain, asset):
+        fake = self
+
+        @contextmanager
+        def client():
+            class C:
+                def get_outgoing_transactions(self, address, limit=None):
+                    import threading
+                    return fake.answer(threading.current_thread().name)
+            yield C()
+        return client()
+
+
+def stored_alerts(watch_id):
+    from sqlalchemy import select
+    with models.session() as s:
+        return list(s.scalars(select(models.Alert.tx_hash).where(models.Alert.watch_id == watch_id)))
+
+
+def cursor_of(watch_id):
+    with models.session() as s:
+        return s.get(models.Watch, watch_id).last_seen_block
+
+
+def test_overlapping_checks_store_and_post_each_alert_once(chain):
+    # The watcher's round and a "Check now" (or two instances during a
+    # deploy) read the same cursor and the same new transfer at once.
+    import threading
+    hook = "https://hooks.slack.com/services/T000/B000/secret"
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH", webhook_url=hook)
+    chain.transfers = [tx(100, STRANGER)]
+    watchlist.check_watch(w.id, source=chain)  # baseline at 100
+    both_read = threading.Barrier(2, timeout=5)
+
+    def answer(_name):
+        both_read.wait()
+        return [tx(100, STRANGER), tx(101, BINANCE_14)]
+    source, posts = ScriptedChain(answer), []
+    threads = [threading.Thread(target=watchlist.check_watch, args=(w.id,),
+                                kwargs={"source": source, "post": lambda url, body: posts.append(body)})
+               for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(10)
+    assert stored_alerts(w.id) == [tx(101, BINANCE_14).hash]
+    assert len(posts) == 1
+    assert cursor_of(w.id) == 101
+
+
+def test_a_slow_check_never_moves_the_cursor_back(chain):
+    import threading
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    chain.transfers = [tx(100, STRANGER)]
+    watchlist.check_watch(w.id, source=chain)  # baseline at 100
+    slow_reading, fast_done = threading.Event(), threading.Event()
+
+    def answer(name):
+        if name == "slow":
+            slow_reading.set()
+            fast_done.wait(5)
+            return [tx(b, STRANGER) for b in (100, 120, 150)]
+        return [tx(b, STRANGER) for b in (100, 120, 150, 200)]
+    source, slow_result = ScriptedChain(answer), []
+    slow = threading.Thread(target=lambda: slow_result.extend(watchlist.check_watch(w.id, source=source)),
+                            name="slow")
+    slow.start()
+    assert slow_reading.wait(5)
+    fast = watchlist.check_watch(w.id, source=source)
+    fast_done.set()
+    slow.join(10)
+    assert [a["tx_hash"] for a in fast] == [tx(b, STRANGER).hash for b in (120, 150, 200)]
+    assert slow_result == []  # the cursor moved past what it read: it stores nothing
+    assert cursor_of(w.id) == 200
+    assert sorted(stored_alerts(w.id)) == sorted(tx(b, STRANGER).hash for b in (120, 150, 200))
