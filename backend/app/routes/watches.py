@@ -58,7 +58,7 @@ def add_watch(body: WatchRequest, http: Request) -> dict[str, Any]:
     try:
         watch = watchlist.create_watch(owner, body.address, body.chain, body.asset,
                                        body.note, body.case_id, body.webhook_url,
-                                       read_head=watchlist.chain_head)
+                                       read_head=watchlist.chain_head, client=client)
     except watchlist.WatchError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return watchlist.watch_summary(watch)
@@ -97,7 +97,6 @@ CHECKS_PER_MINUTE_PER_CLIENT = 10
 CHECKS_PER_MINUTE_TOTAL = 60
 checks_per_client = rate_limit.SlidingWindowLimiter(CHECKS_PER_MINUTE_PER_CLIENT, 60)
 checks_total = rate_limit.SlidingWindowLimiter(CHECKS_PER_MINUTE_TOTAL, 60)
-_TOTAL = "all"
 # Watches being checked right now: a second click while the first is still
 # reading would otherwise reach the provider again (the cooldown is only
 # written once a check finishes).
@@ -109,29 +108,36 @@ def _too_many(detail: str, wait: float) -> HTTPException:
     return HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(int(wait) + 1)})
 
 
+def _cooled_down(watch: Any) -> None:
+    since = watchlist.seconds_since_check(watch)
+    if since is not None and since < watchlist.MIN_MANUAL_CHECK_SECONDS:
+        wait = int(watchlist.MIN_MANUAL_CHECK_SECONDS - since) + 1
+        raise HTTPException(status_code=429, detail=f"Checked {int(since)} s ago. Try again in {wait} s.",
+                            headers={"Retry-After": str(wait)})
+
+
 @router.post("/watches/{watch_id}/check")
 def check_now(watch_id: str, http: Request) -> dict[str, Any]:
     owner = _owner(http)
     watch = watchlist.get_owned_watch(owner, watch_id)
     if watch is None:
         raise HTTPException(status_code=404, detail="No such watch.")
-    since = watchlist.seconds_since_check(watch)
-    if since is not None and since < watchlist.MIN_MANUAL_CHECK_SECONDS:
-        wait = int(watchlist.MIN_MANUAL_CHECK_SECONDS - since) + 1
-        raise HTTPException(status_code=429, detail=f"Checked {int(since)} s ago. Try again in {wait} s.",
-                            headers={"Retry-After": str(wait)})
+    watchlist.touch(owner, [watch_id])  # the owner still uses it: it keeps its slot
+    _cooled_down(watch)
     with _checking_lock:
         if watch_id in _checking:
             raise _too_many("This watch is being checked right now.", 5)
-        if checks_total.remaining(_TOTAL) == 0:
-            raise _too_many("This site has made as many manual checks as it allows this minute. "
-                            "Try again shortly.", 30)
+        # Read again under the lock: a check that finished since the read
+        # above has just written the time the cooldown counts from.
+        _cooled_down(watchlist.get_owned_watch(owner, watch_id) or watch)
         client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
-        wait = checks_per_client.check(client)
-        if wait is not None:
-            raise _too_many(f"This connection has checked {CHECKS_PER_MINUTE_PER_CLIENT} watches "
+        refused = rate_limit.charge(checks_per_client, checks_total, client)
+        if refused is not None:
+            wait, who = refused
+            raise _too_many("This site has made as many manual checks as it allows this minute. "
+                            "Try again shortly." if who == "site" else
+                            f"This connection has checked {CHECKS_PER_MINUTE_PER_CLIENT} watches "
                             "in the last minute. Try again shortly.", wait)
-        checks_total.check(_TOTAL)
         _checking.add(watch_id)
     try:
         new = watchlist.check_watch(watch_id)

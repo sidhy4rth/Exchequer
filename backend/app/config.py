@@ -716,6 +716,10 @@ WATCHES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR", 20)
 REQUEST_WRITES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_REQUEST_WRITES_PER_HOUR", 120)
 # Watches the whole site may create per hour (0 = no ceiling); see TRACES_PER_HOUR_TOTAL.
 WATCHES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR_TOTAL", 60)
+# Active watches one connection may hold, whatever owner keys it uses (owner
+# keys are free; two keys' worth by default). Raise it for a day when a whole
+# venue shares one address.
+WATCHES_PER_CLIENT: int = max(1, _int_env("EXCHEQUER_WATCHES_PER_CLIENT", 50))
 # Bearer token for GET /health/detail, the operator's view of keys, quota
 # and warm-up. Unset = the endpoint does not exist (404); /health stays public.
 HEALTH_TOKEN: str = os.getenv("EXCHEQUER_HEALTH_TOKEN", "").strip()

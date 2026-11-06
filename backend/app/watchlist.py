@@ -30,6 +30,8 @@ answers, and the watch exists to see new ones.
 """
 from __future__ import annotations
 
+import hashlib
+import ipaddress
 import logging
 import threading
 import time
@@ -52,6 +54,11 @@ logger = logging.getLogger(__name__)
 
 MAX_WATCHES_PER_OWNER = 25
 MAX_WATCHES_TOTAL = 500
+# A watch nobody has listed or checked for this long gives up its slot when
+# the server is full (and only then).
+WATCH_IDLE_DAYS = 14
+# list_watches marks the owner's watches as used at most this often.
+TOUCH_EVERY_SECONDS = 3600
 MIN_MANUAL_CHECK_SECONDS = 60
 FETCH_LIMIT = 50  # records per read
 # Forward reads one check may make before it stops and says how far it got.
@@ -180,9 +187,50 @@ def _anchor(created_at: str) -> int:
     return int(datetime.fromisoformat(created_at).timestamp()) - ANCHOR_SKEW_SECONDS
 
 
+def client_hash(client: str | None) -> str | None:
+    """The connection a watch was made from, hashed. An IPv6 address counts
+    as its /64: one host can hold a whole /64 and pick any address in it."""
+    if not client:
+        return None
+    try:
+        ip = ipaddress.ip_address(client)
+        key = str(ipaddress.ip_network(f"{ip}/64", strict=False)) if ip.version == 6 else str(ip)
+    except ValueError:
+        key = client
+    return hashlib.sha256(b"exchequer-watch-client:" + key.encode()).hexdigest()
+
+
+def _free_idle_slots(s: Any) -> None:
+    """Stop the watches nobody has listed or checked for WATCH_IDLE_DAYS, and
+    delete their alerts. Run only when the server is full."""
+    idle = _iso_ago(WATCH_IDLE_DAYS * 86400)
+    stale = select(models.Watch.id).where(
+        models.Watch.active, func.coalesce(models.Watch.touched_at, models.Watch.created_at) < idle)
+    ids = list(s.scalars(stale))
+    if ids:
+        s.execute(delete(models.Alert).where(models.Alert.watch_id.in_(ids)))
+        s.execute(update(models.Watch).where(models.Watch.id.in_(ids)).values(active=False, webhook_url=None))
+        s.flush()
+        logger.info("Watchlist full: %d idle watches gave up their slots", len(ids))
+
+
+def touch(owner: str, watch_ids: list[str] | None = None) -> None:
+    """Mark the owner's watches as used (listed or checked), at most hourly."""
+    now = _now()
+    stmt = update(models.Watch).where(
+        models.Watch.owner_hash == owner, models.Watch.active,
+        models.Watch.touched_at.is_(None) | (models.Watch.touched_at < _iso_ago(TOUCH_EVERY_SECONDS)))
+    if watch_ids is not None:
+        stmt = stmt.where(models.Watch.id.in_(watch_ids))
+    with models.session() as s:
+        s.execute(stmt.values(touched_at=now))
+        s.commit()
+
+
 def create_watch(owner: str, address: str, chain_key: str | None, asset: str | None,
                  note: str = "", case_id: str | None = None, webhook_url: str | None = None,
-                 read_head: Callable[[str, str], int | None] | None = None) -> models.Watch:
+                 read_head: Callable[[str, str], int | None] | None = None,
+                 client: str | None = None) -> models.Watch:
     try:
         chain = config.get_chain(chain_key)
     except config.UnknownChainError as exc:
@@ -203,28 +251,42 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
     else:
         start = read_head(chain.key, asset_symbol) if read_head else None
 
+    connection = client_hash(client)
     with models.session() as s:
         mine = s.scalar(select(func.count()).select_from(models.Watch)
                         .where(models.Watch.owner_hash == owner, models.Watch.active))
         if mine >= MAX_WATCHES_PER_OWNER:
             raise WatchError(f"This browser already watches {MAX_WATCHES_PER_OWNER} addresses; remove one first.")
-        total = s.scalar(select(func.count()).select_from(models.Watch).where(models.Watch.active))
-        if total >= MAX_WATCHES_TOTAL:
-            raise WatchError("The server is watching as many addresses as it can. Try again later.")
         existing = s.scalar(select(models.Watch).where(
             models.Watch.owner_hash == owner, models.Watch.active, models.Watch.address == address,
             models.Watch.chain == chain.key, models.Watch.asset == asset_symbol))
         if existing is not None:
+            existing.touched_at = created
             if hook:
                 existing.webhook_url = hook
-                s.commit()
+            s.commit()
             s.refresh(existing)
             s.expunge(existing)
             return existing
+        # Owner keys are free: one connection's share is counted across all
+        # of them. Watches made before connections were recorded count for no one.
+        if connection is not None:
+            held = s.scalar(select(func.count()).select_from(models.Watch)
+                            .where(models.Watch.client_hash == connection, models.Watch.active))
+            if held >= config.WATCHES_PER_CLIENT:
+                raise WatchError(f"This connection already watches {config.WATCHES_PER_CLIENT} addresses; "
+                                 "stop one first.")
+        total = s.scalar(select(func.count()).select_from(models.Watch).where(models.Watch.active))
+        if total >= MAX_WATCHES_TOTAL:
+            _free_idle_slots(s)
+            total = s.scalar(select(func.count()).select_from(models.Watch).where(models.Watch.active))
+        if total >= MAX_WATCHES_TOTAL:
+            raise WatchError("The server is watching as many addresses as it can. Try again later.")
         watch = models.Watch(
             id=str(uuid.uuid4()), owner_hash=owner, chain=chain.key, asset=asset_symbol,
             address=address, note=(note or "")[:200], case_id=case_id, webhook_url=hook,
             created_at=created, last_seen_block=start, active=True,
+            client_hash=connection, touched_at=created,
         )
         s.add(watch)
         s.commit()
@@ -269,6 +331,7 @@ def alert_summary(alert: models.Alert, chain_key: str | None = None,
 
 
 def list_watches(owner: str) -> list[dict[str, Any]]:
+    touch(owner)  # the owner still uses these: they keep their slots
     with models.session() as s:
         watches = list(s.scalars(select(models.Watch).where(
             models.Watch.owner_hash == owner, models.Watch.active).order_by(models.Watch.created_at.desc())))

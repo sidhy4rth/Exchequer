@@ -109,6 +109,12 @@ class Watch(Base):
     last_seen_block: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     last_error: Mapped[str | None] = mapped_column(String(300), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # A hash of the connection that made it (its share is counted whatever
+    # owner keys it uses), and when its owner last listed or checked it (a
+    # forgotten watch gives up its slot when the server is full). NULL for
+    # watches made before either existed.
+    client_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True, default=None)
+    touched_at: Mapped[str | None] = mapped_column(String(32), nullable=True, default=None)
 
 
 class Alert(Base):

@@ -81,3 +81,22 @@ def test_a_watch_being_checked_is_not_checked_again_in_parallel(client, monkeypa
     assert first == [200]
     assert second.status_code == 429 and "being checked" in second.json()["detail"]
     assert client.calls == [watch_id]
+
+
+def test_a_site_wide_refusal_does_not_use_up_the_clients_allowance(client, monkeypatch):
+    per_client = rate_limit.SlidingWindowLimiter(5, 60)
+    monkeypatch.setattr(watch_routes, "checks_per_client", per_client)
+    monkeypatch.setattr(watch_routes, "checks_total", rate_limit.SlidingWindowLimiter(1, 60))
+    ids = watches(2)
+    assert [check(client, w).status_code for w in ids] == [200, 429]
+    assert per_client.remaining("testclient") == 4  # only the check that ran was counted
+
+
+def test_a_click_racing_a_finishing_check_is_still_cooled_down(client, monkeypatch):
+    # The cooldown was read before the lock: a click that read it just before
+    # another check finished went on to read the provider again.
+    (watch_id,) = watches(1)
+    answers = iter([None, 5.0])
+    monkeypatch.setattr(watchlist, "seconds_since_check", lambda w: next(answers, 5.0))
+    r = check(client, watch_id)
+    assert r.status_code == 429 and client.calls == []
