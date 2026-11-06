@@ -90,9 +90,19 @@ def test_a_batch_is_charged_against_the_hourly_limit_in_full(client, monkeypatch
     assert r.status_code == 429 and "needs 3 traces" in r.json()["detail"]
 
 
+def silence(batch_id, minutes=10):
+    """Make the batch's last heartbeat `minutes` old, as if its runner had died then."""
+    from datetime import datetime, timedelta, timezone
+    with models.session() as s:
+        s.get(models.Batch, batch_id).heartbeat_at = (
+            datetime.now(tz=timezone.utc) - timedelta(minutes=minutes)).isoformat(timespec="seconds")
+        s.commit()
+
+
 def test_a_restart_marks_unfinished_rows_interrupted(client):
     owner = ownership.owner_hash(ALICE)
     b = batches.create(owner, "", batches.validate_rows([{"address": A1}, {"address": A2}]))
+    silence(b.id)
     batches.mark_interrupted()
     body = batches.summary(batches.get(owner, b.id))
     assert body["status"] == "interrupted" and body["interrupted"] == 2
@@ -194,3 +204,86 @@ def test_a_batch_that_cannot_start_is_marked_failed(client, monkeypatch):
     assert not batch_routes._active
     (listed,) = client.get("/batches", headers={ownership.OWNER_HEADER: ALICE}).json()["batches"]
     assert listed["status"] == "failed"
+
+
+def test_boot_leaves_a_batch_with_a_fresh_heartbeat_alone(client):
+    # During a deploy the old instance is still running it: not interrupted.
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}]))
+    batches.mark_interrupted()
+    assert batches.get(owner, b.id).status == "running"
+
+
+def test_boot_marks_a_batch_with_a_stale_heartbeat_interrupted(client):
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}, {"address": A2}]))
+    silence(b.id, minutes=batches.STALE_AFTER_SECONDS // 60 + 1)
+    batches.mark_interrupted()
+    body = batches.summary(batches.get(owner, b.id))
+    assert body["status"] == "interrupted" and body["interrupted"] == 2
+
+
+def test_get_marks_a_silent_running_batch_interrupted(client):
+    # Its instance died after boot-time clean-up ran elsewhere: the page says
+    # so (and stops polling) instead of showing "running" for ever.
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}]))
+    silence(b.id)
+    body = client.get(f"/batches/{b.id}", headers={ownership.OWNER_HEADER: ALICE}).json()
+    assert body["status"] == "interrupted" and body["rows"][0]["status"] == "interrupted"
+    listed = client.get("/batches", headers={ownership.OWNER_HEADER: ALICE}).json()["batches"]
+    assert [x["status"] for x in listed] == ["interrupted"]
+
+
+def test_a_runner_stops_once_its_batch_is_marked_interrupted(client, monkeypatch):
+    import threading
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}, {"address": A2}]))
+    tracing, go_on, traced = threading.Event(), threading.Event(), []
+
+    def slow(request):
+        traced.append(request.address)
+        tracing.set()
+        go_on.wait(5)
+        return fake_trace(request)
+    runner = threading.Thread(target=batches.run, args=(b.id, owner, lambda: True, lambda: None, slow,
+                                                        lambda payload, request, o: payload))
+    runner.start()
+    assert tracing.wait(5)
+    silence(b.id)
+    batches.mark_interrupted()  # another instance booting
+    go_on.set()
+    runner.join(5)
+    body = batches.summary(batches.get(owner, b.id))
+    assert traced == [A1]  # row 2 never started
+    assert body["status"] == "interrupted"
+    assert [r["status"] for r in body["rows"]] == ["interrupted", "interrupted"]
+
+
+def test_a_running_batch_keeps_its_heartbeat(client, monkeypatch):
+    import threading
+    monkeypatch.setattr(batches, "HEARTBEAT_SECONDS", 0.01)
+    beats, release_trace = [], threading.Event()
+    real = batches._beat_once
+
+    def beat(batch_id):
+        beats.append(batch_id)
+        return real(batch_id)
+    monkeypatch.setattr(batches, "_beat_once", beat)
+
+    def slow(request):
+        release_trace.wait(5)
+        return fake_trace(request)
+    monkeypatch.setattr(pipeline, "run_trace", slow)
+    r = client.post("/batches", json={"rows": [{"address": A1}]}, headers={ownership.OWNER_HEADER: ALICE})
+    batch_id = r.json()["batch_id"]
+    for _ in range(100):
+        if beats:
+            break
+        time.sleep(0.02)
+    release_trace.set()
+    assert wait_settled(batch_id)["status"] == "done"
+    assert beats and set(beats) == {batch_id}
+    count = len(beats)
+    time.sleep(0.1)
+    assert len(beats) <= count + 1  # the heartbeat stops with its batch

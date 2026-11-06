@@ -166,8 +166,11 @@ class Batch(Base):
     owner_hash: Mapped[str] = mapped_column(String(64), index=True)
     name: Mapped[str] = mapped_column(String(120), default="")
     created_at: Mapped[str] = mapped_column(String(32))
-    status: Mapped[str] = mapped_column(String(16))  # running | done | interrupted
+    status: Mapped[str] = mapped_column(String(16))  # running | done | failed | interrupted
     rows_json: Mapped[str] = mapped_column(Text)
+    # When the runner last wrote; a running batch silent for a while has no
+    # runner left (batches.STALE_AFTER_SECONDS). NULL reads as silent.
+    heartbeat_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 def _postgres_url(url: str) -> str:
