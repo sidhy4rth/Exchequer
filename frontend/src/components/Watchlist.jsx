@@ -32,14 +32,16 @@ const ago = (iso) => {
 export default function Watchlist({ onCount } = {}) {
   const [watches, setWatches] = useState([])
   const [alerts, setAlerts] = useState([])
-  const [watcher, setWatcher] = useState(null)
+  // undefined while loading, null if the watch service could not be reached:
+  // no schedule is promised that has not been seen.
+  const [watcher, setWatcher] = useState(undefined)
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
   const [logged, setLogged] = useState({})
   const [showAll, setShowAll] = useState(false)
 
   const load = useCallback(() => {
-    fetchWatches().then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) }).catch(() => {})
+    fetchWatches().then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) }).catch(() => setWatcher(null))
     fetchAlerts().then((d) => setAlerts(d.alerts ?? [])).catch(() => {})
   }, [])
   useEffect(() => {
@@ -67,7 +69,11 @@ export default function Watchlist({ onCount } = {}) {
           <span className="micro">Watchlist · {watches.length}{unread ? <span className="pill red" style={{ marginLeft: 8 }}>{unread} new</span> : null}</span>
           <span className="note">{watcher?.enabled === false
             ? 'automatic checks are off on this site · press Check now · this browser only'
-            : `checked automatically about every ${Math.round((watcher?.interval_seconds ?? 600) / 60)} min · last check of your watches ${ago(watcher?.last_check_at)} · this browser only`}</span>
+            : watcher?.enabled === true
+              ? `checked automatically about every ${Math.round((watcher.interval_seconds ?? 600) / 60)} min · last check of your watches ${ago(watcher.last_check_at)} · this browser only`
+              : watcher === null
+                ? 'could not reach the watch service · press Check now before relying on a watch · this browser only'
+                : 'this browser only'}</span>
         </div>
         <div className="body">
           {watcher?.stale && (

@@ -402,6 +402,16 @@ describe('what the watchlist says about the watcher (R30)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('promises no schedule when the watch service cannot be reached', async () => {
+    api({
+      'GET /watches': { status: 500, body: { detail: 'down' } },
+      'GET /alerts': { body: { count: 1, alerts: [{ alert_id: 'a1', kind: 'moved', value: 1, asset: 'ETH', counterparty: '0x' + '9'.repeat(40), counterparty_label: '', tx_time: 1700000000, tx_url: '', tx_hash: '0x1', read: false }] } },
+    })
+    const { container } = inRouter(<Watchlist />)
+    expect(await screen.findByText(/could not reach the watch service/)).toBeInTheDocument()
+    expect(container).not.toHaveTextContent(/checked automatically|about every/)
+  })
+
   it('warns when no check has run for too long', async () => {
     oneWatch({ enabled: true, interval_seconds: 600, last_check_at: minutesAgo(180), stale: true })
     inRouter(<Watchlist />)
