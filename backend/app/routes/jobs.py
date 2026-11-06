@@ -13,6 +13,8 @@ import asyncio
 import json
 import logging
 import threading
+import time
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -80,30 +82,66 @@ def job_status(job_id: str) -> dict[str, Any]:
     return _job_or_404(job_id).snapshot(with_result=True)
 
 
+# Every open stream wakes every POLL_SECONDS on the one event loop, so a job
+# takes only a few at once (a tab, a reload, a second screen). A stream ends
+# after STREAM_MAX_SECONDS and the browser's EventSource reconnects by itself;
+# that lifetime also clears entries left by connections that dropped without
+# closing their stream. Job id -> {stream token: opened at (monotonic)}.
+MAX_STREAMS_PER_JOB = 3
+STREAM_MAX_SECONDS = 900.0
+_streams: dict[str, dict[str, float]] = {}
+
+
+def _open_stream(job_id: str) -> str:
+    now = time.monotonic()
+    open_ = {t: at for t, at in _streams.get(job_id, {}).items() if now - at < STREAM_MAX_SECONDS}
+    if len(open_) >= MAX_STREAMS_PER_JOB:
+        _streams[job_id] = open_
+        raise HTTPException(status_code=429, headers={"Retry-After": "5"},
+                            detail="This trace already has as many progress streams as it allows.")
+    token = uuid.uuid4().hex
+    open_[token] = now
+    _streams[job_id] = open_
+    return token
+
+
+def _close_stream(job_id: str, token: str) -> None:
+    open_ = _streams.get(job_id)
+    if open_ is not None:
+        open_.pop(token, None)
+        if not open_:
+            _streams.pop(job_id, None)
+
+
 @router.get("/trace/jobs/{job_id}/events")
 async def job_events(job_id: str, http: Request) -> StreamingResponse:
     job = _job_or_404(job_id)
+    token = _open_stream(job_id)
 
     async def stream():
         last_version = -1
         quiet = 0.0
-        # Tell the browser how soon to reconnect if the stream drops.
-        yield "retry: 2000\n\n"
-        while True:
-            if job.version != last_version:
-                last_version = job.version
-                quiet = 0.0
-                yield f"event: progress\ndata: {json.dumps(job.snapshot())}\n\n"
-            if job.status != jobs.RUNNING:
-                yield f"event: {job.status}\ndata: {json.dumps(job.snapshot())}\n\n"
-                return
-            if await http.is_disconnected():
-                return
-            await asyncio.sleep(POLL_SECONDS)
-            quiet += POLL_SECONDS
-            if quiet >= HEARTBEAT_SECONDS:
-                quiet = 0.0
-                yield ": still tracing\n\n"  # keeps proxies from closing an idle stream
+        opened = time.monotonic()
+        try:
+            # Tell the browser how soon to reconnect if the stream drops.
+            yield "retry: 2000\n\n"
+            while True:
+                if job.version != last_version:
+                    last_version = job.version
+                    quiet = 0.0
+                    yield f"event: progress\ndata: {json.dumps(job.snapshot())}\n\n"
+                if job.status != jobs.RUNNING:
+                    yield f"event: {job.status}\ndata: {json.dumps(job.snapshot())}\n\n"
+                    return
+                if await http.is_disconnected() or time.monotonic() - opened >= STREAM_MAX_SECONDS:
+                    return
+                await asyncio.sleep(POLL_SECONDS)
+                quiet += POLL_SECONDS
+                if quiet >= HEARTBEAT_SECONDS:
+                    quiet = 0.0
+                    yield ": still tracing\n\n"  # keeps proxies from closing an idle stream
+        finally:
+            _close_stream(job_id, token)
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache",

@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 
 from ..signing import ALGORITHM, get_signer, verify_report
 
@@ -32,12 +33,20 @@ def signing_key() -> dict[str, Any]:
 
 @router.post("/verify")
 async def verify(request: Request) -> dict[str, Any]:
-    """Check a text report, sent as the raw request body."""
-    body = b""
+    """Check a text report, sent as the raw request body.
+
+    The body is read here, but decoded and checked in a worker thread: this
+    handler runs on the event loop that serves every visitor, and parsing a
+    couple of megabytes there stalled them all."""
+    body = bytearray()
     async for chunk in request.stream():
         body += chunk
         if len(body) > MAX_REPORT_BYTES:
             raise HTTPException(status_code=413, detail="That is larger than any Exchequer report.")
+    return await run_in_threadpool(_check, bytes(body))
+
+
+def _check(body: bytes) -> dict[str, Any]:
     try:
         text = body.decode("utf-8")
     except UnicodeDecodeError as exc:

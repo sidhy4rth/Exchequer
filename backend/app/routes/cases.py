@@ -11,7 +11,7 @@ import threading
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from .. import audit, config, models, ownership, pipeline, rate_limit
 from ..auth import CurrentUser
@@ -163,15 +163,19 @@ def trace_intake() -> dict[str, Any]:
 
 
 @router.get("/trace/{case_id}", response_model=None)
-def get_trace(case_id: str, http: Request) -> dict[str, Any] | FileResponse:
+def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
     """Retrieve a previously traced case.
 
     /trace/<address> is also the app's own URL for a trace in progress, and
     the API claims the path first. A shared link or a reload of that page
-    would get this endpoint's JSON 404; a browser navigation gets the app."""
+    would get this endpoint's JSON 404; a browser navigation gets the app.
+
+    The case is returned as a ready JSONResponse, rendered here in the worker
+    thread: a plain dict would be walked by jsonable_encoder on the event
+    loop, and a large case then stalled every other request."""
     if _is_page_load(http) and _INDEX_HTML.is_file():
         return FileResponse(_INDEX_HTML, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
-    return case.result
+    return JSONResponse(case.result)

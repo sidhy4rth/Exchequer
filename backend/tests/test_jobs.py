@@ -119,3 +119,46 @@ def test_an_unknown_job_is_a_404(client):
 
 def test_progress_outside_a_job_is_a_no_op():
     progress.report(stage="walking")  # nobody listening: must not raise
+
+
+def _running_job(client, monkeypatch):
+    gate = threading.Event()
+    monkeypatch.setattr(pipeline, "run_trace", lambda request: gate.wait(5) and {"address": request.address})
+    job_id = client.post("/trace/jobs", json={"address": ADDR}).json()["job_id"]
+    return job_id, gate
+
+
+def test_a_job_takes_only_a_few_progress_streams(client, monkeypatch):
+    # Each open stream wakes every 0.3 s on the one event loop; a job used to
+    # accept any number of them.
+    from app.routes import jobs as job_routes
+    job_id, gate = _running_job(client, monkeypatch)
+    now = time.monotonic()
+    monkeypatch.setattr(job_routes, "_streams", {job_id: {f"t{i}": now for i in range(job_routes.MAX_STREAMS_PER_JOB)}})
+    refused = client.get(f"/trace/jobs/{job_id}/events")
+    assert refused.status_code == 429
+    gate.set()
+
+
+def test_streams_left_behind_by_dropped_connections_expire(client, monkeypatch):
+    from app.routes import jobs as job_routes
+    job_id, gate = _running_job(client, monkeypatch)
+    old = time.monotonic() - job_routes.STREAM_MAX_SECONDS - 1
+    monkeypatch.setattr(job_routes, "_streams", {job_id: {f"t{i}": old for i in range(job_routes.MAX_STREAMS_PER_JOB)}})
+    gate.set()
+    with client.stream("GET", f"/trace/jobs/{job_id}/events") as stream:
+        assert stream.status_code == 200
+        "".join(stream.iter_text())
+    assert job_routes._streams.get(job_id, {}) == {}  # its own entry is gone too
+
+
+def test_a_stream_ends_after_its_lifetime_and_the_browser_reconnects(client, monkeypatch):
+    from app.routes import jobs as job_routes
+    monkeypatch.setattr(job_routes, "STREAM_MAX_SECONDS", 0.5)
+    job_id, gate = _running_job(client, monkeypatch)
+    start = time.monotonic()
+    with client.stream("GET", f"/trace/jobs/{job_id}/events") as stream:
+        text = "".join(stream.iter_text())
+    gate.set()
+    assert time.monotonic() - start < 3
+    assert "retry:" in text and "event: done" not in text
