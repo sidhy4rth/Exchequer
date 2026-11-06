@@ -13,6 +13,9 @@ import ThemeToggle from '../components/ThemeToggle'
 // may ever look reassuring.
 const VERDICT = {
   genuine: { tone: 'green', title: 'Genuine and unchanged' },
+  genuine_earlier_key: { tone: 'green', title: 'Genuine, signed with an earlier Exchequer key' },
+  forged_issuer: { tone: 'red', title: 'Forged: not signed by this server' },
+  revoked_key: { tone: 'red', title: 'Signed with a revoked key' },
   text_added: { tone: 'red', title: 'Text was added after signing' },
   changed: { tone: 'red', title: 'This report was changed' },
   signature_missing: { tone: 'red', title: 'Signature missing' },
@@ -25,10 +28,13 @@ const UNKNOWN = { tone: 'red', title: 'Cannot be trusted' }
 
 function signatureRow(r) {
   if (!r.signed) return r.status === 'signature_missing' ? 'missing' : 'none'
-  if (r.status === 'unknown_key') return 'not checked (unknown key)'
+  if (r.status === 'unknown_key' || r.status === 'forged_issuer') return 'not checked (unknown key)'
   if (r.status === 'damaged') return 'damaged'
   return r.signature_ok ? 'valid' : 'invalid'
 }
+
+// A 64-hex fingerprint in groups of four, so it can be compared by eye.
+const grouped = (fp) => (fp || '').match(/.{1,4}/g)?.join(' ') ?? ''
 
 export default function Verify() {
   const [text, setText] = useState('')
@@ -68,7 +74,7 @@ export default function Verify() {
       <main className="verify-body">
         <span className="micro">Verify a report</span>
         <h1>Was this report issued by Exchequer, unchanged?</h1>
-        <p className="note">Paste a text report (Report&nbsp;(.txt) on a case) or drop the file. Every report ends in a SHA-256 content hash and an Ed25519 signature made with this server&apos;s private key: editing a single character breaks the signature, and nobody without the key can make a new one. Nothing you paste is stored.</p>
+        <p className="note">Paste a text report (Report&nbsp;(.txt) on a case) or drop the file. Every report ends in a SHA-256 content hash and an Ed25519 signature made with the issuing server&apos;s private key. They cover everything above the CONTENT HASH line, including the server that issued the report and its key; this check also rejects any text added below it. Nothing you paste is stored.</p>
         <div
           className="verify-drop"
           onDragOver={(e) => e.preventDefault()}
@@ -100,7 +106,9 @@ export default function Verify() {
                 <dl className="verify-facts mono">
                   <dt>content hash</dt><dd>{!result.hash_ok ? 'does not match the text' : result.signature_ok ? 'matches the text' : 'self-consistent only (anyone can compute this)'}</dd>
                   <dt>signature</dt><dd>{signatureRow(result)}</dd>
-                  {result.signature_ok && result.key_fingerprint && <><dt>signed with key</dt><dd>{result.key_fingerprint}</dd></>}
+                  {result.signature_ok && result.issued_by && <><dt>issued by</dt><dd>{result.issued_by}</dd></>}
+                  {result.signature_ok && result.key_fingerprint && <><dt>signed with key</dt><dd>{grouped(result.key_fingerprint_sha256) || result.key_fingerprint}</dd></>}
+                  {result.signature_ok && <><dt>official key</dt><dd>{result.official ? "yes: in Exchequer's published list" : 'not in the published list'}</dd></>}
                   {!result.signature_ok && (result.claimed_key || result.key_fingerprint) && <><dt>claimed key (not checked)</dt><dd>{result.claimed_key || result.key_fingerprint}</dd></>}
                 </dl>
               )}
@@ -109,7 +117,9 @@ export default function Verify() {
         )}
         {key && (
           <p className="note">
-            This server signs with Ed25519 key <span className="mono">{key.fingerprint}</span>.{' '}
+            This server signs with Ed25519 key <span className="mono">{grouped(key.fingerprint_sha256) || key.fingerprint}</span>
+            {key.official && <> <span className="pill green">Official Exchequer key</span></>}.{' '}
+            {key.keys_published_at && <>Compare it with the key <a href={key.keys_published_at} target="_blank" rel="noreferrer">Exchequer publishes</a>: a copy of this site signs with a key of its own. </>}
             <button className="quiet" onClick={downloadKey}>Download the public key</button>{' '}
             to check reports offline with OpenSSL.
             {!key.persistent && ' This key is temporary and changes when the server restarts.'}

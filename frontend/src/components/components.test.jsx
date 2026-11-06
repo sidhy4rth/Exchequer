@@ -103,6 +103,32 @@ describe('Verify page', () => {
     expect(s).toHaveTextContent('claimed key (not checked)')
   })
 
+  it('shows a clone claiming this server as forged, in red', async () => {
+    const s = await verdictFor({ status: 'forged_issuer', sealed: true, hash_ok: true, signed: true, signature_ok: false, signature_checked: false, claimed_key: 'f'.repeat(64), detail: 'Claims to be issued by this server.' })
+    expect(s).toHaveTextContent('Forged')
+    expect(s).toHaveClass('red')
+    expect(s).toHaveTextContent('not checked')
+  })
+
+  it('shows who issued a genuine report and its full key, and whether the key is official', async () => {
+    const fp = 'abcd'.repeat(16)
+    const s = await verdictFor({ status: 'genuine', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: true, issued_by: 'https://exchequer.example', key_fingerprint: fp.slice(0, 16), key_fingerprint_sha256: fp, official: true, detail: 'Genuine.' })
+    expect(s).toHaveTextContent('https://exchequer.example')
+    expect(s).toHaveTextContent('abcd abcd abcd abcd')
+    expect(s).toHaveTextContent("in Exchequer's published list")
+  })
+
+  it('shows a report signed with an earlier official key as genuine', async () => {
+    const earlier = await verdictFor({ status: 'genuine_earlier_key', sealed: true, hash_ok: true, signed: true, signature_ok: true, official: true, detail: 'Earlier key.' })
+    expect(earlier).toHaveClass('green')
+    expect(earlier).toHaveTextContent('earlier Exchequer key')
+  })
+
+  it('shows a revoked key in red', async () => {
+    const s = await verdictFor({ status: 'revoked_key', sealed: true, hash_ok: true, signed: true, signature_ok: true, detail: 'Revoked.' })
+    expect(s).toHaveClass('red')
+  })
+
   it('shows an unsigned report as unverifiable, not amber', async () => {
     const s = await verdictFor({ status: 'unsigned', sealed: true, hash_ok: true, signed: false, signature_ok: false, detail: 'No signature.' })
     expect(s).toHaveTextContent('Unsigned: cannot be verified')

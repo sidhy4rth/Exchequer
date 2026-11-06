@@ -51,8 +51,30 @@ Provider keys live in `backend/.env` locally and in the platform's variables
 when deployed; neither is committed. The report-signing key is made on first
 start beside the case store (`report_signing_key.pem`, mode 0600) or comes
 from `EXCHEQUER_SIGNING_KEY`. If a key may have leaked, rotate it at the
-provider and update the variable; for the signing key, previously issued
-reports will then verify only against the old public key.
+provider and update the variable. For the signing key, add the old key to
+`backend/data/signing_keys.json` in the same change (see below): with
+`retired` set, reports it signed keep verifying; with `revoked: true`, they
+read as signed with a revoked key.
+
+## Report signing key
+
+Since report format v2.2 every signed report ends with an ISSUER block that
+the signature covers: the server that issued it (`Issued by`, from
+`EXCHEQUER_PUBLIC_URL` or Render's `RENDER_EXTERNAL_URL`) and the full SHA-256
+fingerprint of its Ed25519 key. This repository is public, so anyone can run a
+copy that signs reports with a key of its own and calls them genuine on its own
+`/verify`. What tells the two apart is the key, so compare the report's
+`Signing key` with Exchequer's official keys, listed here and in
+`backend/data/signing_keys.json` (which `/verify` and `/signing-key` read):
+
+| SHA-256 fingerprint of the public key | In use from | Retired | Revoked |
+|---|---|---|---|
+| *not yet recorded: the owner adds the live key here and in `signing_keys.json`* | | | |
+
+The list is append-only. A report signed with a retired key reads "Genuine,
+signed with an earlier Exchequer key"; one signed with a revoked key never
+reads as genuine; one that names this server but is signed with any other key
+reads as forged.
 
 `GET /admin/backup` returns the whole store. It exists only when
 `EXCHEQUER_BACKUP_TOKEN` is set, compares the bearer token in constant time,
