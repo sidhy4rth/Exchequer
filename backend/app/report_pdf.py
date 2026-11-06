@@ -157,6 +157,9 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
             facts.append(("Sent from the reported address that likely arrived (pro-rata)",
                           f"≈ {_num(prorata.get('estimated'))} of {_num(prorata.get('sent'))} "
                           f"{attribution.get('value_currency', '')}", False))
+        elif prorata.get("status") == "unknown":
+            # Said on page 1, not only in the limitations: no amount was measured.
+            facts.append(("Pro-rata", f"not estimated — {prorata.get('reason')}", False))
     if confidence.get("score") is not None:
         # R10: the band, not the decimal; the score's working is in the signed text.
         band = (confidence.get("band") or "").capitalize() or "n/a"

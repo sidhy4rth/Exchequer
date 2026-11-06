@@ -96,3 +96,61 @@ def test_tron_transfers_without_block_numbers_are_windowed_by_time():
     g.add_edge("M", "X", value_native=100.0, transactions=[{"value_native": 100.0, "timestamp": 200}])
     result = estimate(g, ["V", "M", "X"], lambda *a: ([Tx(40.0), Tx(60.0)], True))
     assert result["status"] == "estimated" and result["estimated"] == 40.0
+
+
+# ---------------------------------------------------------------------------
+# Not estimated: no amount credit (audit r2-g2-documented-claims-vs-code-7-2)
+# ---------------------------------------------------------------------------
+def _scored(complete):
+    from app.exchange_matcher import ExchangeMatch
+    # V -> M 40, M -> X 100; M received 1,000 in the window.
+    g = path_graph(sent=40.0, onward=100.0)
+    g.nodes["V"]["depth"], g.nodes["M"]["depth"], g.nodes["X"]["depth"] = 0, 1, 2
+    match = ExchangeMatch(address="X", exchange="Binance", label="Binance: Hot Wallet 6",
+                          wallet_type="hot_wallet", depth=2, value_received_native=100.0)
+    prorata = estimate(g, ["V", "M", "X"], lambda *a: ([Tx(40.0), Tx(960.0)], complete))
+    return score_case(g, "V", match, native_symbol="USDT", prorata=prorata), prorata
+
+
+def test_an_incomplete_read_never_scores_above_a_complete_one():
+    from app.scoring import _BAND_ORDER
+    full, _ = _scored(True)
+    part, prorata = _scored(False)
+    assert prorata["status"] == "unknown"
+    assert part.score <= full.score
+    assert _BAND_ORDER.index(part.band) <= _BAND_ORDER.index(full.band)
+
+
+def test_not_estimated_gets_no_amount_credit_and_says_so():
+    part, _ = _scored(False)
+    amount = next(c for c in part.components if c.name == "amount_correlation")
+    assert amount.raw_value == 0.0
+    assert amount.explanation.startswith("Not estimated:")
+    assert "no credit is given" in amount.explanation
+    assert "survived the route" not in amount.explanation
+    assert part.band != "high"
+
+
+def test_the_unknown_caveat_says_traced_funds_not_reported_funds():
+    part, _ = _scored(False)
+    caveat = next(c for c in part.caveats if "could not be estimated" in c)
+    assert "the traced funds" in caveat and "the reported funds" not in caveat
+    assert "No amount credit was given" in caveat
+    assert "first and last hop" not in caveat
+
+
+def test_a_hop_diluted_before_an_unknown_one_is_still_called_out():
+    # V -> M1 -> M2 -> X: M1 is read (victim 4% of it), M2's read is cut short.
+    g = nx.DiGraph()
+    edge(g, "V", "M1", 40.0, 100)
+    edge(g, "M1", "M2", 1000.0, 200)
+    edge(g, "M2", "X", 1000.0, 300)
+
+    def reads(address, *window):
+        return ([Tx(40.0), Tx(960.0)], True) if address == "M1" else ([Tx(1000.0)], False)
+
+    result = estimate(g, ["V", "M1", "M2", "X"], reads)
+    assert result["status"] == "unknown"
+    assert result["diluted"] is True and result["lowest_share"] == 0.04
+    from app.scoring import _prorata_caveats
+    assert any("only 4.0%" in c and "M1" in c for c in _prorata_caveats(result, "USDT"))

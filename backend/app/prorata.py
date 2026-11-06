@@ -75,23 +75,20 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
         times_in = [t["timestamp"] for t in txs_in if t.get("timestamp")]
         times_out = [t["timestamp"] for t in txs_out if t.get("timestamp")]
         if not (blocks_in and blocks_out) and not (times_in and times_out):
-            return {"status": "unknown", "sent": sent, "hops": hops,
-                    "reason": f"the transfers through {wallet} carry neither blocks nor times to bound the window"}
+            return _unknown(sent, hops, f"the transfers through {wallet} carry neither blocks nor times "
+                                        "to bound the window")
         start_block, end_block = (min(blocks_in), max(blocks_out)) if blocks_in and blocks_out else (0, 0)
         start_ts = min(times_in) if times_in else 0
         end_ts = max(times_out) if times_out else 0
         if (end_block < start_block) or (not blocks_in and end_ts < start_ts):
-            return {"status": "unknown", "sent": sent, "hops": hops,
-                    "reason": f"{wallet} sent on before the traced funds arrived"}
+            return _unknown(sent, hops, f"{wallet} sent on before the traced funds arrived")
 
         try:
             received, complete = incoming_between(wallet, start_block, end_block, start_ts, end_ts)
         except Exception as exc:  # noqa: BLE001 -- an estimate is never worth a failed trace
-            return {"status": "unknown", "sent": sent, "hops": hops,
-                    "reason": f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})"}
+            return _unknown(sent, hops, f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})")
         if not complete:
-            return {"status": "unknown", "sent": sent, "hops": hops,
-                    "reason": f"{wallet} received too many transfers in the window to read in full"}
+            return _unknown(sent, hops, f"{wallet} received too many transfers in the window to read in full")
 
         # The traced funds that reached this wallet before it last sent on.
         edge_total = float(edge_in.get("value_native", 0.0)) or 1.0
@@ -122,3 +119,11 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
         "diluted": lowest < DILUTED,
         "hops": hops,
     }
+
+
+def _unknown(sent: float, hops: list[dict[str, Any]], reason: str) -> dict[str, Any]:
+    """No estimate. The wallets measured before the read failed are kept, and
+    a small share at one of them is still called out."""
+    lowest = min((h["victim_share"] for h in hops), default=None)
+    return {"status": "unknown", "sent": sent, "hops": hops, "reason": reason,
+            "lowest_share": lowest, "diluted": lowest is not None and lowest < DILUTED}

@@ -355,6 +355,27 @@ def _prorata_component(prorata: dict[str, Any], native_symbol: str) -> ScoreComp
     return ScoreComponent("amount_correlation", ratio, WEIGHT_AMOUNT_CORRELATION, " ".join(lines))
 
 
+def _not_estimated(prorata: dict[str, Any], materiality: dict[str, Any] | None,
+                   native_symbol: str) -> ScoreComponent:
+    """Pro-rata could not be read along the path, so the amount earns nothing.
+
+    The fallback used to be the last hop over the first, capped at 1, which
+    scores the most diluted paths highest: a read cut short by a busy wallet
+    scored above a complete one on the same path (audit
+    r2-g2-documented-claims-vs-code-7-2). With no credit, a less complete
+    read can never score above a complete one.
+    """
+    lines = [f"Not estimated: {prorata.get('reason') or 'the wallets on the path could not be read'}."]
+    if materiality and materiality.get("denominator") and materiality.get("primary_reach") is not None:
+        reach, of = materiality["primary_reach"], materiality["denominator"]
+        lines.append(f"At most {reach:,.4f} of the {of:,.4f} {native_symbol} ({min(1.0, reach / of) * 100:.1f}%) "
+                     "could have reached it along this route;")
+    else:
+        lines.append("Whatever reached it along this route may include other people's money;")
+    lines.append("no credit is given for an amount that could not be measured.")
+    return ScoreComponent("amount_correlation", 0.0, WEIGHT_AMOUNT_CORRELATION, " ".join(lines))
+
+
 def _match_directness(match: ExchangeMatch) -> ScoreComponent:
     """Exact hot-wallet match vs. a weaker attribution.
 
@@ -447,10 +468,11 @@ def score_case(
                              internal_transfers_read=internal_transfers_read),
         )
 
+    status = (prorata or {}).get("status")
     components = [
         _hop_proximity(primary_match.depth, direction, depth_offset),
-        (_prorata_component(prorata, native_symbol)
-         if prorata and prorata.get("status") == "estimated"
+        (_prorata_component(prorata, native_symbol) if status == "estimated"
+         else _not_estimated(prorata, materiality, native_symbol) if status == "unknown"
          else _amount_correlation(graph, seed, primary_match.address, native_symbol, direction)),
         _match_directness(primary_match),
     ]
@@ -515,20 +537,19 @@ def _materiality_cap(band: str, materiality: dict[str, Any] | None) -> str:
 def _prorata_caveats(prorata: dict[str, Any] | None, native_symbol: str) -> list[str]:
     if not prorata or prorata.get("status") == "not_applicable":
         return []
-    if prorata.get("status") == "unknown":
-        return [
-            f"How much of the value at the exchange was the reported funds could not be "
-            f"estimated: {prorata.get('reason')}. The amount component compares the first and "
-            f"last hop only, which overstates the match when other money joined on the way."
-        ]
     out = []
-    if prorata.get("diluted"):
+    if prorata.get("status") == "unknown":
+        out.append(
+            f"How much of the value at the exchange was the traced funds could not be "
+            f"estimated: {prorata.get('reason')}. No amount credit was given."
+        )
+    if prorata.get("diluted") and prorata.get("hops"):
         low = min(prorata["hops"], key=lambda h: h["victim_share"])
         out.append(
             f"At {low['address']} the traced funds were only {low['victim_share'] * 100:.1f}% of "
             f"what the wallet received before sending on; most of what it moved came from elsewhere."
         )
-    if prorata.get("hops"):
+    if prorata.get("status") == "estimated" and prorata.get("hops"):
         out.append(
             "The pro-rata estimate counts what each wallet received while the traced funds "
             "passed through it, not money it already held; an older balance would lower the "

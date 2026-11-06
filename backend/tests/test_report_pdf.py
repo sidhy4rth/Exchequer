@@ -78,3 +78,11 @@ def test_a_case_with_no_exchange_still_renders():
     report = {**REPORT, "attribution": {}, "confidence": {}, "trace_path": [],
               "risk_screening": {"screened": False}}
     assert render_pdf(report, TEXT)[:5] == b"%PDF-"
+
+
+def test_page_one_says_when_pro_rata_was_not_estimated():
+    # Audit r2-g2-documented-claims-vs-code-7-2: the limitation was only in the text.
+    report = {**REPORT, "attribution": {**REPORT["attribution"], "prorata": {
+        "status": "unknown", "reason": "0xmid received too many transfers in the window to read in full"}}}
+    text, _ = first_page(report)
+    assert "not estimated" in text and "too many transfers" in " ".join(text.split())
