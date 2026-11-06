@@ -49,7 +49,9 @@ logger = logging.getLogger(__name__)
 MAX_WATCHES_PER_OWNER = 25
 MAX_WATCHES_TOTAL = 500
 MIN_MANUAL_CHECK_SECONDS = 60
-FETCH_LIMIT = 50  # newest outgoing transfers read per check
+FETCH_LIMIT = 50  # records per read
+# Forward reads one check may make before it stops and says how far it got.
+MAX_PAGES_PER_CHECK = 3
 # Clock drift allowed between this server and the chain when a watch's
 # creation time is the line between history and news.
 ANCHOR_SKEW_SECONDS = 60
@@ -391,9 +393,80 @@ def _position_of(chain: config.Chain) -> Callable[[Any], int]:
     return lambda t: int(t.block_number or 0)
 
 
+def _cursor(chain: config.Chain, last_seen: int | None, created_at: str) -> int | None:
+    """Where this check reads from; None for an EVM watch whose start is not known."""
+    if chain.address_family == "tron" and (last_seen or 0) < _TRON_EPOCH_FLOOR:
+        # Never read, or a cursor from the code that stored block numbers
+        # (TRC-20 transfers carry none): read from when the watch was set.
+        return _anchor(created_at)
+    return last_seen or None  # 0 was an empty first read, not a position
+
+
+def _reached(chain: config.Chain, through: int) -> str:
+    if chain.address_family == "tron":
+        from datetime import datetime, timezone
+        return datetime.fromtimestamp(through, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return f"block {through}"
+
+
+_GAP = (f"More movements than one read returns ({FETCH_LIMIT}) since the last check: some may be "
+        "missing here; re-trace the wallet to see them all.")
+_GAP_SINCE_SET = (f"More movements since this watch was set than one read returns ({FETCH_LIMIT}): "
+                  "some may be missing here; re-trace the wallet to see them all.")
+
+
+def _read(client: Any, chain: config.Chain, address: str, cursor: int | None,
+          anchor: int) -> tuple[list[Any], int | None, str | None]:
+    """(new transfers, where the cursor moves, a "more" notice or None).
+
+    From a known cursor the read goes forward (read_outgoing_since): the
+    cursor moves only over records actually read, so nothing between two
+    checks can be skipped, whatever fills the pages. A provider without that
+    read, or an EVM watch whose start is not known, reads the newest page;
+    then only transfers after the cursor (or dated after the watch was set)
+    are news, and a full page says some may be missing."""
+    position = _position_of(chain)
+    forward = getattr(client, "read_outgoing_since", None)
+    if cursor is not None and forward is not None:
+        got: list[Any] = []
+        after, complete = cursor, False
+        for _ in range(MAX_PAGES_PER_CHECK):
+            page = forward(address, after=after, limit=FETCH_LIMIT)
+            got += [t for t in page.transfers if after < position(t) <= page.through]
+            if page.through <= after:
+                complete = page.complete
+                break
+            after = page.through
+            if page.complete:
+                complete = True
+                break
+        notice = None if complete else (
+            f"Not everything since the last check was read in one go: this check reached "
+            f"{_reached(chain, after)}. Press Check now again to read on, or re-trace the wallet.")
+        return got, after, notice
+
+    transfers = client.get_outgoing_transactions(address, limit=FETCH_LIMIT)
+    page_info = getattr(client, "newest_page_info", None)
+    full, oldest = (page_info(address) if page_info else None) or (False, None)
+    full = full or len(transfers) >= FETCH_LIMIT
+    if oldest is None and transfers:
+        oldest = min(int(t.timestamp or 0) for t in transfers)
+    newest = max((position(t) for t in transfers), default=0)
+    if cursor is not None:
+        fresh = [t for t in transfers if position(t) > cursor]
+        gap = full and len(fresh) == len(transfers)  # the page never reached the cursor
+        return fresh, (max(cursor, newest) if fresh else cursor), (_GAP if gap else None)
+    # An EVM watch whose head was not known when it was set (or a legacy
+    # cursor of 0): what moved since it was set is news, only what came
+    # before it is history, and an empty read leaves the start unknown.
+    fresh = [t for t in transfers if int(t.timestamp or 0) >= anchor]
+    gap = full and oldest is not None and oldest > anchor
+    return fresh, (newest if transfers else None), (_GAP_SINCE_SET if gap else None)
+
+
 def check_watch(watch_id: str, source: Source = open_source,
                 post: Callable[[str, dict[str, Any]], None] | None = None) -> list[dict[str, Any]]:
-    """Read one watch's newest outgoing transfers; store and send any new ones.
+    """Read what one watch's address sent since its cursor; store and send any new ones.
 
     Returns the new alerts. A provider failure is recorded on the watch and
     tried again next round, never raised."""
@@ -410,11 +483,10 @@ def check_watch(watch_id: str, source: Source = open_source,
         case_id, created_at = watch.case_id, watch.created_at
     try:
         chain = config.get_chain(chain_key)
+        cursor = _cursor(chain, last_seen, created_at)
         with fresh_reads(), source(chain, asset) as client:
-            transfers = client.get_outgoing_transactions(address, limit=FETCH_LIMIT)
+            fresh, seen_block, notice = _read(client, chain, address, cursor, _anchor(created_at))
             unconfirmed = getattr(client, "confirmed_bound_applied", True) is False
-            page_info = getattr(client, "newest_page_info", None)
-            full_page, oldest = (page_info(address) if page_info else None) or (False, None)
     except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
         _finish_check(watch_id, error=f"Could not read the address this round ({type(exc).__name__}).")
         logger.warning("Watch %s: provider failure: %s", watch_id, exc)
@@ -429,27 +501,7 @@ def check_watch(watch_id: str, source: Source = open_source,
     # or store what it read records that and moves on (r2-g2-watchlist-alerts-0-7).
     try:
         position = _position_of(chain)
-        newest = max((position(t) for t in transfers), default=0)
-        read_cursor = last_seen  # the stored cursor, which _finish_check moves only from
-        anchor = _anchor(created_at)
-        more: models.Alert | None = None
-        if chain.address_family == "tron" and (last_seen or 0) < _TRON_EPOCH_FLOOR:
-            # Never read, or a cursor from the code that stored block numbers
-            # (TRC-20 transfers carry none): read from when the watch was set.
-            last_seen = anchor
-        if last_seen:
-            fresh = [t for t in transfers if position(t) > last_seen]
-            seen_block: int | None = max(last_seen, newest) if fresh else last_seen
-        else:
-            # An EVM watch whose head was not known when it was set (or a
-            # legacy cursor of 0): what moved since it was set is news, and
-            # only what came before it is history.
-            fresh = [t for t in transfers if int(t.timestamp or 0) >= anchor]
-            seen_block = newest if transfers else None
-            if full_page and oldest and oldest > anchor:
-                more = _more_alert(watch_id, owner, asset, "More movements since this watch was set "
-                                   f"than one read returns ({FETCH_LIMIT}): some may be missing here; "
-                                   "re-trace the wallet to see them all.")
+        more = _more_alert(watch_id, owner, asset, notice) if notice else None
         fresh.sort(key=lambda t: (position(t), t.hash))
         inferred = inferred_for(chain.key, (t.to_address for t in fresh), owner)
         new_alerts = [_alert(watch_id, owner, chain, address, asset, t, inferred) for t in fresh]
@@ -457,7 +509,7 @@ def check_watch(watch_id: str, source: Source = open_source,
         if more is not None:
             out.append(alert_summary(more, chain.key, case_id))
         if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts, more=more,
-                             expected=read_cursor):
+                             expected=last_seen):
             return []  # removed while we were reading, or another check got there first
     except Exception as exc:  # noqa: BLE001 -- one watch must not stop the rest
         logger.exception("Watch %s: could not store this check", watch_id)

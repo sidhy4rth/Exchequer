@@ -216,3 +216,26 @@ def test_a_watch_whose_head_read_fails_neither_alerts_nor_moves(tmp_path, monkey
     chain.head = 111
     alerts = watchlist.check_watch(watch.id, source=source)
     assert len(alerts) == 1 and alerts[0]["tx_hash"] == f"0x{99:064x}"
+
+
+# -- the watch's forward read (read_outgoing_since) keeps both rules ------------
+def test_a_watch_forward_read_stops_below_the_confirmed_head():
+    # Head 100, 12 confirmations: block 95 has not settled. The read returns the
+    # settled send at 88 and moves the cursor no further than what it read, so
+    # 95 is read (and alerted) by a later check once it has settled.
+    chain = Chain(100, [_row(80), _row(88), _row(95)])
+    page = chain.client().read_outgoing_since(WALLET, after=79, limit=50)
+    assert [t.block_number for t in page.transfers] == [80, 88]
+    assert page.through == 88 and page.through < 95
+    # And it asks for every block to the head: 99999999 is below Arbitrum's height.
+    sent = [c for c in chain.calls if c.get("action") == "txlist"]
+    assert sent and all(c["endblock"] == str(ENDBLOCK_LATEST) for c in sent)
+
+
+def test_a_full_watch_page_cut_at_the_bound_counts_as_read_up_to_it():
+    # A page that fills up only because of unsettled rows still read every
+    # settled block; the cursor reaches the last of them.
+    chain = Chain(100, [_row(70), _row(71), _row(95), _row(96)])
+    page = chain.client().read_outgoing_since(WALLET, after=60, limit=4)
+    assert [t.block_number for t in page.transfers] == [70, 71]
+    assert page.through == 71 and page.complete

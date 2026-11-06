@@ -952,7 +952,7 @@ class EtherscanClient:
             "action": "tokentx" if self.contract_address else "txlist",
             "address": target,
             "startblock": int(after) + 1,
-            "endblock": 99999999,
+            "endblock": ENDBLOCK_LATEST,  # 99999999 is below Arbitrum's height (r2-g2-watchlist-alerts-0-5)
             "page": 1,
             "offset": limit,
             "sort": "asc",
@@ -960,13 +960,23 @@ class EtherscanClient:
         if self.contract_address:
             params["contractaddress"] = self.contract_address
 
+        # Rows above the confirmed head may still be reorganised away: they are
+        # neither news nor read, so the cursor stops below them and the next
+        # check reads them once they have settled (r2-g2-watchlist-alerts-0-10).
+        bound = self.confirmed_head()
+
         def page(raws: Any, parse: Callable[[dict[str, Any]], Transaction | None]
                  ) -> tuple[list[Transaction], list[int], bool]:
             rows = [r for r in raws if isinstance(r, dict)] if isinstance(raws, list) else []
+            full = bool(rows) and len(rows) >= limit
+            if bound is not None:
+                settled = [r for r in rows if int(r.get("blockNumber") or 0) <= bound]
+                full = full and len(settled) == len(rows)  # cut at the bound: read up to it
+                rows = settled
             blocks = [int(r.get("blockNumber") or 0) for r in rows]
             sent = [t for t in (parse(r) for r in rows) if t is not None and t.from_address == target
                     and t.to_address is not None and not t.is_error and t.value_wei > 0]
-            return sent, blocks, bool(rows) and len(rows) >= limit
+            return sent, blocks, full
 
         sent, blocks, full = page(self._request(params), self._parser())
         through, complete = split_page(blocks, after, full)
