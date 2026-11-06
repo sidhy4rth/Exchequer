@@ -9,7 +9,10 @@ investigator, and the exchange the letter goes to. So the store never labels:
 
   system    the zero and burn range (an address below 2**64) and the
             native-coin placeholder
-  token     each chain's traced tokens, and data/never_flag_tokens.txt
+  token     each chain's traced tokens, data/never_flag_tokens.txt, and the
+            CoinGecko/Uniswap token lists in data/never_flag_tokens.json
+            (scripts/build_never_flag.py; its "allow" map holds reviewed
+            exceptions, address -> why, never code)
   router    a DEX router in router_labels*.json
   exchange  an exchange's own wallet in exchange_labels*.json
   deposit   an exchange deposit address (one customer's account)
@@ -22,6 +25,11 @@ or router address keeps nothing. Enforced when the store is built
 already released reads correctly too. The curated label files keep their own
 rules; at run time they also outrank the store, so a casino wallet named in a
 gambling file never reaches a store lookup at all.
+
+The list importers and the nightly gate ask the same question per address
+with reason()/screen(): a token contract, DEX router, exchange wallet (not a
+per-customer deposit address) or burn address must never carry a sanctions,
+freeze or scam label there either.
 """
 from __future__ import annotations
 
@@ -44,6 +52,7 @@ _STRICT = frozenset({SYSTEM, TOKEN, ROUTER, LISTED})
 _RANK = {SYSTEM: 0, TOKEN: 1, ROUTER: 2, LISTED: 3, EXCHANGE: 4, DEPOSIT: 5, GAMBLING: 6, NO_POISONING: 7}
 
 TOKENS_FILE = config.DATA_DIR / "never_flag_tokens.txt"
+NEVER_FLAG_FILE = "never_flag_tokens.json"
 # Above 2**64, but no one's wallet: the native-coin placeholder DEX
 # aggregators use, and a common burn address.
 _SYSTEM_BODIES = frozenset(bytes.fromhex(h) for h in (
@@ -92,13 +101,31 @@ def read_list(path: Path, chain_key: str) -> set[bytes]:
     return out
 
 
+@lru_cache(maxsize=1)
+def _file() -> tuple[frozenset[str], dict[str, str]]:
+    """(token contracts, allowed exceptions) from data/never_flag_tokens.json; empty if it is missing."""
+    try:
+        document = json.loads((config.DATA_DIR / NEVER_FLAG_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        logger.warning("No readable %s; only configured tokens count as token contracts", NEVER_FLAG_FILE)
+        return frozenset(), {}
+    listed = frozenset(a for a in document.get("tokens") or [] if isinstance(a, str))
+    allow = {a: str(why) for a, why in (document.get("allow") or {}).items() if isinstance(a, str)}
+    return listed, allow
+
+
+def _allowed(chain_key: str) -> frozenset[bytes]:
+    return frozenset(r for r in (_raw(chain_key, a, hex_as_tron=False) for a in _file()[1]) if r is not None)
+
+
 @lru_cache(maxsize=None)
 def tokens(chain_key: str) -> frozenset[bytes]:
     chain = config.get_chain(chain_key)
     found = {r for r in (_raw(chain.key, t.address) for t in chain.tokens) if r is not None}
     if TOKENS_FILE.is_file():
         found |= read_list(TOKENS_FILE, chain.key)
-    return frozenset(found)
+    found |= {r for r in (_raw(chain.key, a, hex_as_tron=False) for a in _file()[0]) if r is not None}
+    return frozenset(found - _allowed(chain.key))
 
 
 @lru_cache(maxsize=None)
@@ -124,7 +151,7 @@ def kind(chain_key: str, address: str, *, with_gambling: bool = False) -> str | 
     from .exchange_matcher import get_matcher, get_router_matcher
 
     raw = _raw(chain_key, address)
-    if raw is None:
+    if raw is None or raw in _allowed(chain_key):
         return None
     if is_system(raw):
         return SYSTEM
@@ -165,3 +192,27 @@ def build_kinds(chain_key: str, listed: Iterable[Path] = (), no_poisoning: Itera
     for path in no_poisoning:
         add(read_list(path, chain_key), NO_POISONING)
     return found
+
+
+# -- the list importers' view (scripts/import_*.py, import_all_lists' gate) --
+_NEVER_LABEL = frozenset({SYSTEM, TOKEN, ROUTER, EXCHANGE})
+
+
+def reason(chain_key: str | None, address: str) -> str | None:
+    """Why `address` must never carry a sanctions, freeze or scam label on this
+    chain (SYSTEM, TOKEN, ROUTER or EXCHANGE), or None. A per-customer deposit
+    address is not refused: a government or issuer acting on it is a fact
+    about that one customer."""
+    found = kind(chain_key or config.DEFAULT_CHAIN.key, address)
+    return found if found in _NEVER_LABEL else None
+
+
+def screen(chain_key: str | None, addresses) -> dict[str, str]:
+    """{address: reason} for every address in `addresses` that must not be labelled."""
+    return {a: why for a in addresses if (why := reason(chain_key, a))}
+
+
+def clear_cache() -> None:
+    _file.cache_clear()
+    tokens.cache_clear()
+    gambling.cache_clear()
