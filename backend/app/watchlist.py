@@ -257,15 +257,13 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
 
     connection = client_hash(client)
     with models.session() as s:
-        mine = s.scalar(select(func.count()).select_from(models.Watch)
-                        .where(models.Watch.owner_hash == owner, models.Watch.active))
-        if mine >= MAX_WATCHES_PER_OWNER:
-            raise WatchError(f"This browser already watches {MAX_WATCHES_PER_OWNER} addresses; remove one first.")
         sealed = webhook_vault.seal(hook)
         existing = s.scalar(select(models.Watch).where(
             models.Watch.owner_hash == owner, models.Watch.active, models.Watch.address == address,
             models.Watch.chain == chain.key, models.Watch.asset == asset_symbol))
         if existing is not None:
+            # Watching it again takes no new slot: it only replaces the
+            # webhook (a leaked one too, at any watch count).
             existing.touched_at = created
             if hook:
                 existing.webhook_url = sealed
@@ -273,6 +271,10 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
             s.refresh(existing)
             s.expunge(existing)
             return existing
+        mine = s.scalar(select(func.count()).select_from(models.Watch)
+                        .where(models.Watch.owner_hash == owner, models.Watch.active))
+        if mine >= MAX_WATCHES_PER_OWNER:
+            raise WatchError(f"This browser already watches {MAX_WATCHES_PER_OWNER} addresses; remove one first.")
         # Owner keys are free: one connection's share is counted across all
         # of them. Watches made before connections were recorded count for no one.
         if connection is not None:

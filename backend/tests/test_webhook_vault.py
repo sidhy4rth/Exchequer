@@ -112,3 +112,16 @@ def test_the_operator_can_see_whether_hooks_are_sealed(chain, monkeypatch):
     monkeypatch.setattr(config, "HEALTH_TOKEN", "t" * 40)
     detail = TestClient(app).get("/health/detail", headers={"authorization": "Bearer " + "t" * 40}).json()
     assert detail["webhooks_sealed"] is True
+
+
+def test_a_leaked_hook_can_be_replaced_by_a_browser_at_its_watch_limit(chain, monkeypatch):
+    # Re-posting a watch replaces its webhook; at the per-browser limit the
+    # re-post was refused as if it were a new watch, so the leaked URL stayed.
+    monkeypatch.setattr(watchlist, "MAX_WATCHES_PER_OWNER", 2)
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH", webhook_url=HOOK)
+    watchlist.create_watch(owner(ALICE), STRANGER, "ethereum", "ETH")
+    fresh = "https://hooks.slack.com/services/T000/B000/" + "n" * 24
+    again = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH", webhook_url=fresh)
+    assert again.id == w.id and webhook_vault.reveal(raw_hook(w.id)) == fresh
+    with pytest.raises(watchlist.WatchError, match="already watches 2"):
+        watchlist.create_watch(owner(ALICE), BINANCE_14, "ethereum", "ETH")
