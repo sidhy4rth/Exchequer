@@ -4,16 +4,28 @@ The CSV (one row per address; columns address, chain, category,
 entity_or_incident, sources, source_refs, date, ...) is the merged output of
 the hunt: government and court lists, stablecoin freeze events, published
 threat intelligence and millions of address-poisoning wallets found by
-on-chain detection. Each hunt category maps to one Exchequer category and an
-evidence tier (app/label_store.TIERS); some are deliberately left out:
+on-chain detection. Each hunt category maps to one Exchequer category, and
+a row's sources set its evidence tier (app/label_rules.py, app/label_store.TIERS);
+some are deliberately left out:
 
   gambling platform          the curated gambling_labels*.json files own it
   laundering-linked (1 hop)  one hop from a launderer is not an attribution
   seizure order (... lapsed) may no longer stand; not safe to assert
   sanctioned/seized (gov)    mixes designations with seizures
+  a mixer's non-pool contract, or its tag on a chain it was not read on
   anything on a chain Exchequer does not trace, or "evm (chain unspecified)"
 
-    cd backend && .venv/bin/python -m scripts.build_label_store ~/exchequer-flagged/new_flagged.csv
+No row may label an exchange wallet, router, token contract, casino or burn
+address (app/never_flag.py); those are refused and listed in
+<csv>.refused.tsv. Two rows for one address keep the stronger evidence. The
+build is removed and exits 1 -- nothing to release by mistake -- when a source
+is not on the tier allow-list, a court record or more than --max-refused rows
+name infrastructure, or a government, court or issuer record conflicts with
+another category; each has a flag to accept it after review.
+
+    cd backend && .venv/bin/python -m scripts.build_label_store ~/exchequer-flagged/new_flagged.csv \
+        --never-flag ~/exchequer-flagged/never_flag_tokens.txt \
+        --never-poison ~/exchequer-flagged/never_poison_services.txt
 """
 from __future__ import annotations
 
