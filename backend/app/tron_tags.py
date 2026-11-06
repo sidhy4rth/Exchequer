@@ -261,7 +261,10 @@ class TronScanTags:
         if self.evidence is not None:
             rec = self.evidence.record(PROVIDER, request, response.content)
             meta = {"retrieved_at": rec.retrieved_at, "sha256": rec.sha256, "bytes": rec.bytes}
-        self._cache.put(key, value, meta)
+        # "No tag, no warning" is the answer most likely to change -- a red tag
+        # goes up after an incident -- so it keeps for minutes, not the day.
+        self._cache.put(key, value, meta,
+                        ttl=None if value["tag"] or value["warning"] else config.API_CACHE_OPEN_TTL_SECONDS)
         return value
 
 

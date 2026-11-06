@@ -172,3 +172,24 @@ def test_the_tether_log_pager_never_asks_for_the_same_page_for_ever():
                      "transactionHash": f"0x{i:x}", "timeStamp": "0x1"} for i in range(1000)]
     with pytest.raises(RuntimeError):
         tether.eth_events(Stuck(), tether.ADDED)
+
+
+def test_an_untagged_tronscan_answer_keeps_for_minutes_a_tag_for_the_day(monkeypatch):
+    from app.tron_tags import TronScanTags
+
+    monkeypatch.setattr(config, "API_CACHE_OPEN_TTL_SECONDS", 0.05)
+    answers = {"TSFFxCbDLh6nP1x4BcyqkbEFJyx3zSGY2r": {}, "TD5gsCnXYaDzd6CwT1aT6XsPX5q8tBfTbY": {"addressTag": "Binance-Hot 7"}}
+    asked = []
+
+    def handler(request):
+        address = request.url.params["address"]
+        asked.append(address)
+        return httpx.Response(200, json=answers[address])
+    tags = TronScanTags("k", client=httpx.Client(transport=httpx.MockTransport(handler)), min_interval=0)
+    for address in answers:
+        tags.account(address)
+    time.sleep(0.08)
+    for address in answers:
+        tags.account(address)
+    assert asked.count("TSFFxCbDLh6nP1x4BcyqkbEFJyx3zSGY2r") == 2
+    assert asked.count("TD5gsCnXYaDzd6CwT1aT6XsPX5q8tBfTbY") == 1
