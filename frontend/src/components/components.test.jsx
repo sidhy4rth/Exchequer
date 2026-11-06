@@ -40,7 +40,7 @@ describe('Verify page', () => {
   it('sends the pasted report and shows the verdict', async () => {
     const calls = api({
       'GET /signing-key': { body: { algorithm: 'Ed25519', fingerprint: 'abcd1234abcd1234', public_key_pem: 'PEM', persistent: true } },
-      'POST /verify': { body: { sealed: true, hash_ok: true, signed: true, signature_ok: true, key_fingerprint: 'abcd1234abcd1234', this_server_key: 'abcd1234abcd1234', detail: 'Genuine and unchanged: signed by this server, every byte as issued.' } },
+      'POST /verify': { body: { status: 'genuine', sealed: true, hash_ok: true, signed: true, signature_ok: true, key_fingerprint: 'abcd1234abcd1234', this_server_key: 'abcd1234abcd1234', genuine: true, extra_content: false, detail: 'Genuine and unchanged: signed by this server, and nothing was added below the signature.' } },
     })
     const user = userEvent.setup()
     inRouter(<Verify />)
@@ -54,13 +54,65 @@ describe('Verify page', () => {
   it('names an edited report as changed', async () => {
     api({
       'GET /signing-key': { body: { fingerprint: 'k', public_key_pem: '', persistent: true } },
-      'POST /verify': { body: { sealed: true, hash_ok: false, signed: true, signature_ok: false, key_fingerprint: 'k', this_server_key: 'k', detail: 'The signature does not match.' } },
+      'POST /verify': { body: { status: 'changed', sealed: true, hash_ok: false, signed: true, signature_ok: false, key_fingerprint: 'k', this_server_key: 'k', detail: 'The signature does not match.' } },
     })
     const user = userEvent.setup()
     inRouter(<Verify />)
     await user.type(screen.getByLabelText('Report text'), 'x')
     await user.click(screen.getByRole('button', { name: 'Verify' }))
     expect(await screen.findByRole('status')).toHaveTextContent('This report was changed')
+  })
+
+  it('never shows text added below the seal as genuine, even with a valid signature', async () => {
+    api({
+      'GET /signing-key': { body: { fingerprint: 'k', public_key_pem: '', persistent: true } },
+      'POST /verify': { body: { status: 'text_added', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: false, extra_content: true, extra_lines: 1, key_fingerprint: 'k', this_server_key: 'k', detail: 'The signed part is genuine, but 1 line was added below the seal.' } },
+    })
+    const user = userEvent.setup()
+    inRouter(<Verify />)
+    await user.type(screen.getByLabelText('Report text'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Verify' }))
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('Text was added after signing')
+    expect(status).not.toHaveTextContent('Genuine and unchanged')
+    expect(status).toHaveClass('red')
+  })
+
+  const verdictFor = async (body) => {
+    api({ 'GET /signing-key': { body: { fingerprint: 'k', public_key_pem: '', persistent: true } }, 'POST /verify': { body } })
+    const user = userEvent.setup()
+    inRouter(<Verify />)
+    await user.type(screen.getByLabelText('Report text'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Verify' }))
+    return screen.findByRole('status')
+  }
+
+  it('shows a removed signature in red', async () => {
+    const s = await verdictFor({ status: 'signature_missing', sealed: true, hash_ok: true, signed: false, signature_ok: false, detail: 'Signature missing.' })
+    expect(s).toHaveTextContent('Signature missing')
+    expect(s).toHaveClass('red')
+    expect(s).toHaveTextContent('self-consistent only')
+  })
+
+  it('never calls an unchecked key a different server', async () => {
+    const s = await verdictFor({ status: 'unknown_key', sealed: true, hash_ok: true, signed: true, signature_ok: false, signature_checked: false, claimed_key: 'deadbeefdeadbeef', detail: 'Unknown key.' })
+    expect(s).toHaveTextContent('Cannot be verified here')
+    expect(s).not.toHaveTextContent('different server')
+    expect(s).not.toHaveClass('amber')
+    expect(s).toHaveTextContent('not checked')
+    expect(s).toHaveTextContent('claimed key (not checked)')
+  })
+
+  it('shows an unsigned report as unverifiable, not amber', async () => {
+    const s = await verdictFor({ status: 'unsigned', sealed: true, hash_ok: true, signed: false, signature_ok: false, detail: 'No signature.' })
+    expect(s).toHaveTextContent('Unsigned: cannot be verified')
+    expect(s).not.toHaveClass('amber')
+  })
+
+  it('treats a status it does not know as a warning, never as genuine', async () => {
+    const s = await verdictFor({ status: 'something_new', sealed: true, hash_ok: true, signed: true, signature_ok: true, detail: '?' })
+    expect(s).toHaveClass('red')
+    expect(s).not.toHaveTextContent('Genuine')
   })
 })
 

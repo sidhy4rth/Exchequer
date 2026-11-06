@@ -8,20 +8,26 @@ import ThemeToggle from '../components/ThemeToggle'
 // exchange's compliance desk, a court -- are not users of the console. The
 // check reads only the text pasted here and the server keeps nothing.
 
+// One verdict per backend `status` (signing.verify_report), shown as given.
+// A status this page does not know reads as a warning: nothing unfamiliar
+// may ever look reassuring.
 const VERDICT = {
   genuine: { tone: 'green', title: 'Genuine and unchanged' },
+  text_added: { tone: 'red', title: 'Text was added after signing' },
   changed: { tone: 'red', title: 'This report was changed' },
-  unsigned: { tone: 'amber', title: 'Unsigned report' },
-  foreign: { tone: 'amber', title: 'Signed by a different server' },
-  invalid: { tone: 'red', title: 'Not an Exchequer report' },
+  signature_missing: { tone: 'red', title: 'Signature missing' },
+  damaged: { tone: 'red', title: 'Signature damaged' },
+  unsigned: { tone: 'grey', title: 'Unsigned: cannot be verified' },
+  unknown_key: { tone: 'grey', title: 'Cannot be verified here' },
+  not_a_report: { tone: 'red', title: 'Not an Exchequer report' },
 }
+const UNKNOWN = { tone: 'red', title: 'Cannot be trusted' }
 
-function verdictOf(r) {
-  if (!r.sealed) return 'invalid'
-  if (r.signed && r.signature_ok && r.hash_ok) return 'genuine'
-  if (r.signed && r.key_fingerprint && r.key_fingerprint !== r.this_server_key) return 'foreign'
-  if (!r.signed) return r.hash_ok ? 'unsigned' : 'changed'
-  return 'changed'
+function signatureRow(r) {
+  if (!r.signed) return r.status === 'signature_missing' ? 'missing' : 'none'
+  if (r.status === 'unknown_key') return 'not checked (unknown key)'
+  if (r.status === 'damaged') return 'damaged'
+  return r.signature_ok ? 'valid' : 'invalid'
 }
 
 export default function Verify() {
@@ -52,7 +58,7 @@ export default function Verify() {
     URL.revokeObjectURL(url)
   }
 
-  const verdict = result && VERDICT[verdictOf(result)]
+  const verdict = result && (VERDICT[result.status] ?? UNKNOWN)
   return (
     <div className="citizen">
       <header className="citizen-top">
@@ -92,9 +98,10 @@ export default function Verify() {
               <p>{result.detail}</p>
               {result.sealed && (
                 <dl className="verify-facts mono">
-                  <dt>content hash</dt><dd>{result.hash_ok ? 'matches the text' : 'does not match the text'}</dd>
-                  <dt>signature</dt><dd>{!result.signed ? 'none' : result.signature_ok ? 'valid' : 'invalid'}</dd>
-                  {result.key_fingerprint && <><dt>signed with key</dt><dd>{result.key_fingerprint}</dd></>}
+                  <dt>content hash</dt><dd>{!result.hash_ok ? 'does not match the text' : result.signature_ok ? 'matches the text' : 'self-consistent only (anyone can compute this)'}</dd>
+                  <dt>signature</dt><dd>{signatureRow(result)}</dd>
+                  {result.signature_ok && result.key_fingerprint && <><dt>signed with key</dt><dd>{result.key_fingerprint}</dd></>}
+                  {!result.signature_ok && (result.claimed_key || result.key_fingerprint) && <><dt>claimed key (not checked)</dt><dd>{result.claimed_key || result.key_fingerprint}</dd></>}
                 </dl>
               )}
             </div>

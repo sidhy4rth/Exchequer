@@ -124,6 +124,57 @@ def build_manifest(records: list[EvidenceRecord]) -> dict[str, Any]:
 
 CONTENT_HASH_MARK = "CONTENT HASH"
 
+# The only lines seal_text writes below the hash line, besides the signature.
+UNSIGNED_HOW = "To verify: hash the report up to, not including, this line."
+SIGNED_HOW = ("To verify: paste this report at /verify on the server that issued it, or check "
+              "the signature with the public key from /signing-key.")
+TEMPORARY_KEY_NOTE = " (Signed with a temporary key: it verifies only until the server restarts.)"
+HOW_LINES = (UNSIGNED_HOW, SIGNED_HOW, SIGNED_HOW + TEMPORARY_KEY_NOTE)
+
+
+@dataclass(frozen=True)
+class Seal:
+    """A sealed text report split at its seal.
+
+    `body` is what the hash and the signature cover. `extra` holds any line
+    below the hash line that seal_text did not write: nothing covers those, so
+    a report with extra lines must never be called unchanged."""
+    body: str
+    hash_line: str
+    signature_line: str | None
+    extra: tuple[str, ...]
+    bom_removed: bool = False
+
+
+def read_seal(text: str) -> Seal | None:
+    """Split a report at its first CONTENT HASH line; None if it has none.
+
+    Below that line only the exact lines seal_text writes are accepted -- the
+    SIGNATURE line, then one known "To verify" line -- in that order. Trailing
+    spaces, line endings and blank lines at the end are forgiven, since copy
+    and paste change them; any other line is extra."""
+    from .signing import SIGNATURE_MARK
+
+    text = text.replace("\r\n", "\n")
+    # One byte-order mark, as a Windows editor adds it, is not part of the
+    # report (reports start with a rule line). Exactly one: more is a change.
+    bom = text.startswith("\ufeff")
+    if bom:
+        text = text[1:]
+    idx = text.find(f"\n{CONTENT_HASH_MARK} (")
+    if idx < 0:
+        return None
+    lines = [line.rstrip() for line in text[idx + 1:].split("\n")]
+    while lines and not lines[-1]:
+        lines.pop()
+    hash_line, rest = lines[0], lines[1:]
+    signature_line = None
+    if rest and rest[0].startswith(SIGNATURE_MARK + " ("):
+        signature_line, rest = rest[0], rest[1:]
+    if rest and rest[0] in HOW_LINES:
+        rest = rest[1:]
+    return Seal(text[:idx], hash_line, signature_line, tuple(rest), bom)
+
 
 def seal_text(text: str, sign: bool = True) -> str:
     """Append a content hash, and this server's signature, to a text report.
@@ -142,22 +193,16 @@ def seal_text(text: str, sign: bool = True) -> str:
         signer = get_signer()
         lines.append(f"{SIGNATURE_MARK} ({ALGORITHM} over the same bytes, key {signer.fingerprint}): "
                      f"{signer.sign(text.encode('utf-8'))}")
-        how = ("To verify: paste this report at /verify on the server that issued it, or check "
-               "the signature with the public key from /signing-key.")
-        if not signer.persistent:
-            how += " (Signed with a temporary key: it verifies only until the server restarts.)"
-        lines.append(how)
+        lines.append(SIGNED_HOW if signer.persistent else SIGNED_HOW + TEMPORARY_KEY_NOTE)
     else:
-        lines.append("To verify: hash the report up to, not including, this line.")
+        lines.append(UNSIGNED_HOW)
     return "\n".join(lines) + "\n"
 
 
 def verify_sealed_text(sealed: str) -> bool:
-    marker = f"\n{CONTENT_HASH_MARK} ("
-    idx = sealed.find(marker)
-    if idx < 0:
+    """The hash-only check: the body matches its hash and nothing was added below."""
+    seal = read_seal(sealed)
+    if seal is None or seal.extra:
         return False
-    body = sealed[:idx]
-    line = sealed[idx + 1:].split("\n", 1)[0]
-    claimed = line.rsplit(": ", 1)[-1].strip()
-    return sha256_hex(body) == claimed
+    claimed = seal.hash_line.rsplit(": ", 1)[-1].strip()
+    return sha256_hex(seal.body) == claimed

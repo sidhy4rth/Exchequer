@@ -30,6 +30,7 @@ import binascii
 import hashlib
 import logging
 import os
+import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -169,64 +170,106 @@ def _load_file() -> Signer:
 # ---------------------------------------------------------------------------
 # Verification
 # ---------------------------------------------------------------------------
+# The SIGNATURE line as seal_text writes it; anything else is damaged. A strict
+# pattern, so a fingerprint with a look-alike or invisible character cannot
+# pass as a foreign key.
+_SIG = re.compile(r"SIGNATURE \(Ed25519 over the same bytes, key (?P<fp>[0-9a-f]{16})\): "
+                  r"(?P<sig>[A-Za-z0-9+/]{86}==)")
+# Every report in this format or later is signed when issued (8fdbdbc), so one
+# without a signature had it removed. The version sits in text a forger can
+# edit: this only sharpens the message; an unsigned report never reads as fine.
+SIGNED_FROM = (2, 1)
+_FORMAT = re.compile(r"\(report format v(\d+)\.(\d+)\)")
+
+DETAILS = {
+    "not_a_report": "No CONTENT HASH line: this is not an Exchequer text report, or its last lines were cut off.",
+    "changed": "The text does not match its seal: it was changed after it was issued.",
+    "signature_missing": ("Signature missing. Every report in this format is signed when issued, so this one "
+                          "was altered. Do not rely on it."),
+    "unsigned": ("No signature, so nothing shows who made this report. Its content hash matches, but anyone "
+                 "can compute a content hash."),
+    "unknown_key": ("This report names a signing key this server does not know, so its signature cannot be "
+                    "checked here. Do not rely on it."),
+    "damaged": "The SIGNATURE line is damaged, so the signature cannot be checked. Do not rely on it.",
+    "genuine": "Genuine and unchanged: signed by this server, and nothing was added below the signature.",
+}
+
+
+def _declares_signed_format(body: str) -> bool:
+    return any((int(a), int(b)) >= SIGNED_FROM for a, b in _FORMAT.findall(body))
+
+
 def verify_report(text: str) -> dict:
     """Check a sealed (and possibly signed) text report.
 
-    Returns what a reader needs: whether the content hash matches, whether a
-    signature is present, whether it verifies against this server's key."""
-    from .evidence import CONTENT_HASH_MARK, sha256_hex
+    `status` is the one verdict to act on: genuine, text_added, changed,
+    signature_missing, unsigned, unknown_key, damaged or not_a_report; the
+    page shows it as given. `genuine` is True only for "genuine". The hash and
+    the signature cover only the text above the CONTENT HASH line, so a line
+    added below it is text nobody signed (`extra_content`)."""
+    from .evidence import read_seal, sha256_hex
 
-    text = text.replace("\r\n", "\n")
-    marker = f"\n{CONTENT_HASH_MARK} ("
-    idx = text.find(marker)
-    if idx < 0:
-        return {"sealed": False, "hash_ok": False, "signed": False, "signature_ok": False,
-                "detail": "No CONTENT HASH line: this is not an Exchequer text report, "
-                          "or its last lines were cut off."}
-    body = text[:idx]
-    tail = text[idx + 1:].split("\n")
-    claimed = tail[0].rsplit(": ", 1)[-1].strip()
+    seal = read_seal(text)
+    if seal is None:
+        return {"status": "not_a_report", "sealed": False, "hash_ok": False, "signed": False,
+                "signature_ok": False, "signature_checked": False, "genuine": False,
+                "extra_content": False, "detail": DETAILS["not_a_report"]}
+    body = seal.body
+    claimed = seal.hash_line.rsplit(": ", 1)[-1].strip()
     hash_ok = sha256_hex(body) == claimed
+    extra = len(seal.extra)
+    added = (f"{extra} line{'s were' if extra != 1 else ' was'} added below the seal, and nothing "
+             f"covers {'them' if extra != 1 else 'it'}: treat everything below the CONTENT HASH line "
+             "as not issued by Exchequer.")
 
     signer = get_signer()
-    sig_line = next((line for line in tail[1:] if line.startswith(SIGNATURE_MARK + " (")), None)
+    sig_line = seal.signature_line
     result = {
         "sealed": True,
         "hash_ok": hash_ok,
         "content_sha256": sha256_hex(body),
         "signed": sig_line is not None,
         "signature_ok": False,
+        "signature_checked": False,
+        "genuine": False,
+        "extra_content": extra > 0,
+        "extra_lines": extra,
+        "bom_removed": seal.bom_removed,
         "key_fingerprint": None,
+        "claimed_key": None,
         "this_server_key": signer.fingerprint,
     }
-    if sig_line is None:
-        result["detail"] = (
-            "Unsigned report (made before reports were signed). The hash only shows "
-            "whether the text was changed after hashing, not who hashed it."
-            if hash_ok else "The text does not match its content hash: it was changed."
-        )
+
+    def done(status: str, detail: str | None = None) -> dict:
+        result["status"] = status
+        result["genuine"] = status == "genuine"
+        result["detail"] = detail or DETAILS[status]
+        if seal.bom_removed:
+            result["detail"] += " (A byte-order mark added by an editor was ignored.)"
         return result
 
-    fingerprint = sig_line.split("key ", 1)[-1].split(")", 1)[0].strip()
-    result["key_fingerprint"] = fingerprint
-    try:
-        signature = base64.b64decode(sig_line.rsplit(": ", 1)[-1].strip(), validate=True)
-    except (binascii.Error, ValueError):
-        result["detail"] = "The SIGNATURE line is damaged."
-        return result
+    if sig_line is None:
+        if not hash_ok:
+            return done("changed")
+        status = "signature_missing" if _declares_signed_format(body) else "unsigned"
+        return done(status, f"{DETAILS[status]} Also, {added}" if extra else None)
+
+    match = _SIG.fullmatch(sig_line)
+    if match is None:
+        return done("damaged")
+    fingerprint = match.group("fp")
     if fingerprint != signer.fingerprint:
-        result["detail"] = ("Signed with a different key than this server's "
-                            f"({fingerprint}, this server uses {signer.fingerprint}).")
-        return result
+        result["claimed_key"] = fingerprint
+        return done("unknown_key")
+    result["key_fingerprint"] = fingerprint
+    result["signature_checked"] = True
     try:
-        signer.public.verify(signature, body.encode("utf-8"))
+        signer.public.verify(base64.b64decode(match.group("sig"), validate=True), body.encode("utf-8"))
         result["signature_ok"] = True
-    except InvalidSignature:
-        pass
-    if result["signature_ok"] and hash_ok:
-        result["detail"] = "Genuine and unchanged: signed by this server, every byte as issued."
-    elif result["signature_ok"]:
-        result["detail"] = "The signature matches but the CONTENT HASH line was edited."
-    else:
-        result["detail"] = "The signature does not match: the report was changed after signing."
-    return result
+    except (InvalidSignature, binascii.Error, ValueError):
+        return done("changed")
+    if not hash_ok:
+        return done("changed", "The signature matches but the CONTENT HASH line was edited.")
+    if extra:
+        return done("text_added", f"The signed part is genuine, but {added}")
+    return done("genuine")

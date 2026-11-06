@@ -164,6 +164,7 @@ a { color: var(--navy); }
 .pill.green { color: var(--green); border-color: var(--green); background: var(--green-soft); }
 .pill.amber { color: var(--amber); border-color: var(--amber); background: var(--amber-soft); }
 .pill.red { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.pill.grey { color: var(--muted); border-color: var(--muted); }
 .pill.navy { color: var(--navy); border-color: var(--navy); background: var(--navy-soft); }
 
 .card { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r); }
@@ -824,6 +825,7 @@ details.more summary:hover { color: var(--ink); }
 .verify-result.green { border-color: var(--green); }
 .verify-result.red { border-color: var(--red); }
 .verify-result.amber { border-color: var(--amber); }
+.verify-result.grey { border-color: var(--muted); }
 .verify-result p { margin: 0; color: var(--ink); font-size: 14px; }
 .verify-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 4px 0 0; font-size: 12px; }
 .verify-facts dt { color: var(--muted); }
