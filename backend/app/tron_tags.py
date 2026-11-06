@@ -257,6 +257,7 @@ class TronScanTags:
                 self._pacer.penalize()
             logger.warning("TronScan tag lookup failed for %s: %s", address, exc)
             return None
+        self._pacer.reward()  # a widened pace drifts back once answers come
         value = {"tag": tag_from_response(body), "warning": warning_from_response(body)}
         meta = None
         if self.evidence is not None:

@@ -130,3 +130,24 @@ def test_the_shared_scopes_are_listed_without_the_key():
     joined = " ".join(names)
     for start in range(len(KEY) - 3):
         assert KEY[start:start + 4] not in joined
+
+
+def test_a_tronscan_refusal_widens_the_pace_and_successes_narrow_it_again():
+    """TronScan was penalised on a 429 but never rewarded, so one refusal
+    left every later tag lookup on the key at the widened pace for good."""
+    refuse = {"on": True}
+
+    def handler(request):
+        if refuse["on"]:
+            return httpx.Response(429)
+        return httpx.Response(200, json={"publicTag": "", "redTag": "", "feedbackRisk": False})
+    tags = TronScanTags("TRONSCAN-PACE-KEY", client=httpx.Client(transport=httpx.MockTransport(handler)),
+                        min_interval=0.001)
+    floor = tags._pacer.interval
+    assert tags.account(TRON) is None
+    widened = tags._pacer.interval
+    assert widened > floor
+    refuse["on"] = False
+    for n in range(3):
+        tags.account(f"T{n:033d}")  # a new address each time: not a cache hit
+    assert tags._pacer.interval < widened
