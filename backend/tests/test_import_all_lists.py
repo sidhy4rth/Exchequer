@@ -236,3 +236,46 @@ def test_the_workflow_stages_only_named_list_files():
 def test_two_refresh_runs_never_race_to_the_same_branch():
     text = (Path(__file__).resolve().parents[2] / ".github/workflows/refresh-lists.yml").read_text()
     assert "concurrency:\n  group: refresh-lists\n  cancel-in-progress: false" in text
+
+
+# -- small lists and vanished authorities (audit r1-scripts-2) ---------------------
+SIX = [addr(f"{i:02x}") for i in range(1, 7)]
+
+
+def _with_authorities(doc: dict, **counts) -> dict:
+    doc["_meta"]["counts"] = {"by_authority": counts}
+    return doc
+
+
+def test_losing_five_of_six_is_refused(tmp_path):
+    path = tmp_path / "intl_sanctions_bsc.json"
+    write(path, document("2026-11-02", *SIX))
+    outcome = run_family(family(path), importer_writing(path, document("2026-11-03", SIX[0])))
+    assert outcome.status == "refused" and "removed 5 of its 6" in outcome.detail
+    assert len(json.loads(path.read_text())["labels"]) == 6  # put back
+
+
+def test_losing_one_of_six_is_allowed(tmp_path):
+    path = tmp_path / "intl_sanctions_bsc.json"
+    write(path, document("2026-11-02", *SIX))
+    outcome = run_family(family(path), importer_writing(path, document("2026-11-03", *SIX[1:])))
+    assert outcome.status == "ok" and outcome.changes[path].removed == [SIX[0]]
+
+
+def test_an_authority_vanishing_is_refused(tmp_path):
+    path = tmp_path / "intl_sanctions.json"
+    many = [addr(f"{i:02x}") for i in range(1, 31)]
+    write(path, _with_authorities(document("2026-11-02", *many), **{"United Kingdom": 29, "Japan": 1}))
+    after = _with_authorities(document("2026-11-03", *many[1:]), **{"United Kingdom": 29})
+    outcome = run_family(family(path), importer_writing(path, after))
+    assert outcome.status == "refused" and "Japan" in outcome.detail
+
+
+def test_unverified_placements_are_named_in_the_summary(held):
+    after = document("2026-11-03", A, B)
+    after["_meta"]["unverified"] = [B]
+    after["_meta"]["bsc_not_checked"] = [A]
+    outcome = run_family(family(held), importer_writing(held, after))
+    summary = render_summary([outcome], "dates")
+    assert "Not re-checked in `risk_labels.json`" in summary and B in summary
+    assert "BSC not checked" in summary

@@ -41,10 +41,10 @@ def test_a_wallet_named_only_in_lifted_orders_is_left_out(monkeypatch):
         {"id": "s2", "schema": "Sanction", "properties": {
             "entity": ["w2"], "authorityId": ["ASO 9/26"]}},
     ]
-    index = {"resources": [{"name": "entities.ftm.json", "url": "entities"}]}
+    index = {"resources": [{"name": "entities.ftm.json", "url": "https://data.opensanctions.org/artifacts/x/entities.ftm.json"}]}
 
     def fake_fetch(url):
-        if url == "entities":
+        if url.endswith("/entities.ftm.json"):
             return "\n".join(json.dumps(e) for e in entities).encode()
         return json.dumps(index).encode()
 
@@ -67,9 +67,9 @@ def _rows(monkeypatch, *end_dates, today=TODAY):
         if ends is not None:
             props["endDate"] = ends
         entities.append({"id": f"s{i}", "schema": "Sanction", "properties": props})
-    index = {"resources": [{"name": "entities.ftm.json", "url": "entities"}]}
+    index = {"resources": [{"name": "entities.ftm.json", "url": "https://data.opensanctions.org/artifacts/x/entities.ftm.json"}]}
     monkeypatch.setattr(intl, "fetch", lambda url: (
-        "\n".join(json.dumps(e) for e in entities) if url == "entities" else json.dumps(index)).encode())
+        "\n".join(json.dumps(e) for e in entities) if url.endswith("/entities.ftm.json") else json.dumps(index)).encode())
     rows, _ = intl.read_opensanctions("il_mod_crypto", today)
     return [record for _, _, record in rows]
 
@@ -209,3 +209,89 @@ def test_recheck_keeps_the_uk_listing_of_a_wallet_whose_israeli_order_ended(held
     assert entry["source"] == "UK Sanctions List, entry CTD0004"
     assert held["intl_sanctions.json"]["_meta"]["counts"] == {
         "addresses": 1, "by_authority": {"United Kingdom": 1}, "by_category": {SANCTIONED: 1}}
+
+
+def test_an_entities_link_off_opensanctions_is_refused(monkeypatch):
+    """The index is third-party data; its link is followed only to OpenSanctions' host."""
+    index = {"resources": [{"name": "entities.ftm.json", "url": "file:///etc/passwd"}]}
+    monkeypatch.setattr(intl, "fetch", lambda url: json.dumps(index).encode())
+    with pytest.raises(ValueError):
+        intl.read_opensanctions("il_mod_crypto", TODAY)
+
+
+# -- a failed check is unknown, never "not used" (audit r1-scripts-2) --------------
+UNPLACED = "0x" + "7" * 40
+
+
+@pytest.fixture
+def placement(tmp_path, monkeypatch):
+    """main() over one UK-listed address that names no chain, held on Ethereum and BSC."""
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    held = {"category": SANCTIONED, "entity": "X", "label": "X", "source": "UK", "authorities": ["United Kingdom"]}
+    for name in ("intl_sanctions.json", "intl_sanctions_bsc.json"):
+        (tmp_path / name).write_text(json.dumps({"_meta": {}, "labels": {UNPLACED: held}}))
+    record = {"entity": "X", "authority": "United Kingdom", "source": "UK"}
+    monkeypatch.setattr(intl, "read_uk", lambda: [(UNPLACED, None, record)])
+    monkeypatch.setattr(intl, "read_eu", lambda: [])
+    monkeypatch.setattr(intl, "read_opensanctions", lambda dataset, today: ([], "https://data.opensanctions.org/x"))
+
+    class Eth:
+        def __init__(self, **_):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *exc):
+            return False
+
+    class Bsc:
+        def __init__(self, **_):
+            pass
+        def close(self):
+            pass
+    monkeypatch.setattr(intl, "EtherscanClient", Eth)
+    monkeypatch.setattr(intl, "NoderealClient", Bsc)
+    monkeypatch.setattr(sys, "argv", ["import_intl_sanctions"])
+
+    def run(eth_used, bsc_used, key="stub"):
+        monkeypatch.setattr(config, "NODEREAL_API_KEY", key)
+        monkeypatch.setattr(intl, "used_on_ethereum", eth_used)
+        monkeypatch.setattr(intl, "used_on_bsc", bsc_used)
+        code = intl.main()
+        return code, {n: json.loads((tmp_path / n).read_text()) for n in ("intl_sanctions.json", "intl_sanctions_bsc.json")}
+    return run
+
+
+def _quota(*_):
+    raise intl.NoderealError("monthly quota exceeded")
+
+
+def test_a_nodereal_quota_error_keeps_the_held_bsc_placement(placement):
+    code, files = placement(lambda *_: True, _quota)
+    assert code == 0
+    assert UNPLACED in files["intl_sanctions_bsc.json"]["labels"]
+    assert files["intl_sanctions_bsc.json"]["_meta"]["unverified"] == [UNPLACED]
+
+
+def test_no_nodereal_key_carries_bsc_placements_over(placement):
+    code, files = placement(lambda *_: True, _quota, key="")
+    assert code == 0 and UNPLACED in files["intl_sanctions_bsc.json"]["labels"]
+
+
+def test_an_ethereum_error_does_not_skip_the_bsc_check(placement):
+    def eth_down(*_):
+        raise intl.EtherscanError("rate limit")
+    code, files = placement(eth_down, lambda *_: True)
+    assert code == 0
+    assert UNPLACED in files["intl_sanctions.json"]["labels"]  # the held Ethereum placement is kept
+    assert UNPLACED in files["intl_sanctions_bsc.json"]["labels"]
+
+
+def test_an_unchecked_new_address_stops_the_intl_import(placement, tmp_path):
+    for name in ("intl_sanctions.json", "intl_sanctions_bsc.json"):
+        (tmp_path / name).write_text(json.dumps({"_meta": {}, "labels": {}}))
+
+    def eth_down(*_):
+        raise intl.EtherscanError("rate limit")
+    code, files = placement(eth_down, lambda *_: True)
+    assert code == 1
+    assert files["intl_sanctions.json"]["labels"] == {}  # nothing written

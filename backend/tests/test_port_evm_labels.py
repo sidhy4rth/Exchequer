@@ -127,3 +127,38 @@ def test_relabel_re_reads_carried_listings_offline_and_drops_lapsed_ones(two_cha
         assert written["labels"][seized]["category"] == "seized"
         assert written["labels"][seized]["valid_until"] == "2028-02-16"
         assert written["_meta"]["last_reviewed"] == "2026-09-23"
+
+
+def test_port_full_mode_retries_an_errored_check(tmp_path, monkeypatch):
+    """A failed check is never checkpointed as a result, so it is asked again (r1-scripts-2)."""
+    wallet = "0x" + "7" * 40
+    monkeypatch.setattr(port, "TARGETS", ("polygon",))
+    monkeypatch.setattr(port, "MERGE_TARGETS", ())
+    monkeypatch.setattr(port, "ethereum_candidates", lambda: {wallet: {"exchange": "Binance", "label": "Binance 1",
+                                                                        "type": "exchange_wallet", "source": "ethereum"}})
+    monkeypatch.setattr(port, "sanctioned_candidates", lambda: {})
+    monkeypatch.setattr(port, "scrape_candidates", lambda chain_key: {})
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    written = []
+    monkeypatch.setattr(port, "write_risk_labels", lambda *a: written.append(a))
+
+    class Client:
+        def __init__(self, **_):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *exc):
+            return False
+    monkeypatch.setattr(port, "EtherscanClient", Client)
+    checkpoint = tmp_path / "port.jsonl"
+    monkeypatch.setattr(port.sys, "argv", ["port_evm_labels", "--checkpoint", str(checkpoint)])
+
+    def down(client, address):
+        raise EtherscanError("rate limit")
+    monkeypatch.setattr(port, "check", down)
+    assert port.main() == 1
+    assert checkpoint.read_text() == "" and written == []  # not checkpointed, nothing written
+
+    monkeypatch.setattr(port, "check", lambda client, address: "ok")
+    assert port.main() == 0
+    assert wallet in json.loads((tmp_path / "exchange_labels_polygon.json").read_text())["labels"]

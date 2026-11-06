@@ -58,6 +58,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import config  # noqa: E402
 from app.etherscan_client import EtherscanClient, EtherscanError, is_valid_address, normalize_address  # noqa: E402
+from app.nodereal_client import NoderealError  # noqa: E402
 from scripts.import_eth_labels import (CANONICAL, DATASET_COMMIT, DATASET_REPO, SKIP_SLUG,  # noqa: E402
                                        SKIP_TAG, tag_head, wallet_type)
 
@@ -235,10 +236,12 @@ def main() -> int:
     if args.checkpoint.exists():
         for line in args.checkpoint.read_text().splitlines():
             r = json.loads(line)
-            done[(r["chain"], r["kind"], r["address"])] = r["result"]
+            if not str(r["result"]).startswith("error"):  # an old run's failed check is re-asked
+                done[(r["chain"], r["kind"], r["address"])] = r["result"]
 
     eth_exchanges, sanctioned = ethereum_candidates(), sanctioned_candidates()
     today = datetime.now(timezone.utc).date().isoformat()
+    status = 0
     with args.checkpoint.open("a") as log:
         for chain_key in (*TARGETS, *MERGE_TARGETS):
             chain = config.CHAINS[chain_key]
@@ -250,11 +253,15 @@ def main() -> int:
                   f"{len(todo)} left to check", flush=True)
             opened = NoderealProbe() if chain_key in MERGE_TARGETS else EtherscanClient(chain_id=chain.chain_id)
             with opened as client:
+                failed = 0
                 for i, (kind, address) in enumerate(todo, 1):
                     try:
                         result = check(client, address)
-                    except EtherscanError as exc:
-                        result = f"error: {exc}"[:120]
+                    except (EtherscanError, NoderealError, ValueError) as exc:
+                        # Unknown, not "no": never checkpointed, so the next run asks again.
+                        print(f"  ! {address}: {str(exc)[:80]}", flush=True)
+                        failed += 1
+                        continue
                     done[(chain_key, kind, address)] = result
                     log.write(json.dumps({"chain": chain_key, "kind": kind, "address": address,
                                           "result": result}) + "\n")
@@ -263,6 +270,11 @@ def main() -> int:
                         ok = sum(1 for (c, k, _), r in done.items() if c == chain_key and r == "ok")
                         print(f"  {i}/{len(todo)} checked · {ok} accepted so far", flush=True)
 
+            if failed:
+                print(f"  {failed} checks failed; re-run to finish before {chain.name}'s files are written",
+                      flush=True)
+                status = 1
+                continue
             accepted = {a: m for a, m in exchanges.items() if done.get((chain_key, "exchange", a)) == "ok"}
             listed = {a: m for a, m in sanctioned.items() if done.get((chain_key, "sanctioned", a)) == "ok"}
             by_source = {s: sum(1 for m in accepted.values() if m["source"] == s)
@@ -306,7 +318,7 @@ def main() -> int:
                            for a, m in sorted(accepted.items())},
             }, indent=1) + "\n")
             write_risk_labels(chain_key, listed, today)
-    return 0
+    return status
 
 
 if __name__ == "__main__":

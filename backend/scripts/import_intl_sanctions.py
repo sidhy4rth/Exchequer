@@ -210,6 +210,9 @@ def _valid_until(active: list[dict]) -> str | None:
 def read_opensanctions(dataset: str, today: date) -> tuple[list[tuple[str, str | None, dict]], str]:
     index = json.loads(fetch(OPENSANCTIONS.format(dataset=dataset)))
     entities_url = next(r["url"] for r in index["resources"] if r["name"] == "entities.ftm.json")
+    # The index is third-party data: follow only an https link to OpenSanctions' own host.
+    if not str(entities_url).startswith("https://data.opensanctions.org/"):
+        raise ValueError(f"{dataset}: unexpected entities URL {entities_url!r}")
     return opensanctions_rows(dataset, fetch(entities_url).decode(), today), entities_url
 
 
@@ -257,6 +260,22 @@ def opensanctions_rows(dataset: str, text: str, today: date) -> list[tuple[str, 
                 "source": f"{source} (via OpenSanctions)",
                 "valid_until": _valid_until(active),
             }))
+    return out
+
+
+def held_placements() -> dict[str, set[str]]:
+    """address -> the EVM chains whose held intl file lists it now."""
+    out: dict[str, set[str]] = defaultdict(set)
+    for chain_key, chain in config.CHAINS.items():
+        path = chain.intl_sanctions_path
+        if chain_key == "tron" or path is None or not path.exists():
+            continue
+        try:
+            labels = json.loads(path.read_text(encoding="utf-8")).get("labels") or {}
+        except (OSError, ValueError):
+            continue
+        for address in labels:
+            out[address].add(chain_key)
     return out
 
 
@@ -391,28 +410,56 @@ def main() -> int:
         if record["source"] not in held["sources"]:
             held["sources"].append(record["source"])
 
-    # File each address under a chain.
+    # File each address under a chain. A check that fails is unknown, never
+    # "not used": the address keeps the placement the held files give it.
+    placed = held_placements()
     by_chain: dict[str, dict[str, dict]] = defaultdict(dict)
     unplaced = [a for a in merged if a.startswith("0x") and not (hints[a] - {"tron"})]
     print(f"\n{len(merged)} distinct addresses; {len(unplaced)} EVM addresses name no chain "
           "and are placed by where they have been used")
     used: dict[str, set[str]] = defaultdict(set)
+    unverified: list[str] = []  # a check failed; the held placement was kept
+    bsc_not_checked: list[str] = []  # new, BSC not checked; filed on Ethereum only
     if unplaced:
         with EtherscanClient(chain_id=1) as eth:
             bsc = NoderealClient(chain_slug="bsc-mainnet") if config.NODEREAL_API_KEY else None
             try:
                 for address in unplaced:
+                    held_on = placed.get(address, set())
                     try:
                         if used_on_ethereum(eth, address):
                             used[address].add("ethereum")
-                        if bsc and used_on_bsc(bsc, address):
+                    except (EtherscanError, ValueError) as exc:
+                        print(f"  ! {address} on Ethereum: {str(exc)[:50]}")
+                        if not held_on:
+                            print("Could not place a new address; nothing written. Re-run.", file=sys.stderr)
+                            return 1
+                        used[address] |= held_on & {"ethereum"}
+                        unverified.append(address)
+                    if bsc is None:
+                        # No key: carry the held BSC placement over rather than drop it.
+                        if "bsc" in held_on:
                             used[address].add("bsc")
-                    except (EtherscanError, NoderealError, ValueError) as exc:
-                        print(f"  ! {address}: {str(exc)[:50]}")
+                        elif not held_on:
+                            bsc_not_checked.append(address)
+                    else:
+                        try:
+                            if used_on_bsc(bsc, address):
+                                used[address].add("bsc")
+                        except (NoderealError, ValueError) as exc:
+                            print(f"  ! {address} on BSC: {str(exc)[:50]}")
+                            if held_on:
+                                used[address] |= held_on & {"bsc"}
+                                unverified.append(address)
+                            else:
+                                bsc_not_checked.append(address)
                     print(f"  {address}  used on: {', '.join(sorted(used[address])) or 'neither'}")
             finally:
                 if bsc:
                     bsc.close()
+    if unverified or bsc_not_checked:
+        print(f"\nunverified (held placement kept): {len(set(unverified))}; "
+              f"new, BSC not checked (filed on Ethereum): {len(bsc_not_checked)}")
 
     for address, held in merged.items():
         if TRON.fullmatch(address):
@@ -462,6 +509,9 @@ def main() -> int:
                 "chain": chain_key,
                 "last_reviewed": today.isoformat(),
                 "counts": _counts(labels),
+                **({"unverified": sorted(set(unverified) & set(labels))} if set(unverified) & set(labels) else {}),
+                **({"bsc_not_checked": sorted(set(bsc_not_checked) & set(labels))}
+                   if set(bsc_not_checked) & set(labels) else {}),
                 "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
                 "schema": SCHEMA,
             },

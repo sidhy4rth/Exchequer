@@ -23,8 +23,9 @@ warning fires, which is correct: the deployed data is what screens a trace.
 What is refused
 ---------------
 A list left empty, or one that loses more than a tenth of its addresses (and more
-than a handful), is put back and the run ends red. A source changing its format
-looks exactly like that. If a source really did remove them, run its importer by
+than a handful), is put back and the run ends red; so is a small list (under 20)
+that loses a third, and a list from which every address of one authority goes. A
+source changing its format looks exactly like that. If a source really did remove them, run its importer by
 hand and open the pull request yourself.
 
 What is not here
@@ -53,6 +54,9 @@ from app import config  # noqa: E402
 RENEW_AFTER_DAYS = 5
 SHRINK_SHARE = 0.10
 SHRINK_MIN = 5
+# Under this many addresses the rule above lets nearly all go (5 of 6), so a
+# third is the limit instead.
+SMALL_LIST = 20
 IMPORTER_TIMEOUT_SECONDS = 3600
 SHOWN_PER_LIST = 50
 
@@ -96,6 +100,8 @@ class Change:
     added: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
     altered: list[str] = field(default_factory=list)
+    # What the importer says it could not check (its _meta.unverified, bsc_not_checked).
+    notes: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def real(self) -> bool:
@@ -138,7 +144,20 @@ def _refusal(before: dict[str, tuple], after: dict[str, tuple]) -> str | None:
     lost = len(before.keys() - after.keys())
     if lost > SHRINK_MIN and lost > len(before) * SHRINK_SHARE:
         return f"removed {lost} of its {len(before)} addresses"
+    if len(before) < SMALL_LIST and lost >= max(2, len(before) // 3):
+        return f"removed {lost} of its {len(before)} addresses"
     return None
+
+
+def _authorities(document: dict) -> dict[str, int]:
+    counts = ((document.get("_meta") or {}).get("counts") or {}).get("by_authority") or {}
+    return counts if isinstance(counts, dict) else {}
+
+
+def _vanished(before: dict, after: dict) -> list[str]:
+    """Authorities that listed addresses in `before` and list none in `after`."""
+    new = _authorities(after)
+    return sorted(a for a, n in _authorities(before).items() if n and not new.get(a))
 
 
 def run_module(family: Family) -> int:
@@ -167,11 +186,14 @@ def run_family(family: Family, run: Callable[[Family], int] = run_module) -> Out
         before = _read(raw) if raw is not None else {"labels": {}}
         old = _identities(before)
         try:
-            new = _identities(_read(path.read_bytes()))
+            after = _read(path.read_bytes())
+            new = _identities(after)
         except (OSError, ValueError):
             problem = "wrote something that is not a list"
         else:
             problem = _refusal(old, new)
+            if not problem and (gone := _vanished(before, after)):
+                problem = f"no address is listed by {', '.join(gone)} any more"
         if problem:
             outcome.restore()
             outcome.status, outcome.detail, outcome.changes = "refused", f"{path.name}: {problem}", {}
@@ -182,6 +204,8 @@ def run_family(family: Family, run: Callable[[Family], int] = run_module) -> Out
             added=sorted(new.keys() - old.keys()),
             removed=sorted(old.keys() - new.keys()),
             altered=sorted(a for a in new.keys() & old.keys() if new[a] != old[a]),
+            notes={key: list(after["_meta"][key]) for key in ("unverified", "bsc_not_checked")
+                   if isinstance((after.get("_meta") or {}).get(key), list) and after["_meta"][key]},
         )
     return outcome
 
@@ -250,6 +274,10 @@ def render_summary(outcomes: list[Outcome], reason: str | None) -> str:
             lines += _addresses(f"Added to `{path.name}`", c.added)
             lines += _addresses(f"Removed from `{path.name}`", c.removed)
             lines += _addresses(f"Changed in `{path.name}`", c.altered)
+            lines += _addresses(f"Not re-checked in `{path.name}` (a check failed; the held placement was kept)",
+                                c.notes.get("unverified", []))
+            lines += _addresses(f"New in `{path.name}` with BSC not checked (filed on Ethereum only)",
+                                c.notes.get("bsc_not_checked", []))
     for outcome in outcomes:
         if outcome.status != "ok":
             kept = "not run" if outcome.status == "skipped" else "the list already held was kept"
