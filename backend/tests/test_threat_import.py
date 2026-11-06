@@ -224,3 +224,10 @@ def test_a_scam_list_never_labels_an_exchange_router_or_token(monkeypatch, tmp_p
     monkeypatch.setattr(config, "NODEREAL_API_KEY", "")
     assert import_threat_labels.import_scam_lists(tmp_path / "checkpoint.jsonl", dry_run=True) == 0
     assert checked == [fresh]
+
+
+def test_a_missing_result_when_placing_a_listed_address_is_an_error():
+    """used_on_bsc places government listings; None must not read as "unused" (r1-scripts-2)."""
+    with pytest.raises(NoderealError):
+        threat.used_on_bsc(StubRpc(nonce=None), "0x" + "1" * 40)
+    assert threat.used_on_bsc(StubRpc(nonce="0x0", code="0x", balance="0x5"), "0x" + "1" * 40) is True

@@ -89,6 +89,7 @@ from app.etherscan_client import (  # noqa: E402
 from app.label_rules import ENTRYPOINTS, MIXER_SERVICE, POOL, SERVICE_NAME  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
 from app.risk_matcher import MIXER, SCAM, STOLEN  # noqa: E402
+from scripts._label_files import ShrinkRefused, chain_regenerate, merge_owned  # noqa: E402
 
 DATASET_REPO = "dawsbot/eth-labels"
 DATASET_COMMIT = "14247ba8cf4686b747938248bee34c66089fa9d9"
@@ -179,12 +180,21 @@ def account_used_on_bsc(client, address: str) -> bool:
 
 
 def used_on_bsc(client: NoderealClient, address: str) -> bool:
-    """A nonce, contract code or a balance: the address has been used on BSC."""
-    if int(client._rpc("eth_getTransactionCount", [address, "latest"]) or "0x0", 16) > 0:
+    """A nonce, contract code or a balance: the address has been used on BSC.
+
+    For placing a government-listed address, not for copying a scam report
+    (that is account_used_on_bsc). A missing result is an error, never a "no".
+    """
+    def ask(method: str) -> str:
+        result = client._rpc(method, [address, "latest"])
+        if not isinstance(result, str):
+            raise NoderealError(f"{method}: no result for {address}")
+        return result
+    if int(ask("eth_getTransactionCount"), 16) > 0:
         return True
-    if (client._rpc("eth_getCode", [address, "latest"]) or "0x") != "0x":
+    if ask("eth_getCode") not in ("0x", "0x0"):
         return True
-    return int(client._rpc("eth_getBalance", [address, "latest"]) or "0x0", 16) > 0
+    return int(ask("eth_getBalance"), 16) > 0
 
 
 SCAMSNIFFER = ("scamsniffer/scam-database", "753310a5c8ae9b83d8d05ae21e3b2ae60bf87c98")
@@ -322,6 +332,7 @@ def import_scam_lists(checkpoint: Path, dry_run: bool) -> int:
         meta = document["_meta"]
         meta["counts"] = _counts(labels)
         meta["category_note"] = CATEGORY_NOTE
+        meta["regenerate_with"] = chain_regenerate(meta.get("regenerate_with"), BASE_RUN, SCAM_RUN)
         meta["last_reviewed"] = datetime.now(timezone.utc).date().isoformat()
         meta["scam_lists"] = (
             f"{added[chain_key]} reported phishing/scam wallets from ScamSniffer ({SCAMSNIFFER[0]} "
@@ -451,32 +462,42 @@ def recheck_bsc(client, dry_run: bool) -> int:
     return 1 if errors else 0
 
 
-def verify_ethereum(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str]]:
-    kept, dropped = {}, []
+BASE_RUN = "cd backend && .venv/bin/python -m scripts.import_threat_labels"
+SCAM_RUN = "cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists"
+# How the explorer-tag run's own entries name their source; the scam lists' do not.
+OWN_SOURCE = f"via {DATASET_REPO}"
+
+
+def verify_ethereum(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str], list[str]]:
+    """(kept, dropped, errors): an address whose check failed is in `errors`, never dropped."""
+    kept, dropped, errors = {}, [], []
     with EtherscanClient(chain_id=1) as client:
         for addr, meta in candidates:
             try:
                 used = used_on_ethereum(client, addr)
             except (EtherscanError, ValueError) as exc:
-                dropped.append(f"{addr} {meta['label']}: {str(exc)[:40]}")
+                print(f"{addr}  {meta['label']:<36} ERROR {str(exc)[:40]}")
+                errors.append(addr)
                 continue
             print(f"{addr}  {meta['label']:<36} {'ok' if used else 'UNUSED'}")
             if used:
                 kept[addr] = meta
             else:
                 dropped.append(f"{addr} {meta['label']}: no transactions")
-    return kept, dropped
+    return kept, dropped, errors
 
 
-def verify_bsc(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str]]:
-    kept, dropped = {}, []
+def verify_bsc(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str], list[str]]:
+    """(kept, dropped, errors), as verify_ethereum."""
+    kept, dropped, errors = {}, [], []
     client = NoderealClient(chain_slug="bsc-mainnet")
     try:
         for addr, meta in candidates:
             try:
                 used = used_on_bsc(client, addr)
             except (NoderealError, ValueError) as exc:
-                dropped.append(f"{addr} {meta['label']}: {str(exc)[:40]}")
+                print(f"{addr}  {meta['label']:<36} ERROR {str(exc)[:40]}")
+                errors.append(addr)
                 continue
             print(f"{addr}  {meta['label']:<36} {'ok' if used else 'UNUSED'}")
             if used:
@@ -485,7 +506,7 @@ def verify_bsc(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str]]:
                 dropped.append(f"{addr} {meta['label']}: never used")
     finally:
         client.close()
-    return kept, dropped
+    return kept, dropped, errors
 
 
 def main() -> int:
@@ -499,6 +520,8 @@ def main() -> int:
     parser.add_argument("--recheck-bsc", action="store_true",
                         help="re-check the BSC file's ScamSniffer-only entries (needs --rpc)")
     parser.add_argument("--rpc", help="with --recheck-bsc: a BSC JSON-RPC URL (a keyless public one will do)")
+    parser.add_argument("--allow-shrink", action="store_true",
+                        help="let the explorer-tag run remove more than a handful of its own entries")
     args = parser.parse_args()
 
     if args.recategorise:
@@ -518,6 +541,7 @@ def main() -> int:
     print(f"Dataset: {DATASET_REPO} @ {DATASET_COMMIT[:10]}")
     found = candidates_by_chain()
 
+    status = 0
     for chain_key in chains:
         chain = config.CHAINS[chain_key]
         sanctioned = set(json.loads(chain.risk_labels_path.read_text())["labels"])
@@ -527,58 +551,75 @@ def main() -> int:
         print(f"\n== {chain_key}: {len(ordered)} candidates "
               f"({len(found[chain_key]) - len(ordered)} already on the OFAC file)\n")
         verify = verify_ethereum if chain_key == "ethereum" else verify_bsc
-        kept, dropped = verify(ordered)
+        kept, dropped, errors = verify(ordered)
 
         counts = Counter(m["category"] for m in kept.values())
         print(f"\n{chain_key}: kept={len(kept)} ({counts[STOLEN]} stolen, {counts[SCAM]} scam, {counts[MIXER]} mixer)  "
-              f"dropped={len(dropped)}")
+              f"dropped={len(dropped)}  errors={len(errors)}")
         for line in dropped:
             print(f"  - {line}")
+
+        # The file also holds what --scam-lists merged in: this run replaces only
+        # its own entries (the explorer tags), and a failed check keeps the old one.
+        path = chain.threat_labels_path
+        document = json.loads(path.read_text()) if path.exists() else {"_meta": {}, "labels": {}}
+        held = document["labels"]
+        new_unchecked = [a for a in errors if a not in held]
+        if new_unchecked:
+            print(f"{len(new_unchecked)} new candidates could not be checked; re-run to finish before writing.")
+            status = 1
+            continue
+        try:
+            labels, merge = merge_owned(
+                held, kept, owned=lambda a, e, mine=found[chain_key]: a in mine or OWN_SOURCE in e.get("source", ""),
+                unknown=set(errors), allow_shrink=args.allow_shrink)
+        except ShrinkRefused as exc:
+            print(f"{chain_key}: refused, nothing written: {exc}")
+            status = 1
+            continue
+        print(f"{chain_key}: {dict(merge)}")
         if args.dry_run:
             continue
-        if not kept:
+        if not labels:
             print("Nothing verified; not writing an empty file.")
             continue
 
-        document = {
-            "_meta": {
-                "description": (
-                    "Wallets tied to known hacks, reported phishing and scam "
-                    "wallets, and mixer pools, that Exchequer screens a trace "
-                    "against. OFAC lists none of them, so this file fills the gap "
-                    "the sanctions file leaves."
-                ),
-                "provenance": (
-                    f"The block explorer's own address tags ({EXPLORER[chain_key]}), "
-                    f"from {DATASET_REPO} @ {DATASET_COMMIT}, a published scrape of "
-                    "them, selected and verified by "
-                    "backend/scripts/import_threat_labels.py."
-                ),
-                "verification_note": (
-                    "Every address was confirmed to exist and to have been used "
-                    "on chain. The attribution itself is the explorer's -- strong, "
-                    "public, but not a government designation. A match means the "
-                    "funds touched a wallet the explorer ties to a theft or a "
-                    "mixer; it does NOT mean any counterparty took part in it. "
-                    "Re-check the tag on the explorer before evidentiary use."
-                ),
-                "category_note": CATEGORY_NOTE,
-                "chain": chain_key,
-                "last_reviewed": datetime.now(timezone.utc).date().isoformat(),
-                "counts": {STOLEN: counts[STOLEN], SCAM: counts[SCAM], MIXER: counts[MIXER]},
-                "regenerate_with": (
-                    "cd backend && .venv/bin/python -m scripts.import_threat_labels"
-                ),
-                "schema": "labels maps an address to {category, entity, label, source}",
-            },
-            "labels": dict(sorted(kept.items(), key=lambda kv: (kv[1]["category"], kv[1]["entity"], kv[1]["label"]))),
-        }
-        chain.threat_labels_path.write_text(json.dumps(document, indent=2) + "\n")
-        print(f"Wrote {len(kept)} labels to {chain.threat_labels_path}")
+        meta = document.setdefault("_meta", {})
+        meta.update({
+            "description": (
+                "Wallets tied to known hacks, reported phishing and scam "
+                "wallets, and mixer pools, that Exchequer screens a trace "
+                "against. OFAC lists none of them, so this file fills the gap "
+                "the sanctions file leaves."
+            ),
+            "provenance": (
+                f"The block explorer's own address tags ({EXPLORER[chain_key]}), "
+                f"from {DATASET_REPO} @ {DATASET_COMMIT}, a published scrape of "
+                "them, selected and verified by "
+                "backend/scripts/import_threat_labels.py."
+            ),
+            "verification_note": (
+                "Every address was confirmed to exist and to have been used "
+                "on chain. The attribution itself is the explorer's -- strong, "
+                "public, but not a government designation. A match means the "
+                "funds touched a wallet the explorer ties to a theft or a "
+                "mixer; it does NOT mean any counterparty took part in it. "
+                "Re-check the tag on the explorer before evidentiary use."
+            ),
+            "category_note": CATEGORY_NOTE,
+            "chain": chain_key,
+            "last_reviewed": datetime.now(timezone.utc).date().isoformat(),
+            "counts": _counts(labels),
+            "regenerate_with": chain_regenerate(meta.get("regenerate_with"), BASE_RUN, SCAM_RUN),
+            "schema": "labels maps an address to {category, entity, label, source}",
+        })
+        document["labels"] = _ordered(labels)
+        path.write_text(json.dumps(document, indent=2) + "\n")
+        print(f"Wrote {len(labels)} labels to {path}")
 
     if args.dry_run:
         print("\n--dry-run: nothing written.")
-    return 0
+    return status
 
 
 if __name__ == "__main__":

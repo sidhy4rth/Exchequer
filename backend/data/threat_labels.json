@@ -11,7 +11,7 @@
       "scam": 7981,
       "mixer": 40
     },
-    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_threat_labels",
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_threat_labels && then cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists",
     "schema": "labels maps an address to {category, entity, label, source}",
     "scam_lists": "8139 reported phishing/scam wallets from ScamSniffer (scamsniffer/scam-database @ 753310a5c8ae9b83d8d05ae21e3b2ae60bf87c98) and Etherscan's Phish/Hack label (dappcenter/etherscan-labels @ d547040b8bf65577945bcc53cec62a96945cc705; forta-network/labelled-datasets @ 40a9c2f2bd7e9ddfdd0f3540db589f0288e1e88a), each confirmed used on this chain. A report on a list is an accusation by that list, not a finding. Regenerate: cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists",
     "recategorised": {

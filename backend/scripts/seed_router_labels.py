@@ -19,6 +19,11 @@ have contract bytecode. An externally-owned account labelled as a router would
 be a data error, and following its "swaps" would invent transactions.
 
     cd backend && .venv/bin/python -m scripts.seed_router_labels
+
+A check that fails (an expired key, a rate limit) is unknown, not "no
+bytecode": that chain's file is left as it is and the run exits 1. The files
+also hold routers added by hand (the OKX DEX routers), so a run replaces only
+the routers its source names and keeps the rest.
 """
 from __future__ import annotations
 
@@ -35,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app import config  # noqa: E402
 from app.etherscan_client import EtherscanClient, EtherscanError, is_evm_address, normalize_address  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
+from scripts._label_files import ShrinkRefused, merge_owned  # noqa: E402
 
 DATASET_REPO = "brianleect/etherscan-labels"
 DATASET_COMMIT = "923aba72c7e2d0682f7ae6194b6140bd90668dc9"
@@ -97,8 +103,11 @@ def has_code_bsc(client: NoderealClient, address: str) -> bool | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--allow-shrink", action="store_true",
+                        help="let a run remove more than a handful of the routers its source names")
     args = parser.parse_args()
 
+    status = 0
     for chain_key, (folder, categories) in SOURCES.items():
         chain = config.CHAINS[chain_key]
         print(f"\n{chain.name}")
@@ -123,17 +132,39 @@ def main() -> int:
 
         labels: dict[str, dict[str, str]] = {}
         rejected: list[str] = []
+        unverified: list[str] = []
         with client:
             for address, name in sorted(candidates.items()):
                 verdict = check(address)
                 if verdict is True:
                     labels[address] = {"exchange": protocol_of(name), "label": name, "type": "router"}
+                elif verdict is False:
+                    rejected.append(f"{address}  {name}  (no bytecode)")
                 else:
-                    rejected.append(f"{address}  {name}  ({'no bytecode' if verdict is False else 'unverified'})")
+                    unverified.append(f"{address}  {name}")
         for line in rejected:
             print("  -", line)
         print(f"  accepted {len(labels)} routers across "
               f"{len({m['exchange'] for m in labels.values()})} protocols")
+        if unverified:
+            print(f"  {len(unverified)} could not be checked; {chain.router_labels_path} left as it is")
+            status = 1
+            continue
+        held = {}
+        if chain.router_labels_path and chain.router_labels_path.exists():
+            held = json.loads(chain.router_labels_path.read_text()).get("labels", {})
+        try:
+            labels, merge = merge_owned(held, labels, owned=lambda a, _e, mine=candidates: a in mine,
+                                        allow_shrink=args.allow_shrink)
+        except ShrinkRefused as exc:
+            print(f"  refused, nothing written: {exc}")
+            status = 1
+            continue
+        print(f"  merged: {dict(merge)}")
+        if not labels:
+            print("  nothing accepted; not writing an empty router file")
+            status = 1
+            continue
 
         document = {
             "_meta": {
@@ -154,13 +185,13 @@ def main() -> int:
                 "rejected": rejected,
                 "count": len(labels),
             },
-            "labels": labels,
+            "labels": dict(sorted(labels.items())),
         }
         if args.dry_run or not chain.router_labels_path:
             continue
         chain.router_labels_path.write_text(json.dumps(document, indent=2) + "\n")
         print(f"  wrote {chain.router_labels_path}")
-    return 0
+    return status
 
 
 if __name__ == "__main__":

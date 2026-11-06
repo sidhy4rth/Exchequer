@@ -6,7 +6,7 @@
   "chain": "bsc",
   "chain_id": 56,
   "last_reviewed": "2026-09-22",
-  "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels && then cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc",
+  "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels && then cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc && then cd backend && .venv/bin/python -m scripts.port_evm_labels",
   "schema": "labels maps a lowercase address to {exchange, label, type}",
   "supplemented_from": "8 further labels imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a newer published scrape of the same explorer label pages, and verified on chain the same way, by backend/scripts/import_eth_labels.py.",
   "ported_from_ethereum": "146 Ethereum-labelled exchange accounts added 2026-09-23 by backend/scripts/port_evm_labels.py: each has no contract code on BNB Smart Chain and has sent a transaction there (nonce > 0), read through NodeReal.",

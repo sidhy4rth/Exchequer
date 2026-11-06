@@ -69,6 +69,7 @@ from app.etherscan_client import (  # noqa: E402
     normalize_address,
 )
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
+from scripts._label_files import chain_regenerate  # noqa: E402
 from scripts.import_exchange_labels import has_value_history  # noqa: E402
 from scripts.seed_bsc_labels import ACTIVITY_LOOKBACK, bsc_activity  # noqa: E402
 from scripts.seed_tron_labels import CANONICAL as TRON_CANONICAL  # noqa: E402
@@ -361,10 +362,9 @@ def main() -> int:
             "label pages, and verified on chain the same way, by "
             "backend/scripts/import_eth_labels.py."
         )
-        meta["regenerate_with"] = (
-            f"{meta.get('regenerate_with', '').split(' && then ')[0]} && then "
-            f"cd backend && .venv/bin/python -m scripts.import_eth_labels --chain {chain_key}"
-        )
+        # Appended, never truncated: the file may list other importers after this one.
+        meta["regenerate_with"] = chain_regenerate(
+            meta.get("regenerate_with"), f"cd backend && .venv/bin/python -m scripts.import_eth_labels --chain {chain_key}")
         path.write_text(json.dumps(document, indent=2) + "\n")
         print(f"\nWrote {len(merged)} labels to {path} (+{len(accepted)})")
 
