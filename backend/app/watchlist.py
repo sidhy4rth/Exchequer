@@ -633,6 +633,8 @@ def check_watch(watch_id: str, source: Source = open_source,
     except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
         _finish_check(watch_id, error=f"Could not read the address this round ({type(exc).__name__}).")
         logger.warning("Watch %s: provider failure: %s", watch_id, exc)
+        if hook:  # the outbox does not wait for the chain
+            _deliver_safely(watch_id, address, chain_key, case_id, post)
         return []
     if unconfirmed:
         # The head could not be read, so the newest rows may not have settled:
@@ -659,16 +661,22 @@ def check_watch(watch_id: str, source: Source = open_source,
     except Exception as exc:  # noqa: BLE001 -- one watch must not stop the rest
         logger.exception("Watch %s: could not store this check", watch_id)
         _record_failure(watch_id, f"Could not store this round's alerts ({type(exc).__name__}).")
-        return []
+        out = []
 
     if hook:
-        try:
-            _deliver_pending(watch_id, hook, address, chain.key, case_id, post)
-        except Exception as exc:  # noqa: BLE001 -- stored; posted with the next check
-            logger.exception("Watch %s: webhook delivery failed", watch_id)
-            _note_webhook_failure(watch_id, f"Webhook: delivery failed ({type(exc).__name__}); "
-                                            "the alerts are in the app.")
+        _deliver_safely(watch_id, address, chain.key, case_id, post)
     return out
+
+
+def _deliver_safely(watch_id: str, address: str, chain_key: str, case_id: str | None,
+                    post: Callable[[str, dict[str, Any]], None]) -> None:
+    """_deliver_pending, never raising: what it did not post stays pending."""
+    try:
+        _deliver_pending(watch_id, address, chain_key, case_id, post)
+    except Exception as exc:  # noqa: BLE001 -- stored; posted with the next check
+        logger.exception("Watch %s: webhook delivery failed", watch_id)
+        _note_webhook_failure(watch_id, f"Webhook: delivery failed ({type(exc).__name__}); "
+                                        "the alerts are in the app.")
 
 
 def _claim(at: float | None = None) -> str:
@@ -684,16 +692,22 @@ def _claimed_at(delivery: str) -> int:
         return 0  # not a claim this code made: stale
 
 
-def _deliver_pending(watch_id: str, hook: str, address: str, chain_key: str, case_id: str | None,
+def _deliver_pending(watch_id: str, address: str, chain_key: str, case_id: str | None,
                      post: Callable[[str, dict[str, Any]], None]) -> None:
     """Post this watch's alerts its webhook has not taken yet: this check's,
     and any left from earlier checks in the last day. They are claimed first,
     so two checks of one watch never post the same alert twice; a claim left
-    by a check that died while posting is given up after CLAIM_STALE_SECONDS."""
+    by a check that died while posting is given up after CLAIM_STALE_SECONDS.
+    The watch is read again first: one stopped, or whose webhook was removed
+    or replaced, while the chain was being read posts nothing to the old URL."""
     claim = _claim()
     cutoff = _iso_ago(REDELIVER_SECONDS)
     Alert = models.Alert
     with models.session() as s:
+        watch = s.get(models.Watch, watch_id)
+        hook = webhook_vault.reveal(watch.webhook_url) if watch is not None and watch.active else None
+        if not hook:
+            return
         stale = time.time() - CLAIM_STALE_SECONDS
         for a in list(s.scalars(select(Alert).where(Alert.watch_id == watch_id, Alert.delivery.like("c%")))):
             if _claimed_at(a.delivery) < stale:

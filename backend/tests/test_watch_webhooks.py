@@ -306,3 +306,49 @@ def test_a_delivery_that_breaks_does_not_fail_the_check(chain, monkeypatch):
     out = watchlist.check_watch(w.id, source=chain)
     assert [a["kind"] for a in out] == ["exchange"]
     assert last_error(w).startswith("Webhook:") and delivery_of(w.id) == [("exchange", "pending")]
+
+
+def test_a_pending_alert_is_posted_even_when_the_next_read_fails(chain, monkeypatch):
+    # The outbox is about the webhook, not the chain: a provider outage after
+    # a failed post used to hold the alert back until it was a day old.
+    hook = Hook(httpx.Response(503))
+    hook.install(monkeypatch)
+    w = hooked(chain)
+    chain.transfers = [tx(100, STRANGER), tx(101, BINANCE_14, 2.0, ts=later())]
+    watchlist.check_watch(w.id, source=chain)
+    assert delivery_of(w.id) == [("exchange", "pending")]
+    chain.fail = True
+    assert watchlist.check_watch(w.id, source=chain) == []
+    assert len(hook.bodies) == 2 and "Binance" in hook.bodies[1]["text"]
+    assert delivery_of(w.id) == [("exchange", "sent")]
+    assert last_error(w).startswith("Could not read")  # the provider error still shows
+
+
+def test_a_pending_alert_is_posted_even_when_this_check_cannot_store(chain, monkeypatch):
+    hook = Hook(httpx.Response(503))
+    hook.install(monkeypatch)
+    w = hooked(chain)
+    chain.transfers = [tx(100, STRANGER), tx(101, BINANCE_14, 2.0, ts=later())]
+    watchlist.check_watch(w.id, source=chain)
+    chain.transfers = [*chain.transfers, tx(102, STRANGER, 1.0, ts=later(5))]
+
+    def broken(*a, **k):
+        raise RuntimeError("store")
+    monkeypatch.setattr(watchlist, "_finish_check", broken)
+    assert watchlist.check_watch(w.id, source=chain) == []
+    assert len(hook.bodies) == 2 and "Binance" in hook.bodies[1]["text"]
+
+
+def test_a_webhook_removed_while_the_chain_is_read_gets_nothing(chain, monkeypatch):
+    hook = Hook()
+    hook.install(monkeypatch)
+    w = hooked(chain)
+    chain.transfers = [tx(100, STRANGER), tx(101, BINANCE_14, 2.0, ts=later())]
+    finish = watchlist._finish_check
+
+    def removed_meanwhile(*a, **k):
+        watchlist.clear_webhook(owner(ALICE), w.id)
+        return finish(*a, **k)
+    monkeypatch.setattr(watchlist, "_finish_check", removed_meanwhile)
+    watchlist.check_watch(w.id, source=chain)
+    assert hook.bodies == []
