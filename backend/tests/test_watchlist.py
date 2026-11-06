@@ -219,3 +219,23 @@ def test_a_tron_watch_baselined_by_block_starts_again_rather_than_flooding(chain
     assert watchlist.check_watch(w.id, source=chain) == []
     chain.transfers.append(trc20(99))
     assert len(watchlist.check_watch(w.id, source=chain)) == 1
+
+
+def test_a_busy_watch_keeps_only_its_newest_alerts(chain, monkeypatch):
+    # Every check can store a page of alerts and nothing ever removed them:
+    # a watch on a wallet that moves all day filled the free database.
+    monkeypatch.setattr(watchlist, "MAX_ALERTS_PER_WATCH", 30)
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    chain.transfers = [tx(100, STRANGER)]
+    watchlist.check_watch(w.id, source=chain)  # baseline
+    block = 101
+    for _ in range(4):  # 4 checks x 20 new transfers = 80 alerts offered
+        chain.transfers = [tx(block + i, STRANGER) for i in range(20)]
+        block += 20
+        watchlist.check_watch(w.id, source=chain)
+    from sqlalchemy import func, select
+    with models.session() as s:
+        stored = s.scalars(select(models.Alert.tx_time).where(models.Alert.watch_id == w.id)).all()
+        assert s.scalar(select(func.count()).select_from(models.Alert)) == 30
+    # The newest survive.
+    assert max(stored) == max(t.timestamp for t in chain.transfers)

@@ -12,6 +12,7 @@ without one there is nothing to list and nothing can be watched.
 """
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -79,6 +80,25 @@ def delete_watch(watch_id: str, http: Request) -> dict[str, Any]:
     return {"removed": watch_id}
 
 
+# A manual check reads the provider fresh, past the cache, so it is bounded
+# per connection and for the site as a whole, per minute. Owner keys are free,
+# so the per-watch cooldown alone bounded nothing.
+CHECKS_PER_MINUTE_PER_CLIENT = 10
+CHECKS_PER_MINUTE_TOTAL = 60
+checks_per_client = rate_limit.SlidingWindowLimiter(CHECKS_PER_MINUTE_PER_CLIENT, 60)
+checks_total = rate_limit.SlidingWindowLimiter(CHECKS_PER_MINUTE_TOTAL, 60)
+_TOTAL = "all"
+# Watches being checked right now: a second click while the first is still
+# reading would otherwise reach the provider again (the cooldown is only
+# written once a check finishes).
+_checking: set[str] = set()
+_checking_lock = threading.Lock()
+
+
+def _too_many(detail: str, wait: float) -> HTTPException:
+    return HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(int(wait) + 1)})
+
+
 @router.post("/watches/{watch_id}/check")
 def check_now(watch_id: str, http: Request) -> dict[str, Any]:
     owner = _owner(http)
@@ -90,7 +110,24 @@ def check_now(watch_id: str, http: Request) -> dict[str, Any]:
         wait = int(watchlist.MIN_MANUAL_CHECK_SECONDS - since) + 1
         raise HTTPException(status_code=429, detail=f"Checked {int(since)} s ago. Try again in {wait} s.",
                             headers={"Retry-After": str(wait)})
-    new = watchlist.check_watch(watch_id)
+    with _checking_lock:
+        if watch_id in _checking:
+            raise _too_many("This watch is being checked right now.", 5)
+        if checks_total.remaining(_TOTAL) == 0:
+            raise _too_many("This site has made as many manual checks as it allows this minute. "
+                            "Try again shortly.", 30)
+        client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+        wait = checks_per_client.check(client)
+        if wait is not None:
+            raise _too_many(f"This connection has checked {CHECKS_PER_MINUTE_PER_CLIENT} watches "
+                            "in the last minute. Try again shortly.", wait)
+        checks_total.check(_TOTAL)
+        _checking.add(watch_id)
+    try:
+        new = watchlist.check_watch(watch_id)
+    finally:
+        with _checking_lock:
+            _checking.discard(watch_id)
     refreshed = watchlist.get_owned_watch(owner, watch_id)
     return {"new_alerts": new, "watch": watchlist.watch_summary(refreshed) if refreshed else None}
 

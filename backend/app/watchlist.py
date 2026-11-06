@@ -32,7 +32,7 @@ from typing import Any, Callable
 from urllib.parse import urlsplit
 
 import httpx
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from . import config, models
 from .api_budget import fresh_reads
@@ -47,6 +47,10 @@ MAX_WATCHES_PER_OWNER = 25
 MAX_WATCHES_TOTAL = 500
 MIN_MANUAL_CHECK_SECONDS = 60
 FETCH_LIMIT = 50  # newest outgoing transfers read per check
+# Alerts kept per watch, newest first. Every check of a busy wallet can store a
+# page of them and nothing else removes them; 500 watches x 200 bounds the
+# table at about 100k rows on the free database.
+MAX_ALERTS_PER_WATCH = 200
 
 DEFAULT_WEBHOOK_HOSTS = frozenset({
     "hooks.slack.com", "discord.com", "discordapp.com", "chat.googleapis.com",
@@ -385,6 +389,13 @@ def _finish_check(watch_id: str, seen_block: int | None = None, error: str | Non
         if error is None and seen_block is not None:
             watch.last_seen_block = seen_block
         s.add_all(alerts or [])
+        s.flush()
+        if alerts:
+            keep = (select(models.Alert.id).where(models.Alert.watch_id == watch_id)
+                    .order_by(models.Alert.tx_time.desc(), models.Alert.created_at.desc())
+                    .limit(MAX_ALERTS_PER_WATCH))
+            s.execute(delete(models.Alert).where(models.Alert.watch_id == watch_id,
+                                                 models.Alert.id.not_in(keep)))
         s.commit()
         return True
 
