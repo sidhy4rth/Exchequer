@@ -202,18 +202,27 @@ class ExchangeMatcher:
         return matches
 
     @staticmethod
-    def primary_match(matches: list[ExchangeMatch]) -> ExchangeMatch | None:
+    def primary_match(matches: list[ExchangeMatch],
+                      shares: dict[str, float] | None = None) -> ExchangeMatch | None:
         """The match to attribute the case to.
 
-        Rule: the exchange reached in the fewest hops from the victim's
-        address. Rationale -- the shortest path is the least diluted by
-        intermediate mixing, so it is the strongest attribution. Ties are
-        broken by preferring a label-file match over an inferred one, then by
-        the larger value received.
+        Rule: follow the money. With `shares` (each match's share of what the
+        reported address sent; see pipeline.run_trace), the largest share
+        wins; shares within one percentage point count as equal, and then the
+        match fewest hops away wins, a label-file match before an inferred
+        one, then the larger value received. Closest-first alone let one dust
+        transfer to any exchange wallet, or to an innocent customer's deposit
+        address, become the case's exchange. An inferred deposit address keeps
+        its lead over the hot wallet it sweeps to: the hot wallet's share
+        through it can never be larger. Without `shares` the order is the
+        closest-first one, for callers that have no graph to measure.
         """
         if not matches:
             return None
-        return min(matches, key=lambda m: (m.depth, m.inferred, -m.value_received_native))
+        if shares is None:
+            return min(matches, key=lambda m: (m.depth, m.inferred, -m.value_received_native))
+        return min(matches, key=lambda m: (-round(shares.get(m.address, 0.0), 2), m.depth, m.inferred,
+                                           -m.value_received_native))
 
 
 @lru_cache(maxsize=None)

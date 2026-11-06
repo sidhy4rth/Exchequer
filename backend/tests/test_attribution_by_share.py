@@ -1,0 +1,177 @@
+"""The case's exchange is where the money went, not merely the closest match.
+
+The primary match used to be the one with the fewest hops, however little of
+the traced value reached it. A scammer could send 0.002 ETH to any exchange
+wallet -- or to an innocent customer's deposit address -- and that became the
+case's exchange, its 'High' confidence and the addressee of the KYC/freeze
+letter, while the 99 ETH cash-out went unmentioned.
+
+Now every match carries its share of what the reported wallet sent (reach
+along the strongest shortest path / the wallet's outflow, or the victim's
+reported payments). The largest share wins, hops only break near-ties, and the
+confidence band is capped when the attributed share is small.
+"""
+from __future__ import annotations
+
+from contextlib import contextmanager
+
+import networkx as nx
+import pytest
+
+from app import pipeline
+from app.etherscan_client import Transaction
+from app.exchange_matcher import ExchangeMatch, ExchangeMatcher
+from app.graph_builder import INCOMING, OUTGOING
+from app.pipeline import TraceRequest, run_trace
+from app.scoring import reach_bottlenecks, score_case, seed_outflow
+from conftest import addr
+
+SEED = addr("5eed")
+W1, W2 = addr("a1"), addr("a2")
+BINANCE_14 = "0x28c6c06298d514db089934071355e5743bf21d60"  # data/exchange_labels.json
+KRAKEN_1 = "0x2910543af39aba0cd09dbb2d50200b3e800a63d2"   # data/exchange_labels.json
+D = addr("d0d0")  # an innocent customer's Binance deposit address
+T = 1_700_000_000
+
+
+def graph(edges, seed=SEED):
+    g = nx.DiGraph()
+    for src, dst, value in edges:
+        g.add_edge(src, dst, value_native=value)
+    g.nodes[seed]["depth"] = 0
+    return g
+
+
+def match(address, exchange, depth, value=1.0, **extra):
+    return ExchangeMatch(address=address, exchange=exchange, label=exchange, wallet_type="hot_wallet",
+                         depth=depth, value_received_native=value, **extra)
+
+
+# --- the numbers ---------------------------------------------------------------
+
+def test_reach_is_the_strongest_shortest_path_bottleneck():
+    a, b, c = addr("a"), addr("b"), addr("c")
+    g = graph([(SEED, a, 10.0), (a, b, 3.0), (SEED, c, 5.0), (c, b, 8.0)])
+    reach = reach_bottlenecks(g, SEED, OUTGOING)
+    assert reach[a] == 10.0 and reach[c] == 5.0
+    assert reach[b] == 5.0  # via c: min(5, 8) beats via a: min(10, 3)
+
+
+def test_reach_follows_the_money_upstream_on_a_reverse_trace():
+    hot, x = addr("b0"), addr("c0")
+    g = graph([(hot, x, 9.0), (x, SEED, 7.0)])
+    assert reach_bottlenecks(g, SEED, INCOMING)[hot] == 7.0
+
+
+def test_seed_outflow_nets_out_value_that_came_back():
+    y = addr("e")
+    g = graph([(SEED, y, 10.0), (SEED, W1, 5.0), (y, SEED, 4.0)])
+    assert seed_outflow(g, SEED, OUTGOING) == pytest.approx(11.0)
+    # Never below the largest single transfer out.
+    g2 = graph([(SEED, y, 10.0), (y, SEED, 10.0)])
+    assert seed_outflow(g2, SEED, OUTGOING) == pytest.approx(10.0)
+
+
+# --- choosing the match --------------------------------------------------------
+
+def test_the_larger_share_wins_over_the_closer_match():
+    kraken, binance = match(KRAKEN_1, "Kraken", 1), match(BINANCE_14, "Binance", 2)
+    shares = {KRAKEN_1: 0.33, BINANCE_14: 0.60}
+    assert ExchangeMatcher.primary_match([kraken, binance], shares).exchange == "Binance"
+
+
+def test_a_dust_match_never_outranks_a_material_one():
+    dust, real = match(KRAKEN_1, "Kraken", 1), match(BINANCE_14, "Binance", 3)
+    assert ExchangeMatcher.primary_match([dust, real], {KRAKEN_1: 0.0002, BINANCE_14: 0.99}) is real
+
+
+def test_the_closer_match_wins_when_shares_are_about_equal():
+    near, far = match(KRAKEN_1, "Kraken", 1), match(BINANCE_14, "Binance", 2)
+    assert ExchangeMatcher.primary_match([far, near], {KRAKEN_1: 0.501, BINANCE_14: 0.499}) is near
+
+
+def test_without_shares_the_old_rule_still_applies():
+    near, far = match(KRAKEN_1, "Kraken", 1), match(BINANCE_14, "Binance", 2)
+    assert ExchangeMatcher.primary_match([far, near]) is near
+
+
+# --- the score -----------------------------------------------------------------
+
+@pytest.mark.parametrize("share, allowed", [(0.05, {"low", "very low"}), (0.30, {"moderate", "low", "very low"})])
+def test_a_small_attributed_share_caps_the_band(share, allowed):
+    g = graph([(SEED, KRAKEN_1, 1.0)])
+    m = match(KRAKEN_1, "Kraken", 1, value=1.0)
+    capped = score_case(g, SEED, m, materiality={"primary_share": share, "threshold": 0.10, "majority": 0.50,
+                                                 "denominator": 20.0, "primary_reach": 20.0 * share})
+    assert capped.band in allowed
+    assert any("%" in c and "reached" in c for c in capped.caveats)
+    assert score_case(g, SEED, m).band == "high"  # the control: uncapped it is high
+
+
+# --- end to end, with a fake provider ---------------------------------------------
+
+_COUNTER = iter(range(1, 10**6))
+
+
+def _tx(src, dst, value, when):
+    return Transaction(hash="0x" + f"{next(_COUNTER):064x}", from_address=src, to_address=dst, value_native=value,
+                       value_wei=int(value * 1e18), timestamp=when, block_number=when // 12,
+                       is_error=False, asset="ETH")
+
+
+BASE = [_tx(SEED, W1, 99.0, T + 10), _tx(W1, W2, 99.0, T + 20), _tx(W2, BINANCE_14, 99.0, T + 30)]
+
+
+@pytest.fixture
+def trace(monkeypatch):
+    def run(history):
+        class Fake:
+            def get_outgoing_transactions(self, address, limit=None):
+                return [t for t in history if t.from_address == address]
+
+        @contextmanager
+        def open_source(chain, asset):
+            yield Fake()
+        monkeypatch.setattr(pipeline, "open_source", open_source)
+        monkeypatch.setattr(pipeline, "detect_swaps", lambda *a, **k: [])
+        return run_trace(TraceRequest(address=SEED, chain="ethereum", asset="ETH", max_depth=4,
+                                      follow_swaps=False))
+    return run
+
+
+def test_a_dust_transfer_to_another_exchange_does_not_take_the_case(trace):
+    r = trace(BASE + [_tx(SEED, KRAKEN_1, 0.002, T + 5)])
+    assert r["exchange"] == "Binance" and r["exchange_address"] == BINANCE_14
+    kraken = next(m for m in r["matches"] if m["address"] == KRAKEN_1)
+    assert kraken["material"] is False
+    assert r["materiality"]["primary_share"] > 0.98
+
+
+def test_dust_to_an_innocent_deposit_address_is_not_the_attribution(trace):
+    r = trace(BASE + [_tx(SEED, D, 0.002, T + 5), _tx(D, BINANCE_14, 0.5, T + 100), _tx(D, BINANCE_14, 0.7, T + 200)])
+    assert r["exchange_address"] != D
+    assert r["exchange"] == "Binance"
+
+
+def test_the_plain_case_is_unchanged(trace):
+    r = trace(BASE)
+    assert r["exchange_address"] == BINANCE_14
+    assert r["materiality"]["basis"] == "seed_outflow" and r["materiality"]["multiple_exchanges"] is False
+
+
+def test_the_principal_path_is_found_fast_on_a_lattice_built_to_explode():
+    # 2^40 equally short routes: listing them all (the old principal_path)
+    # never finishes; the widest-route search reads each edge once.
+    import time
+
+    from app.scoring import principal_path
+    g = nx.DiGraph()
+    layers = [[SEED]] + [[addr(f"{i:02x}{j}") for j in "ab"] for i in range(40)] + [[BINANCE_14]]
+    for here, there in zip(layers, layers[1:], strict=False):
+        for a in here:
+            for b in there:
+                g.add_edge(a, b, value_native=1.0)
+    start = time.monotonic()
+    path = principal_path(g, SEED, BINANCE_14)
+    assert time.monotonic() - start < 1.0
+    assert path[0] == SEED and path[-1] == BINANCE_14 and len(path) == 42

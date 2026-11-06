@@ -30,6 +30,7 @@ exchange match. If nothing matched, the score is 0.0 and the verdict is
 """
 from __future__ import annotations
 
+import heapq
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -142,24 +143,102 @@ def _hop_proximity(depth: int, max_depth: int, direction: str = OUTGOING) -> Sco
 def principal_path(graph: nx.DiGraph, source: str, destination: str) -> list[str]:
     """The route the attribution is read along, chosen the same way every time.
 
-    Among the shortest paths from `source` to `destination`, the one whose
-    narrowest hop carried the most value -- the path that could have moved the
-    most of the traced funds. networkx's own shortest_path picks one of several
-    equal-length routes by insertion order, which is arbitrary from an
-    investigator's point of view: a dust transfer that happens to reach the
-    same exchange could be the path the score and the report were read from.
-    Ties are broken by address order so the choice is reproducible.
+    The widest route from `source` to `destination`: the one whose narrowest
+    hop carried the most value -- the route that could have moved the most of
+    the traced funds -- with ties going to fewer hops, then to address order.
+    It used to be the widest among the *shortest* routes only, so a dust
+    transfer that happened to reach the same exchange in fewer hops could be
+    the path the pro-rata estimate, the score and the report were read from;
+    and listing every shortest route grew exponentially on a lattice of
+    wallets built to do that. This is O(E log V) and agrees with
+    `reach_bottlenecks`.
 
     Raises the same exceptions as nx.shortest_path when there is no route.
     """
-    def bottleneck(path: list[str]) -> float:
-        return min(
-            graph.edges[path[i], path[i + 1]].get("value_native", 0.0)
-            for i in range(len(path) - 1)
-        ) if len(path) > 1 else 0.0
+    if destination not in graph:
+        raise nx.NodeNotFound(f"{destination} is not in the graph")
+    best, prev = _widest(graph, source, forward=True)
+    if destination == source:
+        return [source]
+    if destination not in best:
+        raise nx.NetworkXNoPath(f"no path from {source} to {destination}")
+    path = [destination]
+    while path[-1] != source:
+        path.append(prev[path[-1]])
+    return path[::-1]
 
-    paths = list(nx.all_shortest_paths(graph, source, destination))
-    return min(paths, key=lambda p: (-bottleneck(p), p))
+def _widest(graph: nx.DiGraph, source: str, forward: bool = True,
+            ) -> tuple[dict[str, float], dict[str, str]]:
+    """Widest paths from `source`: for every address, the most value that
+    could have reached it along any route (the largest narrowest hop), and the
+    address before it on that route. Ties go to fewer hops, then to address
+    order, so the route is reproducible. Dijkstra on the bottleneck: O(E log V).
+
+    `forward=False` reads incoming edges -- money moving towards `source`, as
+    on a reverse trace -- taking each edge's value from the farther address to
+    the nearer one."""
+    if source not in graph:
+        raise nx.NodeNotFound(f"{source} is not in the graph")
+    step = graph.successors if forward else graph.predecessors
+
+    def value(near: str, far: str) -> float:
+        edge = graph.edges[near, far] if forward else graph.edges[far, near]
+        return float(edge.get("value_native", 0.0))
+
+    best: dict[str, float] = {source: float("inf")}
+    hops: dict[str, int] = {source: 0}
+    prev: dict[str, str] = {}
+    done: set[str] = set()
+    heap: list[tuple[float, int, str]] = [(-float("inf"), 0, source)]
+    while heap:
+        _, h, near = heapq.heappop(heap)
+        if near in done:
+            continue
+        done.add(near)
+        for far in step(near):
+            if far in done:
+                continue
+            width = min(best[near], value(near, far))
+            key = (-width, h + 1, near)
+            if far not in best or key < (-best[far], hops[far], prev.get(far, "")):
+                best[far], hops[far], prev[far] = width, h + 1, near
+                heapq.heappush(heap, (-width, h + 1, far))
+    best.pop(source, None)
+    return best, prev
+
+
+def reach_bottlenecks(graph: nx.DiGraph, source: str, direction: str = OUTGOING) -> dict[str, float]:
+    """For every address, the most value that could have reached it from
+    `source`: the narrowest hop of its widest route (see `_widest`). A route
+    through a dust transfer can never carry more than the dust, so a decoy
+    near the source cannot outweigh the route the money took, however short
+    the decoy's route is. On a reverse trace the routes run towards `source`.
+    `source` itself is not in the result."""
+    if source not in graph:
+        return {}
+    return _widest(graph, source, forward=direction == OUTGOING)[0]
+
+
+def seed_outflow(graph: nx.DiGraph, seed: str, direction: str = OUTGOING,
+                 untraced: list[dict[str, Any]] | None = None) -> float:
+    """What the reported wallet sent (or, on a reverse trace, received), as
+    the trace saw it: its edges, plus value it sent to counterparties the
+    trace did not follow, minus value that came back to it from wallets the
+    trace did follow (a round trip must not count twice). Never below its
+    largest single transfer.
+    """
+    if seed not in graph:
+        return 0.0
+    if direction == OUTGOING:
+        out = [d.get("value_native", 0.0) for _, _, d in graph.out_edges(seed, data=True)]
+        back = sum(d.get("value_native", 0.0) for _, _, d in graph.in_edges(seed, data=True))
+    else:
+        out = [d.get("value_native", 0.0) for _, _, d in graph.in_edges(seed, data=True)]
+        back = sum(d.get("value_native", 0.0) for _, _, d in graph.out_edges(seed, data=True))
+    left = sum(u.get("value_native", 0.0) for u in (untraced or []) if u.get("address") == seed)
+    if not out:
+        return float(left)
+    return max(max(out), sum(out) + left - back)
 
 
 def _amount_correlation(
@@ -316,6 +395,7 @@ def score_case(
     direction: str = OUTGOING,
     internal_transfers_read: bool = False,
     prorata: dict[str, Any] | None = None,
+    materiality: dict[str, Any] | None = None,
 ) -> ConfidenceScore:
     """Compute the confidence score for one traced case.
 
@@ -359,6 +439,16 @@ def score_case(
     ]
     score = round(sum(c.contribution for c in components), 4)
     band = _band(score)
+    capped = _materiality_cap(band, materiality)
+    material_caveat = []
+    if capped != band and materiality:
+        material_caveat = [
+            f"Only {materiality['primary_share'] * 100:.1f}% of what the reported address sent "
+            f"(about {materiality.get('primary_reach', 0):g} of {materiality.get('denominator', 0):g} "
+            f"{native_symbol}) reached this exchange, so confidence is capped at {capped}: the rest of "
+            "the funds went elsewhere."
+        ]
+        band = capped
 
     hops = f"{primary_match.depth} hop{'s' if primary_match.depth != 1 else ''}"
     if direction == OUTGOING:
@@ -381,9 +471,23 @@ def score_case(
         band=band,
         components=components,
         summary=summary,
-        caveats=_caveats(findings, truncated, matched=True, asset=native_symbol,
-                         internal_transfers_read=internal_transfers_read) + _prorata_caveats(prorata, native_symbol),
+        caveats=material_caveat + _caveats(findings, truncated, matched=True, asset=native_symbol,
+                                           internal_transfers_read=internal_transfers_read)
+        + _prorata_caveats(prorata, native_symbol),
     )
+
+
+_BAND_ORDER = ("very low", "low", "moderate", "high")
+
+
+def _materiality_cap(band: str, materiality: dict[str, Any] | None) -> str:
+    """Below the material share the band can be at most low; below a majority, at most moderate."""
+    if not materiality or materiality.get("primary_share") is None:
+        return band
+    share = materiality["primary_share"]
+    cap = ("low" if share < materiality.get("threshold", 0.10)
+           else "moderate" if share < materiality.get("majority", 0.50) else "high")
+    return band if _BAND_ORDER.index(band) <= _BAND_ORDER.index(cap) else cap
 
 
 def _prorata_caveats(prorata: dict[str, Any] | None, native_symbol: str) -> list[str]:

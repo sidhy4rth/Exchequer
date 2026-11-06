@@ -51,7 +51,7 @@ from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .risk_matcher import MIXER, REPORTED, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
 from .prorata import estimate as estimate_prorata
-from .scoring import principal_path, score_case
+from .scoring import principal_path, reach_bottlenecks, score_case, seed_outflow
 from .tracing_methods import compare as compare_methods
 
 
@@ -354,6 +354,43 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
     return chain, address
 
 
+def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
+                 untraced: list[dict[str, Any]], intake: dict[str, Any] | None,
+                 ) -> tuple[dict[str, Any], dict[str, float]]:
+    """Each match's share of what the reported address sent, and the case's
+    materiality record (pipeline.run_trace fills in the primary's figures).
+
+    Share = the most value that could have reached the match along a shortest
+    path (scoring.reach_bottlenecks) / a denominator: the victim's reported
+    payments for an intake trace, else the reported wallet's outflow as the
+    trace saw it (scoring.seed_outflow)."""
+    reach = reach_bottlenecks(graph, seed, direction)
+    outflow = seed_outflow(graph, seed, direction, untraced)
+    reported = reported_amount(intake["payments"]) if intake and intake.get("payments") else None
+    denominator, basis = (reported, "reported_amount") if reported else (outflow, "seed_outflow")
+    shares: dict[str, float] = {}
+    for m in matches:
+        if m.address == seed:
+            shares[m.address] = 1.0
+        elif denominator:
+            shares[m.address] = min(1.0, reach.get(m.address, 0.0) / denominator)
+    threshold = config.ATTRIBUTION_MATERIAL_SHARE
+    material = sorted({m.exchange for m in matches if shares.get(m.address, 0.0) >= threshold})
+    return {
+        "basis": basis,
+        "denominator": round(denominator or 0.0, 6),
+        "seed_outflow": round(outflow, 6),
+        "threshold": threshold,
+        "majority": config.ATTRIBUTION_MAJORITY_SHARE,
+        "primary_share": None,
+        "primary_reach": None,
+        "reach_method": "path_upper_bound",
+        "material_exchanges": material,
+        "multiple_exchanges": len(material) > 1,
+        "reach": reach,
+    }, shares
+
+
 def run_trace(request: TraceRequest, seed_window: int | None = None,
               budget: TraceBudget | None = None) -> dict[str, Any]:
     """Run one trace and return the full result, without storing it.
@@ -482,7 +519,15 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             # exchange, reading what else joined them in each wallet on the path.
             prorata = None
             methods = None
-            lead = ExchangeMatcher.primary_match(matches + inferred)
+            # Follow the money: each match's share of what the reported address
+            # sent picks the case's exchange, not its hop count alone (one dust
+            # transfer used to name any exchange, or an innocent deposit address).
+            materiality, shares = _materiality(result.graph, seed, direction, matches + inferred,
+                                               result.untraced, intake)
+            lead = ExchangeMatcher.primary_match(matches + inferred, shares)
+            if lead is not None:
+                materiality["primary_share"] = round(shares.get(lead.address, 0.0), 4)
+                materiality["primary_reach"] = round(materiality["reach"].get(lead.address, 0.0), 6)
             if direction == OUTGOING and lead is not None and lead.address != seed:
                 try:
                     lead_path = principal_path(result.graph, seed, lead.address)
@@ -574,7 +619,11 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     # wallet is the address a lawful request must name, so it leads when it
     # is closer; a label-file match wins any tie.
     matches = matches + inferred
-    primary = ExchangeMatcher.primary_match(matches)
+    primary = lead  # chosen once, above, so pro-rata and the case name the same address
+    if primary is not None and prorata and prorata.get("status") == "estimated" and materiality["denominator"]:
+        materiality["primary_reach"] = round(min(prorata["estimated"], materiality["denominator"]), 6)
+        materiality["primary_share"] = round(min(1.0, prorata["estimated"] / materiality["denominator"]), 4)
+        materiality["reach_method"] = "prorata"
     # Sanctions / mixer screening. Runs after exchange annotation so a node
     # that is somehow on both lists keeps both sets of tags.
     risk_matches = risk_matcher.annotate(graph, direction)
@@ -592,6 +641,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         direction=direction,
         internal_transfers_read=internal_read,
         prorata=prorata,
+        materiality=materiality,
     )
 
     # Swaps into a stablecoin this chain carries are followed as their own
@@ -754,7 +804,15 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         "value_received_native": (
             round(primary.value_received_native, 6) if primary else None
         ),
-        "matches": [m.to_dict() for m in matches],
+        "matches": [{**m.to_dict(),
+                     "share": round(shares.get(m.address, 0.0), 4),
+                     "reach_native": round(materiality["reach"].get(m.address, 0.0), 6),
+                     "material": shares.get(m.address, 0.0) >= materiality["threshold"]}
+                    for m in matches],
+        # How much of what the reported address sent reached the attributed
+        # exchange, and on what basis; also which exchanges received a
+        # material share (more than one: a letter may be needed to each).
+        "materiality": {k: v for k, v in materiality.items() if k != "reach"},
         # Sanctions / mixer screening. `risk_flags` mirrors `flags` so the
         # frontend can render both the same way; `risk_notes` are report-ready
         # sentences so neither the UI nor the report has to re-phrase them.

@@ -371,6 +371,12 @@ TRACE_MAX_DEPTH: int = _int_env("TRACE_MAX_DEPTH", 4)
 TRACE_TIME_BUDGET_DEFAULT: int = _int_env("EXCHEQUER_TRACE_TIME_BUDGET", 180)
 TRACE_TIME_BUDGET_MAX: int = _int_env("EXCHEQUER_TRACE_TIME_BUDGET_MAX", 300)
 TRACE_POST_WALK_SECONDS: int = _int_env("EXCHEQUER_TRACE_POST_WALK_SECONDS", 60)
+# Attribution follows the money (pipeline.run_trace): a match whose share of
+# what the reported address sent is under this percentage is not "material",
+# and a case whose exchange received less is scored low at most; under a
+# majority, moderate at most.
+ATTRIBUTION_MATERIAL_SHARE: float = _int_env("EXCHEQUER_MATERIAL_SHARE_PERCENT", 10) / 100
+ATTRIBUTION_MAJORITY_SHARE: float = 0.50
 TRACE_MAX_TXS_PER_ADDRESS: int = _int_env("TRACE_MAX_TXS_PER_ADDRESS", 200)
 TRACE_MAX_NODES: int = _int_env("TRACE_MAX_NODES", 400)
 # How many addresses at one depth are fetched concurrently. Providers answer in
