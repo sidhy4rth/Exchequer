@@ -72,3 +72,15 @@ def test_methodology_says_when_following_was_tried_but_did_not_finish():
     text = methodology(result)
     assert "attempted but did not finish" in text and "FOLLOW-ON TRACES" in text
     assert "a swap is followed only when" not in text
+
+
+def test_methodology_gives_the_no_stablecoin_reason_only_when_it_is_true():
+    # Demo 8's swap returned wstETH, which this chain does not follow: the reason holds.
+    assert "a swap is followed only when it returned a stablecoin" in methodology(DEMOS[8])
+    # A swap that did return USDT, read from its receipt, yet was not followed
+    # (a case stored with following unrecorded): the method must not invent why.
+    result = copy.deepcopy(DEMOS[8])
+    result["swaps"] = [{**result["swaps"][0], "asset_out": "USDT", "output_read": True}]
+    text = methodology(result)
+    assert "was not followed for this case" in text
+    assert "a swap is followed only when" not in text

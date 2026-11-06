@@ -469,6 +469,17 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
     return opening + found + extra + closing
 
 
+def _a_swap_could_be_followed(result: dict[str, Any]) -> bool:
+    """Whether any swap returned, readably, a stablecoin this chain carries
+    other than the one traced: what pipeline._follow_swaps follows."""
+    try:
+        traceable = {t.symbol for t in config.get_chain(result.get("chain")).tokens}
+    except config.UnknownChainError:
+        return True  # cannot tell, so give no reason
+    return any(s.get("output_read") and s.get("asset_out") in traceable
+               and s.get("asset_out") != result.get("native_symbol") for s in result.get("swaps") or [])
+
+
 def _swap_sentence(result: dict[str, Any]) -> str:
     """What happened at a swap, for this case: a signed method must not say the
     trace stopped where its own FOLLOW-ON TRACES section carries on."""
@@ -493,9 +504,11 @@ def _swap_sentence(result: dict[str, Any]) -> str:
         return (recorded + "; the trace ends there. Following the other asset was attempted but did not "
                 "finish for this case; FOLLOW-ON TRACES gives the reason for each.")
     if result.get("swaps"):
-        return (recorded + "; the trace ends there, and the other asset was not followed for this case (a "
-                "swap is followed only when it returned a stablecoin this chain carries and the return "
-                "could be read).")
+        # Give the rule as the reason only when it is the reason: a case can
+        # also have had following switched off without recording so.
+        why = (" (a swap is followed only when it returned a stablecoin this chain carries and the return "
+               "could be read)") if not _a_swap_could_be_followed(result) else ""
+        return recorded + "; the trace ends there, and the other asset was not followed for this case" + why + "."
     return (recorded + "; where a swap returns a stablecoin this chain carries, that stablecoin is followed "
             "as its own trace. No swap was found in this trace.")
 
