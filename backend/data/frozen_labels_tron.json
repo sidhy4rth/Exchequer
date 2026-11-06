@@ -6,12 +6,20 @@
   "chain": "tron",
   "last_reviewed": "2026-09-23",
   "counts": {
-   "frozen": 7589,
+   "frozen": 7588,
    "freeze_events": 8584,
-   "release_events": 967
+   "release_events": 967,
+   "excluded": 1
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_tether_freezes",
-  "schema": "labels maps an address to {category, entity, label, source}"
+  "schema": "labels maps an address to {category, entity, label, source}",
+  "excluded": {
+   "TDk91SWz2GvwfZwMTGX21d4ngUUH8YZZAv": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2022-06-30"
+   }
+  },
+  "excluded_note": "Frozen by Tether but left out: token contracts, DEX routers and burn addresses are on every user's path, not anyone's wallet (app/never_flag.py)."
  },
  "labels": {
   "T9yGhjmHZCqiujMZX1DjYgRVRN36VxgR7u": {
@@ -7657,12 +7665,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-05-22",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 86fa7d28e884e04536359e89608a21465a1c775b2ecff3a616f15d7b135c3a77"
-  },
-  "TDk91SWz2GvwfZwMTGX21d4ngUUH8YZZAv": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2022-06-30",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 91a6f741f102b6dccdc1e297c672849de55011c7daef7cefa4fe1c9fbb1b43a7"
   },
   "TDkMsYLnoGCd4xsuEsFrHP6i3B32xXujRv": {
    "category": "frozen",

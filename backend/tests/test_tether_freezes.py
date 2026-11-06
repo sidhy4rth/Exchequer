@@ -6,6 +6,8 @@ release must come back.
 """
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
@@ -86,3 +88,57 @@ def test_burn_and_system_addresses_are_not_wallets():
     assert is_system_address("0x" + "0" * 40)
     assert is_system_address("0x" + "0" * 38 + "18")
     assert not is_system_address("0x9faf5515f177f3a8a845d48c19032b33cc54c09c")
+
+
+# -- infrastructure is left out (audit r1-scripts-3) -------------------------------
+from app import config  # noqa: E402
+
+USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+METAMASK_ROUTER = "0x881d40237659c251811cec9c364ef91dc08d300c"
+WALLET = "0x" + "4" * 40
+
+
+def _entry(day="2021-08-05"):
+    return {"category": "frozen", "entity": "Tether (USDT freeze)", "label": f"USDT frozen by Tether on {day}",
+            "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x1"}
+
+
+def test_the_usdt_contract_and_a_router_are_left_out_and_listed():
+    kept, excluded, review = freezes.leave_out("ethereum", {USDT: _entry(), METAMASK_ROUTER: _entry(), WALLET: _entry()})
+    assert set(kept) == {WALLET} and review == []
+    assert excluded[USDT]["why"] == "token contract" and excluded[METAMASK_ROUTER]["why"] == "DEX router"
+
+
+def test_a_frozen_exchange_deposit_stays_listed():
+    deposit = next(a for a, m in json.loads(config.CHAINS["ethereum"].labels_path.read_text())["labels"].items()
+                   if m["type"] == "deposit_wallet")
+    kept, excluded, review = freezes.leave_out("ethereum", {deposit: _entry()})
+    assert deposit in kept and not excluded and not review
+
+
+def test_a_frozen_exchange_hot_wallet_stops_the_import(tmp_path, monkeypatch):
+    hot = next(a for a, m in json.loads(config.CHAINS["ethereum"].labels_path.read_text())["labels"].items()
+               if m["type"] != "deposit_wallet")
+    written = []
+    monkeypatch.setattr(freezes, "write", lambda *a, **k: written.append(a))
+    assert freezes._screened("ethereum", {hot: _entry(), WALLET: _entry()}, {}, dry_run=False) == 1
+    assert written == []
+
+
+def test_screen_held_moves_infrastructure_to_excluded_offline(tmp_path, monkeypatch):
+    for name in ("frozen_labels.json", "frozen_labels_tron.json", "exchange_labels.json", "router_labels.json",
+                 "exchange_labels_tron.json", "never_flag_tokens.json"):
+        source = config.DATA_DIR / name
+        target = tmp_path / name
+        if name.startswith("frozen"):
+            target.write_text(json.dumps({"_meta": {"counts": {"frozen": 2}}, "labels": (
+                {USDT: _entry(), WALLET: _entry()} if name == "frozen_labels.json" else {})}))
+        else:
+            target.write_text(source.read_text())
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(freezes, "eth_events", lambda *a: pytest.fail("no network"))
+    assert freezes.screen_held(dry_run=False) == 0
+    written = json.loads((tmp_path / "frozen_labels.json").read_text())
+    assert set(written["labels"]) == {WALLET}
+    assert written["_meta"]["excluded"][USDT]["why"] == "token contract"
+    assert written["_meta"]["counts"] == {"frozen": 1, "excluded": 1}
