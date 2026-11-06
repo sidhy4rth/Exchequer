@@ -76,6 +76,7 @@ detection can look at the individual amounts later.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 from collections import defaultdict
@@ -86,7 +87,7 @@ from typing import Any, Callable, Iterable
 import networkx as nx
 
 from . import config, log_safety, progress
-from .api_budget import Cancelled, TraceStopped
+from .api_budget import Cancelled, TraceStopped, fresh_reads
 from .etherscan_client import (
     EtherscanClient,
     Transaction,
@@ -144,6 +145,11 @@ class TraceConfig:
     # it. Checked between batches of fetches, so the overshoot is at most one
     # batch of concurrent requests.
     time_budget_seconds: float | None = None
+    # The reported address is always read from the provider, never from the
+    # response cache: it is the wallet whose newest moves the officer is
+    # chasing, and a cached page of it could say "sent nothing" after the
+    # money left. Its fresh answer replaces the cached one for later reads.
+    fresh_seed: bool = True
 
 
 @dataclass
@@ -508,7 +514,10 @@ def build_trace_graph(
         progress.report(stage="walking", hop=pending[0][1] + 1, max_depth=cfg.max_depth,
                         level_size=len(pending), level_read=0,
                         addresses=graph.number_of_nodes())
-        fetched = _fetch_level(pending, fetch, cfg, deadline=deadline if pending[0][1] > 0 else None)
+        seed_level = pending[0][1] == 0
+        # The seed level is one address, fetched on this thread, so the context applies.
+        with fresh_reads() if seed_level and cfg.fresh_seed else contextlib.nullcontext():
+            fetched = _fetch_level(pending, fetch, cfg, deadline=None if seed_level else deadline)
         next_frontier: list[tuple[str, int]] = []
 
         for (address, depth), (transfers, error) in zip(pending, fetched, strict=True):

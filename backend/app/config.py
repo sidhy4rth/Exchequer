@@ -508,6 +508,12 @@ EXCHANGE_LABELS_PATH: Path = DEFAULT_CHAIN.labels_path
 # network. A day, so a demo traced in the morning is still instant in the
 # afternoon; set it in seconds.
 API_CACHE_TTL_SECONDS: float = float(os.getenv("API_CACHE_TTL_SECONDS", str(24 * 3600)))
+# That holds for a closed block range only. A question about the chain's tip --
+# the newest page of a wallet, "no transactions yet", a read up to `latest` --
+# is a moving target: served for a day, a re-trace after the money moved
+# replayed "sent nothing". Those answers are kept this long instead; balances,
+# nonces and other `latest` state are never kept at all.
+API_CACHE_OPEN_TTL_SECONDS: float = float(os.getenv("API_CACHE_OPEN_TTL_SECONDS", "300"))
 
 # What one provider cache may hold, in bytes, in memory and on disk. Counted
 # entries alone let 2,048 raw pages pin ~0.7 GB on a 512 MB instance.

@@ -813,7 +813,8 @@ def render_text_report(report: dict[str, Any]) -> str:
             if e.get("current_balance_native") is not None:
                 # The chain's coin, not the traced asset (older cases did not say which).
                 balance_unit = e.get("current_balance_symbol") or case.get("chain_currency") or symbol
-                add(f"    current balance     : {e.get('current_balance_native')} {balance_unit}")
+                read_at = f" (read {e['current_balance_at']})" if e.get("current_balance_at") else ""
+                add(f"    current balance     : {e.get('current_balance_native')} {balance_unit}{read_at}")
             add(f"    thresholds applied  : {e.get('thresholds_applied')}")
             add("")
 

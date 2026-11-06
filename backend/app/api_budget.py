@@ -36,11 +36,8 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
-import hashlib
-import hmac
 import json
 import logging
-import os
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -74,19 +71,6 @@ def fresh_reads():
         yield
     finally:
         _fresh.reset(token)
-
-
-def _row_key() -> bytes:
-    """The key the disk rows are checked with: derived from the report-signing
-    seed when it comes from the environment, so nothing on the disk beside the
-    cache holds it. Without one it is empty, and the check catches corruption
-    and careless edits only -- but then the signing key is itself a file on
-    that disk, and whoever can write the cache can read it."""
-    from .signing import _seed_bytes
-
-    seed = os.getenv("EXCHEQUER_SIGNING_KEY", "").strip()
-    raw = _seed_bytes(seed) if seed else None
-    return hmac.new(raw, b"exchequer provider-cache rows v1", hashlib.sha256).digest() if raw else b""
 
 
 class ResponseTooLarge(Exception):
@@ -137,9 +121,12 @@ class ResponseCache:
 
     On-chain history is append-only, so a stale entry can only ever be missing
     the newest transactions, never wrong about the old ones. That is what makes
-    a TTL acceptable here at all. Every cached answer is recorded in the case's
-    evidence manifest with the time it was originally retrieved, so how old the
-    data was is never hidden from the report.
+    a TTL acceptable here at all -- for a closed block range. A question about
+    the chain's tip (the newest page, a balance, "nothing here yet") is a
+    moving target, so `put` takes a TTL per entry and the caller gives those
+    minutes or nothing. Every cached answer is recorded in the case's evidence
+    manifest with the time it was originally retrieved, so how old the data
+    was is never hidden from the report.
 
     With `path` set, every entry is also written to a SQLite file and read back
     on a miss, so the cache survives a restart. The memory layer is what makes
@@ -170,16 +157,14 @@ class ResponseCache:
         self.max_entries = max_entries
         self.max_bytes = max_bytes if max_bytes is not None else config.CACHE_MEMORY_BYTES
         self.max_disk_bytes = max_disk_bytes if max_disk_bytes is not None else config.CACHE_DISK_BYTES
-        # key -> (stored_at, JSON text or the value itself, meta, size in bytes)
-        self._entries: OrderedDict[Hashable, tuple[float, Any, dict | None, int]] = OrderedDict()
+        # key -> (stored_at, JSON text or the value itself, meta, size in bytes, ttl)
+        self._entries: OrderedDict[Hashable, tuple[float, Any, dict | None, int, float]] = OrderedDict()
         self._bytes = 0
         self._lock = threading.Lock()
         self._db_lock = threading.Lock()
         self._hits = 0
         self._misses = 0
         self._disk_hits = 0
-        self._integrity_drops = 0
-        self._row_key = _row_key()
         self.path = Path(path) if path else None
         self._db: sqlite3.Connection | None = None
         self._puts = 0
@@ -198,13 +183,15 @@ class ResponseCache:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS responses ("
                 "key TEXT PRIMARY KEY, stored_at REAL NOT NULL, "
-                "value TEXT NOT NULL, meta TEXT)"
+                "value TEXT NOT NULL, meta TEXT, expires_at REAL)"
             )
+            columns = {row[1] for row in db.execute("PRAGMA table_info(responses)")}
+            if "expires_at" not in columns:
+                # A file from before per-entry TTLs: its rows may be tip answers
+                # held for a day. The cache is disposable; start it again.
+                db.execute("ALTER TABLE responses ADD COLUMN expires_at REAL")
+                db.execute("DELETE FROM responses")
             db.execute("CREATE INDEX IF NOT EXISTS responses_stored_at ON responses(stored_at)")
-            if "value_sha256" not in {row[1] for row in db.execute("PRAGMA table_info(responses)")}:
-                # A file from before the check: its rows have no hash, so
-                # each reads as a miss and is fetched (and stored) afresh.
-                db.execute("ALTER TABLE responses ADD COLUMN value_sha256 TEXT")
             db.commit()
             self._prune_disk(db, at_open=True)
             self._db = db
@@ -227,7 +214,9 @@ class ResponseCache:
         auto_vacuum was set is compacted once, at open, when most of it is
         free pages; after that the incremental vacuum keeps it in step."""
         try:
-            db.execute("DELETE FROM responses WHERE stored_at < ?", (time.time() - self.ttl_seconds,))
+            now = time.time()
+            db.execute("DELETE FROM responses WHERE (expires_at IS NULL AND stored_at < ?) OR expires_at < ?",
+                       (now - self.ttl_seconds, now))
             total = db.execute("SELECT COALESCE(SUM(LENGTH(value)), 0) FROM responses").fetchone()[0]
             if self.max_disk_bytes and total > self.max_disk_bytes:
                 rows = db.execute("SELECT key, LENGTH(value) FROM responses ORDER BY stored_at").fetchall()
@@ -257,60 +246,54 @@ class ResponseCache:
     def _disk_key(key: Hashable) -> str:
         return json.dumps(key, sort_keys=True, default=str)
 
-    def _row_sha256(self, value_text: str, meta_text: str | None) -> str:
-        """HMAC-SHA256 (keyed by _row_key) over the exact stored text: the value
-        the trace will use and the provider hash the evidence manifest will
-        report for it. A plain hash anyone could recompute after an edit."""
-        return hmac.new(self._row_key, f"{value_text}\n{meta_text or ''}".encode("utf-8"),
-                        hashlib.sha256).hexdigest()
-
-    def _disk_get(self, key: Hashable) -> tuple[float, str, dict | None] | None:
-        """(age_seconds, JSON text, meta) for a live row, or None.
-
-        A row whose stored text no longer matches the hash written with it was
-        edited (or corrupted) on disk: it is deleted and treated as a miss, so
-        a trace never uses data its evidence manifest does not describe."""
-        disk_key = self._disk_key(key)
+    def _disk_get(self, key: Hashable) -> tuple[float, str, dict | None, float] | None:
+        """(age_seconds, JSON text, meta, ttl) for a live row, or None."""
         with self._db_lock:
             if self._db is None:
                 return None
             try:
                 row = self._db.execute(
-                    "SELECT stored_at, value, meta, value_sha256 FROM responses WHERE key = ?", (disk_key,)
+                    "SELECT stored_at, value, meta, expires_at FROM responses WHERE key = ?",
+                    (self._disk_key(key),),
                 ).fetchone()
             except sqlite3.Error as exc:
                 logger.warning("Response cache read failed: %s", exc)
                 return None
-            if row is None:
-                return None
-            stored_at, value_text, meta_text, digest = row
-            if time.time() - stored_at > self.ttl_seconds:
-                return None
-            if not isinstance(digest, str) or not hmac.compare_digest(digest, self._row_sha256(value_text, meta_text)):
-                self._integrity_drops += 1
-                logger.warning("Response cache row for %s does not match its hash; dropped", disk_key[:120])
-                try:
-                    self._db.execute("DELETE FROM responses WHERE key = ?", (disk_key,))
-                    self._db.commit()
-                except sqlite3.Error as exc:
-                    logger.warning("Response cache delete failed: %s", exc)
-                return None
+        if row is None:
+            return None
+        stored_at, value_text, meta_text, expires_at = row
+        ttl = (expires_at - stored_at) if expires_at is not None else self.ttl_seconds
         age = time.time() - stored_at
+        if age > ttl:
+            return None
         try:
-            return age, value_text, json.loads(meta_text) if meta_text else None
+            return age, value_text, json.loads(meta_text) if meta_text else None, ttl
         except ValueError:
             return None
 
-    def _disk_put(self, key: Hashable, value_text: str, meta_text: str | None) -> None:
+    def _disk_drop(self, key: Hashable) -> None:
         with self._db_lock:
             if self._db is None:
                 return
             try:
+                disk_key = self._disk_key(key)
+                # Most such keys were never stored: no write, and no commit, for those.
+                if self._db.execute("SELECT 1 FROM responses WHERE key = ?", (disk_key,)).fetchone():
+                    self._db.execute("DELETE FROM responses WHERE key = ?", (disk_key,))
+                    self._db.commit()
+            except sqlite3.Error as exc:
+                logger.warning("Response cache delete failed: %s", exc)
+
+    def _disk_put(self, key: Hashable, value_text: str, meta_text: str | None, ttl: float) -> None:
+        with self._db_lock:
+            if self._db is None:
+                return
+            try:
+                now = time.time()
                 self._db.execute(
-                    "INSERT OR REPLACE INTO responses (key, stored_at, value, meta, value_sha256) "
+                    "INSERT OR REPLACE INTO responses (key, stored_at, value, meta, expires_at) "
                     "VALUES (?, ?, ?, ?, ?)",
-                    (self._disk_key(key), time.time(), value_text, meta_text,
-                     self._row_sha256(value_text, meta_text)),
+                    (self._disk_key(key), now, value_text, meta_text, now + ttl),
                 )
                 self._db.commit()
             except sqlite3.Error as exc:
@@ -332,14 +315,19 @@ class ResponseCache:
                 return 0
 
     # -- memory layer -------------------------------------------------------
-    def _remember(self, key: Hashable, stored_at: float, held: Any, meta: dict | None, size: int) -> None:
-        """Insert as most recent and evict the oldest past either bound. Under the lock."""
+    def _forget(self, key: Hashable) -> None:
+        """Drop one memory entry. Under the lock."""
         old = self._entries.pop(key, None)
         if old is not None:
             self._bytes -= old[3]
+
+    def _remember(self, key: Hashable, stored_at: float, held: Any, meta: dict | None, size: int,
+                  ttl: float) -> None:
+        """Insert as most recent and evict the oldest past either bound. Under the lock."""
+        self._forget(key)
         if size > self.max_bytes:
             return  # larger than the whole budget: disk only
-        self._entries[key] = (stored_at, held, meta, size)
+        self._entries[key] = (stored_at, held, meta, size, ttl)
         self._bytes += size
         while self._entries and (len(self._entries) > self.max_entries or self._bytes > self.max_bytes):
             _, evicted = self._entries.popitem(last=False)
@@ -357,39 +345,30 @@ class ResponseCache:
         change what the next one reads. Inside `fresh_reads()` every lookup
         misses, so the provider is asked and the answer replaces what was
         cached."""
-        hit, value, _meta = self.get_with_meta(key)
-        return hit, value
-
-    def get_with_meta(self, key: Hashable) -> tuple[bool, Any, dict | None]:
-        """(hit, value, meta) in one look, so a hit is always recorded as
-        evidence with its own retrieval metadata: asking get() then meta()
-        could lose the entry in between, and the trace would then use data
-        its manifest does not list."""
         if _fresh.get():
-            return False, None, None
+            return False, None
         with self._lock:
             entry = self._entries.get(key)
             if entry is not None:
-                stored_at, held, meta, _size = entry
-                if time.monotonic() - stored_at <= self.ttl_seconds:
+                stored_at, held, _meta, _size, ttl = entry
+                if time.monotonic() - stored_at <= ttl:
                     self._entries.move_to_end(key)
                     self._hits += 1
-                    return True, self._decode(held), meta
-                del self._entries[key]
-                self._bytes -= entry[3]
+                    return True, self._decode(held)
+                self._forget(key)
         # Not in memory: the disk may have it from before a restart.
         found = self._disk_get(key)
         with self._lock:
             if found is None:
                 self._misses += 1
-                return False, None, None
-            age, text, meta = found
+                return False, None
+            age, text, meta, ttl = found
             # Promote to memory with its original age, so it expires on the
             # same schedule it would have had the process never restarted.
-            self._remember(key, time.monotonic() - age, text, meta, len(text))
+            self._remember(key, time.monotonic() - age, text, meta, len(text), ttl)
             self._hits += 1
             self._disk_hits += 1
-        return True, json.loads(text), meta
+        return True, json.loads(text)
 
     def meta(self, key: Hashable) -> dict | None:
         """The retrieval metadata stored with a live entry (hash, time, size),
@@ -401,7 +380,15 @@ class ResponseCache:
         found = self._disk_get(key)
         return found[2] if found else None
 
-    def put(self, key: Hashable, value: Any, meta: dict | None = None) -> None:
+    def put(self, key: Hashable, value: Any, meta: dict | None = None, ttl: float | None = None) -> None:
+        """Store `value` for `ttl` seconds (the cache's own TTL when None). A TTL
+        of 0 stores nothing and drops what an earlier answer left."""
+        ttl = self.ttl_seconds if ttl is None else ttl
+        if ttl <= 0:
+            with self._lock:
+                self._forget(key)
+            self._disk_drop(key)
+            return
         # Serialised before either lock is taken: a large page must not hold up
         # every other lookup while it is written.
         try:
@@ -412,9 +399,9 @@ class ResponseCache:
         held = text if text is not None else _Opaque(value)
         size = len(text) if text is not None else 1024
         with self._lock:
-            self._remember(key, time.monotonic(), held, meta, size)
+            self._remember(key, time.monotonic(), held, meta, size, ttl)
         if text is not None:
-            self._disk_put(key, text, meta_text)
+            self._disk_put(key, text, meta_text, ttl)
 
     def clear(self) -> None:
         with self._lock:
@@ -454,8 +441,6 @@ class ResponseCache:
                 "persistent": self._db is not None,
                 "path": str(self.path) if self.path else None,
                 "hits_from_disk": self._disk_hits,
-                # Disk rows that no longer matched their hash, dropped and re-fetched.
-                "integrity_drops": self._integrity_drops,
             }
         out["entries_on_disk"] = self._disk_count()
         return out

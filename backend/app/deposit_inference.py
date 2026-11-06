@@ -51,6 +51,7 @@ from typing import Any, Callable
 
 import networkx as nx
 
+from .evidence import utc_now_iso
 from .exchange_matcher import INFERRED_DEPOSIT, ExchangeMatch, ExchangeMatcher
 
 logger = logging.getLogger(__name__)
@@ -164,6 +165,8 @@ def infer_deposit_addresses(
         if balance_of is not None:
             try:
                 evidence["current_balance_native"] = round(balance_of(node), 6)
+                # When it was read: a balance is a moment, not a fact about the address.
+                evidence["current_balance_at"] = utc_now_iso()
                 # The chain's own coin, whatever asset the trace follows: on a
                 # USDT trace this is the ETH left for gas, not USDT.
                 evidence["current_balance_symbol"] = native_symbol
@@ -201,10 +204,14 @@ def describe(match: ExchangeMatch, native_symbol: str = "ETH") -> str:
     """One paragraph an investigator can paste into a report."""
     e = match.evidence or {}
     balance = e.get("current_balance_native")
-    balance_text = (
-        f" Its current balance is {balance:.4f} {e.get('current_balance_symbol') or native_symbol}."
-        if balance is not None else ""
-    )
+    unit = e.get("current_balance_symbol") or native_symbol
+    if balance is None:
+        balance_text = ""
+    elif e.get("current_balance_at"):
+        at = str(e["current_balance_at"]).replace("T", " ").replace("Z", " UTC")
+        balance_text = f" Its balance was {balance:.4f} {unit} when read at {at}."
+    else:  # a case stored before the read time was kept
+        balance_text = f" Its current balance is {balance:.4f} {unit}."
     scope = (
         f"Every one of its {e.get('sweep_count')} most recent outgoing transfers (older "
         f"history exists and was not read)"

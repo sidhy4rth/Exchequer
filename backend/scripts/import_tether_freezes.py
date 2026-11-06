@@ -93,7 +93,11 @@ def eth_events(client: EtherscanClient, topic: str) -> list[tuple[int, int, str,
             break
         # Restart at the last block rather than after it: a page can end
         # partway through a block, and the dedupe above absorbs the overlap.
-        from_block = int(logs[-1]["blockNumber"], 16)
+        last_block = int(logs[-1]["blockNumber"], 16)
+        if last_block <= from_block:
+            # A full page inside one block would be asked for again for ever.
+            raise RuntimeError(f"more than 1000 {topic[:10]} events in block {from_block}; cannot page past it")
+        from_block = last_block
     return list(out.values())
 
 

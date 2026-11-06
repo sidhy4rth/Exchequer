@@ -300,6 +300,27 @@ RECORD_FIELDS = ("hash", "from", "to", "value", "timeStamp", "blockNumber", "isE
 _LIST_ACTIONS = ("txlist", "tokentx", "txlistinternal")
 
 
+# Current state rather than history: never served from the cache.
+_STATE_ACTIONS = ("balance", "eth_getTransactionCount", "eth_getCode", "eth_call", "eth_blockNumber")
+
+
+def cache_ttl(params: dict[str, Any], result: Any) -> float:
+    """How long an answer to `params` may be reused (0: not at all).
+
+    A closed block range is history and keeps for the cache's day. A read up
+    to the tip -- newest-first pages, reads from a block forward, and their
+    empty answers -- keeps for minutes; current state (`latest` balances,
+    nonces, code, calls) and a receipt not yet mined are never kept."""
+    if (params.get("tag") == "latest" or str(params.get("toBlock")) == "latest"
+            or params.get("action") in _STATE_ACTIONS):
+        return 0
+    if params.get("action") == "eth_getTransactionReceipt" and result is None:
+        return 0
+    if str(params.get("endblock")) == str(ENDBLOCK_LATEST):
+        return config.API_CACHE_OPEN_TTL_SECONDS
+    return config.API_CACHE_TTL_SECONDS
+
+
 def slim_records(params: dict[str, Any], result: Any) -> Any:
     """An account-list result cut down to RECORD_FIELDS; anything else as it came."""
     if params.get("module") != "account" or params.get("action") not in _LIST_ACTIONS:
@@ -442,14 +463,16 @@ class EtherscanClient:
         parts = "&".join(f"{k}={v}" for k, v in sorted(query.items()) if k != "apikey")
         return f"GET {self.base_url}?{parts}"
 
-    def _record(self, request_desc: str, cache_key: tuple, response: httpx.Response, result: Any) -> None:
+    def _record(self, request_desc: str, cache_key: tuple, response: httpx.Response, result: Any,
+                params: dict[str, Any]) -> None:
         """Hash the bytes this answer came from, store them with the cached
-        value, and log them as evidence for this trace. The hash is of the
-        whole raw body; the cached value is only what the parsers read."""
+        value for as long as that kind of answer stays true (cache_ttl), and
+        log them as evidence for this trace. The hash is of the whole raw
+        body; the cached value is only what the parsers read."""
         rec = self.evidence.record("etherscan", request_desc, response.content)
         self._cache.put(cache_key, result, meta={
             "sha256": rec.sha256, "retrieved_at": rec.retrieved_at, "bytes": rec.bytes,
-        })
+        }, ttl=cache_ttl(params, result))
 
     def _request(self, params: dict[str, Any]) -> Any:
         """Perform one Etherscan call with throttling, retries and backoff.
@@ -469,7 +492,8 @@ class EtherscanClient:
         # On-chain history is append-only, so a cached answer can only ever lag
         # the newest blocks -- it cannot be wrong about what already happened.
         # That is what makes this safe, and it is the single biggest saving
-        # available: the provider, not the traversal, is what makes a trace slow.
+        # available: the provider, not the traversal, is what makes a trace
+        # slow. How long an answer about the tip may lag is cache_ttl's call.
         cache_key = self._cache_key(query)
         request_desc = self._describe(query)
         hit, cached, meta = self._cache.get_with_meta(cache_key)
@@ -521,7 +545,7 @@ class EtherscanClient:
                     raise EtherscanError(f"Etherscan proxy error: {payload['error']}")
                 self._pacer.reward()
                 result = payload.get("result")
-                self._record(request_desc, cache_key, response, result)
+                self._record(request_desc, cache_key, response, result, params)
                 return result
 
             status = str(payload.get("status", ""))
@@ -531,7 +555,7 @@ class EtherscanClient:
             if status == "1":
                 self._pacer.reward()
                 result = slim_records(params, result)
-                self._record(request_desc, cache_key, response, result)
+                self._record(request_desc, cache_key, response, result, params)
                 return result
 
             # status != "1". Three distinct cases, and they must not be conflated.
@@ -542,7 +566,7 @@ class EtherscanClient:
             # re-askable as a full list, and re-asking it costs the same second.
             if any(phrase in haystack for phrase in _EMPTY_MESSAGES):
                 self._pacer.reward()
-                self._record(request_desc, cache_key, response, [])
+                self._record(request_desc, cache_key, response, [], params)
                 return []
 
             # 2a. The day's allowance is spent -- retrying cannot help.
