@@ -19,7 +19,7 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, Float, Integer, String, Text, create_engine, event, func, or_, select, text
+from sqlalchemy import BigInteger, Boolean, Float, String, Text, create_engine, event, func, or_, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
@@ -103,7 +103,8 @@ class Watch(Base):
     last_checked_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # Newest block already seen; a transfer above it is news. NULL until the
     # first check sets the baseline (history before the watch is not news).
-    last_seen_block: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # A Unix time on Tron (watchlist._position_of): 64-bit, past 2038.
+    last_seen_block: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     last_error: Mapped[str | None] = mapped_column(String(300), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -120,7 +121,7 @@ class Alert(Base):
     kind: Mapped[str] = mapped_column(String(16))  # exchange | risk | moved
     message: Mapped[str] = mapped_column(Text)
     tx_hash: Mapped[str] = mapped_column(String(80))
-    tx_time: Mapped[int] = mapped_column(Integer)
+    tx_time: Mapped[int] = mapped_column(BigInteger)  # Unix seconds, past 2038
     value: Mapped[float] = mapped_column(Float)
     asset: Mapped[str] = mapped_column(String(16))
     counterparty: Mapped[str] = mapped_column(String(64))

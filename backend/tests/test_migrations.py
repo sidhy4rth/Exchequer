@@ -143,3 +143,32 @@ def test_every_upgrade_goes_through_the_guard(engine, monkeypatch):
     models.init_db()
     assert seen == ["sqlite"]
     assert revision(engine) == head()
+
+
+def test_cursor_columns_are_bigint_on_postgres():
+    # A Tron cursor and an alert's tx_time are Unix seconds, past int4 in
+    # January 2038; Arbitrum block numbers pass it around then too.
+    from sqlalchemy.dialects import postgresql
+    for column in (models.Watch.__table__.c.last_seen_block, models.Alert.__table__.c.tx_time):
+        assert column.type.compile(dialect=postgresql.dialect()) == "BIGINT"
+
+
+def test_upgrade_keeps_a_cursor_past_2038(engine):
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.upgrade(settings, "0001")
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO watches (id, owner_hash, chain, asset, address, note, created_at, "
+                          "last_seen_block, active) VALUES ('w', 'h', 'tron', 'USDT', 'T', '', 't', "
+                          "3000000000, 1)"))
+        conn.execute(text("INSERT INTO alerts (id, watch_id, owner_hash, created_at, kind, message, tx_hash, "
+                          "tx_time, value, asset, counterparty, counterparty_label, read) VALUES "
+                          "('a', 'w', 'h', 't', 'moved', 'm', '0x', 3000000001, 1.0, 'USDT', 'T2', '', 0)"))
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT last_seen_block FROM watches")).scalar() == 3_000_000_000
+        assert conn.execute(text("SELECT tx_time FROM alerts")).scalar() == 3_000_000_001
+    assert {i["name"] for i in inspect(engine).get_indexes("watches")} >= {"ix_watches_address",
+                                                                            "ix_watches_owner_hash"}
