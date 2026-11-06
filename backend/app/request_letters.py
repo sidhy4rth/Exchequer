@@ -29,7 +29,7 @@ from typing import Any
 from . import config
 from .display_text import one_line, short
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
-                     _when, _when_iso, attribution_kind)
+                     _amount, _when, _when_iso, attribution_kind)
 from .risk_matcher import _list_meta, is_tether_usdt_freeze
 
 EXCHANGE = "exchange"
@@ -153,13 +153,30 @@ def available(result: dict[str, Any]) -> list[dict[str, str]]:
 
 
 def _opening(result: dict[str, Any]) -> list[str]:
-    """Only what the case holds: an address. Who reported it, and what they paid, the officer states."""
-    return [
+    """Only what the case holds. A trace from the victim's payments states them as
+    verified on chain; one from the address alone says so and leaves them to the
+    officer. The complaint's references are always the officer's."""
+    lines = [
         "1. This office is investigating a complaint of cyber-enabled financial fraud. The wallet",
         f"   address {result.get('address')} was reported in connection with it.",
-        f"   The victim's payments: {BLANK} (officer to state amounts, dates and references",
-        "   from the complaint).",
     ]
+    intake = result.get("intake") or {}
+    payments = intake.get("payments") or [] if intake.get("mode") == "payment" else []
+    if not payments:
+        return lines + [
+            f"   The victim's payments: {BLANK} (officer to state amounts, dates and references",
+            "   from the complaint). This trace followed the reported address's history, not specific payments.",
+        ]
+    asset = result.get("asset")
+    total = result.get("reported_amount")
+    if total is None:
+        total = sum(float(p.get("amount") or 0) for p in payments)
+    lines.append(f"   The victim's payments, as verified on chain: {len(payments)} transfer"
+                 f"{'s' if len(payments) != 1 else ''}, {_amount(total)} {asset} in all:")
+    for payment in payments:
+        lines += [f"     {_amount(payment.get('amount'))} {asset}, {_when(payment.get('timestamp'))}",
+                  f"       tx {payment.get('tx_hash')}"]
+    return lines + [f"   {BLANK} (officer to add the complaint's references)."]
 
 
 def _label_source(trace: dict[str, Any]) -> str:

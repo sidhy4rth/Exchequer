@@ -36,7 +36,7 @@ from xml.sax.saxutils import escape
 
 from .display_text import one_line, short
 from .evidence import CONTENT_HASH_MARK, read_issuer
-from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso, signed_finding
+from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso, signed_finding, started_from
 from .scoring import CAP_WORDING
 from .signing import SIGNATURE_MARK
 
@@ -199,6 +199,7 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
         ("Reported address", case["reported_address"], True),
         ("Chain · asset · direction", f"{case['chain']} · {case['asset']} · {case['direction']}", False),
         ("Traced at", _when_iso(case.get("traced_at")), False),
+        ("Started from", started_from(report.get("intake"), case.get("asset") or ""), False),
     ]
     if exchange:
         facts += [

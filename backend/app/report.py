@@ -170,6 +170,9 @@ def build_report(case: Case) -> dict[str, Any]:
             "max_depth": result.get("max_depth"),
         },
         "summary": _summary(case, result),
+        # How the trace started. Never the NCRP number or the victim's own
+        # wallet: those are particulars, not evidence about the money.
+        "intake": _intake(result),
         # Only meaningful on a reverse trace. Named for what the transactions
         # show -- these addresses funded the reported one -- because calling
         # them victims would be an inference the data does not support.
@@ -259,6 +262,40 @@ def build_report(case: Case) -> dict[str, Any]:
         "evidence": result.get("evidence"),
         "live_tags": result.get("live_tags"),
     }
+
+
+def _intake(result: dict[str, Any]) -> dict[str, Any]:
+    """From the victim's verified payments, or from the address alone (exploratory)."""
+    intake = result.get("intake") or {}
+    payments = intake.get("payments") or [] if intake.get("mode") == "payment" else []
+    if not payments:
+        return {"mode": "address", "reported_amount": None, "payments": []}
+    return {
+        "mode": "payment",
+        "reported_amount": result.get("reported_amount"),
+        "payments": [{key: p.get(key) for key in ("tx_hash", "asset", "amount", "timestamp", "block", "found_by")}
+                     for p in payments],
+    }
+
+
+def _amount(value: Any) -> str:
+    try:
+        return f"{float(value):,.6f}".rstrip("0").rstrip(".")
+    except (TypeError, ValueError):
+        return "?"
+
+
+def started_from(intake: dict[str, Any] | None, symbol: str) -> str:
+    """One line: how the trace started, for the report, the PDF and the letters."""
+    payments = (intake or {}).get("payments") or []
+    if not payments:
+        return ("the reported address's history (EXPLORATORY: not a reported payment; amounts can include "
+                "other people's money)")
+    total = (intake or {}).get("reported_amount")
+    if total is None:
+        total = sum(float(p.get("amount") or 0) for p in payments)
+    return (f"{len(payments)} victim payment{'s' if len(payments) != 1 else ''}, {_amount(total)} {symbol} in all "
+            "(listed under VICTIM'S PAYMENTS)")
 
 
 def _screening_lists(case: Case, result: dict[str, Any]) -> dict[str, Any] | None:
@@ -461,6 +498,13 @@ def _methodology(result: dict[str, Any]) -> list[str]:
             "at or before the moment it paid the next address were followed, "
             "since only money already held could have funded that payment."
         )
+    if direction == "outgoing" and _intake(result)["mode"] == "payment":
+        walk = (
+            f"Outgoing {native_symbol} transfers were followed from the reported "
+            "address, from when the first of the victim's payments arrived there "
+            "(listed under VICTIM'S PAYMENTS), using breadth-first traversal, "
+            "depth-limited, via a public blockchain data API."
+        )
     exchanges = (
         "Every address in the resulting graph was compared, by exact match, "
         "against a database of publicly labelled exchange wallets. An unlabelled "
@@ -539,6 +583,8 @@ def render_text_report(report: dict[str, Any]) -> str:
     add("Direction        : "
         + ("outgoing (where the funds went)" if direction == "outgoing"
            else "incoming (who funded this address)"))
+    intake = report.get("intake") or {"mode": "address", "payments": []}
+    add(f"Started from     : {started_from(intake, symbol)}")
     add(f"Traced at        : {_when_iso(case['traced_at'])}")
     add(f"Report generated : {_when_iso(report['generated_at'])}")
     add(f"Tool version     : {TOOL_NAME} {report.get('tool_version', 'unknown')} "
@@ -600,6 +646,18 @@ def render_text_report(report: dict[str, Any]) -> str:
         add("No known exchange wallet was found upstream within the traced depth.")
         add("This does not establish that the funds did not originate at one.")
     add("")
+
+    # -- the victim's payments, when the trace started from them --------------------
+    if intake.get("payments"):
+        section("VICTIM'S PAYMENTS (VERIFIED ON CHAIN)")
+        para("Each payment was read from the chain by its hash and is an incoming transfer to the "
+             "reported address. The trace followed the address only from when the first arrived.")
+        add("")
+        for payment in intake["payments"]:
+            add(f"  {_amount(payment.get('amount'))} {payment.get('asset') or symbol}, {_when(payment.get('timestamp'))}"
+                + ("  (found by the officer's search)" if payment.get("found_by") == "officer_search" else ""))
+            add(f"    tx {payment.get('tx_hash')}")
+        add("")
 
     # -- reverse trace: who funded it -------------------------------------------
     funders = report.get("funding_sources") or []
