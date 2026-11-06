@@ -11,7 +11,14 @@ from app import config
 from app import pipeline as main
 from app.contracts import read_case
 from app.etherscan_client import Transaction
-from app.payment_intake import PaymentError, PaymentRef, normalize_hash, resolve_payments
+from app.payment_intake import (
+    PaymentError,
+    PaymentRef,
+    leg_warnings,
+    normalize_hash,
+    reported_amount,
+    resolve_payments,
+)
 from app.pipeline import TraceRequest, check_request, run_trace
 
 from conftest import addr
@@ -271,3 +278,70 @@ def test_an_address_only_statement_is_unchanged(chain):
     statement = run_trace(request(payments=[]))["statement"]
     assert "window_start" not in statement
     assert all("before_window" not in r for r in statement["debits"] + statement["credits"])
+
+
+# ---------------------------------------------------------------- one hash, several legs (5-2)
+CONTRACT = addr("c0de")
+LEG_HASH = "0x" + "12" * 32
+
+
+def legs(*values, sender=CONTRACT):
+    return [tx(LEG_HASH, sender, SCAMMER, v, PAID_AT) for v in values]
+
+
+class LegClient(FakeClient):
+    def __init__(self, rows):
+        self.rows = rows
+
+    def get_outgoing_transactions(self, address, limit=None):
+        return []
+
+    def get_incoming_transactions(self, address, limit=None):
+        return list(self.rows)
+
+
+def resolve(rows):
+    return resolve_payments(LegClient(rows), SCAMMER, [PaymentRef(tx_hash=LEG_HASH)],
+                            chain_key="ethereum", asset="ETH", limit=100)
+
+
+@pytest.mark.parametrize("order", [(3999.0, 1.0), (1.0, 3999.0)])
+def test_a_payment_with_two_legs_records_both_in_either_order(order):
+    payments = resolve(legs(*order))
+    assert [(p["leg"], p["amount"]) for p in payments] == [(0, 3999.0), (1, 1.0)]
+    assert reported_amount(payments) == 4000.0
+    (warning,) = leg_warnings(payments)
+    assert "arrived as 2 transfers" in warning and "3,999 + 1 ETH" in warning
+    assert SCAMMER.lower() not in warning.lower() and CONTRACT.lower() not in warning.lower()
+
+
+def test_two_identical_legs_are_both_counted():
+    # Two Transfer logs of the same amount are two rows alike: both are money.
+    payments = resolve(legs(1000.0, 1000.0))
+    assert len(payments) == 2 and reported_amount(payments) == 2000.0
+
+
+def test_a_single_leg_payment_has_no_leg_field():
+    (payment,) = resolve(legs(4.0))
+    assert "leg" not in payment
+    assert leg_warnings([payment]) == []
+
+
+def test_legs_from_two_senders_say_so():
+    (warning,) = leg_warnings(resolve(legs(3.0) + legs(1.0, sender=VICTIM)))
+    assert "from 2 different senders" in warning
+
+
+def test_a_multi_leg_payment_is_whole_in_the_case(monkeypatch):
+    @contextmanager
+    def open_source(chain, asset):
+        yield LegClient(legs(1.0, 3999.0))
+
+    monkeypatch.setattr(main, "open_source", open_source)
+    monkeypatch.setattr(main, "detect_swaps", lambda *a, **k: [])
+    monkeypatch.setattr(config, "TX_INTAKE", True)
+    result = run_trace(request(payments=[{"tx_hash": LEG_HASH}]))
+    case = read_case(result)
+    assert case.reported_amount == 4000.0
+    assert [(p.leg, p.amount) for p in case.intake.payments] == [(0, 3999.0), (1, 1.0)]
+    assert any("arrived as 2 transfers" in w for w in result["warnings"])

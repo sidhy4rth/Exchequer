@@ -50,7 +50,9 @@ class _Strict(BaseModel):
 
 
 class Payment(_Strict):
-    """One payment the victim made, read from the chain by its hash (R1)."""
+    """One transfer of a payment the victim made, read from the chain by its
+    hash (R1). A hash that carried several transfers into the reported wallet
+    has one entry per transfer, numbered by `leg`."""
 
     tx_hash: str
     chain: str
@@ -64,6 +66,8 @@ class Payment(_Strict):
     # "victim": the hash came with the complaint. "officer_search": the officer
     # found it by searching the recipient wallet for the amount and date.
     found_by: Literal["victim", "officer_search"] = "victim"
+    # Which transfer of the hash this is, from 0; only on a hash with several.
+    leg: int | None = None
 
 
 class Intake(_Strict):

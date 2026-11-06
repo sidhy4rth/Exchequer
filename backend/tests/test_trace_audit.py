@@ -95,3 +95,13 @@ def test_a_batch_audits_its_creation_and_each_stored_row(monkeypatch, recorded, 
     text = json.dumps(recorded)
     for secret in (*(r["address"] for r in rows), NCRP, SCAMMER):
         assert secret not in text
+
+
+def test_the_audit_counts_payments_not_their_legs(recorded):
+    # One hash that arrived as two transfers is one payment (5-2).
+    leg = {"tx_hash": "0x" + "aa" * 32, "chain": "ethereum", "asset": "ETH", "amount": 2.0,
+           "from": addr("c0de"), "to": SCAMMER, "block": 1, "timestamp": 1, "found_by": "victim"}
+    payments = [{**leg, "leg": 0}, {**leg, "amount": 1.0, "leg": 1}]
+    cases.record_trace(finished(case_id="c3", intake={"mode": "payment", "payments": payments, "ncrp_ack": None}))
+    ((_, kw),) = recorded
+    assert kw["detail"]["payments"] == 1

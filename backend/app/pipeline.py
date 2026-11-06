@@ -26,6 +26,7 @@ from .payment_intake import (
     PaymentError,
     PaymentRef,
     intake_record,
+    leg_warnings,
     normalize_hash,
     reported_amount,
     resolve_payments,
@@ -565,6 +566,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                     "The chain's newest block could not be read, so the newest blocks may include "
                     "unconfirmed transfers that a reorganisation could still drop."
                 )
+            if intake is not None:
+                # A payment hash that carried several transfers says so (5-2).
+                result.warnings.extend(leg_warnings(intake["payments"]))
             if live is not None:
                 # The last hop is never checked during the walk; ask now, then
                 # attribute against the file's labels plus what TronScan named.

@@ -162,7 +162,8 @@ def record_trace(payload: dict[str, Any], via: str | None = None) -> None:
         "asset": payload.get("asset"),
         "direction": payload.get("direction"),
         "mode": intake.get("mode", "address"),
-        "payments": len(intake.get("payments") or []),
+        # Distinct hashes: one payment can arrive as several transfers (legs).
+        "payments": len({p.get("tx_hash") for p in intake.get("payments") or []}),
         "saved": bool(payload.get("case_id")),
         "exchange_reached": bool(payload.get("exchange")),
     }

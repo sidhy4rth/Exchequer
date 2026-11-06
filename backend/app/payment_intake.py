@@ -81,37 +81,77 @@ def resolve_payments(
         seen.add(key)
 
     incoming = client.get_incoming_transactions(address, limit=limit)
-    # A row with no hash can never be a named payment, so it is skipped
-    # rather than matched by an empty key.
-    by_hash = {
-        normalize_hash(tx.hash): tx
-        for tx in incoming
-        if not getattr(tx, "is_error", False) and normalize_hash(tx.hash or "")
-    }
+    # One transaction can carry several transfers into the wallet (a multisend,
+    # a contract paying out in pieces, several Transfer logs), so every row of
+    # a hash is kept. Identical rows are not merged: within one read they are
+    # separate legs, and merging would undercount two equal transfers. A row
+    # with no hash can never be a named payment, so it is skipped rather than
+    # matched by an empty key.
+    by_hash: dict[str, list[Any]] = {}
+    for tx in incoming:
+        key = normalize_hash(tx.hash or "")
+        if key and not getattr(tx, "is_error", False):
+            by_hash.setdefault(key, []).append(tx)
 
     payments = []
     for ref in refs:
-        tx = by_hash.get(normalize_hash(ref.tx_hash)) if normalize_hash(ref.tx_hash) else None
-        if tx is None:
+        rows = by_hash.get(normalize_hash(ref.tx_hash)) if normalize_hash(ref.tx_hash) else None
+        if not rows:
             raise PaymentError(
                 f"Payment {ref.tx_hash} is not an incoming {asset} transfer to {address} "
                 f"on {chain_key} among its latest {len(incoming)} incoming transfers. "
                 "Check the chain, the asset and the reported address; if they are right, the "
                 "payment may be older than this wallet's recent activity."
             )
-        payments.append({
-            "tx_hash": tx.hash,
-            "chain": chain_key,
-            "asset": asset,
-            "amount": round(tx.value_native, 6),
-            "from": tx.from_address,
-            "to": tx.to_address,
-            "block": tx.block_number,
-            "timestamp": tx.timestamp,
-            "found_by": ref.found_by,
-        })
-    payments.sort(key=lambda p: (p["timestamp"], p["tx_hash"]))
+        # A fixed order, so the record does not depend on the provider's.
+        rows = sorted(rows, key=lambda t: (bool(getattr(t, "internal", False)), t.from_address or "",
+                                           -t.value_wei))
+        for leg, tx in enumerate(rows):
+            payment = {
+                "tx_hash": tx.hash,
+                "chain": chain_key,
+                "asset": asset,
+                "amount": round(tx.value_native, 6),
+                "from": tx.from_address,
+                "to": tx.to_address,
+                "block": tx.block_number,
+                "timestamp": tx.timestamp,
+                "found_by": ref.found_by,
+            }
+            # Only on a hash with several legs, so a one-transfer payment's
+            # record is what it always was.
+            if len(rows) > 1:
+                payment["leg"] = leg
+            payments.append(payment)
+    payments.sort(key=lambda p: (p["timestamp"], p["tx_hash"], p.get("leg", 0)))
     return payments
+
+
+def _amount(value: float) -> str:
+    return f"{value:,.6f}".rstrip("0").rstrip(".")
+
+
+def leg_warnings(payments: list[dict[str, Any]]) -> list[str]:
+    """One sentence per payment hash that arrived as several transfers, for the
+    case's warnings. Names no address: the senders are the complaint's
+    particulars, and the case record already holds them."""
+    by_hash: dict[str, list[dict[str, Any]]] = {}
+    for p in payments:
+        by_hash.setdefault(p["tx_hash"], []).append(p)
+    out = []
+    for tx_hash, legs in by_hash.items():
+        if len(legs) < 2:
+            continue
+        asset = legs[0]["asset"]
+        senders = {p["from"] for p in legs}
+        counted = "both are" if len(legs) == 2 else f"all {len(legs)} are"
+        out.append(
+            f"Payment {tx_hash[:6]}…{tx_hash[-4:]} arrived as {len(legs)} transfers into the reported "
+            f"wallet ({' + '.join(_amount(p['amount']) for p in legs)} {asset})"
+            + (f", from {len(senders)} different senders" if len(senders) > 1 else "")
+            + f"; {counted} counted in the reported amount."
+        )
+    return out
 
 
 def intake_record(payments: list[dict[str, Any]], ncrp_ack: str | None) -> dict[str, Any]:
