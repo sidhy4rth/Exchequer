@@ -171,3 +171,110 @@ def test_no_store_or_a_stale_one_means_screening_as_before(tmp_path, monkeypatch
         assert label_store.SCHEMA_VERSION == 1
     finally:
         get_label_store.cache_clear()
+
+
+# -- what a row may claim, and how it reads (r1-labels-data-2, -13, -17) ---------
+HF = "HF ethereum_fraud_dataset (fesevu, CC BY 4.0)"
+DETECTOR = "Ethereum poisoning via BigQuery full-history scan (8-char lookalike)"
+
+
+def old_store(tmp_path, rows, *, tier=None, texts=None):
+    """A store as an earlier build wrote it: tiers set by the hunt category,
+    text copied verbatim. Built with today's code, then rewritten to match."""
+    src = tmp_path / "old.csv"
+    with open(src, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+    out = tmp_path / "old.db"
+    build(src, out)
+    db = sqlite3.connect(out)
+    if tier is not None:
+        db.execute("UPDATE labels SET tier=?", (tier,))
+    for old, new in (texts or {}).items():
+        db.execute("UPDATE texts SET text=? WHERE text=?", (new, old))
+    db.commit()
+    db.close()
+    return LabelStore(out)
+
+
+def test_an_ml_dataset_row_is_not_called_threat_intelligence(tmp_path):
+    hf = row(address=SCAMMER, chain="ethereum", category="phishing/scam", entity_or_incident="phishing",
+             sources=HF, source_refs="https://huggingface.co/datasets/fesevu/ethereum_fraud_dataset_by_activity")
+    assert map_row(hf)[0][0][-1] == 5
+    mixed = row(**{**hf, "sources": f"ScamSniffer scam-database @87c9e14 ; {HF}"})
+    assert map_row(mixed)[0][0][-1] == 5
+    research = row(**{**hf, "sources": f"Elliptic Binance hack blocklist ; {HF}", "category": "hack proceeds"})
+    assert map_row(research)[0][0][-1] == 3
+    # A store built before the rule (tier 3) reads the same way.
+    hit = old_store(tmp_path, [hf], tier=3).lookup("ethereum", SCAMMER)
+    assert "published threat intelligence" not in hit["source"]
+    assert hit["source"].endswith("evidence: unvetted list (community reports or a machine-learning dataset), "
+                                  "not checked")
+
+
+def test_a_published_lookalike_list_is_not_on_chain_detection(tmp_path):
+    slowmist = "Threat-intel report: SlowMist (via DeFiHackLabs substack): Analysis of fake Zoom"
+    listed = row(address=POISONER, chain="ethereum", category="address poisoning",
+                 entity_or_incident=f"lookalike of {TARGET}", sources=slowmist)
+    assert map_row(listed)[0][0][-1] == 3
+    fake = row(**{**listed, "entity_or_incident": "Fake token contract used to poison victims"})
+    rows, _ = map_row(fake)
+    assert rows[0][-1] == 3 and rows[0][3] == "Fake token contract used in address poisoning"
+    ours = row(**{**listed, "sources": DETECTOR})
+    assert map_row(ours)[0][0][-1] == 4
+    # A dataset's "Fake token transfer" names a transfer, not the contract.
+    transfer = row(**{**listed, "entity_or_incident": "Fake token transfer", "sources": HF})
+    rows, _ = map_row(transfer)
+    assert rows[0][3] == "Fake token transfer" and rows[0][-1] == 5
+    # Read back from a store that filed it as detection.
+    hit = old_store(tmp_path, [listed], tier=4).lookup("ethereum", POISONER)
+    assert hit["source"].endswith("evidence: published threat intelligence")
+
+
+def test_no_source_text_names_a_team_member(tmp_path):
+    named = {
+        "Tron operator expansion (operator-level verification) ; Tron poisoning via BigQuery full-history "
+        "scan (base58 4+4 lookalike)":
+            "Tron operator expansion (Mukesh, operator-level verification) ; Tron poisoning via BigQuery "
+            "full-history scan (base58 4+4 lookalike)",
+    }
+    rows = [row(address="0x" + "b7" * 20, chain="tron", category="address poisoning",
+                entity_or_incident="lookalike sent by verified poisoning operator",
+                sources=list(named.values())[0]),
+            row(address=SCAMMER, chain="ethereum", category="stablecoin freeze", entity_or_incident="USDC",
+                sources="XSGD freeze/restriction events (on-chain replay, Mukesh)"),
+            row(address=POISONER, chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}",
+                sources="Tron poisoning detection by Mukesh (TronGrid, 8-char lookalike)"),
+            row(address=addr("1a"), chain="tron|ethereum", category="laundering (reported)",
+                entity_or_incident="HuionePay",
+                sources="Laundering source (Mukesh): SlowMist KYT: On-chain analysis of HuionePay")]
+    for r in rows:
+        built, _ = map_row(r)
+        assert "mukesh" not in built[0][8].lower()
+    assert map_row(rows[0])[0][0][-1] == 4  # still our own detection
+    assert map_row(rows[3])[0][0][8] == "Laundering source: SlowMist KYT: On-chain analysis of HuionePay"
+    # A store built before the rule, its texts restored to the names, reads without them.
+    store = old_store(tmp_path, rows[1:], texts={
+        "XSGD freeze/restriction events (on-chain replay)": "XSGD freeze/restriction events (on-chain replay, Mukesh)",
+        "Tron poisoning detection (TronGrid, 8-char lookalike)":
+            "Tron poisoning detection by Mukesh (TronGrid, 8-char lookalike)"})
+    for chain, address in (("ethereum", SCAMMER), ("ethereum", POISONER)):
+        hit = store.lookup(chain, address)
+        assert "mukesh" not in hit["source"].lower()
+    assert store.lookup("ethereum", SCAMMER)["source"].startswith("XSGD freeze/restriction events (on-chain replay)")
+
+
+def test_a_null_entity_never_reaches_a_report(tmp_path):
+    null = row(address=SCAMMER, chain="ethereum", category="phishing/scam", entity_or_incident="null",
+               sources="Explorer tag via dawsbot/eth-labels @d9b21ae", source_refs="label:phish-hack")
+    rows, _ = map_row(null)
+    assert rows[0][3] == "phishing/scam"
+    for value in ("NULL", "none", "N/A", "-", "nan"):
+        assert map_row(row(**{**null, "entity_or_incident": value}))[0][0][3] == "phishing/scam"
+    assert map_row(row(**{**null, "sources": "null", "source_refs": "null"}))[0][0][8] == ""
+    # A store that holds the literal "null" reads as the category's default.
+    store = old_store(tmp_path, [null], texts={"phishing/scam": "null"})
+    hit = store.lookup("ethereum", SCAMMER)
+    assert hit["entity"] == "Reported scam wallet" and hit["label"] == "Reported scam wallet"

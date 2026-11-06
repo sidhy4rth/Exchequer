@@ -36,11 +36,25 @@ def test_an_interrupted_build_leaves_no_building_file(tmp_path, monkeypatch):
     out.parent.mkdir()
     real = build_label_store.iter_rows
 
-    def interrupted(reader, skipped):
-        yield from real(reader, skipped)
+    def interrupted(*args, **kwargs):
+        yield from real(*args, **kwargs)
         raise KeyboardInterrupt
 
     monkeypatch.setattr(build_label_store, "iter_rows", interrupted)
     with pytest.raises(KeyboardInterrupt):
         build(src, out)
     assert not out.with_suffix(".building").exists() and not out.exists()
+
+
+def test_a_source_the_rules_do_not_place_fails_the_build(tmp_path, capsys):
+    """r1-labels-data-2: a row's tier comes from an allow-list of sources, so a new
+    list must be placed there before its rows can ship."""
+    blog = {**SCAM, "address": addr("b10c"), "sources": "Some blog post"}
+    src = write_csv(tmp_path / "flagged.csv", [SCAM, blog])
+    out = tmp_path / "label_store.db"
+    assert build_label_store.main([str(src), "--out", str(out)]) == 1
+    printed = capsys.readouterr().out
+    assert "Some blog post" in printed
+    assert not out.exists()  # nothing to release by mistake
+    assert build_label_store.main([str(src), "--out", str(out), "--allow-unknown-sources"]) == 0
+    assert out.exists()

@@ -26,7 +26,7 @@ import threading
 from functools import lru_cache
 from pathlib import Path
 
-from . import config
+from . import config, label_rules
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +34,14 @@ SCHEMA_VERSION = 1
 CHAIN_IDS = {"ethereum": 1, "bsc": 2, "polygon": 3, "arbitrum": 4, "tron": 5}
 
 # How strong the evidence behind a row is, strongest first. Quoted in the
-# source line so a report never presents a scan result as a court finding.
+# source line so a report never presents a scan result as a court finding, or
+# a crowd-sourced list as research. app/label_rules.py says which applies.
 TIERS = {
     1: "government or court record",
     2: "stablecoin issuer action",
     3: "published threat intelligence",
     4: "on-chain detection",
+    5: "unvetted list (community reports or a machine-learning dataset), not checked",
 }
 
 _B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -107,7 +109,10 @@ class LabelStore:
         if not version or int(version[0]) != SCHEMA_VERSION:
             raise ValueError(f"label store {self.path} has schema {version and version[0]}, "
                              f"expected {SCHEMA_VERSION}; rebuild it")
-        self._texts = dict(self._db.execute("SELECT id, text FROM texts"))
+        # The rules apply on read too, so a store built before them reads
+        # right: no team member's name in a source, no "null" entity.
+        self._texts = {i: label_rules.public_text(t) for i, t in self._db.execute("SELECT id, text FROM texts")}
+        self._tiers: dict[tuple[int, str, int], int] = {}
         self._counts: dict[str, dict[str, int]] = {}
         for chain, category, n in self._db.execute("SELECT chain, category, n FROM counts"):
             self._counts.setdefault(chain, {})[category] = n
@@ -124,21 +129,31 @@ class LabelStore:
         if row is None:
             return None
         category, entity_id, label, peer, tx, date, source_id, tier = row
-        if label is None and peer is not None:
+        label = label_rules.clean_text(label)
+        if not label and peer is not None:
             label = f"Lookalike of {decode_address(peer)}"
-        entity = self._texts.get(entity_id, "")
+        entity = (label_rules.clean_text(self._texts.get(entity_id, ""))
+                  or label_rules.DEFAULT_ENTITY.get(category, category))
         evidence = []
         if tx is not None:
             evidence.append(f"sample tx {'' if chain == 'tron' else '0x'}{tx.hex()}")
         if date:
             d = str(date)
             evidence.append(f"{d[:4]}-{d[4:6]}-{d[6:]}")
-        source = self._texts.get(source_id, "")
+        source = label_rules.clean_text(self._texts.get(source_id, ""))
+        # Who published the row decides its tier, never more than it was built with.
+        tier = self._tier(source_id, category, tier)
         if evidence:
             source = f"{source} ({', '.join(evidence)})"
         if tier in TIERS:
             source = f"{source}; evidence: {TIERS[tier]}"
         return {"category": category, "entity": entity, "label": label or entity, "source": source}
+
+    def _tier(self, source_id: int, category: str, stored: int) -> int:
+        key = (source_id, category, stored)
+        if key not in self._tiers:
+            self._tiers[key] = label_rules.evidence_tier(category, self._texts.get(source_id, ""), stored)
+        return self._tiers[key]
 
     def counts(self, chain: str) -> dict[str, int]:
         return dict(self._counts.get(chain, {}))

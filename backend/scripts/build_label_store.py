@@ -27,11 +27,13 @@ import time
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
+from app import label_rules
 from app.label_store import CHAIN_IDS, SCHEMA_VERSION, encode_address, encode_tx
 
 DEFAULT_OUT = Path(__file__).resolve().parent.parent / "data" / "label_store.db"
 
-# hunt category -> (Exchequer category, evidence tier); None = left out.
+# hunt category -> (Exchequer category, the most evidence tier it may claim);
+# None = left out. The row's sources then set its tier (app/label_rules.py).
 CATEGORY_MAP: dict[str, tuple[str, int] | None] = {
     "hack proceeds (FBI)": ("stolen", 1),
     "hack proceeds": ("stolen", 3),
@@ -54,9 +56,6 @@ LOOKALIKE = re.compile(r"^lookalike of (\S+)")
 TX = re.compile(r"\btx (?:0x)?([0-9a-fA-F]{64})\b")
 POISONING_OPERATOR = "Address-poisoning operator"
 POISONING_TOKEN = "Fake token contract used in address poisoning"
-# Our own detectors (the BigQuery scans, the Etherscan/Tenderly/Alchemy/TronGrid runs and the Tron
-# operator expansion) are on-chain detection; only a list someone else published is threat intelligence.
-ON_CHAIN_DETECTOR = re.compile(r"poisoning (?:detection|via)|operator expansion", re.I)
 
 
 def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
@@ -71,7 +70,8 @@ def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
     if mapped is None:
         return [], f"left out: {row['category']}"
     category, tier = mapped
-    entity_text = (row.get("entity_or_incident") or "").strip()
+    # A list's "null" or "n/a" is no name; the category's own name stands in.
+    entity_text = label_rules.clean_text(row.get("entity_or_incident"))
     label = None
     peer = None
     if category == "mixer" and not entity_text.startswith("Tornado.Cash"):
@@ -85,18 +85,19 @@ def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
             if peer_raw is None:
                 return [], "unparseable lookalike target"
             peer, entity = peer_raw, POISONING_OPERATOR
-        elif entity_text.startswith("fake token"):
+        elif entity_text.lower().startswith("fake token contract"):
             entity = POISONING_TOKEN
         else:
             entity = entity_text or POISONING_OPERATOR
-            if not ON_CHAIN_DETECTOR.search(row.get("sources") or ""):
-                tier = 3  # a published poisoning list
     else:
         entity = entity_text or row.get("category", "")
-    refs = (row.get("source_refs") or "").strip()
+    refs = label_rules.public_text(label_rules.clean_text(row.get("source_refs")))
     tx_match = TX.search(refs)
     tx = encode_tx(tx_match.group(1)) if tx_match else None
-    source = (row.get("sources") or "").strip()
+    # A report cites a method, never a team member; and who published the row,
+    # not the branch that filed it, sets how strong its evidence is.
+    source = label_rules.public_text(label_rules.clean_text(row.get("sources")))
+    tier = label_rules.evidence_tier(category, source, tier)
     if refs and not tx_match:
         source = f"{source} ({refs})"  # a URL or a list's own tag: part of the citation
     date = None
@@ -125,11 +126,17 @@ def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
     return out, None
 
 
-def iter_rows(reader: Iterable[dict[str, str]], skipped: collections.Counter) -> Iterator[tuple]:
+def iter_rows(reader: Iterable[dict[str, str]], skipped: collections.Counter,
+              unknown: collections.Counter | None = None) -> Iterator[tuple]:
     for row in reader:
         rows, reason = map_row(row)
         if reason:
             skipped[reason] += 1
+        elif unknown is not None:
+            # A source the tier rules do not place (app/label_rules.SOURCE_TIERS).
+            for piece in label_rules.unknown_sources(label_rules.public_text(
+                    label_rules.clean_text(row.get("sources")))):
+                unknown[piece] += 1
         yield from rows
 
 
@@ -167,12 +174,13 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         return text_ids[text]
 
     skipped: collections.Counter = collections.Counter()
+    unknown: collections.Counter = collections.Counter()
     written = 0
     started = time.time()
     batch: list[tuple] = []
     with open(csv_path, newline="") as fh:
         reader = csv.DictReader(fh)
-        for n, (raw, chain_id, category, entity, label, peer, tx, date, source, tier) in enumerate(iter_rows(reader, skipped)):
+        for n, (raw, chain_id, category, entity, label, peer, tx, date, source, tier) in enumerate(iter_rows(reader, skipped, unknown)):
             if limit is not None and n >= limit:
                 break
             batch.append((raw, chain_id, category, tid(entity), label, peer, tx, date, tid(source), tier))
@@ -199,23 +207,43 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         "rows": sum(n for _, _, n in counts),
         "by_chain_category": {f"{names[c]}:{cat}": n for c, cat, n in counts},
         "skipped": dict(skipped.most_common()),
+        "unknown_sources": dict(unknown.most_common()),
         "size_mb": round(out.stat().st_size / 1e6, 1),
     }
     return report
 
 
-def main() -> int:
+def problems(report: dict, args: argparse.Namespace) -> list[str]:
+    """Why this build must not be released, if anything."""
+    found = []
+    if report["unknown_sources"] and not args.allow_unknown_sources:
+        found.append("sources app/label_rules.SOURCE_TIERS does not place (add each, with its tier): "
+                     + "; ".join(f"{p!r} ({n:,} rows)" for p, n in list(report["unknown_sources"].items())[:20]))
+    return found
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("csv", type=Path)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--limit", type=int, default=None, help="stop after N store rows (for a trial build)")
-    args = ap.parse_args()
+    ap.add_argument("--allow-unknown-sources", action="store_true",
+                    help="keep rows whose sources the tier rules do not place, at their category's tier")
+    args = ap.parse_args(argv)
     report = build(args.csv.expanduser(), args.out, args.limit)
     print(f"{report['rows']:,} labels, {report['size_mb']} MB -> {args.out}")
     for key, n in sorted(report["by_chain_category"].items()):
         print(f"  {key}: {n:,}")
     for reason, n in report["skipped"].items():
         print(f"  skipped {n:,}: {reason}")
+    found = problems(report, args)
+    if found:
+        # Nothing is left to release by mistake; the build is repeatable.
+        args.out.unlink(missing_ok=True)
+        for problem in found:
+            print(f"REFUSED: {problem}")
+        print(f"removed {args.out}")
+        return 1
     return 0
 
 
