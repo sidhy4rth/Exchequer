@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import urllib.request
 from datetime import datetime, timezone
@@ -87,6 +88,17 @@ def fetch(stem: str) -> dict[str, str]:
     url = f"{DATASET_URL}/{stem}.json"
     with urllib.request.urlopen(url, timeout=30) as response:
         return json.loads(response.read().decode())
+
+
+# Labels in the exchange datasets that name something the exchange runs but
+# that is not where customers' funds are cashed out: a contract deployer, a
+# router, or another company's treasury ('Tether: Treasury' sits in the
+# Bitfinex set). An exchange match ends a trace, so these must never be one.
+NOT_CASH_OUT = re.compile(r"router|aggregat|relayer|paymaster|treasury|deployer|\bdex\b(?!-trade)", re.IGNORECASE)
+
+
+def is_cash_out_label(label: str) -> bool:
+    return not NOT_CASH_OUT.search(label or "")
 
 
 def classify(label: str) -> str:
@@ -155,6 +167,8 @@ def main() -> int:
                 skipped_malformed += 1
                 continue
             if addr in have or addr in candidates:
+                continue
+            if not is_cash_out_label(label or ""):
                 continue
             candidates[addr] = {
                 "exchange": exchange,

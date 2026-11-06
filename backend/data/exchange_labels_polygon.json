@@ -10,7 +10,8 @@
    "dawsbot": 0,
    "brianleect": 4
   },
-  "regenerate_with": "cd backend && .venv/bin/python -m scripts.port_evm_labels"
+  "regenerate_with": "cd backend && .venv/bin/python -m scripts.port_evm_labels",
+  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json."
  },
  "labels": {
   "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
@@ -123,11 +124,6 @@
    "label": "CoinsPaid: Hot Wallet 2",
    "type": "hot_wallet"
   },
-  "0x32047ac688997feb8fbf1d5d4aee39ec0202086d": {
-   "exchange": "Crypto.com",
-   "label": "Crypto.com: Deployer 3",
-   "type": "exchange_wallet"
-  },
   "0x345d8e3a1f62ee6b1d483890976fd66168e390f2": {
    "exchange": "Binance",
    "label": "Binance 23",
@@ -213,11 +209,6 @@
    "label": "Coinbase: Commerce Fee 6",
    "type": "exchange_wallet"
   },
-  "0x4c2f150fc90fed3d8281114c2349f1906cde5346": {
-   "exchange": "Gemini",
-   "label": "Gemini: Deployer 2",
-   "type": "exchange_wallet"
-  },
   "0x4d24eececb86041f47bca41265319e9f06ae2fcb": {
    "exchange": "CoinDCX",
    "label": "CoinDCX 4",
@@ -236,11 +227,6 @@
   "0x51e3d44172868acc60d68ca99591ce4230bc75e0": {
    "exchange": "MEXC",
    "label": "MEXC 8",
-   "type": "exchange_wallet"
-  },
-  "0x5754284f345afc66a98fbb0a0afe71e0f007b949": {
-   "exchange": "Bitfinex",
-   "label": "Tether: Treasury",
    "type": "exchange_wallet"
   },
   "0x576b81f0c21edbc920ad63feeeb2b0736b018a58": {

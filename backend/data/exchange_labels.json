@@ -13,7 +13,8 @@
     "deposit_addresses": {
       "Bitget": "19027 per-customer deposit addresses, tagged 'Bitget Dep' by Etherscan, imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9 and each confirmed to have at least one transaction or token transfer on chain; 0 never-used addresses left out. Regenerate: cd backend && .venv/bin/python -m scripts.import_eth_labels --deposits Bitget",
       "Binance": "4991 per-customer deposit addresses, tagged 'Binance Dep' by Etherscan, imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9 and each confirmed to have at least one transaction or token transfer on chain; 21 never-used addresses left out. Regenerate: cd backend && .venv/bin/python -m scripts.import_eth_labels --deposits Binance"
-    }
+    },
+    "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json."
   },
   "labels": {
     "0x05f51aab068caa6ab7eeb672f88c180f67f17ec7": {
@@ -25406,11 +25407,6 @@
       "label": "Binance: Contract",
       "type": "contract_wallet"
     },
-    "0x1074253202528777561f83817d413e91bfa671d4": {
-      "exchange": "Binance",
-      "label": "Binance: Deployer 3",
-      "type": "exchange_wallet"
-    },
     "0x170c7c38419767816cc7ec519da67d1a4dc43826": {
       "exchange": "Binance",
       "label": "Binance: Deposit 1",
@@ -25736,36 +25732,6 @@
       "label": "Bitfinex: Contract 2",
       "type": "contract_wallet"
     },
-    "0x5dbdebcae07cc958ba5290ff9deaae554e29e7b4": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 1",
-      "type": "exchange_wallet"
-    },
-    "0x2ee3b2df6534abc759ffe994f7b8dcdfaa02cd31": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 2",
-      "type": "exchange_wallet"
-    },
-    "0xe1f3c653248de6894d683cb2f10de7ca2253046f": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 3",
-      "type": "exchange_wallet"
-    },
-    "0x2903cadbe271e057edef157340b52a5898d7424f": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 4",
-      "type": "exchange_wallet"
-    },
-    "0x36928500bc1dcd7af6a2b4008875cc336b927d57": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 5",
-      "type": "exchange_wallet"
-    },
-    "0x14d06788090769f669427b6aea1c0240d2321f34": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 6",
-      "type": "contract_wallet"
-    },
     "0xab7c74abc0c4d48d1bdad5dcb26153fc8780f83e": {
       "exchange": "Bitfinex",
       "label": "Bitfinex: MultiSig 1",
@@ -25800,11 +25766,6 @@
       "exchange": "Bitfinex",
       "label": "Bitfinex: Old Contract 2",
       "type": "contract_wallet"
-    },
-    "0x5754284f345afc66a98fbb0a0afe71e0f007b949": {
-      "exchange": "Bitfinex",
-      "label": "Tether: Treasury",
-      "type": "exchange_wallet"
     },
     "0xe80623a9d41f2f05780d9cd9cea0f797fd53062a": {
       "exchange": "Bitget",
@@ -122786,21 +122747,6 @@
       "label": "Crypto.com 6",
       "type": "exchange_wallet"
     },
-    "0xc42f0e95ff6c861164a86415eb6b3dabe7e13843": {
-      "exchange": "Crypto.com",
-      "label": "Crypto.com: Deployer",
-      "type": "exchange_wallet"
-    },
-    "0x494adb1ecac39d9df00fcda84ed2c1dc775107e7": {
-      "exchange": "Crypto.com",
-      "label": "Crypto.com: Deployer 2",
-      "type": "exchange_wallet"
-    },
-    "0x32047ac688997feb8fbf1d5d4aee39ec0202086d": {
-      "exchange": "Crypto.com",
-      "label": "Crypto.com: Deployer 3",
-      "type": "exchange_wallet"
-    },
     "0xae45a8240147e6179ec7c9f92c5a18f9a97b3fca": {
       "exchange": "Crypto.com",
       "label": "Crypto.com: Deposit Funder",
@@ -123161,16 +123107,6 @@
       "label": "Gemini: Contract 1",
       "type": "contract_wallet"
     },
-    "0xdd51f01d9fc0fd084c1a4737bbfa5becb6ced9bc": {
-      "exchange": "Gemini",
-      "label": "Gemini: Deployer 1",
-      "type": "exchange_wallet"
-    },
-    "0x4c2f150fc90fed3d8281114c2349f1906cde5346": {
-      "exchange": "Gemini",
-      "label": "Gemini: Deployer 2",
-      "type": "exchange_wallet"
-    },
     "0xdec042a90de005b22754e94a8a979c4b8c67fde5": {
       "exchange": "Gemini",
       "label": "Gemini: Old Contract 1",
@@ -123489,11 +123425,6 @@
     "0x9d6d492bd500da5b33cf95a5d610a73360fcaaa0": {
       "exchange": "Huobi / HTX",
       "label": "Huobi Mining Pool",
-      "type": "exchange_wallet"
-    },
-    "0x63155828e949aeba75038a5e8a5f4edd5038d9a6": {
-      "exchange": "Huobi / HTX",
-      "label": "Huobi: Deployer",
       "type": "exchange_wallet"
     },
     "0xe0d513cf39b52a09aefcef25e91dda3a2636329a": {
@@ -124126,11 +124057,6 @@
       "label": "Kraken: Cold Wallet 4",
       "type": "cold_wallet"
     },
-    "0x2e7542ec36df6429d8c397f88c4cf0c925948f44": {
-      "exchange": "Kraken",
-      "label": "Kraken: Deployer 1",
-      "type": "contract_wallet"
-    },
     "0xa40dfee99e1c85dc97fdc594b16a460717838703": {
       "exchange": "Kraken",
       "label": "Kraken: Eth2 Depositor",
@@ -124285,11 +124211,6 @@
       "exchange": "KuCoin",
       "label": "KuCoin Contract",
       "type": "contract_wallet"
-    },
-    "0xf2b16510270a214130c6b17ff0e9bf87585126bd": {
-      "exchange": "KuCoin",
-      "label": "KuCoin: Deployer",
-      "type": "exchange_wallet"
     },
     "0x061f7937b7b2bc7596539959804f86538b6368dc": {
       "exchange": "KuCoin",
@@ -124804,16 +124725,6 @@
     "0x461249076b88189f8ac9418de28b365859e46bfd": {
       "exchange": "OKX",
       "label": "OKX 9",
-      "type": "exchange_wallet"
-    },
-    "0x7d0ccaa3fac1e5a943c5168b6ced828691b46b36": {
-      "exchange": "OKX",
-      "label": "OKX: DEX Router 2",
-      "type": "exchange_wallet"
-    },
-    "0x156acd2bc5fc336d59baae602a2bd9b5e20d6672": {
-      "exchange": "OKX",
-      "label": "OKX: DEX Router 4",
       "type": "exchange_wallet"
     },
     "0xc5a93444cc4da6efb9e6fc6e5d3cb55a53b52396": {

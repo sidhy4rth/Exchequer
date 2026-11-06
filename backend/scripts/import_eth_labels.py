@@ -111,12 +111,16 @@ CANONICAL: dict[str, str] = {
 
 # Dataset slugs whose rows are never exchange wallets, whatever the tag says.
 SKIP_SLUG = re.compile(
-    r"exploit|ofac|charity|mixer|tornado|sybil|airdrop|nonprofit|take-action|endaoment|scam|heist|compromised"
+    r"exploit|ofac|charity|mixer|tornado|sybil|airdrop|nonprofit|take-action|endaoment|scam|heist|compromised|"
+    r"\bdex\b"
 )
 # Tags that name exchange infrastructure or a customer, not a cash-out wallet.
 SKIP_TAG = re.compile(
     r"\bdep\b|deployer|funder|contract|token|charity|exploit|multisig|vesting|treasury|"
-    r"staking|bridge|swap|launchpad|operator|registry|^\.|^bitget wallet",
+    r"staking|bridge|swap|launchpad|operator|registry|^\.|^bitget wallet|"
+    # An exchange's on-chain router or aggregator is a swap, not a cash-out:
+    # 'OKX: DEX Router 2' once came in as an OKX wallet. Dex-Trade is a CEX.
+    r"router|aggregat|relayer|paymaster|\bdex\b(?!-trade)",
     re.IGNORECASE,
 )
 

@@ -522,7 +522,7 @@ and matching one chain's address against the other's labels would manufacture an
 
 | File | Coverage |
 |---|---|
-| `exchange_labels.json` | **25,038 addresses / 92 exchanges** — 975 exchange wallets (the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX**, Bitget, Poloniex) plus **24,063 customer deposit addresses** (19,027 Bitget, 4,998 Binance, 38 at other exchanges) |
+| `exchange_labels.json` | **25,020 addresses / 92 exchanges** — 957 exchange wallets (the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX**, Bitget, Poloniex) plus **24,063 customer deposit addresses** (19,027 Bitget, 4,998 Binance, 38 at other exchanges) |
 | `exchange_labels_bsc.json` | **184 addresses / 56 exchanges** — the original 38 (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat) plus 146 Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`) |
 | `exchange_labels_tron.json` | **41 addresses / 19 exchanges** — read live from TronScan's own address tags |
 

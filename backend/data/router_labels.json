@@ -6,7 +6,7 @@
     "generated": "2026-09-15T14:46:35+00:00",
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_router_labels",
     "rejected": [],
-    "count": 20
+    "count": 22
   },
   "labels": {
     "0x11111112542d85b3ef69ae05771c2dccff4faa26": {
@@ -27,6 +27,11 @@
     "0x1111111254fb6c44bac0bed2854e76f90643097d": {
       "exchange": "1inch",
       "label": "1inch v4: Aggregation Router",
+      "type": "router"
+    },
+    "0x156acd2bc5fc336d59baae602a2bd9b5e20d6672": {
+      "exchange": "OKX DEX",
+      "label": "OKX DEX: Router 4",
       "type": "router"
     },
     "0x3b3ae790df4f312e745d270119c6052904fb6790": {
@@ -52,6 +57,11 @@
     "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": {
       "exchange": "Uniswap",
       "label": "Uniswap V2: Router 2",
+      "type": "router"
+    },
+    "0x7d0ccaa3fac1e5a943c5168b6ced828691b46b36": {
+      "exchange": "OKX DEX",
+      "label": "OKX DEX: Router 2",
       "type": "router"
     },
     "0x881d40237659c251811cec9c364ef91dc08d300c": {
