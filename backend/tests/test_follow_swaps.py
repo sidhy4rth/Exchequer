@@ -185,3 +185,29 @@ def test_a_follow_on_counts_hops_from_the_reported_address(faked, monkeypatch):
     assert found["hop_count"] == 1
     assert proximity["raw_value"] == 0.75
     assert "2 hops from the reported address (1 after the swap)" in proximity["explanation"]
+
+
+def test_the_follow_on_estimate_is_capped_at_the_swap_output(faked, monkeypatch):
+    """Audit r1-evidence-crypto-5: the swap returned 100 USDT, but the wallet
+    already held more and sent 5,000 to Binance. At most 100 can be the
+    swapped money."""
+    monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, BINANCE_14, 5000.0, SWAP_AT + 60, "USDT")])
+    swap = {**SWAP, "amount_in": 0.04, "amount_out": 100.0}
+    monkeypatch.setattr(main, "detect_swaps", lambda graph, *a, **k: [swap] if k.get("asset_symbol") == "ETH" else [])
+
+    found = run_trace(request())["follow_ons"][0]["result"]
+    assert found["prorata"]["estimated"] == 100.0
+    assert found["prorata"]["seed_cap"] == {"amount": 100.0, "basis": "swap_output", "applied": True}
+    assert found["materiality"]["basis"] == "swap_output" and found["materiality"]["denominator"] == 100.0
+
+
+def test_the_follow_on_keeps_the_route_to_the_swap(faked, monkeypatch):
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, MID, 1.0, SWAP_AT - 60, "ETH"),
+                                         tx(MID, ROUTER, 1.0, SWAP_AT, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(MID, BINANCE_14, 2400.0, SWAP_AT + 60, "USDT")])
+    swap = {**SWAP, "sender": MID}
+    monkeypatch.setattr(main, "detect_swaps", lambda graph, *a, **k: [swap] if k.get("asset_symbol") == "ETH" else [])
+
+    (follow,) = run_trace(request())["follow_ons"]
+    assert [step["address"] for step in follow["route"]] == [SEED, MID]
+    assert follow["route"][1]["value_native"] == 1.0

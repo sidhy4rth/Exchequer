@@ -166,3 +166,34 @@ def test_the_form_is_told_whether_payment_intake_is_on(monkeypatch):
     assert off.status_code == on.status_code == 200
     assert off.json()["payments"] is False and on.json()["payments"] is True
     assert on.json()["lookup_limit"] == config.TX_INTAKE_LOOKUP_LIMIT
+
+
+def test_an_intake_trace_estimate_never_exceeds_the_reported_amount(chain, monkeypatch):
+    # Audit r1-attribution-integrity-7: the victim paid 2.0; the wallet sent
+    # 2.4 to an exchange, the rest from someone else. The case may say at most
+    # 2.0 of the victim's money arrived.
+    from app.exchange_matcher import ExchangeMatcher
+    labels = {LATER: {"exchange": "Binance", "label": "Binance 14", "type": "hot_wallet"}}
+    monkeypatch.setattr(main, "get_matcher", lambda key: ExchangeMatcher(labels, chain="ethereum"))
+    result = run_trace(request())
+    assert result["exchange"] == "Binance"
+    assert result["prorata"]["estimated"] == 2.0 and result["prorata"]["sent"] == 2.4
+    assert result["prorata"]["seed_cap"] == {"amount": 2.0, "basis": "reported_amount", "applied": True}
+    assert read_case(result).estimates.conservative == 2.0
+
+
+def test_the_report_states_the_capped_figure_and_why(chain, monkeypatch):
+    import json
+
+    from app.exchange_matcher import ExchangeMatcher
+    from app.models import Case
+    from app.report import build_report, render_text_report
+    labels = {LATER: {"exchange": "Binance", "label": "Binance 14", "type": "hot_wallet"}}
+    monkeypatch.setattr(main, "get_matcher", lambda key: ExchangeMatcher(labels, chain="ethereum"))
+    result = run_trace(request())
+    amount = next(c for c in result["confidence_detail"]["components"] if c["name"] == "amount_correlation")
+    assert "about 2.0000 of the 2.0000 ETH the victim reported paying" in amount["explanation"]
+    case = Case(id="c1", address=SCAMMER, created_at="2026-09-24T00:00:00+00:00",
+                result_json=json.dumps(result, default=str))
+    text = " ".join(render_text_report(build_report(case)).split())
+    assert "about 2.0 of the 2.0 ETH the victim reported paying (pro-rata; the reported address sent 2.4" in text

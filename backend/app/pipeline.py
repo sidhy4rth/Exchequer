@@ -354,20 +354,32 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
     return chain, address
 
 
+def _seed_cap(intake: dict[str, Any] | None, seed_amount: float | None,
+              seed_amount_basis: str | None) -> tuple[float | None, str | None]:
+    """What the traced figure may never exceed, and why: the victim's reported
+    payments on an intake trace, or what the swap returned on a follow-on."""
+    if intake and intake.get("payments"):
+        return reported_amount(intake["payments"]), "reported_amount"
+    if seed_amount is not None and seed_amount > 0:
+        return float(seed_amount), seed_amount_basis or "swap_output"
+    return None, None
+
+
 def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
                  untraced: list[dict[str, Any]], intake: dict[str, Any] | None,
+                 seed_amount: float | None = None, seed_amount_basis: str | None = None,
                  ) -> tuple[dict[str, Any], dict[str, float]]:
     """Each match's share of what the reported address sent, and the case's
     materiality record (pipeline.run_trace fills in the primary's figures).
 
     Share = the most value that could have reached the match along a shortest
     path (scoring.reach_bottlenecks) / a denominator: the victim's reported
-    payments for an intake trace, else the reported wallet's outflow as the
-    trace saw it (scoring.seed_outflow)."""
+    payments for an intake trace, the swap's output for a follow-on, else the
+    reported wallet's outflow as the trace saw it (scoring.seed_outflow)."""
     reach = reach_bottlenecks(graph, seed, direction)
     outflow = seed_outflow(graph, seed, direction, untraced)
-    reported = reported_amount(intake["payments"]) if intake and intake.get("payments") else None
-    denominator, basis = (reported, "reported_amount") if reported else (outflow, "seed_outflow")
+    cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis)
+    denominator, basis = (cap, cap_basis) if cap else (outflow, "seed_outflow")
     shares: dict[str, float] = {}
     for m in matches:
         if m.address == seed:
@@ -392,13 +404,16 @@ def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
 
 
 def run_trace(request: TraceRequest, seed_window: int | None = None,
-              budget: TraceBudget | None = None, depth_offset: int = 0) -> dict[str, Any]:
+              budget: TraceBudget | None = None, depth_offset: int = 0,
+              seed_amount: float | None = None, seed_amount_basis: str | None = None) -> dict[str, Any]:
     """Run one trace and return the full result, without storing it.
 
     `seed_window` is set only for a follow-on trace after a swap: the time rule
     then applies to the starting wallet too (see build_trace_graph).
     `depth_offset` is then the swapping wallet's hops from the reported
-    address, so the follow-on's hop proximity counts from there.
+    address, so the follow-on's hop proximity counts from there, and
+    `seed_amount` what the swap returned: the follow-on's amounts are capped
+    at it, because the wallet may have sent on money that was not the swap's.
 
     Everything the endpoint does except the case record: the endpoint gives
     the result a case id and saves it; the startup warm-up runs the demo
@@ -525,7 +540,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             # sent picks the case's exchange, not its hop count alone (one dust
             # transfer used to name any exchange, or an innocent deposit address).
             materiality, shares = _materiality(result.graph, seed, direction, matches + inferred,
-                                               result.untraced, intake)
+                                               result.untraced, intake, seed_amount, seed_amount_basis)
+            # The figure is never more than the victim reported paying, or
+            # than what the swap returned (follow-on).
+            cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis)
             lead = ExchangeMatcher.primary_match(matches + inferred, shares)
             if lead is not None:
                 materiality["primary_share"] = round(shares.get(lead.address, 0.0), 4)
@@ -541,11 +559,12 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 flows = getattr(client, "get_flows_between", None)
                 flows = read_once(flows) if flows else None
                 prorata = estimate_prorata(result.graph, lead_path,
-                                           getattr(client, "get_incoming_between", None), flows_between=flows)
+                                           getattr(client, "get_incoming_between", None), flows_between=flows,
+                                           seed_cap=cap, cap_basis=cap_basis)
                 # R4: FIFO and LIBR beside pro-rata, on the same path. Before
                 # the evidence manifest below, so their reads are in it.
                 if config.TRACING_METHODS and lead_path:
-                    methods = compare_methods(result.graph, lead_path, flows, prorata)
+                    methods = compare_methods(result.graph, lead_path, flows, prorata, seed_cap=cap)
             # The reported wallet's own statement: what it received and sent in
             # this asset, whether or not anything could be followed onward.
             statement = _wallet_statement(client, seed) if seed_window is None else None
@@ -657,7 +676,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     follow_ons: list[dict[str, Any]] = []
     if direction == OUTGOING and request.follow_swaps and seed_window is None and swaps:
         follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth,
-                                   budget=budget)
+                                   budget=budget, seed=seed)
     followed = next((f for f in follow_ons if (f.get("result") or {}).get("exchange")), None)
 
     # Edge case: the address has never sent anything. Not an error -- a finding.
@@ -897,6 +916,7 @@ def _follow_swaps(
     swaps: list[dict[str, Any]],
     max_depth: int,
     budget: TraceBudget | None = None,
+    seed: str | None = None,
 ) -> list[dict[str, Any]]:
     """Trace the output asset of each swap into a stablecoin this chain carries.
 
@@ -905,8 +925,10 @@ def _follow_swaps(
     The follow-on starts at the swap: the time rule excludes anything the
     wallet sent in the new asset before the swap's output arrived. It follows
     everything the wallet sent in that asset afterwards, which may include
-    money that was not the swap's output; the swap's amount is kept beside the
-    result so a reader can compare. Follow-ons never follow further swaps.
+    money that was not the swap's output, so its amounts are capped at what
+    the swap returned. `route` is the original asset's path from the reported
+    address (`seed`) to the swapping wallet, for the letter. Follow-ons never
+    follow further swaps.
 
     A time budget covers the whole case, not each trace: follow-ons share what
     the original trace left of it, and one that would start with less than the
@@ -927,7 +949,8 @@ def _follow_swaps(
             break
         depth_at = (graph.nodes.get(swap["sender"]) or {}).get("depth", 0)
         remaining = max(1, max_depth - depth_at)
-        follow = {"swap": swap, "asset": asset_out, "address": swap["sender"], "max_depth": remaining}
+        follow = {"swap": swap, "asset": asset_out, "address": swap["sender"], "max_depth": remaining,
+                  "route": _trace_path(graph, seed, swap["sender"], OUTGOING) if seed else []}
         # One clock for the whole case: a follow-on uses what is left of it.
         if budget is not None and budget.walk_over():
             follow["error"] = "not traced: the case's time budget was spent before this swap could be followed"
@@ -940,7 +963,8 @@ def _follow_swaps(
         progress.report(stage="following_swap", follow_asset=asset_out)
         try:
             follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"), budget=budget,
-                                         depth_offset=depth_at)
+                                         depth_offset=depth_at, seed_amount=swap.get("amount_out"),
+                                         seed_amount_basis="swap_output")
         except HTTPException as exc:
             if budget is not None and budget.cancelled:
                 raise  # a stop ends the whole case, follow-ons included

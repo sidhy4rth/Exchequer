@@ -86,3 +86,12 @@ def test_page_one_says_when_pro_rata_was_not_estimated():
         "status": "unknown", "reason": "0xmid received too many transfers in the window to read in full"}}}
     text, _ = first_page(report)
     assert "not estimated" in text and "too many transfers" in " ".join(text.split())
+
+
+def test_page_one_states_a_capped_figure_as_capped():
+    # Audit r1-attribution-integrity-7: never "sent from the reported address" for the victim's share.
+    report = {**REPORT, "attribution": {**REPORT["attribution"], "prorata": {
+        "status": "estimated", "estimated": 2.0, "sent": 50.0,
+        "seed_cap": {"amount": 2.0, "basis": "reported_amount", "applied": True}}}}
+    text = " ".join(first_page(report)[0].split())
+    assert "at most what the victim reported paying" in text and "≈ 2 of 2" in text

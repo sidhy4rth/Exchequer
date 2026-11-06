@@ -67,16 +67,18 @@ FlowsBetween = Callable[[str, int, int, int, int], tuple[list[Any], list[Any], b
 
 def compare(
     graph: nx.DiGraph, path: list[str], flows_between: FlowsBetween | None,
-    prorata: dict[str, Any] | None = None,
+    prorata: dict[str, Any] | None = None, seed_cap: float | None = None,
 ) -> dict[str, Any]:
     """FIFO and LIBR along `path`, beside the pro-rata result already computed.
 
     `path` runs seed -> ... -> exchange in the direction the money moved.
     Returns one result per method, plus the range across every method that
-    produced a figure and the smallest of them (`conservative`).
+    produced a figure and the smallest of them (`conservative`). `seed_cap`
+    limits the victim's part of the first hop as in prorata.estimate (the
+    reported payments, or a swap's output), so no method states more.
     """
     reader = read_once(flows_between) if flows_between else None
-    results = {method: _trace(graph, path, reader, method) for method in METHODS}
+    results = {method: _trace(graph, path, reader, method, seed_cap) for method in METHODS}
     figures = {m: r["estimated"] for m, r in results.items() if r["status"] == "estimated"}
     if prorata and prorata.get("status") == "estimated":
         figures["prorata"] = float(prorata["estimated"])
@@ -110,7 +112,8 @@ def read_once(flows_between: FlowsBetween) -> FlowsBetween:
     return read
 
 
-def _trace(graph: nx.DiGraph, path: list[str], flows_between: FlowsBetween | None, method: str) -> dict[str, Any]:
+def _trace(graph: nx.DiGraph, path: list[str], flows_between: FlowsBetween | None, method: str,
+           seed_cap: float | None = None) -> dict[str, Any]:
     if len(path) < 2:
         return {"status": "not_applicable"}
     first = _edge_txs(graph, path[0], path[1])
@@ -122,8 +125,9 @@ def _trace(graph: nx.DiGraph, path: list[str], flows_between: FlowsBetween | Non
 
     # The victim's part of each transfer on the edge being followed. Everything
     # the reported wallet sent along the path counts as the victim's, as in
-    # pro-rata.
-    victim = {transfer_key(t): t["value_native"] for t in first}
+    # pro-rata -- scaled down to the cap when one is given.
+    start = min(sent, seed_cap) if seed_cap is not None else sent
+    victim = {transfer_key(t): t["value_native"] * (start / sent) for t in first}
     hops: list[dict[str, Any]] = []
     for i in range(1, len(path) - 1):
         wallet = path[i]
@@ -163,7 +167,7 @@ def _trace(graph: nx.DiGraph, path: list[str], flows_between: FlowsBetween | Non
         "method": method,
         "sent": round(sent, 6),
         "estimated": round(estimated, 6),
-        "ratio": round(min(1.0, estimated / sent), 4),
+        "ratio": round(min(1.0, estimated / start), 4) if start > 0 else 0.0,
         "unseen_outflow": any(h["unseen_outflow"] > 0 for h in hops),
         "hops": hops,
     }

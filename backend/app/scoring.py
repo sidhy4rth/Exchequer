@@ -333,13 +333,26 @@ def _amount_correlation(
     )
 
 
+# What a pro-rata cap (prorata.estimate's seed_cap) is, in words.
+CAP_WORDING = {"reported_amount": "the victim reported paying", "swap_output": "the swap returned"}
+
+
 def _prorata_component(prorata: dict[str, Any], native_symbol: str) -> ScoreComponent:
     """Amount correlation measured pro-rata (see prorata.py)."""
     sent, est, ratio = prorata["sent"], prorata["estimated"], prorata["ratio"]
-    lines = [
-        f"Pro-rata estimate: about {est:,.4f} of the {sent:,.4f} {native_symbol} that left the "
-        f"reported address on this path likely reached the exchange ({ratio * 100:.1f}%)."
-    ]
+    cap = prorata.get("seed_cap") or {}
+    if cap.get("applied"):
+        lines = [
+            f"Pro-rata estimate: about {est:,.4f} of the {cap['amount']:,.4f} {native_symbol} "
+            f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')} likely reached the exchange "
+            f"({ratio * 100:.1f}%). The reported wallet sent {sent:,.4f} along this path, more than that, "
+            "so the estimate starts from the smaller figure."
+        ]
+    else:
+        lines = [
+            f"Pro-rata estimate: about {est:,.4f} of the {sent:,.4f} {native_symbol} that left the "
+            f"reported address on this path likely reached the exchange ({ratio * 100:.1f}%)."
+        ]
     for h in prorata.get("hops") or []:
         lines.append(
             f"At {h['address']} the traced funds were {h['victim_share'] * 100:.1f}% of the "

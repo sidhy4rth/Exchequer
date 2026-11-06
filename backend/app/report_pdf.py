@@ -29,6 +29,7 @@ from xml.sax.saxutils import escape
 
 from .evidence import CONTENT_HASH_MARK
 from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso
+from .scoring import CAP_WORDING
 from .signing import SIGNATURE_MARK
 
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
@@ -153,7 +154,13 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
             ("Hops from the reported address", attribution.get("hop_count", ""), False),
         ]
         prorata = attribution.get("prorata") or {}
-        if prorata.get("status") == "estimated":
+        cap = prorata.get("seed_cap") or {}
+        if prorata.get("status") == "estimated" and cap.get("applied"):
+            facts.append((f"Likely arrived (pro-rata; at most what "
+                          f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')})",
+                          f"≈ {_num(prorata.get('estimated'))} of {_num(cap.get('amount'))} "
+                          f"{attribution.get('value_currency', '')}", False))
+        elif prorata.get("status") == "estimated":
             facts.append(("Sent from the reported address that likely arrived (pro-rata)",
                           f"≈ {_num(prorata.get('estimated'))} of {_num(prorata.get('sent'))} "
                           f"{attribution.get('value_currency', '')}", False))

@@ -26,7 +26,7 @@ from . import config
 from .evidence import seal_text
 from .models import Case
 from .risk_matcher import list_freshness
-from .scoring import BAND_THRESHOLDS
+from .scoring import BAND_THRESHOLDS, CAP_WORDING
 
 REPORT_VERSION = "2.1"
 TOOL_NAME = "Exchequer"
@@ -493,9 +493,16 @@ def render_text_report(report: dict[str, Any]) -> str:
                if attribution.get("inferred") else basis))
         add(f"Hops from source : {attribution['hop_count']}")
         prorata = attribution.get("prorata") or {}
+        cap = prorata.get("seed_cap") or {}
         if direction == "outgoing" and prorata.get("status") == "estimated":
-            add(f"Likely arrived   : about {prorata['estimated']} of {prorata['sent']} {symbol} "
-                "sent from the reported address (pro-rata)")
+            if cap.get("applied"):
+                # Never more than the victim paid, or than the swap returned.
+                add(f"Likely arrived   : about {prorata['estimated']} of the {cap['amount']} {symbol} "
+                    f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')} (pro-rata; the "
+                    f"reported address sent {prorata['sent']} along this path)")
+            else:
+                add(f"Likely arrived   : about {prorata['estimated']} of {prorata['sent']} {symbol} "
+                    "sent from the reported address (pro-rata)")
             add(f"Arrived in total : {prorata['arrived_total']} {symbol} along this path, "
                 "including funds from other sources")
             for h in prorata.get("hops") or []:

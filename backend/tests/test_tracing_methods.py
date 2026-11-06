@@ -254,3 +254,11 @@ def test_conservative_is_not_zeroed_by_recycling():
     prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows)
     result = compare(g, ["V", "M", "X"], flows, prorata)
     assert result["conservative"] == 10_000.0
+
+
+def test_the_methods_never_exceed_the_seed_cap():
+    # The reported wallet sent 50 on; the victim's part of it was at most 10.
+    g, flows = one_hop([tx("v1", 50.0, 1)], [tx("x1", 50.0, 2)])
+    result = compare(g, ["V", "M", "X"], flows, seed_cap=10.0)
+    assert result[FIFO]["estimated"] == result[LIBR]["estimated"] == 10.0
+    assert result["conservative"] == 10.0

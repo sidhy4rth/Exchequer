@@ -104,7 +104,8 @@ def _recycled(received: list[tuple[Any, str | None]], paid: list[Any], by_block:
 
 
 def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetween | None,
-             flows_between: FlowsBetween | None = None) -> dict[str, Any]:
+             flows_between: FlowsBetween | None = None, seed_cap: float | None = None,
+             cap_basis: str | None = None) -> dict[str, Any]:
     """Pro-rata estimate of the reported funds reaching the end of `path`.
 
     `path` runs seed -> ... -> exchange in the direction the money moved.
@@ -114,6 +115,12 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
     what the wallet paid out, so coins it got back from wallets it had paid
     are netted out. Never raises: a failed read is an "unknown", not a failed
     trace.
+
+    `seed_cap` limits the starting figure: the victim's reported payments
+    (`cap_basis` "reported_amount") or what a swap returned ("swap_output").
+    Without it the start is everything the reported wallet sent along the
+    first hop, which can include other people's money; with it the estimate
+    never exceeds what the victim paid, or what the swap gave back.
     """
     if len(path) < 2 or (len(path) > 2 and incoming_between is None and flows_between is None):
         return {"status": "not_applicable"}
@@ -122,7 +129,10 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
     if sent <= 0:
         return {"status": "not_applicable"}
 
-    carried = sent
+    start = min(sent, seed_cap) if seed_cap is not None else sent
+    capped = ({"seed_cap": {"amount": round(seed_cap, 6), "basis": cap_basis, "applied": seed_cap < sent}}
+              if seed_cap is not None else {})
+    carried = start
     hops: list[dict[str, Any]] = []
     for i in range(1, len(path) - 1):
         wallet = path[i]
@@ -134,13 +144,13 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
         times_in = [t["timestamp"] for t in txs_in if t.get("timestamp")]
         times_out = [t["timestamp"] for t in txs_out if t.get("timestamp")]
         if not (blocks_in and blocks_out) and not (times_in and times_out):
-            return _unknown(sent, hops, f"the transfers through {wallet} carry neither blocks nor times "
+            return _unknown(sent, hops, capped, f"the transfers through {wallet} carry neither blocks nor times "
                                         "to bound the window")
         start_block, end_block = (min(blocks_in), max(blocks_out)) if blocks_in and blocks_out else (0, 0)
         start_ts = min(times_in) if times_in else 0
         end_ts = max(times_out) if times_out else 0
         if (end_block < start_block) or (not blocks_in and end_ts < start_ts):
-            return _unknown(sent, hops, f"{wallet} sent on before the traced funds arrived")
+            return _unknown(sent, hops, capped, f"{wallet} sent on before the traced funds arrived")
 
         try:
             if flows_between is not None:
@@ -148,9 +158,9 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
             else:
                 (received, complete), paid = incoming_between(wallet, start_block, end_block, start_ts, end_ts), []
         except Exception as exc:  # noqa: BLE001 -- an estimate is never worth a failed trace
-            return _unknown(sent, hops, f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})")
+            return _unknown(sent, hops, capped, f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})")
         if not complete:
-            return _unknown(sent, hops, f"{wallet} received too many transfers in the window to read in full")
+            return _unknown(sent, hops, capped, f"{wallet} received too many transfers in the window to read in full")
 
         # A wallet paying itself moves nobody else's money.
         def to_itself(tx: Any) -> bool:
@@ -192,17 +202,19 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
         "status": "estimated",
         "sent": round(sent, 6),
         "estimated": round(carried, 6),
-        "ratio": round(min(1.0, carried / sent), 4),
+        # Of the starting figure: the capped one when a cap applied.
+        "ratio": round(min(1.0, carried / start), 4) if start > 0 else 0.0,
         "arrived_total": round(arrived, 6),
         "lowest_share": lowest,
         "diluted": lowest < DILUTED,
         "hops": hops,
+        **capped,
     }
 
 
-def _unknown(sent: float, hops: list[dict[str, Any]], reason: str) -> dict[str, Any]:
+def _unknown(sent: float, hops: list[dict[str, Any]], capped: dict[str, Any], reason: str) -> dict[str, Any]:
     """No estimate. The wallets measured before the read failed are kept, and
     a small share at one of them is still called out."""
     lowest = min((h["victim_share"] for h in hops), default=None)
     return {"status": "unknown", "sent": sent, "hops": hops, "reason": reason,
-            "lowest_share": lowest, "diluted": lowest is not None and lowest < DILUTED}
+            "lowest_share": lowest, "diluted": lowest is not None and lowest < DILUTED, **capped}

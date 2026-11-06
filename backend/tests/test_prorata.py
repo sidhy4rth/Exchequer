@@ -246,3 +246,25 @@ def test_netted_value_is_said_in_the_caveats():
     text = " ".join(_prorata_caveats(result, "USDT"))
     assert "W sent 90,000.0000 USDT to itself" in text and "netted out" in text
     assert "upper bound" not in text
+
+
+# ---------------------------------------------------------------------------
+# A cap on the starting figure (audit r1-attribution-integrity-7, r1-evidence-crypto-5)
+# ---------------------------------------------------------------------------
+def test_the_estimate_never_exceeds_the_seed_cap():
+    # The reported wallet sent 50,000 on, of which the victim paid 1,000.
+    g = path_graph(sent=50_000.0, onward=50_000.0)
+    result = estimate(g, ["V", "M", "X"], lambda *a: ([Tx(50_000.0)], True),
+                      seed_cap=1_000.0, cap_basis="reported_amount")
+    assert result["estimated"] == 1_000.0 and result["sent"] == 50_000.0
+    assert result["seed_cap"] == {"amount": 1_000.0, "basis": "reported_amount", "applied": True}
+    assert result["ratio"] == 1.0  # all of the capped amount arrived
+    direct = nx.DiGraph()
+    edge(direct, "V", "X", 5_000.0, 100)
+    assert estimate(direct, ["V", "X"], None, seed_cap=100.0, cap_basis="swap_output")["estimated"] == 100.0
+
+
+def test_a_cap_above_what_was_sent_changes_nothing():
+    g = path_graph(sent=40.0, onward=40.0)
+    result = estimate(g, ["V", "M", "X"], lambda *a: ([Tx(40.0)], True), seed_cap=100.0, cap_basis="swap_output")
+    assert result["estimated"] == 40.0 and result["seed_cap"]["applied"] is False
