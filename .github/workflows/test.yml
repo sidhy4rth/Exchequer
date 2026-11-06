@@ -26,7 +26,8 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
-      - run: pip install -r requirements-dev.txt ruff==0.17.0
+      # The dev lock: the image's packages plus pytest, ruff and PyYAML, all hashed.
+      - run: pip install --require-hashes -r requirements-dev.txt
       - run: ruff check app scripts tests migrations
       - run: python -m pytest -p no:warnings
 
@@ -57,7 +58,7 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements.txt
-      - run: pip install -r requirements.txt
+      - run: pip install --require-hashes -r requirements.txt
       - name: Exactly one migration head (two means two branches each added one; rebase and renumber)
         run: test "$(alembic heads | wc -l)" -eq 1
       - name: An empty database reaches head, and a second run changes nothing

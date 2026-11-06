@@ -3,7 +3,9 @@
 # raised as soon as an advisory lands, whatever this schedule says.
 version: 2
 updates:
-  - package-ecosystem: pip
+  # uv: it recompiles the hashed locks from requirements*.in (their headers
+  # name the options), where the pip updater would edit one line of a lock.
+  - package-ecosystem: uv
     directory: /backend
     schedule: { interval: weekly, day: monday }
     groups:

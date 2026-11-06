@@ -33,8 +33,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# The lock pins and hashes every package (backend/requirements.in says how it
+# is made): pip refuses anything else, and installs wheels only, so no
+# package's setup.py runs here.
 COPY backend/requirements.txt ./backend/requirements.txt
-RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir --require-hashes --only-binary=:all: -r backend/requirements.txt
 
 COPY backend/ ./backend/
 
