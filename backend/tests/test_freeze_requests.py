@@ -64,3 +64,53 @@ def test_a_request_with_no_reply_for_a_week_is_flagged(client):
     r = fr.create(ownership.owner_hash(ALICE), "case-1", "OKX", "exchange", status="sent")
     later = fr.update(ownership.owner_hash(ALICE), r["request_id"], {"sent_at": "2026-01-01"})
     assert later["days_waiting"] >= 7 and later["follow_up"] is True
+
+
+def test_two_status_changes_at_once_both_reach_the_history(client, monkeypatch):
+    # Two tabs PATCH at the same moment: both read the row before either
+    # writes. The later write used to replace the history the earlier added to.
+    import threading
+
+    rid = client.post("/requests", json={"case_id": "case-1", "recipient": "Binance"},
+                      headers=h(ALICE)).json()["request_id"]
+    real_now = fr._now
+    both_read = threading.Barrier(2, timeout=5)
+    first = threading.local()
+
+    def now_after_both_read():
+        if not getattr(first, "done", False):
+            first.done = True
+            both_read.wait()
+        return real_now()
+    monkeypatch.setattr(fr, "_now", now_after_both_read)
+
+    owner = ownership.owner_hash(ALICE)
+    errors = []
+
+    def change(status):
+        try:
+            fr.update(owner, rid, {"status": status})
+        except Exception as exc:  # noqa: BLE001 -- reported below
+            errors.append(exc)
+    threads = [threading.Thread(target=change, args=(s,)) for s in ("sent", "acknowledged")]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(10)
+    assert errors == []
+    stored = client.get("/trace/case-1/requests", headers=h(ALICE)).json()["requests"][0]
+    assert sorted(e["status"] for e in stored["history"]) == ["acknowledged", "drafted", "sent"]
+    assert stored["status"] in ("sent", "acknowledged")
+
+
+def test_a_patch_that_keeps_conflicting_is_a_409(client, monkeypatch):
+    from sqlalchemy.orm.exc import StaleDataError
+
+    rid = client.post("/requests", json={"case_id": "case-1", "recipient": "Binance"},
+                      headers=h(ALICE)).json()["request_id"]
+
+    def always_stale(*args, **kwargs):
+        raise StaleDataError("changed meanwhile")
+    monkeypatch.setattr(fr, "_update_once", always_stale)
+    r = client.patch(f"/requests/{rid}", json={"status": "sent"}, headers=h(ALICE))
+    assert r.status_code == 409 and "reload" in r.json()["detail"].lower()

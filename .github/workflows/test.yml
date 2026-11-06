@@ -82,6 +82,8 @@ jobs:
           wait "$second"
           alembic current | grep -q "(head)"
           alembic check
+      # The baseline's schema with no version table is what create_all() made
+      # before migrations (today's models are ahead of it).
       - name: A store made before migrations is adopted with its cases
         run: |
           python - <<'PY'
@@ -90,8 +92,15 @@ jobs:
           with models.engine().begin() as conn:
               conn.execute(text("DROP SCHEMA public CASCADE"))
               conn.execute(text("CREATE SCHEMA public"))
-          models.Base.metadata.create_all(models.engine())
-          models.save_case("kept", "0x" + "1" * 40, {"address": "0x" + "1" * 40})
+          PY
+          alembic upgrade 0001
+          python - <<'PY'
+          from sqlalchemy import text
+          from app import models
+          with models.engine().begin() as conn:
+              conn.execute(text("DROP TABLE alembic_version"))
+              conn.execute(text("INSERT INTO cases (id, address, created_at, result_json) "
+                                "VALUES ('kept', :a, '2026-11-01T00:00:00+00:00', '{}')"), {"a": "0x" + "1" * 40})
           PY
           alembic upgrade head
           alembic check

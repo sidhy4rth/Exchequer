@@ -57,6 +57,11 @@ def _allow_write(http: Request) -> None:
         )
 
 
+def _conflict() -> HTTPException:
+    return HTTPException(status_code=409, detail="Someone changed this request at the same moment. "
+                                                 "Reload it and make the change again.")
+
+
 @router.get("/requests")
 def list_requests(user: CurrentUser, open: bool = Query(False)) -> dict[str, Any]:  # noqa: A002
     items = freeze_requests.list_for(user.owner_hash, open_only=open) if user.owner_hash else []
@@ -91,6 +96,8 @@ def change_request(request_id: str, body: RequestChange, user: CurrentUser, http
         updated = freeze_requests.update(_owner(user), request_id, changes)
     except freeze_requests.RequestError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except freeze_requests.RequestConflict as exc:
+        raise _conflict() from exc
     if updated is None:
         raise HTTPException(status_code=404, detail="No such request.")
     # Which fields changed, never what they say: notes can name people.
@@ -101,7 +108,11 @@ def change_request(request_id: str, body: RequestChange, user: CurrentUser, http
 
 @router.delete("/requests/{request_id}")
 def delete_request(request_id: str, user: CurrentUser) -> dict[str, Any]:
-    if not freeze_requests.delete(_owner(user), request_id):
+    try:
+        deleted = freeze_requests.delete(_owner(user), request_id)
+    except freeze_requests.RequestConflict as exc:
+        raise _conflict() from exc
+    if not deleted:
         raise HTTPException(status_code=404, detail="No such request.")
     audit.record("request.delete", detail={"request_id": request_id})
     return {"deleted": request_id}

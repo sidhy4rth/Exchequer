@@ -52,9 +52,30 @@ def test_an_empty_database_gets_the_whole_schema(engine):
     assert drift(engine) == []
 
 
+def pre_migration_store(engine, skip: tuple[str, ...] = ()) -> None:
+    """What create_all() made before migrations existed: the baseline's tables
+    and indexes, no version table. (Today's models are ahead of it: later
+    migrations add columns the old stores do not have.)"""
+    import importlib.util
+
+    from sqlalchemy import Index, MetaData, Table
+    spec = importlib.util.spec_from_file_location(
+        "baseline", config.BACKEND_DIR / "migrations" / "versions" / "0001_baseline.py")
+    baseline = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(baseline)
+    metadata = MetaData()
+    for name, (columns, indexed) in baseline.TABLES.items():
+        if name in skip:
+            continue
+        table = Table(name, metadata, *columns())
+        for column in indexed:
+            Index(f"ix_{name}_{column}", table.c[column])
+    metadata.create_all(engine)
+
+
 def test_a_store_made_before_migrations_is_adopted_untouched(engine):
-    # What every deployed or local store is today: create_all(), no version.
-    models.Base.metadata.create_all(engine)
+    # What every deployed or local store was on 2 Nov: create_all(), no version.
+    pre_migration_store(engine)
     models.save_case("kept", ADDRESS, {"address": ADDRESS}, owner_hash="h" * 64)
     models.init_db()
     assert revision(engine) == head()
@@ -64,8 +85,7 @@ def test_a_store_made_before_migrations_is_adopted_untouched(engine):
 
 
 def test_a_store_older_than_ownership_gains_owner_hash_and_keeps_its_cases(engine):
-    models.Base.metadata.create_all(engine, tables=[t for t in models.Base.metadata.sorted_tables
-                                                    if t.name != "cases"])
+    pre_migration_store(engine, skip=("cases",))
     with engine.begin() as conn:
         conn.execute(text("CREATE TABLE cases (id VARCHAR(36) NOT NULL PRIMARY KEY, "
                           "address VARCHAR(42) NOT NULL, created_at VARCHAR(32) NOT NULL, "
@@ -172,3 +192,21 @@ def test_upgrade_keeps_a_cursor_past_2038(engine):
         assert conn.execute(text("SELECT tx_time FROM alerts")).scalar() == 3_000_000_001
     assert {i["name"] for i in inspect(engine).get_indexes("watches")} >= {"ix_watches_address",
                                                                             "ix_watches_owner_hash"}
+
+
+def test_existing_freeze_requests_start_at_version_one_and_still_update(engine):
+    from app import freeze_requests
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.upgrade(settings, "0001")
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO freeze_requests (id, owner_hash, case_id, recipient, kind, status, "
+                          "address, reference, asset, notes, created_at, updated_at, history_json) VALUES "
+                          "('r', 'o', 'c', 'Binance', 'exchange', 'drafted', '', '', '', '', 't', 't', '[]')"))
+    models.init_db()
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT row_version FROM freeze_requests")).scalar() == 1
+    assert freeze_requests.update("o", "r", {"status": "sent"})["status"] == "sent"
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT row_version FROM freeze_requests")).scalar() == 2

@@ -19,7 +19,8 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, Float, String, Text, create_engine, event, func, or_, select, text
+from sqlalchemy import (BigInteger, Boolean, Float, Integer, String, Text, create_engine, event, func, or_, select,
+                        text)
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
@@ -149,6 +150,11 @@ class FreezeRequest(Base):
     created_at: Mapped[str] = mapped_column(String(32))
     updated_at: Mapped[str] = mapped_column(String(32))
     history_json: Mapped[str] = mapped_column(Text, default="[]")
+    # Checked and bumped by every UPDATE and DELETE: a write made from a stale
+    # read fails (StaleDataError) instead of replacing what another wrote.
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
 
 
 class Batch(Base):

@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.orm.exc import StaleDataError
 
 from . import models
 
@@ -40,8 +41,17 @@ MAX_TOTAL = 20_000
 HISTORY_MAX = 50
 
 
+# Tries per update or delete when another write lands between the read and
+# the write (row_version moved): each try re-reads and re-applies the change.
+WRITE_TRIES = 3
+
+
 class RequestError(ValueError):
     pass
+
+
+class RequestConflict(RuntimeError):
+    """The request kept changing underneath this update; the caller should reload."""
 
 
 def _now() -> str:
@@ -101,6 +111,17 @@ def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "
 
 
 def update(owner: str, request_id: str, changes: dict[str, Any]) -> dict[str, Any] | None:
+    """Apply `changes`; None if the request is not this owner's. Two updates
+    at once both land: the second re-reads and re-applies on its next try."""
+    for _ in range(WRITE_TRIES):
+        try:
+            return _update_once(owner, request_id, changes)
+        except StaleDataError:
+            continue
+    raise RequestConflict(request_id)
+
+
+def _update_once(owner: str, request_id: str, changes: dict[str, Any]) -> dict[str, Any] | None:
     with models.session() as s:
         r = s.get(models.FreezeRequest, request_id)
         if r is None or r.owner_hash != owner:
@@ -144,13 +165,18 @@ def update(owner: str, request_id: str, changes: dict[str, Any]) -> dict[str, An
 
 
 def delete(owner: str, request_id: str) -> bool:
-    with models.session() as s:
-        r = s.get(models.FreezeRequest, request_id)
-        if r is None or r.owner_hash != owner:
-            return False
-        s.delete(r)
-        s.commit()
-        return True
+    for _ in range(WRITE_TRIES):
+        try:
+            with models.session() as s:
+                r = s.get(models.FreezeRequest, request_id)
+                if r is None or r.owner_hash != owner:
+                    return False
+                s.delete(r)
+                s.commit()
+                return True
+        except StaleDataError:
+            continue  # updated meanwhile: read it again and delete that
+    raise RequestConflict(request_id)
 
 
 def list_for(owner: str, case_id: str | None = None, open_only: bool = False) -> list[dict[str, Any]]:
