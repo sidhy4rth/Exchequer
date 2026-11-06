@@ -104,7 +104,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - run: docker build -t exchequer:ci .
+      # No build secret here, so the label store is not required (the image's
+      # default fails a build without it).
+      - run: docker build --build-arg LABEL_STORE_REQUIRED=0 -t exchequer:ci .
       # Start it the way Railway does -- as root, with a root-owned volume at
       # /data -- and check the entrypoint handed the volume to the app user.
       - name: Start the image with a volume

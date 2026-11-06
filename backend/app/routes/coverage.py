@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import api_budget, config, models, ownership, signing, warmup, watchlist
+from .. import api_budget, config, label_store, models, ownership, signing, warmup, watchlist
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, STOLEN,
@@ -88,6 +88,9 @@ def health_detail(request: Request) -> dict[str, Any]:
         "max_depth": config.TRACE_MAX_DEPTH,
         "exchange_labels_loaded": len(get_matcher()),
         "risk_labels_loaded": len(get_risk_matcher()),
+        # The on-disk label store (most of the 10.9M labels): an image built to
+        # carry it that runs without it screens far less than it claims.
+        "label_store": label_store.status(),
         "chains": _chains(),
         # Why a trace was slow. On the free tiers the provider, not the
         # traversal, is what costs the seconds: a high `rate_limit_penalties`

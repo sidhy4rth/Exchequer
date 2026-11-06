@@ -133,3 +133,27 @@ def test_on_a_lasting_disk_nothing_is_called_temporary(client, monkeypatch):
 ])
 def test_a_temporary_disk_is_read_from_the_host(environ, temporary):
     assert config.temporary_disk(environ) is temporary
+
+
+# -- r1-scripts-12: whether the 10.9M-row label store is actually in use ---------
+def test_health_detail_reports_the_label_store(client, monkeypatch, tmp_path):
+    from app.label_store import get_label_store
+    from scripts.build_label_store import build
+
+    src = tmp_path / "flagged.csv"
+    src.write_text("address,chain,category,entity_or_incident,sources,source_refs,date\n"
+                   f"0x{'5c' * 20},ethereum|arbitrum,phishing/scam,Drainer,Threat-intel report: Check Point,,\n")
+    build(src, tmp_path / "store.db")
+    monkeypatch.setattr(config, "LABEL_STORE_REQUIRED", True)
+    monkeypatch.setattr(config, "LABEL_STORE_TAG", "labels-test")
+    try:
+        monkeypatch.setattr(config, "LABEL_STORE_PATH", tmp_path / "store.db")
+        get_label_store.cache_clear()
+        assert detail(client, monkeypatch)["label_store"] == {
+            "required": True, "loaded": True, "rows": 2, "tag": "labels-test"}
+        monkeypatch.setattr(config, "LABEL_STORE_PATH", tmp_path / "missing.db")
+        get_label_store.cache_clear()
+        assert detail(client, monkeypatch)["label_store"] == {
+            "required": True, "loaded": False, "rows": 0, "tag": "labels-test"}
+    finally:
+        get_label_store.cache_clear()

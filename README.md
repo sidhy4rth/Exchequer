@@ -816,9 +816,13 @@ One Docker image builds the frontend with Node and serves it from FastAPI — on
 deployment.
 
 ```bash
-docker build -t exchequer .
+docker build --build-arg LABEL_STORE_REQUIRED=0 -t exchequer .
 docker run -p 8000:8000 --env-file backend/.env -v exchequer-data:/data exchequer
 ```
+
+The label store comes from a private release and needs the `label_store_token` build secret; by default a
+build without it fails, so a deploy never ships without its labels unnoticed. `LABEL_STORE_REQUIRED=0` builds
+an image that screens against the label files only.
 
 The same image runs on Render, Railway, Fly or any VM. The live demo runs on Render's free plan from
 `render.yaml` (Dashboard → New → Blueprint), which deploys every push to `main`. That plan has no disk, so set

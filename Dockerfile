@@ -41,15 +41,22 @@ COPY backend/ ./backend/
 # The risk-label store: millions of hunt addresses, kept in a PRIVATE release
 # rather than in git (too large, and not for publishing). Fetched here with a
 # read-only token from a build secret -- on Render, a Secret File named
-# label_store_token -- so the token never enters a layer. No token: the step
-# prints why and the image screens against the label files only, as before.
+# label_store_token -- so the token never enters a layer. No token fails the
+# build, so the live version stays up rather than a deploy shipping without
+# its labels; a build that has no secret on purpose (CI's image job, a fork, a
+# local build) passes --build-arg LABEL_STORE_REQUIRED=0 and screens against
+# the label files only. The mount stays optional so the script, not BuildKit,
+# prints the reason.
 # A new store = a new release tag + sha256 here. See backend/scripts/fetch_label_store.py.
 ARG LABEL_STORE_REPO="sidhy4rth/exchequer-labels"
 ARG LABEL_STORE_TAG="labels-2026-11-05b"
 ARG LABEL_STORE_SHA256="f3e1d3b597768234e5b3d2eec14e1365c0c14bdbd9cc771ecd0209dd954e9846"
+ARG LABEL_STORE_REQUIRED="1"
 RUN --mount=type=secret,id=label_store_token,required=false \
-    cd backend && LABEL_STORE_REPO="$LABEL_STORE_REPO" LABEL_STORE_TAG="$LABEL_STORE_TAG" \
-    LABEL_STORE_SHA256="$LABEL_STORE_SHA256" python -m scripts.fetch_label_store
+    cd backend && LABEL_STORE_REQUIRED="$LABEL_STORE_REQUIRED" LABEL_STORE_REPO="$LABEL_STORE_REPO" \
+    LABEL_STORE_TAG="$LABEL_STORE_TAG" LABEL_STORE_SHA256="$LABEL_STORE_SHA256" python -m scripts.fetch_label_store
+# What /health/detail reports: whether this image was built to carry the store, and which.
+ENV EXCHEQUER_LABEL_STORE_REQUIRED=${LABEL_STORE_REQUIRED} EXCHEQUER_LABEL_STORE_TAG=${LABEL_STORE_TAG}
 COPY --from=frontend /build/dist ./frontend/dist
 
 # The image has no .git, so the report's "tool version" line is baked in at

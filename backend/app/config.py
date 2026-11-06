@@ -446,6 +446,13 @@ LABEL_STORE_PATH: Path | None = (
     else Path(_store_raw) if Path(_store_raw).is_absolute()
     else BACKEND_DIR / _store_raw
 )
+# Set by the Dockerfile from its build args: whether this image was built to
+# carry the store (a deploy without it is degraded screening, not "as before")
+# and which release it was built from. Shown on /health/detail.
+LABEL_STORE_REQUIRED: bool = (
+    os.getenv("EXCHEQUER_LABEL_STORE_REQUIRED", "").strip().lower() in ("1", "true", "yes", "on")
+)
+LABEL_STORE_TAG: str = os.getenv("EXCHEQUER_LABEL_STORE_TAG", "").strip()
 
 # Default-chain label file. Per-chain callers should use Chain.labels_path.
 EXCHANGE_LABELS_PATH: Path = DEFAULT_CHAIN.labels_path

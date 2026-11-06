@@ -24,6 +24,12 @@ test('the API is up and the label files are loaded', async ({ request }) => {
   // its data files, not ordinary growth or pruning.
   expect(chains.ethereum.exchange_labels).toBeGreaterThan(10_000)
   expect(Object.values(chains.ethereum.risk_labels).reduce((a, b) => a + b, 0)).toBeGreaterThan(5_000)
+  // The label store carries most of the ~10.9M labels; without it the total
+  // is well under a million. A deploy that lost it fails here.
+  const screened = Object.values(chains)
+    .flatMap((c) => Object.values(c.risk_labels || {}))
+    .reduce((a, b) => a + b, 0)
+  expect(screened, 'risk labels across every chain (is the label store in?)').toBeGreaterThan(5_000_000)
   const notReady = Object.values(chains).filter((c) => !c.ready).map((c) => c.name)
   expect(notReady, 'chains that cannot be traced').toEqual([])
 })

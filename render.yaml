@@ -16,6 +16,10 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeployTrigger: commit
+    # The build also needs a Secret File named label_store_token (Settings →
+    # Secret Files; a Blueprint cannot declare one): the read-only token for
+    # the private label-store release. Without it the build fails and the
+    # running deploy stays up (Dockerfile, LABEL_STORE_REQUIRED).
     envVars:
       # Provider keys (backend/.env.example says where each comes from).
       - key: ETHERSCAN_API_KEY

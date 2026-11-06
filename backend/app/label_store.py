@@ -152,7 +152,11 @@ def get_label_store() -> LabelStore | None:
     """The configured store, or None when there is no file (screening as before)."""
     path = config.LABEL_STORE_PATH
     if not path or not Path(path).is_file():
-        logger.info("No label store at %s; screening uses the label files only", path)
+        if config.LABEL_STORE_REQUIRED:
+            logger.error("No label store at %s although this image requires one; screening is "
+                         "degraded to the label files only", path)
+        else:
+            logger.info("No label store at %s; screening uses the label files only", path)
         return None
     try:
         store = LabelStore(Path(path))
@@ -161,3 +165,10 @@ def get_label_store() -> LabelStore | None:
         return None
     logger.info("Label store %s: %d addresses", path, len(store))
     return store
+
+
+def status() -> dict[str, object]:
+    """For /health/detail: whether the store this image needs is in use."""
+    store = get_label_store()
+    return {"required": config.LABEL_STORE_REQUIRED, "loaded": store is not None,
+            "rows": len(store) if store is not None else 0, "tag": config.LABEL_STORE_TAG}
