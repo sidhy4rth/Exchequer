@@ -40,6 +40,7 @@ import httpx
 
 from . import api_budget, config
 from .evidence import EvidenceLog
+from .exchange_matcher import is_deposit_label
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ def wallet_type(tag: str) -> str:
     lowered = tag.lower()
     if "cold" in lowered:
         return "cold_wallet"
-    if "deposit" in lowered:
+    if is_deposit_label(tag):  # never the bare word: "Poloniex Deposit" is not one customer's
         return "deposit_wallet"
     if "hot" in lowered:
         return "hot_wallet"

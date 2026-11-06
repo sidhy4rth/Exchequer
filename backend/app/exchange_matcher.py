@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -37,6 +38,20 @@ logger = logging.getLogger(__name__)
 # behaviour (deposit_inference.py) rather than read from a label file. Scoring
 # treats it as weaker, and the report says so.
 INFERRED_DEPOSIT = "inferred_deposit"
+DEPOSIT_WALLET = "deposit_wallet"
+
+# A per-customer deposit address, said so explicitly: "Binance Dep: 0x..." (the
+# deposit label sets) or "<Exchange>: Deposit Address|Wallet". The word
+# "deposit" alone also names the exchange's own infrastructure ("Deposit
+# Funder", "Eth2 Depositor", "Batch Deposit") and other firms' accounts at the
+# exchange ("AltCoinTrader: Binance Deposit 1"), and a deposit address is what
+# makes a letter ask the exchange for an account holder's KYC.
+DEPOSIT_LABEL = re.compile(r"\bDep:\s|^[^:]+:\s*Deposit (?:Address|Wallet)\b", re.IGNORECASE)
+
+
+def is_deposit_label(label: str | None) -> bool:
+    """True if the label itself says the address is one customer's deposit address."""
+    return bool(DEPOSIT_LABEL.search(label or ""))
 
 
 @dataclass(frozen=True)

@@ -26,6 +26,13 @@ they were added, and re-verifying them would burn API budget to learn nothing.
 
     cd backend && .venv/bin/python -m scripts.import_exchange_labels
     cd backend && .venv/bin/python -m scripts.import_exchange_labels --dry-run
+    cd backend && .venv/bin/python -m scripts.import_exchange_labels --retype-deposits   # offline
+
+A wallet is a customer deposit address only when its label says so explicitly
+(app/exchange_matcher.is_deposit_label): "Deposit Funder", "Eth2 Depositor" and
+"<A>: <B> Deposit" name the exchange's own wallets or another firm's account,
+and a deposit type is what makes a letter ask for an account holder's KYC.
+`--retype-deposits` re-types the held files' entries under that rule.
 """
 from __future__ import annotations
 
@@ -46,6 +53,8 @@ from app.etherscan_client import (  # noqa: E402
     is_valid_address,
     normalize_address,
 )
+from app.exchange_matcher import DEPOSIT_WALLET, is_deposit_label  # noqa: E402
+from scripts._label_files import chain_regenerate  # noqa: E402
 
 # Pinned so a re-run imports the same data rather than whatever the dataset
 # happens to say today.
@@ -104,16 +113,46 @@ def is_cash_out_label(label: str) -> bool:
 def classify(label: str) -> str:
     """Wallet role, stated only when the label itself says so.
 
-    Etherscan's labels distinguish cold storage explicitly. Everything else is
-    recorded as a generic exchange wallet rather than guessed at -- claiming a
-    wallet is "hot" on no evidence would put an unsupported detail in a report.
+    Etherscan's labels distinguish cold storage explicitly, and a per-customer
+    deposit address only in the explicit forms is_deposit_label reads. Everything
+    else is recorded as a generic exchange wallet rather than guessed at --
+    claiming a wallet is "hot" on no evidence would put an unsupported detail in
+    a report.
     """
     lowered = label.lower()
     if "cold" in lowered:
         return "cold_wallet"
-    if "deposit" in lowered:
-        return "deposit_wallet"
+    if is_deposit_label(label):
+        return DEPOSIT_WALLET
     return "exchange_wallet"
+
+
+def retype_deposits(dry_run: bool) -> int:
+    """Re-type every held entry typed a deposit whose label does not say so. Offline."""
+    today = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+    for chain in config.CHAINS.values():
+        path = chain.labels_path
+        if not path.exists():
+            continue
+        text = path.read_text()
+        document = json.loads(text)
+        retyped = {}
+        for address, meta in document["labels"].items():
+            if isinstance(meta, dict) and meta.get("type") == DEPOSIT_WALLET and not is_deposit_label(meta.get("label")):
+                meta["type"] = classify(meta.get("label") or "")
+                retyped[address] = meta.get("label")
+        print(f"{chain.key}: {len(retyped)} re-typed from deposit_wallet")
+        if not retyped or dry_run:
+            continue
+        document.setdefault("_meta", {})["deposits_retyped"] = {
+            "date": today, "count": len(retyped), "labels": dict(sorted(retyped.items())),
+            "rule": ("deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); "
+                     "an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, "
+                     "is not one customer's deposit address"),
+        }
+        indent = 1 if text.startswith('{\n "') else 2
+        path.write_text(json.dumps(document, indent=indent) + "\n")
+    return 0
 
 
 def has_value_history(client: EtherscanClient, address: str) -> tuple[bool, float, str | None]:
@@ -145,7 +184,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Import and verify exchange labels")
     parser.add_argument("--dry-run", action="store_true", help="verify but do not write")
     parser.add_argument("--limit", type=int, default=None, help="cap candidates (for testing)")
+    parser.add_argument("--retype-deposits", action="store_true",
+                        help="re-type held entries typed deposit_wallet whose label does not say so, offline")
     args = parser.parse_args()
+    if args.retype_deposits:
+        return retype_deposits(args.dry_run)
 
     path = config.CHAINS["ethereum"].labels_path
     document = json.loads(path.read_text())
@@ -246,7 +289,8 @@ def main() -> int:
         "Re-verify on etherscan.io before any evidentiary use. Candidates whose "
         "entire history was zero-value address-poisoning spam were rejected."
     )
-    meta["regenerate_with"] = "cd backend && .venv/bin/python -m scripts.import_exchange_labels"
+    meta["regenerate_with"] = chain_regenerate(meta.get("regenerate_with"),
+                                               "cd backend && .venv/bin/python -m scripts.import_exchange_labels")
 
     path.write_text(json.dumps(document, indent=2) + "\n")
     print(f"\nWrote {len(merged)} labels to {path} (+{len(accepted)})")

@@ -68,6 +68,7 @@ from app.etherscan_client import (  # noqa: E402
     is_valid_address,
     normalize_address,
 )
+from app.exchange_matcher import is_deposit_label  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
 from scripts._label_files import chain_regenerate  # noqa: E402
 from scripts.import_exchange_labels import has_value_history  # noqa: E402
@@ -119,6 +120,9 @@ SKIP_SLUG = re.compile(
 SKIP_TAG = re.compile(
     r"\bdep\b|deployer|funder|contract|token|charity|exploit|multisig|vesting|treasury|"
     r"staking|bridge|swap|launchpad|operator|registry|^\.|^bitget wallet|"
+    # Wallets an exchange uses to fund deposit addresses' gas or to stake: its
+    # own, never a cash-out ('Binance: Deposit Funder', 'Kraken: Eth2 Depositor').
+    r"depositor|supplier|"
     # An exchange's on-chain router or aggregator is a swap, not a cash-out:
     # 'OKX: DEX Router 2' once came in as an OKX wallet. Dex-Trade is a CEX.
     r"router|aggregat|relayer|paymaster|\bdex\b(?!-trade)",
@@ -138,7 +142,7 @@ def wallet_type(tag: str) -> str:
     lowered = tag.lower()
     if "cold" in lowered:
         return "cold_wallet"
-    if "deposit" in lowered:
+    if is_deposit_label(tag):  # never the bare word: "Deposit Funder" is the exchange's own
         return "deposit_wallet"
     if "hot" in lowered:
         return "hot_wallet"

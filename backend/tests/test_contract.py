@@ -51,7 +51,7 @@ def test_a_labelled_deposit_wallet_is_a_deposit_label():
     # built: the minimum the matcher produces for a deposit_wallet match.
     result = {"exchange": "Bitget", "exchange_address": "0xdep", "exchange_label": "Bitget Dep",
               "attribution_inferred": False, "transfers": [],
-              "matches": [{"address": "0xdep", "wallet_type": "deposit_wallet", "depth": 1}]}
+              "matches": [{"address": "0xdep", "wallet_type": "deposit_wallet", "label": "Bitget Dep: 0xdep", "depth": 1}]}
     attr = read_case(result).attribution
     assert (attr.kind, attr.source, attr.wallet_type) == ("deposit_label", "label_file", "deposit_wallet")
 
@@ -122,3 +122,12 @@ def test_every_fixture_is_a_valid_v2_case():
     for name in index["fixtures"]:
         read_case(json.loads((FIXTURES / name).read_text()))
     assert index["kinds_without_a_recorded_example"] == ["deposit_label"]
+
+
+def test_an_exchange_funder_typed_deposit_is_an_exchange_wallet():
+    """The contract's kind agrees with the report's (r1-labels-data-5)."""
+    result = {"exchange": "Binance", "exchange_address": "0xfun", "exchange_label": "Binance: Deposit Funder",
+              "attribution_inferred": False, "transfers": [],
+              "matches": [{"address": "0xfun", "wallet_type": "deposit_wallet", "label": "Binance: Deposit Funder",
+                           "depth": 1}]}
+    assert read_case(result).attribution.kind == "exchange_wallet"

@@ -76,8 +76,11 @@ SKIP_TYPES = {"deposit_wallet", "contract_wallet"}
 
 
 def ethereum_candidates() -> dict[str, dict[str, str]]:
+    """Ethereum exchange accounts to carry over: not deposits or contracts, and not a
+    tag SKIP_TAG names as infrastructure (a deposit funder, a peg or swap address)."""
     labels = json.loads(config.CHAINS["ethereum"].labels_path.read_text())["labels"]
-    return {a: {**m, "source": "ethereum"} for a, m in labels.items() if m.get("type") not in SKIP_TYPES}
+    return {a: {**m, "source": "ethereum"} for a, m in labels.items()
+            if m.get("type") not in SKIP_TYPES and not SKIP_TAG.search(m.get("label") or "")}
 
 
 def scrape_candidates(chain_key: str) -> dict[str, dict[str, str]]:

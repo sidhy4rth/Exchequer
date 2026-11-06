@@ -46,6 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import config  # noqa: E402
 from app.etherscan_client import is_valid_address, normalize_address  # noqa: E402
+from app.exchange_matcher import is_deposit_label  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
 from scripts._label_files import ShrinkRefused, chain_regenerate, merge_owned  # noqa: E402
 
@@ -104,7 +105,7 @@ def wallet_type(label: str) -> str:
     lowered = label.lower()
     if "cold" in lowered:
         return "cold_wallet"
-    if "deposit" in lowered:
+    if is_deposit_label(label):  # never the bare word: "Deposit Funder" is the exchange's own
         return "deposit_wallet"
     if "hot" in lowered:
         return "hot_wallet"

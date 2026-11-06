@@ -166,6 +166,11 @@ def read_case(result: dict[str, Any]) -> CaseV2:
     return CaseV2.model_validate(upgrade(result))
 
 
+def _says_deposit(label: str | None) -> bool:
+    from ..exchange_matcher import is_deposit_label  # here, so the contract module stays light to import
+    return is_deposit_label(label)
+
+
 def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
     address = result.get("exchange_address")
     if not result.get("exchange") or not address:
@@ -176,8 +181,8 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
 
     if inferred:
         kind = "deposit_inferred"
-    elif wallet_type == DEPOSIT_WALLET:
-        kind = "deposit_label"
+    elif wallet_type == DEPOSIT_WALLET and _says_deposit(match.get("label")):
+        kind = "deposit_label"  # the same test as report.attribution_kind
     else:
         kind = "exchange_wallet"
 

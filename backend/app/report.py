@@ -24,6 +24,7 @@ from typing import Any
 
 from . import config
 from .evidence import seal_text
+from .exchange_matcher import DEPOSIT_WALLET, is_deposit_label
 from .models import Case
 from .risk_matcher import freeze_parts, is_tether_usdt_freeze, list_freshness
 from .scoring import BAND_THRESHOLDS, CAP_WORDING
@@ -89,7 +90,10 @@ def attribution_kind(trace: dict[str, Any]) -> str:
     if any(found.get("address") == address for found in (trace.get("live_tags") or {}).get("found") or []):
         return EXPLORER_TAG
     match = next((m for m in trace.get("matches") or [] if m.get("address") == address), {})
-    return LABELLED_DEPOSIT if match.get("wallet_type") == "deposit_wallet" else EXCHANGE_WALLET
+    # Typed a deposit by an importer, and the label says so: older files typed
+    # any label with "deposit" in it (an exchange's Deposit Funder) as one.
+    deposit = match.get("wallet_type") == DEPOSIT_WALLET and is_deposit_label(match.get("label"))
+    return LABELLED_DEPOSIT if deposit else EXCHANGE_WALLET
 
 
 def _band_word(score: float | None) -> str:
