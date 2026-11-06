@@ -9,9 +9,9 @@ import { stubFetch } from '../test/setup'
 // with one amount-split pattern. Traced from the address alone.
 const demo = recordings.find((r) => r.demo === 11)
 
-async function openDemo11() {
+async function openDemo11(overrides = {}) {
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
-  stubFetch({ '/demos/recorded/11': { body: { ...demo.result, case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
+  stubFetch({ '/demos/recorded/11': { body: { ...demo.result, case_id: null, created_at: demo.recorded_at, recorded_demo: 11, ...overrides } } })
   render(
     <MemoryRouter initialEntries={['/demo/11']}>
       <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
@@ -49,6 +49,17 @@ describe('how sure the case is (R10)', () => {
   it('marks an address-only trace as exploratory', async () => {
     await openDemo11()
     expect(screen.getByText(/Exploratory · traced from the address/)).toBeInTheDocument()
+  })
+})
+
+describe('a payment case read by someone other than the officer who traced it', () => {
+  it('says the NCRP number is on file without showing it, and survives a withheld payer', async () => {
+    await openDemo11({
+      intake: { mode: 'payment', ncrp_ack: null, payments: [{ tx_hash: '0x' + 'c'.repeat(64), from: null, amount: 12 }] },
+      reported_amount: 12,
+      redacted: ['intake.ncrp_ack', 'intake.payments[].from'],
+    })
+    expect(screen.getByText(/NCRP on file \(visible to the officer who traced it\)/)).toBeInTheDocument()
   })
 })
 

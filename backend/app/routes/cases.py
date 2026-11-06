@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from .. import audit, config, models, ownership, pipeline, rate_limit
+from .. import audit, case_privacy, config, models, ownership, pipeline, rate_limit
 from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 
@@ -226,10 +226,15 @@ def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
 
     The case is returned as a ready JSONResponse, rendered here in the worker
     thread: a plain dict would be walked by jsonable_encoder on the event
-    loop, and a large case then stalled every other request."""
+    loop, and a large case then stalled every other request.
+
+    Anyone holding the id gets the case -- it is the reference letters print
+    -- but a complaint's particulars only reach the browser that traced it
+    (case_privacy.py)."""
     if _is_page_load(http) and _INDEX_HTML.is_file():
         return FileResponse(_INDEX_HTML, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
-    return JSONResponse(case.result)
+    caller = ownership.owner_hash_from_headers(http.headers)
+    return JSONResponse(case_privacy.for_reader(case.result, case.owner_hash, caller))

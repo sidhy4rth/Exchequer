@@ -170,7 +170,7 @@ export async function stopTraceJob(jobId) {
  * level_size, level_read, addresses }, elapsed } as the trace moves.
  */
 export function runTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments, ncrpAck }, onProgress) {
-  const body = JSON.stringify({
+  const trace = {
     address,
     ...(maxDepth ? { max_depth: maxDepth } : {}),
     ...(chain ? { chain } : {}),
@@ -180,15 +180,18 @@ export function runTrace({ address, maxDepth, chain, asset, direction, timeBudge
     // R1: start from the victim's payments. The backend checks each one is an
     // incoming transfer to `address`, and reads the wallet from the first.
     ...(payments?.length ? { payments: payments.map((h) => ({ tx_hash: h })) } : {}),
-    ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}),
-  })
-  const existing = jobsInFlight.get(body)
+  }
+  const body = JSON.stringify({ ...trace, ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}) })
+  // What identifies the trace in this tab, and is kept in sessionStorage so a
+  // reload re-attaches: everything but the NCRP number, a complaint reference.
+  const key = JSON.stringify(trace)
+  const existing = jobsInFlight.get(key)
   if (existing) { existing.listeners.add(onProgress); return existing.promise }
   const listeners = new Set([onProgress])
   const broadcast = (snap) => listeners.forEach((fn) => fn?.(snap))
   const promise = (async () => {
     try {
-      let jobId = recalledJob(body)
+      let jobId = recalledJob(key)
       if (jobId && !(await jobSnapshot(jobId).catch(() => null))) jobId = null
       if (!jobId) {
         let response
@@ -203,14 +206,14 @@ export function runTrace({ address, maxDepth, chain, asset, direction, timeBudge
         const started = await response.json()
         jobId = started.job_id
         broadcast(started)
-        rememberJob(body, jobId)
+        rememberJob(key, jobId)
       }
       return await watchJob(jobId, broadcast)
     } finally {
-      rememberJob(body, null)
-      jobsInFlight.delete(body)
+      rememberJob(key, null)
+      jobsInFlight.delete(key)
     }
   })()
-  jobsInFlight.set(body, { promise, listeners })
+  jobsInFlight.set(key, { promise, listeners })
   return promise
 }

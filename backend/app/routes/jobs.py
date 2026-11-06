@@ -5,7 +5,8 @@
     GET  /trace/jobs/{id}/events     the same as server-sent events, live
 
 A job id works like a case id: whoever holds it can watch it. The finished
-case is stored with the starting browser's owner key, as POST /trace does.
+case is stored with the starting browser's owner key, as POST /trace does,
+and its complaint particulars go only to that browser (case_privacy.py).
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .. import api_budget, jobs, pipeline, progress
+from .. import api_budget, case_privacy, jobs, ownership, pipeline, progress
 from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 from . import cases
@@ -104,8 +105,13 @@ def _job_or_404(job_id: str) -> jobs.Job:
 
 
 @router.get("/trace/jobs/{job_id}")
-def job_status(job_id: str) -> dict[str, Any]:
-    return _job_or_404(job_id).snapshot(with_result=True)
+def job_status(job_id: str, http: Request) -> dict[str, Any]:
+    job = _job_or_404(job_id)
+    snapshot = job.snapshot(with_result=True)
+    if snapshot.get("result"):
+        caller = ownership.owner_hash_from_headers(http.headers)
+        snapshot["result"] = case_privacy.for_reader(snapshot["result"], job.owner, caller)
+    return snapshot
 
 
 # Every open stream wakes every POLL_SECONDS on the one event loop, so a job

@@ -105,6 +105,30 @@ describe('background traces', () => {
     expect(calls.some((c) => c.startsWith('POST'))).toBe(false)
   })
 
+  it('never keeps the NCRP number in sessionStorage, and still re-attaches after a reload', async () => {
+    const address = '0x' + '6'.repeat(40)
+    const posted = []
+    let resolveJob
+    const finished = new Promise((r) => { resolveJob = r })
+    globalThis.fetch = vi.fn(async (url, init = {}) => {
+      if ((init.method || 'GET') === 'POST') {
+        posted.push(JSON.parse(init.body))
+        return new Response(JSON.stringify({ job_id: 'j9', status: 'running', progress: {} }), { status: 202 })
+      }
+      await finished
+      return new Response(JSON.stringify({ job_id: 'j9', status: 'done', progress: {}, result: { case_id: 'c9' } }))
+    })
+    const { runTrace } = await import('./api')
+    const running = runTrace({ address, payments: ['0x' + 'a'.repeat(64)], ncrpAck: '31911250012345' })
+    const stored = () => Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i))
+      .map((k) => k + sessionStorage.getItem(k)).join('|')
+    await vi.waitFor(() => expect(stored()).toContain('j9'))
+    expect(posted[0].ncrp_ack).toBe('31911250012345')  // the server still gets it
+    expect(stored()).not.toContain('31911250012345')
+    resolveJob()
+    expect(await running).toEqual({ case_id: 'c9' })
+  })
+
   it('surfaces a failed job as an error with the backend detail', async () => {
     server([
       ['POST', /\/trace\/jobs$/, () => [202, { job_id: 'j3', status: 'running', progress: {} }]],

@@ -436,6 +436,7 @@ export default function TraceView() {
                 <span className="intake" title="The trace read the reported wallet only from when the first payment arrived.">
                   From the victim's <span className="num">{num(result.reported_amount)} {unit}</span> in {payments.length} payment{payments.length === 1 ? '' : 's'}
                   {result.intake.ncrp_ack ? <> · NCRP <span className="mono">{result.intake.ncrp_ack}</span></> : null}
+                  {!result.intake.ncrp_ack && result.redacted?.includes('intake.ncrp_ack') ? <> · NCRP on file (visible to the officer who traced it)</> : null}
                 </span>
               ) : (
                 <span className="intake exploratory" title="Traced from the address alone: it follows the wallet's whole recent history, which can include other people's money. Start from the victim's payment hashes to trace their money only.">

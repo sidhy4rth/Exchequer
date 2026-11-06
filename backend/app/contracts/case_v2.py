@@ -56,7 +56,8 @@ class Payment(_Strict):
     chain: str
     asset: str
     amount: float
-    from_address: str = Field(alias="from")
+    # Null unless read by the browser that traced the case (case_privacy.py).
+    from_address: str | None = Field(alias="from")
     to: str
     block: int | None = None
     timestamp: int | None = None
@@ -106,7 +107,8 @@ class Estimates(_Strict):
 
 class Transfer(_Strict):
     hash: str | None
-    from_address: str = Field(alias="from")
+    # Null unless read by the browser that traced the case (case_privacy.py).
+    from_address: str | None = Field(alias="from")
     to: str
     value_native: float
     timestamp: int | None

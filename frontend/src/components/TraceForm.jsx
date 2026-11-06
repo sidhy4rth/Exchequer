@@ -130,7 +130,8 @@ export default function TraceForm({ health }) {
     if (opts.capped ?? capped) q.set('budget', String(TIME_BUDGET_SECONDS))
     // Payment hashes are public chain data and make the link reproducible, so
     // they go in the URL. The NCRP number is a complaint reference: it travels
-    // in the navigation state, which never reaches history, logs or a shared link.
+    // in this tab's navigation state, never in the URL, the server's logs or
+    // another browser's view of the case (backend/app/case_privacy.py).
     if (hashes.length) q.set('pay', hashes.join(','))
     const ack = hashes.length ? ncrpAck.trim() : ''
     navigate(`/trace/${addr}?${q}`, ack ? { state: { ncrpAck: ack } } : undefined)
