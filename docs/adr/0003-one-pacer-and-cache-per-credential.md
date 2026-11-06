@@ -28,6 +28,14 @@ request by its cost (250 CU for a transfer read, 5 for the block number) between
 true: a day for a closed block range, minutes for a read up to the chain's tip,
 never for `latest` state such as a balance.
 
+NodeReal and TronGrid answers are cached too, each in a smaller byte-bounded
+cache shared by every key. NodeReal's block windows end on multiples of
+100,000, so the same range is the same request from one trace to the next; a
+window below the indexed head keeps the day, the one at the head minutes. A
+TronGrid read is cached whole (every page it took) or not at all, because a
+fingerprint belongs to the read that made it: a settled time range keeps the
+day, a read up to the newest records minutes.
+
 ## Alternatives Considered
 
 ### A fixed interval per client

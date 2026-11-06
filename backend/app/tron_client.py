@@ -28,11 +28,11 @@ import json
 import logging
 import random
 import time
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
-from .api_budget import ResponseTooLarge, SharedPacer, get_pacer, read_capped
+from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache, get_pacer, read_capped
 from .evidence import EvidenceLog
 
 from . import config
@@ -95,6 +95,51 @@ MAX_PAGE = 200
 # wallet that paginated for minutes and never finished). Five pages is the
 # same budget as one fully-kept page on Etherscan, five times over.
 MAX_SCAN = MAX_PAGE * 5
+# A time range that ended this long ago is settled history: Tron solidifies a
+# block in about a minute, and only confirmed records are read.
+SETTLED_SECONDS = 300
+
+# The fields the parsers read; a cached record keeps only these.
+TRC20_FIELDS = ("type", "token_info", "value", "transaction_id", "from", "to", "block_timestamp")
+TOKEN_INFO_FIELDS = ("address", "decimals", "symbol")
+NATIVE_FIELDS = ("txID", "block_timestamp", "blockNumber")
+TRANSFER_VALUE_FIELDS = ("amount", "to_address", "owner_address")
+
+
+def _slim_trc20(raw: Any) -> Any:
+    """A /transactions/trc20 record cut to what _token_transfer reads."""
+    if not isinstance(raw, dict):
+        return raw
+    slim = {k: raw[k] for k in TRC20_FIELDS if k in raw}
+    info = slim.get("token_info")
+    if isinstance(info, dict):
+        slim["token_info"] = {k: info[k] for k in TOKEN_INFO_FIELDS if k in info}
+    return slim
+
+
+def _slim_native(raw: Any) -> Any:
+    """A /transactions record cut to what _native_transfer reads. Anything
+    not TransferContract keeps only its type (it still counts as scanned);
+    a record of a shape the parser would not read is kept as it came."""
+    if not isinstance(raw, dict):
+        return raw
+    try:
+        contract = raw["raw_data"]["contract"][0]
+        kind = contract.get("type")
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return raw
+    if kind != "TransferContract":
+        return {"raw_data": {"contract": [{"type": kind}]}}
+    param = contract.get("parameter")
+    value = param.get("value") if isinstance(param, dict) else None
+    if not isinstance(value, dict):
+        return raw
+    slim = {k: raw[k] for k in NATIVE_FIELDS if k in raw}
+    if "ret" in raw:
+        slim["ret"] = raw["ret"][:1] if isinstance(raw["ret"], list) else raw["ret"]
+    slim["raw_data"] = {"contract": [{"type": kind, "parameter": {
+        "value": {k: value[k] for k in TRANSFER_VALUE_FIELDS if k in value}}}]}
+    return slim
 
 
 class TronError(EtherscanError):
@@ -172,6 +217,11 @@ class TronClient:
         interval = self.min_interval
         self._pacer = get_pacer(f"trongrid:{credential}", lambda: SharedPacer(
             interval=interval, min_interval=interval, max_interval=max(interval * 5, 6.0)))
+        # Re-traces, both directions and follow-ons read the same pages again.
+        # Shared by every key: the answer is the chain's, not the caller's.
+        self._cache = get_cache("trongrid:responses", lambda: ResponseCache(
+            ttl_seconds=config.API_CACHE_TTL_SECONDS, path=config.API_CACHE_PATH,
+            max_bytes=config.CACHE_SMALL_MEMORY_BYTES))
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -188,15 +238,19 @@ class TronClient:
     def _throttle(self) -> None:
         self._pacer.wait()
 
-    def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
+    def _describe(self, path: str, params: dict[str, Any]) -> str:
         query = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
-        return self._send("GET", path, f"GET {self.base_url}{path}?{query}", params=params)
+        return f"GET {self.base_url}{path}?{query}"
+
+    def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
+        return self._send("GET", path, self._describe(path, params), params=params)[0]
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._send("POST", path, f"POST {self.base_url}{path} {json.dumps(payload, sort_keys=True)}",
-                          json=payload)
+                          json=payload)[0]
 
-    def _send(self, method: str, path: str, request_desc: str, **kwargs: Any) -> dict[str, Any]:
+    def _send(self, method: str, path: str, request_desc: str, **kwargs: Any) -> tuple[dict[str, Any], Any]:
+        """(body, its evidence record)."""
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
             if self.budget is not None:
@@ -233,13 +287,45 @@ class TronClient:
 
             if body.get("success") is False:
                 raise TronError(f"TronGrid error: {str(body.get('error'))[:200]}")
-            self.evidence.record("trongrid", request_desc, response.content)
+            rec = self.evidence.record("trongrid", request_desc, response.content)
             self._pacer.reward()
-            return body
+            return body, rec
 
         raise TronError(
             f"TronGrid request failed after {self.max_retries + 1} attempts: {last_error}"
         )
+
+    def _read_pages(self, path: str, params: dict[str, Any], scope: Any, ttl: float,
+                    take: Callable[[list[Any], bool], bool]) -> None:
+        """Page through one read, handing each page's records to `take` with
+        whether more follow; `take` says whether to go on.
+
+        The read is cached whole -- every page it took, under its first
+        request and `scope` (what else decides where `take` stops) -- or not
+        at all: a fingerprint belongs to the read that made it, so a cached
+        first page is never followed by a live one. A hit replays the pages
+        as cached evidence, each with its own request and original hash."""
+        slim = _slim_trc20 if self.contract_address else _slim_native
+        key = (self.base_url, path, json.dumps(params, sort_keys=True), json.dumps(scope))
+        hit, pages = self._cache.get(key)
+        if hit and isinstance(pages, list):
+            for page in pages:
+                self.evidence.record_cached("trongrid", page["request"], page["meta"])
+                if not take(page["data"], page["more"]):
+                    break
+            return
+        params, pages = dict(params), []
+        while True:
+            request_desc = self._describe(path, params)
+            body, rec = self._send("GET", path, request_desc, params=dict(params))
+            records, fingerprint = _page(body)
+            more = bool(fingerprint and records)
+            pages.append({"request": request_desc, "data": [slim(r) for r in records], "more": more,
+                          "meta": {"sha256": rec.sha256, "retrieved_at": rec.retrieved_at, "bytes": rec.bytes}})
+            if not take(records, more):
+                break
+            params["fingerprint"] = fingerprint
+        self._cache.put(key, pages, ttl=ttl)
 
     def _backoff(self, attempt: int, reason: str) -> None:
         if attempt >= self.max_retries:
@@ -327,7 +413,7 @@ class TronClient:
                 asset="TRX",
                 contract_address=None,
             )
-        except (TypeError, ValueError, IndexError, AttributeError):
+        except (TypeError, ValueError, IndexError, KeyError, AttributeError):
             logger.warning("Skipping malformed TRX transfer: %r", str(raw)[:120])
             return None
 
@@ -401,17 +487,24 @@ class TronClient:
 
         collected: list[Transaction] = []
         scanned = 0
-        while scanned < MAX_SCAN:
-            records, fingerprint = _page(self._get(path, params))
+        complete = False
+
+        def take(records: list[Any], more: bool) -> bool:
+            nonlocal scanned, complete
             scanned += len(records)
             for raw in records:
                 tx = parse(raw)
                 if tx and ours(tx) and not tx.is_error and tx.value_wei > 0:
                     collected.append(tx)
-            if not fingerprint or not records:
-                return collected, True
-            params["fingerprint"] = fingerprint
-        return collected, False
+            complete = not more
+            return more and scanned < MAX_SCAN
+
+        # A range that ended a few minutes ago is history and keeps the day;
+        # one reaching the last minutes may still gain records.
+        settled = end_ts <= time.time() - SETTLED_SECONDS
+        ttl = config.API_CACHE_TTL_SECONDS if settled else config.API_CACHE_OPEN_TTL_SECONDS
+        self._read_pages(path, params, ["between", self.token_decimals], ttl, take)
+        return collected, complete
 
     def _get_directional_transactions(
         self, address: str, direction_param: str, limit: int | None = None,
@@ -430,7 +523,6 @@ class TronClient:
 
         cap = limit or config.TRACE_MAX_TXS_PER_ADDRESS
         collected: list[Transaction] = []
-        fingerprint: str | None = None
 
         if self.contract_address:
             path = f"/v1/accounts/{address}/transactions/trc20"
@@ -445,22 +537,19 @@ class TronClient:
         # "fingerprint does not match current set of params".
         page_size = min(MAX_PAGE, cap)
         scanned = 0
+        params: dict[str, Any] = {
+            direction_param: "true",
+            "only_confirmed": "true",  # never unconfirmed records (see _between)
+            "limit": page_size,
+            "order_by": "block_timestamp,desc" if since_ts is None else "block_timestamp,asc",
+        }
+        if since_ts is not None:
+            params["min_timestamp"] = int(since_ts) * 1000
+        if self.contract_address:
+            params["contract_address"] = self.contract_address
 
-        while len(collected) < cap and scanned < MAX_SCAN:
-            params: dict[str, Any] = {
-                direction_param: "true",
-                "only_confirmed": "true",  # never unconfirmed records (see _between)
-                "limit": page_size,
-                "order_by": "block_timestamp,desc" if since_ts is None else "block_timestamp,asc",
-            }
-            if since_ts is not None:
-                params["min_timestamp"] = int(since_ts) * 1000
-            if self.contract_address:
-                params["contract_address"] = self.contract_address
-            if fingerprint:
-                params["fingerprint"] = fingerprint
-
-            records, fingerprint = _page(self._get(path, params))
+        def take(records: list[Any], more: bool) -> bool:
+            nonlocal scanned
             scanned += len(records)
             for raw in records:
                 tx = parse(raw)
@@ -468,10 +557,11 @@ class TronClient:
                 # moving; the rest is noise the trace must not follow.
                 if tx and tx.to_address and not tx.is_error and tx.value_wei > 0:
                     collected.append(tx)
+            return more and len(collected) < cap and scanned < MAX_SCAN
 
-            if not fingerprint or not records:
-                break
-
+        # Both read up to the newest records, which keep coming: minutes only.
+        self._read_pages(path, params, ["directional", cap, self.token_decimals],
+                         config.API_CACHE_OPEN_TTL_SECONDS, take)
         return collected[:cap]
 
     def is_contract(self, address: str) -> bool | None:

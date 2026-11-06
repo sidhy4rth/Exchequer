@@ -14,7 +14,7 @@ import time
 import httpx
 import pytest
 
-from app import config
+from app import api_budget, config
 from app.api_budget import budget_stats
 from app.nodereal_client import NoderealClient, NoderealError
 from app.tron_client import TronClient, TronError
@@ -92,7 +92,11 @@ def test_keyless_tron_clients_share_one_pace():
         return httpx.Response(200, json={"data": [], "meta": {}})
     clients = [TronClient(api_key="", min_interval=0.05, client=httpx.Client(transport=httpx.MockTransport(handler)))
                for _ in range(4)]
-    threads = [threading.Thread(target=c.get_outgoing_transactions, args=(TRON,)) for c in clients for _ in range(2)]
+
+    def read(client):
+        with api_budget.fresh_reads():  # every read goes out: these are not cache hits
+            client.get_outgoing_transactions(TRON)
+    threads = [threading.Thread(target=read, args=(c,)) for c in clients for _ in range(2)]
     start = time.monotonic()
     [t.start() for t in threads]
     [t.join() for t in threads]
