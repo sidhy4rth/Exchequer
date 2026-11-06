@@ -507,6 +507,14 @@ class NoderealClient:
         with self._state_lock:
             self._deep_allowed.add(normalize_address(address))
 
+    def set_arrival(self, address: str, block: int) -> None:
+        """Say when the traced funds reached `address` (a payment trace's first
+        payment). Replaces what any scan noted: the intake's incoming read
+        records the oldest inflow it saw, which can be other, older money, and
+        reading the wallet's sends from there skipped the victim's."""
+        with self._state_lock:
+            self._arrived[normalize_address(address)] = block
+
     def get_incoming_between(
         self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,
     ) -> tuple[list[Transaction], bool]:

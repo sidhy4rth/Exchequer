@@ -82,6 +82,7 @@ import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Callable, Iterable
 
 import networkx as nx
@@ -367,15 +368,20 @@ def build_trace_graph(
     is_terminal: Callable[[str], bool] | None = None,
     direction: str = OUTGOING,
     seed_window: int | None = None,
+    seed_window_block: int | None = None,
 ) -> TraceResult:
     """Breadth-first trace of funds to or from `seed_address`.
 
     `seed_window` applies the time rule to the seed itself: only transfers the
-    seed made at or after that Unix time are followed. A reported address is
-    never windowed -- the trace cannot know when the victim's funds arrived --
-    but a follow-on trace after a swap does know: it starts when the swap's
-    output landed, and anything the wallet sent in that asset before then was
-    not the swapped money.
+    seed made at or after that Unix time are followed. An address-only trace
+    never windows its seed -- it cannot know when the victim's funds arrived --
+    but two traces do know: a payment trace starts when the victim's first
+    payment arrived, and a follow-on trace after a swap starts when the swap's
+    output landed. Anything the wallet sent before then was not that money.
+
+    `seed_window_block` is the block of that moment, when known (a payment
+    trace). With it a busy seed whose newest page does not reach back to the
+    payment is read again from that block forward, as any windowed address is.
 
     `direction` is OUTGOING (where the money went) or INCOMING (who sent it).
     See the module docstring for why that choice is investigative rather than
@@ -435,6 +441,9 @@ def build_trace_graph(
         start_block, arrived = window_block.get(address), window.get(address)
         if arrived is None or limit is None:
             return transfers
+        full, oldest = page_reach(address, transfers, limit)
+        if not full or (oldest is not None and oldest <= arrived):
+            return transfers
         if since is not None and start_block is not None:
             def read_later() -> list[Transaction]:
                 return since(address, start_block, limit=limit)
@@ -442,9 +451,9 @@ def build_trace_graph(
             def read_later() -> list[Transaction]:
                 return since_time(address, arrived, limit=limit)
         else:
-            return transfers
-        full, oldest = page_reach(address, transfers, limit)
-        if not full or (oldest is not None and oldest <= arrived):
+            # No way to read forward from the arrival: the transfers between it
+            # and the oldest one read are missing, and the case must say so.
+            not_read_back[address] = oldest
             return transfers
         later = read_later()
         known = {(tx.hash, tx.to_address, tx.value_wei) for tx in transfers}
@@ -453,6 +462,9 @@ def build_trace_graph(
         return transfers + added
 
     read_from_arrival: set[str] = set()
+    # Windowed addresses whose page stopped short of the arrival and could not
+    # be read forward: address -> time of the oldest record read.
+    not_read_back: dict[str, int | None] = {}
     seed = normalize_address(seed_address)
     graph = nx.DiGraph()
     graph.add_node(seed, address=seed, depth=0, is_seed=True, expanded=False)
@@ -469,7 +481,7 @@ def build_trace_graph(
     # address is first reached, read when it is expanded one level later.
     window: dict[str, int] = {seed: seed_window} if seed_window else {}
     # The block of that arrival, for reading a busy wallet from it forward.
-    window_block: dict[str, int] = {}
+    window_block: dict[str, int] = {seed: seed_window_block} if seed_window and seed_window_block else {}
 
     # One level of the search at a time, so the addresses at a given depth can
     # be fetched together. See _fetch_level for why that matters.
@@ -720,6 +732,15 @@ def build_trace_graph(
 
         frontier = next_frontier
 
+    # Sorted: fetch runs in worker threads, and the reasons must come out in a fixed order.
+    for address in sorted(not_read_back):
+        oldest = not_read_back[address]
+        upto = (datetime.fromtimestamp(oldest, tz=timezone.utc).strftime("%d %b %Y %H:%M UTC")
+                if oldest else "the oldest one read")
+        result.note_truncation(
+            f"history read limit at {address[:10]}...: transfers between the funds' arrival "
+            f"and {upto} were not read"
+        )
     result.seconds_elapsed = round(time.monotonic() - started, 2)
     _annotate_node_totals(graph)
     result.read_from_arrival = sorted(read_from_arrival)

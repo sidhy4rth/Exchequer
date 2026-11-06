@@ -123,6 +123,15 @@ def reported_amount(payments: list[dict[str, Any]]) -> float:
     return round(sum(p["amount"] for p in payments), 6)
 
 
+def window_anchor(payments: list[dict[str, Any]]) -> tuple[int, int | None]:
+    """When, and in which block, the first payment arrived: the trace reads the
+    wallet from here on. The block lets a busy wallet be read forward from the
+    payment (graph_builder); it is None when the provider gives none (Tron's
+    TRC-20 rows), and the read is then by time."""
+    blocks = [p["block"] for p in payments if p.get("block")]
+    return min(p["timestamp"] for p in payments), (min(blocks) if blocks else None)
+
+
 def window_start(payments: list[dict[str, Any]]) -> int:
     """When the first payment arrived: the trace reads the wallet from here on."""
-    return min(p["timestamp"] for p in payments)
+    return window_anchor(payments)[0]

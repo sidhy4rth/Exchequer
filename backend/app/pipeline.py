@@ -29,7 +29,7 @@ from .payment_intake import (
     normalize_hash,
     reported_amount,
     resolve_payments,
-    window_start,
+    window_anchor,
 )
 from .etherscan_client import (
     ProviderQuotaError,
@@ -521,6 +521,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             # incoming transfers to the reported wallet, and the walk then reads
             # that wallet only from when the first one arrived.
             intake = None
+            seed_block = None
             if request.payments:
                 try:
                     payments = resolve_payments(
@@ -530,7 +531,13 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 except PaymentError as exc:
                     raise HTTPException(status_code=400, detail=str(exc)) from exc
                 intake = intake_record(payments, request.ncrp_ack)
-                seed_window = window_start(payments)
+                # Read the wallet from the first payment's block, not from its
+                # newest page (Etherscan) or the oldest inflow the lookup saw
+                # (NodeReal).
+                seed_window, seed_block = window_anchor(payments)
+                anchor = getattr(client, "set_arrival", None)
+                if anchor is not None and seed_block:
+                    anchor(seed, seed_block)
             result = build_trace_graph(
                 seed,
                 client,
@@ -550,6 +557,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 ),
                 direction=direction,
                 seed_window=seed_window,
+                seed_window_block=seed_block,
             )
             if getattr(client, "confirmed_bound_applied", True) is False:
                 # The head could not be read, so the newest rows were kept uncut.
