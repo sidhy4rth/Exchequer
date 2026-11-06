@@ -602,6 +602,20 @@ LIST_STALE_DAYS: int = 7
 # sent as X-Exchequer-Demo-Code; unset, nothing is guarded. A shared secret
 # for a public demo, not an account.
 DEMO_CODE: str = os.getenv("EXCHEQUER_DEMO_CODE", "").strip()
+# Whether this is a public deployment: Render and Railway say so themselves,
+# EXCHEQUER_PUBLIC=1 for any other host. One running without a demo code logs
+# an error at startup and /health says "access": "open" (access.py).
+PUBLIC_HOST: bool = (
+    os.getenv("RENDER", "").strip().lower() == "true"
+    or bool(os.getenv("RAILWAY_ENVIRONMENT"))
+    or os.getenv("EXCHEQUER_PUBLIC", "").strip().lower() in ("1", "true", "yes", "on")
+)
+# Turn on once the code is set: a deploy that then loses it refuses live
+# tracing (503) rather than opening it to everyone. Off by default, so a site
+# whose code was never set keeps working.
+REQUIRE_DEMO_CODE: bool = (
+    os.getenv("EXCHEQUER_REQUIRE_DEMO_CODE", "").strip().lower() in ("1", "true", "yes", "on")
+)
 # How long the pass that POST /access/check hands a browser lasts (access.py):
 # an event day, so a presenter enters the code once.
 DEMO_PASS_SECONDS: int = max(60, int(float(os.getenv("EXCHEQUER_DEMO_PASS_HOURS", "12") or 12) * 3600))

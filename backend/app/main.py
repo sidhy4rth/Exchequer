@@ -126,6 +126,7 @@ async def lifespan(_app: FastAPI):
                 "screened against sanctions or mixer lists",
                 chain.name,
             )
+    access.report_at_startup()
     logger.info("Per-client limits key on %s", rate_limit.rule())
     for status in provider_status().values():
         if status["ready"]:

@@ -22,6 +22,9 @@ jobs:
     env:
       # Set the repository variable SITE_URL when the site moves host.
       EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer-6gnl.onrender.com' }}
+      # Set the repository variable EXPECT_DEMO_CODE to 1 once the demo code
+      # is on: the canary then goes red if the site is ever open to anyone.
+      EXPECT_DEMO_CODE: ${{ vars.EXPECT_DEMO_CODE }}
     defaults:
       run:
         working-directory: frontend

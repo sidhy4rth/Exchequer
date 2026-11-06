@@ -13,7 +13,11 @@ X-Exchequer-Demo-Code:
     POST /access/check           whether a code is right, for the console's code box
 
 Unset (a laptop, the test suite), nothing is guarded. The code is a shared
-secret for a demo, not an account: R23 brings accounts.
+secret for a demo, not an account: R23 brings accounts. A public host
+without it stays open -- the live site must keep working before the code is
+set -- but says so: an error at every start, and "access": "open" in /health.
+EXCHEQUER_REQUIRE_DEMO_CODE, once the code is in place, makes a deploy that
+loses it refuse live tracing (503) instead.
 
 The right code at /access/check also returns a pass, which the console sends
 as X-Exchequer-Demo-Pass instead of the code. Ten wrong codes from one
@@ -35,6 +39,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import re
 import secrets
 import time
@@ -44,8 +49,12 @@ from fastapi import APIRouter
 
 from . import config, rate_limit
 
+logger = logging.getLogger(__name__)
+
 CODE_HEADER = "x-exchequer-demo-code"
 PASS_HEADER = "x-exchequer-demo-pass"
+# Shorter than this, a code can be guessed despite the lockout.
+MIN_CODE_LENGTH = 16
 
 GUARDED: list[tuple[str, re.Pattern[str]]] = [
     ("POST", re.compile(r"^/trace/?$")),
@@ -74,6 +83,29 @@ Send = Callable[[dict[str, Any]], Awaitable[None]]
 
 def is_guarded(method: str, path: str) -> bool:
     return any(method == m and pattern.match(path) for m, pattern in GUARDED)
+
+
+def state() -> str:
+    """"code" (guarded), "open" (no code: anyone may trace) or "closed" (a
+    code is required but missing: nobody may)."""
+    if config.DEMO_CODE:
+        return "code"
+    return "closed" if config.REQUIRE_DEMO_CODE else "open"
+
+
+def report_at_startup() -> None:
+    """Say loudly, at every start, when a public site is open to anyone."""
+    current = state()
+    if current == "closed":
+        logger.error("EXCHEQUER_REQUIRE_DEMO_CODE is on but EXCHEQUER_DEMO_CODE is not set: "
+                     "live traces, batches and watches are refused (503) until it is")
+    elif current == "open" and config.PUBLIC_HOST:
+        logger.error("THIS PUBLIC SITE IS OPEN: EXCHEQUER_DEMO_CODE is not set, so anyone can start "
+                     "live traces, batches and watches that spend the provider quota. Set it in the "
+                     "host's environment, and the repository secret DEMO_CODE to the same value")
+    elif current == "code" and len(config.DEMO_CODE) < MIN_CODE_LENGTH:
+        logger.warning("EXCHEQUER_DEMO_CODE is %d characters, short enough to guess; use "
+                       "python -c 'import secrets;print(secrets.token_urlsafe(16))'", len(config.DEMO_CODE))
 
 
 def _pass_mac(body: str) -> str:
@@ -108,7 +140,14 @@ class DemoCodeMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not config.DEMO_CODE or not is_guarded(scope["method"], scope["path"]):
+        if scope["type"] != "http" or not is_guarded(scope["method"], scope["path"]):
+            await self.app(scope, receive, send)
+            return
+        if not config.DEMO_CODE:
+            if config.REQUIRE_DEMO_CODE:
+                await _refuse(send, 503, "This site requires an access code but none is configured: "
+                                         "live tracing is off until the operator sets EXCHEQUER_DEMO_CODE.")
+                return
             await self.app(scope, receive, send)
             return
         headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope["headers"]}
@@ -158,7 +197,7 @@ router = APIRouter()
 def access() -> dict[str, bool]:
     """Whether this deployment asks for a demo code, so the console knows
     to show the recorded demos and a code box instead of the trace form."""
-    return {"demo_code_required": bool(config.DEMO_CODE)}
+    return {"demo_code_required": state() != "open"}
 
 
 @router.post("/access/check")

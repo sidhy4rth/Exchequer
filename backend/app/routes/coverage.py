@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import api_budget, config, label_store, models, ownership, rate_limit, signing, warmup, watchlist
+from .. import access, api_budget, config, label_store, models, ownership, rate_limit, signing, warmup, watchlist
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, STOLEN,
@@ -29,9 +29,11 @@ router = APIRouter()
 @router.api_route("/health", methods=["GET", "HEAD"])
 def health() -> dict[str, str]:
     """Liveness, for the host's health check and the uptime monitors: up or
-    not, and nothing else. What the site can trace is /chains; how it is
-    configured is /health/detail, for the operator."""
-    return {"status": "ok"}
+    not, and whether anyone may start live traces ("open"), only holders of
+    the demo code ("code"), or nobody ("closed") -- what GET /access already
+    tells the console, where a monitor sees it. What the site can trace is
+    /chains; how it is configured is /health/detail, for the operator."""
+    return {"status": "ok", "access": access.state()}
 
 
 # The label type of a customer's deposit address at an exchange, as opposed
@@ -114,6 +116,13 @@ def health_detail(request: Request) -> dict[str, Any]:
         "signing_key": {"fingerprint": signing.get_signer().fingerprint,
                         "source": signing.get_signer().source,
                         "persistent": signing.get_signer().persistent},
+        # Whether live tracing needs the demo code, and whether that code is
+        # long enough not to be guessed. Never the code itself.
+        "access": {"state": access.state(), "public_host": config.PUBLIC_HOST,
+                   "demo_code_set": bool(config.DEMO_CODE),
+                   "demo_code_long_enough": len(config.DEMO_CODE) >= access.MIN_CODE_LENGTH,
+                   "require_demo_code": config.REQUIRE_DEMO_CODE,
+                   "pass_hours": config.DEMO_PASS_SECONDS / 3600},
         # Which address this request was counted against, and which header
         # gave it -- as fingerprints, never addresses. Send your own address
         # as X-Exchequer-Probe-Me to measure the proxy chain (rate_limit.probe).

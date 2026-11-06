@@ -19,6 +19,8 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_MAX_RUNNING_TRACES` | 4 | Traces running at once, server-wide. |
 | `EXCHEQUER_TRACES_PER_HOUR` | 30 | Traces one client may start per hour (a batch counts every row). `0` = no limit. |
 | `EXCHEQUER_DEMO_CODE` | — | Set, a live trace, a batch or a watch needs this code in the `X-Exchequer-Demo-Code` header; reading stays open. After 10 wrong codes in 15 minutes a client is refused (429), the right code included. The right code returns a pass (sent as `X-Exchequer-Demo-Pass`, valid `EXCHEQUER_DEMO_PASS_HOURS`, default 12) that is never locked out; changing the code revokes every pass. Use a long random value: `python -c 'import secrets;print(secrets.token_urlsafe(16))'`. Unset, nothing is guarded. See `backend/app/access.py`. |
+| `EXCHEQUER_REQUIRE_DEMO_CODE` | off | Set once the code is in place: a deploy without `EXCHEQUER_DEMO_CODE` then refuses live tracing (503) instead of opening it. |
+| `EXCHEQUER_PUBLIC` | on when Render or Railway says so | A public host without a demo code logs an error at every start. |
 | `EXCHEQUER_WATCHES_PER_HOUR` | 20 | Watches one client may create per hour. `0` = no limit. |
 | `EXCHEQUER_TRUST_PROXY` | `render` when Render sets `RENDER=true`, `1` on Railway, else off | Read the client address (the key of every per-client limit) from the proxy's headers. Only behind a proxy that sets them. `1`: `X-Real-IP`, else the last `X-Forwarded-For` entry (Railway). `render`: `EXCHEQUER_CLIENT_IP_HEADER` if the edge sent it, else entry `EXCHEQUER_PROXY_HOPS` from the right of `X-Forwarded-For`, else the leftmost entry (which a client can write; logged as a warning). `0` = never. |
 | `EXCHEQUER_CLIENT_IP_HEADER` | `cf-connecting-ip` | In `render` mode, a header the edge sets to the connecting address and overwrites if the client sent one (Cloudflare's). `none` ignores it. |
@@ -30,7 +32,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_BACKUPS` | off (on in the image) | A daily snapshot of the store in `backups/` beside it. |
 | `EXCHEQUER_BACKUP_KEEP` | 7 | How many daily snapshots to keep. |
 | `EXCHEQUER_BACKUP_TOKEN` | — | Bearer token for `GET /admin/backup`. Unset, the endpoint answers 404. |
-| `EXCHEQUER_HEALTH_TOKEN` | — (Render generates one) | Bearer token for `GET /health/detail`: key status, per-chain detail, API budget, warm-cache status. Unset, the endpoint answers 404. Public `/health` says only `{"status": "ok"}`; `/chains` is the public list of what the site can trace. |
+| `EXCHEQUER_HEALTH_TOKEN` | — (Render generates one) | Bearer token for `GET /health/detail`: key status, per-chain detail, API budget, warm-cache status. Unset, the endpoint answers 404. Public `/health` says only `{"status": "ok"}` and `"access"` (`open`, `code` or `closed`); `/chains` is the public list of what the site can trace. |
 | `EXCHEQUER_TEMPORARY_DISK` | on when Render sets `RENDER=true`, else off | Whether a restart wipes the disk. `/health/detail` → `storage` then marks a SQLite case store and the provider cache as temporary: on Render's free plan, an empty `DATABASE_URL` means every stored case is lost when the instance sleeps. `0` or `1` overrides the guess. |
 | `EXCHEQUER_WARM_CACHE` | off (on in the image) | Trace the demo addresses at startup so they answer from cache. |
 
@@ -110,8 +112,13 @@ it). Visitors then see the recorded demos, which open exactly as recorded,
 and a box for the code; with it, the console traces as before. The code
 stays in that browser tab only (`sessionStorage`) and is forgotten on sign
 out. Share it with the people presenting, and change it after an event.
-`scripts/check_demos.py` must send it (Lane A) before the code is set, or
-Demo health fails.
+Order: set the repository secret `DEMO_CODE` first (`scripts/check_demos.py`
+sends it), then `EXCHEQUER_DEMO_CODE` on Render with the same value, then
+`EXCHEQUER_REQUIRE_DEMO_CODE=1` there too, and the repository variable
+`EXPECT_DEMO_CODE=1` for the site canary. Until the code is set the site
+stays open, and says so: every start logs `THIS PUBLIC SITE IS OPEN`, and
+`/health` answers `"access": "open"` (`"code"` once set; `"closed"` if the
+code is required but missing, when live tracing answers 503).
 
 ## Database schema
 

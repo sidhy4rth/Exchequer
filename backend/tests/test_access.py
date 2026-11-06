@@ -56,6 +56,43 @@ def test_without_a_configured_code_tracing_stays_open(client):
     assert client.traced == [ADDRESS]
 
 
+def test_a_public_host_without_a_code_stays_open_but_says_so_loudly(client, monkeypatch, caplog):
+    """The live site must keep working before the operator sets the code, so
+    a missing code never closes it by itself -- it is reported instead."""
+    monkeypatch.setattr(config, "PUBLIC_HOST", True)
+    with caplog.at_level("WARNING", logger="app.access"):
+        access.report_at_startup()
+    assert any(r.levelname == "ERROR" and "EXCHEQUER_DEMO_CODE" in r.getMessage() for r in caplog.records)
+    assert client.get("/health").json() == {"status": "ok", "access": "open"}
+    assert post(client, "/trace", GUARDED[0][1]).status_code == 200
+
+
+def test_a_laptop_without_a_code_logs_no_alarm(monkeypatch, caplog):
+    monkeypatch.setattr(config, "PUBLIC_HOST", False)
+    with caplog.at_level("WARNING", logger="app.access"):
+        access.report_at_startup()
+    assert not caplog.records
+
+
+def test_a_short_code_is_warned_about(monkeypatch, caplog):
+    monkeypatch.setattr(config, "DEMO_CODE", CODE)
+    with caplog.at_level("WARNING", logger="app.access"):
+        access.report_at_startup()
+    assert any("guess" in r.getMessage() for r in caplog.records)
+
+
+def test_a_required_code_that_is_missing_closes_live_tracing(client, monkeypatch):
+    """EXCHEQUER_REQUIRE_DEMO_CODE: once the operator has set the code, a
+    deploy that loses it fails closed instead of silently opening."""
+    monkeypatch.setattr(config, "REQUIRE_DEMO_CODE", True)
+    refused = post(client, "/trace", GUARDED[0][1])
+    assert refused.status_code == 503 and "EXCHEQUER_DEMO_CODE" in refused.json()["detail"]
+    assert client.traced == []
+    assert client.get("/access").json() == {"demo_code_required": True}
+    assert client.get("/health").json()["access"] == "closed"
+    assert client.get("/cases", headers=OWNER).status_code == 200  # reading stays open
+
+
 # -- with a code configured -------------------------------------------------------
 def test_anonymous_post_trace_is_refused(client, code_set):
     response = post(client, "/trace", GUARDED[0][1])

@@ -42,8 +42,13 @@ services:
       - key: EXCHEQUER_HEALTH_TOKEN
         generateValue: true
       # The demo code (access.py): set, the public site shows recorded demos
-      # and live tracing needs the code; blank, everything stays open. Keep
-      # the repository secret DEMO_CODE equal to it for the Demo health job.
+      # and live tracing needs the code. LEFT BLANK, THE SITE IS OPEN: anyone
+      # can spend the provider quota. Every start then logs an error and
+      # /health answers "access": "open". Use a long random value
+      # (python -c 'import secrets;print(secrets.token_urlsafe(16))'), set the
+      # repository secret DEMO_CODE to the same value first (Demo health
+      # sends it), then add EXCHEQUER_REQUIRE_DEMO_CODE=1 here by hand so a
+      # deploy that loses the code fails closed instead of opening.
       - key: EXCHEQUER_DEMO_CODE
         sync: false
       # Render behind Cloudflare: the client is CF-Connecting-IP, which the

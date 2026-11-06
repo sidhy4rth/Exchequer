@@ -326,7 +326,7 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |
 | `GET /risk-labels?chain=bsc` | What that chain's screening covers, by category: sanctioned, mixer, stolen |
 | `GET /ledger?chain=ethereum` | The labelled addresses the sign-in backdrop draws |
-| `GET /health` | Up or down, nothing else |
+| `GET /health` | Up or down, and whether live tracing is open to anyone (`"access": "open"`), needs the demo code (`"code"`) or is off (`"closed"`) |
 | `GET /chains` | Per-chain readiness, assets and label counts, with exchange wallets and customer deposit addresses counted apart |
 | `GET /health/detail` | Operator only (bearer `EXCHEQUER_HEALTH_TOKEN`): key status, per-chain detail, API budget, warm-cache status |
 | `GET /access` | Whether this site asks for a demo code before live tracing |

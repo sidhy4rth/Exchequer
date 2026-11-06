@@ -18,8 +18,22 @@ def client():
         yield c
 
 
-def test_public_health_says_only_whether_it_is_up(client):
-    assert client.get("/health").json() == {"status": "ok"}
+def test_public_health_says_only_whether_it_is_up_and_open(client, monkeypatch):
+    """Up, and whether anyone may start live traces -- the same fact GET
+    /access gives the console, shown where monitors look."""
+    monkeypatch.setattr(config, "DEMO_CODE", "")
+    assert client.get("/health").json() == {"status": "ok", "access": "open"}
+    monkeypatch.setattr(config, "DEMO_CODE", "a" * 22)
+    assert client.get("/health").json() == {"status": "ok", "access": "code"}
+
+
+def test_health_detail_reports_the_access_state(client, monkeypatch):
+    monkeypatch.setattr(config, "HEALTH_TOKEN", TOKEN)
+    monkeypatch.setattr(config, "DEMO_CODE", "short")
+    body = client.get("/health/detail", headers={"authorization": f"Bearer {TOKEN}"}).json()
+    assert body["access"]["state"] == "code"
+    assert body["access"]["demo_code_long_enough"] is False
+    assert "short" not in repr(body)
 
 
 def test_chains_lists_what_the_console_needs(client):

@@ -18,7 +18,11 @@ async function enter(page) {
 }
 
 test('the API is up and the label files are loaded', async ({ request }) => {
-  expect(await (await request.get('/health')).json()).toEqual({ status: 'ok' })
+  const health = await (await request.get('/health')).json()
+  expect(health.status).toBe('ok')
+  // "open" means anyone can start live traces; once the code is set, say so
+  // with the repository variable EXPECT_DEMO_CODE and losing it turns this red.
+  if (process.env.EXPECT_DEMO_CODE) expect(health.access, 'live tracing must need the demo code').toBe('code')
   const { chains } = await (await request.get('/chains')).json()
   // Well below today's counts; this catches a deploy that shipped without
   // its data files, not ordinary growth or pruning.
