@@ -57,6 +57,11 @@ function middle(address, head = 10, tail = 8) {
   if (!address || address.length <= head + tail + 1) return address
   return `${address.slice(0, head)}…${address.slice(-tail)}`
 }
+/** A transaction's page on the chain's explorer (Tronscan's is under #/). */
+function txUrl(explorer, chain, hash) {
+  if (!explorer || !hash) return null
+  return chain === 'tron' ? `${explorer}/#/transaction/${hash.replace(/^0x/, '')}` : `${explorer}/tx/${hash}`
+}
 const mmss = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
@@ -278,6 +283,10 @@ export default function TraceView() {
   // victim's payments; anything else followed the wallet's own history.
   const paymentTrace = result?.intake?.mode === 'payment'
   const payments = result?.intake?.payments ?? []
+  // A hash that carried several transfers has one entry per transfer (leg),
+  // so payments are counted by hash.
+  const paymentCount = new Set(payments.map((p) => p.tx_hash)).size
+  const windowStart = payments.length ? Math.min(...payments.map((p) => p.timestamp || Infinity)) : null
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
   const findings = result?.findings ?? []
@@ -436,8 +445,9 @@ export default function TraceView() {
               <span className="q">{reverse ? 'Where the money came from' : 'Where the money went'}</span>
               {!reverse && (paymentTrace ? (
                 <span className="intake" title="The trace read the reported wallet only from when the first payment arrived.">
-                  From the victim's <span className="num">{num(result.reported_amount)} {unit}</span> in {payments.length} payment{payments.length === 1 ? '' : 's'}
-                  {result.intake.ncrp_ack ? <> · NCRP <span className="mono">{result.intake.ncrp_ack}</span></> : null}
+                  From the victim's <span className="num">{num(result.reported_amount)} {unit}</span> in {paymentCount} payment{paymentCount === 1 ? '' : 's'}
+                  {payments.length > paymentCount ? ` (${payments.length} transfers)` : ''}
+                  {result.intake.ncrp_ack ? <> · NCRP <span className="mono">{result.intake.ncrp_ack}</span> <span className="note">as entered</span></> : null}
                   {!result.intake.ncrp_ack && result.redacted?.includes('intake.ncrp_ack') ? <> · NCRP on file (visible to the officer who traced it)</> : null}
                 </span>
               ) : (
@@ -601,6 +611,41 @@ export default function TraceView() {
                 </div>
               </div>
 
+              {paymentTrace && payments.length > 0 && (
+                <details className="card sec payments-card" open>
+                  <summary>
+                    <span className="micro">Victim's payments · {paymentCount}</span>
+                    <span className="note">confirm each against the complaint{windowStart && windowStart !== Infinity ? ` · the trace reads the wallet from ${when(windowStart)} UTC` : ''}</span>
+                  </summary>
+                  <div className="feed">
+                    {payments.map((p) => {
+                      const link = txUrl(result.explorer_url, result.chain, p.tx_hash)
+                      return (
+                        <div className="row" key={`${p.tx_hash}:${p.leg ?? 0}`}>
+                          <div className="hop">PAY</div>
+                          <div>
+                            <div className="pair">
+                              <Address value={p.tx_hash} head={10} tail={8} />
+                              {link && <a className="note" href={link} target="_blank" rel="noreferrer">explorer</a>}
+                              {p.leg != null && <span className="note">transfer {p.leg + 1} of this hash</span>}
+                            </div>
+                            <div className="sub">
+                              <span>{when(p.timestamp)}</span>
+                              <span>from <Address value={p.from} head={8} tail={6} /></span>
+                              {p.payer_label && <span className="pill">{p.payer_label}</span>}
+                              {p.payer_is_victim === true && <span className="pill green">the victim's wallet</span>}
+                              {p.payer_is_victim === false && <span className="pill amber" title="The sender is not the victim's wallet entered with the complaint">not the victim's wallet</span>}
+                              {p.found_by === 'officer_search' && <span className="pill">found by the officer</span>}
+                            </div>
+                          </div>
+                          <div className="amount">{num(p.amount)}<span className="unit">{unit}</span></div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </details>
+              )}
+
               {result.statement && (result.statement.credits.length > 0 || result.statement.debits.length > 0) && (
                 <details className="card sec">
                   <summary>
@@ -615,12 +660,13 @@ export default function TraceView() {
                       <div key={key}>
                         <p className="note" style={{ padding: '10px 12px 4px' }}><strong>{title}</strong>{(result.statement[key] ?? []).length === 0 ? ' — none found' : ''}{key === 'poisoning' ? ` — ${result.statement.lookalikes} in all; never copy an address from wallet history` : ''}</p>
                         {(result.statement[key] ?? []).map((r) => (
-                          <div className="row" key={r.tx + key}>
+                          <div className={`row${r.before_window ? ' before-window' : ''}`} key={r.tx + key}>
                             <div className="hop">{sign}</div>
                             <div>
                               <div className="pair"><span className="note">{dir}</span> <Address value={r.counterparty} head={8} tail={6} /></div>
                               <div className="sub">
                                 <span>{when(r.time)}</span>
+                                {r.before_window && <span className="pill" title="Before the victim's first payment arrived, so it cannot be the victim's money">before the payment</span>}
                                 {r.lookalike && <span className="pill red" title="A stranger's address copying the start and end of one this wallet really paid — address poisoning. Never copy an address from history.">lookalike · address poisoning</span>}
                               </div>
                             </div>

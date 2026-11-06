@@ -20,3 +20,7 @@
   font-size: 12px;
   margin-top: 4px;
 }
+
+/* Statement rows from before the victim's first payment: kept, but greyed. */
+.results .feed .row.before-window { opacity: 0.6; }
+.payments-card .pair { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

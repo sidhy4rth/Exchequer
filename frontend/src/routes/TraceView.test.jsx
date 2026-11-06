@@ -191,3 +191,58 @@ describe('a government seizure order (audit r1-labels-data-12)', () => {
     expect(alert.closest('.pr-alert')).not.toHaveTextContent('Sanctioned')
   })
 })
+
+describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
+  const H1 = '0x' + 'a1'.repeat(32)
+  const H2 = '0x' + 'b2'.repeat(32)
+  const SENDER = '0x' + '5'.repeat(40)
+  const pay = (over) => ({ chain: 'ethereum', asset: 'ETH', to: demo.result.address, block: 1, found_by: 'victim', from: SENDER, ...over })
+
+  async function openPaymentCase(extra = {}) {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+    const intake = {
+      mode: 'payment', ncrp_ack: '31911250012345',
+      payments: [
+        pay({ tx_hash: H1, amount: 3999, timestamp: 1_700_000_000, leg: 0, payer_label: 'Binance 14', payer_is_victim: false }),
+        pay({ tx_hash: H1, amount: 1, timestamp: 1_700_000_000, leg: 1, payer_is_victim: false }),
+        pay({ tx_hash: H2, amount: 5, timestamp: 1_700_086_400, payer_is_victim: true }),
+      ],
+    }
+    stubFetch({ '/demos/recorded/11': { body: { ...demo.result, intake, reported_amount: 4005, explorer_url: 'https://etherscan.io', chain: 'ethereum', case_id: null, created_at: demo.recorded_at, recorded_demo: 11, ...extra } } })
+    render(
+      <MemoryRouter initialEntries={['/demo/11']}>
+        <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
+      </MemoryRouter>,
+    )
+    await screen.findByText(/Verified example 11/)
+  }
+
+  it('counts payments by hash, not by transfer, and marks the NCRP number as entered', async () => {
+    await openPaymentCase()
+    const line = document.querySelector('.finding-bar .intake')
+    expect(line).toHaveTextContent('in 2 payments (3 transfers)')
+    expect(line).toHaveTextContent('NCRP 31911250012345 as entered')
+  })
+
+  it('lists every payment with its sender, label, victim check and explorer link', async () => {
+    await openPaymentCase()
+    const card = document.querySelector('.payments-card')
+    expect(card).toHaveTextContent("Victim's payments · 2")
+    expect(card).toHaveTextContent('confirm each against the complaint')
+    const rows = card.querySelectorAll('.row')
+    expect(rows).toHaveLength(3)
+    expect(rows[0]).toHaveTextContent('Binance 14')
+    expect(rows[0]).toHaveTextContent("not the victim's wallet")
+    expect(rows[0]).toHaveTextContent('transfer 1 of this hash')
+    expect(rows[2]).toHaveTextContent("the victim's wallet")
+    expect(rows[2].querySelector('a')).toHaveAttribute('href', `https://etherscan.io/tx/${H2}`)
+  })
+
+  it("greys statement rows from before the victim's first payment", async () => {
+    const row = (over) => ({ tx: over.tx, counterparty: SENDER, amount: 1, time: 1_600_000_000, ...over })
+    await openPaymentCase({ statement: { credits: [row({ tx: 'a', before_window: true })], debits: [row({ tx: 'b', before_window: false })], rows_per_side: 20, lookalikes: 0 } })
+    const marked = document.querySelectorAll('.row.before-window')
+    expect(marked).toHaveLength(1)
+    expect(marked[0]).toHaveTextContent('before the payment')
+  })
+})
