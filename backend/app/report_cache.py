@@ -50,6 +50,12 @@ class RenderCache:
     def _cost(value: bytes | str) -> int:
         return len(value) if isinstance(value, bytes) else len(value.encode("utf-8"))
 
+    def pop(self, key: Hashable) -> None:
+        with self._lock:
+            old = self._items.pop(key, None)
+            if old is not None:
+                self.size -= self._cost(old)
+
     def get(self, key: Hashable) -> bytes | str | None:
         with self._lock:
             value = self._items.get(key)
@@ -89,10 +95,18 @@ def _case_key(case: Case) -> tuple[str, str, str]:
 
 
 def _key(case: Case, kind: str) -> tuple[Any, ...]:
+    return _key_for(_case_key(case), kind)
+
+
+def _key_for(case_key: tuple[str, str, str], kind: str) -> tuple[Any, ...]:
     from .report import REPORT_VERSION
     from .signing import get_signer
 
-    return (_case_key(case), REPORT_VERSION, get_signer().fingerprint_sha256, config.PUBLIC_URL, kind)
+    return (case_key, REPORT_VERSION, get_signer().fingerprint_sha256, config.PUBLIC_URL, kind)
+
+
+# The renders that print generated_at; graph exports do not.
+_DATED = ("text", "pdf")
 
 
 def generated_at(case: Case) -> str:
@@ -104,7 +118,11 @@ def generated_at(case: Case) -> str:
             when = datetime.now(tz=timezone.utc).isoformat(timespec="seconds")
             _generated[key] = when
             while len(_generated) > GENERATED_AT_KEPT:
-                _generated.popitem(last=False)
+                forgotten, _ = _generated.popitem(last=False)
+                # Its kept text and PDF carry the time just forgotten: drop
+                # them, so the next render of every format shares a new one.
+                for kind in _DATED:
+                    _cache.pop(_key_for(forgotten, kind))
         else:
             _generated.move_to_end(key)
         return when
@@ -124,9 +142,19 @@ def text(case: Case) -> str:
     cached = _cache.get(key)
     if isinstance(cached, str):
         return cached
-    rendered = render_text_report(report(case))
-    _cache.put(key, rendered)
+    built = report(case)
+    rendered = render_text_report(built)
+    _keep_dated(case, "text", built["generated_at"], rendered)
     return rendered
+
+
+def _keep_dated(case: Case, kind: str, when: str, value: bytes | str) -> None:
+    """Keep a render only while its case's first-render time is still `when`:
+    a time forgotten during the render must not come back with it."""
+    case_key = _case_key(case)
+    with _generated_lock:
+        if _generated.get(case_key) == when:
+            _cache.put(_key_for(case_key, kind), value)
 
 
 def cached_pdf(case: Case) -> bytes | None:
@@ -134,8 +162,9 @@ def cached_pdf(case: Case) -> bytes | None:
     return cached if isinstance(cached, bytes) else None
 
 
-def store_pdf(case: Case, pdf: bytes) -> None:
-    _cache.put(_key(case, "pdf"), pdf)
+def store_pdf(case: Case, pdf: bytes, generated: str) -> None:
+    """Keep a PDF rendered from the report generated at `generated`."""
+    _keep_dated(case, "pdf", generated, pdf)
 
 
 def graph(case: Case, fmt: str) -> str:

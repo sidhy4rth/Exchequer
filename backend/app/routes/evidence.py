@@ -44,8 +44,9 @@ def _pdf(case: models.Case, http: Request) -> bytes:
     try:
         pdf = report_cache.cached_pdf(case)  # made while this request waited for the slot
         if pdf is None:
-            pdf = render_pdf(report_cache.report(case), report_cache.text(case))
-            report_cache.store_pdf(case, pdf)
+            built = report_cache.report(case)
+            pdf = render_pdf(built, report_cache.text(case))
+            report_cache.store_pdf(case, pdf, built["generated_at"])
         return pdf
     finally:
         report_cache.render_slot.release()

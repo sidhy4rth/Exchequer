@@ -146,3 +146,49 @@ def test_a_graph_export_is_rendered_once(client, monkeypatch):
     second = client.get("/trace/case-0/graph?format=graphml")
     assert first.content == second.content and calls == ["case-0"]
     assert second.headers["cache-control"] == "private, max-age=3600"
+
+
+def test_a_forgotten_first_render_time_never_splits_one_case_into_two_reports(client, monkeypatch):
+    # The first-render times are kept for a bounded number of cases. Once a
+    # case's time is forgotten, its kept text must go too: else the JSON says
+    # one generated_at and the kept text and PDF another.
+    from datetime import datetime, timedelta, timezone
+
+    ticks = iter(range(10_000))
+
+    class Clock:
+        @staticmethod
+        def now(tz=None):
+            return datetime(2026, 11, 6, tzinfo=timezone.utc) + timedelta(minutes=next(ticks))
+
+    monkeypatch.setattr(report_cache, "datetime", Clock)
+    monkeypatch.setattr(report_cache, "GENERATED_AT_KEPT", 2)
+    text = client.get("/trace/case-0/report?format=text").text
+    for n in (1, 2, 3):  # three other cases push case-0's first-render time out
+        client.get(f"/trace/case-{n}/report")
+    generated = client.get("/trace/case-0/report").json()["generated_at"]
+    again = client.get("/trace/case-0/report?format=text").text
+    from app.report import _when_iso
+
+    assert f"Report generated : {_when_iso(generated)}" in again
+    assert again != text  # rendered afresh with the new time, not the old text kept
+
+
+def test_a_text_whose_time_was_forgotten_mid_render_is_not_kept(client, monkeypatch):
+    from app import report as report_module
+
+    monkeypatch.setattr(report_cache, "GENERATED_AT_KEPT", 2)
+    calls = []
+    real = report_module.render_text_report
+
+    def render_while_others_are_asked_for(built):
+        calls.append(built["case"]["case_id"])
+        if len(calls) == 1:
+            for n in (1, 2, 3):
+                client.get(f"/trace/case-{n}/report")
+        return real(built)
+
+    monkeypatch.setattr(report_module, "render_text_report", render_while_others_are_asked_for)
+    client.get("/trace/case-0/report?format=text")
+    client.get("/trace/case-0/report?format=text")
+    assert calls == ["case-0", "case-0"]  # the first was not kept under a forgotten time
