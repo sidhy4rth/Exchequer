@@ -12,7 +12,12 @@ const KIND = {
   exchange: { pill: 'green', text: 'into an exchange' },
   risk: { pill: 'red', text: 'into a flagged address' },
   moved: { pill: 'amber', text: 'moved' },
+  more: { pill: '', text: 'more movements' },
 }
+// Unread exchange and flagged alerts are pinned above the rest: however much
+// dust moved since, the alert a freeze request is sent on stays in view.
+const urgent = (a) => !a.read && (a.kind === 'exchange' || a.kind === 'risk')
+const SHOWN = 30
 const amount = (v) => Number(v).toLocaleString('en-US', { maximumFractionDigits: 6 })
 const short = (a) => (a && a.length > 20 ? `${a.slice(0, 10)}…${a.slice(-8)}` : a)
 const ago = (iso) => {
@@ -31,6 +36,7 @@ export default function Watchlist({ onCount } = {}) {
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
   const [logged, setLogged] = useState({})
+  const [showAll, setShowAll] = useState(false)
 
   const load = useCallback(() => {
     fetchWatches().then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) }).catch(() => {})
@@ -45,6 +51,9 @@ export default function Watchlist({ onCount } = {}) {
 
   if (watches.length === 0 && alerts.length === 0) return null
   const unread = alerts.filter((a) => !a.read).length
+  const pinned = alerts.filter(urgent)
+  const others = alerts.filter((a) => !urgent(a))
+  const shown = [...pinned, ...(showAll ? others : others.slice(0, SHOWN))]
 
   async function act(id, fn) {
     setBusy(id); setError(null)
@@ -87,13 +96,15 @@ export default function Watchlist({ onCount } = {}) {
                 <span className="micro">Alerts</span>
                 {unread > 0 && <button className="quiet" onClick={() => act('read', () => markAlertsRead())}>Mark all read</button>}
               </div>
-              {alerts.slice(0, 30).map((a) => (
+              {shown.map((a) => (
                 <div className={`alert-row${a.read ? '' : ' unread'}`} key={a.alert_id}>
                   <span className={`pill ${KIND[a.kind]?.pill ?? ''}`}>{KIND[a.kind]?.text ?? a.kind}</span>
-                  <span className="msg">
-                    {amount(a.value)} {a.asset} to <span className="mono">{plain(a.counterparty_label) || short(a.counterparty)}</span>
-                    <small> · {new Date(a.tx_time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC · {a.tx_url ? <a href={a.tx_url} target="_blank" rel="noopener noreferrer">transaction</a> : short(a.tx_hash)}</small>
-                  </span>
+                  {a.kind === 'more'
+                    ? <span className="msg">{a.message}</span>
+                    : <span className="msg">
+                        {amount(a.value)} {a.asset} to <span className="mono">{plain(a.counterparty_label) || short(a.counterparty)}</span>
+                        <small> · {new Date(a.tx_time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC · {a.tx_url ? <a href={a.tx_url} target="_blank" rel="noopener noreferrer">transaction</a> : short(a.tx_hash)}</small>
+                      </span>}
                   {a.kind === 'exchange' && a.exchange && a.case_id && (
                     logged[a.alert_id]
                       ? <Link to={`/case/${a.case_id}`} className="quiet-link">request logged</Link>
@@ -105,6 +116,9 @@ export default function Watchlist({ onCount } = {}) {
                   )}
                 </div>
               ))}
+              {!showAll && others.length > SHOWN && (
+                <button className="quiet link-like" onClick={() => setShowAll(true)}>Show all {alerts.length}</button>
+              )}
             </div>
           )}
         </div>

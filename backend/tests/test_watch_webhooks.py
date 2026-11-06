@@ -186,3 +186,21 @@ def test_the_internal_alert_record_is_never_sent(chain, monkeypatch):
     watchlist.check_watch(w.id, source=chain)
     assert "alert" not in hook.bodies[0] and "content" not in hook.bodies[0]
     assert ownership.owner_hash(ALICE) not in str(hook.bodies)
+
+
+def test_unread_exchange_alerts_come_first_in_the_list(chain):
+    # Alerts of one check share a created_at, so dust sent after a cash-out
+    # sorted above it; two checks of dust pushed it out of GET /alerts.
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    chain.transfers = [tx(100, STRANGER)]
+    watchlist.check_watch(w.id, source=chain)
+    chain.transfers = [tx(101 + i, STRANGER, 0.001) for i in range(20)] + [tx(121, BINANCE_14, 5.0)] + \
+        [tx(122 + i, STRANGER, 0.001) for i in range(20)]
+    watchlist.check_watch(w.id, source=chain)
+    for start in (142, 182, 222):
+        chain.transfers = [tx(start + i, STRANGER, 0.001) for i in range(40)]
+        watchlist.check_watch(w.id, source=chain)
+    listed = watchlist.list_alerts(owner(ALICE), limit=30)
+    assert listed[0]["kind"] == "exchange"
+    watchlist.mark_read(owner(ALICE), [listed[0]["alert_id"]])
+    assert watchlist.list_alerts(owner(ALICE), limit=30)[0]["kind"] == "moved"  # read: back in time order

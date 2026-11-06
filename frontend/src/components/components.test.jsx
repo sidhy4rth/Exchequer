@@ -202,6 +202,35 @@ describe('Watchlist on the home page', () => {
     expect(calls.some((c) => c.method === 'POST' && c.path === '/alerts/read')).toBe(true)
   })
 
+  const alertRow = (i, kind, read = false) => ({ alert_id: `a${i}`, kind, value: 1, asset: 'ETH', counterparty: '0x' + String(i).padStart(40, '0'), counterparty_label: kind === 'exchange' ? 'Binance 14' : '', tx_time: 1700000000 + i, tx_url: '', tx_hash: `0x${i}`, read })
+  const listing = (alerts) => api({
+    'GET /watches': { body: { count: 1, watches: [{ watch_id: 'w1', address: '0x' + '7'.repeat(40), chain: 'ethereum', asset: 'ETH', last_checked_at: null, unread_alerts: alerts.length }] } },
+    'GET /alerts': { body: { count: alerts.length, alerts } },
+  })
+
+  it('pins an unread exchange alert above 30 newer moved alerts', async () => {
+    listing([...Array.from({ length: 40 }, (_, i) => alertRow(i + 1, 'moved')), alertRow(99, 'exchange')])
+    inRouter(<Watchlist />)
+    const rows = await screen.findAllByText(/into an exchange|^moved$/)
+    expect(rows[0]).toHaveTextContent('into an exchange')
+    expect(screen.getByText('Binance 14')).toBeInTheDocument()
+  })
+
+  it('offers Show all past 30 alerts', async () => {
+    listing(Array.from({ length: 45 }, (_, i) => alertRow(i + 1, 'moved')))
+    const user = userEvent.setup()
+    inRouter(<Watchlist />)
+    await user.click(await screen.findByRole('button', { name: 'Show all 45' }))
+    expect(screen.getAllByText('moved')).toHaveLength(45)
+  })
+
+  it('names a "more movements" notice for what it is', async () => {
+    listing([{ ...alertRow(1, 'more'), message: 'Not everything since the last check was read in one go.' }])
+    inRouter(<Watchlist />)
+    expect(await screen.findByText('more movements')).toBeInTheDocument()
+    expect(screen.getByText(/Not everything since the last check/)).toBeInTheDocument()
+  })
+
   it('renders nothing when this browser watches nothing', async () => {
     api({ 'GET /watches': { body: { count: 0, watches: [] } }, 'GET /alerts': { body: { count: 0, alerts: [] } } })
     const { container } = inRouter(<Watchlist />)

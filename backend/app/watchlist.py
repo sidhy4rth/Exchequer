@@ -301,7 +301,12 @@ def list_alerts(owner: str, unread_only: bool = False, limit: int = 100) -> list
         stmt = select(models.Alert).where(models.Alert.owner_hash == owner)
         if unread_only:
             stmt = stmt.where(models.Alert.read.is_(False))
-        stmt = stmt.order_by(models.Alert.created_at.desc(), models.Alert.tx_time.desc()).limit(limit)
+        # Unread exchange and flagged alerts first, however much moved since:
+        # they are the ones a freeze request is sent on.
+        urgent_first = case((and_(models.Alert.read.is_(False),
+                                  models.Alert.kind.in_(("exchange", "risk"))), 0), else_=1)
+        stmt = stmt.order_by(urgent_first, models.Alert.created_at.desc(),
+                             models.Alert.tx_time.desc()).limit(limit)
         alerts = list(s.scalars(stmt))
         watches = {w.id: (w.chain, w.case_id) for w in s.scalars(select(models.Watch).where(
             models.Watch.id.in_({a.watch_id for a in alerts})))}
