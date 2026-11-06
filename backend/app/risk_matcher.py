@@ -29,11 +29,11 @@ The categories, with very different investigative meaning:
               The issuer acted on it -- after a sanctions match, a
               law-enforcement request or a theft; the event does not say which.
 
-  stolen      The address is a wallet the block explorer or a published
-              scam list attributes to the perpetrator of a known hack or
-              phishing campaign (e.g. "WazirX Exploiter 3"). Funds that touch one are commingled with the
-              proceeds of that theft, which ties a fraud case to a larger,
-              already-documented laundering operation.
+  stolen      The address is a wallet a tag names as the perpetrator of a
+              known hack or exploit (e.g. "WazirX Exploiter 3"). Funds that
+              touch one are commingled with the proceeds of that theft, which
+              ties a fraud case to a larger, already-documented laundering
+              operation. A scam or phishing list's report is `scam`, not this.
 
   reported    Tron only, read live: TronScan's own warning tag on the address
               ("Suspicious", "Scam", a phishing tag). The weakest of the five

@@ -360,8 +360,23 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
         )
     if "stolen" in risk:
         extra += (
-            " At least one address in the trace is tagged by the block explorer as a "
-            "wallet used in a known hack or phishing theft."
+            " At least one address in the trace is tied by a published source to a known "
+            "hack or exploit."
+        )
+    if "scam" in risk:
+        extra += (
+            " At least one address in the trace is named by a published scam or phishing "
+            "list; a list's report is an accusation, not a finding."
+        )
+    if "poisoning" in risk:
+        extra += (
+            " At least one address in the trace is an address-poisoning lookalike found by "
+            "on-chain detection."
+        )
+    if "laundering" in risk:
+        extra += (
+            " At least one address in the trace is named by a published source as moving "
+            "illicit proceeds."
         )
     closing = (
         " An exchange wallet identifies where the money went, not who received it; "

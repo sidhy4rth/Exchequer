@@ -171,3 +171,13 @@ def test_a_seizure_only_case_does_not_say_sanctions_list():
     summary = build_report(stored(result))["summary"]
     assert "seizure or forfeiture order, which is not a sanctions designation" in summary
     assert "on a published sanctions list" not in summary
+
+
+def test_the_summary_no_longer_credits_every_stolen_tag_to_the_explorer():
+    """ScamSniffer is not the block explorer, and a list's report is not a theft (r1-labels-data-6)."""
+    result = full_result()
+    result["risk_flags"] = ["stolen", "scam"]
+    summary = build_report(stored(result))["summary"]
+    assert "block explorer" not in summary
+    assert "tied by a published source to a known hack or exploit" in summary
+    assert "named by a published scam or phishing list" in summary

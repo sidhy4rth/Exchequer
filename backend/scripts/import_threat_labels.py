@@ -16,10 +16,13 @@ designations, and every entry says so in its `source`.
 Selection
 ---------
   stolen  A tag naming the perpetrator of a theft -- "Exploiter", "Hacker",
-          "Attacker" -- or Etherscan's "Fake_Phishing" flag. Tags that only
-          contain the word (a hackerspace charity, a "Hack Alert" contract)
-          do not match, and "Compromised" wallets are left out: those are
-          the victims.
+          "Attacker". Tags that only contain the word (a hackerspace
+          charity, a "Hack Alert" contract) do not match, and "Compromised"
+          wallets are left out: those are the victims. So are whitehat,
+          rescue and bot tags ("Multichain Exploiter 4 (Whitehat)", "Uniswap
+          V2: BOT"): they returned or front-ran funds, they did not steal them.
+  scam    Etherscan's "Fake_Phishing" flag: a reported phishing wallet, not a
+          named theft.
   mixer   Only the pools and the router that deposits into them -- the
           contracts where funds actually commingle. A mixer's governance,
           token, vesting and verifier contracts are not a laundering hop.
@@ -41,15 +44,25 @@ Scam lists
 ----------
 `--scam-lists` adds reported phishing and scam wallets from three published
 lists, all pinned: ScamSniffer's address blacklist (a Web3 security vendor,
-updated daily, published with a 7-day delay), and two mirrors of Etherscan's
-Phish/Hack label (dappcenter/etherscan-labels and Forta's labelled datasets).
-They join the `stolen` category; each entry names the lists that report it.
-The Etherscan lists are Ethereum's; ScamSniffer names no chain, so each of its
-addresses is filed under every EVM chain it has been used on. Existing entries
+updated daily, published with a 7-day delay, open to community reports), and
+two mirrors of Etherscan's Phish/Hack label (dappcenter/etherscan-labels and
+Forta's labelled datasets). They are filed as `scam`, a report by that list;
+only a tag naming a theft's perpetrator ("X Exploiter") is `stolen`. Each
+entry names the lists that report it. The Etherscan lists are Ethereum's;
+ScamSniffer names no chain, so each of its addresses is also filed under BSC
+when the same account has been used there: it has sent a transaction (nonce
+above zero) and holds no contract code, the rule port_evm_labels.py uses. Any
+code at the address on BSC may be an unrelated contract, and a balance alone
+is a dust send anyone can make. Existing entries
 are kept, and addresses already on a sanctions list are skipped. Progress is
 checkpointed, so an interrupted run resumes.
 
     cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists --checkpoint scam_check.jsonl
+
+`--recategorise` re-files the held threat files under the rules above, offline.
+`--recheck-bsc --rpc URL` re-checks the BSC file's ScamSniffer-only entries
+against the account rule through any BSC JSON-RPC endpoint (a keyless public
+one is enough), and removes those that fail it.
 """
 from __future__ import annotations
 
@@ -75,7 +88,7 @@ from app.etherscan_client import (  # noqa: E402
 )
 from app.label_rules import ENTRYPOINTS, MIXER_SERVICE, POOL, SERVICE_NAME  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
-from app.risk_matcher import MIXER, STOLEN  # noqa: E402
+from app.risk_matcher import MIXER, SCAM, STOLEN  # noqa: E402
 
 DATASET_REPO = "dawsbot/eth-labels"
 DATASET_COMMIT = "14247ba8cf4686b747938248bee34c66089fa9d9"
@@ -90,14 +103,18 @@ EXPLORER = {"ethereum": "Etherscan", "bsc": "BscScan"}
 THIEF = re.compile(r"^(?P<name>.+?)\s+(?P<role>exploiter|hacker|attacker)\b", re.IGNORECASE)
 PHISHING = re.compile(r"^fake_phishing\d*$", re.IGNORECASE)
 NOT_A_THIEF = re.compile(r"endaoment|avs operator|hack alert", re.IGNORECASE)
+# Tags that name someone who rescued, returned or front-ran funds: never a thief or a scam.
+EXCLUDED = re.compile(r"white ?hat|rescue|returned|\bbot\b|\bmev\b", re.IGNORECASE)
 
 
 
 def classify(tag: str) -> tuple[str, str] | None:
     """(category, entity) for a tag this file should hold, else None."""
     tag = tag.strip()
+    if EXCLUDED.search(tag):
+        return None
     if PHISHING.match(tag):
-        return STOLEN, "Phishing wallet"
+        return SCAM, "Phishing wallet"
     thief = THIEF.match(tag)
     if thief and not NOT_A_THIEF.search(tag):
         role = "hack" if thief["role"].lower() == "hacker" else thief["role"].lower()
@@ -147,6 +164,20 @@ def used_on_ethereum(client: EtherscanClient, address: str) -> bool:
     return bool(client.get_transactions(address, limit=1, sort="asc", include_internal=False))
 
 
+def account_used_on_bsc(client, address: str) -> bool:
+    """The same key's account on BSC: it has sent a transaction (nonce > 0) and holds no code.
+
+    Contract code there may be an unrelated contract at the same address, and a
+    balance alone is a dust send anyone can make. A missing result is an error,
+    never a "no".
+    """
+    nonce = client._rpc("eth_getTransactionCount", [address, "latest"])
+    code = client._rpc("eth_getCode", [address, "latest"])
+    if not isinstance(nonce, str) or not isinstance(code, str):
+        raise NoderealError(f"no result for {address}")
+    return int(nonce, 16) > 0 and code in ("0x", "0x0")
+
+
 def used_on_bsc(client: NoderealClient, address: str) -> bool:
     """A nonce, contract code or a balance: the address has been used on BSC."""
     if int(client._rpc("eth_getTransactionCount", [address, "latest"]) or "0x0", 16) > 0:
@@ -193,12 +224,23 @@ def scam_candidates() -> dict[str, dict]:
     return out
 
 
-def scam_entity(tag: str) -> tuple[str, str]:
-    """(entity, label) for a reported scam wallet."""
+GENERIC_SCAM = "Reported phishing / scam wallet"
+
+
+def scam_entity(tag: str) -> tuple[str, str, str] | None:
+    """(category, entity, label) for a wallet a scam list reports, or None to leave it out.
+
+    A list's report is `scam`. Only a tag naming a theft's perpetrator makes it
+    `stolen`; a whitehat, rescue or bot tag is no one to accuse.
+    """
+    if tag and EXCLUDED.search(tag):
+        return None
     found = classify(tag) if tag else None
     if found and found[0] == STOLEN:
-        return found[1], tag
-    return "Reported phishing / scam wallet", tag or "Reported phishing / scam wallet"
+        return STOLEN, found[1], tag
+    if found and found[0] == SCAM:
+        return SCAM, found[1], tag
+    return SCAM, GENERIC_SCAM, tag or GENERIC_SCAM
 
 
 def import_scam_lists(checkpoint: Path, dry_run: bool) -> int:
@@ -240,7 +282,7 @@ def import_scam_lists(checkpoint: Path, dry_run: bool) -> int:
                     if has_any_activity(eth, addr):
                         chains.append("ethereum")
                     # Etherscan's list is Ethereum's own; only ScamSniffer's needs BSC checked.
-                    if bsc and not candidates[addr]["etherscan"] and used_on_bsc(bsc, addr):
+                    if bsc and not candidates[addr]["etherscan"] and account_used_on_bsc(bsc, addr):
                         chains.append("bsc")
                 except (EtherscanError, NoderealError, ValueError) as exc:
                     print(f"  ! {addr}: {str(exc)[:60]}", flush=True)
@@ -257,10 +299,13 @@ def import_scam_lists(checkpoint: Path, dry_run: bool) -> int:
     unchecked = [a for a in todo if a not in done]
     added = Counter()
     for addr in todo:
+        filed = scam_entity(candidates[addr]["tag"])
+        if filed is None:
+            continue  # a whitehat, rescue or bot tag
+        category, entity, label = filed
         for chain_key in done.get(addr, []):
-            entity, label = scam_entity(candidates[addr]["tag"])
             documents[chain_key]["labels"][addr] = {
-                "category": STOLEN, "entity": entity, "label": label,
+                "category": category, "entity": entity, "label": label,
                 "source": "; ".join(candidates[addr]["sources"]),
             }
             added[chain_key] += 1
@@ -274,9 +319,9 @@ def import_scam_lists(checkpoint: Path, dry_run: bool) -> int:
         return 1
     for chain_key, document in documents.items():
         labels = document["labels"]
-        counts = Counter(m["category"] for m in labels.values())
         meta = document["_meta"]
-        meta["counts"] = {STOLEN: counts[STOLEN], MIXER: counts[MIXER]}
+        meta["counts"] = _counts(labels)
+        meta["category_note"] = CATEGORY_NOTE
         meta["last_reviewed"] = datetime.now(timezone.utc).date().isoformat()
         meta["scam_lists"] = (
             f"{added[chain_key]} reported phishing/scam wallets from ScamSniffer ({SCAMSNIFFER[0]} "
@@ -289,6 +334,121 @@ def import_scam_lists(checkpoint: Path, dry_run: bool) -> int:
         config.CHAINS[chain_key].threat_labels_path.write_text(json.dumps(document, indent=2) + "\n")
         print(f"Wrote {len(labels)} labels to {config.CHAINS[chain_key].threat_labels_path}")
     return 0
+
+
+CATEGORY_NOTE = (
+    "'stolen' marks wallets a tag names as the perpetrator of a hack or exploit; 'scam' marks "
+    "wallets a published scam or phishing list reports (an accusation by that list); a trace "
+    "continues through both. 'mixer' marks pools where deposits commingle; a trace stops there."
+)
+
+
+def _counts(labels: dict[str, dict]) -> dict[str, int]:
+    counts = Counter(m["category"] for m in labels.values())
+    return {STOLEN: counts[STOLEN], SCAM: counts[SCAM], MIXER: counts[MIXER]}
+
+
+def _ordered(labels: dict[str, dict]) -> dict[str, dict]:
+    return dict(sorted(labels.items(), key=lambda kv: (kv[1]["category"], kv[1]["entity"], kv[1]["label"])))
+
+
+def refile(entry: dict) -> dict | None:
+    """One held entry under today's rules, or None to remove it. No network."""
+    label = entry.get("label") or ""
+    if EXCLUDED.search(label):
+        return None
+    found = classify(label)
+    if found and found[0] in (STOLEN, MIXER):
+        return {**entry, "category": found[0]}
+    if entry["category"] == MIXER:
+        return entry
+    return {**entry, "category": SCAM}
+
+
+def recategorise(dry_run: bool) -> int:
+    """Re-file the held threat files under the rules above. Reads and writes local files only."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    for chain_key in CHAIN_IDS:
+        path = config.CHAINS[chain_key].threat_labels_path
+        document = json.loads(path.read_text())
+        before = Counter(m["category"] for m in document["labels"].values())
+        labels, removed = {}, {}
+        for address, entry in document["labels"].items():
+            new = refile(entry)
+            if new is None:
+                removed[address] = entry["label"]
+            else:
+                labels[address] = new
+        meta = document["_meta"]
+        meta["counts"] = _counts(labels)
+        meta["category_note"] = CATEGORY_NOTE
+        meta["recategorised"] = {
+            "date": today,
+            "before": dict(before),
+            "removed": removed,
+            "note": ("Re-filed by import_threat_labels --recategorise: a scam or phishing list's report "
+                     "is 'scam', not 'stolen'; only a tag naming a theft's perpetrator stays 'stolen'; "
+                     "whitehat, rescue and bot tags are removed."),
+        }
+        document["labels"] = _ordered(labels)
+        print(f"{chain_key}: {dict(before)} -> {meta['counts']}; removed {len(removed)}: {sorted(removed.values())}")
+        if not dry_run:
+            path.write_text(json.dumps(document, indent=2) + "\n")
+    return 0
+
+
+class PlainRpc:
+    """A bare JSON-RPC client for --recheck-bsc, so it can use a keyless public endpoint."""
+
+    def __init__(self, url: str) -> None:
+        self.url = url
+
+    def _rpc(self, method: str, params: list) -> object:
+        body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+        request = urllib.request.Request(self.url, data=body, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                reply = json.loads(response.read().decode())
+        except (OSError, ValueError) as exc:
+            raise NoderealError(f"{method}: {exc}") from exc
+        if not isinstance(reply, dict) or "error" in reply:
+            raise NoderealError(f"{method}: {reply.get('error') if isinstance(reply, dict) else reply}")
+        return reply.get("result")
+
+
+def recheck_bsc(client, dry_run: bool) -> int:
+    """Remove BSC entries filed on ScamSniffer's word alone that fail account_used_on_bsc.
+
+    An entry whose check errors is kept and listed: unknown is never "no".
+    """
+    path = config.CHAINS["bsc"].threat_labels_path
+    document = json.loads(path.read_text())
+    labels = document["labels"]
+    only_scamsniffer = sorted(a for a, m in labels.items()
+                              if m["source"].startswith("ScamSniffer") and ";" not in m["source"])
+    removed, errors = [], []
+    for n, address in enumerate(only_scamsniffer, 1):
+        try:
+            if not account_used_on_bsc(client, address):
+                removed.append(address)
+        except (NoderealError, ValueError) as exc:
+            errors.append(f"{address}: {str(exc)[:60]}")
+        if n % 100 == 0:
+            print(f"  checked {n}/{len(only_scamsniffer)}", flush=True)
+    for address in removed:
+        del labels[address]
+    print(f"checked {len(only_scamsniffer)}; removed {len(removed)}; errors {len(errors)} (kept)")
+    for line in errors:
+        print(f"  ! {line}")
+    document["_meta"]["counts"] = _counts(labels)
+    document["_meta"]["scam_lists_bsc_recheck"] = {
+        "date": datetime.now(timezone.utc).date().isoformat(), "checked": len(only_scamsniffer),
+        "removed": len(removed), "errors_kept": len(errors),
+        "rule": "nonce > 0 and no contract code on BSC (import_threat_labels.account_used_on_bsc)",
+    }
+    if not dry_run:
+        path.write_text(json.dumps(document, indent=2) + "\n")
+    return 1 if errors else 0
 
 
 def verify_ethereum(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str]]:
@@ -335,8 +495,18 @@ def main() -> int:
     parser.add_argument("--scam-lists", action="store_true", help="add reported phishing/scam wallets instead")
     parser.add_argument("--checkpoint", type=Path, default=Path("scam_check.jsonl"),
                         help="progress file for --scam-lists, so an interrupted run resumes")
+    parser.add_argument("--recategorise", action="store_true", help="re-file the held files under today's rules, offline")
+    parser.add_argument("--recheck-bsc", action="store_true",
+                        help="re-check the BSC file's ScamSniffer-only entries (needs --rpc)")
+    parser.add_argument("--rpc", help="with --recheck-bsc: a BSC JSON-RPC URL (a keyless public one will do)")
     args = parser.parse_args()
 
+    if args.recategorise:
+        return recategorise(args.dry_run)
+    if args.recheck_bsc:
+        if not args.rpc:
+            parser.error("--recheck-bsc needs --rpc")
+        return recheck_bsc(PlainRpc(args.rpc), args.dry_run)
     if args.scam_lists:
         return import_scam_lists(args.checkpoint, args.dry_run)
 
@@ -360,7 +530,7 @@ def main() -> int:
         kept, dropped = verify(ordered)
 
         counts = Counter(m["category"] for m in kept.values())
-        print(f"\n{chain_key}: kept={len(kept)} ({counts[STOLEN]} stolen, {counts[MIXER]} mixer)  "
+        print(f"\n{chain_key}: kept={len(kept)} ({counts[STOLEN]} stolen, {counts[SCAM]} scam, {counts[MIXER]} mixer)  "
               f"dropped={len(dropped)}")
         for line in dropped:
             print(f"  - {line}")
@@ -373,10 +543,10 @@ def main() -> int:
         document = {
             "_meta": {
                 "description": (
-                    "Wallets tied to known hacks and phishing thefts, and mixer "
-                    "pools, that Exchequer screens a trace against. OFAC lists "
-                    "neither, so this file fills the gap the sanctions file "
-                    "leaves."
+                    "Wallets tied to known hacks, reported phishing and scam "
+                    "wallets, and mixer pools, that Exchequer screens a trace "
+                    "against. OFAC lists none of them, so this file fills the gap "
+                    "the sanctions file leaves."
                 ),
                 "provenance": (
                     f"The block explorer's own address tags ({EXPLORER[chain_key]}), "
@@ -392,14 +562,10 @@ def main() -> int:
                     "mixer; it does NOT mean any counterparty took part in it. "
                     "Re-check the tag on the explorer before evidentiary use."
                 ),
-                "category_note": (
-                    "'stolen' marks wallets run by the perpetrator of a hack or a "
-                    "phishing campaign; a trace continues through them. 'mixer' "
-                    "marks pools where deposits commingle; a trace stops there."
-                ),
+                "category_note": CATEGORY_NOTE,
                 "chain": chain_key,
                 "last_reviewed": datetime.now(timezone.utc).date().isoformat(),
-                "counts": {STOLEN: counts[STOLEN], MIXER: counts[MIXER]},
+                "counts": {STOLEN: counts[STOLEN], SCAM: counts[SCAM], MIXER: counts[MIXER]},
                 "regenerate_with": (
                     "cd backend && .venv/bin/python -m scripts.import_threat_labels"
                 ),
