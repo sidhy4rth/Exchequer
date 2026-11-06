@@ -73,6 +73,7 @@ from app.etherscan_client import (  # noqa: E402
     is_valid_address,
     normalize_address,
 )
+from app.label_rules import ENTRYPOINTS, MIXER_SERVICE, POOL, SERVICE_NAME  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
 from app.risk_matcher import MIXER, STOLEN  # noqa: E402
 
@@ -90,14 +91,6 @@ THIEF = re.compile(r"^(?P<name>.+?)\s+(?P<role>exploiter|hacker|attacker)\b", re
 PHISHING = re.compile(r"^fake_phishing\d*$", re.IGNORECASE)
 NOT_A_THIEF = re.compile(r"endaoment|avs operator|hack alert", re.IGNORECASE)
 
-MIXER_SERVICE = re.compile(
-    r"^(?P<service>Tornado\.Cash|Typhoon\.Cash|Typhoon Network|Privacy Pools):?\s+(?P<part>.+)$"
-)
-# "100 ETH", "5,000,000 cDAI", "10,000 DAI 2": a fixed-denomination pool.
-POOL = re.compile(r"^[\d.,]+\s+[A-Za-z]+(\s+\d+)?$")
-ENTRYPOINTS = {"Router", "Proxy", "Old Proxy", "Mixer 1", "Mixer 2", "Deposit", "Simple"}
-SERVICE_NAME = {"Tornado.Cash": "Tornado Cash", "Typhoon.Cash": "Typhoon Cash",
-                "Typhoon Network": "Typhoon Network", "Privacy Pools": "Privacy Pools"}
 
 
 def classify(tag: str) -> tuple[str, str] | None:

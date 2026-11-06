@@ -278,3 +278,57 @@ def test_a_null_entity_never_reaches_a_report(tmp_path):
     store = old_store(tmp_path, [null], texts={"phishing/scam": "null"})
     hit = store.lookup("ethereum", SCAMMER)
     assert hit["entity"] == "Reported scam wallet" and hit["label"] == "Reported scam wallet"
+
+
+# -- only a mixer's own pool may end a trace (r2-g2-documented-claims-vs-code-7-5) --
+POOL = "Tornado.Cash: 0.1 WBTC (OFAC-delisted Mar 2025)"
+REGISTRY = "Tornado.Cash: Relayer Registry (OFAC-delisted Mar 2025)"
+TAG = "PYUSD contract freeze events (on-chain replay) ; Explorer tag via dawsbot/eth-labels @d9b21ae"
+
+
+def mixer_row(address, entity, chain="ethereum"):
+    return row(address=address, chain=chain, category="mixer", entity_or_incident=entity, sources=TAG)
+
+
+def test_tornado_governance_and_registry_rows_are_not_mixers(tmp_path):
+    for entity in (REGISTRY, "Tornado.Cash: Trees", "Tornado.Cash: Donate", "Tornado.Cash: L1 Helper"):
+        assert map_row(mixer_row(SCAMMER, entity)) == ([], "mixer contract that is not a pool")
+    # A store built before the rule still holds it: it reads as nothing, so the walk goes on.
+    store = old_store(tmp_path, [mixer_row(SCAMMER, POOL)], texts={POOL: REGISTRY})
+    assert store.lookup("ethereum", SCAMMER) is None
+    assert not RiskMatcher({}, chain="ethereum", store=store).is_terminal(SCAMMER)
+
+
+def test_a_tornado_pool_in_the_store_still_ends_a_trace(tmp_path):
+    rows, _ = map_row(mixer_row(SCAMMER, POOL))
+    assert [r[2] for r in rows] == ["mixer"]
+    store = old_store(tmp_path, [mixer_row(SCAMMER, POOL)])
+    assert RiskMatcher({}, chain="ethereum", store=store).is_terminal(SCAMMER)
+
+
+def test_an_ethereum_pool_filed_under_arbitrum_is_not_a_mixer_there(tmp_path):
+    rows, _ = map_row(mixer_row(SCAMMER, POOL, chain="ethereum|arbitrum"))
+    assert [r[1] for r in rows] == [label_store.CHAIN_IDS["ethereum"]]
+    assert map_row(mixer_row(SCAMMER, POOL, chain="arbitrum")) == ([], "mixer tag read on another chain")
+    # An older store filed it under both.
+    store = old_store(tmp_path, [mixer_row(SCAMMER, POOL)])
+    db = sqlite3.connect(store.path)
+    db.execute("INSERT INTO labels SELECT address, ?, category, entity, label, peer, tx, date, source, tier "
+               "FROM labels", (label_store.CHAIN_IDS["arbitrum"],))
+    db.commit()
+    db.close()
+    store = LabelStore(store.path)
+    assert store.lookup("ethereum", SCAMMER)["category"] == "mixer"
+    assert store.lookup("arbitrum", SCAMMER) is None
+
+
+def test_a_store_only_non_pool_does_not_stop_the_walk(tmp_path):
+    from app.graph_builder import build_trace_graph
+    from test_graph_builder import SEED, FakeClient, tx
+
+    registry, beyond = SCAMMER, addr("be70d")
+    store = old_store(tmp_path, [mixer_row(registry, POOL)], texts={POOL: REGISTRY})
+    matcher = RiskMatcher({}, chain="ethereum", store=store)
+    client = FakeClient({SEED: [tx(SEED, registry, 5.0)], registry: [tx(registry, beyond, 5.0)]})
+    graph = build_trace_graph(SEED, client, is_terminal=matcher.is_terminal).graph
+    assert beyond in graph

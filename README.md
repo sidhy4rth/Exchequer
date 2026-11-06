@@ -502,7 +502,7 @@ hand an investigator a confident-looking graph built on a false premise. Tornado
 2025 (*Van Loon v. Treasury*), and every mixer OFAC still lists is a Bitcoin service — so a sanctions-only screen
 would never stop at a mixer on these chains. The mixer category therefore comes from the explorer's own tags:
 only the pools and routers of Tornado Cash, Typhoon and Privacy Pools, never their governance, token or vesting
-contracts.
+contracts. The label store follows the same rule, and only on Ethereum, the chain its mixer tags were read on.
 
 **Stolen funds** are the wallets Etherscan tags as the perpetrator of a theft — the WazirX, Bybit, BingX, Ronin,
 Multichain and other exploiters — plus reported phishing and scam wallets from ScamSniffer's published blacklist

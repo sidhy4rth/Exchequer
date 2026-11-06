@@ -78,6 +78,9 @@ def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
         # Only a mixer's own pool may end a trace; anything else the hunt
         # filed under "mixer" (e.g. a malicious contract's creator) is a scam.
         category = "scam"
+    elif category == "mixer" and label_rules.mixer_service(entity_text) is None:
+        # Its governance, registry or helper contracts are not where funds mix.
+        return [], "mixer contract that is not a pool"
     if category == "poisoning":
         m = LOOKALIKE.match(entity_text)
         if m:
@@ -112,6 +115,8 @@ def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
         if chain_id is None:
             continue
         traced = True
+        if category == "mixer" and chain not in label_rules.STORE_MIXER_CHAINS:
+            continue  # the tag was read on Ethereum; this address is not that pool here
         address = row.get("address", "")
         raw = encode_address(address)
         if chain == "tron" and raw is not None and len(raw) == 20:
@@ -120,6 +125,8 @@ def map_row(row: dict[str, str]) -> tuple[list[tuple], str | None]:
             continue
         out.append((raw, chain_id, category, entity, label, peer, tx, date, source, tier))
     if not out:
+        if traced and category == "mixer":
+            return [], "mixer tag read on another chain"
         if traced:
             return [], "malformed address"
         return [], f"no Exchequer chain ({row.get('chain')})"

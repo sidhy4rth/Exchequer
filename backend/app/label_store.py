@@ -129,6 +129,11 @@ class LabelStore:
         if row is None:
             return None
         category, entity_id, label, peer, tx, date, source_id, tier = row
+        if category == "mixer" and (chain not in label_rules.STORE_MIXER_CHAINS
+                                    or not label_rules.mixer_service(self._texts.get(entity_id, ""))):
+            # Only a mixer's own pool ends a trace, and only on the chain its
+            # tag was read on. Anything else is left out: the walk goes on.
+            return None
         label = label_rules.clean_text(label)
         if not label and peer is not None:
             label = f"Lookalike of {decode_address(peer)}"

@@ -106,6 +106,34 @@ def evidence_tier(category: str, source: str, claimed: int) -> int:
     return claimed if derived is None else max(claimed, derived)
 
 
+# -- which mixer contracts stop a trace --------------------------------------------
+# Only a mixer's pools and entry points stop a trace (README, "the mixer rule"):
+# never its governance, registry, token or vesting contracts. Shared by the
+# curated importer (scripts/import_threat_labels.py) and the store.
+MIXER_SERVICE = re.compile(
+    r"^(?P<service>Tornado\.Cash|Typhoon\.Cash|Typhoon Network|Privacy Pools):?\s+(?P<part>.+)$"
+)
+# "100 ETH", "5,000,000 cDAI", "10,000 DAI 2": a fixed-denomination pool.
+POOL = re.compile(r"^[\d.,]+\s+[A-Za-z]+(\s+\d+)?$")
+ENTRYPOINTS = {"Router", "Proxy", "Old Proxy", "Mixer 1", "Mixer 2", "Deposit", "Simple"}
+SERVICE_NAME = {"Tornado.Cash": "Tornado Cash", "Typhoon.Cash": "Typhoon Cash",
+                "Typhoon Network": "Typhoon Network", "Privacy Pools": "Privacy Pools"}
+# The store's mixer rows come from explorer tags read on Ethereum; the same
+# address on another chain is not that pool.
+STORE_MIXER_CHAINS = frozenset({"ethereum"})
+
+
+def mixer_service(tag: str) -> str | None:
+    """The service whose pool or entry point `tag` names, else None.
+
+    A trailing note such as " (OFAC-delisted Mar 2025)" is not part of the name.
+    """
+    mixer = MIXER_SERVICE.match(re.sub(r"\s*\([^()]*\)$", "", (tag or "").strip()))
+    if mixer and (POOL.match(mixer["part"]) or mixer["part"] in ENTRYPOINTS):
+        return SERVICE_NAME[mixer["service"]]
+    return None
+
+
 # -- text a report may quote ------------------------------------------------------
 # Hunt lanes are named after the people who ran them; extend as lanes are added.
 INTERNAL_NAMES = re.compile(r"\b(?:mukesh|suresh)\b", re.I)
