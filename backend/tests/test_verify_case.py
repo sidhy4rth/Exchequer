@@ -197,3 +197,38 @@ def test_a_receipt_without_a_status_is_unchecked():
     saved = answers("demo_1_ethereum.json")
     saved[first] = {**saved[first], "receipt": {k: v for k, v in saved[first]["receipt"].items() if k != "status"}}
     assert outcomes(report, saved)[0] == UNCHECKED
+
+
+# -- a provider's error or odd answer is a failure, not an answer (r1-scripts-6) ------
+def tronscan(body, status: int = 200) -> httpx.Client:
+    return httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(status, json=body)))
+
+
+def first_only(report: dict) -> dict:
+    report["appendix"]["transactions"] = report["appendix"]["transactions"][:1]
+    return report
+
+
+def test_a_tronscan_rate_limit_answer_is_unchecked_not_a_mismatch():
+    # TronScan's refusal can come as HTTP 200 with an error body and no transaction.
+    checks = verify(first_only(_demo_report(12)),
+                    live(tronscan({"Error": "request rate exceeded the allowed_rps(5)"})))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+    assert exit_code(checks) == 2
+
+
+def test_a_tronscan_answer_that_is_not_an_object_is_unchecked():
+    checks = verify(first_only(_demo_report(12)), live(tronscan(["not", "a", "transaction"])))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_an_empty_tronscan_answer_is_still_a_mismatch():
+    # {} is how TronScan says it has no such transaction: a real disagreement.
+    checks = verify(first_only(_demo_report(12)), live(tronscan({})))
+    assert [c.outcome for c in checks] == [MISMATCH]
+
+
+def test_an_ethereum_result_that_is_not_an_object_is_unchecked():
+    weird = {"jsonrpc": "2.0", "id": 1, "result": "0xdeadbeef"}
+    checks = verify(first_only(_demo_report(1)), live(nodes(lambda _m: weird, lambda _m: weird)))
+    assert [c.outcome for c in checks] == [UNCHECKED]

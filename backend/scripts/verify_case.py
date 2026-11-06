@@ -193,6 +193,9 @@ def _ethereum_rpc(http: httpx.Client, method: str, digest: str) -> dict[str, Any
             error = body.get("error") if isinstance(body, dict) else None
             failures.append(f"{node}: {error.get('message') if isinstance(error, dict) else 'no result'}")
             continue
+        if body["result"] is not None and not isinstance(body["result"], dict):
+            failures.append(f"{node}: the result is not a transaction or a receipt")
+            continue
         if body["result"]:
             return body["result"]
     if failures:
@@ -204,7 +207,15 @@ def read_live(http: httpx.Client, chain_key: str, digest: str, token: Asset) -> 
     if chain_key == "tron":
         response = http.get(TRONSCAN, params={"hash": digest})
         response.raise_for_status()
-        return response.json()
+        body = response.json()
+        # {} is TronScan's "no such transaction"; a refusal can come as HTTP 200
+        # with an error and no transaction, which is a failed read, not an answer.
+        if not isinstance(body, dict):
+            raise ValueError("TronScan's answer is not an object")
+        error = body.get("Error") or body.get("error")
+        if error and not body.get("hash"):
+            raise httpx.HTTPError(f"TronScan refused: {str(error)[:60]}")
+        return body
     answer = {"transaction": _ethereum_rpc(http, "eth_getTransactionByHash", digest)}
     answer["receipt"] = _ethereum_rpc(http, "eth_getTransactionReceipt", digest) if answer["transaction"] else None
     return answer
