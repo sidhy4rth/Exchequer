@@ -48,9 +48,16 @@ TOLERANCE = 0.05
 
 def trace(base: str, demo: dict) -> dict:
     body = {k: demo[k] for k in ("address", "chain", "asset", "max_depth", "direction")}
+    headers = {"content-type": "application/json"}
+    # A live trace needs the demo code once the site sets one (app/access.py).
+    # The Action passes the repository secret DEMO_CODE in this variable;
+    # unset, nothing is sent and an open site does not ask.
+    code = os.environ.get("EXCHEQUER_DEMO_CODE", "").strip()
+    if code:
+        headers["x-exchequer-demo-code"] = code
     request = urllib.request.Request(
         f"{base}/trace", data=json.dumps({**body, "save": False}).encode(),
-        headers={"content-type": "application/json"}, method="POST")
+        headers=headers, method="POST")
     with urllib.request.urlopen(request, timeout=400) as response:
         return json.loads(response.read())
 

@@ -88,3 +88,36 @@ def test_a_hit_clears_the_remembered_miss(monkeypatch, tmp_path):
     assert _run_main(monkeypatch, tmp_path, None, state) == 0
     assert _run_main(monkeypatch, tmp_path, "Binance", state) == 0
     assert _run_main(monkeypatch, tmp_path, None, state) == 0   # a fresh first miss
+
+
+class _Captured:
+    def __init__(self):
+        self.headers = None
+
+    def urlopen(self, request, timeout=None):
+        import io
+        import json
+        self.headers = {k.lower(): v for k, v in request.header_items()}
+        body = io.BytesIO(json.dumps({"exchange": None}).encode())
+        return body
+
+
+def test_the_demo_code_is_sent_when_the_job_has_one(monkeypatch):
+    # The live site refuses live traces without the code once
+    # EXCHEQUER_DEMO_CODE is set on Render; the Action passes the repository
+    # secret DEMO_CODE in the same variable, and the script must send it.
+    captured = _Captured()
+    monkeypatch.setattr(check_demos.urllib.request, "urlopen", captured.urlopen)
+    monkeypatch.setenv("EXCHEQUER_DEMO_CODE", "river-otter-42")
+    check_demos.trace("https://example.test", {"address": "0x1", "chain": "ethereum", "asset": "ETH",
+                                                "max_depth": 3, "direction": "outgoing"})
+    assert captured.headers["x-exchequer-demo-code"] == "river-otter-42"
+
+
+def test_no_code_header_on_an_open_site(monkeypatch):
+    captured = _Captured()
+    monkeypatch.setattr(check_demos.urllib.request, "urlopen", captured.urlopen)
+    monkeypatch.delenv("EXCHEQUER_DEMO_CODE", raising=False)
+    check_demos.trace("https://example.test", {"address": "0x1", "chain": "ethereum", "asset": "ETH",
+                                                "max_depth": 3, "direction": "outgoing"})
+    assert "x-exchequer-demo-code" not in captured.headers
