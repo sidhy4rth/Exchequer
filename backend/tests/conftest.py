@@ -170,3 +170,13 @@ def _fresh_trace_rate_limit():
     for limiter in (rate_limit.traces, rate_limit.traces_total, rate_limit.watches_total):
         limiter.reset()
     yield
+
+
+@pytest.fixture(autouse=True)
+def _fresh_report_cache():
+    """Rendered reports and the PDF render limits are process-wide (report_cache.py);
+    a report kept from one test must not answer the next."""
+    from app import report_cache
+    report_cache.reset()
+    yield
+    report_cache.reset()

@@ -168,8 +168,11 @@ def _when_iso(value: str | None) -> str:
     return _both_zones(moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc))
 
 
-def build_report(case: Case) -> dict[str, Any]:
-    """Structured report for one case. Safe to serve as JSON."""
+def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
+    """Structured report for one case. Safe to serve as JSON.
+
+    `generated_at` is when it was first rendered (report_cache.py), so every
+    format of one case is one report; now, if not given."""
     result = case.result
     confidence_detail = result.get("confidence_detail", {})
     native_symbol = result.get("native_symbol", "ETH")
@@ -186,7 +189,7 @@ def build_report(case: Case) -> dict[str, Any]:
         "tool_version": tool_version(),
         "traced_with": (result.get("provenance") or {}).get("tool_version"),
         "provenance": result.get("provenance"),
-        "generated_at": datetime.now(tz=timezone.utc).isoformat(timespec="seconds"),
+        "generated_at": generated_at or datetime.now(tz=timezone.utc).isoformat(timespec="seconds"),
         "case": {
             "case_id": case.id,
             "reported_address": case.address,

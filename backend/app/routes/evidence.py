@@ -8,46 +8,81 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
-from .. import audit, graph_export, models, request_letters
+from .. import audit, graph_export, models, rate_limit, report_cache, request_letters
 from ..auth import CurrentUser
-from ..report import build_report, render_text_report
 from ..report_pdf import render_pdf
 
 router = APIRouter()
+
+# A stored case never changes, so a browser may keep its report for an hour.
+KEEP = {"Cache-Control": "private, max-age=3600"}
+
+
+def _pdf(case: models.Case, http: Request) -> bytes:
+    """The case's PDF: kept after its first render (report_cache.py). A render
+    is the costliest thing a visitor can ask for, so a miss is charged to the
+    client's and the site's hourly PDF limits and only one runs at a time."""
+    cached = report_cache.cached_pdf(case)
+    if cached is not None:
+        return cached
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    refused = rate_limit.charge(report_cache.pdf_renders, report_cache.pdf_renders_total, client)
+    if refused is not None:
+        wait, who = refused
+        raise HTTPException(
+            status_code=429, headers={"Retry-After": str(int(wait))},
+            detail=("Too many PDF reports prepared " + ("for you" if who == "client" else "on this server")
+                    + " in the last hour; try again later, or download the text report, which is the signed one."))
+    if not report_cache.render_slot.acquire(blocking=False):
+        report_cache.pdf_renders.refund(client)
+        report_cache.pdf_renders_total.refund(rate_limit.TOTAL)
+        raise HTTPException(status_code=429, headers={"Retry-After": "5"},
+                            detail="A report is being prepared; try again in a few seconds.")
+    try:
+        pdf = report_cache.cached_pdf(case)  # made while this request waited for the slot
+        if pdf is None:
+            pdf = render_pdf(report_cache.report(case), report_cache.text(case))
+            report_cache.store_pdf(case, pdf)
+        return pdf
+    finally:
+        report_cache.render_slot.release()
 
 
 @router.get("/trace/{case_id}/report")
 def get_report(
     case_id: str,
     user: CurrentUser,
+    http: Request,
     format: str = Query("json", pattern="^(json|text|pdf)$", description="json, text or pdf"),
 ):
-    """Exportable summary suitable for a law-enforcement handoff."""
+    """Exportable summary suitable for a law-enforcement handoff.
+
+    Every format of a case is the same report, rendered once (report_cache.py)."""
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
 
-    report = build_report(case)
     if format == "pdf":
         response = Response(
-            render_pdf(report, render_text_report(report)),
+            _pdf(case, http),
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}.pdf"'},
+            headers={"Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}.pdf"', **KEEP},
         )
     elif format == "text":
         response = PlainTextResponse(
-            render_text_report(report),
+            report_cache.text(case),
             headers={
                 "Content-Disposition": (
                     f'attachment; filename="exchequer-{case_id[:8]}.txt"'
-                )
+                ),
+                **KEEP,
             },
         )
     else:
-        response = report
+        response = report_cache.report(case)
     audit.record("case.report_export", case_id=case_id, detail={"format": format})
     return response
 
