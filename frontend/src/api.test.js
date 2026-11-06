@@ -129,4 +129,31 @@ describe('the demo code', () => {
     await fetchCases()
     expect(new Headers(fetch.mock.calls[2][1].headers).has('X-Exchequer-Demo-Code')).toBe(false)
   })
+
+  it('sends the pass instead of the code once the site has issued one', async () => {
+    const { fetchCases } = await import('./api')
+    const { forgetDemoCode, rememberDemoCode, rememberDemoPass } = await import('./demoCode')
+    const fetch = stubFetch({ '/cases': { body: { count: 0, cases: [] } } })
+    rememberDemoCode('river-otter-42')
+    rememberDemoPass('v1.1999999999.nonce.mac')
+    await fetchCases()
+    const sent = new Headers(fetch.mock.calls[0][1].headers)
+    expect(sent.get('X-Exchequer-Demo-Pass')).toBe('v1.1999999999.nonce.mac')
+    expect(sent.has('X-Exchequer-Demo-Code')).toBe(false)
+    expect(sessionStorage.getItem('exchequer-demo-code')).toBeNull()
+    forgetDemoCode()
+  })
+
+  it('forgets a pass the site no longer accepts, and nothing else', async () => {
+    const { apiFetch } = await import('./api/client')
+    const { demoPass, forgetDemoCode, rememberDemoPass } = await import('./demoCode')
+    rememberDemoPass('v1.1.nonce.mac')
+    stubFetch({ '/trace/jobs/j1': { status: 403, body: { detail: 'Only the browser that started this trace can stop it.' } } })
+    await apiFetch('/api/trace/jobs/j1', { method: 'DELETE' })
+    expect(demoPass()).toBe('v1.1.nonce.mac')  // a 403 from the route itself
+    stubFetch({ '/trace/jobs': { status: 403, body: { detail: 'expired' }, headers: { 'X-Exchequer-Demo-Pass-Invalid': '1' } } })
+    await apiFetch('/api/trace/jobs', { method: 'POST' })
+    expect(demoPass()).toBe('')
+    forgetDemoCode()
+  })
 })

@@ -15,15 +15,29 @@ X-Exchequer-Demo-Code:
 Unset (a laptop, the test suite), nothing is guarded. The code is a shared
 secret for a demo, not an account: R23 brings accounts.
 
+The right code at /access/check also returns a pass, which the console sends
+as X-Exchequer-Demo-Pass instead of the code. Ten wrong codes from one
+connection lock that connection out for a while -- the right code included,
+or the lockout would answer guesses -- but a pass is signed with a key made
+from the code, so it cannot be guessed and says nothing about the code: a
+browser holding one is never locked out by someone else's guesses on the same
+venue Wi-Fi. Passes expire (config.DEMO_PASS_SECONDS) and changing the code
+revokes them all. Make the code long and random (secrets.token_urlsafe(16));
+the lockout is a backstop, not what keeps it secret.
+
 One table here rather than a check in each route: what the public may do is
 a single decision, and it should be readable in one place. tests/test_access.py
 checks every guarded route by path, so a route that moves cannot slip out.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
 import hmac
 import json
 import re
+import secrets
+import time
 from typing import Any, Awaitable, Callable
 
 from fastapi import APIRouter
@@ -31,6 +45,7 @@ from fastapi import APIRouter
 from . import config, rate_limit
 
 CODE_HEADER = "x-exchequer-demo-code"
+PASS_HEADER = "x-exchequer-demo-pass"
 
 GUARDED: list[tuple[str, re.Pattern[str]]] = [
     ("POST", re.compile(r"^/trace/?$")),
@@ -48,8 +63,9 @@ GUARDED: list[tuple[str, re.Pattern[str]]] = [
     ("POST", re.compile(r"^/access/check/?$")),
 ]
 
-# Wrong codes per client: enough for typos, too few to guess one.
-wrong_codes = rate_limit.SlidingWindowLimiter(10, 3600)
+# Wrong codes per client: enough for typos, too few to guess one, and a
+# prank on shared Wi-Fi lasts minutes rather than the afternoon.
+wrong_codes = rate_limit.SlidingWindowLimiter(10, 900)
 
 Scope = dict[str, Any]
 Receive = Callable[[], Awaitable[dict[str, Any]]]
@@ -58,6 +74,31 @@ Send = Callable[[dict[str, Any]], Awaitable[None]]
 
 def is_guarded(method: str, path: str) -> bool:
     return any(method == m and pattern.match(path) for m, pattern in GUARDED)
+
+
+def _pass_mac(body: str) -> str:
+    key = hmac.new(config.DEMO_CODE.encode(), b"exchequer demo pass v1", hashlib.sha256).digest()
+    digest = hmac.new(key, body.encode(), hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+
+
+def mint_pass(now: float | None = None) -> str:
+    """v1.<expiry>.<nonce>.<mac>: stateless, so it survives a restart."""
+    exp = int((time.time() if now is None else now) + config.DEMO_PASS_SECONDS)
+    body = f"v1.{exp}.{secrets.token_urlsafe(9)}"
+    return f"{body}.{_pass_mac(body)}"
+
+
+def pass_is_valid(token: str, now: float | None = None) -> bool:
+    if not config.DEMO_CODE or len(token) > 200:
+        return False
+    parts = token.split(".")
+    if len(parts) != 4 or parts[0] != "v1" or not parts[1].isdigit():
+        return False
+    body = ".".join(parts[:3])
+    if not hmac.compare_digest(parts[3].encode(), _pass_mac(body).encode()):
+        return False
+    return int(parts[1]) > (time.time() if now is None else now)
 
 
 class DemoCodeMiddleware:
@@ -71,6 +112,12 @@ class DemoCodeMiddleware:
             await self.app(scope, receive, send)
             return
         headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope["headers"]}
+        token = headers.get(PASS_HEADER, "")
+        if token and pass_is_valid(token):
+            # Before the lockout: a pass cannot be guessed, so letting it
+            # through while the connection is locked out answers nothing.
+            await self.app(scope, receive, send)
+            return
         peer = scope.get("client")
         client = rate_limit.client_ip(headers, peer[0] if peer else None)
         if wrong_codes.remaining(client) == 0:
@@ -79,6 +126,11 @@ class DemoCodeMiddleware:
                           {"retry-after": str(int(wait))})
             return
         given = headers.get(CODE_HEADER, "")
+        if not given and token:
+            # Expired, or made with a code since changed: not a guess.
+            await _refuse(send, 403, "This browser's access pass has expired. Enter the access code again.",
+                          {"x-exchequer-demo-pass-invalid": "1"})
+            return
         if not given:
             await _refuse(send, 403, "Live tracing on this site needs an access code. "
                                      "The verified examples and stored cases open without one.")
@@ -110,7 +162,10 @@ def access() -> dict[str, bool]:
 
 
 @router.post("/access/check")
-def check_code() -> dict[str, bool]:
-    """Reached only with the right code (or none configured): the middleware
-    above answers every other case."""
-    return {"ok": True}
+def check_code() -> dict[str, Any]:
+    """Reached only with the right code or a valid pass (or none configured):
+    the middleware above answers every other case. Hands back a fresh pass
+    for the browser to send instead of the code."""
+    if not config.DEMO_CODE:
+        return {"ok": True}
+    return {"ok": True, "pass": mint_pass(), "expires_in": config.DEMO_PASS_SECONDS}

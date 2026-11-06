@@ -145,6 +145,23 @@ describe('a public site that asks for a demo code', () => {
     expect(after.length).toBeGreaterThan(0)
     for (const [, init] of after) expect(new Headers(init.headers).get('X-Exchequer-Demo-Code')).toBe('river-otter-42')
   })
+
+  it('keeps the pass the right code returns, never the code itself', async () => {
+    const user = userEvent.setup()
+    const fetch = await renderPublicHome({ body: { ok: true, pass: 'v1.1999999999.nonce.mac', expires_in: 43200 } })
+    await user.type(screen.getByLabelText('Access code'), 'river-otter-42{Enter}')
+    expect(await screen.findByLabelText('Reported wallet address')).toBeInTheDocument()
+    expect(sessionStorage.getItem('exchequer-demo-pass')).toBe('v1.1999999999.nonce.mac')
+    expect(sessionStorage.getItem('exchequer-demo-code')).toBeNull()
+    const checked = fetch.mock.calls.findIndex(([url]) => String(url).includes('/access/check'))
+    const after = fetch.mock.calls.slice(checked + 1)
+    expect(after.length).toBeGreaterThan(0)
+    for (const [, init] of after) {
+      const headers = new Headers(init.headers)
+      expect(headers.get('X-Exchequer-Demo-Pass')).toBe('v1.1999999999.nonce.mac')
+      expect(headers.has('X-Exchequer-Demo-Code')).toBe(false)
+    }
+  })
 })
 
 describe('the headline numbers (R14)', () => {

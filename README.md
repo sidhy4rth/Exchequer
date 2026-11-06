@@ -330,7 +330,7 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /chains` | Per-chain readiness, assets and label counts, with exchange wallets and customer deposit addresses counted apart |
 | `GET /health/detail` | Operator only (bearer `EXCHEQUER_HEALTH_TOKEN`): key status, per-chain detail, API budget, warm-cache status |
 | `GET /access` | Whether this site asks for a demo code before live tracing |
-| `POST /access/check` | Checks a demo code (sent as `X-Exchequer-Demo-Code`); 403 if wrong, 429 after 10 wrong tries an hour |
+| `POST /access/check` | Checks a demo code (sent as `X-Exchequer-Demo-Code`) and returns a pass to send as `X-Exchequer-Demo-Pass` instead; 403 if wrong, 429 after 10 wrong tries in 15 minutes |
 
 ---
 

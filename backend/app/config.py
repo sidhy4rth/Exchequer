@@ -602,6 +602,9 @@ LIST_STALE_DAYS: int = 7
 # sent as X-Exchequer-Demo-Code; unset, nothing is guarded. A shared secret
 # for a public demo, not an account.
 DEMO_CODE: str = os.getenv("EXCHEQUER_DEMO_CODE", "").strip()
+# How long the pass that POST /access/check hands a browser lasts (access.py):
+# an event day, so a presenter enters the code once.
+DEMO_PASS_SECONDS: int = max(60, int(float(os.getenv("EXCHEQUER_DEMO_PASS_HOURS", "12") or 12) * 3600))
 # Watches one client may create per hour (0 = no limit). Each is re-read on
 # a schedule for as long as it exists, spending the provider quota.
 WATCHES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR", 20)

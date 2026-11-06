@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { checkDemoCode, fetchRecordedDemos } from '../api'
-import { rememberDemoCode } from '../demoCode'
+import { rememberDemoCode, rememberDemoPass } from '../demoCode'
 import './Showroom.css'
 
 const middle = (a, head = 10, tail = 8) => (a && a.length > head + tail + 1 ? `${a.slice(0, head)}…${a.slice(-tail)}` : a)
@@ -27,8 +27,10 @@ export default function Showroom({ onUnlock }) {
     setChecking(true)
     setError('')
     try {
-      await checkDemoCode(typed)
-      rememberDemoCode(typed)
+      const checked = await checkDemoCode(typed)
+      // Keep the pass, not the code; a server too old to issue one gets the code.
+      if (checked?.pass) rememberDemoPass(checked.pass)
+      else rememberDemoCode(typed)
       onUnlock()
     } catch (err) {
       setError(err.message)

@@ -24,8 +24,11 @@ Exchequer has no accounts. What it does instead:
   everything that spends the provider quota or keeps running afterwards: live
   traces, batches and watches. Reading -- recorded demos, a stored case by its
   link -- stays open. The code is compared in constant time and a client gets
-  10 wrong tries an hour. It is a shared demo secret, not an account. Creating
-  watches is also rate limited per client. See `backend/app/access.py`.
+  10 wrong tries per 15 minutes. The right code returns a signed pass that the
+  console sends instead, so a browser that entered it is never locked out by
+  someone else's wrong guesses on the same network. It is a shared demo
+  secret, not an account: make it long and random. Creating watches is also
+  rate limited per client. See `backend/app/access.py`.
 - **Reports are signed.** Every text report ends in a SHA-256 content hash and
   an Ed25519 signature made with the server's key. Anyone can check one at
   `/verify` or offline with the key from `/signing-key`. See

@@ -33,7 +33,8 @@ def client(tmp_path, monkeypatch):
     traced = []
     monkeypatch.setattr(pipeline, "run_trace",
                         lambda request: traced.append(request.address) or {"address": request.address, "chain": "ethereum"})
-    monkeypatch.setattr(access, "wrong_codes", rate_limit.SlidingWindowLimiter(10, 3600))
+    monkeypatch.setattr(access, "wrong_codes",
+                        rate_limit.SlidingWindowLimiter(access.wrong_codes.limit, access.wrong_codes.window))
     with TestClient(app) as c:
         c.traced = traced
         yield c
@@ -97,8 +98,67 @@ def test_a_refusal_still_carries_the_security_headers(client, code_set):
 def test_guessing_the_code_is_cut_off_after_ten_wrong_tries(client, code_set):
     for _ in range(10):
         assert post(client, "/trace", GUARDED[0][1], code="guess").status_code == 403
-    blocked = post(client, "/trace", GUARDED[0][1], code=CODE)  # even the right one, for now
+    # Even the right code: answering it differently while locked out would
+    # turn the lockout into an unlimited guessing oracle. A pass gets through.
+    blocked = post(client, "/trace", GUARDED[0][1], code=CODE)
     assert blocked.status_code == 429 and int(blocked.headers["retry-after"]) > 0
+    assert int(blocked.headers["retry-after"]) <= 900  # a prank lasts minutes, not an hour
+
+
+# -- the pass: a browser that entered the code is never locked out by others -------------
+def get_pass(client):
+    body = post(client, "/access/check", None, code=CODE).json()
+    assert body["ok"] is True and body["expires_in"] > 0
+    return body["pass"]
+
+
+def with_pass(client, path, body, token):
+    return client.post(path, json=body, headers={**OWNER, access.PASS_HEADER: token})
+
+
+def test_checking_the_right_code_returns_a_pass_that_unlocks_tracing(client, code_set):
+    token = get_pass(client)
+    assert CODE not in token
+    assert with_pass(client, "/trace", GUARDED[0][1], token).status_code == 200
+    assert client.traced == [ADDRESS]
+
+
+def test_a_browser_holding_a_pass_is_not_locked_out_by_wrong_guesses_on_its_connection(client, code_set):
+    token = get_pass(client)
+    for _ in range(10):
+        post(client, "/access/check", None, code="guess")
+    assert post(client, "/trace", GUARDED[0][1], code=CODE).status_code == 429  # no oracle
+    assert with_pass(client, "/trace", GUARDED[0][1], token).status_code == 200
+
+
+@pytest.mark.parametrize("tamper", [
+    lambda t: t[:-2] + ("AA" if not t.endswith("AA") else "BB"),
+    lambda t: t.replace("v1.", "v1.9", 1),
+    lambda t: "v1.99999999999.x.y",
+    lambda t: "garbage",
+    lambda t: t + "." + "a" * 5000,
+])
+def test_a_tampered_pass_is_refused_and_counts_no_guess(client, code_set, tamper):
+    token = tamper(get_pass(client))
+    for _ in range(12):
+        refused = with_pass(client, "/trace", GUARDED[0][1], token)
+        assert refused.status_code == 403
+    assert refused.headers.get("x-exchequer-demo-pass-invalid") == "1"
+    assert access.wrong_codes.remaining(rate_limit.client_ip({}, "testclient")) == 10
+    assert client.traced == []
+
+
+def test_an_expired_pass_is_refused(client, code_set, monkeypatch):
+    token = get_pass(client)
+    later = access.time.time() + config.DEMO_PASS_SECONDS + 1
+    monkeypatch.setattr(access.time, "time", lambda: later)
+    assert with_pass(client, "/trace", GUARDED[0][1], token).status_code == 403
+
+
+def test_a_pass_from_an_old_code_is_refused(client, code_set, monkeypatch):
+    token = get_pass(client)
+    monkeypatch.setattr(config, "DEMO_CODE", "a-new-code-after-the-event")
+    assert with_pass(client, "/trace", GUARDED[0][1], token).status_code == 403
 
 
 def test_rotating_the_leftmost_forwarded_entry_does_not_reset_the_guess_limit(client, code_set, monkeypatch):
@@ -135,7 +195,7 @@ def test_the_console_can_ask_whether_a_code_is_needed(client, monkeypatch):
 def test_checking_a_code_goes_through_the_same_gate(client, code_set):
     assert post(client, "/access/check", None).status_code == 403
     assert post(client, "/access/check", None, code="nope").status_code == 403
-    assert post(client, "/access/check", None, code=CODE).json() == {"ok": True}
+    assert post(client, "/access/check", None, code=CODE).json()["ok"] is True
 
 
 def test_checking_codes_counts_towards_the_guess_limit(client, code_set):
