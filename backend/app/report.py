@@ -241,7 +241,7 @@ def build_report(case: Case) -> dict[str, Any]:
             "warnings": result.get("warnings", []),
         },
         "limitations": confidence_detail.get("caveats", []),
-        "methodology": _methodology(native_symbol, direction)
+        "methodology": _methodology(result)
         + ([
             f"{len(result['read_from_arrival'])} busy address(es) had more transfers since the "
             "traced funds arrived than one page of the data provider returns, so each was "
@@ -395,8 +395,38 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
     return opening + found + extra + closing
 
 
-def _methodology(native_symbol: str = "ETH", direction: str = "outgoing") -> list[str]:
-    """Plain description of what the tool did, so the result is reproducible."""
+def _swap_sentence(result: dict[str, Any]) -> str:
+    """What happened at a swap, for this case: a signed method must not say the
+    trace stopped where its own FOLLOW-ON TRACES section carries on."""
+    recorded = ("A transfer into a publicly labelled DEX router was recorded as a swap, with the asset "
+                "returned to the sender read from the transaction receipt")
+    settings = (result.get("provenance") or {}).get("settings") or {}
+    follows = result.get("follow_ons")
+    if result.get("direction", "outgoing") != "outgoing" or follows is None:
+        # Incoming traces never follow a swap; a case stored before follow-ons did not either.
+        return recorded + "; the trace ends there and is not continued on the other asset."
+    if any(f.get("result") for f in follows):
+        from .pipeline import MAX_FOLLOW_ONS
+
+        most = settings.get("max_follow_ons", MAX_FOLLOW_ONS)
+        return (recorded + ". This trace ends at the swap. Where the swap returned a stablecoin this chain "
+                "carries, that stablecoin was followed as its own trace from the wallet that swapped, "
+                f"counting only what it sent at or after the swap (at most {most}, one level deep, each "
+                "scored in its own asset; see FOLLOW-ON TRACES).")
+    if settings.get("follow_swaps") is False:
+        return recorded + "; the trace ends there: following the other asset was switched off for this case."
+    if result.get("swaps"):
+        return (recorded + "; the trace ends there, and the other asset was not followed for this case (a "
+                "swap is followed only when it returned a stablecoin this chain carries and the return "
+                "could be read).")
+    return (recorded + "; where a swap returns a stablecoin this chain carries, that stablecoin is followed "
+            "as its own trace. No swap was found in this trace.")
+
+
+def _methodology(result: dict[str, Any]) -> list[str]:
+    """Plain description of what the tool did for this case, so the result is reproducible."""
+    native_symbol = result.get("native_symbol", "ETH")
+    direction = result.get("direction", "outgoing")
     if direction == "outgoing":
         walk = (
             f"Outgoing {native_symbol} transfers were followed from the reported "
@@ -431,22 +461,29 @@ def _methodology(native_symbol: str = "ETH", direction: str = "outgoing") -> lis
             "at or before the moment it paid the next address were followed, "
             "since only money already held could have funded that payment."
         )
-    return [
-        walk,
-        grouping,
-        timing,
+    exchanges = (
         "Every address in the resulting graph was compared, by exact match, "
         "against a database of publicly labelled exchange wallets. An unlabelled "
         "address whose every outgoing transfer went to one labelled exchange "
         "wallet was reported as a probable deposit address of that exchange, "
-        "marked as an inference and scored lower than an exact match.",
+        "marked as an inference and scored lower than an exact match."
+    )
+    if (result.get("live_tags") or {}).get("enabled"):
+        exchanges += (
+            " On Tron, wallets no label file names were also looked up in TronScan's "
+            "public tags at trace time; an exchange reached only through such a tag "
+            "is marked as a tag, not a label match."
+        )
+    return [
+        walk,
+        grouping,
+        timing,
+        exchanges,
         "Every address was also screened, by exact match, against the lists "
         "named under LISTS SCREENED AGAINST. A trace is stopped at any address "
         "identified as a mixer: its payouts come from a commingled pool, so "
         "transfers leaving it have no established link to the deposit traced.",
-        "A transfer into a publicly labelled DEX router was recorded as a swap, "
-        "with the asset returned to the sender read from the transaction "
-        "receipt; the trace ends there and is not continued on the other asset.",
+        _swap_sentence(result),
         "Laundering patterns were identified using fixed arithmetic rules "
         "(peel chain, amount split). Each finding records the thresholds it "
         "applied so it can be re-checked by hand.",
