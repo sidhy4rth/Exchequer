@@ -36,6 +36,12 @@ it almost always is, since only the key holder can send from it.
 
     cd backend && .venv/bin/python -m scripts.port_evm_labels --checkpoint port.jsonl
     cd backend && .venv/bin/python -m scripts.port_evm_labels --sanctions-only
+    cd backend && .venv/bin/python -m scripts.port_evm_labels --relabel
+
+`--relabel` re-reads each carried government listing from the Ethereum files,
+offline: a listing that changed there (a seizure order now filed as `seized`,
+a new end date) changes here, and one no longer held there is removed. It
+makes no chain call, because the account checks do not depend on the label.
 """
 from __future__ import annotations
 
@@ -97,12 +103,16 @@ def scrape_candidates(chain_key: str) -> dict[str, dict[str, str]]:
     return out
 
 
+GOVERNMENT = ("sanctioned", "seized")
+
+
 def sanctioned_candidates() -> dict[str, dict[str, str]]:
+    """Every Ethereum account a government lists: designated, or named in a seizure order."""
     out: dict[str, dict[str, str]] = {}
     eth = config.CHAINS["ethereum"]
     for path in (eth.risk_labels_path, eth.intl_sanctions_path):
         for address, meta in json.loads(path.read_text())["labels"].items():
-            if meta.get("category") == "sanctioned" and address not in out:
+            if meta.get("category") in GOVERNMENT and address not in out:
                 out[address] = meta
     return out
 
@@ -162,6 +172,22 @@ def write_risk_labels(chain_key: str, listed: dict[str, dict[str, str]], today: 
     }, indent=1) + "\n")
 
 
+def relabel(dry_run: bool) -> int:
+    """Re-read each carried listing from the Ethereum files; drop one they no longer hold. Offline."""
+    current = sanctioned_candidates()
+    for chain_key in TARGETS:
+        chain = config.CHAINS[chain_key]
+        document = json.loads(chain.risk_labels_path.read_text())
+        held = document["labels"]
+        kept = {a: current[a] for a in held if a in current}
+        gone = sorted(set(held) - set(kept))
+        changed = sum(1 for a, m in kept.items() if m.get("category") != held[a].get("category"))
+        print(f"{chain.name}: {len(kept)} kept ({changed} re-filed), {len(gone)} removed: {gone}")
+        if not dry_run:
+            write_risk_labels(chain_key, kept, document["_meta"].get("last_reviewed", ""))
+    return 0
+
+
 def sanctions_only(dry_run: bool) -> int:
     """Re-check the sanctioned accounts and rewrite only the risk files.
 
@@ -196,8 +222,12 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--sanctions-only", action="store_true",
                         help="re-check only sanctioned accounts; stop on any failed check")
+    parser.add_argument("--relabel", action="store_true",
+                        help="re-read the carried listings from the Ethereum files, offline")
     args = parser.parse_args()
 
+    if args.relabel:
+        return relabel(args.dry_run)
     if args.sanctions_only:
         return sanctions_only(args.dry_run)
 

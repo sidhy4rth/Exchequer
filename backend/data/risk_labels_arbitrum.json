@@ -8,13 +8,14 @@
  },
  "labels": {
   "0x53b9b72dc6f96eb4b54143b211b22e2548e4cf5c": {
-   "category": "sanctioned",
-   "entity": "NBCTF seizure order ASO 22/25",
-   "label": "NBCTF seizure order ASO 22/25",
-   "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Arbitrum One)",
+   "category": "seized",
+   "entity": "NBCTF order FO 22/25",
+   "label": "NBCTF order FO 22/25",
+   "source": "Israel NBCTF seizure or forfeiture order FO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Arbitrum One)",
    "authorities": [
     "Israel"
-   ]
+   ],
+   "valid_until": "2028-02-16"
   },
   "0x9dd7fa4b4950154f7e75bdd8a77266b99b94ec08": {
    "category": "sanctioned",
@@ -67,13 +68,14 @@
    "ofac_id_type": "Digital Currency Address - ETH"
   },
   "0xe3740c1b2fcda407027e2c80906306604e5260e7": {
-   "category": "sanctioned",
-   "entity": "NBCTF seizure order ASO 22/25",
-   "label": "NBCTF seizure order ASO 22/25",
-   "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Arbitrum One)",
+   "category": "seized",
+   "entity": "NBCTF order FO 22/25",
+   "label": "NBCTF order FO 22/25",
+   "source": "Israel NBCTF seizure or forfeiture order FO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Arbitrum One)",
    "authorities": [
     "Israel"
-   ]
+   ],
+   "valid_until": "2028-02-16"
   },
   "0xef85a6fafa5942a964dc618e94e230881d29ce2a": {
    "category": "sanctioned",

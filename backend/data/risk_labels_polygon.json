@@ -48,13 +48,14 @@
    "ofac_id_type": "Digital Currency Address - ETH"
   },
   "0x53b9b72dc6f96eb4b54143b211b22e2548e4cf5c": {
-   "category": "sanctioned",
-   "entity": "NBCTF seizure order ASO 22/25",
-   "label": "NBCTF seizure order ASO 22/25",
-   "source": "Israel NBCTF administrative seizure order ASO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Polygon PoS)",
+   "category": "seized",
+   "entity": "NBCTF order FO 22/25",
+   "label": "NBCTF order FO 22/25",
+   "source": "Israel NBCTF seizure or forfeiture order FO 22/25 (via OpenSanctions) (listed as an Ethereum address; the same account on Polygon PoS)",
    "authorities": [
     "Israel"
-   ]
+   ],
+   "valid_until": "2028-02-16"
   },
   "0x56de1527136f76a809e5b14ded6103eecd072ba7": {
    "category": "sanctioned",

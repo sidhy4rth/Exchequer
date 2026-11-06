@@ -105,3 +105,25 @@ def test_polygon_and_arbitrum_are_etherscan_chains_with_their_own_stablecoins():
     assert (polygon.chain_id, polygon.native_symbol, polygon.provider) == (137, "POL", "etherscan")
     assert (arbitrum.chain_id, arbitrum.native_symbol, arbitrum.provider) == (42161, "ETH", "etherscan")
     assert polygon.find_token("USDT").address != config.CHAINS["ethereum"].find_token("USDT").address
+
+
+def test_relabel_re_reads_carried_listings_offline_and_drops_lapsed_ones(two_chains, monkeypatch):
+    """An Israeli order now filed as seized is seized on Polygon too; a lapsed one goes (r1-labels-data-12/-3)."""
+    chains, listed = two_chains
+    lapsed, seized = "0x" + "5" * 40, "0x" + "6" * 40
+    for chain in chains.values():
+        chain.risk_labels_path.write_text(json.dumps({"_meta": {"last_reviewed": "2026-09-23"}, "labels": {
+            a: {"category": "sanctioned", "entity": "E", "label": "E", "source": "old"} for a in (listed, lapsed, seized)}}))
+    monkeypatch.setattr(port, "sanctioned_candidates", lambda: {
+        listed: {"category": "sanctioned", "entity": "E", "label": "E", "source": "OFAC SDN list"},
+        seized: {"category": "seized", "entity": "NBCTF order FO 1/24", "label": "NBCTF order FO 1/24",
+                 "source": "Israel NBCTF seizure or forfeiture order FO 1/24 (via OpenSanctions)",
+                 "authorities": ["Israel"], "valid_until": "2028-02-16"}})
+    monkeypatch.setattr(port, "EtherscanClient", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no chain calls")))
+    assert port.relabel(dry_run=False) == 0
+    for chain in chains.values():
+        written = json.loads(chain.risk_labels_path.read_text())
+        assert set(written["labels"]) == {listed, seized}
+        assert written["labels"][seized]["category"] == "seized"
+        assert written["labels"][seized]["valid_until"] == "2028-02-16"
+        assert written["_meta"]["last_reviewed"] == "2026-09-23"
