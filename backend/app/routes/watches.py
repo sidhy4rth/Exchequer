@@ -47,13 +47,13 @@ def _owner(http: Request) -> str:
 def add_watch(body: WatchRequest, http: Request) -> dict[str, Any]:
     owner = _owner(http)
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
-    wait = rate_limit.watches.check(client)
-    if wait is not None:
-        raise HTTPException(
-            status_code=429,
-            detail=f"This connection has created {config.WATCHES_PER_HOUR_PER_CLIENT} watches in the last hour.",
-            headers={"Retry-After": str(int(wait))},
-        )
+    refused = rate_limit.charge(rate_limit.watches, rate_limit.watches_total, client)
+    if refused is not None:
+        wait, who = refused
+        detail = (f"This site has created {config.WATCHES_PER_HOUR_TOTAL} watches in the last hour."
+                  if who == "site" else
+                  f"This connection has created {config.WATCHES_PER_HOUR_PER_CLIENT} watches in the last hour.")
+        raise HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(int(wait))})
     try:
         watch = watchlist.create_watch(owner, body.address, body.chain, body.asset,
                                        body.note, body.case_id, body.webhook_url)

@@ -39,6 +39,12 @@ from .pipeline import TraceRequest
 logger = logging.getLogger(__name__)
 
 MAX_ROWS = 25
+# Of the server's trace slots (config.TRACE_MAX_RUNNING), all batches together
+# hold at most BATCH_SLOTS, so live traces always find the rest free. A browser
+# has one active batch at a time, the site at most MAX_ACTIVE_BATCHES; the
+# others are refused rather than queued behind each other for hours.
+BATCH_SLOTS = 1
+MAX_ACTIVE_BATCHES = 3
 PENDING, RUNNING, DONE, FAILED, INTERRUPTED = "pending", "running", "done", "failed", "interrupted"
 
 
@@ -144,9 +150,15 @@ def run(batch_id: str, owner: str, acquire, release, trace_fn, store_fn) -> None
     _save_rows(batch_id, rows, status=DONE)
 
 
-def start(batch_id: str, owner: str, acquire, release, trace_fn, store_fn) -> None:
-    threading.Thread(target=run, args=(batch_id, owner, acquire, release, trace_fn, store_fn),
-                     name=f"batch-{batch_id[:8]}", daemon=True).start()
+def start(batch_id: str, owner: str, acquire, release, trace_fn, store_fn, on_done=None) -> None:
+    """Run the batch in its own thread; `on_done()` once it ends, however it ends."""
+    def target() -> None:
+        try:
+            run(batch_id, owner, acquire, release, trace_fn, store_fn)
+        finally:
+            if on_done is not None:
+                on_done()
+    threading.Thread(target=target, name=f"batch-{batch_id[:8]}", daemon=True).start()
 
 
 def mark_interrupted() -> None:

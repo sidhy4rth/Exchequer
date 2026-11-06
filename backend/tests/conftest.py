@@ -164,7 +164,9 @@ def _reset_api_budget(monkeypatch):
 @pytest.fixture(autouse=True)
 def _fresh_trace_rate_limit():
     """The per-client trace limit is process-wide; the suite's TestClient is
-    one client, so without this the 31st trace in a run would be refused."""
+    one client, so without this the 31st trace in a run would be refused.
+    The site-wide ceilings are process-wide too."""
     from app import rate_limit
-    rate_limit.traces.reset()
+    for limiter in (rate_limit.traces, rate_limit.traces_total, rate_limit.watches_total):
+        limiter.reset()
     yield

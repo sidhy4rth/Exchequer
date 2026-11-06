@@ -32,7 +32,7 @@ HEARTBEAT_SECONDS = 15.0
 POLL_SECONDS = 0.3
 
 
-def _run(job: jobs.Job, request: TraceRequest, owner: str | None) -> None:
+def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | None = None) -> None:
     token = progress.listen(lambda fields: jobs.store.report(job, fields))
     try:
         payload = pipeline.run_trace(request)
@@ -48,20 +48,20 @@ def _run(job: jobs.Job, request: TraceRequest, owner: str | None) -> None:
                                       "detail": "The trace failed unexpectedly. Try again."})
     finally:
         progress.stop(token)
-        cases.release()
+        cases.release(slot)
 
 
 @router.post("/trace/jobs", status_code=202)
 def start_job(request: TraceRequest, http: Request, user: CurrentUser) -> JSONResponse:
     pipeline.check_request(request)  # a typo is refused before it costs the allowance
-    cases.admit(http)  # holds a running slot from here until _run releases it
+    slot = cases.admit(http)  # holds a running slot from here until _run releases it
     try:
         job = jobs.store.create()
         owner = user.owner_hash
-        threading.Thread(target=_run, args=(job, request, owner),
+        threading.Thread(target=_run, args=(job, request, owner, slot),
                          name=f"trace-job-{job.id[:8]}", daemon=True).start()
     except Exception:
-        cases.release()
+        cases.release(slot)
         raise
     return JSONResponse(status_code=202, content={
         **job.snapshot(),

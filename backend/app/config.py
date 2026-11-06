@@ -377,6 +377,10 @@ TRACE_CONCURRENCY: int = _int_env("TRACE_CONCURRENCY", 6)
 # for the next visitor. Past it, POST /trace answers 429 at once. One presenter
 # never comes near four; the demo-health job traces one address at a time.
 TRACE_MAX_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES", 4)
+# How many of those one connection may hold at once (0 = no per-connection
+# cap). Without it one visitor could take every slot and keep it while their
+# traces ran; two still lets a presenter open a second trace.
+TRACES_RUNNING_PER_CLIENT: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES_PER_CLIENT", 2)
 
 # The most cases the store keeps (0 = no cap). Anyone can save a trace, and a
 # free hosted Postgres holds 0.5 GB; a stored case averages ~32 KB, so 5,000 is
@@ -473,6 +477,10 @@ API_DOCS_ENABLED: bool = (
 # How many traces one client may start per hour (0 = no limit). Each trace
 # spends the shared free-tier provider quota; see rate_limit.py.
 TRACES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_TRACES_PER_HOUR", 30)
+# How many traces the whole site may start per hour, all clients together
+# (0 = no ceiling). The per-client limit trusts proxy headers a client may be
+# able to set; this one cannot be dodged, so it bounds the provider quota.
+TRACES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_TRACES_PER_HOUR_TOTAL", 120)
 
 # Read the client address from the proxy's headers. Only behind a proxy that
 # sets them; the Docker image turns it on. Proxies disagree on where the real
@@ -557,6 +565,8 @@ WATCHES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR", 20)
 # hour (0 = no limit). An officer logs a few and updates them now and then;
 # this only stops a script filling the store.
 REQUEST_WRITES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_REQUEST_WRITES_PER_HOUR", 120)
+# Watches the whole site may create per hour (0 = no ceiling); see TRACES_PER_HOUR_TOTAL.
+WATCHES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR_TOTAL", 60)
 # Bearer token for GET /health/detail, the operator's view of keys, quota
 # and warm-up. Unset = the endpoint does not exist (404); /health stays public.
 HEALTH_TOKEN: str = os.getenv("EXCHEQUER_HEALTH_TOKEN", "").strip()

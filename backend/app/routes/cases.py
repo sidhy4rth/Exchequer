@@ -25,34 +25,68 @@ router = APIRouter()
 _running = threading.BoundedSemaphore(config.TRACE_MAX_RUNNING)
 
 
-def admit(http: Request) -> None:
-    """Refuse a trace this client may not start now: over its hourly limit,
-    or the server already running its maximum. On success the caller holds
-    a running slot and must release it with `_running.release()`."""
+# Running traces per connection, so one cannot hold every slot above.
+_running_by_client: dict[str, int] = {}
+_by_client_lock = threading.Lock()
+
+
+def admit(http: Request) -> str:
+    """Refuse a trace this client may not start now: already running its
+    share of the slots, the server running its maximum, or over its hourly
+    limit. On success the caller holds a running slot and must hand the
+    returned token to `release()`.
+
+    The hourly allowance is charged last, once a slot is taken: a visitor
+    turned away because the server is busy has started nothing."""
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
-    wait = rate_limit.traces.check(client)
-    if wait is not None:
+    with _by_client_lock:
+        mine = _running_by_client.get(client, 0)
+        if mine >= config.TRACES_RUNNING_PER_CLIENT > 0:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"This connection already has {mine} trace{'s' if mine != 1 else ''} running. "
+                    "Wait for one to finish, or open a stored case in the meantime."
+                ),
+                headers={"Retry-After": "30"},
+            )
+        if not _running.acquire(blocking=False):
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"{config.TRACE_MAX_RUNNING} traces are already running. "
+                    "Try again in a minute, or open a stored case in the meantime."
+                ),
+                headers={"Retry-After": "30"},
+            )
+        _running_by_client[client] = mine + 1
+    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client)
+    if refused is not None:
+        release(client)
+        wait, who = refused
+        started = (f"This site has started {config.TRACES_PER_HOUR_TOTAL} traces" if who == "site"
+                   else f"This connection has started {config.TRACES_PER_HOUR_PER_CLIENT} traces")
         raise HTTPException(
             status_code=429,
             detail=(
-                f"This connection has started {config.TRACES_PER_HOUR_PER_CLIENT} traces "
-                f"in the last hour. Try again in {int(wait // 60) + 1} min, or open a "
+                f"{started} in the last hour. Try again in {int(wait // 60) + 1} min, or open a "
                 "stored case in the meantime."
             ),
             headers={"Retry-After": str(int(wait))},
         )
-    if not _running.acquire(blocking=False):
-        raise HTTPException(
-            status_code=429,
-            detail=(
-                f"{config.TRACE_MAX_RUNNING} traces are already running. "
-                "Try again in a minute, or open a stored case in the meantime."
-            ),
-            headers={"Retry-After": "30"},
-        )
+    return client
 
 
-def release() -> None:
+def release(client: str | None = None) -> None:
+    """Give back a running slot; `client` is the token admit() returned
+    (batch rows take a slot directly and pass none)."""
+    if client is not None:
+        with _by_client_lock:
+            left = _running_by_client.get(client, 0) - 1
+            if left > 0:
+                _running_by_client[client] = left
+            else:
+                _running_by_client.pop(client, None)
     _running.release()
 
 
@@ -132,11 +166,11 @@ def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, 
     app itself uses POST /trace/jobs, which runs it in the background.
     """
     pipeline.check_request(request)
-    admit(http)
+    slot = admit(http)
     try:
         payload = pipeline.run_trace(request)
     finally:
-        release()
+        release(slot)
     stored = store_result(payload, request, user.owner_hash)
     record_trace(stored)
     return stored
