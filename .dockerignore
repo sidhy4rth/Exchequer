@@ -5,6 +5,10 @@
 **/*.pyc
 **/.env
 **/*.db
+# The private label store is fetched inside the build, never copied from here.
+**/*.building
+**/*.partial
+backend/data/label_store*
 .git
 .DS_Store
 *.pdf

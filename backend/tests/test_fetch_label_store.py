@@ -157,3 +157,14 @@ def test_an_installed_store_reports_its_rows(monkeypatch, tmp_path, capsys):
     fake_release(monkeypatch, gz)
     assert fetch.main() == 0
     assert "1 rows" in capsys.readouterr().out
+
+
+def test_a_broken_gzip_leaves_no_partial_file(tmp_path):
+    """r1-scripts-13: the half-written private store must not linger in data/."""
+    whole = gzip.compress(b"SQLite format 3\x00" + bytes(range(256)) * 400)
+    gz = tmp_path / "label_store.db.gz"
+    gz.write_bytes(whole[: len(whole) // 2])  # truncated, but its checksum is the one asked for
+    out = tmp_path / "data" / "label_store.db"
+    with pytest.raises((EOFError, gzip.BadGzipFile)):
+        fetch.install(gz, hashlib.sha256(gz.read_bytes()).hexdigest(), out)
+    assert not out.exists() and not out.with_suffix(".partial").exists()

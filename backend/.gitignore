@@ -5,3 +5,7 @@ __pycache__/
 *.db
 sdn.xml
 *_check.jsonl
+# The private label store's temp files and copies (see the root .gitignore)
+*.building
+*.partial
+data/label_store*

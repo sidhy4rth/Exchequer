@@ -138,6 +138,16 @@ def build(csv_path: Path, out: Path, limit: int | None = None) -> dict:
     tmp = out.with_suffix(".building")
     tmp.unlink(missing_ok=True)
     db = sqlite3.connect(tmp)
+    try:
+        return _build(db, tmp, csv_path, out, limit)
+    except BaseException:
+        # Private hunt data: a failed or interrupted build leaves no copy behind.
+        db.close()
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: int | None) -> dict:
     db.executescript("""
         PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);

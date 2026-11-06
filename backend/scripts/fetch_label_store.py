@@ -50,9 +50,14 @@ def install(gz_path: Path, sha256: str, out: Path) -> None:
         raise ValueError(f"checksum mismatch: got {digest.hexdigest()}, expected {sha256}")
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".partial")
-    with gzip.open(gz_path, "rb") as src, open(tmp, "wb") as dst:
-        shutil.copyfileobj(src, dst, 1 << 20)
-    tmp.replace(out)
+    try:
+        with gzip.open(gz_path, "rb") as src, open(tmp, "wb") as dst:
+            shutil.copyfileobj(src, dst, 1 << 20)
+        tmp.replace(out)
+    except BaseException:
+        # Private hunt data: never leave a half-written copy beside the store.
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 class _HttpsOnlyRedirect(urllib.request.HTTPRedirectHandler):

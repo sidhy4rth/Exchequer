@@ -11,6 +11,11 @@ backend/.env
 # SQLite's write-ahead log and its index, beside every store in WAL mode.
 *.db-shm
 *.db-wal
+# The private label store: its build and download temp files, and any copy of
+# it under data/ (scripts/build_label_store.py, scripts/fetch_label_store.py).
+*.building
+*.partial
+backend/data/label_store*
 
 # Node
 frontend/node_modules/
