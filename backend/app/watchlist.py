@@ -4,22 +4,23 @@ A freeze request only works while the money is still at the exchange, and
 the window between a scam wallet receiving funds and cashing them out can be
 hours. A trace answers "where did it go"; a watch answers "it is moving
 now". The investigator watches the scam wallet, or a probable deposit
-address, and the server re-reads its outgoing transfers on a schedule. Every
-transfer newer than the last one seen becomes an alert, ranked by where it
-went:
+address, and the server reads what it sent since the last check, forward
+from a cursor that only moves over records actually read. Every transfer
+found becomes an alert, ranked by where it went:
 
   exchange  into a labelled exchange wallet: ask that exchange now
   risk      into a sanctioned, mixer, frozen or stolen-funds address
   moved     anywhere else: the funds are on the move
+  more      a notice: more moved than one check read; check again or re-trace
 
 Alerts show in the app for the browser that set the watch, and can also be
 posted to a Slack, Discord or Google Chat webhook: exchange and flagged
 transfers first, each on its own, then one digest of the rest, in the form
 each host expects, with label text escaped so it can never ping a channel or
-pass for a link. Webhooks go only to those
-hosts (plus any in EXCHEQUER_WEBHOOK_HOSTS), over https, without following
-redirects: a free-form URL would let anyone make this server call addresses
-inside its own network.
+pass for a link. Webhooks go only to those hosts (plus any in
+EXCHEQUER_WEBHOOK_HOSTS), over https, without following redirects: a
+free-form URL would let anyone make this server call addresses inside its
+own network. Their URLs are sealed at rest (webhook_vault.py).
 
 What happened before the watch was set is not news, and everything after it
 is: a new EVM watch starts at the chain's head block, a Tron watch at its
@@ -325,7 +326,7 @@ def alert_summary(alert: models.Alert, chain_key: str | None = None,
         "chain": chain_key,
         "case_id": case_id,
         "exchange": exchange,
-        "tx_url": tx_url(chain_key, alert.tx_hash) if chain_key else "",
+        "tx_url": tx_url(chain_key, alert.tx_hash) if chain_key and alert.tx_hash else "",
         "alert_id": alert.id, "watch_id": alert.watch_id, "created_at": alert.created_at,
         "kind": alert.kind, "message": alert.message, "tx_hash": alert.tx_hash,
         "tx_time": alert.tx_time, "value": alert.value, "asset": alert.asset,

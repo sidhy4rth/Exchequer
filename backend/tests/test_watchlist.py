@@ -532,6 +532,7 @@ def test_a_full_first_page_newer_than_the_watch_says_some_may_be_missing(store):
     assert kinds == ["more", "moved"]
     more = [a for a in watchlist.list_alerts(owner(ALICE)) if a["kind"] == "more"]
     assert len(more) == 1 and "re-trace" in more[0]["message"]
+    assert more[0]["tx_url"] == ""  # a notice, not a transaction
 
 
 def test_a_watch_made_through_the_route_starts_at_the_chain_head(store, monkeypatch):

@@ -126,7 +126,7 @@ class Alert(Base):
     watch_id: Mapped[str] = mapped_column(String(36), index=True)
     owner_hash: Mapped[str] = mapped_column(String(64), index=True)
     created_at: Mapped[str] = mapped_column(String(32))
-    kind: Mapped[str] = mapped_column(String(16))  # exchange | risk | moved
+    kind: Mapped[str] = mapped_column(String(16))  # exchange | risk | moved | more (a notice)
     message: Mapped[str] = mapped_column(Text)
     tx_hash: Mapped[str] = mapped_column(String(80))
     tx_time: Mapped[int] = mapped_column(BigInteger)  # Unix seconds, past 2038
