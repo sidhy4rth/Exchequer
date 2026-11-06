@@ -34,7 +34,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
@@ -97,19 +97,54 @@ def reset_for_tests(signer: Signer | None = None) -> None:
         _signer = signer
 
 
+def _seed_bytes(seed: str) -> bytes | None:
+    """A 32-byte seed from base64 (standard or URL-safe, padded or not) or hex."""
+    if len(seed) == 64:
+        try:
+            return bytes.fromhex(seed)
+        except ValueError:
+            pass
+    padded = seed + "=" * (-len(seed) % 4)
+    for decode in (base64.b64decode, base64.urlsafe_b64decode):
+        try:
+            raw = decode(padded, validate=True) if decode is base64.b64decode else decode(padded)
+        except (binascii.Error, ValueError):
+            continue
+        if len(raw) == 32:
+            return raw
+    return None
+
+
 def _load() -> Signer:
     seed = os.getenv("EXCHEQUER_SIGNING_KEY", "").strip()
     if seed:
-        try:
-            raw = base64.b64decode(seed, validate=True)
+        raw = _seed_bytes(seed)
+        if raw is not None:
             return Signer(Ed25519PrivateKey.from_private_bytes(raw), "environment")
-        except (binascii.Error, ValueError):
-            logger.error("EXCHEQUER_SIGNING_KEY is not a base64 32-byte Ed25519 seed; ignoring it")
+        logger.error("EXCHEQUER_SIGNING_KEY is not a 32-byte Ed25519 seed (base64 or hex); ignoring it")
+    signer = _load_file()
+    if signer.source == "file" and config.TEMPORARY_DISK:
+        # A disk wiped on restart takes the key file with it: every wake signs
+        # with a new key, and earlier reports stop verifying. Say so.
+        logger.error("The report signing key is kept on a disk this host wipes on restart; "
+                     "set EXCHEQUER_SIGNING_KEY so reports keep verifying")
+        return Signer(signer.private, "ephemeral")
+    return signer
 
+
+def _load_file() -> Signer:
     path: Path = config.SIGNING_KEY_PATH
     try:
         if path.is_file():
-            key = serialization.load_pem_private_key(path.read_bytes(), password=None)
+            try:
+                key = serialization.load_pem_private_key(path.read_bytes(), password=None)
+            except (ValueError, TypeError, UnsupportedAlgorithm) as exc:
+                # Empty, truncated, password-protected or not a key. It may be
+                # the real key and recoverable, so it is never overwritten;
+                # this process signs with a marked temporary key meanwhile.
+                logger.error("%s cannot be read as a private key (%s); fix or remove it. Signing with "
+                             "a temporary key until then", path, type(exc).__name__)
+                return Signer(Ed25519PrivateKey.generate(), "ephemeral")
             if isinstance(key, Ed25519PrivateKey):
                 return Signer(key, "file")
             logger.error("%s is not an Ed25519 key; making a new one in memory", path)

@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import api_budget, config, models, ownership, warmup, watchlist
+from .. import api_budget, config, models, ownership, signing, warmup, watchlist
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, STOLEN,
@@ -104,6 +104,11 @@ def health_detail(request: Request) -> dict[str, Any]:
         # What a restart wipes. On a host without a lasting disk a SQLite case
         # store loses every case, and the provider cache starts cold.
         "storage": _storage(),
+        # Whether reports signed now will still verify after a restart: a
+        # temporary key means EXCHEQUER_SIGNING_KEY is missing or unreadable.
+        "signing_key": {"fingerprint": signing.get_signer().fingerprint,
+                        "source": signing.get_signer().source,
+                        "persistent": signing.get_signer().persistent},
     }
 
 
