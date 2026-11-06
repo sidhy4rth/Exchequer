@@ -9,12 +9,13 @@ warm-up both call it; nothing here knows about requests or storage."""
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any
 
 import networkx as nx
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from . import config, log_safety, progress
 from .api_budget import Cancelled, TraceBudget, TraceStopped, current_budget
@@ -25,6 +26,7 @@ from .payment_intake import (
     PaymentError,
     PaymentRef,
     intake_record,
+    normalize_hash,
     reported_amount,
     resolve_payments,
     window_start,
@@ -62,6 +64,11 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Request / response models
 # ---------------------------------------------------------------------------
+# An NCRP acknowledgement number: ASCII digits only (no letters, spaces,
+# control or direction-changing characters).
+_NCRP = re.compile(r"[0-9]{10,20}")
+
+
 class TraceRequest(BaseModel):
     address: str = Field(..., description="The victim-reported wallet address")
     max_depth: int | None = Field(
@@ -134,8 +141,25 @@ class TraceRequest(BaseModel):
     )
     ncrp_ack: str | None = Field(
         None, max_length=64,
-        description="The NCRP complaint acknowledgement number, recorded with the case.",
+        description=(
+            "The NCRP complaint acknowledgement number, recorded with the case "
+            "as entered by the requester: 10 to 20 digits."
+        ),
     )
+
+    @field_validator("ncrp_ack", mode="before")
+    @classmethod
+    def _ncrp_shape(cls, value: Any) -> Any:
+        # Digits only: free text here was shown on the case page as "NCRP
+        # <value>", lending a police reference to any anonymous trace.
+        if value is None or not isinstance(value, str):
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        if not _NCRP.fullmatch(value):
+            raise ValueError("An NCRP acknowledgement number is 10 to 20 digits.")
+        return value
 
 
 # ---------------------------------------------------------------------------
@@ -352,6 +376,12 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
                 status_code=400,
                 detail="Payments start a trace of where the money went: use direction 'outgoing'.",
             )
+        seen: set[str] = set()
+        for ref in request.payments:
+            key = normalize_hash(ref.tx_hash)
+            if key in seen:
+                raise HTTPException(status_code=400, detail=f"Payment {ref.tx_hash} is listed twice.")
+            seen.add(key)
     return chain, address
 
 

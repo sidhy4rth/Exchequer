@@ -20,18 +20,33 @@ and the error says so.
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+# EVM and Tron transaction ids are both 32 bytes: 64 hex characters, with or
+# without 0x. Checked when the request is read, so a typo is refused before
+# the trace is admitted or any provider is asked.
+_HASH = re.compile(r"(0x)?[0-9a-f]{64}")
 
 
 class PaymentRef(BaseModel):
     """One payment named in a complaint: its hash and who found it."""
 
-    tx_hash: str = Field(..., min_length=8, max_length=100)
+    tx_hash: str = Field(..., max_length=100)
     # "victim": the hash came with the complaint. "officer_search": the officer
     # found it by searching the reported wallet for the amount and date.
+    # As stated by the requester; Exchequer does not check it.
     found_by: Literal["victim", "officer_search"] = "victim"
+
+    @field_validator("tx_hash")
+    @classmethod
+    def _hash_shape(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not _HASH.fullmatch(value):
+            raise ValueError("A transaction hash is 64 hexadecimal characters, with or without 0x.")
+        return value
 
 
 class PaymentError(ValueError):
@@ -66,15 +81,17 @@ def resolve_payments(
         seen.add(key)
 
     incoming = client.get_incoming_transactions(address, limit=limit)
+    # A row with no hash can never be a named payment, so it is skipped
+    # rather than matched by an empty key.
     by_hash = {
         normalize_hash(tx.hash): tx
         for tx in incoming
-        if not getattr(tx, "is_error", False)
+        if not getattr(tx, "is_error", False) and normalize_hash(tx.hash or "")
     }
 
     payments = []
     for ref in refs:
-        tx = by_hash.get(normalize_hash(ref.tx_hash))
+        tx = by_hash.get(normalize_hash(ref.tx_hash)) if normalize_hash(ref.tx_hash) else None
         if tx is None:
             raise PaymentError(
                 f"Payment {ref.tx_hash} is not an incoming {asset} transfer to {address} "

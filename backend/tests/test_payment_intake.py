@@ -197,3 +197,62 @@ def test_the_report_states_the_capped_figure_and_why(chain, monkeypatch):
                 result_json=json.dumps(result, default=str))
     text = " ".join(render_text_report(build_report(case)).split())
     assert "about 2.0 of the 2.0 ETH the victim reported paying (pro-rata; the reported address sent 2.4" in text
+
+
+# ---------------------------------------------------------------- shapes, before admission (5-5)
+def _post_job(monkeypatch, body):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.routes import cases
+
+    admitted = []
+    monkeypatch.setattr(cases, "admit", lambda http: admitted.append(1) or None)
+    with TestClient(app) as client:
+        response = client.post("/trace/jobs", json={"address": SCAMMER, "chain": "ethereum", **body})
+    return response, admitted
+
+
+@pytest.mark.parametrize("bad", ["zzzzzzzz", " " * 8, "0x" + "ab" * 31, "0x" + "ab" * 33, "0x" + "gg" * 32])
+def test_a_malformed_hash_is_refused_before_anything_is_spent(monkeypatch, bad):
+    monkeypatch.setattr(config, "TX_INTAKE", True)
+    response, admitted = _post_job(monkeypatch, {"payments": [{"tx_hash": bad}]})
+    assert response.status_code == 422 and admitted == []
+
+
+def test_an_upper_case_hash_without_0x_is_accepted():
+    ref = PaymentRef(tx_hash=" " + "AB" * 32 + " ")
+    assert ref.tx_hash == "ab" * 32
+
+
+def test_a_hash_listed_twice_is_refused_before_admission(monkeypatch):
+    monkeypatch.setattr(config, "TX_INTAKE", True)
+    response, admitted = _post_job(monkeypatch, {"payments": [{"tx_hash": PAYMENT.hash},
+                                                              {"tx_hash": PAYMENT.hash[2:].upper()}]})
+    assert response.status_code == 400 and "listed twice" in response.json()["detail"]
+    assert admitted == []
+
+
+@pytest.mark.parametrize("bad", ["FIR 123/2026", "‮31911250012345", "3191125001234\u0000", "123", "1" * 21])
+def test_an_ncrp_number_that_is_not_digits_is_refused(bad):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="NCRP acknowledgement number"):
+        request(ncrp_ack=bad)
+
+
+def test_an_ncrp_number_is_stored_stripped_and_blank_is_none():
+    assert request(ncrp_ack=" 31911250012345 ").ncrp_ack == "31911250012345"
+    assert request(ncrp_ack="  ").ncrp_ack is None
+
+
+def test_a_provider_row_with_no_hash_never_matches():
+    blank = replace(PAYMENT, hash="")
+
+    class Client(FakeClient):
+        def get_incoming_transactions(self, address, limit=None):
+            return [blank]
+
+    with pytest.raises(PaymentError):
+        resolve_payments(Client(), SCAMMER, [PaymentRef.model_construct(tx_hash="  ", found_by="victim")],
+                         chain_key="ethereum", asset="ETH", limit=100)
