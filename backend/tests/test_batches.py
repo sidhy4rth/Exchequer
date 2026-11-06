@@ -85,7 +85,7 @@ def test_bad_rows_come_back_by_number(client):
 
 def test_a_batch_is_charged_against_the_hourly_limit_in_full(client, monkeypatch):
     monkeypatch.setattr(rate_limit, "traces", rate_limit.SlidingWindowLimiter(2, 3600))
-    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}, {"address": A1}]},
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}, {"address": A3}]},
                     headers={ownership.OWNER_HEADER: ALICE})
     assert r.status_code == 429 and "needs 3 traces" in r.json()["detail"]
 
@@ -287,3 +287,50 @@ def test_a_running_batch_keeps_its_heartbeat(client, monkeypatch):
     count = len(beats)
     time.sleep(0.1)
     assert len(beats) <= count + 1  # the heartbeat stops with its batch
+
+
+def test_a_repeated_row_is_traced_once_and_points_at_the_first(client, monkeypatch):
+    # Five complaints often name the same scam wallet: one trace, one case.
+    traced = []
+
+    def counting(request):
+        traced.append(request.address)
+        return fake_trace(request)
+    monkeypatch.setattr(pipeline, "run_trace", counting)
+    rows = batches.validate_rows([{"address": A1, "reference": "C-1"}, {"address": A2, "reference": "C-2"},
+                                  {"address": A1, "reference": "C-3"}])
+    assert [(r["status"], r["same_as"]) for r in rows] == [("pending", None), ("pending", None), ("same", 1)]
+    r = client.post("/batches", json={"rows": [{"address": A1, "reference": "C-1"}, {"address": A2, "reference": "C-2"},
+                                               {"address": A1, "reference": "C-3"}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    done = wait_done(client, r.json()["batch_id"])
+    assert traced == [A1, A2]
+    first, _, third = done["rows"]
+    assert third["status"] == "done" and third["case_id"] == first["case_id"] and third["same_as"] == 1
+    assert third["exchange"] == first["exchange"]
+    assert done["done"] == 3 and done["total"] == 3
+    shared = {w["address"]: w for w in done["shared_wallets"]}
+    assert shared[SHARED]["rows"] == [1, 2, 3] and shared[SHARED]["references"] == ["C-1", "C-2", "C-3"]
+
+
+def test_a_batch_is_charged_for_distinct_rows_only(client, monkeypatch):
+    monkeypatch.setattr(rate_limit, "traces", rate_limit.SlidingWindowLimiter(2, 3600))
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}, {"address": A1}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    assert r.status_code == 202
+    wait_done(client, r.json()["batch_id"])
+
+
+def test_mixed_case_evm_addresses_count_as_one():
+    lower, upper = "0x" + "ab" * 20, "0x" + "AB" * 20
+    rows = batches.validate_rows([{"address": lower}, {"address": upper}, {"address": lower, "depth": 2}])
+    assert [r["status"] for r in rows] == ["pending", "same", "pending"]  # another depth is another trace
+
+
+def test_a_repeated_row_is_interrupted_with_its_first(client):
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}, {"address": A1}]))
+    silence(b.id)
+    batches.mark_interrupted()
+    body = batches.summary(batches.get(owner, b.id))
+    assert [r["status"] for r in body["rows"]] == ["interrupted", "interrupted"]

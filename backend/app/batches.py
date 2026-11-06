@@ -11,7 +11,9 @@ wallets two or more of these complaints share, and the exchanges they
 reached.
 
 Rows are checked before anything runs, so a typo is reported against its
-row number rather than discovered twenty minutes in. The batch is charged
+row number rather than discovered twenty minutes in. A row that repeats an
+earlier one (several complaints naming one wallet) is traced once: it says
+"same as row N" and shares that row's case. The batch is charged per trace
 against the client's hourly trace limit in full, up front; rows that never
 reach a trace are given back when the batch ends.
 
@@ -59,6 +61,8 @@ MAX_ROWS = 25
 BATCH_SLOTS = 1
 MAX_ACTIVE_BATCHES = 3
 PENDING, RUNNING, DONE, FAILED, INTERRUPTED = "pending", "running", "done", "failed", "interrupted"
+# A row repeating an earlier one (row["same_as"]); it takes that row's result when it ends.
+SAME = "same"
 # A store write that fails (a dropped connection, a busy SQLite file, a pool
 # with no free connection) is tried again after each of these waits, seconds.
 SAVE_RETRY_DELAYS = (0.5, 2.0, 5.0)
@@ -88,6 +92,7 @@ def validate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if len(rows) > MAX_ROWS:
         raise BatchError(f"A batch holds at most {MAX_ROWS} rows; this one has {len(rows)}. Split it.")
     clean, errors = [], []
+    first_of: dict[tuple, int] = {}  # what a row traces -> the first row that traces it
     for n, raw in enumerate(rows, start=1):
         address = str(raw.get("address") or "").strip()
         try:
@@ -114,15 +119,32 @@ def validate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not 1 <= depth <= 6:
             errors.append({"row": n, "error": "depth must be a whole number from 1 to 6."})
             continue
+        key = (address.lower() if chain.address_family == "evm" else address, chain.key, asset, direction, depth)
+        same_as = first_of.setdefault(key, n)
         clean.append({
             "row": n, "address": address, "chain": chain.key, "asset": asset,
             "direction": direction, "max_depth": depth,
             "reference": str(raw.get("reference") or "")[:120],
-            "status": PENDING, "case_id": None, "exchange": None, "confidence": None, "error": None,
+            "status": PENDING if same_as == n else SAME, "same_as": None if same_as == n else same_as,
+            "case_id": None, "exchange": None, "confidence": None, "error": None,
         })
     if errors:
         raise BatchError(f"{len(errors)} row{'s' if len(errors) != 1 else ''} cannot be traced as written.", errors)
     return clean
+
+
+def traces_needed(rows: list[dict[str, Any]]) -> int:
+    """How many traces the rows cost: repeats of an earlier row cost nothing."""
+    return sum(1 for r in rows if r["status"] == PENDING)
+
+
+def _settle_repeats(rows: list[dict[str, Any]]) -> None:
+    """A repeated row takes the result of the row it repeats once that ends."""
+    by_number = {r["row"]: r for r in rows}
+    for row in rows:
+        first = by_number.get(row.get("same_as"))
+        if first is not None and first["status"] in (DONE, FAILED, INTERRUPTED):
+            row.update({k: first[k] for k in ("status", "case_id", "exchange", "confidence", "error")})
 
 
 def create(owner: str, name: str, rows: list[dict[str, Any]]) -> models.Batch:
@@ -170,6 +192,7 @@ def _write(batch_id: str, rows: list[dict[str, Any]], status: str | None = None)
 
 
 def _save_rows(batch_id: str, rows: list[dict[str, Any]], status: str | None = None) -> None:
+    _settle_repeats(rows)
     _retrying("save", lambda: _write(batch_id, rows, status))
 
 
@@ -181,6 +204,7 @@ def fail(batch_id: str, message: str, rows: list[dict[str, Any]] | None = None) 
         for row in rows:
             if row["status"] in (PENDING, RUNNING):
                 row.update(status=FAILED, error=message)
+        _settle_repeats(rows)
         _retrying("save", lambda: _write(batch_id, rows, FAILED))
     except BatchGone:
         pass  # already ended elsewhere: leave what that wrote
@@ -292,6 +316,7 @@ def _interrupt_silent(stale_after: float, *criteria) -> int:
             for row in rows:
                 if row["status"] in (PENDING, RUNNING):
                     row["status"] = INTERRUPTED
+            _settle_repeats(rows)
             stmt = (update(models.Batch)
                     .where(models.Batch.id == batch.id, models.Batch.status == RUNNING,
                            beat.is_not_distinct_from(batch.heartbeat_at))
@@ -319,22 +344,26 @@ def summary(batch: models.Batch, with_correlation: bool = False, excluded=None) 
     out: dict[str, Any] = {
         "batch_id": batch.id, "name": batch.name, "created_at": batch.created_at,
         "status": batch.status, "total": len(rows),
-        "done": counts[DONE], "failed": counts[FAILED], "pending": counts[PENDING] + counts[RUNNING],
+        "done": counts[DONE], "failed": counts[FAILED],
+        "pending": counts[PENDING] + counts[RUNNING] + counts[SAME],
         "interrupted": counts[INTERRUPTED],
         "rows": rows,
     }
     if with_correlation:
-        case_ids = [r["case_id"] for r in rows if r.get("case_id")]
-        cases = [c for c in (models.get_case(cid) for cid in case_ids) if c is not None]
+        # A repeated row shares its first row's case: each case once, every row of it named.
+        rows_of: dict[str, list[dict[str, Any]]] = {}
+        for r in rows:
+            if r.get("case_id"):
+                rows_of.setdefault(r["case_id"], []).append(r)
+        cases = [c for c in (models.get_case(cid) for cid in rows_of) if c is not None]
         clusters = correlate(cases, min_cases=2, excluded=excluded)
-        by_case = {r["case_id"]: r for r in rows if r.get("case_id")}
         out["exchanges"] = Counter(r["exchange"] for r in rows if r.get("exchange")).most_common()
         out["shared_wallets"] = [{
             "address": c["address"], "chain": c["chain"],
             "inferred_exchange": c.get("inferred_exchange"), "risk_category": c.get("risk_category"),
-            "rows": sorted({by_case[m["case_id"]]["row"] for m in c["cases"] if m["case_id"] in by_case}),
-            "references": sorted({by_case[m["case_id"]]["reference"] for m in c["cases"]
-                                  if m["case_id"] in by_case and by_case[m["case_id"]]["reference"]}),
+            "rows": sorted({r["row"] for m in c["cases"] for r in rows_of.get(m["case_id"], [])}),
+            "references": sorted({r["reference"] for m in c["cases"] for r in rows_of.get(m["case_id"], [])
+                                  if r["reference"]}),
         } for c in clusters]
     return out
 

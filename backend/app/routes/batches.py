@@ -90,19 +90,19 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
     except batches.BatchError as exc:
         return JSONResponse(status_code=400, content={"detail": str(exc), "row_errors": exc.row_errors})
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
-    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client, cost=len(rows))
+    charged = batches.traces_needed(rows)  # a repeated row is traced once
+    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client, cost=charged)
     if refused is not None:
         wait, who = refused
         if who == "site":
             left = rate_limit.traces_total.remaining(rate_limit.TOTAL)
-            detail = (f"This batch needs {len(rows)} traces and this site can start {left} more "
+            detail = (f"This batch needs {charged} traces and this site can start {left} more "
                       f"this hour (limit {config.TRACES_PER_HOUR_TOTAL}). Send fewer rows, or wait.")
         else:
             left = rate_limit.traces.remaining(client)
-            detail = (f"This batch needs {len(rows)} traces and this connection can start {left} more "
+            detail = (f"This batch needs {charged} traces and this connection can start {left} more "
                       f"this hour (limit {config.TRACES_PER_HOUR_PER_CLIENT}). Send fewer rows, or wait.")
         raise HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(int(wait))})
-    charged = len(rows)
     with _active_lock:
         try:
             _admit_batch_locked(owner)  # again: another request may have started one meanwhile
