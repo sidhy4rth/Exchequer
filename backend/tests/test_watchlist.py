@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from contextlib import contextmanager
 
 import pytest
@@ -19,10 +20,17 @@ TORNADO = "0x722122df12d4e14e13ac3b6895a86e84145b6967"     # mixer in the threat
 STRANGER = "0x" + "9" * 40
 
 
-def tx(block, to, value=1.5, h=None):
+def tx(block, to, value=1.5, h=None, ts=None):
+    # Dated in 2023 unless `ts` says otherwise: history from before any watch.
     return Transaction(hash=h or f"0x{block:064x}", from_address=WALLET, to_address=to,
-                       value_native=value, value_wei=int(value * 1e18), timestamp=1_700_000_000 + block,
+                       value_native=value, value_wei=int(value * 1e18),
+                       timestamp=1_700_000_000 + block if ts is None else ts,
                        block_number=block, is_error=False, asset="ETH")
+
+
+def later(seconds=60):
+    """A time after a watch made now: a transfer it must report."""
+    return int(time.time()) + seconds
 
 
 class FakeChain:
@@ -54,6 +62,7 @@ def store(tmp_path, monkeypatch):
     engine = create_engine(f"sqlite:///{tmp_path / 'w.db'}", future=True)
     monkeypatch.setattr(models, "_engine", engine)
     models.init_db()
+    monkeypatch.setattr(watchlist, "chain_head", lambda *a, **k: None)  # never a real provider
 
 
 @pytest.fixture
@@ -125,7 +134,7 @@ def test_alerts_are_posted_to_the_webhook_and_the_url_is_never_echoed(chain):
     assert summary["webhook"] == "https://hooks.slack.com/…" and "secret" not in str(summary)
     chain.transfers = []
     watchlist.check_watch(w.id, source=chain)
-    chain.transfers = [tx(5, BINANCE_14)]
+    chain.transfers = [tx(5, BINANCE_14, ts=later())]
     watchlist.check_watch(w.id, source=chain, post=lambda url, payload: sent.append((url, payload)))
     assert sent and sent[0][0] == hook and "Binance" in sent[0][1]["text"]
 
@@ -133,7 +142,7 @@ def test_alerts_are_posted_to_the_webhook_and_the_url_is_never_echoed(chain):
 def test_watches_and_alerts_belong_to_their_browser(chain):
     w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
     watchlist.check_watch(w.id, source=chain)
-    chain.transfers = [tx(9, STRANGER)]
+    chain.transfers = [tx(9, STRANGER, ts=later())]
     watchlist.check_watch(w.id, source=chain)
     assert watchlist.list_watches(owner(BOB)) == []
     assert watchlist.list_alerts(owner(BOB)) == []
@@ -198,7 +207,7 @@ def test_a_transfer_to_an_inferred_deposit_address_counts_as_an_exchange(chain):
                      owner_hash=owner(ALICE))
     w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH", case_id="c1")
     watchlist.check_watch(w.id, source=chain)
-    chain.transfers = [tx(7, deposit, 2.0)]
+    chain.transfers = [tx(7, deposit, 2.0, ts=later())]
     (alert,) = watchlist.check_watch(w.id, source=chain)
     assert alert["kind"] == "exchange" and "probable OKX deposit" in alert["message"]
     assert alert["exchange"] == "OKX" and alert["case_id"] == "c1"
@@ -209,10 +218,12 @@ def test_a_transfer_to_an_inferred_deposit_address_counts_as_an_exchange(chain):
 TRON_WALLET = "TNXoiAJ3dct8Fjg4M9fkLFh9S2v9TXc32G"
 
 
-def trc20(seconds, to=STRANGER, value=100.0):
+def trc20(seconds, to=STRANGER, value=100.0, at=None):
     # TronGrid's TRC-20 endpoint gives no block number: block_number is 0.
-    return Transaction(hash=f"{seconds:064x}", from_address=TRON_WALLET, to_address=to,
-                       value_native=value, value_wei=int(value * 1e6), timestamp=1_760_000_000 + seconds,
+    # Dated in 2025 (before any watch) unless `at` gives the time.
+    stamp = 1_760_000_000 + seconds if at is None else at
+    return Transaction(hash=f"{stamp:064x}", from_address=TRON_WALLET, to_address=to,
+                       value_native=value, value_wei=int(value * 1e6), timestamp=stamp,
                        block_number=0, is_error=False, asset="USDT")
 
 
@@ -220,22 +231,25 @@ def test_a_tron_usdt_watch_sees_new_transfers_without_block_numbers(chain, monke
     monkeypatch.setattr(watchlist, "_classify", lambda *a, **k: ("moved", ""))
     w = watchlist.create_watch(owner(ALICE), TRON_WALLET, "tron", "USDT")
     chain.transfers = [trc20(10)]
-    assert watchlist.check_watch(w.id, source=chain) == []  # baseline
-    chain.transfers = [trc20(10), trc20(70, value=250.0)]
+    assert watchlist.check_watch(w.id, source=chain) == []  # history
+    chain.transfers = [trc20(10), trc20(0, value=250.0, at=later(70))]
     alerts = watchlist.check_watch(w.id, source=chain)
     assert len(alerts) == 1 and "250 USDT" in alerts[0]["message"]
     assert watchlist.check_watch(w.id, source=chain) == []
 
 
-def test_a_tron_watch_baselined_by_block_starts_again_rather_than_flooding(chain, monkeypatch):
+def test_a_legacy_tron_cursor_reads_from_the_watch_creation_time(chain, monkeypatch):
+    # Old code stored block 0 (or a block number) as a Tron cursor. Reading
+    # from "newest seen" then swallowed the first transfer; reading from 0
+    # would flood. Now it reads from when the watch was set.
     monkeypatch.setattr(watchlist, "_classify", lambda *a, **k: ("moved", ""))
     w = watchlist.create_watch(owner(ALICE), TRON_WALLET, "tron", "USDT")
-    with models.session() as s:  # what the old code stored: block 0
+    with models.session() as s:
         s.get(models.Watch, w.id).last_seen_block = 0
         s.commit()
     chain.transfers = [trc20(i) for i in range(1, 30)]
     assert watchlist.check_watch(w.id, source=chain) == []
-    chain.transfers.append(trc20(99))
+    chain.transfers.append(trc20(0, at=later(99)))
     assert len(watchlist.check_watch(w.id, source=chain)) == 1
 
 
@@ -354,6 +368,7 @@ OTHER_WALLET = "0x" + "8" * 40
 def _two_baselined_watches(chain, monkeypatch):
     a = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
     b = watchlist.create_watch(owner(BOB), OTHER_WALLET, "ethereum", "ETH")
+    chain.transfers = [tx(100, STRANGER)]
     for w in (a, b):
         watchlist.check_watch(w.id, source=chain)
     with models.session() as s:  # A is first in the queue
@@ -431,6 +446,7 @@ def test_a_failed_store_moves_the_watch_to_the_back_and_starts_the_cooldown(chai
 
 def test_a_long_or_control_char_label_is_cleaned_and_cut(chain, monkeypatch):
     w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    chain.transfers = [tx(1, STRANGER)]
     watchlist.check_watch(w.id, source=chain)
     label = "X" * 300 + "\x00\n<!channel>‮"
     monkeypatch.setattr(watchlist, "_classify", lambda *a, **k: ("exchange", label))
@@ -442,3 +458,133 @@ def test_a_long_or_control_char_label_is_cleaned_and_cut(chain, monkeypatch):
     for text in (alert.counterparty_label, alert.message, alert.tx_hash):
         assert not any(ch in text for ch in "\x00\n‮")
     assert len(alert.tx_hash) <= models.Alert.__table__.c.tx_hash.type.length
+
+
+# ---------------------------------------------------------------------------
+# The baseline is when the watch was set, not the first read that worked
+# (r2-g2-watchlist-alerts-0-2). With the watcher off the first read is the
+# first Check now, maybe hours later; after a provider outage it is the first
+# good read; on Tron an empty history used to store cursor 0 and start again.
+# ---------------------------------------------------------------------------
+class FullPageChain(FakeChain):
+    """A fake whose newest page was full, its oldest record at `oldest`."""
+
+    def __init__(self, oldest):
+        super().__init__()
+        self.oldest = oldest
+
+    def __call__(self, chain, asset):
+        fake = self
+
+        @contextmanager
+        def client():
+            class C:
+                def get_outgoing_transactions(self, address, limit=None):
+                    return list(fake.transfers)
+
+                def newest_page_info(self, address):
+                    return True, fake.oldest
+            yield C()
+        return client()
+
+
+def test_a_cash_out_between_watch_and_first_check_is_alerted(chain):
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    chain.transfers = [tx(100, STRANGER), tx(200, BINANCE_14, 25.0, ts=later(600))]
+    (alert,) = watchlist.check_watch(w.id, source=chain)
+    assert alert["kind"] == "exchange" and "25 ETH" in alert["message"]
+    assert watchlist.check_watch(w.id, source=chain) == []
+
+
+def test_after_a_provider_failure_the_first_good_read_still_alerts_moves_since_the_watch(chain):
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    chain.fail = True
+    watchlist.check_watch(w.id, source=chain)
+    chain.fail = False
+    chain.transfers = [tx(100, STRANGER), tx(150, STRANGER, ts=later(300))]
+    assert len(watchlist.check_watch(w.id, source=chain)) == 1
+
+
+def test_a_tron_watch_on_a_wallet_with_no_history_alerts_its_first_cash_out(chain, monkeypatch):
+    monkeypatch.setattr(watchlist, "_classify", lambda *a, **k: ("moved", ""))
+    w = watchlist.create_watch(owner(ALICE), TRON_WALLET, "tron", "USDT")
+    assert watchlist.check_watch(w.id, source=chain) == []  # nothing sent yet
+    with models.session() as s:
+        assert s.get(models.Watch, w.id).last_seen_block >= 1_000_000_000  # a time, never 0
+    chain.transfers = [trc20(0, at=later(60))]
+    assert len(watchlist.check_watch(w.id, source=chain)) == 1
+
+
+def test_an_empty_first_read_then_old_history_raises_nothing(chain):
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    assert watchlist.check_watch(w.id, source=chain) == []  # transiently empty
+    chain.transfers = [tx(b, BINANCE_14) for b in range(1, 51)]  # all from 2023
+    assert watchlist.check_watch(w.id, source=chain) == []
+    with models.session() as s:
+        assert s.get(models.Watch, w.id).last_seen_block == 50
+
+
+def test_a_full_first_page_newer_than_the_watch_says_some_may_be_missing(store):
+    full = FullPageChain(oldest=later(5))
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    full.transfers = [tx(300, STRANGER, ts=later(10))]
+    kinds = sorted(a["kind"] for a in watchlist.check_watch(w.id, source=full))
+    assert kinds == ["more", "moved"]
+    more = [a for a in watchlist.list_alerts(owner(ALICE)) if a["kind"] == "more"]
+    assert len(more) == 1 and "re-trace" in more[0]["message"]
+
+
+def test_a_watch_made_through_the_route_starts_at_the_chain_head(store, monkeypatch):
+    monkeypatch.setattr(watchlist, "chain_head", lambda chain, asset: 12_345)
+    made = TestClient(app).post("/watches", json={"address": WALLET, "chain": "ethereum"},
+                                headers={ownership.OWNER_HEADER: ALICE}).json()
+    assert made["baseline_set"] is True
+    fake = FakeChain()
+    fake.transfers = [tx(12_345, STRANGER, ts=later(-30)), tx(12_346, STRANGER, ts=later(-20))]
+    assert len(watchlist.check_watch(made["watch_id"], source=fake)) == 1
+
+
+def test_the_chain_head_is_one_read_under_a_short_deadline():
+    class Source:
+        def __init__(self, fail=False):
+            self.fail, self.budgets = fail, []
+
+        def __call__(self, chain, asset):
+            src = self
+
+            @contextmanager
+            def client():
+                class C:
+                    budget = None
+
+                    def head_block(self):
+                        src.budgets.append(self.budget)
+                        if src.fail:
+                            raise RuntimeError("down")
+                        return 777
+                yield C()
+            return client()
+    ok = Source()
+    assert watchlist.chain_head("ethereum", "ETH", source=ok) == 777
+    assert ok.budgets[0] is not None and ok.budgets[0].remaining() <= watchlist.HEAD_READ_SECONDS
+    assert watchlist.chain_head("ethereum", "ETH", source=Source(fail=True)) is None
+    assert watchlist.chain_head("tron", "USDT", source=ok) is None  # a Tron cursor is a time
+
+
+def test_etherscan_reads_the_head_block_in_one_request():
+    import httpx
+
+    from app.etherscan_client import EtherscanClient
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params))
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": "0x10d4f"})
+    client = EtherscanClient(api_key="k", chain_id=1, min_interval=0.0,
+                             client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+    @contextmanager
+    def source(chain, asset):
+        yield client
+    assert watchlist.chain_head("ethereum", "ETH", source=source) == 0x10D4F
+    assert len(seen) == 1 and seen[0]["module"] == "proxy" and seen[0]["action"] == "eth_blockNumber"

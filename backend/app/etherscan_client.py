@@ -945,6 +945,14 @@ class EtherscanClient:
         )
         return safe_int(result, 16)
 
+    def head_block(self) -> int:
+        """The chain's newest block number: one free-tier `proxy` request.
+
+        Where a new watch starts reading, so that what moved after it was set
+        is news and what came before is history."""
+        result = self._request({"module": "proxy", "action": "eth_blockNumber"})
+        return int(result, 16) if isinstance(result, str) else 0
+
     def get_transaction_receipt(self, tx_hash: str) -> dict[str, Any] | None:
         """The receipt of one transaction, with its event logs.
 

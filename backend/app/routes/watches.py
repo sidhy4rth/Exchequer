@@ -57,7 +57,8 @@ def add_watch(body: WatchRequest, http: Request) -> dict[str, Any]:
         raise HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(int(wait))})
     try:
         watch = watchlist.create_watch(owner, body.address, body.chain, body.asset,
-                                       body.note, body.case_id, body.webhook_url)
+                                       body.note, body.case_id, body.webhook_url,
+                                       read_head=watchlist.chain_head)
     except watchlist.WatchError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return watchlist.watch_summary(watch)

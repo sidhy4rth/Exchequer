@@ -18,10 +18,12 @@ hosts (plus any in EXCHEQUER_WEBHOOK_HOSTS), over https, without following
 redirects: a free-form URL would let anyone make this server call addresses
 inside its own network.
 
-The first check of a new watch only records where the history ends; what
-happened before the watch was set is not news. Reads skip the provider cache
-(api_budget.fresh_reads) -- the cache exists to repeat old answers, and the
-watch exists to see new ones.
+What happened before the watch was set is not news, and everything after it
+is: a new EVM watch starts at the chain's head block, a Tron watch at its
+creation time, and a watch whose head could not be read takes the first read
+as history only for transfers dated before it was set. Reads skip the
+provider cache (api_budget.fresh_reads) -- the cache exists to repeat old
+answers, and the watch exists to see new ones.
 """
 from __future__ import annotations
 
@@ -35,7 +37,7 @@ import httpx
 from sqlalchemy import delete, func, select, update
 
 from . import config, models, ownership
-from .api_budget import fresh_reads
+from .api_budget import TraceBudget, fresh_reads
 from .chain_data import open_source
 from .etherscan_client import normalize_address
 from .exchange_matcher import get_matcher
@@ -48,6 +50,11 @@ MAX_WATCHES_PER_OWNER = 25
 MAX_WATCHES_TOTAL = 500
 MIN_MANUAL_CHECK_SECONDS = 60
 FETCH_LIMIT = 50  # newest outgoing transfers read per check
+# Clock drift allowed between this server and the chain when a watch's
+# creation time is the line between history and news.
+ANCHOR_SKEW_SECONDS = 60
+# How long creating a watch may wait for the chain's head block.
+HEAD_READ_SECONDS = 5.0
 # Alerts kept per watch, newest first. Every check of a busy wallet can store a
 # page of them and nothing else removes them; 500 watches x 200 bounds the
 # table at about 100k rows on the free database.
@@ -112,8 +119,37 @@ def tx_url(chain_key: str, tx_hash: str) -> str:
 # ---------------------------------------------------------------------------
 # Creating and listing
 # ---------------------------------------------------------------------------
+def chain_head(chain_key: str, asset: str, source: Any = None) -> int | None:
+    """The chain's newest block now: where a new EVM watch starts reading.
+
+    One request, fresh, under a few seconds' deadline; None if it cannot be
+    had (the watch then dates its first read instead). A Tron watch's cursor
+    is a time, so it needs none."""
+    try:
+        chain = config.get_chain(chain_key)
+        if chain.address_family == "tron":
+            return None
+        with fresh_reads(), (source or open_source)(chain, asset) as client:
+            read = getattr(client, "head_block", None)
+            if read is None:
+                return None
+            client.budget = TraceBudget(HEAD_READ_SECONDS, 0.0)
+            head = int(read())
+        return head if head > 0 else None
+    except Exception as exc:  # noqa: BLE001 -- the watch is made either way
+        logger.info("Could not read the %s head for a new watch: %s", chain_key, type(exc).__name__)
+        return None
+
+
+def _anchor(created_at: str) -> int:
+    """When a watch was set, as a Unix time, less the allowed clock drift."""
+    from datetime import datetime
+    return int(datetime.fromisoformat(created_at).timestamp()) - ANCHOR_SKEW_SECONDS
+
+
 def create_watch(owner: str, address: str, chain_key: str | None, asset: str | None,
-                 note: str = "", case_id: str | None = None, webhook_url: str | None = None) -> models.Watch:
+                 note: str = "", case_id: str | None = None, webhook_url: str | None = None,
+                 read_head: Callable[[str, str], int | None] | None = None) -> models.Watch:
     try:
         chain = config.get_chain(chain_key)
     except config.UnknownChainError as exc:
@@ -126,6 +162,13 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
         raise WatchError(f"{chain.name} has no traceable asset called '{asset_symbol}'.")
     hook = validate_webhook(webhook_url)
     address = normalize_address(address)
+    # Where the watch starts, read before the store is opened: a Tron cursor
+    # is the creation time, an EVM one the head block now (None if unknown).
+    created = _now()
+    if chain.address_family == "tron":
+        start: int | None = _anchor(created)
+    else:
+        start = read_head(chain.key, asset_symbol) if read_head else None
 
     with models.session() as s:
         mine = s.scalar(select(func.count()).select_from(models.Watch)
@@ -148,7 +191,7 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
         watch = models.Watch(
             id=str(uuid.uuid4()), owner_hash=owner, chain=chain.key, asset=asset_symbol,
             address=address, note=(note or "")[:200], case_id=case_id, webhook_url=hook,
-            created_at=_now(), active=True,
+            created_at=created, last_seen_block=start, active=True,
         )
         s.add(watch)
         s.commit()
@@ -364,12 +407,14 @@ def check_watch(watch_id: str, source: Source = open_source,
             return []
         address, asset, chain_key = watch.address, watch.asset, watch.chain
         owner, last_seen, hook = watch.owner_hash, watch.last_seen_block, watch.webhook_url
-        case_id = watch.case_id
+        case_id, created_at = watch.case_id, watch.created_at
     try:
         chain = config.get_chain(chain_key)
         with fresh_reads(), source(chain, asset) as client:
             transfers = client.get_outgoing_transactions(address, limit=FETCH_LIMIT)
             unconfirmed = getattr(client, "confirmed_bound_applied", True) is False
+            page_info = getattr(client, "newest_page_info", None)
+            full_page, oldest = (page_info(address) if page_info else None) or (False, None)
     except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
         _finish_check(watch_id, error=f"Could not read the address this round ({type(exc).__name__}).")
         logger.warning("Watch %s: provider failure: %s", watch_id, exc)
@@ -385,21 +430,34 @@ def check_watch(watch_id: str, source: Source = open_source,
     try:
         position = _position_of(chain)
         newest = max((position(t) for t in transfers), default=0)
-        new_alerts: list[models.Alert] = []
-        inferred: Inferred = {}
-        if last_seen is None or (chain.address_family == "tron" and last_seen < _TRON_EPOCH_FLOOR):
-            # First check: the baseline. History before the watch is not news.
-            # A Tron watch whose cursor is below any real timestamp was baselined
-            # by block number, which TRC-20 transfers do not carry; start again.
-            seen_block = newest
+        read_cursor = last_seen  # the stored cursor, which _finish_check moves only from
+        anchor = _anchor(created_at)
+        more: models.Alert | None = None
+        if chain.address_family == "tron" and (last_seen or 0) < _TRON_EPOCH_FLOOR:
+            # Never read, or a cursor from the code that stored block numbers
+            # (TRC-20 transfers carry none): read from when the watch was set.
+            last_seen = anchor
+        if last_seen:
+            fresh = [t for t in transfers if position(t) > last_seen]
+            seen_block: int | None = max(last_seen, newest) if fresh else last_seen
         else:
-            fresh = sorted((t for t in transfers if position(t) > last_seen),
-                           key=lambda t: (position(t), t.hash))
-            inferred = inferred_for(chain.key, (t.to_address for t in fresh), owner)
-            new_alerts = [_alert(watch_id, owner, chain, address, asset, t, inferred) for t in fresh]
-            seen_block = max(last_seen, newest) if fresh else last_seen
+            # An EVM watch whose head was not known when it was set (or a
+            # legacy cursor of 0): what moved since it was set is news, and
+            # only what came before it is history.
+            fresh = [t for t in transfers if int(t.timestamp or 0) >= anchor]
+            seen_block = newest if transfers else None
+            if full_page and oldest and oldest > anchor:
+                more = _more_alert(watch_id, owner, asset, "More movements since this watch was set "
+                                   f"than one read returns ({FETCH_LIMIT}): some may be missing here; "
+                                   "re-trace the wallet to see them all.")
+        fresh.sort(key=lambda t: (position(t), t.hash))
+        inferred = inferred_for(chain.key, (t.to_address for t in fresh), owner)
+        new_alerts = [_alert(watch_id, owner, chain, address, asset, t, inferred) for t in fresh]
         out = [alert_summary(a, chain.key, case_id, inferred) for a in new_alerts]
-        if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts, expected=last_seen):
+        if more is not None:
+            out.append(alert_summary(more, chain.key, case_id))
+        if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts, more=more,
+                             expected=read_cursor):
             return []  # removed while we were reading, or another check got there first
     except Exception as exc:  # noqa: BLE001 -- one watch must not stop the rest
         logger.exception("Watch %s: could not store this check", watch_id)
@@ -408,7 +466,7 @@ def check_watch(watch_id: str, source: Source = open_source,
 
     if hook and out:
         for alert in out[:10]:
-            emoji = {"exchange": "🏦", "risk": "⚠️", "moved": "➡️"}[alert["kind"]]
+            emoji = {"exchange": "🏦", "risk": "⚠️", "moved": "➡️", "more": "ℹ️"}[alert["kind"]]
             text = f"{emoji} Exchequer watch: {alert['message']} — {alert['tx_url']}"
             try:
                 post(hook, {"text": text, "content": text[:1900], "alert": alert})
@@ -445,6 +503,19 @@ def _alert(watch_id: str, owner: str, chain: config.Chain, address: str, asset: 
     )
 
 
+def _more_alert(watch_id: str, owner: str, asset: str, message: str) -> models.Alert:
+    """The watch's one "more" row: movements a check knows of but did not
+    read. Its id is fixed per watch, so a later notice replaces it."""
+    from datetime import datetime, timezone
+    return models.Alert(
+        id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"exchequer-watch-more:{watch_id}")),
+        watch_id=watch_id, owner_hash=owner, created_at=_now(), kind="more",
+        message=plain_text(message, _MESSAGE_LEN), tx_hash="",
+        tx_time=int(datetime.now(tz=timezone.utc).timestamp()), value=0.0, asset=asset,
+        counterparty="", counterparty_label="", read=False,
+    )
+
+
 def _record_failure(watch_id: str, error: str) -> None:
     """A check that read the chain but could not store what it found. The
     time and the reason are written on their own; the cursor stays, so the
@@ -460,7 +531,8 @@ def _record_failure(watch_id: str, error: str) -> None:
 
 
 def _finish_check(watch_id: str, seen_block: int | None = None, error: str | None = None,
-                  alerts: list[models.Alert] | None = None, expected: int | None = None) -> bool:
+                  alerts: list[models.Alert] | None = None, more: models.Alert | None = None,
+                  expected: int | None = None) -> bool:
     """Record a check's outcome in one short transaction. False if the watch is
     gone, or if its cursor is no longer `expected` (what this check read).
 
@@ -479,6 +551,8 @@ def _finish_check(watch_id: str, seen_block: int | None = None, error: str | Non
             s.rollback()
             return False
         s.add_all(alerts or [])
+        if more is not None:
+            s.merge(more)  # replaces the watch's earlier "more" row, read or not
         s.flush()
         if alerts:
             keep = (select(models.Alert.id).where(models.Alert.watch_id == watch_id)

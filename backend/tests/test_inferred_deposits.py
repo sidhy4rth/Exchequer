@@ -43,7 +43,8 @@ def infer(case_id, deposit=DEPOSIT, exchange="OKX", key=None, seed=WALLET):
 
 def watched(chain, key=ALICE):
     w = watchlist.create_watch(owner(key), WALLET, "ethereum", "ETH")
-    watchlist.check_watch(w.id, source=chain)  # baseline
+    chain.transfers = [tx(1, "0x" + "4" * 40)]
+    watchlist.check_watch(w.id, source=chain)  # baseline: the cursor is block 1
     return w
 
 
