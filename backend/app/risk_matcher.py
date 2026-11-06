@@ -16,10 +16,13 @@ The categories, with very different investigative meaning:
               pays out from that pool, deliberately severing the link between
               input and output.
 
-  frozen      Tether has frozen the address's USDT, as recorded by the USDT
-              contract's own blacklist events. The issuer acted on it --
-              after a sanctions match, a law-enforcement request or a theft;
-              the event does not say which.
+  frozen      A stablecoin's issuer has frozen the address. In the label
+              files, always Tether's USDT, as recorded by the USDT contract's
+              own blacklist events; the on-disk store adds other issuers'
+              freezes (Circle's USDC, Paxos's PYUSD, ...), and each match
+              carries its token and issuer so nothing calls those Tether's.
+              The issuer acted on it -- after a sanctions match, a
+              law-enforcement request or a theft; the event does not say which.
 
   stolen      The address is a wallet the block explorer or a published
               scam list attributes to the perpetrator of a known hack or
@@ -69,6 +72,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from functools import lru_cache
@@ -113,6 +117,44 @@ CATEGORIES = (SANCTIONED, MIXER, FROZEN, STOLEN, GAMBLING, POISONING, SCAM, LAUN
 # the same money in any sense a report could defend.
 TERMINAL_CATEGORIES = frozenset({MIXER})
 
+# Where a match came from when it is not a label file (a file's own name).
+LABEL_STORE_ORIGIN = "label_store"
+# The entity scripts/import_tether_freezes.py writes for every USDT blacklist entry.
+TETHER_FREEZE_ENTITY = "Tether (USDT freeze)"
+# "USDC frozen by Circle", "PYUSD frozen by Paxos (PYUSD)", "XSGD frozen by its
+# issuer", "USDT frozen by Tether on 2021-08-05", "sUSDe holder restricted by issuer (...)".
+_FREEZE_TEXT = re.compile(r"^(?P<token>[A-Za-z0-9.]+) (?:frozen|holder restricted) by (?P<issuer>.+?)"
+                          r"(?: on \d{4}-\d{2}-\d{2})?(?: \([^)]*\))?$")
+
+
+def freeze_issuer(*texts: str | None) -> tuple[str | None, str | None]:
+    """(token, issuer) named by a freeze's entity or label; None where unsaid."""
+    for text in texts:
+        text = (text or "").strip()
+        if text == TETHER_FREEZE_ENTITY:
+            return "USDT", "Tether"
+        found = _FREEZE_TEXT.match(text)
+        if found:
+            issuer = found["issuer"].strip()
+            return found["token"], None if issuer in ("its issuer", "issuer", "a token issuer") else issuer
+    return None, None
+
+
+def freeze_parts(match: dict[str, Any]) -> tuple[str | None, str | None]:
+    """A frozen match's (token, issuer): as recorded, or read from its text on
+    a case stored before they were."""
+    if "token" in match or "issuer" in match:
+        return match.get("token"), match.get("issuer")
+    return freeze_issuer(match.get("entity"), match.get("label"))
+
+
+def is_tether_usdt_freeze(match: dict[str, Any]) -> bool:
+    """Tether froze this address's USDT. Only such a freeze may be called one
+    in a letter to Tether or in the report's summary: the store's 4,000-odd
+    freezes are other issuers' (USDC, XSGD, PYUSD, USDT0, ...). Exact token
+    and issuer, never a substring, so a USDT0 freeze is not one."""
+    return match.get("category") == FROZEN and freeze_parts(match) == ("USDT", "Tether")
+
 
 @dataclass(frozen=True)
 class RiskMatch:
@@ -125,13 +167,18 @@ class RiskMatch:
     source: str  # which published list, and when it was read
     depth: int  # hops from the victim-reported address
     value_received_native: float  # value that reached it within this trace
+    # Which label file (its name) or "label_store" the match came from; None
+    # when read live (TronScan). A freeze also names its token and issuer.
+    origin: str | None = None
+    token: str | None = None
+    issuer: str | None = None
 
     @property
     def is_terminal(self) -> bool:
         return self.category in TERMINAL_CATEGORIES
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "address": self.address,
             "category": self.category,
             "entity": self.entity,
@@ -140,7 +187,11 @@ class RiskMatch:
             "depth": self.depth,
             "value_received_native": round(self.value_received_native, 6),
             "is_terminal": self.is_terminal,
+            "origin": self.origin,
         }
+        if self.category == FROZEN:
+            out.update(token=self.token, issuer=self.issuer)
+        return out
 
     def describe(self, native_symbol: str = "ETH") -> str:
         """One sentence an investigator can paste into a report."""
@@ -167,11 +218,16 @@ class RiskMatch:
             )
         if self.category == FROZEN:
             # The USDT blacklist file is Tether's; the label store adds other
-            # issuers' freezes (Circle's USDC, PayPal's PYUSD, ...), whose label
-            # names the token.
-            issuer = "Tether" if "tether" in f"{self.label} {self.source}".lower() else "the token's issuer"
+            # issuers' freezes (Circle's USDC, PayPal's PYUSD, ...), whose entity
+            # names the token and the issuer.
+            token, issuer = ((self.token, self.issuer) if self.origin
+                             else freeze_issuer(self.entity, self.label))
+            if issuer is None and token is None and "tether" in f"{self.label} {self.source}".lower():
+                issuer = "Tether"  # an older record that names nothing else
+            issuer = issuer or "the token's issuer"
+            by = f"{issuer} ({token})" if token else issuer
             return (
-                f"Frozen by {issuer}: {self.address} — {self.label}, per {self.source}. "
+                f"Frozen by {by}: {self.address} — {self.label}, per {self.source}. "
                 f"{placement}. The issuer acted on this address; the freeze does not "
                 f"say why, and it is not a finding that any counterparty took part in "
                 f"anything. {issuer[0].upper() + issuer[1:]} can say, on a lawful request."
@@ -316,6 +372,8 @@ class RiskMatcher:
             meta = self.store.lookup(self.chain, address)
             if meta is not None and meta["category"] not in CATEGORIES:
                 return None
+            if meta is not None:
+                meta = {**meta, "origin": LABEL_STORE_ORIGIN}
         return meta
 
     def entries(self) -> list[tuple[str, dict[str, str]]]:
@@ -364,6 +422,8 @@ class RiskMatcher:
             if meta["category"] in TERMINAL_CATEGORIES:
                 data["is_terminal"] = True
 
+            token, issuer = (freeze_issuer(meta["entity"], meta["label"]) if meta["category"] == FROZEN
+                             else (None, None))
             matches.append(
                 RiskMatch(
                     address=node,
@@ -373,6 +433,9 @@ class RiskMatcher:
                     source=meta["source"],
                     depth=data.get("depth", 0),
                     value_received_native=value_in,
+                    origin=meta.get("origin"),
+                    token=token,
+                    issuer=issuer,
                 )
             )
 
@@ -543,6 +606,7 @@ def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
             "entity": entity,
             "label": value.get("label", entity),
             "source": value.get("source", default_source),
+            "origin": path.name,
         }
 
     logger.info("Loaded %d risk labels from %s", len(labels), path)

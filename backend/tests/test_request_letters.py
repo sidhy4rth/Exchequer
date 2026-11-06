@@ -208,3 +208,50 @@ def test_an_older_follow_on_without_its_route_points_to_the_report():
     result = follow_on_case()
     del result["follow_ons"][0]["route"]
     assert "Route to the swapping wallet: see the attached report" in draft("c1", result, "exchange")
+
+
+# ---------------------------------------------------------------------------
+# Only Tether's own USDT freezes go in the Tether letter (audit r1-labels-data-0)
+# ---------------------------------------------------------------------------
+CIRCLE = {"address": DEPOSIT, "category": "frozen", "entity": "USDC frozen by Circle",
+          "label": "USDC frozen by Circle", "origin": "label_store", "token": "USDC", "issuer": "Circle",
+          "source": "USDC contract freeze events (on-chain replay); evidence: stablecoin issuer action"}
+
+
+def test_a_circle_freeze_on_polygon_offers_no_tether_letter():
+    result = case(chain="polygon", chain_name="Polygon", asset="USDC", risk_matches=[CIRCLE])
+    assert all(letter["to"] != "tether" for letter in available(result))
+    with pytest.raises(LetterNotApplicable):
+        draft("case-1", result, "tether")
+
+
+def test_a_circle_freeze_on_ethereum_is_not_called_a_usdt_blacklist_freeze():
+    result = case(asset="USDC", risk_matches=[CIRCLE])
+    assert all(letter["to"] != "tether" for letter in available(result))
+
+
+def test_a_usdt0_freeze_is_not_a_usdt_blacklist_freeze():
+    usdt0 = {**CIRCLE, "entity": "USDT0 frozen by Tether/USDT0", "label": "USDT0 frozen by Tether/USDT0",
+             "token": "USDT0", "issuer": "Tether/USDT0"}
+    assert all(letter["to"] != "tether" for letter in available(case(risk_matches=[usdt0])))
+    # The same row from a case stored before issuers were recorded.
+    old = {k: v for k, v in usdt0.items() if k not in ("origin", "token", "issuer")}
+    assert all(letter["to"] != "tether" for letter in available(case(risk_matches=[old])))
+
+
+def test_a_tether_freeze_from_the_freeze_file_is_still_listed():
+    tether = {"address": DEPOSIT, "category": "frozen", "entity": "Tether (USDT freeze)",
+              "label": "USDT frozen by Tether on 2026-09-11", "origin": "frozen_labels.json",
+              "token": "USDT", "issuer": "Tether", "source": "Tether USDT contract on Ethereum, AddedBlackList event"}
+    text = draft("case-1", case(risk_matches=[tether, CIRCLE]), "tether")
+    assert "USDT frozen by Tether on 2026-09-11" in text and "USDC frozen by Circle" not in text
+
+
+@pytest.mark.parametrize("demo", [3, 11])
+def test_an_older_case_still_gets_its_tether_letter(demo):
+    import json
+
+    from app.routes import demos
+    result = next(r["result"] for r in json.loads(demos.RECORDED_DEMOS_PATH.read_text()) if r["demo"] == demo)
+    assert any(letter["to"] == "tether" for letter in available(result))
+    assert "AddedBlackList" in draft("case-1", result, "tether")

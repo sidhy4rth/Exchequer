@@ -29,7 +29,7 @@ from typing import Any
 from . import config
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
                      _when, _when_iso, attribution_kind)
-from .risk_matcher import _list_meta
+from .risk_matcher import _list_meta, is_tether_usdt_freeze
 
 EXCHANGE = "exchange"
 TETHER = "tether"
@@ -128,7 +128,12 @@ def _all_traces(result: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _frozen(result: dict[str, Any]) -> list[dict[str, Any]]:
-    return [m for t in _all_traces(result) for m in t.get("risk_matches") or [] if m.get("category") == "frozen"]
+    """Tether's own USDT freezes, on the chains where USDT is Tether's
+    blacklisting contract. Other issuers' freezes (Circle's USDC, ...) stay
+    in the report's screening notes: the Tether letter says each listed
+    address is on the USDT contract's blacklist."""
+    return [m for t in _all_traces(result) if t.get("chain") in USDT_CHAINS
+            for m in t.get("risk_matches") or [] if is_tether_usdt_freeze(m)]
 
 
 def _usdt_traces(result: dict[str, Any]) -> list[dict[str, Any]]:

@@ -334,3 +334,17 @@ def test_the_zero_address_is_never_flagged(tmp_path):
     path.write_text(json.dumps({"labels": {zero: {
         "category": "frozen", "entity": "Tether (USDT freeze)", "label": "USDT frozen by Tether"}}}))
     assert RiskMatcher.from_file(path).lookup(zero) is None
+
+
+
+def test_a_freeze_file_entry_is_tethers_usdt(tmp_path):
+    from app.risk_matcher import is_tether_usdt_freeze
+    path = tmp_path / "frozen_labels.json"
+    path.write_text(json.dumps({"labels": {HACK_ADDR: {
+        "category": "frozen", "entity": "Tether (USDT freeze)",
+        "label": "USDT frozen by Tether on 2025-01-01", "source": "Tether USDT contract on Ethereum"}}}))
+    matcher = RiskMatcher.from_file(None, extra_paths=(path,))
+    (match,) = matcher.annotate(make_graph([(SEED, HACK_ADDR, 5.0)], seed=SEED))
+    assert (match.origin, match.token, match.issuer) == ("frozen_labels.json", "USDT", "Tether")
+    assert is_tether_usdt_freeze(match.to_dict())
+    assert match.describe().startswith("Frozen by Tether (USDT):")

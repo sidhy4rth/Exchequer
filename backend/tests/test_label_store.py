@@ -150,7 +150,10 @@ def test_the_label_files_outrank_the_store(store_path):
 def test_a_freeze_by_another_issuer_is_not_attributed_to_tether():
     m = RiskMatch(address=addr("f2"), category="frozen", entity="USDC", label="USDC frozen by Circle",
                   source="USDC contract freeze events", depth=1, value_received_native=1.0)
-    assert m.describe().startswith("Frozen by the token's issuer:")
+    assert m.describe().startswith("Frozen by Circle (USDC):")
+    x = RiskMatch(address=addr("f4"), category="frozen", entity="XSGD frozen by its issuer",
+                  label="XSGD frozen by its issuer", source="XSGD freeze events", depth=1, value_received_native=1.0)
+    assert x.describe().startswith("Frozen by the token's issuer (XSGD):")
     t = RiskMatch(address=addr("f3"), category="frozen", entity="Tether", label="Frozen by Tether",
                   source="USDT blacklist", depth=1, value_received_native=1.0)
     assert t.describe().startswith("Frozen by Tether:")
@@ -372,3 +375,36 @@ def test_a_store_row_on_infrastructure_reads_as_nothing(tmp_path):
     # A label file's own entry on the same address still applies.
     filed = {BINANCE_14: {"category": SANCTIONED, "entity": "x", "label": "x", "source": "OFAC"}}
     assert RiskMatcher(filed, chain="ethereum", store=store).lookup(BINANCE_14)["category"] == SANCTIONED
+
+
+
+CIRCLE_FROZEN = addr("c17c1e")
+
+
+@pytest.fixture
+def freeze_store(tmp_path):
+    src = tmp_path / "freezes.csv"
+    with open(src, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerow(row(address=CIRCLE_FROZEN, chain="ethereum", category="stablecoin freeze",
+                       entity_or_incident="USDC frozen by Circle",
+                       sources="USDC contract freeze events (on-chain replay)"))
+    build(src, tmp_path / "freezes.db")
+    return LabelStore(tmp_path / "freezes.db")
+
+
+def test_a_store_freeze_carries_its_token_and_issuer(freeze_store):
+    # Audit r1-labels-data-0: the store's freezes are other issuers', and say so.
+    matcher = RiskMatcher({}, chain="ethereum", store=freeze_store)
+    graph = nx.DiGraph()
+    graph.add_node(CIRCLE_FROZEN, depth=1)
+    graph.add_edge(addr("51c7"), CIRCLE_FROZEN, value_native=1.0)
+    [match] = matcher.annotate(graph)
+    assert (match.category, match.token, match.issuer) == ("frozen", "USDC", "Circle")
+    assert match.to_dict()["issuer"] == "Circle" and match.describe().startswith("Frozen by Circle (USDC):")
+
+
+def test_a_store_row_is_marked_as_coming_from_the_store(store_path, freeze_store):
+    assert RiskMatcher({}, chain="ethereum", store=freeze_store).lookup(CIRCLE_FROZEN)["origin"] == "label_store"
+    assert RiskMatcher({}, chain="ethereum", store=LabelStore(store_path)).lookup(POISONER)["origin"] == "label_store"

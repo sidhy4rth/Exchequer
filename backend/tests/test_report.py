@@ -144,3 +144,21 @@ def test_a_case_stored_before_hashing_says_so_and_still_seals():
     text = render_text_report(build_report(stored(full_result())))
     assert "No evidence manifest was stored with this case" in text
     assert verify_sealed_text(text)
+
+
+def test_the_summary_names_the_issuer_for_a_circle_freeze():
+    # Audit r1-labels-data-0: a Circle freeze is not Tether's.
+    circle = {"address": MID, "category": "frozen", "entity": "USDC frozen by Circle", "label": "USDC frozen by Circle",
+              "origin": "label_store", "token": "USDC", "issuer": "Circle", "source": "USDC freeze events"}
+    xsgd = {**circle, "entity": "XSGD frozen by its issuer", "label": "XSGD frozen by its issuer",
+            "token": "XSGD", "issuer": None}
+    summary = build_report(stored({**full_result(), "risk_flags": ["frozen"], "risk_matches": [circle, xsgd]}))["summary"]
+    assert "USDT frozen by Tether" not in summary
+    assert "frozen by its token's issuer (USDC by Circle; XSGD by its issuer)" in summary
+
+
+def test_a_tether_freeze_still_says_tether():
+    tether = {"address": MID, "category": "frozen", "entity": "Tether (USDT freeze)",
+              "label": "USDT frozen by Tether on 2021-08-05", "source": "Tether USDT contract on Ethereum"}
+    summary = build_report(stored({**full_result(), "risk_flags": ["frozen"], "risk_matches": [tether]}))["summary"]
+    assert "had its USDT frozen by Tether" in summary

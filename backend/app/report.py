@@ -25,7 +25,7 @@ from typing import Any
 from . import config
 from .evidence import seal_text
 from .models import Case
-from .risk_matcher import list_freshness
+from .risk_matcher import freeze_parts, is_tether_usdt_freeze, list_freshness
 from .scoring import BAND_THRESHOLDS, CAP_WORDING
 
 REPORT_VERSION = "2.1"
@@ -339,8 +339,15 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
         extra += " At least one address in the trace is on a published sanctions list."
     if "mixer" in risk:
         extra += " The trace stopped at a mixer, whose payouts cannot be linked to its deposits."
-    if "frozen" in risk:
+    frozen = [m for m in result.get("risk_matches") or [] if m.get("category") == "frozen"]
+    if "frozen" in risk and frozen and all(is_tether_usdt_freeze(m) for m in frozen):
         extra += " At least one address in the trace has had its USDT frozen by Tether."
+    elif "frozen" in risk:
+        # Not every freeze is Tether's: the label store holds other issuers'.
+        named = sorted({f"{token} by {issuer or 'its issuer'}"
+                        for token, issuer in (freeze_parts(m) for m in frozen) if token})
+        extra += (" At least one address in the trace has been frozen by its token's issuer"
+                  + (f" ({'; '.join(named)})." if named else "."))
     if "reported" in risk:
         extra += (
             " TronScan, the Tron block explorer, carries a warning tag on at least one "
