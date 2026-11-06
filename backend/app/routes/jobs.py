@@ -171,7 +171,10 @@ async def job_events(job_id: str, http: Request) -> StreamingResponse:
                 quiet += POLL_SECONDS
                 if quiet >= HEARTBEAT_SECONDS:
                     quiet = 0.0
-                    yield ": still tracing\n\n"  # keeps proxies from closing an idle stream
+                    # A named event, not a comment: it keeps proxies from
+                    # closing an idle stream, and it reaches the page, whose
+                    # watchdog then knows the stream is alive.
+                    yield "event: heartbeat\ndata: {}\n\n"
         finally:
             _close_stream(job_id, token)
 

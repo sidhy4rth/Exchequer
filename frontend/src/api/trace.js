@@ -117,14 +117,20 @@ function settle(snapshot) {
   throw err
 }
 
+// A stream silent this long is treated as lost: while a trace runs the server
+// sends a heartbeat event every 15 s (routes/jobs.py).
+const STREAM_SILENCE_MS = 45_000
+
 function watchJob(jobId, onProgress) {
   return new Promise((resolve, reject) => {
     let finished = false
     let failures = 0
     let source = null
+    let watchdog = null
     const finish = async () => {
       if (finished) return
       finished = true
+      clearTimeout(watchdog)
       source?.close()
       try {
         const snap = await jobSnapshot(jobId)
@@ -143,14 +149,28 @@ function watchJob(jobId, onProgress) {
         await new Promise((r) => setTimeout(r, 1500))
       }
     }
+    // Poll instead of the stream. poll() then sees a lost job's 404 and says
+    // so, rather than leaving the progress bar spinning forever.
+    const fallBack = () => {
+      clearTimeout(watchdog)
+      if (finished || !source) return
+      source.close(); source = null
+      poll()
+    }
+    const alive = () => { failures = 0; clearTimeout(watchdog); watchdog = setTimeout(fallBack, STREAM_SILENCE_MS) }
     if (typeof EventSource === 'undefined') { poll(); return }
     source = new EventSource(`${BASE}/trace/jobs/${encodeURIComponent(jobId)}/events`)
-    source.addEventListener('progress', (e) => { failures = 0; try { onProgress?.(JSON.parse(e.data)) } catch { /* ignore */ } })
+    alive()
+    source.addEventListener('progress', (e) => { alive(); try { onProgress?.(JSON.parse(e.data)) } catch { /* ignore */ } })
+    source.addEventListener('heartbeat', alive)
     source.addEventListener('done', finish)
     source.addEventListener('failed', finish)
     source.onerror = () => {
       failures += 1
-      if (failures >= 3 && !finished) { source.close(); source = null; poll() }
+      // A reconnect that is refused (the new instance's 404 after a restart,
+      // a 502 while it comes back) closes the source for good, with no third
+      // error to wait for.
+      if (source && (source.readyState === EventSource.CLOSED || failures >= 3)) fallBack()
     }
   })
 }

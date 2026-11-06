@@ -200,3 +200,16 @@ def test_someone_else_cannot_stop_your_job(client, monkeypatch):
 
 def test_stopping_an_unknown_job_is_a_404(client):
     assert client.delete("/trace/jobs/nope", headers={ownership.OWNER_HEADER: "o" * 32}).status_code == 404
+
+
+def test_the_stream_sends_named_heartbeats(client, monkeypatch):
+    # A comment line never reaches the page's JavaScript; a named event does,
+    # so the browser can tell a quiet trace from a dead stream (4-5).
+    from app.routes import jobs as job_routes
+    monkeypatch.setattr(job_routes, "HEARTBEAT_SECONDS", 0.01)
+    monkeypatch.setattr(job_routes, "STREAM_MAX_SECONDS", 0.6)
+    job_id, gate = _running_job(client, monkeypatch)
+    with client.stream("GET", f"/trace/jobs/{job_id}/events") as stream:
+        text = "".join(stream.iter_text())
+    gate.set()
+    assert "event: heartbeat\ndata: {}\n\n" in text

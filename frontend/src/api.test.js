@@ -129,6 +129,56 @@ describe('background traces', () => {
     expect(await running).toEqual({ case_id: 'c9' })
   })
 
+  // A stand-in for the browser's EventSource: the test fires its events.
+  class FakeSource {
+    static CLOSED = 2
+    static last = null
+    constructor(url) { this.url = url; this.readyState = 0; this.listeners = {}; FakeSource.last = this }
+    addEventListener(type, fn) { (this.listeners[type] ??= []).push(fn) }
+    close() { this.readyState = 2 }
+  }
+
+  it('falls back to polling when the event stream closes after two errors', async () => {
+    // The server restarted: the stream drops (error, CONNECTING), the
+    // reconnect gets a 404 (error, CLOSED) and the browser stops retrying.
+    vi.stubGlobal('EventSource', FakeSource)
+    FakeSource.last = null
+    server([['POST', /\/trace\/jobs$/, () => [202, { job_id: 'j-lost', status: 'running', progress: {} }]]])
+    const { runTrace } = await import('./api')
+    const outcome = runTrace({ address: '0x' + '6'.repeat(40) }).then(() => 'resolved', (e) => e.message)
+    await vi.waitFor(() => expect(FakeSource.last).not.toBeNull())
+    const source = FakeSource.last
+    source.onerror()
+    source.readyState = 2
+    source.onerror()
+    expect(await outcome).toMatch(/lost/)
+  })
+
+  it('falls back to polling when the stream goes silent', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal('EventSource', FakeSource)
+      FakeSource.last = null
+      const calls = server([
+        ['POST', /\/trace\/jobs$/, () => [202, { job_id: 'j-quiet', status: 'running', progress: {} }]],
+        ['GET', /\/trace\/jobs\/j-quiet$/, () => [200, { job_id: 'j-quiet', status: 'done', progress: {}, result: { case_id: 'c9' } }]],
+      ])
+      const { runTrace } = await import('./api')
+      const outcome = runTrace({ address: '0x' + '7'.repeat(40) })
+      await vi.waitFor(() => expect(FakeSource.last).not.toBeNull())
+      // A heartbeat keeps the stream alive; then nothing at all for 45 s.
+      await vi.advanceTimersByTimeAsync(30_000)
+      FakeSource.last.listeners.heartbeat.forEach((fn) => fn({ data: '{}' }))
+      await vi.advanceTimersByTimeAsync(40_000)
+      expect(calls.some((c) => c.startsWith('GET') && c.includes('j-quiet'))).toBe(false)
+      await vi.advanceTimersByTimeAsync(6_000)
+      expect(await outcome).toEqual({ case_id: 'c9' })
+      expect(FakeSource.last.readyState).toBe(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('surfaces a failed job as an error with the backend detail', async () => {
     server([
       ['POST', /\/trace\/jobs$/, () => [202, { job_id: 'j3', status: 'running', progress: {} }]],
