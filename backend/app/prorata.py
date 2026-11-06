@@ -144,8 +144,8 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
         times_in = [t["timestamp"] for t in txs_in if t.get("timestamp")]
         times_out = [t["timestamp"] for t in txs_out if t.get("timestamp")]
         if not (blocks_in and blocks_out) and not (times_in and times_out):
-            return _unknown(sent, hops, capped, f"the transfers through {wallet} carry neither blocks nor times "
-                                        "to bound the window")
+            return _unknown(sent, hops, capped,
+                            f"the transfers through {wallet} carry neither blocks nor times to bound the window")
         start_block, end_block = (min(blocks_in), max(blocks_out)) if blocks_in and blocks_out else (0, 0)
         start_ts = min(times_in) if times_in else 0
         end_ts = max(times_out) if times_out else 0
@@ -158,7 +158,8 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
             else:
                 (received, complete), paid = incoming_between(wallet, start_block, end_block, start_ts, end_ts), []
         except Exception as exc:  # noqa: BLE001 -- an estimate is never worth a failed trace
-            return _unknown(sent, hops, capped, f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})")
+            return _unknown(sent, hops, capped,
+                            f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})")
         if not complete:
             return _unknown(sent, hops, capped, f"{wallet} received too many transfers in the window to read in full")
 
