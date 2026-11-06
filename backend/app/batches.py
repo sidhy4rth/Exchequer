@@ -12,12 +12,14 @@ reached.
 
 Rows are checked before anything runs, so a typo is reported against its
 row number rather than discovered twenty minutes in. The batch is charged
-against the client's hourly trace limit in full, up front.
+against the client's hourly trace limit in full, up front; rows that never
+reach a trace are given back when the batch ends.
 
 One trace at a time, sharing the server's running ceiling with everyone
 else: a batch is patient, an investigator at the console is not. A restart
 stops a batch; the rows already traced keep their cases and the rest are
-marked interrupted.
+marked interrupted. A batch always ends: done, or failed with each
+unfinished row saying why -- never 'running' with no runner behind it.
 """
 from __future__ import annotations
 
@@ -31,6 +33,8 @@ from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from . import config, models
 from .correlation import correlate
@@ -46,6 +50,12 @@ MAX_ROWS = 25
 BATCH_SLOTS = 1
 MAX_ACTIVE_BATCHES = 3
 PENDING, RUNNING, DONE, FAILED, INTERRUPTED = "pending", "running", "done", "failed", "interrupted"
+# A store write that fails (a dropped connection, a busy SQLite file, a pool
+# with no free connection) is tried again after each of these waits, seconds.
+SAVE_RETRY_DELAYS = (0.5, 2.0, 5.0)
+_STORE_ERRORS = (DBAPIError, PoolTimeoutError)
+_sleep = time.sleep  # tests skip the waits
+STORE_GAVE_UP = "Stopped: the case store could not be written. Run these rows again."
 
 
 class BatchError(ValueError):
@@ -109,7 +119,25 @@ def create(owner: str, name: str, rows: list[dict[str, Any]]) -> models.Batch:
     return batch
 
 
-def _save_rows(batch_id: str, rows: list[dict[str, Any]], status: str | None = None) -> None:
+def _retrying(what: str, fn):
+    """fn(), tried again after each of SAVE_RETRY_DELAYS when the store fails."""
+    for delay in (*SAVE_RETRY_DELAYS, None):
+        try:
+            return fn()
+        except _STORE_ERRORS as exc:
+            if delay is None:
+                raise
+            logger.warning("Batch store %s failed (%s); trying again in %.1f s", what, type(exc).__name__, delay)
+            _sleep(delay)
+
+
+def _load_rows(batch_id: str) -> list[dict[str, Any]]:
+    with models.session() as s:
+        batch = s.get(models.Batch, batch_id)
+        return json.loads(batch.rows_json) if batch else []
+
+
+def _write(batch_id: str, rows: list[dict[str, Any]], status: str | None = None) -> None:
     with models.session() as s:
         batch = s.get(models.Batch, batch_id)
         if batch is None:
@@ -120,41 +148,73 @@ def _save_rows(batch_id: str, rows: list[dict[str, Any]], status: str | None = N
         s.commit()
 
 
-def run(batch_id: str, owner: str, acquire, release, trace_fn, store_fn) -> None:
+def _save_rows(batch_id: str, rows: list[dict[str, Any]], status: str | None = None) -> None:
+    _retrying("save", lambda: _write(batch_id, rows, status))
+
+
+def fail(batch_id: str, message: str, rows: list[dict[str, Any]] | None = None) -> None:
+    """End the batch failed, every unfinished row saying why. Best effort:
+    never raises (a restart still marks it interrupted)."""
+    try:
+        rows = rows or _retrying("load", lambda: _load_rows(batch_id))
+        for row in rows:
+            if row["status"] in (PENDING, RUNNING):
+                row.update(status=FAILED, error=message)
+        _retrying("save", lambda: _write(batch_id, rows, FAILED))
+    except Exception:  # noqa: BLE001 -- the caller is already handling a failure
+        logger.exception("Batch %s could not be marked failed", batch_id)
+
+
+def run(batch_id: str, owner: str, acquire, release, trace_fn, store_fn, record_fn=None) -> None:
     """Trace every pending row in order. Injected callables keep this testable:
-    acquire/release a running slot, trace a TraceRequest, store a payload."""
-    with models.session() as s:
-        batch = s.get(models.Batch, batch_id)
-        rows = json.loads(batch.rows_json) if batch else []
-    for row in rows:
-        if row["status"] != PENDING:
-            continue
-        row["status"] = RUNNING
-        _save_rows(batch_id, rows)
-        while not acquire():
-            time.sleep(2)  # wait for a free slot rather than refusing
-        try:
-            request = TraceRequest(address=row["address"], chain=row["chain"], asset=row["asset"],
-                                   direction=row["direction"], max_depth=row["max_depth"])
-            payload = store_fn(trace_fn(request), request, owner)
-            row.update(status=DONE, case_id=payload.get("case_id"), exchange=payload.get("exchange"),
-                       confidence=payload.get("confidence"))
-        except HTTPException as exc:
-            row.update(status=FAILED, error=str(exc.detail)[:300])
-        except Exception:  # noqa: BLE001 -- one bad row must not stop the batch
-            logger.exception("Batch %s row %s failed", batch_id, row["row"])
-            row.update(status=FAILED, error="The trace failed unexpectedly.")
-        finally:
-            release()
-        _save_rows(batch_id, rows)
-    _save_rows(batch_id, rows, status=DONE)
+    acquire/release a running slot, trace a TraceRequest, store a payload,
+    record (audit) a stored payload.
+
+    Store writes are retried; if the store still cannot be written the batch
+    ends failed rather than staying 'running' with nothing behind it."""
+    rows: list[dict[str, Any]] = []
+    try:
+        rows = _retrying("load", lambda: _load_rows(batch_id))
+        for row in rows:
+            if row["status"] != PENDING:
+                continue
+            row["status"] = RUNNING
+            _save_rows(batch_id, rows)
+            while not acquire():
+                time.sleep(2)  # wait for a free slot rather than refusing
+            payload = None
+            try:
+                request = TraceRequest(address=row["address"], chain=row["chain"], asset=row["asset"],
+                                       direction=row["direction"], max_depth=row["max_depth"])
+                payload = store_fn(trace_fn(request), request, owner)
+                row.update(status=DONE, case_id=payload.get("case_id"), exchange=payload.get("exchange"),
+                           confidence=payload.get("confidence"))
+            except HTTPException as exc:
+                row.update(status=FAILED, error=str(exc.detail)[:300])
+            except Exception:  # noqa: BLE001 -- one bad row must not stop the batch
+                logger.exception("Batch %s row %s failed", batch_id, row["row"])
+                row.update(status=FAILED, error="The trace failed unexpectedly.")
+            finally:
+                release()
+            if record_fn is not None and row["status"] == DONE:
+                try:
+                    record_fn(payload)
+                except Exception:  # noqa: BLE001 -- the case is stored; the row stays done
+                    logger.exception("Batch %s row %s: audit failed", batch_id, row["row"])
+            _save_rows(batch_id, rows)
+        _save_rows(batch_id, rows, status=DONE)
+    except Exception:  # noqa: BLE001 -- the batch must not stay 'running' with no runner
+        logger.exception("Batch %s stopped", batch_id)
+        fail(batch_id, STORE_GAVE_UP, rows)
 
 
-def start(batch_id: str, owner: str, acquire, release, trace_fn, store_fn, on_done=None) -> None:
-    """Run the batch in its own thread; `on_done()` once it ends, however it ends."""
+def start(batch_id: str, owner: str, acquire, release, trace_fn, store_fn, on_done=None,
+          record_fn=None) -> None:
+    """Run the batch in its own thread; `on_done()` once it ends, however it
+    ends. Raises if no thread can be started: the caller then fails the batch."""
     def target() -> None:
         try:
-            run(batch_id, owner, acquire, release, trace_fn, store_fn)
+            run(batch_id, owner, acquire, release, trace_fn, store_fn, record_fn)
         finally:
             if on_done is not None:
                 on_done()

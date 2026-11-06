@@ -149,14 +149,15 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
     return payload
 
 
-def record_trace(payload: dict[str, Any]) -> None:
+def record_trace(payload: dict[str, Any], via: str | None = None) -> None:
     """Audit a finished trace (CLAUDE.md rule 5): what kind of trace, not whose.
 
     No address and no NCRP number goes into the detail: until R24 the audit
     trail is a log line, and logs are no place for a complaint's particulars.
+    `via` names a path other than the API and jobs ("batch").
     """
     intake = payload.get("intake") or {}
-    audit.record("case.trace", case_id=payload.get("case_id"), detail={
+    detail = {
         "chain": payload.get("chain"),
         "asset": payload.get("asset"),
         "direction": payload.get("direction"),
@@ -164,7 +165,10 @@ def record_trace(payload: dict[str, Any]) -> None:
         "payments": len(intake.get("payments") or []),
         "saved": bool(payload.get("case_id")),
         "exchange_reached": bool(payload.get("exchange")),
-    })
+    }
+    if via:
+        detail["via"] = via
+    audit.record("case.trace", case_id=payload.get("case_id"), detail=detail)
 
 
 def record_trace_safely(payload: dict[str, Any]) -> None:

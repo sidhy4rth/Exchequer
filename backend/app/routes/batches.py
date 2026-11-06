@@ -9,6 +9,7 @@ upload.
 """
 from __future__ import annotations
 
+import logging
 import threading
 from typing import Any
 
@@ -16,9 +17,10 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from .. import batches, config, ownership, pipeline, rate_limit
+from .. import audit, batches, config, ownership, pipeline, rate_limit
 from . import casebook, cases
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -54,6 +56,12 @@ def _acquire() -> bool:
 def _release() -> None:
     cases.release()
     _batch_slots.release()
+
+
+def _refund(client: str, rows: int) -> None:
+    if rows > 0:
+        rate_limit.traces.refund(client, rows)
+        rate_limit.traces_total.refund(rate_limit.TOTAL, rows)
 
 
 def _admit_batch(owner: str) -> None:
@@ -94,20 +102,41 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
             detail = (f"This batch needs {len(rows)} traces and this connection can start {left} more "
                       f"this hour (limit {config.TRACES_PER_HOUR_PER_CLIENT}). Send fewer rows, or wait.")
         raise HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(int(wait))})
+    charged = len(rows)
     with _active_lock:
         try:
             _admit_batch_locked(owner)  # again: another request may have started one meanwhile
-        except HTTPException:
-            rate_limit.traces.refund(client, len(rows))
-            rate_limit.traces_total.refund(rate_limit.TOTAL, len(rows))
+            batch = batches.create(owner, body.name, rows)
+        except Exception:
+            _refund(client, charged)
             raise
-        batch = batches.create(owner, body.name, rows)
         _active[batch.id] = owner
+    audit.record("batch.create", detail={"rows": len(rows)})
+
+    # Rows that never reach a trace (the store failed, the batch was stopped)
+    # are given back to the hourly allowance when the batch ends.
+    traced = [0]
+
+    def trace(request):
+        traced[0] += 1
+        return pipeline.run_trace(request)
 
     def done(batch_id: str = batch.id) -> None:
         with _active_lock:
             _active.pop(batch_id, None)
-    batches.start(batch.id, owner, _acquire, _release, pipeline.run_trace, cases.store_result, on_done=done)
+        _refund(client, charged - traced[0])
+
+    def record(payload: dict[str, Any]) -> None:
+        cases.record_trace(payload, via="batch")
+    try:
+        batches.start(batch.id, owner, _acquire, _release, trace, cases.store_result, on_done=done,
+                      record_fn=record)
+    except Exception as exc:  # noqa: BLE001 -- e.g. "can't start new thread" under memory pressure
+        logger.error("Batch %s could not be started: %s", batch.id, type(exc).__name__)
+        batches.fail(batch.id, "The batch could not be started. Send it again in a minute.")
+        done()
+        raise HTTPException(status_code=503, headers={"Retry-After": "60"},
+                            detail="The server could not start this batch right now. Try again in a minute.") from exc
     return JSONResponse(status_code=202, content=batches.summary(batch))
 
 

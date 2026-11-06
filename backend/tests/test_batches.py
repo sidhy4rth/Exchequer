@@ -32,6 +32,8 @@ def fake_trace(request):
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(models, "_engine", create_engine(f"sqlite:///{tmp_path / 'b.db'}", future=True))
     models.init_db()
+    for name in ("traces", "traces_total"):  # earlier tests spent this client's hour
+        monkeypatch.setattr(rate_limit, name, rate_limit.SlidingWindowLimiter(100, 3600))
     monkeypatch.setattr(pipeline, "run_trace", fake_trace)
     with TestClient(app) as c:
         yield c
@@ -103,3 +105,92 @@ def test_cost_limiter_is_all_or_nothing():
     assert lim.remaining("k", now=1) == 2
     assert lim.check("k", now=1, cost=2) is None
     assert lim.check("k", now=61, cost=3) is None  # the first three expired
+
+
+def wait_settled(batch_id, owner_key=ALICE, timeout=10.0):
+    """The batch as stored once it has left 'running' (None if it never does)."""
+    owner = ownership.owner_hash(owner_key)
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        batch = batches.get(owner, batch_id)
+        if batch is not None and batch.status != "running":
+            return batches.summary(batch)
+        time.sleep(0.05)
+    return None
+
+
+@pytest.fixture
+def no_waits(monkeypatch):
+    monkeypatch.setattr(batches, "_sleep", lambda seconds: None, raising=False)
+
+
+def flaky_batch_sessions(monkeypatch, fail_on: set[int]):
+    """models.session() raises OperationalError on these calls (1-based) made
+    from a batch thread; the test's own polling is left alone."""
+    import threading
+
+    from sqlalchemy.exc import OperationalError
+    real, calls = models.session, []
+
+    def session():
+        if threading.current_thread().name.startswith("batch-"):
+            calls.append(1)
+            if len(calls) in fail_on:
+                raise OperationalError("UPDATE batches", {}, Exception("server closed the connection"))
+        return real()
+    monkeypatch.setattr(models, "session", session)
+    return calls
+
+
+def test_a_save_that_fails_once_does_not_stop_the_batch(client, monkeypatch, no_waits):
+    flaky_batch_sessions(monkeypatch, fail_on={3})  # the save after row 1 is traced
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    done = wait_settled(r.json()["batch_id"])
+    assert done is not None and done["status"] == "done" and done["done"] == 2
+
+
+def test_a_store_that_never_saves_ends_the_batch_failed_not_running(client, monkeypatch, no_waits):
+    from sqlalchemy.exc import OperationalError
+
+    def never(*args, **kwargs):
+        raise OperationalError("UPDATE batches", {}, Exception("quota exceeded"))
+    monkeypatch.setattr(batches, "_save_rows", never)
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    body = wait_settled(r.json()["batch_id"])
+    assert body is not None and body["status"] == "failed"
+    assert all(row["status"] == "failed" and "could not be written" in row["error"] for row in body["rows"])
+
+
+def test_rows_that_never_ran_are_refunded(client, monkeypatch, no_waits):
+    from sqlalchemy.exc import OperationalError
+    monkeypatch.setattr(rate_limit, "traces", rate_limit.SlidingWindowLimiter(10, 3600))
+
+    def never(*args, **kwargs):
+        raise OperationalError("UPDATE batches", {}, Exception("quota exceeded"))
+    monkeypatch.setattr(batches, "_save_rows", never)
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}, {"address": A3}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    assert wait_settled(r.json()["batch_id"]) is not None
+    for _ in range(100):  # the refund runs as the batch thread ends
+        if rate_limit.traces.remaining("testclient") == 10:
+            break
+        time.sleep(0.02)
+    assert rate_limit.traces.remaining("testclient") == 10
+
+
+def test_a_batch_that_cannot_start_is_marked_failed(client, monkeypatch):
+    from app.routes import batches as batch_routes
+    monkeypatch.setattr(rate_limit, "traces", rate_limit.SlidingWindowLimiter(10, 3600))
+
+    def cannot(*args, **kwargs):
+        raise RuntimeError("can't start new thread")
+    monkeypatch.setattr(batches, "start", cannot)
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    assert r.status_code == 503
+    assert rate_limit.traces.remaining("testclient") == 10
+    assert not batch_routes._active
+    (listed,) = client.get("/batches", headers={ownership.OWNER_HEADER: ALICE}).json()["batches"]
+    assert listed["status"] == "failed"
