@@ -80,24 +80,23 @@ RUN groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 
 # The provider response cache also lives on the volume (beside the case
-# store, by default), so a redeploy does not forget every response; and the
-# demo addresses are traced in the background at startup so the first real
-# request finds them cached rather than paying the cold cost.
-ENV EXCHEQUER_WARM_CACHE=1
+# store, by default), so a redeploy does not forget every response.
 
 # No interactive API docs on the public site: they map every endpoint and
 # Swagger UI needs a looser content policy than the app (security_headers.py).
 ENV EXCHEQUER_API_DOCS=0
 
-# No EXCHEQUER_TRUST_PROXY here: a host with no proxy in front would then key
+# Nothing that runs in the background or trusts a proxy is turned on here:
+# each host opts in, in its own settings (render.yaml for Render). An image
+# that turned them on relied on every host turning them off again, and a host
+# whose settings drifted ran them anyway. On a host with a lasting disk:
+#   EXCHEQUER_WARM_CACHE=1  trace the demos at startup so they answer from cache
+#   EXCHEQUER_WATCHER=1     re-read watched addresses every 10 minutes
+#   EXCHEQUER_BACKUPS=1     a daily snapshot of a SQLite store on the volume
+# (on a temporary disk they stay off unless set to "force"; config.host_flag).
+# No EXCHEQUER_TRUST_PROXY either: a host with no proxy in front would then key
 # every limit on a header the client wrote. Render and Railway are detected
 # from their own variables (config.proxy_mode); anything else sets it itself.
-
-# Re-read watched addresses every 10 minutes (watchlist.py).
-ENV EXCHEQUER_WATCHER=1
-
-# A daily snapshot of the store on the volume, last 7 kept (backups.py).
-ENV EXCHEQUER_BACKUPS=1
 
 WORKDIR /app/backend
 EXPOSE 8000

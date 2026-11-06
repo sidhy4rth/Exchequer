@@ -25,6 +25,11 @@ jobs:
       # Set the repository variable EXPECT_DEMO_CODE to 1 once the demo code
       # is on: the canary then goes red if the site is ever open to anyone.
       EXPECT_DEMO_CODE: ${{ vars.EXPECT_DEMO_CODE }}
+      # What render.yaml gives the service; the canary fails when it has drifted.
+      # Opt-in: set the repository variables EXPECT_HEALTH_TOKEN=1 and
+      # EXPECT_WATCHER=0 once Render's Environment matches render.yaml.
+      EXPECT_HEALTH_TOKEN: ${{ vars.EXPECT_HEALTH_TOKEN }}
+      EXPECT_WATCHER: ${{ vars.EXPECT_WATCHER }}
     defaults:
       run:
         working-directory: frontend

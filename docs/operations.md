@@ -26,15 +26,15 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_CLIENT_IP_HEADER` | `cf-connecting-ip` | In `render` mode, a header the edge sets to the connecting address and overwrites if the client sent one (Cloudflare's). `none` ignores it. |
 | `EXCHEQUER_PROXY_HOPS` | 0 (not measured) | In `render` mode, how many proxies append to `X-Forwarded-For` after the client. Set it only from a measurement: `GET /health/detail` with `X-Exchequer-Probe-Me: <your public address>` answers `client_ip` with fingerprints (never addresses), whether each header equals you, and the value to set. Check from two networks. |
 | `EXCHEQUER_API_DOCS` | on (off in the image) | `/docs`, `/redoc`, `/openapi.json`. |
-| `EXCHEQUER_WATCHER` | off (on in the image; off in `render.yaml`) | Re-read watched addresses in the background. Only worth it on a host that stays awake: on one that sleeps when idle (Render's free plan) the watcher sleeps too. The watchlist and `/health/detail` report the last check and call it stale after three missed intervals. |
+| `EXCHEQUER_WATCHER` | off | Re-read watched addresses in the background. Only worth it on a host that stays awake: on one that sleeps when idle (Render's free plan) the watcher sleeps too, so on a temporary disk `1` is ignored and only `force` turns it on. The watchlist and `/health/detail` report the last check and call it stale after three missed intervals. |
 | `EXCHEQUER_WATCH_INTERVAL` | 600 | Seconds between checks of one watch (minimum 60). |
 | `EXCHEQUER_WEBHOOK_HOSTS` | — | Comma-separated hosts alert webhooks may post to, beyond Slack, Discord and Google Chat. |
-| `EXCHEQUER_BACKUPS` | off (on in the image) | A daily snapshot of the store in `backups/` beside it. |
+| `EXCHEQUER_BACKUPS` | off | A daily snapshot of a SQLite store in `backups/` beside it. Ignored on a temporary disk (`force` overrides). |
 | `EXCHEQUER_BACKUP_KEEP` | 7 | How many daily snapshots to keep. |
 | `EXCHEQUER_BACKUP_TOKEN` | — | Bearer token for `GET /admin/backup`. Unset, the endpoint answers 404. |
-| `EXCHEQUER_HEALTH_TOKEN` | — (Render generates one) | Bearer token for `GET /health/detail`: key status, per-chain detail, API budget, warm-cache status. Unset, the endpoint answers 404. Public `/health` says only `{"status": "ok"}` and `"access"` (`open`, `code` or `closed`); `/chains` is the public list of what the site can trace. |
+| `EXCHEQUER_HEALTH_TOKEN` | — (`render.yaml` generates one) | Bearer token for `GET /health/detail`: key status, per-chain detail, API budget, warm-cache status, and under `runtime` which background jobs and proxy setting this instance actually runs with. Unset, the endpoint answers 404. Public `/health` says only `{"status": "ok"}` and `"access"` (`open`, `code` or `closed`); `/chains` is the public list of what the site can trace. |
 | `EXCHEQUER_TEMPORARY_DISK` | on when Render sets `RENDER=true`, else off | Whether a restart wipes the disk. `/health/detail` → `storage` then marks a SQLite case store and the provider cache as temporary: on Render's free plan, an empty `DATABASE_URL` means every stored case is lost when the instance sleeps. `0` or `1` overrides the guess. |
-| `EXCHEQUER_WARM_CACHE` | off (on in the image) | Trace the demo addresses at startup so they answer from cache. |
+| `EXCHEQUER_WARM_CACHE` | off | Trace the demo addresses at startup so they answer from cache. Ignored on a temporary disk or with the provider cache in memory only (`force` overrides). |
 
 ## Endpoints added in October 2026
 
@@ -77,6 +77,14 @@ to `main`. The free instance has no disk and sleeps after 15 idle minutes, so:
   (the recorded demos open instantly instead);
 - the first visit after a sleep waits for the container to start; the
   monitoring workflows knock on `/health` before they check anything.
+
+The image turns no background job on (watcher, snapshots, warm-up) and trusts
+no proxy header: `render.yaml` sets what the service needs. Values added to
+`render.yaml` after the service was created reach it only through a Blueprint
+sync (Dashboard → the Blueprint → Manual sync) or by setting them by hand in
+Environment; `/health/detail` shows what the instance runs with under
+`runtime`, and the site canary fails when the health token or the watcher
+setting has drifted.
 
 The monitors read the site address from the repository variable `SITE_URL`
 (`gh variable set SITE_URL --body https://<service>.onrender.com`).
@@ -149,7 +157,7 @@ real Postgres, including adopting a store made before migrations.
 
 Two copies, for two different accidents:
 
-- **On the volume:** with `EXCHEQUER_BACKUPS` on (the image turns it on), the
+- **On the volume:** with `EXCHEQUER_BACKUPS` on (a host with a lasting disk sets it), the
   server writes `backups/exchequer-YYYY-MM-DD.db.gz` beside the store once a
   day and keeps the last 7. That covers a bad deploy, a broken migration or a
   mistaken delete. It does not cover losing the volume.

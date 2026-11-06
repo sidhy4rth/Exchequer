@@ -37,6 +37,28 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
+# Whether this host's disk is wiped on restart, as on Render's free plan (no
+# disk; the instance also restarts after 15 idle minutes). /health/detail then
+# says a SQLite store and the provider cache are temporary. Render sets RENDER
+# in every service; EXCHEQUER_TEMPORARY_DISK=0 or 1 overrides it either way.
+def temporary_disk(environ: Mapping[str, str]) -> bool:
+    raw = environ.get("EXCHEQUER_TEMPORARY_DISK", "").strip().lower()
+    if raw:
+        return raw in ("1", "true", "yes", "on")
+    return environ.get("RENDER", "").strip().lower() == "true"
+
+
+def host_flag(environ: Mapping[str, str], name: str) -> bool:
+    """A background job's switch (watcher, snapshots, warm-up): on for 1, true,
+    yes or on -- unless this host's disk is temporary, where the host sleeps
+    and forgets and the job would only spend quota -- and on anywhere for
+    "force". The image sets none of them: each host opts in."""
+    raw = environ.get(name, "").strip().lower()
+    if raw == "force":
+        return True
+    return raw in ("1", "true", "yes", "on") and not temporary_disk(environ)
+
+
 # ---------------------------------------------------------------------------
 # Chains
 # ---------------------------------------------------------------------------
@@ -488,10 +510,10 @@ API_CACHE_PATH: Path | None = (
 
 # Whether to trace the DEMO.md addresses in the background at startup so their
 # responses are cached before anyone asks. Off by default: on a laptop it
-# would spend the key's rate on every restart. The Docker image turns it on.
-WARM_CACHE_AT_STARTUP: bool = (
-    os.getenv("EXCHEQUER_WARM_CACHE", "").strip().lower() in ("1", "true", "yes", "on")
-)
+# would spend the key's rate on every restart; on a temporary disk the cache
+# it fills is wiped at the next sleep (host_flag). A host with a lasting disk
+# turns it on.
+WARM_CACHE_AT_STARTUP: bool = host_flag(os.environ, "EXCHEQUER_WARM_CACHE")
 
 # The interactive API docs (/docs, /redoc, /openapi.json). On for local
 # development; the Docker image turns them off, because on the public site
@@ -551,21 +573,19 @@ SIGNING_KEY_PATH: Path = (
 )
 
 # The watchlist poller (watchlist.py): off unless EXCHEQUER_WATCHER is set, so
-# a laptop or the test suite never spends the key on it; the image turns it
-# on. Each due watch costs one or two provider requests per round.
-WATCHER_ENABLED: bool = (
-    os.getenv("EXCHEQUER_WATCHER", "").strip().lower() in ("1", "true", "yes", "on")
-)
+# a laptop or the test suite never spends the key on it, and off on a host
+# that sleeps (host_flag) unless forced. Each due watch costs one or two
+# provider requests per round.
+WATCHER_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_WATCHER")
 WATCH_INTERVAL_SECONDS: int = max(60, _int_env("EXCHEQUER_WATCH_INTERVAL", 600))
 # Hosts beyond Slack, Discord and Google Chat that alert webhooks may post to.
 WEBHOOK_EXTRA_HOSTS: str = os.getenv("EXCHEQUER_WEBHOOK_HOSTS", "")
 
 # Daily snapshots of the store beside it (backups.py): off unless
-# EXCHEQUER_BACKUPS is set; the image turns it on. The last
-# EXCHEQUER_BACKUP_KEEP are kept.
-BACKUPS_ENABLED: bool = (
-    os.getenv("EXCHEQUER_BACKUPS", "").strip().lower() in ("1", "true", "yes", "on")
-)
+# EXCHEQUER_BACKUPS is set, and off on a temporary disk, where the snapshot
+# would be wiped with the store (host_flag). The last EXCHEQUER_BACKUP_KEEP
+# are kept.
+BACKUPS_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_BACKUPS")
 BACKUP_KEEP: int = max(1, _int_env("EXCHEQUER_BACKUP_KEEP", 7))
 # Bearer token for GET /admin/backup. Unset = the endpoint does not exist.
 BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
@@ -637,17 +657,7 @@ WATCHES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR_TOTAL", 60)
 # Bearer token for GET /health/detail, the operator's view of keys, quota
 # and warm-up. Unset = the endpoint does not exist (404); /health stays public.
 HEALTH_TOKEN: str = os.getenv("EXCHEQUER_HEALTH_TOKEN", "").strip()
-# Whether this host's disk is wiped on restart, as on Render's free plan (no
-# disk; the instance also restarts after 15 idle minutes). /health/detail then
-# says a SQLite store and the provider cache are temporary. Render sets RENDER
-# in every service; EXCHEQUER_TEMPORARY_DISK=0 or 1 overrides it either way.
-def temporary_disk(environ: Mapping[str, str]) -> bool:
-    raw = environ.get("EXCHEQUER_TEMPORARY_DISK", "").strip().lower()
-    if raw:
-        return raw in ("1", "true", "yes", "on")
-    return environ.get("RENDER", "").strip().lower() == "true"
-
-
+# Whether this host's disk is wiped on restart (temporary_disk, at the top).
 TEMPORARY_DISK: bool = temporary_disk(os.environ)
 
 # ---------------------------------------------------------------------------

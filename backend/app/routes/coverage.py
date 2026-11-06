@@ -112,6 +112,14 @@ def health_detail(request: Request) -> dict[str, Any]:
         "watcher": watchlist.watcher_status(),
         # Which unfinished features are switched on here (config.FLAGS).
         "flags": config.FLAGS,
+        # What this instance actually runs with: the host's environment can
+        # drift from render.yaml (values added later reach Render only through
+        # a Blueprint sync or by hand), and the image no longer fills the gap.
+        "runtime": {
+            "watcher": config.WATCHER_ENABLED, "backups": config.BACKUPS_ENABLED,
+            "warm_cache": config.WARM_CACHE_AT_STARTUP, "trust_proxy": config._proxy_raw or "off",
+            "temporary_disk": config.TEMPORARY_DISK,
+        },
         # What a restart wipes. On a host without a lasting disk a SQLite case
         # store loses every case, and the provider cache starts cold.
         "storage": _storage(),

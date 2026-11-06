@@ -707,8 +707,9 @@ cached answer can lag the newest blocks but never contradict them:
 | First trace of an address | ~35 | ~20 s |
 | Either direction, again | **0** | **0.03 s** |
 
-With `EXCHEQUER_WARM_CACHE=1` (on in the Docker image) the backend traces the `DEMO.md` addresses in the
-background at startup, so demos never go cold on a hosted instance. `GET /health/detail` (operator token) reports
+With `EXCHEQUER_WARM_CACHE=1` (for a host with a lasting disk; the free Render plan leaves it off and serves
+recorded demos instead) the backend traces the `DEMO.md` addresses in the background at startup, so demos never go
+cold on a hosted instance. `GET /health/detail` (operator token) reports
 `api_budget` and `warm_cache`.
 
 ---

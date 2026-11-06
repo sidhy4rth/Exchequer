@@ -38,6 +38,21 @@ test('the API is up and the label files are loaded', async ({ request }) => {
   expect(notReady, 'chains that cannot be traced').toEqual([])
 })
 
+// render.yaml's values reach Render only through a Blueprint sync or by hand,
+// and the live service once ran for days without the ones added after it was
+// created: no health token, the watcher on. The workflow says what to expect
+// (repository variables EXPECT_HEALTH_TOKEN and EXPECT_WATCHER).
+test('the service runs with the settings render.yaml gives it', async ({ request }) => {
+  if (process.env.EXPECT_HEALTH_TOKEN === '1') {
+    // 404 means EXCHEQUER_HEALTH_TOKEN is unset there; 401 is the endpoint refusing a stranger.
+    expect((await request.get('/health/detail')).status(), 'EXCHEQUER_HEALTH_TOKEN is set on the service').toBe(401)
+  }
+  if (process.env.EXPECT_WATCHER === '0' || process.env.EXPECT_WATCHER === '1') {
+    const { watcher } = await (await request.get('/watches')).json()
+    expect(watcher.enabled, 'EXCHEQUER_WATCHER on the service').toBe(process.env.EXPECT_WATCHER === '1')
+  }
+})
+
 test('the front door opens the console with every chain live', async ({ page }) => {
   const errors = watchForErrors(page)
   const started = Date.now()
