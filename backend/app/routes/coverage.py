@@ -51,13 +51,32 @@ DEPOSIT_TYPE = "deposit_wallet"
 def _chains() -> dict[str, dict[str, Any]]:
     chains = provider_status()
     for key, status in chains.items():
-        matcher = get_matcher(key)
-        deposits = sum(1 for _, meta in matcher.entries() if meta.get("type") == DEPOSIT_TYPE)
-        status["exchange_labels"] = len(matcher)
-        status["exchange_wallets"] = len(matcher) - deposits
-        status["deposit_addresses"] = deposits
-        status["risk_labels"] = get_risk_matcher(key).counts_by_category()
+        status.update(_label_counts(key))
     return chains
+
+
+# chain -> (the matchers it was counted from and their sizes, the counts).
+# Counting walks every label, and /chains is public and asked on every page
+# load; the matchers are built once per process, so count once per matcher
+# (r1-providers-8). A rebuilt or resized matcher is counted again.
+_COUNTS: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {}
+
+
+def _label_counts(key: str) -> dict[str, Any]:
+    matcher, risk = get_matcher(key), get_risk_matcher(key)
+    stamp = (matcher, len(matcher), risk, len(risk))
+    held = _COUNTS.get(key)
+    if held is None or held[0] != stamp:
+        deposits = sum(1 for _, meta in matcher.entries() if meta.get("type") == DEPOSIT_TYPE)
+        held = (stamp, {
+            "exchange_labels": len(matcher),
+            "exchange_wallets": len(matcher) - deposits,
+            "deposit_addresses": deposits,
+            "risk_labels": risk.counts_by_category(),
+        })
+        _COUNTS[key] = held
+    counts = held[1]
+    return {**counts, "risk_labels": dict(counts["risk_labels"])}
 
 
 @router.get("/chains")

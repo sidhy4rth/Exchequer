@@ -196,3 +196,31 @@ def test_chain_readiness_builds_no_provider_client(client, monkeypatch, keys):
         assert (status[key]["detail"] is None) is keys
     body = client.get("/chains").json()
     assert {k: c["ready"] for k, c in body["chains"].items()} == {k: s["ready"] for k, s in status.items()}
+
+
+def test_chains_counts_its_labels_once_not_per_request(client, monkeypatch):
+    """/chains walked every exchange label and recounted every risk label on
+    each public request; the counts change only when a matcher is rebuilt
+    (r1-providers-8)."""
+    from app.exchange_matcher import ExchangeMatcher
+    from app.risk_matcher import RiskMatcher
+    from app.routes import coverage
+
+    coverage._COUNTS.clear()
+    walks = []
+    entries, counts = ExchangeMatcher.entries, RiskMatcher.counts_by_category
+    monkeypatch.setattr(ExchangeMatcher, "entries", lambda self: walks.append("x") or entries(self))
+    monkeypatch.setattr(RiskMatcher, "counts_by_category", lambda self: walks.append("r") or counts(self))
+    first = client.get("/chains").json()["chains"]
+    assert len(walks) == 2 * len(first)
+    for _ in range(3):
+        assert client.get("/chains").json()["chains"] == first
+    assert len(walks) == 2 * len(first)
+
+    # A rebuilt matcher (another label file, the store attached) is counted again.
+    from app.exchange_matcher import get_matcher
+
+    rebuilt = ExchangeMatcher({"0x" + "ab" * 20: {"exchange": "Test", "type": "hot_wallet"}}, chain="ethereum")
+    monkeypatch.setattr(coverage, "get_matcher", lambda key=None: rebuilt if key == "ethereum" else get_matcher(key))
+    again = client.get("/chains").json()["chains"]
+    assert again["ethereum"]["exchange_labels"] == 1 and again["polygon"] == first["polygon"]
