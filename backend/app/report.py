@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from . import config
+from . import config, provenance
 from .display_text import one_line
 from .evidence import SEAL_MARKS, seal_text
 from .exchange_matcher import DEPOSIT_WALLET, is_deposit_label
@@ -83,10 +83,38 @@ TAG_WORDING = " (TronScan tag, read live)"  # tron_tags.py's label suffix
 def attribution_kind(trace: dict[str, Any]) -> str:
     """What the case actually holds about the address it reached.
 
-    The one place that reads this from a trace: when case contract v2 lands, this
-    becomes a lookup of its attribution.kind and nothing else changes. A case that
-    does not say gets the kind that assumes least: no single customer.
+    The kind recorded when the case was traced (case contract v2's attribution,
+    stored with it), so a later change to these rules cannot change what an old
+    case's letter asks for; today's reading of the same facts for a case
+    stored without one. A case that does not say gets the kind that assumes
+    least: no single customer.
     """
+    stored = _stored_kind(trace)
+    return stored if stored is not None else derived_kind(trace)
+
+
+def _stored_kind(trace: dict[str, Any]) -> str | None:
+    stored = trace.get("attribution")
+    if not isinstance(stored, dict) or not stored.get("kind") or stored.get("address") != trace.get("exchange_address"):
+        return None
+    if stored["kind"] == "deposit_inferred":
+        return INFERRED_DEPOSIT
+    if stored.get("source") == "live_tag":  # an explorer's word, whatever kind it was stored as
+        return EXPLORER_TAG
+    return LABELLED_DEPOSIT if stored["kind"] == "deposit_label" else EXCHANGE_WALLET
+
+
+def kind_disagreement(trace: dict[str, Any]) -> str | None:
+    """"X (today's rules read the same facts as Y)" when the stored kind and today's differ."""
+    stored = _stored_kind(trace)
+    today = derived_kind(trace)
+    if stored is None or stored == today:
+        return None
+    return f"{stored.replace('_', ' ')} (today's rules read the same facts as {today.replace('_', ' ')})"
+
+
+def derived_kind(trace: dict[str, Any]) -> str:
+    """The kind as today's rules read the case's facts."""
     address = trace.get("exchange_address")
     if trace.get("attribution_inferred"):
         return INFERRED_DEPOSIT
@@ -153,7 +181,11 @@ def build_report(case: Case) -> dict[str, Any]:
     return {
         "report_version": REPORT_VERSION,
         "generated_by": TOOL_NAME,
+        # The code that rendered this report, and the code that ran the trace
+        # (None for a case stored before provenance was kept).
         "tool_version": tool_version(),
+        "traced_with": (result.get("provenance") or {}).get("tool_version"),
+        "provenance": result.get("provenance"),
         "generated_at": datetime.now(tz=timezone.utc).isoformat(timespec="seconds"),
         "case": {
             "case_id": case.id,
@@ -187,6 +219,7 @@ def build_report(case: Case) -> dict[str, Any]:
             "exchange_address": result.get("exchange_address"),
             "exchange_wallet_label": result.get("exchange_label"),
             "kind": attribution_kind(result) if result.get("exchange") else None,
+            "kind_note": kind_disagreement(result) if result.get("exchange") else None,
             "inferred": result.get("attribution_inferred", False),
             "inferred_deposit_addresses": result.get("inferred_deposits", []),
             "inference_notes": result.get("inference_notes", []),
@@ -305,9 +338,10 @@ def _screening_lists(case: Case, result: dict[str, Any]) -> dict[str, Any] | Non
     except ValueError:
         traced = datetime.now(tz=timezone.utc).date()
     try:
+        metas = provenance.list_metas(result)
         if "label_store" in result:  # recorded by the trace; an older case can only name today's
-            return list_freshness(result.get("chain"), traced, store=result["label_store"])
-        return list_freshness(result.get("chain"), traced)
+            return list_freshness(result.get("chain"), traced, metas, store=result["label_store"])
+        return list_freshness(result.get("chain"), traced, metas)
     except config.UnknownChainError:
         return None
 
@@ -586,8 +620,10 @@ def render_text_report(report: dict[str, Any]) -> str:
     intake = report.get("intake") or {"mode": "address", "payments": []}
     add(f"Started from     : {started_from(intake, symbol)}")
     add(f"Traced at        : {_when_iso(case['traced_at'])}")
+    add(f"Traced with      : {TOOL_NAME} {report['traced_with']}" if report.get("traced_with") else
+        "Traced with      : not recorded (this case was stored before traces recorded their version)")
     add(f"Report generated : {_when_iso(report['generated_at'])}")
-    add(f"Tool version     : {TOOL_NAME} {report.get('tool_version', 'unknown')} "
+    add(f"Rendered with    : {TOOL_NAME} {report.get('tool_version', 'unknown')} "
         f"(report format v{report['report_version']})")
     if case.get("block_explorer"):
         add(f"Verify at        : {case['block_explorer']}")
@@ -616,6 +652,8 @@ def render_text_report(report: dict[str, Any]) -> str:
         add("Basis            : "
             + ("INFERRED from the wallet's behaviour, not a label-file match"
                if attribution.get("inferred") else basis))
+        if attribution.get("kind_note"):
+            add(f"Kind recorded    : {attribution['kind_note']}")
         add(f"Hops from source : {attribution['hop_count']}")
         prorata = attribution.get("prorata") or {}
         cap = prorata.get("seed_cap") or {}
@@ -777,9 +815,14 @@ def render_text_report(report: dict[str, Any]) -> str:
     # -- lists -----------------------------------------------------------------
     section("LISTS SCREENED AGAINST")
     if screening_lists:
-        para("The lists this server held when this report was generated, compared "
-             f"with {screening_lists['as_of']} (UTC), the day this case was traced. A date "
-             "is when the list was last checked against its source.")
+        if screening_lists.get("recorded_at_trace"):
+            para("The lists this case was screened against, as recorded when this case was traced on "
+                 f"{screening_lists['as_of']} (UTC). A date is when the list was last checked against its source.")
+        else:
+            para("The lists this server held when this report was generated, compared "
+                 f"with {screening_lists['as_of']} (UTC), the day this case was traced. A date "
+                 "is when the list was last checked against its source. This case was stored "
+                 "before traces recorded their lists, so these are not necessarily the ones it used.")
         add("")
         for entry in screening_lists.get("lists") or []:
             para(entry["name"], indent="  ")

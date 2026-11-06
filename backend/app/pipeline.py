@@ -20,6 +20,7 @@ from . import config, log_safety, progress
 from .api_budget import Cancelled, TraceBudget, TraceStopped, current_budget
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
 from .contracts import upgrade as upgrade_to_contract
+from .provenance import capture as capture_provenance
 from .payment_intake import (
     PaymentError,
     PaymentRef,
@@ -909,6 +910,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     if intake is not None:
         payload["intake"] = intake
         payload["reported_amount"] = reported_amount(intake["payments"])
+    # What this trace ran with, so its report can say so after a deploy (provenance.py).
+    payload["provenance"] = capture_provenance(
+        chain.key, follow_swaps=request.follow_swaps, max_follow_ons=MAX_FOLLOW_ONS,
+        live_tags=bool(live is not None and getattr(live.tags, "enabled", False)))
     # Every result leaves here under the case contract (contracts/case_v2.py):
     # the v1 fields above, untouched, plus the v2 fields the other lanes read.
     return upgrade_to_contract(payload)

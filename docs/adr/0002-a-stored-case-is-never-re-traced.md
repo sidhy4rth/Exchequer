@@ -28,7 +28,13 @@ separate, explicit button.
 ## Consequences
 
 ### Positive
-- A report, a letter and a screenshot of the same case always agree.
+- A report, a letter and a screenshot of the same case always agree. Reports
+  and letters are rendered on request, so each case also stores what its trace
+  ran with (`backend/app/provenance.py`: the code version, each list's dates and
+  hash, the settings, and the attribution kind under the case contract). A
+  report rendered after a deploy names both the code that traced the case and
+  the code that rendered it, and its lists and kind are the trace's own. Cases
+  stored before provenance say so.
 - Opening a case costs no provider requests, so it is instant and free.
 
 ### Negative

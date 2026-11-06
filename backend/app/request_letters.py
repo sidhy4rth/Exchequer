@@ -26,7 +26,7 @@ import textwrap
 from datetime import datetime, timezone
 from typing import Any
 
-from . import config
+from . import config, provenance
 from .display_text import one_line, short
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
                      _amount, _when, _when_iso, attribution_kind)
@@ -180,7 +180,12 @@ def _opening(result: dict[str, Any]) -> list[str]:
 
 
 def _label_source(trace: dict[str, Any]) -> str:
-    """Where a label came from and when, so a reader can weigh it."""
+    """Where a label came from and when, so a reader can weigh it: the list as
+    the trace recorded it, or, for a case stored before that, as held today."""
+    recorded = provenance.list_metas(trace)
+    if recorded is not None:
+        checked = (recorded.get("labels_path") or {}).get("last_reviewed")
+        return f"Exchequer's exchange label list{f', last checked {checked}' if checked else ''}"
     meta = None
     if trace.get("chain"):
         try:
@@ -188,7 +193,8 @@ def _label_source(trace: dict[str, Any]) -> str:
         except config.UnknownChainError:
             pass
     checked = (meta or {}).get("last_reviewed")
-    return f"Exchequer's exchange label list{f', last checked {checked}' if checked else ''}"
+    return ("Exchequer's exchange label list as held when this letter was drafted"
+            f"{f', last checked {checked}' if checked else ''}")
 
 
 def _plain_label(label: str | None) -> str:

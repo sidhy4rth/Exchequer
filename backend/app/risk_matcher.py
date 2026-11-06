@@ -567,14 +567,16 @@ def _list_ends(path: Path) -> tuple[str, ...]:
     return tuple(sorted(d.isoformat() for d in ends if d))
 
 
-def list_freshness(chain_key: str | None, as_of: date, store: Any = _HELD) -> dict[str, Any]:
+def list_freshness(chain_key: str | None, as_of: date,
+                   metas: dict[str, dict[str, Any] | None] | None = None, store: Any = _HELD) -> dict[str, Any]:
     """Each list this chain is screened against, and how old it was on `as_of`.
 
-    `as_of` is the day the case was traced. These are the files this server holds
-    now, so a list dated after the trace is reported as such, never as what the
-    trace used. `store` is the label store the trace recorded
-    (RiskMatcher.store_entry, None if it ran without one); left out, it is the
-    one this server holds.
+    `as_of` is the day the case was traced. `metas`, when given, are the lists'
+    `_meta` as the trace recorded them (provenance.py), and are what is reported.
+    Without them these are the files this server holds now, so a list dated
+    after the trace is reported as such, never as what the trace used. `store`
+    is the label store the trace recorded (RiskMatcher.store_entry, None if it
+    ran without one); left out, it is the one this server holds.
     """
     chain = config.get_chain(chain_key)
     lists: list[dict[str, Any]] = []
@@ -582,7 +584,10 @@ def list_freshness(chain_key: str | None, as_of: date, store: Any = _HELD) -> di
     overdue: list[str] = []
     for attribute, name, has_age_limit in LISTS:
         path = getattr(chain, attribute, None)
-        meta = _list_meta(path) if path else None
+        if metas is not None:
+            meta = metas.get(attribute)
+        else:
+            meta = _list_meta(path) if path else None
         if meta is None:
             not_held.append(name)
             continue
@@ -611,7 +616,8 @@ def list_freshness(chain_key: str | None, as_of: date, store: Any = _HELD) -> di
         }
         if has_age_limit:
             # Dated orders past their last day were held but not matched (_read_labels).
-            entry["lapsed"] = bisect_left(_list_ends(path), as_of.isoformat())
+            # (a list the trace recorded may no longer be held here: nothing to count)
+            entry["lapsed"] = bisect_left(_list_ends(path), as_of.isoformat()) if path else 0
             if entry["lapsed"]:
                 ended = (f"{entry['lapsed']:,} listings in it had ended by {as_of.isoformat()} and were not matched."
                          if entry["lapsed"] > 1 else
@@ -627,6 +633,7 @@ def list_freshness(chain_key: str | None, as_of: date, store: Any = _HELD) -> di
         not_held.append(STORE_LIST)  # no store, or nothing in it for this chain
     return {
         "as_of": as_of.isoformat(),
+        "recorded_at_trace": metas is not None,
         "stale_after_days": config.LIST_STALE_DAYS,
         "lists": lists,
         "not_held": not_held,
