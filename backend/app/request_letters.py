@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from . import config
+from .display_text import one_line, short
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
                      _when, _when_iso, attribution_kind)
 from .risk_matcher import _list_meta, is_tether_usdt_freeze
@@ -174,7 +175,24 @@ def _label_source(trace: dict[str, Any]) -> str:
 
 
 def _plain_label(label: str | None) -> str:
-    return (label or "").removesuffix(TAG_WORDING)
+    return short((label or "").removesuffix(TAG_WORDING), LABEL_MAX)
+
+
+LABEL_MAX = 200  # a label is a name; anything longer is not one a letter should quote
+
+
+def _cleaned(value: Any) -> Any:
+    """`value` with every string on one line (display_text.one_line). Labels,
+    tags and names in a case come from third parties, and a newline in one
+    would print as a paragraph of the letter. The graph is never quoted, so
+    it is left out rather than walked."""
+    if isinstance(value, str):
+        return one_line(value)
+    if isinstance(value, list):
+        return [_cleaned(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _cleaned(v) for k, v in value.items() if k != "graph"}
+    return value
 
 
 def _claim(kind: str, trace: dict[str, Any], exchange: str) -> str:
@@ -419,6 +437,7 @@ def _tether_letter(case_id: str, result: dict[str, Any]) -> str:
 
 
 def draft(case_id: str, result: dict[str, Any], to: str) -> str:
+    result = _cleaned(result)
     if to == EXCHANGE:
         return _exchange_letter(case_id, result)
     if to == TETHER:

@@ -12,6 +12,7 @@ Typeset in IBM Plex (app/fonts, SIL Open Font Licence), the app's own family.
 from __future__ import annotations
 
 import io
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -25,14 +26,21 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     CondPageBreak, KeepTogether, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
+from reportlab.platypus.doctemplate import LayoutError
 from xml.sax.saxutils import escape
 
+from .display_text import one_line, short
 from .evidence import CONTENT_HASH_MARK
 from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso
 from .scoring import CAP_WORDING
 from .signing import SIGNATURE_MARK
 
+logger = logging.getLogger(__name__)
+
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
+# A label in a narrow table cell: a row taller than the page cannot be laid
+# out at all. The full text is in Part 2 and the attached file.
+CELL_LABEL_MAX = 120
 _FONTS = {
     "Plex": "IBMPlexSans-Regular.ttf",
     "Plex-Bold": "IBMPlexSans-SemiBold.ttf",
@@ -90,7 +98,11 @@ def _seal_facts(sealed_text: str) -> tuple[str, str | None]:
 
 
 def _p(text: Any, style: ParagraphStyle) -> Paragraph:
-    return Paragraph(escape("" if text is None else str(text)), style)
+    return Paragraph(escape(one_line(text)), style)
+
+
+def _label(text: Any) -> str:
+    return short(_shown_label(one_line(text) if text else ""), CELL_LABEL_MAX)
 
 
 def _num(value: Any) -> str:
@@ -104,11 +116,25 @@ def _num(value: Any) -> str:
 def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     _register_fonts()
     st = _styles()
+    digest, key = _seal_facts(sealed_text)
+    case_id = report["case"]["case_id"]
+    try:
+        pdf = _build(_part_one(report, st, digest, key) + _part_two(sealed_text, st), case_id, digest, key)
+    except LayoutError:
+        # Part 1 is a reading aid; the signed report must still be issued.
+        logger.warning("Case %s: the PDF summary page could not be laid out; issuing Part 2 only", case_id)
+        unplaced = [_p("EXCHEQUER · CRYPTOCURRENCY TRACE REPORT", st["micro"]), _p(f"Case {case_id}", st["small"]),
+                    _p("The summary page could not be laid out for this case (a label in it is too long "
+                       "for the page). The signed report follows in full and is attached to this PDF.", st["cell"])]
+        pdf = _build(unplaced + _part_two(sealed_text, st), case_id, digest, key)
+    return _attach(pdf, _attachment_name(case_id), sealed_text.encode("utf-8"))
+
+
+def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str, key: str | None) -> list[Any]:
     case = report["case"]
     attribution = report.get("attribution") or {}
     confidence = report.get("confidence") or {}
     screening = report.get("risk_screening") or {}
-    digest, key = _seal_facts(sealed_text)
     case_id = case["case_id"]
 
     story: list[Any] = []
@@ -121,7 +147,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     if screening_lists.get("warning"):
         stale = Table([[Paragraph(
             f"<font name='Plex-Bold' color='{RED.hexval()}'>WARNING.</font> "
-            f"<font color='{RED.hexval()}'>{escape(screening_lists['warning'])}</font>", st["cell"])]],
+            f"<font color='{RED.hexval()}'>{escape(one_line(screening_lists['warning']))}</font>", st["cell"])]],
             colWidths=[None])
         stale.setStyle(TableStyle([
             ("BOX", (0, 0), (-1, -1), 1, RED),
@@ -150,7 +176,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
             ({EXPLORER_TAG: "Address to ask the exchange to confirm",
               EXCHANGE_WALLET: "Wallet the funds reached"}.get(attribution.get("kind"), "Address to ask the exchange about"),
              attribution.get("exchange_address", ""), True),
-            ("Wallet", _shown_label(attribution.get("exchange_wallet_label")), False),
+            ("Wallet", _label(attribution.get("exchange_wallet_label")), False),
             ("Hops from the reported address", attribution.get("hop_count", ""), False),
         ]
         prorata = attribution.get("prorata") or {}
@@ -212,9 +238,9 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     else:
         for m in matches[:8]:
             colour = RED if m.get("category") in ("sanctioned", "mixer") else AMBER
-            line = (f"<font name='Plex-Bold' color='{colour.hexval()}'>{escape(str(m.get('category', '')).title())}</font> · "
-                    f"<font name='PlexMono'>{escape(m.get('address', ''))}</font> · "
-                    f"{escape(str(m.get('entity') or m.get('label') or ''))}")
+            line = (f"<font name='Plex-Bold' color='{colour.hexval()}'>{escape(one_line(m.get('category', '')).title())}</font> · "
+                    f"<font name='PlexMono'>{escape(one_line(m.get('address', '')))}</font> · "
+                    f"{escape(_label(m.get('entity') or m.get('label') or ''))}")
             story.append(Paragraph(line, st["cell"]))
         if len(matches) > 8:
             story.append(_p(f"…and {len(matches) - 8} more, listed in Part 2.", st["small"]))
@@ -239,9 +265,9 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
         route = [[_p("Hop", st["small"]), _p("Address", st["small"]), _p("Label", st["small"]),
                   _p("Received", st["small"])]]
         for step in path:
-            label = _shown_label(step.get("label") or step.get("exchange"))
+            label = _label(step.get("label") or step.get("exchange"))
             if not label and step.get("address") == attribution.get("exchange_address"):
-                label = _shown_label(attribution.get("exchange_wallet_label"))
+                label = _label(attribution.get("exchange_wallet_label"))
             if not label and step.get("depth") == 0:
                 label = "reported address"
             amount = step.get("value_native")
@@ -265,16 +291,21 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     if limits:
         story.append(_p("READ WITH THESE LIMITATIONS", st["micro"]))
         for item in limits[:3]:
-            story.append(Paragraph(f"• {escape(_shown_label(item))}", st["small"]))
+            story.append(Paragraph(f"• {escape(_shown_label(one_line(item)))}", st["small"]))
         if len(limits) > 3:
             story.append(_p(f"…{len(limits) - 3} more in Part 2.", st["small"]))
 
-    # -- part 2 ---------------------------------------------------------------
-    story += [CondPageBreak(90 * mm), Spacer(1, 10), _p("Part 2 · The signed text report", st["h2"]),
-              _p("The text the content hash and signature cover, for reading. Lines too long for the "
-                 "page wrap onto the next line; the exact file is attached to this PDF.", st["small"]),
-              Spacer(1, 6), Preformatted(sealed_text, st["pre"], maxLineLength=118, newLineChars="")]
+    return story
 
+
+def _part_two(sealed_text: str, st: dict[str, ParagraphStyle]) -> list[Any]:
+    return [CondPageBreak(90 * mm), Spacer(1, 10), _p("Part 2 · The signed text report", st["h2"]),
+            _p("The text the content hash and signature cover, for reading. Lines too long for the "
+               "page wrap onto the next line; the exact file is attached to this PDF.", st["small"]),
+            Spacer(1, 6), Preformatted(sealed_text, st["pre"], maxLineLength=118, newLineChars="")]
+
+
+def _build(story: list[Any], case_id: str, digest: str, key: str | None) -> bytes:
     buffer = io.BytesIO()
 
     def footer(canvas, doc):
@@ -292,7 +323,7 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
         creator="Exchequer",
     )
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
-    return _attach(buffer.getvalue(), _attachment_name(case_id), sealed_text.encode("utf-8"))
+    return buffer.getvalue()
 
 
 def _attachment_name(case_id: str) -> str:

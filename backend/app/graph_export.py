@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 from typing import Any
 from xml.sax.saxutils import escape, quoteattr
 
+from .display_text import one_line
+
 NODE_FIELDS = [
     ("address", "string"), ("depth", "int"), ("role", "string"), ("label", "string"),
     ("exchange", "string"), ("inferred_exchange", "string"), ("risk_category", "string"),
@@ -102,15 +104,18 @@ def to_csv(case_id: str, result: dict[str, Any]) -> str:
     writer.writerow(["# transfers"])
     writer.writerow(["source", "target"] + [name for name, _ in EDGE_FIELDS])
     for row in edges:
-        writer.writerow([row["source"], row["target"]] + [_cell(row[name]) for name, _ in EDGE_FIELDS])
+        writer.writerow([_cell(row["source"]), _cell(row["target"])] + [_cell(row[name]) for name, _ in EDGE_FIELDS])
     return out.getvalue()
 
 
 def _cell(value: Any) -> Any:
     # A label beginning with = + - @ would run as a formula when the CSV is
-    # opened in a spreadsheet; label files come from third parties.
-    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r"):
-        return "'" + value
+    # opened in a spreadsheet, even behind a tab or spaces; label files come
+    # from third parties. One line, nothing hidden (display_text.py).
+    if isinstance(value, str):
+        value = one_line(value)
+        if value.lstrip()[:1] in ("=", "+", "-", "@"):
+            return "'" + value
     return value
 
 
@@ -126,13 +131,13 @@ def to_graphml(case_id: str, result: dict[str, Any]) -> str:
         lines.append(f'  <key id="e_{name}" for="edge" attr.name="{name}" attr.type="{kind}"/>')
     lines.append(f'  <graph id={quoteattr("exchequer-" + case_id)} edgedefault="directed">')
     for row in nodes:
-        lines.append(f'    <node id={quoteattr(str(row["address"]))}>')
+        lines.append(f'    <node id={quoteattr(_text(row["address"]))}>')
         lines += [f'      <data key="n_{name}">{escape(_text(row[name]))}</data>'
                   for name, _ in NODE_FIELDS]
         lines.append("    </node>")
     for i, row in enumerate(edges):
-        lines.append(f'    <edge id="e{i}" source={quoteattr(str(row["source"]))} '
-                     f'target={quoteattr(str(row["target"]))}>')
+        lines.append(f'    <edge id="e{i}" source={quoteattr(_text(row["source"]))} '
+                     f'target={quoteattr(_text(row["target"]))}>')
         lines += [f'      <data key="e_{name}">{escape(_text(row[name]))}</data>'
                   for name, _ in EDGE_FIELDS]
         lines.append("    </edge>")
@@ -141,8 +146,10 @@ def to_graphml(case_id: str, result: dict[str, Any]) -> str:
 
 
 def _text(value: Any) -> str:
+    """As XML 1.0 can hold it: control characters (one is enough to make the
+    whole file unreadable) become spaces, invisible ones a visible <U+XXXX>."""
     if isinstance(value, bool):
         return "true" if value else "false"
     if value is None:
         return ""
-    return str(value)
+    return one_line(value)

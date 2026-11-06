@@ -123,6 +123,10 @@ def build_manifest(records: list[EvidenceRecord]) -> dict[str, Any]:
 
 
 CONTENT_HASH_MARK = "CONTENT HASH"
+# Line starts that only the seal may write. read_seal cuts a report at the
+# first line beginning "CONTENT HASH (", so a body line like that would make
+# a genuine report read as changed.
+SEAL_MARKS = (CONTENT_HASH_MARK + " (", "SIGNATURE (")
 
 # The only lines seal_text writes below the hash line, besides the signature.
 UNSIGNED_HOW = "To verify: hash the report up to, not including, this line."
@@ -185,6 +189,9 @@ def seal_text(text: str, sign: bool = True) -> str:
     (signing.py) is Ed25519 over those same bytes: the hash shows the text is
     unchanged, the signature that this server issued it.
     """
+    if sign and (text.startswith(SEAL_MARKS[0]) or f"\n{SEAL_MARKS[0]}" in text):
+        # Signed, it would verify as changed: never issue that.
+        raise ValueError("The report body contains a CONTENT HASH line of its own; refusing to sign it.")
     digest = sha256_hex(text)
     lines = [text, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): {digest}"]
     if sign:

@@ -23,7 +23,8 @@ from pathlib import Path
 from typing import Any
 
 from . import config
-from .evidence import seal_text
+from .display_text import one_line
+from .evidence import SEAL_MARKS, seal_text
 from .exchange_matcher import DEPOSIT_WALLET, is_deposit_label
 from .models import Case
 from .risk_matcher import freeze_parts, is_tether_usdt_freeze, list_freshness
@@ -459,7 +460,13 @@ def _methodology(native_symbol: str = "ETH", direction: str = "outgoing") -> lis
 def render_text_report(report: dict[str, Any]) -> str:
     """Human-readable plain-text version, suitable for printing or attaching."""
     out: list[str] = []
-    add = out.append
+
+    def add(line: str) -> None:
+        # Every line passes here, so text from a label or a tag can never
+        # start a line of its own or hide characters, and no line but the
+        # seal's own can begin with the seal's marker (display_text.py).
+        line = one_line(line)
+        out.append(" " + line if line.startswith(SEAL_MARKS) else line)
 
     def rule(char: str = "=") -> None:
         add(char * 78)
