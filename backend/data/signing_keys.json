@@ -1,0 +1,4 @@
+{
+  "_about": "Exchequer's official report-signing keys (Ed25519). public_key_b64 is the raw 32-byte public key in base64; fingerprint_sha256 is the SHA-256 of those bytes, as signed into every report since format v2.2 and shown by GET /signing-key. Append-only: a rotation adds the old key with 'retired' set (ISO date) so the reports it signed keep verifying; a leaked key gets 'revoked': true. Each entry: {fingerprint_sha256, public_key_b64, in_use_from, retired, revoked}. See SECURITY.md, 'Report signing key'.",
+  "keys": []
+}

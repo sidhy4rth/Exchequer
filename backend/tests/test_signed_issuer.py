@@ -5,10 +5,15 @@ only pointer to a verifier was an unsigned "paste this report at /verify on the
 server that issued it", and the key was cut to 16 hex digits. Anyone running a
 copy of the public repo could issue made-up reports that its own /verify called
 genuine, and a recipient had nothing to tell the two apart. Now the issuer URL
-and the full key fingerprint are signed, nothing follows the signature, and a
-report naming this server but signed by another key is called forged.
+and the full key fingerprint are signed, nothing follows the signature, a
+report naming this server but signed by another key is called forged, and
+reports signed with an earlier official key (backend/data/signing_keys.json)
+still verify, with a note.
 """
 from __future__ import annotations
+
+import base64
+import json
 
 import pytest
 from cryptography.hazmat.primitives import serialization
@@ -27,6 +32,7 @@ BODY = "EXCHEQUER CASE REPORT\n(report format v2.2)\nSent 9.5 ETH to Binance 14"
 @pytest.fixture(autouse=True)
 def _public_url(monkeypatch):
     monkeypatch.setattr(config, "PUBLIC_URL", URL)
+    monkeypatch.setattr(signing, "_official", None)  # re-read the key list per test
     yield
 
 
@@ -45,6 +51,19 @@ def _old_style(body: str) -> str:
     return "\n".join([body, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): {sha256_hex(body)}",
                       f"SIGNATURE (Ed25519 over the same bytes, key {signer.fingerprint}): "
                       f"{signer.sign(body.encode())}", SIGNED_HOW]) + "\n"
+
+
+def _keyring(tmp_path, monkeypatch, *entries: dict) -> None:
+    path = tmp_path / "signing_keys.json"
+    path.write_text(json.dumps({"keys": list(entries)}))
+    monkeypatch.setattr(signing, "OFFICIAL_KEYS_PATH", path)
+    monkeypatch.setattr(signing, "_official", None)
+
+
+def _entry(signer: signing.Signer, **over) -> dict:
+    return {"fingerprint_sha256": signer.fingerprint_sha256,
+            "public_key_b64": base64.b64encode(signer.public_raw).decode(),
+            "in_use_from": "2026-11-06", "retired": None, "revoked": False, **over}
 
 
 # -- what a sealed report carries ------------------------------------------------------
@@ -124,13 +143,52 @@ def test_a_signing_key_line_that_disagrees_with_the_signature_is_damaged():
     assert signing.verify_report(sealed)["status"] == "damaged"
 
 
+# -- the list of official keys -----------------------------------------------------------
+def test_a_report_signed_with_a_retired_official_key_verifies_with_a_note(tmp_path, monkeypatch):
+    old = signing.Signer(Ed25519PrivateKey.generate(), "file")
+    _keyring(tmp_path, monkeypatch, _entry(old, in_use_from="2026-10-01", retired="2026-11-06"))
+    r = signing.verify_report(_signed_by(old))
+    assert r["status"] == "genuine_earlier_key" and r["genuine"] is False
+    assert r["signature_ok"] is True and r["official"] is True
+    assert "2026-11-06" in r["detail"]
+
+
+def test_a_report_signed_with_a_revoked_key_is_never_reassuring(tmp_path, monkeypatch):
+    leaked = signing.Signer(Ed25519PrivateKey.generate(), "file")
+    _keyring(tmp_path, monkeypatch, _entry(leaked, retired="2026-11-06", revoked=True))
+    r = signing.verify_report(_signed_by(leaked))
+    assert r["status"] == "revoked_key" and r["official"] is False
+
+
+def test_the_current_key_is_official_only_when_listed(tmp_path, monkeypatch):
+    _keyring(tmp_path, monkeypatch)
+    assert signing.verify_report(seal_text(BODY))["official"] is False
+    _keyring(tmp_path, monkeypatch, _entry(signing.get_signer()))
+    r = signing.verify_report(seal_text(BODY))
+    assert r["status"] == "genuine" and r["official"] is True
+
+
+def test_a_malformed_key_entry_is_skipped_never_trusted(tmp_path, monkeypatch):
+    other = signing.Signer(Ed25519PrivateKey.generate(), "file")
+    wrong = _entry(other, fingerprint_sha256="ab" * 32)  # fingerprint does not match the key
+    _keyring(tmp_path, monkeypatch, wrong, {"fingerprint_sha256": "nonsense"})
+    assert signing.official_keys() == []
+    assert signing.verify_report(_signed_by(other))["status"] == "forged_issuer"
+
+
+def test_the_committed_key_list_is_well_formed():
+    raw = json.loads(signing.OFFICIAL_KEYS_PATH.read_text())
+    assert isinstance(raw.get("keys"), list)
+    assert len(signing.official_keys()) == len(raw["keys"])  # every entry loads
+
+
 # -- the public endpoints ------------------------------------------------------------------
 def test_the_signing_key_endpoint_gives_the_full_fingerprint_and_issuer():
     key = client.get("/signing-key").json()
     signer = signing.get_signer()
     assert key["fingerprint_sha256"] == signer.fingerprint_sha256
     assert key["fingerprint"] == signer.fingerprint
-    assert key["issued_by"] == URL
+    assert key["issued_by"] == URL and key["official"] is False
     pem = serialization.load_pem_public_key(key["public_key_pem"].encode())
     assert pem.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw) == signer.public_raw
 
