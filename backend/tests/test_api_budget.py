@@ -323,3 +323,44 @@ def test_get_with_meta_returns_both_under_one_look(tmp_path):
     assert cache.get_with_meta("a") == (True, 1, {"sha256": "ab", "retrieved_at": "t", "bytes": 1})
     assert cache.get_with_meta("missing") == (False, None, None)
     cache.close()
+
+
+def test_an_edit_that_recomputes_a_plain_hash_is_still_dropped(tmp_path, monkeypatch):
+    # The code is public: anyone who can write the cache file can recompute a
+    # plain SHA-256 over an edited row. With the signing seed in the
+    # environment (not on the disk beside the cache), the row check is keyed.
+    import base64
+    import hashlib
+    import sqlite3
+
+    monkeypatch.setenv("EXCHEQUER_SIGNING_KEY", base64.b64encode(bytes(range(32))).decode())
+    path = tmp_path / "cache.db"
+    first = ResponseCache(path=path)
+    meta = {"sha256": "ab", "retrieved_at": "t", "bytes": 3}
+    first.put("k", [{"to": "0xreal"}], meta=meta)
+    first.close()
+
+    db = sqlite3.connect(str(path))
+    value, meta_text = '[{"to": "0xdeposit"}]', db.execute("SELECT meta FROM responses").fetchone()[0]
+    forged = hashlib.sha256(f"{value}\n{meta_text}".encode()).hexdigest()
+    db.execute("UPDATE responses SET value = ?, value_sha256 = ?", (value, forged))
+    db.commit()
+    db.close()
+
+    second = ResponseCache(path=path)
+    assert second.get("k") == (False, None)
+    assert second.stats()["integrity_drops"] == 1
+    second.close()
+
+
+def test_rows_written_under_another_signing_seed_are_misses(tmp_path, monkeypatch):
+    import base64
+
+    path = tmp_path / "cache.db"
+    monkeypatch.setenv("EXCHEQUER_SIGNING_KEY", base64.b64encode(bytes(range(32))).decode())
+    first = ResponseCache(path=path)
+    first.put("k", [1])
+    first.close()
+    assert ResponseCache(path=path).get("k") == (True, [1])
+    monkeypatch.setenv("EXCHEQUER_SIGNING_KEY", base64.b64encode(bytes(range(1, 33))).decode())
+    assert ResponseCache(path=path).get("k") == (False, None)

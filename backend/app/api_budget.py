@@ -37,8 +37,10 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import hashlib
+import hmac
 import json
 import logging
+import os
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -72,6 +74,19 @@ def fresh_reads():
         yield
     finally:
         _fresh.reset(token)
+
+
+def _row_key() -> bytes:
+    """The key the disk rows are checked with: derived from the report-signing
+    seed when it comes from the environment, so nothing on the disk beside the
+    cache holds it. Without one it is empty, and the check catches corruption
+    and careless edits only -- but then the signing key is itself a file on
+    that disk, and whoever can write the cache can read it."""
+    from .signing import _seed_bytes
+
+    seed = os.getenv("EXCHEQUER_SIGNING_KEY", "").strip()
+    raw = _seed_bytes(seed) if seed else None
+    return hmac.new(raw, b"exchequer provider-cache rows v1", hashlib.sha256).digest() if raw else b""
 
 
 class ResponseCache:
@@ -109,6 +124,7 @@ class ResponseCache:
         self._misses = 0
         self._disk_hits = 0
         self._integrity_drops = 0
+        self._row_key = _row_key()
         self.path = Path(path) if path else None
         self._db: sqlite3.Connection | None = None
         self._puts = 0
@@ -173,11 +189,12 @@ class ResponseCache:
     def _disk_key(key: Hashable) -> str:
         return json.dumps(key, sort_keys=True, default=str)
 
-    @staticmethod
-    def _row_sha256(value_text: str, meta_text: str | None) -> str:
-        """Over the exact stored text: the value the trace will use and the
-        provider hash the evidence manifest will report for it."""
-        return hashlib.sha256(f"{value_text}\n{meta_text or ''}".encode("utf-8")).hexdigest()
+    def _row_sha256(self, value_text: str, meta_text: str | None) -> str:
+        """HMAC-SHA256 (keyed by _row_key) over the exact stored text: the value
+        the trace will use and the provider hash the evidence manifest will
+        report for it. A plain hash anyone could recompute after an edit."""
+        return hmac.new(self._row_key, f"{value_text}\n{meta_text or ''}".encode("utf-8"),
+                        hashlib.sha256).hexdigest()
 
     def _disk_get(self, key: Hashable) -> tuple[float, Any, dict | None] | None:
         """(age_seconds, value, meta) for a live row, or None. Called under the lock.
@@ -201,7 +218,7 @@ class ResponseCache:
         age = time.time() - stored_at
         if age > self.ttl_seconds:
             return None
-        if digest != self._row_sha256(value_text, meta_text):
+        if not isinstance(digest, str) or not hmac.compare_digest(digest, self._row_sha256(value_text, meta_text)):
             self._integrity_drops += 1
             logger.warning("Response cache row for %s does not match its hash; dropped", disk_key[:120])
             try:
