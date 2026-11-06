@@ -12,7 +12,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `TRONGRID_API_KEY` | — | Raises the Tron rate limit (Tron works without it). |
 | `TRONSCAN_API_KEY` | — | Live TronScan tag lookup on Tron traces. |
 | `EXCHEQUER_DB_PATH` | `exchequer.db` (`/data/exchequer.db` in the image) | The case store: cases, watches, alerts, freeze requests, batches. SQLite in WAL mode. |
-| `DATABASE_URL` | — | A `postgres://` URL moves the case store to Postgres (needed on a host without a disk, such as Render's free plan). Unset, the store is the SQLite file above. The volume backups and `/admin/backup` apply to SQLite only. |
+| `DATABASE_URL` | — | A `postgres://` URL moves the case store to Postgres (needed on a host without a disk, such as Render's free plan). Unset, the store is the SQLite file above. The volume backups and `/admin/backup` apply to SQLite only; a Postgres store is copied off-site by the backup workflow (Backups). |
 | `API_CACHE_PATH` | `provider_cache.db` beside the store | Provider response cache (24 h). `off` disables it. |
 | `EXCHEQUER_SIGNING_KEY` | — | Base64 32-byte Ed25519 seed for signing reports. Without it a key is made on first start at `report_signing_key.pem` beside the store (mode 0600). |
 | `EXCHEQUER_SIGNING_KEY_PATH` | `report_signing_key.pem` | Where that file lives. |
@@ -47,7 +47,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `/watches`, `/alerts` | Watch an address; alerts when funds leave it. |
 | `/requests`, `GET /trace/{id}/requests` | Freeze requests sent about a case and their status. |
 | `/batches` | Trace up to 25 complaints and correlate them. |
-| `GET /admin/backup` | A snapshot of the store, for the nightly off-site copy. Needs `EXCHEQUER_BACKUP_TOKEN`. |
+| `GET /admin/backup` | A snapshot of a SQLite store, for a self-hosted off-site copy. Needs `EXCHEQUER_BACKUP_TOKEN`; 404 on Postgres. |
 
 ## Who sees what
 
@@ -155,42 +155,64 @@ real Postgres, including adopting a store made before migrations.
 
 ## Backups
 
-Two copies, for two different accidents:
+The production store is Neon Postgres (`DATABASE_URL` on Render). Its
+off-site copy is `.github/workflows/backup.yml`: every night at 03:00 IST it
+runs `pg_dump --format=custom` against the database with a read-only role,
+checks the archive holds the `cases` table, encrypts it with
+[age](https://age-encryption.org) and keeps it as a workflow artifact for 14
+days. The plain dump never leaves the runner, and the log prints no counts or
+table contents. Until it is set up the job fails, so a night with no copy is
+never green.
 
-- **On the volume:** with `EXCHEQUER_BACKUPS` on (a host with a lasting disk sets it), the
-  server writes `backups/exchequer-YYYY-MM-DD.db.gz` beside the store once a
-  day and keeps the last 7. That covers a bad deploy, a broken migration or a
-  mistaken delete. It does not cover losing the volume.
-- **Off the server:** `.github/workflows/backup.yml` pulls a fresh snapshot
-  from `GET /admin/backup` every night at 03:00 IST, checks it opens, encrypts
-  it with [age](https://age-encryption.org) and keeps it as a workflow
-  artifact for 30 days. The plain copy never leaves the runner.
-
-The snapshot holds every case and the alert webhooks, so the off-site copy is
-encrypted to the public key in `.github/backup-recipient.txt`; only the
-matching private key (`~/.config/exchequer/backup-age-key.txt` on the
+The dump holds every case, freeze request and alert webhook, so it is
+encrypted to the public key in the `backup` environment's
+`BACKUP_AGE_RECIPIENT` variable, which must equal `.github/backup-recipient.txt`
+(the job refuses otherwise: a changed file cannot re-target the backups).
+Only the matching private key (`~/.config/exchequer/backup-age-key.txt` on the
 maintainer's machine -- keep a second copy offline) opens it. A new key pair
-is `age-keygen -o <file>`, and `age-keygen -y <file>` prints the public half
-for the recipient file. To switch the nightly copy on:
+is `age-keygen -o <file>`, and `age-keygen -y <file>` prints the public half.
+
+To switch the nightly copy on, once:
+
+1. Neon console → SQL Editor, as the owner role, make a read-only role:
+
+   ```sql
+   CREATE ROLE exchequer_backup LOGIN PASSWORD '<long random password>';
+   GRANT CONNECT ON DATABASE <database> TO exchequer_backup;  -- the name in DATABASE_URL
+   GRANT USAGE ON SCHEMA public TO exchequer_backup;
+   GRANT SELECT ON ALL TABLES IN SCHEMA public TO exchequer_backup;
+   GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO exchequer_backup;
+   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO exchequer_backup;
+   ```
+
+   Its connection string (Neon → Connect, role `exchequer_backup`, direct, not
+   pooled) is `NEON_BACKUP_URL`.
+2. GitHub → Settings → Environments → New environment `backup`. Deployment
+   branches: selected, `main` only. Add the secret `NEON_BACKUP_URL` and the
+   variable `BACKUP_AGE_RECIPIENT` (the contents of
+   `.github/backup-recipient.txt`). If Neon's Postgres major version is newer
+   than 17, set the repository variable `BACKUP_PG_MAJOR` to it.
+3. Actions → Store backup → Run workflow (on `main`). It must be green with an
+   artifact `store-<run id>`.
+
+To restore (drill this once into a scratch Neon branch before relying on it):
 
 ```sh
-token=$(openssl rand -hex 32)
-gh secret set BACKUP_TOKEN --body "$token"
-railway variables --set EXCHEQUER_BACKUP_TOKEN="$token"
+age -d -i ~/.config/exchequer/backup-age-key.txt exchequer-<stamp>.pgdump.age > store.pgdump
+pg_restore --no-owner --no-privileges --dbname="$SCRATCH_DATABASE_URL" store.pgdump
 ```
 
-Then run the workflow once by hand (Actions → Store backup → Run workflow).
+then point a local run at it (`DATABASE_URL=$SCRATCH_DATABASE_URL`) and open a
+known case. To replace production, restore into a new Neon branch and switch
+`DATABASE_URL` on Render to it. The signing key is not in the backup;
+`EXCHEQUER_SIGNING_KEY` on Render keeps reports verifying.
 
-To restore, download the artifact and:
-
-```sh
-age -d -i ~/.config/exchequer/backup-age-key.txt exchequer-<stamp>.db.gz.age | gunzip > exchequer.db
-```
-
-and put `exchequer.db` where `EXCHEQUER_DB_PATH` points (on Railway,
-`/data/exchequer.db`, with the service stopped). The signing key is not in the
-backup; to survive losing the volume, set `EXCHEQUER_SIGNING_KEY` from the
-key file once.
+A self-hosted SQLite store has two more copies: with `EXCHEQUER_BACKUPS` on (a
+host with a lasting disk sets it) the server writes
+`backups/exchequer-YYYY-MM-DD.db.gz` beside the store once a day and keeps the
+last 7, and with `EXCHEQUER_BACKUP_TOKEN` set `GET /admin/backup` returns a
+fresh snapshot for that host's own off-site job. Neither exists on a Postgres
+store.
 
 ## Keys
 
