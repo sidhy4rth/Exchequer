@@ -250,6 +250,18 @@ def test_the_label_store_is_listed_with_its_build_and_rows(held_store):
     assert STORE not in freshness["not_held"]
 
 
+def test_the_store_records_the_release_the_image_was_built_with(held_store, monkeypatch):
+    """The Dockerfile bakes the release tag it fetched into EXCHEQUER_LABEL_STORE_TAG."""
+    monkeypatch.setenv("EXCHEQUER_LABEL_STORE_TAG", "labels-2026-11-05b")
+    recorded = risk_matcher.label_store_entry(held_store, "ethereum")
+    assert recorded["release"] == "labels-2026-11-05b"
+    store = entry(list_freshness("ethereum", TRACED, store=recorded), STORE)
+    assert store["release"] == "labels-2026-11-05b" and "Release labels-2026-11-05b, built" in store["note"]
+    monkeypatch.delenv("EXCHEQUER_LABEL_STORE_TAG")
+    assert risk_matcher.label_store_entry(held_store, "ethereum")["release"] is None
+    assert entry(list_freshness("ethereum", TRACED), STORE)["note"].startswith("Built ")
+
+
 def test_a_store_with_nothing_for_the_chain_is_not_screened_on_it(held_store):
     assert STORE in list_freshness("polygon", date(2030, 1, 1))["not_held"]
 

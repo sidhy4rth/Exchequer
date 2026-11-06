@@ -77,6 +77,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from bisect import bisect_left
 from dataclasses import dataclass
@@ -640,14 +641,17 @@ def label_store_entry(store: LabelStore | None, chain_key: str) -> dict[str, Any
     if store is None:
         return None
     info = store.build_info()
-    return {"name": STORE_LIST, "file": store.path.name, "built_at": info.get("built_at"),
+    # The release the image fetched (Dockerfile: ENV EXCHEQUER_LABEL_STORE_TAG); None outside one.
+    release = os.getenv("EXCHEQUER_LABEL_STORE_TAG", "").strip() or None
+    return {"name": STORE_LIST, "file": store.path.name, "release": release, "built_at": info.get("built_at"),
             "built_from": info.get("built_from"), "rows": sum(store.counts(chain_key).values())}
 
 
 def _store_freshness(store: dict[str, Any], as_of: date, recorded: bool) -> dict[str, Any]:
     built_at = str(store.get("built_at") or "")
     built = _iso_date(built_at[:10])
-    note = (f"Built {built_at or 'at an unrecorded time'} from {store.get('built_from') or 'an unrecorded file'}; "
+    release = f"Release {store['release']}, built" if store.get("release") else "Built"
+    note = (f"{release} {built_at or 'at an unrecorded time'} from {store.get('built_from') or 'an unrecorded file'}; "
             f"{store['rows']:,} addresses on this chain. A build, replaced with each release, so no age limit "
             "applies.")
     state = "fixed_snapshot"
@@ -657,7 +661,8 @@ def _store_freshness(store: dict[str, Any], as_of: date, recorded: bool) -> dict
         state, note = "updated_since_trace", f"{note} {UPDATED_NOTE}"
     return {"name": STORE_LIST, "file": store.get("file") or "label_store.db",
             "checked": built.isoformat() if built else None, "published": None, "state": state, "note": note,
-            "built_at": built_at or None, "built_from": store.get("built_from"), "rows": store["rows"]}
+            "release": store.get("release"), "built_at": built_at or None, "built_from": store.get("built_from"),
+            "rows": store["rows"]}
 
 
 _BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
