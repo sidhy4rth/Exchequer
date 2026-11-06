@@ -514,6 +514,8 @@ API_CACHE_PATH: Path | None = (
 # it fills is wiped at the next sleep (host_flag). A host with a lasting disk
 # turns it on.
 WARM_CACHE_AT_STARTUP: bool = host_flag(os.environ, "EXCHEQUER_WARM_CACHE")
+# "force": run it even where its cache cannot outlive the instance (warmup.py).
+WARM_CACHE_FORCED: bool = os.getenv("EXCHEQUER_WARM_CACHE", "").strip().lower() == "force"
 
 # The interactive API docs (/docs, /redoc, /openapi.json). On for local
 # development; the Docker image turns them off, because on the public site
