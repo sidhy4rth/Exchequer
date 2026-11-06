@@ -404,6 +404,11 @@ def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
     }, shares
 
 
+# How the 502 below names the provider (an exception's class name read as
+# "ProviderResponse" or "TronResponse" once failures had kinds).
+_PROVIDER_NAMES = {"etherscan": "Etherscan", "nodereal": "NodeReal", "trongrid": "TronGrid"}
+
+
 def run_trace(request: TraceRequest, seed_window: int | None = None,
               budget: TraceBudget | None = None, depth_offset: int = 0,
               seed_amount: float | None = None, seed_amount_basis: str | None = None) -> dict[str, Any]:
@@ -631,7 +636,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             status_code=502,
             detail=(
                 "Could not reach the blockchain data provider "
-                f"({type(exc).__name__.removesuffix('Error')}). Try again in a minute."
+                f"({_PROVIDER_NAMES.get(chain.provider, chain.provider)}). Try again in a minute."
             ),
         ) from exc
     except InvalidAddressError as exc:  # defensive; validated above

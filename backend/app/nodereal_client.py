@@ -42,6 +42,7 @@ from .etherscan_client import (
     _QUOTA_MESSAGES,
     EtherscanError,
     ProviderQuotaError,
+    ProviderResponseError,
     Transaction,
     is_valid_address,
     normalize_address,
@@ -101,6 +102,20 @@ class NoderealError(EtherscanError):
 
 class NoderealQuotaError(NoderealError, ProviderQuotaError):
     """NodeReal's monthly compute units are spent: not retried."""
+
+
+class NoderealResponseError(NoderealError, ProviderResponseError):
+    """NodeReal answered with a shape Exchequer cannot read."""
+
+
+def _hex_int(value: Any) -> int:
+    """A JSON-RPC hex quantity ("0x1a"), or NoderealResponseError."""
+    if not isinstance(value, str):
+        raise NoderealResponseError(f"NodeReal returned {type(value).__name__} where a hex number belongs")
+    try:
+        return int(value, 16)
+    except ValueError as exc:
+        raise NoderealResponseError("NodeReal returned a number that is not hex") from exc
 
 
 class NoderealClient:
@@ -215,10 +230,14 @@ class NoderealClient:
             try:
                 body = response.json()
             except ValueError as exc:
-                raise NoderealError(f"NodeReal returned non-JSON: {exc}") from exc
+                raise NoderealResponseError(f"NodeReal returned non-JSON: {exc}") from exc
+            if not isinstance(body, dict):
+                raise NoderealResponseError(f"NodeReal returned a JSON {type(body).__name__}, not an object")
 
-            if body.get("error"):
-                message = str(body["error"].get("message", body["error"]))
+            error = body.get("error")
+            if error:
+                # A JSON-RPC error is an object; a provider in trouble has sent a bare string.
+                message = str(error.get("message", error)) if isinstance(error, dict) else str(error)
                 # Rate limiting arrives as a JSON-RPC error, not an HTTP status.
                 if any(phrase in message.lower() for phrase in _QUOTA_MESSAGES):
                     raise NoderealQuotaError(f"NodeReal quota spent: {message}")
@@ -254,8 +273,7 @@ class NoderealClient:
         see INDEX_LAG_BLOCKS.
         """
         if self._head_block is None:
-            result = self._rpc("eth_blockNumber", [])
-            tip = int(result, 16) if isinstance(result, str) else 0
+            tip = _hex_int(self._rpc("eth_blockNumber", []))
             self._head_block = max(0, tip - INDEX_LAG_BLOCKS)
         return self._head_block
 
@@ -266,6 +284,8 @@ class NoderealClient:
         Returns None for anything unusable so a single malformed record cannot
         abort a trace.
         """
+        if not isinstance(raw, dict):
+            return None
         try:
             to_raw = raw.get("to") or ""
             if not to_raw:
@@ -404,7 +424,7 @@ class NoderealClient:
         return incoming, outgoing, complete_in and not self.last_scan_capped
 
     def _nonce(self, address: str, block: int) -> int:
-        return int(self._rpc("eth_getTransactionCount", [normalize_address(address), hex(block)]) or "0x0", 16)
+        return _hex_int(self._rpc("eth_getTransactionCount", [normalize_address(address), hex(block)]))
 
     def send_range(self, address: str) -> tuple[int, int] | None:
         """Cached `_send_range` from the current head."""
@@ -445,7 +465,7 @@ class NoderealClient:
     def block_time(self, block: int) -> int | None:
         """A block's timestamp (s), for saying how far back a search reached."""
         try:
-            return int(self._rpc("eth_getBlockByNumber", [hex(block), False])["timestamp"], 16)
+            return _hex_int(self._rpc("eth_getBlockByNumber", [hex(block), False])["timestamp"])
         except (NoderealError, KeyError, TypeError, ValueError):
             return None
 
@@ -489,7 +509,9 @@ class NoderealClient:
                     self._head_block = min(self._head_block or window_end, window_end)
                     params["toBlock"] = hex(window_end)
                     result = self._rpc("nr_getAssetTransfers", [params]) or {}
-                transfers = result.get("transfers") or []
+                transfers = (result.get("transfers") or []) if isinstance(result, dict) else None
+                if not isinstance(transfers, list):
+                    raise NoderealResponseError("NodeReal returned transfers in an unexpected shape")
                 scanned += len(transfers)
                 for raw in transfers:
                     tx = self._to_transaction(raw)
@@ -505,6 +527,8 @@ class NoderealClient:
                 page_key = result.get("pageKey")
                 if not page_key:
                     break
+                if not isinstance(page_key, str):
+                    raise NoderealResponseError("NodeReal returned a page key that is not a string")
                 # An empty page that still offers more, a key seen before, or
                 # more pages than the scan ceiling allows: the provider is not
                 # converging. Stop, and mark the read incomplete so "sent

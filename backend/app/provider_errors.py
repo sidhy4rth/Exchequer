@@ -8,7 +8,7 @@ carries only `public_reason(exc)`; the detail goes to the log, redacted
 from __future__ import annotations
 
 from .api_budget import TraceStopped
-from .etherscan_client import EtherscanError, EtherscanRateLimitError, ProviderQuotaError
+from .etherscan_client import EtherscanError, EtherscanRateLimitError, ProviderQuotaError, ProviderResponseError
 
 
 def public_reason(exc: BaseException) -> str:
@@ -18,6 +18,8 @@ def public_reason(exc: BaseException) -> str:
         return "the provider's quota is used up"
     if isinstance(exc, EtherscanRateLimitError):
         return "the provider kept refusing requests"
+    if isinstance(exc, ProviderResponseError):
+        return "the provider sent a response Exchequer could not read"
     if isinstance(exc, EtherscanError):
         return "the provider reported an error"
     return "an unexpected error"

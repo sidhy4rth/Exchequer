@@ -124,6 +124,22 @@ class EtherscanConfigError(EtherscanError):
     """Raised when no API key is configured."""
 
 
+class ProviderResponseError(EtherscanError):
+    """A provider answered with something Exchequer cannot read: the wrong JSON
+    shape, a field that should be hex and is not. A provider failure like any
+    other (a 502 at the seed), never an AttributeError that reads as a crash."""
+
+
+def safe_int(value: Any, base: int = 10, default: int = 0) -> int:
+    """`int(value, base)` for a provider field, `default` when it is garbled."""
+    try:
+        if isinstance(value, str):
+            return int(value, base) if value.strip() else default
+        return int(value) if isinstance(value, int) and base == 10 else default
+    except (TypeError, ValueError):
+        return default
+
+
 def resolve_decimals(stated: Any, fallback: int | None) -> int | None:
     """The precision to divide a token amount by, or None if it is unknowable.
 
@@ -175,6 +191,8 @@ class Transaction:
         Returns None if the record is unusable (missing/garbled fields) rather
         than raising, so one bad row cannot abort an entire trace.
         """
+        if not isinstance(raw, dict):
+            return None
         try:
             to_raw = raw.get("to") or ""
             value_wei = int(raw.get("value", "0") or "0")
@@ -216,6 +234,8 @@ class Transaction:
         being traced -- and is dropped if that is unknown too. Guessing 18 would
         turn a USDT transfer into a trillionth of itself.
         """
+        if not isinstance(raw, dict):
+            return None
         try:
             to_raw = raw.get("to") or ""
             if not to_raw:
@@ -442,7 +462,9 @@ class EtherscanClient:
             try:
                 payload = response.json()
             except ValueError as exc:
-                raise EtherscanError(f"Etherscan returned non-JSON response: {exc}") from exc
+                raise ProviderResponseError(f"Etherscan returned non-JSON response: {exc}") from exc
+            if not isinstance(payload, dict):
+                raise ProviderResponseError(f"Etherscan returned a JSON {type(payload).__name__}, not an object")
 
             # The `proxy` module speaks JSON-RPC and has no `status` field.
             if "jsonrpc" in payload:
@@ -565,7 +587,7 @@ class EtherscanClient:
             result = []
 
         if sort == "desc":
-            stamps = [int(raw.get("timeStamp") or 0) for raw in result if isinstance(raw, dict)]
+            stamps = [safe_int(raw.get("timeStamp")) for raw in result if isinstance(raw, dict)]
             self._newest_page[normalize_address(address)] = (
                 len(result) >= offset, min((t for t in stamps if t > 0), default=None),
             )
@@ -774,7 +796,7 @@ class EtherscanClient:
                 "tag": "latest",
             }
         )
-        return int(result, 16) if isinstance(result, str) else 0
+        return safe_int(result, 16)
 
     def get_transaction_receipt(self, tx_hash: str) -> dict[str, Any] | None:
         """The receipt of one transaction, with its event logs.

@@ -35,7 +35,7 @@ import httpx
 from .evidence import EvidenceLog
 
 from . import config
-from .etherscan_client import EtherscanError, Transaction, is_tron_address
+from .etherscan_client import EtherscanError, ProviderResponseError, Transaction, is_tron_address
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +102,20 @@ class TronError(EtherscanError):
     Subclasses EtherscanError so main.py's existing upstream-failure handling
     applies to Tron traces unchanged.
     """
+
+
+class TronResponseError(TronError, ProviderResponseError):
+    """TronGrid answered with a shape Exchequer cannot read."""
+
+
+def _page(body: dict[str, Any]) -> tuple[list[Any], str | None]:
+    """(records, next fingerprint) of one TronGrid page, or TronResponseError."""
+    records = body.get("data") or []
+    meta = body.get("meta") or {}
+    fingerprint = meta.get("fingerprint") if isinstance(meta, dict) else None
+    if not isinstance(records, list) or not isinstance(meta, dict) or not isinstance(fingerprint, (str, type(None))):
+        raise TronResponseError("TronGrid returned a page in an unexpected shape")
+    return records, fingerprint or None
 
 
 class TronClient:
@@ -196,7 +210,9 @@ class TronClient:
             try:
                 body = response.json()
             except ValueError as exc:
-                raise TronError(f"TronGrid returned non-JSON: {exc}") from exc
+                raise TronResponseError(f"TronGrid returned non-JSON: {exc}") from exc
+            if not isinstance(body, dict):
+                raise TronResponseError(f"TronGrid returned a JSON {type(body).__name__}, not an object")
 
             if body.get("success") is False:
                 raise TronError(f"TronGrid error: {str(body.get('error'))[:200]}")
@@ -224,10 +240,12 @@ class TronClient:
         approve() moves nothing, but read as a transfer it became an edge of
         up to 2**256-1 units to the spender. Only rows that do not say they
         are something else are transfers, and only of the token asked for."""
-        if raw.get("type", "Transfer") != "Transfer":
+        if not isinstance(raw, dict) or raw.get("type", "Transfer") != "Transfer":
             return None
         try:
             info = raw.get("token_info") or {}
+            if not isinstance(info, dict):
+                return None
             token = info.get("address")
             if self.contract_address and token and token != self.contract_address:
                 return None
@@ -246,8 +264,8 @@ class TronClient:
                 asset=info.get("symbol") or self.asset_symbol,
                 contract_address=info.get("address") or self.contract_address,
             )
-        except (TypeError, ValueError):
-            logger.warning("Skipping malformed TRC-20 transfer: %r", raw)
+        except (TypeError, ValueError, AttributeError):
+            logger.warning("Skipping malformed TRC-20 transfer: %r", str(raw)[:120])
             return None
 
     def _native_transfer(self, raw: dict[str, Any]) -> Transaction | None:
@@ -257,6 +275,8 @@ class TronClient:
         moves TRX. Anything else (token transfers, staking, votes, contract
         calls) is skipped rather than counted as a payment.
         """
+        if not isinstance(raw, dict):
+            return None
         try:
             contracts = (raw.get("raw_data") or {}).get("contract") or []
             if not contracts:
@@ -284,7 +304,7 @@ class TronClient:
                 asset="TRX",
                 contract_address=None,
             )
-        except (TypeError, ValueError, IndexError):
+        except (TypeError, ValueError, IndexError, AttributeError):
             logger.warning("Skipping malformed TRX transfer: %r", str(raw)[:120])
             return None
 
@@ -359,14 +379,12 @@ class TronClient:
         collected: list[Transaction] = []
         scanned = 0
         while scanned < MAX_SCAN:
-            body = self._get(path, params)
-            records = body.get("data") or []
+            records, fingerprint = _page(self._get(path, params))
             scanned += len(records)
             for raw in records:
                 tx = parse(raw)
                 if tx and ours(tx) and not tx.is_error and tx.value_wei > 0:
                     collected.append(tx)
-            fingerprint = (body.get("meta") or {}).get("fingerprint")
             if not fingerprint or not records:
                 return collected, True
             params["fingerprint"] = fingerprint
@@ -419,8 +437,7 @@ class TronClient:
             if fingerprint:
                 params["fingerprint"] = fingerprint
 
-            body = self._get(path, params)
-            records = body.get("data") or []
+            records, fingerprint = _page(self._get(path, params))
             scanned += len(records)
             for raw in records:
                 tx = parse(raw)
@@ -429,7 +446,6 @@ class TronClient:
                 if tx and tx.to_address and not tx.is_error and tx.value_wei > 0:
                     collected.append(tx)
 
-            fingerprint = (body.get("meta") or {}).get("fingerprint")
             if not fingerprint or not records:
                 break
 
