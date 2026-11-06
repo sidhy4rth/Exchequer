@@ -9,6 +9,8 @@ Discord rendered third-party label text with mentions and links live
 """
 from __future__ import annotations
 
+import time
+
 import httpx
 import pytest
 from sqlalchemy import create_engine, select
@@ -261,3 +263,46 @@ def test_alerts_of_a_watch_without_a_webhook_are_not_queued(chain):
     chain.transfers = [tx(100, STRANGER), tx(101, BINANCE_14, 2.0)]
     watchlist.check_watch(w.id, source=chain)
     assert delivery_of(w.id) == [("exchange", None)]
+
+
+def stored_alert(w, delivery):
+    with models.session() as s:
+        s.add(models.Alert(id="stuck", watch_id=w.id, owner_hash=owner(ALICE), created_at=models.utc_now_iso(),
+                           kind="exchange", message="m", tx_hash="0x1", tx_time=1_800_000_000, value=2.0,
+                           asset="ETH", counterparty=BINANCE_14, counterparty_label="Binance 14",
+                           delivery=delivery))
+        s.commit()
+
+
+def test_alerts_claimed_by_a_check_that_died_while_posting_are_posted_again(chain, monkeypatch):
+    # A claim keeps two checks from posting one alert twice; a process killed
+    # while posting left its claim behind, and the alert was never posted.
+    hook = Hook()
+    hook.install(monkeypatch)
+    w = hooked(chain)
+    stored_alert(w, watchlist._claim(time.time() - 3600))
+    watchlist.check_watch(w.id, source=chain)
+    assert len(hook.bodies) == 1 and "Binance" in hook.bodies[0]["text"]
+    assert delivery_of(w.id) == [("exchange", "sent")]
+
+
+def test_a_claim_still_being_posted_is_left_to_its_check(chain, monkeypatch):
+    hook = Hook()
+    hook.install(monkeypatch)
+    w = hooked(chain)
+    claim = watchlist._claim(time.time())
+    stored_alert(w, claim)
+    watchlist.check_watch(w.id, source=chain)
+    assert hook.bodies == [] and delivery_of(w.id) == [("exchange", claim)]
+
+
+def test_a_delivery_that_breaks_does_not_fail_the_check(chain, monkeypatch):
+    w = hooked(chain)
+
+    def broken(*a, **k):
+        raise RuntimeError("bug")
+    monkeypatch.setattr(watchlist, "_deliver", broken)
+    chain.transfers = [tx(100, STRANGER), tx(101, BINANCE_14, 2.0, ts=later())]
+    out = watchlist.check_watch(w.id, source=chain)
+    assert [a["kind"] for a in out] == ["exchange"]
+    assert last_error(w).startswith("Webhook:") and delivery_of(w.id) == [("exchange", "pending")]

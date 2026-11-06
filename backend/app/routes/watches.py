@@ -5,7 +5,7 @@
     DELETE /watches/{id}               stop watching
     POST   /watches/{id}/check         check now, at most once a minute
     DELETE /watches/{id}/webhook       stop posting this watch's alerts to a webhook
-    GET    /alerts                     this browser's alerts, newest first
+    GET    /alerts                     this browser's alerts: unread exchange and flagged first, then newest
     POST   /alerts/read                mark some or all read
 
 Everything here belongs to the owner key the browser sends (ownership.py);

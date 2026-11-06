@@ -96,6 +96,9 @@ DELIVERY_SECONDS = 8.0
 # An alert its webhook did not take is posted with the next check of its
 # watch, for this long; after that it counts as failed (it is in the app).
 REDELIVER_SECONDS = 24 * 3600
+# A claim older than this belongs to a check that died while posting (a
+# delivery gives up after DELIVERY_SECONDS): its alerts are pending again.
+CLAIM_STALE_SECONDS = 300
 
 
 class WatchError(ValueError):
@@ -659,19 +662,43 @@ def check_watch(watch_id: str, source: Source = open_source,
         return []
 
     if hook:
-        _deliver_pending(watch_id, hook, address, chain.key, case_id, post)
+        try:
+            _deliver_pending(watch_id, hook, address, chain.key, case_id, post)
+        except Exception as exc:  # noqa: BLE001 -- stored; posted with the next check
+            logger.exception("Watch %s: webhook delivery failed", watch_id)
+            _note_webhook_failure(watch_id, f"Webhook: delivery failed ({type(exc).__name__}); "
+                                            "the alerts are in the app.")
     return out
+
+
+def _claim(at: float | None = None) -> str:
+    """A delivery claim: 'c', when it was made (hex seconds), and a nonce;
+    14 characters of the 16-character column."""
+    return f"c{int(time.time() if at is None else at):08x}{uuid.uuid4().hex[:5]}"
+
+
+def _claimed_at(delivery: str) -> int:
+    try:
+        return int(delivery[1:9], 16)
+    except ValueError:
+        return 0  # not a claim this code made: stale
 
 
 def _deliver_pending(watch_id: str, hook: str, address: str, chain_key: str, case_id: str | None,
                      post: Callable[[str, dict[str, Any]], None]) -> None:
     """Post this watch's alerts its webhook has not taken yet: this check's,
     and any left from earlier checks in the last day. They are claimed first,
-    so two checks of one watch never post the same alert twice."""
-    claim = f"c:{uuid.uuid4().hex[:12]}"
+    so two checks of one watch never post the same alert twice; a claim left
+    by a check that died while posting is given up after CLAIM_STALE_SECONDS."""
+    claim = _claim()
     cutoff = _iso_ago(REDELIVER_SECONDS)
     Alert = models.Alert
     with models.session() as s:
+        stale = time.time() - CLAIM_STALE_SECONDS
+        for a in list(s.scalars(select(Alert).where(Alert.watch_id == watch_id, Alert.delivery.like("c%")))):
+            if _claimed_at(a.delivery) < stale:
+                a.delivery = "pending"
+        s.flush()
         mine = (Alert.watch_id == watch_id) & (Alert.delivery == "pending")
         s.execute(update(Alert).where(mine, Alert.created_at < cutoff).values(delivery="failed"))
         s.execute(update(Alert).where(mine, Alert.created_at >= cutoff).values(delivery=claim))
@@ -680,13 +707,16 @@ def _deliver_pending(watch_id: str, hook: str, address: str, chain_key: str, cas
         todo = [alert_summary(a, chain_key, case_id) for a in _rank(rows)]
     if not todo:
         return
-    sent = _deliver(watch_id, hook, address, todo, post)
-    with models.session() as s:
-        for state, ids in (("sent", sent), ("pending", [a["alert_id"] for a in todo if a["alert_id"] not in sent])):
-            if ids:
-                s.execute(update(Alert).where(Alert.id.in_(ids), Alert.delivery == claim)
-                          .values(delivery=state))
-        s.commit()
+    sent: set[str] = set()
+    try:
+        sent = _deliver(watch_id, hook, address, todo, post)
+    finally:  # what was not posted goes back in the outbox, whatever happened
+        with models.session() as s:
+            for state, ids in (("sent", sent), ("pending", [a["alert_id"] for a in todo if a["alert_id"] not in sent])):
+                if ids:
+                    s.execute(update(Alert).where(Alert.id.in_(ids), Alert.delivery == claim)
+                              .values(delivery=state))
+            s.commit()
 
 
 def _rank(alerts: list[models.Alert]) -> list[models.Alert]:
