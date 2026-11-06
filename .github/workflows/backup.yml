@@ -30,15 +30,19 @@ jobs:
     environment: backup
     timeout-minutes: 20
     env:
-      NEON_BACKUP_URL: ${{ secrets.NEON_BACKUP_URL }}
-      BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
-      # pg_dump must be at least the server's major version (Neon's console shows it).
-      PG_IMAGE: postgres:${{ vars.BACKUP_PG_MAJOR || '17' }}-bookworm
+      # pg_dump must be at least the server's major version (Neon's console
+      # shows it); the repository variable BACKUP_PG_MAJOR names a newer one.
+      PG_MAJOR: ${{ vars.BACKUP_PG_MAJOR || '17' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The secret and the recipient reach the two steps that use them, not
+      # the actions around them.
       - name: Check the job is set up
+        env:
+          NEON_BACKUP_URL: ${{ secrets.NEON_BACKUP_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
         run: |
           if [ -z "${NEON_BACKUP_URL:-}" ] || [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
             echo "::error::Backups are not set up: the 'backup' environment needs the NEON_BACKUP_URL secret and the BACKUP_AGE_RECIPIENT variable (docs/operations.md, Backups)."
@@ -51,8 +55,19 @@ jobs:
             exit 1
           fi
       - name: Dump, check and encrypt the store
+        env:
+          NEON_BACKUP_URL: ${{ secrets.NEON_BACKUP_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
         run: |
           set -euo pipefail
+          # Each image is pinned by digest: it reads every case in plain text.
+          # A new major needs its own line here (tag and digest together).
+          case "$PG_MAJOR" in
+            16) PG_IMAGE=postgres:16.15-bookworm@sha256:5264710be20f409750ac6dc4e5706dcef929c87e241605463f0f9aefa932a8d9 ;;
+            17) PG_IMAGE=postgres:17.11-bookworm@sha256:665dc7b37ac52a17e298511414c21d23ffa4e6a6ef6225b3e5d59c7afb35e994 ;;
+            18) PG_IMAGE=postgres:18.6-bookworm@sha256:f1ea2a1a4fb7b68d4836be1fdcb8a6466a89b072158bf9d97663600538c294c5 ;;
+            *) echo "::error::No pinned pg_dump image for BACKUP_PG_MAJOR=$PG_MAJOR; add one to backup.yml."; exit 1 ;;
+          esac
           sudo apt-get install -y -qq age > /dev/null
           stamp=$(date -u +%Y%m%dT%H%M%SZ)
           docker run --rm -e NEON_BACKUP_URL "$PG_IMAGE" \
@@ -63,6 +78,8 @@ jobs:
           age -r "$BACKUP_AGE_RECIPIENT" -o "exchequer-$stamp.pgdump.age" store.pgdump
           rm -f store.pgdump
           echo "FILE=exchequer-$stamp.pgdump.age" >> "$GITHUB_ENV"
+      # Artifacts of a public repository can be downloaded by any signed-in
+      # user: only ciphertext is uploaded, and kept two weeks.
       - name: Keep the encrypted dump
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
