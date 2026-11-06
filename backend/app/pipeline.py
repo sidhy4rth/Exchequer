@@ -459,6 +459,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 client.budget = budget  # checked before every request the client makes
             except AttributeError:
                 pass
+            # A provider that searches a bounded window (NodeReal) may look
+            # further back for the reported address alone, never for a hop.
+            if hasattr(client, "allow_deep_search"):
+                client.allow_deep_search(seed)
             # On Tron, a wallet no label file names is asked about: TronScan's
             # own tag, read live, attributes it when it names an exchange.
             if chain.key == "tron":

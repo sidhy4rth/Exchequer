@@ -96,15 +96,15 @@ def _paging(pages):
 
 def test_an_empty_page_that_still_offers_more_ends_the_window():
     client, calls = _paging(lambda n: {"transfers": [], "pageKey": f"k{n}"})
-    out = client._scan(ADDRESS, "fromAddress", cap=50, top=40_000_000, floor=40_000_000 - 100)
+    out, capped = client._scan(ADDRESS, "fromAddress", cap=50, top=40_000_000, floor=40_000_000 - 100)
     assert out == [] and len(calls) <= 2
-    assert client.last_scan_capped is True  # never read as "sent nothing"
+    assert capped is True  # never read as "sent nothing"
 
 
 def test_a_repeated_page_key_ends_the_window():
     record = {"hash": "0x1", "from": ADDRESS, "to": "0x" + "2" * 40, "value": hex(10**18), "decimal": 18,
               "blockNum": hex(40_000_000 - 5), "blockTimeStamp": 1_700_000_000, "asset": "BNB", "receiptsStatus": 1}
     client, calls = _paging(lambda n: {"transfers": [dict(record, hash=f"0x{n:x}")], "pageKey": "same"})
-    client._scan(ADDRESS, "fromAddress", cap=500, top=40_000_000, floor=40_000_000 - 100)
+    _, capped = client._scan(ADDRESS, "fromAddress", cap=500, top=40_000_000, floor=40_000_000 - 100)
     assert len(calls) <= 3
-    assert client.last_scan_capped is True
+    assert capped is True
