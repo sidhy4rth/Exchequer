@@ -39,6 +39,7 @@ from .api_budget import fresh_reads
 from .chain_data import open_source
 from .etherscan_client import normalize_address
 from .exchange_matcher import get_matcher
+from .input_rules import plain_text
 from .risk_matcher import get_risk_matcher
 
 logger = logging.getLogger(__name__)
@@ -334,8 +335,8 @@ def check_watch(watch_id: str, source: Source = open_source,
         address, asset, chain_key = watch.address, watch.asset, watch.chain
         owner, last_seen, hook = watch.owner_hash, watch.last_seen_block, watch.webhook_url
         case_id = watch.case_id
-    chain = config.get_chain(chain_key)
     try:
+        chain = config.get_chain(chain_key)
         with fresh_reads(), source(chain, asset) as client:
             transfers = client.get_outgoing_transactions(address, limit=FETCH_LIMIT)
             unconfirmed = getattr(client, "confirmed_bound_applied", True) is False
@@ -349,34 +350,29 @@ def check_watch(watch_id: str, source: Source = open_source,
         _finish_check(watch_id, error="Could not read the chain's newest block this round.")
         return []
 
-    position = _position_of(chain)
-    newest = max((position(t) for t in transfers), default=0)
-    new_alerts: list[models.Alert] = []
-    if last_seen is None or (chain.address_family == "tron" and last_seen < _TRON_EPOCH_FLOOR):
-        # First check: the baseline. History before the watch is not news.
-        # A Tron watch whose cursor is below any real timestamp was baselined
-        # by block number, which TRC-20 transfers do not carry; start again.
-        seen_block = newest
-    else:
-        fresh = sorted((t for t in transfers if position(t) > last_seen),
-                       key=lambda t: (position(t), t.hash))
-        for t in fresh:
-            to = t.to_address or ""
-            kind, label = _classify(chain.key, to)
-            where = f"{label} ({to})" if label else to
-            verb = {"exchange": "sent to exchange wallet", "risk": "sent to flagged address",
-                    "moved": "moved"}[kind]
-            message = f"{address} {verb}: {t.value_native:g} {asset} to {where} in tx {t.hash}"
-            new_alerts.append(models.Alert(
-                id=str(uuid.uuid4()), watch_id=watch_id, owner_hash=owner,
-                created_at=_now(), kind=kind, message=message, tx_hash=t.hash,
-                tx_time=int(t.timestamp), value=float(t.value_native), asset=asset,
-                counterparty=to, counterparty_label=label, read=False,
-            ))
-        seen_block = max(last_seen, newest) if fresh else last_seen
-    out = [alert_summary(a, chain.key, case_id) for a in new_alerts]
-    if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts, expected=last_seen):
-        return []  # removed while we were reading, or another check got there first
+    # Everything after the read is guarded too: a check that cannot classify
+    # or store what it read records that and moves on (r2-g2-watchlist-alerts-0-7).
+    try:
+        position = _position_of(chain)
+        newest = max((position(t) for t in transfers), default=0)
+        new_alerts: list[models.Alert] = []
+        if last_seen is None or (chain.address_family == "tron" and last_seen < _TRON_EPOCH_FLOOR):
+            # First check: the baseline. History before the watch is not news.
+            # A Tron watch whose cursor is below any real timestamp was baselined
+            # by block number, which TRC-20 transfers do not carry; start again.
+            seen_block = newest
+        else:
+            fresh = sorted((t for t in transfers if position(t) > last_seen),
+                           key=lambda t: (position(t), t.hash))
+            new_alerts = [_alert(watch_id, owner, chain, address, asset, t) for t in fresh]
+            seen_block = max(last_seen, newest) if fresh else last_seen
+        out = [alert_summary(a, chain.key, case_id) for a in new_alerts]
+        if not _finish_check(watch_id, seen_block=seen_block, alerts=new_alerts, expected=last_seen):
+            return []  # removed while we were reading, or another check got there first
+    except Exception as exc:  # noqa: BLE001 -- one watch must not stop the rest
+        logger.exception("Watch %s: could not store this check", watch_id)
+        _record_failure(watch_id, f"Could not store this round's alerts ({type(exc).__name__}).")
+        return []
 
     if hook and out:
         for alert in out[:10]:
@@ -387,6 +383,48 @@ def check_watch(watch_id: str, source: Source = open_source,
             except Exception as exc:  # noqa: BLE001 -- the alert is stored either way
                 logger.warning("Watch %s: webhook failed: %s", watch_id, type(exc).__name__)
     return out
+
+
+# Column sizes the store enforces (Postgres does; SQLite does not).
+_LABEL_LEN = models.Alert.__table__.c.counterparty_label.type.length
+_PARTY_LEN = models.Alert.__table__.c.counterparty.type.length
+_HASH_LEN = models.Alert.__table__.c.tx_hash.type.length
+_MESSAGE_LEN = 1000
+
+
+def _alert(watch_id: str, owner: str, chain: config.Chain, address: str, asset: str,
+           t: Any) -> models.Alert:
+    """One transfer as an alert. Provider fields and label text come from
+    outside, so each is cut to its column and stripped of control characters."""
+    to = plain_text(t.to_address, _PARTY_LEN)
+    tx_hash = plain_text(t.hash, _HASH_LEN)
+    kind, label = _classify(chain.key, to)
+    label = plain_text(label, _LABEL_LEN)
+    where = f"{label} ({to})" if label else to
+    verb = {"exchange": "sent to exchange wallet", "risk": "sent to flagged address",
+            "moved": "moved"}[kind]
+    message = plain_text(f"{address} {verb}: {t.value_native:g} {asset} to {where} in tx {tx_hash}",
+                         _MESSAGE_LEN)
+    return models.Alert(
+        id=str(uuid.uuid4()), watch_id=watch_id, owner_hash=owner,
+        created_at=_now(), kind=kind, message=message, tx_hash=tx_hash,
+        tx_time=int(t.timestamp), value=float(t.value_native), asset=asset,
+        counterparty=to, counterparty_label=label, read=False,
+    )
+
+
+def _record_failure(watch_id: str, error: str) -> None:
+    """A check that read the chain but could not store what it found. The
+    time and the reason are written on their own; the cursor stays, so the
+    watch goes to the back of the queue, the Check-now cooldown applies, and
+    the same transfers are tried again next time."""
+    with models.session() as s:
+        watch = s.get(models.Watch, watch_id)
+        if watch is None or not watch.active:
+            return
+        watch.last_checked_at = _now()
+        watch.last_error = error[:300]
+        s.commit()
 
 
 def _finish_check(watch_id: str, seen_block: int | None = None, error: str | None = None,
@@ -505,7 +543,8 @@ def nudge() -> None:
 
 def _round(interval: float) -> int:
     """Check every due watch, unchecked first, then the longest unchecked.
-    Returns how many watches are active. One query to find them."""
+    Returns how many watches are active. One query to find them. Each watch
+    fails on its own: one that raises is logged and the round goes on."""
     cutoff = _iso_ago(interval)
     with models.session() as s:
         active = s.execute(select(models.Watch.id, models.Watch.last_checked_at)
@@ -515,7 +554,10 @@ def _round(interval: float) -> int:
     for watch_id, _ in due:
         if _stop.is_set():
             break
-        check_watch(watch_id)
+        try:
+            check_watch(watch_id)
+        except Exception:  # noqa: BLE001 -- one watch must not stop the rest
+            logger.exception("Watch %s: check failed", watch_id)
     return len(active)
 
 
@@ -529,7 +571,7 @@ def _loop(interval: float) -> None:
         active = None
         try:
             active = _round(interval)
-        except Exception:  # noqa: BLE001 -- the loop must outlive one bad round
+        except Exception:  # noqa: BLE001 -- the store itself; the loop must outlive it
             logger.exception("Watchlist round failed")
         if _stop.is_set():
             break

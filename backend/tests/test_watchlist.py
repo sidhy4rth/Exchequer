@@ -1,6 +1,7 @@
 """The watchlist (app/watchlist.py, app/routes/watches.py)."""
 from __future__ import annotations
 
+import threading
 from contextlib import contextmanager
 
 import pytest
@@ -29,6 +30,7 @@ class FakeChain:
 
     def __init__(self):
         self.transfers: list[Transaction] = []
+        self.by_address: dict[str, list[Transaction]] = {}  # overrides `transfers` per address
         self.fail = False
         self.fresh_flags: list[bool] = []
 
@@ -42,7 +44,7 @@ class FakeChain:
                     fake.fresh_flags.append(api_budget._fresh.get())
                     if fake.fail:
                         raise RuntimeError("provider down")
-                    return list(fake.transfers)
+                    return list(fake.by_address.get(address, fake.transfers))
             yield C()
         return client()
 
@@ -336,3 +338,105 @@ def test_a_slow_check_never_moves_the_cursor_back(chain):
     assert slow_result == []  # the cursor moved past what it read: it stores nothing
     assert cursor_of(w.id) == 200
     assert sorted(stored_alerts(w.id)) == sorted(tx(b, STRANGER).hash for b in (120, 150, 200))
+
+
+# ---------------------------------------------------------------------------
+# One watch failing must not stop the others (r2-g2-watchlist-alerts-0-7), and
+# third-party label text is cleaned and cut to its column before it is stored
+# (r2-g2-postgres-prod-divergence-6-3): Postgres enforces VARCHAR(200) and
+# refuses NUL, SQLite does neither.
+# ---------------------------------------------------------------------------
+OTHER_WALLET = "0x" + "8" * 40
+
+
+def _two_baselined_watches(chain, monkeypatch):
+    a = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    b = watchlist.create_watch(owner(BOB), OTHER_WALLET, "ethereum", "ETH")
+    for w in (a, b):
+        watchlist.check_watch(w.id, source=chain)
+    with models.session() as s:  # A is first in the queue
+        s.get(models.Watch, a.id).last_checked_at = "2026-01-01T00:00:00+00:00"
+        s.get(models.Watch, b.id).last_checked_at = "2026-01-01T00:00:01+00:00"
+        s.commit()
+    real = watchlist.check_watch
+    monkeypatch.setattr(watchlist, "check_watch", lambda wid, **k: real(wid, source=chain))
+    # An app shutdown earlier in the run sets the watcher's stop flag.
+    monkeypatch.setattr(watchlist, "_stop", threading.Event())
+    return a, b
+
+
+def _alerts_of(watch_id):
+    from sqlalchemy import select
+    with models.session() as s:
+        return list(s.scalars(select(models.Alert).where(models.Alert.watch_id == watch_id)))
+
+
+def test_one_failing_watch_does_not_stop_the_round(chain, monkeypatch):
+    a, b = _two_baselined_watches(chain, monkeypatch)
+    poisoned = "0x" + "e" * 40
+    real_classify = watchlist._classify
+
+    def classify(chain_key, to, *args, **kwargs):
+        if to == poisoned:
+            raise RuntimeError("bad label row")
+        return real_classify(chain_key, to, *args, **kwargs)
+    monkeypatch.setattr(watchlist, "_classify", classify)
+    chain.by_address = {WALLET: [tx(200, poisoned)], OTHER_WALLET: [tx(201, STRANGER)]}
+    watchlist._round(0)
+    assert len(_alerts_of(b.id)) >= 1  # B was reached and its alerts stored
+    summary = {w["watch_id"]: w for w in watchlist.list_watches(owner(ALICE))}[a.id]
+    assert summary["last_error"] and "Could not store" in summary["last_error"]
+
+
+def test_a_watch_whose_check_raises_outright_does_not_stop_the_round(chain, monkeypatch):
+    a, b = _two_baselined_watches(chain, monkeypatch)
+    inner = watchlist.check_watch
+    seen = []
+
+    def check(wid, **k):
+        seen.append(wid)
+        if wid == a.id:
+            raise RuntimeError("unsupported chain")
+        return inner(wid, **k)
+    monkeypatch.setattr(watchlist, "check_watch", check)
+    watchlist._round(0)
+    assert seen == [a.id, b.id]
+
+
+def test_a_failed_store_moves_the_watch_to_the_back_and_starts_the_cooldown(chain, monkeypatch):
+    a, b = _two_baselined_watches(chain, monkeypatch)
+    real_finish = watchlist._finish_check
+    calls = {"n": 0}
+
+    def finish(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("value too long for type character varying(200)")
+        return real_finish(*args, **kwargs)
+    monkeypatch.setattr(watchlist, "_finish_check", finish)
+    with models.session() as s:
+        cursor = s.get(models.Watch, a.id).last_seen_block
+    chain.transfers = [tx(300, STRANGER)]
+    assert watchlist.check_watch(a.id) == []
+    assert watchlist.due_watch_ids(0) == [b.id, a.id]
+    monkeypatch.setattr(watchlist, "check_watch", lambda wid, **k: [])
+    r = TestClient(app).post(f"/watches/{a.id}/check", headers={ownership.OWNER_HEADER: ALICE})
+    assert r.status_code == 429
+    # The cursor did not move, so the next round tries the same transfer again.
+    with models.session() as s:
+        assert s.get(models.Watch, a.id).last_seen_block == cursor
+
+
+def test_a_long_or_control_char_label_is_cleaned_and_cut(chain, monkeypatch):
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    watchlist.check_watch(w.id, source=chain)
+    label = "X" * 300 + "\x00\n<!channel>‮"
+    monkeypatch.setattr(watchlist, "_classify", lambda *a, **k: ("exchange", label))
+    chain.transfers = [tx(7, STRANGER, h="0xab\x00cd")]
+    watchlist.check_watch(w.id, source=chain)
+    (alert,) = _alerts_of(w.id)
+    limit = models.Alert.__table__.c.counterparty_label.type.length
+    assert len(alert.counterparty_label) <= limit
+    for text in (alert.counterparty_label, alert.message, alert.tx_hash):
+        assert not any(ch in text for ch in "\x00\n‮")
+    assert len(alert.tx_hash) <= models.Alert.__table__.c.tx_hash.type.length
