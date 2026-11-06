@@ -243,6 +243,10 @@ def verify(report: dict[str, Any], read: Callable[[str, str, Asset], dict[str, A
                 checks.append(CHECKERS[chain_key](transfer, read(chain_key, digest, token), token))
             except (httpx.HTTPError, ValueError, KeyError) as exc:
                 checks.append(Check(digest, UNCHECKED, f"the second provider could not be read: {str(exc)[:80]}"))
+            except (TypeError, AttributeError):
+                # An answer whose parts are not the shape a provider gives (a log
+                # that is not an object, say) is a failed read, not a disagreement.
+                checks.append(Check(digest, UNCHECKED, "the second provider's answer is not in the shape expected"))
     return checks
 
 
@@ -283,7 +287,10 @@ def main() -> int:
     with httpx.Client(timeout=30, headers={"User-Agent": "Exchequer verify_case"}) as http:
         def read(chain_key: str, digest: str, token: Asset) -> dict[str, Any]:
             if args.recorded:
-                return saved.get(digest) or {}
+                if digest not in saved:
+                    # --record saves only the reads that worked: a missing one failed.
+                    raise ValueError("this transfer is not in the recording")
+                return saved[digest]
             answer = read_live(http, chain_key, digest, token)
             recorded[digest] = answer
             time.sleep(SECONDS_BETWEEN_READS)

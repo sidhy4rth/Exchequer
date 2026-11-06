@@ -232,3 +232,33 @@ def test_an_ethereum_result_that_is_not_an_object_is_unchecked():
     weird = {"jsonrpc": "2.0", "id": 1, "result": "0xdeadbeef"}
     checks = verify(first_only(_demo_report(1)), live(nodes(lambda _m: weird, lambda _m: weird)))
     assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_a_log_of_the_wrong_shape_is_unchecked_not_a_crash():
+    # A node's receipt whose logs are not objects is an odd answer, not a disagreement.
+    report = _demo_report(3, follow_on=True)
+    first = report["appendix"]["transactions"][0]["hash"]
+    saved = answers("demo_3_follow_on_usdt.json")
+    saved[first] = {**saved[first], "receipt": {**saved[first]["receipt"], "logs": ["not a log", 7]}}
+    checks = verify(report, replay(saved))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_a_tronscan_transfer_list_of_the_wrong_shape_is_unchecked_not_a_crash():
+    report, saved = first_only(_demo_report(12)), answers("demo_12_tron.json")
+    first = report["appendix"]["transactions"][0]["hash"]
+    saved[first] = {**saved[first], "trc20TransferInfo": ["not a transfer"]}
+    assert [c.outcome for c in verify(report, replay(saved))] == [UNCHECKED]
+
+
+def test_a_transfer_missing_from_a_recording_is_unchecked_not_a_mismatch(monkeypatch, capsys, tmp_path):
+    # A read that failed while recording is not saved; replayed, it is still a failed read.
+    saved = answers("demo_12_tron.json")
+    missing = _demo_report(12)["appendix"]["transactions"][0]["hash"]
+    del saved[missing]
+    recording = tmp_path / "recording.json"
+    recording.write_text(json.dumps(saved), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["verify_case", "--demo", "12", "--recorded", str(recording)])
+    assert vc.main() == 2
+    out = capsys.readouterr().out
+    assert "5 transfers: 4 confirmed, 0 mismatch, 1 unchecked" in out and "not in the recording" in out
