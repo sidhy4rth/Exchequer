@@ -70,10 +70,15 @@ def validate_webhook(url: str | None) -> str | None:
     if not url:
         return None
     url = url.strip()
-    parts = urlsplit(url)
+    try:
+        # An unclosed [ or a port that is not a number in range raises here.
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError as exc:
+        raise WatchError("A webhook must be an https:// URL on an allowed host.") from exc
     if parts.scheme != "https" or not parts.hostname:
         raise WatchError("A webhook must be an https:// URL.")
-    if parts.hostname.lower() not in webhook_hosts() or parts.port not in (None, 443) or parts.username:
+    if parts.hostname.lower() not in webhook_hosts() or port not in (None, 443) or parts.username:
         raise WatchError(
             "Webhooks can go to Slack (hooks.slack.com), Discord (discord.com) or Google Chat "
             "(chat.googleapis.com). Ask the operator to allow another host."
@@ -448,7 +453,7 @@ def seconds_since_check(watch: models.Watch) -> float | None:
 STALE_AFTER_INTERVALS = 3
 
 
-def watcher_status() -> dict[str, Any]:
+def watcher_status(owner: str | None = None) -> dict[str, Any]:
     """What the watcher has actually done, not what it is set to do (R30).
 
     On a host that sleeps when idle, as Render's free plan does, the watcher
@@ -456,10 +461,15 @@ def watcher_status() -> dict[str, Any]:
     panel used to say "checked about every ten minutes" regardless. This reads
     the newest check from the store, so it survives a restart, and calls it
     stale when watches exist, checks are on, and none has run for three
-    intervals -- or, for a watch never checked, since it was made."""
+    intervals -- or, for a watch never checked, since it was made.
+
+    With `owner`, only that browser's watches count; without, the whole site
+    (for the operator's /health/detail only)."""
     interval = config.WATCH_INTERVAL_SECONDS
     with models.session() as s:
         active = models.Watch.active.is_(True)
+        if owner is not None:
+            active = active & (models.Watch.owner_hash == owner)
         count = s.scalar(select(func.count()).select_from(models.Watch).where(active)) or 0
         last = s.scalar(select(func.max(models.Watch.last_checked_at)).where(active))
         never = s.scalar(select(func.min(models.Watch.created_at)).where(active)

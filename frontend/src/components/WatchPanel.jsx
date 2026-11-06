@@ -14,8 +14,12 @@ export default function WatchPanel({ result }) {
   const [hook, setHook] = useState('')
   const [showHook, setShowHook] = useState(false)
 
-  const [automatic, setAutomatic] = useState(true)
-  const load = () => fetchWatches().then((d) => { setWatches(d.watches ?? []); setAutomatic(d.watcher?.enabled ?? d.running !== false) }).catch(() => {})
+  // undefined while loading, null if the watch service could not be reached:
+  // the panel must not promise a schedule it has not seen.
+  const [watcher, setWatcher] = useState(undefined)
+  const load = () => fetchWatches()
+    .then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) })
+    .catch(() => setWatcher(null))
   useEffect(() => { load() }, [result?.case_id])
 
   if (!result?.address) return null
@@ -42,7 +46,8 @@ export default function WatchPanel({ result }) {
     <details className="card sec" open>
       <summary><span className="micro">Watch for movement</span><span className="note">alerts when funds leave</span></summary>
       <div className="body watch-panel">
-        {!automatic && <p className="note">Automatic checks are off on this site: a watch is checked only when someone presses Check now in the watchlist.</p>}
+        {watcher === null && <p className="note">Could not reach the watch service; press Check now on the home page before relying on a watch.</p>}
+        {watcher?.enabled === false && <p className="note">Automatic checks are off on this site: a watch is checked only when someone presses Check now in the watchlist.</p>}
         {candidates.map((c) => {
           const w = watching(c.address)
           return (
@@ -63,7 +68,10 @@ export default function WatchPanel({ result }) {
             </label>
           : <button className="quiet link-like" onClick={() => setShowHook(true)}>+ post alerts to Slack, Discord or Google Chat</button>}
         {error && <p className="error-line">{error}</p>}
-        <p className="note">Checked about every ten minutes. Alerts appear on the home page, in this browser only. An alert into an exchange wallet is the moment to send the freeze request.</p>
+        <p className="note">
+          {watcher?.enabled === true ? `Checked automatically about every ${Math.round((watcher.interval_seconds ?? 600) / 60)} min. ` : ''}
+          Alerts appear on the home page, in this browser only. An alert into an exchange wallet is the moment to send the freeze request.
+        </p>
       </div>
     </details>
   )

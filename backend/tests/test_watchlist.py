@@ -96,9 +96,23 @@ def test_webhooks_only_to_known_hosts_over_https():
     assert watchlist.validate_webhook("https://discord.com/api/webhooks/1/abc")
     for bad in ("http://hooks.slack.com/x", "https://169.254.169.254/latest", "https://localhost/x",
                 "https://hooks.slack.com.evil.com/x", "https://user@hooks.slack.com/x",
-                "https://hooks.slack.com:8443/x", "file:///etc/passwd"):
+                "https://hooks.slack.com:8443/x", "file:///etc/passwd", *MALFORMED_HOOKS):
         with pytest.raises(watchlist.WatchError):
             watchlist.validate_webhook(bad)
+
+
+# urlsplit or .port raise a plain ValueError on these, which the route did
+# not catch: a 500 and a traceback instead of a 400.
+MALFORMED_HOOKS = ("https://hooks.slack.com:abc/x", "https://[hooks.slack.com/x",
+                   "https://hooks.slack.com:99999/x")
+
+
+def test_a_malformed_webhook_url_is_a_400_not_a_500(store):
+    client = TestClient(app, raise_server_exceptions=False)
+    for bad in MALFORMED_HOOKS:
+        r = client.post("/watches", json={"address": WALLET, "webhook_url": bad},
+                        headers={ownership.OWNER_HEADER: ALICE})
+        assert r.status_code == 400, bad
 
 
 def test_alerts_are_posted_to_the_webhook_and_the_url_is_never_echoed(chain):

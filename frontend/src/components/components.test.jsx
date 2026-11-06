@@ -344,7 +344,7 @@ describe('what the watchlist says about the watcher (R30)', () => {
   it('says when the last check was, and stays calm when it was recent', async () => {
     oneWatch({ enabled: true, interval_seconds: 600, last_check_at: minutesAgo(4), stale: false })
     inRouter(<Watchlist />)
-    expect(await screen.findByText(/about every 10 min · last check 4 min ago/)).toBeInTheDocument()
+    expect(await screen.findByText(/about every 10 min · last check of your watches 4 min ago/)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -370,5 +370,26 @@ describe('the watch panel when automatic checks are off (R30)', () => {
     await screen.findByText('Watch for movement')
     await new Promise((r) => setTimeout(r, 20))
     expect(screen.queryByText(/Automatic checks are off/)).not.toBeInTheDocument()
+  })
+
+  it('promises no schedule when checks run only on Check now', async () => {
+    api({ 'GET /watches': { body: { count: 0, watches: [], watcher: { enabled: false, interval_seconds: 600 } } } })
+    const { container } = inRouter(<WatchPanel result={result} />)
+    await screen.findByText(/Automatic checks are off on this site/)
+    expect(container).not.toHaveTextContent(/every ten minutes|about every/)
+    expect(container).toHaveTextContent(/Alerts appear on the home page/)
+  })
+
+  it('gives the real interval when automatic checks are on', async () => {
+    api({ 'GET /watches': { body: { count: 0, watches: [], watcher: { enabled: true, interval_seconds: 300 } } } })
+    inRouter(<WatchPanel result={result} />)
+    expect(await screen.findByText(/Checked automatically about every 5 min/)).toBeInTheDocument()
+  })
+
+  it('claims no schedule when the watch service cannot be reached', async () => {
+    api({ 'GET /watches': { status: 500, body: { detail: 'down' } } })
+    const { container } = inRouter(<WatchPanel result={result} />)
+    expect(await screen.findByText(/Could not reach the watch service/)).toBeInTheDocument()
+    expect(container).not.toHaveTextContent(/every ten minutes|about every/)
   })
 })

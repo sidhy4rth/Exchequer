@@ -58,7 +58,7 @@ export default function Watchlist({ onCount } = {}) {
           <span className="micro">Watchlist · {watches.length}{unread ? <span className="pill red" style={{ marginLeft: 8 }}>{unread} new</span> : null}</span>
           <span className="note">{watcher?.enabled === false
             ? 'automatic checks are off on this site · press Check now · this browser only'
-            : `checked automatically about every ${Math.round((watcher?.interval_seconds ?? 600) / 60)} min · last check ${ago(watcher?.last_check_at)} · this browser only`}</span>
+            : `checked automatically about every ${Math.round((watcher?.interval_seconds ?? 600) / 60)} min · last check of your watches ${ago(watcher?.last_check_at)} · this browser only`}</span>
         </div>
         <div className="body">
           {watcher?.stale && (

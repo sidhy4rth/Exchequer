@@ -66,11 +66,19 @@ def add_watch(body: WatchRequest, http: Request) -> dict[str, Any]:
 def get_watches(http: Request) -> dict[str, Any]:
     owner = ownership.owner_hash_from_headers(http.headers)
     watches = watchlist.list_watches(owner) if owner else []
+    # Whether and how often checks run is for anyone. When they last ran is
+    # said only of this browser's own watches: the site-wide count and the
+    # time of anyone's last check stay in the token-gated /health/detail.
+    watcher: dict[str, Any] = {"enabled": config.WATCHER_ENABLED,
+                               "interval_seconds": config.WATCH_INTERVAL_SECONDS}
+    if owner:
+        mine = watchlist.watcher_status(owner)
+        watcher |= {"stale": mine["stale"], "last_check_at": mine["last_check_at"]}
     return {"count": len(watches), "watches": watches,
-            "interval_seconds": watchlist.config.WATCH_INTERVAL_SECONDS,
-            "running": watchlist.config.WATCHER_ENABLED,
+            "interval_seconds": config.WATCH_INTERVAL_SECONDS,
+            "running": config.WATCHER_ENABLED,
             # What the watcher has actually done, for the panel to say (R30).
-            "watcher": watchlist.watcher_status()}
+            "watcher": watcher}
 
 
 @router.delete("/watches/{watch_id}")
