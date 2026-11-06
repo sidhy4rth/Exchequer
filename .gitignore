@@ -16,6 +16,8 @@ backend/.env
 *.building
 *.partial
 backend/data/label_store*
+# Rows a store build refused (never_flag.py), listed beside the private hunt CSV.
+*.refused.tsv
 
 # Node
 frontend/node_modules/

@@ -58,3 +58,73 @@ def test_a_source_the_rules_do_not_place_fails_the_build(tmp_path, capsys):
     assert not out.exists()  # nothing to release by mistake
     assert build_label_store.main([str(src), "--out", str(out), "--allow-unknown-sources"]) == 0
     assert out.exists()
+
+
+# -- r1-labels-data-1: no scan or list may label infrastructure ------------------
+BINANCE_14 = "0x28c6c06298d514db089934071355e5743bf21d60"     # exchange_labels.json: hot wallet
+DEPOSIT = "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7"        # exchange_labels.json: deposit wallet
+ROUTER_1INCH = "0x11111112542d85b3ef69ae05771c2dccff4faa26"   # router_labels.json
+USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"           # config: a traced token
+WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"           # data/never_flag_tokens.txt
+CLOUDBET = "TAJ3SYGtVjGqm61qoGzZN9bQY6MST2JQVL"               # gambling_labels_tron.json
+WHITEBIT = "TWBPGLwQw2EbqYLLw1DJnTDt2ZQ9yJW1JJ"               # exchange_labels_tron.json
+DETECTOR = "Ethereum poisoning via BigQuery full-history scan (8-char lookalike)"
+
+
+def poisoning(address, chain="ethereum"):
+    return {"address": address, "chain": chain, "category": "address poisoning",
+            "entity_or_incident": "lookalike sent by a poisoning operator", "sources": DETECTOR}
+
+
+def freeze(address, chain="ethereum"):
+    return {"address": address, "chain": chain, "category": "stablecoin freeze",
+            "entity_or_incident": "USDT", "sources": "USDT0 contract freeze events (on-chain replay)"}
+
+
+def test_infrastructure_never_becomes_a_store_row(tmp_path):
+    infra = [BINANCE_14, DEPOSIT, ROUTER_1INCH, USDT, WETH, "0x" + "0" * 40, "0x" + "0" * 36 + "dead"]
+    rows = [poisoning(a) for a in infra] + [poisoning(CLOUDBET, "tron"), poisoning(WHITEBIT, "tron"),
+                                             SCAM]
+    src = write_csv(tmp_path / "flagged.csv", rows)
+    out = tmp_path / "label_store.db"
+    report = build(src, out)
+    assert report["rows"] == 1  # only the real scam wallet
+    assert report["refused"] == 9
+    assert report["skipped"] == {"never-flag: system": 2, "never-flag: token": 2, "never-flag: exchange": 2,
+                                 "never-flag: deposit": 1, "never-flag: router": 1, "never-flag: gambling": 1}
+    listed = (tmp_path / "flagged.csv.refused.tsv").read_text()
+    assert BINANCE_14 in listed and CLOUDBET in listed and ROUTER_1INCH in listed
+
+
+def test_an_issuer_freeze_on_an_exchange_or_deposit_wallet_stays(tmp_path):
+    src = write_csv(tmp_path / "flagged.csv", [freeze(DEPOSIT), freeze(BINANCE_14), freeze(USDT)])
+    report = build(src, tmp_path / "label_store.db")
+    assert report["rows"] == 2 and report["skipped"] == {"never-flag: token": 1}
+
+
+def test_a_court_record_on_infrastructure_or_a_flood_of_refusals_fails_the_build(tmp_path, capsys):
+    fbi = {"address": BINANCE_14, "chain": "ethereum", "category": "hack proceeds (FBI)",
+           "entity_or_incident": "Lazarus", "sources": "FBI alert 31 Oct 2026"}
+    src = write_csv(tmp_path / "flagged.csv", [SCAM, fbi])
+    out = tmp_path / "label_store.db"
+    assert build_label_store.main([str(src), "--out", str(out)]) == 1
+    assert "refused.tsv" in capsys.readouterr().out and not out.exists()
+    assert build_label_store.main([str(src), "--out", str(out), "--accept-refusals"]) == 0
+
+    src = write_csv(tmp_path / "many.csv", [SCAM, poisoning(USDT), poisoning(WETH)])
+    assert build_label_store.main([str(src), "--out", str(out), "--max-refused", "1"]) == 1
+    assert build_label_store.main([str(src), "--out", str(out), "--max-refused", "2"]) == 0
+
+
+def test_the_owners_never_flag_lists_apply_too(tmp_path):
+    """The out-of-repo gates (one address per line, or a note then a tab and the
+    address) run inside the build rather than as a step someone can skip."""
+    tokens = tmp_path / "never_flag_tokens.txt"
+    tokens.write_text(f"{addr('70c3')}\n")
+    services = tmp_path / "never_poison_x.txt"
+    services.write_text(f"# reason\tfile\taddress\nknown service\tops.csv\t{addr('5e2c')}\n")
+    rows = [poisoning(addr("70c3")), freeze(addr("70c3")), poisoning(addr("5e2c")), freeze(addr("5e2c"))]
+    src = write_csv(tmp_path / "flagged.csv", rows)
+    report = build(src, tmp_path / "label_store.db", listed=[tokens], no_poisoning=[services])
+    assert report["rows"] == 1  # the freeze on the service, which only poisoning labels may not name
+    assert report["skipped"] == {"never-flag: listed": 2, "never-flag: never-poison": 1}

@@ -43,3 +43,22 @@ def test_only_pools_and_entrypoints_count_as_a_mixer():
 def test_a_scam_list_entry_without_a_tag_is_named_generically():
     assert scam_entity("") == ("Reported phishing / scam wallet", "Reported phishing / scam wallet")
     assert scam_entity("Akropolis Hacker 1") == ("Akropolis hack", "Akropolis Hacker 1")
+
+
+def test_a_scam_list_never_labels_an_exchange_router_or_token(monkeypatch, tmp_path, capsys):
+    """r1-labels-data-1: the scam-list import skips infrastructure before it spends a call."""
+    import contextlib
+
+    from app import config
+    from scripts import import_eth_labels, import_threat_labels
+
+    binance_14, usdt, fresh = ("0x28c6c06298d514db089934071355e5743bf21d60",
+                               "0xdac17f958d2ee523a2206206994597c13d831ec7", "0x" + "5c" * 20)
+    monkeypatch.setattr(import_threat_labels, "scam_candidates", lambda: {
+        a: {"tag": "", "sources": ["ScamSniffer"], "etherscan": True} for a in (binance_14, usdt, fresh)})
+    checked = []
+    monkeypatch.setattr(import_eth_labels, "has_any_activity", lambda _c, a: checked.append(a) or True)
+    monkeypatch.setattr(import_threat_labels, "EtherscanClient", lambda **_k: contextlib.nullcontext(object()))
+    monkeypatch.setattr(config, "NODEREAL_API_KEY", "")
+    assert import_threat_labels.import_scam_lists(tmp_path / "checkpoint.jsonl", dry_run=True) == 0
+    assert checked == [fresh]

@@ -66,7 +66,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import config  # noqa: E402
+from app import config, never_flag  # noqa: E402
 from app.etherscan_client import (  # noqa: E402
     EtherscanClient,
     EtherscanError,
@@ -214,7 +214,13 @@ def import_scam_lists(checkpoint: Path, dry_run: bool) -> int:
                 listed |= set(json.loads(path.read_text())["labels"])
         documents[key] = json.loads(chain.threat_labels_path.read_text())
     have = set(documents["ethereum"]["labels"]) | set(documents["bsc"]["labels"])
-    todo = sorted(a for a in candidates if a not in listed and a not in have)
+    # A list is wrong about an exchange wallet, router, token contract, casino
+    # or burn address, whatever it says; skipped before any call is spent.
+    infrastructure = {a for a in candidates
+                      if any(never_flag.kind(key, a, with_gambling=True) for key in CHAIN_IDS)}
+    if infrastructure:
+        print(f"{len(infrastructure)} listed addresses are exchanges, routers, tokens or casinos; left out")
+    todo = sorted(a for a in candidates if a not in listed and a not in have and a not in infrastructure)
 
     done: dict[str, list[str]] = {}
     if checkpoint.exists():
