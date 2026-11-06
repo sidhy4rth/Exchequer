@@ -937,9 +937,17 @@ def _follow_swaps(
     traceable = {t.symbol for t in chain.tokens}
     seen: set[tuple[str, str]] = set()
     out: list[dict[str, Any]] = []
-    for swap in swaps:
+    # Every traceable output of a swap is followed, not only the one named as
+    # its result: the swapper decides what else his transaction pays him.
+    # Each follow-on carries the swap with its own output's asset and amount.
+    candidates = [
+        {**swap, "asset_out": o.get("asset"), "amount_out": o.get("amount")}
+        for swap in swaps if swap.get("output_read")
+        for o in (swap.get("outputs") or [{"asset": swap.get("asset_out"), "amount": swap.get("amount_out")}])
+    ]
+    for swap in candidates:
         asset_out = swap.get("asset_out")
-        if not swap.get("output_read") or asset_out not in traceable or asset_out == asset_symbol:
+        if asset_out not in traceable or asset_out == asset_symbol:
             continue
         key = (swap["sender"], asset_out)
         if key in seen:

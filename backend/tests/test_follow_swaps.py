@@ -211,3 +211,32 @@ def test_the_follow_on_keeps_the_route_to_the_swap(faked, monkeypatch):
     (follow,) = run_trace(request())["follow_ons"]
     assert [step["address"] for step in follow["route"]] == [SEED, MID]
     assert follow["route"][1]["value_native"] == 1.0
+
+
+def test_a_decoy_token_does_not_stop_the_follow_on(faked, monkeypatch):
+    """Audit r1-attribution-integrity-4: a worthless token in the same
+    receipt must not stand in for the USDT the swap returned."""
+    decoy = {"contract": "0xfa4e" + "0" * 36, "asset": "token 0xfa4e" + "0" * 36, "units": str(10**18),
+             "amount": None}
+    usdt = {"contract": "0xdac17f958d2ee523a2206206994597c13d831ec7", "asset": "USDT", "units": "2400000000",
+            "amount": 2400.0}
+    # Even a record that names the decoy as its output is followed in USDT.
+    swap = {**SWAP, "asset_out": decoy["asset"], "amount_out": None, "amount_out_units": decoy["units"],
+            "outputs": [decoy, usdt], "other_outputs": 1}
+    monkeypatch.setattr(main, "detect_swaps", lambda graph, *a, **k: [swap] if k.get("asset_symbol") == "ETH" else [])
+    (follow,) = run_trace(request())["follow_ons"]
+    assert follow["swap"]["amount_out"] == 2400.0
+    assert follow["asset"] == "USDT" and follow["result"]["exchange"] == "Binance"
+
+
+def test_every_configured_output_is_followed_once(faked, monkeypatch):
+    monkeypatch.setitem(HISTORY, "USDC", [tx(SEED, BINANCE_14, 300.0, SWAP_AT + 60, "USDC")])
+    outputs = [{"contract": "0xdac17f958d2ee523a2206206994597c13d831ec7", "asset": "USDT", "units": "2400000000",
+                "amount": 2400.0},
+               {"contract": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "asset": "USDC", "units": "300000000",
+                "amount": 300.0}]
+    swap = {**SWAP, "outputs": outputs, "other_outputs": 1}
+    monkeypatch.setattr(main, "detect_swaps", lambda graph, *a, **k: [swap] if k.get("asset_symbol") == "ETH" else [])
+    follows = run_trace(request())["follow_ons"]
+    assert [(f["asset"], f["swap"]["asset_out"], f["swap"]["amount_out"]) for f in follows] == [
+        ("USDT", "USDT", 2400.0), ("USDC", "USDC", 300.0)]
