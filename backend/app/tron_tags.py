@@ -33,8 +33,9 @@ import logging
 import re
 import threading
 import time
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -47,10 +48,23 @@ logger = logging.getLogger(__name__)
 TRONSCAN = "https://apilist.tronscanapi.com"
 PROVIDER = "tronscan"
 
-# Tags that name something other than a place funds are cashed out at.
+# Tags that name something other than a place funds are cashed out at: an
+# exchange's own infrastructure, a protocol, or a warning about a wallet that
+# only borrows an exchange's name ("Binance (Fake)", "Bybit_Drainer"). A DEX
+# router or pool under an exchange's name is a swap, not a deposit (ADR-0006).
 NOT_AN_EXCHANGE = re.compile(
     r"(treasury|token|contract|bridge|foundation|team|burn|blackhole|black hole|justlend|sunswap|dao|"
-    r"multisig|deployer|staking|validator|sr\b|super representative|exploit|hacker|scam|phish)",
+    r"multisig|deployer|staking|validator|sr\b|super representative|exploit|hacker|scam|phish|"
+    r"fake|fraud|drainer|impersonat|lookalike|poison|victim|honeypot|copycat|ponzi|clone|\bnot\b|"
+    r"\bdex\b|router|swap|pool|aggregat|relayer|paymaster|funder)",
+    re.IGNORECASE,
+)
+
+# What may follow the exchange's name in a tag that names one of its wallets:
+# "-Hot 12", " Hot Wallet 3", ": Cold", " Exchange Reserves", " 2". Anything
+# else ("(Fake)", ":Lookalike", "-Pool") is not recognised, never guessed at.
+QUALIFIERS = re.compile(
+    r"^(?:[\s\-:_().#]|\d+|hot|cold|wallets?|exchange|deposits?|reserves?|old|new|main)*$",
     re.IGNORECASE,
 )
 
@@ -85,8 +99,33 @@ MAX_LOOKUPS_PER_TRACE = 60
 SWEEP_WORKERS = 4
 
 
+# Invisible characters: controls, format characters (zero-width space and
+# joiners, soft hyphen, bidi embeddings, overrides and isolates), private-use
+# and surrogates. Inside a word they hid it from every regex here while the
+# letters-only head still matched ("Binance-Sc\u2060am" read as Binance).
+_INVISIBLE = ("Cf", "Co", "Cs")
+MAX_TAG_LENGTH = 200
+
+
+def clean_tag(text: Any) -> str:
+    """A third-party tag as plain text: NFKC-normalised, invisible characters
+    removed, control characters and runs of whitespace as one space, capped.
+    Applied before any rule reads a tag, here and in the label importers."""
+    if not isinstance(text, str):
+        return ""
+    text = unicodedata.normalize("NFKC", text)
+    text = "".join(
+        " " if unicodedata.category(ch) == "Cc" else ch
+        for ch in text if unicodedata.category(ch) not in _INVISIBLE
+    )
+    return re.sub(r"\s+", " ", text).strip()[:MAX_TAG_LENGTH]
+
+
+_HEAD_SPLIT = re.compile(r"[-:_(]| hot| cold| wallet| exchange| deposit|\d", re.IGNORECASE)
+
+
 def tag_head(tag: str) -> str:
-    head = re.split(r"[-:_(]| hot| cold| wallet| exchange| deposit|\d", tag, maxsplit=1, flags=re.I)[0]
+    head = _HEAD_SPLIT.split(tag, maxsplit=1)[0]
     head = re.sub(r"\.(com|io|net)$", "", head.strip().lower())
     return re.sub(r"[^a-z]", "", head)
 
@@ -103,8 +142,16 @@ def wallet_type(tag: str) -> str:
 
 
 def exchange_for_tag(tag: str | None) -> str | None:
-    """The exchange a TronScan tag names, or None if it names none we know."""
-    if not tag or NOT_AN_EXCHANGE.search(tag):
+    """The exchange a TronScan tag names, or None if it names none we know.
+
+    The tag must be the exchange's name followed only by a wallet qualifier
+    (QUALIFIERS), and must not be a warning: "Binance (Fake)" is a TronScan
+    warning about a wallet, not one of Binance's."""
+    tag = clean_tag(tag)
+    if not tag or NOT_AN_EXCHANGE.search(tag) or WARNING_TAG.search(tag):
+        return None
+    head = _HEAD_SPLIT.split(tag, maxsplit=1)[0]
+    if not QUALIFIERS.match(tag[len(head):]):
         return None
     return CANONICAL.get(tag_head(tag))
 
@@ -117,9 +164,9 @@ def warning_from_response(body: Any) -> str | None:
     """TronScan's warning about an address: its red tag, else a tag naming a scam."""
     if not isinstance(body, dict):
         return None
-    red = body.get("redTag")
-    if isinstance(red, str) and red.strip():
-        return red.strip()
+    red = clean_tag(body.get("redTag"))
+    if red:
+        return red
     tag = tag_from_response(body)
     return tag if tag and WARNING_TAG.search(tag) else None
 
@@ -134,9 +181,9 @@ def tag_from_response(body: Any) -> str | None:
     if not isinstance(body, dict):
         return None
     for key in ("addressTag", "publicTag", "tag"):
-        value = body.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
+        value = clean_tag(body.get(key))
+        if value:
+            return value
     return None
 
 
@@ -218,13 +265,26 @@ class TronScanTags:
 
 
 class LiveTronExchanges:
-    """Exchange wallets a Tron trace identified from TronScan tags as it ran."""
+    """Exchange wallets a Tron trace identified from TronScan tags as it ran.
 
-    def __init__(self, tags: TronScanTags, is_labelled) -> None:
+    A tag is accepted the way a label file's entry is (ADR-0006): the text
+    must name an exchange's wallet, and the address must prove itself on
+    chain. A wallet the trace reached has moved value, which covers the
+    "received at least once" test; `is_contract` covers the other, so an
+    exchange-named router or pool contract is never a cash-out point. A tag
+    whose address carries a TronScan warning is never one either.
+    """
+
+    def __init__(self, tags: TronScanTags, is_labelled,
+                 is_contract: Callable[[str], bool | None] | None = None) -> None:
         self.tags = tags
         self.is_labelled = is_labelled
+        # address -> True (contract), False (an account), None (could not tell).
+        # None here means the caller has no way to ask (tests); a trace passes one.
+        self.is_contract = is_contract
         self.found: dict[str, dict[str, str]] = {}
         self.unrecognised: dict[str, str] = {}
+        self.rejected: dict[str, str] = {}
         self.warnings: dict[str, str] = {}
         self._asked: set[str] = set()
         self._lock = threading.Lock()
@@ -279,14 +339,23 @@ class LiveTronExchanges:
 
     def _ask(self, address: str) -> None:
         account = self.tags.account(address) or {}
-        tag, warning = account.get("tag"), account.get("warning")
+        tag, warning = clean_tag(account.get("tag")), clean_tag(account.get("warning"))
         exchange = exchange_for_tag(tag)
+        refusal = None
+        if exchange and warning:
+            refusal = f"{tag} (TronScan also warns about this address)"
+        elif exchange and self.is_contract is not None:
+            code = self.is_contract(address)
+            if code is not False:
+                refusal = f"{tag} ({'a contract' if code else 'could not confirm it is not a contract'})"
         with self._lock:
             if warning:
                 self.warnings[address] = warning
-            if exchange:
+            if exchange and refusal is None:
                 self.found[address] = {"exchange": exchange, "label": f"{tag} (TronScan tag, read live)",
                                        "type": wallet_type(tag)}
+            elif refusal is not None:
+                self.rejected[address] = refusal
             elif tag:
                 self.unrecognised[address] = tag
 
@@ -308,5 +377,7 @@ class LiveTronExchanges:
             "failures": self.tags.failures,
             "found": [{"address": a, **m} for a, m in sorted(self.found.items())],
             "unrecognised_tags": [{"address": a, "tag": t} for a, t in sorted(self.unrecognised.items())],
+            # Tags naming an exchange that the address failed to prove (ADR-0006).
+            "rejected_tags": [{"address": a, "tag": t} for a, t in sorted(self.rejected.items())],
             "warnings": [{"address": a, "warning": w} for a, w in sorted(self.warnings.items())],
         }

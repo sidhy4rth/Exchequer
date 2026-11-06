@@ -61,6 +61,7 @@ from app.etherscan_client import EtherscanClient, EtherscanError, is_valid_addre
 from app.nodereal_client import NoderealError  # noqa: E402
 from scripts.import_eth_labels import (CANONICAL, DATASET_COMMIT, DATASET_REPO, SKIP_SLUG,  # noqa: E402
                                        SKIP_TAG, tag_head, wallet_type)
+from app.tron_tags import clean_tag  # noqa: E402
 
 TARGETS = ("polygon", "arbitrum")
 # BNB Smart Chain has its own importers and a label file of its own; the port
@@ -87,6 +88,7 @@ def scrape_candidates(chain_key: str) -> dict[str, dict[str, str]]:
     out: dict[str, dict[str, str]] = {}
     with urllib.request.urlopen(BRIAN.format(site=BRIAN_SITE[chain_key]), timeout=300) as response:
         for address, tag in json.loads(response.read()).items():
+            tag = clean_tag(tag)  # before SKIP_TAG: invisible characters must not hide a word
             exchange = CANONICAL.get(tag_head(tag))
             if exchange and is_valid_address(address) and not SKIP_TAG.search(tag):
                 out[normalize_address(address)] = {"exchange": exchange, "label": tag,
@@ -96,7 +98,7 @@ def scrape_candidates(chain_key: str) -> dict[str, dict[str, str]]:
             for row in csv.DictReader(io.StringIO(response.read().decode())):
                 if row["chainId"] != DAWS_CHAIN_ID[chain_key] or SKIP_SLUG.search(row["label"]):
                     continue
-                tag = (row["nameTag"] or "").strip()
+                tag = clean_tag(row["nameTag"])
                 if not tag or tag == "null" or SKIP_TAG.search(tag):
                     continue
                 exchange = CANONICAL.get(tag_head(tag))

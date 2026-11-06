@@ -24,6 +24,7 @@ enough for a demo. A free key raises the limit and is sent as TRON-PRO-API-KEY.
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import random
 import threading
@@ -187,14 +188,22 @@ class TronClient:
             self._last_request_at = time.monotonic()
 
     def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
+        query = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+        return self._send("GET", path, f"GET {self.base_url}{path}?{query}", params=params)
+
+    def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._send("POST", path, f"POST {self.base_url}{path} {json.dumps(payload, sort_keys=True)}",
+                          json=payload)
+
+    def _send(self, method: str, path: str, request_desc: str, **kwargs: Any) -> dict[str, Any]:
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
             if self.budget is not None:
                 self.budget.check()  # the case's wall clock, before every attempt
             self._throttle()
             try:
-                response = self._client.get(f"{self.base_url}{path}", params=params,
-                                            **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
+                response = self._client.request(method, f"{self.base_url}{path}", **kwargs,
+                                                **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
             except httpx.RequestError as exc:
                 last_error = TronError(f"Network error contacting TronGrid: {exc}")
                 self._backoff(attempt, str(exc))
@@ -219,8 +228,7 @@ class TronClient:
 
             if body.get("success") is False:
                 raise TronError(f"TronGrid error: {str(body.get('error'))[:200]}")
-            query = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
-            self.evidence.record("trongrid", f"GET {self.base_url}{path}?{query}", response.content)
+            self.evidence.record("trongrid", request_desc, response.content)
             return body
 
         raise TronError(
@@ -459,6 +467,21 @@ class TronClient:
                 break
 
         return collected[:cap]
+
+    def is_contract(self, address: str) -> bool | None:
+        """Whether `address` holds contract bytecode: True, False, or None when
+        TronGrid could not say. What ADR-0006 asks of a label before it can
+        name an exchange; the live TronScan tags are held to it too."""
+        if not is_tron_address(address):
+            return None
+        try:
+            body = self._post("/wallet/getcontract", {"value": address, "visible": True})
+        except TronError as exc:
+            logger.warning("Could not read whether %s is a contract: %s", address, type(exc).__name__)
+            return None
+        if body.get("Error"):
+            return None
+        return bool(body.get("bytecode"))
 
     def get_transactions(self, address: str, limit: int | None = None, sort: str = "desc"):
         """Present for interface parity; callers pick a direction explicitly."""

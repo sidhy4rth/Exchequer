@@ -74,6 +74,7 @@ from scripts._label_files import chain_regenerate  # noqa: E402
 from scripts.import_exchange_labels import has_value_history  # noqa: E402
 from scripts.seed_bsc_labels import ACTIVITY_LOOKBACK, bsc_activity  # noqa: E402
 from scripts.seed_tron_labels import CANONICAL as TRON_CANONICAL  # noqa: E402
+from app.tron_tags import clean_tag  # noqa: E402
 
 DATASET_REPO = "dawsbot/eth-labels"
 DATASET_COMMIT = "14247ba8cf4686b747938248bee34c66089fa9d9"
@@ -158,7 +159,8 @@ def candidates_by_chain() -> dict[str, dict[str, dict[str, str]]]:
             chain_key = wanted.get(row["chainId"])
             if chain_key is None or SKIP_SLUG.search(row["label"]):
                 continue
-            tag = (row["nameTag"] or "").strip()
+            # Invisible characters removed first, or "Treas\u200bury" hides from SKIP_TAG.
+            tag = clean_tag(row["nameTag"])
             if not tag or tag == "null" or SKIP_TAG.search(tag):
                 continue
             exchange = CANONICAL.get(tag_head(tag))
@@ -232,7 +234,7 @@ def deposit_candidates(exchange: str) -> dict[str, dict[str, str]]:
         for row in rows:
             if row["chainId"] != CHAIN_IDS["ethereum"]:
                 continue
-            tag = (row["nameTag"] or "").strip()
+            tag = clean_tag(row["nameTag"])
             match = DEPOSIT_TAG.match(tag)
             addr = normalize_address(row["address"])
             if match and CANONICAL.get(tag_head(match["name"])) == exchange and is_valid_address(addr):

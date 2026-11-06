@@ -465,6 +465,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 live = LiveTronExchanges(
                     TronScanTags(config.TRONSCAN_API_KEY, evidence=getattr(client, "evidence", None)),
                     matcher.is_exchange,
+                    # ADR-0006: a tag names an exchange only for an account, never a contract.
+                    is_contract=getattr(client, "is_contract", None) or (lambda a: None),
                 )
                 live.tags.budget = budget
             # R1: read the victim's payments from the chain first. They must be
@@ -505,6 +507,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 # The last hop is never checked during the walk; ask now, then
                 # attribute against the file's labels plus what TronScan named.
                 live.sweep(result.graph)
+                file_matcher = matcher
                 if live.found:
                     matcher = ExchangeMatcher({**matcher._labels, **live.found}, chain=chain.key)
                 if live.warnings:
@@ -530,8 +533,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             progress.report(stage="attributing")
             inferred = []
             if direction == OUTGOING:
+                # Only a label file's wallet is a sweep destination: an inference
+                # resting on an explorer tag read live would be two guesses deep.
                 inferred = infer_deposit_addresses(
-                    result.graph, matcher,
+                    result.graph, matcher if live is None else file_matcher,
                     balance_of=getattr(client, "get_balance_native", None),
                     native_symbol=chain.native_symbol,
                     # Dust is measured in the traced asset; a wallet the risk
