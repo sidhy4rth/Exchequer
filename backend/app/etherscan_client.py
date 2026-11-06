@@ -405,9 +405,9 @@ class EtherscanClient:
         # available: the provider, not the traversal, is what makes a trace slow.
         cache_key = self._cache_key(query)
         request_desc = self._describe(query)
-        hit, cached = self._cache.get(cache_key)
+        hit, cached, meta = self._cache.get_with_meta(cache_key)
         if hit:
-            self.evidence.record_cached("etherscan", request_desc, self._cache.meta(cache_key))
+            self.evidence.record_cached("etherscan", request_desc, meta)
             return cached
 
         last_error: Exception | None = None

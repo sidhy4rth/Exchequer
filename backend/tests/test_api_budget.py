@@ -262,3 +262,64 @@ def test_an_old_bloated_cache_file_is_compacted_at_open(tmp_path):
     ResponseCache(ttl_seconds=60, path=path).close()
     assert path.stat().st_size < before / 10
     assert sqlite3.connect(path).execute("PRAGMA auto_vacuum").fetchone()[0] == 2
+
+
+# --- a cached row must be what was stored (r1-providers-11) ------------------------
+def _tamper(path, column: str, value: str) -> None:
+    import sqlite3
+
+    db = sqlite3.connect(str(path))
+    db.execute(f"UPDATE responses SET {column} = ?", (value,))
+    db.commit()
+    db.close()
+
+
+def test_an_edited_disk_row_is_dropped_not_served(tmp_path):
+    path = tmp_path / "cache.db"
+    first = ResponseCache(path=path)
+    key = (("action", "txlist"), ("address", "0xabc"))
+    first.put(key, [{"to": "0xreal"}], meta={"sha256": "ab", "retrieved_at": "t", "bytes": 3})
+    first.close()
+    _tamper(path, "value", '[{"to": "0xdeposit"}]')
+
+    second = ResponseCache(path=path)
+    assert second.get(key) == (False, None)
+    assert second.stats()["integrity_drops"] == 1
+    assert second.stats()["entries_on_disk"] == 0  # the row is gone
+    second.close()
+
+
+def test_an_edited_provider_hash_is_dropped_too(tmp_path):
+    path = tmp_path / "cache.db"
+    first = ResponseCache(path=path)
+    first.put("k", [1], meta={"sha256": "ab", "retrieved_at": "t", "bytes": 3})
+    first.close()
+    _tamper(path, "meta", '{"sha256": "cd", "retrieved_at": "t", "bytes": 3}')
+    second = ResponseCache(path=path)
+    assert second.get("k") == (False, None)
+    second.close()
+
+
+def test_a_row_from_before_the_check_is_a_miss(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "cache.db"
+    db = sqlite3.connect(str(path))
+    db.execute("CREATE TABLE responses (key TEXT PRIMARY KEY, stored_at REAL NOT NULL, value TEXT NOT NULL, meta TEXT)")
+    db.execute("INSERT INTO responses VALUES (?, ?, ?, ?)", ('"k"', time.time(), "[1]", None))
+    db.commit()
+    db.close()
+    cache = ResponseCache(path=path)
+    assert cache.get("k") == (False, None)
+    cache.put("k", [2])
+    assert ResponseCache(path=path).get("k") == (True, [2])
+    cache.close()
+
+
+def test_get_with_meta_returns_both_under_one_look(tmp_path):
+    cache = ResponseCache(max_entries=1, path=tmp_path / "cache.db")
+    cache.put("a", 1, meta={"sha256": "ab", "retrieved_at": "t", "bytes": 1})
+    cache.put("b", 2)  # evicts "a" from memory; the disk still has it
+    assert cache.get_with_meta("a") == (True, 1, {"sha256": "ab", "retrieved_at": "t", "bytes": 1})
+    assert cache.get_with_meta("missing") == (False, None, None)
+    cache.close()

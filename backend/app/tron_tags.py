@@ -190,10 +190,10 @@ class TronScanTags:
             return None
         key = ("tronscan-account", address)
         request = f"GET {TRONSCAN}/api/accountv2?address={address}"
-        hit, value = self._cache.get(key)
+        hit, value, meta = self._cache.get_with_meta(key)
         if hit:
             if self.evidence is not None:
-                self.evidence.record_cached(PROVIDER, request, self._cache.meta(key))
+                self.evidence.record_cached(PROVIDER, request, meta)
             return value
         self._throttle()
         self.lookups += 1
