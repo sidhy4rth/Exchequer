@@ -172,13 +172,16 @@ def _postgres_url(url: str) -> str:
 
 
 def _make_engine() -> Engine:
+    # hide_parameters: a database error's text then names the statement but
+    # not its values -- an address, a case's JSON, an officer's note -- and
+    # that text reaches the platform's logs.
     if config.DATABASE_URL:
         # A hosted Postgres closes idle connections (Neon suspends after a few
         # minutes), so a pooled one is tested before use, never trusted.
         return create_engine(_postgres_url(config.DATABASE_URL), future=True,
-                             pool_pre_ping=True, pool_recycle=300)
+                             pool_pre_ping=True, pool_recycle=300, hide_parameters=True)
     return create_engine(
-        f"sqlite:///{config.DB_PATH}", future=True,
+        f"sqlite:///{config.DB_PATH}", future=True, hide_parameters=True,
         # Wait up to 15 s for a lock rather than failing at once: background
         # traces, batches and the watchlist all write here.
         connect_args={"timeout": 15},

@@ -328,12 +328,18 @@ def get_chain(key: str | None = None) -> Chain:
     return chain
 
 
+def secret_env(name: str) -> str | None:
+    """A key from the environment, without the space or newline a paste into a
+    dashboard leaves: httpx refuses such a header and prints it in the error."""
+    return (os.getenv(name) or "").strip() or None
+
+
 def chain_by_id(chain_id: int) -> Chain | None:
     """Look up a chain by its Etherscan V2 chainid."""
     return _CHAINS_BY_ID.get(chain_id)
 
 
-ETHERSCAN_API_KEY: str | None = os.getenv("ETHERSCAN_API_KEY") or None
+ETHERSCAN_API_KEY: str | None = secret_env("ETHERSCAN_API_KEY")
 ETHERSCAN_BASE_URL: str = os.getenv("ETHERSCAN_BASE_URL", "https://api.etherscan.io/v2/api")
 
 # Which chain a request that names none is traced on. ETHERSCAN_CHAIN_ID is
@@ -347,14 +353,14 @@ else:
 # Kept for backwards compatibility with callers that expect a single chain id.
 ETHERSCAN_CHAIN_ID: int = DEFAULT_CHAIN.chain_id
 
-NODEREAL_API_KEY: str | None = os.getenv("NODEREAL_API_KEY") or None
+NODEREAL_API_KEY: str | None = secret_env("NODEREAL_API_KEY")
 # TronGrid works without a key at a low rate limit; a free key raises it. Sent
 # as the TRON-PRO-API-KEY header.
-TRONGRID_API_KEY: str | None = os.getenv("TRONGRID_API_KEY") or None
+TRONGRID_API_KEY: str | None = secret_env("TRONGRID_API_KEY")
 # TronScan's account endpoint, read during Tron traces for the explorer's own
 # address tag (app/tron_tags.py). Its own key, free from tronscan.org; without
 # one the live tag lookup is off and Tron attribution uses the label file only.
-TRONSCAN_API_KEY: str | None = os.getenv("TRONSCAN_API_KEY") or None
+TRONSCAN_API_KEY: str | None = secret_env("TRONSCAN_API_KEY")
 # How far back a NodeReal-served trace looks. Its API caps one query at 100,000
 # blocks (~3.5 days on BSC), so this is walked in windows: 500,000 blocks is
 # roughly 17 days and at most five requests per address. Raising it widens

@@ -124,8 +124,7 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
     if config.MAX_STORED_CASES and stored + 1 == int(config.MAX_STORED_CASES * 0.8):
         logger.warning("Case store is 80%% full (%d of %d cases)", stored + 1, config.MAX_STORED_CASES)
     if config.MAX_STORED_CASES and stored >= config.MAX_STORED_CASES:
-        logger.warning("Case store full (%d cases); trace of %s not stored",
-                       config.MAX_STORED_CASES, payload["address"])
+        logger.warning("Case store full (%d cases); trace not stored", config.MAX_STORED_CASES)
         payload["case_id"] = None
         payload.setdefault("warnings", []).append(
             f"The case store is full ({config.MAX_STORED_CASES:,} cases), so this result is "

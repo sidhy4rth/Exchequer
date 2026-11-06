@@ -50,7 +50,8 @@ from .pipeline import TraceRequest, run_trace  # noqa: F401
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 # Before any provider is called: httpx would otherwise log request URLs, keys
-# included. See app/log_safety.py.
+# included, and uvicorn's own handlers and access log are filtered too. See
+# app/log_safety.py.
 log_safety.install()
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,8 @@ def _retry_store_in_background() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # Again, for any handler set up after this module was imported.
+    log_safety.install()
     for delay in DB_STARTUP_DELAYS:
         if delay:
             await asyncio.sleep(delay)
