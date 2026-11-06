@@ -181,3 +181,29 @@ def test_the_summary_no_longer_credits_every_stolen_tag_to_the_explorer():
     assert "block explorer" not in summary
     assert "tied by a published source to a known hack or exploit" in summary
     assert "named by a published scam or phishing list" in summary
+
+
+def test_a_payment_case_prints_its_payments_and_window_but_no_particulars():
+    # 5-3: the time rule's basis is in the signed report so a reviewer can
+    # check it; the sender, the victim's wallet and the NCRP number are not.
+    victim, ncrp = addr("71c"), "31911250012345"
+    leg = {"tx_hash": "0x" + "aa" * 32, "chain": "ethereum", "asset": "ETH", "amount": 3999.0, "from": victim,
+           "to": SEED, "block": 18_000_000, "timestamp": 1_700_000_000, "found_by": "victim",
+           "payer_label": "Binance 14", "payer_is_victim": False, "leg": 0}
+    intake = {"mode": "payment", "ncrp_ack": ncrp, "victim_address": victim,
+              "payments": [leg, {**leg, "amount": 1.0, "leg": 1}]}
+    report = build_report(stored({**full_result(), "intake": intake, "reported_amount": 4000.0}))
+    assert report["intake"]["window_start"] == 1_700_000_000
+    text = render_text_report(report)
+    assert "VICTIM'S PAYMENTS" in text and "0x" + "aa" * 32 in text
+    assert "Window start" in text and "4000.0 ETH" in text and "transfer 2 of 2" in text
+    assert "Binance 14" in text and "not the victim's wallet" in text
+    for secret in (victim, ncrp):
+        assert secret not in json.dumps(report["intake"]) and secret not in text
+
+
+def test_an_address_case_has_no_payments_section():
+    report = build_report(stored(full_result()))
+    # The report says how it started (r2-g2-frontend-intake-rendering-3-4), but lists no payments.
+    assert report["intake"] == {"mode": "address", "reported_amount": None, "payments": []}
+    assert "VICTIM'S PAYMENTS" not in render_text_report(report)

@@ -300,18 +300,38 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
     }
 
 
-def _intake(result: dict[str, Any]) -> dict[str, Any]:
-    """From the victim's verified payments, or from the address alone (exploratory)."""
+def _payment_intake(result: dict[str, Any]) -> dict[str, Any] | None:
+    """What a payment trace started from, so a reviewer can check the time
+    rule's basis: each payment's hash, amount, time and the sender's label.
+    Never the sender, the victim's wallet or the NCRP number: those are the
+    complaint's particulars, and the report leaves the tool."""
     intake = result.get("intake") or {}
-    payments = intake.get("payments") or [] if intake.get("mode") == "payment" else []
-    if not payments:
-        return {"mode": "address", "reported_amount": None, "payments": []}
+    payments = intake.get("payments") or []
+    if intake.get("mode") != "payment" or not payments:
+        return None
+    legs: dict[str, int] = {}
+    for p in payments:
+        legs[p.get("tx_hash")] = legs.get(p.get("tx_hash"), 0) + 1
     return {
         "mode": "payment",
+        "window_start": min((p.get("timestamp") or 0 for p in payments), default=0) or None,
         "reported_amount": result.get("reported_amount"),
-        "payments": [{key: p.get(key) for key in ("tx_hash", "asset", "amount", "timestamp", "block", "found_by")}
-                     for p in payments],
+        "payments": [
+            {"tx_hash": p.get("tx_hash"), "leg": p.get("leg"), "legs": legs[p.get("tx_hash")],
+             "amount": p.get("amount"), "asset": p.get("asset"), "time": p.get("timestamp"),
+             "timestamp": p.get("timestamp"),
+             "block": p.get("block"), "payer_label": p.get("payer_label"),
+             "payer_is_victim": p.get("payer_is_victim"), "found_by": p.get("found_by")}
+            for p in payments
+        ],
     }
+
+
+def _intake(result: dict[str, Any]) -> dict[str, Any]:
+    """From the victim's verified payments, or from the address alone (exploratory).
+    One record for both: started_from() reads the mode and payments, the
+    VICTIM'S PAYMENTS section the payment details (_payment_intake)."""
+    return _payment_intake(result) or {"mode": "address", "reported_amount": None, "payments": []}
 
 
 def _amount(value: Any) -> str:
@@ -656,6 +676,29 @@ def render_text_report(report: dict[str, Any]) -> str:
     section("SUMMARY")
     para(report.get("summary", ""))
     add("")
+
+    # -- payment trace: what it started from --------------------------------------
+    intake = report.get("intake")
+    if intake and intake.get("mode") == "payment" and intake.get("payments"):
+        section("VICTIM'S PAYMENTS")
+        para("The trace started from these payments, each read from the chain by its hash as an "
+             "incoming transfer to the reported address. It reads that address only from when the "
+             "first arrived. Who paid is not established by the hash; check each against the complaint.")
+        add(f"Window start     : {_when(intake.get('window_start'))}")
+        if intake.get("reported_amount") is not None:
+            add(f"Reported amount  : {intake['reported_amount']} {symbol}")
+        for p in intake.get("payments", []):
+            leg = f" (transfer {p['leg'] + 1} of {p['legs']})" if p.get("leg") is not None else ""
+            add(f"  {p.get('tx_hash')}{leg}")
+            facts = [f"{p.get('amount')} {p.get('asset') or symbol} at {_when(p.get('time'))}"]
+            if p.get("payer_label"):
+                facts.append(f"sender labelled {_shown_label(p['payer_label'])}")
+            if p.get("payer_is_victim") is False:
+                facts.append("not the victim's wallet given with the complaint")
+            elif p.get("payer_is_victim"):
+                facts.append("from the victim's wallet given with the complaint")
+            para("; ".join(facts), indent="    ")
+        add("")
 
     # -- finding ---------------------------------------------------------------
     section("FINDING")

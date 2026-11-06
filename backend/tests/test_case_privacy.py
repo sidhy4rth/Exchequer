@@ -55,7 +55,7 @@ def test_a_case_link_still_opens_but_without_the_particulars(client, headers):
     assert body["intake"]["ncrp_ack"] is None
     assert all(p["from"] is None for p in body["intake"]["payments"])
     assert body["intake"]["payments"][0]["amount"] == 1.5
-    assert body["redacted"] == ["intake.ncrp_ack", "intake.payments[].from"]
+    assert body["redacted"] == ["intake.ncrp_ack", "intake.victim_address", "intake.payments[].from"]
     assert NCRP not in response.text and PAYER not in response.text
 
 
@@ -98,3 +98,13 @@ def test_a_finished_job_is_redacted_for_anyone_but_its_owner(client, monkeypatch
         theirs = client.get(f"/trace/jobs/{started['job_id']}", headers=headers)
         assert theirs.json()["result"]["intake"]["ncrp_ack"] is None
         assert NCRP not in theirs.text and PAYER not in theirs.text
+
+
+def test_the_victims_own_wallet_is_a_particular_too():
+    # The complaint may give the victim's own paying wallet (intake.victim_address,
+    # to check each payment's sender); it is as personal as the payer.
+    from app.case_privacy import for_reader
+    case = {**PAYMENT_CASE, "intake": {**PAYMENT_CASE["intake"], "victim_address": PAYER}}
+    seen = for_reader(case, "owner-hash", "someone-else")
+    assert seen["intake"]["victim_address"] is None and PAYER not in str(seen)
+    assert for_reader(case, "owner-hash", "owner-hash")["intake"]["victim_address"] == PAYER

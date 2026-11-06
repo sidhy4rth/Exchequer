@@ -21,9 +21,12 @@ and the error says so.
 from __future__ import annotations
 
 import re
-from typing import Any, Literal
+from datetime import datetime, timezone
+from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, Field, field_validator
+
+from .etherscan_client import normalize_address
 
 # EVM and Tron transaction ids are both 32 bytes: 64 hex characters, with or
 # without 0x. Checked when the request is read, so a typo is refused before
@@ -154,9 +157,79 @@ def leg_warnings(payments: list[dict[str, Any]]) -> list[str]:
     return out
 
 
-def intake_record(payments: list[dict[str, Any]], ncrp_ack: str | None) -> dict[str, Any]:
+# A first payment this long before the next is worth a second look: a stray
+# older hash, or a small "test" payment, opens the window early.
+PAYMENT_GAP_WARN_DAYS = 7
+
+
+def _short(tx_hash: str) -> str:
+    return f"{tx_hash[:6]}…{tx_hash[-4:]}"
+
+
+def review_payments(
+    payments: list[dict[str, Any]],
+    *,
+    victim_address: str | None = None,
+    exchange_of: Callable[[str], dict[str, str] | None] | None = None,
+    router_of: Callable[[str], dict[str, str] | None] | None = None,
+) -> list[str]:
+    """Label each payment's sender and, when the complaint gives the victim's
+    own wallet, compare the two. Fills `payer_label` and `payer_is_victim`
+    (None when no wallet was given) on every entry and returns the case's
+    warnings.
+
+    Any incoming transfer is otherwise accepted as the victim's payment, so a
+    hash from someone else -- a scammer's "deposit receipt", a look-alike the
+    officer picked -- would open the window with nothing to say so. The
+    warnings name no address: the senders and the victim's wallet are the
+    complaint's particulars, kept in the case record only.
+    """
+    victim = normalize_address(victim_address) if victim_address else None
+    warnings: list[str] = []
+    for p in payments:
+        sender = p.get("from") or ""
+        exchange = exchange_of(sender) if exchange_of and sender else None
+        router = router_of(sender) if router_of and sender and not exchange else None
+        record = exchange or router
+        p["payer_label"] = (record.get("label") or record.get("exchange")) if record else None
+        p["payer_is_victim"] = None if victim is None else normalize_address(sender) == victim
+        if p["payer_is_victim"] is not False:
+            continue
+        if exchange:
+            text = (f"Payment {_short(p['tx_hash'])} came from an exchange wallet ({p['payer_label']}), not the "
+                    "victim's own wallet: expected when the victim withdrew from an exchange account. "
+                    "Confirm against the complaint.")
+        elif router:
+            text = (f"Payment {_short(p['tx_hash'])} was paid through a contract ({p['payer_label']}), not "
+                    "straight from the victim's wallet entered with the complaint. Confirm against the "
+                    "complaint before relying on the time window.")
+        else:
+            text = (f"Payment {_short(p['tx_hash'])} was not sent from the victim's wallet entered with the "
+                    "complaint. Check it is the victim's payment before relying on the time window.")
+        if text not in warnings:
+            warnings.append(text)
+    # The window opens at the first payment: say so when it is far from the
+    # rest. Per hash, since the legs of one payment share its time.
+    first_seen: dict[str, int] = {}
+    for p in payments:
+        first_seen.setdefault(p["tx_hash"], p.get("timestamp") or 0)
+    times = sorted(t for t in first_seen.values() if t)
+    if len(times) >= 2 and times[1] - times[0] > PAYMENT_GAP_WARN_DAYS * 86_400:
+        on = datetime.fromtimestamp(times[0], tz=timezone.utc)
+        warnings.append(
+            f"The first payment ({on.day} {on:%b %Y}) is {(times[1] - times[0]) // 86_400} days before the "
+            "next; the trace reads the wallet from the first. Check it belongs to this complaint."
+        )
+    return warnings
+
+
+def intake_record(payments: list[dict[str, Any]], ncrp_ack: str | None,
+                  victim_address: str | None = None) -> dict[str, Any]:
     """The case contract's `intake` for a payment-mode trace."""
-    return {"mode": "payment", "payments": payments, "ncrp_ack": ncrp_ack}
+    record = {"mode": "payment", "payments": payments, "ncrp_ack": ncrp_ack}
+    if victim_address:
+        record["victim_address"] = normalize_address(victim_address)
+    return record
 
 
 def reported_amount(payments: list[dict[str, Any]]) -> float:

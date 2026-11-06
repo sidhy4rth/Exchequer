@@ -105,3 +105,14 @@ def test_the_audit_counts_payments_not_their_legs(recorded):
     cases.record_trace(finished(case_id="c3", intake={"mode": "payment", "payments": payments, "ncrp_ack": None}))
     ((_, kw),) = recorded
     assert kw["detail"]["payments"] == 1
+
+
+def test_the_audit_never_holds_the_victims_wallet(recorded):
+    victim = addr("71c")
+    payment = {"tx_hash": "0x" + "aa" * 32, "chain": "ethereum", "asset": "ETH", "amount": 2.0,
+               "from": victim, "to": SCAMMER, "block": 1, "timestamp": 1, "found_by": "victim",
+               "payer_label": None, "payer_is_victim": True}
+    cases.record_trace(finished(case_id="c4", intake={"mode": "payment", "payments": [payment],
+                                                       "ncrp_ack": NCRP, "victim_address": victim}))
+    ((_, kw),) = recorded
+    assert victim not in json.dumps(kw)

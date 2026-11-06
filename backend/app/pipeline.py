@@ -30,6 +30,7 @@ from .payment_intake import (
     normalize_hash,
     reported_amount,
     resolve_payments,
+    review_payments,
     window_anchor,
 )
 from .etherscan_client import (
@@ -147,6 +148,22 @@ class TraceRequest(BaseModel):
             "as entered by the requester: 10 to 20 digits."
         ),
     )
+
+    victim_address: str | None = Field(
+        None, max_length=100,
+        description=(
+            "The victim's own paying wallet, if the complaint gives it. Sent with "
+            "`payments` only: each payment's sender is compared with it, and a "
+            "payment from another wallet is warned about in the case."
+        ),
+    )
+
+    @field_validator("victim_address", mode="before")
+    @classmethod
+    def _victim_blank(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
 
     @field_validator("ncrp_ack", mode="before")
     @classmethod
@@ -392,6 +409,24 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
             if key in seen:
                 raise HTTPException(status_code=400, detail=f"Payment {ref.tx_hash} is listed twice.")
             seen.add(key)
+    # The victim's own wallet is only ever compared with their payments. Never
+    # echoed back: it is the complaint's, not the reported address.
+    if request.victim_address is not None:
+        if not request.payments:
+            raise HTTPException(
+                status_code=400,
+                detail="The victim's wallet is compared with their payments: send it with the payment hashes.",
+            )
+        if not chain.validate_address(request.victim_address):
+            raise HTTPException(
+                status_code=400,
+                detail=f"The victim's wallet is not a valid {chain.name} address. Expected {chain.address_hint()}.",
+            )
+        if normalize_address(request.victim_address) == normalize_address(address):
+            raise HTTPException(
+                status_code=400,
+                detail="The victim's wallet is the reported wallet: enter the wallet the victim paid from.",
+            )
     return chain, address
 
 
@@ -523,6 +558,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             # that wallet only from when the first one arrived.
             intake = None
             seed_block = None
+            payer_warnings: list[str] = []
             if request.payments:
                 try:
                     payments = resolve_payments(
@@ -531,7 +567,12 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                     )
                 except PaymentError as exc:
                     raise HTTPException(status_code=400, detail=str(exc)) from exc
-                intake = intake_record(payments, request.ncrp_ack)
+                # Who paid each one, and whether it was the victim's own wallet.
+                payer_warnings = review_payments(
+                    payments, victim_address=request.victim_address,
+                    exchange_of=matcher.lookup, router_of=routers.lookup,
+                )
+                intake = intake_record(payments, request.ncrp_ack, request.victim_address)
                 # Read the wallet from the first payment's block, not from its
                 # newest page (Etherscan) or the oldest inflow the lookup saw
                 # (NodeReal).
@@ -567,8 +608,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                     "unconfirmed transfers that a reorganisation could still drop."
                 )
             if intake is not None:
-                # A payment hash that carried several transfers says so (5-2).
-                result.warnings.extend(leg_warnings(intake["payments"]))
+                # A payment hash that carried several transfers says so (5-2),
+                # as does a payment not from the victim's own wallet (5-3).
+                result.warnings.extend(leg_warnings(intake["payments"]) + payer_warnings)
             if live is not None:
                 # The last hop is never checked during the walk; ask now, then
                 # attribute against the file's labels plus what TronScan named.

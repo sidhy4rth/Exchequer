@@ -68,12 +68,20 @@ class Payment(_Strict):
     found_by: Literal["victim", "officer_search"] = "victim"
     # Which transfer of the hash this is, from 0; only on a hash with several.
     leg: int | None = None
+    # The sender's label, when a label file names it (an exchange wallet: the
+    # victim withdrew from an exchange; a router or other contract).
+    payer_label: str | None = None
+    # Whether the sender is the victim's own wallet given with the complaint;
+    # None when no wallet was given.
+    payer_is_victim: bool | None = None
 
 
 class Intake(_Strict):
     mode: Literal["payment", "address"]
     payments: list[Payment] = []
     ncrp_ack: str | None = None
+    # The victim's own paying wallet, when the complaint gives it.
+    victim_address: str | None = None
 
 
 class Attribution(_Strict):
