@@ -461,35 +461,40 @@ every hit names the list it came from.
 
 | Category | Meaning | Source | Effect on the trace |
 |---|---|---|---|
-| `sanctioned` | On a government sanctions or seizure list | US, UK, EU, Israel, Japan, France | Flagged; the trace continues — its transfers mean what they say |
+| `sanctioned` | On a government sanctions list | US, UK, EU, Japan, France | Flagged; the trace continues — its transfers mean what they say |
+| `seized` | Named in a government seizure or forfeiture order: one government's measure, often time-limited, not a designation | Israel (NBCTF orders) | Flagged; the trace continues; a dated order stops matching after its last day |
 | `mixer` | A tumbler's pool or entry router | Etherscan / BscScan tags | **The trace stops here** |
 | `frozen` | Tether has frozen the address's USDT | The USDT contract's own blacklist events | Flagged; the trace continues |
-| `stolen` | A hacker's wallet, or a reported phishing / scam wallet | Etherscan / BscScan tags, ScamSniffer | Flagged; the trace continues — where the thief moved the money is the point |
+| `stolen` | A wallet a tag names as the perpetrator of a hack or exploit | Etherscan / BscScan tags | Flagged; the trace continues — where the thief moved the money is the point |
+| `scam` | Reported by a published scam or phishing list | ScamSniffer, Etherscan's Phish/Hack label | Flagged as that list's report; the trace continues |
 | `reported` | TronScan's own warning tag ("Suspicious", "Scam", a phishing tag) | TronScan, **read live** during a Tron trace | Flagged as the explorer's warning — the weakest of the five; a label-file entry always outranks it |
 
-| Chain | Sanctioned | Mixers | Frozen by Tether | Stolen funds |
-|---|---:|---:|---:|---:|
-| Ethereum | 139 | 40 | 2,633 | 8,380 |
-| BNB Smart Chain | 7 | 14 | — | 560 |
-| Polygon PoS | 15 | — | — | — |
-| Arbitrum One | 9 | — | — | — |
-| Tron | 915 | — | 6,759 | — |
+| Chain | Sanctioned | Seizure orders | Mixers | Frozen by Tether | Stolen funds | Scam lists |
+|---|---:|---:|---:|---:|---:|---:|
+| Ethereum | 127 | 3 | 40 | 2,580 | 398 | 7,979 |
+| BNB Smart Chain | 4 | 2 | 14 | — | 31 | 529 |
+| Polygon PoS | 14 | 1 | — | — | — | — |
+| Arbitrum One | 7 | 2 | — | — | — | — |
+| Tron | 337 | 481 | — | 6,800 | — | — |
 
-<sub>Counts are after overlap: an address on a government list is reported as sanctioned, and a mixer pool Tether
-also froze stays a mixer. Before overlap the freeze list holds 2,763 Ethereum and 7,589 Tron addresses.</sub>
+<sub>Counts are after overlap: an address on a government list is reported as sanctioned or seized, and a mixer
+pool Tether also froze stays a mixer. Before overlap the freeze list holds 2,710 Ethereum and 7,588 Tron addresses.</sub>
 
 **Government lists** are loaded first and always win: where an address is also on an explorer's list, the
 government entry is the one reported, and an address several governments list names all of them — "designated
-by the US, the UK and Israel" is a stronger finding than any one alone.
+by the US and the UK, and named in an Israeli seizure order" is a stronger finding than any one alone.
 
 - **OFAC SDN list** (18 September 2026) — built straight from Treasury's XML, keeping the programs and exact
   `idType` of every entry: 124 Ethereum, 334 Tron, 1 BSC. `scripts/import_ofac_addresses.py`
 - **Five more governments** — the UK Sanctions List and the EU consolidated list, read directly (their addresses
   sit in free text, each filed under the chain the text names before it: `ETH:`, `BNB:`, `TRX:`); Israel's NBCTF
   counter-terror seizure orders, Japan's Ministry of Finance and France's DG Trésor, through OpenSanctions. Only
-  measures still in force count — a wallet named only in lifted Israeli seizure orders is left out. Israel's
-  orders alone name 585 Tron wallets, almost all USDT. Canada, Australia, Switzerland and the UN publish no crypto
-  addresses; all 95 official lists OpenSanctions carries were checked. `scripts/import_intl_sanctions.py`
+  measures still in force count — a wallet named only in lifted Israeli seizure orders is left out, and an order
+  with an end date stops matching after its last day, whether or not the list has been refreshed. A seizure order
+  is one government's measure against a wallet, not a designation, so a wallet only Israel's orders name is
+  reported as `seized`. Israel's orders in force alone name 488 Tron wallets, almost all USDT. Canada, Australia,
+  Switzerland and the UN publish no crypto addresses; all 95 official lists OpenSanctions carries were checked.
+  `scripts/import_intl_sanctions.py`
 
 **Tether's freeze list** is read from the chain itself. Tether can blacklist an address on its USDT contract — after
 a sanctions match, a law-enforcement request or a theft — and every freeze is an `AddedBlackList` event, every
@@ -497,6 +502,8 @@ release a `RemovedBlackList`. Replaying them in order gives the addresses frozen
 contract and the label; a random sample is checked against the contract's own `isBlackListed()` and the import
 refuses to write on any disagreement. Tether's list also holds the zero address and other tiny system addresses
 where tokens are burned; those are not wallets and are left out, so a burn in a trace is never read as a freeze.
+So are the USDT contract itself, DEX routers and other token contracts it names (`app/never_flag.py`): a swap
+through a router is never read as a freeze either.
 A freeze says the issuer acted, not why — and a request to Tether can ask.
 BNB Smart Chain's USDT is a Binance-issued peg with no Tether blacklist. `scripts/import_tether_freezes.py`
 
@@ -509,10 +516,12 @@ only the pools and routers of Tornado Cash, Typhoon and Privacy Pools, never the
 contracts. The label store follows the same rule, and only on Ethereum, the chain its mixer tags were read on.
 
 **Stolen funds** are the wallets Etherscan tags as the perpetrator of a theft — the WazirX, Bybit, BingX, Ronin,
-Multichain and other exploiters — plus reported phishing and scam wallets from ScamSniffer's published blacklist
-and Etherscan's Phish/Hack label. Every one was checked to exist and to have been used on chain, and filed under
-each chain it has been used on (1,604 with no history on Ethereum or BSC were left out). A wallet on a scam list
-is that list's accusation, and the finding says whose. `scripts/import_threat_labels.py [--scam-lists]`
+Multichain and other exploiters; whitehat, rescue and bot tags are left out. **Scam-list** wallets are the reported
+phishing and scam wallets from ScamSniffer's published blacklist and Etherscan's Phish/Hack label, filed as `scam`:
+a report, not a finding that the wallet holds a theft's proceeds. Every one was checked to exist and to have been
+used on chain, and filed under each chain it has been used on (1,604 with no history on Ethereum or BSC were left
+out). A wallet on a scam list is that list's accusation, and the finding says whose.
+`scripts/import_threat_labels.py [--scam-lists]`
 
 > Screening degrades safely. With a label file missing, the trace still runs and still attributes an exchange —
 > it reports what it could not screen. `GET /risk-labels` reports `screened`, so a clean result is never ambiguous.
