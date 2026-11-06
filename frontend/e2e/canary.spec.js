@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 
 // What a judge does first: open the link, sign in, look at a case. If any of
@@ -102,4 +103,17 @@ test('a stored case opens without re-tracing', async ({ page, request }) => {
   await expect(page.getByRole('heading', { name: known.exchange }).first()).toBeVisible()
   expect(traced, 'opening a stored case must not start a new trace').toEqual([])
   expect(errors).toEqual([])
+})
+
+// Every report names the key that signed it (SECURITY.md, "Report signing
+// key"); a reader tells Exchequer's reports from a copy's by that key. The
+// live site must sign with a current official key from the committed list,
+// or every report it issues reads as unofficial.
+test('the site signs reports with an official Exchequer key', async ({ request }) => {
+  const listed = JSON.parse(readFileSync(new URL('../../backend/data/signing_keys.json', import.meta.url), 'utf8')).keys
+  test.skip(!listed.length, 'no official signing key recorded yet in backend/data/signing_keys.json')
+  const live = await (await request.get('/signing-key')).json()
+  const current = listed.filter((k) => !k.retired && !k.revoked).map((k) => k.fingerprint_sha256)
+  expect(current, 'the live key is the current official key').toContain(live.fingerprint_sha256)
+  expect(live.persistent, 'the live key survives a restart').toBe(true)
 })
