@@ -19,6 +19,15 @@ credential, process-wide. The pacer is adaptive: it widens on refusal and
 recovers slowly on success. Repeat lookups of the same address are answered
 from the cache.
 
+This covers every provider, not only Etherscan: NodeReal, TronGrid (keyed, or
+"anon" per server without a key) and TronScan each share one pacer per
+credential. NodeReal meters compute units per second, so its pacer weighs each
+request by its cost (250 CU for a transfer read, 5 for the block number) between
+`NODEREAL_CUPS_FLOOR` and `NODEREAL_CUPS`. The cache bounds itself in bytes
+(memory and disk) and keeps each entry for as long as that kind of answer stays
+true: a day for a closed block range, minutes for a read up to the chain's tip,
+never for `latest` state such as a balance.
+
 ## Alternatives Considered
 
 ### A fixed interval per client

@@ -400,6 +400,13 @@ TRONSCAN_API_KEY: str | None = secret_env("TRONSCAN_API_KEY")
 # roughly 17 days and at most five requests per address. Raising it widens
 # coverage and costs proportionally more calls.
 NODEREAL_LOOKBACK_BLOCKS: int = _int_env("NODEREAL_LOOKBACK_BLOCKS", 500_000)
+# NodeReal meters compute units per second per key (CUPS), and one
+# nr_getAssetTransfers costs 250 CU. Its pricing page gives the free plan 150
+# CUPS in one place and 300 in another: the shared pacer starts at the lower
+# and narrows toward the higher while the provider keeps answering. Set both
+# from the key's plan page (MegaNode > Plan/Usage) on a paid plan.
+NODEREAL_CUPS_FLOOR: int = max(1, _int_env("NODEREAL_CUPS_FLOOR", 150))
+NODEREAL_CUPS: int = max(1, _int_env("NODEREAL_CUPS", 300))
 
 # Traversal safety limits -- a busy wallet must never make a trace run forever.
 TRACE_MAX_DEPTH: int = _int_env("TRACE_MAX_DEPTH", 4)

@@ -29,6 +29,7 @@ tronscan.org). Without one the lookup is off and the trace says so.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 import threading
@@ -207,8 +208,10 @@ class TronScanTags:
         })
         self._cache = api_budget.get_cache("tronscan:tags", lambda: api_budget.ResponseCache(
             ttl_seconds=config.API_CACHE_TTL_SECONDS, max_entries=20000, path=config.API_CACHE_PATH))
-        self._lock = threading.Lock()
-        self._last = 0.0
+        # TronScan limits per key, across traces: one pacer per credential.
+        credential = hashlib.sha256((api_key or "anon").encode()).hexdigest()[:8]
+        self._pacer = api_budget.get_pacer(f"tronscan:{credential}", lambda: api_budget.SharedPacer(
+            interval=min_interval, min_interval=min_interval, max_interval=max(min_interval * 8, 2.0)))
         self.lookups = 0
         self.failures = 0
 
@@ -221,11 +224,7 @@ class TronScanTags:
             self._client.close()
 
     def _throttle(self) -> None:
-        with self._lock:
-            wait = self.min_interval - (time.monotonic() - self._last)
-            if wait > 0:
-                time.sleep(wait)
-            self._last = time.monotonic()
+        self._pacer.wait()
 
     def tag(self, address: str) -> str | None:
         """TronScan's tag for `address`, or None (no tag, lookup off, or failed)."""
@@ -254,6 +253,8 @@ class TronScanTags:
             body = response.json()
         except (httpx.HTTPError, ValueError, api_budget.ResponseTooLarge) as exc:
             self.failures += 1
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+                self._pacer.penalize()
             logger.warning("TronScan tag lookup failed for %s: %s", address, exc)
             return None
         value = {"tag": tag_from_response(body), "warning": warning_from_response(body)}

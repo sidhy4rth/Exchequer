@@ -25,6 +25,7 @@ the data rather than by an assumption in our code.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import random
 import threading
@@ -35,7 +36,7 @@ import json
 
 import httpx
 
-from .api_budget import ResponseTooLarge, read_capped
+from .api_budget import ResponseTooLarge, SharedPacer, get_pacer, read_capped
 from .evidence import EvidenceLog
 
 from . import config
@@ -95,6 +96,11 @@ DEEP_WINDOWS = 20
 ARRIVAL_WINDOWS = 5
 NOT_INDEXED = "not reached"
 
+# Compute units per method (NodeReal's published table; others at 25). The
+# pacer spaces requests by what they cost, in units of one transfer read.
+METHOD_CU = {"nr_getAssetTransfers": 250, "eth_getTransactionCount": 25, "eth_blockNumber": 5}
+TRANSFER_CU = METHOD_CU["nr_getAssetTransfers"]
+
 
 class NoderealError(EtherscanError):
     """Any non-recoverable problem talking to NodeReal.
@@ -144,7 +150,7 @@ class NoderealClient:
         lookback_blocks: int | None = None,
         timeout: float = 30.0,
         max_retries: int = 3,
-        min_interval: float = 0.12,
+        min_interval: float | None = None,  # None: paced by compute units (config.NODEREAL_CUPS*)
         client: httpx.Client | None = None,
     ) -> None:
         self.api_key = api_key if api_key is not None else config.NODEREAL_API_KEY
@@ -173,14 +179,25 @@ class NoderealClient:
             lookback_blocks if lookback_blocks is not None else config.NODEREAL_LOOKBACK_BLOCKS
         )
         self.max_retries = max_retries
-        self.min_interval = min_interval
 
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout)
         self.evidence = EvidenceLog()
-        self._lock = threading.Lock()
-        self._last_request_at = 0.0
         self._head_block: int | None = None
+        # NodeReal limits compute units per second per key, across every trace
+        # using it. A client is built per trace, so a pacer per instance let four
+        # concurrent traces send four times the rate: it is shared by key, as
+        # Etherscan's is, and widens when the provider refuses. An explicit
+        # `min_interval` spaces requests evenly instead (tests, scripts).
+        self._per_cu = min_interval is None
+        credential = hashlib.sha256((self.api_key or "anon").encode()).hexdigest()[:8]
+        if self._per_cu:
+            interval = TRANSFER_CU / config.NODEREAL_CUPS_FLOOR
+            floor = min(interval, TRANSFER_CU / config.NODEREAL_CUPS)
+        else:
+            interval = floor = min_interval
+        self._pacer = get_pacer(f"nodereal:{credential}", lambda: SharedPacer(
+            interval=interval, min_interval=floor, max_interval=max(interval * 6, 1.0)))
 
     # -- lifecycle ---------------------------------------------------------
     @property
@@ -198,12 +215,9 @@ class NoderealClient:
         self.close()
 
     # -- internals ---------------------------------------------------------
-    def _throttle(self) -> None:
-        with self._lock:
-            elapsed = time.monotonic() - self._last_request_at
-            if elapsed < self.min_interval:
-                time.sleep(self.min_interval - elapsed)
-            self._last_request_at = time.monotonic()
+    def _throttle(self, method: str) -> None:
+        """Wait for the key's shared schedule; a request's weight is its compute units."""
+        self._pacer.wait(METHOD_CU.get(method, 25) / TRANSFER_CU if self._per_cu else 1.0)
 
     def _rpc(self, method: str, params: list[Any]) -> Any:
         if not self.api_key:
@@ -218,7 +232,7 @@ class NoderealClient:
         for attempt in range(self.max_retries + 1):
             if self.budget is not None:
                 self.budget.check()  # the case's wall clock, before every attempt
-            self._throttle()
+            self._throttle(method)
             try:
                 response = read_capped(self._client, "POST", self.url, json=payload,
                                        **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
@@ -231,6 +245,8 @@ class NoderealClient:
 
             if response.status_code == 429 or response.status_code >= 500:
                 last_error = NoderealError(f"NodeReal returned HTTP {response.status_code}")
+                if response.status_code == 429:
+                    self._pacer.penalize()  # every trace on this key is going too fast
                 self._backoff(attempt, f"HTTP {response.status_code}")
                 continue
             if response.status_code != 200:
@@ -254,6 +270,7 @@ class NoderealClient:
                     raise NoderealQuotaError(f"NodeReal quota spent: {message}")
                 if "limit" in message.lower() or "too many" in message.lower():
                     last_error = NoderealError(f"NodeReal rate limit: {message}")
+                    self._pacer.penalize()
                     self._backoff(attempt, "rate limit")
                     continue
                 raise NoderealError(f"NodeReal error: {message}")
@@ -263,6 +280,7 @@ class NoderealClient:
                 f"POST {self.url.split('/v1/')[0]}/v1/<key> {method} {json.dumps(params, sort_keys=True)}",
                 response.content,
             )
+            self._pacer.reward()
             return body.get("result")
 
         raise NoderealError(

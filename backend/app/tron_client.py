@@ -27,13 +27,12 @@ import hashlib
 import json
 import logging
 import random
-import threading
 import time
 from typing import Any
 
 import httpx
 
-from .api_budget import ResponseTooLarge, read_capped
+from .api_budget import ResponseTooLarge, SharedPacer, get_pacer, read_capped
 from .evidence import EvidenceLog
 
 from . import config
@@ -166,8 +165,13 @@ class TronClient:
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout, headers=headers)
         self.evidence = EvidenceLog()
-        self._lock = threading.Lock()
-        self._last_request_at = 0.0
+        # TronGrid limits requests per key (or per IP without one) across every
+        # trace, so the pacer is shared by credential and widens on refusal; a
+        # pacer per instance let four keyless traces send four times the rate.
+        credential = hashlib.sha256(self.api_key.encode()).hexdigest()[:8] if self.api_key else "anon"
+        interval = self.min_interval
+        self._pacer = get_pacer(f"trongrid:{credential}", lambda: SharedPacer(
+            interval=interval, min_interval=interval, max_interval=max(interval * 5, 6.0)))
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -182,11 +186,7 @@ class TronClient:
 
     # -- internals ---------------------------------------------------------
     def _throttle(self) -> None:
-        with self._lock:
-            elapsed = time.monotonic() - self._last_request_at
-            if elapsed < self.min_interval:
-                time.sleep(self.min_interval - elapsed)
-            self._last_request_at = time.monotonic()
+        self._pacer.wait()
 
     def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         query = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
@@ -215,6 +215,8 @@ class TronClient:
             if response.status_code in (429, 403) or response.status_code >= 500:
                 # 403 here means the free rate limit, not a bad key.
                 last_error = TronError(f"TronGrid returned HTTP {response.status_code}")
+                if response.status_code in (429, 403):
+                    self._pacer.penalize()  # every trace on this key is going too fast
                 self._backoff(attempt, f"HTTP {response.status_code}")
                 continue
             if response.status_code != 200:
@@ -232,6 +234,7 @@ class TronClient:
             if body.get("success") is False:
                 raise TronError(f"TronGrid error: {str(body.get('error'))[:200]}")
             self.evidence.record("trongrid", request_desc, response.content)
+            self._pacer.reward()
             return body
 
         raise TronError(

@@ -484,6 +484,7 @@ class SharedPacer:
 
         self._interval = interval
         self._last_request_at = 0.0
+        self._last_cost = 1.0
         self._lock = threading.Lock()
         self._waits = 0
         self._slept = 0.0
@@ -494,8 +495,13 @@ class SharedPacer:
         with self._lock:
             return self._interval
 
-    def wait(self) -> None:
+    def wait(self, cost: float = 1.0) -> None:
         """Block until the shared schedule permits the next request.
+
+        `cost` weighs the request in units of the interval: a provider that
+        meters compute units (NodeReal) spends more of its per-second
+        allowance on some methods than others, so the gap after a request is
+        `interval * cost`.
 
         The sleep happens under the lock deliberately. The point of the pacer is
         that requests leave in single file at a known spacing; releasing the lock
@@ -504,12 +510,14 @@ class SharedPacer:
         """
         with self._lock:
             now = time.monotonic()
+            gap = self._interval * self._last_cost
             elapsed = now - self._last_request_at
-            if elapsed < self._interval:
-                delay = self._interval - elapsed
+            if elapsed < gap:
+                delay = gap - elapsed
                 time.sleep(delay)
                 self._slept += delay
             self._last_request_at = time.monotonic()
+            self._last_cost = cost
             self._waits += 1
 
     def penalize(self) -> float:
