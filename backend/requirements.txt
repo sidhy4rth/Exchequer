@@ -1,6 +1,11 @@
 fastapi==0.143.0
 starlette==1.7.0
-uvicorn[standard]==0.54.0
+uvicorn==0.54.0
+# What the "standard" uvicorn extra added that the site uses: the fast HTTP parser and
+# event loop. Not its WebSocket stack, reloader or YAML config (no route
+# speaks WebSocket; docker-entrypoint.sh runs --ws none).
+httptools==0.9.0
+uvloop==0.23.0; sys_platform != "win32"
 httpx==0.28.1
 networkx==3.7
 python-dotenv==1.2.4

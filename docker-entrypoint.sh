@@ -6,7 +6,9 @@
 # back to the old behaviour (running as root) rather than failing: a volume
 # that refuses chown, or a missing setpriv, must not take the site down.
 set -u
-CMD="uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+# --ws none: no route speaks WebSocket, so no WebSocket parser faces the
+# network. --no-server-header: no version banner on every response.
+CMD="uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --ws none --no-server-header"
 
 if [ "$(id -u)" = "0" ] && command -v setpriv >/dev/null 2>&1 && id app >/dev/null 2>&1; then
   mkdir -p /data
