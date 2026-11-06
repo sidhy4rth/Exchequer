@@ -13,7 +13,10 @@ went:
   moved     anywhere else: the funds are on the move
 
 Alerts show in the app for the browser that set the watch, and can also be
-posted to a Slack, Discord or Google Chat webhook. Webhooks go only to those
+posted to a Slack, Discord or Google Chat webhook: exchange and flagged
+transfers first, each on its own, then one digest of the rest, in the form
+each host expects, with label text escaped so it can never ping a channel or
+pass for a link. Webhooks go only to those
 hosts (plus any in EXCHEQUER_WEBHOOK_HOSTS), over https, without following
 redirects: a free-form URL would let anyone make this server call addresses
 inside its own network.
@@ -29,12 +32,13 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 import uuid
 from typing import Any, Callable, Iterable
 from urllib.parse import urlsplit
 
 import httpx
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, case, delete, func, select, update
 
 from . import config, models, ownership
 from .api_budget import TraceBudget, fresh_reads
@@ -65,10 +69,34 @@ MAX_ALERTS_PER_WATCH = 200
 DEFAULT_WEBHOOK_HOSTS = frozenset({
     "hooks.slack.com", "discord.com", "discordapp.com", "chat.googleapis.com",
 })
+_HOST_NAMES = {"hooks.slack.com": "Slack", "discord.com": "Discord", "discordapp.com": "Discord",
+               "chat.googleapis.com": "Google Chat"}
+_DISCORD = frozenset({"discord.com", "discordapp.com"})
+
+# Where the money went decides what is seen first: in the list, in storage
+# and on the webhook. Then how much, then when.
+KIND_RANK = {"exchange": 0, "risk": 1, "moved": 2, "more": 3}
+_EMOJI = {"exchange": "🏦", "risk": "⚠️", "moved": "➡️", "more": "ℹ️"}
+_VERB = {"exchange": "sent to exchange wallet", "risk": "sent to flagged address", "moved": "moved"}
+# Webhook delivery: this many exchange or flagged alerts get a post each, the
+# rest one digest, so a check makes at most four posts (Discord allows five
+# per two seconds). A 429 asking to wait up to MAX_RETRY_AFTER is retried
+# once; the whole delivery gives up after DELIVERY_SECONDS.
+URGENT_POSTS = 3
+MAX_RETRY_AFTER = 5.0
+DELIVERY_SECONDS = 8.0
 
 
 class WatchError(ValueError):
     """A watch that cannot be created as asked; the message says why."""
+
+
+class WebhookFailed(Exception):
+    """A webhook post the host did not accept; `retry_after` (s) on a 429."""
+
+    def __init__(self, status: int, retry_after: float | None = None) -> None:
+        super().__init__(f"HTTP {status}")
+        self.status, self.retry_after = status, retry_after
 
 
 def webhook_hosts() -> frozenset[str]:
@@ -504,7 +532,7 @@ def check_watch(watch_id: str, source: Source = open_source,
         more = _more_alert(watch_id, owner, asset, notice) if notice else None
         fresh.sort(key=lambda t: (position(t), t.hash))
         inferred = inferred_for(chain.key, (t.to_address for t in fresh), owner)
-        new_alerts = [_alert(watch_id, owner, chain, address, asset, t, inferred) for t in fresh]
+        new_alerts = _rank([_alert(watch_id, owner, chain, address, asset, t, inferred) for t in fresh])
         out = [alert_summary(a, chain.key, case_id, inferred) for a in new_alerts]
         if more is not None:
             out.append(alert_summary(more, chain.key, case_id))
@@ -517,14 +545,129 @@ def check_watch(watch_id: str, source: Source = open_source,
         return []
 
     if hook and out:
-        for alert in out[:10]:
-            emoji = {"exchange": "🏦", "risk": "⚠️", "moved": "➡️", "more": "ℹ️"}[alert["kind"]]
-            text = f"{emoji} Exchequer watch: {alert['message']} — {alert['tx_url']}"
-            try:
-                post(hook, {"text": text, "content": text[:1900], "alert": alert})
-            except Exception as exc:  # noqa: BLE001 -- the alert is stored either way
-                logger.warning("Watch %s: webhook failed: %s", watch_id, type(exc).__name__)
+        _deliver(watch_id, hook, address, out, post)
     return out
+
+
+def _rank(alerts: list[models.Alert]) -> list[models.Alert]:
+    return sorted(alerts, key=lambda a: (KIND_RANK.get(a.kind, 9), -(a.value or 0.0), a.tx_time))
+
+
+# ---------------------------------------------------------------------------
+# Webhooks
+# ---------------------------------------------------------------------------
+def _when(ts: int) -> str:
+    from datetime import datetime, timezone
+    return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _line(alert: dict[str, Any], address: str) -> str:
+    """One alert as a chat line, built from its fields. A URL inside label
+    text is broken ("[:]//") so it can never become a link."""
+    if alert["kind"] == "more":
+        return f"{_EMOJI['more']} Exchequer watch on {address}: {alert['message']}"
+    label = (alert["counterparty_label"] or "").replace("://", "[:]//")
+    where = f"{label} ({alert['counterparty']})" if label else alert["counterparty"]
+    return (f"{_EMOJI[alert['kind']]} Exchequer watch: {address} {_VERB[alert['kind']]}: "
+            f"{alert['value']:g} {alert['asset']} to {where} at {_when(alert['tx_time'])}")
+
+
+def _digest(rest: list[dict[str, Any]], address: str) -> str:
+    """Everything not posted on its own, in one message."""
+    urgent = sum(1 for a in rest if a["kind"] in ("exchange", "risk"))
+    moved = [a for a in rest if a["kind"] == "moved"]
+    parts = []
+    if urgent:
+        parts.append(f"+{urgent} more exchange or flagged transfer{'' if urgent == 1 else 's'}")
+    if moved:
+        big = max(moved, key=lambda a: a["value"])
+        parts.append(f"{len(moved)} other movement{'' if len(moved) == 1 else 's'} (largest "
+                     f"{big['value']:g} {big['asset']} at {_when(big['tx_time'])})")
+    lines = [f"{_EMOJI['more']} Exchequer watch: {' and '.join(parts)} from {address} since the last "
+             "check. Open the watchlist to see them."] if parts else []
+    lines += [_line(a, address) for a in rest if a["kind"] == "more"]
+    return "\n".join(lines)
+
+
+def _slack(text: str) -> str:
+    """Slack's escaping: only these three are markup in a message."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _discord(text: str) -> str:
+    """Discord markdown and mentions shown as typed (mentions are also off)."""
+    for ch in "\\*_~|>[]()#@`":
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
+def webhook_payload(url: str, text: str, link: str = "") -> dict[str, Any]:
+    """The body each host expects, and nothing else: Google Chat refuses
+    unknown fields, Slack and Discord would render label markup live. Our own
+    explorer link is added after the text is escaped."""
+    host = (urlsplit(url).hostname or "").lower()
+    tail = f" — {link}" if link else ""
+    if host in _DISCORD:
+        body = _discord(text)[: 1900 - len(tail)]
+        return {"content": body + tail, "allowed_mentions": {"parse": []}}
+    if host == "chat.googleapis.com":
+        return {"text": text.replace("<", "‹").replace(">", "›") + tail}
+    return {"text": _slack(text) + tail}  # Slack, and hosts the operator added
+
+
+def _pause(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+def _deliver(watch_id: str, hook: str, address: str, ranked: list[dict[str, Any]],
+             post: Callable[[str, dict[str, Any]], None]) -> None:
+    """Post a check's alerts: the first URGENT_POSTS exchange or flagged ones
+    on their own, then one digest. A failure stops delivery and is written on
+    the watch; the alerts are in the app either way."""
+    urgent = [a for a in ranked if a["kind"] in ("exchange", "risk")][:URGENT_POSTS]
+    picked = {id(a) for a in urgent}
+    rest = [a for a in ranked if id(a) not in picked]
+    messages = [(_line(a, address), a["tx_url"], 1) for a in urgent]
+    if rest:
+        messages.append((_digest(rest, address), "", len(rest)))
+    host = (urlsplit(hook).hostname or "").lower()
+    name = _HOST_NAMES.get(host, host)
+    spacing = 0.5 if host in _DISCORD else 1.0
+    started = time.monotonic()
+    for i, (text, link, _count) in enumerate(messages):
+        left = sum(c for _, _, c in messages[i:])
+        if time.monotonic() - started > DELIVERY_SECONDS:
+            _note_webhook_failure(watch_id, f"Webhook: {name} was too slow; {left} alerts not posted "
+                                            "(they are in the app).")
+            return
+        if i:
+            _pause(spacing)
+        payload = webhook_payload(hook, text, link)
+        try:
+            try:
+                post(hook, payload)
+            except WebhookFailed as exc:
+                if exc.status != 429 or exc.retry_after is None or exc.retry_after > MAX_RETRY_AFTER:
+                    raise
+                _pause(exc.retry_after)
+                post(hook, payload)
+        except Exception as exc:  # noqa: BLE001 -- the alerts are stored either way
+            why = (f"answered {exc.status}" if isinstance(exc, WebhookFailed)
+                   else f"could not be reached ({type(exc).__name__})")
+            logger.warning("Watch %s: webhook %s", watch_id, why)
+            _note_webhook_failure(watch_id, f"Webhook: {name} {why}; {left} alerts not posted "
+                                            "(they are in the app).")
+            return
+
+
+def _note_webhook_failure(watch_id: str, error: str) -> None:
+    """Say on the watch that its webhook failed, unless the check itself
+    already recorded a provider error there: that one matters more."""
+    with models.session() as s:
+        watch = s.get(models.Watch, watch_id)
+        if watch is not None and watch.last_error is None:
+            watch.last_error = error[:300]
+            s.commit()
 
 
 # Column sizes the store enforces (Postgres does; SQLite does not).
@@ -607,8 +750,12 @@ def _finish_check(watch_id: str, seen_block: int | None = None, error: str | Non
             s.merge(more)  # replaces the watch's earlier "more" row, read or not
         s.flush()
         if alerts:
+            # Unread exchange and flagged alerts are kept first: newer dust
+            # must never push out the alert that matters.
+            urgent_first = case((and_(models.Alert.read.is_(False),
+                                      models.Alert.kind.in_(("exchange", "risk"))), 0), else_=1)
             keep = (select(models.Alert.id).where(models.Alert.watch_id == watch_id)
-                    .order_by(models.Alert.tx_time.desc(), models.Alert.created_at.desc())
+                    .order_by(urgent_first, models.Alert.tx_time.desc(), models.Alert.created_at.desc())
                     .limit(MAX_ALERTS_PER_WATCH))
             s.execute(delete(models.Alert).where(models.Alert.watch_id == watch_id,
                                                  models.Alert.id.not_in(keep)))
@@ -616,11 +763,33 @@ def _finish_check(watch_id: str, seen_block: int | None = None, error: str | Non
         return True
 
 
+def _http() -> httpx.Client:
+    return httpx.Client(timeout=5.0, follow_redirects=False)
+
+
+def _retry_after(response: httpx.Response) -> float | None:
+    """Seconds a 429 asks to wait: the header, or Discord's JSON retry_after."""
+    try:
+        return max(0.0, float(response.headers["retry-after"]))
+    except (KeyError, ValueError):
+        pass
+    try:
+        value = response.json().get("retry_after")
+        return max(0.0, float(value)) if value is not None else None
+    except (ValueError, AttributeError, TypeError):
+        return None
+
+
 def post_webhook(url: str, payload: dict[str, Any]) -> None:
-    """POST to an allowed webhook host. Re-validated here, never redirected."""
+    """POST to an allowed webhook host. Re-validated here, never redirected.
+    Raises WebhookFailed for any answer but a 2xx."""
     validate_webhook(url)
-    with httpx.Client(timeout=5.0, follow_redirects=False) as client:
-        client.post(url, json=payload).raise_for_status()
+    with _http() as client:
+        response = client.post(url, json=payload)
+    if response.status_code == 429:
+        raise WebhookFailed(429, _retry_after(response))
+    if not 200 <= response.status_code < 300:
+        raise WebhookFailed(response.status_code)
 
 
 def due_watch_ids(interval_seconds: float) -> list[str]:
