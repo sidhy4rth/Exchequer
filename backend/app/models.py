@@ -129,6 +129,9 @@ class Alert(Base):
     counterparty: Mapped[str] = mapped_column(String(64))
     counterparty_label: Mapped[str] = mapped_column(String(200), default="")
     read: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Its webhook post: pending | sent | failed (or a claim while posting);
+    # NULL when the watch has no webhook, and for alerts from before this.
+    delivery: Mapped[str | None] = mapped_column(String(16), nullable=True, default=None)
 
 
 class InferredDeposit(Base):

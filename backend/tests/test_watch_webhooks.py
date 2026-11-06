@@ -204,3 +204,60 @@ def test_unread_exchange_alerts_come_first_in_the_list(chain):
     assert listed[0]["kind"] == "exchange"
     watchlist.mark_read(owner(ALICE), [listed[0]["alert_id"]])
     assert watchlist.list_alerts(owner(ALICE), limit=30)[0]["kind"] == "moved"  # read: back in time order
+
+
+# -- The outbox: an alert the webhook did not take is posted next time -------
+def delivery_of(watch_id):
+    with models.session() as s:
+        return sorted((a.kind, a.delivery) for a in s.scalars(select(models.Alert).where(
+            models.Alert.watch_id == watch_id)))
+
+
+def test_an_alert_that_failed_to_post_is_sent_on_the_next_check(chain, monkeypatch):
+    hook = Hook(httpx.Response(503))
+    hook.install(monkeypatch)
+    w = hooked(chain)
+    chain.transfers = [tx(100, STRANGER), tx(101, BINANCE_14, 2.0, ts=later())]
+    watchlist.check_watch(w.id, source=chain)
+    assert delivery_of(w.id) == [("exchange", "pending")]
+    watchlist.check_watch(w.id, source=chain)  # nothing new; the host is back
+    assert len(hook.bodies) == 2 and "Binance" in hook.bodies[1]["text"]
+    assert delivery_of(w.id) == [("exchange", "sent")]
+    watchlist.check_watch(w.id, source=chain)
+    assert len(hook.bodies) == 2  # never twice
+
+
+def test_a_pending_alert_older_than_a_day_is_not_retried(chain, monkeypatch):
+    hook = Hook(httpx.Response(503))
+    hook.install(monkeypatch)
+    w = hooked(chain)
+    chain.transfers = [tx(100, STRANGER), tx(101, BINANCE_14, 2.0, ts=later())]
+    watchlist.check_watch(w.id, source=chain)
+    with models.session() as s:
+        for a in s.scalars(select(models.Alert)):
+            a.created_at = "2020-01-01T00:00:00+00:00"
+        s.commit()
+    watchlist.check_watch(w.id, source=chain)
+    assert len(hook.bodies) == 1 and delivery_of(w.id) == [("exchange", "failed")]
+
+
+def test_alerts_from_before_the_upgrade_are_never_posted(chain, monkeypatch):
+    hook = Hook()
+    hook.install(monkeypatch)
+    w = hooked(chain)
+    with models.session() as s:
+        s.add(models.Alert(id="old", watch_id=w.id, owner_hash=owner(ALICE), created_at=models.utc_now_iso(),
+                           kind="exchange", message="m", tx_hash="0x1", tx_time=1, value=1.0, asset="ETH",
+                           counterparty=BINANCE_14, counterparty_label="Binance 14"))
+        s.commit()
+    watchlist.check_watch(w.id, source=chain)
+    assert hook.bodies == []
+
+
+def test_alerts_of_a_watch_without_a_webhook_are_not_queued(chain):
+    w = watchlist.create_watch(owner(ALICE), WALLET, "ethereum", "ETH")
+    chain.transfers = [tx(100, STRANGER)]
+    watchlist.check_watch(w.id, source=chain)
+    chain.transfers = [tx(100, STRANGER), tx(101, BINANCE_14, 2.0)]
+    watchlist.check_watch(w.id, source=chain)
+    assert delivery_of(w.id) == [("exchange", None)]

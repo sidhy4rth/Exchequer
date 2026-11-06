@@ -85,6 +85,9 @@ _VERB = {"exchange": "sent to exchange wallet", "risk": "sent to flagged address
 URGENT_POSTS = 3
 MAX_RETRY_AFTER = 5.0
 DELIVERY_SECONDS = 8.0
+# An alert its webhook did not take is posted with the next check of its
+# watch, for this long; after that it counts as failed (it is in the app).
+REDELIVER_SECONDS = 24 * 3600
 
 
 class WatchError(ValueError):
@@ -538,6 +541,8 @@ def check_watch(watch_id: str, source: Source = open_source,
         fresh.sort(key=lambda t: (position(t), t.hash))
         inferred = inferred_for(chain.key, (t.to_address for t in fresh), owner)
         new_alerts = _rank([_alert(watch_id, owner, chain, address, asset, t, inferred) for t in fresh])
+        for a in [*new_alerts, *([more] if more is not None else [])]:
+            a.delivery = "pending" if hook else None  # the outbox (_deliver_pending)
         out = [alert_summary(a, chain.key, case_id, inferred) for a in new_alerts]
         if more is not None:
             out.append(alert_summary(more, chain.key, case_id))
@@ -549,9 +554,35 @@ def check_watch(watch_id: str, source: Source = open_source,
         _record_failure(watch_id, f"Could not store this round's alerts ({type(exc).__name__}).")
         return []
 
-    if hook and out:
-        _deliver(watch_id, hook, address, out, post)
+    if hook:
+        _deliver_pending(watch_id, hook, address, chain.key, case_id, post)
     return out
+
+
+def _deliver_pending(watch_id: str, hook: str, address: str, chain_key: str, case_id: str | None,
+                     post: Callable[[str, dict[str, Any]], None]) -> None:
+    """Post this watch's alerts its webhook has not taken yet: this check's,
+    and any left from earlier checks in the last day. They are claimed first,
+    so two checks of one watch never post the same alert twice."""
+    claim = f"c:{uuid.uuid4().hex[:12]}"
+    cutoff = _iso_ago(REDELIVER_SECONDS)
+    Alert = models.Alert
+    with models.session() as s:
+        mine = (Alert.watch_id == watch_id) & (Alert.delivery == "pending")
+        s.execute(update(Alert).where(mine, Alert.created_at < cutoff).values(delivery="failed"))
+        s.execute(update(Alert).where(mine, Alert.created_at >= cutoff).values(delivery=claim))
+        s.commit()
+        rows = list(s.scalars(select(Alert).where(Alert.watch_id == watch_id, Alert.delivery == claim)))
+        todo = [alert_summary(a, chain_key, case_id) for a in _rank(rows)]
+    if not todo:
+        return
+    sent = _deliver(watch_id, hook, address, todo, post)
+    with models.session() as s:
+        for state, ids in (("sent", sent), ("pending", [a["alert_id"] for a in todo if a["alert_id"] not in sent])):
+            if ids:
+                s.execute(update(Alert).where(Alert.id.in_(ids), Alert.delivery == claim)
+                          .values(delivery=state))
+        s.commit()
 
 
 def _rank(alerts: list[models.Alert]) -> list[models.Alert]:
@@ -625,26 +656,27 @@ def _pause(seconds: float) -> None:
 
 
 def _deliver(watch_id: str, hook: str, address: str, ranked: list[dict[str, Any]],
-             post: Callable[[str, dict[str, Any]], None]) -> None:
-    """Post a check's alerts: the first URGENT_POSTS exchange or flagged ones
-    on their own, then one digest. A failure stops delivery and is written on
-    the watch; the alerts are in the app either way."""
+             post: Callable[[str, dict[str, Any]], None]) -> set[str]:
+    """Post alerts: the first URGENT_POSTS exchange or flagged ones on their
+    own, then one digest. A failure stops delivery and is written on the
+    watch; the alerts are in the app either way. Returns the ids posted."""
     urgent = [a for a in ranked if a["kind"] in ("exchange", "risk")][:URGENT_POSTS]
     picked = {id(a) for a in urgent}
     rest = [a for a in ranked if id(a) not in picked]
-    messages = [(_line(a, address), a["tx_url"], 1) for a in urgent]
+    messages = [(_line(a, address), a["tx_url"], [a["alert_id"]]) for a in urgent]
     if rest:
-        messages.append((_digest(rest, address), "", len(rest)))
+        messages.append((_digest(rest, address), "", [a["alert_id"] for a in rest]))
+    posted: set[str] = set()
     host = (urlsplit(hook).hostname or "").lower()
     name = _HOST_NAMES.get(host, host)
     spacing = 0.5 if host in _DISCORD else 1.0
     started = time.monotonic()
-    for i, (text, link, _count) in enumerate(messages):
-        left = sum(c for _, _, c in messages[i:])
+    for i, (text, link, ids) in enumerate(messages):
+        left = sum(len(m[2]) for m in messages[i:])
         if time.monotonic() - started > DELIVERY_SECONDS:
             _note_webhook_failure(watch_id, f"Webhook: {name} was too slow; {left} alerts not posted "
                                             "(they are in the app).")
-            return
+            return posted
         if i:
             _pause(spacing)
         payload = webhook_payload(hook, text, link)
@@ -662,7 +694,9 @@ def _deliver(watch_id: str, hook: str, address: str, ranked: list[dict[str, Any]
             logger.warning("Watch %s: webhook %s", watch_id, why)
             _note_webhook_failure(watch_id, f"Webhook: {name} {why}; {left} alerts not posted "
                                             "(they are in the app).")
-            return
+            return posted
+        posted.update(ids)
+    return posted
 
 
 def _note_webhook_failure(watch_id: str, error: str) -> None:
