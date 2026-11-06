@@ -163,3 +163,34 @@ jobs:
           if curl -s localhost:8000/openapi.json | grep -q '"openapi"'; then echo "schema exposed"; exit 1; fi
       - if: failure()
         run: docker logs app
+
+  # The nightly list refresh (refresh-lists.yml) rebuilds one branch and stages
+  # only the OFAC, intl and Tether list files. Its pull request is read as list
+  # data, so a change to anything else on that branch is refused here. Skipped,
+  # which counts as passing, on every other pull request. It reads the pull
+  # request's file list through the API, so it checks out nothing.
+  bot-scope:
+    name: bot branch touches only list files
+    if: github.event_name == 'pull_request' && github.head_ref == 'b/r11-refresh-lists-bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Every file the pull request changes is a refreshed list
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # A renamed file counts under its old name too.
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)')
+          test -n "$files"
+          outside=$(printf '%s\n' "$files" | grep -Ev '^backend/data/(risk_labels|intl_sanctions|frozen_labels)[a-z_]*\.json$' || true)
+          if [ -n "$outside" ]; then
+            echo "::error::The list-refresh pull request changes files that are not lists:"
+            printf '%s\n' "$outside"
+            exit 1
+          fi
