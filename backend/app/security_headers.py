@@ -72,27 +72,36 @@ class SecurityHeadersMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-class BodySizeLimitMiddleware:
-    """Refuse request bodies over `max_bytes` with 413, before they fill memory.
+# The most any request body may hold. Only /verify takes a whole text report;
+# every other route takes a small JSON body (the largest real one, a 25-row
+# batch, is a few kilobytes), and FastAPI parses and validates JSON on the
+# event loop, so a 2 MB body on any route stalled every visitor.
+DEFAULT_MAX_BODY = 256_000
+LARGE_BODY_ROUTES = {"/verify": 2_100_000}
 
-    FastAPI reads a JSON body whole. Nothing this API accepts comes near the
-    limit -- the largest is a text report sent to /verify -- so anything over
-    it is refused: up front when Content-Length says so, or as soon as a
-    streamed body crosses it.
+
+class BodySizeLimitMiddleware:
+    """Refuse request bodies over the route's limit with 413, before they fill memory.
+
+    Refused up front when Content-Length says so, or as soon as a streamed
+    body crosses the limit.
     """
 
-    def __init__(self, app: Callable[[Scope, Receive, Send], Awaitable[None]], max_bytes: int = 2_100_000) -> None:
+    def __init__(self, app: Callable[[Scope, Receive, Send], Awaitable[None]],
+                 max_bytes: int = DEFAULT_MAX_BODY, large: dict[str, int] | None = None) -> None:
         self.app = app
-        self.max_bytes = max_bytes
+        self.default_max = max_bytes
+        self.large = LARGE_BODY_ROUTES if large is None else large
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        limit = self.large.get(scope.get("path", "").rstrip("/") or "/", self.default_max)
         for name, value in scope.get("headers", []):
             if name == b"content-length":
                 try:
-                    too_big = int(value) > self.max_bytes
+                    too_big = int(value) > limit
                 except ValueError:
                     too_big = True
                 if too_big:
@@ -100,18 +109,27 @@ class BodySizeLimitMiddleware:
                     return
         received = 0
         started = False
+        over = False
 
         async def counting_receive() -> dict[str, Any]:
-            nonlocal received
+            nonlocal received, over
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
-                if received > self.max_bytes:
+                if received > limit:
+                    over = True
                     raise _TooLarge()
             return message
 
         async def tracking_send(message: dict[str, Any]) -> None:
             nonlocal started
+            if over:
+                # FastAPI catches the error raised mid-read and answers 400
+                # ("error parsing the body"); say what happened instead.
+                if message["type"] == "http.response.start" and not started:
+                    started = True
+                    await _send_413(send)
+                return
             if message["type"] == "http.response.start":
                 started = True
             await send(message)

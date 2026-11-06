@@ -51,3 +51,21 @@ def test_the_policy_trusts_no_other_origin():
     csp = client.get("/health").headers["content-security-policy"]
     assert "https://" not in csp and "http://" not in csp
     assert "font-src 'self';" in csp + ";"
+
+
+def test_ordinary_routes_take_a_much_smaller_body():
+    # Only /verify takes a whole report; every JSON route used to accept the
+    # same 2 MB, parsed and validated on the event loop.
+    from app.security_headers import DEFAULT_MAX_BODY, LARGE_BODY_ROUTES
+    assert DEFAULT_MAX_BODY <= 256_000 and LARGE_BODY_ROUTES == {"/verify": 2_100_000}
+    just_over = b"x" * (DEFAULT_MAX_BODY + 1)
+    for path in ("/batches", "/requests", "/watches", "/trace", "/alerts/read"):
+        r = client.post(path, content=just_over, headers={"content-type": "application/json"})
+        assert r.status_code == 413, path
+
+    def chunks():  # streamed, no length
+        for _ in range(3):
+            yield b"y" * 100_000
+    assert client.post("/batches", content=chunks(), headers={"content-type": "application/json"}).status_code == 413
+    # A report of 1 MB is still checked.
+    assert client.post("/verify", content=b"z" * 1_000_000).status_code == 200
