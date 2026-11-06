@@ -131,6 +131,8 @@ class Outcome:
     detail: str = ""
     changes: dict[Path, Change] = field(default_factory=dict)
     held: dict[Path, bytes | None] = field(default_factory=dict)
+    # A skipped family's files: when each was last reviewed (None: no date, or no file).
+    reviewed: tuple[str | None, ...] = ()
 
     def restore(self) -> None:
         for path, raw in self.held.items():
@@ -220,6 +222,13 @@ def _gate(path: Path, before: dict[str, tuple], after: dict, change_added: list[
     return None
 
 
+def _reviewed(path: Path) -> str | None:
+    try:
+        return (_read(path.read_bytes()).get("_meta") or {}).get("last_reviewed")
+    except (OSError, ValueError):
+        return None
+
+
 def run_module(family: Family) -> int:
     command = [sys.executable, "-m", f"scripts.{family.module}", *family.args]
     try:
@@ -232,7 +241,8 @@ def run_module(family: Family) -> int:
 def run_family(family: Family, run: Callable[[Family], int] = run_module) -> Outcome:
     missing = [name for name in family.needs if not getattr(config, name, None)]
     if missing:
-        return Outcome(family, "skipped", f"{', '.join(missing)} is not set")
+        return Outcome(family, "skipped", f"{', '.join(missing)} is not set",
+                       reviewed=tuple(_reviewed(path) for path in family.files))
 
     held = {path: path.read_bytes() if path.exists() else None for path in family.files}
     outcome = Outcome(family, "ok", held=held)
@@ -301,8 +311,45 @@ def settle(outcomes: list[Outcome], reason: str | None) -> None:
                 outcome.restore()
 
 
-def has_problem(outcomes: list[Outcome]) -> bool:
-    return any(o.status in ("failed", "refused") for o in outcomes)
+def _over_age(reviewed: str | None, today: date) -> bool:
+    """Older than the reports' own limit (the risk matcher's rule): a report would warn."""
+    try:
+        return (today - date.fromisoformat(reviewed)).days > config.LIST_STALE_DAYS
+    except (TypeError, ValueError):
+        return True
+
+
+def has_problem(outcomes: list[Outcome], strict: bool = False, today: date | None = None) -> bool:
+    """A failure or a refusal is always red. So is a skip in a strict run (the
+    nightly job, which should have every key), and in any run given `today`
+    once a list the skip left alone is past the reports' age limit: a list that
+    is never refreshed must not stay green while it goes stale."""
+    for outcome in outcomes:
+        if outcome.status in ("failed", "refused"):
+            return True
+        if outcome.status == "skipped" and (
+                strict or (today is not None and any(_over_age(r, today) for r in outcome.reviewed))):
+            return True
+    return False
+
+
+def _annotation(value: str) -> str:
+    return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def announce(outcomes: list[Outcome], summary: str) -> None:
+    """On GitHub Actions: a warning for each skip, an error for each failure or
+    refusal, and the summary on the run's page, whatever else happens."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    for outcome in outcomes:
+        if outcome.status == "skipped":
+            print(f"::warning title=List skipped::{_annotation(f'{outcome.family.name}: {outcome.detail}')}")
+        elif outcome.status in ("failed", "refused"):
+            print(f"::error title=List not refreshed::{_annotation(f'{outcome.family.name}: {outcome.detail}')}")
+    if os.environ.get("GITHUB_STEP_SUMMARY"):
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+            out.write(summary)
 
 
 def pr_title(outcomes: list[Outcome], reason: str | None) -> str:
@@ -365,10 +412,13 @@ def render_summary(outcomes: list[Outcome], reason: str | None) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--summary", type=Path, help="write the pull request body here")
+    parser.add_argument("--strict", action="store_true",
+                        help="a list skipped for want of a key turns the run red (the nightly job)")
     args = parser.parse_args()
 
+    today = datetime.now(timezone.utc).date()
     outcomes = [run_family(family) for family in families()]
-    reason = reason_to_open(outcomes, datetime.now(timezone.utc).date())
+    reason = reason_to_open(outcomes, today)
     settle(outcomes, reason)
 
     summary = render_summary(outcomes, reason)
@@ -378,7 +428,8 @@ def main() -> int:
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
             out.write(f"open_pr={'true' if reason else 'false'}\ntitle={pr_title(outcomes, reason)}\n")
-    return 1 if has_problem(outcomes) else 0
+    announce(outcomes, summary)
+    return 1 if has_problem(outcomes, strict=args.strict, today=today) else 0
 
 
 if __name__ == "__main__":
