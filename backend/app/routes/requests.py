@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from .. import audit, freeze_requests
+from .. import audit, freeze_requests, rate_limit
 from ..auth import CurrentUser, User
 
 router = APIRouter()
@@ -44,6 +44,19 @@ def _owner(user: User) -> str:
     return user.owner_hash
 
 
+def _allow_write(http: Request) -> None:
+    """Every create or update is a stored write: limit them per connection,
+    since a fresh owner key costs nothing."""
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    wait = rate_limit.request_writes.check(client)
+    if wait is not None:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many request updates from this connection in the last hour. Try again later.",
+            headers={"Retry-After": str(int(wait))},
+        )
+
+
 @router.get("/requests")
 def list_requests(user: CurrentUser, open: bool = Query(False)) -> dict[str, Any]:  # noqa: A002
     items = freeze_requests.list_for(user.owner_hash, open_only=open) if user.owner_hash else []
@@ -59,7 +72,8 @@ def case_requests(case_id: str, user: CurrentUser) -> dict[str, Any]:
 
 
 @router.post("/requests", status_code=201)
-def new_request(body: NewRequest, user: CurrentUser) -> dict[str, Any]:
+def new_request(body: NewRequest, user: CurrentUser, http: Request) -> dict[str, Any]:
+    _allow_write(http)
     try:
         made = freeze_requests.create(_owner(user), body.case_id, body.recipient, body.kind,
                                       body.address, body.asset, body.status)
@@ -70,7 +84,8 @@ def new_request(body: NewRequest, user: CurrentUser) -> dict[str, Any]:
 
 
 @router.patch("/requests/{request_id}")
-def change_request(request_id: str, body: RequestChange, user: CurrentUser) -> dict[str, Any]:
+def change_request(request_id: str, body: RequestChange, user: CurrentUser, http: Request) -> dict[str, Any]:
+    _allow_write(http)
     changes = body.model_dump(exclude_unset=True)
     try:
         updated = freeze_requests.update(_owner(user), request_id, changes)

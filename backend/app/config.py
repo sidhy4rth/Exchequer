@@ -553,6 +553,10 @@ DEMO_CODE: str = os.getenv("EXCHEQUER_DEMO_CODE", "").strip()
 # Watches one client may create per hour (0 = no limit). Each is re-read on
 # a schedule for as long as it exists, spending the provider quota.
 WATCHES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR", 20)
+# Freeze-request writes (POST and PATCH /requests) one client may make per
+# hour (0 = no limit). An officer logs a few and updates them now and then;
+# this only stops a script filling the store.
+REQUEST_WRITES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_REQUEST_WRITES_PER_HOUR", 120)
 # Bearer token for GET /health/detail, the operator's view of keys, quota
 # and warm-up. Unset = the endpoint does not exist (404); /health stays public.
 HEALTH_TOKEN: str = os.getenv("EXCHEQUER_HEALTH_TOKEN", "").strip()

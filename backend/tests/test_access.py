@@ -23,6 +23,7 @@ GUARDED = [
     ("/batches", {"name": "b", "rows": [{"address": ADDRESS}]}),
     ("/watches", {"address": ADDRESS}),
     ("/watches/some-watch/check", None),
+    ("/requests", {"case_id": "case-1", "recipient": "Binance"}),
 ]
 
 

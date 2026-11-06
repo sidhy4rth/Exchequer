@@ -86,3 +86,5 @@ class SlidingWindowLimiter:
 traces = SlidingWindowLimiter(config.TRACES_PER_HOUR_PER_CLIENT, 3600)
 # A watch is re-read on a schedule for as long as it exists (watchlist.py).
 watches = SlidingWindowLimiter(config.WATCHES_PER_HOUR_PER_CLIENT, 3600)
+# Every freeze-request create or update is a database write (routes/requests.py).
+request_writes = SlidingWindowLimiter(config.REQUEST_WRITES_PER_HOUR_PER_CLIENT, 3600)

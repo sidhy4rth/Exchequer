@@ -9,6 +9,7 @@ X-Exchequer-Demo-Code:
     POST /trace, /trace/jobs     a live trace
     POST /batches                up to 25 of them
     POST /watches, /watches/{id}/check    re-reading an address on a schedule
+    POST /requests               logging a freeze request (a stored row)
     POST /access/check           whether a code is right, for the console's code box
 
 Unset (a laptop, the test suite), nothing is guarded. The code is a shared
@@ -37,6 +38,9 @@ GUARDED: list[tuple[str, re.Pattern[str]]] = [
     ("POST", re.compile(r"^/batches/?$")),
     ("POST", re.compile(r"^/watches/?$")),
     ("POST", re.compile(r"^/watches/[^/]+/check/?$")),
+    # A stored row per call; owner keys cost nothing, so only the code stops a
+    # script filling the store from the public site.
+    ("POST", re.compile(r"^/requests/?$")),
     # Guarded like the rest, so checking a code in the console gets the same
     # constant-time comparison and the same limit on guesses.
     ("POST", re.compile(r"^/access/check/?$")),
