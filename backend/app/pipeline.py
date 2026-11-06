@@ -507,6 +507,12 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 direction=direction,
                 seed_window=seed_window,
             )
+            if getattr(client, "confirmed_bound_applied", True) is False:
+                # The head could not be read, so the newest rows were kept uncut.
+                result.warnings.append(
+                    "The chain's newest block could not be read, so the newest blocks may include "
+                    "unconfirmed transfers that a reorganisation could still drop."
+                )
             if live is not None:
                 # The last hop is never checked during the walk; ask now, then
                 # attribute against the file's labels plus what TronScan named.

@@ -141,6 +141,12 @@ class Chain:
     # on the family it belongs to, so this is what makes "is this address valid
     # for the chain you picked" answerable.
     address_family: str = "evm"
+    # Blocks that must sit on top of one before its transfers count. A watch
+    # alerted on, and moved its cursor past, a transfer the next reorg could
+    # drop (r2-g2-watchlist-alerts-0-10); Etherscan reads drop rows above the
+    # head less this. BSC's matches NodeReal's indexed-head lag; Tron asks
+    # TronGrid for confirmed records instead. Tunable here, in one place.
+    confirmations: int = 0
     # Stablecoins traceable on this chain. A trace follows one asset at a time:
     # 1 BNB and 1 USDT are not comparable quantities, so summing them into a
     # single "value" would make the confidence score meaningless.
@@ -236,6 +242,7 @@ CHAINS: dict[str, Chain] = {
         name="Ethereum Mainnet",
         native_symbol="ETH",
         explorer_url="https://etherscan.io",
+        confirmations=12,  # ~2.5 minutes
         labels_filename="exchange_labels.json",
         gambling_labels_filename="gambling_labels.json",
         risk_labels_filename="risk_labels.json",
@@ -254,6 +261,7 @@ CHAINS: dict[str, Chain] = {
         name="BNB Smart Chain",
         native_symbol="BNB",
         explorer_url="https://bscscan.com",
+        confirmations=32,  # nodereal_client.INDEX_LAG_BLOCKS
         labels_filename="exchange_labels_bsc.json",
         gambling_labels_filename="gambling_labels_bsc.json",
         risk_labels_filename="risk_labels_bsc.json",
@@ -280,6 +288,7 @@ CHAINS["polygon"] = Chain(
     name="Polygon PoS",
     native_symbol="POL",
     explorer_url="https://polygonscan.com",
+    confirmations=64,  # ~2 minutes; Polygon has had deep reorgs
     labels_filename="exchange_labels_polygon.json",
     gambling_labels_filename="gambling_labels_polygon.json",
     risk_labels_filename="risk_labels_polygon.json",
@@ -294,6 +303,7 @@ CHAINS["arbitrum"] = Chain(
     name="Arbitrum One",
     native_symbol="ETH",
     explorer_url="https://arbiscan.io",
+    confirmations=20,
     labels_filename="exchange_labels_arbitrum.json",
     gambling_labels_filename="gambling_labels_arbitrum.json",
     risk_labels_filename="risk_labels_arbitrum.json",

@@ -333,9 +333,15 @@ def check_watch(watch_id: str, source: Source = open_source,
     try:
         with fresh_reads(), source(chain, asset) as client:
             transfers = client.get_outgoing_transactions(address, limit=FETCH_LIMIT)
+            unconfirmed = getattr(client, "confirmed_bound_applied", True) is False
     except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
         _finish_check(watch_id, error=f"Could not read the address this round ({type(exc).__name__}).")
         logger.warning("Watch %s: provider failure: %s", watch_id, exc)
+        return []
+    if unconfirmed:
+        # The head could not be read, so the newest rows may not have settled:
+        # no alert and no cursor move on them; next round tries again.
+        _finish_check(watch_id, error="Could not read the chain's newest block this round.")
         return []
 
     position = _position_of(chain)

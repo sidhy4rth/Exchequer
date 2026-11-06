@@ -124,6 +124,7 @@ def open_source(chain: config.Chain, asset: str | None = None) -> TransactionSou
         # USDC here costs nothing extra.
         return EtherscanClient(
             chain_id=chain.chain_id,
+            confirmations=chain.confirmations,
             contract_address=token.address if token else None,
             asset_symbol=token.symbol if token else chain.native_symbol,
             token_decimals=token.decimals if token else None,

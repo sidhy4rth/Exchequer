@@ -28,6 +28,7 @@ import logging
 import random
 import hashlib
 import re
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -35,7 +36,8 @@ from typing import Any, Callable
 import httpx
 
 from . import config
-from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache, get_pacer, read_capped
+from .api_budget import (ResponseCache, ResponseTooLarge, SharedPacer, fresh_reads, get_cache, get_pacer,
+                         read_capped)
 from .evidence import EvidenceLog
 
 logger = logging.getLogger(__name__)
@@ -48,6 +50,14 @@ WEI_PER_UNIT = 10**18
 # arrival above that block asked for an inverted range. A constant rather
 # than the head, so the request (and its cache key) is the same every time.
 ENDBLOCK_LATEST = 9_999_999_999
+
+# The chain head, read once per chain and shared by every client for this
+# long: concurrent traces and watch checks then cost one eth_blockNumber call
+# between them. (base_url, chain_id) -> (monotonic read time, head).
+HEAD_MEMO_SECONDS = 15.0
+_confirmed_heads: dict[tuple[str, int], tuple[float, int]] = {}
+_confirmed_heads_lock = threading.Lock()
+_UNREAD = object()
 
 # An EVM address: 0x followed by 40 hex characters. Identical on Ethereum
 # and BNB Smart Chain.
@@ -373,6 +383,7 @@ class EtherscanClient:
         token_decimals: int | None = None,
         client: httpx.Client | None = None,
         include_internal: bool | None = None,  # None -> config.ETHERSCAN_INCLUDE_INTERNAL
+        confirmations: int | None = None,  # config.Chain.confirmations; None reads to the tip
     ) -> None:
         self.api_key = api_key if api_key is not None else config.ETHERSCAN_API_KEY
         self.chain_id = chain_id if chain_id is not None else config.ETHERSCAN_CHAIN_ID
@@ -393,6 +404,13 @@ class EtherscanClient:
         self.include_internal = (
             include_internal if include_internal is not None else config.ETHERSCAN_INCLUDE_INTERNAL
         )
+        # Rows above the head less this many blocks are dropped from every
+        # parsed read (confirmed_head). False once the head could not be read:
+        # the rows were then kept, and the trace says so.
+        self.confirmations = confirmations
+        self.confirmed_bound_applied = True
+        self._bound: Any = _UNREAD
+        self._bound_lock = threading.Lock()
 
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout)
@@ -652,6 +670,8 @@ class EtherscanClient:
         if self.contract_address:
             params["contractaddress"] = self.contract_address
 
+        # The bound's head is read before the rows, so no kept row is newer.
+        parse = self._parser()
         result = self._request(params)
 
         if not isinstance(result, list):
@@ -666,7 +686,6 @@ class EtherscanClient:
                 len(result) >= offset, min((t for t in stamps if t > 0), default=None),
             )
 
-        parse = self._parser()
         txs = [tx for tx in (parse(raw) for raw in result) if tx is not None]
 
         # Value moved by a contract call -- a multisig paying out, a
@@ -677,10 +696,8 @@ class EtherscanClient:
         if not self.contract_address and want_internal:
             internal_raw = self._request({**params, "action": "txlistinternal"})
             if isinstance(internal_raw, list):
-                txs += [
-                    tx for tx in (Transaction.from_api(raw, internal=True) for raw in internal_raw)
-                    if tx is not None
-                ]
+                parse_internal = self._parser(internal=True)
+                txs += [tx for tx in (parse_internal(raw) for raw in internal_raw) if tx is not None]
             # Each source was capped at `offset` by its own request. The union
             # is deliberately NOT capped again: measured on a busy demo wallet,
             # trimming the merged list to the newest `offset` let a burst of
@@ -719,10 +736,10 @@ class EtherscanClient:
         }
         if self.contract_address:
             params["contractaddress"] = self.contract_address
+        parse = self._parser()
         result = self._request(params)
         if not isinstance(result, list):
             result = []
-        parse = self._parser()
         target = normalize_address(address)
         txs = [t for t in (parse(r) for r in result) if t is not None and t.to_address == target
                and not t.is_error and t.value_wei > 0]
@@ -748,21 +765,76 @@ class EtherscanClient:
         }
         if self.contract_address:
             params["contractaddress"] = self.contract_address
+        parse = self._parser()
         result = self._request(params)
         if not isinstance(result, list):
             result = []
-        parse = self._parser()
         target = normalize_address(address)
         moved = [t for t in (parse(r) for r in result) if t is not None and not t.is_error and t.value_wei > 0]
         incoming = [t for t in moved if t.to_address == target]
         outgoing = [t for t in moved if t.from_address == target and t.to_address is not None]
         return incoming, outgoing, len(result) < page
 
-    def _parser(self) -> Callable[[dict[str, Any]], Transaction | None]:
-        """The record parser for the asset this client follows."""
+    def _parser(self, internal: bool = False) -> Callable[[dict[str, Any]], Transaction | None]:
+        """The record parser for the asset this client follows. With a
+        confirmation depth, a row above the confirmed head parses to None."""
         if self.contract_address:
-            return lambda raw: Transaction.from_token_api(raw, self.token_decimals)
-        return Transaction.from_api
+            def parse(raw: dict[str, Any]) -> Transaction | None:
+                return Transaction.from_token_api(raw, self.token_decimals)
+        else:
+            def parse(raw: dict[str, Any]) -> Transaction | None:
+                return Transaction.from_api(raw, internal=internal)
+        bound = self.confirmed_head()
+        if bound is None:
+            return parse
+
+        def confirmed(raw: dict[str, Any]) -> Transaction | None:
+            tx = parse(raw)
+            return tx if tx is None or tx.block_number <= bound else None
+        return confirmed
+
+    def confirmed_head(self) -> int | None:
+        """The newest block with `confirmations` blocks on top of it; None
+        when no depth is set or the head could not be read.
+
+        Read once per client, so every read of one trace (or one watch check)
+        cuts at the same block, from a head shared across clients for
+        HEAD_MEMO_SECONDS. The request (endblock=ENDBLOCK_LATEST) never
+        changes, so cache keys and evidence URLs stay the same; the rows are
+        cut after the answer arrives."""
+        if not self.confirmations:
+            return None
+        with self._bound_lock:
+            if self._bound is not _UNREAD:
+                return self._bound
+            memo_key = (self.base_url, self.chain_id)
+            with _confirmed_heads_lock:
+                memo = _confirmed_heads.get(memo_key)
+            if memo is not None and time.monotonic() - memo[0] < HEAD_MEMO_SECONDS:
+                head: int | None = memo[1]
+            else:
+                head = self._read_head()
+                if head is not None:
+                    with _confirmed_heads_lock:
+                        _confirmed_heads[memo_key] = (time.monotonic(), head)
+            if head is None:
+                self.confirmed_bound_applied = False
+                self._bound = None
+            else:
+                self._bound = max(0, head - self.confirmations)
+            return self._bound
+
+    def _read_head(self) -> int | None:
+        """The chain's newest block number, never from the cache; None on failure."""
+        try:
+            with fresh_reads():
+                result = self._request({"module": "proxy", "action": "eth_blockNumber"})
+            head = int(result, 16) if isinstance(result, str) else None
+        except (EtherscanError, ValueError) as exc:
+            logger.warning("Could not read the %s head; newest rows are kept unconfirmed: %s",
+                           self.chain_id, type(exc).__name__)
+            return None
+        return head if head and head > 0 else None
 
     def get_outgoing_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
         """Only the transfers *sent by* `address` that actually moved value.
@@ -824,13 +896,14 @@ class EtherscanClient:
         def sent(raws: Any, internal: bool = False) -> list[Transaction]:
             if not isinstance(raws, list):
                 return []
-            parse = (lambda raw: Transaction.from_api(raw, internal=True)) if internal else self._parser()
+            parse = self._parser(internal=internal)
             return [
                 tx for tx in (parse(raw) for raw in raws)
                 if tx is not None and tx.from_address == target and tx.to_address is not None
                 and not tx.is_error and tx.value_wei > 0
             ]
 
+        self.confirmed_head()  # before the rows, so no kept row is newer than its head
         signed = sent(self._request(params))
         if signed or self.contract_address or not self.include_internal:
             return signed
