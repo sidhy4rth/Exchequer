@@ -112,30 +112,41 @@ def _band(score: float) -> str:
     return "very low"
 
 
-def _hop_proximity(depth: int, max_depth: int, direction: str = OUTGOING) -> ScoreComponent:
+# Hop proximity is scored against this fixed distance (the default trace
+# depth), never the depth a request asked for: asking for a deeper trace must
+# not raise the score of the same path (audit r1-attribution-integrity-8).
+PROXIMITY_REFERENCE_HOPS = 4
+
+
+def _hop_proximity(depth: int, direction: str = OUTGOING, offset: int = 0) -> ScoreComponent:
     """Linear decay with distance from the victim's address.
 
     depth 1 scores 1.0 (a direct deposit to the exchange) and each further hop
-    costs an equal share, reaching 0 at one hop beyond the traversal limit.
-    Linear rather than exponential so the penalty stays easy to explain.
+    costs an equal share of PROXIMITY_REFERENCE_HOPS, reaching 0 at one hop
+    beyond it. Linear rather than exponential so the penalty stays easy to
+    explain. `offset` is the hops before this trace began: a follow-on after a
+    swap starts at the swapping wallet, which may sit hops from the reported
+    address.
     """
-    span = max(max_depth, 1)
-    raw = max(0.0, min(1.0, 1.0 - (depth - 1) / span))
-    if depth <= 1 and direction == OUTGOING:
+    hops = depth + offset
+    raw = max(0.0, min(1.0, 1.0 - (hops - 1) / PROXIMITY_REFERENCE_HOPS))
+    if hops <= 1 and direction == OUTGOING:
         explanation = (
             "The exchange wallet received funds directly from the reported "
             "address, with no intermediary."
         )
-    elif depth <= 1:
+    elif hops <= 1:
         explanation = (
             "The exchange wallet sent funds directly to the reported address, "
             "with no intermediary."
         )
     else:
+        after = f" ({depth} after the swap)" if offset else ""
         explanation = (
-            f"The exchange wallet is {depth} hops from the reported address. "
+            f"The exchange wallet is {hops} hops from the reported address{after}. "
             f"Each hop adds a wallet we cannot independently account for, so "
-            f"confidence decays with distance (limit: {max_depth} hops)."
+            f"confidence decays with distance, scored against a fixed reference of "
+            f"{PROXIMITY_REFERENCE_HOPS} hops ({PROXIMITY_REFERENCE_HOPS + 1} or more score 0)."
         )
     return ScoreComponent("hop_proximity", raw, WEIGHT_HOP_PROXIMITY, explanation)
 
@@ -396,8 +407,14 @@ def score_case(
     internal_transfers_read: bool = False,
     prorata: dict[str, Any] | None = None,
     materiality: dict[str, Any] | None = None,
+    depth_offset: int = 0,
 ) -> ConfidenceScore:
     """Compute the confidence score for one traced case.
+
+    `max_depth` is kept for callers but no longer moves the score: hop
+    proximity is measured against PROXIMITY_REFERENCE_HOPS. `depth_offset`
+    is the hops between the reported address and where this trace started
+    (a follow-on after a swap).
 
     On a reverse trace the three components measure the same quantities, but
     the claim they support is the mirror image: not "the funds reached this
@@ -431,7 +448,7 @@ def score_case(
         )
 
     components = [
-        _hop_proximity(primary_match.depth, max_depth, direction),
+        _hop_proximity(primary_match.depth, direction, depth_offset),
         (_prorata_component(prorata, native_symbol)
          if prorata and prorata.get("status") == "estimated"
          else _amount_correlation(graph, seed, primary_match.address, native_symbol, direction)),
@@ -451,7 +468,12 @@ def score_case(
         band = capped
 
     hops = f"{primary_match.depth} hop{'s' if primary_match.depth != 1 else ''}"
-    if direction == OUTGOING:
+    if direction == OUTGOING and depth_offset:
+        claim = (
+            f"the swapped funds reached {primary_match.exchange} at {primary_match.address}, "
+            f"{hops} after the swap ({primary_match.depth + depth_offset} from the reported address)"
+        )
+    elif direction == OUTGOING:
         claim = (
             f"funds from the reported address reached {primary_match.exchange} "
             f"at {primary_match.address}, {hops} from the source"

@@ -154,10 +154,10 @@ def test_a_follow_on_that_crashes_keeps_the_trace_that_found_it(faked, monkeypat
     away the finished original trace."""
     real = main.run_trace
 
-    def flaky(sub, seed_window=None, budget=None):
+    def flaky(sub, seed_window=None, budget=None, **kw):
         if sub.asset == "USDT":
             raise RuntimeError("provider answered something odd")
-        return real(sub, seed_window=seed_window, budget=budget)
+        return real(sub, seed_window=seed_window, budget=budget, **kw)
 
     monkeypatch.setattr(main, "run_trace", flaky)
     result = real(request())
@@ -165,3 +165,23 @@ def test_a_follow_on_that_crashes_keeps_the_trace_that_found_it(faked, monkeypat
     assert "result" not in follow and "could not be traced" in follow["error"]
     assert "provider answered" not in follow["error"]  # a fixed sentence, never raw text
     assert result["asset"] == "ETH"
+
+
+MID = addr("a1d")
+
+
+def test_a_follow_on_counts_hops_from_the_reported_address(faked, monkeypatch):
+    """The swap sat one hop out; the USDT went straight to Binance. Two hops
+    from the reported address, so the follow-on is not scored as a direct
+    deposit (audit r1-attribution-integrity-8)."""
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, MID, 1.0, SWAP_AT - 60, "ETH"),
+                                         tx(MID, ROUTER, 1.0, SWAP_AT, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(MID, BINANCE_14, 2400.0, SWAP_AT + 60, "USDT")])
+    swap = {**SWAP, "sender": MID}
+    monkeypatch.setattr(main, "detect_swaps", lambda graph, *a, **k: [swap] if k.get("asset_symbol") == "ETH" else [])
+
+    found = run_trace(request())["follow_ons"][0]["result"]
+    proximity = next(c for c in found["confidence_detail"]["components"] if c["name"] == "hop_proximity")
+    assert found["hop_count"] == 1
+    assert proximity["raw_value"] == 0.75
+    assert "2 hops from the reported address (1 after the swap)" in proximity["explanation"]

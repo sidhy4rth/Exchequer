@@ -392,11 +392,13 @@ def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
 
 
 def run_trace(request: TraceRequest, seed_window: int | None = None,
-              budget: TraceBudget | None = None) -> dict[str, Any]:
+              budget: TraceBudget | None = None, depth_offset: int = 0) -> dict[str, Any]:
     """Run one trace and return the full result, without storing it.
 
     `seed_window` is set only for a follow-on trace after a swap: the time rule
     then applies to the starting wallet too (see build_trace_graph).
+    `depth_offset` is then the swapping wallet's hops from the reported
+    address, so the follow-on's hop proximity counts from there.
 
     Everything the endpoint does except the case record: the endpoint gives
     the result a case id and saves it; the startup warm-up runs the demo
@@ -642,6 +644,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         internal_transfers_read=internal_read,
         prorata=prorata,
         materiality=materiality,
+        depth_offset=depth_offset,
     )
 
     # Swaps into a stablecoin this chain carries are followed as their own
@@ -932,7 +935,8 @@ def _follow_swaps(
         )
         progress.report(stage="following_swap", follow_asset=asset_out)
         try:
-            follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"), budget=budget)
+            follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"), budget=budget,
+                                         depth_offset=depth_at)
         except HTTPException as exc:
             if budget is not None and budget.cancelled:
                 raise  # a stop ends the whole case, follow-ons included
