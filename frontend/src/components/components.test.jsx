@@ -302,7 +302,7 @@ describe('Bulk intake', () => {
     await user.click(box)
     await user.paste('reference,address\nC-1,0xabc\nC-2,nope\n')
     await user.click(screen.getByRole('button', { name: 'Run batch of 2' }))
-    expect(await screen.findByText(/Row 2: 'nope' is not a valid/)).toBeInTheDocument()
+    expect(await screen.findByText(/Line 3: 'nope' is not a valid/)).toBeInTheDocument()
   })
 
   it('opens the batch page once the batch starts', async () => {
@@ -318,7 +318,7 @@ describe('Bulk intake', () => {
     )
     await user.click(screen.getByText('Bulk intake'))
     await user.click(screen.getByLabelText('Complaints CSV'))
-    await user.paste('0xabc\n')
+    await user.paste('0x' + 'a'.repeat(40) + '\n')
     await user.click(screen.getByRole('button', { name: 'Run batch of 1' }))
     expect(await screen.findByText('batch page')).toBeInTheDocument()
   })
