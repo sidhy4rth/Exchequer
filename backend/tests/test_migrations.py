@@ -106,3 +106,40 @@ def test_migrating_at_startup_leaves_the_apps_logging_alone(engine):
     models.init_db()
     assert not logging.getLogger("app.models").disabled
     assert all(not logging.getLogger(name).disabled for name in before)
+
+
+class _RecordingConnection:
+    """Stands in for a live connection: records each statement it is given."""
+
+    def __init__(self, dialect: str):
+        self.dialect = type("Dialect", (), {"name": dialect})()
+        self.statements: list[str] = []
+
+    def execute(self, statement, *args, **kwargs):
+        self.statements.append(str(statement))
+
+
+def test_postgres_migrations_take_the_lock_before_any_ddl():
+    # One migrator at a time; DDL that cannot get its table lock gives up
+    # instead of queueing every live query behind it.
+    conn = _RecordingConnection("postgresql")
+    models.guard_migrations(conn)
+    assert conn.statements == [
+        "SET LOCAL statement_timeout = '120s'",
+        f"SELECT pg_advisory_xact_lock({models.MIGRATION_LOCK_KEY})",
+        "SET LOCAL lock_timeout = '5s'",
+    ]
+
+
+def test_sqlite_migrations_run_no_lock_sql():
+    conn = _RecordingConnection("sqlite")
+    models.guard_migrations(conn)
+    assert conn.statements == []
+
+
+def test_every_upgrade_goes_through_the_guard(engine, monkeypatch):
+    seen = []
+    monkeypatch.setattr(models, "guard_migrations", lambda conn: seen.append(conn.dialect.name))
+    models.init_db()
+    assert seen == ["sqlite"]
+    assert revision(engine) == head()

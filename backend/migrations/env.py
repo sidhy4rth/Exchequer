@@ -25,6 +25,8 @@ def run_migrations(connection) -> None:
         render_as_batch=connection.dialect.name == "sqlite",
     )
     with context.begin_transaction():
+        # Postgres: wait for any other migrator, and fail fast on a busy table.
+        models.guard_migrations(connection)
         context.run_migrations()
 
 

@@ -19,7 +19,7 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, Float, Integer, String, Text, create_engine, event, func, or_, select
+from sqlalchemy import Boolean, Float, Integer, String, Text, create_engine, event, func, or_, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
@@ -221,6 +221,26 @@ def ensure_storage_dir() -> None:
     """The SQLite file's folder must exist before the first connection."""
     if _engine.dialect.name == "sqlite":
         config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+# Any fixed number; every migrator of this store asks for the same lock.
+MIGRATION_LOCK_KEY = 727202611
+
+
+def guard_migrations(connection) -> None:
+    """Postgres: one migrator at a time, and DDL that cannot get its table
+    lock within 5 s fails instead of queueing live queries behind it.
+
+    Called inside the migration's transaction (migrations/env.py), so the
+    transaction-level lock and SET LOCAL end with it -- which also works
+    through a transaction pooler such as Neon's. The lock is taken before
+    lock_timeout is set, so a second migrator (the CLI, a script, a booting
+    instance) waits for the first, up to the 120 s statement limit."""
+    if connection.dialect.name != "postgresql":
+        return
+    connection.execute(text("SET LOCAL statement_timeout = '120s'"))
+    connection.execute(text(f"SELECT pg_advisory_xact_lock({MIGRATION_LOCK_KEY})"))
+    connection.execute(text("SET LOCAL lock_timeout = '5s'"))
 
 
 def init_db() -> None:

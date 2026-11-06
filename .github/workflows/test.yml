@@ -64,6 +64,24 @@ jobs:
         run: alembic upgrade head && alembic upgrade head && alembic current | grep -q "(head)"
       - name: The schema matches app/models.py
         run: alembic check
+      # A booting instance and the CLI (or a script) can migrate at the same
+      # moment; the advisory lock (models.guard_migrations) makes the second
+      # wait for the first instead of failing on "relation already exists".
+      - name: Two migrators at once on an empty database both succeed
+        run: |
+          python - <<'PY'
+          from sqlalchemy import text
+          from app import models
+          with models.engine().begin() as conn:
+              conn.execute(text("DROP SCHEMA public CASCADE"))
+              conn.execute(text("CREATE SCHEMA public"))
+          PY
+          alembic upgrade head & first=$!
+          alembic upgrade head & second=$!
+          wait "$first"
+          wait "$second"
+          alembic current | grep -q "(head)"
+          alembic check
       - name: A store made before migrations is adopted with its cases
         run: |
           python - <<'PY'
