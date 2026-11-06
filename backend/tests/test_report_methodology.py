@@ -60,3 +60,15 @@ def test_methodology_names_tronscan_tags_when_they_were_read():
     text = methodology(DEMOS[12])
     assert "TronScan" in text and "public tags at trace time" in text
     assert "TronScan" not in methodology(DEMOS[1])
+
+
+def test_methodology_says_when_following_was_tried_but_did_not_finish():
+    # A follow-on that ran out of time is listed under FOLLOW-ON TRACES with its
+    # reason; the method must not give a different reason (no stablecoin returned).
+    result = copy.deepcopy(DEMOS[8])
+    swap = (result.get("swaps") or [{}])[0]
+    result["follow_ons"] = [{"swap": swap, "asset": "USDT", "address": swap.get("sender"), "max_depth": 2,
+                             "error": "not traced: the case's time budget was spent before this swap could be followed"}]
+    text = methodology(result)
+    assert "attempted but did not finish" in text and "FOLLOW-ON TRACES" in text
+    assert "a swap is followed only when" not in text

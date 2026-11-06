@@ -489,6 +489,9 @@ def _swap_sentence(result: dict[str, Any]) -> str:
                 "scored in its own asset; see FOLLOW-ON TRACES).")
     if settings.get("follow_swaps") is False:
         return recorded + "; the trace ends there: following the other asset was switched off for this case."
+    if follows:  # tried, but none finished: each is listed with its reason
+        return (recorded + "; the trace ends there. Following the other asset was attempted but did not "
+                "finish for this case; FOLLOW-ON TRACES gives the reason for each.")
     if result.get("swaps"):
         return (recorded + "; the trace ends there, and the other asset was not followed for this case (a "
                 "swap is followed only when it returned a stablecoin this chain carries and the return "
