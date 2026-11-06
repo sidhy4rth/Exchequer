@@ -13,7 +13,9 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+import threading
 import uuid
+from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any
 
@@ -283,12 +285,67 @@ def case_count_for(owner_hash: str) -> int:
         return int(session.scalar(stmt) or 0)
 
 
+# Recently read cases, kept in memory. A stored case never changes (nothing
+# updates one; only the offline prune script deletes, and the server is
+# restarted after it), but its result can be megabytes and the production
+# store is a metered free tier: re-reading one case in a loop would spend the
+# month's transfer. Bounded in bytes of result_json; a case over a quarter of
+# the bound is never kept, so a few huge ones cannot empty it.
+CASE_CACHE_BYTES = 32 * 1024 * 1024
+
+
+class _CaseCache:
+    def __init__(self) -> None:
+        self._items: OrderedDict[str, Case] = OrderedDict()
+        self.size = 0
+        self._engine: Engine | None = None
+        self._lock = threading.Lock()
+
+    def _for(self, engine: Engine) -> None:
+        """Called with the lock held: a different store starts empty."""
+        if engine is not self._engine:
+            self._items.clear()
+            self.size = 0
+            self._engine = engine
+
+    def get(self, engine: Engine, case_id: str) -> Case | None:
+        with self._lock:
+            self._for(engine)
+            case = self._items.get(case_id)
+            if case is not None:
+                self._items.move_to_end(case_id)
+            return case
+
+    def put(self, engine: Engine, case: Case) -> None:
+        cost = len(case.result_json or "")
+        if cost > CASE_CACHE_BYTES // 4:
+            return
+        with self._lock:
+            self._for(engine)
+            if case.id in self._items:
+                return
+            self._items[case.id] = case
+            self.size += cost
+            while self.size > CASE_CACHE_BYTES and self._items:
+                _, old = self._items.popitem(last=False)
+                self.size -= len(old.result_json or "")
+
+
+_case_cache = _CaseCache()
+
+
 def get_case(case_id: str) -> Case | None:
-    with Session(_engine) as session:
+    engine = _engine
+    cached = _case_cache.get(engine, case_id)
+    if cached is not None:
+        return cached
+    with Session(engine) as session:
         case = session.get(Case, case_id)
         if case is not None:
             session.expunge(case)
-        return case
+    if case is not None:
+        _case_cache.put(engine, case)
+    return case
 
 
 def all_cases(limit: int = 2000) -> list[Case]:
