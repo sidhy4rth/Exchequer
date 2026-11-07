@@ -53,7 +53,7 @@ def test_the_policy(what, category, blocked):
     ("tron", "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", TOKEN),                 # USDT on Tron
     ("ethereum", "0x11111112542d85b3ef69ae05771c2dccff4faa26", ROUTER),    # 1inch
     ("ethereum", "0x28c6c06298d514db089934071355e5743bf21d60", EXCHANGE),  # Binance 14
-    ("ethereum", "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7", DEPOSIT),
+    ("ethereum", "0x000f9f5f6db6d63bb64bb55d58272a1ce660fd90", DEPOSIT),
     ("tron", "TWBPGLwQw2EbqYLLw1DJnTDt2ZQ9yJW1JJ", EXCHANGE),              # WhiteBIT
 ])
 def test_real_infrastructure_resolves_to_its_kind(chain, address, expected):

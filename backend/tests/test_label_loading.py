@@ -61,7 +61,7 @@ def test_a_non_string_entity_is_skipped_and_odd_label_or_source_fall_back(tmp_pa
         GOOD: {"category": "stolen", "entity": "Y", "label": 5, "source": {"no": 1}},
     }})
     meta = _risk(path).lookup(GOOD)
-    assert meta == {"category": "stolen", "entity": "Y", "label": "Y", "source": "the list"}
+    assert meta == {"category": "stolen", "entity": "Y", "label": "Y", "source": "the list", "origin": path.name}
 
 
 def test_list_shaped_labels_mean_an_unusable_file(tmp_path, caplog):

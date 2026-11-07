@@ -44,9 +44,11 @@ from .label_store import decode_address, encode_address
 
 logger = logging.getLogger(__name__)
 
-SYSTEM, TOKEN, ROUTER, EXCHANGE, DEPOSIT, GAMBLING = "system", "token", "router", "exchange", "deposit", "gambling"
+# Readable: the importers print these in their refusals and excluded notes.
+SYSTEM, TOKEN, ROUTER, EXCHANGE = "burn/system address", "token contract", "DEX router", "exchange wallet"
+DEPOSIT, GAMBLING = "exchange deposit address", "casino wallet"
 # From a list given to the store build: every label refused, or only poisoning.
-LISTED, NO_POISONING = "listed", "never-poison"
+LISTED, NO_POISONING = "on a never-flag list", "on a never-poison list"
 _STRICT = frozenset({SYSTEM, TOKEN, ROUTER, LISTED})
 # Precedence when one address is several kinds: the strictest wins.
 _RANK = {SYSTEM: 0, TOKEN: 1, ROUTER: 2, LISTED: 3, EXCHANGE: 4, DEPOSIT: 5, GAMBLING: 6, NO_POISONING: 7}

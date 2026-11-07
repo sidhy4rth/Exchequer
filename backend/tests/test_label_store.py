@@ -339,7 +339,7 @@ def test_a_store_only_non_pool_does_not_stop_the_walk(tmp_path):
 
 # -- r1-labels-data-1: a store row never labels infrastructure at run time ------
 BINANCE_14 = "0x28c6c06298d514db089934071355e5743bf21d60"     # exchange_labels.json: hot wallet
-DEPOSIT = "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7"        # exchange_labels.json: deposit wallet
+DEPOSIT = "0x000f9f5f6db6d63bb64bb55d58272a1ce660fd90"        # exchange_labels.json: a Binance customer deposit address
 ROUTER_1INCH = "0x11111112542d85b3ef69ae05771c2dccff4faa26"   # router_labels.json
 USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"           # config: a traced token
 WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"           # data/never_flag_tokens.txt

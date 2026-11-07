@@ -62,7 +62,7 @@ def test_a_source_the_rules_do_not_place_fails_the_build(tmp_path, capsys):
 
 # -- r1-labels-data-1: no scan or list may label infrastructure ------------------
 BINANCE_14 = "0x28c6c06298d514db089934071355e5743bf21d60"     # exchange_labels.json: hot wallet
-DEPOSIT = "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7"        # exchange_labels.json: deposit wallet
+DEPOSIT = "0x000f9f5f6db6d63bb64bb55d58272a1ce660fd90"        # exchange_labels.json: a Binance customer deposit address
 ROUTER_1INCH = "0x11111112542d85b3ef69ae05771c2dccff4faa26"   # router_labels.json
 USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"           # config: a traced token
 WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"           # data/never_flag_tokens.txt
@@ -90,8 +90,8 @@ def test_infrastructure_never_becomes_a_store_row(tmp_path):
     report = build(src, out)
     assert report["rows"] == 1  # only the real scam wallet
     assert report["refused"] == 9
-    assert report["skipped"] == {"never-flag: system": 2, "never-flag: token": 2, "never-flag: exchange": 2,
-                                 "never-flag: deposit": 1, "never-flag: router": 1, "never-flag: gambling": 1}
+    assert report["skipped"] == {"never-flag: burn/system address": 2, "never-flag: token contract": 2, "never-flag: exchange wallet": 2,
+                                 "never-flag: exchange deposit address": 1, "never-flag: DEX router": 1, "never-flag: casino wallet": 1}
     listed = (tmp_path / "flagged.csv.refused.tsv").read_text()
     assert BINANCE_14 in listed and CLOUDBET in listed and ROUTER_1INCH in listed
 
@@ -99,7 +99,7 @@ def test_infrastructure_never_becomes_a_store_row(tmp_path):
 def test_an_issuer_freeze_on_an_exchange_or_deposit_wallet_stays(tmp_path):
     src = write_csv(tmp_path / "flagged.csv", [freeze(DEPOSIT), freeze(BINANCE_14), freeze(USDT)])
     report = build(src, tmp_path / "label_store.db")
-    assert report["rows"] == 2 and report["skipped"] == {"never-flag: token": 1}
+    assert report["rows"] == 2 and report["skipped"] == {"never-flag: token contract": 1}
 
 
 def test_a_court_record_on_infrastructure_or_a_flood_of_refusals_fails_the_build(tmp_path, capsys):
@@ -127,7 +127,7 @@ def test_the_owners_never_flag_lists_apply_too(tmp_path):
     src = write_csv(tmp_path / "flagged.csv", rows)
     report = build(src, tmp_path / "label_store.db", listed=[tokens], no_poisoning=[services])
     assert report["rows"] == 1  # the freeze on the service, which only poisoning labels may not name
-    assert report["skipped"] == {"never-flag: listed": 2, "never-flag: never-poison": 1}
+    assert report["skipped"] == {"never-flag: on a never-flag list": 2, "never-flag: on a never-poison list": 1}
 
 
 # -- r1-scripts-7: two rows for one address keep the stronger evidence -----------
