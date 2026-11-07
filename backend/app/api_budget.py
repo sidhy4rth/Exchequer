@@ -674,9 +674,45 @@ class Cancelled(TraceStopped):
     reason = "stop requested by the person who started it"
 
 
+# How each provider is named in a case, and what one of its units is.
+PROVIDER_NAMES = {"etherscan": "Etherscan", "nodereal": "NodeReal", "trongrid": "TronGrid", "tronscan": "TronScan"}
+UNIT_NAMES = {"nodereal": "compute units"}
+
+
+class BudgetSpent(TraceStopped):
+    """A provider's request budget refused a request: this case's own share
+    ("trace"), or the site's allowance for the period ("site", "client"; see
+    UnitMeter). Like the time limit it stops the walk, it does not fail it."""
+
+    def __init__(self, provider: str, scope: str = "trace", limit: float | None = None) -> None:
+        self.provider, self.scope = provider, scope
+        name = PROVIDER_NAMES.get(provider, provider)
+        of = f" ({limit:,.0f} {UNIT_NAMES.get(provider, 'requests')})" if limit else ""
+        self.reason = {
+            "trace": f"{name} request budget for this trace{of}",
+            "site": f"{name} allowance for this site today",
+            "client": f"share of today's {name} allowance for this connection",
+        }.get(scope, f"{name} request budget")
+        super().__init__(self.reason)
+
+
+def trace_unit_limits() -> dict[str, float]:
+    """The units one case (a trace and its follow-ons) may spend per provider; 0 is no limit."""
+    from . import config
+
+    return {"etherscan": config.TRACE_MAX_ETHERSCAN_CALLS, "nodereal": config.TRACE_MAX_NODEREAL_CU,
+            "trongrid": config.TRACE_MAX_TRONGRID_CALLS, "tronscan": config.TRACE_MAX_TRONSCAN_CALLS}
+
+
+# The share of each unit limit the walk may use; the rest is kept for the
+# reads after it (receipts, balances, pro-rata windows, the statement).
+WALK_UNIT_SHARE = 0.85
+
+
 class TraceBudget:
     def __init__(self, walk_seconds: float, grace_seconds: float,
-                 clock: Callable[[], float] = time.monotonic) -> None:
+                 clock: Callable[[], float] = time.monotonic,
+                 limits: dict[str, float] | None = None, client: str | None = None) -> None:
         self.walk_seconds = float(walk_seconds)
         self.grace_seconds = float(grace_seconds)
         self._clock = clock
@@ -684,7 +720,19 @@ class TraceBudget:
         self.walk_deadline = self.started + self.walk_seconds
         self.hard_deadline = self.walk_deadline + self.grace_seconds
         self.stopped = False
+        # "time", "budget" or "cancel": what stopped the case first.
+        self.stopped_by: str | None = None
         self._cancel = threading.Event()
+        # Units (requests; compute units on NodeReal) per provider: the case's
+        # ceilings, what it has spent and in how many network requests. One
+        # case's fetch threads share it, so it is locked.
+        self.limits = dict(limits) if limits is not None else trace_unit_limits()
+        self.client = client  # the admit() token, for the site's per-connection share
+        self.units: dict[str, float] = {}
+        self.requests: dict[str, int] = {}
+        self.walking = False  # set by run_trace around the walk (WALK_UNIT_SHARE)
+        self._refused: set[tuple[str, bool]] = set()
+        self._units_lock = threading.Lock()
 
     def cancel(self) -> None:
         """Stop the trace at its next provider request or backoff (DELETE /trace/jobs/{id})."""
@@ -695,12 +743,65 @@ class TraceBudget:
         return self._cancel.is_set()
 
     @classmethod
-    def for_request(cls, requested_seconds: float | None) -> TraceBudget:
+    def for_request(cls, requested_seconds: float | None, client: str | None = None) -> TraceBudget:
         """The server's default when none is asked for, never above its maximum."""
         from . import config
 
         walk = min(requested_seconds or config.TRACE_TIME_BUDGET_DEFAULT, config.TRACE_TIME_BUDGET_MAX)
-        return cls(walk, config.TRACE_POST_WALK_SECONDS)
+        return cls(walk, config.TRACE_POST_WALK_SECONDS, client=client)
+
+    def _stop(self, kind: str) -> None:
+        self.stopped = True
+        self.stopped_by = self.stopped_by or kind
+
+    def charge(self, provider: str, units: float) -> None:
+        """Before one network request: the clock, then this case's units.
+
+        Raises BudgetSpent once the request would pass the provider's limit
+        (WALK_UNIT_SHARE of it while the walk runs); after one refusal every
+        later request to that provider in the same phase is refused too, so
+        a case never reads a little more after being cut off."""
+        self.check()
+        limit = self.limits.get(provider) or 0
+        with self._units_lock:
+            ceiling = limit * (WALK_UNIT_SHARE if self.walking else 1.0)
+            phase = (provider, self.walking)
+            if limit and (phase in self._refused or self.units.get(provider, 0.0) + units > ceiling):
+                self._refused.add(phase)
+                refused = True
+            else:
+                self.units[provider] = self.units.get(provider, 0.0) + units
+                self.requests[provider] = self.requests.get(provider, 0) + 1
+                refused = False
+        if refused:
+            self._stop("budget")
+            raise BudgetSpent(provider, limit=limit)
+
+    def refund(self, provider: str, units: float) -> None:
+        """Take back a charge whose request was refused further on (UnitMeter)."""
+        with self._units_lock:
+            self.units[provider] = max(0.0, self.units.get(provider, 0.0) - units)
+            self.requests[provider] = max(0, self.requests.get(provider, 0) - 1)
+
+    def usage(self) -> dict[str, dict[str, float]]:
+        """{provider: {"requests", "units"}} so far, for one trace's share (`usage_since`)."""
+        with self._units_lock:
+            return {p: {"requests": self.requests.get(p, 0), "units": self.units.get(p, 0.0)}
+                    for p in sorted(set(self.units) | set(self.requests))}
+
+    def usage_since(self, earlier: dict[str, dict[str, float]]) -> dict[str, dict[str, Any]]:
+        """What was spent after `earlier` (a `usage()`), with each provider's limit:
+        a follow-on shares the case's budget, and each trace reports its own part."""
+        out: dict[str, dict[str, Any]] = {}
+        for provider, now in self.usage().items():
+            before = earlier.get(provider, {})
+            requests = now["requests"] - before.get("requests", 0)
+            if requests:
+                out[provider] = {"requests": requests,
+                                 "units": round(now["units"] - before.get("units", 0.0), 2),
+                                 "case_limit": self.limits.get(provider) or None,
+                                 "unit": UNIT_NAMES.get(provider, "requests")}
+        return out
 
     def remaining(self) -> float:
         return self.hard_deadline - self._clock()
@@ -715,10 +816,10 @@ class TraceBudget:
     def check(self) -> None:
         """Raise Cancelled once a stop was asked for, DeadlineReached once the hard deadline has passed."""
         if self._cancel.is_set():
-            self.stopped = True
+            self._stop("cancel")
             raise Cancelled()
         if self.remaining() <= 0:
-            self.stopped = True
+            self._stop("time")
             raise DeadlineReached()
 
     def timeout(self, default: float) -> float:
@@ -728,11 +829,19 @@ class TraceBudget:
     def sleep(self, seconds: float) -> None:
         """A retry backoff that never sleeps past the deadline."""
         if seconds >= self.remaining():
-            self.stopped = True
+            self._stop("time")
             raise DeadlineReached()
         if self._cancel.wait(seconds):  # a stop ends the wait at once
-            self.stopped = True
+            self._stop("cancel")
             raise Cancelled()
+
+
+def spend(provider: str, units: float, budget: TraceBudget | None) -> None:
+    """The one check every provider client makes before each network attempt
+    (retries included; cache hits make none): the case's clock and its units.
+    Raises a TraceStopped when the request may not be sent."""
+    if budget is not None:
+        budget.charge(provider, units)
 
 
 # The budget a background job runs its trace under, handed to run_trace on the

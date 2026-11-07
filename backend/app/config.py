@@ -432,6 +432,17 @@ TRACE_MAX_DEPTH: int = min(_int_env("TRACE_MAX_DEPTH", 4), TRACE_MAX_DEPTH_CEILI
 TRACE_TIME_BUDGET_DEFAULT: int = _int_env("EXCHEQUER_TRACE_TIME_BUDGET", 180)
 TRACE_TIME_BUDGET_MAX: int = _int_env("EXCHEQUER_TRACE_TIME_BUDGET_MAX", 300)
 TRACE_POST_WALK_SECONDS: int = _int_env("EXCHEQUER_TRACE_POST_WALK_SECONDS", 60)
+# What one case (a trace and its follow-ons) may spend per provider, in
+# requests (compute units on NodeReal; 0 = no limit). Counted at every network
+# request a client makes, retries included; a cache hit costs nothing. The walk
+# may use 85% of each, so the reads after it are not starved; past the limit
+# the walk stops, marked truncated with the reason. The heaviest depth-6
+# Etherscan trace measured 367 calls; the recorded demos use under 40. 60,000
+# NodeReal CU is about 240 transfer reads (250 CU each).
+TRACE_MAX_ETHERSCAN_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_ETHERSCAN_CALLS", 600)
+TRACE_MAX_NODEREAL_CU: int = _int_env("EXCHEQUER_TRACE_MAX_NODEREAL_CU", 60_000)
+TRACE_MAX_TRONGRID_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_TRONGRID_CALLS", 400)
+TRACE_MAX_TRONSCAN_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_TRONSCAN_CALLS", 100)
 # Attribution follows the money (pipeline.run_trace): a match whose share of
 # what the reported address sent is under this percentage is not "material",
 # and a case whose exchange received less is scored low at most; under a

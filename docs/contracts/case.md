@@ -70,6 +70,15 @@ largest destinations, the default) or `min_share` (flag
 `EXCHEQUER_TAINT_EXPANSION`). An empty list means nothing above dust was left
 behind. A report that states where the money went should state this too.
 
+What a trace cost and what stopped it (v1-style, read with `.get`, absent in
+older cases): `provider_units` is, per provider, `{requests, units, unit,
+case_limit}` for this trace's own network requests (follow-ons report theirs;
+`units` are compute units on NodeReal, requests elsewhere; cache hits cost
+nothing; `case_limit` is the whole case's, follow-ons included).
+`stopped_by` is `"time"` or `"budget"` when the clock or a request budget cut
+the trace short, and `addresses_unexpanded_by_budget` counts the addresses a
+budget left unread; `truncation_reasons` names the budget either way.
+
 A transfer from an address to itself moves nothing, so it is never an edge or
 a branch: each `graph.nodes[]` entry carries `self_transfer_count` and
 `self_transfer_value_native` (0 when none, absent in older cases) instead,

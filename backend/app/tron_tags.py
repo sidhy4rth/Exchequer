@@ -191,8 +191,8 @@ def tag_from_response(body: Any) -> str | None:
 class TronScanTags:
     """Per-trace reader of TronScan address tags, cached across traces."""
 
-    # The case's wall clock (api_budget.TraceBudget), set by pipeline.run_trace;
-    # None outside a trace (scripts, the watcher).
+    # The case's clock and request budget (api_budget.TraceBudget), set by
+    # pipeline.run_trace; None outside a trace (scripts, the watcher).
     budget = None
 
     def __init__(self, api_key: str | None, evidence: EvidenceLog | None = None,
@@ -241,10 +241,12 @@ class TronScanTags:
             if self.evidence is not None:
                 self.evidence.record_cached(PROVIDER, request, meta)
             return value
+        try:
+            api_budget.spend("tronscan", 1, self.budget)
+        except api_budget.TraceStopped:
+            return None  # the case's time or budget is spent: a tag lookup is never worth waiting for
         self._throttle()
         self.lookups += 1
-        if self.budget is not None and self.budget.remaining() <= 0:
-            return None  # the case's time is spent: a tag lookup is never worth waiting for
         try:
             response = api_budget.read_capped(self._client, "GET", f"{TRONSCAN}/api/accountv2",
                                               params={"address": address},

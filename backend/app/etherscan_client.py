@@ -36,7 +36,7 @@ from typing import Any, Callable
 import httpx
 
 from . import config
-from .api_budget import (ResponseCache, ResponseTooLarge, SharedPacer, fresh_reads, get_cache, get_pacer,
+from .api_budget import (ResponseCache, ResponseTooLarge, SharedPacer, fresh_reads, get_cache, get_pacer, spend,
                          read_capped)
 from .evidence import EvidenceLog
 
@@ -406,8 +406,8 @@ class EtherscanClient:
     be shared across FastAPI's worker threads.
     """
 
-    # The case's wall clock (api_budget.TraceBudget), set by pipeline.run_trace;
-    # None outside a trace (scripts, the watcher).
+    # The case's clock and request budget (api_budget.TraceBudget), set by
+    # pipeline.run_trace; None outside a trace (scripts, the watcher).
     budget = None
 
     def __init__(
@@ -562,8 +562,7 @@ class EtherscanClient:
         last_error: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
-            if self.budget is not None:
-                self.budget.check()  # the case's wall clock, before every attempt
+            spend("etherscan", 1, self.budget)  # the case's clock and request budget, every attempt
             self._throttle()
             try:
                 response = read_capped(self._client, "GET", self.base_url, params=query, **self._timeout())

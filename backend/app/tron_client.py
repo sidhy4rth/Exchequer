@@ -32,7 +32,7 @@ from typing import Any, Callable
 
 import httpx
 
-from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache, get_pacer, read_capped
+from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache, get_pacer, read_capped, spend
 from .evidence import EvidenceLog
 
 from . import config
@@ -172,8 +172,8 @@ class TronClient:
         client.get_outgoing_transactions(address) -> list[Transaction]
     """
 
-    # The case's wall clock (api_budget.TraceBudget), set by pipeline.run_trace;
-    # None outside a trace (scripts, the watcher).
+    # The case's clock and request budget (api_budget.TraceBudget), set by
+    # pipeline.run_trace; None outside a trace (scripts, the watcher).
     budget = None
 
     def __init__(
@@ -254,8 +254,7 @@ class TronClient:
         """(body, its evidence record)."""
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
-            if self.budget is not None:
-                self.budget.check()  # the case's wall clock, before every attempt
+            spend("trongrid", 1, self.budget)  # the case's clock and request budget, every attempt
             self._throttle()
             try:
                 response = read_capped(self._client, method, f"{self.base_url}{path}", **kwargs,

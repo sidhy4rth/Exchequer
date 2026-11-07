@@ -88,7 +88,7 @@ from typing import Any, Callable, Iterable
 import networkx as nx
 
 from . import config, log_safety, progress
-from .api_budget import Cancelled, TraceStopped, fresh_reads
+from .api_budget import BudgetSpent, Cancelled, TraceStopped, fresh_reads
 from .etherscan_client import (
     EtherscanClient,
     Transaction,
@@ -174,6 +174,8 @@ class TraceResult:
     transfers_excluded_by_time: int = 0
     # Addresses reached but never expanded because the time budget ran out.
     addresses_unexpanded_by_time: int = 0
+    # ... or because a provider's request budget refused their read.
+    addresses_unexpanded_by_budget: int = 0
     seconds_elapsed: float = 0.0
     # Busy wallets whose newest page did not reach the funds' arrival, so they
     # were also read from that block forward.
@@ -531,6 +533,8 @@ def build_trace_graph(
         with fresh_reads() if seed_level and cfg.fresh_seed else contextlib.nullcontext():
             fetched = _fetch_level(pending, fetch, cfg, deadline=None if seed_level else deadline)
         next_frontier: list[tuple[str, int]] = []
+        # Reads a request budget refused in this level, by the budget's reason.
+        budget_stops: dict[str, int] = {}
 
         for (address, depth), (transfers, error) in zip(pending, fetched, strict=True):
             if graph.number_of_nodes() >= cfg.max_nodes:
@@ -539,6 +543,12 @@ def build_trace_graph(
 
             if isinstance(error, Cancelled):
                 raise error  # a stop ends the whole trace, not just this branch
+            if isinstance(error, BudgetSpent) and depth > 0:
+                # The case's request budget (or the site's allowance) is spent:
+                # reached, never read, like the clock below; the walk ends here.
+                budget_stops[error.reason] = budget_stops.get(error.reason, 0) + 1
+                result.addresses_unexpanded_by_budget += 1
+                continue
             if isinstance(error, (TimeBudgetExceeded, TraceStopped)) and depth > 0:
                 # Brake 6, mid-level: reached, never read. Not a failure of
                 # the provider and not this address's fault; counted so the
@@ -731,6 +741,14 @@ def build_trace_graph(
                 if counterparty not in visited:
                     visited.add(counterparty)
                     next_frontier.append((counterparty, depth + 1))
+
+        if budget_stops:
+            for reason, count in sorted(budget_stops.items()):
+                result.note_truncation(
+                    f"{reason} reached; {count} reached address{'es' if count != 1 else ''} "
+                    "were not expanded"
+                )
+            break
 
         # Anything the clock cut off mid-level is a truncation the report
         # must state; the frontier past it is also not walked.

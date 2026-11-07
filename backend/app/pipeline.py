@@ -18,7 +18,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from . import config, log_safety, progress
-from .api_budget import Cancelled, TraceBudget, TraceStopped, current_budget
+from .api_budget import PROVIDER_NAMES, BudgetSpent, Cancelled, TraceBudget, TraceStopped, current_budget
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
 from .contracts import upgrade as upgrade_to_contract
 from .provenance import capture as capture_provenance
@@ -528,6 +528,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     # Every trace has a wall clock (api_budget.TraceBudget): the server's default
     # unless the request asks for less, never above its maximum.
     budget = budget or current_budget() or TraceBudget.for_request(request.time_budget_seconds)
+    # The budget is the case's, shared with follow-ons: this trace reports its own part.
+    units_before = budget.usage()
     # The operator's ceiling wins over the request (and over the default).
     max_depth = min(request.max_depth or config.TRACE_MAX_DEPTH, config.TRACE_MAX_DEPTH_CEILING)
     trace_config = TraceConfig(
@@ -594,27 +596,32 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 anchor = getattr(client, "set_arrival", None)
                 if anchor is not None and seed_block:
                     anchor(seed, seed_block)
-            result = build_trace_graph(
-                seed,
-                client,
-                cfg=trace_config,
-                # Three quite different reasons to stop. An exchange is where
-                # the trail *ends*: the funds arrived, and those wallets have
-                # millions of unrelated transactions. A mixer is where the trail
-                # *breaks*: its payouts come from a commingled pool, so
-                # expanding through one would invent a path the transactions do
-                # not support. A swap router is where the trail *changes
-                # asset*: the funds came straight back to the sender as a
-                # different token, and a router contract has no outgoing
-                # transfers of its own to follow anyway.
-                is_terminal=lambda a: (
-                    matcher.is_exchange(a) or risk_matcher.is_terminal(a) or routers.is_exchange(a)
-                    or (live is not None and live.is_exchange(a))
-                ),
-                direction=direction,
-                seed_window=seed_window,
-                seed_window_block=seed_block,
-            )
+            budget.walking = True  # the walk may spend only part of each request budget
+            try:
+                result = build_trace_graph(
+                    seed,
+                    client,
+                    cfg=trace_config,
+                    # Three quite different reasons to stop. An exchange is where
+                    # the trail *ends*: the funds arrived, and those wallets have
+                    # millions of unrelated transactions. A mixer is where the trail
+                    # *breaks*: its payouts come from a commingled pool, so
+                    # expanding through one would invent a path the transactions do
+                    # not support. A swap router is where the trail *changes
+                    # asset*: the funds came straight back to the sender as a
+                    # different token, and a router contract has no outgoing
+                    # transfers of its own to follow anyway.
+                    is_terminal=lambda a: (
+                        matcher.is_exchange(a) or risk_matcher.is_terminal(a) or routers.is_exchange(a)
+                        or (live is not None and live.is_exchange(a))
+                    ),
+                    direction=direction,
+                    seed_window=seed_window,
+                    seed_window_block=seed_block,
+                )
+            finally:
+                budget.walking = False
+            walk_stopped_by = budget.stopped_by
             if request.max_depth and request.max_depth > max_depth:
                 result.warnings.append(
                     f"Depth capped at {max_depth} hops by this server; the request asked for {request.max_depth}."
@@ -717,12 +724,34 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             if floor is not None and hasattr(client, "block_time"):
                 searched_since = client.block_time(floor)
             deep = (getattr(client, "deep_searched", None) or {}).get(seed)
+            if budget.stopped_by in ("time", "budget") and walk_stopped_by is None:
+                # A read after the walk was refused: each stage keeps going without it.
+                result.note_truncation(
+                    f"the case's {'time limit' if budget.stopped_by == 'time' else 'request budget'} ran out "
+                    "in the reads after the walk, so some later figures (swap receipts, balances, pro-rata "
+                    "windows, the wallet statement) may be missing"
+                )
             evidence = client.evidence.manifest() if hasattr(client, "evidence") else None
             # Whether contract-moved value was part of the data, for the
             # limitations paragraph. Only the Etherscan native path reads it.
             internal_read = bool(getattr(client, "include_internal", False)) and is_native
     except Cancelled as exc:
         raise HTTPException(status_code=409, detail="The trace was stopped by the person who started it.") from exc
+    except BudgetSpent as exc:
+        # The reported address itself could not be read within the budget
+        # (deeper addresses just truncate the walk). Fixed sentences only.
+        name = PROVIDER_NAMES.get(exc.provider, exc.provider)
+        if exc.scope == "trace":
+            detail = (f"The reported address could not be read within this case's {name} request budget. "
+                      "Try a smaller depth.")
+        elif exc.scope == "client":
+            detail = (f"This connection has used its share of today's {name} allowance, so it cannot start "
+                      f"live traces on {chain.name} until 00:00 UTC. Stored cases and the verified examples "
+                      "still open.")
+        else:
+            detail = (f"Today's {name} allowance for this site is used up, so live tracing on {chain.name} "
+                      "resumes at 00:00 UTC. Stored cases and the verified examples still open.")
+        raise HTTPException(status_code=429 if exc.scope == "client" else 503, detail=detail) from exc
     except TraceStopped as exc:
         # The reported address itself could not be read before the case's
         # time ran out (deeper addresses just truncate the walk). A fixed
@@ -818,6 +847,11 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     # Swaps into a stablecoin this chain carries are followed as their own
     # traces, before the message is written, so the message can say where the
     # money went after it changed asset.
+    # This trace's own requests, before any follow-on spends from the same budget.
+    provider_units = budget.usage_since(units_before)
+    stopped_by = ("budget" if result.addresses_unexpanded_by_budget else
+                  "time" if result.addresses_unexpanded_by_time else
+                  budget.stopped_by if budget.stopped_by in ("time", "budget") else None)
     follow_ons: list[dict[str, Any]] = []
     if direction == OUTGOING and request.follow_swaps and not is_follow_on and swaps:
         follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth,
@@ -1033,9 +1067,14 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         "time_budget_seconds": request.time_budget_seconds,
         # The limit this trace actually ran under, and whether it cut the walk short.
         "time_limit_seconds": budget.walk_seconds,
-        "stopped_by": "time" if (budget.stopped or result.addresses_unexpanded_by_time) else None,
+        # "time" or "budget" when either cut this trace short (truncation_reasons says where).
+        "stopped_by": stopped_by,
         "seconds_elapsed": result.seconds_elapsed,
         "addresses_unexpanded_by_time": result.addresses_unexpanded_by_time,
+        "addresses_unexpanded_by_budget": result.addresses_unexpanded_by_budget,
+        # What this trace spent per provider ({requests, units, case_limit, unit}),
+        # follow-ons apart; the limit is the whole case's.
+        "provider_units": provider_units,
         "addresses_expanded": result.addresses_expanded,
         # Busy wallets also read from when the funds arrived (graph_builder).
         "read_from_arrival": result.read_from_arrival,
@@ -1176,6 +1215,11 @@ def _follow_swaps(
         # One clock for the whole case: a follow-on uses what is left of it.
         if budget is not None and budget.walk_over():
             follow["error"] = "not traced: the case's time budget was spent before this swap could be followed"
+            out.append(follow)
+            continue
+        if budget is not None and budget.stopped_by == "budget":
+            follow["error"] = ("not traced: the case's provider request budget was spent before this swap "
+                               "could be followed")
             out.append(follow)
             continue
         sub = TraceRequest(

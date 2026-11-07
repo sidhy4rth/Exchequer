@@ -36,7 +36,8 @@ import json
 
 import httpx
 
-from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache, get_pacer, read_capped
+from .api_budget import (ResponseCache, ResponseTooLarge, SharedPacer, TraceStopped, get_cache, get_pacer,
+                         read_capped, spend)
 from .evidence import EvidenceLog
 
 from . import config
@@ -152,8 +153,8 @@ class NoderealClient:
         client.get_outgoing_transactions(address) -> list[Transaction]
     """
 
-    # The case's wall clock (api_budget.TraceBudget), set by pipeline.run_trace;
-    # None outside a trace (scripts, the watcher).
+    # The case's clock and request budget (api_budget.TraceBudget), set by
+    # pipeline.run_trace; None outside a trace (scripts, the watcher).
     budget = None
 
     def __init__(
@@ -263,8 +264,8 @@ class NoderealClient:
         last_error: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
-            if self.budget is not None:
-                self.budget.check()  # the case's wall clock, before every attempt
+            # The case's clock and compute-unit budget, before every attempt.
+            spend("nodereal", METHOD_CU.get(method, 25), self.budget)
             self._throttle(method)
             try:
                 response = read_capped(self._client, "POST", self.url, json=payload,
@@ -590,8 +591,8 @@ class NoderealClient:
         """A block's timestamp (s), for saying how far back a search reached."""
         try:
             return _hex_int(self._rpc("eth_getBlockByNumber", [hex(block), False])["timestamp"])
-        except (NoderealError, KeyError, TypeError, ValueError):
-            return None
+        except (NoderealError, TraceStopped, KeyError, TypeError, ValueError):
+            return None  # a spent clock or budget costs only the date
 
     def _scan(self, address: str, direction_param: str, cap: int, top: int, floor: int,
               ) -> tuple[list[Transaction], bool]:
