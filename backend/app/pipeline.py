@@ -1091,7 +1091,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         # What the walk did not follow, with its value (brake 2; R5).
         "untraced": result.untraced,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,
-        "api_calls": result.api_calls,
+        # Network requests this trace sent (provider_units), not addresses read;
+        # cache hits are in the evidence manifest instead.
+        "api_calls": sum(u["requests"] for u in provider_units.values()),
+        "addresses_read": result.addresses_read,
         # Hash-and-timestamp of every response above; see app/evidence.py.
         "evidence": evidence,
         "truncated": result.truncated,

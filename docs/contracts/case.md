@@ -75,6 +75,10 @@ older cases): `provider_units` is, per provider, `{requests, units, unit,
 case_limit}` for this trace's own network requests (follow-ons report theirs;
 `units` are compute units on NodeReal, requests elsewhere; cache hits cost
 nothing; `case_limit` is the whole case's, follow-ons included).
+`api_calls` is the total of those requests (in cases stored before November
+2026 it counted addresses read), and `addresses_read` how many addresses'
+transfers were fetched: a level is read in batches and stops at the node cap,
+so at most one batch is read past it.
 `stopped_by` is `"time"` or `"budget"` when the clock or a request budget cut
 the trace short, and `addresses_unexpanded_by_budget` counts the addresses a
 budget left unread; `truncation_reasons` names the budget either way.

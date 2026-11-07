@@ -83,7 +83,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Iterator
 
 import networkx as nx
 
@@ -177,6 +177,9 @@ class TraceResult:
     # ... or because a provider's request budget refused their read.
     addresses_unexpanded_by_budget: int = 0
     seconds_elapsed: float = 0.0
+    # Addresses whose transfers were fetched, including any read past the node
+    # cap within the last batch (api_calls in a case counts the requests).
+    addresses_read: int = 0
     # Busy wallets whose newest page did not reach the funds' arrival, so they
     # were also read from that block forward.
     read_from_arrival: list[str] = field(default_factory=list)
@@ -290,12 +293,18 @@ class TimeBudgetExceeded(Exception):
     """Internal marker: the address was not fetched because the clock ran out."""
 
 
+class _NotRead(Exception):
+    """Internal marker: the address was not fetched because the walk had stopped (the node cap)."""
+
+
 def _fetch_level(
     pending: list[tuple[str, int]],
     fetch: Callable[..., list[Transaction]],
     cfg: TraceConfig,
     deadline: float | None = None,
-) -> list[tuple[list[Transaction], Exception | None]]:
+    stop: Callable[[], bool] | None = None,
+    result: "TraceResult | None" = None,
+) -> Iterator[tuple[list[Transaction], Exception | None]]:
     """Fetch every address at one depth together, preserving input order.
 
     The traversal used to make one request, wait for it, then make the next.
@@ -318,21 +327,29 @@ def _fetch_level(
     rule it already had -- fatal at the seed, a warning deeper in -- with the
     depth in hand.
 
-    With a `deadline` (a time.monotonic() instant), the level is fetched one
-    batch of `max_concurrent_fetches` at a time and stops once the deadline
-    has passed; the addresses never fetched come back with
-    TimeBudgetExceeded in place of a result.
+    The level is fetched one batch of `max_concurrent_fetches` at a time and
+    yielded batch by batch, so the caller processes each batch before the
+    next is sent. Before each batch `stop()` is asked (the node cap): once it
+    says so, and once a `deadline` (a time.monotonic() instant) has passed,
+    nothing more is read, and the addresses never fetched come back with
+    _NotRead or TimeBudgetExceeded in place of a result. Reading the whole
+    level first threw most of a wide trace's last level away (287 addresses
+    read for 120 used). `result.addresses_read` counts what was read.
     """
-    results: list[tuple[list[Transaction], Exception | None]] = [([], None)] * len(pending)
+    def counted() -> None:
+        if result is not None:
+            result.addresses_read += 1
 
     if len(pending) == 1:
         address, _ = pending[0]
         try:
-            return [(fetch(address, limit=cfg.max_txs_per_address), None)]
+            yield fetch(address, limit=cfg.max_txs_per_address), None
         except Exception as exc:  # noqa: BLE001 -- classified by the caller
-            return [([], exc)]
+            yield [], exc
         finally:
+            counted()
             progress.report(level_read=1)
+        return
 
     def one(index: int, address: str):
         try:
@@ -341,26 +358,28 @@ def _fetch_level(
             return index, [], exc
 
     read = 0
-    workers = min(cfg.max_concurrent_fetches, len(pending))
-    batch_size = workers if deadline is not None else len(pending)
+    workers = max(1, min(cfg.max_concurrent_fetches, len(pending)))
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="trace") as pool:
-        for start in range(0, len(pending), batch_size):
+        for start in range(0, len(pending), workers):
+            unread: Exception | None = None
             if deadline is not None and time.monotonic() >= deadline:
-                for index in range(start, len(pending)):
-                    results[index] = ([], TimeBudgetExceeded())
-                break
-            futures = [
-                pool.submit(one, index, address)
-                for index, (address, _depth) in enumerate(pending)
-                if start <= index < start + batch_size
-            ]
+                unread = TimeBudgetExceeded()
+            elif stop is not None and stop():
+                unread = _NotRead()
+            if unread is not None:
+                for _ in range(start, len(pending)):
+                    yield [], unread
+                return
+            batch: list[tuple[list[Transaction], Exception | None]] = [([], None)] * len(pending[start:start + workers])
+            futures = [pool.submit(one, index, address)
+                       for index, (address, _depth) in enumerate(pending[start:start + workers])]
             for future in as_completed(futures):
                 index, transfers, error = future.result()
-                results[index] = (transfers, error)
+                batch[index] = (transfers, error)
                 read += 1
+                counted()
                 progress.report(level_read=read)
-
-    return results
+            yield from batch
 
 
 def build_trace_graph(
@@ -529,9 +548,13 @@ def build_trace_graph(
                         level_size=len(pending), level_read=0,
                         addresses=graph.number_of_nodes())
         seed_level = pending[0][1] == 0
-        # The seed level is one address, fetched on this thread, so the context applies.
-        with fresh_reads() if seed_level and cfg.fresh_seed else contextlib.nullcontext():
-            fetched = _fetch_level(pending, fetch, cfg, deadline=None if seed_level else deadline)
+        # Read batch by batch as the loop below takes them, until the node cap.
+        fetched = _fetch_level(pending, fetch, cfg, deadline=None if seed_level else deadline,
+                               stop=lambda: graph.number_of_nodes() >= cfg.max_nodes, result=result)
+        if seed_level:
+            # One address, read now on this thread, so the context applies.
+            with fresh_reads() if cfg.fresh_seed else contextlib.nullcontext():
+                fetched = iter(list(fetched))
         next_frontier: list[tuple[str, int]] = []
         # Reads a request budget refused in this level, by the budget's reason.
         budget_stops: dict[str, int] = {}
@@ -741,6 +764,8 @@ def build_trace_graph(
                 if counterparty not in visited:
                     visited.add(counterparty)
                     next_frontier.append((counterparty, depth + 1))
+        if hasattr(fetched, "close"):
+            fetched.close()  # a level left at the node cap reads no further batch
 
         if budget_stops:
             for reason, count in sorted(budget_stops.items()):
