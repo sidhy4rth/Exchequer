@@ -70,6 +70,11 @@ largest destinations, the default) or `min_share` (flag
 `EXCHEQUER_TAINT_EXPANSION`). An empty list means nothing above dust was left
 behind. A report that states where the money went should state this too.
 
+A transfer from an address to itself moves nothing, so it is never an edge or
+a branch: each `graph.nodes[]` entry carries `self_transfer_count` and
+`self_transfer_value_native` (0 when none, absent in older cases) instead,
+and the report lists where they were ignored.
+
 `provenance` (v1-style, optional, read with `.get`) is what the trace ran with,
 so a report rendered after a deploy can say so (`backend/app/provenance.py`):
 `tool_version`, `captured_at`, `lists` (for each screening and label list: its

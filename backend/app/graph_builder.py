@@ -583,7 +583,7 @@ def build_trace_graph(
             if direction == OUTGOING:
                 outflows: dict[str, dict] = {}
                 for tx in transfers:
-                    if not tx.to_address:
+                    if not tx.to_address or tx.to_address == address:  # a self-send is no outflow
                         continue
                     stats = outflows.setdefault(
                         tx.to_address, {"count": 0, "total": 0.0, "first": None, "last": None}
@@ -615,6 +615,19 @@ def build_trace_graph(
                 excluded = before - len(transfers)
                 graph.nodes[address]["excluded_by_time"] = excluded
                 result.transfers_excluded_by_time += excluded
+
+            # A wallet paying itself moves nothing anywhere: no branch, no edge.
+            # As a self-loop it took a fan-out slot, counted in the totals and
+            # made the wallet's degrees 2, which hid a peel chain. Counted apart.
+            own: list[Transaction] = []
+            rest: list[Transaction] = []
+            for tx in transfers:
+                far_end = tx.to_address if direction == OUTGOING else tx.from_address
+                (own if far_end == address else rest).append(tx)
+            if own:
+                transfers = rest
+                graph.nodes[address]["self_transfer_count"] = len(own)
+                graph.nodes[address]["self_transfer_value_native"] = round(sum(tx.value_native for tx in own), 6)
 
             # Brake 5: a service contract's payouts are not the traced money.
             # Only the reported address itself is exempt -- the trace starts
@@ -814,6 +827,9 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "window_start": data.get("window_start"),
             "window_end": data.get("window_end"),
             "excluded_by_time": data.get("excluded_by_time", 0),
+            # Transfers the address made to itself: never an edge or a branch.
+            "self_transfer_count": data.get("self_transfer_count", 0),
+            "self_transfer_value_native": data.get("self_transfer_value_native", 0.0),
             "flags": sorted(data.get("flags", [])),
         }
         for node, data in graph.nodes(data=True)

@@ -278,6 +278,9 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
             "individual_transactions": len(result.get("transfers", [])),
             "max_depth_reached": result.get("depth_reached"),
             "transfers_excluded_by_time": result.get("transfers_excluded_by_time"),
+            # Transfers an address made to itself, left out of the graph.
+            "self_transfers": [(n.get("id"), n.get("self_transfer_count"))
+                               for n in graph.get("nodes", []) if n.get("self_transfer_count")],
             "truncated": result.get("truncated", False),
             "truncation_reasons": result.get("truncation_reasons", []),
             "warnings": result.get("warnings", []),
@@ -1001,6 +1004,8 @@ def render_text_report(report: dict[str, Any]) -> str:
     add(f"Depth reached              : {summary['max_depth_reached']}")
     if summary.get("transfers_excluded_by_time") is not None:
         add(f"Excluded by the time rule  : {summary['transfers_excluded_by_time']}")
+    for address, count in summary.get("self_transfers") or []:
+        add(f"Self-transfers ignored     : {count} at {address}")
     add(f"Truncated                  : {'yes' if summary['truncated'] else 'no'}")
     for reason in summary.get("truncation_reasons", []):
         add(f"  - {reason}")
