@@ -91,6 +91,8 @@ def chains() -> dict[str, Any]:
     return {
         "default_chain": config.DEFAULT_CHAIN.key,
         "max_depth": config.TRACE_MAX_DEPTH,
+        # The deepest a request may ask for here.
+        "max_depth_ceiling": config.TRACE_MAX_DEPTH_CEILING,
         "chains": listed,
     }
 

@@ -419,7 +419,11 @@ NODEREAL_CUPS_FLOOR: int = max(1, _int_env("NODEREAL_CUPS_FLOOR", 150))
 NODEREAL_CUPS: int = max(1, _int_env("NODEREAL_CUPS", 300))
 
 # Traversal safety limits -- a busy wallet must never make a trace run forever.
-TRACE_MAX_DEPTH: int = _int_env("TRACE_MAX_DEPTH", 4)
+# The deepest any trace may go, whatever a request or batch row asks for (1-6;
+# 6 is the request model's own bound). Lower it to save quota: a caller asking
+# for more is traced at this depth and told so.
+TRACE_MAX_DEPTH_CEILING: int = min(6, max(1, _int_env("TRACE_MAX_DEPTH_CEILING", 6)))
+TRACE_MAX_DEPTH: int = min(_int_env("TRACE_MAX_DEPTH", 4), TRACE_MAX_DEPTH_CEILING)
 # Every trace's wall clock (api_budget.TraceBudget): the walk stops expanding
 # after TRACE_TIME_BUDGET_DEFAULT seconds unless the request asks for less,
 # never later than TRACE_TIME_BUDGET_MAX, and the reads after the walk get

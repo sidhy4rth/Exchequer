@@ -72,9 +72,11 @@ _NCRP = re.compile(r"[0-9]{10,20}")
 
 
 class TraceRequest(BaseModel):
-    address: str = Field(..., description="The victim-reported wallet address")
+    # No address is near 128 characters; a longer one is refused before it is read.
+    address: str = Field(..., max_length=128, description="The victim-reported wallet address")
     max_depth: int | None = Field(
-        None, ge=1, le=6, description="Override the hop limit (default 4, capped at 6)"
+        None, ge=1, le=6,
+        description="Override the hop limit (default 4). Never deeper than the server's ceiling (6 by default)",
     )
     chain: str | None = Field(
         None,
@@ -96,10 +98,10 @@ class TraceRequest(BaseModel):
     time_budget_seconds: int | None = Field(
         None, ge=10, le=600,
         description=(
-            "Optional wall-clock cap. With it set the walk stops expanding once "
-            "the time is spent and returns what it has, marked truncated with the "
-            "reason. Without it the trace runs until the depth, fan-out and size "
-            "limits stop it, however long that takes on the provider's free tier."
+            "A shorter wall-clock cap than the server's. The walk stops expanding "
+            "once the time is spent and returns what it has, marked truncated with "
+            "the reason. Without it the server's default applies (180 s unless "
+            "configured), and no request may run longer than the server's maximum."
         ),
     )
     direction: str = Field(
@@ -373,10 +375,12 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
     # and telling the user which format this chain expects is more use than
     # calling it invalid.
     if not chain.validate_address(address):
+        # Quoted short: the error repeats what was typed, never all of it.
+        shown = address if len(address) <= 64 else address[:64] + "…"
         raise HTTPException(
             status_code=400,
             detail=(
-                f"'{address}' is not a valid {chain.name} address. "
+                f"'{shown}' is not a valid {chain.name} address. "
                 f"Expected {chain.address_hint(address)}."
             ),
         )
@@ -524,8 +528,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     # Every trace has a wall clock (api_budget.TraceBudget): the server's default
     # unless the request asks for less, never above its maximum.
     budget = budget or current_budget() or TraceBudget.for_request(request.time_budget_seconds)
+    # The operator's ceiling wins over the request (and over the default).
+    max_depth = min(request.max_depth or config.TRACE_MAX_DEPTH, config.TRACE_MAX_DEPTH_CEILING)
     trace_config = TraceConfig(
-        max_depth=request.max_depth or config.TRACE_MAX_DEPTH,
+        max_depth=max_depth,
         # R5: every branch carrying a share of the funds, not the top ten.
         branch_min_share=config.TRACE_BRANCH_MIN_SHARE_PERCENT / 100 if config.TAINT_EXPANSION else None,
         max_branches_hard=config.TRACE_MAX_BRANCHES_HARD,
@@ -609,6 +615,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 seed_window=seed_window,
                 seed_window_block=seed_block,
             )
+            if request.max_depth and request.max_depth > max_depth:
+                result.warnings.append(
+                    f"Depth capped at {max_depth} hops by this server; the request asked for {request.max_depth}."
+                )
             if getattr(client, "confirmed_bound_applied", True) is False:
                 # The head could not be read, so the newest rows were kept uncut.
                 result.warnings.append(

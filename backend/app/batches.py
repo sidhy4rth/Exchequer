@@ -112,13 +112,15 @@ def validate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if direction not in ("outgoing", "incoming"):
             errors.append({"row": n, "error": "direction must be outgoing or incoming."})
             continue
+        # The server's depth ceiling, as for a single trace.
+        ceiling = config.TRACE_MAX_DEPTH_CEILING
         try:
-            depth = int(raw.get("max_depth") or raw.get("depth") or config.TRACE_MAX_DEPTH)
+            depth = int(raw.get("max_depth") or raw.get("depth") or min(config.TRACE_MAX_DEPTH, ceiling))
         except (TypeError, ValueError):
-            errors.append({"row": n, "error": "depth must be a whole number from 1 to 6."})
+            errors.append({"row": n, "error": f"depth must be a whole number from 1 to {ceiling}."})
             continue
-        if not 1 <= depth <= 6:
-            errors.append({"row": n, "error": "depth must be a whole number from 1 to 6."})
+        if not 1 <= depth <= ceiling:
+            errors.append({"row": n, "error": f"depth must be a whole number from 1 to {ceiling}."})
             continue
         key = (address.lower() if chain.address_family == "evm" else address, chain.key, asset, direction, depth)
         same_as = first_of.setdefault(key, n)
