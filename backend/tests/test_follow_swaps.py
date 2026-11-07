@@ -424,3 +424,39 @@ def test_the_report_states_what_the_follow_on_may_claim(faked, monkeypatch):
     text = " ".join(render_text_report(build_report(case)).split())
     assert "swap returned : 25,000.0000 USDT (2 swaps)" in text
     assert "traced share : at most 100.0000 USDT (at most 0.0400 of the 10.0000 ETH swapped)" in text
+
+
+def test_the_letter_after_a_dust_swap_states_both_swaps(faked, monkeypatch):
+    """The checker's probe, end to end: the letter said 'of the 0.250000 USDT
+    the swap returned, about 0.250000 USDT reached this address'."""
+    from app.request_letters import draft
+
+    dust = {**SWAP, "tx": "0xd057", "timestamp": SWAP_AT - 30, "amount_in": 0.0001, "amount_out": 0.25}
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, ROUTER, 0.0001, SWAP_AT - 30, "ETH"),
+                                         tx(SEED, ROUTER, 1.0, SWAP_AT, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, BINANCE_14, 2400.25, SWAP_AT + 60, "USDT")])
+    swaps_are(monkeypatch, [dust, SWAP])
+    letter = " ".join(draft("c1", run_trace(request()), "exchange").split())
+    assert "of the 2,400.250000 USDT the 2 swaps returned, about 2,400.250000 USDT reached this address" in letter
+
+
+def test_an_intake_letter_after_a_swap_states_at_most_the_victims_share(faked, monkeypatch):
+    from app import config
+    from app.request_letters import draft
+
+    @contextmanager
+    def open_source(chain, asset):
+        yield UsdtPaidClient(HISTORY[asset])
+
+    monkeypatch.setattr(main, "open_source", open_source)
+    monkeypatch.setattr(config, "TX_INTAKE", True)
+    monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, ROUTER, 50000.0, SWAP_AT, "USDT")])
+    monkeypatch.setitem(HISTORY, "USDC", [tx(SEED, BINANCE_14, 50000.0, SWAP_AT + 60, "USDC")])
+    swaps_are(monkeypatch, [{**SWAP, "asset_in": "USDT", "amount_in": 50000.0, "asset_out": "USDC",
+                             "amount_out": 50000.0}], asset="USDT")
+    result = run_trace(TraceRequest(address=SEED, chain="ethereum", asset="USDT", max_depth=3,
+                                    payments=[{"tx_hash": USDT_PAID.hash}]))
+    letter = " ".join(draft("c1", result, "exchange").split())
+    assert "at most 1,000.000000 USDC can be the victim's" in letter
+    assert "about 1,000.000000 USDC of it reached this address" in letter
+    assert "about 50,000.000000" not in letter

@@ -50,18 +50,41 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
     """The trace (original or follow-on) that reached an exchange, if any.
 
     `route` is a follow-on's path from the reported address to the swapping
-    wallet, in the original asset; None for a case stored before it was kept."""
+    wallet, in the original asset; None for a case stored before it was kept.
+    `cap` and `swaps` are what the follow-on may state and every swap it
+    covers (pipeline._follow_swaps); None in older cases."""
     if result.get("exchange"):
-        return {"trace": result, "asset": result.get("asset"), "via_swap": None, "route": None}
+        return {"trace": result, "asset": result.get("asset"), "via_swap": None, "route": None,
+                "cap": None, "swaps": None}
     for follow in result.get("follow_ons") or []:
         found = follow.get("result") or {}
         if found.get("exchange"):
             return {"trace": found, "asset": follow.get("asset"), "via_swap": follow.get("swap"),
-                    "route": follow.get("route")}
+                    "route": follow.get("route"), "cap": follow.get("cap"), "swaps": follow.get("swaps")}
     return None
 
 
 METHOD_NAME = {"fifo": "FIFO", "libr": "LIBR", "prorata": "pro-rata"}
+
+
+def _swap_cap(result: dict[str, Any], found: dict[str, Any]) -> dict[str, Any] | None:
+    """The most a follow-on letter may state: the follow-on's own cap, or
+    for a case stored before it, the swap's output. On a payment trace never
+    more than the victim's reported payments' share of what went into the
+    swap, whatever the case holds."""
+    swap = found["via_swap"] or {}
+    cap = dict(found.get("cap") or {})
+    if cap.get("amount") is None:
+        if swap.get("amount_out") is None:
+            return None
+        cap = {"amount": float(swap["amount_out"]), "basis": "swap_output", "swap_output": float(swap["amount_out"]),
+               "swap_input": swap.get("amount_in"), "traced_in": None, "share": None, "swaps": 1}
+    reported, paid_in = result.get("reported_amount"), cap.get("swap_input")
+    if reported and paid_in and reported < paid_in and (cap.get("share") is None or reported / paid_in < cap["share"]):
+        share = reported / paid_in
+        cap.update(amount=round(cap["swap_output"] * share, 6), basis="swap_share", traced_in=float(reported),
+                   share=round(share, 6))
+    return cap
 
 
 def _letter_amount(result: dict[str, Any], found: dict[str, Any]) -> dict[str, Any] | None:
@@ -84,14 +107,17 @@ def _letter_amount(result: dict[str, Any], found: dict[str, Any]) -> dict[str, A
     if amount is None:
         return None
     swap = found["via_swap"]
-    cap, basis = None, None
-    if swap and swap.get("amount_out") is not None:
-        cap, basis = float(swap["amount_out"]), "swap_output"
-    elif not swap and result.get("reported_amount"):
+    cap, basis, swap_cap = None, None, None
+    if swap:
+        swap_cap = _swap_cap(result, found)
+        if swap_cap is not None:
+            cap, basis = swap_cap["amount"], swap_cap["basis"]
+    elif result.get("reported_amount"):
         cap, basis = float(result["reported_amount"]), "reported_amount"
     rng = methods.get("range") if methods.get("range") and methods["range"]["low"] != methods["range"]["high"] else None
     return {"amount": min(float(amount), cap) if cap is not None else float(amount),
-            "method": method or "prorata", "range": rng, "cap": cap, "basis": basis,
+            "method": method or "prorata", "range": rng, "cap": cap, "basis": basis, "swap_cap": swap_cap,
+            "asset_in": (swap or {}).get("asset_in"), "intake": bool(result.get("reported_amount")),
             "arrived": prorata.get("arrived_total") if prorata.get("status") == "estimated" else None}
 
 
@@ -102,24 +128,37 @@ def _amount_lines(asset: str, stated: dict[str, Any]) -> list[str]:
            f"applied; they give {stated['range']['low']:,.6f} to {stated['range']['high']:,.6f})"
            if stated["range"] else "")
     lead = "On a pro-rata estimate" if stated["method"] == "prorata" else "On an estimate"
-    if stated["basis"] == "swap_output":
-        text = (f"{lead} from the public records, of the {stated['cap']:,.6f} {asset} the swap returned, "
-                f"about {x} {asset}{how} reached this address")
+    # Only an intake trace starts from the victim's own payments; anything
+    # else starts from what the reported wallet sent.
+    caveat = "" if stated["intake"] else ". That figure can include other people's money, not only the complainant's"
+    if stated["basis"] in ("swap_output", "swap_share"):
+        swap = stated["swap_cap"]
+        count = swap.get("swaps") or 1
+        text = (f"{lead} from the public records, of the {swap['swap_output']:,.6f} {asset} "
+                + ("the swap returned, " if count == 1 else f"the {count} swaps returned, "))
+        if stated["basis"] == "swap_share":
+            # The swapping wallet added money of its own.
+            whose, source = (("the victim's", "the victim's reported payments") if stated["intake"]
+                             else ("the traced funds", "the reported address"))
+            text += (f"at most {swap['amount']:,.6f} {asset} can be {whose} (at most {swap['traced_in']:,.6f} of "
+                     f"the {swap['swap_input']:,.6f} {stated['asset_in']} that went in can have come from {source}); "
+                     f"about {x} {asset}{how} of it reached this address")
+        else:
+            text += f"about {x} {asset}{how} reached this address"
     elif stated["basis"] == "reported_amount":
         text = (f"{lead} from the public records, about {x} of the {stated['cap']:,.6f} {asset} the victim "
                 f"reported paying{how} reached this address")
     else:
         # Address-only: the start is everything the reported wallet sent.
         text = (f"{lead} from the public records, about {x} {asset}{how} of everything the reported address "
-                "sent along this route reached this address. That figure can include other people's money, "
-                "not only the complainant's")
+                "sent along this route reached this address")
     arrived = stated["arrived"]
     if arrived is not None and arrived - stated["amount"] > stated["amount"] * 0.05:
         rest = ("came from other sources" if stated["method"] == "prorata" and not stated["cap"]
                 else "is not counted in that figure")
         text += (f" ({arrived:,.6f} {asset} arrived along this path in total; about "
                  f"{arrived - stated['amount']:,.6f} {rest})")
-    return ["", *textwrap.wrap(text + ".", width=95, initial_indent="   ", subsequent_indent="   ",
+    return ["", *textwrap.wrap(text + caveat + ".", width=95, initial_indent="   ", subsequent_indent="   ",
                                break_long_words=False, break_on_hyphens=False),
             "   This is an estimate; your own records of the deposits are authoritative."]
 
@@ -380,7 +419,20 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
             "   the pattern of an exchange sweeping a customer deposit address. This is an inference",
             f"   from public records, which only {exchange} can confirm.",
         ]
-    if swap:
+    if swap and len(found["swaps"] or []) > 1:
+        # Every swap by that wallet into the asset: the follow-on covers them all.
+        each = found["swaps"]
+        lines += [
+            "",
+            f"   On the way, {sender} exchanged {sum(s.get('amount_in') or 0 for s in each):,.6f} "
+            f"{swap.get('asset_in')}",
+            f"   for {sum(s.get('amount_out') or 0 for s in each):,.6f} {asset} in {len(each)} swaps (the largest at "
+            f"{swap.get('router_label')}); the {asset} was followed",
+            "   from the first of them:",
+            *(f"     {s.get('amount_in') or 0:,.6f} {swap.get('asset_in')} for {s.get('amount_out') or 0:,.6f} "
+              f"{asset}, tx {s.get('tx')}" for s in each),
+        ]
+    elif swap:
         returned = (f"{swap['amount_out']:,.6f} {asset}" if swap.get("amount_out") is not None else asset)
         lines += [
             "",

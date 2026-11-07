@@ -210,6 +210,61 @@ def test_an_older_follow_on_without_its_route_points_to_the_report():
     assert "Route to the swapping wallet: see the attached report" in draft("c1", result, "exchange")
 
 
+def test_an_address_only_follow_on_letter_says_the_figure_may_include_other_peoples_money():
+    letter = " ".join(draft("c1", follow_on_case(), "exchange").split())
+    assert "can include other people's money, not only the complainant's" in letter
+
+
+def test_a_follow_on_letter_states_every_swap_the_wallet_made():
+    # A dust swap first, then the real one: the cap is both, not the first.
+    result = follow_on_case(amount_in=1.0, amount_out=2400.0)
+    follow = result["follow_ons"][0]
+    follow["result"]["prorata"] = {**PRORATA, "estimated": 2400.25, "sent": 2400.25, "arrived_total": 2400.25}
+    follow["cap"] = {"amount": 2400.25, "basis": "swap_output", "swap_output": 2400.25, "swap_input": 1.0001,
+                     "traced_in": None, "share": None, "swaps": 2}
+    follow["swaps"] = [{"tx": "0x" + "d0" * 32, "amount_in": 0.0001, "amount_out": 0.25},
+                       {"tx": TX, "amount_in": 1.0, "amount_out": 2400.0}]
+    letter = " ".join(draft("c1", result, "exchange").split())
+    assert "of the 2,400.250000 USDT the 2 swaps returned, about 2,400.250000 USDT reached this address" in letter
+    assert "exchanged 1.000100 ETH for 2,400.250000 USDT in 2 swaps" in letter
+    assert "0.000100 ETH for 0.250000 USDT, tx 0x" + "d0" * 32 in letter
+    assert "about 0.250000" not in letter
+
+
+def test_a_follow_on_letter_states_only_the_traced_share_of_the_swap():
+    # 0.04 ETH traced into a 10 ETH swap for 25,000 USDT.
+    result = follow_on_case(amount_in=10.0, amount_out=25000.0)
+    follow = result["follow_ons"][0]
+    follow["result"]["prorata"] = {**PRORATA, "estimated": 100.0, "sent": 25000.0, "arrived_total": 25000.0}
+    follow["cap"] = {"amount": 100.0, "basis": "swap_share", "swap_output": 25000.0, "swap_input": 10.0,
+                     "traced_in": 0.04, "share": 0.004, "swaps": 1}
+    letter = " ".join(draft("c1", result, "exchange").split())
+    assert ("of the 25,000.000000 USDT the swap returned, at most 100.000000 USDT can be the traced funds "
+            "(at most 0.040000 of the 10.000000 ETH that went in can have come from the reported address); "
+            "about 100.000000 USDT of it reached this address") in letter
+    assert "can include other people's money, not only the complainant's" in letter
+    assert "about 25,000.000000" not in letter
+
+
+def test_an_intake_follow_on_letter_never_exceeds_the_victims_share():
+    # Audit r1-attribution-integrity-7: 1,000 USDT reported, 50,000 USDT
+    # swapped for 50,000 USDC. An older case holds no cap; the letter applies
+    # the victim's share anyway.
+    result = follow_on_case(asset_in="USDT", amount_in=50000.0, asset_out="USDC", amount_out=50000.0)
+    result.update(asset="USDT", reported_amount=1000.0,
+                  intake={"mode": "payment", "payments": [{"tx_hash": TX, "amount": 1000.0}]})
+    follow = result["follow_ons"][0]
+    follow["asset"] = "USDC"
+    follow["result"].update(asset="USDC", prorata={**PRORATA, "estimated": 50000.0, "sent": 50000.0,
+                                                   "arrived_total": 50000.0})
+    letter = " ".join(draft("c1", result, "exchange").split())
+    assert ("of the 50,000.000000 USDC the swap returned, at most 1,000.000000 USDC can be the victim's "
+            "(at most 1,000.000000 of the 50,000.000000 USDT that went in can have come from the victim's "
+            "reported payments); about 1,000.000000 USDC of it reached this address") in letter
+    assert "about 50,000.000000" not in letter
+    assert "other people's money" not in letter
+
+
 # ---------------------------------------------------------------------------
 # Only Tether's own USDT freezes go in the Tether letter (audit r1-labels-data-0)
 # ---------------------------------------------------------------------------

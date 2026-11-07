@@ -114,7 +114,7 @@ class Estimates(_Strict):
     libr: float | None = None
     # The smallest figure available: what a letter states (request_letters
     # ._letter_amount), never above the victim's reported payments or, on a
-    # follow-on, what the swap returned.
+    # follow-on, the traced share of what the swaps returned.
     conservative: float | None = None
 
 
