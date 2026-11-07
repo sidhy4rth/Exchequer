@@ -272,3 +272,11 @@ describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
     expect(marked[0]).toHaveTextContent('before the payment')
   })
 })
+
+describe('a case whose appendix lists only part of its transfers (r1-trace-engine-5)', () => {
+  it('states the trace\'s total and how many are listed', async () => {
+    await openDemo11({ transfers_total: 5000, transfers_omitted: 5000 - demo.result.transfers.length })
+    expect(screen.getByText(new RegExp(`5000 individual transactions \\(${demo.result.transfers.length} listed\\)`)))
+      .toBeInTheDocument()
+  })
+})

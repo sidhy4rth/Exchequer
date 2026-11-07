@@ -105,6 +105,17 @@ describe('background traces', () => {
     expect(calls.some((c) => c.startsWith('POST'))).toBe(false)
   })
 
+  it('reads a stored case by its id once the job no longer holds the result', async () => {
+    const address = '0x' + '5a'.repeat(20)
+    sessionStorage.setItem(`exchequer-job:${JSON.stringify({ address })}`, 'j3')
+    server([
+      ['GET', /\/trace\/jobs\/j3$/, () => [200, { job_id: 'j3', status: 'done', progress: {}, case_id: 'c3' }]],
+      ['GET', /\/trace\/c3$/, () => [200, { case_id: 'c3', exchange: 'Binance' }]],
+    ])
+    const { runTrace } = await import('./api')
+    expect(await runTrace({ address })).toEqual({ case_id: 'c3', exchange: 'Binance' })
+  })
+
   it('never keeps the NCRP number in sessionStorage, and still re-attaches after a reload', async () => {
     const address = '0x' + '6'.repeat(40)
     const posted = []

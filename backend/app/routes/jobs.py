@@ -102,7 +102,8 @@ def stop_job(job_id: str, user: CurrentUser) -> dict[str, Any]:
 def _job_or_404(job_id: str) -> jobs.Job:
     job = jobs.store.get(job_id)
     if job is None:
-        raise HTTPException(status_code=404, detail="No such trace job (finished jobs are kept for 30 minutes).")
+        raise HTTPException(status_code=404, detail=("No such trace job (a finished job is kept for 30 minutes, "
+                                                     "or 5 if its result was not saved)."))
     return job
 
 

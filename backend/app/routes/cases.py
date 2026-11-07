@@ -6,6 +6,7 @@ are in evidence.py; the history list and correlation in casebook.py."""
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from typing import Any
@@ -134,9 +135,24 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
         )
         return payload
 
+    # The cap above counts cases, not bytes: one dense trace could be megabytes.
+    try:
+        text = json.dumps(payload, default=str)
+    except (TypeError, ValueError):
+        text = None  # save_case reports it below
+    if text is not None and config.MAX_CASE_BYTES and len(text) > config.MAX_CASE_BYTES:
+        logger.warning("Case of %d bytes not stored (limit %d)", len(text), config.MAX_CASE_BYTES)
+        payload["case_id"] = None
+        payload.setdefault("warnings", []).append(
+            f"This result is too large to save ({len(text) / 1e6:.1f} MB; the limit is "
+            f"{config.MAX_CASE_BYTES / 1e6:.1f} MB), so it is shown here but was not saved: export "
+            "what you need from it now, or trace again with a smaller depth."
+        )
+        return payload
+
     try:
         models.save_case(case_id, payload["address"], payload, created_at=created_at,
-                         owner_hash=owner or ownership.orphan_hash())
+                         owner_hash=owner or ownership.orphan_hash(), result_json=text)
     except Exception:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
         # No id for a case that does not exist: the page would open it, find

@@ -483,6 +483,16 @@ TRACE_MAX_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES", 4)
 # traces ran; two still lets a presenter open a second trace.
 TRACES_RUNNING_PER_CLIENT: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES_PER_CLIENT", 2)
 
+# The most individual transfers a case lists in its appendix (0 = all). Every
+# transfer on the route to the exchange, out of the reported address and into
+# a matched address is always listed; the rest by value up to this. A dense
+# cluster listed 71,283 transfers (21 MB). The case keeps the full count and a
+# SHA-256 over all of them (pipeline._appendix).
+TRANSFERS_APPENDIX_MAX: int = _int_env("EXCHEQUER_TRANSFERS_APPENDIX_MAX", 2000)
+# The largest case the store keeps, in bytes of JSON (0 = no cap). A larger one
+# is shown, with a warning, and not saved: Neon's free tier holds 0.5 GB.
+MAX_CASE_BYTES: int = _int_env("EXCHEQUER_MAX_CASE_BYTES", 4 * 1024 * 1024)
+
 # The most cases the store keeps (0 = no cap). Anyone can save a trace, and a
 # free hosted Postgres holds 0.5 GB; a stored case averages ~32 KB, so 5,000 is
 # ~160 MB. Once full, a trace still runs and shows its result -- it is just not

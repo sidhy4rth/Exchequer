@@ -275,7 +275,8 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
         "graph_summary": {
             "addresses": len(graph.get("nodes", [])),
             "transfers": len(graph.get("edges", [])),
-            "individual_transactions": len(result.get("transfers", [])),
+            # The trace's count; the appendix may list fewer (pipeline._appendix).
+            "individual_transactions": result.get("transfers_total") or len(result.get("transfers", [])),
             "max_depth_reached": result.get("depth_reached"),
             "transfers_excluded_by_time": result.get("transfers_excluded_by_time"),
             # Transfers an address made to itself, left out of the graph.
@@ -297,6 +298,10 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
         "appendix": {
             "addresses": [n.get("id") for n in graph.get("nodes", [])],
             "transactions": result.get("transfers", []),
+            # Set when the trace had more transfers than the case lists.
+            "transactions_total": result.get("transfers_total"),
+            "transactions_omitted": result.get("transfers_omitted") or 0,
+            "transactions_sha256": result.get("transfers_sha256"),
         },
         # Every provider response the trace was computed from, hashed when it
         # arrived, and one hash over all of them. Absent on cases stored by an
@@ -1000,7 +1005,9 @@ def render_text_report(report: dict[str, Any]) -> str:
     add(f"Addresses examined         : {summary['addresses']}")
     add(f"Transfers (aggregated)     : {summary['transfers']}")
     if summary.get("individual_transactions"):
-        add(f"Individual transactions    : {summary['individual_transactions']}")
+        listed = len((report.get("appendix") or {}).get("transactions") or [])
+        add(f"Individual transactions    : {summary['individual_transactions']}"
+            + (f" ({listed} listed in Appendix B)" if listed < summary["individual_transactions"] else ""))
     add(f"Depth reached              : {summary['max_depth_reached']}")
     if summary.get("transfers_excluded_by_time") is not None:
         add(f"Excluded by the time rule  : {summary['transfers_excluded_by_time']}")
@@ -1035,6 +1042,13 @@ def render_text_report(report: dict[str, Any]) -> str:
     if transactions:
         add("Each hash can be opened on the block explorer named in the header.")
         add("")
+        if appendix.get("transactions_omitted"):
+            para(f"This appendix lists {len(transactions)} of the trace's {appendix['transactions_total']} "
+                 "transactions: every one out of the reported address, on the route to the exchange and "
+                 "into each matched exchange address, then the largest of the rest by value. SHA-256 of "
+                 f"all {appendix['transactions_total']} (one JSON line each, sorted keys, in time order): "
+                 f"{appendix.get('transactions_sha256')}")
+            add("")
         para(f"Each gives its time, then its value in {symbol} and from -> to "
              "(i = moved by a contract call), then its hash.")
         add("-" * 78)

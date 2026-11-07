@@ -111,7 +111,12 @@ async function jobSnapshot(jobId) {
 }
 
 function settle(snapshot) {
-  if (snapshot.status === 'done') return snapshot.result
+  if (snapshot.status === 'done') {
+    // A finished job holds a stored case's result only briefly; the store has it by id.
+    if (snapshot.result) return snapshot.result
+    if (snapshot.case_id) return fetchCase(snapshot.case_id)
+    throw new Error('The trace finished, but its result was not saved and is no longer held. Run the trace again.')
+  }
   const err = new Error(snapshot.error?.detail || 'The trace failed.')
   err.status = snapshot.error?.status_code
   throw err

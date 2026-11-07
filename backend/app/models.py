@@ -331,13 +331,15 @@ def save_case(
     result: dict[str, Any],
     created_at: str | None = None,
     owner_hash: str | None = None,
+    result_json: str | None = None,
 ) -> Case:
-    """Persist one completed trace, and the deposit addresses it inferred."""
+    """Persist one completed trace, and the deposit addresses it inferred.
+    `result_json` is `result` already serialised, when the caller has it."""
     case = Case(
         id=case_id,
         address=address,
         created_at=created_at or utc_now_iso(),
-        result_json=json.dumps(result, default=str),
+        result_json=result_json if result_json is not None else json.dumps(result, default=str),
         owner_hash=owner_hash,
     )
     global _store_version

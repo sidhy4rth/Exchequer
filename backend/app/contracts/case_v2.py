@@ -26,7 +26,6 @@ fields. A case stored before this contract existed is upgraded on read.
 """
 from __future__ import annotations
 
-import copy
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -149,6 +148,12 @@ class CaseV2(BaseModel):
     attribution: Attribution | None
     estimates: Estimates
     transfers: list[Transfer]
+    # When the appendix lists fewer than all (pipeline._appendix): how many the
+    # trace had, how many are left out, and SHA-256 over all of them. Absent
+    # in cases stored before November 2026, which list every one.
+    transfers_total: int | None = None
+    transfers_omitted: int | None = None
+    transfers_sha256: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -161,16 +166,18 @@ def upgrade(result: dict[str, Any]) -> dict[str, Any]:
     is already v2 (the fields it has are kept), on a stored case from before
     the contract, and on each follow-on trace inside it.
     """
-    out = copy.deepcopy(result)
+    # A new top level, never a deep copy: the input is left as it was, and a
+    # multi-MB case is not copied whole once per follow-on.
+    out = dict(result)
     out["contract_version"] = CONTRACT_VERSION
     out.setdefault("intake", {"mode": "address", "payments": [], "ncrp_ack": None})
     out.setdefault("reported_amount", None)
     out["attribution"] = out.get("attribution") or _attribution(out)
     out.setdefault("estimates", _estimates(out))
     out["transfers"] = [_transfer(t) for t in out.get("transfers") or []]
-    for follow in out.get("follow_ons") or []:
-        if isinstance(follow.get("result"), dict):
-            follow["result"] = upgrade(follow["result"])
+    if "follow_ons" in out:
+        out["follow_ons"] = [{**f, "result": upgrade(f["result"])} if isinstance(f.get("result"), dict) else f
+                             for f in out.get("follow_ons") or []]
     return out
 
 

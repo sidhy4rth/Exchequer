@@ -929,7 +929,7 @@ export default function TraceView() {
                   )}
                   <div className="exclusion">
                     <span className="n">{result.api_calls}</span>
-                    <span className="t">provider requests<small>{result.transfers?.length ?? 0} individual transactions; depth {result.depth_reached} reached of {result.max_depth ?? depth}{result.seconds_elapsed ? `; ${result.seconds_elapsed} s` : ''}.</small></span>
+                    <span className="t">provider requests<small>{result.transfers_total ?? result.transfers?.length ?? 0} individual transactions{result.transfers_omitted ? ` (${result.transfers?.length ?? 0} listed)` : ''}; depth {result.depth_reached} reached of {result.max_depth ?? depth}{result.seconds_elapsed ? `; ${result.seconds_elapsed} s` : ''}.</small></span>
                   </div>
                   {result.evidence?.count > 0 && (
                     <div className="exclusion">

@@ -250,6 +250,16 @@ def verify(report: dict[str, Any], read: Callable[[str, str, Asset], dict[str, A
     return checks
 
 
+def appendix_note(report: dict[str, Any]) -> str | None:
+    """What a capped Appendix B leaves unchecked (pipeline._appendix), or None."""
+    appendix = report.get("appendix") or {}
+    if not appendix.get("transactions_omitted"):
+        return None
+    return (f"The report lists {len(appendix.get('transactions') or [])} of the trace's "
+            f"{appendix.get('transactions_total')} transfers; the other {appendix['transactions_omitted']} "
+            "are not in Appendix B, so they were not checked.")
+
+
 def exit_code(checks: list[Check]) -> int:
     if any(c.outcome == MISMATCH for c in checks):
         return 1
@@ -302,6 +312,8 @@ def main() -> int:
         print(f"{check.outcome:<10} {check.hash}" + (f"  {check.detail}" if check.detail else ""))
     tally = {o: sum(c.outcome == o for c in checks) for o in (CONFIRMED, MISMATCH, UNCHECKED)}
     print(f"\n{len(checks)} transfers: {tally[CONFIRMED]} confirmed, {tally[MISMATCH]} mismatch, {tally[UNCHECKED]} unchecked")
+    if appendix_note(report):
+        print(appendix_note(report))
     if report.get("follow_ons"):
         print("Follow-on traces after a swap are not in Appendix B, so they were not checked.")
     if args.record:

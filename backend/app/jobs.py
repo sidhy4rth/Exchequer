@@ -9,7 +9,11 @@ as POST /trace stores it.
 
 In memory, per process: a restart forgets running jobs (their case is lost,
 as a POST /trace in flight would be) and finished ones are forgotten after
-JOB_TTL_SECONDS -- by then the case store has the result.
+JOB_TTL_SECONDS -- by then the case store has the result. A finished job holds
+its result only briefly: a stored case's payload for RESULT_HOLD_SECONDS
+(then only its id; the page reads the case from the store), an unsaved one's
+for UNSAVED_RESULT_TTL (then the job is forgotten). A case can be megabytes,
+and 500 jobs kept whole for 30 minutes could fill a 512 MB instance.
 """
 from __future__ import annotations
 
@@ -20,7 +24,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 JOB_TTL_SECONDS = 30 * 60
-MAX_JOBS = 500
+RESULT_HOLD_SECONDS = 120
+UNSAVED_RESULT_TTL = 5 * 60
+MAX_JOBS = 100
 
 RUNNING, DONE, FAILED = "running", "done", "failed"
 
@@ -39,6 +45,7 @@ class Job:
     # trace's clock, which a stop cancels (api_budget.TraceBudget).
     owner: str | None = None
     budget: Any = None
+    case_id: str | None = None
 
     def snapshot(self, with_result: bool = False) -> dict[str, Any]:
         end = self.finished or time.time()
@@ -47,7 +54,7 @@ class Job:
             "status": self.status,
             "progress": dict(self.progress),
             "elapsed": round(end - self.started, 1),
-            "case_id": (self.result or {}).get("case_id"),
+            "case_id": self.case_id,
             "error": self.error,
         }
         if with_result and self.status == DONE:
@@ -69,6 +76,7 @@ class JobStore:
 
     def get(self, job_id: str) -> Job | None:
         with self._lock:
+            self._prune()
             return self._jobs.get(job_id)
 
     def report(self, job: Job, fields: dict[str, Any]) -> None:
@@ -81,6 +89,7 @@ class JobStore:
         with self._lock:
             job.finished = time.time()
             job.result = result
+            job.case_id = (result or {}).get("case_id")
             job.error = error
             job.status = FAILED if error else DONE
             job.progress["stage"] = "done" if not error else "failed"
@@ -88,9 +97,14 @@ class JobStore:
 
     def _prune(self) -> None:
         now = time.time()
-        for job_id in [j.id for j in self._jobs.values()
-                       if j.finished and now - j.finished > JOB_TTL_SECONDS]:
-            del self._jobs[job_id]
+        for job in list(self._jobs.values()):
+            if not job.finished:
+                continue
+            age = now - job.finished
+            if age > JOB_TTL_SECONDS or (job.case_id is None and job.result is not None and age > UNSAVED_RESULT_TTL):
+                del self._jobs[job.id]
+            elif job.case_id is not None and age > RESULT_HOLD_SECONDS:
+                job.result = None  # the case store has it
         if len(self._jobs) >= MAX_JOBS:
             for job in sorted((j for j in self._jobs.values() if j.finished), key=lambda j: j.finished):
                 del self._jobs[job.id]

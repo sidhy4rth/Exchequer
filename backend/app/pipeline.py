@@ -8,6 +8,8 @@ warm-up both call it; nothing here knows about requests or storage."""
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
 from datetime import datetime, timezone
@@ -247,6 +249,50 @@ def _all_transfers(graph: nx.DiGraph) -> list[dict[str, Any]]:
             })
     rows.sort(key=lambda r: (r["timestamp"] or 0, r["hash"] or ""))
     return rows
+
+
+def appendix_sha256(rows: list[dict[str, Any]]) -> str:
+    """SHA-256 over every transfer of a trace, one canonical JSON line each
+    (sorted keys, no spaces) in _all_transfers order (docs/contracts/case.md)."""
+    lines = "\n".join(json.dumps(r, sort_keys=True, separators=(",", ":")) for r in rows)
+    return hashlib.sha256(lines.encode("utf-8")).hexdigest()
+
+
+def _appendix(rows: list[dict[str, Any]], keep_edges: set[tuple[str, str]],
+              keep_to: set[str]) -> dict[str, Any]:
+    """The transfers a case lists, and what it commits to about all of them.
+
+    The appendix listed every transfer on every followed edge, so a dense
+    cluster made a 21 MB case. Past config.TRANSFERS_APPENDIX_MAX it keeps
+    every transfer on `keep_edges` (the route to the exchange and the
+    reported address's own hops) and into `keep_to` (each matched or
+    inferred exchange address, whose transfers a letter lists), then the
+    largest of the rest by value. The full count and a hash over all of
+    them are kept, so the case still commits to every transfer."""
+    limit = config.TRANSFERS_APPENDIX_MAX
+    listed = rows
+    if limit and len(rows) > limit:
+        must = [r for r in rows if (r["from"], r["to"]) in keep_edges or r["to"] in keep_to]
+        kept = {id(r) for r in must}
+        rest = sorted((r for r in rows if id(r) not in kept), key=lambda r: -(r["value_native"] or 0))
+        chosen = {id(r) for r in must + rest[:max(0, limit - len(must))]}
+        listed = [r for r in rows if id(r) in chosen]  # in the full list's order
+    return {"transfers": listed, "transfers_total": len(rows), "transfers_omitted": len(rows) - len(listed),
+            "transfers_sha256": appendix_sha256(rows)}
+
+
+def _appendix_edges(graph: nx.DiGraph, seed: str, direction: str, primary: Any) -> set[tuple[str, str]]:
+    """The edges whose every transfer a case lists: the reported address's own
+    (out of it, or into it on a reverse trace) and each on the route to the exchange."""
+    edges = set(graph.out_edges(seed) if direction == OUTGOING else graph.in_edges(seed))
+    if primary is not None:
+        source, destination = (seed, primary.address) if direction == OUTGOING else (primary.address, seed)
+        try:
+            path = principal_path(graph, source, destination)
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            path = []
+        edges |= set(zip(path, path[1:], strict=False))
+    return edges
 
 
 def _hops_covered(graph: nx.DiGraph) -> int:
@@ -1079,7 +1125,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         # Only populated on a reverse trace: the seed has no inbound edges when
         # the walk ran outward.
         "direct_senders": _direct_senders(graph, seed),
-        "transfers": _all_transfers(graph),
+        # transfers, transfers_total, transfers_omitted, transfers_sha256 (_appendix).
+        **_appendix(_all_transfers(graph), _appendix_edges(graph, seed, direction, primary),
+                    {m.address for m in matches}),
         "depth_reached": result.depth_reached,
         "max_depth": trace_config.max_depth,
         # The clock, if the caller set one, and what it cost: how long the walk
