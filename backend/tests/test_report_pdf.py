@@ -98,11 +98,20 @@ def test_page_one_says_when_pro_rata_was_not_estimated():
 
 def test_page_one_states_a_capped_figure_as_capped():
     # Audit r1-attribution-integrity-7: never "sent from the reported address" for the victim's share.
-    report = {**REPORT, "attribution": {**REPORT["attribution"], "prorata": {
-        "status": "estimated", "estimated": 2.0, "sent": 50.0,
-        "seed_cap": {"amount": 2.0, "basis": "reported_amount", "applied": True}}}}
-    text = " ".join(first_page(report)[0].split())
-    assert "at most what the victim reported paying" in text and "≈ 2 of 2" in text
+    # Page 1 prints the signed text's own figure (r1-evidence-crypto-6), so the text is
+    # written from the same capped case.
+    from app.report import build_report, render_text_report
+    from test_report import full_result, stored
+
+    report = build_report(stored(full_result()))
+    prorata = {**(report["attribution"].get("prorata") or {}), "status": "estimated", "estimated": 2.0,
+               "sent": 50.0, "arrived_total": 40.0, "hops": [],
+               "seed_cap": {"amount": 2.0, "basis": "reported_amount", "applied": True}}
+    report = {**report, "attribution": {**report["attribution"], "prorata": prorata}}
+    page = PdfReader(io.BytesIO(render_pdf(report, render_text_report(report)))).pages[0]
+    text = " ".join(page.extract_text().split())
+    assert "at most what the victim reported paying" in text and "about 2.0 of the 2.0" in text
+    assert "sent from the reported address (pro-rata)" not in text
 
 
 # -- page 1 is a reading aid, and says so (r1-evidence-crypto-6) ----------------------
