@@ -693,12 +693,15 @@ class EtherscanClient:
         limit: int | None = None,
         sort: str = "desc",
         include_internal: bool | None = None,
+        page: int = 1,
     ) -> list[Transaction]:
         """Return normal native-currency transactions involving `address`.
 
         `limit` caps how many records we pull (default: TRACE_MAX_TXS_PER_ADDRESS)
         so one whale wallet cannot stall a trace. `sort="desc"` puts the most
         recent activity first, which is what an investigator cares about.
+        `page` reads the next `limit` records after earlier pages (Etherscan
+        allows page x limit up to 10,000).
 
         An address with no transactions returns [] -- that is a valid answer,
         not an error.
@@ -713,7 +716,7 @@ class EtherscanClient:
             "address": normalize_address(address),
             "startblock": 0,
             "endblock": ENDBLOCK_LATEST,
-            "page": 1,
+            "page": max(1, int(page)),
             "offset": offset,
             "sort": sort,
         }
@@ -894,7 +897,13 @@ class EtherscanClient:
             return None
         return head if head and head > 0 else None
 
-    def get_outgoing_transactions(self, address: str, limit: int | None = None) -> list[Transaction]:
+    # The graph builder may read past a page that held nothing it could follow
+    # (zero-value or dust spam): get_outgoing_transactions and
+    # get_outgoing_transactions_since take `page`.
+    reads_pages = True
+
+    def get_outgoing_transactions(self, address: str, limit: int | None = None,
+                                  page: int = 1) -> list[Transaction]:
         """Only the transfers *sent by* `address` that actually moved value.
 
         This is what the trace follows: we are chasing where the money went.
@@ -919,13 +928,13 @@ class EtherscanClient:
                 and tx.value_wei > 0
             ]
 
-        signed = outgoing(self.get_transactions(address, limit=limit, include_internal=False))
+        signed = outgoing(self.get_transactions(address, limit=limit, include_internal=False, page=page))
         if signed or self.contract_address or not self.include_internal:
             return signed
-        return outgoing(self.get_transactions(address, limit=limit, include_internal=True))
+        return outgoing(self.get_transactions(address, limit=limit, include_internal=True, page=page))
 
     def get_outgoing_transactions_since(
-        self, address: str, start_block: int, limit: int | None = None,
+        self, address: str, start_block: int, limit: int | None = None, page: int = 1,
     ) -> list[Transaction]:
         """The first transfers `address` sent at or after `start_block`, oldest first.
 
@@ -944,7 +953,7 @@ class EtherscanClient:
             "address": target,
             "startblock": max(0, int(start_block)),
             "endblock": ENDBLOCK_LATEST,
-            "page": 1,
+            "page": max(1, int(page)),
             "offset": offset,
             "sort": "asc",
         }

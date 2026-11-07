@@ -151,6 +151,11 @@ class TraceConfig:
     # chasing, and a cached page of it could say "sent nothing" after the
     # money left. Its fresh answer replaces the cached one for later reads.
     fresh_seed: bool = True
+    # Pages one read of an address may take when a full page held nothing the
+    # walk could follow (zero-value or dust spam fills a page as well as real
+    # transfers do): 5 x 200 is the 1,000 records Tron and NodeReal scan.
+    # Only clients that read by page (Etherscan) page; each page is a request.
+    max_pages_per_address: int = 5
 
 
 @dataclass
@@ -466,11 +471,35 @@ def build_trace_graph(
         capped = read_capped(address) if read_capped is not None else None
         return capped if capped is not None else len(later) >= limit
 
+    paged = direction == OUTGOING and bool(getattr(client, "reads_pages", False))
+
+    def past_spam(address: str, transfers: list[Transaction], arrived: int | None,
+                  read: Callable[[int], list[Transaction]], capped: Callable[[list[Transaction]], bool],
+                  ) -> list[Transaction]:
+        """Read the next pages of the same query while the page was full and
+        held nothing the walk could follow after `arrived`, up to
+        max_pages_per_address. Spam must not be able to hide a cash-out
+        behind one page; a page with a real outflow costs nothing extra."""
+        page, latest = 1, transfers
+        while (paged and page < cfg.max_pages_per_address and capped(latest)
+               and not any(tx.value_native >= cfg.min_value_native and (arrived is None or tx.timestamp >= arrived)
+                           for tx in transfers)
+               and (deadline is None or time.monotonic() < deadline)):
+            page += 1
+            latest = read(page)
+            known = {(tx.hash, tx.to_address, tx.value_wei) for tx in transfers}
+            transfers = transfers + [tx for tx in latest if (tx.hash, tx.to_address, tx.value_wei) not in known]
+        return transfers
+
     def fetch(address: str, limit: int | None = None) -> list[Transaction]:  # noqa: F811
         transfers = newest_page(address, limit=limit)
         start_block, arrived = window_block.get(address), window.get(address)
         if limit is None:
             return transfers
+        if arrived is None:
+            # Newest first, older pages while they held nothing to follow.
+            transfers = past_spam(address, transfers, None, lambda p: newest_page(address, limit=limit, page=p),
+                                  lambda page: page_reach(address, page, limit)[0])
         full, oldest = page_reach(address, transfers, limit)
         if arrived is None:
             # Read newest first and never from an arrival (the reported address
@@ -486,7 +515,10 @@ def build_trace_graph(
             return transfers
         if since is not None and start_block is not None:
             def read_later() -> list[Transaction]:
-                return since(address, start_block, limit=limit)
+                first = since(address, start_block, limit=limit)
+                return past_spam(address, first, arrived,
+                                 lambda p: since(address, start_block, limit=limit, page=p),
+                                 lambda page: later_capped(address, page, limit))
         elif since_time is not None:
             def read_later() -> list[Transaction]:
                 return since_time(address, arrived, limit=limit)
