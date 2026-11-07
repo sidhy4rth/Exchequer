@@ -36,7 +36,8 @@ from typing import Any, Callable
 import httpx
 
 from . import config
-from .api_budget import (ResponseCache, ResponseTooLarge, SharedPacer, fresh_reads, get_cache, get_pacer, spend,
+from .api_budget import (BudgetSpent, ResponseCache, ResponseTooLarge, SharedPacer, fresh_reads, get_cache,
+                         get_pacer, spend, credential as meter_key,
                          read_capped)
 from .evidence import EvidenceLog
 
@@ -196,6 +197,12 @@ class ProviderQuotaError(EtherscanRateLimitError):
     """A provider's daily or monthly allowance is spent. Unlike a momentary rate
     limit, waiting seconds cannot help, so it is never retried and never slows
     the shared pacer; the officer is told the quota is used up."""
+
+
+class AllowanceSpent(BudgetSpent, ProviderQuotaError):
+    """The site's own allowance for the day (api_budget.UnitMeter) refused a
+    request: to a trace a stop like its request budget, to a script or a
+    watch check a spent quota like the provider's own."""
 
 
 class EtherscanConfigError(EtherscanError):
@@ -464,6 +471,7 @@ class EtherscanClient:
         # page, so it carries a digest of the key rather than any of the key.
         credential = hashlib.sha256((self.api_key or "anon").encode()).hexdigest()[:8]
         scope = f"etherscan:{credential}"
+        self._meter_key = meter_key(self.api_key)  # the key's allowance for the day
         self._pacer = get_pacer(
             scope,
             lambda: SharedPacer(
@@ -562,7 +570,7 @@ class EtherscanClient:
         last_error: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
-            spend("etherscan", 1, self.budget)  # the case's clock and request budget, every attempt
+            spend("etherscan", self._meter_key, 1, self.budget)  # the case's clock and request budget, every attempt
             self._throttle()
             try:
                 response = read_capped(self._client, "GET", self.base_url, params=query, **self._timeout())

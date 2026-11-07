@@ -27,9 +27,9 @@ from __future__ import annotations
 import logging
 from typing import Protocol, runtime_checkable
 
-from . import config
+from . import api_budget, config
 from .etherscan_client import EtherscanClient, EtherscanError, Transaction
-from .nodereal_client import NoderealClient
+from .nodereal_client import TRANSFER_CU, NoderealClient
 from .tron_client import TronClient
 
 logger = logging.getLogger(__name__)
@@ -153,6 +153,16 @@ def provider_ready(chain: config.Chain) -> tuple[bool, str | None]:
         return False, ("ETHERSCAN_API_KEY is not set. Copy backend/.env.example to "
                        "backend/.env and add a free key from https://etherscan.io/apis")
     return False, f"Unknown provider '{chain.provider}' configured for {chain.name}."
+
+
+def allowance_spent(chain: config.Chain) -> int | None:
+    """Seconds until the chain's provider allowance resets, when today's is
+    used up (api_budget.UnitMeter); None while a trace could still start."""
+    key = {"etherscan": config.ETHERSCAN_API_KEY, "nodereal": config.NODEREAL_API_KEY,
+           "trongrid": config.TRONGRID_API_KEY}.get(chain.provider)
+    meter = api_budget.get_meter(chain.provider, api_budget.credential(key))
+    # One transfer read: a trace that cannot make even that would read nothing.
+    return meter.seconds_to_reset() if meter.spent(TRANSFER_CU if chain.provider == "nodereal" else 1) else None
 
 
 def provider_status() -> dict[str, dict[str, object]]:

@@ -72,7 +72,9 @@ def start_job(request: TraceRequest, http: Request, user: CurrentUser) -> JSONRe
     slot = cases.admit(http)  # holds a running slot from here until _run releases it
     try:
         owner = user.owner_hash
-        job = jobs.store.create(owner=owner, budget=api_budget.TraceBudget.for_request(request.time_budget_seconds))
+        # The admit() token: this connection's share of the day's provider allowance.
+        job = jobs.store.create(owner=owner, budget=api_budget.TraceBudget.for_request(
+            request.time_budget_seconds, client=slot))
         threading.Thread(target=_run, args=(job, request, owner, slot),
                          name=f"trace-job-{job.id[:8]}", daemon=True).start()
     except Exception:

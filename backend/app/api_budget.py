@@ -47,6 +47,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 import time
 from collections import OrderedDict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Hashable
 
@@ -633,11 +634,13 @@ def get_cache(name: str, factory: Callable[[], ResponseCache]) -> ResponseCache:
 
 
 def budget_stats() -> dict[str, Any]:
-    """Everything the /health endpoint needs to explain a slow trace."""
+    """Everything the /health endpoint needs to explain a slow trace, and
+    what each credential has spent of its allowance today."""
     with _registry_lock:
         return {
             "pacers": {name: p.stats() for name, p in _pacers.items()},
             "caches": {name: c.stats() for name, c in _caches.items()},
+            "meters": {name: m.stats() for name, m in _meters.items()},
         }
 
 
@@ -648,6 +651,117 @@ def reset() -> None:
         for cache in _caches.values():
             cache.close()
         _caches.clear()
+        _meters.clear()
+
+
+# ---------------------------------------------------------------------------
+# One credential's allowance per day
+#
+# A case's budget bounds one trace; it does not stop a burst of traces, watch
+# checks and warm-ups from spending a free tier's whole day (Etherscan 100k
+# calls, TronGrid 100k per account) or NodeReal's month in hours. A UnitMeter
+# counts every network request made with one credential in this process,
+# trace or not, and refuses once the UTC day's allowance is spent; one
+# connection may spend only a share of it. In memory: a restart forgets the
+# day's count, as the hourly trace limits do.
+# ---------------------------------------------------------------------------
+def credential(api_key: str | None) -> str:
+    """How a key is named in a meter's scope (and on /health/detail): a digest, never the key."""
+    return hashlib.sha256(api_key.encode()).hexdigest()[:8] if api_key else "anon"
+
+
+class UnitMeter:
+    MAX_CLIENTS = 10_000  # connection keys come from headers; bounded whatever they say
+
+    def __init__(self, provider: str, limit: float, client_share: float = 0.0,
+                 clock: Callable[[], float] = time.time) -> None:
+        self.provider = provider
+        self.limit = float(limit)  # 0: no limit, counted only
+        self.client_share = client_share
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._day = int(clock() // 86400)
+        self.used = 0.0
+        self.requests = 0
+        self.refused = 0
+        self._by_client: dict[str, float] = {}
+
+    def _roll(self) -> None:
+        """A new UTC day starts every count again. Under the lock."""
+        day = int(self._clock() // 86400)
+        if day != self._day:
+            self._day, self.used, self.requests, self.refused = day, 0.0, 0, 0
+            self._by_client.clear()
+
+    def charge(self, units: float, client: str | None = None) -> str | None:
+        """Count one request of `units`. None if allowed; else "site" or
+        "client" (which allowance refused it), and nothing is counted."""
+        with self._lock:
+            self._roll()
+            if self.limit and self.used + units > self.limit:
+                self.refused += 1
+                return "site"
+            if client and self.limit and self.client_share:
+                mine = self._by_client.get(client, 0.0)
+                if mine + units > self.limit * self.client_share:
+                    self.refused += 1
+                    return "client"
+                if client not in self._by_client and len(self._by_client) >= self.MAX_CLIENTS:
+                    self._by_client.pop(next(iter(self._by_client)))
+                self._by_client[client] = mine + units
+            self.used += units
+            self.requests += 1
+            return None
+
+    def spent(self, units: float = 1.0) -> bool:
+        """Whether a request of `units` would be refused for the whole site now."""
+        with self._lock:
+            self._roll()
+            return bool(self.limit) and self.used + units > self.limit
+
+    def seconds_to_reset(self) -> int:
+        now = self._clock()
+        return int((int(now // 86400) + 1) * 86400 - now) + 1
+
+    def stats(self) -> dict[str, Any]:
+        with self._lock:
+            self._roll()
+            resets = datetime.fromtimestamp((self._day + 1) * 86400, tz=timezone.utc)
+            return {
+                "provider": self.provider,
+                "unit": UNIT_NAMES.get(self.provider, "requests"),
+                "used": round(self.used, 2),
+                "limit": self.limit or None,
+                "remaining": round(max(0.0, self.limit - self.used), 2) if self.limit else None,
+                "requests": self.requests,
+                "refused": self.refused,
+                "client_share": self.client_share or None,
+                "connections": len(self._by_client),  # how many, never which
+                "resets_at": resets.isoformat().replace("+00:00", "Z"),
+            }
+
+
+_meters: dict[str, UnitMeter] = {}
+
+
+def period_limits() -> dict[str, float]:
+    """Each provider's allowance per UTC day for this site (0 = counted only)."""
+    from . import config
+
+    return {"etherscan": config.ETHERSCAN_CALLS_PER_DAY, "nodereal": config.NODEREAL_CU_PER_DAY,
+            "trongrid": config.TRONGRID_CALLS_PER_DAY, "tronscan": config.TRONSCAN_CALLS_PER_DAY}
+
+
+def get_meter(provider: str, api_key_digest: str) -> UnitMeter:
+    from . import config
+
+    name = f"{provider}:{api_key_digest}"
+    with _registry_lock:
+        meter = _meters.get(name)
+        if meter is None:
+            meter = _meters[name] = UnitMeter(provider, period_limits().get(provider, 0),
+                                              client_share=config.PROVIDER_CLIENT_SHARE_PERCENT / 100)
+        return meter
 
 
 # ---------------------------------------------------------------------------
@@ -836,12 +950,22 @@ class TraceBudget:
             raise Cancelled()
 
 
-def spend(provider: str, units: float, budget: TraceBudget | None) -> None:
+def spend(provider: str, api_key_digest: str, units: float, budget: TraceBudget | None) -> None:
     """The one check every provider client makes before each network attempt
-    (retries included; cache hits make none): the case's clock and its units.
-    Raises a TraceStopped when the request may not be sent."""
+    (retries included; cache hits make none): the case's clock and its units,
+    then the credential's allowance for the day -- with or without a case, so
+    watch checks and warm-ups count too. Raises a TraceStopped (BudgetSpent
+    for either budget) when the request may not be sent."""
     if budget is not None:
         budget.charge(provider, units)
+    refused = get_meter(provider, api_key_digest).charge(units, budget.client if budget is not None else None)
+    if refused is not None:
+        from .etherscan_client import AllowanceSpent  # here: that module imports this one
+
+        if budget is not None:
+            budget.refund(provider, units)
+            budget._stop("budget")
+        raise AllowanceSpent(provider, scope=refused)
 
 
 # The budget a background job runs its trace under, handed to run_trace on the

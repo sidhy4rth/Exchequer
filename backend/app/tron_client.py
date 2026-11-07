@@ -215,6 +215,7 @@ class TronClient:
         # trace, so the pacer is shared by credential and widens on refusal; a
         # pacer per instance let four keyless traces send four times the rate.
         credential = hashlib.sha256(self.api_key.encode()).hexdigest()[:8] if self.api_key else "anon"
+        self._meter_key = credential  # the key's (or this address's) allowance for the day
         interval = self.min_interval
         self._pacer = get_pacer(f"trongrid:{credential}", lambda: SharedPacer(
             interval=interval, min_interval=interval, max_interval=max(interval * 5, 6.0)))
@@ -254,7 +255,7 @@ class TronClient:
         """(body, its evidence record)."""
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
-            spend("trongrid", 1, self.budget)  # the case's clock and request budget, every attempt
+            spend("trongrid", self._meter_key, 1, self.budget)  # the case's clock and request budget, every attempt
             self._throttle()
             try:
                 response = read_capped(self._client, method, f"{self.base_url}{path}", **kwargs,

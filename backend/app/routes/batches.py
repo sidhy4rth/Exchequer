@@ -17,7 +17,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from .. import audit, batches, config, ownership, pipeline, rate_limit
+from .. import api_budget, audit, batches, config, ownership, pipeline, rate_limit
+from ..chain_data import allowance_spent
 from ..input_rules import OneLine
 from . import casebook, cases
 
@@ -91,6 +92,13 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
         rows = batches.validate_rows(body.rows)
     except batches.BatchError as exc:
         return JSONResponse(status_code=400, content={"detail": str(exc), "row_errors": exc.row_errors})
+    # A chain whose provider allowance is used up today cannot trace its rows.
+    for key in sorted({row["chain"] for row in rows}):
+        chain = config.get_chain(key)
+        wait = allowance_spent(chain)
+        if wait is not None:
+            raise HTTPException(status_code=503, detail=pipeline.allowance_used_up(chain),
+                                headers={"Retry-After": str(wait)})
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
     charged = batches.traces_needed(rows)  # a repeated row is traced once
     refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client, cost=charged)
@@ -121,7 +129,9 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
 
     def trace(request):
         traced[0] += 1
-        return pipeline.run_trace(request)
+        # The rows spend the starting connection's share of the day's allowance.
+        with api_budget.using(api_budget.TraceBudget.for_request(request.time_budget_seconds, client=client)):
+            return pipeline.run_trace(request)
 
     def done(batch_id: str = batch.id) -> None:
         with _active_lock:

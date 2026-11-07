@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from . import config, log_safety, progress
 from .api_budget import PROVIDER_NAMES, BudgetSpent, Cancelled, TraceBudget, TraceStopped, current_budget
-from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
+from .chain_data import ProviderNotConfiguredError, UnknownAssetError, allowance_spent, open_source
 from .contracts import upgrade as upgrade_to_contract
 from .provenance import capture as capture_provenance
 from .payment_intake import (
@@ -394,6 +394,11 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
                 f"Available: {chain.native_symbol}, " + ", ".join(t.symbol for t in chain.tokens)
             ),
         )
+    # Today's provider allowance for the whole site (api_budget.UnitMeter):
+    # once it is used up, a new trace is refused before it is admitted.
+    wait = allowance_spent(chain)
+    if wait is not None:
+        raise HTTPException(status_code=503, detail=allowance_used_up(chain), headers={"Retry-After": str(wait)})
     # Payments (R1) are checked here too, before anything is spent: the flag
     # must be on, and a payment starts a trace of where the money went.
     if request.payments:
@@ -432,6 +437,12 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
                 detail="The victim's wallet is the reported wallet: enter the wallet the victim paid from.",
             )
     return chain, address
+
+
+def allowance_used_up(chain: config.Chain) -> str:
+    name = PROVIDER_NAMES.get(chain.provider, chain.provider)
+    return (f"Today's {name} allowance for this site is used up, so live tracing on {chain.name} "
+            "resumes at 00:00 UTC. Stored cases and the verified examples still open.")
 
 
 def _seed_cap(intake: dict[str, Any] | None, seed_amount: float | None,
@@ -749,8 +760,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                       f"live traces on {chain.name} until 00:00 UTC. Stored cases and the verified examples "
                       "still open.")
         else:
-            detail = (f"Today's {name} allowance for this site is used up, so live tracing on {chain.name} "
-                      "resumes at 00:00 UTC. Stored cases and the verified examples still open.")
+            detail = allowance_used_up(chain)
         raise HTTPException(status_code=429 if exc.scope == "client" else 503, detail=detail) from exc
     except TraceStopped as exc:
         # The reported address itself could not be read before the case's

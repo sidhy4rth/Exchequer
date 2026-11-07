@@ -443,6 +443,21 @@ TRACE_MAX_ETHERSCAN_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_ETHERSCAN_CALLS",
 TRACE_MAX_NODEREAL_CU: int = _int_env("EXCHEQUER_TRACE_MAX_NODEREAL_CU", 60_000)
 TRACE_MAX_TRONGRID_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_TRONGRID_CALLS", 400)
 TRACE_MAX_TRONSCAN_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_TRONSCAN_CALLS", 100)
+# What the whole site may spend per provider credential in one UTC day, every
+# trace, watch check and warm-up together (api_budget.UnitMeter; 0 = counted,
+# not limited). Past it new traces on that chain are refused with a 503 until
+# 00:00 UTC, and a trace already running stops where it is, saying so. Sized
+# under the free tiers: Etherscan's 100,000 calls a day, TronGrid's 100,000 a
+# day per account, and NodeReal's monthly compute units spread over the month
+# with a tenth held back (set the month from the key's plan page).
+ETHERSCAN_CALLS_PER_DAY: int = _int_env("EXCHEQUER_ETHERSCAN_CALLS_PER_DAY", 60_000)
+NODEREAL_CU_PER_MONTH: int = _int_env("EXCHEQUER_NODEREAL_CU_PER_MONTH", 10_000_000)
+NODEREAL_CU_PER_DAY: int = _int_env("EXCHEQUER_NODEREAL_CU_PER_DAY", NODEREAL_CU_PER_MONTH * 9 // 10 // 31)
+TRONGRID_CALLS_PER_DAY: int = _int_env("EXCHEQUER_TRONGRID_CALLS_PER_DAY", 50_000)
+TRONSCAN_CALLS_PER_DAY: int = _int_env("EXCHEQUER_TRONSCAN_CALLS_PER_DAY", 20_000)
+# The most of each day's allowance one connection may spend (0 = no share), so
+# one visitor cannot use up the day for everyone; keyed like the hourly limits.
+PROVIDER_CLIENT_SHARE_PERCENT: int = _int_env("EXCHEQUER_CLIENT_SHARE_PERCENT", 25)
 # Attribution follows the money (pipeline.run_trace): a match whose share of
 # what the reported address sent is under this percentage is not "material",
 # and a case whose exchange received less is scored low at most; under a

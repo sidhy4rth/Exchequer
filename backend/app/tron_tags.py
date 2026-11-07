@@ -242,7 +242,7 @@ class TronScanTags:
                 self.evidence.record_cached(PROVIDER, request, meta)
             return value
         try:
-            api_budget.spend("tronscan", 1, self.budget)
+            api_budget.spend("tronscan", api_budget.credential(self.api_key), 1, self.budget)
         except api_budget.TraceStopped:
             return None  # the case's time or budget is spent: a tag lookup is never worth waiting for
         self._throttle()

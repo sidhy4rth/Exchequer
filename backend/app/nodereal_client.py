@@ -38,6 +38,7 @@ import httpx
 
 from .api_budget import (ResponseCache, ResponseTooLarge, SharedPacer, TraceStopped, get_cache, get_pacer,
                          read_capped, spend)
+from .api_budget import credential as meter_key
 from .evidence import EvidenceLog
 
 from . import config
@@ -209,6 +210,7 @@ class NoderealClient:
         # `min_interval` spaces requests evenly instead (tests, scripts).
         self._per_cu = min_interval is None
         credential = hashlib.sha256((self.api_key or "anon").encode()).hexdigest()[:8]
+        self._meter_key = meter_key(self.api_key)  # the key's allowance for the day
         if self._per_cu:
             interval = TRANSFER_CU / config.NODEREAL_CUPS_FLOOR
             floor = min(interval, TRANSFER_CU / config.NODEREAL_CUPS)
@@ -265,7 +267,7 @@ class NoderealClient:
 
         for attempt in range(self.max_retries + 1):
             # The case's clock and compute-unit budget, before every attempt.
-            spend("nodereal", METHOD_CU.get(method, 25), self.budget)
+            spend("nodereal", self._meter_key, METHOD_CU.get(method, 25), self.budget)
             self._throttle(method)
             try:
                 response = read_capped(self._client, "POST", self.url, json=payload,

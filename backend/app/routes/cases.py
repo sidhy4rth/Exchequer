@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from .. import audit, case_privacy, config, models, ownership, pipeline, rate_limit
+from .. import api_budget, audit, case_privacy, config, models, ownership, pipeline, rate_limit
 from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 
@@ -193,7 +193,9 @@ def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, 
     pipeline.check_request(request)
     slot = admit(http)
     try:
-        payload = pipeline.run_trace(request)
+        # The admit() token: this connection's share of the day's provider allowance.
+        with api_budget.using(api_budget.TraceBudget.for_request(request.time_budget_seconds, client=slot)):
+            payload = pipeline.run_trace(request)
     finally:
         release(slot)
     stored = store_result(payload, request, user.owner_hash)
