@@ -49,6 +49,9 @@ export default function Present({ result, related = [], unit, onClose }) {
   const components = result.confidence_detail?.components ?? []
   const band = String(result.confidence_detail?.band ?? '').replace(/^./, (c) => c.toUpperCase())
   const capped = result.prorata?.seed_cap?.applied ? result.prorata.seed_cap : null
+  const paymentTrace = result.intake?.mode === 'payment'
+  // An address-only figure starts from everything the reported wallet sent.
+  const othersMoney = !reverse && result.prorata?.status === 'estimated' && !capped && !paymentTrace
 
   const screens = [
     // 1 — the finding
@@ -67,7 +70,7 @@ export default function Present({ result, related = [], unit, onClose }) {
               {reverse
                 ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached the reported wallet from{' '}</>
                 : result.prorata?.status === 'estimated'
-                  ? <>About <span className="num">{num(result.prorata.estimated)} of {num(capped ? capped.amount : result.prorata.sent)} {unit}</span> {capped ? (capped.basis === 'swap_output' ? 'the swap returned' : 'the victim reported paying') : 'from the reported wallet'} likely reached{' '}</>
+                  ? <>About <span className="num">{num(result.prorata.estimated)} of {num(capped ? capped.amount : result.prorata.sent)} {unit}</span> {capped ? (capped.basis === 'swap_output' ? 'the swap returned' : 'the victim reported paying') : paymentTrace ? "sent on after the victim's payment" : 'from the reported wallet'} likely reached{' '}</>
                   : result.prorata?.status === 'unknown'
                     ? <>Funds moved from the reported wallet to{' '}</>
                     : <>Funds from the reported wallet reached{' '}</>}
@@ -75,6 +78,7 @@ export default function Present({ result, related = [], unit, onClose }) {
               {result.attribution_inferred ? `, a wallet this tool infers to be a ${result.exchange} deposit address, ` : `, a wallet ${result.exchange} publicly operates, `}
               {result.hop_count} hop{result.hop_count === 1 ? '' : 's'} {reverse ? 'upstream' : 'away'}
               {!reverse && result.prorata?.status === 'unknown' ? ' (amount not estimated).' : '.'}
+              {othersMoney && <span className="note"> This figure may include other people's money, not only the complainant's.</span>}
             </p>
             <div className="pr-cite">
               <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>

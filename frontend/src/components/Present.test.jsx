@@ -23,5 +23,22 @@ describe('Present mode, screen 1', () => {
   it('states a capped figure as the victim\'s, never the wallet\'s whole outflow', () => {
     const { container } = open({ prorata: { ...demo.result.prorata, estimated: 100, seed_cap: { amount: 100, basis: 'reported_amount', applied: true } } })
     expect(container.querySelector('.pr-lede')).toHaveTextContent('About 100 of 100 USDT the victim reported paying likely reached')
+    expect(container.querySelector('.pr-lede')).not.toHaveTextContent("other people's money")
+  })
+
+  // Audit r1-attribution-integrity-7: an address-only figure is everything the
+  // reported wallet sent along the route, not the complainant's loss.
+  it("says an address-only figure may include other people's money", () => {
+    const { container } = open({})
+    const lede = container.querySelector('.pr-lede')
+    expect(lede).toHaveTextContent('About 635 of 635 USDT from the reported wallet likely reached')
+    expect(lede).toHaveTextContent("may include other people's money, not only the complainant's")
+  })
+
+  it("words a payment trace's figure for the victim's payment, without that caveat", () => {
+    const { container } = open({ intake: { mode: 'payment', payments: [] } })
+    const lede = container.querySelector('.pr-lede')
+    expect(lede).toHaveTextContent("About 635 of 635 USDT sent on after the victim's payment likely reached")
+    expect(lede).not.toHaveTextContent("other people's money")
   })
 })
