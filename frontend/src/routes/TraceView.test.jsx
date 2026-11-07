@@ -280,3 +280,20 @@ describe('a case whose appendix lists only part of its transfers (r1-trace-engin
       .toBeInTheDocument()
   })
 })
+
+describe('reads cut short by a record limit or a request budget', () => {
+  it('groups the history-read-limit reasons and counts what the budget left unread', async () => {
+    await openDemo11({
+      truncated: true,
+      addresses_unexpanded_by_budget: 4,
+      truncation_reasons: [
+        'history read limit at 0x11111111...: the read stopped at its record limit, so older transfers were not read',
+        'history read limit at 0x22222222...: the read stopped at its record limit, so later transfers were not read',
+        'TronGrid request budget for this trace (400 requests) reached; 4 reached addresses were not expanded',
+      ],
+    })
+    expect(screen.getByText(/history not read in full at 2 addresses/)).toBeInTheDocument()
+    expect(screen.getByText(/TronGrid request budget for this trace/)).toBeInTheDocument()
+    expect(screen.getByText(/request budget ran out first/)).toBeInTheDocument()
+  })
+})

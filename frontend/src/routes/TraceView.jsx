@@ -24,7 +24,7 @@ const COMPONENT_NAME = {
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
 function groupReasons(reasons) {
-  const counts = { depth: 0, nodes: 0, fanout: 0, service: 0, fetch: 0, other: [] }
+  const counts = { depth: 0, nodes: 0, fanout: 0, service: 0, fetch: 0, history: 0, other: [] }
   ;(reasons ?? []).forEach((r) => {
     if (r.startsWith('time budget')) counts.other.push(r)
     else if (r.startsWith('depth limit')) counts.depth += 1
@@ -32,6 +32,7 @@ function groupReasons(reasons) {
     else if (r.startsWith('fan-out limit')) counts.fanout += 1
     else if (r.includes('pays out to many addresses')) counts.service += 1
     else if (r.includes('could not be fetched')) counts.fetch += 1
+    else if (r.startsWith('history read limit')) counts.history += 1
     else counts.other.push(r)
   })
   const out = []
@@ -40,6 +41,8 @@ function groupReasons(reasons) {
   if (counts.fanout) out.push(`only the 10 largest counterparties were followed at ${counts.fanout} address${counts.fanout === 1 ? '' : 'es'}`)
   if (counts.service) out.push(`${counts.service} service contract${counts.service === 1 ? '' : 's'} not expanded`)
   if (counts.fetch) out.push(`${counts.fetch} address${counts.fetch === 1 ? '' : 'es'} could not be fetched`)
+  // A read that stopped at its record limit: spam can fill one, so the case may miss transfers there.
+  if (counts.history) out.push(`history not read in full at ${counts.history} address${counts.history === 1 ? '' : 'es'} (each read stopped at its record limit)`)
   return out.concat(counts.other)
 }
 
@@ -925,6 +928,12 @@ export default function TraceView() {
                     <div className="exclusion">
                       <span className="n">{result.addresses_unexpanded_by_time}</span>
                       <span className="t">addresses reached but not expanded<small>The {mmss(result.time_budget_seconds)} time cap ran out first; the graph beyond them is missing.</small></span>
+                    </div>
+                  )}
+                  {result.addresses_unexpanded_by_budget > 0 && (
+                    <div className="exclusion">
+                      <span className="n">{result.addresses_unexpanded_by_budget}</span>
+                      <span className="t">addresses reached but not expanded<small>The case's provider request budget ran out first; the graph beyond them is missing.</small></span>
                     </div>
                   )}
                   <div className="exclusion">
