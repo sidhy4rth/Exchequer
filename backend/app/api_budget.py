@@ -36,8 +36,11 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import hashlib
+import hmac
 import json
 import logging
+import os
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -71,6 +74,19 @@ def fresh_reads():
         yield
     finally:
         _fresh.reset(token)
+
+
+def _row_key() -> bytes:
+    """The key the disk rows are checked with: derived from the report-signing
+    seed when it comes from the environment, so nothing on the disk beside the
+    cache holds it. Without one it is empty, and the check catches corruption
+    and careless edits only -- but then the signing key is itself a file on
+    that disk, and whoever can write the cache can read it."""
+    from .signing import _seed_bytes
+
+    seed = os.getenv("EXCHEQUER_SIGNING_KEY", "").strip()
+    raw = _seed_bytes(seed) if seed else None
+    return hmac.new(raw, b"exchequer provider-cache rows v1", hashlib.sha256).digest() if raw else b""
 
 
 class ResponseTooLarge(Exception):
@@ -165,6 +181,8 @@ class ResponseCache:
         self._hits = 0
         self._misses = 0
         self._disk_hits = 0
+        self._integrity_drops = 0
+        self._row_key = _row_key()
         self.path = Path(path) if path else None
         self._db: sqlite3.Connection | None = None
         self._puts = 0
@@ -192,6 +210,10 @@ class ResponseCache:
                 db.execute("ALTER TABLE responses ADD COLUMN expires_at REAL")
                 db.execute("DELETE FROM responses")
             db.execute("CREATE INDEX IF NOT EXISTS responses_stored_at ON responses(stored_at)")
+            if "value_sha256" not in {row[1] for row in db.execute("PRAGMA table_info(responses)")}:
+                # A file from before the check: its rows have no hash, so
+                # each reads as a miss and is fetched (and stored) afresh.
+                db.execute("ALTER TABLE responses ADD COLUMN value_sha256 TEXT")
             db.commit()
             self._prune_disk(db, at_open=True)
             self._db = db
@@ -246,26 +268,47 @@ class ResponseCache:
     def _disk_key(key: Hashable) -> str:
         return json.dumps(key, sort_keys=True, default=str)
 
+    def _row_sha256(self, value_text: str, meta_text: str | None) -> str:
+        """HMAC-SHA256 (keyed by _row_key) over the exact stored text: the value
+        the trace will use and the provider hash the evidence manifest will
+        report for it. A plain hash anyone could recompute after an edit."""
+        return hmac.new(self._row_key, f"{value_text}\n{meta_text or ''}".encode("utf-8"),
+                        hashlib.sha256).hexdigest()
+
     def _disk_get(self, key: Hashable) -> tuple[float, str, dict | None, float] | None:
-        """(age_seconds, JSON text, meta, ttl) for a live row, or None."""
+        """(age_seconds, JSON text, meta, ttl) for a live row, or None.
+
+        A row whose stored text no longer matches the hash written with it was
+        edited (or corrupted) on disk: it is deleted and treated as a miss, so
+        a trace never uses data its evidence manifest does not describe."""
+        disk_key = self._disk_key(key)
         with self._db_lock:
             if self._db is None:
                 return None
             try:
                 row = self._db.execute(
-                    "SELECT stored_at, value, meta, expires_at FROM responses WHERE key = ?",
-                    (self._disk_key(key),),
+                    "SELECT stored_at, value, meta, expires_at, value_sha256 FROM responses WHERE key = ?",
+                    (disk_key,),
                 ).fetchone()
             except sqlite3.Error as exc:
                 logger.warning("Response cache read failed: %s", exc)
                 return None
-        if row is None:
-            return None
-        stored_at, value_text, meta_text, expires_at = row
-        ttl = (expires_at - stored_at) if expires_at is not None else self.ttl_seconds
+            if row is None:
+                return None
+            stored_at, value_text, meta_text, expires_at, digest = row
+            ttl = (expires_at - stored_at) if expires_at is not None else self.ttl_seconds
+            if time.time() - stored_at > ttl:
+                return None
+            if not isinstance(digest, str) or not hmac.compare_digest(digest, self._row_sha256(value_text, meta_text)):
+                self._integrity_drops += 1
+                logger.warning("Response cache row for %s does not match its hash; dropped", disk_key[:120])
+                try:
+                    self._db.execute("DELETE FROM responses WHERE key = ?", (disk_key,))
+                    self._db.commit()
+                except sqlite3.Error as exc:
+                    logger.warning("Response cache delete failed: %s", exc)
+                return None
         age = time.time() - stored_at
-        if age > ttl:
-            return None
         try:
             return age, value_text, json.loads(meta_text) if meta_text else None, ttl
         except ValueError:
@@ -291,9 +334,10 @@ class ResponseCache:
             try:
                 now = time.time()
                 self._db.execute(
-                    "INSERT OR REPLACE INTO responses (key, stored_at, value, meta, expires_at) "
-                    "VALUES (?, ?, ?, ?, ?)",
-                    (self._disk_key(key), now, value_text, meta_text, now + ttl),
+                    "INSERT OR REPLACE INTO responses (key, stored_at, value, meta, expires_at, value_sha256) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (self._disk_key(key), now, value_text, meta_text, now + ttl,
+                     self._row_sha256(value_text, meta_text)),
                 )
                 self._db.commit()
             except sqlite3.Error as exc:
@@ -345,30 +389,38 @@ class ResponseCache:
         change what the next one reads. Inside `fresh_reads()` every lookup
         misses, so the provider is asked and the answer replaces what was
         cached."""
+        hit, value, _meta = self.get_with_meta(key)
+        return hit, value
+
+    def get_with_meta(self, key: Hashable) -> tuple[bool, Any, dict | None]:
+        """(hit, value, meta) in one look, so a hit is always recorded as
+        evidence with its own retrieval metadata: asking get() then meta()
+        could lose the entry in between, and the trace would then use data
+        its manifest does not list."""
         if _fresh.get():
-            return False, None
+            return False, None, None
         with self._lock:
             entry = self._entries.get(key)
             if entry is not None:
-                stored_at, held, _meta, _size, ttl = entry
+                stored_at, held, meta, _size, ttl = entry
                 if time.monotonic() - stored_at <= ttl:
                     self._entries.move_to_end(key)
                     self._hits += 1
-                    return True, self._decode(held)
+                    return True, self._decode(held), meta
                 self._forget(key)
         # Not in memory: the disk may have it from before a restart.
         found = self._disk_get(key)
         with self._lock:
             if found is None:
                 self._misses += 1
-                return False, None
+                return False, None, None
             age, text, meta, ttl = found
             # Promote to memory with its original age, so it expires on the
             # same schedule it would have had the process never restarted.
             self._remember(key, time.monotonic() - age, text, meta, len(text), ttl)
             self._hits += 1
             self._disk_hits += 1
-        return True, json.loads(text)
+        return True, json.loads(text), meta
 
     def meta(self, key: Hashable) -> dict | None:
         """The retrieval metadata stored with a live entry (hash, time, size),
@@ -441,6 +493,8 @@ class ResponseCache:
                 "persistent": self._db is not None,
                 "path": str(self.path) if self.path else None,
                 "hits_from_disk": self._disk_hits,
+                # Disk rows that no longer matched their hash, dropped and re-fetched.
+                "integrity_drops": self._integrity_drops,
             }
         out["entries_on_disk"] = self._disk_count()
         return out
