@@ -879,7 +879,17 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             f" since {datetime.fromtimestamp(searched_since, tz=timezone.utc):%d %b %Y}"
             if searched_since else ""
         )
-        if direction == OUTGOING and since:
+        if graph.nodes[seed].get("history_capped"):
+            # The read stopped at its record limit (spam can fill it), so
+            # "sent nothing" or "received nothing" is not a claim it can make.
+            verb = "sent" if direction == OUTGOING else "received"
+            message = (
+                f"The newest records read for this address held no {asset_symbol} it {verb} with value, "
+                f"and the rest of its history was not read (the read stopped at its record limit), so "
+                f"Exchequer cannot say it {verb} nothing. It may have moved the money in older records, "
+                "or as a different asset" + alternatives
+            )
+        elif direction == OUTGOING and since:
             message = (
                 f"No {asset_symbol} with value was sent by this address in the history "
                 f"searched ({chain.name}{since}). "

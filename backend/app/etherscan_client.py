@@ -494,6 +494,9 @@ class EtherscanClient:
         # The page holds both directions, so the count of transfers an address
         # *sent* says nothing about whether older history went unread.
         self._newest_page: dict[str, tuple[bool, int | None]] = {}
+        # address -> whether its latest read (newest page or forward read)
+        # filled its page, so records past it went unread (history_capped).
+        self._last_full: dict[str, bool] = {}
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -732,6 +735,7 @@ class EtherscanClient:
             self._newest_page[normalize_address(address)] = (
                 len(result) >= offset, min((t for t in stamps if t > 0), default=None),
             )
+        self._last_full[normalize_address(address)] = len(result) >= offset
 
         txs = [tx for tx in (parse(raw) for raw in result) if tx is not None]
 
@@ -754,6 +758,13 @@ class EtherscanClient:
             txs.sort(key=lambda t: t.timestamp, reverse=(sort == "desc"))
 
         return txs
+
+    def history_capped(self, address: str) -> bool | None:
+        """Whether the latest read of `address` (its newest page, or a read
+        forward from a block) came back full, so records past it went unread:
+        zero-value or dust spam fills a page as well as real transfers do.
+        None if it has not been read."""
+        return self._last_full.get(normalize_address(address))
 
     def newest_page_info(self, address: str) -> tuple[bool, int | None] | None:
         """Whether the last newest-first read of `address` filled its page, and
@@ -951,10 +962,14 @@ class EtherscanClient:
             ]
 
         self.confirmed_head()  # before the rows, so no kept row is newer than its head
-        signed = sent(self._request(params))
+        raws = self._request(params)
+        self._last_full[target] = isinstance(raws, list) and len(raws) >= offset
+        signed = sent(raws)
         if signed or self.contract_address or not self.include_internal:
             return signed
-        return sent(self._request({**params, "action": "txlistinternal"}), internal=True)
+        internal = self._request({**params, "action": "txlistinternal"})
+        self._last_full[target] = self._last_full[target] or (isinstance(internal, list) and len(internal) >= offset)
+        return sent(internal, internal=True)
 
     def read_outgoing_since(self, address: str, after: int, limit: int) -> SinceRead:
         """What `address` sent after block `after`, oldest first, for a watch.

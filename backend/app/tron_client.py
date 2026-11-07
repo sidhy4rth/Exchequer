@@ -211,6 +211,8 @@ class TronClient:
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout, headers=headers)
         self.evidence = EvidenceLog()
+        # address -> whether its latest read stopped at a limit (history_capped).
+        self._capped: dict[str, bool] = {}
         # TronGrid limits requests per key (or per IP without one) across every
         # trace, so the pacer is shared by credential and widens on refusal; a
         # pacer per instance let four keyless traces send four times the rate.
@@ -549,8 +551,10 @@ class TronClient:
         if self.contract_address:
             params["contract_address"] = self.contract_address
 
+        capped = False
+
         def take(records: list[Any], more: bool) -> bool:
-            nonlocal scanned
+            nonlocal scanned, capped
             scanned += len(records)
             for raw in records:
                 tx = parse(raw)
@@ -558,12 +562,21 @@ class TronClient:
                 # moving; the rest is noise the trace must not follow.
                 if tx and tx.to_address and not tx.is_error and tx.value_wei > 0:
                     collected.append(tx)
-            return more and len(collected) < cap and scanned < MAX_SCAN
+            go_on = len(collected) < cap and scanned < MAX_SCAN
+            capped = more and not go_on  # stopped at a limit with pages left unread
+            return more and go_on
 
         # Both read up to the newest records, which keep coming: minutes only.
         self._read_pages(path, params, ["directional", cap, self.token_decimals],
                          config.API_CACHE_OPEN_TTL_SECONDS, take)
+        self._capped[address] = capped
         return collected[:cap]
+
+    def history_capped(self, address: str) -> bool | None:
+        """Whether the latest read of `address` stopped at its record or scan
+        limit (zero-value spam counts toward the scan) with pages unread;
+        None if it has not been read."""
+        return self._capped.get(address)
 
     def is_contract(self, address: str) -> bool | None:
         """Whether `address` holds contract bytecode: True, False, or None when

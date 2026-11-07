@@ -461,6 +461,8 @@ def score_case(
     transaction list); the limitations paragraph is worded to match.
     """
     findings = findings or []
+    # A read stopped at its record limit somewhere: "read in full" would be untrue.
+    capped = any(data.get("history_capped") for _, data in graph.nodes(data=True))
 
     if primary_match is None:
         return ConfidenceScore(
@@ -480,7 +482,7 @@ def score_case(
                 "the substantive result of a reverse trace."
             ),
             caveats=_caveats(findings, truncated, matched=False, asset=native_symbol,
-                             internal_transfers_read=internal_transfers_read),
+                             internal_transfers_read=internal_transfers_read, history_capped=capped),
         )
 
     status = (prorata or {}).get("status")
@@ -531,7 +533,8 @@ def score_case(
         components=components,
         summary=summary,
         caveats=material_caveat + _caveats(findings, truncated, matched=True, asset=native_symbol,
-                                           internal_transfers_read=internal_transfers_read)
+                                           internal_transfers_read=internal_transfers_read,
+                                           history_capped=capped)
         + _prorata_caveats(prorata, native_symbol),
     )
 
@@ -587,7 +590,7 @@ def _prorata_caveats(prorata: dict[str, Any] | None, native_symbol: str) -> list
 
 def _caveats(
     findings: list[PatternFinding], truncated: bool, matched: bool, asset: str = "ETH",
-    internal_transfers_read: bool = False,
+    internal_transfers_read: bool = False, history_capped: bool = False,
 ) -> list[str]:
     """Limitations a reader must know before acting on the score.
 
@@ -627,7 +630,10 @@ def _caveats(
             "across a bridge to another chain is not covered. Value moved by a "
             "contract call was read for addresses that signed no outgoing "
             "transfer of their own (contracts) and for every address on a "
-            "reverse trace; a wallet's own signed transfers were read in full."
+            "reverse trace; "
+            + ("a wallet's own signed transfers were read up to each read's record limit, "
+               "which some reads reached (see the truncation notes)."
+               if history_capped else "a wallet's own signed transfers were read in full.")
         )
     else:
         caveats.append(

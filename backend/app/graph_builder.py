@@ -441,6 +441,10 @@ def build_trace_graph(
     since_time = (getattr(client, "get_outgoing_transactions_since_time", None)
                   if direction == OUTGOING else None)
     page_info = getattr(client, "newest_page_info", None)
+    # Whether a client's latest read of an address stopped at a record or scan
+    # limit. Zero-value or dust spam fills those limits as well as real
+    # transfers do, and is filtered out only after it has been counted.
+    read_capped = getattr(client, "history_capped", None)
     newest_page = fetch
 
     def page_reach(address: str, transfers: list[Transaction], limit: int | None) -> tuple[bool, int | None]:
@@ -454,16 +458,31 @@ def build_trace_graph(
         info = page_info(address) if page_info is not None else None
         if info is not None:
             return info
-        full = limit is not None and len(transfers) >= limit
+        capped = read_capped(address) if read_capped is not None else None
+        full = capped if capped is not None else (limit is not None and len(transfers) >= limit)
         return full, min((tx.timestamp for tx in transfers), default=None)
+
+    def later_capped(address: str, later: list[Transaction], limit: int) -> bool:
+        capped = read_capped(address) if read_capped is not None else None
+        return capped if capped is not None else len(later) >= limit
 
     def fetch(address: str, limit: int | None = None) -> list[Transaction]:  # noqa: F811
         transfers = newest_page(address, limit=limit)
         start_block, arrived = window_block.get(address), window.get(address)
-        if arrived is None or limit is None:
+        if limit is None:
             return transfers
         full, oldest = page_reach(address, transfers, limit)
-        if not full or (oldest is not None and oldest <= arrived):
+        if arrived is None:
+            # Read newest first and never from an arrival (the reported address
+            # of an address-only trace): a full read left its older history unread.
+            if full:
+                capped_at[address] = "older"
+            return transfers
+        if not full:
+            return transfers
+        if oldest is not None and oldest <= arrived:
+            if direction == INCOMING:
+                capped_at[address] = "older"  # money it received before then still goes back further
             return transfers
         if since is not None and start_block is not None:
             def read_later() -> list[Transaction]:
@@ -477,12 +496,18 @@ def build_trace_graph(
             not_read_back[address] = oldest
             return transfers
         later = read_later()
+        if later_capped(address, later, limit):
+            # The read from the arrival came back full too: what it sent between
+            # that page's end and the newest page was not read.
+            capped_at[address] = "later"
         known = {(tx.hash, tx.to_address, tx.value_wei) for tx in transfers}
         added = [tx for tx in later if (tx.hash, tx.to_address, tx.value_wei) not in known]
         read_from_arrival.add(address)
         return transfers + added
 
     read_from_arrival: set[str] = set()
+    # Addresses whose read stopped at its record limit: which side went unread.
+    capped_at: dict[str, str] = {}
     # Windowed addresses whose page stopped short of the arrival and could not
     # be read forward: address -> time of the oldest record read.
     not_read_back: dict[str, int | None] = {}
@@ -607,6 +632,13 @@ def build_trace_graph(
 
             graph.nodes[address]["expanded"] = True
             result.addresses_expanded += 1
+            if address in capped_at:
+                # Stated, never silent: spam can push the real cash-out past the limit.
+                graph.nodes[address]["history_capped"] = True
+                result.note_truncation(
+                    f"history read limit at {address[:10]}...: the read stopped at its record limit, "
+                    f"so {capped_at[address]} transfers were not read"
+                )
             result.depth_reached = max(result.depth_reached, depth)
 
             # What this address does with money in general, from its complete
@@ -790,6 +822,8 @@ def build_trace_graph(
 
     # Sorted: fetch runs in worker threads, and the reasons must come out in a fixed order.
     for address in sorted(not_read_back):
+        if address in graph:
+            graph.nodes[address]["history_capped"] = True
         oldest = not_read_back[address]
         upto = (datetime.fromtimestamp(oldest, tz=timezone.utc).strftime("%d %b %Y %H:%M UTC")
                 if oldest else "the oldest one read")
@@ -870,6 +904,8 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "window_start": data.get("window_start"),
             "window_end": data.get("window_end"),
             "excluded_by_time": data.get("excluded_by_time", 0),
+            # A read of this address stopped at its record limit (truncation_reasons says which side).
+            "history_capped": data.get("history_capped", False),
             # Transfers the address made to itself: never an edge or a branch.
             "self_transfer_count": data.get("self_transfer_count", 0),
             "self_transfer_value_native": data.get("self_transfer_value_native", 0.0),

@@ -191,6 +191,8 @@ class NoderealClient:
         self._deep_allowed: set[str] = set()
         # address -> earliest block this client has seen it receive in.
         self._arrived: dict[str, int] = {}
+        # address -> whether its latest read stopped at a record or scan limit (history_capped).
+        self._capped: dict[str, bool] = {}
         # One trace's fetch threads share this client: its per-trace state
         # (arrivals, searches, the head) is read and written under this lock.
         self._state_lock = threading.Lock()
@@ -478,10 +480,10 @@ class NoderealClient:
             # wallet that moved them on costs these windows only; the recent
             # search is skipped, since newer sends are not the traced money.
             top = min(floor - 1, arrived + ARRIVAL_WINDOWS * MAX_BLOCK_WINDOW)
-            collected, _ = self._scan(address, direction_param, cap, top, arrived)
+            collected, capped = self._scan(address, direction_param, cap, top, arrived)
             lowest = arrived
         if not collected:
-            collected, _ = self._scan(address, direction_param, cap, head, floor)
+            collected, capped = self._scan(address, direction_param, cap, head, floor)
             lowest = min(lowest, floor)
         # Only a named address goes deep; and not one whose funds arrived inside
         # the recent window -- sends from before they arrived are not the
@@ -496,13 +498,21 @@ class NoderealClient:
                 # wallet received starts a little before its first send.
                 start = first if direction_param == "fromAddress" else first - 2 * MAX_BLOCK_WINDOW
                 lowest = max(0, start, last - DEEP_WINDOWS * MAX_BLOCK_WINDOW)
-                collected, _ = self._scan(address, direction_param, cap, last, lowest)
+                collected, capped = self._scan(address, direction_param, cap, last, lowest)
                 with self._state_lock:
                     self.deep_searched[key] = (lowest, last)
-        if not collected:
-            with self._state_lock:
+        with self._state_lock:
+            self._capped[key] = capped
+            if not collected:
                 self.searched_from[key] = lowest
         return collected
+
+    def history_capped(self, address: str) -> bool | None:
+        """Whether the latest read of `address` stopped at its record or scan
+        limit (zero-value spam counts toward the scan) with records unread;
+        None if it has not been read."""
+        with self._state_lock:
+            return self._capped.get(normalize_address(address))
 
     def allow_deep_search(self, address: str) -> None:
         """Let a nonce-located deep search run for `address` if its recent

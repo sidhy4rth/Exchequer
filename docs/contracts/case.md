@@ -83,6 +83,12 @@ so at most one batch is read past it.
 the trace short, and `addresses_unexpanded_by_budget` counts the addresses a
 budget left unread; `truncation_reasons` names the budget either way.
 
+A read that stopped at its record limit (Etherscan's page, the 1,000-record
+scan on Tron and NodeReal; zero-value spam counts toward both) sets
+`history_capped: true` on that `graph.nodes[]` entry and adds a "history read
+limit at …" reason to `truncation_reasons`, so a trace that read nothing it
+could follow never says the address sent nothing.
+
 A transfer from an address to itself moves nothing, so it is never an edge or
 a branch: each `graph.nodes[]` entry carries `self_transfer_count` and
 `self_transfer_value_native` (0 when none, absent in older cases) instead,
