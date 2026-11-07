@@ -334,7 +334,9 @@ def _amount_correlation(
 
 
 # What a pro-rata cap (prorata.estimate's seed_cap) is, in words.
-CAP_WORDING = {"reported_amount": "the victim reported paying", "swap_output": "the swap returned"}
+CAP_WORDING = {"reported_amount": "the victim reported paying", "swap_output": "the swap returned",
+               # A follow-on whose swapping wallet added money of its own.
+               "swap_share": "the swap returned for the traced funds (their share of its input, at most)"}
 
 
 def _prorata_component(prorata: dict[str, Any], native_symbol: str) -> ScoreComponent:

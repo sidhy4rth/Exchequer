@@ -254,7 +254,10 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
                 "asset": f.get("asset"),
                 "address": f.get("address"),
                 "swap_tx": (f.get("swap") or {}).get("tx"),
-                "amount_out": (f.get("swap") or {}).get("amount_out"),
+                # Every swap the follow-on covers; an older case kept one.
+                "amount_out": (f.get("cap") or {}).get("swap_output", (f.get("swap") or {}).get("amount_out")),
+                "asset_in": (f.get("swap") or {}).get("asset_in"),
+                "cap": f.get("cap"),
                 "max_depth": f.get("max_depth"),
                 "error": f.get("error"),
                 "exchange": (f.get("result") or {}).get("exchange"),
@@ -945,8 +948,16 @@ def render_text_report(report: dict[str, Any]) -> str:
         for f in report["follow_ons"]:
             add(f"* {f['asset']} from {f['address']} (swap tx {f.get('swap_tx')}, "
                 f"up to {f.get('max_depth')} hops)")
+            cap = f.get("cap") or {}
             if f.get("amount_out") is not None:
-                add(f"    swap returned       : {f['amount_out']:,.4f} {f['asset']}")
+                count = cap.get("swaps") or 1
+                add(f"    swap returned       : {f['amount_out']:,.4f} {f['asset']}"
+                    + (f" ({count} swaps)" if count > 1 else ""))
+            if cap.get("basis") == "swap_share":
+                # The swapping wallet added its own money: the follow-on
+                # states at most the traced funds' share of the output.
+                add(f"    traced share        : at most {cap['amount']:,.4f} {f['asset']} (at most "
+                    f"{cap['traced_in']:,.4f} of the {cap['swap_input']:,.4f} {f.get('asset_in')} swapped)")
             if f.get("error"):
                 add(f"    not traced          : {f['error']}")
             elif f.get("exchange"):

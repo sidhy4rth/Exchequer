@@ -275,3 +275,152 @@ def test_a_payment_trace_still_follows_the_swap(paid):
 def test_a_follow_on_never_follows_again(faked):
     result = run_trace(request(), seed_window=SWAP_AT - 1, is_follow_on=True)
     assert result["follow_ons"] == [] and result["statement"] is None
+
+
+# ---------------------------------------------------------------------------
+# What a follow-on may state, and which swaps are followed (an adversarial
+# check of the r1-evidence-crypto-5 fix)
+# ---------------------------------------------------------------------------
+
+USDT_ETH = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+USDC_ETH = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+
+
+def output(asset, amount):
+    return {"contract": USDT_ETH if asset == "USDT" else USDC_ETH, "asset": asset,
+            "units": str(int(amount * 1e6)), "amount": amount}
+
+
+def swaps_are(monkeypatch, found, asset="ETH"):
+    monkeypatch.setattr(main, "detect_swaps",
+                        lambda graph, *a, **k: list(found) if k.get("asset_symbol") == asset else [])
+
+
+def test_a_dust_swap_before_the_real_one_does_not_cap_the_follow_on(faked, monkeypatch):
+    """A 0.25 USDT swap, then the real 2,400 one, then 2,400.25 USDT to
+    Binance. The first swap's output capped the whole follow-on at 0.25; the
+    cap is every swap by that wallet into USDT."""
+    dust = {**SWAP, "tx": "0xd057", "timestamp": SWAP_AT - 30, "amount_in": 0.0001, "amount_out": 0.25}
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, ROUTER, 0.0001, SWAP_AT - 30, "ETH"),
+                                         tx(SEED, ROUTER, 1.0, SWAP_AT, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, BINANCE_14, 2400.25, SWAP_AT + 60, "USDT")])
+    swaps_are(monkeypatch, [dust, SWAP])
+
+    (follow,) = run_trace(request())["follow_ons"]
+    found = follow["result"]
+    assert found["prorata"]["estimated"] == 2400.25
+    assert found["prorata"]["seed_cap"] == {"amount": 2400.25, "basis": "swap_output", "applied": False}
+    assert found["materiality"]["denominator"] == 2400.25
+    assert follow["cap"]["swap_output"] == 2400.25 and follow["cap"]["swaps"] == 2
+    assert follow["swap"]["tx"] == SWAP["tx"]  # the swap named is the largest
+    assert [s["tx"] for s in follow["swaps"]] == ["0xd057", SWAP["tx"]]
+
+
+def test_a_decoy_output_cannot_take_the_slot_of_the_real_swap(faked, monkeypatch):
+    """The reported wallet's tiny swap also pays it 1 USDC. Its two outputs
+    took both follow-on slots, so the real swap one wallet on was never
+    followed. Follow-ons are chosen by how much traced money went into them."""
+    tiny = {**SWAP, "tx": "0x7171", "timestamp": SWAP_AT - 30, "amount_in": 0.0001, "asset_out": "USDC",
+            "amount_out": 1.0, "outputs": [output("USDC", 1.0), output("USDT", 0.25)], "other_outputs": 1}
+    real = {**SWAP, "sender": MID, "tx": "0x4ea1"}
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, ROUTER, 0.0001, SWAP_AT - 30, "ETH"),
+                                         tx(SEED, MID, 1.0, SWAP_AT - 60, "ETH"),
+                                         tx(MID, ROUTER, 1.0, SWAP_AT, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(MID, BINANCE_14, 2400.0, SWAP_AT + 60, "USDT")])
+    monkeypatch.setitem(HISTORY, "USDC", [])
+    swaps_are(monkeypatch, [tiny, real])
+
+    result = run_trace(request())
+    assert len(result["follow_ons"]) == main.MAX_FOLLOW_ONS
+    first = result["follow_ons"][0]
+    assert (first["address"], first["asset"]) == (MID, "USDT")
+    assert first["result"]["exchange"] == "Binance"
+    assert result["followed_attribution"]["exchange"] == "Binance"
+
+
+def test_the_follow_on_is_capped_at_the_traced_share_of_the_swap(faked, monkeypatch):
+    """0.04 ETH of the traced money reached a wallet that added its own ETH
+    and swapped 10 ETH for 25,000 USDT. At most 0.4% of what the swap
+    returned can be the traced money: 100 USDT, not 25,000."""
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, MID, 0.04, SWAP_AT - 60, "ETH"),
+                                         tx(MID, ROUTER, 10.0, SWAP_AT, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(MID, BINANCE_14, 25000.0, SWAP_AT + 60, "USDT")])
+    swaps_are(monkeypatch, [{**SWAP, "sender": MID, "amount_in": 10.0, "amount_out": 25000.0}])
+
+    (follow,) = run_trace(request())["follow_ons"]
+    found = follow["result"]
+    assert follow["cap"] == {"amount": 100.0, "basis": "swap_share", "swap_output": 25000.0, "swap_input": 10.0,
+                             "traced_in": 0.04, "share": 0.004, "swaps": 1}
+    assert found["prorata"]["estimated"] == 100.0
+    assert found["prorata"]["seed_cap"] == {"amount": 100.0, "basis": "swap_share", "applied": True}
+    # Which exchange got the money is still read against the whole output.
+    assert found["materiality"]["denominator"] == 25000.0
+    assert found["materiality"]["primary_share"] == 1.0
+    assert found["exchange"] == "Binance"
+
+
+def test_the_reported_wallets_own_swap_is_not_scaled_in_an_address_only_trace(faked):
+    """Everything the reported wallet sent is the starting figure of an
+    address-only trace, so its own swap is taken whole (the letter says the
+    figure can include other people's money)."""
+    (follow,) = run_trace(request())["follow_ons"]
+    assert follow["cap"]["basis"] == "swap_output" and follow["cap"]["share"] is None
+    assert follow["cap"]["amount"] == 2400.0
+
+
+USDT_PAID = tx(addr("71c"), SEED, 1000.0, SWAP_AT - 60, "USDT")
+
+
+class UsdtPaidClient(FakeClient):
+    """The reported wallet, entered by the victim's 1,000 USDT payment."""
+
+    def get_incoming_transactions(self, address, limit=None):
+        return [USDT_PAID] if address == SEED and self.history is HISTORY["USDT"] else []
+
+
+def test_an_intake_follow_on_keeps_the_victims_share(faked, monkeypatch):
+    """The victim reported paying 1,000 USDT; the wallet swapped 50,000 USDT
+    for 50,000 USDC and sent it to Binance. The follow-on carried no
+    payments, so the cap was the whole 50,000. The victim's money can be at
+    most 1,000 of the 50,000 that went into the swap."""
+    from app import config
+
+    @contextmanager
+    def open_source(chain, asset):
+        yield UsdtPaidClient(HISTORY[asset])
+
+    monkeypatch.setattr(main, "open_source", open_source)
+    monkeypatch.setattr(config, "TX_INTAKE", True)
+    monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, ROUTER, 50000.0, SWAP_AT, "USDT")])
+    monkeypatch.setitem(HISTORY, "USDC", [tx(SEED, BINANCE_14, 50000.0, SWAP_AT + 60, "USDC")])
+    swaps_are(monkeypatch, [{**SWAP, "asset_in": "USDT", "amount_in": 50000.0, "asset_out": "USDC",
+                             "amount_out": 50000.0}], asset="USDT")
+
+    result = run_trace(TraceRequest(address=SEED, chain="ethereum", asset="USDT", max_depth=3,
+                                    payments=[{"tx_hash": USDT_PAID.hash}]))
+    assert result["reported_amount"] == 1000.0
+    (follow,) = result["follow_ons"]
+    assert follow["cap"]["basis"] == "swap_share" and follow["cap"]["amount"] == 1000.0
+    assert follow["cap"]["traced_in"] == 1000.0 and follow["cap"]["share"] == 0.02
+    assert follow["result"]["prorata"]["estimated"] == 1000.0
+
+
+def test_the_report_states_what_the_follow_on_may_claim(faked, monkeypatch):
+    import json
+
+    from app.models import Case
+    from app.report import build_report, render_text_report
+
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, MID, 0.04, SWAP_AT - 60, "ETH"),
+                                         tx(MID, ROUTER, 5.0, SWAP_AT, "ETH"),
+                                         tx(MID, ROUTER, 5.0, SWAP_AT + 10, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(MID, BINANCE_14, 25000.0, SWAP_AT + 60, "USDT")])
+    swaps_are(monkeypatch, [{**SWAP, "sender": MID, "amount_in": 5.0, "amount_out": 12500.0},
+                            {**SWAP, "sender": MID, "tx": "0xdef", "timestamp": SWAP_AT + 10, "amount_in": 5.0,
+                             "amount_out": 12500.0}])
+    result = run_trace(request())
+    case = Case(id="c1", address=SEED, created_at="2026-09-24T00:00:00+00:00",
+                result_json=json.dumps(result, default=str))
+    text = " ".join(render_text_report(build_report(case)).split())
+    assert "swap returned : 25,000.0000 USDT (2 swaps)" in text
+    assert "traced share : at most 100.0000 USDT (at most 0.0400 of the 10.0000 ETH swapped)" in text
