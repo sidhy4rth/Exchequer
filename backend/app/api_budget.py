@@ -365,7 +365,9 @@ class ResponseCache:
                 # A row checked under the older scheme (value and meta only) lands
                 # here too, once: it is dropped and fetched afresh like any other.
                 self._integrity_drops += 1
-                logger.warning("Response cache row for %s does not match its hash; dropped", disk_key[:120])
+                # Named by a short hash: the log needs something to match rows by, not the request.
+                logger.warning("Response cache row %s does not match its hash; dropped",
+                               hashlib.sha256(disk_key.encode()).hexdigest()[:12])
                 try:
                     self._db.execute("DELETE FROM responses WHERE key = ?", (disk_key,))
                     self._db.commit()

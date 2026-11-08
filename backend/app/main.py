@@ -290,13 +290,17 @@ def spa(full_path: str, request: Request):
     then failed as "backend unreachable" instead of as a 404.
     """
     index = FRONTEND_DIR / "index.html"
-    # A real file (favicon, manifest) is served as itself.
+    # A real file (favicon, manifest) is served as itself -- only from inside the
+    # built frontend: the resolved path is checked before the filesystem is asked
+    # anything about it.
+    root = FRONTEND_DIR.resolve()
     try:
-        candidate = (FRONTEND_DIR / full_path).resolve()
-        is_file = bool(full_path) and candidate.is_file()
+        candidate = (root / full_path).resolve()
+        inside = bool(full_path) and candidate.is_relative_to(root) and candidate != root
+        is_file = inside and candidate.is_file()
     except (OSError, ValueError):  # a NUL byte, a segment too long for the filesystem
         is_file = False
-    if is_file and FRONTEND_DIR.resolve() in candidate.parents:
+    if is_file:
         return FileResponse(candidate)
     if not index.is_file() or not _is_page_load(request):
         return JSONResponse({"detail": "Not Found"}, status_code=404)

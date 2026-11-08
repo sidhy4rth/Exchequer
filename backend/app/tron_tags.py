@@ -65,7 +65,9 @@ NOT_AN_EXCHANGE = re.compile(
 # "-Hot 12", " Hot Wallet 3", ": Cold", " Exchange Reserves", " 2". Anything
 # else ("(Fake)", ":Lookalike", "-Pool") is not recognised, never guessed at.
 QUALIFIERS = re.compile(
-    r"^(?:[\s\-:_().#]|\d+|hot|cold|wallets?|exchange|deposits?|reserves?|old|new|main)*$",
+    # \d, not \d+: a + inside the * backtracked exponentially on a long run of
+    # digits followed by anything else (CodeQL py/redos); it matches the same strings.
+    r"^(?:[\s\-:_().#]|\d|hot|cold|wallets?|exchange|deposits?|reserves?|old|new|main)*$",
     re.IGNORECASE,
 )
 
