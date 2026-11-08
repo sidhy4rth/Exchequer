@@ -155,3 +155,17 @@ def test_no_tracked_file_is_a_database_a_key_or_oversized():
         problems += [f"{path.relative_to(ROOT)}: looks like a key ({p.pattern[:30]!r})"
                      for p in KEY_PATTERNS if p.search(body)]
     assert not problems, problems
+
+
+# -- agent files in the archived films (r1-secrets-history-3) -----------------------------
+def test_archived_film_agent_files_run_only_the_pinned_cli():
+    """Coding agents load CLAUDE.md/AGENTS.md on their own; the generated ones told
+    them to run unpinned npx, install skills and upgrade to @latest."""
+    files = sorted((ROOT / "docs" / "launch-video").glob("*/composition/*.md"))
+    assert files
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        assert "skills update" not in text and "hyperframes@latest" not in text, path
+        for line in text.splitlines():
+            if "npx " in line and "hyperframes" in line:
+                assert "hyperframes@0.8.50" in line, (path, line)
