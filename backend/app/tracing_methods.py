@@ -40,6 +40,14 @@ funds. Transfers in the same block (or the same second, on Tron) have no
 order in the providers' lists. They are taken incoming first, so money can
 arrive and leave in one block.
 
+Coins a wallet paid out and got back are still the coins it paid out: a
+transfer in carries back the victim's part of what the wallet had paid, either
+from the same wallet (W -> X -> W) or through others the trace followed
+(W -> X -> Y -> W). The second needs a route from X to Y in the traced graph,
+inside the window and not through W, and nets no more than could flow along
+it (Loops). Money from a wallet the trace never linked to W's payees is
+someone else's and is never netted.
+
 A wallet whose window could not be read in full gives "unknown" for both
 methods, never a number from part of the picture. Nothing here raises: an
 estimate is never worth a failed trace.
@@ -147,7 +155,8 @@ def _trace(graph: nx.DiGraph, path: list[str], flows_between: FlowsBetween | Non
 
         events = _events(incoming, outgoing, arriving, leaving, window, victim, path[i - 1], path[i + 1])
         apply = _fifo if method == FIFO else _libr
-        victim_out, unseen = apply(events, {transfer_key(t) for t in leaving})
+        loops = Loops(graph, wallet, window, by_block=end_block > 0)
+        victim_out, unseen = apply(events, {transfer_key(t) for t in leaving}, loops)
         victim_in = sum(victim.get(transfer_key(t), 0.0) for t in arriving)
         victim = victim_out
         hops.append({
@@ -173,17 +182,120 @@ def _trace(graph: nx.DiGraph, path: list[str], flows_between: FlowsBetween | Non
     }
 
 
-def _returned(e: dict[str, Any], owed: dict[str, float]) -> float:
-    """The victim's part of a transfer in: its own, plus what the wallet had
-    paid of the victim's to this same counterparty earlier in the window and
-    is now getting back (W -> X -> W carries the coins' history with it)."""
-    back = min(e["value"] - e["victim"], owed.get(e["party"], 0.0)) if e["party"] else 0.0
-    if back > 0:
-        owed[e["party"]] -= back
-    return e["victim"] + max(0.0, back)
+class Loops:
+    """Which wallets can hand a wallet's own coins back to it through others.
+
+    A payee X of the wallet W can return W's coins by way of a sender Y when
+    the traced graph has a route from X to Y made of transfers inside W's
+    window that does not pass through W (W -> X -> ... -> Y -> W). How much
+    can come back that way is at most what could flow along those transfers
+    from X to Y (a maximum flow over their values), and each unit of it is
+    used once. So a thin link nets little, a link before the window nets
+    nothing, and a sender the trace never linked to W's payees is new money.
+
+    The graph holds what the trace followed: a loop through a wallet it did
+    not reach (past its depth, say) is not seen, and that money counts as
+    someone else's -- the estimate stays on the low side, never the high.
+    """
+
+    # Maximum flows worked out per wallet; past this, no more loops are netted.
+    MAX_FLOWS = 200
+
+    def __init__(self, graph: nx.DiGraph | None, wallet: str, window: tuple[int, int, int, int],
+                 by_block: bool) -> None:
+        self._graph, self._wallet, self._window, self._by_block = graph, wallet, window, by_block
+        self._net: nx.DiGraph | None = None
+        self._names: dict[str, str] = {}
+        self._reach: dict[str, set[str]] = {}
+        self._left: dict[tuple[str, str], float] = {}
+        self._flows = 0
+
+    def _build(self) -> nx.DiGraph:
+        start_block, end_block, start_ts, end_ts = self._window
+        net = nx.DiGraph()
+        for a, b, data in (self._graph.edges(data=True) if self._graph is not None else []):
+            if self._wallet in (a, b) or a == b:
+                continue
+            value = 0.0
+            for t in data.get("transactions") or []:
+                pos = _position(t, self._by_block)
+                inside = (start_block <= pos <= end_block) if self._by_block else (start_ts <= pos <= end_ts)
+                if inside:
+                    value += float(t.get("value_native") or 0)
+            if value > EPSILON:
+                net.add_edge(a, b, capacity=value)
+        self._names = {str(n).lower(): n for n in net}
+        return net
+
+    def _node(self, address: str | None) -> str | None:
+        if self._net is None:
+            self._net = self._build()
+        if not address:
+            return None
+        return address if address in self._net else self._names.get(str(address).lower())
+
+    def room(self, paid: str, sender: str) -> float:
+        """How much more of what the wallet paid `paid` can come back from `sender`."""
+        a, b = self._node(paid), self._node(sender)
+        if a is None or b is None or a == b:
+            return 0.0
+        if (a, b) not in self._left:
+            if a not in self._reach:
+                self._reach[a] = nx.descendants(self._net, a)
+            if b not in self._reach[a] or self._flows >= self.MAX_FLOWS:
+                self._left[(a, b)] = 0.0
+            else:
+                self._flows += 1
+                self._left[(a, b)] = float(nx.maximum_flow_value(self._net, a, b))
+        return self._left[(a, b)]
+
+    def use(self, paid: str, sender: str, value: float) -> None:
+        a, b = self._node(paid), self._node(sender)
+        if (a, b) in self._left:
+            self._left[(a, b)] = max(0.0, self._left[(a, b)] - value)
 
 
-def _fifo(events: list[dict[str, Any]], path_out: set[tuple]) -> tuple[dict[tuple, float], float]:
+def take_back(owed: dict[str, float], sender: str | None, value: float,
+              loops: Loops | None = None) -> tuple[float, dict[str, float]]:
+    """How much of `value`, arriving from `sender`, is the wallet's own coins
+    coming back: first what it had paid `sender` itself, then what it had
+    paid other wallets that reach `sender` (Loops), oldest payee first.
+    `owed` (what the wallet has paid each counterparty and not yet had back)
+    is reduced by what is taken. Returns (taken, taken per payee)."""
+    if not sender or value <= EPSILON:
+        return 0.0, {}
+    taken: dict[str, float] = {}
+    back = min(value, owed.get(sender, 0.0))
+    if back > EPSILON:
+        owed[sender] -= back
+        taken[sender] = back
+    left = value - max(0.0, back)
+    if loops is not None:
+        for paid in list(owed):
+            if left <= EPSILON:
+                break
+            if paid == sender or owed[paid] <= EPSILON:
+                continue
+            amount = min(left, owed[paid], loops.room(paid, sender))
+            if amount > EPSILON:
+                owed[paid] -= amount
+                loops.use(paid, sender, amount)
+                taken[paid] = taken.get(paid, 0.0) + amount
+                left -= amount
+    return value - left, taken
+
+
+def _returned(e: dict[str, Any], owed: dict[str, float], loops: Loops | None = None) -> float:
+    """The victim's part of a transfer in: its own, plus the victim's coins
+    the wallet had paid out earlier in the window and is now getting back,
+    from the same counterparty or through others (take_back). Coins carry
+    their history with them."""
+    back, _ = take_back(owed, e["party"], e["value"] - e["victim"], loops)
+    return e["victim"] + back
+
+
+def _fifo(events: list[dict[str, Any]], path_out: set[tuple],
+          loops: Loops | None = None) -> tuple[dict[tuple, float], float]:
     """Each transfer out takes the oldest money first. Returns the victim's
     part of each transfer out along the path, and the unseen outflow."""
     queue: deque[list[float]] = deque()  # [amount left, victim part of it]
@@ -192,7 +304,7 @@ def _fifo(events: list[dict[str, Any]], path_out: set[tuple]) -> tuple[dict[tupl
     unseen = 0.0
     for e in events:
         if e["in"]:
-            queue.append([e["value"], _returned(e, owed)])
+            queue.append([e["value"], _returned(e, owed, loops)])
             continue
         need, taken = e["value"], 0.0
         while need > EPSILON and queue:
@@ -213,7 +325,8 @@ def _fifo(events: list[dict[str, Any]], path_out: set[tuple]) -> tuple[dict[tupl
     return victim_out, unseen
 
 
-def _libr(events: list[dict[str, Any]], path_out: set[tuple]) -> tuple[dict[tuple, float], float]:
+def _libr(events: list[dict[str, Any]], path_out: set[tuple],
+          loops: Loops | None = None) -> tuple[dict[tuple, float], float]:
     """The victim's money leaves only when the balance drops below it."""
     balance = victim_left = unseen = 0.0
     victim_out: dict[tuple, float] = {}
@@ -221,7 +334,7 @@ def _libr(events: list[dict[str, Any]], path_out: set[tuple]) -> tuple[dict[tupl
     for e in events:
         if e["in"]:
             balance += e["value"]
-            victim_left += _returned(e, owed)
+            victim_left += _returned(e, owed, loops)
             continue
         before = victim_left
         if e["value"] > balance:

@@ -21,9 +21,12 @@ wallet is the estimate of the victim's funds reaching the exchange.
 
 "Came in" is new money only. The route's own transfer is counted once, even
 when the provider's list missed it (an internal transfer). A wallet paying
-itself, or getting back coins it had just paid out (W -> X -> W), adds
-nothing anyone else owned, so both are netted out and the hop says how much
--- otherwise each bounce, for the price of gas, shrank the estimate.
+itself, or getting back coins it had just paid out -- straight back
+(W -> X -> W) or through other wallets the trace followed (W -> X -> Y -> W,
+see tracing_methods.Loops) -- adds nothing anyone else owned, so all of it
+is netted out and the hop says how much. Otherwise each bounce, for the
+price of gas, shrank the estimate. Money from a wallet the trace never
+linked to the ones W paid is someone else's and stays in.
 
 What it does not see, and says so: money a wallet already held before the
 traced funds arrived. Counting it would lower the victim's share. And where a
@@ -39,7 +42,7 @@ from typing import Any, Callable
 import networkx as nx
 
 from .provider_errors import public_reason
-from .tracing_methods import FlowsBetween, transfer_key
+from .tracing_methods import FlowsBetween, Loops, take_back, transfer_key
 
 # A share below this at any wallet is called out: the victim's funds were a
 # small part of what that wallet was moving.
@@ -78,27 +81,28 @@ def _missed(received: list[Any], own: list[dict[str, Any]]) -> list[dict[str, An
 
 
 def _recycled(received: list[tuple[Any, str | None]], paid: list[Any], by_block: bool,
-              ) -> tuple[float, dict[str, float]]:
-    """Value that came back from wallets this one had paid earlier in the
-    window (W -> X -> W): the wallet's own coins, not anyone else's. One pass
-    in order; a payment counts before a return in the same block. A transfer
-    from X that arrived before W paid X is new money and is not netted."""
+              loops: Loops | None = None) -> tuple[float, dict[str, float]]:
+    """Value that came back to this wallet out of what it had paid earlier in
+    the window, straight back (W -> X -> W) or through other traced wallets
+    (W -> X -> Y -> W, `loops`): the wallet's own coins, not anyone else's.
+    One pass in order; a payment counts before a return in the same block. A
+    transfer that arrived before W paid anything out is new money and is not
+    netted. `via` is keyed by the wallet the coins came back from."""
     def pos(tx: Any) -> int:
         return int((_field(tx, "block_number") if by_block else _field(tx, "timestamp")) or 0)
 
     events = [(pos(t), 0, _field(t, "to_address"), float(_field(t, "value_native") or 0)) for t in paid]
     events += [(pos(t), 1, party, float(_field(t, "value_native") or 0)) for t, party in received]
-    owed: dict[str, float] = defaultdict(float)
+    owed: dict[str, float] = {}
     via: dict[str, float] = defaultdict(float)
     for _, is_in, party, value in sorted(events, key=lambda e: (e[0], e[1])):
         if not party:
             continue
         if not is_in:
-            owed[party] += value
+            owed[party] = owed.get(party, 0.0) + value
             continue
-        back = min(value, owed[party])
+        back, _ = take_back(owed, party, value, loops)
         if back > 0:
-            owed[party] -= back
             via[party] += back
     return sum(via.values()), dict(via)
 
@@ -177,7 +181,9 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
         carried_in = carried * (in_window / edge_total)
         came_in = [(t, _field(t, "from_address")) for t in received]
         came_in += [(t, path[i - 1]) for t in _missed(received, own_in)]
-        recycled, via = _recycled(came_in, paid, by_block=bool(blocks_in and blocks_out))
+        by_block = bool(blocks_in and blocks_out)
+        loops = Loops(graph, wallet, (start_block, end_block, start_ts, end_ts), by_block)
+        recycled, via = _recycled(came_in, paid, by_block=by_block, loops=loops)
         total_in = max(sum(float(_field(t, "value_native") or 0) for t, _ in came_in) - recycled, in_window)
         share = min(1.0, carried_in / total_in) if total_in > 0 else 0.0
         onward = float(edge_out.get("value_native", 0.0))
@@ -189,8 +195,10 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
             "victim_share": round(share, 4),
             "sent_on": round(onward, 6),
             "victim_on": round(carried, 6),
-            # Netted out of what came in: sent to itself, or got back from
-            # wallets it had paid in the window (largest first).
+            # Netted out of what came in: sent to itself, or got back out of
+            # what it had paid in the window, straight back or round a loop
+            # of traced wallets; `recycled_via` names who sent it back
+            # (largest first).
             "self_transfers": round(self_sent, 6),
             "recycled_in_window": round(recycled, 6),
             "recycled_via": [{"address": a, "value": round(v, 6)}

@@ -256,6 +256,119 @@ def test_conservative_is_not_zeroed_by_recycling():
     assert result["conservative"] == 10_000.0
 
 
+# ---------------------------------------------------------------------------
+# Longer loops: coins out through one helper, back through another
+# (audit r1-attribution-integrity-5, round 2)
+# ---------------------------------------------------------------------------
+def three_wallet_loop(n=9, link=10_000.0, link_block=None, h2_is_linked=True):
+    """V pays M 10,000; n times M pays H1 10,000, H1 pays H2 `link`, H2 pays
+    M 10,000; M pays X 10,000. The trace followed M -> H1 -> H2, so those
+    edges are in the graph. The verifier's probe, with the link in the graph."""
+    victim = tx("v1", 10_000.0, 1, frm="V", to="M")
+    onward = tx("x1", 10_000.0, 100, frm="M", to="X")
+    out = [tx(f"o{i}", 10_000.0, 2 + 3 * i, frm="M", to="H1") for i in range(n)]
+    hop = [tx(f"h{i}", link, link_block or 3 + 3 * i, frm="H1", to="H2") for i in range(n)]
+    back = [tx(f"b{i}", 10_000.0, 4 + 3 * i, frm="H2", to="M") for i in range(n)]
+    g = nx.DiGraph()
+    edge(g, "V", "M", victim)
+    edge(g, "M", "X", onward)
+    edge(g, "M", "H1", *out)
+    if h2_is_linked:
+        edge(g, "H1", "H2", *hop)
+    return g, reader([victim, *back], [*out, onward])
+
+
+def test_a_loop_through_two_helpers_keeps_the_victims_coins():
+    g, flows = three_wallet_loop()
+    prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows)
+    fifo, libr, result = figures(g, flows, prorata)
+    assert (fifo, libr, prorata["estimated"]) == (10_000.0, 10_000.0, 10_000.0)
+    assert result["conservative"] == 10_000.0
+    assert prorata["hops"][0]["recycled_in_window"] == 90_000.0 and not prorata["diluted"]
+
+
+def test_a_longer_loop_is_netted_too():
+    # M -> H1 -> H2 -> H3 -> M, once.
+    victim = tx("v1", 10_000.0, 1, frm="V", to="M")
+    onward = tx("x1", 10_000.0, 100, frm="M", to="X")
+    out, back = tx("o", 10_000.0, 2, frm="M", to="H1"), tx("b", 10_000.0, 5, frm="H3", to="M")
+    g = nx.DiGraph()
+    edge(g, "V", "M", victim)
+    edge(g, "M", "X", onward)
+    edge(g, "M", "H1", out)
+    edge(g, "H1", "H2", tx("h12", 10_000.0, 3))
+    edge(g, "H2", "H3", tx("h23", 10_000.0, 4))
+    flows = reader([victim, back], [out, onward])
+    prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows)
+    fifo, libr, _ = figures(g, flows, prorata)
+    assert (fifo, libr, prorata["estimated"]) == (10_000.0, 10_000.0, 10_000.0)
+
+
+def test_a_loop_is_netted_by_time_where_the_chain_gives_no_blocks():
+    # Tron: transfers carry times only.
+    def t(hash_, value, when, frm, to):
+        return tx(hash_, value, None, ts=1_000 + when, frm=frm, to=to)
+    victim, onward = t("v1", 10_000.0, 1, "V", "M"), t("x1", 10_000.0, 100, "M", "X")
+    out = [t(f"o{i}", 10_000.0, 2 + 3 * i, "M", "H1") for i in range(9)]
+    hop = [t(f"h{i}", 10_000.0, 3 + 3 * i, "H1", "H2") for i in range(9)]
+    back = [t(f"b{i}", 10_000.0, 4 + 3 * i, "H2", "M") for i in range(9)]
+    g = nx.DiGraph()
+    edge(g, "V", "M", victim)
+    edge(g, "M", "X", onward)
+    edge(g, "M", "H1", *out)
+    edge(g, "H1", "H2", *hop)
+    flows = reader([victim, *back], [*out, onward])
+    prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows)
+    fifo, libr, _ = figures(g, flows, prorata)
+    assert (fifo, libr, prorata["estimated"]) == (10_000.0, 10_000.0, 10_000.0)
+
+
+def test_a_loop_is_said_in_the_caveats():
+    from app.scoring import _prorata_caveats
+    g, flows = three_wallet_loop()
+    text = " ".join(_prorata_caveats(estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows), "USDT"))
+    assert "M got 90,000.0000 USDT back" in text and "from H2" in text and "netted out" in text
+
+
+def test_money_from_a_wallet_the_trace_never_linked_to_ms_payees_is_new_money():
+    # H2 is not reached from H1 in the traced graph: its 10,000s are someone else's.
+    g, flows = three_wallet_loop(n=1, h2_is_linked=False)
+    prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows)
+    fifo, libr, _ = figures(g, flows, prorata)
+    assert prorata["estimated"] == 5_000.0 and prorata["hops"][0]["recycled_in_window"] == 0.0
+    # M paid the victim's coins to H1 and took H2's in: nothing netted, as before.
+    assert (fifo, libr) == (0.0, 0.0)
+
+
+def test_a_thin_link_nets_no_more_than_flowed_along_it():
+    # H1 passed only 5 to H2 each time: at most 45 of H2's 90,000 can be M's own coins.
+    g, flows = three_wallet_loop(link=5.0)
+    prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows)
+    assert prorata["hops"][0]["recycled_in_window"] == 45.0
+    assert prorata["diluted"]
+
+
+def test_a_link_outside_the_window_is_not_a_loop():
+    # H1 paid H2 long before the victim's money arrived: not these coins.
+    g, flows = three_wallet_loop(n=1, link_block=-50)
+    prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=flows)
+    assert prorata["hops"][0]["recycled_in_window"] == 0.0
+
+
+def test_money_back_before_m_paid_out_is_not_netted_even_with_a_link():
+    # H2 paid M first; M only paid H1 afterwards. H2's money did join M.
+    victim = tx("v1", 10_000.0, 1, frm="V", to="M")
+    onward = tx("x1", 10_000.0, 100, frm="M", to="X")
+    came, went = tx("b", 10_000.0, 2, frm="H2", to="M"), tx("o", 10_000.0, 3, frm="M", to="H1")
+    g = nx.DiGraph()
+    edge(g, "V", "M", victim)
+    edge(g, "M", "X", onward)
+    edge(g, "M", "H1", went)
+    edge(g, "H1", "H2", tx("h", 10_000.0, 4))
+    prorata = estimate_prorata(g, ["V", "M", "X"], None, flows_between=reader([victim, came], [went, onward]))
+    assert prorata["hops"][0]["recycled_in_window"] == 0.0 and prorata["estimated"] == 5_000.0
+
+
 def test_the_methods_never_exceed_the_seed_cap():
     # The reported wallet sent 50 on; the victim's part of it was at most 10.
     g, flows = one_hop([tx("v1", 50.0, 1)], [tx("x1", 50.0, 2)])

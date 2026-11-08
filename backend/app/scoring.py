@@ -575,8 +575,9 @@ def _prorata_caveats(prorata: dict[str, Any] | None, native_symbol: str) -> list
                 parts.append(f"sent {h['self_transfers']:,.4f} {native_symbol} to itself")
             if h.get("recycled_in_window"):
                 via = ", ".join(v["address"] for v in h.get("recycled_via") or [])
-                parts.append(f"got {h['recycled_in_window']:,.4f} {native_symbol} back from wallets it had "
-                             f"paid in the window ({via})")
+                parts.append(f"got {h['recycled_in_window']:,.4f} {native_symbol} back out of what it had "
+                             f"paid out in the window, from {via} (straight back, or through other wallets "
+                             "the trace followed)")
             out.append(f"{h['address']} {' and '.join(parts)}; that was its own money moving, not anyone "
                        "else's, and was netted out of what it received.")
     if prorata.get("status") == "estimated" and prorata.get("hops"):
