@@ -275,8 +275,8 @@ def test_repeated_demo_traces_are_listed_once(client):
 def test_correlation_is_recomputed_once_a_case_is_stored(client, monkeypatch):
     from app.routes import casebook as routes
     calls = []
-    real = routes.correlate
-    monkeypatch.setattr(routes, "correlate", lambda *a, **k: calls.append(1) or real(*a, **k))
+    real = routes.index_cases
+    monkeypatch.setattr(routes, "index_cases", lambda *a, **k: calls.append(1) or real(*a, **k))
     client.get("/cases/correlate")
     client.get("/cases/correlate")
     assert len(calls) == 1  # second answer from the cache

@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Query, Request
 
 from .. import config, models, ownership
-from ..correlation import correlate, related_cases
+from ..correlation import CaseIndex, related_cases
 from ..exchange_matcher import get_matcher, get_router_matcher
 
 router = APIRouter()
@@ -53,21 +53,29 @@ def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
 
 # Correlation reads and parses every case the caller may see. Stored cases
 # never change, so the answer depends only on which cases go in: it is kept
-# per set of case ids examined, and nothing else. Callers who see the same
-# cases -- every visitor with none of their own sees just the demos -- share
-# one answer, a fresh owner key costs one id-only read, and a save changes
-# only the answers of those who can see the new case. The key is what the
-# answer was really computed from, never what was asked for, so one set's
-# answer is never served to another. A case id that matches no case never
-# reaches the cache: nothing can include it.
+# per set of case ids the caller may see, and nothing else. Callers who see
+# the same cases -- every visitor with none of their own sees just the demos
+# -- share one answer, a fresh owner key costs one id-only read, and a save
+# changes only the answers of those who can see the new case. The key is what
+# the answer was really computed from, never what was asked for, so one set's
+# answer is never served to another.
 #
 # What the caller chooses -- min_cases, and which case the clusters must
 # include -- is applied to the kept answer after the lookup, never part of
 # the key: otherwise cycling through them would miss every time and reload
 # every visible case on each request (r1-dos-cost-12). The kept answer is
 # computed at the smallest min_cases (2), so every filter is a subset of it.
-_CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], list[dict[str, Any]]]]" = OrderedDict()
+#
+# A case the caller cannot list but holds the link to is not part of the key
+# either (the 8 Nov check: cycling other people's case ids reloaded every
+# visible case each time). The kept index of the caller's own set answers
+# for it: only that one case is read (models.get_case, itself cached), and
+# its addresses are looked up in the index. A case id that matches no case
+# reads nothing more. The cache is bounded by entries as well as sets.
+_CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], CaseIndex, list[dict[str, Any]]]]" = OrderedDict()
 _CLUSTER_CACHE_SIZE = 128
+_CLUSTER_CACHE_ENTRIES = 100_000  # (address, case) entries over every kept index
+_cluster_entries = [0]
 _cluster_lock = threading.Lock()
 _FEWEST = 2  # the least min_cases the route accepts
 
@@ -77,29 +85,62 @@ def _key(ids) -> tuple:
     return (digest, models.engine())  # ids are unique within one store
 
 
-def _all_clusters(caller: str | None, case_id: str | None):
-    """(store, clusters): who owns each case examined, and every cluster of
-    at least _FEWEST reported addresses among them."""
-    refs = ownership.correlatable_refs(caller)
-    ids = [r[0] for r in refs]
-    if case_id and case_id not in ids:
-        linked = models.get_case(case_id)
-        if linked is None:
-            return refs, []
-        ids.append(linked.id)
-    key = _key(ids)
+def _keep(key: tuple, value) -> None:
+    cost = value[1].entries()
+    if cost > _CLUSTER_CACHE_ENTRIES:
+        return  # one set too large to keep: computed each time, as before
+    with _cluster_lock:
+        if key in _CLUSTER_CACHE:
+            return
+        _CLUSTER_CACHE[key] = value
+        _cluster_entries[0] += cost
+        while _CLUSTER_CACHE and (len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE
+                                  or _cluster_entries[0] > _CLUSTER_CACHE_ENTRIES):
+            _, old = _CLUSTER_CACHE.popitem(last=False)
+            _cluster_entries[0] -= old[1].entries()
+
+
+def clear_cluster_cache() -> None:
+    with _cluster_lock:
+        _CLUSTER_CACHE.clear()
+        _cluster_entries[0] = 0
+
+
+def _visible(caller: str | None, refs):
+    """(store, index, clusters) for the cases `caller` may list (`refs`, read just before)."""
+    key = _key([r[0] for r in refs])
     with _cluster_lock:
         if key in _CLUSTER_CACHE:
             _CLUSTER_CACHE.move_to_end(key)
             return _CLUSTER_CACHE[key]
-    records = ownership.correlatable_cases(caller, case_id)
-    clusters = correlate(records, min_cases=_FEWEST, excluded=_known_contract_or_exchange)
-    value = ([(c.id, c.owner_hash, c.address) for c in records], clusters)
-    with _cluster_lock:
-        _CLUSTER_CACHE[_key([c.id for c in records])] = value
-        while len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE:
-            _CLUSTER_CACHE.popitem(last=False)
+    records = ownership.correlatable_cases(caller)
+    index = index_cases(records, _known_contract_or_exchange)
+    value = ([(c.id, c.owner_hash, c.address) for c in records], index, index.clusters(min_cases=_FEWEST))
+    # Under the ids really read: a case saved since the id read above is in them.
+    _keep(_key([c.id for c in records]), value)
     return value
+
+
+def index_cases(records, excluded) -> CaseIndex:
+    return CaseIndex.of(records, excluded)
+
+
+def _all_clusters(caller: str | None, case_id: str | None):
+    """(store, clusters): who owns each case examined, and every cluster of
+    at least _FEWEST reported addresses among them (with an unlisted
+    case_id, only those that include it)."""
+    refs = ownership.correlatable_refs(caller)
+    linked = None
+    if case_id and all(ref[0] != case_id for ref in refs):
+        linked = models.get_case(case_id)
+        if linked is None:
+            return refs, []  # nothing more is read for an id that matches no case
+    store, index, clusters = _visible(caller, refs)
+    if linked is None:
+        return store, clusters
+    own = index_cases([linked], _known_contract_or_exchange)
+    return ([*store, (linked.id, linked.owner_hash, linked.address)],
+            index.merged(own).clusters(only_case=linked.id, min_cases=_FEWEST))
 
 
 def _clusters(caller: str | None, case_id: str | None, min_cases: int):

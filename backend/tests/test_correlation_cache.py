@@ -40,14 +40,14 @@ def save_converging(case_id, reported, owner):
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(models, "_engine", create_engine(f"sqlite:///{tmp_path / 'c.db'}", future=True))
-    casebook._CLUSTER_CACHE.clear()
+    casebook.clear_cluster_cache()
     with TestClient(app) as c:
         calls = []
-        real = casebook.correlate
-        monkeypatch.setattr(casebook, "correlate", lambda *a, **k: calls.append(1) or real(*a, **k))
+        real = casebook.index_cases
+        monkeypatch.setattr(casebook, "index_cases", lambda *a, **k: calls.append(1) or real(*a, **k))
         c.calls = calls
         yield c
-    casebook._CLUSTER_CACHE.clear()
+    casebook.clear_cluster_cache()
 
 
 def correlate_as(client, owner=None, **params):
@@ -120,6 +120,29 @@ def test_rotating_min_cases_and_case_id_never_forces_a_reload(client, monkeypatc
             for min_cases in range(2, 51):
                 correlate_as(client, ALICE, min_cases=min_cases, **({"case_id": case_id} if case_id else {}))
     assert len(client.calls) == 1 and len(loads) == 1
+    assert len(casebook._CLUSTER_CACHE) == 1
+
+
+def test_cycling_other_peoples_case_ids_never_reloads_the_callers_cases(client, monkeypatch):
+    """The 8 Nov probe: a caller cycling through case ids it cannot list
+    (another owner's, links it holds) forced a full reload of every case it
+    can see on each request, since each id made a new cache key. The key is
+    now the caller's own set; each linked case is read alone."""
+    for n in range(30):
+        save_converging(f"alice-{n}", "0x" + f"{n + 1:040x}", ALICE)
+    bob_ids = [f"bob-{n}" for n in range(150)]
+    for n, cid in enumerate(bob_ids):
+        save_converging(cid, "0x" + f"{n + 1000:040x}", BOB)
+    loads = []
+    real = ownership.correlatable_cases
+    monkeypatch.setattr(ownership, "correlatable_cases", lambda *a, **k: loads.append(1) or real(*a, **k))
+    for _ in range(2):
+        for cid in bob_ids:
+            body = correlate_as(client, ALICE, case_id=cid)
+            assert body["cases_examined"] == 31
+            # Bob's case meets all 30 of Alice's at the shared wallet.
+            assert body["cluster_count"] == 1 and len(body["related_cases"]) == 30
+    assert len(loads) == 1
     assert len(casebook._CLUSTER_CACHE) == 1
 
 
