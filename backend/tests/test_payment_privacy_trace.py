@@ -329,3 +329,43 @@ def test_every_readers_pdf_of_a_real_payment_trace_verifies(traced, headers):
     checked = client.post("/verify", content=pdf.content, headers={"Content-Type": "application/pdf"}).json()
     assert checked["status"] == "genuine", checked
     assert checked["pdf"]["pages_match"] is True, checked["pdf"]["problems"]
+
+
+
+@pytest.mark.parametrize("name", sorted(SCENARIOS))
+def test_a_finished_payment_job_hides_the_anchored_reads_from_strangers(client, monkeypatch, name):
+    # r2-g2-payment-intake-integrity-5-4: the job route returns the result
+    # while the trace's browser waits for it; anyone else polling the job id
+    # gets the redacted copy, evidence included.
+    from app import jobs
+    from app import pipeline
+
+    result = _trace(monkeypatch, name)
+    monkeypatch.setattr(pipeline, "run_trace", lambda request: result)
+    chain, asset, seed = SCENARIOS[name][:3]
+    started = client.post("/trace/jobs", json={"address": seed, "chain": chain, "asset": asset}, headers=OWNER).json()
+    for _ in range(200):
+        mine = client.get(f"/trace/jobs/{started['job_id']}", headers=OWNER)
+        if mine.json()["status"] != jobs.RUNNING:
+            break
+    assert mine.json()["result"]["evidence"] == result["evidence"]  # the owner's browser gets the reads as made
+    for headers in ({}, OTHER):
+        assert leaks(client.get(f"/trace/jobs/{started['job_id']}", headers=headers).text, SCENARIOS[name]) == []
+
+
+def test_a_message_dated_by_the_payment_is_not_given_to_strangers(client, monkeypatch):
+    # "... sent no BNB since <day>": the day is how far back NodeReal searched,
+    # which starts at the payment's block when it is older than the recent
+    # window. Not reached by the scenarios above (their wallets moved the money
+    # on), so the stored message is set to that wording here.
+    result = _trace(monkeypatch, "bsc")
+    day = _day(BSC_PAID_AT)[0]
+    result["message"] = (f"This address sent no BNB since {day} — try one of the tokens. Exchequer "
+                         "searched from the first payment's block.")
+    models.save_case("quiet-case", BSC_SEED, result, owner_hash=hashlib.sha256(OWNER_KEY.encode()).hexdigest())
+    for headers in ({}, OTHER):
+        for route in ("/trace/quiet-case", "/trace/quiet-case/report?format=text",
+                      "/trace/quiet-case/report?format=json"):
+            assert leaks(client.get(route, headers=headers).text, SCENARIOS["bsc"]) == [], route
+        assert "since the first payment" in client.get("/trace/quiet-case", headers=headers).json()["message"]
+    assert client.get("/trace/quiet-case", headers=OWNER).json()["message"] == result["message"]

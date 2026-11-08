@@ -19,7 +19,8 @@ owner gets none of these either:
     their senders, and the time the statement's window opened;
   - the reported wallet's own window start in the graph (the first payment's
     time);
-  - the payment hashes and the first payment's date quoted in warnings;
+  - the payment hashes and the first payment's date quoted in warnings, and
+    the payment's date in a "sent nothing since" message;
   - in the evidence manifest, the block, time and page parameters of every
     provider request (the reported wallet is read from the payment's block or
     time onward, and other reads are windowed around it -- "startblock=" on
@@ -39,6 +40,7 @@ from __future__ import annotations
 import hmac
 import json
 import re
+from datetime import datetime, timezone
 from typing import Any
 
 from .evidence import sha256_hex
@@ -48,7 +50,7 @@ PARTICULARS = ["intake.ncrp_ack", "intake.victim_address", "intake.payments[].fr
 # What else leads back to the victim's wallet on a block explorer.
 PAYMENT_LINKS = ["intake.payments[].tx_hash", "intake.payments[].block", "intake.payments[].timestamp",
                  "statement.credits", "statement.window_start", "graph.nodes[].window_start",
-                 "warnings (payment hashes and dates)",
+                 "warnings (payment hashes and dates)", "message (the payment's date)",
                  "evidence.records[].request (block, time and page parameters) and their response hashes"]
 
 # What renderers print in place of a withheld hash or time.
@@ -151,6 +153,15 @@ def _evidence_hidden(evidence: dict[str, Any], payments: list[dict[str, Any]]) -
     return {**evidence, "records": records, "withheld": withheld, "manifest_sha256": sha256_hex("\n".join(lines))}
 
 
+def _payment_days(payments: list[dict[str, Any]]) -> list[str]:
+    days = []
+    for p in payments:
+        if isinstance(p.get("timestamp"), int) and p["timestamp"] > 0:
+            moment = datetime.fromtimestamp(p["timestamp"], tz=timezone.utc)
+            days += [f"{moment:%d %b %Y}", f"{moment.day} {moment:%b %Y}"]
+    return days
+
+
 def is_owner(stored: str | None, caller: str | None) -> bool:
     return bool(stored and caller) and hmac.compare_digest(stored, caller)
 
@@ -194,6 +205,13 @@ def _payment_links_hidden(result: dict[str, Any], intake: dict[str, Any]) -> dic
 
     if isinstance(result.get("evidence"), dict):
         out["evidence"] = _evidence_hidden(result["evidence"], payments)
+
+    message = result.get("message")
+    if isinstance(message, str):
+        # "... sent no BNB since 04 Nov 2023": the search floor can be the payment's block.
+        for day in _payment_days(payments):
+            message = message.replace(f" since {day}", " since the first payment")
+        out["message"] = message
 
     return out
 
