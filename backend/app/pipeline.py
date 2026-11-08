@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import re
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any
 
@@ -58,7 +59,7 @@ from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .risk_matcher import MIXER, REPORTED, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
 from .prorata import estimate as estimate_prorata
-from .scoring import principal_path, reach_bottlenecks, score_case, seed_outflow
+from .scoring import principal_path, score_case, seed_outflow, widest_routes
 from .tracing_methods import compare as compare_methods, read_once
 
 
@@ -190,9 +191,10 @@ class TraceRequest(BaseModel):
 def _trace_path(
     graph: nx.DiGraph, seed: str, target: str, direction: str = OUTGOING
 ) -> list[dict[str, Any]]:
-    """The shortest chain of addresses between the reported address and
-    `target`, with the amount moved at each step. This is what goes in the
-    report.
+    """The widest route between the reported address and `target` (the one
+    whose narrowest hop carried the most; see scoring.principal_path), with
+    the amount moved at each step. This is what goes in the report, and its
+    length is the case's hop count.
 
     Always read in the direction the money moved, so a reverse trace's path
     runs from the exchange down to the reported address rather than being
@@ -514,11 +516,14 @@ def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
     """Each match's share of what the reported address sent, and the case's
     materiality record (pipeline.run_trace fills in the primary's figures).
 
-    Share = the most value that could have reached the match along a shortest
-    path (scoring.reach_bottlenecks) / a denominator: the victim's reported
+    Share = the most value that could have reached the match along its
+    widest route (scoring.widest_routes) / a denominator: the victim's reported
     payments for an intake trace, the swap's output for a follow-on, else the
-    reported wallet's outflow as the trace saw it (scoring.seed_outflow)."""
-    reach = reach_bottlenecks(graph, seed, direction)
+    reported wallet's outflow as the trace saw it (scoring.seed_outflow).
+    `hops` is each address's hop count along that same route: a match's hop
+    count (and so the case's) is the route the money took, not a shorter one
+    a dust send happened to take."""
+    reach, hops = widest_routes(graph, seed, direction)
     outflow = seed_outflow(graph, seed, direction, untraced)
     cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis)
     denominator, basis = (cap, cap_basis) if cap else (outflow, "seed_outflow")
@@ -542,6 +547,7 @@ def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
         "material_exchanges": material,
         "multiple_exchanges": len(material) > 1,
         "reach": reach,
+        "hops": hops,
     }, shares
 
 
@@ -745,6 +751,11 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             # transfer used to name any exchange, or an innocent deposit address).
             materiality, shares = _materiality(result.graph, seed, direction, matches + inferred,
                                                result.untraced, intake, seed_amount, seed_amount_basis)
+            # Each match's hop count is its widest route's, the route the score,
+            # the report and the letter are read along (8 Nov check).
+            route_hops = materiality["hops"]
+            matches = [replace(m, depth=route_hops.get(m.address, m.depth)) for m in matches]
+            inferred = [replace(m, depth=route_hops.get(m.address, m.depth)) for m in inferred]
             # The figure is never more than the victim reported paying, or
             # than the traced money's part of what the swaps returned (follow-on).
             cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis, seed_share)
@@ -1085,7 +1096,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         # How much of what the reported address sent reached the attributed
         # exchange, and on what basis; also which exchanges received a
         # material share (more than one: a letter may be needed to each).
-        "materiality": {k: v for k, v in materiality.items() if k != "reach"},
+        "materiality": {k: v for k, v in materiality.items() if k not in ("reach", "hops")},
         # Sanctions / mixer screening. `risk_flags` mirrors `flags` so the
         # frontend can render both the same way; `risk_notes` are report-ready
         # sentences so neither the UI nor the report has to re-phrase them.
@@ -1273,8 +1284,9 @@ def _follow_swaps(
         cap, basis = _seed_cap(None, returned, "swap_output", share)
         depth_at = (graph.nodes.get(sender) or {}).get("depth", 0)
         remaining = max(1, max_depth - depth_at)
+        route = _trace_path(graph, seed, sender, OUTGOING) if seed else []
         follow = {"swap": swap, "asset": asset_out, "address": sender, "max_depth": remaining,
-                  "route": _trace_path(graph, seed, sender, OUTGOING) if seed else [],
+                  "route": route,
                   # What the follow-on may state, and why (see the docstring).
                   "cap": {"amount": cap, "basis": basis, "swap_output": returned,
                           "swap_input": round(g["in"], 6),
@@ -1301,7 +1313,9 @@ def _follow_swaps(
         progress.report(stage="following_swap", follow_asset=asset_out)
         try:
             follow["result"] = run_trace(sub, seed_window=min(starts) if starts else None, budget=budget,
-                                         depth_offset=depth_at, seed_amount=returned,
+                                         # Hops before the swap: the printed route's.
+                                         depth_offset=len(route) - 1 if route else depth_at,
+                                         seed_amount=returned,
                                          seed_amount_basis="swap_output", is_follow_on=True, seed_share=share)
         except HTTPException as exc:
             if budget is not None and budget.cancelled:

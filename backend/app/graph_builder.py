@@ -765,8 +765,9 @@ def build_trace_graph(
                         expanded=False,
                     )
                 else:
-                    # Keep the shortest known distance from the seed -- confidence
-                    # scoring rewards short paths, so this must not drift upward.
+                    # Keep the shortest known distance from the seed: the walk's
+                    # depth limit counts from it. (A match's hop count for the
+                    # score is its widest route's instead; see scoring.widest_routes.)
                     graph.nodes[counterparty]["depth"] = min(
                         graph.nodes[counterparty].get("depth", depth + 1), depth + 1
                     )

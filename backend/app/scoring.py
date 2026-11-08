@@ -168,7 +168,7 @@ def principal_path(graph: nx.DiGraph, source: str, destination: str) -> list[str
     """
     if destination not in graph:
         raise nx.NodeNotFound(f"{destination} is not in the graph")
-    best, prev = _widest(graph, source, forward=True)
+    best, prev, _ = _widest(graph, source, forward=True)
     if destination == source:
         return [source]
     if destination not in best:
@@ -179,11 +179,12 @@ def principal_path(graph: nx.DiGraph, source: str, destination: str) -> list[str
     return path[::-1]
 
 def _widest(graph: nx.DiGraph, source: str, forward: bool = True,
-            ) -> tuple[dict[str, float], dict[str, str]]:
+            ) -> tuple[dict[str, float], dict[str, str], dict[str, int]]:
     """Widest paths from `source`: for every address, the most value that
-    could have reached it along any route (the largest narrowest hop), and the
-    address before it on that route. Ties go to fewer hops, then to address
-    order, so the route is reproducible. Dijkstra on the bottleneck: O(E log V).
+    could have reached it along any route (the largest narrowest hop), the
+    address before it on that route, and that route's hop count. Ties go to
+    fewer hops, then to address order, so the route is reproducible. Dijkstra
+    on the bottleneck: O(E log V).
 
     `forward=False` reads incoming edges -- money moving towards `source`, as
     on a reverse trace -- taking each edge's value from the farther address to
@@ -215,7 +216,8 @@ def _widest(graph: nx.DiGraph, source: str, forward: bool = True,
                 best[far], hops[far], prev[far] = width, h + 1, near
                 heapq.heappush(heap, (-width, h + 1, far))
     best.pop(source, None)
-    return best, prev
+    hops.pop(source, None)
+    return best, prev, hops
 
 
 def reach_bottlenecks(graph: nx.DiGraph, source: str, direction: str = OUTGOING) -> dict[str, float]:
@@ -225,9 +227,20 @@ def reach_bottlenecks(graph: nx.DiGraph, source: str, direction: str = OUTGOING)
     near the source cannot outweigh the route the money took, however short
     the decoy's route is. On a reverse trace the routes run towards `source`.
     `source` itself is not in the result."""
+    return widest_routes(graph, source, direction)[0]
+
+
+def widest_routes(graph: nx.DiGraph, source: str, direction: str = OUTGOING,
+                  ) -> tuple[dict[str, float], dict[str, int]]:
+    """`reach_bottlenecks` plus each address's hop count along that same
+    widest route -- the route `principal_path` returns, so the case's hop
+    count, its proximity score and the printed route all describe one path
+    (a dust send that reached the exchange in fewer hops used to set the hop
+    count while the route shown ran through the real cash-out)."""
     if source not in graph:
-        return {}
-    return _widest(graph, source, forward=direction == OUTGOING)[0]
+        return {}, {}
+    best, _, hops = _widest(graph, source, forward=direction == OUTGOING)
+    return best, hops
 
 
 def seed_outflow(graph: nx.DiGraph, seed: str, direction: str = OUTGOING,

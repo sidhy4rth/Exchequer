@@ -175,3 +175,44 @@ def test_the_principal_path_is_found_fast_on_a_lattice_built_to_explode():
     path = principal_path(g, SEED, BINANCE_14)
     assert time.monotonic() - start < 1.0
     assert path[0] == SEED and path[-1] == BINANCE_14 and len(path) == 42
+
+
+# --- the hop count is the route's ----------------------------------------------
+
+def test_a_dust_send_straight_to_the_exchange_does_not_shorten_the_route(trace):
+    # 8 Nov check (r1-trace-engine-11): the route is the widest one (3 hops,
+    # 99 ETH), but the hop count, its proximity score and the "directly, with no
+    # intermediary" wording came from the shortest one, a 0.002 ETH send. One
+    # dust transfer raised the score from 0.8 to 1.0 and the report contradicted
+    # its own route.
+    import json
+
+    from app.models import Case
+    from app.report import build_report, render_text_report
+
+    plain = trace(BASE)
+    r = trace(BASE + [_tx(SEED, BINANCE_14, 0.002, T + 5)])
+    assert r["exchange_address"] == BINANCE_14
+    assert len(r["trace_path"]) - 1 == 3
+    assert r["hop_count"] == 3 == plain["hop_count"]
+    assert r["confidence"] == plain["confidence"]
+    hop = next(c for c in r["confidence_detail"]["components"] if c["name"] == "hop_proximity")
+    assert "directly" not in hop["explanation"] and "3 hops" in hop["explanation"]
+    assert "3 hops from the source" in r["confidence_detail"]["summary"]
+    binance = next(m for m in r["matches"] if m["address"] == BINANCE_14)
+    assert binance["depth"] == 3
+    text = render_text_report(build_report(Case(id="c1", address=SEED, created_at="2026-11-08T00:00:00+00:00",
+                                                result_json=json.dumps(r))))
+    assert "Hops from source : 3" in text
+    assert "no intermediary" not in text
+
+
+def test_a_dust_route_to_one_exchange_does_not_win_the_tie_on_hops(trace):
+    # Both exchanges received all 99 ETH (each a full share); Kraken's widest
+    # route is 2 hops, Binance's 3, so Kraken leads -- even though a 0.002 ETH
+    # send reached Binance in one hop.
+    r = trace([_tx(SEED, W1, 99.0, T + 10), _tx(W1, W2, 99.0, T + 20), _tx(W2, BINANCE_14, 99.0, T + 30),
+               _tx(SEED, addr("a3"), 99.0, T + 11), _tx(addr("a3"), KRAKEN_1, 99.0, T + 21),
+               _tx(SEED, BINANCE_14, 0.002, T + 5)])
+    assert r["exchange_address"] == KRAKEN_1
+    assert r["hop_count"] == 2 == len(r["trace_path"]) - 1
