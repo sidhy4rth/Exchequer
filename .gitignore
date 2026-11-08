@@ -46,3 +46,22 @@ frontend/playwright-report/
 
 # Report signing key (made on first start; see backend/app/signing.py)
 backend/*.pem
+
+# Anything private, at any depth (r1-secrets-history-2). The narrower lines
+# above matched only one folder; these cover case-store files and their
+# backups, dumps, keys and env files wherever a script writes them.
+**/*.db
+**/*.db-*
+**/*.db.*
+**/*.sqlite*
+**/backups/
+**/*.db.gz
+**/*.pgdump
+**/*.age
+**/*.pem
+**/*.key
+**/.env
+**/.env.*
+!backend/.env.example
+**/*keys*.env
+**/*_check.jsonl

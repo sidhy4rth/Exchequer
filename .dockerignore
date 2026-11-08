@@ -14,3 +14,15 @@ backend/data/label_store*
 *.pdf
 **/*.pem
 docs
+# The same private files as .gitignore, at any depth: a locally built image
+# must not carry a case store, a backup, a key or an env file.
+**/*.db-*
+**/*.db.*
+**/*.sqlite*
+**/backups
+**/*.pgdump
+**/*.age
+**/*.key
+**/.env.*
+**/*keys*.env
+**/*_check.jsonl

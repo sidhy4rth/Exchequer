@@ -60,3 +60,98 @@ def test_the_private_label_store_and_its_temp_files_are_never_committed_or_copie
         assert subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT).returncode == 1
     docker = entries(".dockerignore")
     assert {"**/*.building", "**/*.partial", "backend/data/label_store*"} <= docker
+
+
+# -- private files at any depth (r1-secrets-history-2) ------------------------------------
+# The repository is public and its history cannot be taken back. Twice a commit
+# swept in case-store files (bede0c3's -shm/-wal, and two 16 MB backups GitHub
+# refused). .gitignore and .dockerignore stop such files at any depth, and the
+# last test fails CI if one is tracked anyway: a SQLite file, a provider key, a
+# private key, or anything bigger than the largest file kept on purpose.
+import re  # noqa: E402
+import shutil  # noqa: E402
+import subprocess  # noqa: E402
+MAX_BYTES = 20 * 1024 * 1024  # the launch films are ~15 MB
+PRIVATE = [
+    "backend/backups/exchequer-2026-11-05.db.gz",
+    "backend/data/report_signing_key.pem",
+    "report_signing_key.pem",
+    "backend/.env",
+    "backend/.env.local",
+    ".env.production",
+    "backend/hunt-keys.env",
+    "hunt-keys-2.env",
+    "exchequer.db.bak-20261105T000000Z",
+    "backend/exchequer.db-wal",
+    "backend/sub/cases.db",
+    "snapshot.db.gz",
+    "exchequer-20261105T000000Z.pgdump.age",
+    "store.pgdump",
+    "backend/scripts/import_check.jsonl",
+]
+# Keys as they appear in use: a NodeReal endpoint, a TronGrid header, an Etherscan query.
+KEY_PATTERNS = [
+    re.compile(rb"nodereal\.io/v1/[0-9a-f]{32}"),
+    re.compile(rb"TRON-PRO-API-KEY[\"']?\s*[:=]\s*[\"']?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I),
+    re.compile(rb"apikey=[A-Z0-9]{34}\b"),
+    re.compile(rb"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----\s*[A-Za-z0-9+/]{64}"),
+]
+
+needs_git = pytest.mark.skipif(shutil.which("git") is None or not (ROOT / ".git").exists(),
+                               reason="needs a git checkout")
+
+
+def _git(*args: str) -> str:
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=False).stdout
+
+
+def _tracked() -> list[Path]:
+    return [ROOT / name for name in _git("ls-files", "-z").split("\0") if name]
+
+
+@needs_git
+@pytest.mark.parametrize("path", PRIVATE)
+def test_private_files_are_ignored_at_any_depth(path):
+    assert _git("check-ignore", "--no-index", path).strip(), f"{path} would be committed"
+
+
+@needs_git
+def test_the_example_env_file_stays_tracked():
+    assert not _git("check-ignore", "--no-index", "backend/.env.example").strip()
+    assert not _git("ls-files", "-ci", "--exclude-standard").strip(), "a tracked file is now ignored"
+
+
+@pytest.mark.parametrize("path", PRIVATE)
+def test_the_image_never_copies_them_either(path):
+    """.dockerignore uses the same patterns (Docker matches like filepath.Match, plus **)."""
+    lines = [ln.strip() for ln in (ROOT / ".dockerignore").read_text().splitlines()]
+    patterns = [ln for ln in lines if ln and not ln.startswith(("#", "!"))]
+
+    def match(pattern: str) -> bool:
+        rx = re.escape(pattern).replace(r"\*\*/", "(?:.*/)?").replace(r"\*\*", ".*").replace(r"\*", "[^/]*")
+        return re.fullmatch(rx + "(?:/.*)?", path) is not None
+
+    assert any(match(p) for p in patterns), f"{path} would be copied into the image"
+
+
+@needs_git
+def test_no_tracked_file_is_a_database_a_key_or_oversized():
+    problems = []
+    for path in _tracked():
+        if not path.is_file() or path.is_symlink():
+            continue
+        size = path.stat().st_size
+        if size > MAX_BYTES:
+            problems.append(f"{path.relative_to(ROOT)}: {size} bytes")
+            continue
+        with path.open("rb") as handle:
+            head = handle.read(16)
+            if head.startswith(b"SQLite format 3"):
+                problems.append(f"{path.relative_to(ROOT)}: a SQLite database")
+                continue
+            if size > 2 * 1024 * 1024:  # label files and media: no key lives there
+                continue
+            body = head + handle.read()
+        problems += [f"{path.relative_to(ROOT)}: looks like a key ({p.pattern[:30]!r})"
+                     for p in KEY_PATTERNS if p.search(body)]
+    assert not problems, problems
