@@ -6,7 +6,8 @@ import ThemeToggle from '../components/ThemeToggle'
 
 // Public on purpose: the people who check an Exchequer report -- an
 // exchange's compliance desk, a court -- are not users of the console. The
-// check reads only the text pasted here and the server keeps nothing.
+// check reads only the text pasted here, or the PDF opened here, and the
+// server keeps nothing.
 
 // One verdict per backend `status` (signing.verify_report), shown as given.
 // A status this page does not know reads as a warning: nothing unfamiliar
@@ -23,7 +24,16 @@ const VERDICT = {
   unsigned: { tone: 'grey', title: 'Unsigned: cannot be verified' },
   unknown_key: { tone: 'grey', title: 'Cannot be verified here' },
   not_a_report: { tone: 'red', title: 'Not an Exchequer report' },
+  // A PDF (backend pdf_verify): its attachment is genuine but its pages say otherwise.
+  summary_differs: { tone: 'red', title: 'Page 1 does not match the signed record' },
+  printed_copy_differs: { tone: 'red', title: 'The printed pages do not match the signed record' },
+  pdf_no_report: { tone: 'red', title: 'No signed report in this PDF' },
+  pdf_unreadable: { tone: 'red', title: 'This PDF cannot be read' },
 }
+
+// The /verify body limit (backend routes/verify.py MAX_REPORT_BYTES).
+const MAX_BYTES = 2_000_000
+const isPdf = (file) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')
 const UNKNOWN = { tone: 'red', title: 'Cannot be trusted' }
 
 function signatureRow(r) {
@@ -42,18 +52,28 @@ export default function Verify() {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [key, setKey] = useState(null)
+  const [pdfName, setPdfName] = useState(null)
 
   useEffect(() => { fetchSigningKey().then(setKey).catch(() => {}) }, [])
 
-  async function check(body) {
+  async function check(body, options) {
     setBusy(true); setError(null); setResult(null)
-    try { setResult(await verifyReport(body)) } catch (e) { setError(e.message) } finally { setBusy(false) }
+    try { setResult(await verifyReport(body, options)) } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
   async function onFile(file) {
     if (!file) return
+    if (file.size > MAX_BYTES) {
+      setResult(null); setError('That file is larger than any Exchequer report (2 MB at most).')
+      return
+    }
+    if (isPdf(file)) {
+      setText(''); setPdfName(file.name)
+      check(await file.arrayBuffer(), { pdf: true })
+      return
+    }
     const body = await file.text()
-    setText(body)
+    setPdfName(null); setText(body)
     check(body)
   }
 
@@ -74,7 +94,7 @@ export default function Verify() {
       <main className="verify-body">
         <span className="micro">Verify a report</span>
         <h1>Was this report issued by Exchequer, unchanged?</h1>
-        <p className="note">Paste a text report (Report&nbsp;(.txt) on a case) or drop the file. Every report ends in a SHA-256 content hash and an Ed25519 signature made with the issuing server&apos;s private key. They cover everything above the CONTENT HASH line, including the server that issued the report and its key; this check also rejects any text added below it. Nothing you paste is stored.</p>
+        <p className="note">Paste a text report (Report&nbsp;(.txt) on a case), or drop the file or the case&apos;s PDF. Every report ends in a SHA-256 content hash and an Ed25519 signature made with the issuing server&apos;s private key. They cover everything above the CONTENT HASH line, including the server that issued the report and its key; this check also rejects any text added below it. A PDF is checked by the signed report attached to it, and its pages, which are not signed, are compared with that report. Nothing you send is stored.</p>
         <div
           className="verify-drop"
           onDragOver={(e) => e.preventDefault()}
@@ -83,7 +103,7 @@ export default function Verify() {
           <textarea
             className="mono"
             value={text}
-            onChange={(e) => { setText(e.target.value); setResult(null) }}
+            onChange={(e) => { setText(e.target.value); setPdfName(null); setResult(null) }}
             placeholder="EXCHEQUER CASE REPORT …"
             spellCheck={false}
             aria-label="Report text"
@@ -92,10 +112,11 @@ export default function Verify() {
         <div className="verify-actions">
           <button className="primary" disabled={!text.trim() || busy} onClick={() => check(text)}>{busy ? 'Checking…' : 'Verify'}</button>
           <label className="button-like">
-            Open a .txt file
-            <input type="file" accept=".txt,text/plain" hidden onChange={(e) => onFile(e.target.files?.[0])} />
+            Open a .txt or .pdf file
+            <input type="file" accept=".txt,.pdf,text/plain,application/pdf" hidden onChange={(e) => onFile(e.target.files?.[0])} />
           </label>
         </div>
+        {pdfName && <p className="note">Checked the PDF <span className="mono">{pdfName}</span>.</p>}
         {error && <p className="error-line">{error}</p>}
         {verdict && (
           <div className={`card verify-result ${verdict.tone}`} role="status">
@@ -112,6 +133,18 @@ export default function Verify() {
                   {!result.signature_ok && (result.claimed_key || result.key_fingerprint) && <><dt>claimed key (not checked)</dt><dd>{result.claimed_key || result.key_fingerprint}</dd></>}
                 </dl>
               )}
+              {result.pdf && typeof result.pdf.pages_match === 'boolean' && (
+                <>
+                  <span className="micro">The PDF&apos;s pages</span>
+                  {result.pdf.pages_match
+                    ? <p className="note">Page 1 and the printed copy show what the attached report states, as far as their text can be read. They are not signed: act on the attached report.</p>
+                    : (
+                      <ul className="verify-problems">
+                        {result.pdf.problems.map((problem) => <li key={problem}>{problem}</li>)}
+                      </ul>
+                    )}
+                </>
+              )}
               {result.finding && (
                 <>
                   <span className="micro">What the signed report says</span>
@@ -121,7 +154,7 @@ export default function Verify() {
                     {result.finding.address && <><dt>address</dt><dd>{result.finding.address}</dd></>}
                     {(result.finding.likely_arrived || result.finding.arrived_on_path) && <><dt>amount</dt><dd>{result.finding.likely_arrived || result.finding.arrived_on_path}</dd></>}
                   </dl>
-                  <p className="note">A PDF&apos;s summary page is not covered by the signature: before acting on it, check that it says exactly this.</p>
+                  {!result.pdf && <p className="note">A PDF&apos;s summary page is not covered by the signature: before acting on it, check that it says exactly this, or open the PDF here to have it compared.</p>}
                 </>
               )}
             </div>

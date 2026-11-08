@@ -1169,8 +1169,10 @@ def signed_finding(text: str) -> dict[str, str | None] | None:
 
     Read by position, not by searching: the header's lines are all the
     server's own, the SUMMARY is one paragraph (which never holds an empty
-    line), and FINDING is the section right after it. A label inside the
-    summary, however it is shaped, cannot be taken for the finding."""
+    line), and FINDING is the section right after it -- or, on a payment
+    trace, right after the VICTIM'S PAYMENTS section, which holds no empty
+    line either. A label inside either, however it is shaped, cannot be taken
+    for the finding."""
     lines = text.replace("\r\n", "\n").split("\n")
     rule = "-" * 78
     if len(lines) < 4 or not lines[3].startswith("Case ID          : "):
@@ -1187,6 +1189,14 @@ def signed_finding(text: str) -> dict[str, str | None] | None:
     summary = " ".join(lines[summary_from:i])
     while i < len(lines) and not lines[i]:
         i += 1
+    if lines[i:i + 3] == [rule, "VICTIM'S PAYMENTS", rule]:
+        # A payment trace's section between the two: the server's own lines and
+        # one-line labels, with no empty line until it ends.
+        i += 3
+        while i < len(lines) and lines[i]:
+            i += 1
+        while i < len(lines) and not lines[i]:
+            i += 1
     if lines[i:i + 3] != [rule, "FINDING", rule]:
         return None
     found: dict[str, str | None] = {"case_id": lines[3][len("Case ID          : "):], "summary": summary,

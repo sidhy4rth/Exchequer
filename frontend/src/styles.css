@@ -1002,3 +1002,5 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
   .console .intake .lede { font-size: 23px; }
   .flagged-total strong { font-size: 44px; }
 }
+.verify-problems { margin: 4px 0 0; padding-left: 18px; color: var(--ink); font-size: 14px; }
+.verify-problems li { margin: 2px 0; overflow-wrap: anywhere; }

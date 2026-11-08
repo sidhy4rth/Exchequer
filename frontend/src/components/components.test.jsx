@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -147,6 +147,60 @@ describe('Verify page', () => {
     const s = await verdictFor({ status: 'something_new', sealed: true, hash_ok: true, signed: true, signature_ok: true, detail: '?' })
     expect(s).toHaveClass('red')
     expect(s).not.toHaveTextContent('Genuine')
+  })
+
+  // r1-evidence-crypto-6, round 2: a PDF is sent whole, and a doctored page 1 is named.
+  const pdfFile = (size = 0) => {
+    const file = new File(['%PDF-1.4 fake'], 'exchequer-case-1.pdf', { type: 'application/pdf' })
+    if (size) Object.defineProperty(file, 'size', { value: size })
+    return file
+  }
+  const uploadPdf = async (body, file = pdfFile()) => {
+    const calls = api({ 'GET /signing-key': { body: { fingerprint: 'k', public_key_pem: '', persistent: true } }, 'POST /verify': { body } })
+    const user = userEvent.setup()
+    inRouter(<Verify />)
+    await user.upload(screen.getByLabelText('Open a .txt or .pdf file'), file)
+    return calls
+  }
+  const FINDING = { case_id: 'case-1', exchange: 'Binance', address: '0x' + 'a'.repeat(40), likely_arrived: 'about 2 of 10 ETH sent from the reported address (pro-rata)' }
+
+  it('sends a PDF as PDF bytes, not as text', async () => {
+    const calls = await uploadPdf({ status: 'genuine', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: true, detail: 'Genuine.', finding: FINDING, pdf: { pages_match: true, problems: [] } })
+    const post = await waitFor(() => { const c = calls.find((x) => x.method === 'POST'); expect(c).toBeTruthy(); return c })
+    expect(post.headers['Content-Type']).toBe('application/pdf')
+    expect(post.body).toBeInstanceOf(ArrayBuffer)
+    const s = await screen.findByRole('status')
+    expect(s).toHaveTextContent('Genuine and unchanged')
+    expect(s).toHaveTextContent('Page 1 and the printed copy show what the attached report states')
+    expect(screen.getByText('exchequer-case-1.pdf')).toBeInTheDocument()
+  })
+
+  it('names a page 1 that does not match the signed record, in red, with the true facts', async () => {
+    await uploadPdf({ status: 'summary_differs', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: false, detail: 'The attached report is genuine, but page 1 of this PDF does not match it.', finding: FINDING, pdf: { pages_match: false, problems: ['Page 1 does not show the address the signed report names (0xaaaa).', 'Page 1 shows an address or hash the signed report never mentions: 0x9999.'] } })
+    const s = await screen.findByRole('status')
+    expect(s).toHaveClass('red')
+    expect(s).toHaveTextContent('Page 1 does not match the signed record')
+    expect(s).not.toHaveTextContent('Genuine and unchanged')
+    expect(within(s).getAllByRole('listitem')).toHaveLength(2)
+    expect(s).toHaveTextContent('never mentions: 0x9999')
+    expect(s).toHaveTextContent('What the signed report says')
+    expect(s).toHaveTextContent('0x' + 'a'.repeat(40))
+  })
+
+  it('shows the other PDF verdicts in red', async () => {
+    for (const [status, title] of [['printed_copy_differs', 'The printed pages do not match the signed record'], ['pdf_no_report', 'No signed report in this PDF'], ['pdf_unreadable', 'This PDF cannot be read']]) {
+      await uploadPdf({ status, genuine: false, sealed: false, detail: 'x', pdf: { pages_match: status === 'printed_copy_differs' ? false : null, problems: status === 'printed_copy_differs' ? ['The printed copy (Part 2) differs from the attached file.'] : [] } })
+      const s = await screen.findByRole('status')
+      expect(s).toHaveClass('red')
+      expect(s).toHaveTextContent(title)
+      cleanup()
+    }
+  })
+
+  it('refuses a file over the size limit without sending it', async () => {
+    const calls = await uploadPdf({ status: 'genuine' }, pdfFile(2_000_001))
+    expect(await screen.findByText(/larger than any Exchequer report/)).toBeInTheDocument()
+    expect(calls.find((c) => c.method === 'POST')).toBeUndefined()
   })
 })
 

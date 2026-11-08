@@ -3,7 +3,8 @@
 Both are public on purpose. The people who need to check an Exchequer report
 -- an exchange's compliance desk, a court, the defence -- are not users of
 the tool, and the check involves no case data: it reads only the report text
-it is given and keeps nothing.
+it is given (a text report, or a PDF and the report attached to it) and
+keeps nothing.
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from .. import config
 from ..evidence import KEYS_PUBLISHED_AT
+from ..pdf_verify import DETAILS, PdfBusy, is_pdf, verify_pdf
 from ..signing import ALGORITHM, _listed, get_signer, verify_report
 
 router = APIRouter()
@@ -45,7 +47,10 @@ def signing_key() -> dict[str, Any]:
 
 @router.post("/verify")
 async def verify(request: Request) -> dict[str, Any]:
-    """Check a text report, sent as the raw request body.
+    """Check a text report, or an Exchequer PDF, sent as the raw request body.
+
+    A PDF (the body starts with %PDF-) is checked by its attached report, and
+    its pages are compared with that report (pdf_verify).
 
     The body is read here, but decoded and checked in a worker thread: this
     handler runs on the event loop that serves every visitor, and parsing a
@@ -59,6 +64,12 @@ async def verify(request: Request) -> dict[str, Any]:
 
 
 def _check(body: bytes) -> dict[str, Any]:
+    if is_pdf(body):
+        # An Exchequer PDF: its attached report, and whether its pages say the same.
+        try:
+            return verify_pdf(body)
+        except PdfBusy as exc:
+            raise HTTPException(status_code=503, detail=DETAILS["pdf_busy"], headers={"Retry-After": "30"}) from exc
     try:
         text = body.decode("utf-8")
     except UnicodeDecodeError as exc:

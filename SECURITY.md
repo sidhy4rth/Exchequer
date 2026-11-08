@@ -36,7 +36,11 @@ Exchequer has no accounts. What it does instead:
 - **Reports are signed.** Every text report ends in a SHA-256 content hash and
   an Ed25519 signature made with the server's key. Anyone can check one at
   `/verify` or offline with the key from `/signing-key`. See
-  `backend/app/signing.py`.
+  `backend/app/signing.py`. A PDF report's pages are not signed (only its
+  attached text is, and page 1 says so); upload the PDF at `/verify` and it
+  checks the attachment and says if the pages do not match it. That check
+  reads the pages' text, so act on the attached report. See
+  `backend/app/pdf_verify.py`.
 - **API keys never reach the logs**: HTTP client logging is turned down and
   every log line is scrubbed. See `backend/app/log_safety.py`.
 - Every response carries a content security policy and the usual hardening

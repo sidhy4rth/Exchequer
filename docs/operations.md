@@ -47,7 +47,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `POST /trace/jobs`, `GET /trace/jobs/{id}`, `GET /trace/jobs/{id}/events` | Background trace with live progress (server-sent events). `POST /trace` still works and waits for the result. |
 | `GET /trace/{id}/graph?format=graphml\|csv` | The case's transfer graph for Gephi, yEd, Maltego or a spreadsheet. |
 | `GET /trace/{id}/report?format=pdf` | PDF report; the exact signed text is attached inside it. |
-| `GET /signing-key`, `POST /verify` | The public key reports are signed with; check a text report. Public. |
+| `GET /signing-key`, `POST /verify` | The public key reports are signed with; check a text report, or an Exchequer PDF (its attached report, and whether its pages match it). Public. |
 | `/watches`, `/alerts` | Watch an address; alerts when funds leave it. |
 | `/requests`, `GET /trace/{id}/requests` | Freeze requests sent about a case and their status. |
 | `/batches` | Trace up to 25 complaints and correlate them. |

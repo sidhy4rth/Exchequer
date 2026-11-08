@@ -10,7 +10,8 @@ and the signing key, so a single printed page can be matched to its report.
 Only the attached text is signed: anyone can edit a PDF's pages without
 touching it. Part 1 says so at the top, takes the exchange, the address and
 the amount from the signed text (never from anything else), and tells the
-reader to check them against what /verify says the attached file states.
+reader to upload the PDF at /verify, which checks the attached file and
+compares the pages with it (pdf_verify).
 
 Typeset in IBM Plex (app/fonts, SIL Open Font Licence), the app's own family.
 """
@@ -249,11 +250,11 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
         "<font name='Plex-Bold'>Checking this report.</font> Only the attached text file is signed: "
         f"<font name='PlexMono'>{escape(_attachment_name(case_id))}</font> (your PDF reader's attachments "
         "panel). This page, the printed Part 2 and the footer are copies for reading: they are not covered "
-        "by the signature and can be edited without breaking it. Before acting on this page, check the "
-        f"attached file at <font name='PlexMono'>{escape(_verify_at(issuer.get('issued_by')))}</font>: it "
-        "shows the exchange, the address and the amount the signed report states, which must match this "
-        "page. Text copied from the printed pages will not verify, because copying from a PDF changes "
-        "line breaks.<br/>"
+        "by the signature and can be edited without breaking it. Before acting on this page, upload this "
+        f"PDF at <font name='PlexMono'>{escape(_verify_at(issuer.get('issued_by')))}</font>: it checks the "
+        "attached file and says whether this page shows the exchange, the address and the amount the signed "
+        "report states. Text copied from the printed pages will not verify, because copying from a PDF "
+        "changes line breaks.<br/>"
         f"<font name='PlexMono' size='7.5'>content SHA-256 {escape(digest)}<br/>"
         f"signing key {escape(key or 'none (unsigned)')}"
         + (f"<br/>issued by {escape(one_line(issuer['issued_by']))}" if issuer.get("issued_by") else "")

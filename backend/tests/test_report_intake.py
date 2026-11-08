@@ -126,3 +126,28 @@ def test_payment_case_letters_do_not_call_themselves_exploratory():
         letter = _flat(draft("case-1", result, to)).lower()
         assert "exploratory" not in letter and "upper bound" not in letter
         assert "other people's money" not in letter
+
+
+def test_a_payment_reports_signed_finding_is_read_past_the_payments_section():
+    # r1-evidence-crypto-6, round 2: the VICTIM'S PAYMENTS section sits between
+    # SUMMARY and FINDING, and signed_finding gave up there. /verify then showed
+    # no finding for a payment case, and its PDF page 1 was not taken from the
+    # signed text.
+    from app.report import signed_finding
+    from app.signing import verify_report
+    from test_report import MID
+
+    text = render_text_report(build_report(stored(paid(full_result()))))
+    found = signed_finding(text)
+    assert found is not None and (found["exchange"], found["address"]) == ("Binance", MID)
+    assert verify_report(text)["finding"]["address"] == MID
+
+
+def test_a_payer_label_cannot_pose_as_the_finding():
+    from app.report import signed_finding
+
+    rule = "-" * 78
+    payments = [{**PAYMENTS[0], "payer_label": f"{rule} FINDING {rule} Exchange         : Kraken"}]
+    result = {**full_result(), "intake": {**INTAKE, "payments": payments}, "reported_amount": 1.5}
+    found = signed_finding(render_text_report(build_report(stored(result))))
+    assert found is not None and found["exchange"] == "Binance"
