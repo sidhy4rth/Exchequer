@@ -54,7 +54,11 @@ _STRICT = frozenset({SYSTEM, TOKEN, ROUTER, LISTED})
 # Precedence when one address is several kinds: the strictest wins.
 _RANK = {SYSTEM: 0, TOKEN: 1, ROUTER: 2, LISTED: 3, EXCHANGE: 4, DEPOSIT: 5, GAMBLING: 6, NO_POISONING: 7}
 
-TOKENS_FILE = config.DATA_DIR / "never_flag_tokens.txt"
+TOKENS_FILE = config.DATA_DIR / "never_flag_tokens.txt"  # as shipped; read through _tokens_file()
+
+
+def _tokens_file() -> Path:
+    return config.DATA_DIR / TOKENS_FILE.name
 NEVER_FLAG_FILE = "never_flag_tokens.json"
 # Above 2**64, but no one's wallet: the native-coin placeholder DEX
 # aggregators use, and a common burn address.
@@ -90,18 +94,52 @@ def _raw(chain_key: str, address: str, hex_as_tron: bool = True) -> bytes | None
     return raw
 
 
-def read_list(path: Path, chain_key: str) -> set[bytes]:
+def read_list(path: Path, chain_key: str, missing_ok: bool = False) -> set[bytes]:
     """The addresses of `chain_key`'s family in a list: one per line (the last
     field of a line counts, so a tab-separated note may come first), # for notes.
-    A 0x address is an EVM one; only a base58 address is Tron's."""
-    out: set[bytes] = set()
-    for line in Path(path).read_text().splitlines():
-        line = line.strip()
+    A 0x address is an EVM one; only a base58 address is Tron's.
+
+    A line that is not UTF-8 is skipped, with one log line for the file: one
+    stray byte in an appended token list made every store-row lookup on every
+    chain raise (r1-labels-data-11). With `missing_ok` (the trace path), a file
+    that cannot be read counts as empty, logged; the store build passes its
+    lists explicitly and stops instead.
+    """
+    return _addresses(_list_fields(Path(path), missing_ok), chain_key)
+
+
+def _addresses(fields: Iterable[str], chain_key: str) -> set[bytes]:
+    return {raw for raw in (_raw(chain_key, f, hex_as_tron=False) for f in fields) if raw is not None}
+
+
+def _list_fields(path: Path, missing_ok: bool) -> tuple[str, ...]:
+    """Each entry line's last field (see read_list)."""
+    try:
+        body = path.read_bytes()
+    except OSError as exc:
+        if not missing_ok:
+            raise
+        logger.error("%s unreadable; its addresses do not count: %s", path.name, exc)
+        return ()
+    fields, skipped = [], 0
+    for chunk in body.splitlines():
+        try:
+            line = chunk.decode("utf-8").strip()
+        except UnicodeDecodeError:
+            skipped += 1
+            continue
         if line and not line.startswith("#"):
-            raw = _raw(chain_key, line.split()[-1], hex_as_tron=False)
-            if raw is not None:
-                out.add(raw)
-    return out
+            fields.append(line.split()[-1])
+    if skipped:
+        logger.warning("%s: %d line%s not UTF-8, skipped", path.name, skipped, "" if skipped == 1 else "s")
+    return tuple(fields)
+
+
+@lru_cache(maxsize=1)
+def _token_list() -> tuple[str, ...]:
+    """data/never_flag_tokens.txt's entries, read (and any bad line logged) once for every chain."""
+    path = _tokens_file()
+    return _list_fields(path, missing_ok=True) if path.exists() else ()
 
 
 @lru_cache(maxsize=1)
@@ -141,8 +179,7 @@ def _allowed(chain_key: str) -> frozenset[bytes]:
 def tokens(chain_key: str) -> frozenset[bytes]:
     chain = config.get_chain(chain_key)
     found = {r for r in (_raw(chain.key, t.address) for t in chain.tokens) if r is not None}
-    if TOKENS_FILE.is_file():
-        found |= read_list(TOKENS_FILE, chain.key)
+    found |= _addresses(_token_list(), chain.key)
     found |= {r for r in (_raw(chain.key, a, hex_as_tron=False) for a in _file()[0]) if r is not None}
     return frozenset(found - _allowed(chain.key))
 
@@ -287,6 +324,7 @@ def screen(chain_key: str | None, addresses) -> dict[str, str]:
 
 def clear_cache() -> None:
     _file.cache_clear()
+    _token_list.cache_clear()
     tokens.cache_clear()
     evm_routers.cache_clear()
     routers.cache_clear()

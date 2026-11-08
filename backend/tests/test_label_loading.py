@@ -223,3 +223,91 @@ def test_a_badly_shaped_gambling_file_is_skipped_entry_by_entry(data_copy, label
     assert isinstance(found, frozenset)
     if isinstance(labels, list) and "0x" + "2" * 40 in labels:
         assert len(found) == 1
+
+
+# -- the plain-text token list and the remaining loaders (8 Nov re-check, p8_malformed) ----
+# never_flag.read_list did Path.read_text() with no error handling, so one
+# non-UTF-8 byte in data/never_flag_tokens.txt (a file meant to have outside
+# token lists appended) raised UnicodeDecodeError from every store-row lookup
+# on every chain. A bad line is now skipped with one log line, and the other
+# loaders on the trace path fail soft the same way.
+GOOD_TOKEN = "0x" + "ab" * 20
+
+
+def _lookups_still_work():
+    from app import never_flag
+    never_flag.clear_cache()
+    risk_matcher.clear_label_caches()
+    for chain in ("ethereum", "bsc", "tron"):
+        assert never_flag.tokens(chain) is not None
+        never_flag.kind(chain, GOOD_TOKEN if chain != "tron" else "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t")
+        risk_matcher.get_risk_matcher(chain).lookup(GOOD_TOKEN)
+
+
+def test_a_non_utf8_byte_in_the_token_list_skips_that_line_only(data_copy, caplog):
+    from app import never_flag
+    (data_copy / "never_flag_tokens.txt").write_bytes(
+        b"# list\n\xff\xfe0x" + b"cd" * 20 + b"\n" + GOOD_TOKEN.encode() + b"\n")
+    with caplog.at_level(logging.WARNING):
+        _lookups_still_work()
+        found = never_flag.tokens("ethereum")
+    assert never_flag._raw("ethereum", GOOD_TOKEN, hex_as_tron=False) in found  # the good line still counts
+    assert never_flag._raw("ethereum", "0x" + "cd" * 20, hex_as_tron=False) not in found
+    assert sum("never_flag_tokens.txt" in r.getMessage() for r in caplog.records) == 1
+
+
+def test_an_unreadable_token_list_counts_as_empty(data_copy, caplog):
+    path = data_copy / "never_flag_tokens.txt"
+    path.unlink()
+    path.mkdir()  # a directory where the file should be: read_text raises IsADirectoryError
+    with caplog.at_level(logging.WARNING):
+        _lookups_still_work()
+    assert any("never_flag_tokens.txt" in r.getMessage() for r in caplog.records)
+
+
+def test_read_list_given_a_bad_line_keeps_the_rest(tmp_path):
+    from app import never_flag
+    listed = tmp_path / "listed.txt"
+    listed.write_bytes(b"\x80\x81 junk\n" + GOOD_TOKEN.encode() + b"\n")
+    assert never_flag.read_list(listed, "ethereum") == {never_flag._raw("ethereum", GOOD_TOKEN, hex_as_tron=False)}
+
+
+@pytest.mark.parametrize("attribute", ["risk_labels_path", "labels_path", "router_labels_path", "threat_labels_path",
+                                       "frozen_labels_path"])
+def test_a_label_file_that_cannot_be_opened_is_skipped_not_fatal(data_copy, attribute):
+    path = getattr(config.get_chain("ethereum"), attribute)
+    assert path is not None and str(path).startswith(str(data_copy))  # the copy, never the shipped file
+    if path.exists():
+        path.unlink()
+    path.mkdir()  # a directory where the file should be: opening it raises IsADirectoryError
+    _lookups_still_work()
+
+
+@pytest.mark.parametrize("meta", [[1, 2], "x", {"counts": [1]}, {"counts": {"by_authority": 5}},
+                                  {"counts": {"by_authority": [1, None]}}, {"last_reviewed": {"a": 1}}])
+def test_a_badly_shaped_list_meta_does_not_break_the_freshness_report(data_copy, meta):
+    from datetime import date
+    path = config.get_chain("ethereum").risk_labels_path
+    assert str(path).startswith(str(data_copy))
+    path.write_text(json.dumps({"_meta": meta, "labels": {}}))
+    risk_matcher.clear_label_caches()
+    report = risk_matcher.list_freshness("ethereum", date(2026, 11, 8))
+    assert isinstance(report["lists"], list)
+    from app import provenance
+    provenance._list_entry(path)
+
+
+@pytest.mark.parametrize("document", [{"a": 1}, [1, "x", {"address": 5}, {"no": 1}], "x"])
+def test_a_badly_shaped_demo_list_means_no_demos_not_a_crash(tmp_path, monkeypatch, document):
+    from app import ownership
+    backend = tmp_path / "backend"
+    (backend / "data").mkdir(parents=True)
+    (backend / "data" / "demo_traces.json").write_text(json.dumps(document))
+    monkeypatch.setattr(config, "BACKEND_DIR", backend)
+    ownership.demo_addresses.cache_clear()
+    try:
+        assert isinstance(ownership.demo_addresses(), frozenset)
+        assert ownership.is_public(None, GOOD_TOKEN) is False
+    finally:
+        monkeypatch.undo()
+        ownership.demo_addresses.cache_clear()

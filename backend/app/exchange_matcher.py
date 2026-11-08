@@ -110,7 +110,7 @@ class ExchangeMatcher:
     def from_file(cls, path: Path | None = None, chain: str | None = None) -> "ExchangeMatcher":
         path = path or config.EXCHANGE_LABELS_PATH
         try:
-            raw = json.loads(path.read_text())
+            raw = json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             # Not fatal: a chain with no label file still traces, it just
             # cannot attribute. Saying so beats pretending the funds went
@@ -123,6 +123,9 @@ class ExchangeMatcher:
             return cls({}, chain=chain)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             logger.error("Exchange label file at %s is not valid JSON: %s", path, exc)
+            return cls({}, chain=chain)
+        except OSError as exc:  # a directory, no permission: unusable, never fatal
+            logger.error("Exchange label file at %s cannot be read: %s", path, exc)
             return cls({}, chain=chain)
 
         # Accept both the documented simple shape {"0x..": "Binance"} and the

@@ -614,7 +614,31 @@ def _list_meta(path: Path) -> dict[str, Any] | None:
         document = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    return (document.get("_meta") or {}) if isinstance(document, dict) else None
+    return _clean_meta(document.get("_meta") or {}, path) if isinstance(document, dict) else None
+
+
+def _clean_meta(meta: Any, path: Path) -> dict[str, Any]:
+    """`meta` with the parts a report reads in the shape it reads them; a part
+    of the wrong shape is dropped with one log line, as a bad entry is in
+    _read_labels (r1-labels-data-11)."""
+    if not isinstance(meta, dict):
+        logger.warning("%s: _meta is not an object; ignored", path.name)
+        return {}
+    meta = dict(meta)
+    for key in ("last_reviewed", "ofac_publish_date", "valid_until"):
+        if key in meta and not isinstance(meta[key], str):
+            logger.warning("%s: _meta %s is not text; ignored", path.name, key)
+            del meta[key]
+    counts = meta.get("counts")
+    if counts is not None:
+        authorities = counts.get("by_authority") if isinstance(counts, dict) else None
+        if not isinstance(counts, dict) or not (
+                authorities is None
+                or (isinstance(authorities, dict))
+                or (isinstance(authorities, list) and all(isinstance(a, str) for a in authorities))):
+            logger.warning("%s: _meta counts not in the shape a report reads; ignored", path.name)
+            del meta["counts"]
+    return meta
 
 
 @lru_cache(maxsize=None)
@@ -780,7 +804,7 @@ def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
     chain's files, so an exception here would stop the site from starting.
     """
     try:
-        raw = json.loads(path.read_text())
+        raw = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         log = logger.warning if required else logger.info
         log("No risk label file at %s -- traces on this chain will not be "
@@ -788,6 +812,9 @@ def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
         return {}
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         logger.error("Risk label file at %s is not valid JSON: %s", path, exc)
+        return {}
+    except OSError as exc:  # a directory, no permission: unusable, never fatal
+        logger.error("Risk label file at %s cannot be read: %s", path, exc)
         return {}
 
     entries = raw.get("labels", raw) if isinstance(raw, dict) else None
