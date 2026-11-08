@@ -158,3 +158,39 @@ def test_the_eth_importer_refuses_router_risk_and_frozen_addresses(monkeypatch):
             return False
     monkeypatch.setattr(import_eth_labels.urllib.request, "urlopen", lambda *a, **k: Response(csv_text.encode()))
     assert list(import_eth_labels.candidates_by_chain()["ethereum"]) == [fresh]
+
+
+# -- one word filter for both importers (r1-scripts-0, 8 Nov re-check, p_import) ----------
+# import_eth_labels.SKIP_TAG had no 'proxy', so 'Binance: Proxy' and 'OKX: Proxy 2'
+# came in there as exchange wallets, and contract tags such as Factory,
+# Executor or Forwarder passed both importers. Both now read one filter, on
+# the tag cleaned the same way (NFKC, format characters removed, casefolded).
+CONTRACT_TAGS = ["Binance: Proxy", "OKX: Proxy 2", "Binance: Wallet Proxy", "Binance: Proxy⁠",
+                 "Binance: Ｐｒｏｘｙ", "Binance: Smart Wallet Factory", "OKX: Web3 Wallet Executor",
+                 "KuCoin: Exchange Implementation", "Bitfinex: Forwarder", "Gate.io: Batch Sender",
+                 "OKX: Rout​er 2", "Binance: DEX Router", "Kraken: Relayer", "Bybit: Aggregator",
+                 "Binance: Token Swap", "Kraken: Bridge", "Gate.io: Multisig 1", "KuCoin: Contract",
+                 "HTX: Token", "Binance: Deployer", "Binance: Deposit Funder", "Binance: Airdrop Distributor",
+                 "Coinbase: Minter", "OKX: Disperse", "Binance: Wrapper", "Bitget: Escrow",
+                 "BINANCE: PROXY", "Binance: Upgradeable", "Binance: Forwarder­"]
+
+
+@pytest.mark.parametrize("tag", CONTRACT_TAGS)
+def test_both_importers_refuse_a_contract_tag(tag):
+    assert import_eth_labels.SKIP_TAG.search(tag), tag
+    assert import_exchange_labels.is_cash_out_label(tag) is False, tag
+
+
+@pytest.mark.parametrize("tag", ["Binance 14", "OKX 9", "Dex-Trade 2", "Kraken: Hot Wallet", "Bitfinex 5",
+                                 "Coinbase 10", "Gate.io: Cold Wallet 2", "KuCoin 6"])
+def test_both_importers_keep_a_plain_exchange_wallet(tag):
+    assert not import_eth_labels.SKIP_TAG.search(tag), tag
+    assert import_exchange_labels.is_cash_out_label(tag) is True, tag
+
+
+def test_the_two_importers_share_one_filter():
+    from scripts import _tag_words
+    assert import_exchange_labels.NOT_CASH_OUT is _tag_words.NOT_CASH_OUT
+    for word in ("proxy", "factory", "executor", "forwarder", "relayer", "router", "aggregator", "swap",
+                 "bridge", "multisig", "contract", "token", "deployer", "funder", "implementation", "batch"):
+        assert _tag_words.names_infrastructure(f"Binance: {word.title()}"), word

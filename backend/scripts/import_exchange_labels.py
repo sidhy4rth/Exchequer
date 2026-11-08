@@ -56,6 +56,7 @@ from app.etherscan_client import (  # noqa: E402
 from app.exchange_matcher import DEPOSIT_WALLET, is_deposit_label  # noqa: E402
 from app.tron_tags import clean_tag  # noqa: E402
 from scripts._label_files import chain_regenerate  # noqa: E402
+from scripts._tag_words import NOT_CASH_OUT, names_infrastructure  # noqa: E402,F401 -- NOT_CASH_OUT re-exported
 
 # Pinned so a re-run imports the same data rather than whatever the dataset
 # happens to say today.
@@ -101,25 +102,16 @@ def fetch(stem: str) -> dict[str, str]:
 
 
 # Labels in the exchange datasets that name something the exchange runs but
-# that is not where customers' funds are cashed out: a contract deployer, a
-# router or proxy, a swap or bridge contract, the wallets that fund deposit
-# addresses' gas, or another company's treasury ('Tether: Treasury' sits in
-# the Bitfinex set). An exchange match ends a trace, so these must never be
-# one. The words import_eth_labels.SKIP_TAG refuses (but for 'Dep', which
-# here marks a customer deposit address), and 'proxy'.
-NOT_CASH_OUT = re.compile(
-    r"router|aggregat|relayer|paymaster|treasury|deployer|proxy|swap|bridge|multisig|contract|token|"
-    r"funder|depositor|supplier|vesting|staking|exploit|charity|launchpad|registry|operator|^bitget wallet|"
-    r"\bdex\b(?!-trade)",
-    re.IGNORECASE,
-)
+# that is not where customers' funds are cashed out (a contract, a deployer,
+# the wallets that fund deposit addresses' gas, another firm's treasury):
+# scripts/_tag_words, the one filter both importers read.
 
 
 def is_cash_out_label(label: str) -> bool:
     """Whether a dataset label may name a cash-out wallet. Read after
     clean_tag (NFKC, invisible and format characters removed) and casefolded:
     'OKX: Rout\u200ber 2' and a full-width 'ＲＯＵＴＥＲ' passed the bare letters."""
-    return not NOT_CASH_OUT.search(clean_tag(label).casefold())
+    return not names_infrastructure(label)
 
 
 def exchange_for(label: str, stem_exchange: str) -> str | None:

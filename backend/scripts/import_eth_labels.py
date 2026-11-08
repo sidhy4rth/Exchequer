@@ -75,6 +75,7 @@ from scripts.import_exchange_labels import has_value_history, listed_elsewhere  
 from scripts.seed_bsc_labels import ACTIVITY_LOOKBACK, bsc_activity  # noqa: E402
 from scripts.seed_tron_labels import CANONICAL as TRON_CANONICAL  # noqa: E402
 from app.tron_tags import clean_tag  # noqa: E402
+from scripts._tag_words import NOT_CASH_OUT, cleaned  # noqa: E402
 
 DATASET_REPO = "dawsbot/eth-labels"
 DATASET_COMMIT = "14247ba8cf4686b747938248bee34c66089fa9d9"
@@ -117,18 +118,23 @@ SKIP_SLUG = re.compile(
     r"exploit|ofac|charity|mixer|tornado|sybil|airdrop|nonprofit|take-action|endaoment|scam|heist|compromised|"
     r"\bdex\b"
 )
-# Tags that name exchange infrastructure or a customer, not a cash-out wallet.
-SKIP_TAG = re.compile(
-    r"\bdep\b|deployer|funder|contract|token|charity|exploit|multisig|vesting|treasury|"
-    r"staking|bridge|swap|launchpad|operator|registry|^\.|^bitget wallet|"
-    # Wallets an exchange uses to fund deposit addresses' gas or to stake: its
-    # own, never a cash-out ('Binance: Deposit Funder', 'Kraken: Eth2 Depositor').
-    r"depositor|supplier|"
-    # An exchange's on-chain router or aggregator is a swap, not a cash-out:
-    # 'OKX: DEX Router 2' once came in as an OKX wallet. Dex-Trade is a CEX.
-    r"router|aggregat|relayer|paymaster|\bdex\b(?!-trade)",
-    re.IGNORECASE,
-)
+# Tags that name exchange infrastructure or a customer, not a cash-out wallet:
+# the shared filter (scripts/_tag_words) plus, in this dataset, 'Dep' (one
+# customer's deposit address, imported only by deposit_candidates) and a tag
+# that starts with a dot.
+_ETH_ONLY = re.compile(r"\bdep\b|^\.")
+
+
+class _SkipTag:
+    """SKIP_TAG.search(tag): a match when `tag` is not an exchange's cash-out
+    wallet. The tag is cleaned first, whoever calls it."""
+
+    def search(self, tag: str | None):
+        text = cleaned(tag or "")
+        return NOT_CASH_OUT.search(text) or _ETH_ONLY.search(text)
+
+
+SKIP_TAG = _SkipTag()
 
 
 def tag_head(tag: str) -> str:
