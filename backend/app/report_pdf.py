@@ -8,10 +8,10 @@ signature cover. Every page's footer carries the case id, the content hash
 and the signing key, so a single printed page can be matched to its report.
 
 Only the attached text is signed: anyone can edit a PDF's pages without
-touching it. Part 1 says so at the top, takes the exchange, the address and
-the amount from the signed text (never from anything else), and tells the
-reader to upload the PDF at /verify, which checks the attached file and
-compares the pages with it (pdf_verify).
+touching it. Part 1 says so at the top, and is drawn from the signed text
+alone (summary_facts reads it back; nothing else reaches the page), so
+/verify can draw it again from the attached file and require the uploaded
+page 1 to hold exactly that text (pdf_verify).
 
 Typeset in IBM Plex (app/fonts, SIL Open Font Licence), the app's own family.
 """
@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +38,7 @@ from xml.sax.saxutils import escape
 
 from .display_text import one_line, short
 from .evidence import CONTENT_HASH_MARK, read_issuer
-from .report import EXCHANGE_WALLET, EXPLORER_TAG, _shown_label, _when_iso, signed_finding, started_from
+from .report import (EXCHANGE_WALLET, EXPLORER_TAG, KIND_LINE, KIND_WORDING, _shown_label, signed_finding)
 from .scoring import CAP_WORDING
 from .signing import SIGNATURE_MARK
 
@@ -120,49 +121,207 @@ def _num(value: Any) -> str:
 
 
 def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
+    """The PDF for `sealed_text`. `report` is the same report; only its case id
+    is read here: page 1 is drawn from the signed text alone."""
     _register_fonts()
     st = _styles()
     digest, key = _seal_facts(sealed_text)
     case_id = report["case"]["case_id"]
     try:
-        pdf = _build(_part_one(report, st, digest, key, sealed_text) + _part_two(sealed_text, st),
-                     case_id, digest, key)
+        pdf = _build(summary_story(sealed_text, st, case_id) + _part_two(sealed_text, st), case_id, digest, key)
     except LayoutError:
         # Part 1 is a reading aid; the signed report must still be issued.
         logger.warning("Case %s: the PDF summary page could not be laid out; issuing Part 2 only", case_id)
-        unplaced = [_p("EXCHEQUER · CRYPTOCURRENCY TRACE REPORT", st["micro"]), _p(f"Case {case_id}", st["small"]),
-                    _p("The summary page could not be laid out for this case (a label in it is too long "
-                       "for the page). The signed report follows in full and is attached to this PDF.", st["cell"])]
-        pdf = _build(unplaced + _part_two(sealed_text, st), case_id, digest, key)
+        pdf = _build(unplaced_story(case_id, st) + _part_two(sealed_text, st), case_id, digest, key)
     return _attach(pdf, _attachment_name(case_id), sealed_text.encode("utf-8"))
 
 
-def _signed_facts(report: dict[str, Any], sealed_text: str) -> dict[str, Any]:
-    """Exchange, address, label, amount and summary as the signed text states them.
-
-    The page must show what the signature covers. They come from the same
-    report, so they agree; if they ever do not, the signed text wins."""
-    attribution = report.get("attribution") or {}
-    signed = signed_finding(sealed_text)
-    if signed is None:  # not a full text report (a test's stand-in): nothing better to read
-        return {"exchange": attribution.get("exchange"), "address": attribution.get("exchange_address"),
-                "label": attribution.get("exchange_wallet_label"), "likely_arrived": None,
-                "summary": report.get("summary", "")}
-    if (signed["exchange"], signed["address"]) != (attribution.get("exchange"), attribution.get("exchange_address")):
-        logger.warning("Case %s: the PDF summary disagrees with the signed text; printing the signed finding",
-                       report["case"]["case_id"])
-    return signed
+NOT_READ = ("The summary page could not be drawn from the signed report (it is not in a format this "
+            "version reads). The signed report follows in full and is attached to this PDF.")
+NOT_LAID_OUT = ("The summary page could not be laid out for this case (a label in it is too long "
+                "for the page). The signed report follows in full and is attached to this PDF.")
 
 
-def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str, key: str | None,
-              sealed_text: str = "") -> list[Any]:
-    case = report["case"]
-    attribution = report.get("attribution") or {}
-    confidence = report.get("confidence") or {}
-    screening = report.get("risk_screening") or {}
-    case_id = case["case_id"]
-    signed = _signed_facts(report, sealed_text)
-    issuer = read_issuer(sealed_text.split(f"\n{CONTENT_HASH_MARK} (", 1)[0]) or {}
+def unplaced_story(case_id: str, st: dict[str, ParagraphStyle], why: str = NOT_LAID_OUT) -> list[Any]:
+    """The short page 1 printed when the summary cannot be: fixed words and the case id."""
+    return [_p("EXCHEQUER · CRYPTOCURRENCY TRACE REPORT", st["micro"]), _p(f"Case {case_id}", st["small"]),
+            _p(why, st["cell"])]
+
+
+def summary_story(sealed_text: str, st: dict[str, ParagraphStyle], case_id: str) -> list[Any]:
+    """Page 1's flowables, from the signed text alone."""
+    facts = summary_facts(sealed_text)
+    if facts is None:
+        return unplaced_story(case_id, st, NOT_READ)
+    digest, key = _seal_facts(sealed_text)
+    return _part_one(facts, st, digest, key)
+
+
+def render_summary(sealed_text: str) -> list[str]:
+    """Page 1 (and any page the summary runs onto) as /verify draws it again:
+    each page's text, read back as pdf_verify reads an uploaded PDF. Both
+    forms page 1 can take -- the summary, or the short page printed when the
+    summary could not be laid out -- in that order."""
+    from pypdf import PdfReader
+
+    _register_fonts()
+    st = _styles()
+    digest, key = _seal_facts(sealed_text)
+    facts = summary_facts(sealed_text)
+    case_id = facts["case_id"] if facts else ""
+    forms = []
+    try:
+        forms.append(_build(summary_story(sealed_text, st, case_id), case_id, digest, key))
+    except LayoutError:
+        pass
+    forms.append(_build(unplaced_story(case_id, st), case_id, digest, key))
+    return ["\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(pdf)).pages) for pdf in forms]
+
+
+# -- reading page 1's facts back from the signed text ------------------------------
+_RULE = "-" * 78
+_HEADER = {"Reported address : ": "reported_address", "Chain            : ": "chain",
+           "Asset followed   : ": "asset", "Direction        : ": "direction",
+           "Started from     : ": "started_from", "Traced at        : ": "traced_at"}
+_CHAIN_ID = re.compile(r" \(chainid \d+\)$")
+_STEP = re.compile(r"  (\d+)\. (\S+)(?:  \[(.*)\])?")
+_SENT = re.compile(r"     sent (\S+) ")
+_MATCH = re.compile(r"(?P<category>[^:]{1,40}): (?P<address>\S+) (?P<rest>.*)")
+_KINDS = {wording: kind for kind, wording in KIND_WORDING.items()}
+ALSO_REACHED = "Also reached     : "  # render_text_report's FINDING line, one per other exchange
+
+
+def _sections(lines: list[str]) -> dict[str, list[str]]:
+    """Each section's lines by title, as render_text_report lays them out
+    (a title between two rules); the first of a title wins."""
+    starts = [n for n in range(1, len(lines) - 1) if lines[n - 1] == lines[n + 1] == _RULE and lines[n]]
+    out: dict[str, list[str]] = {}
+    for i, n in enumerate(starts):
+        end = starts[i + 1] - 1 if i + 1 < len(starts) else len(lines)
+        out.setdefault(lines[n], lines[n + 2:end])
+    return out
+
+
+def _section(sections: dict[str, list[str]], title: str) -> list[str]:
+    return next((body for name, body in sections.items() if name.startswith(title)), [])
+
+
+def _items(lines: list[str], bullet: str) -> list[str]:
+    """Wrapped bullet items ("- " or "* " then indented lines), joined back into one line each."""
+    items: list[str] = []
+    for line in lines:
+        if line.startswith(bullet):
+            items.append(line[len(bullet):])
+        elif items and line.startswith(" " * len(bullet)) and line.strip():
+            items[-1] += " " + line.strip()
+    return items
+
+
+def _para(lines: list[str], start: int) -> str:
+    """The wrapped paragraph from `start` to the next empty line, as one line."""
+    end = start
+    while end < len(lines) and lines[end]:
+        end += 1
+    return " ".join(line.strip() for line in lines[start:end])
+
+
+def summary_facts(sealed_text: str) -> dict[str, Any] | None:
+    """What page 1 prints, read back from a signed text report; None if the
+    text is not one this version can read. Every fact comes from the text,
+    so page 1 can never state anything the signature does not cover."""
+    try:
+        return _summary_facts(sealed_text)
+    except (IndexError, KeyError, ValueError, StopIteration):
+        return None
+
+
+def _summary_facts(sealed_text: str) -> dict[str, Any] | None:
+    finding = signed_finding(sealed_text)
+    if finding is None:
+        return None
+    body = sealed_text.replace("\r\n", "\n").split(f"\n{CONTENT_HASH_MARK} (", 1)[0]
+    lines = body.split("\n")
+    facts: dict[str, Any] = {"case_id": finding["case_id"], "finding": finding,
+                             "issued_by": (read_issuer(body) or {}).get("issued_by")}
+    header_end = lines.index("", 3)
+    for line in lines[3:header_end]:
+        for prefix, key in _HEADER.items():
+            if line.startswith(prefix):
+                facts.setdefault(key, line[len(prefix):])
+    facts["chain"] = _CHAIN_ID.sub("", facts["chain"])
+    facts["direction"] = facts["direction"].split(" ", 1)[0]
+    after = header_end + 1
+    facts["warning"] = (_para(lines, after).removeprefix("WARNING: ")
+                        if lines[after].startswith("WARNING: ") else None)
+
+    sections = _sections(lines)
+    found = _section(sections, "FINDING")
+    field = {prefix: next((line[len(prefix):] for line in found if line.startswith(prefix)), None)
+             for prefix in (KIND_LINE, "Hops from source : ", "Pro-rata         : ")}
+    facts["kind"] = _KINDS.get(field[KIND_LINE] or "")
+    facts["hops"] = field["Hops from source : "] or ""
+    facts["prorata_unknown"] = (field["Pro-rata         : "] or "").removeprefix("not estimated -- ") or None
+    facts["also_reached"] = [line[len(ALSO_REACHED):] for line in found if line.startswith(ALSO_REACHED)]
+
+    confidence = _section(sections, "CONFIDENCE")
+    band = next((line[19:] for line in confidence if line.startswith("Band             : ")), "")
+    score = next((line[19:] for line in confidence if line.startswith("Score            : ")), "n/a")
+    facts["band"] = None if score.startswith("n/a") else ("n/a" if band in ("", "N/a") else band)
+    at = next(n for n, line in enumerate(confidence) if line.startswith("Score            : "))
+    summary_at = at + 2
+    facts["how_sure"] = (_para(confidence, summary_at)
+                         if summary_at < len(confidence) and confidence[at + 1] == "" and confidence[summary_at]
+                         and confidence[summary_at] != "How this score was reached:" else None)
+
+    path = _section(sections, "PATH THE MONEY TOOK")
+    steps, amount = [], None
+    for line in path:
+        sent = _SENT.match(line)
+        if sent:
+            amount = sent.group(1)
+            continue
+        step = _STEP.fullmatch(line)
+        if step:
+            steps.append({"address": step.group(2), "label": step.group(3) or "",
+                          "amount": None if amount in (None, "None") else float(amount)})
+            amount = None
+    facts["route"] = steps
+
+    screening = _section(sections, "SANCTIONS, MIXER, FREEZE AND STOLEN-FUNDS SCREENING")
+    facts["matches"] = _items(screening, "* ")
+
+    listed = _section(sections, "LISTS SCREENED AGAINST")
+    entries: list[dict[str, str]] = []
+    not_held = None
+    blank = listed.index("") if "" in listed else len(listed)
+    n = blank + 1
+    while n < len(listed) and listed[n]:
+        line = listed[n]
+        if line.startswith("  ") and not line.startswith("    "):
+            if entries and "checked" not in entries[-1]:
+                entries[-1]["name"] += " " + line.strip()
+            else:
+                entries.append({"name": line.strip()})
+        elif line.startswith("    ") and entries:
+            if "checked" not in entries[-1]:
+                entries[-1]["checked"] = line.split(": checked ", 1)[1]
+            else:
+                entries[-1]["note"] = (entries[-1].get("note", "") + " " + line.strip()).strip()
+        n += 1
+    rest = listed[n + 1:] if n < len(listed) else []
+    if rest and rest[0].startswith("Not loaded for this chain, so not screened: "):
+        not_held = _para(rest, 0)
+    facts["lists"] = [e for e in entries if "checked" in e]
+    facts["not_held"] = not_held
+
+    facts["limitations"] = _items(_section(sections, "LIMITATIONS"), "- ")
+    return facts
+
+
+def _part_one(facts: dict[str, Any], st: dict[str, ParagraphStyle], digest: str, key: str | None) -> list[Any]:
+    """Page 1, from summary_facts() alone."""
+    case_id = facts["case_id"]
+    signed = facts["finding"]
 
     story: list[Any] = []
     story.append(_p("EXCHEQUER · CRYPTOCURRENCY TRACE REPORT", st["micro"]))
@@ -173,11 +332,10 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
     story.append(Spacer(1, 8))
 
     # -- an old screening list, before anything that relies on the screening ---
-    screening_lists = report.get("screening_lists") or {}
-    if screening_lists.get("warning"):
+    if facts["warning"]:
         stale = Table([[Paragraph(
             f"<font name='Plex-Bold' color='{RED.hexval()}'>WARNING.</font> "
-            f"<font color='{RED.hexval()}'>{escape(one_line(screening_lists['warning']))}</font>", st["cell"])]],
+            f"<font color='{RED.hexval()}'>{escape(one_line(facts['warning']))}</font>", st["cell"])]],
             colWidths=[None])
         stale.setStyle(TableStyle([
             ("BOX", (0, 0), (-1, -1), 1, RED),
@@ -189,58 +347,54 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
     # -- the finding --------------------------------------------------------
     exchange = signed["exchange"]
     heading = exchange or "No exchange reached"
-    story.append(_p("WHERE THE MONEY WENT" if case["direction"] == "outgoing" else "WHO FUNDED THE ADDRESS",
+    story.append(_p("WHERE THE MONEY WENT" if facts["direction"] == "outgoing" else "WHO FUNDED THE ADDRESS",
                     st["micro"]))
     finding = ParagraphStyle("f2", parent=st["finding"], textColor=GREEN if exchange else INK)
     story.append(_p(heading, finding))
     story.append(_p(signed["summary"], st["lede"]))
 
     # -- key facts ----------------------------------------------------------
-    facts = [
-        ("Reported address", case["reported_address"], True),
-        ("Chain · asset · direction", f"{case['chain']} · {case['asset']} · {case['direction']}", False),
-        ("Traced at", _when_iso(case.get("traced_at")), False),
-        ("Started from", started_from(report.get("intake"), case.get("asset") or ""), False),
+    facts_rows = [
+        ("Reported address", facts["reported_address"], True),
+        ("Chain · asset · direction", f"{facts['chain']} · {facts['asset']} · {facts['direction']}", False),
+        ("Traced at", facts["traced_at"], False),
+        ("Started from", facts["started_from"], False),
     ]
     if exchange:
-        facts += [
+        facts_rows += [
             ({EXPLORER_TAG: "Address to ask the exchange to confirm",
-              EXCHANGE_WALLET: "Wallet the funds reached"}.get(attribution.get("kind"), "Address to ask the exchange about"),
+              EXCHANGE_WALLET: "Wallet the funds reached"}.get(facts["kind"], "Address to ask the exchange about"),
              signed["address"] or "", True),
             ("Wallet", _label(signed["label"]), False),
-            ("Hops from the reported address", attribution.get("hop_count", ""), False),
+            ("Hops from the reported address", facts["hops"], False),
         ]
-        prorata = attribution.get("prorata") or {}
-        cap = prorata.get("seed_cap") or {}
-        if signed["likely_arrived"]:
+        likely = signed["likely_arrived"]
+        if likely:
             # The signed text's own line, so Part 1 can never state another figure;
             # it already says what the estimate is capped at (r1-attribution-integrity-7).
-            caption = (f"Likely arrived (pro-rata; at most what "
-                       f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')})"
-                       if prorata.get("status") == "estimated" and cap.get("applied")
-                       else "Likely arrived, of what this wallet sent on this route (pro-rata)")
-            facts.append((caption, signed["likely_arrived"], False))
-        elif prorata.get("status") == "estimated":
-            facts.append(("Likely arrived, of what this wallet sent on this route (pro-rata)",
-                          f"≈ {_num(prorata.get('estimated'))} of {_num(prorata.get('sent'))} "
-                          f"{attribution.get('value_currency', '')}", False))
-        elif prorata.get("status") == "unknown":
+            if "(pro-rata; the reported address sent" in likely:
+                wording = next((w for w in CAP_WORDING.values() if f" {w} (pro-rata;" in likely),
+                               "the trace started from")
+                caption = f"Likely arrived (pro-rata; at most what {wording})"
+            else:
+                caption = "Likely arrived, of what this wallet sent on this route (pro-rata)"
+            facts_rows.append((caption, likely, False))
+        elif facts["prorata_unknown"]:
             # Said on page 1, not only in the limitations: no amount was measured.
-            facts.append(("Pro-rata", f"not estimated — {prorata.get('reason')}", False))
+            facts_rows.append(("Pro-rata", f"not estimated — {facts['prorata_unknown']}", False))
         if signed.get("share_of_funds"):
             # Against the whole, from the signed text: the line above is one route's.
-            facts.append(("Share of the traced funds", signed["share_of_funds"], False))
-        if signed.get("also_reached"):
-            # The signed text's first such line; every one is in the signed report.
-            more = len(attribution.get("also_reached") or []) - 1
-            facts.append(("Material funds also reached", signed["also_reached"]
-                          + (f" (and {more} more; see the signed report)" if more > 0 else ""), False))
-    if confidence.get("score") is not None:
+            facts_rows.append(("Share of the traced funds", signed["share_of_funds"], False))
+        if facts["also_reached"]:
+            # The signed text's first such line, and how many more it lists.
+            more = len(facts["also_reached"]) - 1
+            facts_rows.append(("Material funds also reached", facts["also_reached"][0]
+                               + (f" (and {more} more; see the signed report)" if more > 0 else ""), False))
+    if facts["band"] is not None:
         # R10: the band, not the decimal; the score's working is in the signed text.
-        band = (confidence.get("band") or "").capitalize() or "n/a"
-        facts.append(("Confidence", f"{band} (a rule of three inputs, not a probability)", False))
+        facts_rows.append(("Confidence", f"{facts['band']} (a rule of three inputs, not a probability)", False))
     rows = [[_p(label, st["small"]), _p(value, st["cellmono"] if mono else st["cell"])]
-            for label, value, mono in facts]
+            for label, value, mono in facts_rows]
     table = Table(rows, colWidths=[52 * mm, None])
     table.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -250,8 +404,8 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
     ]))
     story += [Spacer(1, 10), table]
 
-    if confidence.get("summary"):
-        story += [_p("HOW SURE", st["micro"]), _p(_shown_label(confidence["summary"]), st["cell"])]
+    if facts["how_sure"]:
+        story += [_p("HOW SURE", st["micro"]), _p(_shown_label(facts["how_sure"]), st["cell"])]
 
     # -- how to verify --------------------------------------------------------
     verify = Table([[Paragraph(
@@ -259,13 +413,13 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
         f"<font name='PlexMono'>{escape(_attachment_name(case_id))}</font> (your PDF reader's attachments "
         "panel). This page, the printed Part 2 and the footer are copies for reading: they are not covered "
         "by the signature and can be edited without breaking it. Before acting on this page, upload this "
-        f"PDF at <font name='PlexMono'>{escape(_verify_at(issuer.get('issued_by')))}</font>: it checks the "
-        "attached file and says whether this page shows the exchange, the address and the amount the signed "
-        "report states. Text copied from the printed pages will not verify, because copying from a PDF "
+        f"PDF at <font name='PlexMono'>{escape(_verify_at(facts['issued_by']))}</font>: it checks the "
+        "attached file and says whether this page holds exactly what Exchequer prints for the signed "
+        "report. Text copied from the printed pages will not verify, because copying from a PDF "
         "changes line breaks.<br/>"
         f"<font name='PlexMono' size='7.5'>content SHA-256 {escape(digest)}<br/>"
         f"signing key {escape(key or 'none (unsigned)')}"
-        + (f"<br/>issued by {escape(one_line(issuer['issued_by']))}" if issuer.get("issued_by") else "")
+        + (f"<br/>issued by {escape(one_line(facts['issued_by']))}" if facts["issued_by"] else "")
         + "</font>", st["small"])]], colWidths=[None])
     verify.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), PANEL), ("BOX", (0, 0), (-1, -1), 0.4, RULE),
@@ -275,53 +429,53 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
     story += [Spacer(1, 8), KeepTogether([verify])]
 
     # -- screening ------------------------------------------------------------
-    matches = screening.get("matches") or []
+    matches = facts["matches"]
     story.append(_p("SANCTIONS, MIXER, FREEZE AND STOLEN-FUNDS SCREENING", st["micro"]))
-    if not screening.get("screened"):
-        story.append(_p("This chain has no screening lists loaded; no screening was done.", st["cell"]))
-    elif not matches:
+    if not matches:
         story.append(_p("No address in the trace is on the lists below.", st["cell"]))
     else:
-        for m in matches[:8]:
-            colour = RED if m.get("category") in ("sanctioned", "mixer") else AMBER
-            line = (f"<font name='Plex-Bold' color='{colour.hexval()}'>{escape(one_line(m.get('category', '')).title())}</font> · "
-                    f"<font name='PlexMono'>{escape(one_line(m.get('address', '')))}</font> · "
-                    f"{escape(_label(m.get('entity') or m.get('label') or ''))}")
+        for note in matches[:8]:
+            match = _MATCH.fullmatch(note)
+            if match is None:
+                story.append(_p(short(note, CELL_LABEL_MAX), st["cell"]))
+                continue
+            category = match.group("category")
+            colour = RED if category.startswith(("Sanctioned", "Mixer")) else AMBER
+            line = (f"<font name='Plex-Bold' color='{colour.hexval()}'>{escape(category)}</font> · "
+                    f"<font name='PlexMono'>{escape(match.group('address'))}</font> · "
+                    f"{escape(short(match.group('rest'), CELL_LABEL_MAX))}")
             story.append(Paragraph(line, st["cell"]))
         if len(matches) > 8:
             story.append(_p(f"…and {len(matches) - 8} more, listed in Part 2.", st["small"]))
 
     # -- the lists and their dates ----------------------------------------------
-    if screening_lists.get("lists"):
+    if facts["lists"]:
         story.append(_p("LISTS SCREENED AGAINST", st["micro"]))
-        for entry in screening_lists["lists"]:
-            published = f", published {entry['published']}" if entry.get("published") else ""
+        for entry in facts["lists"]:
             note = f" {entry['note']}" if entry.get("note") else ""
-            story.append(_p(f"{entry['name']}: checked {entry['checked'] or 'no date recorded'}{published}.{note}",
-                            st["small"]))
-    if screening_lists.get("not_held"):
+            story.append(_p(f"{entry['name']}: checked {entry['checked']}.{note}", st["small"]))
+    if facts["not_held"]:
         # Said here too: a summary that names only what was held reads as if nothing was left out.
-        story.append(_p(f"Not loaded for this chain, so not screened: {', '.join(screening_lists['not_held'])}.",
-                        st["small"]))
+        story.append(_p(facts["not_held"], st["small"]))
 
     # -- the route ------------------------------------------------------------
-    path = report.get("trace_path") or []
+    path = facts["route"]
     if len(path) > 1:
         story.append(_p("THE ROUTE (PRINCIPAL PATH)", st["micro"]))
         route = [[_p("Hop", st["small"]), _p("Address", st["small"]), _p("Label", st["small"]),
                   _p("Received", st["small"])]]
-        for step in path:
-            label = _label(step.get("label") or step.get("exchange"))
-            if not label and step.get("address") == attribution.get("exchange_address"):
-                label = _label(attribution.get("exchange_wallet_label"))
-            if not label and step.get("depth") == 0:
+        for hop, step in enumerate(path):
+            label = _label(step["label"])
+            if not label and step["address"] == signed["address"]:
+                label = _label(signed["label"])
+            if not label and hop == 0:
                 label = "reported address"
-            amount = step.get("value_native")
+            amount = step["amount"]
             route.append([
-                _p(step.get("depth", ""), st["cell"]),
-                _p(step.get("address", ""), st["cellmono"]),
+                _p(hop, st["cell"]),
+                _p(step["address"], st["cellmono"]),
                 _p(label, st["cell"]),
-                _p(f"{_num(amount)} {case['asset']}" if amount is not None else "", st["cellmono"]),
+                _p(f"{_num(amount)} {facts['asset']}" if amount is not None else "", st["cellmono"]),
             ])
         t = Table(route, colWidths=[12 * mm, 82 * mm, None, 28 * mm], repeatRows=1)
         t.setStyle(TableStyle([
@@ -333,7 +487,7 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
         story.append(t)
 
     # -- limitations ----------------------------------------------------------
-    limits = report.get("limitations") or []
+    limits = facts["limitations"]
     if limits:
         story.append(_p("READ WITH THESE LIMITATIONS", st["micro"]))
         for item in limits[:3]:

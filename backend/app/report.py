@@ -34,7 +34,7 @@ from .scoring import BAND_THRESHOLDS, CAP_WORDING
 
 # 2.2: the signed body ends in an ISSUER block (issuing server, full key
 # fingerprint) and nothing follows the signature; earlier reports still verify.
-REPORT_VERSION = "2.2"
+REPORT_VERSION = "2.3"  # 2.3: FINDING states the address kind; PDF page 1 is drawn from the signed text
 TOOL_NAME = "Exchequer"
 
 
@@ -80,6 +80,15 @@ INFERRED_DEPOSIT = "inferred_deposit"  # probably one customer: ask to confirm, 
 EXCHANGE_WALLET = "exchange_wallet"    # the company's own: ask about the transactions, never KYC on it
 EXPLORER_TAG = "explorer_tag"          # a third party's word: ask whether it is theirs first
 TAG_WORDING = " (TronScan tag, read live)"  # tron_tags.py's label suffix
+# The FINDING line that says what kind of address the funds reached, so the
+# signed text states it and the PDF's page 1 can be drawn from that text alone.
+KIND_LINE = "Address kind     : "
+KIND_WORDING = {
+    LABELLED_DEPOSIT: "a deposit address (labelled: one customer's account)",
+    INFERRED_DEPOSIT: "a probable deposit address (inferred: only the exchange can confirm it)",
+    EXCHANGE_WALLET: "the exchange's own wallet (not one customer's account)",
+    EXPLORER_TAG: "an address an explorer tags as the exchange's (not confirmed by the exchange)",
+}
 
 
 def attribution_kind(trace: dict[str, Any]) -> str:
@@ -825,6 +834,8 @@ def render_text_report(report: dict[str, Any]) -> str:
         add("Basis            : "
             + ("INFERRED from the wallet's behaviour, not a label-file match"
                if attribution.get("inferred") else basis))
+        if attribution.get("kind") in KIND_WORDING:
+            add(KIND_LINE + KIND_WORDING[attribution["kind"]])
         if attribution.get("kind_note"):
             add(f"Kind recorded    : {attribution['kind_note']}")
         add(f"Hops from source : {attribution['hop_count']}")

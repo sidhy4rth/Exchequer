@@ -8,12 +8,21 @@ module does the next best thing for a reader who uploads the PDF to /verify:
 
 1. Pull out the one attached report and check it exactly as pasted text is
    checked (signing.verify_report). If it is not genuine, that is the answer.
+   Every embedded file counts -- the attachments list, a file attached to a
+   page as an annotation, and any other embedded file stream -- and there
+   must be exactly one.
 2. Read the text the pages hold and compare it with the signed report:
-   - page 1 must carry its NOT SIGNED notice, and show the case, exchange,
-     address and amount the signed report states;
-   - every address or hash, and every amount, page 1 shows must appear in the
-     signed report (so one cannot be added beside the genuine one);
-   - page 1 must hold no image (text in a picture cannot be read and compared);
+   - page 1 is drawn from the signed text alone (report_pdf.summary_facts),
+     so it is drawn again here from the attached file, and the uploaded
+     page 1's text must be exactly that, whitespace aside: a word, a line or
+     an "addendum" added, changed or left out is a difference, whether or
+     not it names an address;
+   - so it is named plainly, page 1 must also carry its NOT SIGNED notice,
+     show the case, exchange, address and amount the signed report states,
+     and show no address, hash or amount the signed report lacks;
+   - page 1 must hold no image, and no page an annotation (a note, stamp or
+     attached file drawn over the page): neither is in the text layer, so
+     neither could be compared;
    - every footer must name the signed report's case, hash and key, and the
      printed copy must be the signed text, word for word.
    Anything else is named, and the verdict says the pages do not match.
@@ -50,7 +59,7 @@ PART_TWO_HEADING = "Part 2 · The signed text report"
 PART_TWO_NOTE = ("The text the content hash and signature cover, for reading. Lines too long for the "
                  "page wrap onto the next line; the exact file is attached to this PDF.")
 NOT_SIGNED = "SUMMARY: NOT SIGNED."
-NOT_LAID_OUT = "The summary page could not be laid out for this case"
+NOT_LAID_OUT = "The summary page could not be"  # laid out, or drawn from the signed report (report_pdf)
 MISSING_GLYPH = "\x00"  # what pypdf reads back for a character the font could not draw
 
 DETAILS = {
@@ -62,8 +71,8 @@ DETAILS = {
     "pdf_unreadable": "This file starts like a PDF but cannot be read as one.",
     "pdf_busy": "Other PDFs are being checked right now. Try again in a minute.",
 }
-MATCHED = (" The PDF's pages match it, as far as their text can be read: page 1 shows the same case, exchange, "
-           "address and amount, and Part 2 is the signed text. The pages themselves are not signed, so the "
+MATCHED = (" The PDF's pages match it, as far as their text can be read: page 1 holds exactly what Exchequer "
+           "prints for this report, and Part 2 is the signed text. The pages themselves are not signed, so the "
            "attached report is the record to act on.")
 NOT_COMPARED = (" The PDF's pages were not compared: the attached report is in an older format whose finding "
                 "this check cannot read. Compare page 1 with the attached report yourself.")
@@ -124,11 +133,13 @@ def _verify(body: bytes) -> dict[str, Any]:
         if count > MAX_PAGES:
             return _verdict("pdf_unreadable", f"This PDF has {count} pages, more than any Exchequer report.")
         attachments = [(name, data) for name, datas in reader.attachments.items() for data in datas]
+        files = _embedded_file_count(reader, started)
     except Exception as exc:  # noqa: BLE001 -- a stranger's file can break a parser in any way; never a 500
         logger.info("An uploaded PDF could not be read: %s", type(exc).__name__)
         return _verdict("pdf_unreadable")
-    if len(attachments) != 1:
-        return _verdict("pdf_no_report", f"This PDF carries {len(attachments)} attached files. An Exchequer PDF "
+    count_files = max(len(attachments), files)
+    if len(attachments) != 1 or files != 1:
+        return _verdict("pdf_no_report", f"This PDF carries {count_files} attached files. An Exchequer PDF "
                                          "carries exactly one, the signed report, so there is nothing to check.")
     name, data = attachments[0]
     try:
@@ -161,6 +172,50 @@ def _verify(body: bytes) -> dict[str, Any]:
     result.update(status=status, genuine=False,
                   detail=DETAILS[status].format(problems=" ".join(problems)))
     return result
+
+
+MAX_OBJECTS = 200_000  # a 2 MB PDF holds far fewer; a crafted one is cut off, then refused
+
+
+def _embedded_file_count(reader: Any, started: float) -> int:
+    """Every embedded file the PDF can show a reader: each embedded file
+    stream reachable from the document (the attachments list, a page's
+    FileAttachment annotation, a page's associated files...), plus any
+    FileAttachment annotation whose file is not one of those streams."""
+    from pypdf.generic import ArrayObject, DictionaryObject, IndirectObject
+
+    seen: set[tuple[int, int]] = set()
+    streams: set[tuple[int, int]] = set()
+    stack: list[Any] = [reader.trailer]
+    visited = 0
+    file_annotations = 0
+    while stack:
+        visited += 1
+        if visited > MAX_OBJECTS or time.monotonic() - started > READ_SECONDS:
+            raise TimeoutError
+        item = stack.pop()
+        ref = None
+        if isinstance(item, IndirectObject):
+            ref = (item.idnum, item.generation)
+            if ref in seen:
+                continue
+            seen.add(ref)
+            item = item.get_object()
+        if isinstance(item, DictionaryObject):  # a stream is one too
+            if item.get("/Type") == "/EmbeddedFile":
+                streams.add(ref or (-visited, 0))
+            if item.get("/Subtype") == "/FileAttachment":
+                file_annotations += 1
+            stack.extend(v for k, v in item.items() if k != "/Parent")
+        elif isinstance(item, ArrayObject):
+            stack.extend(item)
+    return max(len(streams), file_annotations + (1 if streams else 0))
+
+
+def _annotations(page: Any) -> int:
+    annots = page.get("/Annots")
+    annots = annots.get_object() if annots is not None else None
+    return len(annots) if annots else 0
 
 
 def _page_texts(reader: Any, started: float) -> list[str]:
@@ -272,6 +327,28 @@ def _follows(lines: list[str], captions: tuple[str, ...], value: str) -> bool:
     return re.match(pattern, page[at + len(caption):]) is not None
 
 
+def _differs_from_redrawn(summary: str, signed: str, footer: str, page_line: Any) -> str | None:
+    """None if `summary` (the uploaded summary pages' text) is what
+    report_pdf draws for `signed`, whitespace aside; else a few words from
+    where they first differ."""
+    from .report_pdf import render_summary
+
+    got = _compact(summary)
+    forms = [_compact("\n".join(line for line in form.split("\n") if line != footer and not page_line.fullmatch(line)))
+             for form in render_summary(signed)]
+    if any(_same_text(got, wanted) for wanted in forms):
+        return None
+    wanted = forms[0]
+    at = next((i for i, (a, b) in enumerate(zip(got, wanted, strict=False)) if a != b and a != MISSING_GLYPH),
+              min(len(got), len(wanted)))
+    # Back from the compacted position to the page's own words.
+    positions = [i for i, c in enumerate(summary) if not c.isspace()]
+    start = positions[at] if at < len(positions) else len(summary)
+    before = summary[:start].split()[-4:]  # whole words: the few before the difference
+    after = summary[start:start + 70].split()
+    return _short(" ".join(before + after) or "the end of the page")
+
+
 def _short(value: str) -> str:
     value = value.strip()
     return value if len(value) <= 90 else value[:87] + "…"
@@ -341,6 +418,21 @@ def _compare(reader: Any, pages: list[str], signed: str, finding: dict[str, Any]
     if any(_has_image(reader.pages[n - 1]) for n, _ in summary_pages):
         problems.append("Page 1 holds an image. Exchequer's summary never does, and text in a picture cannot "
                         "be read and compared.")
+    marked = [n for n in range(1, len(pages) + 1) if _annotations(reader.pages[n - 1])]
+    if marked:
+        on_summary = [n for n in marked if n in {m for m, _ in summary_pages}]
+        (problems if on_summary else copy_problems).append(
+            f"Page{'s' if len(marked) > 1 else ''} {', '.join(map(str, marked))} "
+            f"carr{'y' if len(marked) > 1 else 'ies'} an annotation (a note, stamp, link or attached file drawn "
+            "over the page). Exchequer adds none, and what an annotation shows is not in the page's text, so "
+            "it cannot be compared.")
+    if not problems:
+        # Page 1 is drawn from the signed text alone: draw it again and require the same text.
+        differs = _differs_from_redrawn(summary, signed, footer, page_line)
+        if differs is not None:
+            problems.append("Page 1 is not exactly what Exchequer would print for the signed report: it "
+                            f"differs at \u201c{differs}\u201d. A word, line or note added to the page, or left "
+                            "out, is a difference.")
 
     if not in_part_two:
         copy_problems.append("This PDF has no printed copy of the report (Part 2).")
