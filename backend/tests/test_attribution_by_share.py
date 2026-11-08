@@ -216,3 +216,119 @@ def test_a_dust_route_to_one_exchange_does_not_win_the_tie_on_hops(trace):
                _tx(SEED, BINANCE_14, 0.002, T + 5)])
     assert r["exchange_address"] == KRAKEN_1
     assert r["hop_count"] == 2 == len(r["trace_path"]) - 1
+
+
+# --- 8 Nov check (r1-trace-engine-0): recycling, intake ties, other exchanges ----
+
+KD = addr("cd0d")  # the attacker's own Kraken deposit address
+
+
+def _recycling_loop(rounds=150):
+    """S pays 1 ETH into its own Kraken deposit KD, KD sweeps it to Kraken,
+    Kraken pays it back out to S: the same 1 ETH, `rounds` times over."""
+    out, back = [], []
+    for i in range(rounds):
+        out += [_tx(SEED, KD, 1.0, T - 10000 + i * 10), _tx(KD, KRAKEN_1, 1.0, T - 9995 + i * 10)]
+        back.append(_tx(KRAKEN_1, SEED, 1.0, T - 9992 + i * 10))
+    return out, back
+
+
+@pytest.fixture
+def trace_with_flows(monkeypatch):
+    """A provider that can also list what a wallet received in a window."""
+    def run(history, inflows=()):
+        everything = list(history) + list(inflows)
+
+        class Fake:
+            def get_outgoing_transactions(self, address, limit=None):
+                return [t for t in history if t.from_address == address]
+
+            def get_flows_between(self, address, start_block, end_block, start_ts, end_ts):
+                inside = [t for t in everything if start_block <= t.block_number <= end_block]
+                return ([t for t in inside if t.to_address == address],
+                        [t for t in inside if t.from_address == address], True)
+
+        @contextmanager
+        def open_source(chain, asset):
+            yield Fake()
+        monkeypatch.setattr(pipeline, "open_source", open_source)
+        monkeypatch.setattr(pipeline, "detect_swaps", lambda *a, **k: [])
+        return run_trace(TraceRequest(address=SEED, chain="ethereum", asset="ETH", max_depth=4,
+                                      follow_swaps=False))
+    return run
+
+
+def test_value_recycled_through_an_exchange_counts_once(trace_with_flows):
+    # 150 x 1 ETH into the attacker's own Kraken deposit, each paid back out by
+    # Kraken: 150 ETH on the aggregated edge, 1 ETH of real value. It used to
+    # take the case (share 0.60, High) from the 99 ETH that went to Binance.
+    loop, back = _recycling_loop()
+    r = trace_with_flows(BASE + loop, inflows=back)
+    assert r["exchange"] == "Binance" and r["exchange_address"] == BINANCE_14
+    assert r["materiality"]["primary_share"] > 0.9
+    kraken = [m for m in r["matches"] if m["exchange"] == "Kraken"]
+    assert kraken and all(m["share"] < 0.1 and not m["material"] for m in kraken)
+    recycled = r["materiality"]["recycled"]
+    assert recycled["by_exchange"]["Kraken"] == pytest.approx(150.0)
+    assert any("Kraken" in w and "back" in w for w in r["warnings"])
+
+
+def test_recycling_that_cannot_be_seen_is_at_least_named_in_the_letter_and_report(trace):
+    # The same loop with no way to read the reported wallet's inflows: the
+    # withdrawals are invisible and the edge reads 150 ETH. The case may still
+    # name Kraken, but the letter and the report must say that a material
+    # share also reached Binance.
+    import json
+
+    from app import request_letters
+    from app.models import Case
+    from app.report import build_report, render_text_report
+
+    loop, _ = _recycling_loop()
+    r = trace(BASE + loop)
+    assert r["materiality"]["multiple_exchanges"] is True
+    other = "Binance" if r["exchange"] == "Kraken" else "Kraken"
+    letter = request_letters.draft("c1", r, "exchange")
+    flat = " ".join(letter.split())
+    assert "also reached" in flat and other in flat
+    report = build_report(Case(id="c1", address=SEED, created_at="2026-11-08T00:00:00+00:00",
+                               result_json=json.dumps(r)))
+    assert any(x["exchange"] == other for x in report["attribution"]["also_reached"])
+    text = render_text_report(report)
+    assert "Also reached" in text and other in text
+
+
+def test_a_hop_wallets_float_to_another_exchange_is_named_in_the_letter(trace):
+    # W1 also sends 100 ETH of its own to Kraken: both exchanges carry the
+    # whole 99 ETH share. The closer one leads; the letter names the other.
+    from app import request_letters
+
+    r = trace(BASE + [_tx(W1, KRAKEN_1, 100.0, T + 25)])
+    assert r["materiality"]["multiple_exchanges"] is True
+    flat = " ".join(request_letters.draft("c1", r, "exchange").split())
+    other = {"Kraken": "Binance", "Binance": "Kraken"}[r["exchange"]]
+    assert "also reached" in flat and other in flat
+
+
+def test_a_single_exchange_letter_has_no_also_reached_paragraph(trace):
+    from app import request_letters
+
+    r = trace(BASE)
+    assert "also reached" not in " ".join(request_letters.draft("c1", r, "exchange").split())
+
+
+def test_on_a_payment_trace_branches_over_the_reported_amount_tie_and_the_larger_wins():
+    # Intake: every branch carrying at least the reported 1,000 saturates at a
+    # 1.0 share. The closest used to win, naming a 1,000 deposit address over
+    # the 50,000 that went to Binance; the tie is now broken by share of
+    # everything the wallet sent.
+    from app.pipeline import _materiality
+
+    g = graph([(SEED, W1, 50000.0), (W1, W2, 50000.0), (W2, BINANCE_14, 50000.0),
+               (SEED, D, 1000.0), (D, BINANCE_14, 400.0)])
+    ms = [match(BINANCE_14, "Binance", 3, value=50400.0),
+          ExchangeMatch(address=D, exchange="Binance", label="probable Binance deposit address (inferred)",
+                        wallet_type="inferred_deposit", depth=1, value_received_native=1000.0, evidence={})]
+    for intake in (None, {"payments": [{"amount": 1000.0, "timestamp": 1}]}):
+        _, shares = _materiality(g, SEED, OUTGOING, ms, [], intake)
+        assert ExchangeMatcher.primary_match(ms, shares).address == BINANCE_14, intake

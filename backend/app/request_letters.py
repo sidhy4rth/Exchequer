@@ -30,7 +30,7 @@ from . import config, provenance
 from .case_privacy import WITHHELD
 from .display_text import one_line, short
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
-                     _amount, _paid_at, _when, _when_iso, attribution_kind)
+                     _amount, _paid_at, _when, _when_iso, also_reached, also_reached_line, attribution_kind)
 from .risk_matcher import _list_meta, is_tether_usdt_freeze
 
 EXCHANGE = "exchange"
@@ -458,6 +458,15 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
     stated = _letter_amount(result, found)
     if stated is not None:
         lines += _amount_lines(asset, stated)
+    others = also_reached(trace)
+    if others:
+        # The trace names one exchange, but material funds also went elsewhere
+        # (8 Nov check): the addressee must know, and the officer must confirm.
+        lines += ["", "   Material funds in this trace also reached another exchange, which this request does",
+                  "   not cover:",
+                  *(f"     {also_reached_line(o)}" for o in others),
+                  "   [Officer to confirm that this exchange is the right addressee; a separate request",
+                  "   may be needed to each.]"]
     listed = _transfers_into(trace, address) if kind in COMPANY_WALLET_KINDS else []
     path = _path_lines(trace, asset, list_all=kind in COMPANY_WALLET_KINDS, leave_out=address if listed else None)
     lines += ["", "3. The transfers, hop by hop:", f"  Reported address: {result.get('address')}"]

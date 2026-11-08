@@ -115,6 +115,34 @@ def kind_disagreement(trace: dict[str, Any]) -> str | None:
     return f"{stored.replace('_', ' ')} (today's rules read the same facts as {today.replace('_', ' ')})"
 
 
+def also_reached(trace: dict[str, Any]) -> list[dict[str, Any]]:
+    """Other exchanges that a material share of the traced funds reached, the
+    largest first, one entry per exchange (its largest-share address).
+
+    The case names one exchange; when material funds also went to another
+    (pipeline._materiality's `multiple_exchanges`), the report and the letter
+    must say so, so the officer can confirm which exchange to write to --
+    a value round trip through an exchange account, or a hop wallet's own
+    float, can make the named one the wrong addressee (8 Nov check)."""
+    named = trace.get("exchange")
+    if not named:
+        return []
+    best: dict[str, dict[str, Any]] = {}
+    for m in trace.get("matches") or []:
+        if not m.get("material") or not m.get("exchange") or m["exchange"] == named:
+            continue
+        if m["exchange"] not in best or (m.get("share") or 0) > best[m["exchange"]]["share"]:
+            best[m["exchange"]] = {"exchange": m["exchange"], "address": m.get("address"), "label": m.get("label"),
+                                   "share": float(m.get("share") or 0), "inferred": bool(m.get("inferred"))}
+    return sorted(best.values(), key=lambda x: (-x["share"], x["exchange"]))
+
+
+def also_reached_line(entry: dict[str, Any]) -> str:
+    """One other exchange, as the report and the letter print it."""
+    return (f"{entry['exchange']} at {entry['address']} -- about {entry['share'] * 100:.1f}% of the traced funds"
+            + (" (an inferred deposit address)" if entry.get("inferred") else ""))
+
+
 def derived_kind(trace: dict[str, Any]) -> str:
     """The kind as today's rules read the case's facts."""
     address = trace.get("exchange_address")
@@ -233,6 +261,9 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
             "prorata": result.get("prorata"),
             "value_currency": native_symbol,
             "all_matches": matches,
+            # Material funds also reached these exchanges (more than one: the
+            # officer confirms which to write to; a request may be needed to each).
+            "also_reached": also_reached(result),
         },
         "confidence": {
             "score": result.get("confidence"),
@@ -797,6 +828,11 @@ def render_text_report(report: dict[str, Any]) -> str:
                 + (" (including any funds from other sources)" if direction == "outgoing" else ""))
             if prorata.get("status") == "unknown":
                 add(f"Pro-rata         : not estimated -- {prorata.get('reason')}")
+        for entry in attribution.get("also_reached") or []:
+            add(f"Also reached     : {also_reached_line(entry)}")
+        if attribution.get("also_reached"):
+            add("                   Material funds went to more than one exchange: confirm which to")
+            add("                   write to; a separate request may be needed to each.")
     elif direction == "outgoing":
         add("No known exchange wallet was reached within the traced depth.")
         add("This does not establish that the funds were not cashed out.")
@@ -1161,7 +1197,7 @@ def render_text_report(report: dict[str, Any]) -> str:
 
 _FINDING_FIELDS = {"Exchange         : ": "exchange", "Address          : ": "address",
                    "Address label    : ": "label", "Likely arrived   : ": "likely_arrived",
-                   "Arrived on path  : ": "arrived_on_path"}
+                   "Arrived on path  : ": "arrived_on_path", "Also reached     : ": "also_reached"}
 
 
 def signed_finding(text: str) -> dict[str, str | None] | None:

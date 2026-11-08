@@ -243,13 +243,32 @@ class ExchangeMatcher:
         its lead over the hot wallet it sweeps to: the hot wallet's share
         through it can never be larger. Without `shares` the order is the
         closest-first one, for callers that have no graph to measure.
+
+        Shares saturate at 1.0 when the denominator is smaller than what the
+        wallet sent (the victim's reported payments, a swap's output), so
+        every branch carrying at least that much ties. `MatchShares.by_value`
+        (each match's share of everything the wallet sent) breaks those ties
+        before hops do: the larger branch wins, not the closer one.
         """
         if not matches:
             return None
         if shares is None:
             return min(matches, key=lambda m: (m.depth, m.inferred, -m.value_received_native))
-        return min(matches, key=lambda m: (-round(shares.get(m.address, 0.0), 2), m.depth, m.inferred,
-                                           -m.value_received_native))
+        by_value = getattr(shares, "by_value", None) or {}
+        return min(matches, key=lambda m: (-round(shares.get(m.address, 0.0), 2),
+                                           -round(by_value.get(m.address, shares.get(m.address, 0.0)), 2),
+                                           m.depth, m.inferred, -m.value_received_native))
+
+
+class MatchShares(dict):
+    """Each match's share of the traced funds (address -> share), as
+    pipeline._materiality measures it, plus `by_value`: each match's share of
+    everything the reported wallet sent, which breaks ties between shares that
+    saturated at 1.0 (see ExchangeMatcher.primary_match)."""
+
+    def __init__(self, shares: dict[str, float] | None = None, by_value: dict[str, float] | None = None):
+        super().__init__(shares or {})
+        self.by_value = dict(by_value or {})
 
 
 def get_router_matcher(chain_key: str | None = None) -> ExchangeMatcher:

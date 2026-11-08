@@ -227,6 +227,11 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
         elif prorata.get("status") == "unknown":
             # Said on page 1, not only in the limitations: no amount was measured.
             facts.append(("Pro-rata", f"not estimated — {prorata.get('reason')}", False))
+        if signed.get("also_reached"):
+            # The signed text's first such line; every one is in the signed report.
+            more = len(attribution.get("also_reached") or []) - 1
+            facts.append(("Material funds also reached", signed["also_reached"]
+                          + (f" (and {more} more; see the signed report)" if more > 0 else ""), False))
     if confidence.get("score") is not None:
         # R10: the band, not the decimal; the score's working is in the signed text.
         band = (confidence.get("band") or "").capitalize() or "n/a"

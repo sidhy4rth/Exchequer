@@ -44,7 +44,7 @@ from .etherscan_client import (
     normalize_address,
 )
 from .deposit_inference import describe as describe_inference, infer_deposit_addresses
-from .exchange_matcher import ExchangeMatcher, get_matcher, get_router_matcher
+from .exchange_matcher import ExchangeMatcher, MatchShares, get_matcher, get_router_matcher
 from .swap_detection import describe as describe_swap, detect_swaps
 from .graph_builder import (
     INCOMING,
@@ -189,7 +189,8 @@ class TraceRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 def _trace_path(
-    graph: nx.DiGraph, seed: str, target: str, direction: str = OUTGOING
+    graph: nx.DiGraph, seed: str, target: str, direction: str = OUTGOING,
+    route_graph: nx.DiGraph | None = None,
 ) -> list[dict[str, Any]]:
     """The widest route between the reported address and `target` (the one
     whose narrowest hop carried the most; see scoring.principal_path), with
@@ -199,11 +200,13 @@ def _trace_path(
     Always read in the direction the money moved, so a reverse trace's path
     runs from the exchange down to the reported address rather than being
     printed backwards. The same route the score was computed along, so the
-    report and the confidence working never describe two different paths.
+    report and the confidence working never describe two different paths:
+    `route_graph` is the graph the score measured (round trips netted; see
+    _exchange_round_trips), while the amounts printed are the chain's own.
     """
     source, destination = (seed, target) if direction == OUTGOING else (target, seed)
     try:
-        path = principal_path(graph, source, destination)
+        path = principal_path(route_graph if route_graph is not None else graph, source, destination)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return []
 
@@ -283,14 +286,15 @@ def _appendix(rows: list[dict[str, Any]], keep_edges: set[tuple[str, str]],
             "transfers_sha256": appendix_sha256(rows)}
 
 
-def _appendix_edges(graph: nx.DiGraph, seed: str, direction: str, primary: Any) -> set[tuple[str, str]]:
+def _appendix_edges(graph: nx.DiGraph, seed: str, direction: str, primary: Any,
+                    route_graph: nx.DiGraph | None = None) -> set[tuple[str, str]]:
     """The edges whose every transfer a case lists: the reported address's own
     (out of it, or into it on a reverse trace) and each on the route to the exchange."""
     edges = set(graph.out_edges(seed) if direction == OUTGOING else graph.in_edges(seed))
     if primary is not None:
         source, destination = (seed, primary.address) if direction == OUTGOING else (primary.address, seed)
         try:
-            path = principal_path(graph, source, destination)
+            path = principal_path(route_graph if route_graph is not None else graph, source, destination)
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             path = []
         edges |= set(zip(path, path[1:], strict=False))
@@ -509,6 +513,89 @@ def _seed_cap(intake: dict[str, Any] | None, seed_amount: float | None,
     return None, None
 
 
+def _field(tx: Any, name: str) -> Any:
+    """A transfer's field, whether it is a graph edge's dict or a client's Transaction."""
+    return tx.get(name) if isinstance(tx, dict) else getattr(tx, name, None)
+
+
+def _exchange_round_trips(graph: nx.DiGraph, seed: str, matches: list, flows_between: Any,
+                          exchange_of: Any) -> dict[str, Any] | None:
+    """Value the reported wallet paid straight into an exchange and got back
+    from that same exchange later: the same coins going round, not more money.
+
+    A wallet that pays 1 ETH into its own exchange deposit and withdraws it,
+    150 times, shows a 150 ETH edge to that deposit address (the exchange's
+    hot wallet, which pays the withdrawals, is never expanded). Counted at face
+    value it took the case from the 99 ETH sent elsewhere. Here the wallet's
+    inflows over the window of its sends are read once (`flows_between`),
+    and each inflow from an address labelled as an exchange takes back what
+    the wallet had paid that exchange before it -- one pass in order, as
+    prorata._recycled does at each hop. Only direct payments (the wallet's own
+    edge to a matched address) are netted; a round trip through other wallets
+    is not seen. Returns None when there is nothing to check; never raises.
+    """
+    direct = {m.address: m.exchange for m in matches if m.address != seed and graph.has_edge(seed, m.address)}
+    if not direct or flows_between is None:
+        return None
+    paid = [(tx, direct[a]) for a in direct for tx in graph.edges[seed, a].get("transactions") or []]
+    sent = [tx for _, _, d in graph.out_edges(seed, data=True) for tx in d.get("transactions") or []]
+    blocks = [t["block_number"] for t, _ in paid if t.get("block_number")]
+    all_blocks = [t["block_number"] for t in sent if t.get("block_number")]
+    times = [t["timestamp"] for t, _ in paid if t.get("timestamp")]
+    all_times = [t["timestamp"] for t in sent if t.get("timestamp")]
+    by_block = bool(blocks)
+    if not by_block and not times:
+        return None
+    try:
+        received, _, complete = flows_between(
+            seed, min(blocks) if blocks else 0, max(all_blocks) if all_blocks else 0,
+            min(times) if times else 0, max(all_times) if all_times else 0)
+    except Exception as exc:  # noqa: BLE001 -- a check is never worth a failed trace
+        logger.warning("Round-trip read for %s failed: %s", seed, log_safety.redact(str(exc)))
+        return {"checked": False, "complete": False, "by_exchange": {}, "total": 0.0, "netted_edges": {}}
+    def pos(tx: Any) -> int:
+        return int(_field(tx, "block_number" if by_block else "timestamp") or 0)
+
+    events = [(pos(t), 0, exch, float(_field(t, "value_native") or 0.0)) for t, exch in paid]
+    for tx in received:
+        sender = normalize_address(_field(tx, "from_address") or "")
+        exch = direct.get(sender) or ((exchange_of(sender) or {}).get("exchange") if sender else None)
+        if exch:
+            events.append((pos(tx), 1, exch, float(_field(tx, "value_native") or 0.0)))
+    owed: dict[str, float] = {}
+    back: dict[str, float] = {}
+    for _, is_in, exch, value in sorted(events, key=lambda e: (e[0], e[1])):
+        if not is_in:
+            owed[exch] = owed.get(exch, 0.0) + value
+            continue
+        taken = min(owed.get(exch, 0.0), value)
+        if taken > 0:
+            owed[exch] -= taken
+            back[exch] = back.get(exch, 0.0) + taken
+    netted: dict[tuple[str, str], float] = {}
+    for exch, value in back.items():
+        edges = [a for a, e in direct.items() if e == exch]
+        total = sum(float(graph.edges[seed, a].get("value_native", 0.0)) for a in edges)
+        keep = max(0.0, 1.0 - value / total) if total else 0.0
+        for a in edges:
+            netted[(seed, a)] = float(graph.edges[seed, a].get("value_native", 0.0)) * keep
+    return {"checked": True, "complete": bool(complete),
+            "by_exchange": {e: round(v, 6) for e, v in sorted(back.items()) if v > 0},
+            "total": round(sum(back.values()), 6), "netted_edges": netted}
+
+
+def _netted_graph(graph: nx.DiGraph, round_trips: dict[str, Any] | None) -> nx.DiGraph:
+    """The graph with the reported wallet's round-tripped value taken off its
+    edges into each exchange, for measuring shares; the case's own graph keeps
+    what the chain shows."""
+    if not round_trips or not round_trips.get("netted_edges"):
+        return graph
+    netted = graph.copy()
+    for (u, v), value in round_trips["netted_edges"].items():
+        netted.edges[u, v]["value_native"] = value
+    return netted
+
+
 def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
                  untraced: list[dict[str, Any]], intake: dict[str, Any] | None,
                  seed_amount: float | None = None, seed_amount_basis: str | None = None,
@@ -527,12 +614,17 @@ def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
     outflow = seed_outflow(graph, seed, direction, untraced)
     cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis)
     denominator, basis = (cap, cap_basis) if cap else (outflow, "seed_outflow")
-    shares: dict[str, float] = {}
+    shares = MatchShares()
     for m in matches:
         if m.address == seed:
-            shares[m.address] = 1.0
-        elif denominator:
+            shares[m.address] = shares.by_value[m.address] = 1.0
+            continue
+        if denominator:
             shares[m.address] = min(1.0, reach.get(m.address, 0.0) / denominator)
+        # Its share of everything the wallet sent: breaks the tie when several
+        # branches carry at least the reported payments (or the swap's output).
+        if outflow:
+            shares.by_value[m.address] = min(1.0, reach.get(m.address, 0.0) / outflow)
     threshold = config.ATTRIBUTION_MATERIAL_SHARE
     material = sorted({m.exchange for m in matches if shares.get(m.address, 0.0) >= threshold})
     return {
@@ -749,8 +841,30 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             # Follow the money: each match's share of what the reported address
             # sent picks the case's exchange, not its hop count alone (one dust
             # transfer used to name any exchange, or an innocent deposit address).
-            materiality, shares = _materiality(result.graph, seed, direction, matches + inferred,
+            # Coins the reported wallet paid straight into an exchange and got
+            # back from it are counted once (8 Nov check): 150 deposits of the
+            # same 1 ETH are 1 ETH of value, not 150. `measured` is the graph
+            # with them netted; shares, the route and the score read it.
+            round_trips = (_exchange_round_trips(result.graph, seed, matches + inferred,
+                                                 getattr(client, "get_flows_between", None), matcher.lookup)
+                           if direction == OUTGOING else None)
+            measured = _netted_graph(result.graph, round_trips)
+            materiality, shares = _materiality(measured, seed, direction, matches + inferred,
                                                result.untraced, intake, seed_amount, seed_amount_basis)
+            materiality["recycled"] = ({k: v for k, v in round_trips.items() if k != "netted_edges"}
+                                       if round_trips else None)
+            if round_trips and round_trips["total"] > 0:
+                result.warnings.append(
+                    f"The reported address got back {round_trips['total']:g} {asset_symbol} from "
+                    + ", ".join(f"{e} ({v:g})" for e, v in round_trips["by_exchange"].items())
+                    + " out of what it had paid in directly: the same coins going round, so they are "
+                    "counted once when measuring each exchange's share"
+                    + ("" if round_trips["complete"] else " (its inflows could not all be read, so this "
+                       "may be less than went round)") + ".")
+            elif round_trips and not round_trips["checked"]:
+                result.warnings.append(
+                    "Whether the reported address got back what it paid into an exchange could not be "
+                    "read, so value it moved round in and out of one may be counted more than once.")
             # Each match's hop count is its widest route's, the route the score,
             # the report and the letter are read along (8 Nov check).
             route_hops = materiality["hops"]
@@ -765,7 +879,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 materiality["primary_reach"] = round(materiality["reach"].get(lead.address, 0.0), 6)
             if direction == OUTGOING and lead is not None and lead.address != seed:
                 try:
-                    lead_path = principal_path(result.graph, seed, lead.address)
+                    lead_path = principal_path(measured, seed, lead.address)
                 except (nx.NetworkXNoPath, nx.NodeNotFound):
                     lead_path = []
                 # One read of each wallet's flows in its window, shared by
@@ -773,7 +887,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 # to net out coins it got back (W -> X -> W).
                 flows = getattr(client, "get_flows_between", None)
                 flows = read_once(flows) if flows else None
-                prorata = estimate_prorata(result.graph, lead_path,
+                prorata = estimate_prorata(measured, lead_path,
                                            getattr(client, "get_incoming_between", None), flows_between=flows,
                                            seed_cap=cap, cap_basis=cap_basis)
                 # R4: FIFO and LIBR beside pro-rata, on the same path. Before
@@ -897,7 +1011,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         graph, PatternConfig(native_symbol=asset_symbol), matcher.is_exchange
     )
     confidence = score_case(
-        graph,
+        measured,  # the graph shares were measured on: round trips netted
         seed,
         primary,
         findings,
@@ -1132,13 +1246,13 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         ),
         "confidence_detail": confidence.to_dict(),
         "trace_path": (
-            _trace_path(graph, seed, primary.address, direction) if primary else []
+            _trace_path(graph, seed, primary.address, direction, route_graph=measured) if primary else []
         ),
         # Only populated on a reverse trace: the seed has no inbound edges when
         # the walk ran outward.
         "direct_senders": _direct_senders(graph, seed),
         # transfers, transfers_total, transfers_omitted, transfers_sha256 (_appendix).
-        **_appendix(_all_transfers(graph), _appendix_edges(graph, seed, direction, primary),
+        **_appendix(_all_transfers(graph), _appendix_edges(graph, seed, direction, primary, measured),
                     {m.address for m in matches}),
         "depth_reached": result.depth_reached,
         "max_depth": trace_config.max_depth,
