@@ -320,7 +320,8 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
                 "amount_out": (f.get("cap") or {}).get("swap_output", (f.get("swap") or {}).get("amount_out")),
                 "asset_in": (f.get("swap") or {}).get("asset_in"),
                 "cap": f.get("cap"),
-                # Earlier dust swaps the follow-on's window was not opened at.
+                # Swaps the follow-on's window left out: too small, or made before
+                # the traced funds reached the wallet (each says which).
                 "swaps_left_out": f.get("swaps_left_out") or [],
                 "max_depth": f.get("max_depth"),
                 "error": f.get("error"),
@@ -1085,7 +1086,8 @@ def render_text_report(report: dict[str, Any]) -> str:
                 add(f"    swap returned       : {f['amount_out']:,.4f} {f['asset']}"
                     + (f" ({count} swaps)" if count > 1 else ""))
             for left in f.get("swaps_left_out") or []:
-                add(f"    left out (too small): {left.get('amount_in') or 0:,.4f} {f.get('asset_in')} for "
+                why = "too early" if left.get("why") == "before_arrival" else "too small"
+                add(f"    left out ({why}): {left.get('amount_in') or 0:,.4f} {f.get('asset_in')} for "
                     f"{left.get('amount_out') or 0:,.4f} {f['asset']}, tx {left.get('tx')}")
             if cap.get("basis") == "swap_share":
                 # The swapping wallet added its own money: the follow-on

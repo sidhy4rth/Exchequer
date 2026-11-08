@@ -457,12 +457,16 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
             "   from that swap.",
         ]
     if swap and found.get("left_out"):
-        # Earlier swaps too small to carry the traced funds: the follow-on
-        # starts after them, so what the wallet sent before is not counted.
-        lines += ["", f"   Earlier swaps by {sender} carried too little to be the traced funds and were left out;",
-                  f"   the {asset} was followed from the first swap that did:",
+        # Swaps that cannot have carried the traced funds -- made before they
+        # reached the wallet, or too small: the follow-on starts after them, so
+        # what the wallet sent before is not counted.
+        lines += ["", f"   Earlier swaps by {sender} cannot have carried the traced funds and were left out;",
+                  f"   the {asset} was followed from the first swap that could:",
                   *(f"     {s.get('amount_in') or 0:,.6f} {swap.get('asset_in')} for {s.get('amount_out') or 0:,.6f} "
-                    f"{asset}, tx {s.get('tx')} (left out)" for s in found["left_out"])]
+                    f"{asset}, tx {s.get('tx')} (left out: "
+                    + ("made before the traced funds reached it)" if s.get("why") == "before_arrival"
+                       else "too small to be the traced funds)")
+                    for s in found["left_out"])]
     stated = _letter_amount(result, found)
     if stated is not None:
         lines += _amount_lines(asset, stated)

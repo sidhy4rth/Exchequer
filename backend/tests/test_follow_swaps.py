@@ -440,7 +440,7 @@ def test_the_letter_after_a_dust_swap_states_the_real_swap_and_names_the_dust_on
     swaps_are(monkeypatch, [dust, SWAP])
     letter = " ".join(draft("c1", run_trace(request()), "exchange").split())
     assert "of the 2,400.000000 USDT the swap returned, about 2,400.000000 USDT reached this address" in letter
-    assert "0xd057 (left out)" in letter
+    assert "0xd057 (left out: too small to be the traced funds)" in letter
 
 
 def test_an_intake_letter_after_a_swap_states_at_most_the_victims_share(faked, monkeypatch):
@@ -527,3 +527,116 @@ def test_many_small_swaps_that_carry_real_value_are_not_left_out(faked, monkeypa
     swaps_are(monkeypatch, small + [REAL])
     (follow,) = run_trace(request())["follow_ons"]
     assert follow["cap"]["swaps"] == 6 and "swaps_left_out" not in follow
+
+
+# --- 8 Nov re-check (r1-evidence-crypto-5): a decoy swap before the traced money arrived ---
+
+def _decoy_at_a_hop(monkeypatch, decoy_in=0.2, inflows=None):
+    """p_follow2 N2: MID gets the traced 1 ETH two minutes before the real
+    swap. Thirty days earlier it swapped `decoy_in` ETH of its own; the day
+    before the real swap it sent 4,900 USDT it already held to Kraken; the
+    real swap's 2,400 USDT goes to Binance."""
+    eth = list(inflows or [tx(SEED, MID, 1.0, SWAP_AT - 120, "ETH")])
+    eth += [tx(MID, ROUTER, decoy_in, SWAP_AT - 30 * DAY, "ETH"), tx(MID, ROUTER, 1.0, SWAP_AT, "ETH")]
+    monkeypatch.setitem(HISTORY, "ETH", eth)
+    monkeypatch.setitem(HISTORY, "USDT", [tx(MID, KRAKEN_1, 4900.0, SWAP_AT - DAY, "USDT"),
+                                          tx(MID, BINANCE_14, 2400.0, SWAP_AT + 60, "USDT")])
+    swaps_are(monkeypatch, [{**SWAP, "sender": MID, "tx": "0xdecoy", "timestamp": SWAP_AT - 30 * DAY,
+                             "amount_in": decoy_in, "amount_out": 2400.0 * decoy_in},
+                            {**REAL, "sender": MID}])
+
+
+def test_a_swap_before_the_traced_money_arrived_does_not_open_the_follow_on(faked, monkeypatch):
+    # The decoy is 20% of the real swap, so the size rule alone kept it, the
+    # window opened 30 days early and the follow-on and its letter named
+    # Kraken, which got only money MID held before the traced ETH arrived.
+    from app.request_letters import draft
+
+    _decoy_at_a_hop(monkeypatch)
+    result = run_trace(request())
+    (follow,) = result["follow_ons"]
+    assert result["followed_attribution"]["exchange"] == "Binance"
+    assert follow["result"]["exchange_address"] == BINANCE_14
+    assert KRAKEN_1 not in [m["address"] for m in follow["result"]["matches"]]
+    assert [s["tx"] for s in follow["swaps_left_out"]] == ["0xdecoy"]
+    assert follow["cap"]["swaps"] == 1 and follow["cap"]["swap_output"] == 2400.0
+    assert follow["swaps_left_out"][0]["why"] == "before_arrival"
+    letter = " ".join(draft("c1", result, "exchange").split())
+    assert "Kraken" not in letter and KRAKEN_1 not in letter
+    assert "0xdecoy" in letter and "left out: made before the traced funds reached it" in letter
+    assert "too small" not in letter
+    import json
+
+    from app.models import Case
+    from app.report import build_report, render_text_report
+    text = render_text_report(build_report(Case(id="c1", address=SEED, created_at="2026-11-08T00:00:00+00:00",
+                                                result_json=json.dumps(result, default=str))))
+    assert "left out (too early)" in text and "0xdecoy" in text
+
+
+def test_an_early_dust_swap_is_still_left_out_as_too_small(faked, monkeypatch):
+    from app.request_letters import draft
+
+    _decoy_at_a_hop(monkeypatch, decoy_in=0.0001, inflows=[tx(SEED, MID, 1.0, SWAP_AT - 31 * DAY, "ETH")])
+    result = run_trace(request())
+    (follow,) = result["follow_ons"]
+    assert [(s["tx"], s["why"]) for s in follow["swaps_left_out"]] == [("0xdecoy", "too_small")]
+    assert "left out: too small to be the traced funds" in " ".join(draft("c1", result, "exchange").split())
+
+
+def test_dust_sent_ahead_does_not_make_the_decoy_count(faked, monkeypatch):
+    # A 0.001 ETH send from the reported wallet before the decoy swap does not
+    # count as the traced money arriving: it could not carry the decoy's 0.2.
+    _decoy_at_a_hop(monkeypatch, inflows=[tx(SEED, MID, 0.001, SWAP_AT - 31 * DAY, "ETH"),
+                                          tx(SEED, MID, 1.0, SWAP_AT - 120, "ETH")])
+    (follow,) = run_trace(request())["follow_ons"]
+    assert [s["tx"] for s in follow["swaps_left_out"]] == ["0xdecoy"]
+    assert follow["result"]["exchange_address"] == BINANCE_14
+
+
+def test_more_money_arriving_after_the_real_swap_does_not_leave_it_out(faked, monkeypatch):
+    # 50 ETH more reaches MID after the real swap: the real swap still happened
+    # after the traced money arrived, and stays in the window.
+    _decoy_at_a_hop(monkeypatch, inflows=[tx(SEED, MID, 1.0, SWAP_AT - 120, "ETH"),
+                                          tx(SEED, MID, 50.0, SWAP_AT + 100, "ETH")])
+    (follow,) = run_trace(request())["follow_ons"]
+    assert follow["cap"]["swaps"] == 1 and follow["swap"]["tx"] == "0xreal"
+    assert follow["result"]["exchange_address"] == BINANCE_14
+
+
+def test_a_wallet_whose_every_swap_came_before_the_traced_money_is_not_followed(faked, monkeypatch):
+    # MID's only swap was 30 days before the traced ETH reached it: none of the
+    # USDT it bought can be the traced funds.
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, MID, 1.0, SWAP_AT - 120, "ETH"),
+                                         tx(MID, ROUTER, 1.0, SWAP_AT - 30 * DAY, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(MID, KRAKEN_1, 2400.0, SWAP_AT - DAY, "USDT")])
+    swaps_are(monkeypatch, [{**SWAP, "sender": MID, "tx": "0xold", "timestamp": SWAP_AT - 30 * DAY}])
+    result = run_trace(request())
+    assert result["follow_ons"] == [] and result["followed_attribution"] is None
+
+
+def test_money_sent_before_a_swap_returned_it_cannot_be_counted_as_its_output(faked, monkeypatch):
+    # p_follow2 N1: the reported wallet's own 0.15 ETH swap 30 days early (its
+    # ETH is all traced, so it opens the window), 4,900 USDT it already held to
+    # Kraken the day before the real swap, the real swap's 2,400 to Binance.
+    # When Kraken was paid the swaps had returned only 360 USDT, so at most
+    # that much of it can have been their output: Binance leads.
+    from app.request_letters import draft
+
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, ROUTER, 0.15, SWAP_AT - 30 * DAY, "ETH"),
+                                         tx(SEED, ROUTER, 1.0, SWAP_AT, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, KRAKEN_1, 4900.0, SWAP_AT - DAY, "USDT"),
+                                          tx(SEED, BINANCE_14, 2400.0, SWAP_AT + 60, "USDT")])
+    swaps_are(monkeypatch, [{**SWAP, "tx": "0xdecoy", "timestamp": SWAP_AT - 30 * DAY, "amount_in": 0.15,
+                             "amount_out": 360.0}, REAL])
+    result = run_trace(request())
+    (follow,) = result["follow_ons"]
+    found = follow["result"]
+    assert result["followed_attribution"]["exchange"] == "Binance"
+    assert found["exchange_address"] == BINANCE_14
+    kraken = next(m for m in found["matches"] if m["address"] == KRAKEN_1)
+    assert kraken["share"] == pytest.approx(360.0 / 2760.0, abs=1e-3)
+    # The printed figures stay the chain's.
+    assert found["trace_path"][-1]["value_native"] == 2400.0
+    letter = " ".join(draft("c1", result, "exchange").split())
+    assert BINANCE_14 in letter

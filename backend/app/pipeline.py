@@ -700,7 +700,8 @@ _PROVIDER_NAMES = {"etherscan": "Etherscan", "nodereal": "NodeReal", "trongrid":
 def run_trace(request: TraceRequest, seed_window: int | None = None,
               budget: TraceBudget | None = None, depth_offset: int = 0,
               seed_amount: float | None = None, seed_amount_basis: str | None = None,
-              *, is_follow_on: bool = False, seed_share: float | None = None) -> dict[str, Any]:
+              *, is_follow_on: bool = False, seed_share: float | None = None,
+              seed_supply: list[tuple[int, float]] | None = None) -> dict[str, Any]:
     """Run one trace and return the full result, without storing it.
 
     `seed_window` is a time rule for the starting wallet (see
@@ -715,7 +716,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     may have sent on money that was not the swap's. `seed_share` is the most
     of the swaps' input the traced money can have been; the pro-rata start is
     that share of `seed_amount`, while which exchange got the money is still
-    read against the whole output.
+    read against the whole output. `seed_supply` is each swap's (time,
+    output): shares count a send only up to what the swaps had returned by
+    then (_swap_supply_cap).
 
     Everything the endpoint does except the case record: the endpoint gives
     the result a case id and saves it; the startup warm-up runs the demo
@@ -903,7 +906,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             round_trips = (_exchange_round_trips(result.graph, seed, matches + inferred,
                                                  getattr(client, "get_flows_between", None), matcher.lookup)
                            if direction == OUTGOING else None)
-            measured = result.graph
+            measured = _swap_supply_cap(result.graph, seed, seed_supply) if is_follow_on else result.graph
             materiality, shares = _materiality(measured, seed, direction, matches + inferred,
                                                result.untraced, intake, seed_amount, seed_amount_basis)
             materiality["recycled"] = ({k: v for k, v in round_trips.items() if k != "netted_edges"}
@@ -942,7 +945,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 # to net out coins it got back (W -> X -> W).
                 flows = getattr(client, "get_flows_between", None)
                 flows = read_once(flows) if flows else None
-                prorata = estimate_prorata(measured, lead_path,
+                # The chain's figures along the route the shares chose: pro-rata
+                # caps at the swaps' output itself (and says so).
+                prorata = estimate_prorata(result.graph, lead_path,
                                            getattr(client, "get_incoming_between", None), flows_between=flows,
                                            seed_cap=cap, cap_basis=cap_basis)
                 # R4: FIFO and LIBR beside pro-rata, on the same path. Before
@@ -1092,7 +1097,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     if direction == OUTGOING and request.follow_swaps and not is_follow_on and swaps:
         follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth,
                                    budget=budget, seed=seed,
-                                   reported=reported_amount(intake["payments"]) if intake else None)
+                                   reported=reported_amount(intake["payments"]) if intake else None,
+                                   seed_since=seed_window if intake else None)
     followed = next((f for f in follow_ons if (f.get("result") or {}).get("exchange")), None)
 
     # Edge case: the address has never sent anything. Not an error -- a finding.
@@ -1391,18 +1397,57 @@ def _swap_groups(swaps: list[dict[str, Any]], traceable: set[str], asset_symbol:
     return groups
 
 
-def _window_swaps(group: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """The swaps a follow-on covers, from the first that carries the traced
-    value, and the earlier ones left out (`group` in time order).
+def _arrival(graph: nx.DiGraph, wallet: str, seed: str | None, seed_since: int | None,
+             largest_in: float) -> int | None:
+    """When the traced money had reached `wallet`, the swapping wallet: the
+    time of the transfer into it, along the trace, that brought what it had
+    received to the material share (config.ATTRIBUTION_MATERIAL_SHARE) of its
+    largest swap's input, or of all it received along the trace if that is
+    less. A dust send ahead of the money does not count as it arriving, and
+    more money arriving later does not move it. For the reported wallet itself
+    it is `seed_since` (a payment trace's first payment), else unknown: an
+    address-only trace treats everything the wallet held as traced. None when
+    the transfers carry no times."""
+    if seed is None or wallet == seed:
+        return seed_since
+    rows = sorted((int(tx["timestamp"]), float(tx.get("value_native") or 0.0))
+                  for _, _, data in graph.in_edges(wallet, data=True)
+                  for tx in data.get("transactions") or [] if tx.get("timestamp"))
+    total = sum(v for _, v in rows)
+    if not rows or total <= 0:
+        return None
+    need = config.ATTRIBUTION_MATERIAL_SHARE * min(largest_in, total) if largest_in > 0 else 0.0
+    got = 0.0
+    for when, value in rows:
+        got += value
+        if got >= need and got > 0:
+            return when
+    return rows[-1][0]
 
-    The window used to open at the wallet's earliest swap into the asset, so a
-    0.0001 ETH swap a month before the real one pulled in everything the
-    wallet sent in the new asset in between -- money it already held -- and
-    could make that money's exchange the follow-on's (8 Nov check). A swap
-    carries the traced value when its input is at least the material share
-    (config.ATTRIBUTION_MATERIAL_SHARE) of the largest swap's. Earlier swaps
-    are left out only while together they carry less than that share of all
-    the input, so a run of small real swaps still opens the window."""
+
+def _window_swaps(group: list[dict[str, Any]], arrived: int | None = None,
+                  ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The swaps a follow-on covers, from the first that can carry the traced
+    value, and the ones left out (`group` in time order).
+
+    A swap made before the traced money reached the swapping wallet
+    (`arrived`, see _arrival) cannot have carried it, however large: it is
+    always left out (8 Nov re-check: a decoy of 20% of the real swap, made a
+    month before the money arrived, opened the window and named the exchange
+    that got only money the wallet already held). Of the rest, the window
+    used to open at the earliest swap into the asset, so a 0.0001 ETH swap a
+    month before the real one pulled in everything the wallet sent in the new
+    asset in between; it opens at the first swap whose input is at least the
+    material share (config.ATTRIBUTION_MATERIAL_SHARE) of the largest swap's.
+    Earlier swaps are left out only while together they carry less than that
+    share of all the input, so a run of small real swaps still opens the
+    window. With no swap at or after the arrival, the window is empty."""
+    if arrived is not None:
+        early = [s.get("timestamp") is not None and s["timestamp"] < arrived for s in group]
+        if any(early):
+            before = [s for s, e in zip(group, early, strict=True) if e]
+            window, left = _window_swaps([s for s, e in zip(group, early, strict=True) if not e])
+            return window, sorted(before + left, key=lambda s: s.get("timestamp") or 0)
     inputs = [float(s.get("amount_in") or 0.0) for s in group]
     share = config.ATTRIBUTION_MATERIAL_SHARE
     largest, total = max(inputs, default=0.0), sum(inputs)
@@ -1410,6 +1455,34 @@ def _window_swaps(group: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], li
     if first and sum(inputs[:first]) < share * total:
         return group[first:], group[:first]
     return group, []
+
+
+def _swap_supply_cap(graph: nx.DiGraph, seed: str, supply: list[tuple[int, float]] | None) -> nx.DiGraph:
+    """A follow-on's graph with each of the swapping wallet's sends counted
+    only up to what its swaps had returned by then: money sent before a swap
+    returned it cannot be that swap's output (8 Nov re-check: 4,900 USDT paid
+    to Kraken when the swaps had returned 360 counted as 4,900 of them). Per
+    edge, never netted against other edges, so one exchange's figure is never
+    lowered for what another got. Only for measuring shares: the case prints
+    the chain's figures. Unchanged when any swap or send has no time."""
+    if not supply or seed not in graph or any(t is None for t, _ in supply):
+        return graph
+    steps = sorted((int(t), float(a or 0.0)) for t, a in supply)
+
+    def returned_by(when: int) -> float:
+        return sum(a for t, a in steps if t <= when)
+    capped = None
+    for _, dst, data in graph.out_edges(seed, data=True):
+        sends = sorted(data.get("transactions") or [], key=lambda t: t.get("timestamp") or 0)
+        if not sends or any(not t.get("timestamp") for t in sends):
+            continue
+        carried = 0.0
+        for tx in sends:
+            carried = min(carried + float(tx.get("value_native") or 0.0), returned_by(int(tx["timestamp"])))
+        if carried < float(data.get("value_native", 0.0)):
+            capped = capped if capped is not None else graph.copy()
+            capped.edges[seed, dst]["value_native"] = carried
+    return capped if capped is not None else graph
 
 
 def _follow_swaps(
@@ -1422,6 +1495,7 @@ def _follow_swaps(
     budget: TraceBudget | None = None,
     seed: str | None = None,
     reported: float | None = None,
+    seed_since: int | None = None,
 ) -> list[dict[str, Any]]:
     """Trace the output asset of each swap into a stablecoin this chain carries.
 
@@ -1453,6 +1527,19 @@ def _follow_swaps(
     flow = None
     ranked = []
     for (sender, asset_out), g in groups.items():
+        ordered = sorted(g["swaps"], key=lambda s: s.get("timestamp") or 0)
+        arrived = _arrival(graph, sender, seed, seed_since,
+                           max((float(s.get("amount_in") or 0.0) for s in ordered), default=0.0))
+        group, left_out = _window_swaps(ordered, arrived)
+        if not group:
+            # Every swap was made before the traced money reached the wallet:
+            # none of what they bought can be it.
+            continue
+        if left_out:
+            # What the follow-on covers is the window's swaps only.
+            kept_in = max(0.0, g["in"] - sum(float(s.get("amount_in") or 0.0) for s in left_out))
+            g = {**g, "out": sum(s["amount_out"] for s in group), "in": kept_in,
+                 "bought": g["bought"] * (kept_in / g["in"]) if g["in"] > 0 else 0.0}
         if seed is None or sender == seed:
             traced = reported
         else:
@@ -1464,19 +1551,14 @@ def _follow_swaps(
             if reported is not None:
                 traced = min(traced, reported)
         share = min(1.0, traced / g["in"]) if traced is not None and g["in"] > 0 else None
-        ranked.append((g["bought"] * (share if share is not None else 1.0), sender, asset_out, g, traced, share))
+        ranked.append((g["bought"] * (share if share is not None else 1.0), sender, asset_out, g, traced, share,
+                       group, left_out, arrived))
     # Most traced money first; ties keep the order the swaps were found in.
     ranked.sort(key=lambda r: -r[0])
 
     out: list[dict[str, Any]] = []
-    for _, sender, asset_out, g, traced, share in ranked[:MAX_FOLLOW_ONS]:
-        group, left_out = _window_swaps(sorted(g["swaps"], key=lambda s: s.get("timestamp") or 0))
+    for _, sender, asset_out, g, traced, share, group, left_out, arrived in ranked[:MAX_FOLLOW_ONS]:
         swap = max(group, key=lambda s: s["amount_out"])  # the swap the letter names
-        if left_out:
-            # What the follow-on covers is the window's swaps only.
-            g = {**g, "out": sum(s["amount_out"] for s in group),
-                 "in": max(0.0, g["in"] - sum(float(s.get("amount_in") or 0.0) for s in left_out))}
-            share = min(1.0, traced / g["in"]) if traced is not None and g["in"] > 0 else None
         returned = round(g["out"], 6)
         cap, basis = _seed_cap(None, returned, "swap_output", share)
         depth_at = (graph.nodes.get(sender) or {}).get("depth", 0)
@@ -1493,8 +1575,12 @@ def _follow_swaps(
             follow["swaps"] = [{k: s.get(k) for k in ("tx", "timestamp", "router_label", "amount_in", "amount_out")}
                                for s in group]
         if left_out:
-            follow["swaps_left_out"] = [{k: s.get(k) for k in ("tx", "timestamp", "router_label", "amount_in",
-                                                               "amount_out")} for s in left_out]
+            follow["swaps_left_out"] = [
+                {**{k: s.get(k) for k in ("tx", "timestamp", "router_label", "amount_in", "amount_out")},
+                 # Why it cannot carry the traced funds (_window_swaps).
+                 "why": ("before_arrival" if arrived is not None and s.get("timestamp") is not None
+                         and s["timestamp"] < arrived else "too_small")}
+                for s in left_out]
         starts = [s["timestamp"] for s in group if s.get("timestamp") is not None]
         # One clock for the whole case: a follow-on uses what is left of it.
         if budget is not None and budget.walk_over():
@@ -1516,7 +1602,8 @@ def _follow_swaps(
                                          # Hops before the swap: the printed route's.
                                          depth_offset=len(route) - 1 if route else depth_at,
                                          seed_amount=returned,
-                                         seed_amount_basis="swap_output", is_follow_on=True, seed_share=share)
+                                         seed_amount_basis="swap_output", is_follow_on=True, seed_share=share,
+                                         seed_supply=[(s.get("timestamp"), s["amount_out"]) for s in group])
         except HTTPException as exc:
             if budget is not None and budget.cancelled:
                 raise  # a stop ends the whole case, follow-ons included
