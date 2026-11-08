@@ -302,11 +302,16 @@ def test_tornado_governance_and_registry_rows_are_not_mixers(tmp_path):
     assert not RiskMatcher({}, chain="ethereum", store=store).is_terminal(SCAMMER)
 
 
+# The real 0.1 WBTC pool: in the store's explorer tags, not in threat_labels.json,
+# and so on the pinned list (data/mixer_pools.json).
+WBTC_POOL = "0x178169b423a011fff22b9e3f3abea13414ddd0f1"
+
+
 def test_a_tornado_pool_in_the_store_still_ends_a_trace(tmp_path):
-    rows, _ = map_row(mixer_row(SCAMMER, POOL))
+    rows, _ = map_row(mixer_row(WBTC_POOL, POOL))
     assert [r[2] for r in rows] == ["mixer"]
-    store = old_store(tmp_path, [mixer_row(SCAMMER, POOL)])
-    assert RiskMatcher({}, chain="ethereum", store=store).is_terminal(SCAMMER)
+    store = old_store(tmp_path, [mixer_row(WBTC_POOL, POOL)])
+    assert RiskMatcher({}, chain="ethereum", store=store).is_terminal(WBTC_POOL)
 
 
 def test_an_ethereum_pool_filed_under_arbitrum_is_not_a_mixer_there(tmp_path):
@@ -477,3 +482,86 @@ def test_a_label_file_match_has_no_tier_and_reads_as_before():
     [match] = RiskMatcher(files, chain="ethereum").annotate(graph)
     assert match.tier is None and "tier" not in match.to_dict()
     assert match.describe().startswith(f"Stolen funds: {SCAMMER} is tagged as Ronin Bridge Exploiter")
+
+
+# -- r2-g2-documented-claims-vs-code-7-5, round 2: a name alone never ends a trace --
+WALLET_4C = "0x" + "4c" * 20
+
+
+def test_probe_a_a_store_row_named_like_a_pool_does_not_stop_the_trace(tmp_path):
+    """Probe A: an arbitrary wallet filed as 'Tornado.Cash: Router' by an explorer-tag
+    row, or as 'Tornado.Cash: 100 ETH' by ScamSniffer, ended every trace through it."""
+    from app.graph_builder import build_trace_graph
+    from test_graph_builder import SEED, FakeClient, tx
+
+    rows = [mixer_row(WALLET_4C, "Tornado.Cash: Router"),
+            row(address=SCAMMER, chain="ethereum", category="mixer", entity_or_incident="Tornado.Cash: 100 ETH",
+                sources="ScamSniffer scam-database @87c9e14")]
+    store = old_store(tmp_path, rows)
+    matcher = RiskMatcher({}, chain="ethereum", store=store)
+    for address in (WALLET_4C, SCAMMER):
+        assert matcher.lookup(address)["category"] == "mixer"  # still shown: an annotation
+        assert not matcher.is_terminal(address), address
+
+    beyond = addr("be70d")
+    client = FakeClient({SEED: [tx(SEED, WALLET_4C, 5.0)], WALLET_4C: [tx(WALLET_4C, beyond, 5.0)]})
+    graph = build_trace_graph(SEED, client, is_terminal=matcher.is_terminal).graph
+    assert beyond in graph
+
+    [match] = matcher.annotate(graph.subgraph([SEED, WALLET_4C]).copy())
+    assert not match.is_terminal and match.to_dict()["is_terminal"] is False
+    assert not graph.nodes[WALLET_4C].get("is_terminal")
+    text = match.describe()
+    assert text.startswith(f"Mixer tag: {WALLET_4C} is tagged Tornado.Cash: Router")
+    assert "not one of the mixer pools or routers on this tool's pinned list" in text
+    assert "The trace stops here" not in text
+
+
+def test_the_pinned_pools_and_the_file_mixers_still_stop_a_trace(tmp_path):
+    from app.risk_matcher import get_risk_matcher
+
+    tornado_01_eth = "0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc"  # threat_labels.json
+    typhoon_bsc = "0x66e90e4f92f39873c2feb394ab87616b37afffdb"     # threat_labels_bsc.json
+    assert get_risk_matcher("ethereum").is_terminal(tornado_01_eth)
+    assert get_risk_matcher("bsc").is_terminal(typhoon_bsc)
+    # The same pool, held only by the store, is pinned too.
+    store = old_store(tmp_path, [mixer_row(tornado_01_eth, "Tornado.Cash: 0.1 ETH"), mixer_row(WBTC_POOL, POOL)])
+    matcher = RiskMatcher({}, chain="ethereum", store=store)
+    assert matcher.is_terminal(tornado_01_eth) and matcher.is_terminal(WBTC_POOL)
+    graph = nx.DiGraph()
+    graph.add_node(WBTC_POOL, depth=1)
+    [match] = matcher.annotate(graph)
+    assert match.is_terminal and "The trace stops here" in match.describe()
+
+
+def test_the_pinned_list_holds_only_pools_and_every_file_mixer():
+    import json
+
+    from app import label_store as ls
+
+    for chain in ("ethereum", "bsc"):
+        path = config.get_chain(chain).threat_labels_path
+        filed = {encode_address(a) for a, v in json.loads(path.read_text())["labels"].items()
+                 if not a.startswith("_") and v.get("category") == "mixer"}
+        assert filed and filed <= ls.pinned_mixers(chain), chain
+    document = json.loads((config.DATA_DIR / ls.MIXER_POOLS_FILE).read_text())
+    from app import label_rules, never_flag
+
+    for chain, pools in document.items():
+        if chain.startswith("_"):
+            continue
+        for address, name in pools.items():
+            assert label_rules.mixer_service(name), name  # a pool or entry point, never governance
+            assert never_flag.kind(chain, address) is None, address
+    assert ls.pinned_mixers("polygon") == frozenset()
+
+
+def test_a_build_counts_the_mixer_tags_it_could_not_pin(tmp_path):
+    rows = [mixer_row(WALLET_4C, "Tornado.Cash: Router"), mixer_row(WBTC_POOL, POOL)]
+    src = tmp_path / "flagged.csv"
+    with open(src, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+    report = build(src, tmp_path / "label_store.db")
+    assert report["rows"] == 2 and report["unpinned_mixers"] == 1

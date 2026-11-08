@@ -193,6 +193,36 @@ describe('a government seizure order (audit r1-labels-data-12)', () => {
   })
 })
 
+describe('a mixer tag the trace went past (audit r2-g2-documented-claims-vs-code-7-5)', () => {
+  const tag = {
+    address: '0x' + '4c'.repeat(20), category: 'mixer', entity: 'Tornado.Cash: Router', label: 'Tornado.Cash: Router',
+    source: 'Explorer tag via dawsbot/eth-labels', depth: 1, value_received_native: 10, is_terminal: false, origin: 'label_store',
+  }
+
+  async function openWith(match) {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+    stubFetch({ '/demos/recorded/11': { body: { ...demo.result, risk_matches: [match], case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
+    render(
+      <MemoryRouter initialEntries={['/demo/11']}>
+        <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
+      </MemoryRouter>,
+    )
+    await screen.findByText(/Verified example 11/)
+  }
+
+  it('is shown, but not said to stop the trace', async () => {
+    await openWith(tag)
+    const alert = document.querySelector('.alert')
+    expect(alert).toHaveTextContent('Mixer:')
+    expect(alert).not.toHaveTextContent('the trace stops at a mixer')
+  })
+
+  it('a pinned pool still says the trace stops', async () => {
+    await openWith({ ...tag, is_terminal: true })
+    expect(document.querySelector('.alert')).toHaveTextContent('the trace stops at a mixer')
+  })
+})
+
 describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
   const H1 = '0x' + 'a1'.repeat(32)
   const H2 = '0x' + 'b2'.repeat(32)

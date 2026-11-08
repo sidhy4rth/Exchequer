@@ -526,7 +526,8 @@ export default function TraceView() {
             <div>
               <div className="title">
                 {riskMatches.length === 1 ? 'Risk screening hit' : `${riskMatches.length} risk screening hits`}
-                {riskMatches.some((m) => m.category === 'mixer') ? ' — the trace stops at a mixer' : ''}
+                {/* A mixer tag that is not a pinned pool is shown, but the trace went past it. */}
+                {riskMatches.some((m) => m.category === 'mixer' && m.is_terminal !== false) ? ' — the trace stops at a mixer' : ''}
               </div>
               {riskMatches.map((m) => (
                 <div className="line" key={m.address}>

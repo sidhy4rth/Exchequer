@@ -52,7 +52,12 @@ def _intermediaries(result: dict[str, Any], chain: str, excluded: Excluder | Non
     for node in result.get("graph", {}).get("nodes", []):
         if node.get("is_seed") or node.get("id") == seed:
             continue
-        if node.get("exchange") or node.get("is_router") or node.get("risk_category") in NOT_INTERMEDIARY_RISKS:
+        if node.get("exchange") or node.get("is_router"):
+            continue
+        risk = node.get("risk_category")
+        # Except a mixer tag the trace went past: not a pinned pool, so possibly
+        # the offender's own wallet (an older case marks every mixer terminal).
+        if risk in NOT_INTERMEDIARY_RISKS and not (risk == "mixer" and node.get("is_terminal") is False):
             continue
         # A contract that pays out to many addresses (WETH, a pool) is a
         # service every trace passes through; so is anything the label files

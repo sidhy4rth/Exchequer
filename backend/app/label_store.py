@@ -22,6 +22,7 @@ with it. Build it with scripts/build_label_store.py.
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import sqlite3
 import threading
@@ -45,6 +46,9 @@ TIERS = {
     4: "on-chain detection",
     5: "unvetted list (community reports or a machine-learning dataset), not checked",
 }
+
+# The mixer pools and routers a store row may end a trace at (see pinned_mixers).
+MIXER_POOLS_FILE = "mixer_pools.json"
 
 _B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 _B58_INDEX = {c: i for i, c in enumerate(_B58)}
@@ -97,6 +101,44 @@ def encode_tx(tx: str) -> bytes | None:
         return None
 
 
+@lru_cache(maxsize=None)
+def pinned_mixers(chain: str) -> frozenset[bytes]:
+    """The addresses a store mixer row may end a trace at on this chain.
+
+    A store row is a name in someone else's list; a name alone must never cut
+    a trail (ADR-0006), or one poisoned row ("Tornado.Cash: Router" on a
+    launderer's wallet) would stop every trace a hop short of the exchange.
+    So only a pool or router kept in the repository counts: the mixer entries
+    of the chain's curated threat file, and data/mixer_pools.json. Any other
+    store mixer row is shown as a tag, and the walk goes on past it.
+    """
+    found: set[bytes] = set()
+    try:
+        path = config.get_chain(chain).threat_labels_path
+    except config.UnknownChainError:
+        return frozenset()
+    sources: list[dict] = []
+    for file in (path, config.DATA_DIR / MIXER_POOLS_FILE):
+        if file is None or not file.is_file():
+            continue
+        try:
+            document = json.loads(file.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            logger.error("%s unreadable; no store mixer row there ends a trace: %s", file, exc)
+            continue
+        if file == path:
+            sources.append({a: v for a, v in (document.get("labels") or {}).items()
+                            if isinstance(v, dict) and v.get("category") == "mixer"})
+        else:
+            sources.append(document.get(chain) or {})
+    for entries in sources:
+        for address in entries:
+            raw = encode_address(address) if not address.startswith("_") else None
+            if raw is not None:
+                found.add(raw)
+    return frozenset(found)
+
+
 class LabelStore:
     """Read-only lookups against one label-store file."""
 
@@ -142,6 +184,8 @@ class LabelStore:
             # An exchange, router, token contract or burn address: a scan or
             # list that names one is wrong, whatever it says (never_flag.py).
             return None
+        # A mixer row stops a trace only at a pool or router kept in the repo.
+        terminal = {"terminal": raw in pinned_mixers(chain)} if category == "mixer" else {}
         label = label_rules.clean_text(label)
         if not label and peer is not None:
             label = f"Lookalike of {decode_address(peer)}"
@@ -162,7 +206,8 @@ class LabelStore:
             source = f"{source}; evidence: {TIERS[tier]}"
         # The tier travels with the row as well as in its text, so the sentence
         # a report quotes can say what kind of evidence it is (RiskMatch.describe).
-        return {"category": category, "entity": entity, "label": label or entity, "source": source, "tier": tier}
+        return {"category": category, "entity": entity, "label": label or entity, "source": source, "tier": tier,
+                **terminal}
 
     def _tier(self, source_id: int, category: str, stored: int) -> int:
         key = (source_id, category, stored)

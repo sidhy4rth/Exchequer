@@ -50,7 +50,7 @@ from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 
 from app import label_rules, never_flag
-from app.label_store import CHAIN_IDS, SCHEMA_VERSION, decode_address, encode_address, encode_tx
+from app.label_store import CHAIN_IDS, SCHEMA_VERSION, decode_address, encode_address, encode_tx, pinned_mixers
 
 DEFAULT_OUT = Path(__file__).resolve().parent.parent / "data" / "label_store.db"
 
@@ -108,8 +108,9 @@ def map_row(row: dict[str, str], never: dict[str, dict[bytes, str]] | None = Non
     label = None
     peer = None
     if category == "mixer" and not entity_text.startswith("Tornado.Cash"):
-        # Only a mixer's own pool may end a trace; anything else the hunt
-        # filed under "mixer" (e.g. a malicious contract's creator) is a scam.
+        # Only a mixer's own pool may end a trace, and at run time only a pool
+        # pinned in the repo does (label_store.pinned_mixers); anything else the
+        # hunt filed under "mixer" (e.g. a malicious contract's creator) is a scam.
         category = "scam"
     elif category == "mixer" and label_rules.mixer_service(entity_text) is None:
         # Its governance, registry or helper contracts are not where funds mix.
@@ -312,6 +313,10 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
     insert(batch)
     db.executemany("INSERT INTO texts VALUES (?,?)", [(i, t) for t, i in text_ids.items()])
     counts = db.execute("SELECT chain, category, COUNT(*) FROM labels GROUP BY 1, 2").fetchall()
+    # A mixer row ends a trace only at a pinned pool or router; the others are
+    # kept as tags, and counted so a list filing wallets as pools is noticed.
+    unpinned = sum(1 for raw, chain_id in db.execute("SELECT address, chain FROM labels WHERE category='mixer'")
+                   if raw not in pinned_mixers(names[chain_id]))
     db.executemany("INSERT INTO counts VALUES (?,?,?)", [(names[c], cat, n) for c, cat, n in counts])
     db.executemany("INSERT INTO meta VALUES (?,?)", [
         ("schema_version", str(SCHEMA_VERSION)),
@@ -334,6 +339,7 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         "refused": refused["rows"],
         "refused_tier1": refused["tier1"],
         "refused_out": str(refused_out) if refused["rows"] else None,
+        "unpinned_mixers": unpinned,
         "duplicates": merged["duplicates"],
         "conflicts": merged["conflicts"],
         "strong_conflicts": merged["strong"],
@@ -400,6 +406,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  skipped {n:,}: {reason}")
     if report["refused"]:
         print(f"  {report['refused']:,} rows naming infrastructure refused, listed in {report['refused_out']}")
+    if report["unpinned_mixers"]:
+        print(f"  {report['unpinned_mixers']:,} mixer tags not on the pinned list (data/mixer_pools.json, "
+              "threat_labels*.json): shown as tags, they do not stop a trace")
     if report["duplicates"]:
         print(f"  {report['duplicates']:,} duplicate rows merged (stronger evidence kept), "
               f"{report['conflicts']:,} with different categories")

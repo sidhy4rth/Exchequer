@@ -214,10 +214,13 @@ class RiskMatch:
     # A label-store row's evidence tier (label_store.TIERS); None for a label
     # file, whose wording is fixed by its category.
     tier: int | None = None
+    # False for a store mixer row that is not a pinned pool or router
+    # (label_store.pinned_mixers): shown, but the trace went on past it.
+    terminal: bool | None = None
 
     @property
     def is_terminal(self) -> bool:
-        return self.category in TERMINAL_CATEGORIES
+        return self.category in TERMINAL_CATEGORIES and self.terminal is not False
 
     def to_dict(self) -> dict[str, Any]:
         out = {
@@ -347,6 +350,14 @@ class RiskMatch:
                 f"source's attribution, not a finding that any counterparty "
                 f"took part in it."
             )
+        if not self.is_terminal:
+            return (
+                f"Mixer tag: {self.address} is tagged {named}, per {self.source}. "
+                f"{placement}. It is not one of the mixer pools or routers on this "
+                f"tool's pinned list, so the trace did not stop here and followed the "
+                f"funds past it; the tag is that source's, a reason to look closer, "
+                f"not a finding."
+            )
         return (
             f"Mixer: {self.address} is {named}, per {self.source}. {placement}. "
             f"The trace stops here — a mixer pays out from a commingled pool, "
@@ -465,10 +476,13 @@ class RiskMatcher:
         Passed to the graph builder alongside the exchange matcher's own
         terminal test. Only mixers qualify: a sanctioned address is still an
         ordinary wallet whose outgoing transfers mean exactly what they say,
-        so there is no reason to stop following the money there.
+        so there is no reason to stop following the money there. A mixer the
+        store alone names qualifies only if it is a pinned pool or router
+        (label_store.pinned_mixers); a name in a list is not enough.
         """
         meta = self.lookup(address)
-        return bool(meta) and meta["category"] in TERMINAL_CATEGORIES
+        # A store mixer row says whether its address is a pinned pool; a file's always is.
+        return bool(meta) and meta["category"] in TERMINAL_CATEGORIES and meta.get("terminal") is not False
 
     # -- graph annotation --------------------------------------------------
     def annotate(self, graph: nx.DiGraph, direction: str = OUTGOING) -> list[RiskMatch]:
@@ -494,7 +508,7 @@ class RiskMatcher:
             data["risk_label"] = meta["label"]
             data["risk_source"] = meta["source"]
             data.setdefault("flags", set()).add(meta["category"])
-            if meta["category"] in TERMINAL_CATEGORIES:
+            if meta["category"] in TERMINAL_CATEGORIES and meta.get("terminal") is not False:
                 data["is_terminal"] = True
 
             token, issuer = (freeze_issuer(meta["entity"], meta["label"]) if meta["category"] == FROZEN
@@ -512,6 +526,7 @@ class RiskMatcher:
                     token=token,
                     issuer=issuer,
                     tier=meta.get("tier") if meta.get("origin") == LABEL_STORE_ORIGIN else None,
+                    terminal=meta.get("terminal"),
                 )
             )
 
@@ -540,9 +555,9 @@ def _risk_matcher(key: str) -> RiskMatcher:
 
 def clear_label_caches() -> None:
     """Forget every loaded label file, so the next call reads them again (tests)."""
-    from . import exchange_matcher
+    from . import exchange_matcher, label_store
     for cached in (_risk_matcher, _list_meta, _list_ends, exchange_matcher._matcher,
-                   exchange_matcher._router_matcher):
+                   exchange_matcher._router_matcher, label_store.pinned_mixers):
         cached.cache_clear()
 
 

@@ -482,7 +482,12 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
             " At least one address in the trace is named in a government seizure or "
             "forfeiture order, which is not a sanctions designation."
         )
-    if "mixer" in risk:
+    mixers = [m for m in result.get("risk_matches") or [] if m.get("category") == "mixer"]
+    if "mixer" in risk and mixers and not any(m.get("is_terminal", True) for m in mixers):
+        # Only store tags that are not pinned pools: shown, but not a stop.
+        extra += (" At least one address in the trace carries a mixer tag that is not on the pinned "
+                  "list of mixer pools, so the trace went on past it; the tag is a reason to look closer.")
+    elif "mixer" in risk:
         extra += " The trace stopped at a mixer, whose payouts cannot be linked to its deposits."
     frozen = [m for m in result.get("risk_matches") or [] if m.get("category") == "frozen"]
     if "frozen" in risk and frozen and all(is_tether_usdt_freeze(m) for m in frozen):

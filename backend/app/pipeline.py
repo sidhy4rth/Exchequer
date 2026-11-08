@@ -965,11 +965,12 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 "sent funds, or the money may have arrived as a different asset"
                 + alternatives
             )
-    elif primary is None and any(m.category == MIXER for m in risk_matches):
+    elif primary is None and any(m.category == MIXER and m.is_terminal for m in risk_matches):
         # Edge case: the trail did not go cold, it was deliberately cut. Saying
         # "no exchange found" here would understate what was actually
-        # discovered, which is that the funds were sent to a tumbler.
-        mixers = [m for m in risk_matches if m.category == MIXER]
+        # discovered, which is that the funds were sent to a tumbler. A mixer
+        # tag the trace went past (not a pinned pool) is not that.
+        mixers = [m for m in risk_matches if m.category == MIXER and m.is_terminal]
         names = sorted({m.entity for m in mixers})
         message = (
             f"The trace stopped at {'a mixer' if len(mixers) == 1 else 'mixers'} "

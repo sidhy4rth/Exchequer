@@ -252,3 +252,13 @@ def test_tier_1_to_3_sentences_are_unchanged_beside_a_weak_one():
     assert "named by a published scam or phishing list; a list's report is an accusation, not a finding." in summary
     assert "tied by a published source to a known hack" not in summary
     assert "listed (theft) only by an unverified source" in summary
+
+
+# -- r2-g2-documented-claims-vs-code-7-5: only a pinned pool stops the trace --
+def test_a_mixer_tag_that_did_not_stop_the_trace_is_not_called_a_stop():
+    tag = {"address": MID, "category": "mixer", "entity": "Tornado.Cash: Router", "label": "Tornado.Cash: Router",
+           "source": "Explorer tag", "origin": "label_store", "depth": 1, "is_terminal": False, "tier": 3}
+    summary = summary_for(tag)
+    assert "The trace stopped at a mixer" not in summary
+    assert "not on the pinned list of mixer pools, so the trace went on past it" in summary
+    assert "The trace stopped at a mixer" in summary_for({**tag, "is_terminal": True})

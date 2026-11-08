@@ -514,6 +514,9 @@ hand an investigator a confident-looking graph built on a false premise. Tornado
 would never stop at a mixer on these chains. The mixer category therefore comes from the explorer's own tags:
 only the pools and routers of Tornado Cash, Typhoon and Privacy Pools, never their governance, token or vesting
 contracts. The label store follows the same rule, and only on Ethereum, the chain its mixer tags were read on.
+A name in a list is not enough to cut a trail, so a store row stops a trace only at a pool or router kept in the
+repository (the threat file's mixer entries and `backend/data/mixer_pools.json`); any other store row named like
+a pool is shown as a mixer tag, and the trace goes on past it.
 
 **Stolen funds** are the wallets Etherscan tags as the perpetrator of a theft — the WazirX, Bybit, BingX, Ronin,
 Multichain and other exploiters; whitehat, rescue and bot tags are left out. **Scam-list** wallets are the reported
