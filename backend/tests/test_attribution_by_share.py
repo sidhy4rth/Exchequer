@@ -332,3 +332,51 @@ def test_on_a_payment_trace_branches_over_the_reported_amount_tie_and_the_larger
     for intake in (None, {"payments": [{"amount": 1000.0, "timestamp": 1}]}):
         _, shares = _materiality(g, SEED, OUTGOING, ms, [], intake)
         assert ExchangeMatcher.primary_match(ms, shares).address == BINANCE_14, intake
+
+
+# --- 8 Nov check (r1-attribution-integrity-2): the stored score is the capped one ----
+
+@pytest.mark.parametrize("share, band, ceiling", [(0.05, "low", 0.49), (0.30, "moderate", 0.74)])
+def test_the_stored_score_is_capped_with_the_band(share, band, ceiling):
+    from app.scoring import _band
+
+    g = graph([(SEED, KRAKEN_1, 1.0)])
+    m = match(KRAKEN_1, "Kraken", 1, value=1.0)
+    capped = score_case(g, SEED, m, materiality={"primary_share": share, "threshold": 0.10, "majority": 0.50,
+                                                 "denominator": 20.0, "primary_reach": 20.0 * share})
+    # Every reader that bands the number (the case list, batches, follow-ons,
+    # the report, the demo check) now gets the capped band.
+    assert capped.band == band and _band(capped.score) == band and capped.score == ceiling
+    detail = capped.to_dict()
+    assert detail["score"] == ceiling and detail["score_uncapped"] == 1.0
+    assert "score_uncapped" not in score_case(g, SEED, m).to_dict()
+
+
+def test_a_five_of_ten_thousand_case_is_low_in_number_band_and_report(trace):
+    import json
+
+    from app.models import Case
+    from app.report import build_report, render_text_report
+    from app.report_pdf import render_pdf
+    from app.scoring import _band
+
+    r = trace([_tx(SEED, addr("ee11"), 10000.0, T + 10), _tx(SEED, BINANCE_14, 5.0, T + 20)])
+    assert r["exchange_address"] == BINANCE_14
+    assert r["confidence_detail"]["band"] == "low" == _band(r["confidence"])
+    assert r["confidence"] < 0.5 and r["confidence_detail"]["score_uncapped"] >= 0.75
+    report = build_report(Case(id="c1", address=SEED, created_at="2026-11-08T00:00:00+00:00",
+                               result_json=json.dumps(r)))
+    text = render_text_report(report)
+    flat = " ".join(text.split())
+    # The pro-rata line is about this route only; the share line gives the
+    # whole picture: 5 of the 10,005 the wallet sent.
+    assert "sent from the reported address (pro-rata)" not in flat
+    assert "of the 5.0 ETH this wallet sent on this route" in flat
+    share = next(line for line in text.splitlines() if line.startswith("Share of funds"))
+    assert "of the 10,005 ETH" in share and "the reported wallet sent" in share and "%" in share
+    import io
+
+    from pypdf import PdfReader
+    page = " ".join(PdfReader(io.BytesIO(render_pdf(report, text))).pages[0].extract_text().split())
+    assert "Sent from the reported address that likely arrived" not in page
+    assert "the reported wallet sent" in page

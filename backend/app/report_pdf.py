@@ -218,15 +218,18 @@ def _part_one(report: dict[str, Any], st: dict[str, ParagraphStyle], digest: str
             caption = (f"Likely arrived (pro-rata; at most what "
                        f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')})"
                        if prorata.get("status") == "estimated" and cap.get("applied")
-                       else "Sent from the reported address that likely arrived (pro-rata)")
+                       else "Likely arrived, of what this wallet sent on this route (pro-rata)")
             facts.append((caption, signed["likely_arrived"], False))
         elif prorata.get("status") == "estimated":
-            facts.append(("Sent from the reported address that likely arrived (pro-rata)",
+            facts.append(("Likely arrived, of what this wallet sent on this route (pro-rata)",
                           f"≈ {_num(prorata.get('estimated'))} of {_num(prorata.get('sent'))} "
                           f"{attribution.get('value_currency', '')}", False))
         elif prorata.get("status") == "unknown":
             # Said on page 1, not only in the limitations: no amount was measured.
             facts.append(("Pro-rata", f"not estimated — {prorata.get('reason')}", False))
+        if signed.get("share_of_funds"):
+            # Against the whole, from the signed text: the line above is one route's.
+            facts.append(("Share of the traced funds", signed["share_of_funds"], False))
         if signed.get("also_reached"):
             # The signed text's first such line; every one is in the signed report.
             more = len(attribution.get("also_reached") or []) - 1

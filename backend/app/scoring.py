@@ -53,6 +53,12 @@ assert abs(WEIGHT_HOP_PROXIMITY + WEIGHT_AMOUNT_CORRELATION + WEIGHT_MATCH_DIREC
 # Bands used in the report so a reader is not left interpreting a bare decimal.
 BAND_THRESHOLDS = ((0.75, "high"), (0.50, "moderate"), (0.25, "low"))
 
+# The most a score may be when its band is capped (a small share of the funds
+# reached the exchange): the band's top, at two decimals. The stored number is
+# the capped one, so every reader that bands the number -- the case list,
+# batches, follow-ons, the report, the demo check -- shows the capped band.
+BAND_CEILING = {"moderate": 0.74, "low": 0.49, "very low": 0.24}
+
 
 @dataclass
 class ScoreComponent:
@@ -94,15 +100,21 @@ class ConfidenceScore:
     components: list[ScoreComponent] = field(default_factory=list)
     summary: str = ""
     caveats: list[str] = field(default_factory=list)
+    # The components' sum before a materiality cap lowered `score`; None when
+    # no cap applied (the sum is then `score`).
+    score_uncapped: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "score": self.score,
             "band": self.band,
             "summary": self.summary,
             "components": [c.to_dict() for c in self.components],
             "caveats": self.caveats,
         }
+        if self.score_uncapped is not None:
+            out["score_uncapped"] = self.score_uncapped
+        return out
 
 
 def _band(score: float) -> str:
@@ -513,6 +525,7 @@ def score_case(
     band = _band(score)
     capped_band = _materiality_cap(band, materiality)
     material_caveat = []
+    uncapped = None
     if capped_band != band and materiality:
         material_caveat = [
             f"Only {materiality['primary_share'] * 100:.1f}% of what the reported address sent "
@@ -521,6 +534,9 @@ def score_case(
             "the funds went elsewhere."
         ]
         band = capped_band
+        # The number goes down with the band (8 Nov check): it used to stay
+        # 1.0 under a "low" band, and every reader banding the number said High.
+        uncapped, score = score, min(score, BAND_CEILING[capped_band])
 
     hops = f"{primary_match.depth} hop{'s' if primary_match.depth != 1 else ''}"
     if direction == OUTGOING and depth_offset:
@@ -548,6 +564,7 @@ def score_case(
         band=band,
         components=components,
         summary=summary,
+        score_uncapped=uncapped,
         caveats=material_caveat + _caveats(findings, truncated, matched=True, asset=native_symbol,
                                            internal_transfers_read=internal_transfers_read,
                                            history_capped=history_capped)

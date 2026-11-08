@@ -161,7 +161,8 @@ def test_reports_do_not_claim_funds_nobody_reported_either():
                "hops": [{"address": "0xhop", "victim_share": 0.8, "received_in_window": 12.0}]}
     report = build_report(stored({**full_result(), "prorata": prorata}))
     text = render_text_report(report)
-    assert "about 9.5 of 10.0 ETH sent from the reported address" in " ".join(text.split())
+    # Of the route's own first hop, said so (8 Nov check, r1-attribution-integrity-2).
+    assert "about 9.5 of the 10.0 ETH this wallet sent on this route" in " ".join(text.split())
     assert "eported funds" not in text
     assert "eported funds" not in "".join(p.extract_text() for p in PdfReader(io.BytesIO(render_pdf(report, text))).pages)
 

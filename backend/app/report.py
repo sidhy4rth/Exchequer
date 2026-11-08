@@ -137,6 +137,24 @@ def also_reached(trace: dict[str, Any]) -> list[dict[str, Any]]:
     return sorted(best.values(), key=lambda x: (-x["share"], x["exchange"]))
 
 
+# What a materiality denominator is, in words.
+SHARE_OF = {"seed_outflow": "the reported wallet sent", "reported_amount": "the victim reported paying",
+            "swap_output": "the swap returned", "swap_share": "the swap returned"}
+
+
+def share_of_funds(materiality: dict[str, Any] | None, symbol: str) -> str | None:
+    """"about X of the Y {symbol} the reported wallet sent (Z%)": the attributed
+    share against the whole, not against the route's own first hop. None for
+    a case with no materiality record (stored before it was kept)."""
+    m = materiality or {}
+    if m.get("primary_share") is None or not m.get("denominator"):
+        return None
+    reach, of = m.get("primary_reach") or 0.0, m["denominator"]
+    return (f"about {_amount(reach)} of the {_amount(of)} {symbol} "
+            f"{SHARE_OF.get(m.get('basis'), 'the trace started from')} "
+            f"({m['primary_share'] * 100:.{2 if m['primary_share'] < 0.01 else 1}f}%)")
+
+
 def also_reached_line(entry: dict[str, Any]) -> str:
     """One other exchange, as the report and the letter print it."""
     return (f"{entry['exchange']} at {entry['address']} -- about {entry['share'] * 100:.1f}% of the traced funds"
@@ -261,6 +279,8 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
             "prorata": result.get("prorata"),
             "value_currency": native_symbol,
             "all_matches": matches,
+            # What share of the traced funds reached it, and of what (materiality).
+            "materiality": result.get("materiality"),
             # Material funds also reached these exchanges (more than one: the
             # officer confirms which to write to; a request may be needed to each).
             "also_reached": also_reached(result),
@@ -815,8 +835,12 @@ def render_text_report(report: dict[str, Any]) -> str:
                     f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')} (pro-rata; the "
                     f"reported address sent {prorata['sent']} along this path)")
             else:
-                add(f"Likely arrived   : about {prorata['estimated']} of {prorata['sent']} {symbol} "
-                    "sent from the reported address (pro-rata)")
+                # Of this route's first hop, not of everything the wallet sent:
+                # "about 5 of 5 sent from the reported address" read as the whole
+                # case when the wallet had sent 10,005 (8 Nov check). The share
+                # line below gives the whole.
+                add(f"Likely arrived   : about {prorata['estimated']} of the {prorata['sent']} {symbol} "
+                    "this wallet sent on this route (pro-rata)")
             add(f"Arrived in total : {prorata['arrived_total']} {symbol} along this path, "
                 "including funds from other sources")
             for h in prorata.get("hops") or []:
@@ -828,6 +852,9 @@ def render_text_report(report: dict[str, Any]) -> str:
                 + (" (including any funds from other sources)" if direction == "outgoing" else ""))
             if prorata.get("status") == "unknown":
                 add(f"Pro-rata         : not estimated -- {prorata.get('reason')}")
+        share = share_of_funds(attribution.get("materiality"), symbol)
+        if share:
+            add(f"Share of funds   : {share}")
         for entry in attribution.get("also_reached") or []:
             add(f"Also reached     : {also_reached_line(entry)}")
         if attribution.get("also_reached"):
@@ -1197,7 +1224,8 @@ def render_text_report(report: dict[str, Any]) -> str:
 
 _FINDING_FIELDS = {"Exchange         : ": "exchange", "Address          : ": "address",
                    "Address label    : ": "label", "Likely arrived   : ": "likely_arrived",
-                   "Arrived on path  : ": "arrived_on_path", "Also reached     : ": "also_reached"}
+                   "Arrived on path  : ": "arrived_on_path", "Also reached     : ": "also_reached",
+                   "Share of funds   : ": "share_of_funds"}
 
 
 def signed_finding(text: str) -> dict[str, str | None] | None:

@@ -106,7 +106,7 @@ def test_a_page_one_stating_another_amount_is_caught(genuine):
     doctored = _splice(_render(_result(prorata={**PRORATA, "estimated": 7.0})), 1, genuine, genuine)
     result = _verify(doctored)
     assert result["status"] == "summary_differs"
-    assert "about 2.0 of 10.0 ETH" in " ".join(result["pdf"]["problems"])
+    assert "about 2.0 of the 10.0 ETH this wallet sent on this route" in " ".join(result["pdf"]["problems"])
 
 
 def test_a_page_one_naming_another_exchange_is_caught(genuine):
