@@ -264,6 +264,30 @@ describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
     expect(row).toHaveTextContent('from hidden')
   })
 
+  it('shows a copy whose payment hashes and times are withheld, one row per transfer, with no explorer link', async () => {
+    const withheld = { tx_hash: null, block: null, timestamp: null, from: null }
+    const intake = { mode: 'payment', ncrp_ack: null, payments: [pay({ ...withheld, amount: 3 }), pay({ ...withheld, amount: 2 })] }
+    const redacted = ['intake.ncrp_ack', 'intake.payments[].tx_hash', 'intake.payments[].timestamp', 'statement.credits']
+    const debit = { tx: 'd', counterparty: SENDER, amount: 1, time: 1_600_000_000 }
+    await openPaymentCase({ intake, reported_amount: 5, redacted, statement: { credits: [], debits: [debit], rows_per_side: 20, lookalikes: 0, window_start: null } })
+    const card = document.querySelector('.payments-card')
+    const rows = card.querySelectorAll('.row')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toHaveTextContent('hash withheld')
+    expect(rows[0].querySelector('a')).toBeNull()
+    expect(card).not.toHaveTextContent(/reads the wallet from \d/)
+    expect(card).toHaveTextContent('visible to the officer who traced it')
+    expect(document.querySelector('.finding-bar .intake')).toHaveTextContent('in 2 payments')
+    expect(screen.getByText(/Money in/).closest('p')).toHaveTextContent('withheld')
+  })
+
+  it('a withheld copy re-traces from the address alone, carrying no empty hashes', async () => {
+    const intake = { mode: 'payment', payments: [pay({ tx_hash: null, timestamp: null, amount: 3 })] }
+    await openPaymentCase({ intake })
+    await userEvent.setup().click(screen.getByRole('button', { name: /Trace live/ }))
+    expect(screen.getByTestId('landed').textContent).not.toContain('pay=')
+  })
+
   it("greys statement rows from before the victim's first payment", async () => {
     const row = (over) => ({ tx: over.tx, counterparty: SENDER, amount: 1, time: 1_600_000_000, ...over })
     await openPaymentCase({ statement: { credits: [row({ tx: 'a', before_window: true })], debits: [row({ tx: 'b', before_window: false })], rows_per_side: 20, lookalikes: 0 } })

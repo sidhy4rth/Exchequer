@@ -1,8 +1,9 @@
 """What a stored case is exported as: the report, the transfer graph and the
 draft request letters. Each reads the case as it was traced, never re-run.
 
-Each takes the caller and records what it did. `user` does nothing here until R23
-and R24 land; having it now means these routes do not change when they do."""
+Each takes the caller and records what it did. The browser that traced a case
+gets it as stored; anyone else holding the link gets it without the complaint's
+particulars or anything that leads to the victim's wallet (case_privacy.py)."""
 
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
-from .. import audit, models, rate_limit, report_cache, request_letters
+from .. import audit, case_privacy, models, rate_limit, report_cache, request_letters
 from ..auth import CurrentUser
 from ..report_pdf import render_pdf
 
@@ -19,6 +20,14 @@ router = APIRouter()
 
 # A stored case never changes, so a browser may keep its report for an hour.
 KEEP = {"Cache-Control": "private, max-age=3600"}
+
+
+def _case_or_404(case_id: str, user: CurrentUser) -> models.Case:
+    """The case as this caller may read it."""
+    case = models.get_case(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
+    return case_privacy.case_for_reader(case, user.owner_hash)
 
 
 def _pdf(case: models.Case, http: Request) -> bytes:
@@ -62,9 +71,7 @@ def get_report(
     """Exportable summary suitable for a law-enforcement handoff.
 
     Every format of a case is the same report, rendered once (report_cache.py)."""
-    case = models.get_case(case_id)
-    if case is None:
-        raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
+    case = _case_or_404(case_id, user)
 
     if format == "pdf":
         response = Response(
@@ -95,9 +102,7 @@ def export_graph(
     format: str = Query("graphml", pattern="^(graphml|csv)$", description="graphml or csv"),
 ) -> Response:
     """The case's transfer graph for Gephi, yEd, Maltego (GraphML) or a spreadsheet (CSV)."""
-    case = models.get_case(case_id)
-    if case is None:
-        raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
+    case = _case_or_404(case_id, user)
     media, ext = ("text/csv", "csv") if format == "csv" else ("application/graphml+xml", "graphml")
     body = report_cache.graph(case, format)
     audit.record("case.graph_export", case_id=case_id, detail={"format": format})
@@ -108,9 +113,7 @@ def export_graph(
 @router.get("/trace/{case_id}/letters")
 def list_letters(case_id: str, user: CurrentUser) -> dict[str, Any]:
     """Which request letters this case can support: to the exchange, to Tether."""
-    case = models.get_case(case_id)
-    if case is None:
-        raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
+    case = _case_or_404(case_id, user)
     letters = request_letters.available(case.result)
     audit.record("case.letters_list", case_id=case_id)
     return {"case_id": case_id, "letters": letters}
@@ -127,9 +130,7 @@ def get_letter(
     A draft, never a sent document: the officer's details, the case reference
     and the legal provision are left as marked blanks.
     """
-    case = models.get_case(case_id)
-    if case is None:
-        raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
+    case = _case_or_404(case_id, user)
     try:
         text = request_letters.draft(case_id, case.result, to)
     except request_letters.LetterNotApplicable as exc:

@@ -346,17 +346,20 @@ export default function TraceView() {
   const paymentTrace = result?.intake?.mode === 'payment'
   const payments = result?.intake?.payments ?? []
   // A hash that carried several transfers has one entry per transfer (leg),
-  // so payments are counted by hash.
+  // so payments are counted by hash. A copy for anyone but the officer who
+  // traced the case has the hashes withheld (backend/app/case_privacy.py):
+  // each transfer is then its own row.
   const paidByHash = useMemo(() => {
     const byHash = new Map()
-    for (const p of payments) {
-      const row = byHash.get(p.tx_hash) ?? { tx_hash: p.tx_hash, timestamp: p.timestamp, amount: 0, legs: 0, senders: [], labels: [], checks: [], found_by: p.found_by }
+    for (const [i, p] of payments.entries()) {
+      const key = p.tx_hash ?? `withheld-${i}`
+      const row = byHash.get(key) ?? { key, tx_hash: p.tx_hash, timestamp: p.timestamp, amount: 0, legs: 0, senders: [], labels: [], checks: [], found_by: p.found_by }
       row.amount += p.amount || 0
       row.legs += 1
       if (p.from && !row.senders.includes(p.from)) row.senders.push(p.from)
       if (p.payer_label && !row.labels.includes(p.payer_label)) row.labels.push(p.payer_label)
       row.checks.push(p.payer_is_victim)
-      byHash.set(p.tx_hash, row)
+      byHash.set(key, row)
     }
     // Any leg from another wallet marks the payment; all from the victim's clears it.
     return [...byHash.values()].map((r) => ({
@@ -364,6 +367,7 @@ export default function TraceView() {
     }))
   }, [payments])
   const paymentCount = paidByHash.length
+  const hashesWithheld = payments.length > 0 && payments.every((p) => !p.tx_hash)
   const windowStart = payments.length ? Math.min(...payments.map((p) => p.timestamp || Infinity)) : null
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
@@ -417,7 +421,7 @@ export default function TraceView() {
     })
     if (result.time_budget_seconds) q.set('budget', String(result.time_budget_seconds))
     // A payment case is re-traced from the same payments (public chain data).
-    const hashes = [...new Set((result.intake?.mode === 'payment' ? result.intake.payments ?? [] : []).map((p) => p.tx_hash))]
+    const hashes = [...new Set((result.intake?.mode === 'payment' ? result.intake.payments ?? [] : []).map((p) => p.tx_hash).filter(Boolean))]
     if (hashes.length) q.set('pay', hashes.join(','))
     navigate(`/trace/${result.address}?${q}`, { state: { startedHere: true } })
   }, [navigate, result])
@@ -713,17 +717,17 @@ export default function TraceView() {
                 <details className="card sec payments-card" open>
                   <summary>
                     <span className="micro">Victim's payments · {paymentCount}</span>
-                    <span className="note">confirm each against the complaint{windowStart && windowStart !== Infinity ? ` · the trace reads the wallet from ${when(windowStart)} UTC` : ''}</span>
+                    <span className="note">confirm each against the complaint{windowStart && windowStart !== Infinity ? ` · the trace reads the wallet from ${when(windowStart)} UTC` : ''}{hashesWithheld ? ' · hashes and times visible to the officer who traced it' : ''}</span>
                   </summary>
                   <div className="feed">
                     {paidByHash.map((p) => {
-                      const link = txUrl(result.explorer_url, result.chain, p.tx_hash)
+                      const link = p.tx_hash ? txUrl(result.explorer_url, result.chain, p.tx_hash) : null
                       return (
-                        <div className="row" key={p.tx_hash}>
+                        <div className="row" key={p.key}>
                           <div className="hop">PAY</div>
                           <div>
                             <div className="pair">
-                              <Address value={p.tx_hash} head={10} tail={8} />
+                              {p.tx_hash ? <Address value={p.tx_hash} head={10} tail={8} /> : <span className="note">hash withheld</span>}
                               {link && <a className="note" href={link} target="_blank" rel="noreferrer">explorer</a>}
                               {p.legs > 1 && <span className="note">{p.legs} transfers</span>}
                             </div>
@@ -759,7 +763,7 @@ export default function TraceView() {
                   <div className="feed">
                     {[['credits', 'Money in', 'from', '+'], ['debits', 'Money out', 'to', '−'], ['poisoning', 'Address-poisoning dust (lookalike senders)', 'from', '!']].filter(([key]) => key !== 'poisoning' || (result.statement.poisoning ?? []).length > 0).map(([key, title, dir, sign]) => (
                       <div key={key}>
-                        <p className="note" style={{ padding: '10px 12px 4px' }}><strong>{title}</strong>{(result.statement[key] ?? []).length === 0 ? ' — none found' : ''}{key === 'poisoning' ? ` — ${result.statement.lookalikes} in all; never copy an address from wallet history` : ''}</p>
+                        <p className="note" style={{ padding: '10px 12px 4px' }}><strong>{title}</strong>{key === 'credits' && result.redacted?.includes('statement.credits') ? ' — withheld: they list the victim\'s payments (visible to the officer who traced it)' : (result.statement[key] ?? []).length === 0 ? ' — none found' : ''}{key === 'poisoning' ? ` — ${result.statement.lookalikes} in all; never copy an address from wallet history` : ''}</p>
                         {(result.statement[key] ?? []).map((r) => (
                           <div className={`row${r.before_window ? ' before-window' : ''}`} key={r.tx + key}>
                             <div className="hop">{sign}</div>

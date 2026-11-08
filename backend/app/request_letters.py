@@ -27,9 +27,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 from . import config, provenance
+from .case_privacy import WITHHELD
 from .display_text import one_line, short
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
-                     _amount, _when, _when_iso, attribution_kind)
+                     _amount, _paid_at, _when, _when_iso, attribution_kind)
 from .risk_matcher import _list_meta, is_tether_usdt_freeze
 
 EXCHANGE = "exchange"
@@ -213,8 +214,8 @@ def _opening(result: dict[str, Any]) -> list[str]:
     lines.append(f"   The victim's payments, as verified on chain: {len(payments)} transfer"
                  f"{'s' if len(payments) != 1 else ''}, {_amount(total)} {asset} in all:")
     for payment in payments:
-        lines += [f"     {_amount(payment.get('amount'))} {asset}, {_when(payment.get('timestamp'))}",
-                  f"       tx {payment.get('tx_hash')}"]
+        lines += [f"     {_amount(payment.get('amount'))} {asset}, {_paid_at(payment)}",
+                  f"       tx {payment.get('tx_hash') or WITHHELD}"]
     return lines + [f"   {BLANK} (officer to add the complaint's references)."]
 
 

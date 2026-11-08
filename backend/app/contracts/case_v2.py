@@ -53,11 +53,13 @@ class Payment(_Strict):
     hash (R1). A hash that carried several transfers into the reported wallet
     has one entry per transfer, numbered by `leg`."""
 
-    tx_hash: str
+    # The hash, the block, the time and the sender are null unless read by
+    # the browser that traced the case (case_privacy.py): each of them leads
+    # a block explorer to the victim's wallet.
+    tx_hash: str | None
     chain: str
     asset: str
     amount: float
-    # Null unless read by the browser that traced the case (case_privacy.py).
     from_address: str | None = Field(alias="from")
     to: str
     block: int | None = None

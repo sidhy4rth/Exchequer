@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from . import config, provenance
+from .case_privacy import WITHHELD
 from .display_text import one_line
 from .evidence import SEAL_MARKS, seal_text
 from .exchange_matcher import DEPOSIT_WALLET, is_deposit_label
@@ -320,15 +321,18 @@ def _payment_intake(result: dict[str, Any]) -> dict[str, Any] | None:
     payments = intake.get("payments") or []
     if intake.get("mode") != "payment" or not payments:
         return None
+    # A copy for someone other than the owner has no hashes (case_privacy.py),
+    # so its legs cannot be counted per hash.
     legs: dict[str, int] = {}
     for p in payments:
-        legs[p.get("tx_hash")] = legs.get(p.get("tx_hash"), 0) + 1
+        if p.get("tx_hash"):
+            legs[p["tx_hash"]] = legs.get(p["tx_hash"], 0) + 1
     return {
         "mode": "payment",
         "window_start": min((p.get("timestamp") or 0 for p in payments), default=0) or None,
         "reported_amount": result.get("reported_amount"),
         "payments": [
-            {"tx_hash": p.get("tx_hash"), "leg": p.get("leg"), "legs": legs[p.get("tx_hash")],
+            {"tx_hash": p.get("tx_hash"), "leg": p.get("leg"), "legs": legs.get(p.get("tx_hash")),
              "amount": p.get("amount"), "asset": p.get("asset"), "time": p.get("timestamp"),
              "timestamp": p.get("timestamp"),
              "block": p.get("block"), "payer_label": p.get("payer_label"),
@@ -343,6 +347,13 @@ def _intake(result: dict[str, Any]) -> dict[str, Any]:
     One record for both: started_from() reads the mode and payments, the
     VICTIM'S PAYMENTS section the payment details (_payment_intake)."""
     return _payment_intake(result) or {"mode": "address", "reported_amount": None, "payments": []}
+
+
+def _paid_at(payment: dict[str, Any], key: str = "timestamp") -> str:
+    """A payment's time; a copy without its hash had the time withheld too."""
+    if not payment.get("tx_hash") and not payment.get(key):
+        return WITHHELD
+    return _when(payment.get(key))
 
 
 def _amount(value: Any) -> str:
@@ -695,13 +706,15 @@ def render_text_report(report: dict[str, Any]) -> str:
         para("The trace started from these payments, each read from the chain by its hash as an "
              "incoming transfer to the reported address. It reads that address only from when the "
              "first arrived. Who paid is not established by the hash; check each against the complaint.")
-        add(f"Window start     : {_when(intake.get('window_start'))}")
+        withheld = not any(p.get("tx_hash") for p in intake.get("payments", []))
+        add(f"Window start     : {WITHHELD if withheld and not intake.get('window_start') else _when(intake.get('window_start'))}")
         if intake.get("reported_amount") is not None:
             add(f"Reported amount  : {intake['reported_amount']} {symbol}")
         for p in intake.get("payments", []):
-            leg = f" (transfer {p['leg'] + 1} of {p['legs']})" if p.get("leg") is not None else ""
-            add(f"  {p.get('tx_hash')}{leg}")
-            facts = [f"{p.get('amount')} {p.get('asset') or symbol} at {_when(p.get('time'))}"]
+            of = f" of {p['legs']}" if p.get("legs") else ""
+            leg = f" (transfer {p['leg'] + 1}{of})" if p.get("leg") is not None else ""
+            add(f"  {p.get('tx_hash') or 'Hash ' + WITHHELD}{leg}")
+            facts = [f"{p.get('amount')} {p.get('asset') or symbol} at {_paid_at(p, 'time')}"]
             if p.get("payer_label"):
                 facts.append(f"sender labelled {_shown_label(p['payer_label'])}")
             if p.get("payer_is_victim") is False:
@@ -765,9 +778,9 @@ def render_text_report(report: dict[str, Any]) -> str:
              "reported address. The trace followed the address only from when the first arrived.")
         add("")
         for payment in intake["payments"]:
-            add(f"  {_amount(payment.get('amount'))} {payment.get('asset') or symbol}, {_when(payment.get('timestamp'))}"
+            add(f"  {_amount(payment.get('amount'))} {payment.get('asset') or symbol}, {_paid_at(payment)}"
                 + ("  (found by the officer's search)" if payment.get("found_by") == "officer_search" else ""))
-            add(f"    tx {payment.get('tx_hash')}")
+            add(f"    tx {payment.get('tx_hash') or WITHHELD}")
         add("")
 
     # -- reverse trace: who funded it -------------------------------------------

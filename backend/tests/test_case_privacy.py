@@ -7,7 +7,8 @@ a letter's reference has to lead back to the evidence. But a payment-mode
 case also holds the victim's NCRP acknowledgement number and the wallet they
 paid from, and those were returned to anyone with the id. Now only the
 owner's browser gets them; everyone else gets the same case with those two
-fields empty and a note saying so.
+fields empty and a note saying so -- and, since a payment's transaction hash,
+block or time names its sender on any block explorer, without those either.
 
 Throwaway SQLite file and a stub pipeline: no network.
 """
@@ -55,7 +56,8 @@ def test_a_case_link_still_opens_but_without_the_particulars(client, headers):
     assert body["intake"]["ncrp_ack"] is None
     assert all(p["from"] is None for p in body["intake"]["payments"])
     assert body["intake"]["payments"][0]["amount"] == 1.5
-    assert body["redacted"] == ["intake.ncrp_ack", "intake.victim_address", "intake.payments[].from"]
+    assert body["redacted"][:3] == ["intake.ncrp_ack", "intake.victim_address", "intake.payments[].from"]
+    assert "intake.payments[].tx_hash" in body["redacted"]
     assert NCRP not in response.text and PAYER not in response.text
 
 
@@ -108,3 +110,147 @@ def test_the_victims_own_wallet_is_a_particular_too():
     seen = for_reader(case, "owner-hash", "someone-else")
     assert seen["intake"]["victim_address"] is None and PAYER not in str(seen)
     assert for_reader(case, "owner-hash", "owner-hash")["intake"]["victim_address"] == PAYER
+
+
+# -- the payments' hashes, blocks and times are particulars too (r2-g2-payment-intake-integrity-5-4) ----
+# A transaction hash names its sender on any block explorer, and so does the
+# block and second it landed in next to the reported address. So a reader
+# who is not the owner gets none of them, from any route that serves the case.
+from test_report import full_result  # noqa: E402
+
+from app import report as report_module  # noqa: E402
+from app.routes import evidence  # noqa: E402
+
+PAID_AT = 1_699_123_457
+SECOND_AT = PAID_AT + 9 * 86_400
+PAY_HASH = "0x9e1f" + "ab" * 28 + "77d2"
+PAY_HASH_2 = "0x4c08" + "cd" * 28 + "e51b"
+PAY_BLOCK, PAY_BLOCK_2 = 18_498_765, 18_563_021
+STRANGER = "0x" + "6" * 40
+
+
+def _payment(tx_hash, amount, block, when):
+    return {"tx_hash": tx_hash, "chain": "ethereum", "asset": "ETH", "amount": amount, "from": PAYER,
+            "to": SCAMMER, "block": block, "timestamp": when, "found_by": "victim",
+            "payer_label": None, "payer_is_victim": False}
+
+
+def rich_payment_case():
+    """A payment case as a real trace stores it: the payments, the wallet
+    statement (whose credits list the same transfers), the seed's time
+    window, and warnings that quote the hashes and the first payment's date."""
+    result = full_result()
+    result["address"] = SCAMMER
+    result["intake"] = {"mode": "payment", "ncrp_ack": NCRP, "victim_address": PAYER,
+                        "payments": [_payment(PAY_HASH, 1.5, PAY_BLOCK, PAID_AT),
+                                     _payment(PAY_HASH_2, 0.5, PAY_BLOCK_2, SECOND_AT)]}
+    result["reported_amount"] = 2.0
+    result["graph"]["nodes"][0] = {"id": SCAMMER, "depth": 0, "window_start": PAID_AT}
+    result["statement"] = {
+        "debits": [{"tx": "0x" + "d1" * 32, "time": PAID_AT - 60, "amount": 5.0, "counterparty": STRANGER,
+                    "before_window": True},
+                   {"tx": "0xaaa", "time": 1_700_000_000, "amount": 4.5, "counterparty": "0x" + "2" * 40,
+                    "before_window": False}],
+        "credits": [{"tx": PAY_HASH, "time": PAID_AT, "amount": 1.5, "counterparty": PAYER,
+                     "lookalike": False, "before_window": False},
+                    {"tx": PAY_HASH_2, "time": SECOND_AT, "amount": 0.5, "counterparty": PAYER,
+                     "lookalike": False, "before_window": False}],
+        "poisoning": [], "rows_per_side": 25, "lookalikes": 0, "window_start": PAID_AT,
+    }
+    result["warnings"] = [
+        "Payment 0x9e1f…77d2 was not sent from the victim's wallet entered with the complaint. "
+        "Check it is the victim's payment before relying on the time window.",
+        "The first payment (4 Nov 2023) is 9 days before the next; the trace reads the wallet from the "
+        "first. Check it belongs to this complaint.",
+        "Some unrelated warning stays as it is.",
+    ]
+    return result
+
+
+# Everything a block explorer could turn back into the victim's wallet.
+LINKS = [PAY_HASH, PAY_HASH_2, PAY_HASH[2:], PAY_HASH[:6], "77d2", PAY_HASH_2[:6], str(PAY_BLOCK),
+         str(PAY_BLOCK_2), str(PAID_AT), str(SECOND_AT), report_module._when(PAID_AT),
+         report_module._when(SECOND_AT), "4 Nov 2023", NCRP, PAYER, PAYER[2:]]
+
+
+@pytest.fixture
+def rich(client):
+    owner_hash = hashlib.sha256(OWNER_KEY.encode()).hexdigest()
+    models.save_case("rich-case", SCAMMER, rich_payment_case(), owner_hash=owner_hash)
+    return client
+
+
+def leaks(text):
+    return [needle for needle in LINKS if needle.lower() in text.lower()]
+
+
+@pytest.mark.parametrize("path", [
+    "/trace/rich-case",
+    "/trace/rich-case/report?format=json", "/trace/rich-case/report?format=text",
+    "/trace/rich-case/graph?format=csv", "/trace/rich-case/graph?format=graphml",
+    "/trace/rich-case/letters", "/trace/rich-case/letter?to=exchange",
+    "/trace/rich-case/requests", "/cases", "/cases/correlate", "/cases/correlate?case_id=rich-case",
+])
+@pytest.mark.parametrize("headers", [{}, OTHER], ids=["anonymous", "another-browser"])
+def test_no_route_gives_a_non_owner_anything_that_leads_to_the_victims_wallet(rich, path, headers):
+    response = rich.get(path, headers=headers)
+    assert response.status_code == 200, response.text
+    assert leaks(response.text) == []
+
+
+def test_the_pdf_is_made_from_the_redacted_report_for_a_non_owner(rich, monkeypatch):
+    seen = []
+    monkeypatch.setattr(evidence, "render_pdf", lambda built, text: seen.append((built, text)) or b"%PDF-")
+    for headers in ({}, OTHER):
+        assert rich.get("/trace/rich-case/report?format=pdf", headers=headers).status_code == 200
+    assert seen and all(leaks(repr(built) + text) == [] for built, text in seen)
+
+
+def test_a_non_owner_still_sees_how_much_was_paid_and_why_it_is_withheld(rich):
+    body = rich.get("/trace/rich-case", headers=OTHER).json()
+    payments = body["intake"]["payments"]
+    assert [p["amount"] for p in payments] == [1.5, 0.5] and body["reported_amount"] == 2.0
+    assert all(p["tx_hash"] is None and p["block"] is None and p["timestamp"] is None for p in payments)
+    for field in ("intake.payments[].tx_hash", "intake.payments[].block", "intake.payments[].timestamp"):
+        assert field in body["redacted"]
+    assert body["statement"]["debits"] and body["statement"]["credits"] == []
+    assert "Some unrelated warning stays as it is." in body["warnings"]
+    text = rich.get("/trace/rich-case/report?format=text", headers=OTHER).text
+    assert "VICTIM'S PAYMENTS" in text and "withheld" in text
+    letter = rich.get("/trace/rich-case/letter?to=exchange", headers=OTHER).text
+    assert "2 transfers" in letter and "withheld" in letter
+
+
+def test_the_owner_still_gets_the_hashes_blocks_and_times_everywhere(rich):
+    body = rich.get("/trace/rich-case", headers=OWNER).json()
+    assert body == rich_payment_case()
+    text = rich.get("/trace/rich-case/report?format=text", headers=OWNER).text
+    assert PAY_HASH in text and report_module._when(PAID_AT) in text
+    letter = rich.get("/trace/rich-case/letter?to=exchange", headers=OWNER).text
+    assert PAY_HASH in letter and PAY_HASH_2 in letter
+
+
+def test_the_owner_and_a_stranger_get_different_reports_from_the_cache(rich):
+    stranger = rich.get("/trace/rich-case/report?format=text").text
+    owner = rich.get("/trace/rich-case/report?format=text", headers=OWNER).text
+    again = rich.get("/trace/rich-case/report?format=text").text
+    assert PAY_HASH in owner and PAY_HASH not in stranger and again == stranger
+
+
+def test_a_finished_payment_job_hides_the_hashes_from_a_non_owner(client, monkeypatch):
+    monkeypatch.setattr(pipeline, "run_trace", lambda request: rich_payment_case())
+    started = client.post("/trace/jobs", json={"address": SCAMMER}, headers=OWNER).json()
+    for _ in range(200):
+        mine = client.get(f"/trace/jobs/{started['job_id']}", headers=OWNER)
+        if mine.json()["status"] != jobs.RUNNING:
+            break
+    assert PAY_HASH in mine.text
+    for headers in ({}, OTHER):
+        assert leaks(client.get(f"/trace/jobs/{started['job_id']}", headers=headers).text) == []
+
+
+def test_the_redacted_copy_still_meets_the_case_contract():
+    from app.case_privacy import for_reader
+    from app.contracts import read_case
+    seen = read_case(for_reader(rich_payment_case(), "owner-hash", "someone-else"))
+    assert [p.tx_hash for p in seen.intake.payments] == [None, None]
