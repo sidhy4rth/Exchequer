@@ -21,6 +21,8 @@ evidence.py, casebook.py and others) and the trace itself in app/pipeline.py.
 """
 from __future__ import annotations
 
+import os
+
 import asyncio
 import logging
 import threading
@@ -293,15 +295,14 @@ def spa(full_path: str, request: Request):
     # A real file (favicon, manifest) is served as itself -- only from inside the
     # built frontend: the resolved path is checked before the filesystem is asked
     # anything about it.
-    root = FRONTEND_DIR.resolve()
-    try:
-        candidate = (root / full_path).resolve()
-        inside = bool(full_path) and candidate.is_relative_to(root) and candidate != root
-        is_file = inside and candidate.is_file()
-    except (OSError, ValueError):  # a NUL byte, a segment too long for the filesystem
-        is_file = False
-    if is_file:
-        return FileResponse(candidate)
+    root = os.path.realpath(FRONTEND_DIR)
+    candidate = os.path.realpath(os.path.normpath(os.path.join(root, full_path)))
+    if full_path and candidate.startswith(root + os.sep):
+        try:
+            if os.path.isfile(candidate):
+                return FileResponse(candidate)
+        except (OSError, ValueError):  # a NUL byte, a segment too long for the filesystem
+            pass
     if not index.is_file() or not _is_page_load(request):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     # The shell must never be cached: a stale index.html keeps pointing at

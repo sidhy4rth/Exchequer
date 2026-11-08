@@ -40,4 +40,4 @@ def test_a_cache_row_that_fails_its_check_is_logged_by_a_hash_of_its_key(tmp_pat
     with caplog.at_level(logging.WARNING, logger="app.api_budget"):
         assert ResponseCache(path=path).get(key) == (False, None)
     text = " ".join(r.getMessage() for r in caplog.records)
-    assert "does not match its hash" in text and "txlist" not in text and "abab" not in text
+    assert "did not match its hash" in text and "txlist" not in text and "abab" not in text
