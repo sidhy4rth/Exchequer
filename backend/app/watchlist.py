@@ -41,7 +41,7 @@ from typing import Any, Callable, Iterable
 from urllib.parse import urlsplit
 
 import httpx
-from sqlalchemy import and_, case, delete, func, select, update
+from sqlalchemy import and_, case, delete, func, or_, select, update
 
 from . import config, models, ownership, webhook_vault
 from .api_budget import TraceBudget, charged_to, fresh_reads
@@ -110,15 +110,38 @@ def _floor() -> Any:
 
 def _material_urgent() -> Any:
     """SQL: an unread exchange or flagged alert at or above its dust floor."""
-    return and_(models.Alert.read.is_(False), models.Alert.kind.in_(URGENT_KINDS), models.Alert.value >= _floor())
+    return and_(models.Alert.read.is_(False), models.Alert.kind.in_(URGENT_KINDS),
+                func.coalesce(models.Alert.value, 0.0) >= _floor())
 
 
-def _larger_first() -> Any:
-    """SQL sort key: material urgent alerts by size, largest first. Size is
-    the value in dust floors, a rough common unit across assets (each floor
-    is about a dollar or a few), so many small sends just above the floor
-    cannot bury one cash-out either. Every other alert sorts as equal."""
-    return case((_material_urgent(), -(models.Alert.value / _floor())), else_=0)
+# An exchange or flagged alert ranks as this many times its size against a
+# movement: a cash-out names the exchange account to freeze, so a small one
+# still outranks a larger hop, but a burst of near-dust cash-outs cannot bury
+# a movement of more than a hundredth of what they add up to each.
+URGENT_WEIGHT = 100
+
+
+def _material() -> Any:
+    """SQL: an alert at or above its dust floor, or the watch's "more" notice."""
+    return or_(func.coalesce(models.Alert.value, 0.0) >= _floor(), models.Alert.kind == "more")
+
+
+def _order() -> list[Any]:
+    """SQL sort keys, most important first, for the list and the per-watch cap:
+    unread alerts above the dust floor (of every kind), then read ones, then
+    unread dust, then read dust; within each, by size in dust floors (a rough
+    common unit across assets: each floor is about a dollar or a few), an
+    exchange or flagged alert counting URGENT_WEIGHT times its size; then
+    newest first. So dust of any kind never pushes out, or buries, an alert
+    that matters, and many small sends cannot bury one large one
+    (r2-g2-watchlist-alerts-0-1)."""
+    material, unread = _material(), models.Alert.read.is_(False)
+    tier = case((and_(unread, material), 0), (material, 1), (unread, 2), else_=3)
+    weight = case((models.Alert.kind.in_(URGENT_KINDS), URGENT_WEIGHT), else_=1)
+    size = func.coalesce(models.Alert.value, 0.0) / _floor() * weight
+    return [tier, size.desc(), models.Alert.tx_time.desc(), models.Alert.created_at.desc()]
+
+
 _EMOJI = {"exchange": "🏦", "risk": "⚠️", "moved": "➡️", "more": "ℹ️"}
 _VERB = {"exchange": "sent to exchange wallet", "risk": "sent to flagged address", "moved": "moved"}
 # Webhook delivery: this many exchange or flagged alerts get a post each, the
@@ -432,8 +455,9 @@ def _delete_orphan_alerts(s: Any) -> int:
 def _keep_site_budget(s: Any) -> None:
     """Hold the alerts table to MAX_ALERTS_TOTAL rows, in the caller's
     transaction: first alerts no active watch owns, then the oldest read
-    ones, then the oldest unread movements and dust, and only then the
-    oldest unread exchange or flagged alerts above the dust floor."""
+    ones, then the oldest unread dust, then unread movements above the dust
+    floor, and only then the oldest unread exchange or flagged alerts above
+    it."""
     def count() -> int:
         return s.scalar(select(func.count()).select_from(models.Alert)) or 0
 
@@ -441,8 +465,8 @@ def _keep_site_budget(s: Any) -> None:
     if excess <= 0:
         return
     excess -= _delete_orphan_alerts(s)
-    material = _material_urgent()
-    for tier in (models.Alert.read.is_(True), ~material, material):
+    urgent, material = _material_urgent(), _material()
+    for tier in (models.Alert.read.is_(True), ~material, ~urgent, urgent):
         if excess <= 0:
             return
         oldest = (select(models.Alert.id).where(tier)
@@ -485,12 +509,9 @@ def list_alerts(owner: str, unread_only: bool = False, limit: int = 100) -> list
         stmt = select(models.Alert).where(models.Alert.owner_hash == owner)
         if unread_only:
             stmt = stmt.where(models.Alert.read.is_(False))
-        # Unread exchange and flagged alerts above the dust floor first,
-        # however much moved since: they are the ones a freeze request is
-        # sent on. Dust to the same places sorts with everything else.
-        urgent_first = case((_material_urgent(), 0), else_=1)
-        stmt = stmt.order_by(urgent_first, _larger_first(), models.Alert.created_at.desc(),
-                             models.Alert.tx_time.desc()).limit(limit)
+        # Unread alerts above the dust floor first, largest first (a cash-out
+        # weighted above a movement), then read ones, then dust (_order).
+        stmt = stmt.order_by(*_order()).limit(limit)
         alerts = list(s.scalars(stmt))
         watches = {w.id: (w.chain, w.case_id) for w in s.scalars(select(models.Watch).where(
             models.Watch.id.in_({a.watch_id for a in alerts})))}
@@ -1022,18 +1043,14 @@ def _finish_check(watch_id: str, seen_block: int | None = None, error: str | Non
             s.merge(more)  # replaces the watch's earlier "more" row, read or not
         s.flush()
         if alerts:
-            # Unread exchange and flagged alerts above the dust floor are kept
-            # first, largest first, so newer dust -- even dust sent to the
-            # same hot wallet or a sanctioned address -- never pushes out the
-            # alert that matters: a cash-out goes only if the watch holds
-            # MAX_ALERTS_PER_WATCH unread ones larger than it. The rest are
-            # kept newest first.
-            urgent_first = case((_material_urgent(), 0), else_=1)
+            # Kept in _order's order: unread alerts above the dust floor first,
+            # largest first, then read ones, then dust. So newer dust of any
+            # kind -- to fresh wallets, the same hot wallet or a sanctioned
+            # address -- never pushes out an unread alert that matters while
+            # any dust is left to delete, and many small material sends
+            # delete the smallest first, never the largest.
             mine = models.Alert.watch_id == watch_id
-            keep = (select(models.Alert.id).where(mine)
-                    .order_by(urgent_first, _larger_first(), models.Alert.tx_time.desc(),
-                              models.Alert.created_at.desc())
-                    .limit(MAX_ALERTS_PER_WATCH))
+            keep = (select(models.Alert.id).where(mine).order_by(*_order()).limit(MAX_ALERTS_PER_WATCH))
             s.execute(delete(models.Alert).where(mine, models.Alert.id.not_in(keep)))
             _keep_site_budget(s)
         s.commit()
