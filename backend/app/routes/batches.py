@@ -147,9 +147,13 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
 
     def record(payload: dict[str, Any]) -> None:
         cases.record_trace(payload, via="batch")
+
+    def store(payload: dict[str, Any], request, owner_hash: str | None) -> dict[str, Any]:
+        # Saved rows count against the starting connection's saves for the day.
+        return cases.store_result(payload, request, owner_hash, client=client)
     try:
         batches.start(batch.id, owner, lambda: _acquire(client), lambda: _release(client), trace,
-                      cases.store_result, on_done=done,
+                      store, on_done=done,
                       record_fn=record)
     except Exception as exc:  # noqa: BLE001 -- e.g. "can't start new thread" under memory pressure
         logger.error("Batch %s could not be started: %s", batch.id, type(exc).__name__)

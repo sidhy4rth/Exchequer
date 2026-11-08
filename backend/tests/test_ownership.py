@@ -291,11 +291,12 @@ def test_correlation_is_recomputed_once_a_case_is_stored(client, monkeypatch):
 def test_a_full_store_still_returns_the_trace_but_does_not_save_it(client, monkeypatch):
     from app import config
     monkeypatch.setattr(config, "MAX_STORED_CASES", 2)
-    assert trace(client, OTHER) and trace(client, OTHER)
+    # Owned and in use: neither gives up its place (an anonymous one would).
+    assert trace(client, OTHER, ALICE) and trace(client, OTHER, ALICE)
     third = client.post("/trace", json={"address": OTHER}).json()
     assert third["case_id"] is None
     assert any("case store is full" in w for w in third["warnings"])
-    assert models.case_count() == 2  # nothing deleted to make room
+    assert models.case_count() == 2  # nothing in use deleted to make room
 
 
 def test_a_failed_save_hands_back_no_case_id(client, monkeypatch):

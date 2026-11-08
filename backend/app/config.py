@@ -504,12 +504,21 @@ MAX_CASE_BYTES: int = _int_env("EXCHEQUER_MAX_CASE_BYTES", 4 * 1024 * 1024)
 
 # The most cases the store keeps (0 = no cap). Anyone can save a trace, and a
 # free hosted Postgres holds 0.5 GB; a stored case averages ~32 KB, so 5,000 is
-# ~160 MB. Once full, a trace still runs and shows its result -- it is just not
-# stored. Nothing already stored is ever deleted to make room.
+# ~160 MB. Once full, the oldest cases nobody is using make room (CASE_IDLE_DAYS);
+# with none left, a trace still runs and shows its result -- it is just not stored.
 MAX_STORED_CASES: int = _int_env("EXCHEQUER_MAX_STORED_CASES", 5000)
 # The most of those one owner key may keep (0 = no quota), so one browser
 # cannot fill the store and stop everyone else's cases from being saved.
 MAX_CASES_PER_OWNER: int = _int_env("EXCHEQUER_MAX_CASES_PER_OWNER", 200)
+# Owner keys are free, so the quota above alone bounds nothing: the most cases
+# one connection (keyed like the hourly limits) may save in 24 hours, whatever
+# owner keys it sends (0 = no quota).
+MAX_CASES_PER_CLIENT_PER_DAY: int = _int_env("EXCHEQUER_MAX_CASES_PER_CLIENT_PER_DAY", 150)
+# When the store is full, the oldest cases nobody is using give up their place
+# to a new one (models.evict_cases): saved without an owner key, or kept by an
+# owner who has saved nothing for this many days. Never a demo case, and never
+# one a freeze request or an active watch refers to.
+CASE_IDLE_DAYS: int = max(1, _int_env("EXCHEQUER_CASE_IDLE_DAYS", 30))
 
 # Minimum spacing between Etherscan requests, in seconds.
 #

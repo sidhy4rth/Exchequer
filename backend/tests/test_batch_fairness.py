@@ -41,7 +41,7 @@ def setup(tmp_path, monkeypatch):
         gate.wait(10)
         return {"address": request.address, "chain": "ethereum"}
     monkeypatch.setattr(pipeline, "run_trace", slow_trace)
-    monkeypatch.setattr(cases, "store_result", lambda payload, request, owner: {**payload, "case_id": None})
+    monkeypatch.setattr(cases, "store_result", lambda payload, request, owner, **_: {**payload, "case_id": None})
     yield SimpleNamespace(client=TestClient(app), gate=gate, started=started)
     gate.set()
     # Let every batch thread finish before the patched slots are put back.

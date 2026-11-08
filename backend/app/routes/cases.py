@@ -6,11 +6,13 @@ are in evidence.py; the history list and correlation in casebook.py."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import threading
 import time
 from collections import deque
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -179,8 +181,40 @@ def _count(query, *args) -> int:
         return 0
 
 
-def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | None) -> dict[str, Any]:
-    """Give a finished trace its case id and, unless asked not to, store it."""
+def connection_hash(client: str | None) -> str | None:
+    """The connection that saved a case, hashed (the key is rate_limit.client_ip's:
+    an IPv6 address already counts as its /64)."""
+    if not client:
+        return None
+    return hashlib.sha256(b"exchequer-case-client:" + client.encode()).hexdigest()
+
+
+def _not_saved(payload: dict[str, Any], warning: str) -> dict[str, Any]:
+    payload["case_id"] = None
+    payload.setdefault("warnings", []).append(warning)
+    return payload
+
+
+def _since(seconds: int) -> str:
+    return (datetime.now(tz=timezone.utc) - timedelta(seconds=seconds)).isoformat(timespec="seconds")
+
+
+def _make_room(stored: int) -> int:
+    """Evict the oldest cases nobody is using until one more fits; the count after."""
+    try:
+        gone = models.evict_cases(stored - config.MAX_STORED_CASES + 1, _since(config.CASE_IDLE_DAYS * 86400))
+    except Exception:  # noqa: BLE001 -- refused below as full, never lost
+        logger.warning("Could not make room in the case store", exc_info=True)
+        return stored
+    if gone:
+        logger.warning("Case store full: %d unused case%s gave up their place", gone, "s" if gone != 1 else "")
+    return stored - gone
+
+
+def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | None,
+                 client: str | None = None) -> dict[str, Any]:
+    """Give a finished trace its case id and, unless asked not to, store it.
+    `client` is the admit() token of the connection that started it."""
     case_id = models.new_case_id()
     created_at = models.utc_now_iso()
     payload["case_id"] = case_id
@@ -190,27 +224,28 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
         return payload
 
     mine = _count(models.case_count_for, owner) if owner and config.MAX_CASES_PER_OWNER else 0
-    stored = _count(models.case_count) if config.MAX_STORED_CASES else 0
     if owner and config.MAX_CASES_PER_OWNER and mine >= config.MAX_CASES_PER_OWNER:
-        payload["case_id"] = None
-        payload.setdefault("warnings", []).append(
-            f"This browser already keeps {config.MAX_CASES_PER_OWNER:,} cases, so this result is "
-            "shown here but was not saved: export what you need from it now."
-        )
-        return payload
+        return _not_saved(payload, f"This browser already keeps {config.MAX_CASES_PER_OWNER:,} cases, so "
+                                   "this result is shown here but was not saved: export what you need from it now.")
+    connection = connection_hash(client)
+    if connection and config.MAX_CASES_PER_CLIENT_PER_DAY:
+        today = _count(models.case_count_from, connection, _since(86400))
+        if today >= config.MAX_CASES_PER_CLIENT_PER_DAY:
+            return _not_saved(payload, f"This connection has saved {config.MAX_CASES_PER_CLIENT_PER_DAY:,} "
+                                       "cases in the last 24 hours, so this result is shown here but was not "
+                                       "saved: export what you need from it now.")
 
+    stored = _count(models.case_count) if config.MAX_STORED_CASES else 0
     if config.MAX_STORED_CASES and stored + 1 == int(config.MAX_STORED_CASES * 0.8):
         logger.warning("Case store is 80%% full (%d of %d cases)", stored + 1, config.MAX_STORED_CASES)
     if config.MAX_STORED_CASES and stored >= config.MAX_STORED_CASES:
+        stored = _make_room(stored)
+    if config.MAX_STORED_CASES and stored >= config.MAX_STORED_CASES:
         logger.warning("Case store full (%d cases); trace not stored", config.MAX_STORED_CASES)
-        payload["case_id"] = None
-        payload.setdefault("warnings", []).append(
-            f"The case store is full ({config.MAX_STORED_CASES:,} cases), so this result is "
-            "shown here but was not saved: it will not appear in the case history and "
-            "cannot be exported or reopened later. Ask the operator to raise "
-            "EXCHEQUER_MAX_STORED_CASES."
-        )
-        return payload
+        return _not_saved(payload, f"The case store is full ({config.MAX_STORED_CASES:,} cases), so this "
+                                   "result is shown here but was not saved: it will not appear in the case "
+                                   "history and cannot be exported or reopened later. Ask the operator to "
+                                   "raise EXCHEQUER_MAX_STORED_CASES.")
 
     # The cap above counts cases, not bytes: one dense trace could be megabytes.
     try:
@@ -229,7 +264,8 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
 
     try:
         models.save_case(case_id, payload["address"], payload, created_at=created_at,
-                         owner_hash=owner or ownership.orphan_hash(), result_json=text)
+                         owner_hash=owner or ownership.orphan_hash(), result_json=text,
+                         client_hash=connection, anonymous=owner is None)
     except Exception:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
         # No id for a case that does not exist: the page would open it, find
@@ -291,7 +327,7 @@ def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, 
             payload = pipeline.run_trace(request)
     finally:
         release(slot)
-    stored = store_result(payload, request, user.owner_hash)
+    stored = store_result(payload, request, user.owner_hash, client=slot)
     record_trace_safely(stored)
     return stored
 

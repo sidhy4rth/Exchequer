@@ -42,7 +42,7 @@ def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | No
         # From here the trace is done and its provider calls are spent: a
         # failure to store or audit it is a warning on the result, never "failed".
         try:
-            stored = cases.store_result(payload, request, owner)
+            stored = cases.store_result(payload, request, owner, client=slot)
         except Exception:  # noqa: BLE001
             logger.exception("Trace job %s finished but could not be stored", job.id)
             stored = {**payload, "case_id": None}

@@ -46,6 +46,11 @@ class Case(Base):
     # SHA-256 of the owner key of the browser that traced it (ownership.py).
     # NULL for cases stored before ownership existed.
     owner_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True, default=None)
+    # A hash of the connection that saved it (a connection's saves per day are
+    # counted whatever owner keys it uses), and whether it was saved without
+    # an owner key. NULL for cases saved before either existed.
+    client_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    anonymous: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # -- convenience -------------------------------------------------------
     @property
@@ -332,6 +337,8 @@ def save_case(
     created_at: str | None = None,
     owner_hash: str | None = None,
     result_json: str | None = None,
+    client_hash: str | None = None,
+    anonymous: bool | None = None,
 ) -> Case:
     """Persist one completed trace, and the deposit addresses it inferred.
     `result_json` is `result` already serialised, when the caller has it."""
@@ -341,6 +348,8 @@ def save_case(
         created_at=created_at or utc_now_iso(),
         result_json=result_json if result_json is not None else json.dumps(result, default=str),
         owner_hash=owner_hash,
+        client_hash=client_hash,
+        anonymous=anonymous,
     )
     global _store_version
     with Session(_engine) as session:
@@ -391,9 +400,54 @@ def case_count_for(owner_hash: str) -> int:
         return int(session.scalar(stmt) or 0)
 
 
+def case_count_from(client_hash: str, since: str) -> int:
+    """Cases one connection saved since `since` (ISO-8601 UTC)."""
+    with Session(_engine) as session:
+        stmt = select(func.count()).select_from(Case).where(Case.client_hash == client_hash,
+                                                            Case.created_at >= since)
+        return int(session.scalar(stmt) or 0)
+
+
+def _evictable(idle_before: str):
+    """Cases that may give up their place when the store is full, oldest
+    first: saved without an owner key, or kept by an owner who has saved
+    nothing since `idle_before` (and older than that themselves). Never a
+    demo case (no owner), and never one a freeze request or an active watch
+    refers to: an officer is using it."""
+    later = Case.__table__.alias("later")
+    owner_active = (select(later.c.id).where(later.c.owner_hash == Case.owner_hash,
+                                             later.c.created_at >= idle_before).exists())
+    requested = select(FreezeRequest.id).where(FreezeRequest.case_id == Case.id).exists()
+    watched = select(Watch.id).where(Watch.case_id == Case.id, Watch.active.is_(True)).exists()
+    idle_owner = (Case.created_at < idle_before) & ~owner_active
+    return (select(Case.id).where(Case.owner_hash.is_not(None), ~requested, ~watched,
+                                  Case.anonymous.is_(True) | idle_owner)
+            .order_by(Case.created_at, Case.id))
+
+
+def evict_cases(count: int, idle_before: str) -> int:
+    """Delete up to `count` evictable cases (see _evictable) and their
+    inferred deposits; returns how many went. A deleted case's link then
+    answers 404, like any id that matches no case."""
+    if count <= 0:
+        return 0
+    global _store_version
+    with Session(_engine) as session:
+        ids = list(session.scalars(_evictable(idle_before).limit(count)))
+        if not ids:
+            return 0
+        session.execute(InferredDeposit.__table__.delete().where(InferredDeposit.case_id.in_(ids)))
+        session.execute(Case.__table__.delete().where(Case.id.in_(ids)))
+        session.commit()
+    _case_cache.drop(ids)
+    with _store_version_lock:
+        _store_version += 1
+    return len(ids)
+
+
 # Recently read cases, kept in memory. A stored case never changes (nothing
-# updates one; only the offline prune script deletes, and the server is
-# restarted after it), but its result can be megabytes and the production
+# updates one; the offline prune script deletes, and the server is restarted
+# after it; evict_cases deletes and drops what it deleted from here), but its result can be megabytes and the production
 # store is a metered free tier: re-reading one case in a loop would spend the
 # month's transfer. Bounded in bytes of result_json; a case over a quarter of
 # the bound is never kept, so a few huge ones cannot empty it.
@@ -435,6 +489,14 @@ class _CaseCache:
             while self.size > CASE_CACHE_BYTES and self._items:
                 _, old = self._items.popitem(last=False)
                 self.size -= len(old.result_json or "")
+
+
+    def drop(self, case_ids: list[str]) -> None:
+        with self._lock:
+            for case_id in case_ids:
+                old = self._items.pop(case_id, None)
+                if old is not None:
+                    self.size -= len(old.result_json or "")
 
 
 _case_cache = _CaseCache()

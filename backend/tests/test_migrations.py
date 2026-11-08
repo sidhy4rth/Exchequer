@@ -76,7 +76,10 @@ def pre_migration_store(engine, skip: tuple[str, ...] = ()) -> None:
 def test_a_store_made_before_migrations_is_adopted_untouched(engine):
     # What every deployed or local store was on 2 Nov: create_all(), no version.
     pre_migration_store(engine)
-    models.save_case("kept", ADDRESS, {"address": ADDRESS}, owner_hash="h" * 64)
+    with engine.begin() as conn:  # written as the code of the time wrote it, not today's model
+        conn.execute(text("INSERT INTO cases (id, address, created_at, result_json, owner_hash) "
+                          "VALUES ('kept', :a, :t, :r, :o)"),
+                     {"a": ADDRESS, "t": models.utc_now_iso(), "r": '{"address": "%s"}' % ADDRESS, "o": "h" * 64})
     models.init_db()
     assert revision(engine) == head()
     assert drift(engine) == []
@@ -114,7 +117,10 @@ def test_the_baseline_refuses_to_be_downgraded(engine):
         with pytest.raises(RuntimeError, match="drop every stored case"):
             command.downgrade(settings, "base")
     assert "cases" in inspect(engine).get_table_names()
-    assert models.get_case("kept") is not None
+    # Read as the baseline stored it: the later migrations were undone first,
+    # so today's model has columns this table no longer has.
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT id FROM cases")).scalars().all() == ["kept"]
 
 
 def test_migrating_at_startup_leaves_the_apps_logging_alone(engine):
