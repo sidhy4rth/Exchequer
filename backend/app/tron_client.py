@@ -32,7 +32,8 @@ from typing import Any, Callable
 
 import httpx
 
-from .api_budget import ResponseCache, ResponseTooLarge, SharedPacer, get_cache, get_pacer, read_capped, spend
+from .api_budget import (Cancelled, ResponseCache, ResponseTooLarge, SharedPacer, TraceStopped, get_cache, get_pacer,
+                         read_capped, spend)
 from .evidence import EvidenceLog
 
 from . import config
@@ -586,7 +587,12 @@ class TronClient:
             return None
         try:
             body = self._post("/wallet/getcontract", {"value": address, "visible": True})
-        except TronError as exc:
+        except Cancelled:
+            raise  # the owner pressed Stop: the trace ends here
+        except (TronError, TraceStopped) as exc:
+            # A budget or clock that runs out at this check leaves the address
+            # unknown, so no exchange is named for it; it must not fail the
+            # whole trace (r2-g2-documented-claims-vs-code-7-8).
             logger.warning("Could not read whether %s is a contract: %s", address, type(exc).__name__)
             return None
         if body.get("Error"):

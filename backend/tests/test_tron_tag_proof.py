@@ -180,3 +180,19 @@ def test_the_eth_importer_reads_tags_as_plain_text(monkeypatch):
     monkeypatch.setattr(eth.urllib.request, "urlopen", lambda *a, **k: Response(csv_text.encode()))
     out = eth.candidates_by_chain()["ethereum"]
     assert list(out) == ["0x" + "2" * 40]
+
+
+@pytest.mark.parametrize("stop", ["budget", "deadline"])
+def test_a_trace_limit_at_the_contract_check_reads_as_unknown_not_a_failed_trace(stop, monkeypatch):
+    """The case's TronGrid budget, the site's daily allowance or the clock can run
+    out exactly at this check; that stop must leave the address unknown (no
+    exchange named for it), not escape and fail the whole trace with a 503."""
+    from app import api_budget
+
+    error = api_budget.BudgetSpent("trongrid", limit=3) if stop == "budget" else api_budget.DeadlineReached()
+    client = TronClient(api_key="k", min_interval=0, max_retries=0)
+
+    def stopped(*args, **kwargs):
+        raise error
+    monkeypatch.setattr(client, "_post", stopped)
+    assert client.is_contract(EXCH) is None
