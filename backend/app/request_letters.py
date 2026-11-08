@@ -131,7 +131,9 @@ def _amount_lines(asset: str, stated: dict[str, Any]) -> list[str]:
     lead = "On a pro-rata estimate" if stated["method"] == "prorata" else "On an estimate"
     # Only an intake trace starts from the victim's own payments; anything
     # else starts from what the reported wallet sent.
-    caveat = "" if stated["intake"] else ". That figure can include other people's money, not only the complainant's"
+    caveat = ("" if stated["intake"] else
+              ". This trace is exploratory, so that figure is an upper bound: it can include other people's "
+              "money, not only the complainant's")
     if stated["basis"] in ("swap_output", "swap_share"):
         swap = stated["swap_cap"]
         count = swap.get("swaps") or 1
@@ -192,6 +194,15 @@ def available(result: dict[str, Any]) -> list[dict[str, str]]:
     return out
 
 
+# An exploratory trace starts from everything the reported address sent, so
+# every amount it reaches can hold third parties' funds as well as the victim's.
+EXPLORATORY_LINES = [
+    "   This trace is EXPLORATORY: it started from the reported address, not from the victim's",
+    "   payments, so every amount in this letter can include other people's money. Each amount is",
+    "   an upper bound on what can be the victim's, not a finding that it is.",
+]
+
+
 def _opening(result: dict[str, Any]) -> list[str]:
     """Only what the case holds. A trace from the victim's payments states them as
     verified on chain; one from the address alone says so and leaves them to the
@@ -206,6 +217,9 @@ def _opening(result: dict[str, Any]) -> list[str]:
         return lines + [
             f"   The victim's payments: {BLANK} (officer to state amounts, dates and references",
             "   from the complaint). This trace followed the reported address's history, not specific payments.",
+            # An older intake case may hold the reported amount without its
+            # payments: it started from them, so it is not exploratory.
+            *(EXPLORATORY_LINES if not result.get("reported_amount") else []),
         ]
     asset = result.get("asset")
     total = result.get("reported_amount")

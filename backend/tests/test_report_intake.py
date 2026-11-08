@@ -85,3 +85,44 @@ def test_an_address_mode_letter_says_the_trace_followed_the_address():
     text = draft("case-1", case(), "exchange")
     assert "followed the reported address's history, not specific payments" in text
     assert "The victim's payments: [____" in text
+
+
+# ---------------------------------------------------------------------------
+# An exploratory case's letters say the figure is an upper bound
+# (r2-g2-frontend-intake-rendering-3-4, round 2). The exchange letter's
+# pro-rata figure read as the victim's money: nothing called the trace
+# exploratory or the figure an upper bound.
+# ---------------------------------------------------------------------------
+from test_request_letters import PRORATA  # noqa: E402
+
+USDT_TRON = {"asset": "USDT", "chain": "tron", "chain_name": "Tron"}
+
+
+def _flat(letter: str) -> str:
+    return " ".join(letter.split())
+
+
+def test_an_exploratory_exchange_letter_calls_its_figure_an_upper_bound():
+    letter = _flat(draft("case-1", case(asset="USDT", prorata=PRORATA), "exchange"))
+    assert "exploratory" in letter.lower()
+    assert "other people's money" in letter
+    assert "upper bound" in letter
+    # The amount paragraph itself says so, not only the opening.
+    amount = letter[letter.index("On a pro-rata estimate"):letter.index("your own records")]
+    assert "upper bound" in amount and "exploratory" in amount.lower()
+
+
+def test_an_exploratory_tether_letter_says_the_amounts_are_an_upper_bound():
+    letter = _flat(draft("case-1", case(**USDT_TRON, prorata=PRORATA), "tether"))
+    assert "exploratory" in letter.lower()
+    assert "other people's money" in letter
+    assert "upper bound" in letter
+
+
+def test_payment_case_letters_do_not_call_themselves_exploratory():
+    for to, over in (("exchange", {"asset": "USDT"}), ("tether", USDT_TRON)):
+        result = {**case(**over, prorata=PRORATA), "intake": {**INTAKE, "payments": [
+            {**p, "asset": "USDT"} for p in PAYMENTS]}, "reported_amount": 2.5}
+        letter = _flat(draft("case-1", result, to)).lower()
+        assert "exploratory" not in letter and "upper bound" not in letter
+        assert "other people's money" not in letter
