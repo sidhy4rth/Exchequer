@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from . import config, provenance
-from .case_privacy import WITHHELD
+from .case_privacy import WITHHELD, WITHHELD_PARAM
 from .display_text import one_line
 from .evidence import SEAL_MARKS, seal_text
 from .exchange_matcher import DEPOSIT_WALLET, is_deposit_label
@@ -1211,10 +1211,20 @@ def render_text_report(report: dict[str, Any]) -> str:
             f"{evidence.get('last_retrieved_at')}")
         add(f"Manifest SHA-256: {evidence['manifest_sha256']}")
         add("  (SHA-256 over the sorted lines '<sha256>  <provider>  <request>')")
+        if evidence.get("withheld"):
+            add("")
+            para(f"This copy withholds the block, time and page parameters of {evidence['withheld']} "
+                 f"request{'s' if evidence['withheld'] != 1 else ''}, and their response hashes and sizes "
+                 f"(each shown as '{WITHHELD_PARAM}'): the reported wallet was read from the victim's "
+                 "payment onward, so they would name the payment, which only the browser that traced the "
+                 "case sees. The manifest SHA-256 above is over the lines as this copy prints them, with "
+                 f"'{WITHHELD_PARAM}' in place of each withheld hash; the owner's copy carries the hash over "
+                 "the requests as they were made.")
         add("")
         for i, rec in enumerate(evidence["records"], 1):
             cached = "  cached" if rec.get("from_cache") else ""
-            add(f"[{i:>3}] {rec['retrieved_at']}  {rec['provider']}  {rec['bytes']} bytes{cached}")
+            size = f"{rec['bytes']} bytes" if rec.get("bytes") is not None else "size withheld"
+            add(f"[{i:>3}] {rec['retrieved_at']}  {rec['provider']}  {size}{cached}")
             add(f"      {rec['request']}")
             add(f"      sha256 {rec['sha256']}")
             if rec.get("value_sha256"):
