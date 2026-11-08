@@ -59,6 +59,7 @@ SOURCE_TIERS: tuple[tuple[re.Pattern[str], int], ...] = tuple((re.compile(p), t)
     (r"Lawsuit filing: ", PUBLISHED),
     (r"Incident write-up: ", PUBLISHED),
     (r"Vendor IOC: ", PUBLISHED),
+    (r"Research dataset: ", PUBLISHED),  # a labelled set checked by hand (DaaS, LaunderNet)
     # Our own on-chain detection.
     (r"\w+ (?:poisoning (?:detection|via)|operator expansion)\b", DETECTION),
     # Community reports and machine-learning datasets: listed, never checked.

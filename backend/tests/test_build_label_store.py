@@ -270,3 +270,5 @@ def test_a_private_lawsuit_is_not_a_court_record(tmp_path):
     from app import label_rules
     assert label_rules.source_tier("Lawsuit filing: Cohn v. Popescu") == 3
     assert label_rules.source_tier("Court record: USAO EDNY") == 1
+    assert label_rules.source_tier("Research dataset: LaunderNet expert flow") == 3
+    assert label_rules.source_tier("Research dataset (unverified): SADPonzi chain") == 5
