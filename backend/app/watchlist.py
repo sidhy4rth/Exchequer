@@ -74,6 +74,12 @@ HEAD_READ_SECONDS = 5.0
 # page of them and nothing else removes them; 500 watches x 200 bounds the
 # table at about 100k rows on the free database.
 MAX_ALERTS_PER_WATCH = 200
+# Alert rows on the whole site. Removing a watch deletes its alerts, so the
+# per-watch cap times MAX_WATCHES_TOTAL already bounds the table; this is the
+# backstop (rows left from before that, or a cap raised by mistake). Past it
+# the oldest go: read ones first, then unread movements and dust, and unread
+# cash-outs only last.
+MAX_ALERTS_TOTAL = 100_000
 
 DEFAULT_WEBHOOK_HOSTS = frozenset({
     "hooks.slack.com", "discord.com", "discordapp.com", "chat.googleapis.com",
@@ -392,14 +398,51 @@ def get_owned_watch(owner: str, watch_id: str) -> models.Watch | None:
 
 
 def remove_watch(owner: str, watch_id: str) -> bool:
+    """Stop a watch and delete its alerts. Alerts of watches removed before
+    removal deleted them are deleted with it (r2-g2-watchlist-alerts-0-3)."""
     with models.session() as s:
         watch = s.get(models.Watch, watch_id)
         if watch is None or watch.owner_hash != owner or not watch.active:
             return False
         watch.active = False
         watch.webhook_url = None
+        s.flush()
+        _delete_orphan_alerts(s)
         s.commit()
         return True
+
+
+def _delete_orphan_alerts(s: Any) -> int:
+    """Delete every alert whose watch is stopped or gone. Returns how many."""
+    live = select(models.Watch.id).where(models.Watch.active.is_(True))
+    gone = s.execute(delete(models.Alert).where(models.Alert.watch_id.not_in(live))
+                     .execution_options(synchronize_session=False)).rowcount or 0
+    if gone:
+        logger.info("Deleted %d alerts of stopped watches", gone)
+    return gone
+
+
+def _keep_site_budget(s: Any) -> None:
+    """Hold the alerts table to MAX_ALERTS_TOTAL rows, in the caller's
+    transaction: first alerts no active watch owns, then the oldest read
+    ones, then the oldest unread movements and dust, and only then the
+    oldest unread exchange or flagged alerts above the dust floor."""
+    def count() -> int:
+        return s.scalar(select(func.count()).select_from(models.Alert)) or 0
+
+    excess = count() - MAX_ALERTS_TOTAL
+    if excess <= 0:
+        return
+    excess -= _delete_orphan_alerts(s)
+    material = _material_urgent()
+    for tier in (models.Alert.read.is_(True), ~material, material):
+        if excess <= 0:
+            return
+        oldest = (select(models.Alert.id).where(tier)
+                  .order_by(models.Alert.created_at, models.Alert.tx_time).limit(excess))
+        excess -= s.execute(delete(models.Alert).where(models.Alert.id.in_(oldest))
+                            .execution_options(synchronize_session=False)).rowcount or 0
+    logger.warning("Alerts table over its budget of %d rows: pruned the oldest", MAX_ALERTS_TOTAL)
 
 
 def clear_webhook(owner: str, watch_id: str) -> models.Watch | None:
@@ -985,6 +1028,7 @@ def _finish_check(watch_id: str, seen_block: int | None = None, error: str | Non
                               models.Alert.created_at.desc())
                     .limit(MAX_ALERTS_PER_WATCH))
             s.execute(delete(models.Alert).where(mine, models.Alert.id.not_in(keep)))
+            _keep_site_budget(s)
         s.commit()
         return True
 
