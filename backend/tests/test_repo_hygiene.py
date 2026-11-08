@@ -94,6 +94,9 @@ KEY_PATTERNS = [
     re.compile(rb"nodereal\.io/v1/[0-9a-f]{32}"),
     re.compile(rb"TRON-PRO-API-KEY[\"']?\s*[:=]\s*[\"']?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I),
     re.compile(rb"apikey=[A-Z0-9]{34}\b"),
+    # The same keys as an env line, a Python/YAML assignment or JSON (r1-secrets-history-2, 8 Nov check).
+    re.compile(rb"(?:ETHERSCAN|BSCSCAN|NODEREAL|TRONGRID|TRONSCAN)\w*[\"']?\s*[:=]\s*[\"']?(?!your_key)[A-Za-z0-9-]{24,}"),
+    re.compile(rb"[\"']api_?key[\"']\s*:\s*[\"'][A-Za-z0-9-]{24,}[\"']", re.I),
     re.compile(rb"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----\s*[A-Za-z0-9+/]{64}"),
 ]
 
@@ -169,3 +172,21 @@ def test_archived_film_agent_files_run_only_the_pinned_cli():
         for line in text.splitlines():
             if "npx " in line and "hyperframes" in line:
                 assert "hyperframes@0.8.50" in line, (path, line)
+
+
+
+def test_the_key_patterns_catch_the_usual_forms():
+    """Built at run time, so this file never holds a string the scan would flag."""
+    etherscan = "ABCDEFGHIJKLMNOPQRSTUVWXYZ12345678"  # 34, like an Etherscan key
+    uuid = "1a2b3c4d-1a2b-1a2b-1a2b-1a2b3c4d5e6f"
+    samples = [
+        "ETHERSCAN" + "_API_KEY=" + etherscan,
+        "NODEREAL" + "_API_KEY: " + "ab" * 16,
+        "TRONGRID" + "_API_KEY='" + uuid + "'",
+        '{"api' + 'key": "' + etherscan + '"}',
+        "TRON-PRO" + "-API-KEY: " + uuid,
+    ]
+    for sample in samples:
+        assert any(p.search(sample.encode()) for p in KEY_PATTERNS), sample
+    assert not any(p.search(b"ETHERSCAN_API_KEY=your_key_here") for p in KEY_PATTERNS)
+    assert not any(p.search(b"NODEREAL_API_KEY=") for p in KEY_PATTERNS)
