@@ -103,3 +103,58 @@ def test_the_port_never_carries_a_funder_peg_or_swap_address():
     carried = port_evm_labels.ethereum_candidates()
     assert not [m["label"] for m in carried.values()
                 if re.search(r"funder|supplier|depositor|peg|swap", m["label"], re.I)]
+
+
+# -- the dataset importer reads the tag, not only its letters (r1-scripts-0, 8 Nov check) --
+def _first_address(name):
+    labels = _labels(config.DATA_DIR / name)
+    return next(a for a in labels if a.startswith("0x"))
+
+
+@pytest.mark.parametrize("label", ["OKX: Rout​er 2", "OKX: Proxy", "OKX: ＲＯＵＴＥＲ 3", "OKX: Aggrega⁠tor",
+                                   "Binance: Token Swap", "Kraken: Bridge", "Gate.io: Multisig 1",
+                                   "Binance: Deposit Funder", "Kraken: Eth2 Depositor", "KuCoin: Contract",
+                                   "OKX: DEX Router", "OKX: dex router"])
+def test_the_dataset_importer_normalises_a_label_before_its_filter(label):
+    assert import_exchange_labels.is_cash_out_label(label) is False
+
+
+@pytest.mark.parametrize("label, stem_exchange, named", [
+    ("Binance 14", "OKX", "Binance"), ("Bitfinex 5", "Bitfinex", "Bitfinex"),
+    ("Huobi 10", "Huobi / HTX", "Huobi / HTX"), ("Gate.io 1", "Gate.io", "Gate.io"),
+    ("Tether 3", "Bitfinex", None), ("Some Fund: Wallet", "Kraken", None),
+])
+def test_the_dataset_importer_names_the_exchange_from_the_tag(label, stem_exchange, named):
+    assert import_exchange_labels.exchange_for(label, stem_exchange) == named
+
+
+def test_the_dataset_importer_refuses_router_risk_and_frozen_addresses():
+    risk, frozen = _first_address("risk_labels.json"), _first_address("frozen_labels.json")
+    threat = _first_address("threat_labels.json")
+    fresh = ["0x" + f"{n:040x}" for n in range(1, 5)]
+    fetched = [("okx", "OKX", {OKX_ROUTERS[0]: "OKX 77", risk: "OKX 78", frozen: "OKX 79", threat: "OKX 76",
+                               fresh[0]: "OKX 80", fresh[1]: "OKX: Rout​er 9", fresh[2]: "Tether 3"}),
+               ("bitfinex", "Bitfinex", {fresh[3]: "Binance​ 99"})]
+    candidates, counts = import_exchange_labels.gather(fetched, have=set())
+    assert sorted(candidates) == sorted([fresh[0], fresh[3]])
+    assert candidates[fresh[0]] == {"exchange": "OKX", "label": "OKX 80", "type": "exchange_wallet"}
+    assert candidates[fresh[3]]["exchange"] == "Binance" and candidates[fresh[3]]["label"] == "Binance 99"
+    assert counts["refused_listed"] == 4 and counts["not_cash_out"] == 1 and counts["no_exchange"] == 1
+
+
+def test_the_eth_importer_refuses_router_risk_and_frozen_addresses(monkeypatch):
+    import io
+
+    risk, frozen = _first_address("risk_labels.json"), _first_address("frozen_labels.json")
+    fresh = "0x" + "3" * 40
+    csv_text = "address,chainId,label,nameTag\n" + "".join(
+        f"{a},1,binance,Binance {n}\n" for n, a in enumerate((OKX_ROUTERS[0], risk, frozen, fresh), start=70))
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+    monkeypatch.setattr(import_eth_labels.urllib.request, "urlopen", lambda *a, **k: Response(csv_text.encode()))
+    assert list(import_eth_labels.candidates_by_chain()["ethereum"]) == [fresh]

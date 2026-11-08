@@ -71,7 +71,7 @@ from app.etherscan_client import (  # noqa: E402
 from app.exchange_matcher import is_deposit_label  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
 from scripts._label_files import chain_regenerate  # noqa: E402
-from scripts.import_exchange_labels import has_value_history  # noqa: E402
+from scripts.import_exchange_labels import has_value_history, listed_elsewhere  # noqa: E402
 from scripts.seed_bsc_labels import ACTIVITY_LOOKBACK, bsc_activity  # noqa: E402
 from scripts.seed_tron_labels import CANONICAL as TRON_CANONICAL  # noqa: E402
 from app.tron_tags import clean_tag  # noqa: E402
@@ -155,6 +155,9 @@ def candidates_by_chain() -> dict[str, dict[str, dict[str, str]]]:
         rows = csv.DictReader(io.StringIO(response.read().decode()))
         out: dict[str, dict[str, dict[str, str]]] = {key: {} for key in CHAIN_IDS}
         wanted = {cid: key for key, cid in CHAIN_IDS.items()}
+        # An address a router, risk, threat, frozen or sanctions file names is
+        # never imported as an exchange wallet (r1-scripts-0).
+        refused = {key: listed_elsewhere(key) for key in CHAIN_IDS}
         for row in rows:
             chain_key = wanted.get(row["chainId"])
             if chain_key is None or SKIP_SLUG.search(row["label"]):
@@ -165,7 +168,7 @@ def candidates_by_chain() -> dict[str, dict[str, dict[str, str]]]:
                 continue
             exchange = CANONICAL.get(tag_head(tag))
             addr = normalize_address(row["address"])
-            if exchange is None or not is_valid_address(addr):
+            if exchange is None or not is_valid_address(addr) or addr in refused[chain_key]:
                 continue
             out[chain_key][addr] = {"exchange": exchange, "label": tag, "type": wallet_type(tag)}
     return out

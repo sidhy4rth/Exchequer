@@ -54,6 +54,7 @@ from app.etherscan_client import (  # noqa: E402
     normalize_address,
 )
 from app.exchange_matcher import DEPOSIT_WALLET, is_deposit_label  # noqa: E402
+from app.tron_tags import clean_tag  # noqa: E402
 from scripts._label_files import chain_regenerate  # noqa: E402
 
 # Pinned so a re-run imports the same data rather than whatever the dataset
@@ -101,13 +102,103 @@ def fetch(stem: str) -> dict[str, str]:
 
 # Labels in the exchange datasets that name something the exchange runs but
 # that is not where customers' funds are cashed out: a contract deployer, a
-# router, or another company's treasury ('Tether: Treasury' sits in the
-# Bitfinex set). An exchange match ends a trace, so these must never be one.
-NOT_CASH_OUT = re.compile(r"router|aggregat|relayer|paymaster|treasury|deployer|\bdex\b(?!-trade)", re.IGNORECASE)
+# router or proxy, a swap or bridge contract, the wallets that fund deposit
+# addresses' gas, or another company's treasury ('Tether: Treasury' sits in
+# the Bitfinex set). An exchange match ends a trace, so these must never be
+# one. The words import_eth_labels.SKIP_TAG refuses (but for 'Dep', which
+# here marks a customer deposit address), and 'proxy'.
+NOT_CASH_OUT = re.compile(
+    r"router|aggregat|relayer|paymaster|treasury|deployer|proxy|swap|bridge|multisig|contract|token|"
+    r"funder|depositor|supplier|vesting|staking|exploit|charity|launchpad|registry|operator|^bitget wallet|"
+    r"\bdex\b(?!-trade)",
+    re.IGNORECASE,
+)
 
 
 def is_cash_out_label(label: str) -> bool:
-    return not NOT_CASH_OUT.search(label or "")
+    """Whether a dataset label may name a cash-out wallet. Read after
+    clean_tag (NFKC, invisible and format characters removed) and casefolded:
+    'OKX: Rout\u200ber 2' and a full-width 'ＲＯＵＴＥＲ' passed the bare letters."""
+    return not NOT_CASH_OUT.search(clean_tag(label).casefold())
+
+
+def exchange_for(label: str, stem_exchange: str) -> str | None:
+    """The exchange a dataset label names, from the label itself.
+
+    The dataset file an address sits in is not proof of who runs it:
+    'Tether: Treasury' sits in the Bitfinex set. So the exchange comes from
+    the tag's name, before any ':' -- its leading whole words, longest
+    first, matched to a known exchange ('Binance Dep: 0x..' and 'Binance-Hot
+    3' -> Binance, wherever they sit; 'Gatekeeper' is never Gate.io). A tag
+    whose name is no known exchange is no exchange wallet (None), unless it
+    is the file's own exchange spelled out."""
+    from scripts.import_eth_labels import CANONICAL
+
+    name = clean_tag(label).split(":", 1)[0]
+    words = [w for w in re.split(r"[\s._()/-]+", name.casefold()) if w and not w.isdigit()]
+    own = re.sub(r"[^a-z]", "", stem_exchange.casefold())
+    for n in range(len(words), 0, -1):
+        letters = re.sub(r"[^a-z]", "", "".join(words[:n]))
+        if letters in CANONICAL:
+            return CANONICAL[letters]
+        if letters and letters == own:
+            return stem_exchange
+    return None
+
+
+def listed_elsewhere(chain_key: str = "ethereum") -> set[str]:
+    """The chain's addresses another of the repository's files already
+    names: its router, risk, threat, frozen and sanctions files, and every
+    EVM chain's router file (a contract is the same contract on every EVM
+    chain). None of them may come in as an exchange cash-out wallet."""
+    chain = config.CHAINS[chain_key]
+    paths = [chain.router_labels_path, chain.risk_labels_path, chain.threat_labels_path,
+             chain.frozen_labels_path, chain.intl_sanctions_path]
+    paths += [c.router_labels_path for c in config.CHAINS.values() if c.address_family == "evm"]
+    found: set[str] = set()
+    for path in {p for p in paths if p is not None and p.is_file()}:
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"{path} is unreadable, so candidates cannot be checked against it: {exc}") from exc
+        labels = document.get("labels", document) if isinstance(document, dict) else {}
+        if isinstance(labels, dict):
+            found |= {normalize_address(a) for a in labels if isinstance(a, str) and a.startswith("0x")}
+    return found
+
+
+def gather(fetched: list[tuple[str, str, dict]], have: set[str],
+           refused: set[str] | None = None) -> tuple[dict[str, dict[str, str]], dict[str, int]]:
+    """(new candidates, how many were skipped and why) from the fetched
+    dataset files, as (file stem, its exchange, {address: label}).
+
+    A label is cleaned first, then must name a cash-out wallet, and the
+    exchange is the one the label names. An address held already, or named
+    by the router, risk, threat, frozen or sanctions files, is skipped."""
+    refused = listed_elsewhere() if refused is None else refused
+    counts = {"malformed": 0, "not_cash_out": 0, "no_exchange": 0, "refused_listed": 0}
+    candidates: dict[str, dict[str, str]] = {}
+    for _stem, stem_exchange, raw in fetched:
+        for address, raw_label in (raw.items() if isinstance(raw, dict) else ()):
+            addr = normalize_address(address) if isinstance(address, str) else ""
+            if not is_valid_address(addr):
+                counts["malformed"] += 1
+                continue
+            if addr in have or addr in candidates:
+                continue
+            if addr in refused:
+                counts["refused_listed"] += 1
+                continue
+            label = clean_tag(raw_label)
+            if not is_cash_out_label(label):
+                counts["not_cash_out"] += 1
+                continue
+            exchange = exchange_for(label, stem_exchange) if label else stem_exchange
+            if exchange is None:
+                counts["no_exchange"] += 1
+                continue
+            candidates[addr] = {"exchange": exchange, "label": label or exchange, "type": classify(label)}
+    return candidates, counts
 
 
 def classify(label: str) -> str:
@@ -196,28 +287,14 @@ def main() -> int:
     have = {normalize_address(a) for a in existing}
 
     # -- gather candidates ------------------------------------------------
-    candidates: dict[str, dict[str, str]] = {}
-    skipped_malformed = 0
+    fetched: list[tuple[str, str, dict]] = []
     for stem, exchange in SOURCES.items():
         try:
-            raw = fetch(stem)
+            fetched.append((stem, exchange, fetch(stem)))
         except Exception as exc:  # a missing file must not abort the import
             print(f"  ! could not fetch {stem}: {exc}")
-            continue
-        for address, label in raw.items():
-            addr = normalize_address(address)
-            if not is_valid_address(addr):
-                skipped_malformed += 1
-                continue
-            if addr in have or addr in candidates:
-                continue
-            if not is_cash_out_label(label or ""):
-                continue
-            candidates[addr] = {
-                "exchange": exchange,
-                "label": (label or exchange).strip(),
-                "type": classify(label or ""),
-            }
+    candidates, skipped = gather(fetched, have)
+    skipped_malformed = skipped["malformed"]
 
     ordered = sorted(candidates.items())
     if args.limit:
@@ -228,6 +305,8 @@ def main() -> int:
     print(f"Candidates: {len(ordered)} new addresses to verify")
     if skipped_malformed:
         print(f"Skipped   : {skipped_malformed} malformed addresses")
+    print(f"Refused   : {skipped['not_cash_out']} not cash-out wallets, {skipped['no_exchange']} naming no "
+          f"exchange, {skipped['refused_listed']} already in a router/risk/threat/frozen/sanctions file")
     print(f"\n{'address':<44} {'exchange':<14} {'value ETH':>14} {'last active':>12}  status")
     print("-" * 96)
 
