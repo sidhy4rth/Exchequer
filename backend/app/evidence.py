@@ -26,6 +26,7 @@ as cached. That is not a second retrieval and must not be presented as one.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import threading
 from dataclasses import asdict, dataclass
@@ -51,9 +52,28 @@ class EvidenceRecord:
     sha256: str        # of the raw response body, as received
     bytes: int
     from_cache: bool = False
+    # A cache hit only: SHA-256 of the canonical JSON of the cached value the
+    # trace used (value_sha256). The cache holds the parsed value, not the
+    # provider's bytes, so `sha256` alone cannot be checked against it.
+    value_sha256: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        out = asdict(self)
+        if out["value_sha256"] is None:
+            del out["value_sha256"]  # a live record keeps the shape stored cases have
+        return out
+
+
+def value_sha256(value: Any) -> str | None:
+    """SHA-256 of `value` as canonical JSON (sorted keys, no spaces), or None
+    if it is not representable as JSON."""
+    try:
+        return sha256_hex(json.dumps(value, sort_keys=True, separators=(",", ":")))
+    except (TypeError, ValueError):
+        return None
+
+
+_NO_VALUE = object()
 
 
 class EvidenceLog:
@@ -78,14 +98,17 @@ class EvidenceLog:
             self._records.append(rec)
         return rec
 
-    def record_cached(self, provider: str, request: str, meta: dict[str, Any] | None) -> None:
-        """A cache hit re-uses bytes retrieved earlier; carry their hash and time."""
+    def record_cached(self, provider: str, request: str, meta: dict[str, Any] | None,
+                      value: Any = _NO_VALUE) -> None:
+        """A cache hit re-uses bytes retrieved earlier; carry their hash and time,
+        and the hash of the cached `value` the trace is about to use."""
         if not meta:
             return
         rec = EvidenceRecord(
             provider=provider, request=request,
             retrieved_at=meta["retrieved_at"], sha256=meta["sha256"],
             bytes=meta["bytes"], from_cache=True,
+            value_sha256=None if value is _NO_VALUE else value_sha256(value),
         )
         with self._lock:
             self._records.append(rec)

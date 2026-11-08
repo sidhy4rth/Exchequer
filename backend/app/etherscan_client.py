@@ -567,7 +567,7 @@ class EtherscanClient:
         request_desc = self._describe(query)
         hit, cached, meta = self._cache.get_with_meta(cache_key)
         if hit:
-            self.evidence.record_cached("etherscan", request_desc, meta)
+            self.evidence.record_cached("etherscan", request_desc, meta, cached)
             return cached
 
         last_error: Exception | None = None

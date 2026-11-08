@@ -239,7 +239,7 @@ class TronScanTags:
         hit, value, meta = self._cache.get_with_meta(key)
         if hit:
             if self.evidence is not None:
-                self.evidence.record_cached(PROVIDER, request, meta)
+                self.evidence.record_cached(PROVIDER, request, meta, value)
             return value
         try:
             api_budget.spend("tronscan", api_budget.credential(self.api_key), 1, self.budget)

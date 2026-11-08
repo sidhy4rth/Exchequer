@@ -313,7 +313,7 @@ class TronClient:
         hit, pages = self._cache.get(key)
         if hit and isinstance(pages, list):
             for page in pages:
-                self.evidence.record_cached("trongrid", page["request"], page["meta"])
+                self.evidence.record_cached("trongrid", page["request"], page["meta"], page["data"])
                 if not take(page["data"], page["more"]):
                     break
             return

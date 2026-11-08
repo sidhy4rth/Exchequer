@@ -102,3 +102,35 @@ def test_log_is_safe_to_append_from_threads():
         list(pool.map(lambda i: log.record("etherscan", f"GET q={i}", str(i).encode()), range(200)))
     assert len(log.records) == 200
     assert len({r.sha256 for r in log.records}) == 200
+
+
+def test_a_cache_hit_records_the_hash_of_the_value_the_trace_used():
+    # r1-providers-11: the cache holds the parsed value, not the provider's
+    # bytes, so a cached record carries both hashes: sha256 of the bytes as
+    # received (unchanged, and what the manifest hash covers) and value_sha256
+    # of the canonical JSON the trace was computed from.
+    import json
+
+    client, _ = make_client(OK)
+    client.get_transactions(ADDR)
+    client.get_transactions(ADDR)
+    first, second = client.evidence.records
+    canonical = json.dumps([TX], sort_keys=True, separators=(",", ":"))
+    assert second.value_sha256 == hashlib.sha256(canonical.encode()).hexdigest()
+    assert second.to_dict()["value_sha256"] == second.value_sha256
+    assert first.value_sha256 is None and "value_sha256" not in first.to_dict()  # a stored case's shape is kept
+    assert manifest_sha256([first, second]) == manifest_sha256(
+        [first, EvidenceRecord(**{**second.to_dict(), "value_sha256": None})])
+
+
+def test_the_report_prints_a_cached_records_value_hash():
+    from app.report import render_text_report
+    from test_report import full_result, stored
+    from app.report import build_report
+
+    result = full_result()
+    record = {"provider": "etherscan", "request": "GET q=1", "retrieved_at": "2026-09-15T10:00:00Z",
+              "sha256": "a" * 64, "bytes": 3, "from_cache": True, "value_sha256": "b" * 64}
+    result["evidence"] = build_manifest([EvidenceRecord(**record)])
+    text = render_text_report(build_report(stored(result)))
+    assert f"value sha256 {'b' * 64}" in text

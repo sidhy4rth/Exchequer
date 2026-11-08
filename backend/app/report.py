@@ -1120,7 +1120,10 @@ def render_text_report(report: dict[str, Any]) -> str:
              "the same hash has confirmed the input was unchanged; a different "
              "hash means the chain, or the provider, has moved on since. "
              "Responses marked 'cached' re-used bytes retrieved earlier in the "
-             "same process and carry that earlier time.")
+             "same process and carry that earlier time."
+             + (" A cached response also lists 'value sha256': the hash, over its "
+                "canonical JSON, of the stored value the trace used."
+                if any(r.get("value_sha256") for r in evidence["records"]) else ""))
         add("")
         add(f"Responses       : {evidence['count']} "
             f"({evidence['retrieved']} retrieved, {evidence['from_cache']} cached)")
@@ -1135,6 +1138,9 @@ def render_text_report(report: dict[str, Any]) -> str:
             add(f"[{i:>3}] {rec['retrieved_at']}  {rec['provider']}  {rec['bytes']} bytes{cached}")
             add(f"      {rec['request']}")
             add(f"      sha256 {rec['sha256']}")
+            if rec.get("value_sha256"):
+                # The cache keeps the parsed value, not the bytes: this is the hash of what the trace used.
+                add(f"      value sha256 {rec['value_sha256']}  (the cached value used)")
     else:
         add("No evidence manifest was stored with this case (it was traced by an")
         add("earlier version). Re-run the trace to obtain one.")

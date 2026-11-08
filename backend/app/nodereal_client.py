@@ -263,7 +263,7 @@ class NoderealClient:
         if cacheable:
             hit, cached = self._cache.get(cache_key)
             if hit:
-                self.evidence.record_cached("nodereal", request_desc, self._cache.meta(cache_key))
+                self.evidence.record_cached("nodereal", request_desc, self._cache.meta(cache_key), cached)
                 return cached
         last_error: Exception | None = None
 

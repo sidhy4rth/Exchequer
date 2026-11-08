@@ -269,19 +269,24 @@ class ResponseCache:
     def _disk_key(key: Hashable) -> str:
         return json.dumps(key, sort_keys=True, default=str)
 
-    def _row_sha256(self, value_text: str, meta_text: str | None) -> str:
-        """HMAC-SHA256 (keyed by _row_key) over the exact stored text: the value
-        the trace will use and the provider hash the evidence manifest will
-        report for it. A plain hash anyone could recompute after an edit."""
-        return hmac.new(self._row_key, f"{value_text}\n{meta_text or ''}".encode("utf-8"),
-                        hashlib.sha256).hexdigest()
+    def _row_sha256(self, disk_key: str, stored_at: float, expires_at: float | None,
+                    value_text: str, meta_text: str | None) -> str:
+        """HMAC-SHA256 (keyed by _row_key) over the whole row: the key it answers,
+        when it was stored and when it expires, the value the trace will use and
+        the provider hash the evidence manifest will report for it. So a genuine
+        row copied onto another key, or with its times moved, no longer matches;
+        and a plain hash anyone could recompute after an edit is not enough.
+        The parts are JSON-encoded as a list so no two rows read the same."""
+        message = json.dumps([disk_key, stored_at, expires_at, value_text, meta_text])
+        return hmac.new(self._row_key, message.encode("utf-8"), hashlib.sha256).hexdigest()
 
     def _disk_get(self, key: Hashable) -> tuple[float, str, dict | None, float] | None:
         """(age_seconds, JSON text, meta, ttl) for a live row, or None.
 
-        A row whose stored text no longer matches the hash written with it was
-        edited (or corrupted) on disk: it is deleted and treated as a miss, so
-        a trace never uses data its evidence manifest does not describe."""
+        A row that no longer matches the hash written with it was edited,
+        corrupted or moved onto another key on disk: it is deleted and treated
+        as a miss, so a trace never uses data its evidence manifest does not
+        describe. A row from before the current check is deleted the same way."""
         disk_key = self._disk_key(key)
         with self._db_lock:
             if self._db is None:
@@ -297,10 +302,17 @@ class ResponseCache:
             if row is None:
                 return None
             stored_at, value_text, meta_text, expires_at, digest = row
+            if (not isinstance(stored_at, float) or not isinstance(expires_at, (float, type(None)))
+                    or not isinstance(value_text, str) or not isinstance(meta_text, (str, type(None)))):
+                # Only an edit stores other types here: read it as expired.
+                return None
             ttl = (expires_at - stored_at) if expires_at is not None else self.ttl_seconds
             if time.time() - stored_at > ttl:
                 return None
-            if not isinstance(digest, str) or not hmac.compare_digest(digest, self._row_sha256(value_text, meta_text)):
+            expected = self._row_sha256(disk_key, stored_at, expires_at, value_text, meta_text)
+            if not isinstance(digest, str) or not hmac.compare_digest(digest, expected):
+                # A row checked under the older scheme (value and meta only) lands
+                # here too, once: it is dropped and fetched afresh like any other.
                 self._integrity_drops += 1
                 logger.warning("Response cache row for %s does not match its hash; dropped", disk_key[:120])
                 try:
@@ -334,11 +346,12 @@ class ResponseCache:
                 return
             try:
                 now = time.time()
+                disk_key, expires_at = self._disk_key(key), now + ttl
                 self._db.execute(
                     "INSERT OR REPLACE INTO responses (key, stored_at, value, meta, expires_at, value_sha256) "
                     "VALUES (?, ?, ?, ?, ?, ?)",
-                    (self._disk_key(key), now, value_text, meta_text, now + ttl,
-                     self._row_sha256(value_text, meta_text)),
+                    (disk_key, now, value_text, meta_text, expires_at,
+                     self._row_sha256(disk_key, now, expires_at, value_text, meta_text)),
                 )
                 self._db.commit()
             except sqlite3.Error as exc:

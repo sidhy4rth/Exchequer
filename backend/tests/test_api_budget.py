@@ -364,3 +364,100 @@ def test_rows_written_under_another_signing_seed_are_misses(tmp_path, monkeypatc
     assert ResponseCache(path=path).get("k") == (True, [1])
     monkeypatch.setenv("EXCHEQUER_SIGNING_KEY", base64.b64encode(bytes(range(1, 33))).decode())
     assert ResponseCache(path=path).get("k") == (False, None)
+
+
+# --- a row is bound to its key and its times (r1-providers-11, round 2) ----------
+# The row check covered only the value and meta text, so a genuine row copied
+# onto another key passed: the verifier moved TronScan's "Binance-Hot 3" tag
+# row onto an innocent address, and it was served for that address.
+SEED_ENV = "EXCHEQUER_SIGNING_KEY"
+
+
+def _seeded(monkeypatch) -> None:
+    import base64
+
+    monkeypatch.setenv(SEED_ENV, base64.b64encode(bytes(range(32))).decode())
+
+
+def _copy_row(path, source_key: str, target_key: str) -> None:
+    import sqlite3
+
+    db = sqlite3.connect(str(path))
+    row = db.execute("SELECT stored_at, value, meta, expires_at, value_sha256 FROM responses WHERE key = ?",
+                     (source_key,)).fetchone()
+    db.execute("INSERT OR REPLACE INTO responses (key, stored_at, value, meta, expires_at, value_sha256) "
+               "VALUES (?, ?, ?, ?, ?, ?)", (target_key, *row))
+    db.commit()
+    db.close()
+
+
+@pytest.mark.parametrize("keyed", [True, False])
+def test_a_genuine_row_moved_onto_another_key_is_dropped(tmp_path, monkeypatch, keyed):
+    if keyed:
+        _seeded(monkeypatch)
+    else:
+        monkeypatch.delenv(SEED_ENV, raising=False)
+    path = tmp_path / "cache.db"
+    first = ResponseCache(path=path)
+    binance, innocent = ("tronscan-account", "TBinanceHotWallet"), ("tronscan-account", "TInnocentPerson")
+    first.put(binance, {"tag": "Binance-Hot 3"}, meta={"sha256": "aa", "retrieved_at": "t", "bytes": 3})
+    first.close()
+    _copy_row(path, ResponseCache._disk_key(binance), ResponseCache._disk_key(innocent))
+
+    second = ResponseCache(path=path)
+    assert second.get(innocent) == (False, None)
+    assert second.stats()["integrity_drops"] == 1
+    assert second.get(binance) == (True, {"tag": "Binance-Hot 3"})  # the genuine row still serves
+    second.close()
+
+
+@pytest.mark.parametrize("column", ["stored_at", "expires_at"])
+def test_a_row_whose_times_were_changed_is_dropped(tmp_path, monkeypatch, column):
+    # Moving stored_at or expires_at forward would keep an old answer alive
+    # past its time-to-live, or make it look newer than it is.
+    import sqlite3
+
+    _seeded(monkeypatch)
+    path = tmp_path / "cache.db"
+    first = ResponseCache(path=path)
+    first.put("k", [1], meta={"sha256": "ab", "retrieved_at": "t", "bytes": 3})
+    first.close()
+    db = sqlite3.connect(str(path))
+    db.execute(f"UPDATE responses SET {column} = {column} + 60")
+    db.commit()
+    db.close()
+
+    second = ResponseCache(path=path)
+    assert second.get("k") == (False, None)
+    assert second.stats()["integrity_drops"] == 1
+    second.close()
+
+
+def test_a_row_checked_under_the_old_scheme_is_a_miss_and_is_fetched_again(tmp_path, monkeypatch):
+    # Rows written before the key and times were bound carry an HMAC over the
+    # value and meta alone. They read as misses (and are deleted), never as a
+    # crash, and the next answer is stored under the new scheme.
+    import hashlib
+    import hmac
+    import sqlite3
+
+    from app.api_budget import _row_key
+
+    _seeded(monkeypatch)
+    path = tmp_path / "cache.db"
+    first = ResponseCache(path=path)
+    first.put("k", [1], meta={"sha256": "ab", "retrieved_at": "t", "bytes": 3})
+    first.close()
+    db = sqlite3.connect(str(path))
+    value, meta_text = db.execute("SELECT value, meta FROM responses").fetchone()
+    old = hmac.new(_row_key(), f"{value}\n{meta_text}".encode(), hashlib.sha256).hexdigest()
+    db.execute("UPDATE responses SET value_sha256 = ?", (old,))
+    db.commit()
+    db.close()
+
+    second = ResponseCache(path=path)
+    assert second.get("k") == (False, None)
+    assert second.stats()["entries_on_disk"] == 0
+    second.put("k", [2])
+    second.close()
+    assert ResponseCache(path=path).get("k") == (True, [2])
