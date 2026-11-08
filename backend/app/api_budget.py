@@ -724,22 +724,35 @@ def reset() -> None:
 # A case's budget bounds one trace; it does not stop a burst of traces, watch
 # checks and warm-ups from spending a free tier's whole day (Etherscan 100k
 # calls, TronGrid 100k per account) or NodeReal's month in hours. A UnitMeter
-# counts every network request made with one credential in this process,
-# trace or not, and refuses once the UTC day's allowance is spent; one
-# connection may spend only a share of it. In memory: a restart forgets the
-# day's count, as the hourly trace limits do.
+# counts every network request made with one credential, trace or not, and
+# refuses once the UTC day's allowance is spent; one connection may spend
+# only a share of it.
+#
+# The count is kept in the store as well (models.ProviderMeter, one row per
+# credential and day): the free host restarts after 15 idle minutes, and a
+# count in memory alone began the day again at zero on every wake (the 8 Nov
+# check). A meter reads its row when it is made and writes it at most every
+# METER_SAVE_SECONDS while it spends, and at shutdown; a restart forgets at
+# most those seconds. Connections are stored by a hash, never an address.
 # ---------------------------------------------------------------------------
 def credential(api_key: str | None) -> str:
     """How a key is named in a meter's scope (and on /health/detail): a digest, never the key."""
     return hashlib.sha256(api_key.encode()).hexdigest()[:8] if api_key else "anon"
 
 
+def _connection(client: str) -> str:
+    """A connection as a meter counts and stores it: a hash, never the address."""
+    return hashlib.sha256(b"exchequer-meter-client:" + client.encode()).hexdigest()[:16]
+
+
 class UnitMeter:
     MAX_CLIENTS = 10_000  # connection keys come from headers; bounded whatever they say
+    STORED_CLIENTS = 200  # the heaviest connections whose share is kept in the store
 
     def __init__(self, provider: str, limit: float, client_share: float = 0.0,
-                 clock: Callable[[], float] = time.time) -> None:
+                 clock: Callable[[], float] = time.time, name: str | None = None) -> None:
         self.provider = provider
+        self.name = name  # its row in the store; None: memory only
         self.limit = float(limit)  # 0: no limit, counted only
         self.client_share = client_share
         self._clock = clock
@@ -749,6 +762,13 @@ class UnitMeter:
         self.requests = 0
         self.refused = 0
         self._by_client: dict[str, float] = {}
+        self._saved_at = clock()
+        self._dirty = False
+        self._saving = threading.Lock()
+
+    @property
+    def day(self) -> int:
+        return self._day
 
     def _roll(self) -> None:
         """A new UTC day starts every count again. Under the lock."""
@@ -762,17 +782,19 @@ class UnitMeter:
         "client" (which allowance refused it), and nothing is counted."""
         with self._lock:
             self._roll()
+            self._dirty = True
             if self.limit and self.used + units > self.limit:
                 self.refused += 1
                 return "site"
             if client and self.limit and self.client_share:
-                mine = self._by_client.get(client, 0.0)
+                who = _connection(client)
+                mine = self._by_client.get(who, 0.0)
                 if mine + units > self.limit * self.client_share:
                     self.refused += 1
                     return "client"
-                if client not in self._by_client and len(self._by_client) >= self.MAX_CLIENTS:
+                if who not in self._by_client and len(self._by_client) >= self.MAX_CLIENTS:
                     self._by_client.pop(next(iter(self._by_client)))
-                self._by_client[client] = mine + units
+                self._by_client[who] = mine + units
             self.used += units
             self.requests += 1
             return None
@@ -786,6 +808,50 @@ class UnitMeter:
     def seconds_to_reset(self) -> int:
         now = self._clock()
         return int((int(now // 86400) + 1) * 86400 - now) + 1
+
+    # -- the store ---------------------------------------------------------
+    def restore(self, day: int, used: float, requests: int, refused: int, clients: dict[str, float]) -> None:
+        """Take up a stored count for `day`: never less than what this process counted."""
+        with self._lock:
+            self._roll()
+            if day != self._day:
+                return
+            self.used = max(self.used, float(used))
+            self.requests = max(self.requests, int(requests))
+            self.refused = max(self.refused, int(refused))
+            for who, units in list(clients.items())[: self.MAX_CLIENTS]:
+                self._by_client[who] = max(self._by_client.get(who, 0.0), float(units))
+
+    def snapshot(self) -> dict[str, Any]:
+        """What the store keeps, read under the lock."""
+        with self._lock:
+            self._roll()
+            heaviest = sorted(self._by_client.items(), key=lambda kv: -kv[1])[: self.STORED_CLIENTS]
+            return {"day": self._day, "used": self.used, "requests": self.requests,
+                    "refused": self.refused, "clients": dict(heaviest)}
+
+    def save_if_due(self, force: bool = False) -> None:
+        """Write the count to the store if it changed and METER_SAVE_SECONDS
+        have passed (or `force`). One thread writes at a time; the others go on."""
+        from . import config
+
+        if self.name is None or not config.PERSIST_METERS or not self._dirty:
+            return
+        if not force and self._clock() - self._saved_at < config.METER_SAVE_SECONDS:
+            return
+        if not self._saving.acquire(blocking=False):
+            return
+        try:
+            self._dirty = False
+            self._saved_at = self._clock()
+            if _store_meter(self.name, self.snapshot()):
+                # Read back what the store now holds: a count another process
+                # wrote, or one this meter could not read when it was made.
+                _load_meter(self)
+            else:
+                self._dirty = True
+        finally:
+            self._saving.release()
 
     def stats(self) -> dict[str, Any]:
         with self._lock:
@@ -806,6 +872,82 @@ class UnitMeter:
 
 
 _meters: dict[str, UnitMeter] = {}
+_meter_store_warned = [False]
+METER_KEEP_DAYS = 7  # rows older than this are deleted as new ones are written
+
+
+def _meter_store_failed(action: str) -> None:
+    if not _meter_store_warned[0]:
+        _meter_store_warned[0] = True
+        logger.warning("Could not %s the provider meter in the case store; counting in memory", action,
+                       exc_info=True)
+
+
+def _load_meter(meter: UnitMeter) -> None:
+    from . import config, models
+
+    if meter.name is None or not config.PERSIST_METERS:
+        return
+    try:
+        with models.session() as s:
+            row = s.get(models.ProviderMeter, (meter.name, meter.day))
+            if row is None:
+                return
+            stored = (row.day, row.used, row.requests, row.refused, row.clients_json)
+    except Exception:  # noqa: BLE001 -- a store not reachable yet: memory only
+        _meter_store_failed("read")
+        return
+    try:
+        clients = json.loads(stored[4] or "{}")
+    except ValueError:
+        clients = {}
+    meter.restore(*stored[:4], clients if isinstance(clients, dict) else {})
+
+
+def _store_meter(name: str, snap: dict[str, Any]) -> bool:
+    """Write one meter's row: never lowering a count another process wrote."""
+    from sqlalchemy import case, update
+    from sqlalchemy.exc import IntegrityError
+
+    from . import models
+
+    table = models.ProviderMeter
+    values = {"used": snap["used"], "requests": snap["requests"], "refused": snap["refused"],
+              "clients_json": json.dumps(snap["clients"], separators=(",", ":")),
+              "updated_at": datetime.now(tz=timezone.utc).isoformat(timespec="seconds")}
+
+    def larger(column, value):
+        return case((column < value, value), else_=column)
+    stmt = (update(table).where(table.name == name, table.day == snap["day"])
+            .values(used=larger(table.used, values["used"]),
+                    requests=larger(table.requests, values["requests"]),
+                    refused=larger(table.refused, values["refused"]),
+                    clients_json=values["clients_json"], updated_at=values["updated_at"]))
+    try:
+        for _ in range(2):
+            with models.session() as s:
+                if s.execute(stmt).rowcount:
+                    s.commit()
+                    return True
+                s.add(table(name=name, day=snap["day"], **values))
+                s.query(table).filter(table.day < snap["day"] - METER_KEEP_DAYS).delete()
+                try:
+                    s.commit()
+                    return True
+                except IntegrityError:  # another writer made the row first: update it
+                    s.rollback()
+        return False
+    except Exception:  # noqa: BLE001 -- counting goes on in memory
+        _meter_store_failed("write")
+        return False
+
+
+def flush_meters() -> None:
+    """Write every meter now (at shutdown)."""
+    with _registry_lock:
+        meters = list(_meters.values())
+    for meter in meters:
+        meter.save_if_due(force=True)
 
 
 def period_limits() -> dict[str, float]:
@@ -822,10 +964,13 @@ def get_meter(provider: str, api_key_digest: str) -> UnitMeter:
     name = f"{provider}:{api_key_digest}"
     with _registry_lock:
         meter = _meters.get(name)
-        if meter is None:
-            meter = _meters[name] = UnitMeter(provider, period_limits().get(provider, 0),
-                                              client_share=config.PROVIDER_CLIENT_SHARE_PERCENT / 100)
-        return meter
+        if meter is not None:
+            return meter
+    made = UnitMeter(provider, period_limits().get(provider, 0),
+                     client_share=config.PROVIDER_CLIENT_SHARE_PERCENT / 100, name=name)
+    _load_meter(made)  # outside the registry lock: a database read
+    with _registry_lock:
+        return _meters.setdefault(name, made)
 
 
 # ---------------------------------------------------------------------------
@@ -1022,7 +1167,9 @@ def spend(provider: str, api_key_digest: str, units: float, budget: TraceBudget 
     for either budget) when the request may not be sent."""
     if budget is not None:
         budget.charge(provider, units)
-    refused = get_meter(provider, api_key_digest).charge(units, budget.client if budget is not None else None)
+    meter = get_meter(provider, api_key_digest)
+    refused = meter.charge(units, budget.client if budget is not None else None)
+    meter.save_if_due()
     if refused is not None:
         from .etherscan_client import AllowanceSpent  # here: that module imports this one
 

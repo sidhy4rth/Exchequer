@@ -29,6 +29,9 @@ config.API_CACHE_PATH = None
 # Nor may it screen against a label store built on this machine: the suite
 # must give the same answers here as on CI, where no store exists.
 config.LABEL_STORE_PATH = None
+# Nor carry one test's provider spend into the next through the case store:
+# tests/test_provider_allowance.py turns the stored meter on where it is tested.
+config.PERSIST_METERS = False
 
 # Reports are signed; the suite signs with a key of its own rather than
 # creating report_signing_key.pem beside the real case store.

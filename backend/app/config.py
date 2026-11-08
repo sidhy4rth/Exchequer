@@ -458,6 +458,11 @@ TRONSCAN_CALLS_PER_DAY: int = _int_env("EXCHEQUER_TRONSCAN_CALLS_PER_DAY", 20_00
 # The most of each day's allowance one connection may spend (0 = no share), so
 # one visitor cannot use up the day for everyone; keyed like the hourly limits.
 PROVIDER_CLIENT_SHARE_PERCENT: int = _int_env("EXCHEQUER_CLIENT_SHARE_PERCENT", 25)
+# The day's count is kept in the case store too, so a restart (the free host
+# sleeps after 15 idle minutes) does not begin the day again at zero; it is
+# written at most this often while spending, and at shutdown.
+PERSIST_METERS: bool = os.getenv("EXCHEQUER_PERSIST_METERS", "1").strip().lower() not in ("0", "false", "no", "off")
+METER_SAVE_SECONDS: int = max(1, _int_env("EXCHEQUER_METER_SAVE_SECONDS", 30))
 # Attribution follows the money (pipeline.run_trace): a match whose share of
 # what the reported address sent is under this percentage is not "material",
 # and a case whose exchange received less is scored low at most; under a

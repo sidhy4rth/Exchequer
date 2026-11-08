@@ -36,7 +36,7 @@ from sqlalchemy.exc import DataError, InterfaceError, OperationalError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from . import batches as batch_runner
-from . import backups, config, log_safety, models, rate_limit, warmup, watchlist, webhook_vault
+from . import api_budget, backups, config, log_safety, models, rate_limit, warmup, watchlist, webhook_vault
 from . import access
 from .access import DemoCodeMiddleware
 from .input_rules import ControlCharMiddleware
@@ -155,6 +155,7 @@ async def lifespan(_app: FastAPI):
     yield
     backups.stop()
     watchlist.stop()
+    api_budget.flush_meters()  # the day's provider spend survives the restart
 
 
 app = FastAPI(

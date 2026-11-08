@@ -214,6 +214,22 @@ class Batch(Base):
     heartbeat_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
+class ProviderMeter(Base):
+    """What one provider credential spent in one UTC day (api_budget.UnitMeter),
+    so a restart does not start the day's allowance again at zero."""
+
+    __tablename__ = "provider_meters"
+
+    name: Mapped[str] = mapped_column(String(80), primary_key=True)  # provider:credential digest
+    day: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)  # days since 1970, UTC
+    used: Mapped[float] = mapped_column(Float)
+    requests: Mapped[int] = mapped_column(Integer)
+    refused: Mapped[int] = mapped_column(Integer)
+    # {hash of a connection: units}, the heaviest connections only.
+    clients_json: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[str] = mapped_column(String(32))
+
+
 def _postgres_url(url: str) -> str:
     """Hosts hand out postgres:// URLs; SQLAlchemy wants the driver named."""
     for prefix in ("postgres://", "postgresql://"):
