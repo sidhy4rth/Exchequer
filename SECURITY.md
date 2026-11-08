@@ -26,8 +26,12 @@ Exchequer has no accounts. What it does instead:
   link -- stays open. The code is compared in constant time and a client gets
   10 wrong tries per 15 minutes. The right code returns a signed pass that the
   console sends instead, so a browser that entered it is never locked out by
-  someone else's wrong guesses on the same network. It is a shared demo
-  secret, not an account: make it long and random. Creating watches is also
+  someone else's wrong guesses on the same network. With a code of 22 or more
+  characters (`secrets.token_urlsafe(16)`), the right code also gets through
+  a lockout, from a new browser or a script; wrong codes are still refused.
+  With a shorter code the lockout refuses the right code too, so that it never
+  tells a right guess from a wrong one. It is a shared demo secret, not an
+  account: make it long and random. Creating watches is also
   rate limited per client. See `backend/app/access.py`.
 - **Reports are signed.** Every text report ends in a SHA-256 content hash and
   an Ed25519 signature made with the server's key. Anyone can check one at

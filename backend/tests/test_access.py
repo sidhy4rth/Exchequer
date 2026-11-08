@@ -135,8 +135,9 @@ def test_a_refusal_still_carries_the_security_headers(client, code_set):
 def test_guessing_the_code_is_cut_off_after_ten_wrong_tries(client, code_set):
     for _ in range(10):
         assert post(client, "/trace", GUARDED[0][1], code="guess").status_code == 403
-    # Even the right code: answering it differently while locked out would
-    # turn the lockout into an unlimited guessing oracle. A pass gets through.
+    # Even the right code, since CODE is short: answering it differently while
+    # locked out would turn the lockout into an unlimited guessing oracle. A
+    # pass gets through (and the right long code: see below).
     blocked = post(client, "/trace", GUARDED[0][1], code=CODE)
     assert blocked.status_code == 429 and int(blocked.headers["retry-after"]) > 0
     assert int(blocked.headers["retry-after"]) <= 900  # a prank lasts minutes, not an hour
@@ -239,3 +240,74 @@ def test_checking_codes_counts_towards_the_guess_limit(client, code_set):
     for _ in range(10):
         post(client, "/access/check", None, code="guess")
     assert post(client, "/access/check", None, code=CODE).status_code == 429
+
+
+# -- a long code: the right one gets through a lockout ----------------------------------
+# 22 characters, the length of secrets.token_urlsafe(16): about 128 bits, so
+# telling a right guess from a wrong one during a lockout helps nobody.
+LONG_CODE = "Qm7v-Kp2xL9tRw4ZsY8nHa"
+
+
+@pytest.fixture
+def long_code_set(monkeypatch):
+    assert len(LONG_CODE) == 22
+    monkeypatch.setattr(config, "DEMO_CODE", LONG_CODE)
+
+
+def lock_out(client):
+    for _ in range(10):
+        assert post(client, "/access/check", None, code="guess").status_code == 403
+
+
+def test_with_a_long_code_the_right_code_at_the_code_box_gets_through_a_lockout(client, long_code_set):
+    """A judge's own laptop, a second presenter device, a new tab: none holds
+    a pass yet, and someone else's wrong guesses must not stop them."""
+    lock_out(client)
+    body = post(client, "/access/check", None, code=LONG_CODE)
+    assert body.status_code == 200 and body.json()["pass"]
+
+
+def test_with_a_long_code_a_raw_code_request_gets_through_a_lockout(client, long_code_set):
+    """The same for a script sending the code itself, as check_demos.py does."""
+    lock_out(client)
+    assert post(client, "/trace", GUARDED[0][1], code=LONG_CODE).status_code == 200
+    assert client.traced == [ADDRESS]
+
+
+def test_with_a_long_code_wrong_guesses_during_a_lockout_are_still_refused(client, long_code_set):
+    lock_out(client)
+    for _ in range(5):
+        refused = post(client, "/trace", GUARDED[0][1], code="guess")
+        assert refused.status_code == 429 and int(refused.headers["retry-after"]) > 0
+        refused = post(client, "/access/check", None, code=LONG_CODE[:-1] + "x")
+        assert refused.status_code == 429
+    assert post(client, "/trace", GUARDED[0][1]).status_code == 429  # no code at all
+    assert client.traced == []
+    # ...and the right code passing does not reset the count for the guesser.
+    assert post(client, "/access/check", None, code=LONG_CODE).status_code == 200
+    assert post(client, "/access/check", None, code="guess").status_code == 429
+
+
+def test_with_a_long_code_wrong_guesses_still_count_towards_the_lockout(client, long_code_set):
+    for n in range(10):
+        assert post(client, "/trace", GUARDED[0][1], code=f"guess-{n}").status_code == 403
+    assert access.wrong_codes.remaining(rate_limit.client_ip({}, "testclient")) == 0
+    assert post(client, "/trace", GUARDED[0][1], code="guess-10").status_code == 429
+
+
+def test_a_code_one_character_short_keeps_the_strict_lockout(client, monkeypatch):
+    """Below the length, telling right from wrong while locked out would
+    answer guesses: the right code is refused too, as before."""
+    monkeypatch.setattr(config, "DEMO_CODE", LONG_CODE[:-1])
+    lock_out(client)
+    assert post(client, "/access/check", None, code=LONG_CODE[:-1]).status_code == 429
+    assert post(client, "/trace", GUARDED[0][1], code=LONG_CODE[:-1]).status_code == 429
+    assert client.traced == []
+
+
+def test_health_detail_says_whether_the_code_is_long_enough_to_get_through_a_lockout(monkeypatch):
+    assert access.MIN_CODE_LENGTH == len(LONG_CODE)
+    monkeypatch.setattr(config, "DEMO_CODE", LONG_CODE)
+    assert access.code_is_long_enough()
+    monkeypatch.setattr(config, "DEMO_CODE", LONG_CODE[:-1])
+    assert not access.code_is_long_enough()

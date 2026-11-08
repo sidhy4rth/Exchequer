@@ -156,10 +156,11 @@ def health_detail(request: Request) -> dict[str, Any]:
                         "source": signing.get_signer().source,
                         "persistent": signing.get_signer().persistent},
         # Whether live tracing needs the demo code, and whether that code is
-        # long enough not to be guessed. Never the code itself.
+        # long enough not to be guessed -- which is also whether the right
+        # code gets through a wrong-code lockout. Never the code itself.
         "access": {"state": access.state(), "public_host": config.PUBLIC_HOST,
                    "demo_code_set": bool(config.DEMO_CODE),
-                   "demo_code_long_enough": len(config.DEMO_CODE) >= access.MIN_CODE_LENGTH,
+                   "demo_code_long_enough": access.code_is_long_enough(),
                    "require_demo_code": config.REQUIRE_DEMO_CODE,
                    "pass_hours": config.DEMO_PASS_SECONDS / 3600},
         # Which address this request was counted against, and which header

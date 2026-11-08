@@ -21,13 +21,25 @@ loses it refuse live tracing (503) instead.
 
 The right code at /access/check also returns a pass, which the console sends
 as X-Exchequer-Demo-Pass instead of the code. Ten wrong codes from one
-connection lock that connection out for a while -- the right code included,
-or the lockout would answer guesses -- but a pass is signed with a key made
-from the code, so it cannot be guessed and says nothing about the code: a
-browser holding one is never locked out by someone else's guesses on the same
-venue Wi-Fi. Passes expire (config.DEMO_PASS_SECONDS) and changing the code
-revokes them all. Make the code long and random (secrets.token_urlsafe(16));
-the lockout is a backstop, not what keeps it secret.
+connection lock that connection out for 15 minutes. A pass is signed with a
+key made from the code, so it cannot be guessed and says nothing about the
+code: a browser holding one is never locked out by someone else's guesses on
+the same venue Wi-Fi. Passes expire (config.DEMO_PASS_SECONDS) and changing
+the code revokes them all.
+
+Whether the right code itself gets through a lockout depends on its length:
+
+  - MIN_CODE_LENGTH (22) characters or more, the length of
+    secrets.token_urlsafe(16), about 128 bits: yes. Telling a right guess from
+    a wrong one helps nobody when there are 2^128 codes to try, so a judge's
+    own laptop, a second presenter device or a script (check_demos.py) is not
+    stopped by a prankster on the same Wi-Fi. Wrong codes are still refused
+    with 429 during the lockout, and still counted before it.
+  - Shorter: no. The lockout answers every request the same way, the right
+    code included, or it would become an unlimited guessing oracle.
+
+So make the code long and random (secrets.token_urlsafe(16)); the lockout is
+a backstop, not what keeps it secret.
 
 One table here rather than a check in each route: what the public may do is
 a single decision, and it should be readable in one place. tests/test_access.py
@@ -53,8 +65,10 @@ logger = logging.getLogger(__name__)
 
 CODE_HEADER = "x-exchequer-demo-code"
 PASS_HEADER = "x-exchequer-demo-pass"
-# Shorter than this, a code can be guessed despite the lockout.
-MIN_CODE_LENGTH = 16
+# The length of secrets.token_urlsafe(16): about 128 bits. Shorter, a code
+# could be guessed despite the lockout, so the right code is locked out too
+# (see the module docstring), and every start warns about it.
+MIN_CODE_LENGTH = 22
 
 GUARDED: list[tuple[str, re.Pattern[str]]] = [
     ("POST", re.compile(r"^/trace/?$")),
@@ -103,9 +117,18 @@ def report_at_startup() -> None:
         logger.error("THIS PUBLIC SITE IS OPEN: EXCHEQUER_DEMO_CODE is not set, so anyone can start "
                      "live traces, batches and watches that spend the provider quota. Set it in the "
                      "host's environment, and the repository secret DEMO_CODE to the same value")
-    elif current == "code" and len(config.DEMO_CODE) < MIN_CODE_LENGTH:
-        logger.warning("EXCHEQUER_DEMO_CODE is %d characters, short enough to guess; use "
-                       "python -c 'import secrets;print(secrets.token_urlsafe(16))'", len(config.DEMO_CODE))
+    elif current == "code" and not code_is_long_enough():
+        logger.warning("EXCHEQUER_DEMO_CODE is %d characters, short enough to guess, so ten wrong "
+                       "codes lock out the right one too; use %d or more: "
+                       "python -c 'import secrets;print(secrets.token_urlsafe(16))'",
+                       len(config.DEMO_CODE), MIN_CODE_LENGTH)
+
+
+def code_is_long_enough() -> bool:
+    """Whether the configured code is too long to guess, so the right code may
+    pass a lockout without the lockout answering guesses. /health/detail
+    reports this as demo_code_long_enough."""
+    return len(config.DEMO_CODE) >= MIN_CODE_LENGTH
 
 
 def _pass_mac(body: str) -> str:
@@ -159,12 +182,18 @@ class DemoCodeMiddleware:
             return
         peer = scope.get("client")
         client = rate_limit.client_ip(headers, peer[0] if peer else None)
+        given = headers.get(CODE_HEADER, "")
         if wrong_codes.remaining(client) == 0:
+            # Locked out. A long code is too long to guess, so the right one
+            # may pass without the lockout answering guesses; a short code is
+            # refused like everything else. Constant time either way.
+            if given and code_is_long_enough() and hmac.compare_digest(given.encode(), config.DEMO_CODE.encode()):
+                await self.app(scope, receive, send)
+                return
             wait = wrong_codes.check(client) or 60.0
             await _refuse(send, 429, "Too many wrong access codes from this connection. Try again later.",
                           {"retry-after": str(int(wait))})
             return
-        given = headers.get(CODE_HEADER, "")
         if not given and token:
             # Expired, or made with a code since changed: not a guess.
             await _refuse(send, 403, "This browser's access pass has expired. Enter the access code again.",
