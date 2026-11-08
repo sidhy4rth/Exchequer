@@ -123,16 +123,25 @@ def _num(value: Any) -> str:
 def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     """The PDF for `sealed_text`. `report` is the same report; only its case id
     is read here: page 1 is drawn from the signed text alone."""
-    _register_fonts()
-    st = _styles()
-    digest, key = _seal_facts(sealed_text)
     case_id = report["case"]["case_id"]
     try:
-        pdf = _build(summary_story(sealed_text, st, case_id) + _part_two(sealed_text, st), case_id, digest, key)
+        return render_issued(sealed_text, case_id)
     except LayoutError:
         # Part 1 is a reading aid; the signed report must still be issued.
         logger.warning("Case %s: the PDF summary page could not be laid out; issuing Part 2 only", case_id)
-        pdf = _build(unplaced_story(case_id, st) + _part_two(sealed_text, st), case_id, digest, key)
+        return render_issued(sealed_text, case_id, laid_out=False)
+
+
+def render_issued(sealed_text: str, case_id: str, laid_out: bool = True) -> bytes:
+    """The whole PDF render_pdf issues for `sealed_text`, attachment included:
+    with the summary page (LayoutError if it cannot be laid out), or with the
+    short page printed instead. /verify draws it again to compare an uploaded
+    PDF with it (pdf_verify)."""
+    _register_fonts()
+    st = _styles()
+    digest, key = _seal_facts(sealed_text)
+    first = summary_story(sealed_text, st, case_id) if laid_out else unplaced_story(case_id, st)
+    pdf = _build(first + _part_two(sealed_text, st), case_id, digest, key)
     return _attach(pdf, _attachment_name(case_id), sealed_text.encode("utf-8"))
 
 

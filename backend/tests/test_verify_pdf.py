@@ -489,3 +489,143 @@ def test_an_also_reached_count_added_to_page_one_is_caught(trace, monkeypatch): 
     _, pdf = _traced_pdf(trace, BASE + [_tx(W1, KRAKEN_1, 100.0, T + 25)])
     monkeypatch.setattr(report_pdf, "_part_one", original)
     assert _verify(pdf)["status"] == "summary_differs"
+
+
+# -- what a viewer shows outside the pages' text (8 Nov re-check, p_pdf3) ------------------
+# Each edit below left every page's text untouched, so the text compare said
+# the pages matched, yet a viewer shows the addendum (or hides part of the
+# summary). A genuine Exchequer PDF carries none of them: no script, no open
+# action, no bookmark, its own title, page boxes equal to the paper, and
+# pages drawing exactly what the renderer draws for the signed report.
+ADDENDUM = f"ADDENDUM from the issuing officer: also freeze every account holding {OTHER}"
+
+
+def _edited(pdf: bytes, edit) -> bytes:
+    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(pdf)))
+    edit(writer)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+def _javascript(writer):
+    # What pypdf's add_js writes: a document-level script run when the file opens.
+    from pypdf.generic import ArrayObject, DictionaryObject, NameObject, TextStringObject
+
+    action = DictionaryObject({NameObject("/S"): NameObject("/JavaScript"),
+                               NameObject("/JS"): TextStringObject(f'app.alert("{ADDENDUM}");')})
+    names = writer._root_object[NameObject("/Names")]
+    names[NameObject("/JavaScript")] = DictionaryObject(
+        {NameObject("/Names"): ArrayObject([TextStringObject("addendum"), writer._add_object(action)])})
+
+
+def _bookmark(writer):
+    from pypdf.generic import NameObject
+
+    writer.add_outline_item(ADDENDUM, 0)
+    writer._root_object[NameObject("/PageMode")] = NameObject("/UseOutlines")
+
+
+def _title(writer):
+    from pypdf.generic import DictionaryObject, NameObject
+
+    writer.add_metadata({"/Title": ADDENDUM, "/Subject": ADDENDUM})
+    writer._root_object[NameObject("/ViewerPreferences")] = DictionaryObject(
+        {NameObject("/DisplayDocTitle"): NameObject("/true")})
+
+
+def _crop(writer):
+    from pypdf.generic import RectangleObject
+
+    page = writer.pages[0]
+    box = page.mediabox
+    page.cropbox = RectangleObject([box.left, box.top - (box.top - box.bottom) / 3, box.right, box.top])
+
+
+def _painted(page_number: int):
+    def edit(writer):
+        from pypdf.generic import ArrayObject, DecodedStreamObject, NameObject
+
+        page = writer.pages[page_number]
+        stream = DecodedStreamObject()
+        stream.set_data(b"q 1 1 1 rg 0 0 600 500 re f Q")
+        contents = page["/Contents"]
+        parts = ArrayObject(contents if isinstance(contents, ArrayObject) else [contents])
+        parts.append(writer._add_object(stream))
+        page[NameObject("/Contents")] = parts
+    return edit
+
+
+def _page_open_action(writer):
+    from pypdf.generic import DictionaryObject, NameObject, TextStringObject
+
+    action = DictionaryObject({NameObject("/S"): NameObject("/JavaScript"),
+                               NameObject("/JS"): TextStringObject(f'app.alert("{ADDENDUM}");')})
+    writer.pages[0][NameObject("/AA")] = DictionaryObject({NameObject("/O"): writer._add_object(action)})
+
+
+def _document_open_action(writer):
+    from pypdf.generic import DictionaryObject, NameObject, TextStringObject
+
+    action = DictionaryObject({NameObject("/S"): NameObject("/JavaScript"),
+                               NameObject("/JS"): TextStringObject(f'app.alert("{ADDENDUM}");')})
+    writer._root_object[NameObject("/OpenAction")] = writer._add_object(action)
+
+
+def _xmp(writer):
+    from pypdf.generic import DecodedStreamObject, NameObject
+
+    stream = DecodedStreamObject()
+    stream.set_data(f'<x:xmpmeta xmlns:x="adobe:ns:meta/"><dc:title>{ADDENDUM}</dc:title></x:xmpmeta>'.encode())
+    stream.update({NameObject("/Type"): NameObject("/Metadata"), NameObject("/Subtype"): NameObject("/XML")})
+    writer._root_object[NameObject("/Metadata")] = writer._add_object(stream)
+
+
+def _renamed_attachment(writer):
+    from pypdf.generic import NameObject, TextStringObject
+
+    names = writer._root_object["/Names"]["/EmbeddedFiles"]["/Names"]
+    names[0] = TextStringObject(ADDENDUM + ".txt")
+    names[1].get_object()[NameObject("/F")] = TextStringObject(ADDENDUM + ".txt")
+
+
+@pytest.mark.parametrize("edit, status, words", [
+    (_javascript, "pdf_altered", "script"),
+    (_document_open_action, "pdf_altered", "opened"),
+    (_page_open_action, "pdf_altered", "opened"),
+    (_bookmark, "pdf_altered", "bookmark"),
+    (_title, "pdf_altered", "title"),
+    (_xmp, "pdf_altered", "metadata"),
+    (_crop, "summary_differs", "box"),
+    (_painted(0), "summary_differs", "draws"),
+])
+def test_what_a_viewer_shows_beyond_the_text_is_caught(genuine, edit, status, words):
+    result = _verify(_edited(genuine, edit))
+    assert result["status"] == status, result["pdf"]["problems"]
+    assert result["genuine"] is False and result["pdf"]["pages_match"] is False
+    assert result["signature_ok"] is True and result["finding"]["address"] == MID  # the attachment is fine
+    assert words in " ".join(result["pdf"]["problems"]).lower()
+
+
+def test_a_shape_painted_over_the_printed_copy_is_caught(genuine):
+    result = _verify(_edited(genuine, _painted(-1)))
+    assert result["status"] == "printed_copy_differs", result["pdf"]["problems"]
+    assert "draws" in " ".join(result["pdf"]["problems"]).lower()
+
+
+def test_an_attachment_renamed_to_carry_words_is_caught(genuine):
+    result = _verify(_edited(genuine, _renamed_attachment))
+    assert result["status"] == "pdf_altered", result["pdf"]["problems"]
+
+
+def test_a_genuine_pdf_saved_again_unchanged_still_matches(genuine):
+    # Re-saving (pypdf, as any tool that rewrites the file) changes object
+    # numbers and compression, not what the pages draw: still genuine.
+    result = _verify(_edited(genuine, lambda writer: None))
+    assert result["status"] == "genuine" and result["pdf"]["pages_match"] is True, result["pdf"]["problems"]
+
+
+def test_the_verdict_names_a_changed_pdf():
+    from app.pdf_verify import DETAILS
+
+    assert "pdf_altered" in DETAILS and "{problems}" in DETAILS["pdf_altered"]

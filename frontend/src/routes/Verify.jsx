@@ -27,6 +27,7 @@ const VERDICT = {
   // A PDF (backend pdf_verify): its attachment is genuine but its pages say otherwise.
   summary_differs: { tone: 'red', title: 'Page 1 does not match the signed record' },
   printed_copy_differs: { tone: 'red', title: 'The printed pages do not match the signed record' },
+  pdf_altered: { tone: 'red', title: 'This PDF was changed after it was issued' },
   pdf_no_report: { tone: 'red', title: 'No signed report in this PDF' },
   pdf_unreadable: { tone: 'red', title: 'This PDF cannot be read' },
 }
@@ -138,7 +139,7 @@ export default function Verify() {
                 <>
                   <span className="micro">The PDF&apos;s pages</span>
                   {result.pdf.pages_match
-                    ? <p className="note">Page 1 and the printed copy show what the attached report states, as far as their text can be read. They are not signed: act on the attached report.</p>
+                    ? <p className="note">Page 1 and the printed copy show what the attached report states, and the file draws and carries nothing Exchequer did not print. They are not signed: act on the attached report.</p>
                     : (
                       <ul className="verify-problems">
                         {result.pdf.problems.map((problem) => <li key={problem}>{problem}</li>)}

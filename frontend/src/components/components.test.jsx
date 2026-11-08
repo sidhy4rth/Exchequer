@@ -188,8 +188,9 @@ describe('Verify page', () => {
   })
 
   it('shows the other PDF verdicts in red', async () => {
-    for (const [status, title] of [['printed_copy_differs', 'The printed pages do not match the signed record'], ['pdf_no_report', 'No signed report in this PDF'], ['pdf_unreadable', 'This PDF cannot be read']]) {
-      await uploadPdf({ status, genuine: false, sealed: false, detail: 'x', pdf: { pages_match: status === 'printed_copy_differs' ? false : null, problems: status === 'printed_copy_differs' ? ['The printed copy (Part 2) differs from the attached file.'] : [] } })
+    for (const [status, title] of [['printed_copy_differs', 'The printed pages do not match the signed record'], ['pdf_altered', 'This PDF was changed after it was issued'], ['pdf_no_report', 'No signed report in this PDF'], ['pdf_unreadable', 'This PDF cannot be read']]) {
+      const differs = status === 'printed_copy_differs' || status === 'pdf_altered'
+      await uploadPdf({ status, genuine: false, sealed: false, detail: 'x', pdf: { pages_match: differs ? false : null, problems: differs ? ['The printed copy (Part 2) differs from the attached file.'] : [] } })
       const s = await screen.findByRole('status')
       expect(s).toHaveClass('red')
       expect(s).toHaveTextContent(title)
