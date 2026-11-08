@@ -77,6 +77,12 @@ never a stored result: the hosted database's transfer is metered. The demo
 list, the same for every visitor without an owner key, is kept for 30
 seconds, and one connection may list 60 times a minute.
 
+Correlation (`GET /cases/correlate`) reads every case the caller can see, so
+its answer is kept per set of visible cases, the least recently used set
+going first once the kept sets hold 100,000 (address, case) entries; a set
+larger than that on its own is kept alone. One connection may correlate 20
+times a minute, whatever owner keys it sends.
+
 Clearing a browser's site data loses its history list (the cases remain and
 open by link). Moving to real accounts later means mapping owner hashes to
 users; nothing else changes.

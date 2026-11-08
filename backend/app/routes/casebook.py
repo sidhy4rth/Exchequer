@@ -110,7 +110,19 @@ def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
 # visible case each time). The kept index of the caller's own set answers
 # for it: only that one case is read (models.get_case, itself cached), and
 # its addresses are looked up in the index. A case id that matches no case
-# reads nothing more. The cache is bounded by entries as well as sets.
+# reads nothing more.
+#
+# The cache is bounded by sets and by (address, case) entries over every kept
+# index, the least recently used set going first. A set larger than the
+# entry bound on its own is still kept, alone: refusing it (c8917c8) meant a
+# full reload of every case on every request for an owner with a dense case
+# book (the 8 Nov re-check, probe_corr_big). One set is itself bounded by
+# MAX_CASES_PER_OWNER cases of at most a few node limits each (about 240,000
+# entries, some 130 MB, at the defaults). And each connection may correlate
+# CORRELATIONS_PER_MINUTE_PER_CLIENT times a minute, whatever owner keys it
+# sends, so even a set that keeps being evicted costs a bounded amount.
+CORRELATIONS_PER_MINUTE_PER_CLIENT = 20
+correlations = rate_limit.SlidingWindowLimiter(CORRELATIONS_PER_MINUTE_PER_CLIENT, 60)
 _CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], CaseIndex, list[dict[str, Any]]]]" = OrderedDict()
 _CLUSTER_CACHE_SIZE = 128
 _CLUSTER_CACHE_ENTRIES = 100_000  # (address, case) entries over every kept index
@@ -125,16 +137,18 @@ def _key(ids) -> tuple:
 
 
 def _keep(key: tuple, value) -> None:
+    """Keep `value` as the newest set; evict the least recently used until
+    the bounds hold, but never the set just kept (a set over the entry bound
+    is kept alone)."""
     cost = value[1].entries()
-    if cost > _CLUSTER_CACHE_ENTRIES:
-        return  # one set too large to keep: computed each time, as before
     with _cluster_lock:
         if key in _CLUSTER_CACHE:
+            _CLUSTER_CACHE.move_to_end(key)
             return
         _CLUSTER_CACHE[key] = value
         _cluster_entries[0] += cost
-        while _CLUSTER_CACHE and (len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE
-                                  or _cluster_entries[0] > _CLUSTER_CACHE_ENTRIES):
+        while len(_CLUSTER_CACHE) > 1 and (len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE
+                                           or _cluster_entries[0] > _CLUSTER_CACHE_ENTRIES):
             _, old = _CLUSTER_CACHE.popitem(last=False)
             _cluster_entries[0] -= old[1].entries()
 
@@ -210,6 +224,12 @@ def cases_correlate(
     (they hold its link) are examined; nobody else's case is read. See
     ownership.py.
     """
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    wait = correlations.check(client)
+    if wait is not None:
+        raise HTTPException(status_code=429, headers={"Retry-After": str(int(wait) + 1)},
+                            detail="This connection has correlated the cases too often this minute. "
+                                   "Try again shortly.")
     caller = ownership.owner_hash_from_headers(http.headers)
     store, clusters = _clusters(caller, case_id, min_cases)
     may_see = {cid for cid, owner, address in store if ownership.visible_to(owner, address, caller)}

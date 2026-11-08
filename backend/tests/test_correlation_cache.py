@@ -41,6 +41,8 @@ def save_converging(case_id, reported, owner):
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(models, "_engine", create_engine(f"sqlite:///{tmp_path / 'c.db'}", future=True))
     casebook.clear_cluster_cache()
+    # These tests count reloads over many requests from one connection, not the rate limit.
+    monkeypatch.setattr(casebook, "correlations", casebook.rate_limit.SlidingWindowLimiter(100_000, 60))
     with TestClient(app) as c:
         calls = []
         real = casebook.index_cases
@@ -175,3 +177,71 @@ def test_saving_a_case_does_not_rebuild_the_ledger(client, monkeypatch):
     client.get("/ledger?chain=ethereum&limit=50")
     assert built == ["ethereum"]
     coverage._LEDGER_CACHE.clear()
+
+
+# -- a large set is kept too, and correlation is rate limited (8 Nov re-check) -------------
+# c8917c8 refused to keep any set whose index held more than the cache's
+# 100,000 (address, case) entries, and /cases/correlate had no rate limit, so
+# one owner with 100 cases of 1,100 intermediaries got a full reload (about
+# 0.5 s) on every request (probe_corr_big). A set over the bound is now kept
+# on its own (the others are evicted, least recently used first), and each
+# connection may correlate a limited number of times a minute.
+
+def _dense(owner, cases, nodes, first=0):
+    for i in range(first, first + cases):
+        reported = "0x" + f"{i + 1:040x}"
+        models.save_case(f"big-{i}", reported, {
+            "address": reported, "chain": "ethereum", "asset": "ETH",
+            "graph": {"nodes": [{"id": reported, "is_seed": True}]
+                      + [{"id": "0x" + f"{(i + 1) * 10**6 + j:040x}", "depth": 1} for j in range(nodes)]},
+        }, owner_hash=ownership.owner_hash(owner))
+
+
+def test_a_set_over_the_entry_bound_is_still_kept(client, monkeypatch):
+    monkeypatch.setattr(casebook, "_CLUSTER_CACHE_ENTRIES", 500)
+    save_converging("bob-1", B1, BOB)
+    correlate_as(client, BOB)  # a small set, kept
+    _dense(ALICE, 10, 60)  # 600 entries: over the bound on its own
+    client.calls.clear()
+    for _ in range(5):
+        assert correlate_as(client, ALICE)["cases_examined"] >= 10
+    assert len(client.calls) == 1  # computed once, then served from the cache
+    assert casebook._cluster_entries[0] >= 600 and len(casebook._CLUSTER_CACHE) == 1  # kept alone
+
+
+def test_the_cache_evicts_the_least_recently_used_set_by_entries(client, monkeypatch):
+    monkeypatch.setattr(casebook, "_CLUSTER_CACHE_ENTRIES", 250)
+    save_converging("a-1", A1, ALICE)
+    _dense(BOB, 2, 100)  # 200 entries
+    correlate_as(client, ALICE)
+    correlate_as(client, BOB)
+    correlate_as(client, ALICE)  # Alice's set used last
+    _dense("carol-key-" + "c" * 22, 1, 100, first=2)
+    correlate_as(client, "carol-key-" + "c" * 22)  # 100 more: Bob's set (least recently used) goes
+    client.calls.clear()
+    correlate_as(client, ALICE)
+    assert client.calls == []  # still kept
+    correlate_as(client, BOB)
+    assert len(client.calls) == 1  # evicted, computed again
+    assert casebook._cluster_entries[0] == sum(v[1].entries() for v in casebook._CLUSTER_CACHE.values())
+
+
+def test_the_rechecks_probe_ten_identical_requests_reload_once(client):
+    _dense(ALICE, 100, 1100)  # the probe: 110,000 entries, over the old bound
+    client.calls.clear()
+    for _ in range(10):
+        correlate_as(client, ALICE)
+    assert len(client.calls) == 1
+
+
+def test_one_connection_may_correlate_only_so_often_a_minute(client, monkeypatch):
+    monkeypatch.setattr(casebook, "correlations",
+                        casebook.rate_limit.SlidingWindowLimiter(casebook.CORRELATIONS_PER_MINUTE_PER_CLIENT, 60))
+    assert casebook.CORRELATIONS_PER_MINUTE_PER_CLIENT == 20
+    for _ in range(20):
+        correlate_as(client, ALICE)
+    refused = client.get("/cases/correlate", headers={ownership.OWNER_HEADER: ALICE})
+    assert refused.status_code == 429 and int(refused.headers["Retry-After"]) >= 1
+    assert "correlat" in refused.json()["detail"].lower()
+    # Fresh owner keys from the same connection do not get round it.
+    assert client.get("/cases/correlate", headers={ownership.OWNER_HEADER: BOB}).status_code == 429

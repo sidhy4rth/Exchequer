@@ -171,7 +171,8 @@ def _fresh_trace_rate_limit():
     The site-wide ceilings are process-wide too."""
     from app import rate_limit
     from app.routes import casebook, cases
-    for limiter in (rate_limit.traces, rate_limit.traces_total, rate_limit.watches_total, casebook.case_lists):
+    for limiter in (rate_limit.traces, rate_limit.traces_total, rate_limit.watches_total, casebook.case_lists,
+                    casebook.correlations):
         limiter.reset()
     # Likewise the minutes each connection held trace slots, and the kept demo list.
     cases._slot_clock.reset()
