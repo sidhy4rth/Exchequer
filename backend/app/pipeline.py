@@ -206,7 +206,7 @@ def _trace_path(
     """
     source, destination = (seed, target) if direction == OUTGOING else (target, seed)
     try:
-        path = principal_path(route_graph if route_graph is not None else graph, source, destination)
+        path = principal_path(route_graph if route_graph is not None else graph, source, destination, direction)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return []
 
@@ -294,7 +294,8 @@ def _appendix_edges(graph: nx.DiGraph, seed: str, direction: str, primary: Any,
     if primary is not None:
         source, destination = (seed, primary.address) if direction == OUTGOING else (primary.address, seed)
         try:
-            path = principal_path(route_graph if route_graph is not None else graph, source, destination)
+            path = principal_path(route_graph if route_graph is not None else graph, source, destination,
+                                  direction)
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             path = []
         edges |= set(zip(path, path[1:], strict=False))
@@ -610,7 +611,7 @@ def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
     `hops` is each address's hop count along that same route: a match's hop
     count (and so the case's) is the route the money took, not a shorter one
     a dust send happened to take."""
-    reach, hops = widest_routes(graph, seed, direction)
+    reach, hops = widest_routes(graph, seed, direction, targets=[m.address for m in matches])
     outflow = seed_outflow(graph, seed, direction, untraced)
     cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis)
     denominator, basis = (cap, cap_basis) if cap else (outflow, "seed_outflow")

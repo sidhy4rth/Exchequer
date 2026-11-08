@@ -163,73 +163,127 @@ def _hop_proximity(depth: int, direction: str = OUTGOING, offset: int = 0) -> Sc
     return ScoreComponent("hop_proximity", raw, WEIGHT_HOP_PROXIMITY, explanation)
 
 
-def principal_path(graph: nx.DiGraph, source: str, destination: str) -> list[str]:
+def principal_path(graph: nx.DiGraph, source: str, destination: str,
+                   direction: str = OUTGOING) -> list[str]:
     """The route the attribution is read along, chosen the same way every time.
 
     The widest route from `source` to `destination`: the one whose narrowest
     hop carried the most value -- the route that could have moved the most of
-    the traced funds -- with ties going to fewer hops, then to address order.
-    It used to be the widest among the *shortest* routes only, so a dust
-    transfer that happened to reach the same exchange in fewer hops could be
-    the path the pro-rata estimate, the score and the report were read from;
-    and listing every shortest route grew exponentially on a lattice of
-    wallets built to do that. This is O(E log V) and agrees with
-    `reach_bottlenecks`.
+    the traced funds -- then the fewest hops among those, then the first in
+    address order from the reported address (see `_widest`). It used to be
+    the widest among the *shortest* routes only, so a dust transfer that
+    happened to reach the same exchange in fewer hops could be the path the
+    pro-rata estimate, the score and the report were read from; and listing
+    every shortest route grew exponentially on a lattice of wallets built to
+    do that.
+
+    The path is always in money order, `source` first. `direction` says which
+    end is the reported address: `source` on a forward trace, `destination`
+    on a reverse one (money from the exchange down to the reported address).
+    The search always starts at the reported address -- on a reverse trace
+    over its senders, then read back -- the same search `widest_routes` runs,
+    so the printed route and the case's hop count are one route (8 Nov
+    re-check: on reverse traces they came from two searches and an exact
+    width tie could give "2 hops upstream" over a 3-hop printed route).
 
     Raises the same exceptions as nx.shortest_path when there is no route.
     """
-    if destination not in graph:
-        raise nx.NodeNotFound(f"{destination} is not in the graph")
-    best, prev, _ = _widest(graph, source, forward=True)
+    for end in (source, destination):
+        if end not in graph:
+            raise nx.NodeNotFound(f"{end} is not in the graph")
     if destination == source:
         return [source]
-    if destination not in best:
+    start, target = (source, destination) if direction == OUTGOING else (destination, source)
+    _, routes, _ = _widest(graph, start, forward=direction == OUTGOING, targets=[target])
+    if target not in routes:
         raise nx.NetworkXNoPath(f"no path from {source} to {destination}")
-    path = [destination]
-    while path[-1] != source:
-        path.append(prev[path[-1]])
-    return path[::-1]
+    path = routes[target]
+    return path if direction == OUTGOING else path[::-1]
 
-def _widest(graph: nx.DiGraph, source: str, forward: bool = True,
-            ) -> tuple[dict[str, float], dict[str, str], dict[str, int]]:
-    """Widest paths from `source`: for every address, the most value that
-    could have reached it along any route (the largest narrowest hop), the
-    address before it on that route, and that route's hop count. Ties go to
-    fewer hops, then to address order, so the route is reproducible. Dijkstra
-    on the bottleneck: O(E log V).
 
-    `forward=False` reads incoming edges -- money moving towards `source`, as
-    on a reverse trace -- taking each edge's value from the farther address to
-    the nearer one."""
-    if source not in graph:
-        raise nx.NodeNotFound(f"{source} is not in the graph")
+def _widths(graph: nx.DiGraph, source: str, forward: bool) -> dict[str, float]:
+    """For every address reachable from `source`, the most value that could
+    have reached it along any route: the largest narrowest hop. Dijkstra on
+    the bottleneck, O(E log V). Widths only: which route carries a width is
+    `_widest`'s question, because the shortest of the widest routes is not
+    found by extending the widest route to each address (a wider prefix with
+    more hops can end at the same bottleneck as a narrower, shorter one)."""
     step = graph.successors if forward else graph.predecessors
-
-    def value(near: str, far: str) -> float:
-        edge = graph.edges[near, far] if forward else graph.edges[far, near]
-        return float(edge.get("value_native", 0.0))
-
     best: dict[str, float] = {source: float("inf")}
-    hops: dict[str, int] = {source: 0}
-    prev: dict[str, str] = {}
     done: set[str] = set()
-    heap: list[tuple[float, int, str]] = [(-float("inf"), 0, source)]
+    heap: list[tuple[float, str]] = [(-float("inf"), source)]
     while heap:
-        _, h, near = heapq.heappop(heap)
+        _, near = heapq.heappop(heap)
         if near in done:
             continue
         done.add(near)
         for far in step(near):
             if far in done:
                 continue
-            width = min(best[near], value(near, far))
-            key = (-width, h + 1, near)
-            if far not in best or key < (-best[far], hops[far], prev.get(far, "")):
-                best[far], hops[far], prev[far] = width, h + 1, near
-                heapq.heappush(heap, (-width, h + 1, far))
+            edge = graph.edges[near, far] if forward else graph.edges[far, near]
+            width = min(best[near], float(edge.get("value_native", 0.0)))
+            if far not in best or width > best[far]:
+                best[far] = width
+                heapq.heappush(heap, (-width, far))
+    return best
+
+
+def _widest(graph: nx.DiGraph, source: str, forward: bool = True, targets: Any = None,
+            ) -> tuple[dict[str, float], dict[str, list[str]], dict[str, int]]:
+    """Widest routes from `source`, one rule for every caller: for each
+    address, the most value that could have reached it (the largest narrowest
+    hop), and its route -- the widest, then the fewest hops among the widest,
+    then the first in address order read from `source` -- with that route's
+    hop count. `targets` limits which routes are built (all, by default); the
+    widths are always every address's.
+
+    Per distinct width, one breadth-first search over the hops that carried
+    at least that much, each level in route order, so the first route to
+    reach an address is the fewest hops and then the first in address order.
+    A lattice of equally wide routes is read once per width, never listed.
+
+    `forward=False` reads incoming edges -- money moving towards `source`, as
+    on a reverse trace -- and the routes run from `source` over the senders
+    (callers reverse them into money order)."""
+    if source not in graph:
+        raise nx.NodeNotFound(f"{source} is not in the graph")
+    step = graph.successors if forward else graph.predecessors
+    best = _widths(graph, source, forward)
     best.pop(source, None)
-    hops.pop(source, None)
-    return best, prev, hops
+    wanted = best if targets is None else {t: best[t] for t in targets if t in best}
+    by_width: dict[float, set[str]] = {}
+    for address, width in wanted.items():
+        by_width.setdefault(width, set()).add(address)
+
+    def carried(near: str, far: str) -> float:
+        edge = graph.edges[near, far] if forward else graph.edges[far, near]
+        return float(edge.get("value_native", 0.0))
+
+    routes: dict[str, list[str]] = {}
+    for width, group in by_width.items():
+        parent: dict[str, str] = {}
+        left = set(group)
+        seen, frontier = {source}, [source]
+        while frontier and left:
+            level = []
+            for near in frontier:  # in route order, so the first parent found is the first route
+                for far in sorted(step(near)):
+                    if far in seen or carried(near, far) < width:
+                        continue
+                    seen.add(far)
+                    parent[far] = near
+                    level.append(far)
+                    left.discard(far)
+            frontier = level
+        for address in group:
+            if address not in parent:  # cannot happen: its width was reached along these hops
+                continue
+            path = [address]
+            while path[-1] != source:
+                path.append(parent[path[-1]])
+            routes[address] = path[::-1]
+    hops = {a: len(p) - 1 for a, p in routes.items()}
+    return best, routes, hops
 
 
 def reach_bottlenecks(graph: nx.DiGraph, source: str, direction: str = OUTGOING) -> dict[str, float]:
@@ -239,19 +293,24 @@ def reach_bottlenecks(graph: nx.DiGraph, source: str, direction: str = OUTGOING)
     near the source cannot outweigh the route the money took, however short
     the decoy's route is. On a reverse trace the routes run towards `source`.
     `source` itself is not in the result."""
-    return widest_routes(graph, source, direction)[0]
+    if source not in graph:
+        return {}
+    best = _widths(graph, source, forward=direction == OUTGOING)
+    best.pop(source, None)
+    return best
 
 
-def widest_routes(graph: nx.DiGraph, source: str, direction: str = OUTGOING,
+def widest_routes(graph: nx.DiGraph, source: str, direction: str = OUTGOING, targets: Any = None,
                   ) -> tuple[dict[str, float], dict[str, int]]:
-    """`reach_bottlenecks` plus each address's hop count along that same
-    widest route -- the route `principal_path` returns, so the case's hop
-    count, its proximity score and the printed route all describe one path
-    (a dust send that reached the exchange in fewer hops used to set the hop
-    count while the route shown ran through the real cash-out)."""
+    """`reach_bottlenecks` plus the hop count of each address's route (of
+    each of `targets`, when given) -- the route `principal_path` returns, from
+    the same search, so the case's hop count, its proximity score and the
+    printed route all describe one path, forward and reverse (a dust send
+    that reached the exchange in fewer hops used to set the hop count while
+    the route shown ran through the real cash-out)."""
     if source not in graph:
         return {}, {}
-    best, _, hops = _widest(graph, source, forward=direction == OUTGOING)
+    best, _, hops = _widest(graph, source, forward=direction == OUTGOING, targets=targets)
     return best, hops
 
 
@@ -306,7 +365,7 @@ def _amount_correlation(
         (seed, exchange_address) if direction == OUTGOING else (exchange_address, seed)
     )
     try:
-        path = principal_path(graph, source, destination)
+        path = principal_path(graph, source, destination, direction)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         # Defensive: the matcher found the address in the graph, so a path
         # should exist. Score neutrally rather than inventing a number.
