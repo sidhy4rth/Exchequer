@@ -119,12 +119,12 @@ way Railway does before anything is deployed.
 
 To put the site in front of the public without letting anyone spend the
 provider quota, set `EXCHEQUER_DEMO_CODE` in Render's environment and the
-same value as the repository secret `DEMO_CODE` (the Demo health job sends
+same value as the secret `DEMO_CODE` of the GitHub environment `live-checks` (the Demo health job sends
 it). Visitors then see the recorded demos, which open exactly as recorded,
 and a box for the code; with it, the console traces as before. The code
 stays in that browser tab only (`sessionStorage`) and is forgotten on sign
 out. Share it with the people presenting, and change it after an event.
-Order: set the repository secret `DEMO_CODE` first (`scripts/check_demos.py`
+Order: set the `live-checks` environment secret `DEMO_CODE` first (`scripts/check_demos.py`
 sends it), then `EXCHEQUER_DEMO_CODE` on Render with the same value, then
 `EXCHEQUER_REQUIRE_DEMO_CODE=1` there too, and the repository variable
 `EXPECT_DEMO_CODE=1` for the site canary. Until the code is set the site

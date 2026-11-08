@@ -51,7 +51,7 @@ services:
       # /health answers "access": "open". Use a long random value, 22+
       # characters (python -c 'import secrets;print(secrets.token_urlsafe(16))'):
       # only then does the right code get through a wrong-code lockout. Set the
-      # repository secret DEMO_CODE to the same value first (Demo health
+      # GitHub environment live-checks' secret DEMO_CODE to the same value first (Demo health
       # sends it), then add EXCHEQUER_REQUIRE_DEMO_CODE=1 here by hand so a
       # deploy that loses the code fails closed instead of opening.
       - key: EXCHEQUER_DEMO_CODE

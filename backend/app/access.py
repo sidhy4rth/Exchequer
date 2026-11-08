@@ -116,7 +116,7 @@ def report_at_startup() -> None:
     elif current == "open" and config.PUBLIC_HOST:
         logger.error("THIS PUBLIC SITE IS OPEN: EXCHEQUER_DEMO_CODE is not set, so anyone can start "
                      "live traces, batches and watches that spend the provider quota. Set it in the "
-                     "host's environment, and the repository secret DEMO_CODE to the same value")
+                     "host's environment, and the secret DEMO_CODE of the GitHub environment live-checks to the same value")
     elif current == "code" and not code_is_long_enough():
         logger.warning("EXCHEQUER_DEMO_CODE is %d characters, short enough to guess, so ten wrong "
                        "codes lock out the right one too; use %d or more: "
