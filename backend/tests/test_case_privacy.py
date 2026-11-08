@@ -254,3 +254,16 @@ def test_the_redacted_copy_still_meets_the_case_contract():
     from app.contracts import read_case
     seen = read_case(for_reader(rich_payment_case(), "owner-hash", "someone-else"))
     assert [p.tx_hash for p in seen.intake.payments] == [None, None]
+
+
+@pytest.mark.parametrize("headers", [{}, OTHER, OWNER], ids=["anonymous", "another-browser", "owner"])
+def test_every_readers_pdf_of_a_payment_case_verifies_with_matching_pages(rich, headers):
+    """The redacted copy a stranger downloads is signed as it is printed, so /verify
+    calls it genuine and its page 1 matches; the owner's full copy too."""
+    pdf = rich.get("/trace/rich-case/report?format=pdf", headers=headers)
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF-")
+    checked = rich.post("/verify", content=pdf.content, headers={"Content-Type": "application/pdf"}).json()
+    assert checked["status"] == "genuine", checked
+    assert checked["pdf"]["pages_match"] is True, checked["pdf"]["problems"]
+    if headers is not OWNER:
+        assert leaks(repr(checked)) == []
