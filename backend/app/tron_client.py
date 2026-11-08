@@ -354,7 +354,10 @@ class TronClient:
             if not isinstance(info, dict):
                 return None
             token = info.get("address")
-            if self.contract_address and token and token != self.contract_address:
+            # Only the traced token's rows: one from another contract, or one
+            # that names none, is dropped -- never stamped as the traced token.
+            if self.contract_address and token != self.contract_address:
+                logger.warning("Skipping TRC-20 record from another or no contract: %r", str(token)[:40])
                 return None
             # ADR-0008: the record's own figure, else the configured one, else
             # drop it -- never a guess. A stated figure that disagrees with the
@@ -375,7 +378,7 @@ class TronClient:
                 block_number=0,  # not returned by this endpoint
                 is_error=False,
                 asset=info.get("symbol") or self.asset_symbol,
-                contract_address=info.get("address") or self.contract_address,
+                contract_address=token or self.contract_address,
             )
         except (TypeError, ValueError, AttributeError):
             logger.warning("Skipping malformed TRC-20 transfer: %r", str(raw)[:120])

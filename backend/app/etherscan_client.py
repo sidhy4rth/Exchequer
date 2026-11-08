@@ -310,7 +310,8 @@ class Transaction:
 
     @classmethod
     def from_token_api(
-        cls, raw: dict[str, Any], fallback_decimals: int | None = None
+        cls, raw: dict[str, Any], fallback_decimals: int | None = None,
+        expected_contract: str | None = None,
     ) -> "Transaction | None":
         """Build a Transaction from one Etherscan `tokentx` record.
 
@@ -328,12 +329,21 @@ class Transaction:
         `fallback_decimals` -- the precision confirmed on-chain for the token
         being traced -- and is dropped if that is unknown too. Guessing 18 would
         turn a USDT transfer into a trillionth of itself.
+
+        `expected_contract` is the traced token's contract: a record from any
+        other contract, or with none, is dropped. The query filters by
+        contract, but a fake "USDT" is the standard poisoning tool, and if the
+        filter were ever ignored its rows would enter the trace as USDT.
         """
         if not isinstance(raw, dict):
             return None
         try:
             to_raw = raw.get("to") or ""
             if not to_raw:
+                return None
+            if expected_contract is not None and (
+                    normalize_address(str(raw.get("contractAddress") or "")) != normalize_address(expected_contract)):
+                logger.warning("Skipping token record from another contract: %r", str(raw.get("contractAddress"))[:66])
                 return None
             units = int(raw.get("value", "0") or "0")
             decimals = resolve_decimals(raw.get("tokenDecimal"), fallback_decimals)
@@ -851,7 +861,7 @@ class EtherscanClient:
         confirmation depth, a row above the confirmed head parses to None."""
         if self.contract_address:
             def parse(raw: dict[str, Any]) -> Transaction | None:
-                return Transaction.from_token_api(raw, self.token_decimals)
+                return Transaction.from_token_api(raw, self.token_decimals, expected_contract=self.contract_address)
         else:
             def parse(raw: dict[str, Any]) -> Transaction | None:
                 return Transaction.from_api(raw, internal=internal)

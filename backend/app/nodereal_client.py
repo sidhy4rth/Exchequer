@@ -402,6 +402,13 @@ class NoderealClient:
             to_raw = raw.get("to") or ""
             if not to_raw:
                 return None
+            # A token trace keeps only the traced contract's rows: a fake "USDT"
+            # (or a row with no contract) is dropped, whatever the filter did.
+            if self.contract_addresses and (
+                    normalize_address(str(raw.get("contractAddress") or "")) not in self.contract_addresses):
+                logger.warning("Skipping NodeReal transfer from another contract: %r",
+                               str(raw.get("contractAddress"))[:66])
+                return None
 
             raw_value = raw.get("value") or "0x0"
             units = int(raw_value, 16) if isinstance(raw_value, str) else int(raw_value)
