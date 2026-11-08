@@ -270,6 +270,16 @@ describe('Watchlist on the home page', () => {
     expect(screen.getByText('Binance 14')).toBeInTheDocument()
   })
 
+  it('does not pin dust sent to an exchange: only 30 of it show, after the pinned cash-out', async () => {
+    const dust = Array.from({ length: 40 }, (_, i) => ({ ...alertRow(i + 1, 'exchange'), value: 0.000001, dust: true }))
+    listing([{ ...alertRow(99, 'exchange'), value: 25 }, ...dust])
+    inRouter(<Watchlist />)
+    const rows = await screen.findAllByText(/into an exchange/)
+    expect(rows).toHaveLength(31)
+    expect(screen.getByRole('button', { name: 'Show all 41' })).toBeInTheDocument()
+    expect(screen.getAllByText(/· dust/)).toHaveLength(30)
+  })
+
   it('offers Show all past 30 alerts', async () => {
     listing(Array.from({ length: 45 }, (_, i) => alertRow(i + 1, 'moved')))
     const user = userEvent.setup()

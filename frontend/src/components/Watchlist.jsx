@@ -16,7 +16,10 @@ const KIND = {
 }
 // Unread exchange and flagged alerts are pinned above the rest: however much
 // dust moved since, the alert a freeze request is sent on stays in view.
-const urgent = (a) => !a.read && (a.kind === 'exchange' || a.kind === 'risk')
+// Dust sent to an exchange or a flagged address (below the asset's dust
+// floor, `dust` from the server) is not pinned: a burst of it would bury
+// the real cash-out among the pins.
+const urgent = (a) => !a.read && !a.dust && (a.kind === 'exchange' || a.kind === 'risk')
 const SHOWN = 30
 const amount = (v) => Number(v).toLocaleString('en-US', { maximumFractionDigits: 6 })
 const short = (a) => (a && a.length > 20 ? `${a.slice(0, 10)}…${a.slice(-8)}` : a)
@@ -110,7 +113,7 @@ export default function Watchlist({ onCount } = {}) {
                     ? <span className="msg">{a.message}</span>
                     : <span className="msg">
                         {amount(a.value)} {a.asset} to <span className="mono">{plain(a.counterparty_label) || short(a.counterparty)}</span>
-                        <small> · {new Date(a.tx_time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC · {a.tx_url ? <a href={a.tx_url} target="_blank" rel="noopener noreferrer">transaction</a> : short(a.tx_hash)}</small>
+                        <small> · {new Date(a.tx_time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC · {a.tx_url ? <a href={a.tx_url} target="_blank" rel="noopener noreferrer">transaction</a> : short(a.tx_hash)}{a.dust ? ' · dust' : ''}</small>
                       </span>}
                   {a.kind === 'exchange' && a.exchange && a.case_id && (
                     logged[a.alert_id]
