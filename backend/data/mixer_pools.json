@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "Mixer pools and routers a label-store row may call a mixer and so end a trace at, besides the mixer entries of each chain's threat_labels*.json (which count too). A store mixer row for any other address is shown as a tag and the trace goes on past it: a name in a third-party list is not enough to cut a trail (ADR-0006). Read by app/label_store.pinned_mixers.",
-    "provenance": "The Tornado Cash pools the 5 Nov 2026 label store (label_store_2026-11-05c) held as Explorer tag via dawsbot/eth-labels @d9b21ae rows but threat_labels.json (dawsbot/eth-labels @14247ba) does not. Each name is that tag, without its '(OFAC-delisted Mar 2025)' note. Not re-checked on chain when added (8 Nov 2026, offline); re-check each on the explorer before relying on it.",
+    "provenance": "The Tornado Cash pools the 5 Nov 2026 label store (label_store_2026-11-05c) held as Explorer tag via dawsbot/eth-labels @d9b21ae rows but threat_labels.json (dawsbot/eth-labels @14247ba) does not. Each name is that tag, without its '(OFAC-delisted Mar 2025)' note. Checked on chain 8 Nov 2026 (keyless Ethereum RPC): each contract's token() and denomination() match its name (WBTC 0.1 and 1; cDAI 50,000 and 5,000,000).",
     "added": "2026-11-08",
     "rule": "Only a pool or entry point (label_rules.mixer_service), never governance, registry, token or vesting contracts; never an address app/never_flag.py names. Add an address only after checking it on the explorer.",
     "schema": "{chain: {address (lowercase): explorer tag}}"
