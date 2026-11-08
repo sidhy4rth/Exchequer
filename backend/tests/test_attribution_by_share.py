@@ -258,19 +258,83 @@ def trace_with_flows(monkeypatch):
     return run
 
 
-def test_value_recycled_through_an_exchange_counts_once(trace_with_flows):
+def _letter(r):
+    from app import request_letters
+    return " ".join(request_letters.draft("c1", r, "exchange").split())
+
+
+def test_value_recycled_through_an_exchange_never_hides_the_other_exchange(trace_with_flows):
     # 150 x 1 ETH into the attacker's own Kraken deposit, each paid back out by
-    # Kraken: 150 ETH on the aggregated edge, 1 ETH of real value. It used to
-    # take the case (share 0.60, High) from the 99 ETH that went to Binance.
+    # Kraken: 150 ETH on the aggregated edge, perhaps 1 ETH of real value. The
+    # round trips are not netted off Kraken's share any more (a withdrawal can
+    # be another customer's money: see the D/E tests below), so Kraken may lead,
+    # but Binance -- where the 99 ETH went -- stays a material exchange named
+    # in the letter, the case warns that Kraken's share came back round, and
+    # the band is at most moderate because counted once Binance would lead.
     loop, back = _recycling_loop()
     r = trace_with_flows(BASE + loop, inflows=back)
-    assert r["exchange"] == "Binance" and r["exchange_address"] == BINANCE_14
-    assert r["materiality"]["primary_share"] > 0.9
-    kraken = [m for m in r["matches"] if m["exchange"] == "Kraken"]
-    assert kraken and all(m["share"] < 0.1 and not m["material"] for m in kraken)
+    binance = next(m for m in r["matches"] if m["address"] == BINANCE_14)
+    assert binance["material"] is True and binance["share"] > 0.3
+    assert "Binance" in r["materiality"]["material_exchanges"] and r["materiality"]["multiple_exchanges"]
     recycled = r["materiality"]["recycled"]
     assert recycled["by_exchange"]["Kraken"] == pytest.approx(150.0)
-    assert any("Kraken" in w and "back" in w for w in r["warnings"])
+    assert recycled["lead_if_netted"] == "Binance"
+    assert any("Kraken" in w and "back" in w and "Binance" in w for w in r["warnings"])
+    assert r["confidence_detail"]["band"] in ("moderate", "low", "very low")
+    letter = _letter(r)
+    if r["exchange"] == "Kraken":
+        assert "also reached" in letter and "Binance" in letter and BINANCE_14 in letter
+
+
+def test_a_loop_big_enough_to_dwarf_the_cash_out_still_keeps_it_material(trace_with_flows):
+    # 1,000 rounds: on the chain's figures Binance's 99 ETH is under 10% of what
+    # the wallet sent, so it would not be material at all. Counted once it is
+    # nearly everything, so it stays material and in the letter.
+    loop, back = _recycling_loop(1000)
+    r = trace_with_flows(BASE + loop, inflows=back)
+    binance = next(m for m in r["matches"] if m["address"] == BINANCE_14)
+    assert binance["material"] is True
+    assert "Binance" in r["materiality"]["material_exchanges"]
+    letter = _letter(r)
+    assert "Binance" in letter and BINANCE_14 in letter
+
+
+BD = addr("bd0d")  # the scammer's Binance deposit address (inferred: two sweeps)
+
+
+def _cash_out_then_a_binance_withdrawal(inferred):
+    """The victim's 99 ETH goes to Binance (straight to Binance 14, or through
+    the scammer's deposit address BD); then a Binance hot wallet pays the
+    reported wallet 99 ETH -- any customer's withdrawal looks like that -- and
+    the wallet sends 99 ETH through two hops to Kraken."""
+    if inferred:
+        into = [_tx(SEED, BD, 99.0, T + 1), _tx(BD, BINANCE_14, 50.0, T + 2), _tx(BD, BINANCE_14, 49.0, T + 3)]
+    else:
+        into = [_tx(SEED, BINANCE_14, 99.0, T + 1)]
+    out = [_tx(SEED, W1, 99.0, T + 10), _tx(W1, W2, 99.0, T + 20), _tx(W2, KRAKEN_1, 99.0, T + 30)]
+    return into + out, [_tx(BINANCE_14, SEED, 99.0, T + 5)]
+
+
+@pytest.mark.parametrize("inferred", [False, True], ids=["D direct to Binance 14", "E via a deposit address"])
+def test_a_withdrawal_from_the_same_exchange_never_hides_where_the_money_went(trace_with_flows, inferred):
+    # 8 Nov re-check (p_recycle2 D/E): the round-trip netting treated that
+    # withdrawal as the victim's coins coming back, netted Binance to a 0 share
+    # and named Kraken, with no word of Binance in the letter. By FIFO and by
+    # pro-rata the victim's coins are at Binance. The case now names Binance,
+    # as it does without the withdrawal, and Kraken is named as also reached.
+    history, back = _cash_out_then_a_binance_withdrawal(inferred)
+    control = trace_with_flows(history)
+    r = trace_with_flows(history, inflows=back)
+    assert control["exchange"] == "Binance"
+    assert r["exchange"] == "Binance" and r["exchange_address"] == control["exchange_address"]
+    assert r["materiality"]["primary_share"] == pytest.approx(control["materiality"]["primary_share"])
+    assert set(r["materiality"]["material_exchanges"]) == {"Binance", "Kraken"}
+    assert all(m["share"] > 0.4 for m in r["matches"] if m["exchange"] == "Binance")
+    letter = _letter(r)
+    assert "Binance" in letter and "also reached" in letter and "Kraken" in letter
+    # The withdrawal is said, not silently used.
+    assert r["materiality"]["recycled"]["by_exchange"] == {"Binance": 99.0}
+    assert any("Binance" in w and "back" in w for w in r["warnings"])
 
 
 def test_recycling_that_cannot_be_seen_is_at_least_named_in_the_letter_and_report(trace):

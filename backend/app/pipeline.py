@@ -201,8 +201,8 @@ def _trace_path(
     runs from the exchange down to the reported address rather than being
     printed backwards. The same route the score was computed along, so the
     report and the confidence working never describe two different paths:
-    `route_graph` is the graph the score measured (round trips netted; see
-    _exchange_round_trips), while the amounts printed are the chain's own.
+    `route_graph` is the graph the score measured when that differs from
+    the chain's figures, while the amounts printed are the chain's own.
     """
     source, destination = (seed, target) if direction == OUTGOING else (target, seed)
     try:
@@ -532,8 +532,14 @@ def _exchange_round_trips(graph: nx.DiGraph, seed: str, matches: list, flows_bet
     and each inflow from an address labelled as an exchange takes back what
     the wallet had paid that exchange before it -- one pass in order, as
     prorata._recycled does at each hop. Only direct payments (the wallet's own
-    edge to a matched address) are netted; a round trip through other wallets
+    edge to a matched address) are matched; a round trip through other wallets
     is not seen. Returns None when there is nothing to check; never raises.
+
+    What this finds never lowers an exchange's share (see _note_round_trips):
+    an inflow from an address labelled with the exchange's name may be another
+    customer's withdrawal, and netting on that once hid the exchange that held
+    the victim's coins. `netted_edges` is the graph as it would read if it
+    were all the same coins, used only to see what that would change.
     """
     direct = {m.address: m.exchange for m in matches if m.address != seed and graph.has_edge(seed, m.address)}
     if not direct or flows_between is None:
@@ -587,14 +593,56 @@ def _exchange_round_trips(graph: nx.DiGraph, seed: str, matches: list, flows_bet
 
 def _netted_graph(graph: nx.DiGraph, round_trips: dict[str, Any] | None) -> nx.DiGraph:
     """The graph with the reported wallet's round-tripped value taken off its
-    edges into each exchange, for measuring shares; the case's own graph keeps
-    what the chain shows."""
+    edges into each exchange: what the shares would be if it were all the same
+    coins (_note_round_trips). Never the graph a case is attributed on."""
     if not round_trips or not round_trips.get("netted_edges"):
         return graph
     netted = graph.copy()
     for (u, v), value in round_trips["netted_edges"].items():
         netted.edges[u, v]["value_native"] = value
     return netted
+
+
+def _note_round_trips(warnings: list[str], materiality: dict[str, Any], round_trips: dict[str, Any],
+                      matches: list, shares: dict[str, float], netted_shares: dict[str, float],
+                      lead: Any, asset_symbol: str) -> None:
+    """What value that came back from an exchange changes in a case: never a share.
+
+    The rule (8 Nov re-check, r1-trace-engine-0): which exchange the case names
+    is read on the chain's own figures. A payment from an exchange's wallet to
+    the reported wallet may be its own coins coming back (a deposit-withdraw
+    loop that inflates one edge) or a withdrawal from another customer's
+    account; the chain does not say which. Netting it away once took the
+    exchange that held the victim's coins out of the case altogether. So the
+    round trips only ever add: every exchange material with them counted once
+    (`netted_shares`) is material too, so the letter names it as also reached;
+    the case says what came back; and when counting it once would put another
+    exchange first, `band_cap` holds confidence at moderate."""
+    threshold = materiality["threshold"]
+    netted_material = sorted(m.address for m in matches if netted_shares.get(m.address, 0.0) >= threshold)
+    materiality["material_if_netted"] = netted_material
+    material = set(materiality["material_exchanges"]) | {m.exchange for m in matches if m.address in netted_material}
+    materiality["material_exchanges"] = sorted(material)
+    materiality["multiple_exchanges"] = len(material) > 1
+    alt = ExchangeMatcher.primary_match(matches, netted_shares)
+    if_netted: dict[str, float] = {}
+    for m in matches:
+        if_netted[m.exchange] = max(if_netted.get(m.exchange, 0.0), netted_shares.get(m.address, 0.0))
+    recycled = materiality["recycled"]
+    recycled["lead_if_netted"] = alt.exchange if alt else None
+    recycled["shares_if_netted"] = {e: round(v, 4) for e, v in sorted(if_netted.items())}
+    other = alt.exchange if alt is not None and lead is not None and alt.exchange != lead.exchange else None
+    if other:
+        materiality["band_cap"] = "moderate"
+    warnings.append(
+        f"The reported address got back {round_trips['total']:g} {asset_symbol} from "
+        + ", ".join(f"{e} ({v:g})" for e, v in round_trips["by_exchange"].items())
+        + " after paying it in directly. That can be the same coins going round or a withdrawal of someone "
+        "else's money, so no exchange's share is reduced for it"
+        + (f". Counted once, {other} would carry the larger share: it is named as also reached and "
+           "confidence is at most moderate" if other else "")
+        + ("" if round_trips["complete"] else " (its inflows could not all be read, so more may have come back)")
+        + ".")
 
 
 def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
@@ -842,30 +890,29 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             # Follow the money: each match's share of what the reported address
             # sent picks the case's exchange, not its hop count alone (one dust
             # transfer used to name any exchange, or an innocent deposit address).
-            # Coins the reported wallet paid straight into an exchange and got
-            # back from it are counted once (8 Nov check): 150 deposits of the
-            # same 1 ETH are 1 ETH of value, not 150. `measured` is the graph
-            # with them netted; shares, the route and the score read it.
+            # Shares are measured on the chain's own figures. Value that came back
+            # to the reported wallet from an exchange it had paid directly is
+            # read (_exchange_round_trips) but never taken off that exchange's
+            # share (8 Nov re-check): a withdrawal from an exchange can be another
+            # customer's money, and netting it away named Kraken with no word of
+            # Binance, where the victim's coins were. Counted once instead, it can
+            # only add: an exchange material with the round trips netted is
+            # material too (named as also reached), the case warns, and when
+            # netting would put another exchange first the band is at most
+            # moderate (scoring.score_case).
             round_trips = (_exchange_round_trips(result.graph, seed, matches + inferred,
                                                  getattr(client, "get_flows_between", None), matcher.lookup)
                            if direction == OUTGOING else None)
-            measured = _netted_graph(result.graph, round_trips)
+            measured = result.graph
             materiality, shares = _materiality(measured, seed, direction, matches + inferred,
                                                result.untraced, intake, seed_amount, seed_amount_basis)
             materiality["recycled"] = ({k: v for k, v in round_trips.items() if k != "netted_edges"}
                                        if round_trips else None)
+            netted_shares = None
             if round_trips and round_trips["total"] > 0:
-                result.warnings.append(
-                    f"The reported address got back {round_trips['total']:g} {asset_symbol} from "
-                    + ", ".join(f"{e} ({v:g})" for e, v in round_trips["by_exchange"].items())
-                    + " out of what it had paid in directly: the same coins going round, so they are "
-                    "counted once when measuring each exchange's share"
-                    + ("" if round_trips["complete"] else " (its inflows could not all be read, so this "
-                       "may be less than went round)") + ".")
-            elif round_trips and not round_trips["checked"]:
-                result.warnings.append(
-                    "Whether the reported address got back what it paid into an exchange could not be "
-                    "read, so value it moved round in and out of one may be counted more than once.")
+                _, netted_shares = _materiality(_netted_graph(result.graph, round_trips), seed, direction,
+                                                matches + inferred, result.untraced, intake,
+                                                seed_amount, seed_amount_basis)
             # Each match's hop count is its widest route's, the route the score,
             # the report and the letter are read along (8 Nov check).
             route_hops = materiality["hops"]
@@ -878,6 +925,13 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             if lead is not None:
                 materiality["primary_share"] = round(shares.get(lead.address, 0.0), 4)
                 materiality["primary_reach"] = round(materiality["reach"].get(lead.address, 0.0), 6)
+            if round_trips and round_trips["total"] > 0:
+                _note_round_trips(result.warnings, materiality, round_trips, matches + inferred,
+                                  shares, netted_shares, lead, asset_symbol)
+            elif round_trips and not round_trips["checked"]:
+                result.warnings.append(
+                    "Whether the reported address got back what it paid into an exchange could not be "
+                    "read, so value it moved round in and out of one may be counted more than once.")
             if direction == OUTGOING and lead is not None and lead.address != seed:
                 try:
                     lead_path = principal_path(measured, seed, lead.address)
@@ -1012,7 +1066,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         graph, PatternConfig(native_symbol=asset_symbol), matcher.is_exchange
     )
     confidence = score_case(
-        measured,  # the graph shares were measured on: round trips netted
+        measured,  # the graph shares were measured on
         seed,
         primary,
         findings,
@@ -1206,12 +1260,13 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         "matches": [{**m.to_dict(),
                      "share": round(shares.get(m.address, 0.0), 4),
                      "reach_native": round(materiality["reach"].get(m.address, 0.0), 6),
-                     "material": shares.get(m.address, 0.0) >= materiality["threshold"]}
+                     "material": (shares.get(m.address, 0.0) >= materiality["threshold"]
+                                  or m.address in materiality.get("material_if_netted", ()))}
                     for m in matches],
         # How much of what the reported address sent reached the attributed
         # exchange, and on what basis; also which exchanges received a
         # material share (more than one: a letter may be needed to each).
-        "materiality": {k: v for k, v in materiality.items() if k not in ("reach", "hops")},
+        "materiality": {k: v for k, v in materiality.items() if k not in ("reach", "hops", "material_if_netted")},
         # Sanctions / mixer screening. `risk_flags` mirrors `flags` so the
         # frontend can render both the same way; `risk_notes` are report-ready
         # sentences so neither the UI nor the report has to re-phrase them.

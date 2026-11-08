@@ -582,16 +582,28 @@ def score_case(
     ]
     score = round(sum(c.contribution for c in components), 4)
     band = _band(score)
-    capped_band = _materiality_cap(band, materiality)
+    share_band = _materiality_cap(band, materiality)
+    # Value that went round through an exchange never lowers a share; when
+    # counting it once would put another exchange first, the case is at most
+    # moderate (pipeline._note_round_trips).
+    capped_band = _lower_band(share_band, (materiality or {}).get("band_cap"))
     material_caveat = []
     uncapped = None
-    if capped_band != band and materiality:
-        material_caveat = [
+    if share_band != band and materiality:
+        material_caveat.append(
             f"Only {materiality['primary_share'] * 100:.1f}% of what the reported address sent "
             f"(about {materiality.get('primary_reach', 0):g} of {materiality.get('denominator', 0):g} "
-            f"{native_symbol}) reached this exchange, so confidence is capped at {capped_band}: the rest of "
+            f"{native_symbol}) reached this exchange, so confidence is capped at {share_band}: the rest of "
             "the funds went elsewhere."
-        ]
+        )
+    if capped_band != share_band and materiality:
+        recycled = materiality.get("recycled") or {}
+        material_caveat.append(
+            f"The reported address got value back from {', '.join(recycled.get('by_exchange') or {})} after "
+            f"paying it in; counted once as the same coins, {recycled.get('lead_if_netted')} would carry the "
+            f"larger share, so confidence is capped at {capped_band} and that exchange is named as also reached."
+        )
+    if capped_band != band and materiality:
         band = capped_band
         # The number goes down with the band (8 Nov check): it used to stay
         # 1.0 under a "low" band, and every reader banding the number said High.
@@ -641,6 +653,13 @@ def _materiality_cap(band: str, materiality: dict[str, Any] | None) -> str:
     share = materiality["primary_share"]
     cap = ("low" if share < materiality.get("threshold", 0.10)
            else "moderate" if share < materiality.get("majority", 0.50) else "high")
+    return _lower_band(band, cap)
+
+
+def _lower_band(band: str, cap: str | None) -> str:
+    """`band`, or `cap` if that is lower."""
+    if cap not in _BAND_ORDER:
+        return band
     return band if _BAND_ORDER.index(band) <= _BAND_ORDER.index(cap) else cap
 
 
