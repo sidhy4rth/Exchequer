@@ -5,10 +5,10 @@
     "verification_note": "This establishes that the U.S. Treasury published the address against the named designated entity as of the publication date. It does NOT establish that a counterparty who received funds from it is culpable, nor that the designation has force in Indian law. It is a lead and an escalation trigger, not a verdict.",
     "category_note": "Every address in this file is sanctioned. 'mixer' marks the subset that are tumblers, which is Exchequer's own editorial classification of the designated entity's name, and which additionally stops a trace: a mixer pays out from a commingled pool, so transfers leaving it have no established link to the deposit that arrived.",
     "chain": "ethereum",
-    "ofac_publish_date": "09/18/2026",
-    "last_reviewed": "2026-09-22",
+    "ofac_publish_date": "11/06/2026",
+    "last_reviewed": "2026-11-08",
     "counts": {
-      "sanctioned": 124,
+      "sanctioned": 127,
       "mixer": 0
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_ofac_addresses",
@@ -19,7 +19,7 @@
       "category": "sanctioned",
       "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
       "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -29,7 +29,7 @@
       "category": "sanctioned",
       "entity": "Armando de Jesus OJEDA AVILES",
       "label": "Armando de Jesus OJEDA AVILES",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059",
         "SDGT"
@@ -40,7 +40,7 @@
       "category": "sanctioned",
       "entity": "Alex Adrianus Martinus PEIJNENBURG",
       "label": "Alex Adrianus Martinus PEIJNENBURG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -50,7 +50,7 @@
       "category": "sanctioned",
       "entity": "LAZARUS GROUP",
       "label": "LAZARUS GROUP",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -60,7 +60,7 @@
       "category": "sanctioned",
       "entity": "Alex Adrianus Martinus PEIJNENBURG",
       "label": "Alex Adrianus Martinus PEIJNENBURG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -70,7 +70,7 @@
       "category": "sanctioned",
       "entity": "CRYPTEX",
       "label": "CRYPTEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "RUSSIA-EO14024"
@@ -81,7 +81,7 @@
       "category": "sanctioned",
       "entity": "LAZARUS GROUP",
       "label": "LAZARUS GROUP",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -91,7 +91,7 @@
       "category": "sanctioned",
       "entity": "Alex Adrianus Martinus PEIJNENBURG",
       "label": "Alex Adrianus Martinus PEIJNENBURG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -101,9 +101,19 @@
       "category": "sanctioned",
       "entity": "OLD VECTOR LLC",
       "label": "OLD VECTOR LLC",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x12ea80238c7d805d003ce793594e92d84a6f4e8d": {
+      "category": "sanctioned",
+      "entity": "Ilya Aleksandrovich BOYKOV",
+      "label": "Ilya Aleksandrovich BOYKOV",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "DPRK2"
       ],
       "ofac_id_type": "Digital Currency Address - ETH"
     },
@@ -111,7 +121,7 @@
       "category": "sanctioned",
       "entity": "Armando de Jesus OJEDA AVILES",
       "label": "Armando de Jesus OJEDA AVILES",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059",
         "SDGT"
@@ -122,7 +132,7 @@
       "category": "sanctioned",
       "entity": "GAZA NOW",
       "label": "GAZA NOW (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -132,7 +142,7 @@
       "category": "sanctioned",
       "entity": "Matthew Simon GRIMM",
       "label": "Matthew Simon GRIMM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -142,7 +152,7 @@
       "category": "sanctioned",
       "entity": "Khadzhi Murat Dalgatovich MAGOMEDOV",
       "label": "Khadzhi Murat Dalgatovich MAGOMEDOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -151,18 +161,18 @@
     "0x19aa5fe80d33a56d56c78e82ea5e50e5d80b4dff": {
       "category": "sanctioned",
       "entity": "SUEX OTC, S.R.O.",
-      "label": "SUEX OTC, S.R.O.",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "label": "SUEX OTC, S.R.O. (USDT)",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
-      "ofac_id_type": "Digital Currency Address - ETH"
+      "ofac_id_type": "Digital Currency Address - USDT"
     },
     "0x19f8f2b0915daa12a3f5c9cf01df9e24d53794f7": {
       "category": "sanctioned",
       "entity": "OKO DESIGN BUREAU",
       "label": "OKO DESIGN BUREAU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -172,7 +182,7 @@
       "category": "sanctioned",
       "entity": "Mojtaba GHAL'EH-KUHI",
       "label": "Mojtaba GHAL'EH-KUHI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -182,7 +192,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -193,7 +203,7 @@
       "category": "sanctioned",
       "entity": "Dmytro RASHEVSKYI",
       "label": "Dmytro RASHEVSKYI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -203,7 +213,7 @@
       "category": "sanctioned",
       "entity": "SECONDEYE SOLUTION",
       "label": "SECONDEYE SOLUTION",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "ELECTION-EO13848"
@@ -214,7 +224,7 @@
       "category": "sanctioned",
       "entity": "GAZA NOW",
       "label": "GAZA NOW",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -224,7 +234,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -235,7 +245,7 @@
       "category": "sanctioned",
       "entity": "FIRST VPN SERVICE",
       "label": "FIRST VPN SERVICE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -245,7 +255,7 @@
       "category": "sanctioned",
       "entity": "Dmytro RASHEVSKYI",
       "label": "Dmytro RASHEVSKYI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -254,18 +264,18 @@
     "0x2f389ce8bd8ff92de3402ffce4691d17fc4f6535": {
       "category": "sanctioned",
       "entity": "SUEX OTC, S.R.O.",
-      "label": "SUEX OTC, S.R.O.",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "label": "SUEX OTC, S.R.O. (USDT)",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
-      "ofac_id_type": "Digital Currency Address - ETH"
+      "ofac_id_type": "Digital Currency Address - USDT"
     },
     "0x308ed4b7b49797e1a98d3818bff6fe5385410370": {
       "category": "sanctioned",
       "entity": "SUEX OTC, S.R.O.",
       "label": "SUEX OTC, S.R.O.",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -275,7 +285,7 @@
       "category": "sanctioned",
       "entity": "Armando de Jesus OJEDA AVILES",
       "label": "Armando de Jesus OJEDA AVILES",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059",
         "SDGT"
@@ -286,7 +296,7 @@
       "category": "sanctioned",
       "entity": "LAZARUS GROUP",
       "label": "LAZARUS GROUP",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -296,7 +306,7 @@
       "category": "sanctioned",
       "entity": "John Desmond HANAFIN",
       "label": "John Desmond HANAFIN (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -306,7 +316,7 @@
       "category": "sanctioned",
       "entity": "Jonatan ZIMENKOV",
       "label": "Jonatan ZIMENKOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -316,7 +326,7 @@
       "category": "sanctioned",
       "entity": "TASK FORCE RUSICH",
       "label": "TASK FORCE RUSICH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -326,7 +336,7 @@
       "category": "sanctioned",
       "entity": "SOUTHFRONT",
       "label": "SOUTHFRONT",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "ELECTION-EO13848",
@@ -338,7 +348,7 @@
       "category": "sanctioned",
       "entity": "LAZARUS GROUP",
       "label": "LAZARUS GROUP",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -348,7 +358,7 @@
       "category": "sanctioned",
       "entity": "LAZARUS GROUP",
       "label": "LAZARUS GROUP",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -358,7 +368,7 @@
       "category": "sanctioned",
       "entity": "Keyvan Fayyaz Gareh BLAGH",
       "label": "Keyvan Fayyaz Gareh BLAGH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -368,7 +378,7 @@
       "category": "sanctioned",
       "entity": "Roman SEMENOV",
       "label": "Roman SEMENOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -378,7 +388,7 @@
       "category": "sanctioned",
       "entity": "CHATEX",
       "label": "CHATEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -388,7 +398,7 @@
       "category": "sanctioned",
       "entity": "Armando de Jesus OJEDA AVILES",
       "label": "Armando de Jesus OJEDA AVILES",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059",
         "SDGT"
@@ -399,7 +409,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -409,7 +419,7 @@
       "category": "sanctioned",
       "entity": "Alex Adrianus Martinus PEIJNENBURG",
       "label": "Alex Adrianus Martinus PEIJNENBURG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -419,7 +429,7 @@
       "category": "sanctioned",
       "entity": "Xingbiao SHEN",
       "label": "Xingbiao SHEN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -429,7 +439,7 @@
       "category": "sanctioned",
       "entity": "Arash Estaki ALIVAND",
       "label": "Arash Estaki ALIVAND",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -440,7 +450,7 @@
       "category": "sanctioned",
       "entity": "LAZARUS GROUP",
       "label": "LAZARUS GROUP",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -450,7 +460,7 @@
       "category": "sanctioned",
       "entity": "CHATEX",
       "label": "CHATEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -460,7 +470,7 @@
       "category": "sanctioned",
       "entity": "Keyvan Fayyaz Gareh BLAGH",
       "label": "Keyvan Fayyaz Gareh BLAGH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -470,7 +480,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -481,7 +491,7 @@
       "category": "sanctioned",
       "entity": "Alex Adrianus Martinus PEIJNENBURG",
       "label": "Alex Adrianus Martinus PEIJNENBURG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -491,7 +501,7 @@
       "category": "sanctioned",
       "entity": "Roman SEMENOV",
       "label": "Roman SEMENOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -501,7 +511,7 @@
       "category": "sanctioned",
       "entity": "Rolan SOKOLOVSKI",
       "label": "Rolan SOKOLOVSKI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -511,7 +521,7 @@
       "category": "sanctioned",
       "entity": "Roman SEMENOV",
       "label": "Roman SEMENOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -521,7 +531,7 @@
       "category": "sanctioned",
       "entity": "CHATEX",
       "label": "CHATEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -531,7 +541,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -542,7 +552,7 @@
       "category": "sanctioned",
       "entity": "SHPS SHELBIT",
       "label": "SHPS SHELBIT",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -552,7 +562,7 @@
       "category": "sanctioned",
       "entity": "Roman SEMENOV",
       "label": "Roman SEMENOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -562,7 +572,7 @@
       "category": "sanctioned",
       "entity": "CHATEX",
       "label": "CHATEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -572,7 +582,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -583,7 +593,7 @@
       "category": "sanctioned",
       "entity": "SECONDEYE SOLUTION",
       "label": "SECONDEYE SOLUTION",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "ELECTION-EO13848"
@@ -594,9 +604,19 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0x761edd5e4546229a0bd35ae99b4d3d01cf4a3510": {
+      "category": "sanctioned",
+      "entity": "Vitold Viktorovich OBERTAS",
+      "label": "Vitold Viktorovich OBERTAS",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "DPRK2"
       ],
       "ofac_id_type": "Digital Currency Address - ETH"
     },
@@ -604,7 +624,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -614,7 +634,7 @@
       "category": "sanctioned",
       "entity": "Roman SEMENOV",
       "label": "Roman SEMENOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -624,7 +644,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -635,7 +655,7 @@
       "category": "sanctioned",
       "entity": "SECONDEYE SOLUTION",
       "label": "SECONDEYE SOLUTION",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "ELECTION-EO13848"
@@ -646,7 +666,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -657,7 +677,7 @@
       "category": "sanctioned",
       "entity": "SECONDEYE SOLUTION",
       "label": "SECONDEYE SOLUTION",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "ELECTION-EO13848"
@@ -668,7 +688,7 @@
       "category": "sanctioned",
       "entity": "Danil POTEKHIN",
       "label": "Danil POTEKHIN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -678,7 +698,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -689,7 +709,7 @@
       "category": "sanctioned",
       "entity": "Alex Adrianus Martinus PEIJNENBURG",
       "label": "Alex Adrianus Martinus PEIJNENBURG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -699,7 +719,7 @@
       "category": "sanctioned",
       "entity": "Anton Nikolaeyvich ANDREYEV",
       "label": "Anton Nikolaeyvich ANDREYEV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "ELECTION-EO13848"
@@ -710,7 +730,7 @@
       "category": "sanctioned",
       "entity": "Keyvan Fayyaz Gareh BLAGH",
       "label": "Keyvan Fayyaz Gareh BLAGH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -720,7 +740,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -731,7 +751,7 @@
       "category": "sanctioned",
       "entity": "Siavash KAYVANPOUR",
       "label": "Siavash KAYVANPOUR",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "IRGC"
@@ -742,7 +762,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -753,7 +773,7 @@
       "category": "sanctioned",
       "entity": "Artem Mikhaylovich LIFSHITS",
       "label": "Artem Mikhaylovich LIFSHITS",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ELECTION-EO13848",
         "CYBER2"
@@ -764,7 +784,7 @@
       "category": "sanctioned",
       "entity": "Roman SEMENOV",
       "label": "Roman SEMENOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -774,7 +794,7 @@
       "category": "sanctioned",
       "entity": "Song Guk YUN",
       "label": "Song Guk YUN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -784,7 +804,7 @@
       "category": "sanctioned",
       "entity": "Wei ZHANG",
       "label": "Wei ZHANG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -794,7 +814,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -805,7 +825,7 @@
       "category": "sanctioned",
       "entity": "Sang Man KIM",
       "label": "Sang Man KIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -815,7 +835,7 @@
       "category": "sanctioned",
       "entity": "VALERIAN LABS, INC.",
       "label": "VALERIAN LABS, INC.",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -825,7 +845,7 @@
       "category": "sanctioned",
       "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
       "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -835,7 +855,7 @@
       "category": "sanctioned",
       "entity": "Mario Alberto JIMENEZ CASTRO",
       "label": "Mario Alberto JIMENEZ CASTRO",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -845,7 +865,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -856,7 +876,7 @@
       "category": "sanctioned",
       "entity": "SOUTHFRONT",
       "label": "SOUTHFRONT",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "ELECTION-EO13848",
@@ -868,7 +888,7 @@
       "category": "sanctioned",
       "entity": "LAZARUS GROUP",
       "label": "LAZARUS GROUP",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -878,7 +898,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -889,7 +909,7 @@
       "category": "sanctioned",
       "entity": "Artem Mikhaylovich LIFSHITS",
       "label": "Artem Mikhaylovich LIFSHITS",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ELECTION-EO13848",
         "CYBER2"
@@ -900,7 +920,7 @@
       "category": "sanctioned",
       "entity": "Rodrigo ALARCON PALOMARES",
       "label": "Rodrigo ALARCON PALOMARES",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -910,7 +930,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -921,7 +941,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -932,7 +952,7 @@
       "category": "sanctioned",
       "entity": "Song Guk YUN",
       "label": "Song Guk YUN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -942,7 +962,7 @@
       "category": "sanctioned",
       "entity": "Sang Man KIM",
       "label": "Sang Man KIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -952,7 +972,7 @@
       "category": "sanctioned",
       "entity": "CRYPTO HOME DMCC",
       "label": "CRYPTO HOME DMCC",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -962,7 +982,7 @@
       "category": "sanctioned",
       "entity": "Keyvan Fayyaz Gareh BLAGH",
       "label": "Keyvan Fayyaz Gareh BLAGH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -972,7 +992,7 @@
       "category": "sanctioned",
       "entity": "Rolan SOKOLOVSKI",
       "label": "Rolan SOKOLOVSKI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -982,7 +1002,7 @@
       "category": "sanctioned",
       "entity": "TASK FORCE RUSICH",
       "label": "TASK FORCE RUSICH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -992,7 +1012,7 @@
       "category": "sanctioned",
       "entity": "CHATEX",
       "label": "CHATEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -1002,7 +1022,7 @@
       "category": "sanctioned",
       "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
       "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1012,7 +1032,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -1022,7 +1042,7 @@
       "category": "sanctioned",
       "entity": "Matthew Simon GRIMM",
       "label": "Matthew Simon GRIMM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -1032,7 +1052,7 @@
       "category": "sanctioned",
       "entity": "FUNNULL TECHNOLOGY INC",
       "label": "FUNNULL TECHNOLOGY INC",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER3"
       ],
@@ -1042,7 +1062,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -1053,7 +1073,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -1064,7 +1084,7 @@
       "category": "sanctioned",
       "entity": "Dmitrii KARASAVIDI",
       "label": "Dmitrii KARASAVIDI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -1074,7 +1094,7 @@
       "category": "sanctioned",
       "entity": "Alireza DERAKHSHAN",
       "label": "Alireza DERAKHSHAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -1085,7 +1105,7 @@
       "category": "sanctioned",
       "entity": "Roman SEMENOV",
       "label": "Roman SEMENOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -1095,7 +1115,7 @@
       "category": "sanctioned",
       "entity": "SHPS SHELBIT",
       "label": "SHPS SHELBIT",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -1105,7 +1125,7 @@
       "category": "sanctioned",
       "entity": "Yunhe WANG",
       "label": "Yunhe WANG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -1115,7 +1135,7 @@
       "category": "sanctioned",
       "entity": "Rolan SOKOLOVSKI",
       "label": "Rolan SOKOLOVSKI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -1125,10 +1145,20 @@
       "category": "sanctioned",
       "entity": "Arash Estaki ALIVAND",
       "label": "Arash Estaki ALIVAND",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - ETH"
+    },
+    "0xe4c9a7f68b1eba4508f54f07f7378847318dd1a3": {
+      "category": "sanctioned",
+      "entity": "Ki Hyok KIM",
+      "label": "Ki Hyok KIM",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "DPRK2"
       ],
       "ofac_id_type": "Digital Currency Address - ETH"
     },
@@ -1136,7 +1166,7 @@
       "category": "sanctioned",
       "entity": "SUEX OTC, S.R.O.",
       "label": "SUEX OTC, S.R.O.",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -1146,7 +1176,7 @@
       "category": "sanctioned",
       "entity": "GAZA NOW",
       "label": "GAZA NOW",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -1156,7 +1186,7 @@
       "category": "sanctioned",
       "entity": "Arman KAHZADIAN",
       "label": "Arman KAHZADIAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -1166,7 +1196,7 @@
       "category": "sanctioned",
       "entity": "Roman SEMENOV",
       "label": "Roman SEMENOV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -1176,7 +1206,7 @@
       "category": "sanctioned",
       "entity": "Arman KAHZADIAN",
       "label": "Arman KAHZADIAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -1186,7 +1216,7 @@
       "category": "sanctioned",
       "entity": "Alex Adrianus Martinus PEIJNENBURG",
       "label": "Alex Adrianus Martinus PEIJNENBURG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -1196,7 +1226,7 @@
       "category": "sanctioned",
       "entity": "Keyvan Fayyaz Gareh BLAGH",
       "label": "Keyvan Fayyaz Gareh BLAGH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -1206,7 +1236,7 @@
       "category": "sanctioned",
       "entity": "Armando de Jesus OJEDA AVILES",
       "label": "Armando de Jesus OJEDA AVILES",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059",
         "SDGT"
@@ -1217,7 +1247,7 @@
       "category": "sanctioned",
       "entity": "Ivan Gennadievich KONDRATIEV",
       "label": "Ivan Gennadievich KONDRATIEV",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -1227,7 +1257,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -1238,7 +1268,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -1249,7 +1279,7 @@
       "category": "sanctioned",
       "entity": "LAZARUS GROUP",
       "label": "LAZARUS GROUP",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK3"
       ],
@@ -1259,7 +1289,7 @@
       "category": "sanctioned",
       "entity": "Mingming WANG",
       "label": "Mingming WANG (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -1269,7 +1299,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -1279,7 +1309,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -1289,7 +1319,7 @@
       "category": "sanctioned",
       "entity": "Yevgeniy Igorevich POLYANIN",
       "label": "Yevgeniy Igorevich POLYANIN (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],

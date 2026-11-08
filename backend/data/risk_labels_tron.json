@@ -5,10 +5,10 @@
     "verification_note": "This establishes that the U.S. Treasury published the address against the named designated entity as of the publication date. It does NOT establish that a counterparty who received funds from it is culpable, nor that the designation has force in Indian law. It is a lead and an escalation trigger, not a verdict.",
     "category_note": "Every address in this file is sanctioned. 'mixer' marks the subset that are tumblers, which is Exchequer's own editorial classification of the designated entity's name, and which additionally stops a trace: a mixer pays out from a commingled pool, so transfers leaving it have no established link to the deposit that arrived.",
     "chain": "tron",
-    "ofac_publish_date": "09/18/2026",
-    "last_reviewed": "2026-09-22",
+    "ofac_publish_date": "11/06/2026",
+    "last_reviewed": "2026-11-08",
     "counts": {
-      "sanctioned": 334,
+      "sanctioned": 352,
       "mixer": 0
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_ofac_addresses",
@@ -19,7 +19,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -29,7 +29,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -39,7 +39,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -50,7 +50,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -61,7 +61,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -71,7 +71,7 @@
       "category": "sanctioned",
       "entity": "ZEDCEX EXCHANGE LTD",
       "label": "ZEDCEX EXCHANGE LTD",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN-EO13902",
         "SDGT",
@@ -83,7 +83,7 @@
       "category": "sanctioned",
       "entity": "GRINEX",
       "label": "GRINEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -93,7 +93,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -104,7 +104,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -115,7 +115,7 @@
       "category": "sanctioned",
       "entity": "Zaid Issam Ahmed AL-JEBOURI",
       "label": "Zaid Issam Ahmed AL-JEBOURI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -125,7 +125,7 @@
       "category": "sanctioned",
       "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
       "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN",
         "IFSR",
@@ -138,7 +138,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -148,7 +148,7 @@
       "category": "sanctioned",
       "entity": "Ryan James WEDDING",
       "label": "Ryan James WEDDING",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -158,7 +158,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -169,7 +169,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -180,7 +180,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -191,7 +191,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -202,17 +202,28 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
       "ofac_id_type": "Digital Currency Address - USDT"
     },
+    "TBEmt7kPSwAv6NJTYKNdBVW524bUfPwJpJ": {
+      "category": "sanctioned",
+      "entity": "Anthony Wuiliam HERNANDEZ GUERRERO",
+      "label": "Anthony Wuiliam HERNANDEZ GUERRERO",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "SDGT",
+        "TCO"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
     "TBEqQGTxXRWXXeqe7ZwmSB6hc5MMMMMMMM": {
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -222,7 +233,7 @@
       "category": "sanctioned",
       "entity": "Dmytro RASHEVSKYI",
       "label": "Dmytro RASHEVSKYI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -232,7 +243,7 @@
       "category": "sanctioned",
       "entity": "Yunhe WANG",
       "label": "Yunhe WANG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2"
       ],
@@ -242,7 +253,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -253,7 +264,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -263,7 +274,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -274,7 +285,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -284,7 +295,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -294,7 +305,7 @@
       "category": "sanctioned",
       "entity": "Miloud ABDERRAHMANE",
       "label": "Miloud ABDERRAHMANE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -304,7 +315,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -314,7 +325,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -324,7 +335,7 @@
       "category": "sanctioned",
       "entity": "Rolan SOKOLOVSKI",
       "label": "Rolan SOKOLOVSKI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -334,7 +345,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -345,7 +356,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -356,7 +367,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -367,7 +378,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -378,7 +389,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -389,7 +400,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -399,7 +410,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -410,7 +421,7 @@
       "category": "sanctioned",
       "entity": "ANSARALLAH",
       "label": "ANSARALLAH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "FTO"
@@ -421,7 +432,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -431,7 +442,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -442,7 +453,7 @@
       "category": "sanctioned",
       "entity": "GRINEX",
       "label": "GRINEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -452,7 +463,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -462,7 +473,7 @@
       "category": "sanctioned",
       "entity": "ZEDCEX EXCHANGE LTD",
       "label": "ZEDCEX EXCHANGE LTD",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN-EO13902",
         "SDGT",
@@ -474,7 +485,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -485,7 +496,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -496,7 +507,7 @@
       "category": "sanctioned",
       "entity": "OLD VECTOR LLC",
       "label": "OLD VECTOR LLC",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -506,10 +517,31 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCUmMCHQEbFFdGvfdg2LeS64QfzUKP2AgW": {
+      "category": "sanctioned",
+      "entity": "Eric Gabriel CARDENAS ARZOLA",
+      "label": "Eric Gabriel CARDENAS ARZOLA",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "SDGT",
+        "TCO"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCV4qdpTxoMyqkn7sSPeRrXmhH5JFxMvmT": {
+      "category": "sanctioned",
+      "entity": "Vitold Viktorovich OBERTAS",
+      "label": "Vitold Viktorovich OBERTAS",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "DPRK2"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -517,10 +549,21 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCifMAMwst3oEJx8GaNfqZw75dkFUa8vjG": {
+      "category": "sanctioned",
+      "entity": "Carlos Javier MARTINEZ ARMENTA",
+      "label": "Carlos Javier MARTINEZ ARMENTA",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "SDGT",
+        "TCO"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -528,7 +571,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -539,7 +582,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -550,7 +593,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -560,10 +603,20 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TCreRMzGspdHNEkqkasejS6xTzqXNkYJJZ": {
+      "category": "sanctioned",
+      "entity": "CCC INC",
+      "label": "CCC INC",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "IRAN-EO13902"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -571,7 +624,7 @@
       "category": "sanctioned",
       "entity": "Rolan SOKOLOVSKI",
       "label": "Rolan SOKOLOVSKI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -581,7 +634,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -592,7 +645,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -603,7 +656,7 @@
       "category": "sanctioned",
       "entity": "ZEDCEX EXCHANGE LTD",
       "label": "ZEDCEX EXCHANGE LTD",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN-EO13902",
         "SDGT",
@@ -615,7 +668,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -626,7 +679,7 @@
       "category": "sanctioned",
       "entity": "Miloud ABDERRAHMANE",
       "label": "Miloud ABDERRAHMANE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -636,7 +689,7 @@
       "category": "sanctioned",
       "entity": "Sadiq Abbas Habib SAYYED",
       "label": "Sadiq Abbas Habib SAYYED",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -646,7 +699,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -657,7 +710,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -667,7 +720,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -678,7 +731,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -688,7 +741,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -699,7 +752,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -710,7 +763,7 @@
       "category": "sanctioned",
       "entity": "Elena CHIRKINYAN",
       "label": "Elena CHIRKINYAN (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -720,7 +773,7 @@
       "category": "sanctioned",
       "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
       "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -730,7 +783,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -741,7 +794,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -752,7 +805,7 @@
       "category": "sanctioned",
       "entity": "ANSARALLAH",
       "label": "ANSARALLAH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "FTO"
@@ -763,7 +816,7 @@
       "category": "sanctioned",
       "entity": "ANSARALLAH",
       "label": "ANSARALLAH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "FTO"
@@ -774,10 +827,21 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TDxZ1XTZCmqkJJW2eJT362z6omRchJyGBX": {
+      "category": "sanctioned",
+      "entity": "Oscar Leonardo MARTINEZ PIRONA",
+      "label": "Oscar Leonardo MARTINEZ PIRONA",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "SDGT",
+        "TCO"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -785,7 +849,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -795,7 +859,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -806,7 +870,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -817,7 +881,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -828,7 +892,7 @@
       "category": "sanctioned",
       "entity": "Xingbiao SHEN",
       "label": "Xingbiao SHEN (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -838,7 +902,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -849,7 +913,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -859,7 +923,7 @@
       "category": "sanctioned",
       "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
       "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -869,7 +933,7 @@
       "category": "sanctioned",
       "entity": "Ilya Andreevich GAMBASHIDZE",
       "label": "Ilya Andreevich GAMBASHIDZE (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -879,7 +943,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -890,7 +954,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -901,7 +965,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -912,7 +976,7 @@
       "category": "sanctioned",
       "entity": "GRINEX",
       "label": "GRINEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -922,7 +986,7 @@
       "category": "sanctioned",
       "entity": "Behzad MESRI",
       "label": "Behzad MESRI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "HRIT-IR"
@@ -933,7 +997,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -944,7 +1008,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -954,7 +1018,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -964,7 +1028,7 @@
       "category": "sanctioned",
       "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
       "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -975,7 +1039,7 @@
       "category": "sanctioned",
       "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
       "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN",
         "IFSR",
@@ -988,7 +1052,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -999,7 +1063,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1009,7 +1073,7 @@
       "category": "sanctioned",
       "entity": "OKO DESIGN BUREAU",
       "label": "OKO DESIGN BUREAU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -1019,7 +1083,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1030,10 +1094,20 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TFksjBcHPYqgAax2USheQuaT1ydRKyZRdg": {
+      "category": "sanctioned",
+      "entity": "Vitold Viktorovich OBERTAS",
+      "label": "Vitold Viktorovich OBERTAS",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "DPRK2"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -1041,7 +1115,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1052,7 +1126,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1062,7 +1136,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1073,7 +1147,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1083,7 +1157,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -1094,7 +1168,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1104,7 +1178,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1114,7 +1188,7 @@
       "category": "sanctioned",
       "entity": "GAZA NOW",
       "label": "GAZA NOW (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -1124,7 +1198,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1134,7 +1208,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1145,7 +1219,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1155,7 +1229,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1166,7 +1240,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1176,7 +1250,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1186,7 +1260,7 @@
       "category": "sanctioned",
       "entity": "ANSARALLAH",
       "label": "ANSARALLAH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "FTO"
@@ -1197,7 +1271,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -1207,7 +1281,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1217,7 +1291,7 @@
       "category": "sanctioned",
       "entity": "GRINEX",
       "label": "GRINEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -1227,7 +1301,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1237,7 +1311,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1247,7 +1321,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1257,7 +1331,7 @@
       "category": "sanctioned",
       "entity": "Zaid Issam Ahmed AL-JEBOURI",
       "label": "Zaid Issam Ahmed AL-JEBOURI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -1267,7 +1341,7 @@
       "category": "sanctioned",
       "entity": "ZEDCEX EXCHANGE LTD",
       "label": "ZEDCEX EXCHANGE LTD",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN-EO13902",
         "SDGT",
@@ -1279,7 +1353,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1289,7 +1363,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1299,7 +1373,7 @@
       "category": "sanctioned",
       "entity": "GAZA NOW",
       "label": "GAZA NOW (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -1309,7 +1383,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1319,7 +1393,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1329,7 +1403,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1339,7 +1413,7 @@
       "category": "sanctioned",
       "entity": "Zaid Issam Ahmed AL-JEBOURI",
       "label": "Zaid Issam Ahmed AL-JEBOURI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -1349,7 +1423,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1360,17 +1434,27 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
       "ofac_id_type": "Digital Currency Address - USDT"
     },
+    "THauYJJEaFGLpEknoKnYmXmT5TCeQGKjDE": {
+      "category": "sanctioned",
+      "entity": "1380079 BC LTD",
+      "label": "1380079 BC LTD",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "IRAN-EO13902"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
     "THfLaNMBAMz7xXnHoz5BkRMmrwuHKqfAfR": {
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1381,7 +1465,7 @@
       "category": "sanctioned",
       "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
       "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -1392,7 +1476,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1402,7 +1486,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1412,10 +1496,21 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "THwbVuBBb26abe5TrAsYUpYz9mhWnBppdz": {
+      "category": "sanctioned",
+      "entity": "Jose Dario GALEANO BAZURTO",
+      "label": "Jose Dario GALEANO BAZURTO",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "SDGT",
+        "TCO"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -1423,7 +1518,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1433,7 +1528,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1443,7 +1538,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1453,7 +1548,7 @@
       "category": "sanctioned",
       "entity": "Almpertos TSORIS",
       "label": "Almpertos TSORIS (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN-EO13902"
       ],
@@ -1463,7 +1558,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1474,10 +1569,30 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TJHZswisiMgjioAVpmpMSWXCeQGCPjcTMK": {
+      "category": "sanctioned",
+      "entity": "DIVERSE TRADE INC",
+      "label": "DIVERSE TRADE INC",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "IRAN-EO13902"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TJT3JZKJWVHVkKRKSmWmg5UYHhAqBM7mfP": {
+      "category": "sanctioned",
+      "entity": "1380079 BC LTD",
+      "label": "1380079 BC LTD",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "IRAN-EO13902"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -1485,7 +1600,7 @@
       "category": "sanctioned",
       "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
       "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN",
         "IFSR",
@@ -1494,11 +1609,22 @@
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
+    "TJjRAn9kLiyh8h6gjBjaYjkfDkskgZfyW9": {
+      "category": "sanctioned",
+      "entity": "Anibal Alexander CANELON AGUIRRE",
+      "label": "Anibal Alexander CANELON AGUIRRE",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "SDGT",
+        "TCO"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
     "TJkBr9TZ1xBeJoF7RNWqyEMbYqVJ6fXXHR": {
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -1509,7 +1635,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -1519,7 +1645,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1529,7 +1655,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1540,7 +1666,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1550,7 +1676,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1561,7 +1687,7 @@
       "category": "sanctioned",
       "entity": "GRINEX",
       "label": "GRINEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -1571,7 +1697,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1582,7 +1708,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1593,7 +1719,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1604,7 +1730,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1615,7 +1741,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1625,7 +1751,7 @@
       "category": "sanctioned",
       "entity": "OBSHCHESTVO S OGRANICHENNOI OTVETSTVENNOSTYU KONSTRUKTORSKOE BYURO VOSTOK",
       "label": "OBSHCHESTVO S OGRANICHENNOI OTVETSTVENNOSTYU KONSTRUKTORSKOE BYURO VOSTOK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -1635,7 +1761,7 @@
       "category": "sanctioned",
       "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
       "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -1646,7 +1772,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1656,7 +1782,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1667,7 +1793,7 @@
       "category": "sanctioned",
       "entity": "Zaid Issam Ahmed AL-JEBOURI",
       "label": "Zaid Issam Ahmed AL-JEBOURI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -1677,7 +1803,7 @@
       "category": "sanctioned",
       "entity": "ZEDCEX EXCHANGE LTD",
       "label": "ZEDCEX EXCHANGE LTD",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN-EO13902",
         "SDGT",
@@ -1685,11 +1811,21 @@
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
+    "TLyRLCNwBhaXkYak1bTFUYTj72crbgN5Vy": {
+      "category": "sanctioned",
+      "entity": "1380079 BC LTD",
+      "label": "1380079 BC LTD",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "IRAN-EO13902"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
     "TM6Kix9wH8cYQ4rLpFifsQ4ddH3rPX3f8p": {
       "category": "sanctioned",
       "entity": "ANSARALLAH",
       "label": "ANSARALLAH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "FTO"
@@ -1700,7 +1836,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1710,7 +1846,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1720,7 +1856,7 @@
       "category": "sanctioned",
       "entity": "Ilya Andreevich GAMBASHIDZE",
       "label": "Ilya Andreevich GAMBASHIDZE (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -1730,7 +1866,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1741,7 +1877,7 @@
       "category": "sanctioned",
       "entity": "Jiantong WANG",
       "label": "Jiantong WANG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -1751,7 +1887,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1761,7 +1897,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1772,7 +1908,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1782,7 +1918,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1792,7 +1928,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1803,7 +1939,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1814,7 +1950,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1825,7 +1961,7 @@
       "category": "sanctioned",
       "entity": "GRINEX",
       "label": "GRINEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -1835,7 +1971,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1846,7 +1982,7 @@
       "category": "sanctioned",
       "entity": "GARANTEX EUROPE OU",
       "label": "GARANTEX EUROPE OU",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "RUSSIA-EO14024"
@@ -1857,7 +1993,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1868,7 +2004,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1879,7 +2015,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -1889,7 +2025,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1899,7 +2035,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1910,7 +2046,7 @@
       "category": "sanctioned",
       "entity": "GRINEX",
       "label": "GRINEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -1920,7 +2056,7 @@
       "category": "sanctioned",
       "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
       "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN",
         "IFSR",
@@ -1933,7 +2069,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1944,7 +2080,7 @@
       "category": "sanctioned",
       "entity": "FUNNULL TECHNOLOGY INC",
       "label": "FUNNULL TECHNOLOGY INC",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER3"
       ],
@@ -1954,7 +2090,7 @@
       "category": "sanctioned",
       "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
       "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -1964,7 +2100,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -1975,7 +2111,7 @@
       "category": "sanctioned",
       "entity": "ZEDCEX EXCHANGE LTD",
       "label": "ZEDCEX EXCHANGE LTD",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN-EO13902",
         "SDGT",
@@ -1987,7 +2123,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -1997,7 +2133,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2008,7 +2144,7 @@
       "category": "sanctioned",
       "entity": "Keyvan Fayyaz Gareh BLAGH",
       "label": "Keyvan Fayyaz Gareh BLAGH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -2018,7 +2154,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2029,7 +2165,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2039,7 +2175,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -2049,7 +2185,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2059,7 +2195,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2070,7 +2206,7 @@
       "category": "sanctioned",
       "entity": "Ryan James WEDDING",
       "label": "Ryan James WEDDING",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -2080,7 +2216,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2090,7 +2226,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2101,7 +2237,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2111,7 +2247,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2122,7 +2258,7 @@
       "category": "sanctioned",
       "entity": "Siavash KAYVANPOUR",
       "label": "Siavash KAYVANPOUR",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "IRGC"
@@ -2133,7 +2269,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2144,7 +2280,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2155,7 +2291,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2165,7 +2301,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2176,7 +2312,7 @@
       "category": "sanctioned",
       "entity": "Zaid Issam Ahmed AL-JEBOURI",
       "label": "Zaid Issam Ahmed AL-JEBOURI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -2186,7 +2322,7 @@
       "category": "sanctioned",
       "entity": "Arash Estaki ALIVAND",
       "label": "Arash Estaki ALIVAND",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -2197,7 +2333,7 @@
       "category": "sanctioned",
       "entity": "ANSARALLAH",
       "label": "ANSARALLAH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "FTO"
@@ -2208,10 +2344,20 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TQCBdU4K92oxLAkzwexZpqVZJhmPbtLYMm": {
+      "category": "sanctioned",
+      "entity": "Vitold Viktorovich OBERTAS",
+      "label": "Vitold Viktorovich OBERTAS",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "DPRK2"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -2219,17 +2365,27 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
       "ofac_id_type": "Digital Currency Address - USDT"
     },
+    "TQKoDq5aCrWAciiNtete5pDYVN38i4qFN1": {
+      "category": "sanctioned",
+      "entity": "Ilya Aleksandrovich BOYKOV",
+      "label": "Ilya Aleksandrovich BOYKOV",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "DPRK2"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
     "TQVZEuLHacexyJX3nZStaPzxceS63C9bax": {
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2240,7 +2396,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2251,7 +2407,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2262,7 +2418,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2272,7 +2428,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2283,7 +2439,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2293,7 +2449,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2303,7 +2459,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2314,7 +2470,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2325,7 +2481,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2335,7 +2491,7 @@
       "category": "sanctioned",
       "entity": "Wei ZHANG",
       "label": "Wei ZHANG",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -2345,7 +2501,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2356,7 +2512,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2367,7 +2523,7 @@
       "category": "sanctioned",
       "entity": "Arash Estaki ALIVAND",
       "label": "Arash Estaki ALIVAND",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -2378,7 +2534,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2388,7 +2544,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2399,7 +2555,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2410,7 +2566,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2420,7 +2576,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2431,7 +2587,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2442,7 +2598,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2453,7 +2609,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2464,7 +2620,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2475,7 +2631,7 @@
       "category": "sanctioned",
       "entity": "Zaid Issam Ahmed AL-JEBOURI",
       "label": "Zaid Issam Ahmed AL-JEBOURI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -2485,7 +2641,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2496,7 +2652,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2506,7 +2662,7 @@
       "category": "sanctioned",
       "entity": "Alireza DERAKHSHAN",
       "label": "Alireza DERAKHSHAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -2517,7 +2673,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2527,7 +2683,7 @@
       "category": "sanctioned",
       "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
       "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -2538,7 +2694,7 @@
       "category": "sanctioned",
       "entity": "Fengbing XIA",
       "label": "Fengbing XIA",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -2548,7 +2704,7 @@
       "category": "sanctioned",
       "entity": "Dmytro RASHEVSKYI",
       "label": "Dmytro RASHEVSKYI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -2558,7 +2714,7 @@
       "category": "sanctioned",
       "entity": "ZEDCEX EXCHANGE LTD",
       "label": "ZEDCEX EXCHANGE LTD",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN-EO13902",
         "SDGT",
@@ -2570,7 +2726,7 @@
       "category": "sanctioned",
       "entity": "CRYPTEX",
       "label": "CRYPTEX",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER2",
         "RUSSIA-EO14024"
@@ -2581,7 +2737,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2591,7 +2747,7 @@
       "category": "sanctioned",
       "entity": "CRYPTO HOME DMCC",
       "label": "CRYPTO HOME DMCC",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -2601,7 +2757,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2611,7 +2767,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2621,7 +2777,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2631,7 +2787,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2641,7 +2797,7 @@
       "category": "sanctioned",
       "entity": "GAZA NOW",
       "label": "GAZA NOW (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -2651,7 +2807,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2661,7 +2817,7 @@
       "category": "sanctioned",
       "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
       "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN",
         "IFSR",
@@ -2674,7 +2830,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2684,7 +2840,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2694,7 +2850,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -2704,7 +2860,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2715,7 +2871,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2726,7 +2882,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2737,7 +2893,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2747,7 +2903,7 @@
       "category": "sanctioned",
       "entity": "AEZA GROUP LLC",
       "label": "AEZA GROUP LLC",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4",
         "CAATSA - RUSSIA"
@@ -2758,7 +2914,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2769,7 +2925,7 @@
       "category": "sanctioned",
       "entity": "Mingming WANG",
       "label": "Mingming WANG (XBT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -2779,7 +2935,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2790,7 +2946,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2800,7 +2956,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2811,7 +2967,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2822,7 +2978,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2833,7 +2989,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2844,7 +3000,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2855,7 +3011,7 @@
       "category": "sanctioned",
       "entity": "FIRST VPN SERVICE",
       "label": "FIRST VPN SERVICE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -2865,7 +3021,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2876,7 +3032,7 @@
       "category": "sanctioned",
       "entity": "Sa'id Ahmad Muhammad AL-JAMAL",
       "label": "Sa'id Ahmad Muhammad AL-JAMAL (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -2887,7 +3043,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2898,7 +3054,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2909,7 +3065,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -2919,7 +3075,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2930,7 +3086,7 @@
       "category": "sanctioned",
       "entity": "Ryan James WEDDING",
       "label": "Ryan James WEDDING",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "ILLICIT-DRUGS-EO14059"
       ],
@@ -2940,7 +3096,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2951,7 +3107,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2962,7 +3118,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2973,7 +3129,7 @@
       "category": "sanctioned",
       "entity": "Ali SHAFIU",
       "label": "Ali SHAFIU (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -2983,7 +3139,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -2994,7 +3150,7 @@
       "category": "sanctioned",
       "entity": "Zaid Issam Ahmed AL-JEBOURI",
       "label": "Zaid Issam Ahmed AL-JEBOURI",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -3004,7 +3160,7 @@
       "category": "sanctioned",
       "entity": "ANSARALLAH",
       "label": "ANSARALLAH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "FTO"
@@ -3015,7 +3171,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3026,7 +3182,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -3036,7 +3192,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -3046,17 +3202,27 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
       "ofac_id_type": "Digital Currency Address - USDT"
     },
+    "TW5NEaaoPHXC1rt5PaYgG474gQ49oiZ2F5": {
+      "category": "sanctioned",
+      "entity": "2397639 ONTARIO LTD",
+      "label": "2397639 ONTARIO LTD",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "IRAN-EO13902"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
     "TW5tokvhEfrb77z98Rc8HqbkzQJ6sxYtGX": {
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3066,7 +3232,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3077,7 +3243,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3088,7 +3254,7 @@
       "category": "sanctioned",
       "entity": "Tawfiq Muhammad Sa'id AL-LAW",
       "label": "Tawfiq Muhammad Sa'id AL-LAW (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -3098,7 +3264,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3109,8 +3275,19 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
+        "TCO"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TWJmTGhquvdp1jhBmgeGxBBwefteGZUQYW": {
+      "category": "sanctioned",
+      "entity": "Alejandro MEJIA CASTILLO",
+      "label": "Alejandro MEJIA CASTILLO",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "SDGT",
         "TCO"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
@@ -3119,7 +3296,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3129,7 +3306,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3140,7 +3317,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3151,7 +3328,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3161,7 +3338,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3172,7 +3349,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -3182,7 +3359,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3193,7 +3370,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3204,7 +3381,7 @@
       "category": "sanctioned",
       "entity": "TASK FORCE RUSICH",
       "label": "TASK FORCE RUSICH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "RUSSIA-EO14024"
       ],
@@ -3214,7 +3391,7 @@
       "category": "sanctioned",
       "entity": "ANSARALLAH",
       "label": "ANSARALLAH (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT",
         "FTO"
@@ -3225,7 +3402,7 @@
       "category": "sanctioned",
       "entity": "GAZA NOW",
       "label": "GAZA NOW (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -3235,7 +3412,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -3245,7 +3422,7 @@
       "category": "sanctioned",
       "entity": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
       "label": "BANK MARKAZI JOMHOURI ISLAMI IRAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IRAN",
         "IFSR",
@@ -3258,7 +3435,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3268,7 +3445,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3279,7 +3456,7 @@
       "category": "sanctioned",
       "entity": "SHPS SHELBIT",
       "label": "SHPS SHELBIT",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "SDGT"
       ],
@@ -3289,7 +3466,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3300,7 +3477,7 @@
       "category": "sanctioned",
       "entity": "Keyvan Fayyaz Gareh BLAGH",
       "label": "Keyvan Fayyaz Gareh BLAGH",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "CYBER4"
       ],
@@ -3310,7 +3487,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3320,7 +3497,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -3330,7 +3507,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3341,7 +3518,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -3351,9 +3528,19 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
+      ],
+      "ofac_id_type": "Digital Currency Address - TRX"
+    },
+    "TXmrnVgsqCMJncYHTXchuJ5z111BXSj4g3": {
+      "category": "sanctioned",
+      "entity": "Ilya Aleksandrovich BOYKOV",
+      "label": "Ilya Aleksandrovich BOYKOV",
+      "source": "OFAC SDN list, published 11/06/2026",
+      "ofac_programs": [
+        "DPRK2"
       ],
       "ofac_id_type": "Digital Currency Address - TRX"
     },
@@ -3361,7 +3548,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3372,7 +3559,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3382,7 +3569,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3393,7 +3580,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3404,7 +3591,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -3414,7 +3601,7 @@
       "category": "sanctioned",
       "entity": "Arash Estaki ALIVAND",
       "label": "Arash Estaki ALIVAND",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "IFSR",
         "SDGT"
@@ -3425,7 +3612,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -3435,7 +3622,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3446,7 +3633,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3456,7 +3643,7 @@
       "category": "sanctioned",
       "entity": "Hyon Sop SIM",
       "label": "Hyon Sop SIM",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "NPWMD"
       ],
@@ -3466,7 +3653,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3476,7 +3663,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3486,7 +3673,7 @@
       "category": "sanctioned",
       "entity": "ISIL KHORASAN",
       "label": "ISIL KHORASAN",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "FTO",
         "SDGT"
@@ -3497,7 +3684,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3507,7 +3694,7 @@
       "category": "sanctioned",
       "entity": "CHEIL CREDIT BANK",
       "label": "CHEIL CREDIT BANK (USDT)",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
@@ -3517,7 +3704,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3527,7 +3714,7 @@
       "category": "sanctioned",
       "entity": "XINBI GUARANTEE",
       "label": "XINBI GUARANTEE",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "TCO"
       ],
@@ -3537,7 +3724,7 @@
       "category": "sanctioned",
       "entity": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
       "label": "AMNOKGANG TECHNOLOGY DEVELOPMENT COMPANY",
-      "source": "OFAC SDN list, published 09/18/2026",
+      "source": "OFAC SDN list, published 11/06/2026",
       "ofac_programs": [
         "DPRK4"
       ],
