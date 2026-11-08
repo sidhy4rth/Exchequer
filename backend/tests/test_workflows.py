@@ -103,3 +103,57 @@ def test_the_backup_encrypts_to_the_recipient_pinned_outside_the_repo():
 def test_the_public_ciphertext_is_kept_two_weeks():
     (upload,) = [s for s in backup_steps() if str(s.get("uses", "")).startswith("actions/upload-artifact@")]
     assert upload["with"]["retention-days"] == 14 and upload["with"]["if-no-files-found"] == "error"
+
+
+# -- the list refresh (r1-ci-github-1, r1-ci-github-2) -----------------------------------
+def refresh_jobs() -> dict:
+    return load(ROOT / ".github" / "workflows" / "refresh-lists.yml")["jobs"]
+
+
+def test_the_job_that_parses_downloads_holds_no_write_token():
+    workflow = load(ROOT / ".github" / "workflows" / "refresh-lists.yml")
+    assert workflow["permissions"] == {}
+    refresh = workflow["jobs"]["refresh"]
+    assert refresh["permissions"] == {"contents": "read"}
+    assert "write" not in yaml.safe_dump(refresh["permissions"])
+    # No cache another workflow could have written is restored beside the provider keys.
+    assert not any("cache" in (step.get("with") or {}) for step in refresh["steps"])
+    assert not any(str(step.get("uses", "")).startswith("actions/cache") for step in refresh["steps"])
+
+
+def test_only_the_importer_step_and_the_bot_token_step_see_a_secret():
+    for job_id, job in refresh_jobs().items():
+        for step in job["steps"]:
+            secrets = SECRET.findall(yaml.safe_dump(step))
+            if not secrets:
+                continue
+            assert (job_id, step.get("name")) in {("refresh", "Run the importers"), ("publish", "The list bot's token")}, (
+                job_id, step.get("name"), secrets)
+
+
+def test_publishing_takes_only_checked_lists_from_the_refresh_job():
+    jobs = refresh_jobs()
+    publish = jobs["publish"]
+    assert publish["needs"] == "refresh" and "tested == 'true'" in publish["if"]
+    assert publish["environment"] == "list-publish"
+    runs = [step.get("run", "") for step in publish["steps"]]
+    # Stdlib only: nothing is installed in the job that holds the token.
+    assert not any("pip install" in run for run in runs)
+    accept = runs.index(next(r for r in runs if "accept_lists.py" in r))
+    commit = runs.index(next(r for r in runs if "git commit" in r))
+    assert accept < commit
+    upload = [s for s in jobs["refresh"]["steps"] if str(s.get("uses", "")).startswith("actions/upload-artifact@")]
+    assert upload and upload[0]["if"] == "steps.tests.outputs.tested == 'true'"
+
+
+def test_the_pull_request_prefers_the_list_bot_token():
+    """An App's pull request runs test.yml; one opened with GITHUB_TOKEN does not."""
+    steps = {s.get("name"): s for s in refresh_jobs()["publish"]["steps"]}
+    assert steps["The list bot's token"]["uses"].startswith("actions/create-github-app-token@")
+    assert steps["Open or update the pull request"]["env"]["GH_TOKEN"] == "${{ steps.bot.outputs.token || github.token }}"
+
+
+def test_the_nightly_job_runs_strict():
+    """r1-ci-github-2: a list skipped for want of its key turns the nightly run red."""
+    steps = {s.get("name"): s for s in refresh_jobs()["refresh"]["steps"]}
+    assert "python -m scripts.import_all_lists --strict " in steps["Run the importers"]["run"]
