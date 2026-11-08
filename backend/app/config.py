@@ -482,6 +482,15 @@ TRACE_MAX_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES", 4)
 # cap). Without it one visitor could take every slot and keep it while their
 # traces ran; two still lets a presenter open a second trace.
 TRACES_RUNNING_PER_CLIENT: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES_PER_CLIENT", 2)
+# The last free slots only a connection with no trace running may take, so a
+# newcomer finds one while others keep theirs busy (routes/cases.take_slot).
+TRACE_RESERVED_SLOTS: int = max(0, _int_env("EXCHEQUER_RESERVED_TRACE_SLOTS", 1))
+# How many minutes in any hour one connection may hold trace slots, all of its
+# running traces together (0 = no limit). A trace holds one for a few minutes
+# at most, so this is several heavy traces an hour, or dozens of quick ones;
+# keeping every slot busy all day then takes many connections, not two. A
+# venue's shared Wi-Fi is one connection: raise it for a large event.
+TRACE_SLOT_MINUTES_PER_HOUR: int = max(0, _int_env("EXCHEQUER_TRACE_SLOT_MINUTES_PER_HOUR", 30))
 
 # The most individual transfers a case lists in its appendix (0 = all). Every
 # transfer on the route to the exchange, out of the reported address and into

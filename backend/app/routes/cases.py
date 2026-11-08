@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
+from collections import deque
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -31,56 +33,129 @@ _running_by_client: dict[str, int] = {}
 _by_client_lock = threading.Lock()
 
 
+class SlotClock:
+    """How long each connection has held trace slots in the last hour.
+
+    A slot is held a few minutes at most (the trace's wall clock), so a cap
+    on how many one connection holds at once still let a few connections
+    re-send traces and keep every slot busy all day. Counting the minutes held
+    makes that cost many connections: one may hold slots for
+    TRACE_SLOT_MINUTES_PER_HOUR (all its slots together) in any hour, running
+    holds included. In memory, like the hourly limits: a restart forgets it.
+    Batch rows are not counted here; they run in the batch slot."""
+
+    MAX_KEYS = 10_000  # keys come from headers a client may invent; bounded whatever they say
+
+    def __init__(self, clock=time.monotonic) -> None:
+        self._clock = clock
+        self._done: dict[str, deque[tuple[float, float]]] = {}  # client -> (start, end) of finished holds
+        self._open: dict[str, list[float]] = {}  # client -> starts of holds still running
+
+    def used(self, client: str) -> float:
+        """Seconds of the last hour this client held slots. Under _by_client_lock."""
+        now = self._clock()
+        since = now - 3600
+        done = self._done.get(client)
+        while done and done[0][1] <= since:
+            done.popleft()
+        if done is not None and not done:
+            del self._done[client]
+            done = None
+        held = sum(end - max(start, since) for start, end in done or ())
+        return held + sum(now - max(start, since) for start in self._open.get(client, ()))
+
+    def start(self, client: str) -> None:
+        self._open.setdefault(client, []).append(self._clock())
+
+    def stop(self, client: str) -> None:
+        starts = self._open.get(client)
+        if not starts:
+            return
+        start = starts.pop(0)
+        if not starts:
+            del self._open[client]
+        done = self._done.setdefault(client, deque())
+        done.append((start, self._clock()))
+        while len(self._done) > self.MAX_KEYS:  # oldest-seen first
+            del self._done[next(iter(self._done))]
+
+    def reset(self) -> None:
+        self._done.clear()
+        self._open.clear()
+
+
+_slot_clock = SlotClock()
+
+
+def _refusal(detail: str, wait: int = 30) -> HTTPException:
+    return HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(wait)})
+
+
+def take_slot(client: str, timed: bool = True) -> str | None:
+    """Take one of the server's trace slots for `client`, or say why not.
+
+    None on success (the caller must give it back with release(client)), else
+    a sentence for the refusal. The rules, in order:
+
+    1. A connection holds at most TRACES_RUNNING_PER_CLIENT slots at once.
+    2. The last TRACE_RESERVED_SLOTS free slots are only for a connection with
+       nothing running: a connection already tracing cannot take the last
+       one, so a newcomer -- a presenter, a judge -- finds a slot even while
+       others keep theirs busy. Filling every slot then takes as many
+       connections as there are slots, not two.
+    3. A connection that held slots for TRACE_SLOT_MINUTES_PER_HOUR in the
+       last hour waits (`timed`; batch rows are not timed: they hold the one
+       batch slot, by design for as long as a batch runs).
+    4. The server runs at most TRACE_MAX_RUNNING.
+    """
+    with _by_client_lock:
+        mine = _running_by_client.get(client, 0)
+        if mine >= config.TRACES_RUNNING_PER_CLIENT > 0:
+            return (f"This connection already has {mine} trace{'s' if mine != 1 else ''} running. "
+                    "Wait for one to finish, or open a stored case in the meantime.")
+        held = sum(_running_by_client.values())
+        free = config.TRACE_MAX_RUNNING - held
+        if mine and 0 < free <= config.TRACE_RESERVED_SLOTS:
+            return ("This connection already has a trace running, and the last free slot is kept "
+                    "for someone with none. Wait for yours to finish.")
+        budget = config.TRACE_SLOT_MINUTES_PER_HOUR * 60
+        if timed and budget and _slot_clock.used(client) >= budget:
+            return (f"This connection has kept traces running for {config.TRACE_SLOT_MINUTES_PER_HOUR} "
+                    "minutes in the last hour. Try again later, or open a stored case in the meantime.")
+        if not _running.acquire(blocking=False):
+            return (f"{config.TRACE_MAX_RUNNING} traces are already running. "
+                    "Try again in a minute, or open a stored case in the meantime.")
+        _running_by_client[client] = mine + 1
+        if timed:
+            _slot_clock.start(client)
+    return None
+
+
 def admit(http: Request) -> str:
-    """Refuse a trace this client may not start now: already running its
-    share of the slots, the server running its maximum, or over its hourly
-    limit. On success the caller holds a running slot and must hand the
-    returned token to `release()`.
+    """Refuse a trace this client may not start now (take_slot's rules, then
+    its hourly limit). On success the caller holds a running slot and must
+    hand the returned token to `release()`.
 
     The hourly allowance is charged last, once a slot is taken: a visitor
     turned away because the server is busy has started nothing."""
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
-    with _by_client_lock:
-        mine = _running_by_client.get(client, 0)
-        if mine >= config.TRACES_RUNNING_PER_CLIENT > 0:
-            raise HTTPException(
-                status_code=429,
-                detail=(
-                    f"This connection already has {mine} trace{'s' if mine != 1 else ''} running. "
-                    "Wait for one to finish, or open a stored case in the meantime."
-                ),
-                headers={"Retry-After": "30"},
-            )
-        if not _running.acquire(blocking=False):
-            raise HTTPException(
-                status_code=429,
-                detail=(
-                    f"{config.TRACE_MAX_RUNNING} traces are already running. "
-                    "Try again in a minute, or open a stored case in the meantime."
-                ),
-                headers={"Retry-After": "30"},
-            )
-        _running_by_client[client] = mine + 1
+    refused_slot = take_slot(client)
+    if refused_slot is not None:
+        raise _refusal(refused_slot)
     refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client)
     if refused is not None:
         release(client)
         wait, who = refused
         started = (f"This site has started {config.TRACES_PER_HOUR_TOTAL} traces" if who == "site"
                    else f"This connection has started {config.TRACES_PER_HOUR_PER_CLIENT} traces")
-        raise HTTPException(
-            status_code=429,
-            detail=(
-                f"{started} in the last hour. Try again in {int(wait // 60) + 1} min, or open a "
-                "stored case in the meantime."
-            ),
-            headers={"Retry-After": str(int(wait))},
-        )
+        raise _refusal(f"{started} in the last hour. Try again in {int(wait // 60) + 1} min, or open a "
+                       "stored case in the meantime.", int(wait))
     return client
 
 
-def release(client: str | None = None) -> None:
-    """Give back a running slot; `client` is the token admit() returned
-    (batch rows take a slot directly and pass none)."""
+def release(client: str | None = None, timed: bool = True) -> None:
+    """Give back a running slot; `client` is the token admit() returned, or
+    the batch's connection with timed=False (none: a slot taken directly)."""
     if client is not None:
         with _by_client_lock:
             left = _running_by_client.get(client, 0) - 1
@@ -88,6 +163,8 @@ def release(client: str | None = None) -> None:
                 _running_by_client[client] = left
             else:
                 _running_by_client.pop(client, None)
+            if timed:
+                _slot_clock.stop(client)
     _running.release()
 
 

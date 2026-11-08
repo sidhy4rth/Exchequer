@@ -47,17 +47,24 @@ _active: dict[str, str] = {}
 _active_lock = threading.Lock()
 
 
-def _acquire() -> bool:
+# Rows of a batch whose connection is not known (none today) count under this.
+_NO_CLIENT = "batch"
+
+
+def _acquire(client: str = _NO_CLIENT) -> bool:
+    """A batch slot, then a server trace slot under the batch's connection: its
+    rows count against that connection's running share, and take the last
+    free slot only when the connection runs nothing else (cases.take_slot)."""
     if not _batch_slots.acquire(blocking=False):
         return False
-    if cases._running.acquire(blocking=False):
+    if cases.take_slot(client, timed=False) is None:
         return True
     _batch_slots.release()
     return False
 
 
-def _release() -> None:
-    cases.release()
+def _release(client: str = _NO_CLIENT) -> None:
+    cases.release(client, timed=False)
     _batch_slots.release()
 
 
@@ -141,7 +148,8 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
     def record(payload: dict[str, Any]) -> None:
         cases.record_trace(payload, via="batch")
     try:
-        batches.start(batch.id, owner, _acquire, _release, trace, cases.store_result, on_done=done,
+        batches.start(batch.id, owner, lambda: _acquire(client), lambda: _release(client), trace,
+                      cases.store_result, on_done=done,
                       record_fn=record)
     except Exception as exc:  # noqa: BLE001 -- e.g. "can't start new thread" under memory pressure
         logger.error("Batch %s could not be started: %s", batch.id, type(exc).__name__)
