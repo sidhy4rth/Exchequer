@@ -7,8 +7,10 @@ call forced a reload of every visible case, random ids flushed the cache for
 everyone, and any save anywhere reset both caches. It is now keyed on the set
 of cases the caller can actually see: callers who see the same cases share
 one answer, an unknown case id never reaches the cache, and only a save into
-the caller's own set changes their answer. The ledger reads only the public
-demo cases, which no route writes, so it is built once per chain.
+the caller's own set changes their answer. min_cases and case_id, which the
+caller also chooses, are filters on the kept answer, not part of the key, so
+cycling through them never forces a reload either. The ledger reads only the
+public demo cases, which no route writes, so it is built once per chain.
 """
 from __future__ import annotations
 
@@ -103,6 +105,41 @@ def test_a_case_saved_while_the_answer_is_computed_is_never_served_to_another_se
     correlate_as(client, BOB)
     monkeypatch.setattr(ownership, "correlatable_cases", real)
     assert correlate_as(client, ALICE)["cluster_count"] == 1
+
+
+def test_rotating_min_cases_and_case_id_never_forces_a_reload(client, monkeypatch):
+    """r1-dos-cost-12: min_cases and case_id are filters applied after the
+    lookup, so one caller cycling through them still costs one computation."""
+    for n, reported in enumerate((A1, A2, B1)):
+        save_converging(f"alice-{n}", reported, ALICE)
+    loads = []
+    real = ownership.correlatable_cases
+    monkeypatch.setattr(ownership, "correlatable_cases", lambda *a, **k: loads.append(1) or real(*a, **k))
+    for _ in range(3):
+        for case_id in (None, "alice-0", "alice-1", "alice-2"):
+            for min_cases in range(2, 51):
+                correlate_as(client, ALICE, min_cases=min_cases, **({"case_id": case_id} if case_id else {}))
+    assert len(client.calls) == 1 and len(loads) == 1
+    assert len(casebook._CLUSTER_CACHE) == 1
+
+
+@pytest.mark.parametrize("case_id", [None, "alice-0", "alice-2", "bob-0"])
+@pytest.mark.parametrize("min_cases", [2, 3, 4])
+def test_filtering_after_the_lookup_gives_the_same_answer_as_computing_it(client, case_id, min_cases):
+    from app.correlation import correlate, related_cases
+    for n, reported in enumerate((A1, A2, B1)):
+        save_converging(f"alice-{n}", reported, ALICE)
+    save_converging("bob-0", "0x" + "b2" * 20, BOB)  # a linked case: its link is held, not its owner's key
+    params = {"min_cases": min_cases, **({"case_id": case_id} if case_id else {})}
+    correlate_as(client, ALICE)  # fill the cache with another filter first
+    body = correlate_as(client, ALICE, **params)
+    direct = correlate(ownership.correlatable_cases(ownership.owner_hash(ALICE), case_id), only_case=case_id,
+                       min_cases=min_cases, excluded=casebook._known_contract_or_exchange)
+    assert body["cluster_count"] == len(direct)
+    assert [c["address"] for c in body["clusters"]] == [c["address"] for c in direct]
+    assert [c["case_count"] for c in body["clusters"]] == [c["case_count"] for c in direct]
+    if case_id:
+        assert [r["case_id"] for r in body["related_cases"]] == [r["case_id"] for r in related_cases(direct, case_id)]
 
 
 def test_saving_a_case_does_not_rebuild_the_ledger(client, monkeypatch):

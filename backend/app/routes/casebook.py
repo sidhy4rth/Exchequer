@@ -53,25 +53,33 @@ def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
 
 # Correlation reads and parses every case the caller may see. Stored cases
 # never change, so the answer depends only on which cases go in: it is kept
-# per (the set of case ids examined, case, min_cases). Callers who see the
-# same cases -- every visitor with none of their own sees just the demos --
-# share one answer, a fresh owner key costs one id-only read, and a save
-# changes only the answers of those who can see the new case. The key is
-# what the answer was really computed from, never what was asked for, so one
-# set's answer is never served to another. A case id that matches no case
-# never reaches the cache: nothing can include it.
+# per set of case ids examined, and nothing else. Callers who see the same
+# cases -- every visitor with none of their own sees just the demos -- share
+# one answer, a fresh owner key costs one id-only read, and a save changes
+# only the answers of those who can see the new case. The key is what the
+# answer was really computed from, never what was asked for, so one set's
+# answer is never served to another. A case id that matches no case never
+# reaches the cache: nothing can include it.
+#
+# What the caller chooses -- min_cases, and which case the clusters must
+# include -- is applied to the kept answer after the lookup, never part of
+# the key: otherwise cycling through them would miss every time and reload
+# every visible case on each request (r1-dos-cost-12). The kept answer is
+# computed at the smallest min_cases (2), so every filter is a subset of it.
 _CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], list[dict[str, Any]]]]" = OrderedDict()
 _CLUSTER_CACHE_SIZE = 128
 _cluster_lock = threading.Lock()
+_FEWEST = 2  # the least min_cases the route accepts
 
 
-def _key(ids, case_id: str | None, min_cases: int) -> tuple:
+def _key(ids) -> tuple:
     digest = hashlib.sha256("\n".join(sorted(ids)).encode()).digest()
-    return (digest, case_id, min_cases, models.engine())  # ids are unique within one store
+    return (digest, models.engine())  # ids are unique within one store
 
 
-def _clusters(caller: str | None, case_id: str | None, min_cases: int):
-    """(store, clusters): who owns each case examined, and the raw clusters."""
+def _all_clusters(caller: str | None, case_id: str | None):
+    """(store, clusters): who owns each case examined, and every cluster of
+    at least _FEWEST reported addresses among them."""
     refs = ownership.correlatable_refs(caller)
     ids = [r[0] for r in refs]
     if case_id and case_id not in ids:
@@ -79,27 +87,35 @@ def _clusters(caller: str | None, case_id: str | None, min_cases: int):
         if linked is None:
             return refs, []
         ids.append(linked.id)
-    key = _key(ids, case_id, min_cases)
+    key = _key(ids)
     with _cluster_lock:
         if key in _CLUSTER_CACHE:
             _CLUSTER_CACHE.move_to_end(key)
             return _CLUSTER_CACHE[key]
     records = ownership.correlatable_cases(caller, case_id)
-    clusters = correlate(records, only_case=case_id, min_cases=min_cases,
-                         excluded=_known_contract_or_exchange)
+    clusters = correlate(records, min_cases=_FEWEST, excluded=_known_contract_or_exchange)
     value = ([(c.id, c.owner_hash, c.address) for c in records], clusters)
     with _cluster_lock:
-        _CLUSTER_CACHE[_key([c.id for c in records], case_id, min_cases)] = value
+        _CLUSTER_CACHE[_key([c.id for c in records])] = value
         while len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE:
             _CLUSTER_CACHE.popitem(last=False)
     return value
+
+
+def _clusters(caller: str | None, case_id: str | None, min_cases: int):
+    """(store, clusters) as correlate(only_case=case_id, min_cases=min_cases)
+    would give them: the kept answer, filtered. Filtering keeps its order."""
+    store, clusters = _all_clusters(caller, case_id)
+    return store, [c for c in clusters
+                   if len(c["reported_addresses"]) >= min_cases
+                   and (case_id is None or any(m["case_id"] == case_id for m in c["cases"]))]
 
 
 @router.get("/cases/correlate")
 def cases_correlate(
     http: Request,
     case_id: str | None = Query(None, description="only clusters that include this case"),
-    min_cases: int = Query(2, ge=2, le=50),
+    min_cases: int = Query(_FEWEST, ge=_FEWEST, le=50),
 ) -> dict[str, Any]:
     """Intermediary addresses shared by two or more of the caller's cases.
 
