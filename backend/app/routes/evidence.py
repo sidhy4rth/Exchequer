@@ -18,8 +18,11 @@ from ..report_pdf import render_pdf
 
 router = APIRouter()
 
-# A stored case never changes, so a browser may keep its report for an hour.
-KEEP = {"Cache-Control": "private, max-age=3600"}
+# Never kept by the browser: the owner's copy holds the NCRP number, the
+# victim's wallet and the payment hashes, and a shared PC's disk cache would
+# hand them to the next user (r2-g2-log-redaction-http-edges-2-7). The server's
+# report_cache already saves the re-render.
+KEEP = {"Cache-Control": "no-store"}
 
 
 def _case_or_404(case_id: str, user: CurrentUser) -> models.Case:

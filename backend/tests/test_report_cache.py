@@ -70,9 +70,12 @@ def test_the_text_and_the_pdf_attachment_are_the_same_report(client):
     assert all(client.get("/trace/case-0/report").json()["generated_at"] == generated for _ in range(2))
 
 
-def test_exports_say_they_may_be_kept(client):
-    for fmt in ("text", "pdf"):
-        assert client.get(f"/trace/case-0/report?format={fmt}").headers["cache-control"] == "private, max-age=3600"
+def test_exports_are_never_kept_by_the_browser(client):
+    """A shared PC's disk cache would hand the owner's particulars to the next user."""
+    for fmt in ("json", "text", "pdf"):
+        assert client.get(f"/trace/case-0/report?format={fmt}").headers["cache-control"] == "no-store"
+    for fmt in ("csv", "graphml"):
+        assert client.get(f"/trace/case-0/graph?format={fmt}").headers["cache-control"] == "no-store"
 
 
 def test_a_busy_renderer_answers_429(client, renders):
@@ -145,7 +148,7 @@ def test_a_graph_export_is_rendered_once(client, monkeypatch):
     first = client.get("/trace/case-0/graph?format=graphml")
     second = client.get("/trace/case-0/graph?format=graphml")
     assert first.content == second.content and calls == ["case-0"]
-    assert second.headers["cache-control"] == "private, max-age=3600"
+    assert second.headers["cache-control"] == "no-store"
 
 
 def test_a_forgotten_first_render_time_never_splits_one_case_into_two_reports(client, monkeypatch):
