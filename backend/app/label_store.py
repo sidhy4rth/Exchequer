@@ -126,11 +126,22 @@ def pinned_mixers(chain: str) -> frozenset[bytes]:
         except (OSError, ValueError) as exc:
             logger.error("%s unreadable; no store mixer row there ends a trace: %s", file, exc)
             continue
+        # A part of the wrong shape counts as empty, with one log line, as in
+        # risk_matcher._read_labels: a list here made every store mixer
+        # lookup raise (r1-labels-data-11).
+        part = (document.get("labels") if file == path else document.get(chain)) \
+            if isinstance(document, dict) else document
+        if part is None:
+            continue
+        if not isinstance(part, dict):
+            logger.error("%s: %s is not an object of addresses; no store mixer row there ends a trace",
+                         file, "'labels'" if file == path else (f"'{chain}'" if isinstance(document, dict)
+                                                                 else "the file"))
+            continue
         if file == path:
-            sources.append({a: v for a, v in (document.get("labels") or {}).items()
-                            if isinstance(v, dict) and v.get("category") == "mixer"})
+            sources.append({a: v for a, v in part.items() if isinstance(v, dict) and v.get("category") == "mixer"})
         else:
-            sources.append(document.get(chain) or {})
+            sources.append(part)
     for entries in sources:
         for address in entries:
             raw = encode_address(address) if not address.startswith("_") else None

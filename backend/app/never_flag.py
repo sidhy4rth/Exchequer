@@ -112,8 +112,24 @@ def _file() -> tuple[frozenset[str], dict[str, str]]:
     except (OSError, ValueError):
         logger.warning("No readable %s; only configured tokens count as token contracts", NEVER_FLAG_FILE)
         return frozenset(), {}
-    listed = frozenset(a for a in document.get("tokens") or [] if isinstance(a, str))
-    allow = {a: str(why) for a, why in (document.get("allow") or {}).items() if isinstance(a, str)}
+    # A file of the wrong shape counts as empty, part by part: a list here
+    # made every store lookup that found a row raise (r1-labels-data-11).
+    if not isinstance(document, dict):
+        logger.warning("%s is a JSON %s, not an object; only configured tokens count as token contracts",
+                       NEVER_FLAG_FILE, type(document).__name__)
+        return frozenset(), {}
+    tokens_part, allow_part = document.get("tokens") or [], document.get("allow") or {}
+    if not isinstance(tokens_part, list):
+        logger.warning("%s: 'tokens' is not a list; ignored", NEVER_FLAG_FILE)
+        tokens_part = []
+    if not isinstance(allow_part, dict):
+        logger.warning("%s: 'allow' is not an object; ignored", NEVER_FLAG_FILE)
+        allow_part = {}
+    listed = frozenset(a for a in tokens_part if isinstance(a, str))
+    allow = {a: str(why) for a, why in allow_part.items() if isinstance(a, str)}
+    if len(listed) < len(tokens_part):
+        logger.warning("%s: %d token entries that are not addresses skipped", NEVER_FLAG_FILE,
+                       len(tokens_part) - len(listed))
     return listed, allow
 
 
@@ -182,11 +198,20 @@ def gambling(chain_key: str) -> frozenset[bytes]:
     if path is None or not path.is_file():
         return frozenset()
     try:
-        entries = json.loads(path.read_text()).get("labels", {})
-    except (OSError, ValueError, AttributeError) as exc:
+        document = json.loads(path.read_text())
+    except (OSError, ValueError) as exc:
         logger.error("Gambling labels at %s unreadable for the never-flag check: %s", path, exc)
         return frozenset()
-    return frozenset(r for r in (_raw(chain_key, a) for a in entries if not a.startswith("_")) if r is not None)
+    entries = document.get("labels", {}) if isinstance(document, dict) else None
+    if not isinstance(entries, (dict, list)):
+        logger.error("Gambling labels at %s are not an object of labels; none count for the never-flag check",
+                     path)
+        return frozenset()
+    keys = [a for a in entries if isinstance(a, str)]
+    if len(keys) < len(entries):
+        logger.warning("Gambling labels at %s: %d entries that are not addresses skipped",
+                       path, len(entries) - len(keys))
+    return frozenset(r for r in (_raw(chain_key, a) for a in keys if not a.startswith("_")) if r is not None)
 
 
 def kind(chain_key: str, address: str, *, with_gambling: bool = False) -> str | None:

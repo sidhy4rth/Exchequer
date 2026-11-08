@@ -138,3 +138,88 @@ def test_every_shipped_label_file_loads_without_a_warning(path, caplog):
         else:
             RiskMatcher.from_file(path)
     assert [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING] == []
+
+
+# Loaders added on the trace path by later fixes (never_flag, the store's
+# pinned mixers) had no shape checks: a never_flag_tokens.json that is a list
+# made every store lookup that found a row raise AttributeError, and so did
+# a list-shaped threat file or mixer_pools.json for every store mixer row
+# (r1-labels-data-11, 8 Nov check). Each now logs once and treats the bad
+# part as empty, like _read_labels.
+
+@pytest.fixture
+def data_copy(tmp_path, monkeypatch):
+    from app import label_store, never_flag
+    data = tmp_path / "data"
+    shutil.copytree(config.DATA_DIR, data, ignore=shutil.ignore_patterns("*.db", "validation"))
+    monkeypatch.setattr(config, "DATA_DIR", data)
+
+    def clear():
+        never_flag.clear_cache()
+        label_store.pinned_mixers.cache_clear()
+    clear()
+    yield data
+    monkeypatch.undo()
+    clear()
+
+
+@pytest.mark.parametrize("document", [[], ["0x" + "1" * 40], "tokens", 5,
+                                      {"tokens": {"a": 1}, "allow": ["0x" + "1" * 40]},
+                                      {"tokens": [5, None], "allow": {"x": 1}}])
+def test_a_badly_shaped_never_flag_file_counts_as_empty(data_copy, caplog, document):
+    from app import never_flag
+    (data_copy / never_flag.NEVER_FLAG_FILE).write_text(json.dumps(document))
+    with caplog.at_level(logging.WARNING):
+        listed, allow = never_flag._file()
+        assert isinstance(listed, frozenset) and isinstance(allow, dict)
+        assert never_flag.tokens("ethereum")  # the configured tokens still count
+    if not isinstance(document, dict):
+        assert any("never_flag_tokens.json" in r.getMessage() for r in caplog.records)
+
+
+def test_a_list_shaped_never_flag_file_does_not_break_store_lookups(data_copy):
+    from app import never_flag
+    (data_copy / never_flag.NEVER_FLAG_FILE).write_text(json.dumps([]))
+    usdt = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+    never_flag.kind("ethereum", usdt)  # used to raise AttributeError
+    assert never_flag.tokens("ethereum")
+
+
+@pytest.mark.parametrize("labels", [[1, 2], ["0x" + "1" * 40], "x"])
+def test_a_list_shaped_threat_file_leaves_the_pinned_mixers_of_mixer_pools(data_copy, caplog, labels):
+    from app import label_store
+    pools = json.loads((data_copy / label_store.MIXER_POOLS_FILE).read_text())
+    path = config.get_chain("ethereum").threat_labels_path
+    path.write_text(json.dumps({"_meta": {}, "labels": labels}))
+    with caplog.at_level(logging.WARNING):
+        found = label_store.pinned_mixers("ethereum")
+    expected = {a for a in pools.get("ethereum") or {} if not a.startswith("_")}
+    assert len(found) == len(expected) and any(path.name in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.parametrize("pools", [[], [1, 2], {"ethereum": [1, None]}, {"ethereum": "x"}, "x"])
+def test_a_badly_shaped_mixer_pools_file_leaves_the_threat_files_mixers(data_copy, pools):
+    from app import label_store
+    label_store.pinned_mixers.cache_clear()
+    before = label_store.pinned_mixers("ethereum")
+    (data_copy / label_store.MIXER_POOLS_FILE).write_text(json.dumps(pools))
+    label_store.pinned_mixers.cache_clear()
+    after = label_store.pinned_mixers("ethereum")
+    assert isinstance(after, frozenset) and after <= before
+
+
+def test_a_threat_file_that_is_a_list_at_the_top_is_unusable_not_fatal(data_copy):
+    from app import label_store
+    config.get_chain("ethereum").threat_labels_path.write_text(json.dumps([1, 2]))
+    assert isinstance(label_store.pinned_mixers("ethereum"), frozenset)
+
+
+@pytest.mark.parametrize("labels", [[1, None, {"a": 1}], [5, "0x" + "2" * 40], "x", 7])
+def test_a_badly_shaped_gambling_file_is_skipped_entry_by_entry(data_copy, labels):
+    from app import never_flag
+    path = config.get_chain("ethereum").gambling_labels_path
+    path.write_text(json.dumps({"labels": labels}))
+    found = never_flag.gambling("ethereum")
+    assert isinstance(found, frozenset)
+    if isinstance(labels, list) and "0x" + "2" * 40 in labels:
+        assert len(found) == 1
