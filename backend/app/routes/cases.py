@@ -199,16 +199,18 @@ def _since(seconds: int) -> str:
     return (datetime.now(tz=timezone.utc) - timedelta(seconds=seconds)).isoformat(timespec="seconds")
 
 
-def _make_room(stored: int) -> int:
-    """Evict the oldest cases nobody is using until one more fits; the count after."""
+def _make_room(rows: int, nbytes: int) -> tuple[int, int]:
+    """Evict the oldest cases nobody is using until `rows` cases and `nbytes`
+    bytes are freed, or none is left: (cases, bytes) freed."""
     try:
-        gone = models.evict_cases(stored - config.MAX_STORED_CASES + 1, _since(config.CASE_IDLE_DAYS * 86400))
+        gone, freed = models.evict_cases(rows, _since(config.CASE_IDLE_DAYS * 86400), nbytes=nbytes)
     except Exception:  # noqa: BLE001 -- refused below as full, never lost
         logger.warning("Could not make room in the case store", exc_info=True)
-        return stored
+        return 0, 0
     if gone:
-        logger.warning("Case store full: %d unused case%s gave up their place", gone, "s" if gone != 1 else "")
-    return stored - gone
+        logger.warning("Case store full: %d unused case%s (%d bytes) gave up their place",
+                       gone, "s" if gone != 1 else "", freed)
+    return gone, freed
 
 
 def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | None,
@@ -235,32 +237,42 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
                                        "cases in the last 24 hours, so this result is shown here but was not "
                                        "saved: export what you need from it now.")
 
-    stored = _count(models.case_count) if config.MAX_STORED_CASES else 0
-    if config.MAX_STORED_CASES and stored + 1 == int(config.MAX_STORED_CASES * 0.8):
-        logger.warning("Case store is 80%% full (%d of %d cases)", stored + 1, config.MAX_STORED_CASES)
-    if config.MAX_STORED_CASES and stored >= config.MAX_STORED_CASES:
-        stored = _make_room(stored)
-    if config.MAX_STORED_CASES and stored >= config.MAX_STORED_CASES:
-        logger.warning("Case store full (%d cases); trace not stored", config.MAX_STORED_CASES)
-        return _not_saved(payload, f"The case store is full ({config.MAX_STORED_CASES:,} cases), so this "
-                                   "result is shown here but was not saved: it will not appear in the case "
-                                   "history and cannot be exported or reopened later. Ask the operator to "
-                                   "raise EXCHEQUER_MAX_STORED_CASES.")
-
-    # The cap above counts cases, not bytes: one dense trace could be megabytes.
+    # One dense trace could be megabytes: refused alone over MAX_CASE_BYTES,
+    # and the store as a whole is bounded in bytes as well as in cases.
     try:
         text = json.dumps(payload, default=str)
     except (TypeError, ValueError):
         text = None  # save_case reports it below
     if text is not None and config.MAX_CASE_BYTES and len(text) > config.MAX_CASE_BYTES:
         logger.warning("Case of %d bytes not stored (limit %d)", len(text), config.MAX_CASE_BYTES)
-        payload["case_id"] = None
-        payload.setdefault("warnings", []).append(
-            f"This result is too large to save ({len(text) / 1e6:.1f} MB; the limit is "
-            f"{config.MAX_CASE_BYTES / 1e6:.1f} MB), so it is shown here but was not saved: export "
-            "what you need from it now, or trace again with a smaller depth."
-        )
-        return payload
+        return _not_saved(payload, f"This result is too large to save ({len(text) / 1e6:.1f} MB; the limit "
+                                   f"is {config.MAX_CASE_BYTES / 1e6:.1f} MB), so it is shown here but was not "
+                                   "saved: export what you need from it now, or trace again with a smaller depth.")
+    size = len(text) if text is not None else 0
+
+    stored = _count(models.case_count) if config.MAX_STORED_CASES else 0
+    total = _count(models.stored_bytes) if config.MAX_STORED_BYTES else 0
+    if config.MAX_STORED_CASES and stored + 1 == int(config.MAX_STORED_CASES * 0.8):
+        logger.warning("Case store is 80%% full (%d of %d cases)", stored + 1, config.MAX_STORED_CASES)
+    if config.MAX_STORED_BYTES and total < config.MAX_STORED_BYTES * 0.8 <= total + size:
+        logger.warning("Case store is 80%% full (%d of %d bytes)", total + size, config.MAX_STORED_BYTES)
+    rows_over = stored + 1 - config.MAX_STORED_CASES if config.MAX_STORED_CASES else 0
+    bytes_over = total + size - config.MAX_STORED_BYTES if config.MAX_STORED_BYTES else 0
+    if rows_over > 0 or bytes_over > 0:
+        rows, freed = _make_room(rows_over, bytes_over)
+        stored, total = stored - rows, total - freed
+    if config.MAX_STORED_CASES and stored >= config.MAX_STORED_CASES:
+        logger.warning("Case store full (%d cases); trace not stored", config.MAX_STORED_CASES)
+        return _not_saved(payload, f"The case store is full ({config.MAX_STORED_CASES:,} cases), so this "
+                                   "result is shown here but was not saved: it will not appear in the case "
+                                   "history and cannot be exported or reopened later. Ask the operator to "
+                                   "raise EXCHEQUER_MAX_STORED_CASES.")
+    if config.MAX_STORED_BYTES and total + size > config.MAX_STORED_BYTES:
+        logger.warning("Case store full (%d of %d bytes); trace not stored", total, config.MAX_STORED_BYTES)
+        return _not_saved(payload, f"The case store is full ({config.MAX_STORED_BYTES / 1e6:,.0f} MB), so "
+                                   "this result is shown here but was not saved: it will not appear in the "
+                                   "case history and cannot be exported or reopened later. Ask the operator "
+                                   "to make room in the store.")
 
     try:
         models.save_case(case_id, payload["address"], payload, created_at=created_at,

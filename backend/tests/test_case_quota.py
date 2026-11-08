@@ -154,3 +154,42 @@ def test_a_deleted_case_is_gone_from_the_case_cache_too(monkeypatch):
     assert models.get_case(anon) is not None  # now cached
     assert store_one(ALICE)["case_id"]
     assert models.get_case(anon) is None
+
+
+# -- the store's size in bytes (r1-trace-engine-5) ------------------------------
+def store_sized(owner, nbytes, client=None):
+    payload = {"address": REQUEST.address, "pad": "x" * nbytes}
+    return cases.store_result(payload, REQUEST, owner, client=client)
+
+
+def test_the_store_never_holds_more_bytes_than_its_bound(monkeypatch):
+    """The 8 Nov check: the cap counted cases, so ~340 dense cases of 1.5 MB
+    filled Neon's 0.5 GB long before 5,000 cases. Now the bytes are bounded too."""
+    monkeypatch.setattr(config, "MAX_STORED_BYTES", 10_000)
+    saved = [store_sized(f"{k:064x}", 3_000)["case_id"] for k in range(5)]
+    assert sum(1 for c in saved if c) == 3
+    refused = store_sized("e" * 64, 3_000)
+    assert refused["case_id"] is None and "case store is full" in refused["warnings"][-1]
+    assert "MB" in refused["warnings"][-1]
+    assert models.stored_bytes() <= 10_000
+    assert store_sized("f" * 64, 100)["case_id"]  # a small one still fits
+
+
+def test_a_large_case_makes_room_from_several_unused_ones(monkeypatch):
+    monkeypatch.setattr(config, "MAX_STORED_BYTES", 10_000)
+    anon = [store_sized(None, 2_000)["case_id"] for _ in range(4)]
+    for n, case_id in enumerate(anon):
+        age([case_id], 10 - n)
+    kept = store_sized(ALICE, 1_000)["case_id"]
+    big = store_sized(BOB, 6_000)
+    assert big["case_id"]
+    assert models.stored_bytes() <= 10_000
+    gone = [i for i in anon if models.get_case(i) is None]
+    assert gone == anon[:len(gone)] and len(gone) >= 2  # the oldest first
+    assert models.get_case(kept) is not None
+
+
+def test_sizes_are_recorded_and_summed():
+    first = store_sized(ALICE, 500)["case_id"]
+    second = store_sized(BOB, 1500)["case_id"]
+    assert models.stored_bytes() == sum(len(models.get_case(i).result_json) for i in (first, second))

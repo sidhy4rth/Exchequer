@@ -51,6 +51,9 @@ class Case(Base):
     # an owner key. NULL for cases saved before either existed.
     client_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     anonymous: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # len(result_json): the store is bounded in bytes too. NULL only on a row
+    # written before the column existed (its migration fills them).
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     # -- convenience -------------------------------------------------------
     @property
@@ -342,14 +345,16 @@ def save_case(
 ) -> Case:
     """Persist one completed trace, and the deposit addresses it inferred.
     `result_json` is `result` already serialised, when the caller has it."""
+    text = result_json if result_json is not None else json.dumps(result, default=str)
     case = Case(
         id=case_id,
         address=address,
         created_at=created_at or utc_now_iso(),
-        result_json=result_json if result_json is not None else json.dumps(result, default=str),
+        result_json=text,
         owner_hash=owner_hash,
         client_hash=client_hash,
         anonymous=anonymous,
+        size_bytes=len(text),
     )
     global _store_version
     with Session(_engine) as session:
@@ -425,24 +430,40 @@ def _evictable(idle_before: str):
             .order_by(Case.created_at, Case.id))
 
 
-def evict_cases(count: int, idle_before: str) -> int:
-    """Delete up to `count` evictable cases (see _evictable) and their
-    inferred deposits; returns how many went. A deleted case's link then
+def stored_bytes() -> int:
+    """The size of every stored result together, in bytes."""
+    with Session(_engine) as session:
+        return int(session.scalar(select(func.coalesce(func.sum(Case.size_bytes), 0))) or 0)
+
+
+EVICT_AT_MOST = 200  # cases one save may delete to make room
+
+
+def evict_cases(count: int, idle_before: str, nbytes: int = 0) -> tuple[int, int]:
+    """Delete the oldest evictable cases (see _evictable), and their inferred
+    deposits, until at least `count` cases and `nbytes` bytes are freed or
+    none is left; returns (cases, bytes) freed. A deleted case's link then
     answers 404, like any id that matches no case."""
-    if count <= 0:
-        return 0
+    if count <= 0 and nbytes <= 0:
+        return 0, 0
     global _store_version
     with Session(_engine) as session:
-        ids = list(session.scalars(_evictable(idle_before).limit(count)))
+        stmt = _evictable(idle_before).add_columns(Case.size_bytes).limit(EVICT_AT_MOST)
+        ids, freed = [], 0
+        for case_id, size in session.execute(stmt):
+            if len(ids) >= count and freed >= nbytes:
+                break
+            ids.append(case_id)
+            freed += size or 0
         if not ids:
-            return 0
+            return 0, 0
         session.execute(InferredDeposit.__table__.delete().where(InferredDeposit.case_id.in_(ids)))
         session.execute(Case.__table__.delete().where(Case.id.in_(ids)))
         session.commit()
     _case_cache.drop(ids)
     with _store_version_lock:
         _store_version += 1
-    return len(ids)
+    return len(ids), freed
 
 
 # Recently read cases, kept in memory. A stored case never changes (nothing

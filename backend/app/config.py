@@ -501,6 +501,11 @@ TRANSFERS_APPENDIX_MAX: int = _int_env("EXCHEQUER_TRANSFERS_APPENDIX_MAX", 2000)
 # The largest case the store keeps, in bytes of JSON (0 = no cap). A larger one
 # is shown, with a warning, and not saved: Neon's free tier holds 0.5 GB.
 MAX_CASE_BYTES: int = _int_env("EXCHEQUER_MAX_CASE_BYTES", 4 * 1024 * 1024)
+# Every stored result together, in bytes of JSON (0 = no cap). The count below
+# alone let a few hundred dense cases (~1.5 MB each) fill Neon's 0.5 GB; this
+# leaves room for the other tables, indexes and the database's own overhead.
+# Bounded like the count: the oldest unused cases make room first.
+MAX_STORED_BYTES: int = _int_env("EXCHEQUER_MAX_STORED_BYTES", 300 * 1000 * 1000)
 
 # The most cases the store keeps (0 = no cap). Anyone can save a trace, and a
 # free hosted Postgres holds 0.5 GB; a stored case averages ~32 KB, so 5,000 is
