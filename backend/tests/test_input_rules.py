@@ -88,3 +88,14 @@ def test_sent_at_with_an_offset_in_seconds_is_stored_in_utc_and_fits(client):
     limit = models.FreezeRequest.__table__.c.sent_at.type.length
     assert len(later["sent_at"]) <= limit and later["sent_at"].endswith("+00:00")
     assert later["sent_at"] == "2026-10-12T18:29:44+00:00"
+
+
+@pytest.mark.parametrize("value", ["0001-01-01T00:00:00+05:00", "9999-12-31T23:59:59-05:00"])
+def test_sent_at_whose_offset_leaves_the_calendar_is_a_400_and_changes_nothing(client, value):
+    # A valid date whose offset moves it past year 1 or 9999 used to raise
+    # OverflowError in the UTC conversion: a 500 that also lost the status.
+    rid = client.post("/requests", json={"case_id": "case-1", "recipient": "Binance"}, headers=H).json()["request_id"]
+    r = client.patch(f"/requests/{rid}", json={"status": "sent", "sent_at": value}, headers=H)
+    assert r.status_code == 400 and "sent_at" in r.json()["detail"]
+    after = client.get("/trace/case-1/requests", headers=H).json()["requests"][0]
+    assert after["status"] != "sent"  # nothing in the refused PATCH was written
