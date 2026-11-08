@@ -15,7 +15,10 @@ services:
     branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    autoDeployTrigger: commit
+    # Deploy a commit on main only once its GitHub checks pass (tests, image
+    # build, commit e-mails), so a red commit never reaches the live site
+    # (r1-deps-supplychain-4).
+    autoDeployTrigger: checksPass
     # The build also needs a Secret File named label_store_token (Settings →
     # Secret Files; a Blueprint cannot declare one): the read-only token for
     # the private label-store release. Without it the build fails and the
