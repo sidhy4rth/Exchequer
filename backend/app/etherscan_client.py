@@ -225,6 +225,16 @@ def safe_int(value: Any, base: int = 10, default: int = 0) -> int:
         return default
 
 
+def _since_block(raw: dict[str, Any]) -> int | None:
+    """A record's block for a watch's forward read, None when it is garbled."""
+    block = safe_int(raw.get("blockNumber"), default=-1)
+    return block if block >= 0 else None
+
+
+def _block_or_zero(raw: dict[str, Any]) -> int:
+    return _since_block(raw) or 0
+
+
 def resolve_decimals(stated: Any, fallback: int | None) -> int | None:
     """The precision to divide a token amount by, or None if it is unknowable.
 
@@ -1005,8 +1015,19 @@ class EtherscanClient:
         if self.contract_address:
             params["contractaddress"] = self.contract_address
 
-        def rows_of(raws: Any) -> list[dict[str, Any]]:
-            return [r for r in raws if isinstance(r, dict)] if isinstance(raws, list) else []
+        def rows_of(raws: Any) -> tuple[list[dict[str, Any]], int]:
+            """(the readable records, how many records the page held). A page
+            that is no record list is a failed read: read as empty it would
+            say nothing happened. A record with no readable block is skipped,
+            so one garbled row cannot fail the watch every round
+            (r1-providers-10); it still counts toward the page being full."""
+            if not isinstance(raws, list):
+                raise ProviderResponseError(
+                    f"Etherscan returned a {type(raws).__name__} where a record list belongs")
+            rows = [r for r in raws if isinstance(r, dict) and _since_block(r) is not None]
+            if len(rows) < len(raws):
+                logger.warning("Skipping %d unreadable Etherscan records for %s", len(raws) - len(rows), target)
+            return rows, len(raws)
 
         cut: list[int] = []
         # Rows above the confirmed head may still be reorganised away: they are
@@ -1015,21 +1036,21 @@ class EtherscanClient:
         bound = self.confirmed_head()
 
         def settled(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-            return rows if bound is None else [r for r in rows if int(r.get("blockNumber") or 0) <= bound]
+            return rows if bound is None else [r for r in rows if _block_or_zero(r) <= bound]
 
         def page(query: dict[str, Any], parse: Callable[[dict[str, Any]], Transaction | None]
                  ) -> tuple[list[Transaction], list[int], bool]:
-            fetched = rows_of(self._request(query))
+            fetched, held = rows_of(self._request(query))
             rows = settled(fetched)
             # A page cut at the bound read every settled row up to it: not full.
-            full = bool(rows) and len(fetched) >= limit and len(rows) == len(fetched)
-            blocks = [int(r.get("blockNumber") or 0) for r in rows]
+            full = bool(rows) and held >= limit and len(rows) == len(fetched)
+            blocks = [_block_or_zero(r) for r in rows]
             if full and min(blocks) == max(blocks):
-                whole = rows_of(self._request({**query, "startblock": blocks[0], "endblock": blocks[0],
-                                               "offset": WHOLE_BLOCK}))
+                whole, held = rows_of(self._request({**query, "startblock": blocks[0], "endblock": blocks[0],
+                                                     "offset": WHOLE_BLOCK}))
                 if len(whole) < len(rows):  # the block came back smaller than its first page
                     raise EtherscanError(f"Etherscan did not return block {blocks[0]} whole")
-                if len(whole) >= WHOLE_BLOCK:
+                if held >= WHOLE_BLOCK:
                     cut.append(blocks[0])
                 rows, blocks = whole, [blocks[0]] * len(whole)
             sent = [t for t in (parse(r) for r in rows) if t is not None and t.from_address == target

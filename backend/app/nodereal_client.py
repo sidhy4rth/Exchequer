@@ -121,6 +121,16 @@ def _block_of(raw: dict[str, Any]) -> int:
         return 0
 
 
+def _since_block(raw: dict[str, Any]) -> int | None:
+    """A record's block for a watch's forward read, None when it is garbled."""
+    value = raw.get("blockNum")
+    try:
+        block = int(value, 16) if isinstance(value, str) else (value if type(value) is int else -1)
+    except ValueError:
+        return None
+    return block if block >= 0 else None
+
+
 class NoderealError(EtherscanError):
     """Any non-recoverable problem talking to NodeReal.
 
@@ -752,7 +762,18 @@ class NoderealClient:
         result = self._rpc("nr_getAssetTransfers", [params])
         if not isinstance(result, dict):
             raise NoderealError("NodeReal returned no transfer list")
-        return [r for r in (result.get("transfers") or []) if isinstance(r, dict)], result.get("pageKey")
+        transfers, page_key = result.get("transfers"), result.get("pageKey")
+        if transfers is None:
+            transfers = []
+        # {"transfers": "x"} used to read as an empty page, and a dict pageKey
+        # raised TypeError: both are failed reads that leave the cursor alone
+        # (r1-providers-10).
+        if not isinstance(transfers, list) or not isinstance(page_key, (str, type(None))):
+            raise NoderealResponseError("NodeReal returned a transfer page in an unexpected shape")
+        rows = [r for r in transfers if isinstance(r, dict) and _since_block(r) is not None]
+        if len(rows) < len(transfers):
+            logger.warning("Skipping %d unreadable NodeReal transfer records", len(transfers) - len(rows))
+        return rows, page_key or None
 
     def _whole_block(self, params: dict[str, Any], block: int) -> tuple[list[dict[str, Any]], bool]:
         """Every record of one block the address sent, page after page, and

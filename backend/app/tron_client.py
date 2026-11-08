@@ -38,7 +38,7 @@ from .evidence import EvidenceLog
 
 from . import config
 from .etherscan_client import (EtherscanError, ProviderResponseError, SinceRead, Transaction, is_tron_address,
-                               resolve_decimals, split_page)
+                               resolve_decimals, safe_int, split_page)
 
 logger = logging.getLogger(__name__)
 
@@ -621,21 +621,31 @@ class TronClient:
         sent: list[Transaction] = []
         stamps: list[int] = []
         cut = None
+        scanned = 0
         while True:
-            body = self._get(path, params)
-            records = [r for r in (body.get("data") or []) if isinstance(r, dict)]
-            stamps += [int(r.get("block_timestamp") or 0) // 1000 for r in records]
-            for raw in records:
+            # A page of the wrong shape is a failed read (TronResponseError),
+            # never an empty one; a record with no readable time is skipped,
+            # so one garbled row cannot fail the watch every round
+            # (r1-providers-10).
+            data, fingerprint = _page(self._get(path, params))
+            scanned += len(data)
+            records = [(r, stamp // 1000) for r in data if isinstance(r, dict)
+                       for stamp in (safe_int(r.get("block_timestamp"), default=-1),) if stamp >= 0]
+            if len(records) < len(data):
+                logger.warning("Skipping %d unreadable TronGrid records for %s", len(data) - len(records), address)
+            stamps += [stamp for _, stamp in records]
+            for raw, _ in records:
                 tx = parse(raw)
                 if tx and tx.to_address and not tx.is_error and tx.value_wei > 0:
                     sent.append(tx)
-            fingerprint = (body.get("meta") or {}).get("fingerprint")
-            if not fingerprint or not records:
+            if fingerprint and not stamps and scanned >= MAX_SCAN:  # page after page of garbage
+                raise TronResponseError("TronGrid kept returning records Exchequer cannot read")
+            if not fingerprint or not data:
                 through, complete = split_page(stamps, after, full=False)
                 break
             # Stop at the limit only once the read has left its first second:
             # a second filled by one block's sends is read to its end.
-            if (len(sent) >= limit and min(stamps) != max(stamps)) or len(stamps) >= MAX_SCAN:
+            if (len(sent) >= limit and min(stamps) != max(stamps)) or scanned >= MAX_SCAN:
                 through, complete = split_page(stamps, after, full=True)
                 if min(stamps) == max(stamps):
                     cut = through  # one second held more than MAX_SCAN records
