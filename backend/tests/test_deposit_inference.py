@@ -269,3 +269,91 @@ def test_a_usdt_trace_does_not_name_a_dust_sweeping_lookalike(monkeypatch):
     result = pipeline.run_trace(TraceRequest(address=SEED, chain="ethereum", asset="USDT", max_depth=3))
     assert result["inferred_deposits"] == []
     assert result["exchange_address"] != lookalike
+
+
+# ---------------------------------------------------------------------------
+# 8 Nov check: the floor is per sweep, and a deposit address sends on what it
+# received (r2-g2-documented-claims-vs-code-7-6)
+# ---------------------------------------------------------------------------
+def test_the_dust_floor_applies_to_each_sweep_not_their_total():
+    graph = sweep_graph()
+    # Two 0.6 USDT sends total 1.2, over a 1 USDT floor; neither is a sweep.
+    graph.nodes[DEPOSIT]["outflows_by_counterparty"] = {
+        HOT: {"count": 2, "total": 1.2, "min": 0.6, "first": 1, "last": 2}}
+    assert infer_deposit_addresses(graph, matcher(), asset="USDT") == []
+    graph.nodes[DEPOSIT]["outflows_by_counterparty"] = {
+        HOT: {"count": 2, "total": 1.001, "min": 0.001, "first": 1, "last": 2}}
+    assert infer_deposit_addresses(graph, matcher(), asset="USDT") == []
+
+
+def test_a_wallet_that_kept_what_it_received_is_not_a_deposit_address():
+    # It received the victim's 5,000 and sent on 6: an exchange sweeps a
+    # deposit address, it does not leave 99.9% of the money in it.
+    graph = make_graph([(SEED, DEPOSIT, 5000.0), (DEPOSIT, HOT, 6.0)], seed=SEED, exchanges={HOT: "Binance"})
+    graph.nodes[DEPOSIT]["outflows_by_counterparty"] = {
+        HOT: {"count": 2, "total": 6.0, "min": 3.0, "first": 1, "last": 2}}
+    assert infer_deposit_addresses(graph, matcher(), asset="USDT") == []
+
+
+def test_a_deposit_address_that_swept_what_it_received_still_is():
+    graph = make_graph([(SEED, DEPOSIT, 5000.0), (DEPOSIT, HOT, 4999.0)], seed=SEED, exchanges={HOT: "Binance"})
+    graph.nodes[DEPOSIT]["outflows_by_counterparty"] = {
+        HOT: {"count": 2, "total": 4999.0, "min": 2000.0, "first": 1, "last": 2}}
+    (found,) = infer_deposit_addresses(graph, matcher(), asset="USDT")
+    assert found.evidence["swept_after_arrival_native"] == 4999.0
+    assert found.evidence["received_on_trace_native"] == 5000.0
+    assert found.evidence["thresholds_applied"]["min_sweep_native"] == 1.0
+
+
+def test_the_graph_builder_records_each_counterpartys_smallest_outflow():
+    from app.etherscan_client import Transaction
+    from app.graph_builder import TraceConfig, build_trace_graph
+
+    def tx(n, src, dst, value):
+        return Transaction(hash=f"0x{n:064x}", from_address=src, to_address=dst, value_native=value,
+                           value_wei=int(value * 1e18), timestamp=1_700_000_000 + n, block_number=100 + n,
+                           is_error=False, asset="ETH")
+    history = [tx(1, SEED, DEPOSIT, 5.0), tx(2, DEPOSIT, HOT, 2.0), tx(3, DEPOSIT, HOT, 0.5)]
+
+    class Client:
+        def get_outgoing_transactions(self, address, limit=None):
+            return [t for t in history if t.from_address == address]
+
+    graph = build_trace_graph(SEED, Client(), cfg=TraceConfig(max_depth=2), is_terminal=lambda a: a == HOT).graph
+    assert graph.nodes[DEPOSIT]["outflows_by_counterparty"][HOT]["min"] == 0.5
+
+
+@pytest.mark.parametrize("sends", [[0.6, 0.6], [1.0, 0.001], [3.0, 3.0]],
+                         ids=["2 x 0.6 USDT", "1.0 + 0.001 USDT", "2 x 3 USDT"])
+def test_a_usdt_trace_does_not_name_a_lookalike_that_kept_the_money(monkeypatch, sends):
+    """The checker's bypasses (8 Nov): lookalike L receives the victim's
+    5,000 USDT and sends a few dollars to Binance 14 in two transfers."""
+    from contextlib import contextmanager
+
+    from app import pipeline
+    from app.etherscan_client import Transaction
+    from app.pipeline import TraceRequest
+
+    lookalike = addr("100ca1")
+
+    def tx(n, src, dst, value):
+        return Transaction(hash=f"0x{n:064x}", from_address=src, to_address=dst, value_native=value,
+                           value_wei=int(value * 1e6), timestamp=1_700_000_000 + n, block_number=100 + n,
+                           is_error=False, asset="USDT")
+
+    history = [tx(1, SEED, lookalike, 5000.0)] + [tx(2 + i, lookalike, HOT, v) for i, v in enumerate(sends)]
+
+    class Client:
+        def get_outgoing_transactions(self, address, limit=None):
+            return [t for t in history if t.from_address == address]
+
+    @contextmanager
+    def open_source(_chain, _asset):
+        yield Client()
+
+    monkeypatch.setattr(pipeline, "open_source", open_source)
+    monkeypatch.setattr(pipeline, "get_matcher", lambda key: matcher())
+    monkeypatch.setattr(pipeline, "detect_swaps", lambda *a, **k: [])
+    result = pipeline.run_trace(TraceRequest(address=SEED, chain="ethereum", asset="USDT", max_depth=3))
+    assert result["inferred_deposits"] == []
+    assert result["exchange_address"] != lookalike

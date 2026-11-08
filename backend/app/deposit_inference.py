@@ -84,8 +84,15 @@ class DepositInferenceConfig:
     # to the same hot wallet and nothing else, is the sweep pattern.
     min_sweeps: int = 2
     # Below this the address moved dust, and the pattern is not evidence.
-    # None: the traced asset's own floor (DUST_FLOOR).
+    # None: the traced asset's own floor (DUST_FLOOR). It applies to every
+    # sweep, not to their total: two 0.6 USDT sends total 1.2 over a 1 USDT
+    # floor, and named a lookalike a deposit address (8 Nov check).
     min_total_native: float | None = None
+    # A deposit address passes on what it receives: what it sent to the hot
+    # wallet after the traced funds arrived must be at least this share of
+    # what it received along the trace. A wallet that kept the victim's 5,000
+    # USDT and sent 6 on is holding the money, not an exchange's deposit.
+    min_swept_share: float = 0.5
 
 
 def _sweep_destination(
@@ -133,14 +140,28 @@ def infer_deposit_addresses(
         if len(outflows) != 1:
             continue
         (destination, stats), = outflows.items()
-        if stats.get("count", 0) < cfg.min_sweeps:
+        count = stats.get("count", 0)
+        if count < cfg.min_sweeps:
             continue
-        if stats.get("total", 0.0) < floor:
+        # Each sweep, not their total (a record without "min" is an older
+        # shape: its average stands in).
+        smallest = stats.get("min")
+        if smallest is None:
+            smallest = stats.get("total", 0.0) / count
+        if stats.get("total", 0.0) < floor or smallest < floor:
             continue
         meta = _sweep_destination(matcher, destination)
         if meta is None:
             continue
         if is_flagged is not None and is_flagged(node):
+            continue
+        # What it received along the trace, and what it sent on to the hot
+        # wallet once the traced funds were there (the graph's edge, after the
+        # time rule): an exchange sweeps a deposit, it does not leave it.
+        received = sum(edge.get("value_native", 0.0) for _, _, edge in graph.in_edges(node, data=True))
+        swept_after = (graph.edges[node, destination].get("value_native", 0.0)
+                       if graph.has_edge(node, destination) else 0.0)
+        if received > 0 and swept_after < cfg.min_swept_share * received:
             continue
 
         evidence: dict[str, Any] = {
@@ -154,11 +175,16 @@ def infer_deposit_addresses(
             "share_of_outflow_to_destination": 1.0,
             "other_outgoing_destinations": 0,
             "total_swept_native": round(stats["total"], 6),
+            "smallest_sweep_native": round(smallest, 6),
+            "received_on_trace_native": round(received, 6),
+            "swept_after_arrival_native": round(swept_after, 6),
             "first_sweep": stats.get("first"),
             "last_sweep": stats.get("last"),
             "thresholds_applied": {
                 "min_sweeps": cfg.min_sweeps,
                 "min_total_native": floor,
+                "min_sweep_native": floor,
+                "min_swept_share_of_received": cfg.min_swept_share,
                 "required_share_to_one_destination": 1.0,
             },
         }
@@ -189,9 +215,7 @@ def infer_deposit_addresses(
                 label=f"probable {meta['exchange']} deposit address (inferred)",
                 wallet_type=INFERRED_DEPOSIT,
                 depth=data.get("depth", 0),
-                value_received_native=sum(
-                    edge.get("value_native", 0.0) for _, _, edge in graph.in_edges(node, data=True)
-                ),
+                value_received_native=received,
                 evidence=evidence,
             )
         )

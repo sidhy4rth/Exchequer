@@ -389,11 +389,13 @@ request has to name — a hot wallet receives from thousands of customers and id
 
 1. It is not the reported address and has no label of its own — no exchange label and no risk label (a poisoning
    lookalike, a scam wallet, a freeze, a warning tag).
-2. It made **at least 2** outgoing transfers, worth more than dust in the traced asset (0.001 ETH, 0.005 BNB,
-   2 POL, 10 TRX, 1 USDT or USDC in all).
+2. It made **at least 2** outgoing transfers, **each** worth more than dust in the traced asset (0.001 ETH,
+   0.005 BNB, 2 POL, 10 TRX, 1 USDT or USDC per transfer, not in all).
 3. **Every one** went to the **same** labelled E wallet (never a labelled *deposit* wallet) and nowhere else.
-4. Where cheap, its current balance is recorded as evidence — but never required, since an unswept deposit is
-   still a deposit address.
+4. It passed on what it received: after the traced funds arrived it sent that E wallet at least **half** of what it
+   received along the trace. A wallet that kept the victim's 5,000 USDT and sent a few dollars on is holding the
+   money, not an exchange's deposit. The cost: a deposit not yet swept when the trace ran is not inferred.
+5. Where cheap, its current balance is recorded as evidence.
 
 An inference is **scored as a weaker attribution**: `match_directness` is 0.5 instead of 1.0. The response says
 `attribution_inferred: true`, the sidebar reads *"Probable Binance deposit address (inferred — see evidence)"*,

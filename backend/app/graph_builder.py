@@ -683,10 +683,12 @@ def build_trace_graph(
                     if not tx.to_address or tx.to_address == address:  # a self-send is no outflow
                         continue
                     stats = outflows.setdefault(
-                        tx.to_address, {"count": 0, "total": 0.0, "first": None, "last": None}
+                        tx.to_address, {"count": 0, "total": 0.0, "min": None, "first": None, "last": None}
                     )
                     stats["count"] += 1
                     stats["total"] += tx.value_native
+                    # The smallest single send: deposit inference's dust floor is per sweep.
+                    stats["min"] = tx.value_native if stats["min"] is None else min(stats["min"], tx.value_native)
                     if tx.timestamp:
                         stats["first"] = min(stats["first"] or tx.timestamp, tx.timestamp)
                         stats["last"] = max(stats["last"] or tx.timestamp, tx.timestamp)
