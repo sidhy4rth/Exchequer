@@ -151,6 +151,19 @@ CONTENT_HASH_MARK = "CONTENT HASH"
 # first line beginning "CONTENT HASH (", so a body line like that would make
 # a genuine report read as changed.
 SEAL_MARKS = (CONTENT_HASH_MARK + " (", "SIGNATURE (")
+# The hash line exactly as seal_text writes it: the only wording ever issued,
+# then 64 lower-case hex digits. Nothing covers this line, so anything else in
+# it -- an "addendum" inside the brackets, words before or after the hash --
+# is text nobody signed, and the report is damaged.
+HASH_CAPTION = f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): "
+_HASH_LINE = re.compile(re.escape(HASH_CAPTION) + r"(?P<hex>[0-9a-f]{64})")
+
+
+def hash_line_value(line: str) -> str | None:
+    """The hash a CONTENT HASH line carries, or None if the line is not
+    exactly as seal_text writes it."""
+    match = _HASH_LINE.fullmatch(line)
+    return match.group("hex") if match else None
 
 # The only lines seal_text writes below the hash line, besides the signature.
 # Append-only: every line ever issued must stay accepted, or the reports that
@@ -216,6 +229,11 @@ class Seal:
     extra: tuple[str, ...]
     bom_removed: bool = False
 
+    @property
+    def claimed_hash(self) -> str | None:
+        """The hash the hash line states; None when the line is not exactly as issued."""
+        return hash_line_value(self.hash_line)
+
 
 def read_seal(text: str) -> Seal | None:
     """Split a report at its first CONTENT HASH line; None if it has none.
@@ -272,23 +290,22 @@ def seal_text(text: str, sign: bool = True) -> str:
         # read_seal turns CRLF into LF before hashing, so this could never verify.
         raise ValueError("The report body contains a CRLF line ending; refusing to sign it.")
     if not sign:
-        return "\n".join([text, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): "
-                                f"{sha256_hex(text)}", UNSIGNED_HOW]) + "\n"
+        return "\n".join([text, f"{HASH_CAPTION}{sha256_hex(text)}", UNSIGNED_HOW]) + "\n"
     from . import config
     from .signing import ALGORITHM, SIGNATURE_MARK, get_signer
 
     signer = get_signer()
     text = "\n".join([text, *issuer_block(config.PUBLIC_URL, signer.fingerprint_sha256, signer.persistent)])
-    lines = [text, f"{CONTENT_HASH_MARK} (SHA-256 of every byte above this line): {sha256_hex(text)}",
+    lines = [text, f"{HASH_CAPTION}{sha256_hex(text)}",
              f"{SIGNATURE_MARK} ({ALGORITHM} over the same bytes, key {signer.fingerprint_sha256}): "
              f"{signer.sign(text.encode('utf-8'))}"]
     return "\n".join(lines) + "\n"
 
 
 def verify_sealed_text(sealed: str) -> bool:
-    """The hash-only check: the body matches its hash and nothing was added below."""
+    """The hash-only check: the hash line is exactly as issued, the body
+    matches it, and nothing was added below."""
     seal = read_seal(sealed)
-    if seal is None or seal.extra:
+    if seal is None or seal.extra or seal.claimed_hash is None:
         return False
-    claimed = seal.hash_line.rsplit(": ", 1)[-1].strip()
-    return sha256_hex(seal.body) == claimed
+    return sha256_hex(seal.body) == seal.claimed_hash

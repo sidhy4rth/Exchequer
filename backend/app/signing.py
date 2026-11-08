@@ -267,6 +267,8 @@ DETAILS = {
     "unknown_key": ("This report names a signing key this server does not know, so its signature cannot be "
                     "checked here. Do not rely on it."),
     "damaged": "The SIGNATURE line is damaged, so the signature cannot be checked. Do not rely on it.",
+    "hash_line_damaged": ("The CONTENT HASH line is not exactly as Exchequer writes it: words were added to it "
+                          "or changed in it, and nothing covers that line. Do not rely on this report."),
     "genuine": "Genuine and unchanged: signed by this server, and nothing was added below the signature.",
     "genuine_earlier_key": ("Genuine and unchanged: signed with an earlier official Exchequer key{retired}, and "
                             "nothing was added below the signature."),
@@ -304,8 +306,10 @@ def verify_report(text: str) -> dict:
                 "signature_ok": False, "signature_checked": False, "genuine": False,
                 "extra_content": False, "finding": None, "detail": DETAILS["not_a_report"]}
     body = seal.body
-    claimed = seal.hash_line.rsplit(": ", 1)[-1].strip()
-    hash_ok = sha256_hex(body) == claimed
+    # The hash line must be exactly as seal_text writes it: no signature covers
+    # it, so text inside it would otherwise pass as part of the seal.
+    claimed = seal.claimed_hash
+    hash_ok = claimed is not None and sha256_hex(body) == claimed
     extra = len(seal.extra)
     added = (f"{extra} line{'s were' if extra != 1 else ' was'} added below the seal, and nothing "
              f"covers {'them' if extra != 1 else 'it'}: treat everything below the CONTENT HASH line "
@@ -323,6 +327,7 @@ def verify_report(text: str) -> dict:
         "genuine": False,
         "extra_content": extra > 0,
         "extra_lines": extra,
+        "hash_line_ok": claimed is not None,
         "bom_removed": seal.bom_removed,
         "key_fingerprint": None,
         "key_fingerprint_sha256": None,
@@ -348,6 +353,8 @@ def verify_report(text: str) -> dict:
             result["detail"] += " (A byte-order mark added by an editor was ignored.)"
         return result
 
+    if claimed is None:
+        return done("damaged", DETAILS["hash_line_damaged"])
     if sig_line is None:
         if not hash_ok:
             return done("changed")

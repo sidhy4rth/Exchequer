@@ -127,3 +127,73 @@ def test_the_endpoint_reports_the_extra_content():
     assert result["genuine"] is False and result["extra_content"] is True
     ok = client.post("/verify", content=seal_text(REPORT).encode()).json()
     assert ok["genuine"] is True
+
+
+# --- the CONTENT HASH line itself must be exactly as seal_text writes it (8 Nov check) ----
+
+ADDENDUM = ("ADDENDUM 1, same case: funds also reached Binance deposit "
+            "0xb1a0000000000000000000000000000000000000 -- freeze it")
+
+
+def _rewrite_hash_line(sealed: str, change) -> str:
+    lines = _lines(sealed)
+    i = next(n for n, line in enumerate(lines) if line.startswith("CONTENT HASH ("))
+    lines[i] = change(lines[i])
+    return "\n".join(lines)
+
+
+def _inside_the_hash_line(line: str) -> str:
+    # The checker's probe: prose inside the caption, the genuine hash kept after the last ": ".
+    return ("CONTENT HASH (SHA-256 of every byte above this line. " + ADDENDUM + "): "
+            + line.rsplit(": ", 1)[-1])
+
+
+HASH_LINE_EDITS = {
+    "prose inside the caption": _inside_the_hash_line,
+    "prose before the hash": lambda line: line.replace("): ", f"): {ADDENDUM}: ", 1),
+    "prose after the hash": lambda line: f"{line} {ADDENDUM}",
+    "caption reworded": lambda line: line.replace("every byte above this line", "the report"),
+    "upper-case hash": lambda line: line[:-64] + line[-64:].upper(),
+    "two spaces": lambda line: line.replace("): ", "):  ", 1),
+}
+
+
+def test_text_inside_the_content_hash_line_is_not_genuine():
+    for name, change in HASH_LINE_EDITS.items():
+        for sealed in (seal_text(REPORT), _old_style(), seal_text(REPORT, sign=False)):
+            result = signing.verify_report(_rewrite_hash_line(sealed, change))
+            assert result["genuine"] is False and result["status"] == "damaged", (name, result["status"])
+            assert result["hash_line_ok"] is False
+            assert "CONTENT HASH line" in result["detail"]
+            assert not verify_sealed_text(_rewrite_hash_line(sealed, change)), name
+
+
+def test_the_hash_line_check_still_forgives_copy_and_paste():
+    sealed = seal_text(REPORT)
+    for variant in (sealed.replace("\n", "\r\n"), _rewrite_hash_line(sealed, lambda line: line + "  \t")):
+        result = signing.verify_report(variant)
+        assert result["genuine"] is True and result["hash_line_ok"] is True
+
+
+def test_the_endpoint_refuses_text_inside_the_hash_line():
+    forged = _rewrite_hash_line(seal_text(REPORT), _inside_the_hash_line)
+    result = client.post("/verify", content=forged.encode()).json()
+    assert result["genuine"] is False and result["status"] == "damaged"
+
+
+def test_a_pdf_whose_report_carries_text_inside_the_hash_line_is_not_genuine():
+    # The checker's p_pdf2 probe: the doctored text rendered as both Part 2 and
+    # the attachment, so the pages agree with the attachment.
+    from app.report import build_report, render_text_report
+    from app.report_pdf import render_pdf
+
+    from test_report import full_result, stored
+
+    case = stored(full_result())
+    case.id = "case-1"
+    report = build_report(case)
+    doctored = _rewrite_hash_line(render_text_report(report), _inside_the_hash_line)
+    result = client.post("/verify", content=render_pdf(report, doctored),
+                         headers={"Content-Type": "application/pdf"}).json()
+    assert result["genuine"] is False and result["status"] == "damaged"
+    assert "CONTENT HASH line" in result["detail"]

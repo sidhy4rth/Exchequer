@@ -20,7 +20,7 @@ const VERDICT = {
   text_added: { tone: 'red', title: 'Text was added after signing' },
   changed: { tone: 'red', title: 'This report was changed' },
   signature_missing: { tone: 'red', title: 'Signature missing' },
-  damaged: { tone: 'red', title: 'Signature damaged' },
+  damaged: { tone: 'red', title: 'Signature or content hash damaged' },
   unsigned: { tone: 'grey', title: 'Unsigned: cannot be verified' },
   unknown_key: { tone: 'grey', title: 'Cannot be verified here' },
   not_a_report: { tone: 'red', title: 'Not an Exchequer report' },
@@ -39,7 +39,8 @@ const UNKNOWN = { tone: 'red', title: 'Cannot be trusted' }
 function signatureRow(r) {
   if (!r.signed) return r.status === 'signature_missing' ? 'missing' : 'none'
   if (r.status === 'unknown_key' || r.status === 'forged_issuer') return 'not checked (unknown key)'
-  if (r.status === 'damaged') return 'damaged'
+  // A CONTENT HASH line not as issued is refused before the signature is checked.
+  if (r.status === 'damaged') return r.hash_line_ok === false ? 'not checked (hash line damaged)' : 'damaged'
   return r.signature_ok ? 'valid' : 'invalid'
 }
 
