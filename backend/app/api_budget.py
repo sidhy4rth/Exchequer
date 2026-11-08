@@ -93,9 +93,27 @@ def _row_key() -> bytes:
 class ResponseTooLarge(Exception):
     """A provider's body passed the size cap while it was being read."""
 
-    def __init__(self, limit: int) -> None:
-        super().__init__(f"response larger than {limit} bytes")
+    def __init__(self, limit: int, reason: str | None = None) -> None:
+        super().__init__(reason or f"response larger than {limit} bytes")
         self.limit = limit
+
+
+# Decoded bytes one decompression step may produce: the peak is the cap plus this.
+_DECODE_STEP = 256 * 1024
+
+
+def _decoder(encoding: str) -> Any:
+    """A bounded decoder for a Content-Encoding, None for an uncompressed body."""
+    import zlib
+
+    name = encoding.strip().lower()
+    if name in ("", "identity"):
+        return None
+    if name in ("gzip", "x-gzip"):
+        return zlib.decompressobj(16 + zlib.MAX_WBITS)
+    if name == "deflate":
+        return zlib.decompressobj()
+    raise ResponseTooLarge(0, f"response in an encoding Exchequer did not ask for ({name[:40]})")
 
 
 def read_capped(client: Any, method: str, url: str, max_bytes: int | None = None, **kwargs: Any) -> Any:
@@ -106,22 +124,55 @@ def read_capped(client: Any, method: str, url: str, max_bytes: int | None = None
     This streams the body and stops with ResponseTooLarge past the cap (by
     Content-Length at once when the server states one). The returned response
     holds the decoded body, so `.json()`, `.text` and `.content` work as before.
+
+    It asks for an uncompressed body. A server that compresses anyway is
+    decoded here, never more than the cap at a time: httpx inflated each
+    whole raw chunk before the cap saw it, so 69 kB of gzipped zeros peaked
+    at 131 MB in one read (r1-providers-1).
     """
+    import zlib
+
     import httpx
 
     from . import config
 
     limit = max_bytes or config.PROVIDER_MAX_RESPONSE_BYTES
+    kwargs["headers"] = {**dict(kwargs.get("headers") or {}), "Accept-Encoding": "identity"}
     with client.stream(method, url, **kwargs) as response:
         declared = response.headers.get("content-length", "")
         if declared.isdigit() and int(declared) > limit:
             raise ResponseTooLarge(limit)
-        chunks, size = [], 0
-        for chunk in response.iter_bytes():
-            size += len(chunk)
+        decoder = _decoder(response.headers.get("content-encoding", ""))
+        chunks, size, wire = [], 0, 0
+
+        def take(piece: bytes) -> None:
+            nonlocal size
+            size += len(piece)
             if size > limit:
                 raise ResponseTooLarge(limit)
-            chunks.append(chunk)
+            if piece:
+                chunks.append(piece)
+
+        if response.is_stream_consumed:
+            # An in-memory body (a test transport): httpx read it already.
+            take(response.content)
+            decoder = None
+        try:
+            for raw in (() if response.is_stream_consumed else response.iter_raw()):
+                wire += len(raw)
+                if wire > limit:
+                    raise ResponseTooLarge(limit)
+                if decoder is None:
+                    take(raw)
+                    continue
+                data = raw
+                while data:  # at most what is left under the cap, one step at a time
+                    take(decoder.decompress(data, min(limit - size + 1, _DECODE_STEP)))
+                    data = decoder.unconsumed_tail
+            if decoder is not None:
+                take(decoder.flush())
+        except zlib.error as exc:
+            raise ResponseTooLarge(0, f"compressed response could not be read: {exc}") from exc
     # The body is already decoded: drop the headers that describe the wire form.
     headers = [(k, v) for k, v in response.headers.multi_items()
                if k.lower() not in ("content-encoding", "content-length", "transfer-encoding")]

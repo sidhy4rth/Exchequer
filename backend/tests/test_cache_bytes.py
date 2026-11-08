@@ -14,7 +14,7 @@ import time
 import httpx
 import pytest
 
-from app.api_budget import ResponseCache, read_capped
+from app.api_budget import ResponseCache, ResponseTooLarge, read_capped
 from app.etherscan_client import EtherscanClient, EtherscanError
 from app.nodereal_client import NoderealClient, NoderealError
 from app.tron_client import TronClient, TronError
@@ -140,3 +140,74 @@ def test_a_cached_value_cannot_be_changed_by_the_caller_who_read_it():
     cache.put("k", [{"a": 1}])
     cache.get("k")[1][0]["a"] = 2
     assert cache.get("k") == (True, [{"a": 1}])
+
+
+# The cap counts the body as it is decoded (r1-providers-1, 8 Nov check):
+# httpx asked for gzip and inflated each whole raw chunk before the cap saw
+# it, so a page of zero calldata (52 MB that gzips to 69 kB) peaked at 26 MB
+# with 16 kB chunks and 131 MB with 64 kB ones.
+
+def _gzip(data: bytes) -> bytes:
+    import zlib
+    packer = zlib.compressobj(9, zlib.DEFLATED, 31)
+    return packer.compress(data) + packer.flush()
+
+
+class _Chunks(httpx.SyncByteStream):
+    def __init__(self, data: bytes, size: int) -> None:
+        self.data, self.size = data, size
+
+    def __iter__(self):
+        for i in range(0, len(self.data), self.size):
+            yield self.data[i:i + self.size]
+
+
+def test_every_provider_asks_for_an_uncompressed_body():
+    seen = []
+
+    def handler(request):
+        seen.append(request.headers.get("accept-encoding"))
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": "0x10", "data": [], "meta": {}})
+    transport = httpx.MockTransport(handler)
+    _etherscan(handler).get_transactions(WALLET)
+    NoderealClient(api_key="k", min_interval=0, max_retries=0, client=httpx.Client(transport=transport)).head_block()
+    TronClient(api_key="k", min_interval=0, max_retries=0,
+               client=httpx.Client(transport=transport)).get_outgoing_transactions("TSFFxCbDLh6nP1x4BcyqkbEFJyx3zSGY2r")
+    TronScanTags("k", client=httpx.Client(transport=transport), min_interval=0).account(
+        "TSFFxCbDLh6nP1x4BcyqkbEFJyx3zSGY2r")
+    assert len(seen) >= 4 and set(seen) == {"identity"}
+
+
+@pytest.mark.parametrize("chunk", [16_384, 65_536])
+def test_a_compressed_body_sent_anyway_is_capped_as_it_is_decoded(chunk):
+    import tracemalloc
+    limit = 1_000_000
+    bomb = _gzip(b"0" * 40_000_000)  # 40 MB that gzips to about 40 kB
+    client = httpx.Client(transport=httpx.MockTransport(
+        lambda r: httpx.Response(200, stream=_Chunks(bomb, chunk), headers={"content-encoding": "gzip"})))
+    tracemalloc.start()
+    try:
+        with pytest.raises(ResponseTooLarge):
+            read_capped(client, "GET", "https://example.test/x", max_bytes=limit)
+        peak = tracemalloc.get_traced_memory()[1]
+    finally:
+        tracemalloc.stop()
+    assert peak < 2 * limit
+
+
+@pytest.mark.parametrize("encoding", ["gzip", "deflate"])
+def test_a_small_compressed_body_is_still_read(encoding):
+    import zlib
+    body = json.dumps({"a": list(range(1000))}).encode()
+    wire = _gzip(body) if encoding == "gzip" else zlib.compress(body)
+    client = httpx.Client(transport=httpx.MockTransport(
+        lambda r: httpx.Response(200, stream=_Chunks(wire, 100), headers={"content-encoding": encoding})))
+    response = read_capped(client, "GET", "https://example.test/x", max_bytes=100_000)
+    assert response.json() == {"a": list(range(1000))} and "content-encoding" not in response.headers
+
+
+def test_a_body_in_an_encoding_nobody_asked_for_is_refused():
+    client = httpx.Client(transport=httpx.MockTransport(
+        lambda r: httpx.Response(200, content=b"\x1b\x00garbage", headers={"content-encoding": "br"})))
+    with pytest.raises(ResponseTooLarge):
+        read_capped(client, "GET", "https://example.test/x", max_bytes=100_000)
