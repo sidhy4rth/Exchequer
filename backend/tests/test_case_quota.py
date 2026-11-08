@@ -193,3 +193,68 @@ def test_sizes_are_recorded_and_summed():
     first = store_sized(ALICE, 500)["case_id"]
     second = store_sized(BOB, 1500)["case_id"]
     assert models.stored_bytes() == sum(len(models.get_case(i).result_json) for i in (first, second))
+
+
+# -- bytes per connection and per owner (r2-g2-documented-claims-vs-code-7-0, 8 Nov re-check) --
+# The per-connection quota counted cases, not bytes, while the store is
+# bounded at MAX_STORED_BYTES and an active owner's cases are never evicted:
+# one connection with one owner key filled the store with dense cases in
+# hours to two days (p_bytes_fill). Now one connection saves at most
+# MAX_BYTES_PER_CLIENT_PER_DAY bytes of cases a day and one owner key keeps
+# at most MAX_BYTES_PER_OWNER, whatever the counts say.
+
+def test_the_rechecks_probe_one_connection_cannot_fill_the_store_by_bytes(monkeypatch):
+    # p_bytes_fill, scaled 1:10: a 30 MB store, cases of 0.39 MB, a 3 MB daily byte quota.
+    monkeypatch.setattr(config, "MAX_STORED_CASES", 5000)
+    monkeypatch.setattr(config, "MAX_CASES_PER_OWNER", 200)
+    monkeypatch.setattr(config, "MAX_STORED_BYTES", 30_000_000)
+    monkeypatch.setattr(config, "MAX_BYTES_PER_CLIENT_PER_DAY", 3_000_000)
+    monkeypatch.setattr(config, "MAX_BYTES_PER_OWNER", 5_000_000)
+    attacker = "z" * 64
+    saved = 0
+    for _ in range(150):
+        result = store_sized(attacker, 390_000, client="203.0.113.66")
+        if not result["case_id"]:
+            assert "last 24 hours" in result["warnings"][-1] and "MB" in result["warnings"][-1]
+            break
+        saved += 1
+    assert saved == 7  # 7 x 0.39 MB fit in 3 MB; the 8th would not
+    assert models.stored_bytes() <= 3_000_000
+    # A fresh owner key from the same connection does not get round it.
+    assert store_sized("y" * 64, 390_000, client="203.0.113.66")["case_id"] is None
+    # The officer's case from another connection is saved.
+    assert store_sized("q" * 64, 3_200, client="198.51.100.5")["case_id"]
+
+
+def test_the_daily_byte_quota_frees_up_after_a_day(monkeypatch):
+    monkeypatch.setattr(config, "MAX_BYTES_PER_CLIENT_PER_DAY", 5_000)
+    first = store_sized(ALICE, 3_000, client="10.0.0.7")["case_id"]
+    assert store_sized(BOB, 3_000, client="10.0.0.7")["case_id"] is None
+    age([first], 2)
+    assert store_sized(BOB, 3_000, client="10.0.0.7")["case_id"]
+
+
+def test_one_owner_key_keeps_at_most_its_bytes(monkeypatch):
+    monkeypatch.setattr(config, "MAX_BYTES_PER_OWNER", 5_000)
+    assert store_sized(ALICE, 3_000, client="10.0.0.1")["case_id"]
+    refused = store_sized(ALICE, 3_000, client="10.0.0.2")  # another connection, the same key
+    assert refused["case_id"] is None and "this browser" in refused["warnings"][-1].lower()
+    assert "MB" in refused["warnings"][-1]
+    assert store_sized(BOB, 3_000, client="10.0.0.2")["case_id"]
+    assert store_sized(ALICE, 500, client="10.0.0.1")["case_id"]  # a small one still fits
+
+
+def test_the_byte_quotas_are_configurable_and_documented():
+    from pathlib import Path
+    assert config.MAX_BYTES_PER_CLIENT_PER_DAY == 30 * 1000 * 1000
+    assert config.MAX_BYTES_PER_OWNER > 0
+    operations = (config.BACKEND_DIR.parent / "docs" / "operations.md").read_text()
+    for name in ("EXCHEQUER_MAX_BYTES_PER_CLIENT_PER_DAY", "EXCHEQUER_MAX_BYTES_PER_OWNER"):
+        assert name in operations and name in Path(config.__file__).read_text()
+
+
+def test_byte_quotas_of_zero_mean_no_quota(monkeypatch):
+    monkeypatch.setattr(config, "MAX_BYTES_PER_CLIENT_PER_DAY", 0)
+    monkeypatch.setattr(config, "MAX_BYTES_PER_OWNER", 0)
+    monkeypatch.setattr(config, "MAX_CASES_PER_OWNER", 10)
+    assert all(store_sized(ALICE, 3_000, client="10.0.0.9")["case_id"] for _ in range(5))

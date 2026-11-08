@@ -249,6 +249,23 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
                                    f"is {config.MAX_CASE_BYTES / 1e6:.1f} MB), so it is shown here but was not "
                                    "saved: export what you need from it now, or trace again with a smaller depth.")
     size = len(text) if text is not None else 0
+    # Bytes as well as cases, per connection and per owner key: the counts
+    # alone let one connection fill the store's bytes with dense cases.
+    if connection and config.MAX_BYTES_PER_CLIENT_PER_DAY:
+        today = _count(models.bytes_from, connection, _since(86400))
+        if today + size > config.MAX_BYTES_PER_CLIENT_PER_DAY:
+            return _not_saved(payload, f"This connection has saved {today / 1e6:.1f} MB of cases in the last 24 "
+                                       f"hours, and this one ({size / 1e6:.1f} MB) would pass the "
+                                       f"{config.MAX_BYTES_PER_CLIENT_PER_DAY / 1e6:,.0f} MB a connection may "
+                                       "save in a day, so it is shown here but was not saved: export what you "
+                                       "need from it now.")
+    if owner and config.MAX_BYTES_PER_OWNER:
+        kept = _count(models.bytes_for, owner)
+        if kept + size > config.MAX_BYTES_PER_OWNER:
+            return _not_saved(payload, f"This browser already keeps {kept / 1e6:.1f} MB of cases, and this one "
+                                       f"({size / 1e6:.1f} MB) would pass the {config.MAX_BYTES_PER_OWNER / 1e6:,.0f} "
+                                       "MB one browser may keep, so it is shown here but was not saved: export "
+                                       "what you need from it now.")
 
     stored = _count(models.case_count) if config.MAX_STORED_CASES else 0
     total = _count(models.stored_bytes) if config.MAX_STORED_BYTES else 0

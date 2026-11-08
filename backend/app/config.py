@@ -528,6 +528,14 @@ MAX_CASES_PER_OWNER: int = _int_env("EXCHEQUER_MAX_CASES_PER_OWNER", 200)
 # one connection (keyed like the hourly limits) may save in 24 hours, whatever
 # owner keys it sends (0 = no quota).
 MAX_CASES_PER_CLIENT_PER_DAY: int = _int_env("EXCHEQUER_MAX_CASES_PER_CLIENT_PER_DAY", 150)
+# The counts bound cases, not bytes, and an active owner's cases are never
+# evicted, so one connection with one key could fill MAX_STORED_BYTES with
+# dense cases in hours to two days. So bytes are bounded too (0 = no quota):
+# what one connection may save in 24 hours (a tenth of the store, so filling
+# it takes ten days from one connection), and what one owner key may keep
+# (a dense case is 1.2-1.5 MB, an average one ~32 KB).
+MAX_BYTES_PER_CLIENT_PER_DAY: int = _int_env("EXCHEQUER_MAX_BYTES_PER_CLIENT_PER_DAY", 30 * 1000 * 1000)
+MAX_BYTES_PER_OWNER: int = _int_env("EXCHEQUER_MAX_BYTES_PER_OWNER", 50 * 1000 * 1000)
 # When the store is full, the oldest cases nobody is using give up their place
 # to a new one (models.evict_cases): saved without an owner key, or kept by an
 # owner who has saved nothing for this many days. Never a demo case, and never

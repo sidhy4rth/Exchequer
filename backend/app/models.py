@@ -464,6 +464,21 @@ def case_count_from(client_hash: str, since: str) -> int:
         return int(session.scalar(stmt) or 0)
 
 
+def bytes_from(client_hash: str, since: str) -> int:
+    """The bytes of the cases one connection saved since `since` (ISO-8601 UTC)."""
+    with Session(_engine) as session:
+        stmt = select(func.coalesce(func.sum(Case.size_bytes), 0)).where(Case.client_hash == client_hash,
+                                                                          Case.created_at >= since)
+        return int(session.scalar(stmt) or 0)
+
+
+def bytes_for(owner_hash: str) -> int:
+    """The bytes of every case one owner key keeps."""
+    with Session(_engine) as session:
+        stmt = select(func.coalesce(func.sum(Case.size_bytes), 0)).where(Case.owner_hash == owner_hash)
+        return int(session.scalar(stmt) or 0)
+
+
 def _evictable(idle_before: str):
     """Cases that may give up their place when the store is full, oldest
     first: saved without an owner key, or kept by an owner who has saved
