@@ -39,26 +39,26 @@ class Etherscan:
 
     def __init__(self, head=HEAD):
         self.records: list[dict] = []
+        self.internal: list[dict] = []
         self.requests: list[dict] = []
         self.head = head
 
-    def add(self, block, frm, to, value, token=False, n=0):
+    def add(self, block, frm, to, value, token=False, n=0, internal=False):
         rec = {"blockNumber": str(block), "timeStamp": str(1_800_000_000 + block), "from": frm, "to": to,
                "value": str(value), "isError": "0", "hash": f"0x{block:060x}{n:04x}"}
         if token:
             rec.update(contractAddress=USDT, tokenDecimal="6", tokenSymbol="USDT")
-        self.records.append(rec)
+        (self.internal if internal else self.records).append(rec)
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         q = dict(request.url.params)
         self.requests.append(q)
         if q.get("module") == "proxy":
             return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": hex(self.head)})
-        if q["action"] == "txlistinternal":
-            return httpx.Response(200, json={"status": "0", "message": "No transactions found", "result": []})
         token = q["action"] == "tokentx"
         lo, hi = int(q.get("startblock", 0)), int(q.get("endblock", 99999999))
-        rows = [r for r in self.records if lo <= int(r["blockNumber"]) <= hi and bool(r.get("contractAddress")) == token
+        pool = self.internal if q["action"] == "txlistinternal" else self.records
+        rows = [r for r in pool if lo <= int(r["blockNumber"]) <= hi and bool(r.get("contractAddress")) == token
                 and W in (r["from"], r["to"])]
         rows.sort(key=lambda r: int(r["blockNumber"]), reverse=q.get("sort") == "desc")
         rows = rows[:int(q.get("offset", 10000))]
@@ -66,8 +66,8 @@ class Etherscan:
             return httpx.Response(200, json={"status": "0", "message": "No transactions found", "result": []})
         return httpx.Response(200, json={"status": "1", "message": "OK", "result": rows})
 
-    def source(self, token=False):
-        client = EtherscanClient(api_key="k", chain_id=1, min_interval=0.0, include_internal=False,
+    def source(self, token=False, internal=False):
+        client = EtherscanClient(api_key="k", chain_id=1, min_interval=0.0, include_internal=internal,
                                  contract_address=USDT if token else None, asset_symbol="USDT" if token else "ETH",
                                  token_decimals=6 if token else None,
                                  client=httpx.Client(transport=httpx.MockTransport(self.handler)))
@@ -197,3 +197,39 @@ def test_a_block_too_full_to_read_whole_is_counted_as_read_and_said_so(store, mo
     assert [a["kind"] for a in alerts] == ["more"]
     assert "block 200" in alerts[0]["message"] and "may be missing" in alerts[0]["message"]
     assert cursor_of(w) == 200
+
+
+def test_an_internal_cash_out_beside_a_signed_send_in_one_window_alerts_both(store):
+    # The watched wallet (an address with code, e.g. EIP-7702 delegated) cashes
+    # out 25 ETH as an internal transfer inside a relayer's transaction, and
+    # signs one 1-wei send after it. Internal transfers were read only when
+    # the signed list held no send, yet the cursor moved past both: the
+    # cash-out was never alerted (8 Nov check).
+    eth = Etherscan()
+    w = watch(eth)
+    eth.add(205, W, BINANCE_14, 25 * 10**18, internal=True)
+    eth.add(210, W, STRANGER, 1)
+    alerts = watchlist.check_watch(w.id, source=eth.source(internal=True))
+    assert sorted((a["kind"], a["value"]) for a in alerts) == [("exchange", 25.0), ("moved", 1e-18)]
+    assert cursor_of(w) == 210
+    assert watchlist.check_watch(w.id, source=eth.source(internal=True)) == []
+
+
+def test_internal_transfers_are_read_over_the_span_the_signed_read_covered(store):
+    # Full signed pages stop the check inside the range; an internal send
+    # above where it stopped must wait for the next check, not be skipped
+    # or read twice.
+    eth = Etherscan()
+    w = watch(eth)
+    for i in range(200):  # more sends than one check reads
+        eth.add(101 + i, W, STRANGER, 10**18)
+    eth.add(120, W, BINANCE_14, 25 * 10**18, internal=True, n=1)
+    eth.add(290, W, BINANCE_14, 30 * 10**18, internal=True, n=1)
+    first = watchlist.check_watch(w.id, source=eth.source(internal=True))
+    assert cursor_of(w) < 290 and [a["value"] for a in first if a["kind"] == "exchange"] == [25.0]
+    later = []
+    for _ in range(3):
+        later += watchlist.check_watch(w.id, source=eth.source(internal=True))
+    assert [a["value"] for a in later if a["kind"] == "exchange"] == [30.0]
+    moved = [a for a in first + later if a["kind"] == "moved"]
+    assert len(moved) == 200 and len({a["tx_hash"] for a in moved}) == 200

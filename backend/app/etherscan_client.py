@@ -999,8 +999,8 @@ class EtherscanClient:
         before it, and never holds the cursor back. A full page that is all
         one block (one transaction can emit that many token records) is read
         again as that block alone, so a transfer after them in the same block
-        is read too. Internal transfers are read over the same span when the
-        signed list shows no send, as in get_outgoing_transactions."""
+        is read too. On a native-asset watch internal transfers are always
+        read over the same span: the cursor moves over both lists."""
         target = normalize_address(address)
         params: dict[str, Any] = {
             "module": "account",
@@ -1059,14 +1059,20 @@ class EtherscanClient:
 
         sent, blocks, full = page(params, self._parser())
         through, complete = split_page(blocks, after, full)
-        if not sent and not self.contract_address and self.include_internal:
+        if not self.contract_address and self.include_internal:
+            # Always, not only when the signed list shows no send: the cursor
+            # moves over this whole span, so an internal cash-out beside a
+            # 1-wei signed send was skipped for good (8 Nov check). The read
+            # covers what the signed read covered, and the cursor stops at
+            # what both covered.
             span = {**params, "action": "txlistinternal"}
             if not complete:
                 span["endblock"] = through
-            sent, iblocks, ifull = page(span, lambda raw: Transaction.from_api(raw, internal=True))
+            internal, iblocks, ifull = page(span, lambda raw: Transaction.from_api(raw, internal=True))
             ithrough, icomplete = split_page(iblocks, after, ifull)
             through = ithrough if not icomplete else max(through, ithrough)
             complete = complete and icomplete
+            sent = sorted([*sent, *internal], key=lambda t: t.block_number)
         return SinceRead([t for t in sent if after < t.block_number <= through], through, complete,
                          max((b for b in cut if b <= through), default=None))
 
