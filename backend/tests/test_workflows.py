@@ -157,3 +157,15 @@ def test_the_nightly_job_runs_strict():
     """r1-ci-github-2: a list skipped for want of its key turns the nightly run red."""
     steps = {s.get("name"): s for s in refresh_jobs()["refresh"]["steps"]}
     assert "python -m scripts.import_all_lists --strict " in steps["Run the importers"]["run"]
+
+
+# -- the site canary (r1-ci-github-9) -------------------------------------------------------
+def test_a_push_canary_checks_the_pushed_commit_not_a_fixed_sleep():
+    steps = load(ROOT / ".github" / "workflows" / "site-canary.yml")["jobs"]["canary"]["steps"]
+    runs = [str(s.get("run", "")) for s in steps]
+    assert not any(run.strip().startswith("sleep 240") for run in runs)
+    (wait,) = [s for s in steps if s.get("name") == "Wait for the pushed commit to go live"]
+    assert wait["if"] == "github.event_name == 'push'" and wait["env"]["WANT"] == "${{ github.sha }}"
+    assert '"build"' in wait["run"] and "exit 1" in wait["run"]
+    names = [s.get("name") for s in steps]
+    assert names.index("Wake the site") < names.index("Wait for the pushed commit to go live")

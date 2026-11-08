@@ -63,7 +63,7 @@ def test_a_public_host_without_a_code_stays_open_but_says_so_loudly(client, monk
     with caplog.at_level("WARNING", logger="app.access"):
         access.report_at_startup()
     assert any(r.levelname == "ERROR" and "EXCHEQUER_DEMO_CODE" in r.getMessage() for r in caplog.records)
-    assert client.get("/health").json() == {"status": "ok", "access": "open"}
+    assert client.get("/health").json()["access"] == "open"
     assert post(client, "/trace", GUARDED[0][1]).status_code == 200
 
 

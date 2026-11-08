@@ -6,7 +6,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app import config
+from app import config, report
 from app.main import app
 
 TOKEN = "t" * 40
@@ -18,13 +18,24 @@ def client():
         yield c
 
 
-def test_public_health_says_only_whether_it_is_up_and_open(client, monkeypatch):
-    """Up, and whether anyone may start live traces -- the same fact GET
-    /access gives the console, shown where monitors look."""
+def test_public_health_says_only_whether_it_is_up_open_and_which_build(client, monkeypatch):
+    """Up, whether anyone may start live traces -- the same fact GET /access
+    gives the console, shown where monitors look -- and which commit is
+    serving, which every report's footer already prints (the repository is
+    public). The site canary waits for the pushed commit by it (r1-ci-github-9)."""
+    build = report.tool_version()
     monkeypatch.setattr(config, "DEMO_CODE", "")
-    assert client.get("/health").json() == {"status": "ok", "access": "open"}
+    assert client.get("/health").json() == {"status": "ok", "access": "open", "build": build}
     monkeypatch.setattr(config, "DEMO_CODE", "a" * 22)
-    assert client.get("/health").json() == {"status": "ok", "access": "code"}
+    assert client.get("/health").json() == {"status": "ok", "access": "code", "build": build}
+
+
+def test_the_build_is_the_commit_the_host_deployed(monkeypatch):
+    """In the image there is no git; Render names the deployed commit."""
+    monkeypatch.delenv("EXCHEQUER_VERSION", raising=False)
+    monkeypatch.delenv("RAILWAY_GIT_COMMIT_SHA", raising=False)
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "0123456789abcdef0123456789abcdef01234567")
+    assert report._read_tool_version() == "0123456789ab"
 
 
 def test_health_detail_reports_the_access_state(client, monkeypatch):

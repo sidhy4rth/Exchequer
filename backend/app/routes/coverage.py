@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import access, api_budget, config, label_store, models, ownership, rate_limit, signing, warmup, watchlist, webhook_vault
+from .. import access, api_budget, config, label_store, models, ownership, rate_limit, report, signing, warmup, watchlist, webhook_vault
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, SEIZED, STOLEN,
@@ -36,8 +36,12 @@ async def health() -> dict[str, str]:
 
     async, so it runs on the event loop: a sync route needs one of the 40
     worker threads, and when a slow database had them all, the host's health
-    check failed and restarted a site that was only busy."""
-    return {"status": "ok", "access": access.state()}
+    check failed and restarted a site that was only busy.
+
+    `build` is the commit serving (every report's footer prints it too; the
+    repository is public), so the site canary can wait for a pushed commit
+    to go live instead of guessing (r1-ci-github-9)."""
+    return {"status": "ok", "access": access.state(), "build": report.tool_version()}
 
 
 # The label type of a customer's deposit address at an exchange, as opposed
