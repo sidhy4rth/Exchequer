@@ -72,6 +72,11 @@ before ownership existed, address in `backend/data/demo_traces.json`) are
 public. A case id or job id is random and works as the permission to read
 that one case or job. See `backend/app/ownership.py` and `SECURITY.md`.
 
+The history list (`GET /cases`) reads only the summary stored with each case,
+never a stored result: the hosted database's transfer is metered. The demo
+list, the same for every visitor without an owner key, is kept for 30
+seconds, and one connection may list 60 times a minute.
+
 Clearing a browser's site data loses its history list (the cases remain and
 open by link). Moving to real accounts later means mapping owner hashes to
 users; nothing else changes.

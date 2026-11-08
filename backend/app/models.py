@@ -17,7 +17,7 @@ import threading
 import uuid
 from collections import OrderedDict
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy import (BigInteger, Boolean, Float, Index, Integer, String, Text, create_engine, event, func, or_,
                         select, text)
@@ -54,6 +54,12 @@ class Case(Base):
     # len(result_json): the store is bounded in bytes too. NULL only on a row
     # written before the column existed (its migration fills them).
     size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # What the history list shows (summary_fields), stored with the case so
+    # listing never reads a whole result; direction is its own column so the
+    # demo copies can be told apart in SQL. NULL on a row whose result did
+    # not parse when its migration filled them: the list then reads its result.
+    direction: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    summary_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # -- convenience -------------------------------------------------------
     @property
@@ -80,20 +86,42 @@ class Case(Base):
 
     def summary(self) -> dict[str, Any]:
         """Compact form used by the /cases history list."""
-        result = self.result
-        return {
-            "case_id": self.id,
-            "address": self.address,
-            "created_at": self.created_at,
-            "chain": self._normalise_chain(result.get("chain")),
-            "asset": result.get("asset"),
-            "direction": result.get("direction", "outgoing"),
-            "exchange": result.get("exchange"),
-            "confidence": result.get("confidence"),
-            "flags": result.get("flags", []),
-            "hop_count": result.get("hop_count"),
-            "node_count": len(result.get("graph", {}).get("nodes", [])),
-        }
+        return summary_row(self.id, self.address, self.created_at, self.summary_json,
+                           lambda: self.result)
+
+
+def summary_fields(result: dict[str, Any]) -> dict[str, Any]:
+    """What the history list shows of a result, stored with the case
+    (Case.summary_json). Frozen in migrations/versions/sec7_cap_4: change both."""
+    return {
+        "chain": result.get("chain"),
+        "asset": result.get("asset"),
+        "direction": result.get("direction", "outgoing"),
+        "exchange": result.get("exchange"),
+        "confidence": result.get("confidence"),
+        "flags": result.get("flags", []),
+        "hop_count": result.get("hop_count"),
+        "node_count": len((result.get("graph") or {}).get("nodes") or []),
+    }
+
+
+def summary_row(case_id: str, address: str, created_at: str, summary_json: str | None,
+                result: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    """A history-list entry from the stored summary, or from the whole result
+    (`result`, read only then) for a row without one."""
+    fields = None
+    if summary_json:
+        try:
+            fields = json.loads(summary_json)
+        except ValueError:
+            fields = None
+    if not isinstance(fields, dict):
+        try:
+            fields = summary_fields(result())
+        except (AttributeError, TypeError):
+            fields = summary_fields({})
+    return {"case_id": case_id, "address": address, "created_at": created_at,
+            **fields, "chain": Case._normalise_chain(fields.get("chain"))}
 
 
 class Watch(Base):
@@ -362,6 +390,11 @@ def save_case(
     """Persist one completed trace, and the deposit addresses it inferred.
     `result_json` is `result` already serialised, when the caller has it."""
     text = result_json if result_json is not None else json.dumps(result, default=str)
+    try:
+        fields = summary_fields(result)
+        summary, direction = json.dumps(fields, default=str), fields["direction"]
+    except (AttributeError, TypeError, ValueError):
+        summary, direction = None, None
     case = Case(
         id=case_id,
         address=address,
@@ -371,6 +404,8 @@ def save_case(
         client_hash=client_hash,
         anonymous=anonymous,
         size_bytes=len(text),
+        direction=direction[:16] if isinstance(direction, str) else None,
+        summary_json=summary,
     )
     global _store_version
     with Session(_engine) as session:
@@ -595,6 +630,45 @@ def list_cases(
         for case in cases:
             session.expunge(case)
         return cases
+
+
+def list_summaries(limit: int = 50, owner_hash: str | None = None,
+                   public_addresses: frozenset[str] | None = None) -> list[tuple[str | None, dict[str, Any]]]:
+    """The history list, newest first: (owner_hash, summary) of the owner's
+    own cases and of the demo cases, never reading a stored result (only a
+    row without a stored summary reads its own). A demo address stored more
+    than once (seeded several times) is listed by its newest copy for each
+    direction, chosen in SQL."""
+    visible = []
+    if owner_hash:
+        visible.append(Case.owner_hash == owner_hash)
+    if public_addresses:
+        later = Case.__table__.alias("later")
+        newer_copy = select(later.c.id).where(
+            later.c.owner_hash.is_(None),
+            func.lower(later.c.address) == func.lower(Case.address),
+            func.coalesce(later.c.direction, "outgoing") == func.coalesce(Case.direction, "outgoing"),
+            later.c.created_at > Case.created_at).exists()
+        visible.append(Case.owner_hash.is_(None) & func.lower(Case.address).in_(sorted(public_addresses))
+                       & ~newer_copy)
+    if not visible:
+        return []
+    stmt = (select(Case.id, Case.address, Case.created_at, Case.owner_hash, Case.summary_json)
+            .where(or_(*visible)).order_by(Case.created_at.desc()).limit(limit))
+    with Session(_engine) as session:
+        rows = session.execute(stmt).all()
+        missing = [r[0] for r in rows if not r[4]]
+        results = dict(session.execute(select(Case.id, Case.result_json).where(Case.id.in_(missing))).all()) \
+            if missing else {}
+
+    def parsed(case_id: str) -> dict[str, Any]:
+        try:
+            value = json.loads(results.get(case_id) or "{}")
+        except ValueError:
+            return {}
+        return value if isinstance(value, dict) else {}
+    return [(owner, summary_row(case_id, address, created_at, summary, lambda cid=case_id: parsed(cid)))
+            for case_id, address, created_at, owner, summary in rows]
 
 
 def session() -> Session:

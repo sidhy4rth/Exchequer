@@ -5,42 +5,81 @@ from __future__ import annotations
 
 import hashlib
 import threading
+import time
 from collections import OrderedDict
 from typing import Any
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import config, models, ownership
+from .. import config, models, ownership, rate_limit
 from ..correlation import CaseIndex, related_cases
 from ..exchange_matcher import get_matcher, get_router_matcher
 
 router = APIRouter()
 
 
+# GET /cases needs no code and once read the whole stored result of every
+# visible case, uncached, from a database whose transfer is metered (about
+# 5.85 MB per anonymous request, the 8 Nov check). It now reads only the
+# summary stored with each case (models.list_summaries); the answer for a
+# caller with no owner key (the demo cases only, the same for everyone) is
+# kept for a short while; and each connection may list a limited number of
+# times a minute.
+CASE_LISTS_PER_MINUTE_PER_CLIENT = 60
+case_lists = rate_limit.SlidingWindowLimiter(CASE_LISTS_PER_MINUTE_PER_CLIENT, 60)
+_PUBLIC_LIST_SECONDS = 30.0
+_public_lists: dict[tuple, tuple[float, dict[str, Any]]] = {}
+_public_lock = threading.Lock()
+
+
+def clear_public_lists() -> None:
+    with _public_lock:
+        _public_lists.clear()
+
+
+def _listing(caller: str | None, limit: int) -> dict[str, Any]:
+    rows = models.list_summaries(limit=limit, owner_hash=caller, public_addresses=ownership.demo_addresses())
+    # The SQL keeps the newest copy of each demo; two saved in the same second
+    # are told apart here. Rows are newest first.
+    seen_demo: set[tuple[str, str]] = set()
+    kept = []
+    for owner, summary in rows:
+        demo = ownership.is_public(owner, summary["address"])
+        if demo:
+            key = (summary["address"].lower(), summary.get("direction") or "outgoing")
+            if key in seen_demo:
+                continue
+            seen_demo.add(key)
+        kept.append({**summary, "demo": demo})
+    return {"count": len(kept), "cases": kept}
+
+
 @router.get("/cases")
 def cases(http: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
     """History of past traces, most recent first: the caller's own cases (by
     the owner key their browser sends) and the demo cases. See ownership.py."""
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    wait = case_lists.check(client)
+    if wait is not None:
+        raise HTTPException(status_code=429, headers={"Retry-After": str(int(wait) + 1)},
+                            detail="This connection has listed the cases too often this minute. Try again shortly.")
     caller = ownership.owner_hash_from_headers(http.headers)
-    records = models.list_cases(limit=limit, owner_hash=caller,
-                                public_addresses=ownership.demo_addresses())
-    # The deployed store holds the demos several times over (seeded more than
-    # once); list each demo once, its newest trace. Records are newest first.
-    seen_demo: set[tuple[str, str]] = set()
-    kept = []
-    for c in records:
-        if ownership.is_public(c.owner_hash, c.address):
-            key = (c.address.lower(), c.result.get("direction", "outgoing"))
-            if key in seen_demo:
-                continue
-            seen_demo.add(key)
-        kept.append(c)
-    records = kept
-    return {
-        "count": len(records),
-        "cases": [{**c.summary(), "demo": ownership.is_public(c.owner_hash, c.address)}
-                  for c in records],
-    }
+    if caller is not None:
+        return _listing(caller, limit)
+    # Everyone without a key sees the same demo list: one read serves them all
+    # until a case is saved or evicted, or the kept answer is a little old.
+    key = (models.engine(), models.store_version(), limit)
+    now = time.monotonic()
+    with _public_lock:
+        kept = _public_lists.get(key)
+        if kept is not None and now - kept[0] < _PUBLIC_LIST_SECONDS:
+            return kept[1]
+    answer = _listing(None, limit)
+    with _public_lock:
+        for stale in [k for k, (at, _) in _public_lists.items() if now - at >= _PUBLIC_LIST_SECONDS or k[:2] != key[:2]]:
+            del _public_lists[stale]
+        _public_lists[key] = (now, answer)
+    return answer
 
 
 def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
