@@ -58,8 +58,8 @@ COPY backend/ ./backend/
 # prints the reason.
 # A new store = a new release tag + sha256 here. See backend/scripts/fetch_label_store.py.
 ARG LABEL_STORE_REPO="sidhy4rth/exchequer-labels"
-ARG LABEL_STORE_TAG="labels-2026-11-05b"
-ARG LABEL_STORE_SHA256="f3e1d3b597768234e5b3d2eec14e1365c0c14bdbd9cc771ecd0209dd954e9846"
+ARG LABEL_STORE_TAG="labels-2026-11-08b"
+ARG LABEL_STORE_SHA256="a59eaf9dd262e0f1720321a1c339ea30875a30da03262da2466c17c78e3d79f3"
 ARG LABEL_STORE_REQUIRED="1"
 RUN --mount=type=secret,id=label_store_token,required=false \
     cd backend && LABEL_STORE_REQUIRED="$LABEL_STORE_REQUIRED" LABEL_STORE_REPO="$LABEL_STORE_REPO" \
