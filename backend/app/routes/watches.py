@@ -19,7 +19,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from .. import config, ownership, rate_limit, watchlist
+from .. import api_budget, config, ownership, rate_limit, watchlist
 from ..input_rules import OneLine
 
 router = APIRouter()
@@ -104,9 +104,14 @@ def delete_webhook(watch_id: str, http: Request) -> dict[str, Any]:
 
 # A manual check reads the provider fresh, past the cache, so it is bounded
 # per connection and for the site as a whole, per minute. Owner keys are free,
-# so the per-watch cooldown alone bounded nothing.
-CHECKS_PER_MINUTE_PER_CLIENT = 10
-CHECKS_PER_MINUTE_TOTAL = 60
+# so the per-watch cooldown alone bounded nothing. Its reads are charged to the
+# connection's share of the day's provider allowance and to the part of it
+# kept for watch checks (config.WATCH_SHARE_PERCENT), so checks can never use
+# up what traces need. At 3 a minute (two reads each on Ethereum) one
+# connection reaches its share of that part in a few hours, not minutes; the
+# site-wide ceiling takes ten connections to fill.
+CHECKS_PER_MINUTE_PER_CLIENT = 3
+CHECKS_PER_MINUTE_TOTAL = 30
 checks_per_client = rate_limit.SlidingWindowLimiter(CHECKS_PER_MINUTE_PER_CLIENT, 60)
 checks_total = rate_limit.SlidingWindowLimiter(CHECKS_PER_MINUTE_TOTAL, 60)
 # Watches being checked right now: a second click while the first is still
@@ -152,7 +157,8 @@ def check_now(watch_id: str, http: Request) -> dict[str, Any]:
                             "in the last minute. Try again shortly.", wait)
         _checking.add(watch_id)
     try:
-        new = watchlist.check_watch(watch_id)
+        with api_budget.charged_to(client, watch=True):
+            new = watchlist.check_watch(watch_id)
     finally:
         with _checking_lock:
             _checking.discard(watch_id)

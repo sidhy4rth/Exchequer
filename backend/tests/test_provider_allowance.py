@@ -202,6 +202,18 @@ def test_a_connections_share_survives_a_restart_too(stored_meters):
     assert "10.0.0" not in row.clients_json and row.used >= 25
 
 
+def test_the_watch_part_survives_a_restart(stored_meters, monkeypatch):
+    monkeypatch.setattr(config, "WATCH_SHARE_PERCENT", 20)
+    api_budget.reset()
+    with api_budget.charged_to(None, watch=True):
+        for _ in range(20):
+            api_budget.spend("etherscan", api_budget.credential(KEY), 1, None)
+    restart()
+    with api_budget.charged_to(None, watch=True), pytest.raises(BudgetSpent) as stopped:
+        api_budget.spend("etherscan", api_budget.credential(KEY), 1, None)
+    assert stopped.value.scope == "watch"
+
+
 def test_the_count_is_written_at_most_every_few_seconds(stored_meters, monkeypatch):
     writes = []
     real = api_budget._store_meter
@@ -234,9 +246,9 @@ def test_a_store_that_cannot_be_reached_leaves_the_meter_counting(monkeypatch):
 def test_the_store_never_lowers_a_count_another_process_wrote(stored_meters):
     day = int(__import__("time").time() // 86400)
     assert api_budget._store_meter("etherscan:x", {"day": day, "used": 50, "requests": 50, "refused": 0,
-                                                   "clients": {}})
+                                                   "shares": {}})
     assert api_budget._store_meter("etherscan:x", {"day": day, "used": 10, "requests": 10, "refused": 0,
-                                                   "clients": {}})
+                                                   "shares": {}})
     with stored_meters.session() as s:
         assert s.get(stored_meters.ProviderMeter, ("etherscan:x", day)).used == 50
 
@@ -246,7 +258,7 @@ def test_a_meter_takes_up_the_stored_count_once_it_can_write(stored_meters, monk
     write that succeeds also reads back what the store held."""
     day = int(__import__("time").time() // 86400)
     name = f"etherscan:{api_budget.credential(KEY)}"
-    assert api_budget._store_meter(name, {"day": day, "used": 90, "requests": 90, "refused": 0, "clients": {}})
+    assert api_budget._store_meter(name, {"day": day, "used": 90, "requests": 90, "refused": 0, "shares": {}})
     with monkeypatch.context() as m:
         m.setattr(api_budget, "_load_meter", lambda meter: None)
         meter = _meter()  # as if the read had failed

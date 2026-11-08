@@ -44,7 +44,7 @@ import httpx
 from sqlalchemy import and_, case, delete, func, select, update
 
 from . import config, models, ownership, webhook_vault
-from .api_budget import TraceBudget, fresh_reads
+from .api_budget import TraceBudget, charged_to, fresh_reads
 from .deposit_inference import DUST_FLOOR, dust_floor
 from .chain_data import open_source
 from .etherscan_client import normalize_address
@@ -266,6 +266,9 @@ def touch(owner: str, watch_ids: list[str] | None = None) -> None:
         s.commit()
 
 
+_create_lock = threading.Lock()
+
+
 def create_watch(owner: str, address: str, chain_key: str | None, asset: str | None,
                  note: str = "", case_id: str | None = None, webhook_url: str | None = None,
                  read_head: Callable[[str, str], int | None] | None = None,
@@ -291,7 +294,11 @@ def create_watch(owner: str, address: str, chain_key: str | None, asset: str | N
         start = read_head(chain.key, asset_symbol) if read_head else None
 
     connection = client_hash(client)
-    with models.session() as s:
+    # Count and insert under one lock: checked apart, 40 creates at once all
+    # passed the counts and made 36 watches against a cap of 25 (8 Nov check).
+    # One process serves the site; a second one (a deploy's overlap) could
+    # still overshoot by its own few.
+    with _create_lock, models.session() as s:
         sealed = webhook_vault.seal(hook)
         existing = s.scalar(select(models.Watch).where(
             models.Watch.owner_hash == owner, models.Watch.active, models.Watch.address == address,
@@ -1152,7 +1159,8 @@ def _round(interval: float) -> int:
         if _stop.is_set():
             break
         try:
-            check_watch(watch_id)
+            with charged_to(None, watch=True):  # the part of the day kept for watches
+                check_watch(watch_id)
         except Exception:  # noqa: BLE001 -- one watch must not stop the rest
             logger.exception("Watch %s: check failed", watch_id)
     return len(active)

@@ -750,11 +750,18 @@ class UnitMeter:
     STORED_CLIENTS = 200  # the heaviest connections whose share is kept in the store
 
     def __init__(self, provider: str, limit: float, client_share: float = 0.0,
-                 clock: Callable[[], float] = time.time, name: str | None = None) -> None:
+                 clock: Callable[[], float] = time.time, name: str | None = None,
+                 watch_share: float = 0.0) -> None:
         self.provider = provider
         self.name = name  # its row in the store; None: memory only
         self.limit = float(limit)  # 0: no limit, counted only
         self.client_share = client_share
+        # The most of the day watch checks may spend (0: no cap of their own),
+        # so they never use up what traces need; one connection's checks get
+        # client_share of that part.
+        self.watch_share = watch_share
+        self.watch_used = 0.0
+        self._watch_by_client: dict[str, float] = {}
         self._clock = clock
         self._lock = threading.Lock()
         self._day = int(clock() // 86400)
@@ -776,25 +783,45 @@ class UnitMeter:
         if day != self._day:
             self._day, self.used, self.requests, self.refused = day, 0.0, 0, 0
             self._by_client.clear()
+            self.watch_used = 0.0
+            self._watch_by_client.clear()
 
-    def charge(self, units: float, client: str | None = None) -> str | None:
-        """Count one request of `units`. None if allowed; else "site" or
-        "client" (which allowance refused it), and nothing is counted."""
+    def _add(self, counts: dict[str, float], who: str, units: float) -> None:
+        if who not in counts and len(counts) >= self.MAX_CLIENTS:
+            counts.pop(next(iter(counts)))
+        counts[who] = counts.get(who, 0.0) + units
+
+    def charge(self, units: float, client: str | None = None, watch: bool = False) -> str | None:
+        """Count one request of `units` (`watch`: for a watch check). None if
+        allowed; else which allowance refused it -- "site", "client", "watch"
+        (watch checks' part) or "watch-client" (one connection's part of it)
+        -- and nothing is counted."""
         with self._lock:
             self._roll()
             self._dirty = True
+            refused = None
+            who = _connection(client) if client else None
             if self.limit and self.used + units > self.limit:
+                refused = "site"
+            elif who and self.limit and self.client_share and \
+                    self._by_client.get(who, 0.0) + units > self.limit * self.client_share:
+                refused = "client"
+            elif watch and self.limit and self.watch_share:
+                part = self.limit * self.watch_share
+                if self.watch_used + units > part:
+                    refused = "watch"
+                elif who and self.client_share and \
+                        self._watch_by_client.get(who, 0.0) + units > part * self.client_share:
+                    refused = "watch-client"
+            if refused is not None:
                 self.refused += 1
-                return "site"
-            if client and self.limit and self.client_share:
-                who = _connection(client)
-                mine = self._by_client.get(who, 0.0)
-                if mine + units > self.limit * self.client_share:
-                    self.refused += 1
-                    return "client"
-                if who not in self._by_client and len(self._by_client) >= self.MAX_CLIENTS:
-                    self._by_client.pop(next(iter(self._by_client)))
-                self._by_client[who] = mine + units
+                return refused
+            if who and self.limit and self.client_share:
+                self._add(self._by_client, who, units)
+                if watch and self.watch_share:
+                    self._add(self._watch_by_client, who, units)
+            if watch:
+                self.watch_used += units
             self.used += units
             self.requests += 1
             return None
@@ -810,8 +837,9 @@ class UnitMeter:
         return int((int(now // 86400) + 1) * 86400 - now) + 1
 
     # -- the store ---------------------------------------------------------
-    def restore(self, day: int, used: float, requests: int, refused: int, clients: dict[str, float]) -> None:
-        """Take up a stored count for `day`: never less than what this process counted."""
+    def restore(self, day: int, used: float, requests: int, refused: int, shares: dict[str, Any]) -> None:
+        """Take up a stored count for `day`: never less than what this process
+        counted. `shares` is snapshot()'s "shares"."""
         with self._lock:
             self._roll()
             if day != self._day:
@@ -819,16 +847,29 @@ class UnitMeter:
             self.used = max(self.used, float(used))
             self.requests = max(self.requests, int(requests))
             self.refused = max(self.refused, int(refused))
-            for who, units in list(clients.items())[: self.MAX_CLIENTS]:
-                self._by_client[who] = max(self._by_client.get(who, 0.0), float(units))
+            try:
+                self.watch_used = max(self.watch_used, float(shares.get("watch") or 0.0))
+            except (TypeError, ValueError):
+                pass
+            for key, counts in (("clients", self._by_client), ("watch_clients", self._watch_by_client)):
+                stored = shares.get(key)
+                for who, units in list(stored.items() if isinstance(stored, dict) else [])[: self.MAX_CLIENTS]:
+                    try:
+                        counts[who] = max(counts.get(who, 0.0), float(units))
+                    except (TypeError, ValueError):
+                        continue
+
+    def _heaviest(self, counts: dict[str, float]) -> dict[str, float]:
+        return dict(sorted(counts.items(), key=lambda kv: -kv[1])[: self.STORED_CLIENTS])
 
     def snapshot(self) -> dict[str, Any]:
         """What the store keeps, read under the lock."""
         with self._lock:
             self._roll()
-            heaviest = sorted(self._by_client.items(), key=lambda kv: -kv[1])[: self.STORED_CLIENTS]
             return {"day": self._day, "used": self.used, "requests": self.requests,
-                    "refused": self.refused, "clients": dict(heaviest)}
+                    "refused": self.refused,
+                    "shares": {"clients": self._heaviest(self._by_client), "watch": self.watch_used,
+                               "watch_clients": self._heaviest(self._watch_by_client)}}
 
     def save_if_due(self, force: bool = False) -> None:
         """Write the count to the store if it changed and METER_SAVE_SECONDS
@@ -866,6 +907,8 @@ class UnitMeter:
                 "requests": self.requests,
                 "refused": self.refused,
                 "client_share": self.client_share or None,
+                "watch_used": round(self.watch_used, 2),
+                "watch_share": self.watch_share or None,
                 "connections": len(self._by_client),  # how many, never which
                 "resets_at": resets.isoformat().replace("+00:00", "Z"),
             }
@@ -898,10 +941,10 @@ def _load_meter(meter: UnitMeter) -> None:
         _meter_store_failed("read")
         return
     try:
-        clients = json.loads(stored[4] or "{}")
+        shares = json.loads(stored[4] or "{}")
     except ValueError:
-        clients = {}
-    meter.restore(*stored[:4], clients if isinstance(clients, dict) else {})
+        shares = {}
+    meter.restore(*stored[:4], shares if isinstance(shares, dict) else {})
 
 
 def _store_meter(name: str, snap: dict[str, Any]) -> bool:
@@ -913,7 +956,7 @@ def _store_meter(name: str, snap: dict[str, Any]) -> bool:
 
     table = models.ProviderMeter
     values = {"used": snap["used"], "requests": snap["requests"], "refused": snap["refused"],
-              "clients_json": json.dumps(snap["clients"], separators=(",", ":")),
+              "clients_json": json.dumps(snap["shares"], separators=(",", ":")),
               "updated_at": datetime.now(tz=timezone.utc).isoformat(timespec="seconds")}
 
     def larger(column, value):
@@ -967,7 +1010,8 @@ def get_meter(provider: str, api_key_digest: str) -> UnitMeter:
         if meter is not None:
             return meter
     made = UnitMeter(provider, period_limits().get(provider, 0),
-                     client_share=config.PROVIDER_CLIENT_SHARE_PERCENT / 100, name=name)
+                     client_share=config.PROVIDER_CLIENT_SHARE_PERCENT / 100, name=name,
+                     watch_share=config.WATCH_SHARE_PERCENT / 100)
     _load_meter(made)  # outside the registry lock: a database read
     with _registry_lock:
         return _meters.setdefault(name, made)
@@ -1015,6 +1059,8 @@ class BudgetSpent(TraceStopped):
             "trace": f"{name} request budget for this trace{of}",
             "site": f"{name} allowance for this site today",
             "client": f"share of today's {name} allowance for this connection",
+            "watch": f"part of today's {name} allowance kept for watch checks",
+            "watch-client": f"share of today's {name} watch checks for this connection",
         }.get(scope, f"{name} request budget")
         super().__init__(self.reason)
 
@@ -1159,6 +1205,24 @@ class TraceBudget:
             raise Cancelled()
 
 
+# Who a read outside any trace is for: (connection, whether it is a watch
+# check). Set around a watch check (charged_to), so its reads count against
+# that connection's share and against the part of the day kept for watches.
+_charged: ContextVar[tuple[str | None, bool]] = ContextVar("charged_to", default=(None, False))
+
+
+@contextmanager
+def charged_to(client: str | None, watch: bool = False):
+    """Charge the reads made in this context, outside a trace, to `client`
+    (the admit()-style connection key), and as watch checks if `watch`.
+    Context does not cross threads: set it on the thread that reads."""
+    token = _charged.set((client, watch))
+    try:
+        yield
+    finally:
+        _charged.reset(token)
+
+
 def spend(provider: str, api_key_digest: str, units: float, budget: TraceBudget | None) -> None:
     """The one check every provider client makes before each network attempt
     (retries included; cache hits make none): the case's clock and its units,
@@ -1167,8 +1231,10 @@ def spend(provider: str, api_key_digest: str, units: float, budget: TraceBudget 
     for either budget) when the request may not be sent."""
     if budget is not None:
         budget.charge(provider, units)
+    connection, watch = _charged.get()
+    client = budget.client if budget is not None and budget.client else connection
     meter = get_meter(provider, api_key_digest)
-    refused = meter.charge(units, budget.client if budget is not None else None)
+    refused = meter.charge(units, client, watch=watch)
     meter.save_if_due()
     if refused is not None:
         from .etherscan_client import AllowanceSpent  # here: that module imports this one

@@ -458,6 +458,10 @@ TRONSCAN_CALLS_PER_DAY: int = _int_env("EXCHEQUER_TRONSCAN_CALLS_PER_DAY", 20_00
 # The most of each day's allowance one connection may spend (0 = no share), so
 # one visitor cannot use up the day for everyone; keyed like the hourly limits.
 PROVIDER_CLIENT_SHARE_PERCENT: int = _int_env("EXCHEQUER_CLIENT_SHARE_PERCENT", 25)
+# The most of each day's allowance watch checks may spend, Check now and the
+# background watcher together (0 = no part of their own): they cannot use up
+# what traces need. One connection's checks get the share above of this part.
+WATCH_SHARE_PERCENT: int = _int_env("EXCHEQUER_WATCH_SHARE_PERCENT", 20)
 # The day's count is kept in the case store too, so a restart (the free host
 # sleeps after 15 idle minutes) does not begin the day again at zero; it is
 # written at most this often while spending, and at shutdown.
