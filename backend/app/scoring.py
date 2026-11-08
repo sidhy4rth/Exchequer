@@ -462,7 +462,9 @@ def score_case(
     """
     findings = findings or []
     # A read stopped at its record limit somewhere: "read in full" would be untrue.
-    capped = any(data.get("history_capped") for _, data in graph.nodes(data=True))
+    # Its own name: the band cap below once reused `capped`, and every matched
+    # case then claimed a read had hit its limit (8 Nov check).
+    history_capped = any(data.get("history_capped") for _, data in graph.nodes(data=True))
 
     if primary_match is None:
         return ConfidenceScore(
@@ -482,7 +484,8 @@ def score_case(
                 "the substantive result of a reverse trace."
             ),
             caveats=_caveats(findings, truncated, matched=False, asset=native_symbol,
-                             internal_transfers_read=internal_transfers_read, history_capped=capped),
+                             internal_transfers_read=internal_transfers_read,
+                             history_capped=history_capped),
         )
 
     status = (prorata or {}).get("status")
@@ -495,16 +498,16 @@ def score_case(
     ]
     score = round(sum(c.contribution for c in components), 4)
     band = _band(score)
-    capped = _materiality_cap(band, materiality)
+    capped_band = _materiality_cap(band, materiality)
     material_caveat = []
-    if capped != band and materiality:
+    if capped_band != band and materiality:
         material_caveat = [
             f"Only {materiality['primary_share'] * 100:.1f}% of what the reported address sent "
             f"(about {materiality.get('primary_reach', 0):g} of {materiality.get('denominator', 0):g} "
-            f"{native_symbol}) reached this exchange, so confidence is capped at {capped}: the rest of "
+            f"{native_symbol}) reached this exchange, so confidence is capped at {capped_band}: the rest of "
             "the funds went elsewhere."
         ]
-        band = capped
+        band = capped_band
 
     hops = f"{primary_match.depth} hop{'s' if primary_match.depth != 1 else ''}"
     if direction == OUTGOING and depth_offset:
@@ -534,7 +537,7 @@ def score_case(
         summary=summary,
         caveats=material_caveat + _caveats(findings, truncated, matched=True, asset=native_symbol,
                                            internal_transfers_read=internal_transfers_read,
-                                           history_capped=capped)
+                                           history_capped=history_capped)
         + _prorata_caveats(prorata, native_symbol),
     )
 

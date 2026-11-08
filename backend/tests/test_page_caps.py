@@ -143,3 +143,29 @@ def test_the_read_in_full_caveat_is_withheld_when_a_read_was_capped():
     assert clause in " ".join(score_case(graph, SEED, None, internal_transfers_read=True).caveats)
     graph.nodes[HOP]["history_capped"] = True
     assert clause not in " ".join(score_case(graph, SEED, None, internal_transfers_read=True).caveats)
+
+
+def test_a_matched_case_with_no_capped_read_says_it_was_read_in_full():
+    # 8 Nov check (r1-attribution-integrity-3): the band cap reused the name of
+    # the "some read was capped" flag, so every matched case with a material
+    # share said a read had hit its record limit when none had.
+    from app.exchange_matcher import ExchangeMatch
+    from app.scoring import score_case
+    from conftest import make_graph
+
+    exchange = addr("e1")
+    graph = make_graph([(SEED, HOP, 10.0), (HOP, exchange, 9.0)], seed=SEED)
+    match = ExchangeMatch(address=exchange, exchange="Binance", label="Binance 14", wallet_type="hot_wallet",
+                          depth=2, value_received_native=9.0)
+    materiality = {"primary_share": 0.9, "threshold": 0.1, "majority": 0.5, "primary_reach": 9, "denominator": 10}
+    full = "signed transfers were read in full"
+    capped = "which some reads reached"
+    caveats = " ".join(score_case(graph, SEED, match, internal_transfers_read=True, materiality=materiality).caveats)
+    assert full in caveats and capped not in caveats
+    # A small share caps the band; the read is still complete.
+    small = {**materiality, "primary_share": 0.05}
+    caveats = " ".join(score_case(graph, SEED, match, internal_transfers_read=True, materiality=small).caveats)
+    assert full in caveats and capped not in caveats
+    graph.nodes[HOP]["history_capped"] = True
+    caveats = " ".join(score_case(graph, SEED, match, internal_transfers_read=True, materiality=materiality).caveats)
+    assert capped in caveats and full not in caveats
