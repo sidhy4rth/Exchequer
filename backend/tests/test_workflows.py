@@ -169,3 +169,13 @@ def test_a_push_canary_checks_the_pushed_commit_not_a_fixed_sleep():
     assert '"build"' in wait["run"] and "exit 1" in wait["run"]
     names = [s.get("name") for s in steps]
     assert names.index("Wake the site") < names.index("Wait for the pushed commit to go live")
+
+
+# -- commit e-mails (r1-secrets-history-4) ---------------------------------------------------
+def test_new_commits_must_carry_a_noreply_address():
+    job = load(ROOT / ".github" / "workflows" / "test.yml")["jobs"]["emails"]
+    (checkout, check) = job["steps"]
+    assert checkout["with"] == {"persist-credentials": False, "fetch-depth": 0}
+    assert "check_commit_emails.sh" in check["run"] and "${{" not in check["run"]
+    script = (ROOT / ".github" / "scripts" / "check_commit_emails.sh").read_text()
+    assert "@users.noreply.github.com" in script and "%ae" in script and "%ce" in script
