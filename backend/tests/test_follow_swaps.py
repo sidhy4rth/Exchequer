@@ -298,8 +298,9 @@ def swaps_are(monkeypatch, found, asset="ETH"):
 
 def test_a_dust_swap_before_the_real_one_does_not_cap_the_follow_on(faked, monkeypatch):
     """A 0.25 USDT swap, then the real 2,400 one, then 2,400.25 USDT to
-    Binance. The first swap's output capped the whole follow-on at 0.25; the
-    cap is every swap by that wallet into USDT."""
+    Binance. The first swap's output capped the whole follow-on at 0.25. The
+    follow-on now covers the swaps from the first that carries the traced
+    value (8 Nov check): the real one, so the cap is its 2,400."""
     dust = {**SWAP, "tx": "0xd057", "timestamp": SWAP_AT - 30, "amount_in": 0.0001, "amount_out": 0.25}
     monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, ROUTER, 0.0001, SWAP_AT - 30, "ETH"),
                                          tx(SEED, ROUTER, 1.0, SWAP_AT, "ETH")])
@@ -308,12 +309,12 @@ def test_a_dust_swap_before_the_real_one_does_not_cap_the_follow_on(faked, monke
 
     (follow,) = run_trace(request())["follow_ons"]
     found = follow["result"]
-    assert found["prorata"]["estimated"] == 2400.25
-    assert found["prorata"]["seed_cap"] == {"amount": 2400.25, "basis": "swap_output", "applied": False}
-    assert found["materiality"]["denominator"] == 2400.25
-    assert follow["cap"]["swap_output"] == 2400.25 and follow["cap"]["swaps"] == 2
+    assert found["prorata"]["estimated"] == 2400.0
+    assert found["prorata"]["seed_cap"] == {"amount": 2400.0, "basis": "swap_output", "applied": True}
+    assert found["materiality"]["denominator"] == 2400.0
+    assert follow["cap"]["swap_output"] == 2400.0 and follow["cap"]["swaps"] == 1
     assert follow["swap"]["tx"] == SWAP["tx"]  # the swap named is the largest
-    assert [s["tx"] for s in follow["swaps"]] == ["0xd057", SWAP["tx"]]
+    assert "swaps" not in follow and [s["tx"] for s in follow["swaps_left_out"]] == ["0xd057"]
 
 
 def test_a_decoy_output_cannot_take_the_slot_of_the_real_swap(faked, monkeypatch):
@@ -426,9 +427,10 @@ def test_the_report_states_what_the_follow_on_may_claim(faked, monkeypatch):
     assert "traced share : at most 100.0000 USDT (at most 0.0400 of the 10.0000 ETH swapped)" in text
 
 
-def test_the_letter_after_a_dust_swap_states_both_swaps(faked, monkeypatch):
+def test_the_letter_after_a_dust_swap_states_the_real_swap_and_names_the_dust_one(faked, monkeypatch):
     """The checker's probe, end to end: the letter said 'of the 0.250000 USDT
-    the swap returned, about 0.250000 USDT reached this address'."""
+    the swap returned, about 0.250000 USDT reached this address'. It now
+    states the real swap's figure and names the dust swap as left out."""
     from app.request_letters import draft
 
     dust = {**SWAP, "tx": "0xd057", "timestamp": SWAP_AT - 30, "amount_in": 0.0001, "amount_out": 0.25}
@@ -437,7 +439,8 @@ def test_the_letter_after_a_dust_swap_states_both_swaps(faked, monkeypatch):
     monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, BINANCE_14, 2400.25, SWAP_AT + 60, "USDT")])
     swaps_are(monkeypatch, [dust, SWAP])
     letter = " ".join(draft("c1", run_trace(request()), "exchange").split())
-    assert "of the 2,400.250000 USDT the 2 swaps returned, about 2,400.250000 USDT reached this address" in letter
+    assert "of the 2,400.000000 USDT the swap returned, about 2,400.000000 USDT reached this address" in letter
+    assert "0xd057 (left out)" in letter
 
 
 def test_an_intake_letter_after_a_swap_states_at_most_the_victims_share(faked, monkeypatch):
@@ -460,3 +463,67 @@ def test_an_intake_letter_after_a_swap_states_at_most_the_victims_share(faked, m
     assert "at most 1,000.000000 USDC can be the victim's" in letter
     assert "about 1,000.000000 USDC of it reached this address" in letter
     assert "about 50,000.000000" not in letter
+
+
+# --- 8 Nov check (r1-evidence-crypto-5): a dust swap does not open the window early ---
+
+KRAKEN_1 = "0x2910543af39aba0cd09dbb2d50200b3e800a63d2"
+DAY = 86400
+EARLY_DUST = {**SWAP, "tx": "0xdust", "timestamp": SWAP_AT - 30 * DAY, "amount_in": 0.0001, "amount_out": 0.25}
+REAL = {**SWAP, "tx": "0xreal"}
+
+
+@pytest.mark.parametrize("swapper", ["seed", "one hop out"])
+def test_an_early_dust_swap_does_not_pull_pre_swap_money_into_the_follow_on(faked, monkeypatch, swapper):
+    """A 0.0001 ETH swap 30 days before the real one; 4,900 USDT the wallet
+    already held goes to Kraken the day before the real swap; the real swap's
+    2,400 USDT goes to Binance. The window opened at the dust swap, so Kraken
+    -- pre-swap money -- became the follow-on's exchange and its letter's
+    addressee. It now opens at the first swap carrying the traced value."""
+    from app.request_letters import draft
+
+    who = SEED if swapper == "seed" else MID
+    eth = [tx(who, ROUTER, 0.0001, SWAP_AT - 30 * DAY, "ETH"), tx(who, ROUTER, 1.0, SWAP_AT, "ETH")]
+    if who == MID:
+        eth.insert(0, tx(SEED, MID, 1.0, SWAP_AT - 30 * DAY - 120, "ETH"))
+    monkeypatch.setitem(HISTORY, "ETH", eth)
+    monkeypatch.setitem(HISTORY, "USDT", [tx(who, KRAKEN_1, 4900.0, SWAP_AT - DAY, "USDT"),
+                                          tx(who, BINANCE_14, 2400.0, SWAP_AT + 60, "USDT")])
+    swaps_are(monkeypatch, [{**EARLY_DUST, "sender": who}, {**REAL, "sender": who}])
+
+    result = run_trace(request())
+    (follow,) = result["follow_ons"]
+    found = follow["result"]
+    assert result["followed_attribution"]["exchange"] == "Binance"
+    assert found["exchange_address"] == BINANCE_14
+    assert KRAKEN_1 not in [m["address"] for m in found["matches"]]
+    assert follow["cap"]["swaps"] == 1 and follow["cap"]["swap_output"] == 2400.0
+    assert [s["tx"] for s in follow["swaps_left_out"]] == ["0xdust"]
+    letter = " ".join(draft("c1", result, "exchange").split())
+    assert "Kraken" not in letter and KRAKEN_1 not in letter
+    assert "of the 2,400.000000 USDT the swap returned" in letter
+    assert "0xdust" in letter and "left out" in letter
+
+
+def test_equal_real_swaps_all_open_the_window(faked, monkeypatch):
+    # Three swaps of the same size: every one carries the traced value.
+    swaps = [{**SWAP, "tx": f"0x{i}", "timestamp": SWAP_AT + i * 60, "amount_in": 0.3, "amount_out": 720.0}
+             for i in range(3)]
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, ROUTER, 0.3, SWAP_AT + i * 60, "ETH") for i in range(3)])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, BINANCE_14, 2160.0, SWAP_AT + 600, "USDT")])
+    swaps_are(monkeypatch, swaps)
+    (follow,) = run_trace(request())["follow_ons"]
+    assert follow["cap"]["swaps"] == 3 and "swaps_left_out" not in follow
+
+
+def test_many_small_swaps_that_carry_real_value_are_not_left_out(faked, monkeypatch):
+    # Five 0.05 ETH swaps (each 5% of the largest) then a 1 ETH one: together
+    # the small ones are a fifth of the input, so the window opens at the first.
+    small = [{**SWAP, "tx": f"0xs{i}", "timestamp": SWAP_AT - (10 - i) * 60, "amount_in": 0.05, "amount_out": 120.0}
+             for i in range(5)]
+    monkeypatch.setitem(HISTORY, "ETH", [tx(SEED, ROUTER, 0.05, SWAP_AT - (10 - i) * 60, "ETH") for i in range(5)]
+                        + [tx(SEED, ROUTER, 1.0, SWAP_AT, "ETH")])
+    monkeypatch.setitem(HISTORY, "USDT", [tx(SEED, BINANCE_14, 3000.0, SWAP_AT + 60, "USDT")])
+    swaps_are(monkeypatch, small + [REAL])
+    (follow,) = run_trace(request())["follow_ons"]
+    assert follow["cap"]["swaps"] == 6 and "swaps_left_out" not in follow

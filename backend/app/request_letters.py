@@ -56,12 +56,13 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
     covers (pipeline._follow_swaps); None in older cases."""
     if result.get("exchange"):
         return {"trace": result, "asset": result.get("asset"), "via_swap": None, "route": None,
-                "cap": None, "swaps": None}
+                "cap": None, "swaps": None, "left_out": None}
     for follow in result.get("follow_ons") or []:
         found = follow.get("result") or {}
         if found.get("exchange"):
             return {"trace": found, "asset": follow.get("asset"), "via_swap": follow.get("swap"),
-                    "route": follow.get("route"), "cap": follow.get("cap"), "swaps": follow.get("swaps")}
+                    "route": follow.get("route"), "cap": follow.get("cap"), "swaps": follow.get("swaps"),
+                    "left_out": follow.get("swaps_left_out")}
     return None
 
 
@@ -455,6 +456,13 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
             f"   for {returned} at {swap.get('router_label')} (tx {swap.get('tx')}); the {asset} was followed",
             "   from that swap.",
         ]
+    if swap and found.get("left_out"):
+        # Earlier swaps too small to carry the traced funds: the follow-on
+        # starts after them, so what the wallet sent before is not counted.
+        lines += ["", f"   Earlier swaps by {sender} carried too little to be the traced funds and were left out;",
+                  f"   the {asset} was followed from the first swap that did:",
+                  *(f"     {s.get('amount_in') or 0:,.6f} {swap.get('asset_in')} for {s.get('amount_out') or 0:,.6f} "
+                    f"{asset}, tx {s.get('tx')} (left out)" for s in found["left_out"])]
     stated = _letter_amount(result, found)
     if stated is not None:
         lines += _amount_lines(asset, stated)

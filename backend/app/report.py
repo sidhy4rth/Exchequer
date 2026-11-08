@@ -311,6 +311,8 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
                 "amount_out": (f.get("cap") or {}).get("swap_output", (f.get("swap") or {}).get("amount_out")),
                 "asset_in": (f.get("swap") or {}).get("asset_in"),
                 "cap": f.get("cap"),
+                # Earlier dust swaps the follow-on's window was not opened at.
+                "swaps_left_out": f.get("swaps_left_out") or [],
                 "max_depth": f.get("max_depth"),
                 "error": f.get("error"),
                 "exchange": (f.get("result") or {}).get("exchange"),
@@ -1071,6 +1073,9 @@ def render_text_report(report: dict[str, Any]) -> str:
                 count = cap.get("swaps") or 1
                 add(f"    swap returned       : {f['amount_out']:,.4f} {f['asset']}"
                     + (f" ({count} swaps)" if count > 1 else ""))
+            for left in f.get("swaps_left_out") or []:
+                add(f"    left out (too small): {left.get('amount_in') or 0:,.4f} {f.get('asset_in')} for "
+                    f"{left.get('amount_out') or 0:,.4f} {f['asset']}, tx {left.get('tx')}")
             if cap.get("basis") == "swap_share":
                 # The swapping wallet added its own money: the follow-on
                 # states at most the traced funds' share of the output.

@@ -1335,6 +1335,27 @@ def _swap_groups(swaps: list[dict[str, Any]], traceable: set[str], asset_symbol:
     return groups
 
 
+def _window_swaps(group: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The swaps a follow-on covers, from the first that carries the traced
+    value, and the earlier ones left out (`group` in time order).
+
+    The window used to open at the wallet's earliest swap into the asset, so a
+    0.0001 ETH swap a month before the real one pulled in everything the
+    wallet sent in the new asset in between -- money it already held -- and
+    could make that money's exchange the follow-on's (8 Nov check). A swap
+    carries the traced value when its input is at least the material share
+    (config.ATTRIBUTION_MATERIAL_SHARE) of the largest swap's. Earlier swaps
+    are left out only while together they carry less than that share of all
+    the input, so a run of small real swaps still opens the window."""
+    inputs = [float(s.get("amount_in") or 0.0) for s in group]
+    share = config.ATTRIBUTION_MATERIAL_SHARE
+    largest, total = max(inputs, default=0.0), sum(inputs)
+    first = next((i for i, v in enumerate(inputs) if v >= share * largest), 0)
+    if first and sum(inputs[:first]) < share * total:
+        return group[first:], group[:first]
+    return group, []
+
+
 def _follow_swaps(
     request: TraceRequest,
     chain: config.Chain,
@@ -1350,8 +1371,9 @@ def _follow_swaps(
 
     One follow-on per (wallet, output asset), at most MAX_FOLLOW_ONS, over the
     hops the original trace had left beyond the swapping wallet (at least one).
-    The follow-on starts at that wallet's first swap into the asset: the time
-    rule excludes anything it sent in the new asset before. It follows
+    The follow-on starts at that wallet's first swap into the asset that
+    carries the traced value (_window_swaps; a dust swap before it is left
+    out): the time rule excludes anything it sent in the new asset before. It follows
     everything the wallet sent in that asset afterwards, which may include
     money that was not the swaps' output, so its amounts are capped (`cap`):
     at what all those swaps returned, and, where the traced money was only
@@ -1392,8 +1414,13 @@ def _follow_swaps(
 
     out: list[dict[str, Any]] = []
     for _, sender, asset_out, g, traced, share in ranked[:MAX_FOLLOW_ONS]:
-        group = sorted(g["swaps"], key=lambda s: s.get("timestamp") or 0)
+        group, left_out = _window_swaps(sorted(g["swaps"], key=lambda s: s.get("timestamp") or 0))
         swap = max(group, key=lambda s: s["amount_out"])  # the swap the letter names
+        if left_out:
+            # What the follow-on covers is the window's swaps only.
+            g = {**g, "out": sum(s["amount_out"] for s in group),
+                 "in": max(0.0, g["in"] - sum(float(s.get("amount_in") or 0.0) for s in left_out))}
+            share = min(1.0, traced / g["in"]) if traced is not None and g["in"] > 0 else None
         returned = round(g["out"], 6)
         cap, basis = _seed_cap(None, returned, "swap_output", share)
         depth_at = (graph.nodes.get(sender) or {}).get("depth", 0)
@@ -1409,6 +1436,9 @@ def _follow_swaps(
         if len(group) > 1:
             follow["swaps"] = [{k: s.get(k) for k in ("tx", "timestamp", "router_label", "amount_in", "amount_out")}
                                for s in group]
+        if left_out:
+            follow["swaps_left_out"] = [{k: s.get(k) for k in ("tx", "timestamp", "router_label", "amount_in",
+                                                               "amount_out")} for s in left_out]
         starts = [s["timestamp"] for s in group if s.get("timestamp") is not None]
         # One clock for the whole case: a follow-on uses what is left of it.
         if budget is not None and budget.walk_over():
