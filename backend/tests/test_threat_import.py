@@ -143,6 +143,16 @@ def test_an_account_that_sent_on_bsc_is_copied():
     assert account_used_on_bsc(StubRpc(nonce="0x1"), "0x" + "1" * 40) is True
 
 
+def test_a_wallet_with_a_7702_delegation_is_still_the_same_account():
+    """EIP-7702: a wallet that delegated shows 23 bytes of code, 0xef0100 + the
+    delegate's address. It is still the wallet, not a contract deployed there
+    (42 of the 74 entries the first re-check would have removed)."""
+    delegated = "0xef0100" + "ab" * 20
+    assert account_used_on_bsc(StubRpc(nonce="0x62", code=delegated), "0x" + "1" * 40) is True
+    # Code that only starts like a delegation is a contract.
+    assert account_used_on_bsc(StubRpc(nonce="0x2", code=delegated + "00"), "0x" + "1" * 40) is False
+
+
 def test_a_missing_rpc_result_is_an_error_not_a_no():
     with pytest.raises(NoderealError):
         account_used_on_bsc(StubRpc(nonce=None), "0x" + "1" * 40)

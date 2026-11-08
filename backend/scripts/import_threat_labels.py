@@ -166,7 +166,8 @@ def used_on_ethereum(client: EtherscanClient, address: str) -> bool:
 
 
 def account_used_on_bsc(client, address: str) -> bool:
-    """The same key's account on BSC: it has sent a transaction (nonce > 0) and holds no code.
+    """The same key's account on BSC: it has sent a transaction (nonce > 0) and holds no
+    code, or only an EIP-7702 delegation.
 
     Contract code there may be an unrelated contract at the same address, and a
     balance alone is a dust send anyone can make. A missing result is an error,
@@ -176,7 +177,13 @@ def account_used_on_bsc(client, address: str) -> bool:
     code = client._rpc("eth_getCode", [address, "latest"])
     if not isinstance(nonce, str) or not isinstance(code, str):
         raise NoderealError(f"no result for {address}")
-    return int(nonce, 16) > 0 and code in ("0x", "0x0")
+    return int(nonce, 16) > 0 and (code in ("0x", "0x0") or _is_7702_delegation(code))
+
+
+def _is_7702_delegation(code: str) -> bool:
+    """EIP-7702: a wallet that delegated carries exactly 0xef0100 + a 20-byte address
+    as its code. It is still that wallet, not a contract deployed at the address."""
+    return re.fullmatch(r"0xef0100[0-9a-fA-F]{40}", code) is not None
 
 
 def used_on_bsc(client: NoderealClient, address: str) -> bool:
@@ -457,7 +464,7 @@ def recheck_bsc(client, dry_run: bool) -> int:
     document["_meta"]["scam_lists_bsc_recheck"] = {
         "date": datetime.now(timezone.utc).date().isoformat(), "checked": len(only_scamsniffer),
         "removed": len(removed), "errors_kept": len(errors),
-        "rule": "nonce > 0 and no contract code on BSC (import_threat_labels.account_used_on_bsc)",
+        "rule": "nonce > 0 and no contract code (an EIP-7702 delegation is not one) on BSC (import_threat_labels.account_used_on_bsc)",
     }
     if not dry_run:
         path.write_text(json.dumps(document, indent=2) + "\n")
