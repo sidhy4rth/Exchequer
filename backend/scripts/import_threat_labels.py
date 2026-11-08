@@ -416,7 +416,9 @@ class PlainRpc:
 
     def _rpc(self, method: str, params: list) -> object:
         body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
-        request = urllib.request.Request(self.url, data=body, headers={"Content-Type": "application/json"})
+        # A name of its own: public endpoints (publicnode) refuse urllib's default with 403.
+        request = urllib.request.Request(self.url, data=body, headers={
+            "Content-Type": "application/json", "User-Agent": "Exchequer-list-import"})
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 reply = json.loads(response.read().decode())

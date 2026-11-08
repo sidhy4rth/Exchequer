@@ -231,3 +231,27 @@ def test_a_missing_result_when_placing_a_listed_address_is_an_error():
     with pytest.raises(NoderealError):
         threat.used_on_bsc(StubRpc(nonce=None), "0x" + "1" * 40)
     assert threat.used_on_bsc(StubRpc(nonce="0x0", code="0x", balance="0x5"), "0x" + "1" * 40) is True
+
+
+def test_the_plain_rpc_client_names_itself(monkeypatch):
+    """Public endpoints such as publicnode refuse urllib's default User-Agent with
+    403, which made every --recheck-bsc check an error (all kept, none decided)."""
+    sent = {}
+
+    class Reply:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return b'{"jsonrpc": "2.0", "id": 1, "result": "0x1"}'
+
+    def fake_urlopen(request, timeout):
+        sent["agent"] = request.get_header("User-agent")
+        return Reply()
+
+    monkeypatch.setattr(threat.urllib.request, "urlopen", fake_urlopen)
+    assert threat.PlainRpc("https://rpc.example")._rpc("eth_blockNumber", []) == "0x1"
+    assert sent["agent"] and not sent["agent"].startswith("Python-urllib")
