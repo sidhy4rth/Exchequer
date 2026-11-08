@@ -17,15 +17,23 @@ some are deliberately left out:
 
 No row may label an exchange wallet, router, token contract, casino or burn
 address (app/never_flag.py); those are refused and listed in
-<csv>.refused.tsv. Two rows for one address keep the stronger evidence. The
-build is removed and exits 1 -- nothing to release by mistake -- when a source
-is not on the tier allow-list, a court record or more than --max-refused rows
-name infrastructure, or a government, court or issuer record conflicts with
-another category; each has a flag to accept it after review.
+<csv>.refused.tsv. The token list (data/never_flag_tokens.json, the 14,800
+CoinGecko and Uniswap tokens) and the router files apply with no flag. The
+never-poison lists are kept with the hunt, outside the repository, so a build
+must be given at least one with --never-poison, or be told it has none with
+--without-never-poison; the store records which lists it was built with. Two
+rows for one address keep the stronger evidence. The build is removed and
+exits 1 -- nothing to release by mistake -- when a source is not on the tier
+allow-list, a court record or more than --max-refused rows name
+infrastructure, a government, court or issuer record conflicts with another
+category, or no never-poison list was given; each has a flag to accept it
+after review.
 
     cd backend && .venv/bin/python -m scripts.build_label_store ~/exchequer-flagged/new_flagged.csv \
-        --never-flag ~/exchequer-flagged/never_flag_tokens.txt \
-        --never-poison ~/exchequer-flagged/never_poison_services.txt
+        --never-poison ~/exchequer-flagged/never_poison_services.txt \
+        --never-poison ~/exchequer-flagged/never_poison_suresh.txt \
+        --never-poison ~/exchequer-flagged/never_poison_mukesh.txt \
+        --never-poison ~/exchequer-flagged/never_poison_scout.txt
 """
 from __future__ import annotations
 
@@ -33,6 +41,7 @@ import argparse
 import collections
 import contextlib
 import csv
+import hashlib
 import re
 import sqlite3
 import sys
@@ -185,20 +194,24 @@ def iter_rows(reader: Iterable[dict[str, str]], skipped: collections.Counter,
 
 
 def build(csv_path: Path, out: Path, limit: int | None = None, *, listed: Iterable[Path] = (),
-          no_poisoning: Iterable[Path] = (), refused_out: Path | None = None) -> dict:
+          no_poisoning: Iterable[Path] = (), refused_out: Path | None = None,
+          without_never_poison: bool = False) -> dict:
     """Build the store at `out`. `listed` and `no_poisoning` are extra never-flag
     lists (every label refused, or only poisoning); every refused row is written
     to `refused_out`, by default beside the CSV and so outside the repository."""
     csv.field_size_limit(sys.maxsize)
     listed, no_poisoning = tuple(listed), tuple(no_poisoning)
     never = {key: never_flag.build_kinds(key, listed, no_poisoning) for key in CHAIN_IDS}
+    lists = {"never_flag_lists": describe_lists(listed), "never_poison_lists": describe_lists(no_poisoning)}
+    if without_never_poison and not no_poisoning:
+        lists["never_poison_lists"] = "none (built with --without-never-poison)"
     refused_out = refused_out or csv_path.with_name(csv_path.name + ".refused.tsv")
     refused_out.unlink(missing_ok=True)
     tmp = out.with_suffix(".building")
     tmp.unlink(missing_ok=True)
     db = sqlite3.connect(tmp)
     try:
-        return _build(db, tmp, csv_path, out, limit, never, refused_out)
+        return _build(db, tmp, csv_path, out, limit, never, refused_out, lists)
     except BaseException:
         # Private hunt data: a failed or interrupted build leaves no copy behind.
         db.close()
@@ -206,8 +219,20 @@ def build(csv_path: Path, out: Path, limit: int | None = None, *, listed: Iterab
         raise
 
 
+def describe_lists(paths: Iterable[Path]) -> str:
+    """Which never-flag lists a build used, as its meta table records them: a
+    list kept outside the repository can be named and checked, never read back."""
+    found = []
+    for path in paths:
+        data = Path(path).read_bytes()
+        lines = sum(1 for line in data.decode("utf-8", "replace").splitlines()
+                    if line.strip() and not line.lstrip().startswith("#"))
+        found.append(f"{Path(path).name} ({lines} lines, sha256 {hashlib.sha256(data).hexdigest()[:16]})")
+    return "; ".join(found) if found else "none"
+
+
 def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: int | None,
-           never: dict[str, dict[bytes, str]], refused_out: Path) -> dict:
+           never: dict[str, dict[bytes, str]], refused_out: Path, lists: dict[str, str]) -> dict:
     db.executescript("""
         PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -295,6 +320,7 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         ("never_flag_refused", str(refused["rows"])),
         ("duplicates", str(merged["duplicates"])),
         ("conflicts", str(merged["conflicts"])),
+        *lists.items(),
     ])
     db.commit()
     db.execute("VACUUM")
@@ -313,6 +339,7 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         "strong_conflicts": merged["strong"],
         "strong_conflicts_shown": strong,
         "size_mb": round(out.stat().st_size / 1e6, 1),
+        **lists,
     }
     return report
 
@@ -320,6 +347,10 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
 def problems(report: dict, args: argparse.Namespace) -> list[str]:
     """Why this build must not be released, if anything."""
     found = []
+    if report["never_poison_lists"] == "none":
+        found.append("no --never-poison list was given: the owner's never_poison_*.txt lists are kept with "
+                     "the hunt, outside the repository, and stop exchange and service wallets being "
+                     "called poisoners; pass each with --never-poison, or --without-never-poison on purpose")
     if not args.accept_refusals and report["refused_tier1"]:
         found.append(f"{report['refused_tier1']:,} government or court record(s) name an exchange, router, "
                      f"token or burn address; read {report['refused_out']}")
@@ -347,6 +378,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="a list of addresses no row may label (one per line, last field); repeatable")
     ap.add_argument("--never-poison", type=Path, action="append", default=[],
                     help="a list of addresses no poisoning row may label; repeatable")
+    ap.add_argument("--without-never-poison", action="store_true",
+                    help="build with no never-poison list on purpose (a trial build); the store records it")
     ap.add_argument("--refused-out", type=Path, default=None,
                     help="where refused rows are listed (default: beside the CSV)")
     ap.add_argument("--max-refused", type=int, default=1000,
@@ -358,7 +391,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     report = build(args.csv.expanduser(), args.out, args.limit,
                    listed=[p.expanduser() for p in args.never_flag],
-                   no_poisoning=[p.expanduser() for p in args.never_poison], refused_out=args.refused_out)
+                   no_poisoning=[p.expanduser() for p in args.never_poison], refused_out=args.refused_out,
+                   without_never_poison=args.without_never_poison)
     print(f"{report['rows']:,} labels, {report['size_mb']} MB -> {args.out}")
     for key, n in sorted(report["by_chain_category"].items()):
         print(f"  {key}: {n:,}")

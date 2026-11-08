@@ -81,3 +81,30 @@ def test_a_list_takes_the_last_field_of_each_line(tmp_path):
                       f"{addr('70c3').upper().replace('0X', '0x')}\nTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t\n")
     assert never_flag.read_list(listed, "ethereum") == {encode_address(addr("5e2c")), encode_address(addr("70c3"))}
     assert never_flag.read_list(listed, "tron") == {encode_address("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t")}
+
+
+# -- r1-labels-data-1, round 2: routers on chains with no router file ---------
+ROUTER_1INCH_V5 = "0x1111111254eeb25477b68fb85ed929f73a960582"   # router_labels.json
+ROUTER_TRANSIT_BSC = "0x638f32fe09baec1fdc54f962e3e8e5f2b286aa70"  # router_labels_bsc.json
+
+
+@pytest.mark.parametrize("chain", ["ethereum", "bsc", "polygon", "arbitrum"])
+def test_every_evm_router_file_counts_on_every_evm_chain(chain):
+    assert kind(chain, ROUTER_1INCH_V5) == ROUTER
+    assert kind(chain, ROUTER_TRANSIT_BSC) == ROUTER
+    assert never_flag.reason(chain, ROUTER_1INCH_V5) == ROUTER
+    assert encode_address(ROUTER_1INCH_V5) in never_flag.build_kinds(chain)
+
+
+def test_a_router_carried_across_is_refused_labels_but_is_no_swap_venue_there():
+    """Only the refusal carries over. Calling a transfer into it a swap is a
+    claim about the contract on that chain, which the router file does not make."""
+    from app.exchange_matcher import get_router_matcher
+
+    assert get_router_matcher("polygon").lookup(ROUTER_1INCH_V5) is None
+    assert get_router_matcher("ethereum").lookup(ROUTER_TRANSIT_BSC) is None
+
+
+def test_routers_are_not_carried_to_tron():
+    # A Tron address is a different family; the hex form of an EVM router is not one.
+    assert kind("tron", ROUTER_1INCH_V5) is None

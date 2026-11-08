@@ -13,7 +13,8 @@ investigator, and the exchange the letter goes to. So the store never labels:
             CoinGecko/Uniswap token lists in data/never_flag_tokens.json
             (scripts/build_never_flag.py; its "allow" map holds reviewed
             exceptions, address -> why, never code)
-  router    a DEX router in router_labels*.json
+  router    a DEX router in any EVM chain's router_labels*.json, on every
+            EVM chain (see evm_routers for why that is safe)
   exchange  an exchange's own wallet in exchange_labels*.json
   deposit   an exchange deposit address (one customer's account)
   gambling  a casino wallet in gambling_labels*.json
@@ -130,6 +131,51 @@ def tokens(chain_key: str) -> frozenset[bytes]:
     return frozenset(found - _allowed(chain.key))
 
 
+@lru_cache(maxsize=1)
+def evm_routers() -> frozenset[bytes]:
+    """Every router any EVM chain's router file names, refused a label on every EVM chain.
+
+    Polygon and Arbitrum have no router file, so the 1inch or Uniswap router a
+    scan names there was labelled. The rule that makes carrying them over safe:
+    a router file holds only contracts (scripts/seed_router_labels.py keeps an
+    entry only if it has bytecode). A contract's address has no private key: it
+    comes from its deployer and that deployer's nonce, or from a factory, a salt
+    and the code itself. So on another EVM chain the same address is either
+    unused, the same protocol's deployment, or code the same deployer or factory
+    put there -- never a wallet a scammer holds the key to. A label lost there
+    is a missed warning; a router labelled a scammer in a letter is the harm
+    this module exists to stop.
+
+    Only the refusal carries over. The router matcher, which calls a transfer a
+    swap and reads the receipt, still uses each chain's own file: a positive
+    claim about the contract on another chain needs that chain's own check
+    (scripts/port_evm_labels.py: a contract address means nothing across
+    chains). Exchange wallets are not carried this way; they have their own
+    port with on-chain checks. Tron is another address family and gets none.
+    """
+    from .exchange_matcher import get_router_matcher
+
+    found: set[bytes] = set()
+    for chain in config.CHAINS.values():
+        if chain.address_family != "evm":
+            continue
+        for address, _ in get_router_matcher(chain.key).entries():
+            raw = _raw(chain.key, address)
+            if raw is not None:
+                found.add(raw)
+    return frozenset(found)
+
+
+@lru_cache(maxsize=None)
+def routers(chain_key: str) -> frozenset[bytes]:
+    """The routers no row may label on this chain: its own file's, and on an EVM chain every EVM file's."""
+    from .exchange_matcher import get_router_matcher
+
+    chain = config.get_chain(chain_key)
+    own = frozenset(r for r in (_raw(chain.key, a) for a, _ in get_router_matcher(chain.key).entries()) if r)
+    return own | evm_routers() if chain.address_family == "evm" else own
+
+
 @lru_cache(maxsize=None)
 def gambling(chain_key: str) -> frozenset[bytes]:
     path = config.get_chain(chain_key).gambling_labels_path
@@ -150,7 +196,7 @@ def kind(chain_key: str, address: str, *, with_gambling: bool = False) -> str | 
     copies nothing. Casino wallets are checked only when asked: at run time
     the gambling file outranks the store and they never reach it.
     """
-    from .exchange_matcher import get_matcher, get_router_matcher
+    from .exchange_matcher import get_matcher
 
     raw = _raw(chain_key, address)
     if raw is None or raw in _allowed(chain_key):
@@ -160,7 +206,7 @@ def kind(chain_key: str, address: str, *, with_gambling: bool = False) -> str | 
     if raw in tokens(chain_key):
         return TOKEN
     canonical = decode_address(raw)
-    if get_router_matcher(chain_key).lookup(canonical):
+    if raw in routers(chain_key):
         return ROUTER
     exchange = get_matcher(chain_key).lookup(canonical)
     if exchange:
@@ -173,7 +219,7 @@ def kind(chain_key: str, address: str, *, with_gambling: bool = False) -> str | 
 def build_kinds(chain_key: str, listed: Iterable[Path] = (), no_poisoning: Iterable[Path] = ()) -> dict[bytes, str]:
     """Every never-flag address of one chain, raw bytes -> kind, for the store
     build's tight loop (the system range is checked by is_system)."""
-    from .exchange_matcher import get_matcher, get_router_matcher
+    from .exchange_matcher import get_matcher
 
     found: dict[bytes, str] = {}
 
@@ -183,7 +229,7 @@ def build_kinds(chain_key: str, listed: Iterable[Path] = (), no_poisoning: Itera
                 found[raw] = what
 
     add(tokens(chain_key), TOKEN)
-    add((r for r in (_raw(chain_key, a) for a, _ in get_router_matcher(chain_key).entries()) if r), ROUTER)
+    add(routers(chain_key), ROUTER)
     for address, meta in get_matcher(chain_key).entries():
         raw = _raw(chain_key, address)
         if raw is not None:
@@ -217,4 +263,6 @@ def screen(chain_key: str | None, addresses) -> dict[str, str]:
 def clear_cache() -> None:
     _file.cache_clear()
     tokens.cache_clear()
+    evm_routers.cache_clear()
+    routers.cache_clear()
     gambling.cache_clear()

@@ -15,6 +15,9 @@ from scripts.build_label_store import build
 from conftest import addr
 
 FIELDS = ["address", "chain", "category", "entity_or_incident", "sources", "source_refs", "date"]
+# Each test of one refusal builds without the hunt's never-poison lists, on
+# purpose, so that refusal is the only one it meets.
+TRIAL = ["--without-never-poison"]
 
 
 def write_csv(path, rows):
@@ -52,11 +55,11 @@ def test_a_source_the_rules_do_not_place_fails_the_build(tmp_path, capsys):
     blog = {**SCAM, "address": addr("b10c"), "sources": "Some blog post"}
     src = write_csv(tmp_path / "flagged.csv", [SCAM, blog])
     out = tmp_path / "label_store.db"
-    assert build_label_store.main([str(src), "--out", str(out)]) == 1
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL]) == 1
     printed = capsys.readouterr().out
     assert "Some blog post" in printed
     assert not out.exists()  # nothing to release by mistake
-    assert build_label_store.main([str(src), "--out", str(out), "--allow-unknown-sources"]) == 0
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL, "--allow-unknown-sources"]) == 0
     assert out.exists()
 
 
@@ -107,13 +110,13 @@ def test_a_court_record_on_infrastructure_or_a_flood_of_refusals_fails_the_build
            "entity_or_incident": "Lazarus", "sources": "FBI alert 31 Oct 2026"}
     src = write_csv(tmp_path / "flagged.csv", [SCAM, fbi])
     out = tmp_path / "label_store.db"
-    assert build_label_store.main([str(src), "--out", str(out)]) == 1
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL]) == 1
     assert "refused.tsv" in capsys.readouterr().out and not out.exists()
-    assert build_label_store.main([str(src), "--out", str(out), "--accept-refusals"]) == 0
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL, "--accept-refusals"]) == 0
 
     src = write_csv(tmp_path / "many.csv", [SCAM, poisoning(USDT), poisoning(WETH)])
-    assert build_label_store.main([str(src), "--out", str(out), "--max-refused", "1"]) == 1
-    assert build_label_store.main([str(src), "--out", str(out), "--max-refused", "2"]) == 0
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL, "--max-refused", "1"]) == 1
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL, "--max-refused", "2"]) == 0
 
 
 def test_the_owners_never_flag_lists_apply_too(tmp_path):
@@ -166,9 +169,9 @@ def test_a_tie_never_makes_an_address_a_mixer(tmp_path):
 def test_a_strong_conflict_fails_the_build_unless_allowed(tmp_path, capsys):
     src = write_csv(tmp_path / "flagged.csv", [poisoning(WALLET), FBI_ROW])
     out = tmp_path / "label_store.db"
-    assert build_label_store.main([str(src), "--out", str(out)]) == 1
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL]) == 1
     assert WALLET in capsys.readouterr().out and not out.exists()
-    assert build_label_store.main([str(src), "--out", str(out), "--allow-conflicts"]) == 0
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL, "--allow-conflicts"]) == 0
 
 
 def test_checksummed_and_lowercase_forms_are_one_row(tmp_path):
@@ -188,3 +191,54 @@ def test_tron_hex_and_base58_forms_are_one_row(tmp_path):
             {**poisoning("0x" + body.hex(), "tron"), "sources": "Tron poisoning via BigQuery full-history scan"}]
     report = build(write_csv(tmp_path / "flagged.csv", rows), tmp_path / "label_store.db")
     assert report["rows"] == 1 and report["duplicates"] == 1 and report["conflicts"] == 0
+
+
+# -- r1-labels-data-1, round 2: the in-repo lists apply with no flag ------------
+LINK = "0x514910771af9ca656af840dff83e8264ecf986ca"            # Chainlink, data/never_flag_tokens.json
+USDC_E_POLYGON = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"  # bridged USDC on Polygon
+USDC_TRON = "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8"               # USDC on Tron
+ROUTER_1INCH_V5 = "0x1111111254eeb25477b68fb85ed929f73a960582"  # router_labels.json (Ethereum only)
+
+
+def test_a_default_build_refuses_the_token_contracts_the_owners_list_names(tmp_path):
+    """Probe C: with no --never-flag list given, LINK, USDC.e and Tron USDC were
+    stored as poisoners. The token list now lives in data/, so no flag is needed."""
+    rows = [poisoning(LINK), poisoning(USDC_E_POLYGON, "polygon"), poisoning(USDC_TRON, "tron"), SCAM]
+    report = build(write_csv(tmp_path / "flagged.csv", rows), tmp_path / "label_store.db")
+    assert report["rows"] == 1
+    assert report["skipped"] == {"never-flag: token contract": 3}
+
+
+@pytest.mark.parametrize("chain", ["ethereum", "bsc", "polygon", "arbitrum"])
+def test_an_ethereum_router_is_refused_on_every_evm_chain(tmp_path, chain):
+    """Probe C: the 1inch v5 router was refused on Ethereum only. A router file
+    lists contracts, and a contract's address has no key, so on another EVM chain
+    it is never somebody's wallet."""
+    scam = {**SCAM, "address": ROUTER_1INCH_V5, "chain": chain}
+    report = build(write_csv(tmp_path / "flagged.csv", [scam, poisoning(ROUTER_1INCH_V5, chain)]),
+                   tmp_path / "label_store.db")
+    assert report["rows"] == 0
+    assert report["skipped"] == {"never-flag: DEX router": 2}
+
+
+def test_a_release_build_needs_the_never_poison_lists_or_says_it_has_none(tmp_path, capsys):
+    """The never-poison lists (the services list alone is about 48,000 addresses)
+    are kept with the hunt, outside the repository. A build that was not given
+    one is refused, unless the person building says so on purpose; the store
+    records which lists it was built with either way."""
+    import sqlite3
+
+    src = write_csv(tmp_path / "flagged.csv", [SCAM])
+    out = tmp_path / "label_store.db"
+    assert build_label_store.main([str(src), "--out", str(out)]) == 1
+    assert "--never-poison" in capsys.readouterr().out and not out.exists()
+
+    assert build_label_store.main([str(src), "--out", str(out), "--without-never-poison"]) == 0
+    meta = dict(sqlite3.connect(out).execute("SELECT key, value FROM meta").fetchall())
+    assert meta["never_poison_lists"] == "none (built with --without-never-poison)"
+
+    services = tmp_path / "never_poison_services.txt"
+    services.write_text(f"{addr('5e2c')}\n{addr('5e2d')}\n")
+    assert build_label_store.main([str(src), "--out", str(out), "--never-poison", str(services)]) == 0
+    meta = dict(sqlite3.connect(out).execute("SELECT key, value FROM meta").fetchall())
+    assert meta["never_poison_lists"].startswith("never_poison_services.txt (2 lines, sha256 ")
