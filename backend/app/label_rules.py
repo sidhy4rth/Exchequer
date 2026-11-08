@@ -37,6 +37,9 @@ SOURCE_TIERS: tuple[tuple[re.Pattern[str], int], ...] = tuple((re.compile(p), t)
     (r"DOJ\b", GOVERNMENT),
     (r"Threat-intel report: DOJ\b", GOVERNMENT),
     (r"Threat-intel report: (?:Texas State Securities Board|Washington DFI)\b", GOVERNMENT),
+    # hunt6 (8 Nov): a government filing or order that names the wallet as the
+    # wrongdoer's (DOJ/USAO forfeiture complaints, forfeiture.gov orders).
+    (r"Court record: ", GOVERNMENT),
     # A stablecoin issuer's own freeze, replayed from its contract.
     (r"\S+(?: Tron)? (?:contract )?freeze(?:/restriction)? events\b", ISSUER),
     # Published research, or an explorer's own tag.
@@ -49,6 +52,13 @@ SOURCE_TIERS: tuple[tuple[re.Pattern[str], int], ...] = tuple((re.compile(p), t)
     # An academic set that cites court records; the record itself is not cited.
     (r"Mendeley judicial ground-truth labels\b", PUBLISHED),
     (r"Explorer tag via dawsbot/eth-labels\b", PUBLISHED),
+    # hunt6 (8 Nov), each source QA'd by hand. A government report's table (UN
+    # Panel of Experts, SEC, a state AG) is published, not a court finding: one
+    # such table listed a DEX settlement contract. A private suit is an allegation.
+    (r"Government report: ", PUBLISHED),
+    (r"Lawsuit filing: ", PUBLISHED),
+    (r"Incident write-up: ", PUBLISHED),
+    (r"Vendor IOC: ", PUBLISHED),
     # Our own on-chain detection.
     (r"\w+ (?:poisoning (?:detection|via)|operator expansion)\b", DETECTION),
     # Community reports and machine-learning datasets: listed, never checked.
@@ -57,6 +67,8 @@ SOURCE_TIERS: tuple[tuple[re.Pattern[str], int], ...] = tuple((re.compile(p), t)
     (r"MyEtherWallet darklist\b", UNVETTED),
     (r"Chainabuse\b", UNVETTED),
     (r"Forta labelled-datasets\b", UNVETTED),
+    (r"Community list: ", UNVETTED),
+    (r"Research dataset \(unverified\): ", UNVETTED),
     (r"Threat-intel report: (?:Codatta|EtherAddressLookup|California DFPI Crypto Scam Tracker)\b", UNVETTED),
 ))
 # Pieces of a stored source text that are citations, not sources.

@@ -242,3 +242,31 @@ def test_a_release_build_needs_the_never_poison_lists_or_says_it_has_none(tmp_pa
     assert build_label_store.main([str(src), "--out", str(out), "--never-poison", str(services)]) == 0
     meta = dict(sqlite3.connect(out).execute("SELECT key, value FROM meta").fetchall())
     assert meta["never_poison_lists"].startswith("never_poison_services.txt (2 lines, sha256 ")
+
+
+# -- the hunt6 sources and categories (8 Nov) ----------------------------------------------
+@pytest.mark.parametrize("source,category,expected", [
+    ("Court record: USAO SDNY forfeiture complaint 24-cv-1", "pig-butchering", ("scam", 1)),
+    ("Court record: USAO DDC forfeiture complaint", "sextortion/extortion", ("scam", 1)),
+    ("Court record: forfeiture.gov order", "investment fraud (regulator)", ("scam", 1)),
+    ("Government report: UN Panel of Experts S/2024/215", "hack proceeds", ("stolen", 3)),
+    ("Incident write-up: rekt.news Orbit Bridge", "exploit attacker", ("stolen", 3)),
+    ("Vendor IOC: ESET malware-ioc KryptoCibule", "malware (clipper/stealer)", ("stolen", 3)),
+    ("Incident write-up: SlowMist Inferno Drainer", "drainer", ("scam", 3)),
+    ("Community list: CryptoScamDB blacklist", "phishing/scam", ("scam", 5)),
+])
+def test_the_hunt6_sources_and_categories_are_placed(tmp_path, source, category, expected):
+    """Each hunt6 source names its kind first, and the QA'd tier follows from it;
+    a court record still cannot lift a laundering hop or a theft above its category's cap."""
+    row = {"address": addr("abc123"), "chain": "ethereum", "category": category,
+           "entity_or_incident": "hunt6 test", "sources": source}
+    out = tmp_path / "label_store.db"
+    build(write_csv(tmp_path / "flagged.csv", [row]), out)
+    assert stored_rows(out) == [expected]
+
+
+def test_a_private_lawsuit_is_not_a_court_record(tmp_path):
+    """An allegation in a private suit is published, not a government record."""
+    from app import label_rules
+    assert label_rules.source_tier("Lawsuit filing: Cohn v. Popescu") == 3
+    assert label_rules.source_tier("Court record: USAO EDNY") == 1

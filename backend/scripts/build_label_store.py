@@ -69,6 +69,12 @@ CATEGORY_MAP: dict[str, tuple[str, int] | None] = {
     "laundering (reported)": ("laundering", 3),
     "mixer": ("mixer", 3),
     "ransomware": ("stolen", 3),  # extorted proceeds, read like a theft's
+    # hunt6 (8 Nov): scams named in court filings and regulator notices.
+    "pig-butchering": ("scam", 1),
+    "sextortion/extortion": ("scam", 1),
+    "investment fraud (regulator)": ("scam", 1),
+    "drainer": ("scam", 3),  # a wallet-drainer kit's receiver
+    "malware (clipper/stealer)": ("stolen", 3),  # what the clipper swapped in received stolen coins
     "gambling platform": None,
     "laundering-linked (1 hop)": None,
     "seizure order (gov, may be lapsed)": None,
