@@ -207,3 +207,48 @@ def test_an_address_case_has_no_payments_section():
     # The report says how it started (r2-g2-frontend-intake-rendering-3-4), but lists no payments.
     assert report["intake"] == {"mode": "address", "reported_amount": None, "payments": []}
     assert "VICTIM'S PAYMENTS" not in render_text_report(report)
+
+
+# -- r1-labels-data-2, round 2: the summary carries the tier --------------------
+UNVETTED = "; evidence: unvetted list (community reports or a machine-learning dataset), not checked"
+
+
+def risk(category, tier, source="HF ethereum_fraud_dataset (fesevu, CC BY 4.0)"):
+    match = {"address": MID, "category": category, "entity": "phishing", "label": "phishing",
+             "source": source, "origin": "label_store", "depth": 1}
+    if tier is not None:
+        match["tier"] = tier
+    return match
+
+
+def summary_for(*matches):
+    flags = sorted({m["category"] for m in matches})
+    return build_report(stored({**full_result(), "risk_flags": flags, "risk_matches": list(matches)}))["summary"]
+
+
+def test_a_tier_5_scam_is_a_lead_in_the_summary_not_a_listing():
+    summary = summary_for(risk("scam", 5))
+    assert "named by a published scam or phishing list" not in summary
+    assert "listed (reported scam) only by an unverified source" in summary
+    assert "treat it as a lead, not a finding" in summary
+
+
+def test_an_older_case_without_a_tier_is_read_from_its_source_text():
+    summary = summary_for(risk("scam", None, source="HF ethereum_fraud_dataset" + UNVETTED))
+    assert "named by a published scam or phishing list" not in summary and "unverified source" in summary
+
+
+def test_a_published_lookalike_is_not_on_chain_detection_in_the_summary():
+    summary = summary_for(risk("poisoning", 3, source="Poison-Hunter CCS24 ground truth"))
+    assert "found by on-chain detection" not in summary
+    assert "named as an address-poisoning lookalike by a published source" in summary
+    assert "found by on-chain detection" in summary_for(risk("poisoning", 4, source="Ethereum poisoning via BigQuery"))
+    mixed = summary_for(risk("poisoning", 3, source="Poison-Hunter CCS24 ground truth"), risk("poisoning", 5))
+    assert "found by on-chain detection" not in mixed and "by a published source" in mixed
+
+
+def test_tier_1_to_3_sentences_are_unchanged_beside_a_weak_one():
+    summary = summary_for(risk("scam", 3, source="Threat-intel report: Check Point"), risk("stolen", 5))
+    assert "named by a published scam or phishing list; a list's report is an accusation, not a finding." in summary
+    assert "tied by a published source to a known hack" not in summary
+    assert "listed (theft) only by an unverified source" in summary

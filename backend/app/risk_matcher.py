@@ -47,7 +47,12 @@ The categories, with very different investigative meaning:
   scam        the evidence behind each row: an address-poisoning lookalike
   laundering  (on-chain detection), a wallet a report or court record ties to
               a scam, or one named as moving illicit proceeds. The store is
-              consulted only for addresses no label file names.
+              consulted only for addresses no label file names. Each store
+              match carries its evidence tier (label_store.TIERS), and the
+              sentence follows it: a lookalike someone else published is not
+              called our own detection, and a row only an unvetted list
+              (community reports, a machine-learning dataset) gives is worded
+              as a lead to check, not a finding.
 
 The authority behind them is not the same. A sanctioned address is on a
 government list -- OFAC's, or another government's (the international file:
@@ -91,7 +96,8 @@ import networkx as nx
 from . import config
 from .etherscan_client import is_tron_address, is_valid_address, normalize_address
 from .graph_builder import OUTGOING
-from .label_store import LabelStore, get_label_store
+from .label_rules import DETECTION, UNVETTED
+from .label_store import TIERS, LabelStore, get_label_store
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +173,28 @@ def is_tether_usdt_freeze(match: dict[str, Any]) -> bool:
     return match.get("category") == FROZEN and freeze_parts(match) == ("USDT", "Tether")
 
 
+# How a tier-5 (unvetted) row is named in its sentence, by category. A freeze
+# is an issuer's act and a mixer pool's stop rests on the pinned list, so
+# neither is ever worded from the list that also names it.
+UNVERIFIED_WHAT = {SCAM: "a reported scam", STOLEN: "tied to a theft", POISONING: "an address-poisoning lookalike",
+                   LAUNDERING: "named as moving illicit proceeds"}
+_TIER_TEXT = {f"evidence: {text}": tier for tier, text in TIERS.items()}
+
+
+def match_tier(match: dict[str, Any]) -> int | None:
+    """A recorded match's evidence tier: as recorded, or, for a case stored
+    before matches carried one, read from the "; evidence: ..." its source
+    ends with. None for a label-file match, which has no tier."""
+    tier = match.get("tier")
+    if isinstance(tier, int) and tier in TIERS:
+        return tier
+    source = str(match.get("source") or "")
+    for text, tier in _TIER_TEXT.items():
+        if source.endswith(text):
+            return tier
+    return None
+
+
 @dataclass(frozen=True)
 class RiskMatch:
     """One address in the trace that appears on a risk list."""
@@ -183,6 +211,9 @@ class RiskMatch:
     origin: str | None = None
     token: str | None = None
     issuer: str | None = None
+    # A label-store row's evidence tier (label_store.TIERS); None for a label
+    # file, whose wording is fixed by its category.
+    tier: int | None = None
 
     @property
     def is_terminal(self) -> bool:
@@ -202,6 +233,8 @@ class RiskMatch:
         }
         if self.category == FROZEN:
             out.update(token=self.token, issuer=self.issuer)
+        if self.tier is not None:
+            out["tier"] = self.tier
         return out
 
     def describe(self, native_symbol: str = "ETH") -> str:
@@ -253,14 +286,29 @@ class RiskMatch:
                 f"say why, and it is not a finding that any counterparty took part in "
                 f"anything. {issuer[0].upper() + issuer[1:]} can say, on a lawful request."
             )
+        if self.tier == UNVETTED and self.category in UNVERIFIED_WHAT:
+            # Listed by a community report or a machine-learning dataset only:
+            # what it says is a lead for the investigator, not a finding.
+            return (
+                f"Unverified listing: {self.address} is listed as {named} "
+                f"({UNVERIFIED_WHAT[self.category]}), per {self.source}. {placement}. "
+                f"The list is a community report or a machine-learning dataset that "
+                f"nobody has checked; treat it as a lead to verify, not as a finding "
+                f"about this wallet or anyone who dealt with it."
+            )
         if self.category == POISONING:
+            # Ours only when one of our detectors found it (tier 4); a label
+            # file's poisoning entry keeps the wording it always had.
+            whose = ("This is an on-chain detection, not a designation."
+                     if self.tier is None or self.tier == DETECTION else
+                     "The lookalike was found by that source, not by this tool's own "
+                     "on-chain detection, and it is not a designation.")
             return (
                 f"Address poisoning: {self.address} is a lookalike address used in an "
                 f"address-poisoning scam ({self.label}), per {self.source}. {placement}. "
                 f"The scam plants a near-identical address in a victim's transaction "
                 f"history so that it is copied by mistake; funds sent here most likely "
-                f"went to the scammer in error. This is an on-chain detection, not a "
-                f"designation."
+                f"went to the scammer in error. {whose}"
             )
         if self.category == SCAM:
             return (
@@ -463,6 +511,7 @@ class RiskMatcher:
                     origin=meta.get("origin"),
                     token=token,
                     issuer=issuer,
+                    tier=meta.get("tier") if meta.get("origin") == LABEL_STORE_ORIGIN else None,
                 )
             )
 

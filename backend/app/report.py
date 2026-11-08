@@ -28,7 +28,8 @@ from .display_text import one_line
 from .evidence import SEAL_MARKS, seal_text
 from .exchange_matcher import DEPOSIT_WALLET, is_deposit_label
 from .models import Case
-from .risk_matcher import freeze_parts, is_tether_usdt_freeze, list_freshness
+from .label_rules import DETECTION, UNVETTED
+from .risk_matcher import UNVERIFIED_WHAT, freeze_parts, is_tether_usdt_freeze, list_freshness, match_tier
 from .scoring import BAND_THRESHOLDS, CAP_WORDING
 
 # 2.2: the signed body ends in an ISSUER block (issuing server, full key
@@ -391,6 +392,11 @@ def _screening_lists(case: Case, result: dict[str, Any]) -> dict[str, Any] | Non
         return None
 
 
+# What a category is called in the summary's sentence on unverified listings.
+UNVERIFIED_WORD = {"scam": "reported scam", "stolen": "theft", "poisoning": "address poisoning",
+                   "laundering": "laundering"}
+
+
 def _summary(case: Case, result: dict[str, Any]) -> str:
     """One paragraph in plain English: what was asked, what was found."""
     asset = result.get("asset") or result.get("native_symbol", "ETH")
@@ -402,6 +408,15 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
     flags = [f.replace("_", " ") for f in result.get("flags", [])]
     risk = result.get("risk_flags", [])
     swaps = [s for s in result.get("swaps", []) if s.get("output_read")]
+    # A category every match of which only an unvetted list gives (tier 5) is
+    # said once, as a lead, instead of in its usual sentence; tiers 1-3 read
+    # as they always have. A case with flags but no matches keeps the old text.
+    tiers: dict[str, list[int | None]] = {}
+    for m in result.get("risk_matches") or []:
+        tiers.setdefault(m.get("category"), []).append(match_tier(m))
+    unverified = [c for c, found in tiers.items()
+                  if c in UNVERIFIED_WHAT and found and all(t == UNVETTED for t in found)]
+    risk = [c for c in risk if c not in unverified]
 
     if direction == "outgoing":
         opening = (
@@ -493,7 +508,14 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
             " At least one address in the trace is named by a published scam or phishing "
             "list; a list's report is an accusation, not a finding."
         )
-    if "poisoning" in risk:
+    listed = [t for t in tiers.get("poisoning", [None]) if t != UNVETTED]
+    if "poisoning" in risk and listed and all(t is not None and t < DETECTION for t in listed):
+        # Only lists someone else published: their finding, not our detection.
+        extra += (
+            " At least one address in the trace is named as an address-poisoning lookalike "
+            "by a published source."
+        )
+    elif "poisoning" in risk:
         extra += (
             " At least one address in the trace is an address-poisoning lookalike found by "
             "on-chain detection."
@@ -502,6 +524,13 @@ def _summary(case: Case, result: dict[str, Any]) -> str:
         extra += (
             " At least one address in the trace is named by a published source as moving "
             "illicit proceeds."
+        )
+    if unverified:
+        named = ", ".join(UNVERIFIED_WORD.get(c, c) for c in sorted(unverified))
+        extra += (
+            f" At least one address in the trace is listed ({named}) only by an unverified "
+            "source, a community report or a machine-learning dataset that nobody has "
+            "checked; treat it as a lead, not a finding."
         )
     closing = (
         " An exchange wallet identifies where the money went, not who received it; "

@@ -160,7 +160,9 @@ class LabelStore:
             source = f"{source} ({', '.join(evidence)})"
         if tier in TIERS:
             source = f"{source}; evidence: {TIERS[tier]}"
-        return {"category": category, "entity": entity, "label": label or entity, "source": source}
+        # The tier travels with the row as well as in its text, so the sentence
+        # a report quotes can say what kind of evidence it is (RiskMatch.describe).
+        return {"category": category, "entity": entity, "label": label or entity, "source": source, "tier": tier}
 
     def _tier(self, source_id: int, category: str, stored: int) -> int:
         key = (source_id, category, stored)

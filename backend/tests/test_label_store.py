@@ -408,3 +408,72 @@ def test_a_store_freeze_carries_its_token_and_issuer(freeze_store):
 def test_a_store_row_is_marked_as_coming_from_the_store(store_path, freeze_store):
     assert RiskMatcher({}, chain="ethereum", store=freeze_store).lookup(CIRCLE_FROZEN)["origin"] == "label_store"
     assert RiskMatcher({}, chain="ethereum", store=LabelStore(store_path)).lookup(POISONER)["origin"] == "label_store"
+
+
+# -- r1-labels-data-2, round 2: the tier reaches the sentence -------------------
+CCS24 = "Poison-Hunter CCS24 ground truth"
+
+
+def one_match(store, address, chain="ethereum"):
+    graph = nx.DiGraph()
+    graph.add_node(address, depth=2)
+    graph.add_edge(addr("51c7"), address, value_native=1.5)
+    [match] = RiskMatcher({}, chain=chain, store=store).annotate(graph)
+    return match
+
+
+def test_probe_d_a_listed_lookalike_is_not_called_our_on_chain_detection(tmp_path):
+    """Probe D: an HF (tier 5) or Poison-Hunter (tier 3) poisoning row said
+    "This is an on-chain detection, not a designation." in the signed note."""
+    rows = [row(address=POISONER, chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}", sources=CCS24),
+            row(address=SCAMMER, chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}", sources=HF),
+            row(address=addr("de7"), chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}", sources=DETECTOR)]
+    store = old_store(tmp_path, rows)
+    published, listed, ours = (one_match(store, a) for a in (POISONER, SCAMMER, addr("de7")))
+    assert (published.tier, listed.tier, ours.tier) == (3, 5, 4)
+    assert published.to_dict()["tier"] == 3
+
+    text = published.describe()
+    assert "This is an on-chain detection" not in text
+    assert text.startswith(f"Address poisoning: {POISONER} is a lookalike address")
+    assert "found by that source, not by this tool's own on-chain detection" in text
+
+    text = listed.describe()
+    assert "on-chain detection" not in text
+    assert text.startswith(f"Unverified listing: {SCAMMER} is listed as Lookalike of {TARGET}")
+    assert "treat it as a lead to verify, not as a finding" in text
+
+    # Our own detectors' rows read exactly as before.
+    assert ours.describe().endswith("This is an on-chain detection, not a designation.")
+
+
+def test_a_tier_5_scam_reads_as_an_unverified_lead_and_tier_3_reads_as_before(tmp_path):
+    rows = [row(address=SCAMMER, chain="ethereum", category="phishing/scam", entity_or_incident="phishing",
+                sources=HF),
+            row(address=POISONER, chain="ethereum", category="phishing/scam",
+                entity_or_incident="Inferno Drainer receiver", sources="Threat-intel report: Check Point")]
+    store = old_store(tmp_path, rows)
+    weak, strong = one_match(store, SCAMMER), one_match(store, POISONER)
+    text = weak.describe()
+    assert text.startswith(f"Unverified listing: {SCAMMER} is listed as phishing (a reported scam), per {HF}")
+    assert "The source ties the wallet to a scam" not in text
+    assert "a community report or a machine-learning dataset that nobody has checked" in text
+    assert strong.describe() == (
+        f"Reported scam: {POISONER} is attributed as Inferno Drainer receiver by "
+        f"Threat-intel report: Check Point; evidence: published threat intelligence. It received 1.5000 ETH "
+        f"within this trace, 2 hops from the reported address. The source ties the wallet to a scam or "
+        f"fraud; it is not a sanctions designation, and not a finding that any other counterparty took "
+        f"part in it.")
+
+
+def test_a_label_file_match_has_no_tier_and_reads_as_before():
+    files = {SCAMMER: {"category": "stolen", "entity": "Ronin Bridge Exploiter", "label": "Ronin Bridge Exploiter",
+                       "source": "Etherscan address tag"}}
+    graph = nx.DiGraph()
+    graph.add_node(SCAMMER, depth=1)
+    [match] = RiskMatcher(files, chain="ethereum").annotate(graph)
+    assert match.tier is None and "tier" not in match.to_dict()
+    assert match.describe().startswith(f"Stolen funds: {SCAMMER} is tagged as Ronin Bridge Exploiter")
