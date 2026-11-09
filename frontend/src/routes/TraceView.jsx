@@ -11,14 +11,12 @@ import Tracing from '../components/case/Tracing'
 import EvidenceTab from '../components/case/EvidenceTab'
 import TimelineTab from '../components/case/TimelineTab'
 import LettersTab from '../components/case/LettersTab'
-import { middle, mmss, num, txUrl } from '../components/case/format'
 import { useCaseTab } from './caseTab'
 import './TraceView.css'
 import { plain } from '../text'
-import { BAND_RULE, bandLabel, bandOf, validationLine } from '../components/confidence'
-
-const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', seized: 'Seizure order', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }
+import { BAND_RULE, bandLabel, bandOf } from '../components/confidence'
+import EntitiesTab from '../components/case/EntitiesTab'
+import { Address, PATTERN_NAME, RISK_NAME, middle, mmss, num, txUrl, when } from '../components/case/format'
 const COMPONENT_NAME = {
   hop_proximity: 'Hop proximity',
   amount_correlation: 'Amount correlation',
@@ -44,8 +42,6 @@ function clampInt(raw, lo, hi, fallback) {
 const PAY_HASH = /^(0x)?[0-9a-fA-F]{64}$/
 // The cap the confirmation card offers, as on the trace form.
 const LINK_BUDGET_SECONDS = 90
-const when = (seconds) =>
-  seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
 
 const Icon = ({ d, size }) => (
   <svg className="icon" viewBox="0 0 24 24" aria-hidden="true" style={size ? { width: size, height: size } : undefined}>
@@ -57,22 +53,6 @@ const ICONS = {
   copy: ['M9 9h10v10H9z', 'M5 15V5h10'],
   redo: ['M4 12a8 8 0 1 1 2.3 5.7', 'M4 18v-6h6'],
   present: ['M3 5h18v11H3z', 'M8 20h8', 'M12 16v4'],
-}
-
-/** An address that copies itself when clicked and shows the full value on hover. */
-function Address({ value, head = 10, tail = 8, className = '' }) {
-  const [copied, setCopied] = useState(false)
-  const copy = () => {
-    navigator.clipboard?.writeText(value).then(
-      () => { setCopied(true); setTimeout(() => setCopied(false), 1100) },
-      () => {},
-    )
-  }
-  return (
-    <button type="button" className={`addr ${copied ? 'copied' : ''} ${className}`} title={`${value} — click to copy`} onClick={copy}>
-      {copied ? 'copied' : middle(value, head, tail)}
-    </button>
-  )
 }
 
 // A count and its noun: "1 wallet", "30 wallets".
@@ -195,15 +175,18 @@ export default function TraceView() {
   const [presenting, setPresenting] = useState(false)
   const timers = useRef([])
 
-  // Stored cases that share an intermediary with this one. Loaded after the
-  // trace, from the case store only; a failure here must not disturb the trace.
-  const [related, setRelated] = useState([])
+  // Stored cases that share an intermediary with this one (GET
+  // /cases/correlate). Loaded after the trace, from the case store only; a
+  // failure here must not disturb the trace.
+  const [correlation, setCorrelation] = useState(null)
+  const related = correlation?.related_cases ?? []
   useEffect(() => {
-    if (!result?.case_id) { setRelated([]); return undefined }
+    setCorrelation(null)
+    if (!result?.case_id) return undefined
     let cancelled = false
     fetchRelatedCases(result.case_id)
-      .then((r) => { if (!cancelled) setRelated(r.related_cases || []) })
-      .catch(() => { if (!cancelled) setRelated([]) })
+      .then((r) => { if (!cancelled) setCorrelation(r) })
+      .catch(() => { if (!cancelled) setCorrelation({ failed: true }) })
     return () => { cancelled = true }
   }, [result?.case_id])
 
@@ -329,9 +312,7 @@ export default function TraceView() {
   }, {}))
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
-  const findings = result?.findings ?? []
   const riskMatches = result?.risk_matches ?? []
-  const funders = result?.direct_senders ?? []
   const swaps = result?.swaps ?? []
   const followOns = (result?.follow_ons ?? []).filter((f) => f.result)
   const followed = result?.followed_attribution
@@ -741,129 +722,7 @@ export default function TraceView() {
               )}
             </>,
             letters: <LettersTab result={result} recorded={recorded ? demoNo : null} />,
-            entities: <>
-              {inferred.length > 0 && (
-                <details className="card sec" open={Boolean(result.attribution_inferred)}>
-                  <summary><span className="micro">Inferred deposit addresses · {inferred.length}</span><span className="pill amber">inference</span></summary>
-                  <div className="body">
-                    {inferred.map((m) => {
-                      const e = m.evidence ?? {}
-                      return (
-                        <div className="rule-block" key={m.address}>
-                          <div className="top"><span className="nm amber">Probable {m.exchange} deposit address</span><span className="st">{m.depth} hop{m.depth === 1 ? '' : 's'}</span></div>
-                          <Address value={m.address} head={12} tail={10} />
-                          <div className="thresholds">
-                            <span className="tk">outgoing transfers</span><span className="tv">{e.sweep_count}{e.outgoing_history_capped ? ' (newest only)' : ''}</span>
-                            <span className="tk">all to</span><span className="tv">{e.sweep_destination_label}</span>
-                            <span className="tk">total swept</span><span className="tv">{num(e.total_swept_native ?? 0)} {unit}</span>
-                            {e.current_balance_native != null && <><span className="tk">current balance</span><span className="tv">{num(e.current_balance_native)} {e.current_balance_symbol ?? result?.chain_native_symbol ?? unit}</span></>}
-                            {e.first_sweep && <><span className="tk">sweeps between</span><span className="tv">{when(e.first_sweep).slice(0, 10)} – {when(e.last_sweep).slice(0, 10)}</span></>}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </details>
-              )}
-
-              {findings.length > 0 ? (
-                <details className="card sec">
-                  <summary><span className="micro">Hints · {findings.length}</span><span className="pill amber">a shape, not evidence</span></summary>
-                  <div className="body">
-                    {findings.map((f) => (
-                      <div className="rule-block" key={f.pattern}>
-                        <div className="top"><span className="nm amber">{PATTERN_NAME[f.pattern] ?? f.pattern}</span></div>
-                        <div className="desc">{f.description}</div>
-                        {validationLine(f.pattern) && <p className="hint-rate">{validationLine(f.pattern)}</p>}
-                        {f.evidence?.thresholds_applied && (
-                          <div className="thresholds">
-                            {Object.entries(f.evidence.thresholds_applied).map(([k, v]) => (
-                              <span key={k} style={{ display: 'contents' }}><span className="tk">{k}</span><span className="tv">{String(v)}</span></span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    <p className="note">A hint is a reason to look closer, not a finding: it never moves the score and should not appear in a request as evidence.</p>
-                  </div>
-                </details>
-              ) : (
-                <div className="card sec flat"><span className="micro">Hints · none</span><span className="note">no peel chain or amount split</span></div>
-              )}
-
-              {swaps.length > 0 && (
-                <details className="card sec" open={!result.exchange}>
-                  <summary><span className="micro">Swaps · {swaps.length}</span><span className="note">the trace changes asset here</span></summary>
-                  <div className="body">
-                    {swaps.map((s) => (
-                      <div className="swap" key={s.tx}>
-                        <Address value={s.sender} head={8} tail={6} /> sent <span className="num">{num(s.amount_in)} {s.asset_in}</span> to <strong>{s.router_label}</strong>
-                        {s.output_read
-                          ? s.amount_out != null
-                            ? <> and got <span className="num">{num(s.amount_out)} {s.asset_out}</span> back. {followOns.some((f) => f.address === s.sender && f.asset === s.asset_out)
-                              ? <>The {s.asset_out} is followed from here — see <em>Continued in {s.asset_out}</em>.</>
-                              : <>Re-run on {s.asset_out} from the sender to follow it further.</>}</>
-                            : <> and got <span className="num">{s.amount_out_units}</span> raw units of an unlisted token{s.asset_out_contract ? <> (<Address value={s.asset_out_contract} head={8} tail={6} />)</> : null} back. Its decimals are not known, so the amount is not converted, and Exchequer does not trace that token — the trail stops here.</>
-                          : <>. Nothing came back to the sender in the receipt — a swap into the native coin looks like this — so the output is unread, not guessed.</>}
-                        <div className="grid">
-                          <span className="k">tx</span><Address value={s.tx} head={12} tail={10} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
-
-              {related.length > 0 ? (
-                <details className="card sec" open>
-                  <summary><span className="micro">Related cases · {related.length}</span><span className="note">same wallets, other complaints</span></summary>
-                  <div className="body">
-                    {related.slice(0, 8).map((c) => (
-                      <div className="related-case" key={c.case_id ?? c.ref}>
-                        <div className="top">
-                          {c.hidden
-                            ? <span className="mono" title="Traced by someone else; only the wallets it shares with this case are shown">{c.ref}</span>
-                            : <a href={`/case/${c.case_id}`} className="mono" title={c.reported_address}>{middle(c.reported_address, 10, 8)}</a>}
-                          <span className="st">{c.shared_count} shared wallet{c.shared_count === 1 ? '' : 's'}</span>
-                        </div>
-                        <div className="ent">{c.exchange ? `reached ${c.exchange}` : 'no exchange matched'}{c.traced_at ? ` · traced ${String(c.traced_at).slice(0, 10)}` : ''}</div>
-                        {c.shared.slice(0, 3).map((s) => (
-                          <div className="row" key={s.address}>
-                            <Address value={s.address} head={10} tail={8} />
-                            <span className="via">{s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}{s.risk_category ? `${RISK_NAME[s.risk_category] ?? s.risk_category} · ` : ''}{s.value_in_native == null ? (s.after_swap_to ? `after a swap to ${s.after_swap_to}` : c.asset) : `${num(s.value_in_native)} ${s.after_swap_to ?? c.asset}${s.after_swap_to ? ' after a swap' : ''}`}</span>
-                          </div>
-                        ))}
-                        {c.shared_count > 3 && <div className="ent">…and {c.shared_count - 3} more</div>}
-                      </div>
-                    ))}
-                    {related.length > 8 && <p className="note">…and {related.length - 8} more related cases.</p>}
-                    <p className="note">Only wallets no list names count — unlabelled, probable deposit addresses, or flagged but unnamed (a Tether freeze, a warning tag). A shared exchange is a shared bank, not a shared offender.</p>
-                  </div>
-                </details>
-              ) : (
-                <div className="card sec flat"><span className="micro">Related cases · none</span><span className="note">no other stored complaint shares a wallet</span></div>
-              )}
-
-              {reverse && funders.length > 0 && (
-                <details className="card sec" open>
-                  <summary><span className="micro">Funded this address · {funders.length}</span><span className="note">{funders.filter((f) => f.exchange).length} are exchange withdrawals</span></summary>
-                  <div className="body">
-                    {funders.map((f) => (
-                      <div className="funder" key={f.address}>
-                        <Address value={f.address} head={12} tail={10} />
-                        <span className="amt">{num(f.value_native)} {unit}</span>
-                        <span className="sub">
-                          {f.tx_count} transfer{f.tx_count === 1 ? '' : 's'}{f.last_seen ? ` · ${when(f.last_seen)}` : ''}
-                          {f.exchange && <span className="pill green">{f.exchange} withdrawal, not a victim</span>}
-                          {f.risk_category && <span className="pill red">{RISK_NAME[f.risk_category] ?? f.risk_category}</span>}
-                        </span>
-                      </div>
-                    ))}
-                    <p className="note">Candidate victims where the reported address is an offender's — but a sender may equally be the offender's own wallet; the exchanges are marked.</p>
-                  </div>
-                </details>
-              )}
-            </>,
+            entities: <EntitiesTab result={result} unit={unit} correlation={correlation} />,
             evidence: <EvidenceTab result={result} unit={unit} depth={depth} recorded={recorded} recheckId={recorded ? `demo-${demoNo}` : result.case_id ?? null} />,
           }} />
         )}

@@ -194,6 +194,12 @@ export const PAGES = [
   // The lane chart opens on its first 14 days; the whole trace is a press away.
   { name: 'recorded case 11, Timeline, every day', path: '/demo/11?tab=timeline', as: 'investigator', click: ['button', { name: /^All \d+ days$/ }], ready: ['button', { name: /^All \d+ days$/, pressed: true }], unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },
   { name: 'recorded case 11, Entities', path: '/demo/11?tab=entities', as: 'investigator', ready: CASE_TAB('Entities'), unmeasured: { phone: 1 } },
+  // Entities opens on the groups with the split wallet's card; its wallets
+  // open on request, and Every wallet shows the graph beside the flow by hop,
+  // whose labels sit over SVG shapes as on Flow (on a phone the graph's own
+  // panels also overlap inside its stage).
+  { name: 'recorded case 11, Entities, a group\'s wallets', path: '/demo/11?tab=entities', as: 'investigator', click: ['button', { name: /^(Open|Hide) the 8 wallets$/ }], ready: ['button', { name: 'Hide the 8 wallets', expanded: true }], unmeasured: { phone: 1 } },
+  { name: 'recorded case 11, Entities, every wallet', path: '/demo/11?tab=entities', as: 'investigator', click: ['button', { name: 'Every wallet' }], ready: ['img', { name: 'Money flow by hop' }], unmeasured: { desktop: 8, phone: 18 }, layout: graphPanelsApart },
   { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   { name: 'recorded case 11, Evidence, rechecked', path: '/demo/11?tab=evidence', as: 'investigator', stub: { url: '**/trace/demo-11/recheck', body: RECHECK }, ready: ['button', { name: 'Re-read from a second provider' }], unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   // The Letters tab drafts a recording's letters as a case's: the first one
@@ -215,4 +221,18 @@ export const NOT_CHECKED = {
   '/signin': 'sends the browser on to /signin/investigator',
   '/case/:caseId': 'needs a stored case; /demo/11 opens the same case view from a recording',
   '*': 'any other path shows the console',
+}
+
+/** Entities, every wallet: the graph's panels along its top (the hint, the
+ * counts, the zoom buttons) never cover one another, however narrow its
+ * stage: the hint once covered the counts' first figures, and on Linux axe
+ * could not measure them. */
+async function graphPanelsApart(page) {
+  const clashes = await page.locator('.ent-every .stage').evaluate((stage) => {
+    const panels = ['.graph-hint', '.graph-stats', '.graph-controls'].map((s) => [s, stage.querySelector(s).getBoundingClientRect()])
+    return panels.flatMap(([a, ra], i) => panels.slice(i + 1)
+      .filter(([, rb]) => ra.left < rb.right && rb.left < ra.right && ra.top < rb.bottom && rb.top < ra.bottom)
+      .map(([b]) => `${a} covers ${b}`))
+  })
+  if (clashes.length) throw new Error(`the graph's panels overlap: ${clashes.join('; ')}`)
 }

@@ -1,0 +1,78 @@
+/* The Entities view (pack Entities): the groups as a map, the chosen group's
+   card and other complaints beside it, the case's other blocks below. */
+.ent-layout { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.ent-groups { flex: 2 1 520px; min-width: 0; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.ent-layout.every .ent-groups { flex-basis: 100%; }
+.ent-side { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.ent-head, .ent-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.ent-layout h2 { margin: 0; font-size: 15px; font-weight: 400; color: var(--text); }
+.ent-toggle { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--panel-2); }
+.ent-toggle button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--text-2); font-weight: 400; }
+.ent-toggle button[aria-pressed="true"] { background: var(--go-tint); color: var(--go-soft); font-weight: 500; }
+
+/* The map: lines in an SVG stretched to the box, bubbles as buttons over it. */
+.ent-map {
+  position: relative; border-radius: var(--r-panel); background-color: var(--ground);
+  background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 18px 18px;
+}
+.ent-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ent-lines path.go { stroke: var(--go); }
+.ent-lines path.risk { stroke: var(--risk); }
+.ent-lines path.plain { stroke: var(--text-3); opacity: 0.6; }
+.ent-node {
+  position: absolute; transform: translate(-50%, calc(var(--d) / -2)); flex-direction: column; gap: 6px;
+  max-width: 170px; padding: 0; border: 0; background: none; border-radius: var(--r);
+}
+.ent-node:hover:not(:disabled) { background: none; }
+.ent-bubble { width: var(--d); height: var(--d); flex-shrink: 0; border-radius: 50%; box-sizing: border-box; background: var(--panel-2); border: 1.5px solid var(--text-3); }
+.ent-bubble.go { background: var(--go); border-color: var(--go); }
+.ent-bubble.risk { background: var(--risk); border-color: var(--risk); }
+.ent-bubble.inferred { background: var(--go-tint); border-style: dashed; }
+.ent-bubble.reported { background: radial-gradient(circle, var(--text) 0 30%, var(--ground) 32%); border: 2px solid var(--text); }
+.ent-node.on .ent-bubble { box-shadow: 0 0 0 3px var(--ground), 0 0 0 5px var(--text); }
+.ent-label { padding: 2px 7px; border-radius: 6px; background: var(--panel); color: var(--text); font-size: 11px; font-weight: 400; line-height: 1.35; text-align: center; }
+.ent-label, .ent-count { white-space: nowrap; }
+.ent-count { display: block; color: var(--text-2); }
+.ent-node.on .ent-label { font-weight: 600; }
+.ent-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; font-size: 11px; color: var(--text-2); }
+
+/* Every wallet: the graph, and the flow by hop beside it. */
+.ent-every { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+.ent-every .stage { position: relative; height: 520px; border-radius: var(--r); overflow: hidden; }
+
+/* The chosen group's card and other complaints. */
+.ent-card, .ent-other { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.ent-card .addr, .ent-other .addr { min-height: 24px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
+.ent-split { display: flex; flex-direction: column; gap: 10px; }
+.ent-split-sum { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 11px; color: var(--text-3); }
+.ent-split-sum > span { display: flex; flex-direction: column; gap: 2px; }
+.ent-split-sum b { font-weight: 300; font-size: 26px; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+.ent-split-sum svg { stroke: var(--text-3); }
+.ent-bars { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
+.ent-bars span { flex: 1; border-radius: 4px; background: var(--text-3); }
+.ent-bars span.risk { background: var(--risk); }
+.ent-range span { white-space: nowrap; }
+.ent-measured { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 11px; color: var(--text-2); }
+.ent-dots { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; }
+.ent-dots span { aspect-ratio: 1; border-radius: 50%; background: var(--panel-2); }
+.ent-dots span.on { background: var(--text); }
+.ent-flows, .ent-wallets, .ent-shared { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.ent-flows li, .ent-wallets li, .ent-shared li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; color: var(--text-2); }
+.ent-flows { padding-top: 12px; border-top: 1px solid var(--line); }
+.ent-wallets[hidden] { display: none; }
+.ent-wallets .note.risk { color: var(--risk); }
+.ent-open { align-self: flex-start; min-height: 40px; padding: 0 16px; background: transparent; border-color: var(--line-strong); }
+.ent-other-mark { width: 100%; height: 30px; stroke: var(--text-2); stroke-width: 1.2; }
+.ent-other-mark .them { stroke: var(--line-strong); stroke-dasharray: 3 4; }
+
+/* A phone: the groups as a list of buttons, the lines left to the cards. */
+@media (max-width: 720px) {
+  .ent-groups, .ent-card, .ent-other { padding: 16px; }
+  .ent-map { height: auto !important; display: flex; flex-direction: column; gap: 4px; padding: 6px; }
+  .ent-lines, .ent-legend { display: none; }
+  .ent-node { position: static; transform: none; flex-direction: row; max-width: none; min-height: 40px; padding: 4px 8px; justify-content: flex-start; }
+  .ent-node { --d: 20px !important; }
+  .ent-label { text-align: left; font-size: 12px; background: none; }
+  .ent-count { display: inline; }
+  .ent-node.on { background: var(--panel-2); }
+}

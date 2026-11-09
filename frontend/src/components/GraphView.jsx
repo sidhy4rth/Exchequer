@@ -740,32 +740,40 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
 
       {hasData && (
         <>
-          <div className="graph-stats">
-            {graphData.nodes.length} addresses · {graphData.links.length} transfers
-          </div>
+          {/* Along the top: the hint on the left, and the counts over the zoom
+              buttons on the right, in one row: on a narrow stage the hint
+              narrows instead of covering the counts. */}
+          <div className="graph-top">
+            <div className="graph-hint">
+              Hover any bubble for detail · click to keep it highlighted · drag to
+              pin · right-click to release · scroll to zoom · bubble size = value
+              moved
+            </div>
 
-          <div className="graph-controls">
-            <button onClick={() => zoomBy(1.4)} title="Zoom in" aria-label="Zoom in">+</button>
-            <button onClick={() => zoomBy(1 / 1.4)} title="Zoom out" aria-label="Zoom out">&minus;</button>
-            <button
-              onClick={fitToView}
-              title="Fit the whole graph in view (f)"
-            >
-              Fit
-            </button>
-            <button
-              onClick={releaseAll}
-              disabled={pinnedCount === 0}
-              title="Release every pinned bubble and let the layout settle again"
-            >
-              Release {pinnedCount > 0 ? `(${pinnedCount})` : ''}
-            </button>
-          </div>
+            <div className="graph-side">
+              <div className="graph-stats">
+                {/* On a phone the counts break at the dot, never inside one. */}
+                {graphData.nodes.length}&nbsp;addresses · {graphData.links.length}&nbsp;transfers
+              </div>
 
-          <div className="graph-hint">
-            Hover any bubble for detail · click to keep it highlighted · drag to
-            pin · right-click to release · scroll to zoom · bubble size = value
-            moved
+              <div className="graph-controls">
+                <button onClick={() => zoomBy(1.4)} title="Zoom in"><span aria-hidden="true">+</span><span className="visually-hidden">Zoom in</span></button>
+                <button onClick={() => zoomBy(1 / 1.4)} title="Zoom out"><span aria-hidden="true">&minus;</span><span className="visually-hidden">Zoom out</span></button>
+                <button
+                  onClick={fitToView}
+                  title="Fit the whole graph in view (f)"
+                >
+                  Fit
+                </button>
+                <button
+                  onClick={releaseAll}
+                  disabled={pinnedCount === 0}
+                  title="Release every pinned bubble and let the layout settle again"
+                >
+                  Release {pinnedCount > 0 ? `(${pinnedCount})` : ''}
+                </button>
+              </div>
+            </div>
           </div>
 
           {landmarks.length > 0 && (

@@ -472,13 +472,18 @@ details:not([open]) .feed .row { animation: none; }
 .graph-stats, .graph-hint, .legend, .graph-controls button, .jump-panel {
   background: var(--overlay); border: 1px solid var(--rule);
 }
-.graph-stats { position: absolute; right: 12px; top: 12px; border-radius: var(--r); padding: 5px 9px; font-size: 11px; color: var(--muted); font-family: var(--mono); font-variant-numeric: tabular-nums; }
-.graph-hint { position: absolute; left: 12px; top: 12px; border-radius: var(--r); padding: 6px 9px; font-size: 11px; color: var(--faint); max-width: 260px; line-height: 1.45; pointer-events: none; }
+/* The top row: the hint narrows to leave the counts and zoom buttons their
+   room, and on a phone the counts may take two lines. Only the panels
+   themselves take the pointer; the gaps between them are still the graph. */
+.graph-top { position: absolute; left: 12px; right: 12px; top: 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; pointer-events: none; }
+.graph-side { flex: none; max-width: 50%; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.graph-stats { pointer-events: auto; border-radius: var(--r); padding: 5px 9px; font-size: 11px; color: var(--muted); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.graph-hint { flex: 0 1 260px; min-width: 0; border-radius: var(--r); padding: 6px 9px; font-size: 11px; color: var(--faint); max-width: 260px; line-height: 1.45; }
 .legend { position: absolute; left: 12px; bottom: 12px; border-radius: var(--r); padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; font-size: 11px; }
 .legend .item { display: flex; align-items: center; gap: 7px; color: var(--muted); }
 .key-swatch { flex-shrink: 0; overflow: visible; }
 .legend .key-swatch .dot:not([stroke]) { stroke: var(--line-strong); }
-.graph-controls { position: absolute; right: 12px; top: 46px; display: flex; flex-direction: column; gap: 4px; }
+.graph-controls { pointer-events: auto; display: flex; flex-direction: column; gap: 4px; }
 .graph-controls button { width: 30px; min-width: 30px; height: 26px; padding: 0; font-size: 12px; color: var(--muted); border-radius: var(--r); justify-content: center; }
 .graph-controls button:last-child { width: auto; padding: 0 9px; }
 .graph-controls button:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
@@ -487,7 +492,7 @@ details:not([open]) .feed .row { animation: none; }
   display: flex; flex-direction: column; gap: 1px; max-height: 42%; overflow-y: auto; min-width: 190px; max-width: 250px;
 }
 .jump-panel .micro { margin-bottom: 4px; }
-.jump-panel button { background: none; border: none; border-radius: 2px; padding: 3px 5px; width: 100%; text-align: left; color: var(--muted); font-size: 11.5px; font-weight: 400; gap: 7px; }
+.jump-panel button { min-height: 24px; background: none; border: none; border-radius: 2px; padding: 3px 5px; width: 100%; text-align: left; color: var(--muted); font-size: 11.5px; font-weight: 400; gap: 7px; }
 .jump-panel button:hover { background: var(--panel-2); color: var(--ink); border-color: transparent; }
 .jump-panel button.active { background: var(--navy-soft); color: var(--navy); }
 .jump-panel .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
