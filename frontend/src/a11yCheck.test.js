@@ -22,14 +22,21 @@ describe('the accessibility check', () => {
     await expect(a11yConfig({ EXCHEQUER_URL: '' })).rejects.toThrow(/EXCHEQUER_URL/)
   })
 
-  it('opens the site it is given, at a desktop and a phone size', async () => {
+  it('opens the site it is given, at a desktop and a phone size, and a tablet size where asked', async () => {
     const config = await a11yConfig({ EXCHEQUER_URL: 'http://127.0.0.1:8123', A11Y_BROWSER: '' })
     expect(config.use.baseURL).toBe('http://127.0.0.1:8123')
-    expect(config.projects.map((p) => p.use.viewport)).toEqual([
-      { width: 1280, height: 900 },
-      { width: 390, height: 844 },
+    expect(config.projects.map((p) => [p.name, p.use.viewport])).toEqual([
+      ['desktop', { width: 1280, height: 900 }],
+      ['phone', { width: 390, height: 844 }],
+      ['tablet', { width: 1024, height: 768 }],
     ])
     expect(config.use.launchOptions?.executablePath).toBeUndefined()
+  })
+
+  it("opens the case's Evidence tab at the tablet size, where its table outgrows the card", () => {
+    const evidence = PAGES.filter((p) => p.path.endsWith('tab=evidence'))
+    expect(evidence.length).toBeGreaterThan(0)
+    for (const p of evidence) expect(p.tablet, p.name).toBe(true)
   })
 
   it('can use a Chromium-based browser already on the machine', async () => {

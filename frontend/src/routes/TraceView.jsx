@@ -10,6 +10,8 @@ import RequestsPanel from '../components/RequestsPanel'
 import { useCrumb } from '../components/AppShell'
 import CaseTabs from '../components/case/CaseTabs'
 import Tracing from '../components/case/Tracing'
+import EvidenceTab from '../components/case/EvidenceTab'
+import { middle, mmss, num, txUrl } from '../components/case/format'
 import { useCaseTab } from './caseTab'
 import './TraceView.css'
 import { plain } from '../text'
@@ -23,31 +25,6 @@ const COMPONENT_NAME = {
   match_directness: 'Match directness',
 }
 
-/** Truncation reasons come back one sentence per address. Grouped by kind
- * they read as a summary rather than a wall. */
-function groupReasons(reasons) {
-  const counts = { depth: 0, nodes: 0, fanout: 0, service: 0, fetch: 0, history: 0, other: [] }
-  ;(reasons ?? []).forEach((r) => {
-    if (r.startsWith('time budget')) counts.other.push(r)
-    else if (r.startsWith('depth limit')) counts.depth += 1
-    else if (r.startsWith('node limit')) counts.nodes += 1
-    else if (r.startsWith('fan-out limit')) counts.fanout += 1
-    else if (r.includes('pays out to many addresses')) counts.service += 1
-    else if (r.includes('could not be fetched')) counts.fetch += 1
-    else if (r.startsWith('history read limit')) counts.history += 1
-    else counts.other.push(r)
-  })
-  const out = []
-  if (counts.depth) out.push('the hop limit was reached')
-  if (counts.nodes) out.push('the address limit was reached')
-  if (counts.fanout) out.push(`only the 10 largest counterparties were followed at ${counts.fanout} address${counts.fanout === 1 ? '' : 'es'}`)
-  if (counts.service) out.push(`${counts.service} service contract${counts.service === 1 ? '' : 's'} not expanded`)
-  if (counts.fetch) out.push(`${counts.fetch} address${counts.fetch === 1 ? '' : 'es'} could not be fetched`)
-  // A read that stopped at its record limit: spam can fill one, so the case may miss transfers there.
-  if (counts.history) out.push(`history not read in full at ${counts.history} address${counts.history === 1 ? '' : 'es'} (each read stopped at its record limit)`)
-  return out.concat(counts.other)
-}
-
 /** OFAC stamps its list "MM/DD/YYYY"; an Indian reader parses that as day-first.
  * Spell the month out so "09/04/2026" cannot be read as 9 April. */
 function unambiguousDate(text) {
@@ -57,16 +34,6 @@ function unambiguousDate(text) {
   })
 }
 
-/** Middle-truncated address: both ends carry identity, the middle does not. */
-function middle(address, head = 10, tail = 8) {
-  if (!address || address.length <= head + tail + 1) return address
-  return `${address.slice(0, head)}…${address.slice(-tail)}`
-}
-/** A transaction's page on the chain's explorer (Tronscan's is under #/). */
-function txUrl(explorer, chain, hash) {
-  if (!explorer || !hash) return null
-  return chain === 'tron' ? `${explorer}/#/transaction/${hash.replace(/^0x/, '')}` : `${explorer}/tx/${hash}`
-}
 // A whole number from the URL, kept within the backend's range; `fallback`
 // when absent or not a number.
 function clampInt(raw, lo, hi, fallback) {
@@ -77,12 +44,8 @@ function clampInt(raw, lo, hi, fallback) {
 const PAY_HASH = /^(0x)?[0-9a-fA-F]{64}$/
 // The cap the confirmation card offers, as on the trace form.
 const LINK_BUDGET_SECONDS = 90
-const mmss = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
-const num = (value) =>
-  value >= 1000 ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                : Number((value || 0).toFixed(6)).toString()
 
 const Icon = ({ d, size }) => (
   <svg className="icon" viewBox="0 0 24 24" aria-hidden="true" style={size ? { width: size, height: size } : undefined}>
@@ -378,7 +341,6 @@ export default function TraceView() {
   const caveats = result?.confidence_detail?.caveats ?? []
   // Pro-rata started from at most the victim's payments or the swap's output.
   const capped = result?.prorata?.seed_cap?.applied ? result.prorata.seed_cap : null
-  const serviceContracts = result?.graph.nodes.filter((n) => n.is_service_contract) ?? []
   const path = result?.trace_path ?? []
   const pathHashes = path.reduce((n, step) => n + (step.tx_hashes?.length ?? 0), 0)
   const primaryInference = inferred.find((m) => m.address === result?.exchange_address)
@@ -390,13 +352,6 @@ export default function TraceView() {
   }, [hops])
   const visible = showAll ? hops : notable
   const shown = visible.slice(0, revealed)
-  const grouped = groupReasons(result?.truncation_reasons)
-  const scopeLine = result ? [
-    result.transfers_excluded_by_time ? `${result.transfers_excluded_by_time} pre-arrival transfers left out` : null,
-    serviceContracts.length ? `${serviceContracts.length} service contract${serviceContracts.length === 1 ? '' : 's'}` : null,
-    swaps.length ? `${swaps.length} swap${swaps.length === 1 ? '' : 's'}` : null,
-    result.evidence?.count ? `${result.evidence.count} responses hashed` : null,
-  ].filter(Boolean).join(' · ') : ''
 
   useEffect(() => {
     const onKey = (e) => {
@@ -919,57 +874,7 @@ export default function TraceView() {
                 </details>
               )}
             </>,
-            evidence: <>
-              <details className="card sec" open>
-                <summary><span className="micro">Scope and evidence</span><span className="note">{result.truncated ? 'truncated' : 'complete within limits'}</span></summary>
-                <div className="body">
-                  <p className="note">{scopeLine || 'Nothing was left out.'}</p>
-                  <div className="exclusion">
-                    <span className={`n ${result.transfers_excluded_by_time ? '' : 'zero'}`}>{result.transfers_excluded_by_time ?? 0}</span>
-                    <span className="t">transfers before the traced funds arrived<small>Money cannot be forwarded before it is received; these were left out.</small></span>
-                  </div>
-                  <div className="exclusion">
-                    <span className={`n ${serviceContracts.length ? '' : 'zero'}`}>{serviceContracts.length}</span>
-                    <span className="t">service contracts not expanded<small>WETH, pools, routers: their payouts are other people's money.</small></span>
-                  </div>
-                  {result.untraced?.length > 0 && (
-                    <div className="exclusion untraced">
-                      <span className="n num">{num(result.untraced.reduce((sum, u) => sum + u.value_native, 0))}</span>
-                      <span className="t">{unit} sent on but not followed<small>{result.untraced.reduce((sum, u) => sum + u.counterparties, 0)} smaller destinations of {result.untraced.length} address{result.untraced.length === 1 ? '' : 'es'}: {result.untraced.some((u) => u.rule === 'top_n') ? 'the walk follows the ten largest of each' : 'each carried less than the share the walk follows'}. Where these went is not in this case.</small></span>
-                    </div>
-                  )}
-                  {result.addresses_unexpanded_by_time > 0 && (
-                    <div className="exclusion">
-                      <span className="n">{result.addresses_unexpanded_by_time}</span>
-                      <span className="t">addresses reached but not expanded<small>The {mmss(result.time_budget_seconds)} time cap ran out first; the graph beyond them is missing.</small></span>
-                    </div>
-                  )}
-                  {result.addresses_unexpanded_by_budget > 0 && (
-                    <div className="exclusion">
-                      <span className="n">{result.addresses_unexpanded_by_budget}</span>
-                      <span className="t">addresses reached but not expanded<small>The case's provider request budget ran out first; the graph beyond them is missing.</small></span>
-                    </div>
-                  )}
-                  <div className="exclusion">
-                    <span className="n">{result.api_calls}</span>
-                    <span className="t">provider requests<small>{result.transfers_total ?? result.transfers?.length ?? 0} individual transactions{result.transfers_omitted ? ` (${result.transfers?.length ?? 0} listed)` : ''}; depth {result.depth_reached} reached of {result.max_depth ?? depth}{result.seconds_elapsed ? `; ${result.seconds_elapsed} s` : ''}.</small></span>
-                  </div>
-                  {result.evidence?.count > 0 && (
-                    <div className="exclusion">
-                      <span className="n">{result.evidence.count}</span>
-                      <span className="t">responses hashed as evidence<small>
-                        SHA-256 at arrival{result.evidence.from_cache > 0 ? ` (${result.evidence.from_cache} from cache, with their original time)` : ''}. Manifest{' '}
-                        <span className="mono" title={result.evidence.manifest_sha256}>{result.evidence.manifest_sha256.slice(0, 16)}…</span>; full list in the report, which carries its own content hash.
-                      </small></span>
-                    </div>
-                  )}
-                  {grouped.length > 0 && (
-                    <ul className="reasons">{grouped.map((r) => <li key={r}>{r}</li>)}</ul>
-                  )}
-                  {result.warnings?.length > 0 && result.warnings.map((w) => <p className="note" key={w}>! {w}</p>)}
-                </div>
-              </details>
-            </>,
+            evidence: <EvidenceTab result={result} unit={unit} depth={depth} recorded={recorded} recheckId={recorded ? `demo-${demoNo}` : result.case_id ?? null} />,
           }} />
         )}
       </div>

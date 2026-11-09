@@ -56,6 +56,39 @@ const LINKED = {
 }
 const CASES_STUB = (linked) => [{ url: /\/cases\?limit=\d+$/, body: CASES }, { url: /\/cases\/correlate$/, body: linked }]
 
+// The Evidence tab's "Second provider" column shows once a recheck answers
+// (routes/recheck.py), so the check answers GET /trace/demo-11/recheck with
+// one that read four of demo 11's route transfers, each with another word.
+const RECHECK = {
+  case_id: null, chain: 'tron', asset: 'USDT', provider: 'TronScan', checked_at: '2026-11-10T05:00:00+00:00',
+  cited: 22, checked: 4, skipped: 0, counts: { matches: 1, differs: 1, not_found: 1, error: 1 },
+  transfers: [
+    { hash: '10472b07a294beb300101a4c6f197c4bdff9680daebd677e946514c88f824fce', status: 'matches', differences: [], detail: null },
+    { hash: '38ef314819abff3f5c448da6de769fad80821ae06a26f15a8fd134e1645fbdba', status: 'differs', differences: [], detail: 'amount is 1148.7, the report says 1148.688' },
+    { hash: 'c69b44b9b87b7d96878a8f71c0a02c918a37d0a2b5f3ec0c69c2b0f70bbfd127', status: 'not_found', differences: [], detail: 'the second provider does not have this transaction' },
+    { hash: '821965673662c740fe8b51126bc3dd3e6d53047f2282f7def00ee750c748f974', status: 'error', differences: [], detail: 'the second provider could not be read' },
+  ],
+}
+
+/** The Amount heading sits over its figures, right-aligned as they are. */
+async function amountsAligned(page, size) {
+  // Each full hash in the table keeps to two even lines, one per half: the
+  // mono glyphs round wider on Linux, and a half that wrapped made its row taller.
+  const wrapped = await page.locator('.ev-table .ev-hash > span').evaluateAll((halves) => halves.filter((half) => {
+    const text = document.createRange()
+    text.selectNodeContents(half)
+    return new Set([...text.getClientRects()].map((r) => Math.round(r.top))).size > 1
+  }).map((half) => half.textContent))
+  if (wrapped.length) throw new Error(`a hash's half wraps onto a second line: ${wrapped.join(', ')}`)
+  if (size === 'phone') return // each transfer is a card there, with no heading row
+  const edge = (cell) => cell.evaluate((e) => {
+    const r = e.firstChild ? (() => { const range = document.createRange(); range.selectNodeContents(e); return range.getBoundingClientRect() })() : e.getBoundingClientRect()
+    return Math.round(r.right)
+  })
+  const [head, figure] = await Promise.all([edge(page.locator('.ev-table th.ev-amt')), edge(page.locator('.ev-table td.ev-amt').first())])
+  if (head !== figure) throw new Error(`the Amount heading ends at x=${head}, its figures at x=${figure}`)
+}
+
 const H1 = (name) => ['heading', { level: 1, name }]
 const CASE_TAB = (name) => ['tab', { name, selected: true }]
 
@@ -100,7 +133,8 @@ export const PAGES = [
   { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
   { name: 'recorded case 11, Timeline', path: '/demo/11?tab=timeline', as: 'investigator', ready: CASE_TAB('Timeline'), unmeasured: { desktop: 11, phone: 21 } },
   { name: 'recorded case 11, Entities', path: '/demo/11?tab=entities', as: 'investigator', ready: CASE_TAB('Entities'), unmeasured: { phone: 1 } },
-  { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 } },
+  { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
+  { name: 'recorded case 11, Evidence, rechecked', path: '/demo/11?tab=evidence', as: 'investigator', stub: { url: '**/trace/demo-11/recheck', body: RECHECK }, ready: ['button', { name: 'Re-read from a second provider' }], unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   { name: 'recorded case 11, Letters', path: '/demo/11?tab=letters', as: 'investigator', ready: CASE_TAB('Letters'), unmeasured: { phone: 1 } },
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },

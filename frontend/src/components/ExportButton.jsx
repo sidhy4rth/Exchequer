@@ -62,25 +62,24 @@ export function DraftLetters({ caseId, bare = false }) {
 }
 
 /**
- * Downloads the case report.
+ * The case's files: the signed report (`report('pdf' | 'text' | 'json')`) and
+ * the transfer graph (`graph('graphml' | 'csv')`), for the Export menu and
+ * the Evidence tab. Each resolves once the download has started or failed.
  *
  * The file is built in the browser from the backend's response rather than
  * pointed at with a plain link, so a failed request surfaces as a visible
  * error instead of navigating the user to an error page.
  */
-export default function ExportButton({ caseId, address, icon = false }) {
+export function useCaseFiles(caseId, address) {
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
+  const name = `exchequer-${address.slice(0, 10)}-${caseId?.slice(0, 8)}`
 
-  async function download(format) {
-    setBusy(format)
+  async function fetchAndSave(key, get) {
+    setBusy(key)
     setError(null)
     try {
-      const body = await fetchReport(caseId, format)
-      const content = format === 'json' ? JSON.stringify(body, null, 2) : body
-      const type = { json: 'application/json', pdf: 'application/pdf' }[format] ?? 'text/plain'
-      const ext = { json: 'json', pdf: 'pdf' }[format] ?? 'txt'
-      save(content, type, `exchequer-${address.slice(0, 10)}-${caseId.slice(0, 8)}.${ext}`)
+      save(...await get())
     } catch (err) {
       setError(err.message)
     } finally {
@@ -88,24 +87,27 @@ export default function ExportButton({ caseId, address, icon = false }) {
     }
   }
 
+  const report = (format) => fetchAndSave(format, async () => {
+    const body = await fetchReport(caseId, format)
+    const content = format === 'json' ? JSON.stringify(body, null, 2) : body
+    const type = { json: 'application/json', pdf: 'application/pdf' }[format] ?? 'text/plain'
+    return [content, type, `${name}.${{ json: 'json', pdf: 'pdf' }[format] ?? 'txt'}`]
+  })
+  const graph = (format) => fetchAndSave(`graph-${format}`, async () => [
+    await fetchGraph(caseId, format), format === 'csv' ? 'text/csv' : 'application/graphml+xml', `${name}-graph.${format}`,
+  ])
+  return { busy, error, report, graph }
+}
+
+/** Downloads the case report, from the case header's Export menu. */
+export default function ExportButton({ caseId, address, icon = false }) {
+  const { busy, error, report: download, graph } = useCaseFiles(caseId, address)
   // Deliberately an inline group, not a titled block: this sits inside the
   // console bar. It previously wrapped itself in `.section`, a landing-page
   // class carrying max-width and 72px of bottom padding, which made it an
   // invisible 739x173 box overhanging the bar and swallowing clicks meant for
   // the controls beneath it.
-  async function downloadGraph(format) {
-    setBusy(`graph-${format}`)
-    setError(null)
-    try {
-      const type = format === 'csv' ? 'text/csv' : 'application/graphml+xml'
-      save(await fetchGraph(caseId, format), type, `exchequer-${address.slice(0, 10)}-${caseId.slice(0, 8)}-graph.${format}`)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setBusy(null)
-      if (menu.current) menu.current.open = false
-    }
-  }
+  const downloadGraph = (format) => graph(format).finally(() => { if (menu.current) menu.current.open = false })
 
   const menu = useRef(null)
   const pick = (fn) => () => { fn(); if (menu.current) menu.current.open = false }

@@ -24,5 +24,8 @@ export default defineConfig({
   projects: [
     { name: 'desktop', use: { viewport: { width: 1280, height: 900 } } },
     { name: 'phone', use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    // Between the two, where a wide table must scroll rather than be cut off:
+    // only the pages that ask for it (`tablet` in a11y.pages.js).
+    { name: 'tablet', use: { viewport: { width: 1024, height: 768 } } },
   ],
 })

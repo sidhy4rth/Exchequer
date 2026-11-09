@@ -91,6 +91,68 @@
 .tracing-foot { display: flex; justify-content: space-between; gap: 12px; margin: 0; font-size: 11px; color: var(--text-3); }
 .tracing-foot .mono { flex-shrink: 0; }
 
+/* The Evidence tab (pack 2-glass-07): the route as a table, then three cards. */
+/* The table scrolls in its own region where its columns outgrow the card. */
+.ev-scroll { overflow-x: auto; }
+.ev-chain-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 22px; }
+.ev-chain h2, .ev-card h2 { margin: 0; font-size: 15px; font-weight: 400; color: var(--text); }
+.ev-chain-head .note { margin-top: 2px; }
+.ev-go { min-height: 40px; padding: 0 16px; border-color: var(--go); background: var(--go-tint); color: var(--go-soft); }
+.ev-go:hover:not(:disabled) { border-color: var(--go-soft); background: var(--go-tint); }
+.ev-chain-line { padding: 0 22px 14px; }
+.ev-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ev-table th { padding: 12px 8px; text-align: left; font-size: 11.5px; font-weight: 400; color: var(--text-3); border-top: 1px solid var(--line); }
+.ev-table td { padding: 14px 8px; border-top: 1px solid var(--line); vertical-align: middle; }
+.ev-table :is(th, td):first-child { padding-left: 22px; }
+.ev-table :is(th, td):last-child { padding-right: 22px; }
+.ev-step, .ev-when, .ev-amt { white-space: nowrap; }
+.ev-amt, .ev-table th.ev-amt { text-align: right; }
+.ev-dot { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--text); }
+.ev-dot.go { background: var(--go); }
+.ev-pair { font-size: 11.5px; min-width: 150px; }
+.ev-pair span { white-space: nowrap; }
+.ev-unit { font-size: 11px; color: var(--text-3); }
+.ev-tx { min-width: 230px; }
+.ev-hash {
+  display: block; width: 100%; min-height: 24px; padding: 0; border: 0; border-radius: 0; background: none;
+  color: var(--text-2); font-size: 11px; font-weight: 400; line-height: 1.5; text-align: left; word-break: break-all; cursor: copy;
+}
+.ev-hash > span { display: block; }
+/* In the table each half keeps to one line, and the column grows to fit it:
+   the mono glyphs round a little wider on Linux than on a Mac. "copied"
+   may still drop below it rather than widen the column. */
+.ev-table .ev-hash > span { white-space: nowrap; }
+.ev-table .ev-copied { white-space: normal; }
+.ev-hash:hover:not(:disabled) { background: none; color: var(--text); }
+.ev-copied { font-family: var(--sans); color: var(--go-soft); }
+.ev-link a { display: inline-flex; align-items: center; min-height: 24px; font-size: 12px; color: var(--text-2); }
+.ev-check { display: inline-block; padding: 3px 10px; border: 1px solid transparent; border-radius: var(--r-pill); font-size: 11px; white-space: nowrap; }
+.ev-check.wait { border: 1px dashed var(--line-strong); color: var(--text-2); }
+.ev-check.go { background: var(--go-tint); color: var(--go-soft); }
+.ev-check.risk { background: var(--risk-tint); color: var(--risk); }
+.ev-check-detail { display: block; max-width: 220px; margin-top: 4px; font-size: 11px; color: var(--text-2); }
+.ev-more { margin: 4px 16px 14px; }
+.ev-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.ev-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 22px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); }
+.ev-card.risk { background: var(--risk-tint); border-color: var(--risk-tint); }
+.ev-card h2 { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+.ev-card h2 svg { flex-shrink: 0; }
+.ev-card.risk h2 svg { color: var(--risk); }
+.ev-card .ev-hash { color: var(--text); }
+.ev-says { margin: 0; font-size: 12px; color: var(--text-2); }
+.ev-item { display: flex; flex-direction: column; gap: 4px; }
+.ev-k { font-size: 11px; color: var(--text-3); }
+.ev-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.ev-stats p { margin: 0; font-size: 11px; color: var(--text-3); }
+.ev-big { display: block; margin-bottom: 4px; font-size: 26px; font-weight: 300; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+.ev-limits { padding: 10px 14px; border-radius: var(--r); background: var(--panel-2); font-size: 12px; color: var(--text-2); }
+.ev-limits summary { min-height: 24px; line-height: 24px; cursor: pointer; }
+.ev-limits ul { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 4px; padding-left: 16px; color: var(--text); }
+.ev-files { display: flex; flex-wrap: wrap; gap: 8px; }
+.ev-file { min-height: 42px; padding: 0 18px; background: transparent; border-color: var(--line-strong); color: var(--text); font-size: 13px; }
+.ev-file.solid { background: var(--text); border-color: var(--text); color: var(--ground); }
+.ev-file.solid:hover:not(:disabled) { background: var(--text-2); border-color: var(--text-2); }
+
 @media (max-width: 720px) {
   .case-top { padding: 16px 16px 0; }
   .case-pill { min-height: 34px; padding: 0 14px; }
@@ -100,4 +162,15 @@
   .case-tabs .pill-tablist [role="tab"] { flex: 1 1 30%; justify-content: center; }
   .tracing-card { padding: 20px; }
   .tracing-head h1 { font-size: 26px; }
+  /* The route's table: each transfer a card of its own, so nothing scrolls sideways. */
+  .ev-chain-head { padding: 16px; }
+  .ev-chain-line { padding: 0 16px 12px; }
+  .ev-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ev-table, .ev-table tbody { display: block; }
+  .ev-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; padding: 14px 16px; border-top: 1px solid var(--line); }
+  .ev-table td, .ev-table td:first-child, .ev-table td:last-child { padding: 0; border: 0; }
+  .ev-table .ev-when, .ev-table .ev-second { text-align: right; }
+  .ev-table .ev-tx { grid-column: 1 / -1; min-width: 0; }
+  .ev-pair { min-width: 0; }
+  .ev-card { padding: 18px; }
 }

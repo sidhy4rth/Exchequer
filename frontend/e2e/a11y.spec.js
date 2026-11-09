@@ -65,6 +65,24 @@ async function open(page, p, theme) {
   if (pressed) expect(await depth(pressed), 'what the check pressed moved down the page: it was pressed before the page had loaded').toBe(clickedAt)
 }
 
+/** Controls that a hidden overflow cuts off sideways: no pointer can reach
+ * them, and focusing one scrolls the box and leaves it shifted. A control in
+ * a scrolling box is fine; the box itself is measured instead. */
+const cutOff = (page) => page.evaluate(() => [...document.querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex]')]
+  .filter((el) => el.getClientRects().length && !el.closest('.visually-hidden'))
+  .flatMap((el) => {
+    const r = el.getBoundingClientRect()
+    for (let box = el.parentElement; box && box !== document.body; box = box.parentElement) {
+      const overflow = getComputedStyle(box).overflowX
+      if (overflow === 'auto' || overflow === 'scroll') return []
+      const b = box.getBoundingClientRect()
+      if ((overflow === 'hidden' || overflow === 'clip') && (r.left < b.left - 1 || r.right > b.right + 1)) {
+        return [`${el.tagName.toLowerCase()} "${el.textContent.trim().slice(0, 40)}" cut off by ${box.tagName.toLowerCase()}.${box.className}`]
+      }
+    }
+    return []
+  }))
+
 /** Contrast with the decorative layers hidden: what fails, and the text axe
  * still cannot measure (an icon glyph such as + is not text). */
 async function contrast(page) {
@@ -80,7 +98,10 @@ for (const theme of ['dark', 'light']) {
     for (const p of PAGES) {
       test(p.name, async ({ page }, info) => {
         test.skip(Boolean(p.size) && p.size !== info.project.name, `checked at ${p.size} size only`)
+        test.skip(info.project.name === 'tablet' && !p.tablet, 'checked at the tablet size only where the page asks')
         await open(page, p, theme)
+        expect(await cutOff(page)).toEqual([])
+        if (p.layout) await p.layout(page, info.project.name)
 
         // Needs-review fails too, for every rule but contrast (measured
         // below): a name on a div with no role is as real as a violation.
@@ -90,7 +111,9 @@ for (const theme of ['dark', 'light']) {
         const { failed, unmeasured } = await contrast(page)
         expect(failed).toEqual([])
         if (unmeasured.length) info.annotations.push({ type: 'contrast not measured', description: unmeasured.join('\n') })
-        const pin = p.unmeasured?.[info.project.name] ?? 0
+        // At the tablet size a wide table scrolls, and axe cannot measure text
+        // scrolled out of view: the same text is measured at the desktop size.
+        const pin = info.project.name === 'tablet' ? Infinity : p.unmeasured?.[info.project.name] ?? 0
         expect(unmeasured.length, `axe cannot measure the contrast of more text than the ${pin} pinned:\n${unmeasured.join('\n')}`).toBeLessThanOrEqual(pin)
       })
     }
@@ -103,7 +126,8 @@ for (const theme of ['dark', 'light']) {
 // canvas would test nothing here, so the case asks for one first.
 test.describe('the contrast pass', () => {
   for (const [name, over] of [['investigator sign-in', '.gate-hint span']]) {
-    test(`fails dark text over the globe: ${name}`, async ({ page }) => {
+    test(`fails dark text over the globe: ${name}`, async ({ page }, info) => {
+      test.skip(info.project.name === 'tablet', 'checked at desktop and phone')
       await open(page, PAGES.find((p) => p.name === name), 'dark')
       await expect(page.locator('canvas'), `${name} draws no globe: this case would check plain text`).not.toHaveCount(0)
       await page.addStyleTag({ content: `${over} { color: #1a1a1a !important }` })
