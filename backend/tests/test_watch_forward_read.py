@@ -180,7 +180,7 @@ def test_a_watch_reads_blocks_above_one_hundred_million(store):
     assert cursor_of(w) == 400_000_000
     eth.add(400_000_050, W, BINANCE_14, 25 * 10**18)
     assert [a["kind"] for a in watchlist.check_watch(w.id, source=eth.source())] == ["exchange"]
-    assert int(eth.requests[-1]["endblock"]) > 10**9
+    assert int(eth.requests[-1]["endblock"]) >= 400_000_050
 
 
 def test_a_block_too_full_to_read_whole_is_counted_as_read_and_said_so(store, monkeypatch):

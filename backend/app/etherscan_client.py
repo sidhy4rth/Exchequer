@@ -50,7 +50,10 @@ WEI_PER_UNIT = 10**18
 # Arbitrum passed in 2023 -- its reads then ended in 2023, and a read from an
 # arrival above that block asked for an inverted range. A constant rather
 # than the head, so the request (and its cache key) is the same every time.
-ENDBLOCK_LATEST = 9_999_999_999
+# 999,999,999 is the value Etherscan's V2 reference shows: it fits a signed
+# 32-bit integer (a 10-digit value does not) and is far above Arbitrum One,
+# our highest chain (522,711,376 on 9 Nov 2026, ~126M blocks a year).
+ENDBLOCK_LATEST = 999_999_999
 
 # The chain head, read once per chain and shared by every client for this
 # long: concurrent traces and watch checks then cost one eth_blockNumber call
@@ -179,7 +182,7 @@ def split_page(blocks: list[int], after: int, full: bool) -> tuple[int, bool]:
 
 # The last block a watch's forward read asks for: above any chain's height
 # (Arbitrum One passed 99,999,999 in 2023); Etherscan stops at its newest.
-SINCE_ENDBLOCK = 9_999_999_999
+SINCE_ENDBLOCK = ENDBLOCK_LATEST
 # Records a read of one block alone may return: Etherscan's page x offset
 # ceiling, and more than one address's records any block's gas can hold.
 WHOLE_BLOCK = 10_000

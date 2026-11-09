@@ -6,13 +6,21 @@ semantics ("ending block number to search to") an Arbitrum trace or watch
 saw nothing after early 2023, and a read from an arrival above that block
 was an inverted range that could only come back empty
 (r2-g2-watchlist-alerts-0-5).
+
+The value is the one Etherscan's V2 txlist reference shows, 999,999,999: it
+fits a signed 32-bit integer (a 10-digit endblock does not, and a server that
+parses it as one would refuse every read) and is far above Arbitrum One's
+head, the highest of our Etherscan chains (522,711,376 on 9 Nov 2026).
 """
 from __future__ import annotations
 
 import httpx
 import pytest
 
-from app.etherscan_client import ENDBLOCK_LATEST, EtherscanClient
+from app.etherscan_client import ENDBLOCK_LATEST, SINCE_ENDBLOCK, EtherscanClient
+
+ARBITRUM_HEAD_NOV_2026 = 522_711_376
+INT32_MAX = 2**31 - 1
 
 WALLET = "0x" + "1" * 40
 CASHOUT = "0x" + "3" * 40
@@ -48,8 +56,11 @@ def _client(seen: list[dict]) -> EtherscanClient:
 def test_reads_ask_for_blocks_above_any_chain_height(read):
     seen: list[dict] = []
     read(_client(seen))
-    assert seen and all(int(p["endblock"]) > 10**9 for p in seen)
-    assert ENDBLOCK_LATEST > 10**9
+    assert seen and all(ARBITRUM_HEAD_NOV_2026 < int(p["endblock"]) <= INT32_MAX for p in seen)
+
+
+def test_the_open_endblock_is_etherscans_documented_value():
+    assert ENDBLOCK_LATEST == SINCE_ENDBLOCK == 999_999_999
 
 
 def test_a_read_from_an_arbitrum_arrival_is_not_an_inverted_range():
