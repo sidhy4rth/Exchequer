@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import { Icon, PortalLink } from './parts.jsx'
 import Home from './pages/Home.jsx'
+import Find from './pages/Find.jsx'
+import Learn from './pages/Learn.jsx'
 import RightNow from './pages/RightNow.jsx'
 import { ComingSoon, NotFound } from './pages/Soon.jsx'
 
@@ -48,7 +50,7 @@ function Layout({ children }) {
       </header>
       <main id="main" ref={main} tabIndex={-1}>{children}</main>
       <footer className="foot">
-        <ul className="safety" aria-label="Stay safe">
+        <ul className="safety" role="list" aria-label="Stay safe">
           <li><Icon name="ban" />Police never charge a fee to recover money.</li>
           <li><Icon name="ban" />We never ask for your seed phrase or private key.</li>
         </ul>
@@ -68,20 +70,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/right-now" element={<RightNow />} />
-        <Route path="/report" element={
-          <ComingSoon title="Find your payment">
-            Here you will find the exact payment you made and build your complaint around it.
-            This part works with the officers who review complaints, and it is not switched on yet.
-          </ComingSoon>} />
+        <Route path="/report" element={<Find />} />
         <Route path="/my-case" element={
           <ComingSoon title="Track my complaint">
             Here you will sign in with your NCRP number to follow your complaint and read messages
             from your officer. This part is not switched on yet.
           </ComingSoon>} />
-        <Route path="/learn" element={
-          <ComingSoon title="Know the scams">
-            A short guide to the common crypto scams and their warning signs is on its way.
-          </ComingSoon>} />
+        <Route path="/learn" element={<Learn />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
