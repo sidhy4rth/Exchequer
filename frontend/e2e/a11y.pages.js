@@ -28,11 +28,18 @@ const BATCH = {
 
 const HOME_TABS = ['Stored cases', 'Watchlist', 'Open requests', 'Bulk intake', 'Coverage']
 
+// On a phone the open sign-in card is drawn from tiles, and the "Preview"
+// paragraph sits over a seam between two of them. On Linux (CI) the card's
+// text wraps a few pixels lower than on a Mac, so that paragraph crosses the
+// seam too and axe cannot pick one background for it: five lines it cannot
+// measure instead of four. Nothing changes on screen.
+const PHONE_DOOR = 5
+
 export const PAGES = [
   { name: 'investigator sign-in', path: '/signin/investigator', ready: DOOR },
-  { name: 'investigator sign-in, door open', path: '/signin/investigator', click: DOOR, ready: ['dialog', { name: /enter as investigator/i }], unmeasured: { desktop: 3, phone: 4 } },
+  { name: 'investigator sign-in, door open', path: '/signin/investigator', click: DOOR, ready: ['dialog', { name: /enter as investigator/i }], unmeasured: { desktop: 3, phone: PHONE_DOOR } },
   { name: 'citizen sign-in', path: '/signin/citizen', ready: DOOR },
-  { name: 'citizen sign-in, door open', path: '/signin/citizen', click: DOOR, ready: ['dialog', { name: /enter as citizen/i }], unmeasured: { desktop: 4, phone: 4 } },
+  { name: 'citizen sign-in, door open', path: '/signin/citizen', click: DOOR, ready: ['dialog', { name: /enter as citizen/i }], unmeasured: { desktop: 4, phone: PHONE_DOOR } },
   ...HOME_TABS.map((tab) => ({
     name: `Home · ${tab}`, path: '/', as: 'investigator',
     click: ['tab', { name: new RegExp(`^${tab}`) }], ready: ['tab', { name: new RegExp(`^${tab}`), selected: true }],
