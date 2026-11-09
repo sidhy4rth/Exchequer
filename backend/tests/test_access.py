@@ -26,6 +26,7 @@ GUARDED = [
     ("/requests", {"case_id": "case-1", "recipient": "Binance"}),
     ("/payments/search", {"chain": "ethereum", "asset": "ETH", "wallet": ADDRESS, "amount": "1",
                           "from": 1_700_000_000, "to": 1_700_003_600}),
+    ("/trace/some-case/recheck", None),
 ]
 
 

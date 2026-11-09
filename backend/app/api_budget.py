@@ -828,11 +828,18 @@ class UnitMeter:
             self.requests += 1
             return None
 
-    def spent(self, units: float = 1.0) -> bool:
-        """Whether a request of `units` would be refused for the whole site now."""
+    def spent(self, units: float = 1.0, client: str | None = None) -> str | None:
+        """Which allowance would refuse a request of `units` now, counting nothing:
+        "site", "client" (`client`'s share of it), or None."""
         with self._lock:
             self._roll()
-            return bool(self.limit) and self.used + units > self.limit
+            if self.limit and self.used + units > self.limit:
+                return "site"
+            share = self._by_client.get(_connection(client), 0.0) if client else None
+            if share is not None and self.limit and self.client_share and \
+                    share + units > self.limit * self.client_share:
+                return "client"
+            return None
 
     def seconds_to_reset(self) -> int:
         now = self._clock()

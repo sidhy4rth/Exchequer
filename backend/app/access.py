@@ -11,6 +11,7 @@ X-Exchequer-Demo-Code:
     POST /payments/search        a search of a wallet for the victim's payment
     POST /watches, /watches/{id}/check    re-reading an address on a schedule
     POST /requests               logging a freeze request (a stored row)
+    POST /trace/{id}/recheck     rereading a case's cited transfers from a second provider
     POST /access/check           whether a code is right, for the console's code box
 
 Unset (a laptop, the test suite), nothing is guarded. The code is a shared
@@ -84,6 +85,8 @@ GUARDED: list[tuple[str, re.Pattern[str]]] = [
     # A stored row per call; owner keys cost nothing, so only the code stops a
     # script filling the store from the public site.
     ("POST", re.compile(r"^/requests/?$")),
+    # Rereads up to 40 transfers from a second provider (routes/recheck.py).
+    ("POST", re.compile(r"^/trace/[^/]+/recheck/?$")),
     # Guarded like the rest, so checking a code in the console gets the same
     # constant-time comparison and the same limit on guesses.
     ("POST", re.compile(r"^/access/check/?$")),

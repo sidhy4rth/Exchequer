@@ -29,7 +29,6 @@ tronscan.org). Without one the lookup is off and the trace says so.
 """
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
 import threading
@@ -190,6 +189,13 @@ def tag_from_response(body: Any) -> str | None:
     return None
 
 
+def pacer(api_key: str | None, min_interval: float = 0.25) -> api_budget.SharedPacer:
+    """TronScan limits per key, across traces and second-provider rechecks
+    (second_provider.py): one pacer per credential, shared by both."""
+    return api_budget.get_pacer(f"tronscan:{api_budget.credential(api_key)}", lambda: api_budget.SharedPacer(
+        interval=min_interval, min_interval=min_interval, max_interval=max(min_interval * 8, 2.0)))
+
+
 class TronScanTags:
     """Per-trace reader of TronScan address tags, cached across traces."""
 
@@ -210,10 +216,7 @@ class TronScanTags:
         })
         self._cache = api_budget.get_cache("tronscan:tags", lambda: api_budget.ResponseCache(
             ttl_seconds=config.API_CACHE_TTL_SECONDS, max_entries=20000, path=config.API_CACHE_PATH))
-        # TronScan limits per key, across traces: one pacer per credential.
-        credential = hashlib.sha256((api_key or "anon").encode()).hexdigest()[:8]
-        self._pacer = api_budget.get_pacer(f"tronscan:{credential}", lambda: api_budget.SharedPacer(
-            interval=min_interval, min_interval=min_interval, max_interval=max(min_interval * 8, 2.0)))
+        self._pacer = pacer(api_key, min_interval)
         self.lookups = 0
         self.failures = 0
 
