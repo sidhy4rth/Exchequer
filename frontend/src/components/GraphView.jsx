@@ -18,11 +18,11 @@ import { forceCollide } from 'd3-force-3d'
 // have to compete for attention with the tool's own inferences.
 const PALETTES = {
   light: {
-    seed: '#16191d', risk: '#b3261e', exchange: '#1d7a4c', inferred: '#9a5b00', gambling: '#6b3fa0',
+    seed: '#16191d', risk: '#b3261e', exchange: '#1b7548', inferred: '#9a5b00', gambling: '#6b3fa0',
     service: '#b9b5ac', flagged: '#c98a1e', node: '#8a9098',
-    link: 'rgba(22,25,29,0.16)', linkPath: '#1d7a4c', linkFlagged: '#c98a1e',
+    link: 'rgba(22,25,29,0.16)', linkPath: '#1b7548', linkFlagged: '#c98a1e',
     text: '#16191d', dim: '#5b6169', background: '#ffffff',
-    haloExchange: 'rgba(29,122,76,0.16)', haloRisk: 'rgba(179,38,30,0.16)', haloGambling: 'rgba(107,63,160,0.16)',
+    haloExchange: 'rgba(27,117,72,0.16)', haloRisk: 'rgba(179,38,30,0.16)', haloGambling: 'rgba(107,63,160,0.16)',
     ring: 'rgba(255,255,255,0.8)', ringInk: 'rgba(22,25,29,0.6)', ringSelected: 'rgba(22,25,29,0.85)',
     labelBox: 'rgba(255,255,255,0.88)',
   },

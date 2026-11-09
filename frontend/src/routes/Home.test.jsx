@@ -191,7 +191,8 @@ describe('the headline numbers (R14)', () => {
       ...chains.flatMap((c) => [c.exchange_wallets, c.deposit_addresses, ...Object.values(c.risk_labels),
         Object.values(c.risk_labels).reduce((a, b) => a + b, 0)]),
     ])
-    const card = screen.getByLabelText('Flagged addresses screened')
+    // A named group: ARIA lets no plain div carry a name (aria-prohibited-attr).
+    const card = screen.getByRole('group', { name: 'Flagged addresses screened' })
     const tables = document.querySelector('.tab-panel .coverage')
     // Text node by text node: textContent would run neighbouring cells together.
     const shown = []

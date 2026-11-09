@@ -96,7 +96,7 @@ export default function Home() {
             {locked ? <Showroom onUnlock={() => setUnlocked(true)} /> : <TraceForm health={health} />}
           </div>
 
-          <div className="card glass flagged-card" aria-label="Flagged addresses screened">
+          <div className="card glass flagged-card" role="group" aria-label="Flagged addresses screened">
             <div className="body">
               <div className="flagged-total">
                 <strong>{health && !backendDown ? compact.format(totalFlagged) : '—'}</strong>

@@ -211,3 +211,23 @@ def test_the_nightly_list_refresh_waits_for_the_owner_to_switch_it_on():
     jobs = refresh_jobs()
     assert jobs["refresh"]["if"] == "github.event_name == 'workflow_dispatch' || vars.REFRESH_LISTS == 'on'"
     assert "needs.refresh.outputs.tested == 'true'" in jobs["publish"]["if"]
+
+
+# -- the accessibility check (before the Glass restyle) ------------------------------------
+def test_the_a11y_job_checks_a_build_served_on_the_runner_with_no_keys():
+    """The axe check opens pages and a recorded demo, which need no provider
+    key, so it runs with no secret and no environment, against the backend
+    serving the fresh build on the runner itself: never the live site."""
+    job = load(ROOT / ".github" / "workflows" / "test.yml")["jobs"]["a11y"]
+    text = yaml.safe_dump(job)
+    assert "environment" not in job and not SECRET.findall(text) and "onrender.com" not in text
+    assert not job.get("continue-on-error")
+    runs = [str(step.get("run", "")) for step in job["steps"]]
+
+    def at(command: str) -> int:
+        return next(i for i, run in enumerate(runs) if command in run)
+
+    assert at("npm ci --ignore-scripts") < at("npm run build") < at("uvicorn app.main:app --host 127.0.0.1")
+    assert at("uvicorn app.main:app --host 127.0.0.1") < at("npm run a11y")
+    assert at("npx playwright install --with-deps chromium") < at("npm run a11y")
+    assert job["env"]["EXCHEQUER_URL"].startswith("http://127.0.0.1:")

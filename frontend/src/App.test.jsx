@@ -83,6 +83,14 @@ describe('the demo doors', () => {
     expect(sessionStorage.getItem('exchequer-demo-code')).toBeNull()
   })
 
+  it('gives each door a main landmark, so a screen reader can skip to it', async () => {
+    for (const door of ['investigator', 'citizen']) {
+      at(`/signin/${door}`)
+      expect(await screen.findByRole('main')).toContainElement(screen.getByText(/click anywhere to enter/i))
+      cleanup()
+    }
+  })
+
   it('keeps a citizen out of the investigator console', async () => {
     sessionStorage.setItem('exchequer-demo-session', 'citizen')
     at('/')
