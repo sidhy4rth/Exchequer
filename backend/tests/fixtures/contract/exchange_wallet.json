@@ -785,5 +785,106 @@
  "truncated": false,
  "truncation_reasons": [],
  "value_received_native": 26405.277104,
+ "victim_flow": {
+  "buckets": [
+   {
+    "action": "draft_letter",
+    "addresses": [
+     "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf"
+    ],
+    "amount": 26405.277104,
+    "kind": "exchange",
+    "share": 1.0
+   },
+   {
+    "action": "ask_issuer",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "held",
+    "share": 0.0
+   },
+   {
+    "action": "watch",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "left",
+    "share": 0.0
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "risk",
+    "share": 0.0
+   },
+   {
+    "action": "trace_deeper",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "beyond_limit",
+    "share": 0.0
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "not_followed",
+    "share": 0.0
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "other",
+    "share": 0.0
+   }
+  ],
+  "lead": {
+   "path": [
+    "THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph",
+    "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf"
+   ],
+   "reached": 26405.277104
+  },
+  "links": [
+   {
+    "gross": 26405.277104,
+    "source": "THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph",
+    "style": "solid",
+    "target": "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf",
+    "victim": 26405.277104
+   }
+  ],
+  "method": "prorata",
+  "nodes": [
+   {
+    "address": "THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph",
+    "basis": "seed_outflow",
+    "left": 0.0,
+    "role": "seed",
+    "share": 1.0,
+    "victim_in": 26405.277104
+   },
+   {
+    "address": "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf",
+    "basis": null,
+    "left": 0.0,
+    "role": "exchange",
+    "share": null,
+    "victim_in": 26405.277104
+   }
+  ],
+  "notes": [
+   "A display of where the victim's share may have gone. Letters state the conservative estimate, not these figures."
+  ],
+  "passed_through": [],
+  "status": "estimated",
+  "totals": {
+   "accounted": 26405.277104,
+   "basis": "seed_outflow",
+   "denominator": 26405.277104
+  },
+  "version": 1
+ },
  "warnings": []
 }

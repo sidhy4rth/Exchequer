@@ -721,5 +721,222 @@
   "depth limit of 3 hops reached"
  ],
  "value_received_native": null,
+ "victim_flow": {
+  "buckets": [
+   {
+    "action": "draft_letter",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "exchange",
+    "share": 0.0
+   },
+   {
+    "action": "ask_issuer",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "held",
+    "share": 0.0
+   },
+   {
+    "action": "watch",
+    "addresses": [
+     "0x1d3a1a9bbda6e8204f3e534f12cc76d84d15f54c",
+     "0x31ab75452f89c824972ec3cd671a089801981bd7",
+     "0x43c2f567b124d6dd9dcc505b93fd9f0c158956db",
+     "0xc09fdb988520802fdd0330cede96821cfdb0a9f9"
+    ],
+    "amount": 0.004805698,
+    "kind": "left",
+    "share": 0.002024
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "risk",
+    "share": 0.0
+   },
+   {
+    "action": "trace_deeper",
+    "addresses": [
+     "0xd123a8f6f7f07a2931192e3b21fccf4d2df83d38",
+     "0xafaac41b9c716496a909c87ea4a33a8af501c5fd"
+    ],
+    "amount": 2.369070302,
+    "kind": "beyond_limit",
+    "share": 0.997976
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "not_followed",
+    "share": 0.0
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "other",
+    "share": 0.0
+   }
+  ],
+  "lead": {
+   "path": [],
+   "reached": null
+  },
+  "links": [
+   {
+    "gross": 2.371776,
+    "source": "0x7c3e9bab6715e4040f013e865b193b0209642e36",
+    "style": "solid",
+    "target": "0xc3c30cbca70bf84c8fe57e826357a820e9642c23",
+    "victim": 2.371776
+   },
+   {
+    "gross": 0.0021,
+    "source": "0x7c3e9bab6715e4040f013e865b193b0209642e36",
+    "style": "solid",
+    "target": "0x1d3a1a9bbda6e8204f3e534f12cc76d84d15f54c",
+    "victim": 0.0021
+   },
+   {
+    "gross": 30.899251,
+    "source": "0xc3c30cbca70bf84c8fe57e826357a820e9642c23",
+    "style": "dashed",
+    "target": "0x96ebe6275405c07f8cea84949c80bb188c45f3c5",
+    "victim": 2.140838562
+   },
+   {
+    "gross": 3.294145,
+    "source": "0xc3c30cbca70bf84c8fe57e826357a820e9642c23",
+    "style": "dashed",
+    "target": "0xc09fdb988520802fdd0330cede96821cfdb0a9f9",
+    "victim": 0.228233126
+   },
+   {
+    "gross": 0.019619,
+    "source": "0xc3c30cbca70bf84c8fe57e826357a820e9642c23",
+    "style": "dashed",
+    "target": "0x31ab75452f89c824972ec3cd671a089801981bd7",
+    "victim": 0.001359292
+   },
+   {
+    "gross": 0.019413,
+    "source": "0xc3c30cbca70bf84c8fe57e826357a820e9642c23",
+    "style": "dashed",
+    "target": "0x43c2f567b124d6dd9dcc505b93fd9f0c158956db",
+    "victim": 0.00134502
+   },
+   {
+    "gross": 3.288442,
+    "source": "0xc09fdb988520802fdd0330cede96821cfdb0a9f9",
+    "style": "dashed",
+    "target": "0x96ebe6275405c07f8cea84949c80bb188c45f3c5",
+    "victim": 0.227837997
+   },
+   {
+    "gross": 0.005683,
+    "source": "0xc09fdb988520802fdd0330cede96821cfdb0a9f9",
+    "style": "dashed",
+    "target": "0xafaac41b9c716496a909c87ea4a33a8af501c5fd",
+    "victim": 0.000393744
+   },
+   {
+    "gross": 73.404682,
+    "source": "0x96ebe6275405c07f8cea84949c80bb188c45f3c5",
+    "style": "dashed",
+    "target": "0xd123a8f6f7f07a2931192e3b21fccf4d2df83d38",
+    "victim": 2.368676559
+   }
+  ],
+  "method": "prorata",
+  "nodes": [
+   {
+    "address": "0x7c3e9bab6715e4040f013e865b193b0209642e36",
+    "basis": "seed_outflow",
+    "left": 0.0,
+    "role": "seed",
+    "share": 1.0,
+    "victim_in": 2.373876
+   },
+   {
+    "address": "0x1d3a1a9bbda6e8204f3e534f12cc76d84d15f54c",
+    "basis": "traced_only",
+    "left": 0.0021,
+    "role": "wallet",
+    "share": 1.0,
+    "victim_in": 0.0021
+   },
+   {
+    "address": "0xc3c30cbca70bf84c8fe57e826357a820e9642c23",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.069284,
+    "victim_in": 2.371776
+   },
+   {
+    "address": "0x43c2f567b124d6dd9dcc505b93fd9f0c158956db",
+    "basis": "traced_only",
+    "left": 0.00134502,
+    "role": "wallet",
+    "share": 0.069284,
+    "victim_in": 0.00134502
+   },
+   {
+    "address": "0x31ab75452f89c824972ec3cd671a089801981bd7",
+    "basis": "traced_only",
+    "left": 0.001359292,
+    "role": "wallet",
+    "share": 0.069284,
+    "victim_in": 0.001359292
+   },
+   {
+    "address": "0xc09fdb988520802fdd0330cede96821cfdb0a9f9",
+    "basis": "traced_only",
+    "left": 1.386e-06,
+    "role": "wallet",
+    "share": 0.069284,
+    "victim_in": 0.228233126
+   },
+   {
+    "address": "0xafaac41b9c716496a909c87ea4a33a8af501c5fd",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 0.000393744
+   },
+   {
+    "address": "0x96ebe6275405c07f8cea84949c80bb188c45f3c5",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.032269,
+    "victim_in": 2.368676559
+   },
+   {
+    "address": "0xd123a8f6f7f07a2931192e3b21fccf4d2df83d38",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 2.368676559
+   }
+  ],
+  "notes": [
+   "A display of where the victim's share may have gone. Letters state the conservative estimate, not these figures.",
+   "Off the lead route a wallet's share counts only the money the trace followed into it, so those figures are upper bounds and drawn dashed."
+  ],
+  "passed_through": [],
+  "status": "estimated",
+  "totals": {
+   "accounted": 2.373876,
+   "basis": "seed_outflow",
+   "denominator": 2.373876
+  },
+  "version": 1
+ },
  "warnings": []
 }

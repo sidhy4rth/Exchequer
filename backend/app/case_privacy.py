@@ -34,6 +34,11 @@ Every route that serves a case -- GET /trace/{id}, the reports, the graph
 exports, the letters, a finished job -- serves the owner the case as stored
 and everyone else this redacted copy, with `redacted` naming what was
 withheld. Only the response is changed, never the stored case.
+
+The victim flow (victim_flow.py) is built from the graph, the transfers and
+the trace's own figures (pro-rata, materiality), none of which this
+withholds, and it carries no hash, block or time. A case read without a
+current one gets it built from the reader's copy.
 """
 from __future__ import annotations
 

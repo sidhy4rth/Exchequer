@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from app.victim_flow import build
+from app.victim_flow import VERSION, build
 
 BACKEND = Path(__file__).resolve().parent.parent
 DEMOS = json.loads((BACKEND / "data" / "recorded_demos.json").read_text())
@@ -79,7 +79,7 @@ def test_conservation(name):
     result = CASES[name]
     flow = build(result)
     if result["direction"] != "outgoing":
-        assert flow == {"status": "not_applicable"}
+        assert flow == {"version": VERSION, "status": "not_applicable"}
         return
     assert flow["status"] == "estimated", flow
     total = flow["totals"]["denominator"]
@@ -290,7 +290,14 @@ def test_a_reported_wallet_that_has_not_sent_the_money_on_keeps_it():
 
 
 def test_a_reverse_trace_has_no_victim_flow():
-    assert build(case([("A", "S", [(1, 10)])], direction="incoming")) == {"status": "not_applicable"}
+    assert build(case([("A", "S", [(1, 10)])], direction="incoming")) == {"version": VERSION,
+                                                                           "status": "not_applicable"}
+
+
+def test_an_outgoing_trace_whose_wallet_sent_nothing_says_why():
+    """Not a reverse trace, so it says why: a reader can tell the two apart."""
+    assert build(case([])) == {"version": VERSION, "status": "not_applicable",
+                               "reason": "the reported wallet sent nothing the trace saw"}
 
 
 @pytest.mark.parametrize("bad", [None, [], {"direction": "outgoing"}, {"direction": "sideways"},
@@ -298,4 +305,4 @@ def test_a_reverse_trace_has_no_victim_flow():
                                  {"direction": "outgoing", "address": "S", "graph": {"nodes": [], "edges": []}}])
 def test_malformed_input_is_unavailable_never_an_error(bad):
     flow = build(bad)
-    assert flow["status"] == "unavailable" and flow["reason"]
+    assert flow["status"] == "unavailable" and flow["reason"] and flow["version"] == VERSION

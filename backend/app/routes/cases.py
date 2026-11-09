@@ -18,7 +18,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from .. import api_budget, audit, case_privacy, config, models, ownership, pipeline, rate_limit
+from .. import api_budget, audit, case_privacy, config, models, ownership, pipeline, rate_limit, victim_flow
 from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 
@@ -395,11 +395,12 @@ def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
 
     Anyone holding the id gets the case -- it is the reference letters print
     -- but a complaint's particulars only reach the browser that traced it
-    (case_privacy.py)."""
+    (case_privacy.py). A case stored without a current victim flow gets one
+    built from that same copy, so it names nothing the copy withholds."""
     if _is_page_load(http) and _INDEX_HTML.is_file():
         return FileResponse(_INDEX_HTML, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
     caller = ownership.owner_hash_from_headers(http.headers)
-    return JSONResponse(case_privacy.for_reader(case.result, case.owner_hash, caller))
+    return JSONResponse(victim_flow.with_flow(case_privacy.for_reader(case.result, case.owner_hash, caller)))

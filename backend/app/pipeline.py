@@ -20,7 +20,7 @@ import networkx as nx
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-from . import config, log_safety, progress
+from . import config, log_safety, progress, victim_flow
 from .api_budget import PROVIDER_NAMES, BudgetSpent, Cancelled, TraceBudget, TraceStopped, current_budget
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, allowance_spent, open_source
 from .contracts import upgrade as upgrade_to_contract
@@ -1227,6 +1227,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
             "limit."
         )
 
+    # Every transfer the trace saw: the case lists at most
+    # TRANSFERS_APPENDIX_MAX of them (_appendix), and the victim flow reads them all.
+    transfers = _all_transfers(graph)
     payload: dict[str, Any] = {
         # -- the documented API contract --
         "case_id": None,  # set by the endpoint when the case is stored
@@ -1316,7 +1319,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         # the walk ran outward.
         "direct_senders": _direct_senders(graph, seed),
         # transfers, transfers_total, transfers_omitted, transfers_sha256 (_appendix).
-        **_appendix(_all_transfers(graph), _appendix_edges(graph, seed, direction, primary, measured),
+        **_appendix(transfers, _appendix_edges(graph, seed, direction, primary, measured),
                     {m.address for m in matches}),
         "depth_reached": result.depth_reached,
         "max_depth": trace_config.max_depth,
@@ -1356,6 +1359,11 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     payload["provenance"] = capture_provenance(
         chain.key, follow_swaps=request.follow_swaps, max_follow_ons=MAX_FOLLOW_ONS,
         live_tags=bool(live is not None and getattr(live.tags, "enabled", False)))
+    # Where the victim's share went (victim_flow.py), from every transfer, not
+    # the trimmed appendix: off the route, a trimmed link's window would fall
+    # back to its first and last times. upgrade_to_contract keeps it, and a
+    # read rebuilds it only once victim_flow.VERSION moves past it.
+    payload["victim_flow"] = victim_flow.build({**payload, "transfers": transfers, "transfers_omitted": 0})
     # Every result leaves here under the case contract (contracts/case_v2.py):
     # the v1 fields above, untouched, plus the v2 fields the other lanes read.
     return upgrade_to_contract(payload)

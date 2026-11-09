@@ -44,7 +44,9 @@ def test_reading_a_case_does_not_re_encode_it(client, monkeypatch):
     monkeypatch.setattr(fastapi.routing, "jsonable_encoder", refuse)
     response = client.get("/trace/case-big")
     assert response.status_code == 200
-    assert response.json() == result
+    body = response.json()
+    assert body.pop("victim_flow")["status"] == "unavailable"  # built on read, in the worker thread too
+    assert body == result
 
 
 def test_a_missing_case_is_still_a_json_404(client):

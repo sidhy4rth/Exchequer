@@ -156,6 +156,10 @@ class CaseV2(BaseModel):
     transfers_total: int | None = None
     transfers_omitted: int | None = None
     transfers_sha256: str | None = None
+    # Where the victim's share went on every branch (app/victim_flow.py): a
+    # display, never the figure a letter states. A new trace stores one; on
+    # read it is built when missing or older than victim_flow.VERSION.
+    victim_flow: dict[str, Any] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +184,9 @@ def upgrade(result: dict[str, Any]) -> dict[str, Any]:
     if "follow_ons" in out:
         out["follow_ons"] = [{**f, "result": upgrade(f["result"])} if isinstance(f.get("result"), dict) else f
                              for f in out.get("follow_ons") or []]
+    from ..victim_flow import build, is_current  # here, so the contract module stays light to import
+    if not is_current(out.get("victim_flow")):  # a current flow the case carries wins
+        out["victim_flow"] = build(out)
     return out
 
 
