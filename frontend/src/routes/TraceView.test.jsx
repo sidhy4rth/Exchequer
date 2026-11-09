@@ -6,8 +6,8 @@ import TraceView from './TraceView'
 import recordings from '../../../backend/data/recorded_demos.json'
 import { stubFetch } from '../test/setup'
 
-// Demo 11: Tron USDT, frozen by Tether, Binance-Hot 7 at score 0.80 (high),
-// with one amount-split pattern. Traced from the address alone.
+// Demo 11: Tron USDT, frozen by Tether, Binance-Hot 7 at score 0.49 (low: the
+// 0.90 rule is capped by a 6.4% share), with one amount-split pattern. Traced from the address alone.
 const demo = recordings.find((r) => r.demo === 11)
 
 async function openDemo11(overrides = {}) {
@@ -24,9 +24,9 @@ async function openDemo11(overrides = {}) {
 describe('how sure the case is (R10)', () => {
   it('leads with the band, and says it is not a probability', async () => {
     await openDemo11()
-    expect(demo.result.confidence).toBeCloseTo(0.8)
+    expect(demo.result.confidence).toBeCloseTo(0.49)
     const big = document.querySelector('.sure .big')
-    expect(big).toHaveTextContent('High')
+    expect(big).toHaveTextContent('Low')
     expect(big.textContent).not.toMatch(/\d/)
     expect(screen.getByText('a rule of three inputs, not a probability')).toBeInTheDocument()
   })
@@ -34,7 +34,7 @@ describe('how sure the case is (R10)', () => {
   it('keeps the exact score in the working, beside the band rule', async () => {
     await openDemo11()
     const working = document.querySelector('.score-working')
-    expect(working).toHaveTextContent('Score 0.80')
+    expect(working).toHaveTextContent('Score 0.49')
     expect(working).toHaveTextContent('read the band, not the decimal')
   })
 
