@@ -6,6 +6,9 @@
 // fails when App.jsx routes to a page, or the sidebar lists one, that is
 // neither here nor in NOT_CHECKED.
 //
+// A `stub` answers a GET with `body`, or with what the server sent passed
+// through `extend`.
+//
 // `unmeasured` pins, per size, how much text axe still cannot measure for
 // contrast with the canvases and gradients hidden (a11y.spec.js lists it).
 // TODO(Glass): bring these down, never up. The door's card sits under its
@@ -17,6 +20,8 @@
 // signing-key note on Verify inside the console, the Console's wallet bars, a
 // coverage row, the Cases page's linked wallet or New trace's direction at
 // the fold) cannot be sampled; the graph draws its labels over SVG shapes.
+
+import FLOW_11 from '../src/test/victim-flow-11.json' with { type: 'json' }
 
 const DOOR = ['button', { name: /click anywhere to enter/i }]
 
@@ -190,6 +195,11 @@ export const PAGES = [
   // phone a line of the finding sits at the foot of the screen at rest.
   { name: 'recorded case 11', path: '/demo/11', as: 'investigator', ready: ['heading', { level: 2 }], unmeasured: { desktop: 8, phone: 9 } },
   { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
+  // The Flow tab drawn from the case's victim flow, whatever the backend: the
+  // recording answered with the flow backend/app/victim_flow.py builds for it
+  // (src/test/victim-flow-11.json). The entry above checks the card a case
+  // without one keeps.
+  { name: 'recorded case 11, Flow drawn', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: (body) => ({ ...body, victim_flow: FLOW_11 }) }, ready: ['heading', { level: 2, name: /^Where the victim's share went$|can be acted on$/ }], unmeasured: { phone: 1 } },
   { name: 'recorded case 11, Timeline', path: '/demo/11?tab=timeline', as: 'investigator', ready: CASE_TAB('Timeline'), unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },
   // The lane chart opens on its first 14 days; the whole trace is a press away.
   { name: 'recorded case 11, Timeline, every day', path: '/demo/11?tab=timeline', as: 'investigator', click: ['button', { name: /^All \d+ days$/ }], ready: ['button', { name: /^All \d+ days$/, pressed: true }], unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },

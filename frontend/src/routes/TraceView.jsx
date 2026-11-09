@@ -11,6 +11,7 @@ import Tracing from '../components/case/Tracing'
 import EvidenceTab from '../components/case/EvidenceTab'
 import TimelineTab from '../components/case/TimelineTab'
 import LettersTab from '../components/case/LettersTab'
+import VictimFlow from '../components/case/VictimFlow'
 import { useCaseTab } from './caseTab'
 import './TraceView.css'
 import { plain } from '../text'
@@ -121,6 +122,14 @@ function ConfirmTrace({ address, chain, asset, depth, direction, budget, hashes,
   )
 }
 
+// A wallet a link asks the watch panel to offer, only when the case's flow
+// leaves some of the victim's money there: a link alone says nothing of a case.
+function flowWallet(result, address) {
+  const flow = result.victim_flow
+  if (!address || flow?.status !== 'estimated') return null
+  return (flow.buckets ?? []).some((b) => b.kind === 'left' && b.amount > 0 && b.addresses?.includes(address)) ? address : null
+}
+
 export default function TraceView() {
   // One component serves all three routes. /trace/:address runs a fresh
   // traversal; /case/:caseId opens what was stored, and /demo/:demoNo a
@@ -171,6 +180,7 @@ export default function TraceView() {
   const [revealed, setRevealed] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState('flow') // 'flow' | 'bubbles'
+  const [everyWallet, setEveryWallet] = useState(false)
   // Present mode: the case as four big screens. P opens it, Esc closes it.
   const [presenting, setPresenting] = useState(false)
   const timers = useRef([])
@@ -344,18 +354,31 @@ export default function TraceView() {
     return () => window.removeEventListener('keydown', onKey)
   }, [result, presenting])
 
-  const retrace = useCallback(() => {
+  // The case traced again, at its own depth or deeper. Re-trace says it was
+  // started here; a deeper trace from a Flow card asks first (ConfirmTrace),
+  // as it spends the allowance.
+  const traceAgain = useCallback((deeper) => {
     if (!result) return
     const q = new URLSearchParams({
       chain: result.chain, asset: result.asset,
-      depth: String(result.max_depth ?? result.depth_reached ?? 3), direction: result.direction ?? 'outgoing',
+      depth: String(deeper ?? result.max_depth ?? result.depth_reached ?? 3), direction: result.direction ?? 'outgoing',
     })
     if (result.time_budget_seconds) q.set('budget', String(result.time_budget_seconds))
     // A payment case is re-traced from the same payments (public chain data).
     const hashes = [...new Set((result.intake?.mode === 'payment' ? result.intake.payments ?? [] : []).map((p) => p.tx_hash).filter(Boolean))]
     if (hashes.length) q.set('pay', hashes.join(','))
-    navigate(`/trace/${result.address}?${q}`, { state: { startedHere: true } })
+    navigate(`/trace/${result.address}?${q}`, deeper ? undefined : { state: { startedHere: true } })
   }, [navigate, result])
+  // A Flow card's action opens another view and puts the keyboard there,
+  // unless the view already took it (the letter the card asked for).
+  const jump = useRef(null)
+  const openTab = (to, asks) => { jump.current = to; setTab(to, asks) }
+  useEffect(() => {
+    if (jump.current !== tab) return
+    jump.current = null
+    const panel = document.querySelector('.case-tabs [role="tabpanel"]:not([hidden])')
+    if (panel && !panel.contains(document.activeElement)) panel.focus()
+  }, [tab])
 
   // Run the trace a link asked for, once the officer has seen what it does.
   const confirmRun = useCallback((capped) => {
@@ -367,6 +390,22 @@ export default function TraceView() {
     navigate(`${location.pathname}?${q}`, { replace: true, state: { ...(location.state ?? {}), startedHere: true } })
   }, [navigate, params, depth, budget, location.pathname, location.state])
 
+  // Every wallet and transfer, by hop or as bubbles: the Flow tab when the
+  // case has no victim flow, and a click away under it when it has one.
+  const moneyFlow = result && (
+    <div className="card graph-card">
+      <div className="head">
+        <span className="micro">Money flow · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
+        <span className="seg">
+          <button className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
+          <button className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
+        </span>
+      </div>
+      {view === 'flow'
+        ? <FlowView data={result.graph} tracePath={result.trace_path} unit={unit} direction={result.direction} />
+        : <div className="stage"><GraphView data={result.graph} tracePath={result.trace_path} unit={unit} /></div>}
+    </div>
+  )
 
   return (
     <div className="results">
@@ -381,7 +420,7 @@ export default function TraceView() {
           </h1>
           <div className="actions">
             {stored && (
-              <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />{recorded ? 'Trace live' : 'Re-trace'}</button>
+              <button onClick={() => traceAgain()} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />{recorded ? 'Trace live' : 'Re-trace'}</button>
             )}
             <button className="icon-btn" onClick={() => setPresenting(true)} title="The case as four big screens (P)"><Icon d={ICONS.present} size={16} /><span className="visually-hidden">Present</span></button>
             {result.case_id && <ExportButton caseId={result.case_id} address={address} icon />}
@@ -582,18 +621,15 @@ export default function TraceView() {
         {result && (
           <CaseTabs value={tab} onChange={setTab} panels={{
             flow: <>
-              <div className="card graph-card">
-                <div className="head">
-                  <span className="micro">Money flow · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
-                  <span className="seg">
-                    <button className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
-                    <button className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
-                  </span>
-                </div>
-                {view === 'flow'
-                  ? <FlowView data={result.graph} tracePath={result.trace_path} unit={unit} direction={result.direction} />
-                  : <div className="stage"><GraphView data={result.graph} tracePath={result.trace_path} unit={unit} /></div>}
-              </div>
+              {result.victim_flow?.status === 'estimated' && <>
+                <VictimFlow result={result} unit={unit} onDeeper={traceAgain}
+                  onLetters={(letter) => openTab('letters', { letter })} onWatch={(watch) => openTab('letters', { watch })} />
+                <details className="card sec every-wallet" onToggle={(e) => setEveryWallet(e.currentTarget.open)}>
+                  <summary><span className="micro">Every wallet · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span></summary>
+                  {everyWallet && moneyFlow}
+                </details>
+              </>}
+              {result.victim_flow?.status !== 'estimated' && moneyFlow}
 
               {followOns.map((f) => (
                 <div className="card graph-card" key={`${f.address}-${f.asset}`}>
@@ -721,7 +757,8 @@ export default function TraceView() {
                 </details>
               )}
             </>,
-            letters: <LettersTab result={result} recorded={recorded ? demoNo : null} />,
+            letters: <LettersTab result={result} recorded={recorded ? demoNo : null}
+              pick={params.get('letter')} watch={flowWallet(result, params.get('watch'))} />,
             entities: <EntitiesTab result={result} unit={unit} correlation={correlation} />,
             evidence: <EvidenceTab result={result} unit={unit} depth={depth} recorded={recorded} recheckId={recorded ? `demo-${demoNo}` : result.case_id ?? null} />,
           }} />

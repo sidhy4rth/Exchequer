@@ -63,6 +63,22 @@ const sheet = () => screen.getByRole('article', { name: /^Draft: / })
 // What a button says back sits beside the buttons, in the side column.
 const side = () => screen.getByRole('complementary', { name: 'Letter checks' })
 
+describe('the Letters tab, asked for one letter by a Flow card', () => {
+  it('opens that letter on the sheet and puts the keyboard on its switch', async () => {
+    api(STORED)
+    render(<MemoryRouter><LettersTab result={CASE} recorded={null} pick="tether" /></MemoryRouter>)
+    const tether = await screen.findByRole('button', { name: 'Request to Tether', pressed: true })
+    await waitFor(() => expect(tether).toHaveFocus())
+    expect(await screen.findByRole('article', { name: 'Draft: Request to Tether' })).toBeInTheDocument()
+  })
+
+  it('opens the first letter when the one asked for is not listed', async () => {
+    api(STORED)
+    render(<MemoryRouter><LettersTab result={CASE} recorded={null} pick="nobody" /></MemoryRouter>)
+    expect(await screen.findByRole('button', { name: 'Urgent freeze request to Binance', pressed: true })).toBeInTheDocument()
+  })
+})
+
 describe('the Letters tab of a stored case', () => {
   it('offers each letter the backend lists, in its order and named in plain text, and opens the first', async () => {
     api(STORED)

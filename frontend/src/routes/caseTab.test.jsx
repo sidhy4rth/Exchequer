@@ -17,6 +17,7 @@ function Probe() {
       <p data-testid="state">{JSON.stringify(state)}</p>
       <p data-testid="nav">{useNavigationType()}</p>
       {CASE_TABS.map((t) => <button key={t.key} onClick={() => setTab(t.key)}>{t.label}</button>)}
+      <button onClick={() => setTab('letters', { letter: 'tether' })}>Ask Tether</button>
     </div>
   )
 }
@@ -63,5 +64,14 @@ describe('the case tab in the URL', () => {
     await user.click(screen.getByRole('button', { name: 'Flow' }))
     expect(text('tab')).toBe('flow')
     expect(Object.fromEntries(new URLSearchParams(text('search')))).toEqual({ chain: 'tron', asset: 'USDT', depth: '3', pay: '0x1,0x2' })
+  })
+
+  it('can name what the view should offer first, and forgets it on the next choice', async () => {
+    const user = userEvent.setup()
+    at('/case/c1?chain=tron')
+    await user.click(screen.getByRole('button', { name: 'Ask Tether' }))
+    expect(Object.fromEntries(new URLSearchParams(text('search')))).toEqual({ chain: 'tron', tab: 'letters', letter: 'tether' })
+    await user.click(screen.getByRole('button', { name: 'Timeline' }))
+    expect(Object.fromEntries(new URLSearchParams(text('search')))).toEqual({ chain: 'tron', tab: 'timeline' })
   })
 })

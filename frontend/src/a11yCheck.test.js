@@ -3,6 +3,7 @@ import appSource from './App.jsx?raw'
 import pkg from '../package.json'
 import { NOT_CHECKED, PAGES } from '../e2e/a11y.pages.js'
 import { GROUPS } from './components/AppShell'
+import flow11 from './test/victim-flow-11.json'
 
 // The accessibility check (npm run a11y, e2e/a11y.spec.js) opens every page
 // of a running Exchequer in a real browser. These keep it pointed at a site
@@ -58,6 +59,16 @@ describe('the accessibility check', () => {
     for (const path of paths) expect(PAGES.some((p) => p.path === path && p.as === 'investigator'), path).toBe(true)
     const more = PAGES.find((p) => p.click?.[1]?.name === 'More')
     expect(more?.size).toBe('phone')
+  })
+
+  it('opens the Flow tab drawn from the victim flow, on a backend whose recording has none', () => {
+    const drawn = PAGES.find((p) => p.path === '/demo/11?tab=flow' && p.stub?.extend)
+    expect(drawn?.stub.url).toBe('**/demos/recorded/11')
+    const answered = drawn.stub.extend({ demo: 11, victim_flow: undefined })
+    expect(answered.demo).toBe(11)
+    expect(answered.victim_flow.status).toBe('estimated')
+    expect(answered.victim_flow).toEqual(flow11)
+    expect(PAGES.filter((p) => p.path === '/demo/11?tab=flow' && !p.stub)).toHaveLength(1) // and the card a case without one keeps
   })
 
   it('opens the locked console a public site shows without the demo code', () => {

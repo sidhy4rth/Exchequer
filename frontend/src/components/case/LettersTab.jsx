@@ -26,8 +26,9 @@ function printSheet() {
 /** The case's Letters tab: the drafts the backend offers for it, one at a
  * time on a paper sheet, then the freeze-request log and the watches. A
  * recorded example (`recorded` is its number) shows its drafts, but only a
- * stored case can log one as sent. */
-export default function LettersTab({ result, recorded }) {
+ * stored case can log one as sent. A Flow card can ask for one letter
+ * (`pick`, its `to`) or one more wallet to watch (`watch`). */
+export default function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   const caseId = result.case_id
   const source = caseId ? { list: () => fetchLetters(caseId), one: (to) => fetchLetter(caseId, to) }
     : recorded ? { list: () => fetchRecordedLetters(recorded), one: (to) => fetchRecordedLetter(recorded, to) } : null
@@ -40,6 +41,7 @@ export default function LettersTab({ result, recorded }) {
   const [logged, setLogged] = useState(0) // remounts the log after a letter is marked sent
   const [manual, setManual] = useState(false) // the clipboard refused: the text waits, selected, in a box
   const box = useRef(null)
+  const picked = useRef(null)
 
   const loadRequests = () => caseId && fetchCaseRequests(caseId).then((d) => { setRequests(d.requests ?? []); return d.requests ?? [] })
   useEffect(() => { loadRequests()?.catch(() => {}) }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -63,6 +65,12 @@ export default function LettersTab({ result, recorded }) {
       .catch((e) => live && setSaid({ tone: 'alert', text: `The letter could not be drafted: ${e.message}` }))
     return () => { live = false }
   }, [to]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The letter a Flow card asked for opens on the sheet and takes the keyboard.
+  useEffect(() => {
+    if (asked && letters?.some((l) => l.to === asked)) { setTo(asked); setSaid(null); setManual(false) }
+  }, [asked, letters])
+  useEffect(() => { picked.current?.focus() }, [letters, asked])
 
   const letter = letters?.find((l) => l.to === to)
   const text = texts[to]
@@ -115,7 +123,7 @@ export default function LettersTab({ result, recorded }) {
         <div className="lt-body">
           <div className="lt-switch" role="group" aria-label="Letter to">
             {letters.map((l) => (
-              <button key={l.to} type="button" aria-pressed={l.to === to} onClick={() => pick(l.to)}>{plain(l.title)}</button>
+              <button key={l.to} ref={l.to === asked ? picked : undefined} type="button" aria-pressed={l.to === to} onClick={() => pick(l.to)}>{plain(l.title)}</button>
             ))}
           </div>
           <article className="letter-sheet" aria-labelledby="letter-title">
@@ -179,7 +187,7 @@ export default function LettersTab({ result, recorded }) {
 
       {caseId ? <>
         <RequestsPanel key={logged} result={result} onChange={() => loadRequests()?.catch(() => {})} />
-        <WatchPanel result={result} />
+        <WatchPanel result={result} extra={watch} />
       </> : (
         <p className="card note case-note">
           Freeze requests and watches need a stored case. {recorded
