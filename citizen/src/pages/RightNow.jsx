@@ -17,7 +17,7 @@ function Items({ id, title, items, mark }) {
   return (
     <section className={id}>
       <h2 id={`${id}-title`}>{title}</h2>
-      <ol className="items" aria-labelledby={`${id}-title`}>
+      <ol className="items" role="list" aria-labelledby={`${id}-title`}>
         {items.map(([head, text], i) => (
           <li className="item" key={head}>
             <span className="mark" aria-hidden="true">{mark ? <Icon name={mark} size={12} /> : i + 1}</span>

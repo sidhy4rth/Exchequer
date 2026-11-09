@@ -11,6 +11,7 @@ for (const file of Object.keys(import.meta.glob('./**/*.css'))) {
   sources[file] = readFileSync(fileURLToPath(new URL(file, import.meta.url)), 'utf8')
 }
 const shipped = [['index.html', indexHtml], ...Object.entries(sources)]
+const tests = import.meta.glob('./**/*.test.{js,jsx}', { query: '?raw', import: 'default', eager: true })
 
 describe('what the site loads and says', () => {
   it.each(shipped)('%s loads nothing from another origin', (_, text) => {
@@ -22,6 +23,23 @@ describe('what the site loads and says', () => {
   it.each(shipped)('%s is English only and never names a contest', (_, text) => {
     expect(text).not.toMatch(/[ऀ-ॿ]/)
     expect(text).not.toMatch(/\bSIH\b|hackathon/i)
+  })
+
+  it.each(shipped)('%s makes no network calls and sets no inline styles', (_, text) => {
+    // Nothing a citizen types leaves the device yet, and style-src 'self'
+    // would block style attributes.
+    expect(text).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
+    expect(text).not.toMatch(/\sstyle=/)
+  })
+
+  it.each(shipped)('%s uses no regex lookbehind, which iPhones before iOS 16.4 cannot parse', (_, text) => {
+    expect(text).not.toMatch(/\(\?<[=!]/)
+  })
+
+  it.each([...shipped, ...Object.entries(tests)])('%s has no invisible characters', (_, text) => {
+    // Zero-width and direction marks hide what code says from a reviewer;
+    // write them as escapes (\u200B) instead.
+    expect(text).not.toMatch(/[\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/)
   })
 
   it('serves IBM Plex from this site', () => {
@@ -42,6 +60,19 @@ describe('styles.css', () => {
     expect(Number(clear?.[1])).toBeGreaterThanOrEqual(bar + 8)
     expect(phone).toMatch(/\n\.tabs \{[^}]*bottom: var\(--tabs-bottom\)/)
     expect(laptop).toMatch(/\n {2}html \{ scroll-padding-bottom: 0; \}/)
+  })
+
+  it('never hides the live region, so the check is announced', () => {
+    // A role="status" region that is display:none until it fills in is often
+    // not announced, by VoiceOver on iPhone in particular.
+    const rules = [...sources['./styles.css'].matchAll(/([^{}]*)\{([^{}]*)\}/g)]
+      .filter(([, selector]) => /\.result\b/.test(selector))
+    expect(rules.length).toBeGreaterThan(0)
+    for (const [rule] of rules) expect(rule).not.toMatch(/display:\s*none|visibility:\s*hidden/)
+  })
+
+  it('gives the paste box 16px text on a phone, so iPhone does not zoom in on it', () => {
+    expect(px(phone, 'textarea', 'font')).toBeGreaterThanOrEqual(16)
   })
 })
 

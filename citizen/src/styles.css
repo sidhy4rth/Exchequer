@@ -35,6 +35,7 @@ h1, h2, p, ol, ul { margin: 0; }
 ol, ul { padding: 0; list-style: none; }
 a { color: inherit; text-decoration: none; }
 code { font-family: var(--mono); }
+button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--go); outline-offset: 2px; }
 main:focus { outline: none; }
 svg { flex: none; }
@@ -160,6 +161,90 @@ main { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
 }
 .more { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; align-self: flex-start; }
 
+/* C8 Learn: one card per scam, its warning signs as red chips */
+.title { display: flex; flex-direction: column; gap: 4px; padding: 0 4px; }
+.title h1 { font-size: 22px; font-weight: 400; line-height: 1.2; }
+.scams { display: grid; gap: 12px; }
+.card {
+  display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 20px;
+  background: var(--panel); border: 1px solid var(--line);
+}
+.card-head { display: flex; align-items: center; gap: 12px; }
+.card h2, .guide-part h2 { font-size: 15px; font-weight: 400; line-height: 1.3; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips li {
+  padding: 5px 10px; border-radius: 16px; font-size: 12.5px; color: #FFD0CB;
+  background: rgba(255, 90, 78, .08); border: 1px solid rgba(255, 90, 78, .22);
+}
+.todo { font-size: 13px; color: var(--text-2); }
+.todo strong { font-weight: 500; color: var(--text); }
+.paid { background: rgba(61, 214, 140, .06); border-color: rgba(61, 214, 140, .2); }
+
+/* C3 Find your payment: the steps, a sketch of each screen, the check box */
+.stepper { display: flex; gap: 6px; }
+.stepper li {
+  display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 6px;
+  border-radius: 999px; font-size: 13px; color: var(--text-3);
+}
+.stepper .is-on { padding-right: 16px; background: var(--panel-2); color: var(--text); }
+.num {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%;
+  border: 1px solid var(--line-2); font-size: 12px;
+}
+.is-on .num { border-color: var(--go); }
+/* On a phone the later steps show as numbers; their names stay for screen readers. */
+.stepper li:not(.is-on) .step-name {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.find { display: grid; gap: 16px; }
+.guide-part { display: flex; flex-direction: column; gap: 12px; }
+.guide-part h2 { padding: 0 4px; }
+.picks { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.picks legend { padding: 0 4px 8px; font-size: 13px; color: var(--text-2); }
+.pick { position: relative; }
+.pick input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.pick span {
+  display: flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .08); font-size: 13px; color: var(--text-2);
+}
+.pick input:checked + span { background: var(--panel-3); border-color: rgba(255, 255, 255, .55); color: #fff; font-weight: 500; }
+.pick input:focus-visible + span { outline: 2px solid var(--go); outline-offset: 2px; }
+.guide {
+  display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 22px;
+  background: var(--panel); border: 1px solid var(--line);
+}
+.guide li { display: flex; align-items: center; gap: 16px; }
+.sketch {
+  width: 52px; height: 86px; flex: none; display: flex; flex-direction: column; gap: 5px; padding: 9px 6px;
+  border-radius: 12px; border: 1.5px solid rgba(255, 255, 255, .3);
+}
+.sketch i { height: 7px; border-radius: 3px; background: rgba(255, 255, 255, .18); }
+.sketch i:first-child { width: 60%; }
+.sketch i.lit { background: var(--go); }
+.hint { padding: 0 4px; font-size: 12.5px; color: var(--text-3); }
+.check-form { display: flex; flex-direction: column; gap: 10px; }
+.check-form label { font-size: 13px; color: var(--text-2); }
+textarea {
+  width: 100%; resize: vertical; padding: 14px; border-radius: 18px; background: rgba(10, 10, 10, .6);
+  border: 1px solid rgba(61, 214, 140, .6); color: var(--text); font: 16px/1.5 var(--mono); word-break: break-all;
+}
+textarea[aria-invalid="true"] { border-color: var(--risk-line); }
+.result { display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; color: var(--text-2); }
+/* Never hidden: a live region must be on the page before its words change.
+   When empty, it takes back the card's gap instead. */
+.result:empty { margin-top: -12px; }
+.verdict { display: flex; align-items: flex-start; gap: 8px; font-weight: 500; color: var(--text); }
+.verdict svg { margin-top: 3px; }
+.verdict.ok svg { color: var(--go); }
+.verdict.bad svg { color: var(--risk); }
+.hash {
+  display: block; padding: 10px 12px; border-radius: 12px; background: var(--panel-2);
+  color: var(--text); font-size: 12.5px; word-break: break-all;
+}
+.fallback { padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; color: var(--text-2); }
+.fallback summary { padding: 6px 0; cursor: pointer; }
+.fallback p { margin-top: 8px; }
+
 /* Laptop: the tabs move into the header as pills; pages use two columns. */
 @media (min-width: 900px) {
   html { scroll-padding-bottom: 0; }
@@ -179,6 +264,18 @@ main { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
   .page-head h1, .soon h1 { font-size: 40px; font-weight: 300; }
   .back { display: none; }
   .dodont { grid-template-columns: 1fr 1fr; gap: 24px; }
+  .title h1 { font-size: 40px; font-weight: 300; }
+  .scams { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .card { gap: 16px; padding: 24px; border-radius: 24px; }
+  .card h2 { font-size: 17px; }
+  .find { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+  textarea { font-size: 13px; line-height: 1.6; }
+  .result:empty { margin-top: -16px; }
+  .stepper li:not(.is-on) .step-name { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .guide { flex-direction: row; padding: 24px 16px; }
+  .guide li { flex: 1; flex-direction: column; text-align: center; }
+  .sketch { width: 96px; height: 160px; gap: 8px; padding: 14px 10px; border-radius: 14px; }
+  .sketch i { height: 9px; }
   .next { flex-direction: row; align-items: center; justify-content: space-between; }
   .foot { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 32px; margin-top: 48px; }
   .safety { flex-direction: row; gap: 24px; }

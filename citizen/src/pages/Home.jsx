@@ -4,7 +4,7 @@ import { Icon, OfficialLinks, usePageTitle } from '../parts.jsx'
 // C1: the official ways to report come first, then three next steps.
 const STEPS = [
   { to: '/right-now', icon: 'steps', title: 'What to do right now', sub: "three do's and three don'ts, two minutes" },
-  { to: '/report', icon: 'search', title: 'Find your payment', sub: 'and build your complaint · coming soon' },
+  { to: '/report', icon: 'search', title: 'Find your payment', sub: 'where to find its hash, and check it' },
   { to: '/my-case', icon: 'case', title: 'Track my complaint', sub: 'with your NCRP number · coming soon' },
 ]
 
@@ -22,7 +22,7 @@ export default function Home() {
       </section>
       <section className="steps" aria-labelledby="steps-title">
         <h2 id="steps-title" className="eyebrow">Start here</h2>
-        <ul className="rows">
+        <ul className="rows" role="list">
           {STEPS.map(({ to, icon, title, sub }) => (
             <li key={to}>
               <Link className="row" to={to}>
