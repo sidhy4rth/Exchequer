@@ -33,9 +33,9 @@
   "max_depth": 3,
   "direction": "outgoing",
   "expect": {
-   "exchange": "Binance",
+   "exchange": "Kraken",
    "followed_exchange": null,
-   "confidence": 0.875
+   "confidence": 0.4501
   },
   "volatile": true
  },
@@ -62,7 +62,7 @@
   "expect": {
    "exchange": "Binance",
    "followed_exchange": null,
-   "confidence": 1.0
+   "confidence": 0.74
   }
  },
  {
@@ -75,7 +75,7 @@
   "expect": {
    "exchange": "Binance",
    "followed_exchange": null,
-   "confidence": 0.875
+   "confidence": 0.49
   }
  },
  {
@@ -88,7 +88,7 @@
   "expect": {
    "exchange": "Bybit",
    "followed_exchange": null,
-   "confidence": 0.875
+   "confidence": 0.7728
   }
  },
  {
@@ -127,7 +127,7 @@
   "expect": {
    "exchange": "Binance",
    "followed_exchange": null,
-   "confidence": 0.7417
+   "confidence": 0.74
   }
  },
  {
@@ -140,7 +140,7 @@
   "expect": {
    "exchange": "Binance",
    "followed_exchange": null,
-   "confidence": 0.8
+   "confidence": 0.49
   }
  },
  {
