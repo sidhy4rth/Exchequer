@@ -262,3 +262,10 @@ def test_a_transfer_missing_from_a_recording_is_unchecked_not_a_mismatch(monkeyp
     assert vc.main() == 2
     out = capsys.readouterr().out
     assert "5 transfers: 4 confirmed, 0 mismatch, 1 unchecked" in out and "not in the recording" in out
+
+
+def test_the_script_rereads_through_the_apps_own_module():
+    # POST /trace/{id}/recheck and this script are one implementation (app/second_provider.py).
+    from app import second_provider
+
+    assert vc.read_live is second_provider.read_live and vc.Check is second_provider.Check

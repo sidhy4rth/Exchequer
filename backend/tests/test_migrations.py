@@ -242,3 +242,19 @@ def test_sec6_watch_1_fills_inferred_deposits_from_the_cases_already_stored(engi
     models.init_db()  # nothing runs twice
     with engine.connect() as conn:
         assert conn.execute(text("SELECT count(*) FROM inferred_deposits")).scalar() == 1
+
+
+def test_g4_recheck_1_goes_down_and_up_again_keeping_the_cases(engine):
+    """cases.recheck_json: the last second-provider recheck (routes/recheck.py)."""
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"chain": "ethereum"})
+    assert models.save_recheck("kept", {"checked_at": "t", "transfers": []})
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "sec7_cap_4")
+    assert "recheck_json" not in {c["name"] for c in inspect(engine).get_columns("cases")}
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    assert models.get_case("kept") is not None
+    assert models.recheck_for("kept") == (True, None)  # the downgrade dropped it; the case stays

@@ -5,6 +5,7 @@ Endpoints:
     POST /trace/jobs                trace in the background; watch /trace/jobs/{id}/events
     GET  /trace/{case_id}           retrieve a stored case
     GET  /trace/{case_id}/report    exportable report (json or text)
+    POST /trace/{case_id}/recheck   reread its cited transfers from a second provider
     GET  /cases                     history of past traces
     GET  /exchanges                 what the label database covers
     GET  /ledger                    the addresses the tool knows, for the sign-in backdrop
@@ -47,8 +48,8 @@ from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import (admin, batches, casebook, cases, coverage, demos, evidence, jobs, payments, requests, verify,
-                     watches)
+from .routes import (admin, batches, casebook, cases, coverage, demos, evidence, jobs, payments, recheck,
+                     requests, verify, watches)
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -226,6 +227,7 @@ app.include_router(access.router)
 app.include_router(jobs.router)
 app.include_router(cases.router)
 app.include_router(evidence.router)
+app.include_router(recheck.router)
 app.include_router(casebook.router)
 app.include_router(demos.router)
 app.include_router(verify.router)
