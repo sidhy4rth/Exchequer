@@ -1055,6 +1055,61 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .work .foot-note { padding: 8px 14px; }
 .cases-table td a { color: var(--text); text-decoration: none; }
 .cases-table td a:hover { text-decoration: underline; }
+.work-empty { padding: 18px 22px; }
+
+/* The Cases page (Cases.jsx): search beside the heading, filter pills, the
+   table (a card per case on a phone), then the linked complaints. */
+.cases-head { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.cases-head > div { display: flex; flex-direction: column; gap: 6px; }
+.cases-find {
+  display: flex; align-items: center; gap: 10px; width: 300px; max-width: 100%; height: 42px; padding: 0 16px;
+  border-radius: var(--r-pill); background: var(--glass-input); border: 1px solid var(--line-strong); color: var(--text-3);
+}
+.cases-find:focus-within { outline: 2px solid var(--go); outline-offset: 2px; }
+.cases-find input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; color: var(--text); font-size: 13px; }
+.cases-find input:focus-visible { outline: none; }
+.cases-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.cases-filters [role="group"] { display: flex; flex-wrap: wrap; gap: 8px; }
+.cases-filters button { min-height: 38px; padding: 0 16px; border-radius: var(--r-pill); border: 1px solid var(--line); background: transparent; color: var(--text-2); font-size: 13px; font-weight: 400; }
+.cases-filters button:hover { color: var(--text); background: var(--panel-2); }
+.cases-filters button[aria-pressed="true"] { background: var(--panel-2); border-color: var(--line-strong); color: var(--text); font-weight: 500; }
+.console .cases-card { padding: 0; border-radius: var(--r-panel); overflow-x: auto; }
+.cases-list { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cases-list th { padding: 14px 10px; text-align: left; font-size: 11.5px; font-weight: 400; color: var(--text-3); }
+.cases-list td { padding: 14px 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+.cases-list :is(th, td):first-child { padding-left: 24px; }
+.cases-list :is(th, td):last-child { padding-right: 24px; white-space: nowrap; }
+.cases-list :is(.num, .end) { text-align: right; }
+.cases-list .soft { color: var(--text-2); }
+.cases-list .faint { color: var(--text-3); }
+.cases-list tr.row { cursor: pointer; }
+.cases-list tr.row:hover td { background: var(--panel-2); }
+.cases-wallet { overflow-wrap: anywhere; }
+.cases-wallet a { min-height: 24px; display: inline-flex; align-items: center; font-size: 12px; color: var(--text); text-decoration: none; }
+.cases-wallet a:hover { text-decoration: underline; }
+.cases-wallet .pill, .cases-cards .recent-meta .pill { margin-left: 8px; padding: 0 7px; font-size: 10.5px; }
+.case-band { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: 11px; white-space: nowrap; }
+/* As the pack reads the band: only High is drawn strong; Moderate and below
+   share a faint pill in the softer grey, and n/a (no score) has none. */
+.case-band.high, .cases-cards .recent-band.high { background: var(--panel-2); color: var(--text); }
+.case-band:is(.moderate, .low, .very-low), .cases-cards .recent-band:is(.moderate, .low, .very-low) { background: color-mix(in srgb, var(--line) 40%, transparent); color: var(--text-2); }
+.case-band.none { background: none; color: var(--text-3); }
+.recent-cases.cases-cards a { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "addr addr" "meta meta" "reached band"; row-gap: 6px; }
+.cases-cards .recent-address { white-space: normal; overflow-wrap: anywhere; }
+.console .cases-cards { padding: 8px; }
+
+.cases-linked { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 28px; padding: 22px 24px; }
+.linked-mark { display: flex; align-items: center; gap: 6px; padding-top: 2px; }
+.linked-mark i { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--text); }
+.linked-mark i.dot { width: 16px; height: 16px; border: 0; background: var(--text-3); }
+.linked-mark b { width: 40px; border-top: 1px dashed var(--line-strong); }
+.linked-body { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.linked-body h2 { margin: 0; font-size: 14px; font-weight: 400; }
+.linked-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.linked-list li { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-radius: var(--r); background: var(--glass-input); }
+.linked-wallet { font-size: 12px; overflow-wrap: anywhere; }
+.linked-by { margin: 2px 0 0; font-size: 12px; color: var(--text-2); }
+.linked-by a { min-height: 24px; display: inline-flex; align-items: center; font-size: 11.5px; color: var(--text); }
 
 /* Read by a screen reader, not drawn. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -1067,6 +1122,7 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
   .console .home-body { gap: 16px; padding: 20px 16px 32px; }
   .hero h1 { font-size: 26px; }
   .console .hero-card, .console-card { padding: 16px; }
+  .work { gap: 16px; padding: 20px 16px 32px; }
   .hero-field { flex-basis: 100%; height: 48px; padding: 0 16px; }
   .hero-chain { flex: 1; min-width: 0; }
   .hero-chain select { flex: 1; min-width: 0; height: 48px; }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchAccess, fetchCases, fetchChains, fetchExchanges, fetchRecordedDemos, fetchRiskLabels, fetchWatches } from '../api'
 import ChainDot from '../components/ChainDot'
@@ -7,6 +7,7 @@ import { DEMOS, SHORT_CHAIN } from '../components/TraceForm'
 import { bandLabel, bandOf } from '../components/confidence'
 import { hasDemoAccess } from '../demoCode'
 import { ADDRESS_RE, HASH_RE, findTarget } from '../find'
+import { usePhone } from '../phone'
 import { plain } from '../text'
 
 // The console's first page (/): one field to start from (a victim's payment
@@ -24,14 +25,7 @@ const and = new Intl.ListFormat('en', { type: 'conjunction' })
 
 // The field's hint: the pack's sentence, or on a phone, where the field holds
 // about 38 characters, its label.
-const PHONE = '(max-width: 720px)'
 const HINT = "Victim's payment hash, or the wallet they paid"
-const onPhone = (change) => {
-  const query = window.matchMedia?.(PHONE)
-  query?.addEventListener('change', change)
-  return () => query?.removeEventListener('change', change)
-}
-const isPhone = () => Boolean(window.matchMedia?.(PHONE).matches)
 
 /** Each ready chain's assets as one choice, "Tron · USDT". On Tron USDT
  * comes first: the money in a complaint is almost always USDT. */
@@ -64,7 +58,7 @@ function QuickTrace({ health }) {
   const [text, setText] = useState('')
   const [picked, setPicked] = useState(null)
   const [missed, setMissed] = useState(false)
-  const phone = useSyncExternalStore(onPhone, isPhone)
+  const phone = usePhone()
   const options = choices(health)
   const chosen = options.find((o) => o.value === picked) ?? options.find((o) => o.chain === health?.default_chain) ?? options[0]
 
@@ -134,7 +128,7 @@ function TryRecorded() {
   )
 }
 
-/** This browser's newest cases, and the shared examples the site keeps
+/** This browser's newest cases, and the recorded demos the site keeps
  * (marked as such): what each reached, and how sure, as the band word. */
 function RecentCases() {
   // undefined while asking; null when the cases cannot be reached.
@@ -155,7 +149,7 @@ function RecentCases() {
               <li key={c.case_id}>
                 <Link to={`/case/${c.case_id}`}>
                   <span className="mono recent-address">{c.address}</span>
-                  <span className="recent-meta">{meta}{c.demo && <> <span className="pill">example</span></>}</span>
+                  <span className="recent-meta">{meta}{c.demo && <> <span className="pill">demo</span></>}</span>
                   <span className={`recent-reached${c.exchange ? '' : ' none'}`}><i aria-hidden="true" />{c.exchange ? plain(c.exchange) : 'No exchange'}</span>
                   {band && <span className={`recent-band ${band.replace(' ', '-')}`}><span className="visually-hidden">Confidence </span>{bandLabel(band)}</span>}
                 </Link>

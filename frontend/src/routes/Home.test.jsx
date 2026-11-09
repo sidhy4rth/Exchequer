@@ -221,12 +221,12 @@ describe('recent cases', () => {
     expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/cases?limit=5'))).toBe(true)
   })
 
-  it('marks the shared examples the site keeps, so none reads as this browser\'s own', async () => {
+  it('marks the recorded demos the site keeps, as the Cases page does, so none reads as this browser\'s own', async () => {
     const own = CASES.cases[1]
     renderHome({ cases: { count: 2, cases: [{ ...CASES.cases[0], demo: true }, { ...own, demo: false }] } })
     const card = within(await screen.findByRole('region', { name: 'Recent cases' }))
-    expect(await card.findByRole('link', { name: new RegExp(`^${TRON_WALLET}.*example`) })).toHaveAttribute('href', '/case/c-1')
-    expect(card.getByRole('link', { name: new RegExp(`^${WALLET}`) })).not.toHaveTextContent('example')
+    expect(await card.findByRole('link', { name: new RegExp(`^${TRON_WALLET}.*demo`) })).toHaveAttribute('href', '/case/c-1')
+    expect(card.getByRole('link', { name: new RegExp(`^${WALLET}`) })).not.toHaveTextContent('demo')
   })
 
   it('says when there are none yet', async () => {

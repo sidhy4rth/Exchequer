@@ -6,8 +6,8 @@ import Work from './Work'
 import { stubFetch } from '../test/setup'
 
 // The console's pages that were Home's tabs, and the trace form on a page of
-// its own. Each has its own heading; R10 holds here too: a case shows its
-// band, never the decimal.
+// its own. Each has its own heading and one line on what it is for. The
+// Cases page is its own (Cases.test.jsx).
 const oneChain = {
   status: 'ok',
   default_chain: 'ethereum',
@@ -41,27 +41,23 @@ function open(page, { path = '/', access = { demo_code_required: false }, extra 
   return fetch
 }
 
-describe('the cases page', () => {
-  it('lists stored cases by band, not decimal, and opens one by keyboard', async () => {
-    const user = userEvent.setup()
-    open('cases')
-    expect(screen.getByRole('heading', { level: 1, name: 'Cases' })).toBeInTheDocument()
-    expect(await screen.findByText('High')).toBeInTheDocument()
-    expect(screen.queryByText('0.88')).not.toBeInTheDocument()
-    const link = screen.getByRole('link', { name: /^0xababababab/ })
-    link.focus()
-    await user.keyboard('{Enter}')
-    expect(screen.getByTestId('landed')).toHaveTextContent('/case/c1')
-  })
-
-  it('says when there are none', async () => {
-    stubFetch({ '/cases': { body: { count: 0, cases: [] } }, '/access': { body: {} } })
-    render(<MemoryRouter><Work page="cases" /></MemoryRouter>)
-    expect(await screen.findByText(/No cases yet/)).toBeInTheDocument()
-  })
-})
-
 describe('the monitor pages', () => {
+  it.each([
+    ['watchlist', 'Watchlist', 'Wallets this browser watches, and what moved'],
+    ['requests', 'Requests', 'Letters logged from a case and still waiting on someone'],
+    ['batch', 'Bulk intake', 'Trace up to 25 complaints from a CSV, then see what they share'],
+  ])('heads %s with its title and one line on what it is for', async (page, title, line) => {
+    open(page)
+    const head = screen.getByRole('heading', { level: 1, name: title }).parentElement
+    expect(head).toHaveTextContent(line)
+    expect(head.firstElementChild).toHaveTextContent(line)
+  })
+
+  it.each([['watchlist', /^Nothing watched yet/], ['requests', /^No open requests/]])('puts an empty %s in its own card', async (page, empty) => {
+    open(page)
+    expect((await screen.findByText(empty)).closest('.card')).toHaveClass('glass')
+  })
+
   it('shows the watchlist, or says nothing is watched', async () => {
     open('watchlist')
     expect(screen.getByRole('heading', { level: 1, name: 'Watchlist' })).toBeInTheDocument()

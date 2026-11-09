@@ -13,6 +13,7 @@ const SignIn = lazy(() => import('./routes/SignIn'))
 const TraceView = lazy(() => import('./routes/TraceView'))
 const Verify = lazy(() => import('./routes/Verify'))
 const Batch = lazy(() => import('./routes/Batch'))
+const Cases = lazy(() => import('./routes/Cases'))
 const Work = lazy(() => import('./routes/Work'))
 
 /** The demo front doors: each part of the app needs the tab to have chosen
@@ -50,7 +51,7 @@ export default function App() {
         <Route path="/verify" element={<VerifyPage />} />
         <Route path="/" element={<Home />} />
         <Route path="/trace/new" element={<Work page="new" />} />
-        <Route path="/cases" element={<Work page="cases" />} />
+        <Route path="/cases" element={<Cases />} />
         <Route path="/watchlist" element={<Work page="watchlist" />} />
         <Route path="/requests" element={<Work page="requests" />} />
         <Route path="/batch" element={<Work page="batch" />} />

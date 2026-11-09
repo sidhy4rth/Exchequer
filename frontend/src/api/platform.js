@@ -18,6 +18,17 @@ export async function fetchRelatedCases(caseId) {
   return response.json()
 }
 
+/**
+ * Every wallet that two or more of the cases this browser may see (its own
+ * and the demos) both reach: the Cases page's linked complaints. Also a
+ * query over the case store.
+ */
+export async function fetchLinkedComplaints() {
+  const response = await apiFetch(`${BASE}/cases/correlate`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
 /** What the attribution database covers on one chain. */
 export async function fetchExchanges(chain) {
   const response = await apiFetch(`${BASE}/exchanges?chain=${encodeURIComponent(chain)}`)

@@ -44,7 +44,7 @@ async function open(page, p, theme) {
     if (as) sessionStorage.setItem('exchequer-demo-session', as)
   }, [theme, p.as])
   await page.route('**/*', (route) => (['GET', 'HEAD'].includes(route.request().method()) ? route.fallback() : route.abort()))
-  if (p.stub) await page.route(p.stub.url, (route) => route.fulfill({ json: p.stub.body }))
+  for (const stub of [p.stub ?? []].flat()) await page.route(stub.url, (route) => route.fulfill({ json: stub.body }))
 
   await page.goto(p.path)
   // A click scrolls what it presses into view, so it waits for the page to

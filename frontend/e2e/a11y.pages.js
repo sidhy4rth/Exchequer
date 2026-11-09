@@ -9,13 +9,13 @@
 // `unmeasured` pins, per size, how much text axe still cannot measure for
 // contrast with the canvases and gradients hidden (a11y.spec.js lists it).
 // TODO(Glass): bring these down, never up. The door's card sits under its
-// tiles; on a phone the console's Coverage tables (opened) and the Cases table
-// scroll sideways inside themselves and axe cannot see the cells they clip, and the
+// tiles; on a phone the console's Coverage tables (opened) scroll sideways
+// inside themselves and axe cannot see the cells they clip, and the
 // verified-example rows and a batch's empty cell run under their neighbours;
 // text cut by the bottom of the screen at rest (a tall exchange list, the
-// signing-key note on Verify inside the console, the Console's wallet bars or
-// a coverage row at the fold) cannot be sampled; the graph draws its labels
-// over SVG shapes.
+// signing-key note on Verify inside the console, the Console's wallet bars, a
+// coverage row or the Cases page's linked wallet at the fold) cannot be
+// sampled; the graph draws its labels over SVG shapes.
 
 const DOOR = ['button', { name: /click anywhere to enter/i }]
 
@@ -34,6 +34,9 @@ const BATCH = {
 // The Cases page and the Console's Recent cases need stored cases, so the
 // check answers the app's own GET /cases?limit= with two (the shape
 // routes/casebook.py returns); the page load of /cases still reaches the server.
+// The Cases page also asks GET /cases/correlate, answered with one wallet the
+// two meet at and a complaint the browser cannot open, so the Linked
+// complaints card is measured with its links (or, empty, with its note).
 const CASES = {
   count: 2,
   cases: [
@@ -41,6 +44,16 @@ const CASES = {
     { case_id: 'a11y-2', address: `0x${'5'.repeat(40)}`, chain: 'ethereum', asset: 'ETH', direction: 'incoming', exchange: null, confidence: null, flags: [], hop_count: 1, node_count: 11, created_at: '2026-11-09T10:00:00+00:00', demo: false },
   ],
 }
+
+const member = (c) => ({ case_id: c.case_id, reported_address: c.address, direction: c.direction, asset: c.asset, traced_at: c.created_at, depth: 1, value_in_native: 1, exchange: c.exchange, after_swap_to: null })
+const LINKED = {
+  cases_examined: 2, cluster_count: 1,
+  clusters: [{
+    chain: 'ethereum', address: `0x${'6'.repeat(40)}`, inferred_exchange: 'Binance', risk_category: 'frozen', reported_addresses: CASES.cases.map((c) => c.address),
+    case_count: 2, max_value_in_native: 1, other_complaints: 1, cases: CASES.cases.map(member),
+  }],
+}
+const CASES_STUB = (linked) => [{ url: /\/cases\?limit=\d+$/, body: CASES }, { url: /\/cases\/correlate$/, body: linked }]
 
 const H1 = (name) => ['heading', { level: 1, name }]
 
@@ -68,7 +81,10 @@ export const PAGES = [
   { name: 'New trace', path: '/trace/new', as: 'investigator', ready: H1('New trace') },
   // A searched hash on a site that cannot trace from one says so.
   { name: 'New trace, hash with payments off', path: `/trace/new?pay=0x${'c'.repeat(64)}`, as: 'investigator', stub: { url: '**/trace/intake', body: { payments: false } }, ready: H1('New trace') },
-  { name: 'Cases', path: '/cases', as: 'investigator', stub: { url: /\/cases\?limit=\d+$/, body: CASES }, ready: ['table', { name: 'Stored cases' }], unmeasured: { phone: 11 } },
+  // The table on a desktop, a card per case on a phone; a pressed filter, and
+  // the Linked complaints card both linked and empty.
+  { name: 'Cases', path: '/cases', as: 'investigator', stub: CASES_STUB(LINKED), ready: ['link', { name: CASES.cases[0].address }], unmeasured: { phone: 1 } },
+  { name: 'Cases, one filter pressed', path: '/cases', as: 'investigator', stub: CASES_STUB({ ...LINKED, cluster_count: 0, clusters: [] }), click: ['button', { name: /^No exchange/ }], ready: ['button', { name: /^No exchange/, pressed: true }] },
   { name: 'Bulk intake', path: '/batch', as: 'investigator', ready: H1('Bulk intake') },
   { name: 'Watchlist', path: '/watchlist', as: 'investigator', ready: H1('Watchlist') },
   { name: 'Requests', path: '/requests', as: 'investigator', ready: H1('Requests') },

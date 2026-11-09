@@ -66,6 +66,13 @@ describe('the accessibility check', () => {
     expect(console.stub.body.cases.length).toBeGreaterThan(0)
   })
 
+  it('opens the Cases page with stored cases and a linked complaint, so their rows and links are measured', () => {
+    const answer = (name, url) => [PAGES.find((p) => p.name === name).stub].flat().find((s) => s.url.test(url))?.body
+    expect(answer('Cases', 'http://127.0.0.1:8123/cases?limit=50').cases.length).toBeGreaterThan(1)
+    expect(answer('Cases', 'http://127.0.0.1:8123/cases/correlate').clusters.length).toBeGreaterThan(0)
+    expect(answer('Cases, one filter pressed', 'http://127.0.0.1:8123/cases/correlate').clusters).toEqual([])
+  })
+
   it('pins, per page and size, how much text axe cannot measure for contrast', async () => {
     // A typo in a size would pin nothing; a zero is the default already.
     const sizes = (await a11yConfig({ EXCHEQUER_URL: 'http://127.0.0.1:8123' })).projects.map((p) => p.name)
