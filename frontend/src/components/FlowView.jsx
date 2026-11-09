@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { plain } from '../text'
+import RoleSwatch from './RoleSwatch'
 
 // The money flow as a layered diagram: one column per hop, the reported
 // address at one end and whatever it reached at the other, every arrow
 // pointing the way the money moved -- left to right, always. No physics:
 // the same graph draws the same picture every time, and a judge at the back
 // of the room can read it in one glance because the attributed path is the
-// one bold red line -- the money under investigation -- and everything else is thin.
+// one bold green line -- the money under investigation, on its way to the
+// exchange -- and everything else is thin.
 //
 // Colour carries meaning exactly as elsewhere: green for a labelled exchange,
-// amber for an inference or a fired pattern, red for a sanctions or mixer hit,
-// purple for a gambling platform's wallet (an attribution, not a designation).
+// red for a sanctions or mixer hit. An inference or a fired pattern is a faded
+// dot with a dashed edge (styles.css); a gambling platform's wallet is grey
+// with a dashed halo (an attribution, not a designation). The key draws them
+// the same way (RoleSwatch). Dashed means inferred, so the traced funds stay
+// solid even where a pattern fired on them.
 
 const ROLE_NAME = {
   seed: 'Reported address',
@@ -23,8 +28,8 @@ const ROLE_NAME = {
   node: 'Traced address',
 }
 const ROLE_VAR = {
-  seed: 'var(--ink)', risk: 'var(--red)', gambling: 'var(--purple)', exchange: 'var(--green)', inferred: 'var(--amber)',
-  service: 'var(--rule-strong)', flagged: 'var(--amber)', node: 'var(--faint)',
+  seed: 'var(--text)', risk: 'var(--risk)', gambling: 'var(--text-2)', exchange: 'var(--go)', inferred: 'var(--go-soft)',
+  service: 'var(--line-strong)', flagged: 'var(--text-2)', node: 'var(--text-3)',
 }
 const RADIUS = { seed: 7, risk: 6.5, gambling: 6.5, exchange: 6.5, inferred: 6, service: 4, flagged: 4.5, node: 3.5 }
 
@@ -332,7 +337,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
             <path d="M0 0.5 L8 4 L0 7.5 z" style={{ fill: 'var(--faint)' }} />
           </marker>
           <marker id="arrow-path" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
-            <path d="M0 0.5 L8 4 L0 7.5 z" style={{ fill: 'var(--red)' }} />
+            <path d="M0 0.5 L8 4 L0 7.5 z" style={{ fill: 'var(--go)' }} />
           </marker>
         </defs>
 
@@ -362,7 +367,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
             <g key={key}>
               <path
                 d={d}
-                className={`flow-link${l.onPath ? ' on-path' : ''}${l.flagged ? ' flagged' : ''}`}
+                className={`flow-link${tone}`}
                 strokeWidth={l.onPath ? Math.max(2.4, l.width) : l.width}
                 vectorEffect="non-scaling-stroke"
                 style={{ opacity: faded ? 0.08 : undefined }}
@@ -404,7 +409,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
             onMouseLeave={() => setHover(null)}
             onClick={() => { if (!drag.current?.moved) copy(p.node.id) }}
           >
-            {(p.role === 'exchange' || p.role === 'risk' || p.role === 'gambling' || p.node.risk_category) && <circle cx={p.x} cy={p.y} r={(p.r + 5) * counter} className="halo" vectorEffect="non-scaling-stroke" style={p.node.risk_category ? { stroke: p.node.risk_category === 'gambling' ? 'var(--purple)' : 'var(--red)' } : undefined} />}
+            {(p.role === 'exchange' || p.role === 'risk' || p.role === 'gambling' || p.node.risk_category) && <circle cx={p.x} cy={p.y} r={(p.r + 5) * counter} className="halo" vectorEffect="non-scaling-stroke" style={p.node.risk_category ? { stroke: p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : ROLE_VAR.risk } : undefined} />}
             <circle cx={p.x} cy={p.y} r={(p.r + 6) * counter} fill="transparent" />
             <circle cx={p.x} cy={p.y} r={p.r * counter} fill={p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]} vectorEffect="non-scaling-stroke" />
             {p.caption && (
@@ -460,7 +465,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
 
       <div className="flow-legend">
         {['seed', 'exchange', 'inferred', 'risk', 'gambling', 'flagged', 'service'].map((r) => (
-          <span key={r}><i style={{ background: ROLE_VAR[r] }} />{ROLE_NAME[r].replace(' (inferred)', '').replace(', not expanded', '')}</span>
+          <span key={r}><RoleSwatch role={r} color={ROLE_VAR[r]} />{ROLE_NAME[r].replace(' (inferred)', '').replace(', not expanded', '')}</span>
         ))}
         <span><i className="line" />the traced funds (attributed path)</span>
       </div>

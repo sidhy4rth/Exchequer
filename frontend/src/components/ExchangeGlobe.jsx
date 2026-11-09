@@ -24,7 +24,7 @@ const CLOSE_MS = 1300
 // on the same curve, so they meet as it arrives. Then the flash and burst.
 const IMPLODE = 0.5
 const C = {
-  red: '#ff5c5c',
+  red: '#ff5a4e',
 }
 
 // Exchanges are coloured by when they were founded. Three eras, because a
@@ -108,7 +108,7 @@ function doorShape(k) {
 
 // The glow of the globe takes the colour of the door: red for investigators,
 // green for citizens, matching the access label under the globe.
-const ACCENTS = { investigator: [255, 92, 92], citizen: [47, 211, 162] }
+const ACCENTS = { investigator: [255, 90, 78], citizen: [61, 214, 140] }
 
 /** The front door's figures, summed across chains from GET /chains. The
  * exchanges' own wallets and their customers' deposit addresses are counted
@@ -318,8 +318,8 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
 
       const glowR = cell * (3.2 + brandHover * 0.8)
       const glow = ctx.createRadialGradient(mx, my + cell * 0.5, 0, mx, my + cell * 0.5, glowR)
-      glow.addColorStop(0, `rgba(255, 92, 92, ${(0.2 + brandHover * 0.15) * fade})`)
-      glow.addColorStop(1, 'rgba(255, 92, 92, 0)')
+      glow.addColorStop(0, `rgba(255, 90, 78, ${(0.2 + brandHover * 0.15) * fade})`)
+      glow.addColorStop(1, 'rgba(255, 90, 78, 0)')
       ctx.fillStyle = glow
       ctx.beginPath(); ctx.arc(mx, my + cell * 0.5, glowR, 0, Math.PI * 2); ctx.fill()
       const thin = Math.max(0.35, Math.min(1, cell / 30)) // hairlines when small
@@ -522,8 +522,8 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
         const fr = R * (0.2 + (1 - shape.flash) * 2.2)
         const fg = ctx.createRadialGradient(cx, cy, 0, cx, cy, fr)
         fg.addColorStop(0, `rgba(255, 255, 255, ${0.9 * shape.flash})`)
-        fg.addColorStop(0.25, `rgba(255, 92, 92, ${0.5 * shape.flash})`)
-        fg.addColorStop(1, 'rgba(255, 92, 92, 0)')
+        fg.addColorStop(0.25, `rgba(255, 90, 78, ${0.5 * shape.flash})`)
+        fg.addColorStop(1, 'rgba(255, 90, 78, 0)')
         ctx.fillStyle = fg
         ctx.beginPath(); ctx.arc(cx, cy, fr, 0, Math.PI * 2); ctx.fill()
         ctx.strokeStyle = `rgba(255, 255, 255, ${0.7 * shape.flash})`
@@ -541,7 +541,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
         const f = 1 - (now - q.at) / 380
         const gr = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.r * 2)
         gr.addColorStop(0, `rgba(255, 120, 120, ${0.22 * f})`)
-        gr.addColorStop(1, 'rgba(255, 92, 92, 0)')
+        gr.addColorStop(1, 'rgba(255, 90, 78, 0)')
         ctx.fillStyle = gr
         ctx.beginPath(); ctx.arc(q.x, q.y, q.r * 2, 0, Math.PI * 2); ctx.fill()
       }

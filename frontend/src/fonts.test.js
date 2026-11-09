@@ -18,7 +18,7 @@ describe('fonts are served from this site', () => {
 
   it('the app imports every weight the stylesheet uses', () => {
     const main = sources['./main.jsx']
-    for (const face of ['sans/400', 'sans/500', 'sans/600', 'mono/400', 'mono/500', 'mono/600', 'serif/500', 'serif/600']) {
+    for (const face of ['sans/300', 'sans/400', 'sans/500', 'sans/600', 'mono/400', 'mono/500', 'mono/600', 'serif/500', 'serif/600']) {
       expect(main).toContain(`@fontsource/ibm-plex-${face}.css`)
     }
   })
