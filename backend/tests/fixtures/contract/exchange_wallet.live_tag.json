@@ -149,6 +149,7 @@
     "depth": 0,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
     "inferred_exchange": null,
@@ -172,6 +173,7 @@
     "depth": 1,
     "exchange": "Flipster",
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
     "inferred_exchange": null,
@@ -520,12 +522,23 @@
   ],
   "passed_through": [],
   "status": "estimated",
+  "stops": [
+   {
+    "addresses": [
+     "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8"
+    ],
+    "amount": 3712.5211,
+    "inferred": false,
+    "kind": "exchange",
+    "note": "Reached an exchange: tracing ends here, and a letter to the exchange is the next step."
+   }
+  ],
   "totals": {
    "accounted": 3712.5211,
    "basis": "seed_outflow",
    "denominator": 3712.5211
   },
-  "version": 1
+  "version": 2
  },
  "warnings": []
 }

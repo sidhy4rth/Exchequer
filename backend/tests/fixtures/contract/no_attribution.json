@@ -278,6 +278,7 @@
     "depth": 0,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0x7c3e9bab6715e4040f013e865b193b0209642e36",
     "inferred_exchange": null,
@@ -301,6 +302,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 8,
+    "expanded": true,
     "flags": [],
     "id": "0xc3c30cbca70bf84c8fe57e826357a820e9642c23",
     "inferred_exchange": null,
@@ -324,6 +326,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0x1d3a1a9bbda6e8204f3e534f12cc76d84d15f54c",
     "inferred_exchange": null,
@@ -347,6 +350,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 7,
+    "expanded": true,
     "flags": [],
     "id": "0x96ebe6275405c07f8cea84949c80bb188c45f3c5",
     "inferred_exchange": null,
@@ -370,6 +374,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 1,
+    "expanded": true,
     "flags": [],
     "id": "0xc09fdb988520802fdd0330cede96821cfdb0a9f9",
     "inferred_exchange": null,
@@ -393,6 +398,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 37,
+    "expanded": true,
     "flags": [],
     "id": "0x31ab75452f89c824972ec3cd671a089801981bd7",
     "inferred_exchange": null,
@@ -416,6 +422,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0x43c2f567b124d6dd9dcc505b93fd9f0c158956db",
     "inferred_exchange": null,
@@ -439,6 +446,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0xd123a8f6f7f07a2931192e3b21fccf4d2df83d38",
     "inferred_exchange": null,
@@ -462,6 +470,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0xafaac41b9c716496a909c87ea4a33a8af501c5fd",
     "inferred_exchange": null,
@@ -931,12 +940,35 @@
   ],
   "passed_through": [],
   "status": "estimated",
+  "stops": [
+   {
+    "addresses": [
+     "0xd123a8f6f7f07a2931192e3b21fccf4d2df83d38",
+     "0xafaac41b9c716496a909c87ea4a33a8af501c5fd"
+    ],
+    "amount": 2.369070302,
+    "inferred": false,
+    "kind": "hop_limit",
+    "note": "The trace stopped at 3 hops."
+   },
+   {
+    "addresses": [
+     "0x1d3a1a9bbda6e8204f3e534f12cc76d84d15f54c",
+     "0x31ab75452f89c824972ec3cd671a089801981bd7",
+     "0x43c2f567b124d6dd9dcc505b93fd9f0c158956db"
+    ],
+    "amount": 0.004804312,
+    "inferred": false,
+    "kind": "no_outflow",
+    "note": "Nothing was seen leaving after the money arrived, so it may still be there."
+   }
+  ],
   "totals": {
    "accounted": 2.373876,
    "basis": "seed_outflow",
    "denominator": 2.373876
   },
-  "version": 1
+  "version": 2
  },
  "warnings": []
 }

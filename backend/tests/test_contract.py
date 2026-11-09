@@ -62,10 +62,18 @@ def test_upgrade_adds_fields_and_changes_no_v1_field(demo):
     before = copy.deepcopy(v1)
     v2 = upgrade(v1)
     assert v1 == before, "upgrade must not modify its input"
+
+    # Rows may gain fields (a transfer's block, a freeze's frozen_on and
+    # event_tx, a graph node's expanded); every field a row had is kept.
+    def kept(rows, new_rows):
+        for old, new in zip(rows, new_rows, strict=True):
+            assert {k: new[k] for k in old} == old
     for key, value in v1.items():
-        if key == "transfers":
-            for old, new in zip(value, v2["transfers"], strict=True):
-                assert {k: new[k] for k in old} == old
+        if key in ("transfers", "risk_matches"):
+            kept(value, v2[key])
+        elif key == "graph":
+            assert {**v2[key], "nodes": value["nodes"]} == value
+            kept(value["nodes"], v2[key]["nodes"])
         elif key != "follow_ons":
             assert v2[key] == value, key
     assert upgrade(v2) == v2, "upgrade must be idempotent"

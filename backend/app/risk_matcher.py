@@ -141,7 +141,11 @@ TETHER_FREEZE_ENTITY = "Tether (USDT freeze)"
 # "USDC frozen by Circle", "PYUSD frozen by Paxos (PYUSD)", "XSGD frozen by its
 # issuer", "USDT frozen by Tether on 2021-08-05", "sUSDe holder restricted by issuer (...)".
 _FREEZE_TEXT = re.compile(r"^(?P<token>[A-Za-z0-9.]+) (?:frozen|holder restricted) by (?P<issuer>.+?)"
-                          r"(?: on \d{4}-\d{2}-\d{2})?(?: \([^)]*\))?$")
+                          r"(?: on (?P<on>\d{4}-\d{2}-\d{2}))?(?: \([^)]*\))?$")
+# The freeze's own event, as scripts/import_tether_freezes.record cites it:
+# "Tether USDT contract on Tron, AddedBlackList event, tx <hash>". A store
+# row's "sample tx" is a transfer, never the freeze.
+_FREEZE_EVENT = re.compile(r"\bAddedBlackList event, tx (?P<tx>(?:0x)?[0-9a-fA-F]{64})\b")
 
 
 def freeze_issuer(*texts: str | None) -> tuple[str | None, str | None]:
@@ -163,6 +167,16 @@ def freeze_parts(match: dict[str, Any]) -> tuple[str | None, str | None]:
     if "token" in match or "issuer" in match:
         return match.get("token"), match.get("issuer")
     return freeze_issuer(match.get("entity"), match.get("label"))
+
+
+def freeze_event(label: Any, source: Any) -> tuple[str | None, str | None]:
+    """A freeze's (date, event hash): the ISO day its label says the issuer
+    froze the address ("USDT frozen by Tether on 2026-09-11") and the hash of
+    the event that did it, from its source. None where the text does not say."""
+    found = _FREEZE_TEXT.match(label.strip()) if isinstance(label, str) else None
+    event = _FREEZE_EVENT.search(source) if isinstance(source, str) else None
+    day = found["on"] if found and found["on"] and _iso_date(found["on"]) else None
+    return day, event["tx"] if event else None
 
 
 def is_tether_usdt_freeze(match: dict[str, Any]) -> bool:
@@ -235,7 +249,8 @@ class RiskMatch:
             "origin": self.origin,
         }
         if self.category == FROZEN:
-            out.update(token=self.token, issuer=self.issuer)
+            frozen_on, event_tx = freeze_event(self.label, self.source)
+            out.update(token=self.token, issuer=self.issuer, frozen_on=frozen_on, event_tx=event_tx)
         if self.tier is not None:
             out["tier"] = self.tier
         return out

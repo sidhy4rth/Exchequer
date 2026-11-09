@@ -184,9 +184,91 @@ def upgrade(result: dict[str, Any]) -> dict[str, Any]:
     if "follow_ons" in out:
         out["follow_ons"] = [{**f, "result": upgrade(f["result"])} if isinstance(f.get("result"), dict) else f
                              for f in out.get("follow_ons") or []]
-    from ..victim_flow import build, is_current  # here, so the contract module stays light to import
-    if not is_current(out.get("victim_flow")):  # a current flow the case carries wins
+    return _with_read_fields(out)
+
+
+def on_read(result: dict[str, Any]) -> dict[str, Any]:
+    """What a route serves for a stored case: `result` with the fields every
+    read adds (each freeze's date and event, which wallets the walk read, a
+    current victim flow), on each follow-on too, and nothing else upgrade()
+    would change. The input is never changed: new top levels, never a deep
+    copy. A route passes the copy its reader may see (case_privacy.for_reader),
+    so nothing is built from what that reader is not shown."""
+    ons = result.get("follow_ons")
+    if isinstance(ons, list):
+        result = {**result, "follow_ons": [{**f, "result": on_read(f["result"])}
+                                           if isinstance(f, dict) and isinstance(f.get("result"), dict) else f
+                                           for f in ons]}
+    return _with_read_fields(dict(result))
+
+
+def _with_read_fields(out: dict[str, Any]) -> dict[str, Any]:
+    """`out`, a new top level, with the fields a case stored before them gets
+    on read where the case can tell: risk_matches[].frozen_on and .event_tx,
+    graph.nodes[].expanded, and victim_flow (a current one the case carries
+    wins). What the case already says is kept."""
+    from ..risk_matcher import freeze_event  # here, so the contract module stays light to import
+    from ..victim_flow import build, is_current
+
+    def freeze(m: Any) -> Any:
+        if not isinstance(m, dict) or m.get("category") != "frozen" or {"frozen_on", "event_tx"} <= m.keys():
+            return m
+        frozen_on, event_tx = freeze_event(m.get("label"), m.get("source"))
+        return {"frozen_on": frozen_on, "event_tx": event_tx, **m}  # what the match says wins
+    try:
+        if isinstance(out.get("risk_matches"), list):
+            out["risk_matches"] = _filled(out["risk_matches"], freeze)
+        graph = out.get("graph")
+        if isinstance(graph, dict) and isinstance(graph.get("nodes"), list):
+            walked = expanded_nodes(out)
+            nodes = _filled(graph["nodes"], lambda n: {**n, "expanded": walked[n["address"]]}
+                            if isinstance(n, dict) and "expanded" not in n and n.get("address") in walked else n)
+            if nodes is not graph["nodes"]:  # else shared, never copied
+                out["graph"] = {**graph, "nodes": nodes}
+    except (TypeError, AttributeError, ValueError):  # a malformed case still reads
+        pass
+    if not is_current(out.get("victim_flow")):
         out["victim_flow"] = build(out)
+    return out
+
+
+def _filled(rows: list[Any], fill: Any) -> list[Any]:
+    """`rows` with `fill` applied, or `rows` itself when it changed none."""
+    new = [fill(r) for r in rows]
+    return rows if all(a is b for a, b in zip(new, rows, strict=True)) else new
+
+
+def expanded_nodes(result: dict[str, Any]) -> dict[str, bool]:
+    """{address: whether the walk read its transfers} for each graph node the
+    case can tell about: as the node says, else from the case. A wallet with a
+    transfer the walk followed out of it (into it on a reverse trace), unfollowed
+    money listed, a read that hit its record limit, or a service contract (only
+    a read of its payouts finds one) was read. One at the depth limit, an end
+    of the walk (an exchange, a mixer pool), or one whose read failed was not. Any other was read, unless the
+    clock, a budget or the node cap cut the walk short: then it is left out."""
+    graph = result.get("graph") or {}
+    end = "target" if result.get("direction") == "incoming" else "source"
+    moved = {e.get(end) for e in graph.get("edges") or [] if isinstance(e, dict)}
+    moved |= {u.get("address") for u in result.get("untraced") or [] if isinstance(u, dict)}
+    reasons = [str(x) for x in result.get("truncation_reasons") or []]
+    limit = result.get("max_depth")
+    short = (result.get("stopped_by") or result.get("addresses_unexpanded_by_time")
+             or result.get("addresses_unexpanded_by_budget") or any(x.startswith("node limit") for x in reasons))
+    out: dict[str, bool] = {}
+    for n in graph.get("nodes") or []:
+        a = n.get("address") if isinstance(n, dict) else None
+        if not isinstance(a, str):
+            continue
+        depth = int(n.get("depth") or 0)
+        if "expanded" in n:
+            out[a] = bool(n["expanded"])
+        elif a in moved or n.get("history_capped") or n.get("is_service_contract"):
+            out[a] = True
+        elif ((n.get("is_terminal") and depth > 0) or (limit is not None and depth >= int(limit))
+              or any(x.startswith(f"transactions of {a[:10]}...") for x in reasons)):
+            out[a] = False
+        elif not short:
+            out[a] = True
     return out
 
 

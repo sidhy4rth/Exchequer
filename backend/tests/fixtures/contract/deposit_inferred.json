@@ -540,6 +540,7 @@
        "depth": 0,
        "exchange": null,
        "excluded_by_time": 23,
+       "expanded": true,
        "flags": [],
        "id": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
        "inferred_exchange": null,
@@ -563,6 +564,7 @@
        "depth": 1,
        "exchange": null,
        "excluded_by_time": 0,
+       "expanded": false,
        "flags": [],
        "id": "0xc6aafd1238694e165bf82ce50a5bff879e822177",
        "inferred_exchange": null,
@@ -716,12 +718,23 @@
      ],
      "passed_through": [],
      "status": "estimated",
+     "stops": [
+      {
+       "addresses": [
+        "0xc6aafd1238694e165bf82ce50a5bff879e822177"
+       ],
+       "amount": 5215.0,
+       "inferred": false,
+       "kind": "hop_limit",
+       "note": "The trace stopped at 1 hop."
+      }
+     ],
      "totals": {
       "accounted": 5215.0,
       "basis": "seed_outflow",
       "denominator": 5215.0
      },
-     "version": 1
+     "version": 2
     },
     "warnings": []
    },
@@ -1259,6 +1272,7 @@
     "depth": 0,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [
      "peel_chain"
     ],
@@ -1284,6 +1298,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
     "inferred_exchange": null,
@@ -1307,6 +1322,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 60,
+    "expanded": true,
     "flags": [],
     "id": "0xa54dc4425190570cb5c841adf445bbecf3b249f5",
     "inferred_exchange": null,
@@ -1330,6 +1346,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 2,
+    "expanded": true,
     "flags": [],
     "id": "0x9f8bc6164a2deb9de0f72bb2a59a053da54b574e",
     "inferred_exchange": null,
@@ -1353,6 +1370,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 8,
+    "expanded": true,
     "flags": [
      "peel_chain"
     ],
@@ -1378,6 +1396,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 176,
+    "expanded": true,
     "flags": [],
     "id": "0x0d92795d84767102ef77b3d2c68482c77a962d19",
     "inferred_exchange": null,
@@ -1401,6 +1420,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0xe8fef39da2d518e54406ae53f476681b3255346e",
     "inferred_exchange": null,
@@ -1424,6 +1444,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 4,
+    "expanded": true,
     "flags": [],
     "id": "0x0fe5f319cd88910b2b6526c5b73875850eb94da6",
     "inferred_exchange": null,
@@ -1447,6 +1468,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 5,
+    "expanded": true,
     "flags": [],
     "id": "0x1f90a4f8564ede20080bd251bfdb090dd570dec4",
     "inferred_exchange": null,
@@ -1470,6 +1492,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0x978aaa06110b060279b75292f681a5ffb19da8ff",
     "inferred_exchange": null,
@@ -1493,6 +1516,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 5,
+    "expanded": true,
     "flags": [],
     "id": "0x64144d08dd276bf75b9582bc12e3be9dc2958351",
     "inferred_exchange": null,
@@ -1516,6 +1540,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 34,
+    "expanded": true,
     "flags": [],
     "id": "0x2ce910fbba65b454bbaf6a18c952a70f3bcd8299",
     "inferred_exchange": null,
@@ -1539,6 +1564,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 17,
+    "expanded": true,
     "flags": [],
     "id": "0x97053adf9c90c08e179942a597cbc6eda8b28870",
     "inferred_exchange": null,
@@ -1562,6 +1588,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 12,
+    "expanded": true,
     "flags": [],
     "id": "0xa79f7f7c92979d1139b66913fac2603295ec7866",
     "inferred_exchange": "Binance",
@@ -1585,6 +1612,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 25,
+    "expanded": true,
     "flags": [],
     "id": "0x0a48c56449428b4320648ef64d4508a1e6f14ee5",
     "inferred_exchange": null,
@@ -1608,6 +1636,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 156,
+    "expanded": true,
     "flags": [],
     "id": "0xc69c42cac383f86f37e4820e34791c0216999c6f",
     "inferred_exchange": null,
@@ -1631,6 +1660,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 96,
+    "expanded": true,
     "flags": [],
     "id": "0x2996cb3a3157dd5917e0c5d8dfc036742db53c5e",
     "inferred_exchange": null,
@@ -1654,6 +1684,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 3,
+    "expanded": true,
     "flags": [],
     "id": "0x3ac431b628c079ede4a915021878aef3d86fa181",
     "inferred_exchange": "Binance",
@@ -1677,6 +1708,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 7,
+    "expanded": true,
     "flags": [],
     "id": "0x0bee92446f1f24d900b658268f058def4032c688",
     "inferred_exchange": null,
@@ -1700,6 +1732,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 67,
+    "expanded": true,
     "flags": [],
     "id": "0x2345804130f13a04c95b3838f31564992aa1885d",
     "inferred_exchange": null,
@@ -1723,6 +1756,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     "inferred_exchange": null,
@@ -1746,6 +1780,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 67,
+    "expanded": true,
     "flags": [],
     "id": "0x62425cd6bdcb6bfe51558ea465b063486b70dc9f",
     "inferred_exchange": null,
@@ -1769,6 +1804,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [
      "peel_chain"
     ],
@@ -1794,6 +1830,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 41,
+    "expanded": true,
     "flags": [],
     "id": "0x2a408ecb7a317fbe9fa6619f1097e421a31c8450",
     "inferred_exchange": null,
@@ -1817,6 +1854,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 21,
+    "expanded": true,
     "flags": [],
     "id": "0x220fa086ff67349f081d6481b35dace07d85291f",
     "inferred_exchange": null,
@@ -1840,6 +1878,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 2,
+    "expanded": true,
     "flags": [],
     "id": "0xa91dd01f919b57d92faf6c9c9ddc0461cf8f9a31",
     "inferred_exchange": null,
@@ -1863,6 +1902,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 6,
+    "expanded": true,
     "flags": [],
     "id": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
     "inferred_exchange": null,
@@ -1886,6 +1926,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 18,
+    "expanded": true,
     "flags": [],
     "id": "0x57239e7eef76e556e8e5d21d9f1a9e1f59e967a0",
     "inferred_exchange": null,
@@ -1909,6 +1950,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 33,
+    "expanded": true,
     "flags": [],
     "id": "0xba7dd16ec300eb8a17bb919ad4e7f5cdca9c2e05",
     "inferred_exchange": null,
@@ -1932,6 +1974,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
     "inferred_exchange": null,
@@ -1955,6 +1998,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
     "inferred_exchange": null,
@@ -1978,6 +2022,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0xa1abfa21f80ecf401bd41365adbb6fef6fefdf09",
     "inferred_exchange": null,
@@ -2001,6 +2046,7 @@
     "depth": 3,
     "exchange": "Binance",
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x28c6c06298d514db089934071355e5743bf21d60",
     "inferred_exchange": null,
@@ -2024,6 +2070,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771",
     "inferred_exchange": null,
@@ -2047,6 +2094,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x58872ee5b0757d030430d894b7a1199d637b42f4",
     "inferred_exchange": null,
@@ -2070,6 +2118,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x0058517bb2e09a9679bd1627f2056670fbbbde2a",
     "inferred_exchange": null,
@@ -2093,6 +2142,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x6112e3ab1ab99ba6c37125ac27ec51b5e950b58a",
     "inferred_exchange": null,
@@ -2116,6 +2166,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [
      "peel_chain"
     ],
@@ -2141,6 +2192,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [
      "frozen"
     ],
@@ -2166,6 +2218,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x8feab81d36e7576107d5de0758c1b839be31b4f6",
     "inferred_exchange": null,
@@ -2350,6 +2403,8 @@
    "category": "frozen",
    "depth": 3,
    "entity": "Tether (USDT freeze)",
+   "event_tx": "0xf678198e4cdb85680daba0bb940645ee230c1544ed09c2615fcd311c6b164e71",
+   "frozen_on": "2021-08-05",
    "is_terminal": false,
    "label": "USDT frozen by Tether on 2021-08-05",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xf678198e4cdb85680daba0bb940645ee230c1544ed09c2615fcd311c6b164e71",
@@ -4124,12 +4179,57 @@
   ],
   "passed_through": [],
   "status": "estimated",
+  "stops": [
+   {
+    "addresses": [
+     "0xa1abfa21f80ecf401bd41365adbb6fef6fefdf09",
+     "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
+     "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+     "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771",
+     "0x58872ee5b0757d030430d894b7a1199d637b42f4",
+     "0x0058517bb2e09a9679bd1627f2056670fbbbde2a",
+     "0x6112e3ab1ab99ba6c37125ac27ec51b5e950b58a"
+    ],
+    "amount": 6.471320711,
+    "inferred": false,
+    "kind": "hop_limit",
+    "note": "The trace stopped at 3 hops."
+   },
+   {
+    "addresses": [
+     "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573"
+    ],
+    "amount": 26.203701636,
+    "inferred": false,
+    "kind": "fanout_limit",
+    "note": "Only the 10 largest destinations were followed at 0xa9ac…4573."
+   },
+   {
+    "addresses": [
+     "0xa79f7f7c92979d1139b66913fac2603295ec7866",
+     "0x3ac431b628c079ede4a915021878aef3d86fa181"
+    ],
+    "amount": 1.227466723,
+    "inferred": true,
+    "kind": "exchange",
+    "note": "Reached probable exchange deposit addresses, inferred and not confirmed: a letter asking the exchange to confirm them is the next step."
+   },
+   {
+    "addresses": [
+     "0x0bee92446f1f24d900b658268f058def4032c688"
+    ],
+    "amount": 0.07572103,
+    "inferred": false,
+    "kind": "no_outflow",
+    "note": "Nothing was seen leaving after the money arrived, so it may still be there."
+   }
+  ],
   "totals": {
    "accounted": 35.702781001,
    "basis": "seed_outflow",
    "denominator": 35.702781
   },
-  "version": 1
+  "version": 2
  },
  "warnings": []
 }

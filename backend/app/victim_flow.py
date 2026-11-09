@@ -29,6 +29,10 @@ How it works, in order:
     a mixer ("risk"), a wallet the trace did not expand ("beyond the limit"),
     or "other": a swap, or money that came back to a wallet earlier on the
     route, which is counted once. Every bucket together is the start.
+  * `stops` says where the trace stopped following the money and why, in
+    plain words: its hop limit, its fan-out limit, a mixer, a bridge or a
+    privacy service, an exchange (a probable deposit address apart, marked
+    `inferred`, as the guess it is), or a wallet that sent nothing on.
 
 On the lead route the next link keeps pro-rata's own figure and the
 wallet's other transfers share what is left, so the money that took that
@@ -51,18 +55,24 @@ import re
 from collections import defaultdict
 from typing import Any, Callable, Mapping
 
+from .contracts.case_v2 import expanded_nodes
 from .prorata import DILUTED
 
 # Which build() made a flow. Bump it whenever build() changes what it gives:
 # a stored flow of an older version (or none) is rebuilt on read, from the
-# stored case, whose transfers may be trimmed (with_flow, contracts.upgrade).
-VERSION = 1
+# stored case, whose transfers may be trimmed (contracts.on_read, .upgrade).
+# 2: `stops`; a bridge or a privacy service ends the money like a mixer.
+VERSION = 2
 
 KINDS = ("exchange", "held", "left", "risk", "beyond_limit", "not_followed", "other")
 ACTIONS = {"exchange": "draft_letter", "held": "ask_issuer", "left": "watch", "beyond_limit": "trace_deeper"}
 HOLDS = frozenset({"frozen", "sanctioned", "seized"})
 UPPER = frozenset({"traced_only", "edge_bounds"})
-CUT = re.compile(r"(?:fan-out limit|safety cap) of \d+ counterparties per address applied at (\S+?)\.\.\.")
+CUT = re.compile(r"(?:fan-out limit|safety cap) of (\d+) counterparties per address applied at (\S+?)\.\.\.")
+# Where the money ends for good (risk), and how its stop is said.
+ENDS = {"mixer": "Reached a mixer: tracing ends here.",
+        "bridge": "Reached a bridge to another chain: tracing ends here.",
+        "privacy": "Reached a privacy service: tracing ends here."}
 
 # A transfer, or a whole link when its transfers are not listed:
 # (block or None, earliest time, latest time, value).
@@ -97,22 +107,6 @@ def _build(result: Any, received_in_window: Mapping[str, float] | None) -> dict[
         return _unavailable("the case's graph could not be read")
 
 
-def with_flow(result: dict[str, Any]) -> dict[str, Any]:
-    """`result` with its `victim_flow`, and each follow-on's, as upgrade()
-    gives them: a current one the case carries wins, else one built now.
-
-    The input is never changed: new top levels, never a deep copy. A route
-    passes the copy its reader may see (case_privacy.for_reader), so the flow
-    is built only from what that reader is shown."""
-    out = result if is_current(result.get("victim_flow")) else {**result, "victim_flow": build(result)}
-    ons = out.get("follow_ons")
-    if not isinstance(ons, list):
-        return out
-    return {**out, "follow_ons": [{**f, "result": with_flow(f["result"])}
-                                  if isinstance(f, dict) and isinstance(f.get("result"), dict) else f
-                                  for f in ons]}
-
-
 def _unavailable(reason: str) -> dict[str, Any]:
     return {"status": "unavailable", "reason": reason}
 
@@ -144,12 +138,15 @@ class _Flow:
             self.out[s].append(t)
             self.inn[t].append(s)
         self.untraced: dict[str, float] = defaultdict(float)
+        self.rules = {u["address"]: u.get("rule") for u in result.get("untraced") or []}
         for u in result.get("untraced") or []:
             self.untraced[u["address"]] += float(u.get("value_native") or 0)
-        # Wallets whose outflow the fan-out limit cut, in a case too old to
-        # say how much: their reasons name them by prefix.
-        self.cut = set() if "untraced" in result else {
-            m.group(1) for x in result.get("truncation_reasons") or [] for m in [CUT.search(str(x))] if m}
+        # The fan-out limit, by the prefix its reasons name each wallet by. In
+        # a case too old to say how much it cut, those wallets are the cut.
+        self.limits = {m.group(2): int(m.group(1)) for x in result.get("truncation_reasons") or []
+                       for m in [CUT.search(str(x))] if m}
+        self.cut = set() if "untraced" in result else set(self.limits)
+        self.walked = expanded_nodes(result)
         rows: dict[tuple[str, str], list[dict]] = defaultdict(list)
         for t in result.get("transfers") or []:
             rows[(t.get("from"), t.get("to"))].append(t)
@@ -179,25 +176,17 @@ class _Flow:
         return self._value(key) * (sum(p[3] for p in ps if keep(p)) / total if total > 0 else 1.0)
 
     def _expanded(self, a: str) -> bool:
-        n, r = self.nodes[a], self.r
-        if "expanded" in n:
-            return bool(n["expanded"])
-        if self.out[a] or a in self.untraced:
-            return True
-        if r.get("max_depth") is not None and int(n.get("depth") or 0) >= int(r["max_depth"]):
-            return False
-        reasons = [str(x) for x in r.get("truncation_reasons") or []]
-        if any(a[:10] in x for x in reasons):
-            return False
-        return not (r.get("stopped_by") or r.get("addresses_unexpanded_by_time")
-                    or r.get("addresses_unexpanded_by_budget") or any(x.startswith("node limit") for x in reasons))
+        """Whether the trace saw where the wallet's money went: the walk read
+        it, and a read that hit its record limit showed something sent on."""
+        capped = self.nodes[a].get("history_capped") and not self.out[a] and not self.untraced.get(a)
+        return self.walked.get(a, False) and not capped
 
     def _kind(self, a: str) -> str | None:
         """The bucket for money that reaches `a`, or None for a wallet it passes through."""
         n = self.nodes[a]
         if a in self.exchanges:
             return "exchange"
-        if n.get("risk_category") == "mixer":
+        if n.get("risk_category") in ENDS:
             return "risk"
         if n.get("is_router"):
             return "other"
@@ -328,9 +317,7 @@ class _Flow:
         for kind in KINDS:
             amount = sum(amounts[kind].values(), 0.0)
             buckets.append({"kind": kind, "amount": _r(amount), "share": round(amount / start, 6),
-                            "addresses": [a for a, v in sorted(amounts[kind].items(), key=lambda kv: (-kv[1], kv[0]))
-                                          if v > 1e-9],
-                            "action": ACTIONS.get(kind)})
+                            "addresses": _ranked(amounts[kind]), "action": ACTIONS.get(kind)})
         bases = {i["basis"] for i in info.values()}
         notes = ["A display of where the victim's share may have gone. Letters state the conservative "
                  "estimate, not these figures."]
@@ -372,7 +359,65 @@ class _Flow:
                                for a in order if info[a]["role"] == "wallet" and self.nodes[a].get("risk_category")
                                and vin[a] > 0],
             "notes": notes,
+            "stops": self._stops(amounts, info),
         }
+
+    def _stops(self, amounts, info) -> list[dict[str, Any]]:
+        """Where the trace stopped following the victim's share, and why: the
+        share that stopped at each kind of place, the wallets, and one sentence."""
+        limit = self.r.get("max_depth")
+        wallets = {a for a, i in info.items() if i["role"] in ("seed", "wallet")}
+        found = [
+            ("hop_limit", {a: v for a, v in amounts["beyond_limit"].items()
+                           if limit is not None and int(self.nodes[a].get("depth") or 0) >= int(limit)}),
+            ("fanout_limit", {a: v for a, v in amounts["not_followed"].items() if a in wallets}),
+            *((kind, {a: v for a, v in amounts["risk"].items() if self.nodes[a].get("risk_category") == kind})
+              for kind in ENDS),
+            # A labelled exchange, then a probable deposit address: a guess, said as one.
+            ("exchange", {a: v for a, v in amounts["exchange"].items() if a not in self.inferred}),
+            ("inferred", {a: v for a, v in amounts["exchange"].items() if a in self.inferred}),
+            ("no_outflow", {a: info[a]["left"] for a in wallets if not self.out[a] and not self.untraced.get(a)}),
+        ]
+        stops = []
+        for kind, where in found:
+            addresses = _ranked(where)
+            if addresses:
+                stops.append({"kind": "exchange" if kind == "inferred" else kind, "addresses": addresses,
+                              "amount": _r(sum(where[a] for a in addresses)),
+                              "note": self._stop_note(kind, addresses), "inferred": kind == "inferred"})
+        return stops
+
+    def _stop_note(self, kind: str, addresses: list[str]) -> str:
+        if kind == "hop_limit":
+            n = int(self.r["max_depth"])
+            return f"The trace stopped at {n} hop{'' if n == 1 else 's'}."
+        if kind == "exchange":
+            return "Reached an exchange: tracing ends here, and a letter to the exchange is the next step."
+        if kind == "inferred":
+            one = len(addresses) == 1
+            return (f"Reached {'a probable exchange deposit address' if one else 'probable exchange deposit addresses'}"
+                    f", inferred and not confirmed: a letter asking the exchange to confirm {'it' if one else 'them'} "
+                    "is the next step.")
+        if kind == "no_outflow":
+            return "Nothing was seen leaving after the money arrived, so it may still be there."
+        if kind != "fanout_limit":
+            return ENDS[kind]
+        first, more = addresses[0], len(addresses) - 1
+        n = self.limits.get(first[:10])
+        head = (f"Only the {n} largest destinations were followed" if n else
+                "Only destinations that each took at least a set share of what it sent were followed"
+                if self.rules.get(first) == "min_share" else "Only the largest destinations were followed")
+        others = f" and {more} other wallet{'' if more == 1 else 's'}" if more else ""
+        return f"{head} at {_short(first)}{others}."
+
+
+def _ranked(amounts: Mapping[str, float]) -> list[str]:
+    """The addresses that hold some of it, the largest first."""
+    return [a for a, v in sorted(amounts.items(), key=lambda kv: (-kv[1], kv[0])) if v > 1e-9]
+
+
+def _short(address: str) -> str:
+    return address if len(address) <= 12 else f"{address[:6]}…{address[-4:]}"
 
 
 def _r(x: float) -> float:

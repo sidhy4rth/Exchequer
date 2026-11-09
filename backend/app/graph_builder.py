@@ -929,7 +929,7 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             # A DEX router: funds sent here were swapped, not paid.
             "is_router": data.get("is_router", False),
             "router": data.get("router"),
-            # A contract that pays out to many addresses; not expanded.
+            # A contract that pays out to many addresses: read, but its payouts are not followed.
             "is_service_contract": data.get("is_service_contract", False),
             "total_in_native": round(data.get("total_in_native", 0.0), 6),
             "total_out_native": round(data.get("total_out_native", 0.0), 6),
@@ -941,6 +941,11 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "excluded_by_time": data.get("excluded_by_time", 0),
             # A read of this address stopped at its record limit (truncation_reasons says which side).
             "history_capped": data.get("history_capped", False),
+            # The walk read this address's transfers (its outflows; its
+            # inflows on a reverse trace), a service contract's included.
+            # False where a limit, an end of the walk (an exchange, a mixer
+            # pool) or a failed read stopped it.
+            "expanded": bool(data.get("expanded", False)),
             # Transfers the address made to itself: never an edge or a branch.
             "self_transfer_count": data.get("self_transfer_count", 0),
             "self_transfer_value_native": data.get("self_transfer_value_native", 0.0),

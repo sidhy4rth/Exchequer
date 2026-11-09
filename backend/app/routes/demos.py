@@ -18,7 +18,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse, PlainTextResponse
 
-from .. import config, request_letters, victim_flow
+from .. import config, request_letters
+from ..contracts import on_read
 
 router = APIRouter()
 
@@ -58,13 +59,14 @@ def get_recorded(demo: int) -> JSONResponse:
     nothing that writes to a case (watches, request logs) applies. Its
     letters are drafted below, marked as examples.
 
-    Recordings predate the victim flow, so it is built here, for each
-    follow-on too, and the case is rendered here as well: both in the worker
-    thread, as GET /trace/{id} does, never on the event loop."""
+    Recordings predate the victim flow, freeze dates and which wallets the
+    walk read, so they are added here (contracts.on_read), for each follow-on
+    too, and the case is rendered here as well: both in the worker thread, as
+    GET /trace/{id} does, never on the event loop."""
     row = _recordings().get(demo)
     if row is None:
         raise HTTPException(status_code=404, detail=f"No recording for demo {demo}")
-    return JSONResponse({**victim_flow.with_flow(row["result"]), "case_id": None,
+    return JSONResponse({**on_read(row["result"]), "case_id": None,
                          "created_at": row["recorded_at"], "recorded_demo": demo})
 
 
