@@ -77,7 +77,7 @@ copy that signs reports with a key of its own and calls them genuine on its own
 
 | SHA-256 fingerprint of the public key | In use from | Retired | Revoked |
 |---|---|---|---|
-| *not yet recorded: the owner adds the live key here and in `signing_keys.json`* | | | |
+| `f9427acc9ebc34ef44a28caffd80a699665a1ba029b93308332042ba895f0592` (exchequer-6gnl.onrender.com) | 2026-11-02 | | |
 
 The list is append-only. A report signed with a retired key reads "Genuine,
 signed with an earlier Exchequer key"; one signed with a revoked key never

@@ -200,3 +200,14 @@ def test_letters_say_where_to_verify_and_name_the_full_key():
     text = draft("case-1", case(), "exchange")
     assert f"{URL}/verify" in text
     assert signing.get_signer().fingerprint_sha256 in text
+
+
+def test_the_live_sites_key_is_published():
+    """r1-evidence-crypto-3: with "keys": [] every report the live site signed
+    read official:false. Its key (GET /signing-key on exchequer-6gnl.onrender.com,
+    9 Nov 2026: source environment, persistent) is now listed, in use."""
+    raw = json.loads(signing.OFFICIAL_KEYS_PATH.read_text())
+    live = [k for k in raw["keys"]
+            if k["fingerprint_sha256"] == "f9427acc9ebc34ef44a28caffd80a699665a1ba029b93308332042ba895f0592"]
+    assert len(live) == 1 and live[0]["retired"] is None and live[0]["revoked"] is False
+    assert any(k.fingerprint_sha256 == live[0]["fingerprint_sha256"] for k in signing.official_keys())
