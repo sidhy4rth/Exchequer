@@ -15,10 +15,13 @@ services:
     branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    # Deploy a commit on main only once its GitHub checks pass (tests, image
-    # build, commit e-mails), so a red commit never reaches the live site
-    # (r1-deps-supplychain-4).
-    autoDeployTrigger: checksPass
+    # Deploy every commit on main. Branch protection takes only pull requests
+    # whose CI checks passed (tests, migrations, image build, commit e-mails;
+    # admins included), so a red commit never reaches main or the live site
+    # (r1-deps-supplychain-4). Not checksPass: Render would wait for every
+    # check on the commit, the push canary among them, and the canary waits
+    # for that commit to go live -- each would wait for the other.
+    autoDeployTrigger: commit
     # The build also needs a Secret File named label_store_token (Settings →
     # Secret Files; a Blueprint cannot declare one): the read-only token for
     # the private label-store release. Without it the build fails and the

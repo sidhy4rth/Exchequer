@@ -181,8 +181,13 @@ def test_new_commits_must_carry_a_noreply_address():
     assert "@users.noreply.github.com" in script and "%ae" in script and "%ce" in script
 
 
-def test_render_deploys_main_only_after_its_checks_pass():
-    """r1-deps-supplychain-4: with autoDeployTrigger commit, a Dependabot merge
-    deployed before CI had finished."""
+def test_render_deploys_each_merge_and_the_canary_can_see_it():
+    """r1-deps-supplychain-4: a Dependabot merge deployed before CI had finished.
+    Branch protection on main now takes only pull requests whose CI checks
+    passed (admins included), so a commit on main has passed CI. checksPass
+    would also wait for the push canary, which itself waits for that commit
+    to go live: each waits for the other, and nothing would deploy again."""
     service = load(ROOT / "render.yaml")["services"][0]
-    assert service["autoDeployTrigger"] == "checksPass"
+    assert service["autoDeployTrigger"] == "commit"
+    on = load(ROOT / ".github" / "workflows" / "site-canary.yml")[True]
+    assert "push" in on
