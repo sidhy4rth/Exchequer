@@ -135,7 +135,7 @@ export default function Present({ result, related = [], unit, onClose }) {
       <div className="pr-rowhead">
         <span className="micro">How it got there · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
         <span className="pr-rowright">
-          <span className="micro">{view === 'flow' ? (reverse ? 'money flows into the reported wallet, right' : 'the traced funds in red, left to right') : 'bubble area = value moved · arrows the way the money went'}</span>
+          <span className="micro">{view === 'flow' ? (reverse ? 'money flows into the reported wallet, right' : 'the traced funds in green, left to right') : 'bubble area = value moved · arrows the way the money went'}</span>
           <span className="seg">
             <button type="button" className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
             <button type="button" className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
@@ -150,7 +150,7 @@ export default function Present({ result, related = [], unit, onClose }) {
       <div className="pr-hops">
         {path.slice(1).map((s, i) => (
           <div className="pr-hop" key={s.address}>
-            <span className="red">Hop {i + 1}</span>
+            <span className="green">Hop {i + 1}</span>
             <span className="mono">{short(path[i].address)} <span className="faint">→</span> {s.exchange ? <span className="green">{plain(s.label ?? s.exchange)}</span> : short(s.address)}</span>
             <span className="mono">{num(s.value_native ?? 0)} {unit}</span>
           </div>
