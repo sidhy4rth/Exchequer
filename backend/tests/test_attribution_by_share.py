@@ -444,3 +444,35 @@ def test_a_five_of_ten_thousand_case_is_low_in_number_band_and_report(trace):
     page = " ".join(PdfReader(io.BytesIO(render_pdf(report, text))).pages[0].extract_text().split())
     assert "Sent from the reported address that likely arrived" not in page
     assert "the reported wallet sent" in page
+
+
+# --- a reverse trace says "received", not "sent" ---------------------------------
+
+def test_a_reverse_traces_share_is_of_what_the_wallet_received():
+    # 9 Nov, demo 5: a reverse trace's cap read "Only 12.5% of what the
+    # reported address sent ... reached this exchange". The figure is of what
+    # the wallet received, and the exchange is where it came from.
+    hot, other = addr("b0"), addr("c0")
+    g = graph([(hot, SEED, 1.0), (other, SEED, 7.0)])
+    record, _ = pipeline._materiality(g, SEED, INCOMING, [match(hot, "Binance", 1)], [], None)
+    assert record["basis"] == "seed_inflow"
+    forward, _ = pipeline._materiality(graph([(SEED, hot, 1.0)]), SEED, OUTGOING, [match(hot, "Binance", 1)], [], None)
+    assert forward["basis"] == "seed_outflow"
+
+
+def test_a_reverse_traces_cap_caveat_names_the_direction():
+    g = graph([(KRAKEN_1, SEED, 1.0)])
+    m = match(KRAKEN_1, "Kraken", 1, value=1.0)
+    capped = score_case(g, SEED, m, materiality={"basis": "seed_inflow", "primary_share": 0.125, "threshold": 0.10,
+                                                 "majority": 0.50, "denominator": 8.0, "primary_reach": 1.0},
+                        direction=INCOMING)
+    (caveat,) = [c for c in capped.caveats if "so confidence is capped" in c]
+    assert "of what the reported address received" in caveat and "came from this exchange" in caveat
+    assert " sent " not in caveat and "reached this exchange" not in caveat
+
+
+def test_the_reports_share_line_names_the_direction():
+    from app.report import share_of_funds
+    line = share_of_funds({"basis": "seed_inflow", "primary_share": 0.125, "primary_reach": 1.0, "denominator": 8.0},
+                          "ETH")
+    assert "the reported wallet received" in line and "sent" not in line

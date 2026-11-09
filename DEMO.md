@@ -122,14 +122,14 @@ Ethereum · ETH · 3 hops · **~10 seconds**
 |---|---|
 | Addresses traced | 38 |
 | Exchange | **Binance — probable deposit address (inferred)** `0x2f9379f0…538e4`, **1 hop** — 18 sweeps since October 2022, every one to Binance 14 |
-| Confidence | **High** (0.875 when this was written). The recording of 14 October shows **Low** (0.40) at a different Binance deposit address: this demo moves, which is the point of it. The daily check only requires it to still reach an exchange. Say the band on screen, not this table's number. |
+| Confidence | **High** (0.875 when this was written). The recording of 14 October shows **Low** (0.40) at a different Binance deposit address; on 9 November the live trace reached Coinbase at 0.46 and, an hour later, Kraken at 0.45. This demo moves, which is the point of it. The daily check only requires it to still reach an exchange. Say the band on screen, not this table's number. |
 | Pro-rata | **2.01 of 2.01 ETH** — everything that reached the deposit address came straight from the reported wallet |
-| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: OKX deposit at 0.39 · 27 Sep: **Binance deposit at 0.875** |
+| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: OKX deposit at 0.39 · 27 Sep: **Binance deposit at 0.875** · 14 Oct: Binance deposit at 0.40 · 9 Nov: Coinbase at 0.46, then Kraken at 0.45 |
 | Patterns | none |
 | Transfers excluded by the time rule | **450** |
 
-**Use this one to show honesty, not a clean result.** It has changed six
-times, and every change has a reason the tool can state.
+**Use this one to show honesty, not a clean result.** It has changed at
+least eight times, and every change has a reason the tool can state.
 
 On 4 September it reached Binance at 0.65. On 15 September, with the time
 rule in place, it reached nothing: that path ran through transfers made
@@ -198,7 +198,7 @@ Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~1 second, 1
 | Addresses that funded it | 10 |
 | **Of which labelled exchanges** | **5** — four Binance, one OKX |
 | Candidate victims | 5 |
-| Source exchange | Binance 17, confidence 1.00 |
+| Source exchange | Binance 17, exact label, 1 hop — confidence **0.74, moderate**: its 0.51 ETH is 12.5% of the 4.05 ETH the wallet received, and a minority source is never called high |
 
 Ten addresses funded this wallet, but five of them are exchange hot wallets,
 and the panel marks each one **"withdrawal, not a victim"** in the row itself.
@@ -217,15 +217,15 @@ Ethereum · ETH · 3 hops · **~11 seconds, 20 API calls**
 | | |
 |---|---|
 | Addresses traced | 32 |
-| Attribution | **Binance — probable deposit address (inferred)** `0xd1565e8f…7aa20`, 1 hop |
-| Confidence | **0.875** (hop 1.0 · amount 1.0 · directness **0.5**) |
-| Evidence | 2 outgoing transfers, 100% of them to **Binance 14**, 2.3201 ETH swept |
+| Attribution | **Binance — probable deposit address (inferred)** `0x8290868c…203a5`, 2 hops |
+| Confidence | **0.49, low** (hop 0.75 · amount 0.46 · directness **0.5**), capped by share: about 12 of the 215 ETH the wallet sent (5.6%) reached it |
+| Evidence | 3 outgoing transfers, 100% of them to **Binance 14** (two more Binance deposit addresses on other branches, `0xd1565e8f…7aa20` among them) |
 | Also in `matches` | Binance 14 itself, exact label, 2 hops |
 | **Screening** | the reported address is itself a **reported phishing wallet** (`Fake_Phishing4939`); **mixer — Tornado Cash Proxy** `0x722122df…6b6967`, 3 hops, 10 ETH in; the trace stops there |
 | Patterns | amount split |
 
 The reported address carries Etherscan's *Phish / Hack* label. Its funds went
-to an unlabelled wallet whose entire outgoing history is two sweeps into
+to an unlabelled wallet whose entire outgoing history is three sweeps into
 Binance's labelled hot wallet and nothing else — the shape an exchange
 produces when it sweeps a customer's deposits. The sidebar reads *"Probable
 Binance deposit address (inferred — see evidence)"* and the report prints the
@@ -233,7 +233,9 @@ sentence that would confirm it: a lawful request to Binance asking whether
 that address is one it issued, and to whom. That is the address the request
 has to name; the hot wallet two hops on identifies nobody. Note the directness
 component at 0.5: the tool scores an inference below a label-file match, and
-the exact match is still listed.
+the exact match is still listed. Note the band too: only 5.6% of what this
+wallet sent reached that deposit address, so the score is capped at low however
+clean the inference is; the rest went elsewhere.
 
 New since 22 September: another branch of the same money puts **10 ETH into
 Tornado Cash** three hops out. The alert says so above the finding, and the
@@ -255,8 +257,8 @@ Ethereum · ETH · 3 hops · **~5 seconds, 6 API calls**
 |---|---|
 | Addresses traced | 9 |
 | Sanctions screening | **hit — the reported address itself** (GAZA NOW): OFAC SDN list, **and** the UK Sanctions List (counter-terrorism, CTD0004), **and** an Israeli NBCTF seizure order (ASO 2/24) |
-| Attribution | **Bybit — probable deposit address (inferred)** `0xcd02509d…dcfe9`, 1 hop |
-| Confidence | 0.875 |
+| Attribution | **Bybit — probable deposit address (inferred)** `0xcd02509d…dcfe9`, 2 hops along the route the money took |
+| Confidence | **0.77, high** (hop 0.75 · amount 0.99 · directness 0.5); 63% of what the wallet sent reached it |
 | Evidence | 4 transfers, 100% to **Bybit 1**, 3.3581 ETH swept |
 
 Two things in one small trace. The reported address is designated not by one
@@ -371,8 +373,8 @@ Tron · USDT · 2 hops · **~3 seconds, 10 API calls**
 |---|---|
 | Addresses traced | 30 |
 | **Screening** | the reported address — **USDT frozen by Tether on 11 September 2026** — and the wallet it paid next, frozen the same day |
-| Exchange | **Binance** — `Binance-Hot 7`, exact label, 2 hops, 45,968.32 USDT received |
-| Confidence | **0.80** |
+| Exchange | **Binance** — `Binance-Hot 7`, exact label, 2 hops; about **635 USDT** of the reported wallet's 9,891 reached it (6.4%), mixed into 45,968 USDT on the way |
+| Confidence | **0.49, low**, capped by that 6.4% share |
 | Patterns | amount split |
 
 Tether can freeze an address on its USDT contract, and it does — after a
@@ -386,9 +388,10 @@ disagreement. No dataset sits between the chain and the label.
 Say what the freeze means and what it does not: the issuer acted on this
 wallet twelve days ago, and on the wallet it paid, the same day — a reason to
 ask Tether what it knows, on a lawful request. It does not say why, and the
-alert says so. Meanwhile 45,968 USDT reached Binance's hot wallet two hops
-out, split across several wallets on the way: the request to Binance is the
-second letter. This is the demo for "why Tron", in three seconds.
+alert says so. Meanwhile money from this wallet reached Binance's hot wallet two hops
+out: about 635 of the 9,891 USDT it sent, mixed into 45,968 USDT on the way,
+which is why the score is low. The request to Binance is the second letter,
+and it states that share rather than the whole. This is the demo for "why Tron", in three seconds.
 
 ---
 

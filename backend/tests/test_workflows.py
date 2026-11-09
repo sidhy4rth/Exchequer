@@ -181,8 +181,23 @@ def test_new_commits_must_carry_a_noreply_address():
     assert "@users.noreply.github.com" in script and "%ae" in script and "%ce" in script
 
 
-def test_render_deploys_main_only_after_its_checks_pass():
-    """r1-deps-supplychain-4: with autoDeployTrigger commit, a Dependabot merge
-    deployed before CI had finished."""
+def test_render_deploys_each_merge_and_the_canary_can_see_it():
+    """r1-deps-supplychain-4: a Dependabot merge deployed before CI had finished.
+    Branch protection on main now takes only pull requests whose CI checks
+    passed (admins included), so a commit on main has passed CI. checksPass
+    would also wait for the push canary, which itself waits for that commit
+    to go live: each waits for the other, and nothing would deploy again."""
     service = load(ROOT / "render.yaml")["services"][0]
-    assert service["autoDeployTrigger"] == "checksPass"
+    assert service["autoDeployTrigger"] == "commit"
+    on = load(ROOT / ".github" / "workflows" / "site-canary.yml")[True]
+    assert "push" in on
+
+
+def test_render_names_the_measured_proxy_hops():
+    """Measured on the live site 9 Nov 2026 (/health/detail client_ip): the
+    X-Forwarded-For chain is client, Cloudflare edge, Render's proxy, so the
+    client is the third entry from the right. Used only when CF-Connecting-IP
+    is missing; set, the leftmost (client-chosen) entry is never the key."""
+    env = {e["key"]: e for e in load(ROOT / "render.yaml")["services"][0]["envVars"]}
+    assert env["EXCHEQUER_TRUST_PROXY"]["value"] == "render"
+    assert env["EXCHEQUER_PROXY_HOPS"]["value"] == "3"

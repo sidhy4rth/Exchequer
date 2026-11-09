@@ -590,11 +590,14 @@ def score_case(
     material_caveat = []
     uncapped = None
     if share_band != band and materiality:
+        inflow = materiality.get("basis") == "seed_inflow"  # a reverse trace
         material_caveat.append(
-            f"Only {materiality['primary_share'] * 100:.1f}% of what the reported address sent "
+            f"Only {materiality['primary_share'] * 100:.1f}% of what the reported address "
+            f"{'received' if inflow else 'sent'} "
             f"(about {materiality.get('primary_reach', 0):g} of {materiality.get('denominator', 0):g} "
-            f"{native_symbol}) reached this exchange, so confidence is capped at {share_band}: the rest of "
-            "the funds went elsewhere."
+            f"{native_symbol}) {'came from' if inflow else 'reached'} this exchange, so confidence is capped "
+            f"at {share_band}: the rest of the funds "
+            f"{'came from elsewhere' if inflow else 'went elsewhere'}."
         )
     if capped_band != share_band and materiality:
         recycled = materiality.get("recycled") or {}

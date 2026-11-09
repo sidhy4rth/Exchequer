@@ -662,7 +662,9 @@ def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
     reach, hops = widest_routes(graph, seed, direction, targets=[m.address for m in matches])
     outflow = seed_outflow(graph, seed, direction, untraced)
     cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis)
-    denominator, basis = (cap, cap_basis) if cap else (outflow, "seed_outflow")
+    # On a reverse trace the "outflow" is what the wallet received (seed_outflow).
+    own = "seed_outflow" if direction == OUTGOING else "seed_inflow"
+    denominator, basis = (cap, cap_basis) if cap else (outflow, own)
     shares = MatchShares()
     for m in matches:
         if m.address == seed:

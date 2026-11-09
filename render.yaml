@@ -15,10 +15,13 @@ services:
     branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    # Deploy a commit on main only once its GitHub checks pass (tests, image
-    # build, commit e-mails), so a red commit never reaches the live site
-    # (r1-deps-supplychain-4).
-    autoDeployTrigger: checksPass
+    # Deploy every commit on main. Branch protection takes only pull requests
+    # whose CI checks passed (tests, migrations, image build, commit e-mails;
+    # admins included), so a red commit never reaches main or the live site
+    # (r1-deps-supplychain-4). Not checksPass: Render would wait for every
+    # check on the commit, the push canary among them, and the canary waits
+    # for that commit to go live -- each would wait for the other.
+    autoDeployTrigger: commit
     # The build also needs a Secret File named label_store_token (Settings →
     # Secret Files; a Blueprint cannot declare one): the read-only token for
     # the private label-store release. Without it the build fails and the
@@ -65,6 +68,11 @@ services:
       # /health/detail "client_ip" and set EXCHEQUER_PROXY_HOPS from it.
       - key: EXCHEQUER_TRUST_PROXY
         value: render
+      # Measured 9 Nov 2026 with /health/detail: X-Forwarded-For arrives as
+      # client, Cloudflare edge, Render's proxy. Only used if CF-Connecting-IP
+      # is ever missing; re-measure if Render changes its proxies.
+      - key: EXCHEQUER_PROXY_HOPS
+        value: "3"
       # Each wake from sleep starts with an empty provider cache; re-tracing
       # every demo then would spend the free quota and slow the first visitor
       # on a tenth of a CPU. The recorded demos open instantly instead.
