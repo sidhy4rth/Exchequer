@@ -147,7 +147,8 @@ def also_reached(trace: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 # What a materiality denominator is, in words.
-SHARE_OF = {"seed_outflow": "the reported wallet sent", "reported_amount": "the victim reported paying",
+SHARE_OF = {"seed_outflow": "the reported wallet sent", "seed_inflow": "the reported wallet received",
+            "reported_amount": "the victim reported paying",
             "swap_output": "the swap returned", "swap_share": "the swap returned"}
 
 
