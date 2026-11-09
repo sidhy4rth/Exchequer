@@ -65,3 +65,10 @@ def test_a_backup_that_is_not_set_up_is_red(env, ok):
     assert (done.returncode == 0) is ok, done.stdout + done.stderr
     if not ok:
         assert "::error::" in done.stdout
+
+
+def test_the_nightly_backup_waits_for_the_owner_to_switch_it_on():
+    # 9 Nov: with no Postgres attached yet, every night failed and e-mailed the
+    # owner. Scheduled runs now need the repository variable STORE_BACKUP=on;
+    # a run started by hand always runs, so an unready setup is still red.
+    assert job()["if"] == "github.event_name == 'workflow_dispatch' || vars.STORE_BACKUP == 'on'"

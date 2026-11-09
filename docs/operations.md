@@ -188,8 +188,8 @@ runs `pg_dump --format=custom` against the database with a read-only role,
 checks the archive holds the `cases` table, encrypts it with
 [age](https://age-encryption.org) and keeps it as a workflow artifact for 14
 days. The plain dump never leaves the runner, and the log prints no counts or
-table contents. Until it is set up the job fails, so a night with no copy is
-never green.
+table contents. Until it is switched on (step 4 below) a scheduled night is
+skipped, not failed; once on, a night with no copy is red, never green.
 
 The dump holds every case, freeze request and alert webhook, so it is
 encrypted to the public key in the `backup` environment's
@@ -221,6 +221,10 @@ To switch the nightly copy on, once:
    than 17, set the repository variable `BACKUP_PG_MAJOR` to it.
 3. Actions → Store backup → Run workflow (on `main`). It must be green with an
    artifact `store-<run id>`.
+4. Settings → Secrets and variables → Actions → Variables: the repository
+   variable `STORE_BACKUP` = `on`, so the nightly run starts. (The nightly list
+   refresh has the same switch, `REFRESH_LISTS` = `on`, for once the `lists`
+   environment has its keys.)
 
 To restore (drill this once into a scratch Neon branch before relying on it):
 
