@@ -23,20 +23,21 @@ export function pieces(text) {
 const ITEM = /^(\d+\.|\([a-z]\)) /           // "4. " or "(a) ": its lines hang under the words
 const FIELD = /^[A-Z][A-Za-z]* +: /          // "Amount    : ": its lines wrap under the value
 const OWN_LINE = /^(tx |Hop \d+:|Reported address)/
+const SOLO = /^(tx |[0-9A-Za-z]{25,}$)/       // a tx or a listed wallet: never wrapped, so nothing flows into it
 
 /** The letter for a proportional font, one entry per paragraph: the server
  * wraps at 95 fixed-width columns, so the lines that carry on a paragraph
  * at its own indent flow back into it. Leading spaces become `indent`; an
  * item's number is its `hang`; the runs of spaces that lined up columns
- * close to one ("From      :" reads "From:"). Items, hops, txs and fields
- * keep their own lines. */
+ * close to one ("From      :" reads "From:"). Items, hops, txs, listed
+ * wallets and fields keep their own lines. */
 export function lines(text) {
   const out = []
   let open = null // the paragraph still taking lines, and the column they start at
   for (const line of rawLines(text)) {
     const head = typeof line.parts[0] === 'string' ? line.raw : ''
     const item = ITEM.exec(head)
-    const own = !line.parts.length || item || FIELD.test(head) || OWN_LINE.test(head)
+    const own = !line.parts.length || item || FIELD.test(head) || OWN_LINE.test(head) || SOLO.test(head)
     if (open && !own && line.indent === open.col && line.indent > 0) {
       for (const p of [' ', ...line.parts]) add(open.para.parts, p)
       continue
@@ -44,7 +45,7 @@ export function lines(text) {
     const para = { indent: line.indent, hang: item ? item[0].length : 0, parts: line.parts }
     out.push(para)
     const field = FIELD.exec(head)
-    open = line.parts.length ? { para, col: line.indent + (item ? item[0].length : field ? field[0].length : 0) } : null
+    open = line.parts.length && !SOLO.test(head) ? { para, col: line.indent + (item ? item[0].length : field ? field[0].length : 0) } : null
   }
   return out
 }

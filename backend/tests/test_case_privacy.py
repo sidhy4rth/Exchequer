@@ -191,6 +191,7 @@ def leaks(text):
     "/trace/rich-case/report?format=json", "/trace/rich-case/report?format=text",
     "/trace/rich-case/graph?format=csv", "/trace/rich-case/graph?format=graphml",
     "/trace/rich-case/letters", "/trace/rich-case/letter?to=exchange",
+    "/trace/rich-case/letter?to=exchange-freeze",
     "/trace/rich-case/requests", "/cases", "/cases/correlate", "/cases/correlate?case_id=rich-case",
 ])
 @pytest.mark.parametrize("headers", [{}, OTHER], ids=["anonymous", "another-browser"])

@@ -115,7 +115,7 @@ def export_graph(
 
 @router.get("/trace/{case_id}/letters")
 def list_letters(case_id: str, user: CurrentUser) -> dict[str, Any]:
-    """Which request letters this case can support: to the exchange, to Tether."""
+    """Which request letters this case can support: the urgent freeze letters first, then the information letters."""
     case = _case_or_404(case_id, user)
     letters = request_letters.available(case.result)
     audit.record("case.letters_list", case_id=case_id)
@@ -126,12 +126,14 @@ def list_letters(case_id: str, user: CurrentUser) -> dict[str, Any]:
 def get_letter(
     case_id: str,
     user: CurrentUser,
-    to: str = Query(..., pattern="^(exchange|tether)$", description="exchange or tether"),
+    to: str = Query(..., pattern=f"^({'|'.join(request_letters.LETTERS)})$",
+                    description="exchange or tether; exchange-freeze or tether-freeze for the urgent freeze letter"),
 ) -> PlainTextResponse:
     """A draft request letter, filled from the case, for the officer to complete.
 
     A draft, never a sent document: the officer's details, the case reference
-    and the legal provision are left as marked blanks.
+    and the legal provision are left as marked blanks, and the letter says it
+    is not valid until an officer signs it on official letterhead.
     """
     case = _case_or_404(case_id, user)
     try:

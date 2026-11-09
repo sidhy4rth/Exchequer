@@ -19,6 +19,13 @@ What an exchange letter may ask depends on what the case holds about the address
 whether an inferred one is theirs, then about the customer; about the accounts
 behind the listed transactions for a wallet the exchange runs itself, never KYC
 on the wallet; and, for an explorer's tag, only whether the address is theirs.
+
+Before either, the urgent freeze letter: "hold these funds now, pending a
+formal request", to the exchange and to Tether. It is sent first, so it holds
+only what the recipient needs to act -- the wallets, the hashes with their
+times, the chain and token, and the one amount the information letter states
+-- and no narrative. Every letter says it is not valid until an officer signs
+it on official letterhead, so an unsigned draft cannot pass as a police request.
 """
 from __future__ import annotations
 
@@ -35,7 +42,11 @@ from .risk_matcher import _list_meta, is_tether_usdt_freeze
 
 EXCHANGE = "exchange"
 TETHER = "tether"
-LETTERS = (EXCHANGE, TETHER)
+EXCHANGE_FREEZE = "exchange-freeze"  # urgent: hold the funds now, pending a formal request
+TETHER_FREEZE = "tether-freeze"
+LETTERS = (EXCHANGE_FREEZE, TETHER_FREEZE, EXCHANGE, TETHER)  # the freeze letters first: they go first
+
+NOT_VALID = "This is a DRAFT. It is not valid until an officer signs it on official letterhead."
 
 BLANK = "[____________________]"
 USDT_CHAINS = {"ethereum", "tron"}  # where USDT is Tether's own contract, with a blacklist
@@ -184,15 +195,82 @@ def _usdt_traces(result: dict[str, Any]) -> list[dict[str, Any]]:
     return [t for t in _all_traces(result) if t.get("asset") == "USDT" and t.get("chain") in USDT_CHAINS]
 
 
-def available(result: dict[str, Any]) -> list[dict[str, str]]:
-    """Which letters this case can support, for the interface to offer."""
+def _route_into(trace: dict[str, Any], i: int) -> tuple[list[tuple[str, int | None]], int]:
+    """The transfers along the route into its i-th wallet, with their times,
+    and how many there were: the case's own list of them, which holds every
+    one on the route, else the step's, which keeps twenty."""
+    route = trace.get("trace_path") or []
+    if i <= 0:
+        return [], 0  # what reached the start is the complaint's, never this letter's
+    step, before = route[i], route[i - 1].get("address")
+    rows = [t for t in trace.get("transfers") or [] if t.get("from") == before and t.get("to") == step.get("address")]
+    hashes = step.get("tx_hashes") or []
+    pairs = ([(t.get("hash"), t.get("timestamp")) for t in rows] if rows else
+             [(h, step.get("first_seen") if len(hashes) == 1 else None) for h in hashes])
+    return pairs, max(len(pairs), step.get("tx_count") or 0)
+
+
+NOT_A_HOLDER = ("label", "exchange", "inferred_exchange", "risk_category", "is_router", "is_service_contract",
+                "is_terminal")
+STOPS_MAX = 5  # a freeze request names a few wallets, never every end of a wide trace
+
+
+def _stops(trace: dict[str, Any], frozen: set[str]) -> tuple[list[dict[str, Any]], int]:
+    """Where a trace that reached no exchange left the USDT: the unlabelled
+    wallets that received it and sent none on (the start, if it sent
+    nothing), the largest first, and how many more there were."""
+    graph = trace.get("graph") or {}
+    ends = sorted((n for n in graph.get("nodes") or [] if n.get("address") and not n.get("total_out_native")
+                   and n["address"] not in frozen and not any(n.get(k) for k in NOT_A_HOLDER)),
+                  key=lambda n: -(n.get("total_in_native") or 0))
+    wallets = []
+    for n in ends[:STOPS_MAX]:
+        address = n["address"]
+        if address == trace.get("address"):
+            wallets.append({"address": address, "pairs": [], "count": 0})
+            continue
+        rows = [(t.get("hash"), t.get("timestamp")) for t in _transfers_into(trace, address)]
+        count = sum(e.get("tx_count") or 0 for e in graph.get("edges") or [] if e.get("target") == address)
+        wallets.append({"address": address, "pairs": rows, "count": max(len(rows), count)})
+    return wallets, len(ends) - len(wallets)
+
+
+def _tether_holds(result: dict[str, Any]) -> list[tuple[dict[str, Any], list[dict[str, Any]], int]]:
+    """Each USDT trace's wallets that Tether could be asked to freeze: along
+    the route to the exchange, or where a trace that reached none stopped;
+    never an exchange's or another labelled wallet, nor one Tether has
+    already frozen. A reverse trace runs back to where the money came from: none."""
+    if result.get("direction", "outgoing") != "outgoing":
+        return []
+    frozen = {m.get("address") for m in _frozen(result)}
     out = []
+    for trace in _usdt_traces(result):
+        route, wallets, left = trace.get("trace_path") or [], [], 0
+        for i, s in enumerate(route):
+            if (s.get("address") and s["address"] not in frozen and s["address"] != trace.get("exchange_address")
+                    and not s.get("label") and not s.get("exchange")):
+                pairs, count = _route_into(trace, i)
+                wallets.append({"address": s["address"], "pairs": pairs, "count": count})
+        if not route:
+            wallets, left = _stops(trace, frozen)
+        if wallets:
+            out.append((trace, wallets, left))
+    return out
+
+
+def available(result: dict[str, Any]) -> list[dict[str, str]]:
+    """Which letters this case can support, for the interface to offer: the
+    urgent freeze letters first, since they are sent first."""
+    urgent, info = [], []
     found = _attribution(result)
     if found and result.get("direction", "outgoing") == "outgoing":
-        out.append({"to": EXCHANGE, "title": f"Request to {found['trace']['exchange']}"})
+        urgent.append({"to": EXCHANGE_FREEZE, "title": f"Urgent freeze request to {found['trace']['exchange']}"})
+        info.append({"to": EXCHANGE, "title": f"Request to {found['trace']['exchange']}"})
+    if _tether_holds(result):
+        urgent.append({"to": TETHER_FREEZE, "title": "Urgent freeze request to Tether"})
     if _frozen(result) or _usdt_traces(result):
-        out.append({"to": TETHER, "title": "Request to Tether"})
-    return out
+        info.append({"to": TETHER, "title": "Request to Tether"})
+    return urgent + info
 
 
 # An exploratory trace starts from everything the reported address sent, so
@@ -263,13 +341,14 @@ def _cleaned(value: Any) -> Any:
     """`value` with every string on one line (display_text.one_line). Labels,
     tags and names in a case come from third parties, and a newline in one
     would print as a paragraph of the letter. The graph is never quoted, so
-    it is left out rather than walked."""
+    it is kept as it is rather than walked: only its addresses, which are
+    printed through one_line, and its numbers and flags are read."""
     if isinstance(value, str):
         return one_line(value)
     if isinstance(value, list):
         return [_cleaned(v) for v in value]
     if isinstance(value, dict):
-        return {k: _cleaned(v) for k, v in value.items() if k != "graph"}
+        return {k: v if k == "graph" else _cleaned(v) for k, v in value.items()}
     return value
 
 
@@ -362,16 +441,20 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _today() -> str:
+    return _utc_now().astimezone(IST).strftime("%d %B %Y")  # the officer's date, whatever the server's clock says
+
+
 def _header(case_id: str, result: dict[str, Any], to_line: str, subject: str) -> list[str]:
-    today = _utc_now().astimezone(IST).strftime("%d %B %Y")  # the officer's date, whatever the server's clock says
     manifest = (result.get("evidence") or {}).get("manifest_sha256")
     return [
         "DRAFT — for the investigating officer to review, complete and sign.",
+        NOT_VALID,
         "Generated by Exchequer from a stored case. Nothing below has been sent.",
         "",
         f"From      : {BLANK} (name, rank, unit, official e-mail and phone)",
         f"Reference : {BLANK} (FIR / complaint / NCRP acknowledgement number)",
-        f"Date      : {today}",
+        f"Date      : {_today()}",
         f"To        : {to_line}",
         "",
         f"Subject   : {subject}",
@@ -557,8 +640,147 @@ def _tether_letter(case_id: str, result: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+# -- the urgent freeze letters -------------------------------------------------------
+FREEZE_ASK = {  # what the case holds about the address decides what may be held
+    LABELLED_DEPOSIT: "Please hold, now, funds up to the amount below in the account(s) that deposit address {a} "
+                      "belongs to",
+    INFERRED_DEPOSIT: "If {a} is a deposit address you issued, please hold, now, funds up to the amount below in "
+                      "the account(s) it belongs to",
+    EXCHANGE_WALLET: "Please hold, now, funds up to the amount below in the customer account(s) credited by the "
+                     "transactions below into your wallet {a} (this request is not about the wallet itself)",
+    EXPLORER_TAG: "If {a} is controlled by you, please hold, now, funds up to the amount below in the account(s) "
+                  "credited by the transactions below",
+}
+
+
+def _freeze_header(to_line: str, subject: str, ask: str) -> list[str]:
+    return [
+        "DRAFT — URGENT freeze request, for the investigating officer to complete and sign.",
+        NOT_VALID,
+        "Generated by Exchequer from a stored case. Nothing below has been sent.",
+        "",
+        f"From      : {BLANK} (officer's name and rank)",
+        f"Station   : {BLANK} (police station / cyber cell)",
+        f"Reference : {BLANK} (FIR / NCRP acknowledgement number)",
+        f"Contact   : {BLANK} (official e-mail and phone)",
+        f"Date      : {_today()}",
+        f"To        : {to_line}",
+        "",
+        f"Subject   : URGENT — {subject}, pending a formal request",
+        "",
+        f"Under {BLANK} (the legal provision this request is made under, officer to state):",
+        *textwrap.wrap(ask + ", pending a formal request from this office.", width=95, initial_indent="   ",
+                       subsequent_indent="   ", break_long_words=False, break_on_hyphens=False),
+        "",
+    ]
+
+
+def _freeze_amount(stated: dict[str, Any] | None, asset: str, reached: str | None = None) -> list[str]:
+    """The information letter's figure, never a gross one; the officer's when
+    there is none. To Tether it is what went on to the exchange (`reached`),
+    not what the listed wallets hold."""
+    if stated is None:
+        return [f"Amount    : {BLANK} (officer to state)"]
+    hedge = "" if stated["intake"] else "; it can include other people's money"
+    went = f" passed through these wallets and reached {reached}" if reached else ""
+    return [f"Amount    : about {stated['amount']:,.6f} {asset}{went}",
+            f"            (the smallest estimate the case holds, from the public records{hedge})"]
+
+
+def _hash_lines(pairs: list[tuple[str, int | None]], into: str, count: int = 0) -> list[str]:
+    if not pairs:
+        return [f"Transactions into {into}: {BLANK} (officer to add)"]
+    cut = [f"     ({len(pairs)} of {count} transfers listed; officer to add the rest)"] if count > len(pairs) else []
+    return [f"Transactions into {into} (times in IST, with UTC):",
+            *(f"     tx {h}" + (f", {_when(ts)}" if ts else "")
+              for h, ts in sorted(pairs, key=lambda p: (p[1] is None, p[1] or 0))), *cut]
+
+
+def _carrying(trace: dict[str, Any], i: int, amount: float | None) -> list[dict[str, Any]]:
+    """The transfers into the route's i-th wallet that can carry the traced
+    funds: from the wallet before it, in time order, each carrying no more
+    than had reached that wallet by then, until `amount` is covered. A wallet
+    the exchange runs credits many customers: the rest are not this case's."""
+    route, rows = trace["trace_path"], trace.get("transfers") or []
+    via, start = route[i - 1].get("address"), route[i - 2].get("address") if i >= 2 else None
+    arrived = ([(a.get("timestamp") or 0, a.get("value_native") or 0.0) for a in rows
+                if start and a.get("from") == start and a.get("to") == via]
+               or [(route[i - 1].get("first_seen") or 0, float("inf"))])  # the start's money is all traced
+    listed, carried = [], 0.0
+    for t in (t for t in _transfers_into(trace, route[i].get("address")) if t.get("from") == via):
+        if amount is not None and carried >= amount - 1e-6:
+            break
+        reached = sum(v for ts, v in arrived if ts <= (t.get("timestamp") or 0))
+        part = min(t.get("value_native") or 0.0, reached - carried)
+        if part > 1e-9:
+            listed.append(t)
+            carried += part
+    return listed
+
+
+SIGN_OFF = ["", BLANK, "(signature, name, rank, seal)"]
+
+
+def _exchange_freeze(result: dict[str, Any]) -> str:
+    found = _attribution(result)
+    if not found or result.get("direction", "outgoing") != "outgoing":
+        raise LetterNotApplicable("This case reached no exchange, so there is no exchange to write to.")
+    trace, asset = found["trace"], found["asset"]
+    exchange, address, kind = trace["exchange"], trace["exchange_address"], attribution_kind(trace)
+    stated = _letter_amount(result, found)
+    i = next((n for n, s in enumerate(trace.get("trace_path") or []) if s.get("address") == address), 0)
+    every, note = _transfers_into(trace, address), []
+    if kind in COMPANY_WALLET_KINDS:
+        # Every transfer into a wallet the exchange runs credits some customer:
+        # only those that can carry the traced funds, so no one else's is held.
+        listed = _carrying(trace, i, stated["amount"] if stated else None) if i else []
+        pairs, count = [(t.get("hash"), t.get("timestamp")) for t in listed], len(listed)
+        others = len(every) - len(listed) if listed else 0
+        if others:
+            note = textwrap.wrap(f"(the earliest that can carry the traced funds; {others} other transfer"
+                                 f"{'s' if others != 1 else ''} into it in this trace "
+                                 f"{'are' if others != 1 else 'is'} not part of this request)",
+                                 width=95, initial_indent="     ", subsequent_indent="     ")
+    elif every:
+        pairs, count = [(t.get("hash"), t.get("timestamp")) for t in every], len(every)
+    else:
+        pairs, count = _route_into(trace, i)
+    lines = _freeze_header(
+        f"{exchange} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
+        f"hold funds credited through {address}", FREEZE_ASK[kind].format(a=address))
+    lines += [f"Chain     : {trace.get('chain_name') or result.get('chain_name')}", f"Token     : {asset}",
+              f"Wallet    : {address}", *_freeze_amount(stated, asset), *_hash_lines(pairs, "it", count), *note,
+              *SIGN_OFF]
+    return "\n".join(lines) + "\n"
+
+
+def _tether_freeze(result: dict[str, Any]) -> str:
+    holds = _tether_holds(result)
+    if not holds:
+        raise LetterNotApplicable("This case has no USDT wallet on Ethereum or Tron for Tether to freeze.")
+    lines = _freeze_header(
+        f"Tether Operations Limited — law-enforcement requests team {BLANK} (officer to find and confirm the right channel)",
+        "freeze USDT at the wallets below", "Please freeze, now, the USDT held at the wallets below")
+    found = _attribution(result)
+    for trace, wallets, left in holds:
+        # The figure the exchange letter states, when this trace reached that exchange: it went on past these wallets.
+        own = found if found and found["trace"] is trace else None
+        lines += [f"Chain     : {trace.get('chain_name')}", "Token     : USDT", "Wallets   : (officer to confirm each)",
+                  *(f"     {one_line(w['address'])}" for w in wallets),
+                  *([f"     ({left} more wallet{'s' if left != 1 else ''} where the traced USDT stopped "
+                     f"{'are' if left != 1 else 'is'} not listed)"] if left else []),
+                  *_freeze_amount(_letter_amount(result, own) if own else None, "USDT", trace.get("exchange")),
+                  *_hash_lines([p for w in wallets for p in w["pairs"]], "them", sum(w["count"] for w in wallets)),
+                  ""]
+    return "\n".join(lines[:-1] + SIGN_OFF) + "\n"
+
+
 def draft(case_id: str, result: dict[str, Any], to: str) -> str:
     result = _cleaned(result)
+    if to == EXCHANGE_FREEZE:
+        return _exchange_freeze(result)
+    if to == TETHER_FREEZE:
+        return _tether_freeze(result)
     if to == EXCHANGE:
         return _exchange_letter(case_id, result)
     if to == TETHER:

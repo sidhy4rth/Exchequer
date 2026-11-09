@@ -108,6 +108,36 @@ describe('the blanks in a draft', () => {
     // Each blank keeps its number, in order, wherever its line lands.
     expect(lines(text).flatMap((l) => l.parts.filter((p) => typeof p !== 'string').map((p) => p.blank))).toEqual([0, 1, 2])
   })
+
+  it('keeps each tx and each lone wallet on its own line, so a note after them reads as its own paragraph', () => {
+    // The freeze letters (request_letters.py): a tx line or a listed wallet
+    // is never wrapped, so the note that follows at its indent is not part of it.
+    const text = [
+      'Wallets   : (officer to confirm each)',
+      '     TXgo8gtf6bPQURfHftYWPRv1QPuLQaBBVU',
+      '     TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf',
+      '     (2 more wallets where the traced USDT stopped are not listed)',
+      'Transactions into it (times in IST, with UTC):',
+      `     tx ${'ab'.repeat(32)}, 2024-12-19 18:03 IST (12:33 UTC)`,
+      `     tx ${'cd'.repeat(32)}, 2024-12-24 20:33 IST (15:03 UTC)`,
+      '     (the earliest that can carry the traced funds; 25 other transfers into it in this trace',
+      '     are not part of this request)',
+      '         tx ef',
+      '         (first 1 of 27 transfers shown; all are listed in the attached report)',
+    ].join('\n')
+    expect(lines(text).map((l) => [l.indent, l.parts.join('')])).toEqual([
+      [0, 'Wallets: (officer to confirm each)'],
+      [5, 'TXgo8gtf6bPQURfHftYWPRv1QPuLQaBBVU'],
+      [5, 'TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf'],
+      [5, '(2 more wallets where the traced USDT stopped are not listed)'],
+      [0, 'Transactions into it (times in IST, with UTC):'],
+      [5, `tx ${'ab'.repeat(32)}, 2024-12-19 18:03 IST (12:33 UTC)`],
+      [5, `tx ${'cd'.repeat(32)}, 2024-12-24 20:33 IST (15:03 UTC)`],
+      [5, '(the earliest that can carry the traced funds; 25 other transfers into it in this trace are not part of this request)'],
+      [9, 'tx ef'],
+      [9, '(first 1 of 27 transfers shown; all are listed in the attached report)'],
+    ])
+  })
 })
 
 describe('the checks on a draft', () => {

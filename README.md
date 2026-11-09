@@ -321,8 +321,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 |---|---|
 | `GET /trace/{case_id}` | Retrieve a stored case |
 | `GET /trace/{case_id}/report?format=text` | The investigator's report (`format=json` for structured): summary, finding and basis, the path hop by hop with amounts, times and hashes, every pattern with its thresholds, every inference with its evidence, screening hits with their sources, limitations, and an appendix of every address and transaction hash |
-| `GET /trace/{case_id}/letters` | Which request letters the case supports (to the exchange, to Tether) |
-| `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether) |
+| `GET /trace/{case_id}/letters` | Which request letters the case supports: the urgent freeze letters first, then the information letters (to the exchange, to Tether) |
+| `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether; `to=exchange-freeze` or `to=tether-freeze` for the urgent "hold these funds now" letter) |
 | `GET /cases` | History of past traces |
 | `GET /cases/correlate` | Intermediaries shared by two or more of your stored cases (plus the demos) — the campaign view (`?case_id=` narrows it) |
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |

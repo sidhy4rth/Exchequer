@@ -215,11 +215,12 @@ export const PAGES = [
   { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   { name: 'recorded case 11, Evidence, rechecked', path: '/demo/11?tab=evidence', as: 'investigator', stub: { url: '**/trace/demo-11/recheck', body: RECHECK }, ready: ['button', { name: 'Re-read from a second provider' }], unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   // The Letters tab drafts a recording's letters as a case's: the first one
-  // listed opens on its sheet; a press switches it; Mark as sent asks, beside
-  // the button, for a stored case, since a recording logs nothing. A line of
-  // the letter sits at the foot of the screen at rest.
+  // listed (the urgent freeze letter) opens on its sheet; a press switches
+  // it; Mark as sent asks, beside the button, for a stored case, since a
+  // recording logs nothing. A line of the letter sits at the foot of the
+  // screen at rest.
   { name: 'recorded case 11, Letters', path: '/demo/11?tab=letters', as: 'investigator', ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
-  { name: 'recorded case 11, Letters, to Tether', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Request to Tether' }], ready: ['article', { name: 'Draft: Request to Tether' }], unmeasured: { desktop: 1, phone: 1 } },
+  { name: 'recorded case 11, Letters, to Tether', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Request to Tether', exact: true }], ready: ['article', { name: 'Draft: Request to Tether', exact: true }], unmeasured: { desktop: 1, phone: 1 } },
   { name: 'recorded case 11, Letters, marked as sent', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Mark as sent' }], ready: ['link', { name: 'Open a stored case' }], unmeasured: { desktop: 1, phone: 1 }, layout: saidBesideButton },
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },

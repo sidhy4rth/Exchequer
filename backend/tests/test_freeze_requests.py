@@ -114,3 +114,13 @@ def test_a_patch_that_keeps_conflicting_is_a_409(client, monkeypatch):
     monkeypatch.setattr(fr, "_update_once", always_stale)
     r = client.patch(f"/requests/{rid}", json={"status": "sent"}, headers=h(ALICE))
     assert r.status_code == 409 and "reload" in r.json()["detail"].lower()
+
+
+@pytest.mark.parametrize("kind", ["exchange-freeze", "tether-freeze"])
+def test_an_urgent_freeze_letter_can_be_logged_as_its_own_kind(client, kind):
+    from app.request_letters import LETTERS
+
+    assert set(LETTERS) <= set(fr.KINDS)  # every letter the tool drafts can be logged as sent
+    made = client.post("/requests", json={"case_id": "case-1", "recipient": "Binance", "kind": kind,
+                                          "status": "sent"}, headers=h(ALICE))
+    assert made.status_code == 201 and made.json()["kind"] == kind and made.json()["sent_at"]
