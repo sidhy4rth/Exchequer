@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fetchCase, traceAddress } from './api'
+import { fetchCase, searchPayments, traceAddress } from './api'
 import { stubFetch } from './test/setup'
 
 describe('error messages', () => {
@@ -260,5 +260,27 @@ describe('the demo code', () => {
     await apiFetch('/api/trace/jobs', { method: 'POST' })
     expect(demoPass()).toBe('')
     forgetDemoCode()
+  })
+})
+
+describe('searchPayments', () => {
+  const query = { chain: 'tron', asset: 'USDT', wallet: 'T' + 'a'.repeat(33), amount: '1500.25',
+    from: new Date(Date.UTC(2026, 10, 9, 9)), to: new Date(Date.UTC(2026, 10, 9, 11)) }
+
+  it('posts the amount as a string and the window as UTC times, and returns the matches', async () => {
+    const match = { tx_hash: 'ab'.repeat(32), amount: '1500.25', found_by: 'officer_search' }
+    const fetch = stubFetch({ '/payments/search': { body: { matches: [match], scanned: 40, complete: true } } })
+    const result = await searchPayments(query)
+    const [url, init] = fetch.mock.calls[0]
+    expect(url).toMatch(/\/payments\/search$/)
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ chain: 'tron', asset: 'USDT', wallet: query.wallet, amount: '1500.25',
+      from: '2026-11-09T09:00:00.000Z', to: '2026-11-09T11:00:00.000Z' })
+    expect(result.matches).toEqual([match])
+  })
+
+  it("carries the backend's refusal", async () => {
+    stubFetch({ '/payments/search': { status: 422, body: { detail: [{ msg: 'The window is at most 7 days.' }] } } })
+    await expect(searchPayments(query)).rejects.toThrow('The window is at most 7 days.')
   })
 })

@@ -11,6 +11,7 @@ Endpoints:
     GET  /health                    liveness + configuration check
     GET  /signing-key               public key that signs exported reports
     POST /verify                    check a text report's hash and signature
+    POST /payments/search           find a victim's payment by its amount and time
     /watches, /alerts               watch an address; alerts when funds leave it
     /requests                       freeze requests sent about a case, and their status
     /batches                        trace a list of complaints, then correlate them
@@ -46,7 +47,8 @@ from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import admin, batches, casebook, cases, coverage, demos, evidence, jobs, requests, verify, watches
+from .routes import (admin, batches, casebook, cases, coverage, demos, evidence, jobs, payments, requests, verify,
+                     watches)
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -230,6 +232,7 @@ app.include_router(verify.router)
 app.include_router(watches.router)
 app.include_router(requests.router)
 app.include_router(batches.router)
+app.include_router(payments.router)
 app.include_router(admin.router)
 
 

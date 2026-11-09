@@ -70,6 +70,23 @@ export async function fetchTraceIntake() {
   return response.json()
 }
 
+/**
+ * Find the victim's payment into `wallet` by its exact amount and a time
+ * window of at most 7 days (POST /payments/search), for a complaint with no
+ * hash. `amount` stays a string so no decimal place is lost; `from` and `to`
+ * are Dates, sent as UTC. Resolves with { matches: [{ tx_hash, timestamp,
+ * amount, from, to, chain, asset, found_by }], more_matches, scanned, complete }.
+ */
+export async function searchPayments({ chain, asset, wallet, amount, from, to }) {
+  const response = await apiFetch(`${BASE}/payments/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chain, asset, wallet, amount: String(amount), from: from.toISOString(), to: to.toISOString() }),
+  })
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
 /** Which DEMO.md traces have a recording, and when each was made. */
 export async function fetchRecordedDemos() {
   const response = await apiFetch(`${BASE}/demos/recorded`)
