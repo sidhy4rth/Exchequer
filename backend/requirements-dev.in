@@ -4,6 +4,6 @@
 -r requirements.in
 -c requirements.txt
 pytest==9.1.1
-ruff==0.17.0
+ruff==0.17.3
 # The workflow tests read .github/workflows/*.yml.
 PyYAML==6.0.3
