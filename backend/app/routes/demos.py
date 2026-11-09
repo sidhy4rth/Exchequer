@@ -35,13 +35,16 @@ def _recordings() -> dict[int, dict[str, Any]]:
 
 @router.get("/demos/recorded")
 def list_recorded() -> dict[str, Any]:
-    """Which demos have a recording, and what each one found."""
+    """Which demos have a recording, and what each one found: the exchange,
+    and whether it was inferred (a probable deposit address, not a label
+    match), so a link that names it can say so."""
     return {"demos": [
         {
             "demo": n,
             "recorded_at": row["recorded_at"],
             "address": row["result"].get("address"),
             "exchange": row["result"].get("exchange"),
+            "attribution_inferred": bool(row["result"].get("attribution_inferred")),
             "confidence": row["result"].get("confidence"),
         }
         for n, row in sorted(_recordings().items())

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { stubFetch } from './test/setup'
+import { CONSOLE_FIELD } from '../e2e/canary.lines.js'
 import recordings from '../../backend/data/recorded_demos.json'
 
 // The globe is WebGL; jsdom has none. What is tested is who gets through which door.
@@ -100,9 +101,9 @@ describe('the demo doors', () => {
   it('keeps a citizen out of the investigator console', async () => {
     sessionStorage.setItem('exchequer-demo-session', 'citizen')
     at('/')
-    // The citizen page renders; the console's address field never does.
+    // The citizen page renders; the console's field never does.
     expect(await screen.findByText(/This page is still to be built/)).toBeInTheDocument()
-    expect(screen.queryByLabelText('Reported wallet address')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(CONSOLE_FIELD)).not.toBeInTheDocument()
   })
 })
 

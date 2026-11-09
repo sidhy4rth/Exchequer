@@ -209,8 +209,10 @@ automatically, so a demo will not die mid-trace. It uses Etherscan's **V2** mult
 <details>
 <summary><b>A tour of the interface</b></summary>
 
-The interface answers first and shows evidence on demand. The home page is the address form with the ten
-`DEMO.md` traces in a dropdown, one line of coverage per chain, and the stored cases. A case opens as: a red
+The interface answers first and shows evidence on demand. The home page, the Console, opens on one field for
+the victim's payment hash or the wallet they paid, a chain and asset choice, and three recorded `DEMO.md` cases
+to try; below it sit the recent cases (what each reached, and how sure), the exchange wallets on file per chain,
+and the watchlist. The full form, with every `DEMO.md` trace and option, is on New trace. A case opens as: a red
 banner if any address is sanctioned, a mixer or a known thief's; one finding bar — where the money went, the
 address to cite, how sure (the score with its three inputs; the working one click away); then the money flow
 drawn by hop, the reported address on the left and whatever it reached on the right, the attributed path the

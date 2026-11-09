@@ -8,8 +8,8 @@ import './TraceForm.css'
 
 // The ten verified traces in DEMO.md, one click each. Addresses and hooks
 // are copied from that file; the numbers there were measured cold on
-// 15 September 2026.
-const DEMOS = [
+// 15 September 2026. The console offers three of them as recorded cases.
+export const DEMOS = [
   { n: '01', address: '0x7c3e9bab6715e4040f013e865b193b0209642e36', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
     title: 'No cash-out found', hook: 'Three hops, no exchange, no pattern. The score reads "not applicable", not 0 — finding nothing is a result.' },
   { n: '02', address: '0xbc1ada2e98dd0087cf4cc0c8bd0e6276c82fadc9', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
@@ -55,8 +55,9 @@ export const SHORT_CHAIN = { ethereum: 'Ethereum', bsc: 'BNB Chain', polygon: 'P
  * examples to fill it from. `health` is GET /health as the page loaded it
  * (null while connecting, { status: 'down' } when unreachable). `payments`
  * fills the victim's payment hashes, as the search box sends one, and
- * `startChain` the chain to start on when the site has it. */
-export default function TraceForm({ health, payments = '', startChain = null }) {
+ * `startChain` and `startAsset` the chain and asset to start on when the
+ * site has them. */
+export default function TraceForm({ health, payments = '', startChain = null, startAsset = null }) {
   const navigate = useNavigate()
   const [address, setAddress] = useState('')
   const [chain, setChain] = useState('ethereum')
@@ -79,15 +80,16 @@ export default function TraceForm({ health, payments = '', startChain = null }) 
   const [showPayments, setShowPayments] = useState(Boolean(payments))
 
   // Trace on the deployment's default chain once /health names it, or on
-  // the chain asked for when it is one the site traces. On Tron, the money
-  // in a complaint is almost always USDT.
+  // the chain (and asset) asked for when it is one the site traces. On Tron,
+  // the money in a complaint is almost always USDT.
   useEffect(() => {
     const first = health?.chains?.[startChain]?.ready ? startChain : health?.default_chain
     if (!first) return
     const symbols = (health.chains?.[first]?.assets ?? []).map((a) => a.symbol)
+    const asked = first === startChain && [startAsset, 'USDT'].find((s) => symbols.includes(s))
     setChain(first)
-    setAsset(first === startChain && symbols.includes('USDT') ? 'USDT' : symbols[0] ?? 'ETH')
-  }, [health, startChain])
+    setAsset(asked || (symbols[0] ?? 'ETH'))
+  }, [health, startChain, startAsset])
 
   // Unreachable reads as off: the form cannot offer payments either way.
   useEffect(() => {

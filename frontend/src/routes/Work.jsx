@@ -72,7 +72,7 @@ function NewTrace({ locked, onUnlock }) {
   useEffect(() => { fetchChains().then(setHealth).catch(() => setHealth({ status: 'down' })) }, [])
   const pay = params.get('pay') ?? ''
   if (locked) return <Showroom onUnlock={onUnlock} />
-  return <TraceForm key={pay} health={health} payments={pay} startChain={params.get('chain')} />
+  return <TraceForm key={pay} health={health} payments={pay} startChain={params.get('chain')} startAsset={params.get('asset')} />
 }
 
 /** A page that would spend the provider quota or keep running (a watch, a

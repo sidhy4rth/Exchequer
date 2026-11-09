@@ -120,6 +120,15 @@ describe('the new trace page', () => {
     expect(screen.queryByText(/Not a valid .* transaction hash/)).not.toBeInTheDocument()
   })
 
+  it('starts a hash on the chain and asset the console chose for it', async () => {
+    const hash = `0x${'d'.repeat(64)}`
+    const three = { ...oneChain, chains: { ethereum: { ...oneChain.chains.ethereum, assets: [{ symbol: 'ETH' }, { symbol: 'USDT' }, { symbol: 'USDC' }] } } }
+    open('new', { path: `/trace/new?pay=${hash}&chain=ethereum&asset=USDC`, extra: { '/chains': { body: three }, '/trace/intake': { body: { payments: true } } } })
+    expect(await screen.findByLabelText(/Victim's payment transaction hash/)).toHaveValue(hash)
+    await waitFor(() => expect(screen.getByLabelText('Asset')).toHaveValue('USDC'))
+    expect(screen.getByLabelText('Blockchain')).toHaveValue('ethereum')
+  })
+
   it('asks for the demo code on a public site instead', async () => {
     open('new', { access: { demo_code_required: true } })
     expect(await screen.findByLabelText('Access code')).toBeInTheDocument()

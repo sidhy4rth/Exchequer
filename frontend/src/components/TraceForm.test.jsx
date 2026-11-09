@@ -21,18 +21,81 @@ function Landed() {
   return <p data-testid="landed" data-ncrp={state?.ncrpAck ?? ''} data-victim={state?.victimAddress ?? ''} data-started={String(state?.startedHere === true)}>{pathname + search}</p>
 }
 
-async function renderForm({ payments }) {
-  stubFetch({ '/trace/intake': { body: { payments, lookup_limit: 1000 } }, '/demos/recorded': { body: { demos: [] } } })
+async function renderForm({ payments, demos = [] }) {
+  stubFetch({ '/trace/intake': { body: { payments, lookup_limit: 1000 } }, '/demos/recorded': { body: { demos } } })
   render(
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/" element={<TraceForm health={health} />} />
         <Route path="/trace/:address" element={<Landed />} />
+        <Route path="/demo/:n" element={<Landed />} />
       </Routes>
     </MemoryRouter>,
   )
   await screen.findByLabelText('Reported wallet address')
 }
+
+// The form was the console's until the Console became a page of its own;
+// these followed it to the new trace page.
+describe('the trace form', () => {
+  const recordings = [{ demo: 6, recorded_at: '2026-10-14T16:44:03+00:00', address: '0x00000000072d54638c2c2a3da3f715360269eea1', exchange: 'Binance', confidence: 0.875 }]
+
+  it('flags a malformed address and does not start a trace', async () => {
+    const user = userEvent.setup()
+    await renderForm({ payments: false })
+    const field = screen.getByLabelText('Reported wallet address')
+    await user.type(field, '0x1234')
+    await user.keyboard('{Enter}')
+    await user.tab()
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('button', { name: /^trace$/i })).toBeDisabled()
+    expect(screen.queryByTestId('landed')).not.toBeInTheDocument()
+  })
+
+  it('opens a shareable trace URL for a valid address', async () => {
+    const user = userEvent.setup()
+    await renderForm({ payments: false })
+    await user.type(screen.getByLabelText('Reported wallet address'), `  ${ADDR} {Enter}`)
+    expect(screen.getByTestId('landed')).toHaveTextContent(
+      `/trace/${ADDR}?chain=ethereum&asset=ETH&depth=4&direction=outgoing`)
+  })
+
+  it('holds a Tron address to the Tron format, not the EVM one', async () => {
+    const user = userEvent.setup()
+    await renderForm({ payments: false })
+    await user.selectOptions(screen.getByLabelText('Blockchain'), 'tron')
+    const field = screen.getByLabelText('Reported wallet address')
+    await user.type(field, ADDR)
+    await user.tab()
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('button', { name: /^trace$/i })).toBeDisabled()
+  })
+
+  it('offers the recording of a loaded demo, and drops it once the form is edited', async () => {
+    const user = userEvent.setup()
+    await renderForm({ payments: false, demos: recordings })
+    await user.selectOptions(screen.getByLabelText('Load a verified example'), '06')
+    const link = await screen.findByRole('link', { name: /open as recorded/i })
+    expect(link).toHaveTextContent('2026-10-14')
+    await user.type(screen.getByLabelText('Reported wallet address'), 'f')
+    expect(screen.queryByRole('link', { name: /open as recorded/i })).not.toBeInTheDocument()
+  })
+
+  it('opens the recording without starting a trace', async () => {
+    const user = userEvent.setup()
+    await renderForm({ payments: false, demos: recordings })
+    await user.selectOptions(screen.getByLabelText('Load a verified example'), '06')
+    await user.click(await screen.findByRole('link', { name: /open as recorded/i }))
+    expect(screen.getByTestId('landed')).toHaveTextContent('/demo/6')
+  })
+
+  it('offers no recording for a demo that has none', async () => {
+    const user = userEvent.setup()
+    await renderForm({ payments: false, demos: recordings })
+    await user.selectOptions(screen.getByLabelText('Load a verified example'), '01')
+    expect(screen.queryByRole('link', { name: /open as recorded/i })).not.toBeInTheDocument()
+  })
+})
 
 describe('payment hashes on the trace form (R1)', () => {
   it('are not offered when the backend has them switched off', async () => {

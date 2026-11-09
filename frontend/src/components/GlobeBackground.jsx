@@ -3,10 +3,11 @@ import globeData from '../data/exchange_globe.json'
 import { ERAS, landDots } from './ExchangeGlobe'
 import './GlobeBackground.css'
 
-// The investigator console's backdrop: the sign-in globe, half off the right
-// edge, so the console and its front door read as one place. Dotted land, a
-// sparse sea lattice, every placed exchange lit in its founding era's colour,
-// and a red rim. It turns once in about 80 s. In the empty parts of the page
+// A page backdrop, kept though no page draws it now (the Glass console stands
+// on the bare ground): the sign-in globe, half off the right edge, so a page
+// and its front door read as one place. Dotted land, a sparse sea lattice,
+// every placed exchange lit in its founding era's colour, and a red rim. It
+// turns once in about 80 s. In the empty parts of the page
 // it can be taken by hand: drag to spin (it coasts back to its turn), hover an
 // exchange for its name, click one for a ripple. It never takes a click or a
 // key from a form control, and under reduced motion it holds still.

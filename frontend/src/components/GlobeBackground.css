@@ -1,5 +1,6 @@
-/* The console backdrop (GlobeBackground.jsx). The canvas sits behind the
-   frosted cards and takes no pointer events; the globe listens on the window. */
+/* A full-page globe backdrop (GlobeBackground.jsx), kept though no page
+   draws it since the Glass console. The canvas sits behind the frosted
+   cards and takes no pointer events; the globe listens on the window. */
 .globe-bg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
 
 body.globe-grab { cursor: grab; }

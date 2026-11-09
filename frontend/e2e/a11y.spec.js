@@ -10,8 +10,8 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
 // axe cannot tell the colour behind text drawn over a canvas or a gradient,
 // so it files that text as "needs review" instead of failing it: most of the
-// sign-in door and the console's sidebar sit over the globe. A second pass hides the
-// canvases and gradients and measures that text against the solid colour
+// sign-in door sits over the globe. A second pass hides the canvases and
+// gradients and measures that text against the solid colour
 // beneath them (a gradient behind text keeps one: its lightest stop, as
 // styles.css .gate does). What axe still cannot measure, such as text that
 // overlaps other text or labels inside the graph, is listed and may not grow
@@ -98,11 +98,14 @@ for (const theme of ['dark', 'light']) {
 }
 
 // The check itself: text turned near-black over the globe must fail it. axe
-// alone files that text as needs-review and lets it pass.
+// alone files that text as needs-review and lets it pass. Only the sign-in
+// doors draw the globe now (the console dropped it), and a page with no
+// canvas would test nothing here, so the case asks for one first.
 test.describe('the contrast pass', () => {
-  for (const [name, over] of [['investigator sign-in', '.gate-hint span'], ['Console', '.shell-name']]) {
+  for (const [name, over] of [['investigator sign-in', '.gate-hint span']]) {
     test(`fails dark text over the globe: ${name}`, async ({ page }) => {
       await open(page, PAGES.find((p) => p.name === name), 'dark')
+      await expect(page.locator('canvas'), `${name} draws no globe: this case would check plain text`).not.toHaveCount(0)
       await page.addStyleTag({ content: `${over} { color: #1a1a1a !important }` })
       expect((await contrast(page)).failed.join('\n')).toContain('foreground color: #1a1a1a')
     })

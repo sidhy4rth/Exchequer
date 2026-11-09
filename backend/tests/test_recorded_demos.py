@@ -38,6 +38,17 @@ def test_list_recorded(client):
     assert all(d["recorded_at"] for d in body["demos"])
 
 
+def test_list_recorded_says_which_exchange_was_inferred(client):
+    # The console's recorded-case chips name the exchange: an inferred one
+    # must read as probable (demo 7 infers Bybit; demo 9 matches a label).
+    listed = {d["demo"]: d for d in client.get("/demos/recorded").json()["demos"]}
+    recorded = {row["demo"]: row["result"] for row in json.loads(demos.RECORDED_DEMOS_PATH.read_text())}
+    assert {n: d["attribution_inferred"] for n, d in listed.items()} == {
+        n: bool(r.get("attribution_inferred")) for n, r in recorded.items()}
+    assert listed[7]["attribution_inferred"] is True
+    assert listed[9]["attribution_inferred"] is False
+
+
 def test_get_recorded_is_a_case_without_a_case_id(client):
     body = client.get("/demos/recorded/9").json()
     assert body["recorded_demo"] == 9

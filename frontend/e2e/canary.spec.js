@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { ALL_CHAINS_READY } from './canary.lines.js'
+import { ALL_CHAINS_READY, CONSOLE_FIELD } from './canary.lines.js'
 
 // What a judge does first: open the link, sign in, look at a case. If any of
 // that is broken the demo-health job would not notice -- it talks to the API
@@ -61,8 +61,8 @@ test('the front door opens the console with every chain live', async ({ page }) 
   await page.goto('/')
   await expect(page).toHaveURL(/\/signin\/investigator/)
   await enter(page)
-  // With EXCHEQUER_DEMO_CODE set, the public console asks for the access code instead.
-  await expect(page.getByLabel('Reported wallet address').or(page.getByLabel('Access code'))).toBeVisible()
+  // The console's field; with EXCHEQUER_DEMO_CODE set, the access code instead.
+  await expect(page.getByLabel(CONSOLE_FIELD).or(page.getByLabel('Access code'))).toBeVisible()
   // The sidebar's status line: "All 5 chains ready to trace" (Glass shell).
   await expect(page.getByRole('complementary', { name: 'Sidebar' }).getByText(ALL_CHAINS_READY)).toBeVisible()
   const loadMs = Date.now() - started
@@ -82,7 +82,7 @@ test('the front door and the console load nothing from another site', async ({ p
   })
   await page.goto('/')
   await enter(page)
-  await expect(page.getByLabel('Reported wallet address').or(page.getByLabel('Access code'))).toBeVisible()
+  await expect(page.getByLabel(CONSOLE_FIELD).or(page.getByLabel('Access code'))).toBeVisible()
   await page.waitForLoadState('networkidle')
   // The bundled fonts are the ones in use, not a fallback.
   expect(await page.evaluate(() => document.fonts.check('13px "IBM Plex Sans"') && document.fonts.check('13px "IBM Plex Mono"'))).toBe(true)

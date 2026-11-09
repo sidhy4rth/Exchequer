@@ -59,6 +59,13 @@ describe('the accessibility check', () => {
     expect(locked.ready).toEqual(['heading', { name: 'Verified examples' }])
   })
 
+  it('opens the console with recent cases in it, so their rows are measured too', () => {
+    const console = PAGES.find((p) => p.name === 'Console')
+    expect(console.ready).toEqual(['heading', { level: 1, name: 'Follow a payment to the exchange that can freeze it' }])
+    expect(console.stub.url.test('http://127.0.0.1:8123/cases?limit=5')).toBe(true)
+    expect(console.stub.body.cases.length).toBeGreaterThan(0)
+  })
+
   it('pins, per page and size, how much text axe cannot measure for contrast', async () => {
     // A typo in a size would pin nothing; a zero is the default already.
     const sizes = (await a11yConfig({ EXCHEQUER_URL: 'http://127.0.0.1:8123' })).projects.map((p) => p.name)

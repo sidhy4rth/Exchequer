@@ -960,10 +960,10 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 /* The headline figure on the investigator's coverage card. */
 .card .head .note .flagged { color: var(--red); font-weight: 600; }
 
-/* ---- Investigator console v2 (Home): glows behind frosted glass ---- */
-/* The globe's red rim glows through the glass, and at its brightest it takes a
-   field's edge below 3:1, so the console's edges are one grey that keeps 3:1
-   there in both skins: against the field's fill and the glass around it.
+/* ---- Investigator console (Home): frosted glass on the bare ground ---- */
+/* A field on the glass takes the root's edge grey below 3:1 in the dark
+   skin, so the console's edges are one grey that keeps 3:1 in both skins:
+   against the field's fill and the glass around it (tokens.test.js).
    --rule-strong is declared again so it reads this value, not the root's. */
 .home.console { position: relative; isolation: isolate; background: transparent; --line-strong: #808080; --rule-strong: var(--line-strong); }
 .console .glass, .console .card {
@@ -973,29 +973,70 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .console .card .card { background: transparent; border: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .console input, .console select, .console textarea { background: var(--glass-input); }
 
-.console .home-body { gap: 20px; padding: 32px 24px 48px; max-width: 1200px; }
-.console .intake { grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
-.console .intake-form, .console .intake-form > .card { min-width: 0; }
-.console .examples select { max-width: none; }
-.console .intake .row .primary:disabled { background: var(--panel); color: var(--text); border-color: var(--go); opacity: 0.5; }
-.console .intake .lede { font-size: 28px; margin-bottom: 8px; }
-.console .intake .row { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; }
-.console .intake .row select { min-width: 0; }
-.console .intake .row .primary { min-width: 110px; }
-.console .intake .address-field { font-size: 15px; padding: 13px 14px; grid-column: 1 / -1; }
+.console .home-body { gap: 24px; padding: 32px 24px 48px; max-width: 1200px; }
 .add-payments { align-self: flex-start; }
 
-.flagged-card > .body { gap: 4px; padding: 24px; }
-.flagged-total { display: flex; flex-direction: column; gap: 0; margin-top: 2px; }
-.flagged-total strong { font-family: var(--sans); font-size: 48px; font-weight: 300; line-height: 1; color: var(--ink); letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; }
-.flagged-total span { font-size: 15px; color: var(--ink); margin-top: 4px; }
-.flagged-card .exact { font-size: 11.5px; color: var(--faint); }
-.chain-bars { list-style: none; margin: 10px 0 0; padding: 14px 0 0; border-top: 1px solid var(--glass-rule); display: flex; flex-direction: column; gap: 10px; }
-.chain-bars li { display: grid; grid-template-columns: 1fr auto; row-gap: 4px; font-size: 13px; }
-.chain-bars .name { display: inline-flex; align-items: center; color: var(--ink); }
-.chain-bars .n { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.chain-bars .bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--glass-rule); overflow: hidden; }
-.chain-bars .bar i { display: block; height: 100%; border-radius: 2px; opacity: 0.85; }
+/* The Console (Home.jsx): a light headline, one field, then the cards. */
+.hero { display: flex; flex-direction: column; gap: 6px; }
+.hero h1 { margin: 0; font-weight: 300; font-size: 34px; line-height: 1.15; }
+.hero-status { margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); }
+.hero-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--go); }
+.console .hero-card { display: flex; flex-direction: column; gap: 14px; padding: 24px; background: linear-gradient(160deg, var(--go-tint), transparent 55%), var(--glass); }
+.hero-trace { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.hero-field {
+  flex: 1 1 380px; min-width: 0; display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 20px;
+  border-radius: var(--r-pill); background: var(--glass-input); border: 1px solid var(--line-strong); color: var(--text-3);
+}
+.hero-field:focus-within { outline: 2px solid var(--go); outline-offset: 2px; }
+.hero-field:has([aria-invalid]) { border-color: var(--risk); }
+.hero-field input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; font-family: var(--mono); font-size: 13.5px; }
+.hero-field input:focus-visible { outline: none; }
+.hero-field input::placeholder { font-family: var(--sans); }
+/* The chain choice draws its own chevron, clear of the pill's round end. */
+.hero-chain { position: relative; display: inline-flex; color: var(--text-3); }
+.hero-chain select { appearance: none; -webkit-appearance: none; height: 54px; padding: 0 40px 0 18px; border-radius: var(--r-pill); font-size: 13.5px; }
+.hero-chain svg { position: absolute; right: 18px; top: 50%; translate: 0 -50%; pointer-events: none; }
+.hero-trace .primary { height: 54px; padding: 0 26px; gap: 10px; font-size: 14px; }
+.hero-trace .primary svg { color: var(--go-soft); }
+.hero-missed { flex: 1 1 100%; margin: 0; font-size: 12px; color: var(--risk); }
+.hero-try { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; font-size: 12px; color: var(--text-3); }
+.hero-try ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.hero-try a { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: var(--r-pill); background: var(--panel-2); color: var(--text-2); text-decoration: none; }
+.hero-try a:hover { color: var(--text); }
+
+.console-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.console-side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.console-card { padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.console .quiet-card { background: transparent; border-style: dashed; }
+.console-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.console-card-head h2 { margin: 0; font-size: 15px; font-weight: 400; }
+.console-card-head a { min-height: 24px; display: inline-flex; align-items: center; font-size: 12px; color: var(--text-2); text-decoration: none; }
+.console-card-head a:hover { color: var(--text); text-decoration: underline; }
+.console-figure { font-weight: 300; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+
+.recent-cases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.recent-cases a {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; grid-template-areas: "addr reached band" "meta reached band";
+  column-gap: 14px; row-gap: 2px; align-items: center; padding: 12px 16px; border-radius: var(--r);
+  background: var(--glass-input); color: var(--text); text-decoration: none;
+}
+.recent-cases a:hover { background: var(--panel-2); }
+.recent-address { grid-area: addr; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-meta { grid-area: meta; font-size: 11px; color: var(--text-3); }
+.recent-meta .pill { margin-left: 6px; padding: 0 7px; font-size: 10.5px; }
+.recent-reached { grid-area: reached; display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+.recent-reached i { width: 8px; height: 8px; flex-shrink: 0; border-radius: 2px; background: var(--go); }
+.recent-reached.none { color: var(--text-3); }
+.recent-reached.none i { background: none; border: 1px solid var(--line-strong); }
+/* Low confidence is faded: the same pill without its fill. */
+.recent-band { grid-area: band; justify-self: end; padding: 3px 10px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--line); font-size: 11px; }
+.recent-band.low, .recent-band.very-low { background: none; color: var(--text-3); }
+
+.wallet-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.wallet-bars li { display: grid; grid-template-columns: 76px minmax(0, 1fr) minmax(40px, auto); gap: 10px; align-items: center; font-size: 12px; color: var(--text-2); }
+.wallet-bars .bar { height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.wallet-bars .bar i { display: block; height: 100%; background: var(--text); }
+.wallet-bars .num { font-size: 11px; text-align: right; color: var(--text); }
 .chain-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; vertical-align: 1px; }
 
 /* Pill tabs (PillTabs.jsx): one rounded track, the chosen tab lit. */
@@ -1020,14 +1061,17 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .console .foot { justify-content: center; border-top: 1px solid var(--glass-rule); background: transparent; }
 
 @media (max-width: 900px) {
-  .console .intake { grid-template-columns: minmax(0, 1fr); }
-  .console .intake .row { grid-template-columns: 1fr 1fr; }
-  .console .intake .row .primary { grid-column: 1 / -1; }
-  .console .examples { flex-wrap: wrap; }
-  .console .examples select { flex: 1 1 100%; min-width: 0; }
-  .console .examples .sep { display: none; }
-  .console .intake .lede { font-size: 23px; }
-  .flagged-total strong { font-size: 44px; }
+  .console-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .console .home-body { gap: 16px; padding: 20px 16px 32px; }
+  .hero h1 { font-size: 26px; }
+  .console .hero-card, .console-card { padding: 16px; }
+  .hero-field { flex-basis: 100%; height: 48px; padding: 0 16px; }
+  .hero-chain { flex: 1; min-width: 0; }
+  .hero-chain select { flex: 1; min-width: 0; height: 48px; }
+  .hero-trace .primary { height: 48px; }
+  .recent-cases a { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "addr band" "meta reached"; padding: 12px; }
 }
 .verify-problems { margin: 4px 0 0; padding-left: 18px; color: var(--ink); font-size: 14px; }
 .verify-problems li { margin: 2px 0; overflow-wrap: anywhere; }
