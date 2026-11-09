@@ -213,3 +213,19 @@ def test_opening_a_trace_link_in_a_browser_gets_the_app(client, monkeypatch, tmp
     assert page.status_code == 200 and "<div id=root>" in page.text
     api = client.get(url, headers={"sec-fetch-mode": "cors", "accept": "*/*"})
     assert api.status_code == 404 and api.json()["detail"].startswith("No case")
+
+
+@pytest.mark.parametrize("path", ["/cases", "/requests"])
+def test_opening_a_console_page_in_a_browser_gets_the_app(client, monkeypatch, tmp_path, path):
+    """/cases and /requests are the console's pages as well as the API's
+    lists: a reload or a shared link must show the page, and the app's own
+    fetch() still gets the list."""
+    from app.routes import cases
+    index = tmp_path / "index.html"
+    index.write_text("<!doctype html><div id=root></div>")
+    monkeypatch.setattr(cases, "_INDEX_HTML", index)
+    page = client.get(path, headers={"sec-fetch-mode": "navigate", "accept": "text/html"})
+    assert page.status_code == 200 and "<div id=root>" in page.text
+    assert page.headers["cache-control"] == "no-cache, no-store, must-revalidate"
+    api = client.get(path, headers={"sec-fetch-mode": "cors", "accept": "*/*"})
+    assert api.status_code == 200 and "count" in api.json()

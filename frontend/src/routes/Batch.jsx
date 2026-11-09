@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchBatch } from '../api'
 import { bandLabel, bandOf } from '../components/confidence'
-import Mark from '../components/Mark'
-import ThemeToggle from '../components/ThemeToggle'
 
 // One batch: progress while it runs, then the exchanges its complaints reached
 // and the wallets two or more of them share.
@@ -47,11 +45,7 @@ export default function Batch() {
 
   return (
     <div className="citizen">
-      <header className="citizen-top">
-        <Link to="/" className="brand" style={{ textDecoration: 'none' }}><Mark size={20} /><span>Exchequer</span></Link>
-        <span className="citizen-actions"><Link to="/" className="quiet-link">Back to the console</Link><ThemeToggle /></span>
-      </header>
-      <main className="batch-body">
+      <div className="batch-body">
         {error && <div className="banner error">{error}</div>}
         {stalled && <div className="banner">No row has finished for 10 minutes, so this page stopped checking. Reload to check again.</div>}
         {batch && (
@@ -107,7 +101,7 @@ export default function Batch() {
             </div>
           </>
         )}
-      </main>
+      </div>
     </div>
   )
 }

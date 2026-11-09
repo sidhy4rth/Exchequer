@@ -48,7 +48,10 @@ function signatureRow(r) {
 // A 64-hex fingerprint in groups of four, so it can be compared by eye.
 const grouped = (fp) => (fp || '').match(/.{1,4}/g)?.join(' ') ?? ''
 
-export default function Verify() {
+/** `embedded`: inside the console's shell, which has the header and the
+ * page's one main landmark. */
+export default function Verify({ embedded = false }) {
+  const Body = embedded ? 'div' : 'main'
   const [text, setText] = useState('')
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -89,11 +92,13 @@ export default function Verify() {
   const verdict = result && (VERDICT[result.status] ?? UNKNOWN)
   return (
     <div className="citizen">
-      <header className="citizen-top">
-        <Link to="/" className="brand" style={{ textDecoration: 'none' }}><Mark size={20} /><span>Exchequer</span></Link>
-        <span className="citizen-actions"><ThemeToggle /></span>
-      </header>
-      <main className="verify-body">
+      {!embedded && (
+        <header className="citizen-top">
+          <Link to="/" className="brand" style={{ textDecoration: 'none' }}><Mark size={20} /><span>Exchequer</span></Link>
+          <span className="citizen-actions"><ThemeToggle /></span>
+        </header>
+      )}
+      <Body className="verify-body">
         <span className="micro">Verify a report</span>
         <h1>Was this report issued by Exchequer, unchanged?</h1>
         <p className="note">Paste a text report (Report&nbsp;(.txt) on a case), or drop the file or the case&apos;s PDF. Every report ends in a SHA-256 content hash and an Ed25519 signature made with the issuing server&apos;s private key. They cover everything above the CONTENT HASH line, including the server that issued the report and its key; this check also rejects any text added below it. A PDF is checked by the signed report attached to it, and its pages, which are not signed, are compared with that report. Nothing you send is stored.</p>
@@ -172,7 +177,7 @@ export default function Verify() {
             {!key.persistent && ' This key is temporary and changes when the server restarts.'}
           </p>
         )}
-      </main>
+      </Body>
     </div>
   )
 }

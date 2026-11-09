@@ -32,7 +32,7 @@ async function renderHome() {
       </Routes>
     </MemoryRouter>,
   )
-  await screen.findByText(/Live · \d+ chains?$/)
+  await screen.findByText(/· screened on every hop$/)
 }
 
 describe('the trace form', () => {
@@ -137,7 +137,6 @@ describe('a public site that asks for a demo code', () => {
     const fetch = await renderPublicHome({ body: { ok: true } })
     await user.type(screen.getByLabelText('Access code'), 'river-otter-42{Enter}')
     expect(await screen.findByLabelText('Reported wallet address')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Bulk intake' })).toBeInTheDocument()
     expect(sessionStorage.getItem('exchequer-demo-code')).toBe('river-otter-42')
     // Requests after the check itself, which carries the typed code by design.
     const checked = fetch.mock.calls.findIndex(([url]) => String(url).includes('/access/check'))
@@ -164,6 +163,20 @@ describe('a public site that asks for a demo code', () => {
   })
 })
 
+describe('the coverage tables', () => {
+  it('wait behind a disclosure, so the console opens on the form and the flagged addresses', async () => {
+    const user = userEvent.setup()
+    await renderHome()
+    const table = screen.getByRole('table', { name: 'Exchange labels per chain', hidden: true })
+    expect(table).not.toBeVisible()
+    const open = screen.getByText('Exchange labels and risk screening per chain')
+    expect(open.closest('summary')).not.toBeNull()
+    await user.click(open)
+    expect(table).toBeVisible()
+    expect(screen.getByRole('table', { name: 'Risk screening per chain' })).toBeVisible()
+  })
+})
+
 describe('the headline numbers (R14)', () => {
   const counted = {
     status: 'ok',
@@ -181,7 +194,7 @@ describe('the headline numbers (R14)', () => {
   it('shows only numbers that /chains gives, and never one total as exchange wallets', async () => {
     stubFetch({ '/chains': { body: counted }, '/cases': { body: { count: 0, cases: [] } }, '/demos/recorded': { body: recordings } })
     render(<MemoryRouter><Home /></MemoryRouter>)
-    await screen.findByText(/Live · 2 chains/)
+    await screen.findByText(/· screened on every hop$/)
     const chains = Object.values(counted.chains)
     const sum = (f) => chains.reduce((s, c) => s + f(c), 0)
     const flagged = sum((c) => Object.values(c.risk_labels).reduce((a, b) => a + b, 0))
@@ -193,7 +206,7 @@ describe('the headline numbers (R14)', () => {
     ])
     // A named group: ARIA lets no plain div carry a name (aria-prohibited-attr).
     const card = screen.getByRole('group', { name: 'Flagged addresses screened' })
-    const tables = document.querySelector('.tab-panel .coverage')
+    const tables = screen.getByRole('group', { name: 'Coverage' })
     // Text node by text node: textContent would run neighbouring cells together.
     const shown = []
     for (const root of [card, tables]) {

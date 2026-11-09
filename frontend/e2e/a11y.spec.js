@@ -10,13 +10,15 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
 // axe cannot tell the colour behind text drawn over a canvas or a gradient,
 // so it files that text as "needs review" instead of failing it: most of the
-// sign-in door and Home's header sit over the globe. A second pass hides the
+// sign-in door and the console's sidebar sit over the globe. A second pass hides the
 // canvases and gradients and measures that text against the solid colour
 // beneath them (a gradient behind text keeps one: its lightest stop, as
 // styles.css .gate does). What axe still cannot measure, such as text that
 // overlaps other text or labels inside the graph, is listed and may not grow
-// past the page's `unmeasured` pin in a11y.pages.js.
-const DECOR_HIDDEN = 'canvas { visibility: hidden !important } *, *::before, *::after { background-image: none !important }'
+// past the page's `unmeasured` pin in a11y.pages.js. The phone's tab bar
+// (and its More menu) floats over the page; the first pass measured it on its
+// own solid panel, so the second hides it to measure the text beneath it.
+const DECOR_HIDDEN = 'canvas, .shell-tabs { visibility: hidden !important } *, *::before, *::after { background-image: none !important }'
 
 const message = (n) => (n.any[0] ?? n.all[0] ?? n.none[0])?.message ?? ''
 /** Each finding as one line a person can act on: the rule, where, and why
@@ -77,6 +79,7 @@ for (const theme of ['dark', 'light']) {
   test.describe(`${theme} theme`, () => {
     for (const p of PAGES) {
       test(p.name, async ({ page }, info) => {
+        test.skip(Boolean(p.size) && p.size !== info.project.name, `checked at ${p.size} size only`)
         await open(page, p, theme)
 
         // Needs-review fails too, for every rule but contrast (measured
@@ -97,7 +100,7 @@ for (const theme of ['dark', 'light']) {
 // The check itself: text turned near-black over the globe must fail it. axe
 // alone files that text as needs-review and lets it pass.
 test.describe('the contrast pass', () => {
-  for (const [name, over] of [['investigator sign-in', '.gate-hint span'], ['Home · Stored cases', '.topbar .brand']]) {
+  for (const [name, over] of [['investigator sign-in', '.gate-hint span'], ['Console', '.shell-name']]) {
     test(`fails dark text over the globe: ${name}`, async ({ page }) => {
       await open(page, PAGES.find((p) => p.name === name), 'dark')
       await page.addStyleTag({ content: `${over} { color: #1a1a1a !important }` })

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -43,7 +43,11 @@ describe('the demo doors', () => {
     render(<MemoryRouter initialEntries={['/demo/9']}><App /></MemoryRouter>)
     await user.click(await screen.findByText(/click anywhere to enter/i))
     await user.click(screen.getByRole('button', { name: /open the console/i }))
-    expect(await screen.findByText(/Verified example 09/)).toBeInTheDocument()
+    // The case's pill, and the shell's breadcrumb.
+    expect(await screen.findAllByText(/Verified example 09/)).toHaveLength(2)
+    // Inside the shell, which carries the one way home.
+    expect(within(screen.getByRole('complementary', { name: 'Sidebar' })).getByRole('link', { name: 'Cases' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getAllByRole('link', { name: 'Exchequer' })).toHaveLength(1)
     expect(screen.getByRole('button', { name: /trace live/i })).toBeInTheDocument()
     // No case id, so nothing that reads or writes a case is offered.
     expect(screen.queryByText('Export')).not.toBeInTheDocument()
@@ -66,10 +70,11 @@ describe('the demo doors', () => {
     const user = userEvent.setup()
     sessionStorage.setItem('exchequer-demo-session', 'investigator')
     at('/')
-    expect(await screen.findByRole('note', { name: 'Preview' })).toHaveTextContent(/no accounts yet · viewing as Investigator/)
-    await user.click(screen.getByRole('button', { name: /switch to citizen view/i }))
+    const side = within(await screen.findByRole('complementary', { name: 'Sidebar' }))
+    expect(side.getByText('Demo mode · Investigator')).toBeInTheDocument()
+    await user.click(side.getByRole('button', { name: /switch to citizen view/i }))
     expect(await screen.findByText(/This page is still to be built/)).toBeInTheDocument()
-    expect(screen.getByRole('note', { name: 'Preview' })).toHaveTextContent(/viewing as Citizen/)
+    expect(screen.getByRole('note', { name: 'Preview' })).toHaveTextContent(/no accounts yet · viewing as Citizen/)
   })
 
   it('forgets the view and the demo code on leaving', async () => {
@@ -77,7 +82,8 @@ describe('the demo doors', () => {
     sessionStorage.setItem('exchequer-demo-session', 'investigator')
     sessionStorage.setItem('exchequer-demo-code', 'river-otter-42')
     at('/')
-    await user.click(await screen.findByRole('button', { name: 'Leave' }))
+    const side = within(await screen.findByRole('complementary', { name: 'Sidebar' }))
+    await user.click(side.getByRole('button', { name: 'Leave' }))
     expect(await screen.findByText(/click anywhere to enter/i)).toBeInTheDocument()
     expect(sessionStorage.getItem('exchequer-demo-session')).toBeNull()
     expect(sessionStorage.getItem('exchequer-demo-code')).toBeNull()
@@ -97,5 +103,72 @@ describe('the demo doors', () => {
     // The citizen page renders; the console's address field never does.
     expect(await screen.findByText(/This page is still to be built/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Reported wallet address')).not.toBeInTheDocument()
+  })
+})
+
+describe('the console shell', () => {
+  const wallet = `0x${'ab'.repeat(20)}`
+  const shellAt = (path, extra = {}) => {
+    sessionStorage.setItem('exchequer-demo-session', 'investigator')
+    stubFetch({ '/chains': { body: health }, '/cases': { body: { count: 0, cases: [] } }, '/access': { body: {} }, ...extra })
+    return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
+  }
+
+  it('opens a searched wallet at its trace link and waits for a click', async () => {
+    const user = userEvent.setup()
+    shellAt('/')
+    await user.type(await screen.findByRole('searchbox', { name: 'Wallet, transaction hash or case ID' }), `${wallet}{Enter}`)
+    expect(await screen.findByRole('button', { name: 'Run this trace' })).toBeInTheDocument()
+    expect(fetch.mock.calls.some(([url]) => /\/trace(\/jobs)?$/.test(String(url).split('?')[0]))).toBe(false)
+  })
+
+  it('puts a searched transaction hash into the new trace form', async () => {
+    const user = userEvent.setup()
+    const hash = `0x${'c'.repeat(64)}`
+    shellAt('/cases', { '/trace/intake': { body: { payments: true } }, '/demos/recorded': { body: { demos: [] } } })
+    await user.type(await screen.findByRole('searchbox', { name: 'Wallet, transaction hash or case ID' }), `${hash}{Enter}`)
+    expect(await screen.findByRole('heading', { level: 1, name: 'New trace' })).toBeInTheDocument()
+    expect(await screen.findByLabelText(/Victim's payment transaction hash/)).toHaveValue(hash)
+  })
+
+  it('opens each page of the sidebar inside the shell', async () => {
+    const user = userEvent.setup()
+    shellAt('/', { '/watches': { body: { watches: [] } }, '/alerts': { body: { alerts: [] } }, '/requests': { body: { requests: [] } } })
+    const side = within(await screen.findByRole('complementary', { name: 'Sidebar' }))
+    for (const [link, heading] of [['Cases', 'Cases'], ['Watchlist', 'Watchlist'], ['Requests', 'Requests']]) {
+      await user.click(side.getByRole('link', { name: link }))
+      expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument()
+      expect(side.getByRole('link', { name: link })).toHaveAttribute('aria-current', 'page')
+    }
+  })
+
+  it('keeps Verify a report public: in the shell for an officer, on its own for anyone else', async () => {
+    stubFetch({ '/chains': { body: health }, '/signing-key': { status: 404, body: {} } })
+    const { unmount } = render(<MemoryRouter initialEntries={['/verify']}><App /></MemoryRouter>)
+    expect(await screen.findByRole('heading', { level: 1, name: /issued by Exchequer/ })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Sidebar' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+    unmount()
+    shellAt('/verify')
+    expect(await screen.findByRole('heading', { level: 1, name: /issued by Exchequer/ })).toBeInTheDocument()
+    expect(within(screen.getByRole('complementary', { name: 'Sidebar' })).getByRole('link', { name: 'Verify a report' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+  })
+
+  it('keeps the one shell when an officer opens Verify a report and comes back', async () => {
+    const user = userEvent.setup()
+    shellAt('/cases', { '/signing-key': { status: 404, body: {} } })
+    const side = () => within(screen.getByRole('complementary', { name: 'Sidebar' }))
+    await side().findByText(/chains? ready to trace/)
+    const asked = () => fetch.mock.calls.filter(([url]) => String(url).split('?')[0].endsWith('/chains')).length
+    const before = asked()
+    await user.click(side().getByRole('link', { name: 'Verify a report' }))
+    // Still the same sidebar: no second /chains, no "Connecting…" while it asks.
+    expect(side().queryByText('Connecting…')).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /issued by Exchequer/ })).toBeInTheDocument()
+    await user.click(side().getByRole('link', { name: 'Cases' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Cases' })).toBeInTheDocument()
+    expect(side().queryByText('Connecting…')).not.toBeInTheDocument()
+    expect(asked()).toBe(before)
   })
 })

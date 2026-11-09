@@ -1,16 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchRecordedDemos, fetchTraceIntake } from '../api'
+// The address and hash rules the backend enforces, checked here only so an
+// obvious typo gets immediate feedback instead of a round trip.
+import { ADDRESS_RE, HASH_RE } from '../find'
 import './TraceForm.css'
-
-// Same rules the backend enforces, checked here only so an obvious typo gets
-// immediate feedback instead of a round trip. The backend remains the
-// authority. Ethereum and BSC share the EVM 0x format; Tron uses
-// case-sensitive Base58 beginning with T.
-const ADDRESS_RE = {
-  evm: /^0x[0-9a-fA-F]{40}$/,
-  tron: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
-}
 
 // The ten verified traces in DEMO.md, one click each. Addresses and hooks
 // are copied from that file; the numbers there were measured cold on
@@ -46,12 +40,6 @@ const DEMOS = [
 // the demo traces cold and short enough to keep a room waiting comfortably.
 const TIME_BUDGET_SECONDS = 90
 
-/** The intake card: a reported address, how to trace it, and the DEMO.md
- * examples to fill it from. `health` is GET /health as the page loaded it
- * (null while connecting, { status: 'down' } when unreachable). */
-// A payment's transaction hash: 0x and 64 hex characters on EVM chains; Tron's
-// are 64 hex characters, often pasted with a 0x the explorer does not show.
-const HASH_RE = { evm: /^0x[0-9a-fA-F]{64}$/, tron: /^(0x)?[0-9a-fA-F]{64}$/ }
 // The NCRP acknowledgement number, as the backend checks it: 10 to 20 digits.
 const NCRP_RE = /^[0-9]{10,20}$/
 
@@ -63,7 +51,12 @@ export function parseHashes(text) {
 // Short names for the chain picker; the full name stays in its tooltip.
 export const SHORT_CHAIN = { ethereum: 'Ethereum', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum', tron: 'Tron' }
 
-export default function TraceForm({ health }) {
+/** The intake card: a reported address, how to trace it, and the DEMO.md
+ * examples to fill it from. `health` is GET /health as the page loaded it
+ * (null while connecting, { status: 'down' } when unreachable). `payments`
+ * fills the victim's payment hashes, as the search box sends one, and
+ * `startChain` the chain to start on when the site has it. */
+export default function TraceForm({ health, payments = '', startChain = null }) {
   const navigate = useNavigate()
   const [address, setAddress] = useState('')
   const [chain, setChain] = useState('ethereum')
@@ -80,20 +73,25 @@ export default function TraceForm({ health }) {
   // R1: whether the backend can start a trace from payment hashes, and the
   // hashes and NCRP number the officer entered.
   const [intake, setIntake] = useState(null)
-  const [paymentText, setPaymentText] = useState('')
+  const [paymentText, setPaymentText] = useState(payments)
   const [ncrpAck, setNcrpAck] = useState('')
   const [victimText, setVictimText] = useState('')
-  const [showPayments, setShowPayments] = useState(false)
+  const [showPayments, setShowPayments] = useState(Boolean(payments))
 
-  // Trace on the deployment's default chain once /health names it.
+  // Trace on the deployment's default chain once /health names it, or on
+  // the chain asked for when it is one the site traces. On Tron, the money
+  // in a complaint is almost always USDT.
   useEffect(() => {
-    if (!health?.default_chain) return
-    setChain(health.default_chain)
-    setAsset(health.chains?.[health.default_chain]?.assets?.[0]?.symbol ?? 'ETH')
-  }, [health])
+    const first = health?.chains?.[startChain]?.ready ? startChain : health?.default_chain
+    if (!first) return
+    const symbols = (health.chains?.[first]?.assets ?? []).map((a) => a.symbol)
+    setChain(first)
+    setAsset(first === startChain && symbols.includes('USDT') ? 'USDT' : symbols[0] ?? 'ETH')
+  }, [health, startChain])
 
+  // Unreachable reads as off: the form cannot offer payments either way.
   useEffect(() => {
-    fetchTraceIntake().then(setIntake).catch(() => setIntake(null))
+    fetchTraceIntake().then(setIntake).catch(() => setIntake({ payments: false }))
   }, [])
 
   useEffect(() => {
@@ -229,6 +227,12 @@ export default function TraceForm({ health }) {
           <button type="submit" className="go" style={{ gridColumn: 'span 2' }} disabled={!valid || blocked || backendDown}>
             {direction === 'outgoing' ? 'Trace' : 'Trace back'}<ArrowIcon />
           </button>
+          {payments && intake && !intake.payments && (
+            <p className="note pay-note" role="status" style={{ gridColumn: 'span 12' }}>
+              Tracing from a payment hash is off on this site, so <span className="mono pay-hash">{payments}</span> is
+              not used. Paste the wallet the victim paid into instead.
+            </p>
+          )}
           {paymentMode && showPayments && (
             <>
               <label className="fld" htmlFor="payment-hashes" style={{ gridColumn: 'span 9' }}>

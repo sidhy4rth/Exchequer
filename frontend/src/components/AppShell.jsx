@@ -1,0 +1,231 @@
+import { Suspense, useEffect, useRef, useState } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { fetchChains } from '../api'
+import { findTarget } from '../find'
+import { plain } from '../text'
+import { useDemoView } from './DemoBanner'
+import Mark from './Mark'
+import ThemeToggle from './ThemeToggle'
+import './AppShell.css'
+
+// The investigator's console around every page behind its front door: a
+// sidebar of grouped pages, a header with breadcrumbs and a search box, and
+// below 720 px a tab bar at the foot of the screen instead of the sidebar.
+
+const ICON = {
+  console: 'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z',
+  trace: 'M8 2.5v11M2.5 8h11',
+  cases: 'M2.5 3.5h11v9h-11zM2.5 6.5h11',
+  bulk: 'M2.5 4h11M2.5 8h11M2.5 12h7',
+  watch: 'M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 6a2 2 0 1 0 0 4a2 2 0 1 0 0-4',
+  requests: 'M2.5 2.5h8l3 3v8h-11zM5 8h6M5 10.5h6',
+  verify: 'M8 1.8l5 2v4.1c0 3-2.2 5.2-5 6.3-2.8-1.1-5-3.3-5-6.3V3.8zM5.6 8.1l1.7 1.7 3.2-3.3',
+  more: 'M3.5 8h.01M8 8h.01M12.5 8h.01',
+}
+const Icon = ({ name }) => (
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={name === 'more' ? 2.4 : 1.4} strokeLinecap="round" strokeLinejoin="round"><path d={ICON[name]} /></svg>
+)
+
+// Each page, and the paths that sit inside it (a case inside Cases).
+export const GROUPS = [
+  ['Investigate', [
+    { to: '/', label: 'Console', icon: 'console', inside: [] },
+    { to: '/trace/new', label: 'New trace', icon: 'trace', inside: ['/trace/'] },
+    { to: '/cases', label: 'Cases', icon: 'cases', inside: ['/case/', '/demo/'] },
+    { to: '/batch', label: 'Bulk intake', icon: 'bulk', inside: ['/batch/'] },
+  ]],
+  ['Monitor', [
+    { to: '/watchlist', label: 'Watchlist', icon: 'watch', inside: [] },
+    { to: '/requests', label: 'Requests', icon: 'requests', inside: [] },
+  ]],
+  ['Evidence', [
+    { to: '/verify', label: 'Verify a report', icon: 'verify', inside: [] },
+  ]],
+]
+const ITEMS = GROUPS.flatMap(([, items]) => items)
+// The phone's tab bar: the four most used, and More for the rest.
+const ON_BAR = ['/', '/trace/new', '/cases', '/watchlist']
+
+/** 'page' on the page itself, 'true' anywhere inside it. */
+const where = (item, path) => (path === item.to ? 'page' : item.inside.some((p) => path.startsWith(p)) ? 'true' : undefined)
+const middle = (a) => (a.length > 22 ? `${a.slice(0, 10)}…${a.slice(-8)}` : a)
+const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+
+/** The breadcrumbs for a path: its page, then what is open inside it. */
+function trail(path) {
+  const item = ITEMS.find((i) => where(i, path))
+  if (!item) return []
+  if (path === item.to) return [{ label: item.label }]
+  const [, kind, raw = ''] = path.split('/')
+  let id = raw
+  try { id = decodeURIComponent(raw) } catch { /* shown as typed */ }
+  const label = kind === 'demo' ? `Verified example ${id.padStart(2, '0')}` : kind === 'batch' ? 'Batch' : middle(plain(id))
+  return [{ label: item.label, to: item.to }, { label, mono: kind === 'trace' || kind === 'case' }]
+}
+
+/** What the sidebar can say for certain about the chains: how many can
+ * trace now (GET /chains `ready`), and how many flagged addresses those
+ * chains hold to screen against (each hop meets only its own chain's list). */
+function Status({ health }) {
+  const chains = Object.values(health?.chains ?? {})
+  const live = chains.filter((c) => c.ready)
+  const ready = live.length
+  const flagged = live.reduce((s, c) => s + Object.values(c.risk_labels ?? {}).reduce((a, b) => a + (b || 0), 0), 0)
+  const down = health?.status === 'down'
+  const line = !health ? 'Connecting…' : down ? 'Backend unreachable'
+    : ready === chains.length && ready > 1 ? `All ${ready} chains ready to trace`
+    : `${ready} of ${chains.length} ${chains.length === 1 ? 'chain' : 'chains'} ready to trace`
+  return (
+    <div className="shell-status">
+      <span><i className={`shell-dot${down ? ' down' : health ? ' live' : ''}`} aria-hidden="true" />{line}</span>
+      {!down && flagged > 0 && <small>{compact.format(flagged)} flagged addresses on file for screening</small>}
+    </div>
+  )
+}
+
+/** Wallet, transaction hash or case id → its page; anything else is said
+ * to be not recognised, in place. */
+function Find({ health }) {
+  const navigate = useNavigate()
+  const [text, setText] = useState('')
+  const [missed, setMissed] = useState(false)
+  function submit(event) {
+    event.preventDefault()
+    if (!text.trim()) return
+    const to = findTarget(text, health)
+    if (!to) { setMissed(true); return }
+    setText('')
+    navigate(to)
+  }
+  return (
+    <div className="shell-find">
+      <form role="search" aria-label="Find" onSubmit={submit}>
+        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" /></svg>
+        <label htmlFor="shell-find" className="visually-hidden">Wallet, transaction hash or case ID</label>
+        <input id="shell-find" type="search" placeholder="Wallet, hash or case" value={text} spellCheck={false} autoComplete="off"
+          onChange={(e) => { setText(e.target.value); setMissed(false) }}
+          aria-invalid={missed || undefined} aria-describedby={missed ? 'shell-find-missed' : undefined} />
+      </form>
+      {missed && <p id="shell-find-missed" className="shell-find-missed" role="alert">Not recognised: paste a wallet address, a transaction hash or a case ID.</p>}
+    </div>
+  )
+}
+
+/** The phone's tab bar. More opens the other pages and the demo's two ways
+ * out just above it, next after More in the Tab order. A choice, Escape,
+ * focus moving on or a press outside closes it, so the open menu never sits
+ * over the control that has focus. */
+function PhoneBar({ path, view }) {
+  const [open, setOpen] = useState(false)
+  const bar = useRef(null)
+  const button = useRef(null)
+  useEffect(() => setOpen(false), [path])
+  useEffect(() => {
+    if (!open) return undefined
+    const outside = (event) => { if (!bar.current?.contains(event.target)) setOpen(false) }
+    const onKey = (event) => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      if (bar.current?.contains(document.activeElement)) button.current?.focus()
+    }
+    document.addEventListener('focusin', outside)
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('focusin', outside)
+      document.removeEventListener('pointerdown', outside)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+  const rest = ITEMS.filter((i) => !ON_BAR.includes(i.to))
+  return (
+    <nav ref={bar} className="shell-tabs" aria-label="Sections">
+      <ul>
+        {ON_BAR.map((to) => ITEMS.find((i) => i.to === to)).map((item) => (
+          <li key={item.to}><Link className="shell-tab" to={item.to} aria-current={where(item, path)}><Icon name={item.icon} />{item.label}</Link></li>
+        ))}
+        <li>
+          <button ref={button} type="button" className={`shell-tab${rest.some((i) => where(i, path)) ? ' on' : ''}`}
+            aria-expanded={open} aria-controls="shell-more" onClick={() => setOpen((o) => !o)}>
+            <Icon name="more" />More
+          </button>
+          {open && (
+            <div id="shell-more" className="shell-more">
+              {rest.map((item) => (
+                <Link key={item.to} to={item.to} aria-current={where(item, path)}><Icon name={item.icon} />{item.label}</Link>
+              ))}
+              <button type="button" className="quiet" onClick={view.switchView}>Switch to {view.other.toLowerCase()} view</button>
+              <button type="button" className="quiet" onClick={view.exit}>Leave</button>
+            </div>
+          )}
+        </li>
+      </ul>
+    </nav>
+  )
+}
+
+export default function AppShell() {
+  // The router reads /cases/ as /cases; so do the sidebar and breadcrumbs.
+  const pathname = useLocation().pathname.replace(/(.)\/+$/, '$1')
+  const view = useDemoView('investigator')
+  const [health, setHealth] = useState(null)
+  useEffect(() => {
+    fetchChains().then(setHealth).catch(() => setHealth({ status: 'down' }))
+  }, [])
+  const crumbs = trail(pathname)
+
+  return (
+    <div className="shell">
+      <a className="skip-link" href="#main">Skip to the page</a>
+      <aside className="shell-side" aria-label="Sidebar">
+        <div className="shell-brand">
+          <Mark size={20} />
+          <span>
+            <Link to="/" className="shell-name">Exchequer</Link>
+            <small>Demo mode · {view.name}</small>
+          </span>
+        </div>
+        <div className="shell-demo">
+          <button type="button" className="quiet" onClick={view.switchView}>Switch to {view.other.toLowerCase()} view</button>
+          <button type="button" className="quiet" onClick={view.exit}>Leave</button>
+        </div>
+        <nav aria-label="Main" className="shell-nav">
+          {GROUPS.map(([group, items]) => (
+            <div key={group}>
+              <span className="shell-group" id={`shell-${group}`}>{group}</span>
+              <ul aria-labelledby={`shell-${group}`}>
+                {items.map((item) => (
+                  <li key={item.to}><Link className="shell-link" to={item.to} aria-current={where(item, pathname)}><Icon name={item.icon} />{item.label}</Link></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+        <Status health={health} />
+      </aside>
+      <div className="shell-body">
+        <header className="shell-head">
+          {crumbs.length > 0 && (
+            <nav aria-label="Breadcrumb" className="shell-crumbs">
+              <ol>
+                {crumbs.map((c, i) => (
+                  <li key={c.label}>
+                    {i > 0 && <span aria-hidden="true">/</span>}
+                    {c.to ? <Link to={c.to}>{c.label}</Link> : <span aria-current="page" className={c.mono ? 'mono' : undefined}>{c.label}</span>}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+          <span className="grow" />
+          <Find health={health} />
+          <ThemeToggle />
+        </header>
+        <main id="main" className="shell-main" tabIndex={-1}>
+          <Suspense fallback={null}><Outlet /></Suspense>
+        </main>
+      </div>
+      <PhoneBar path={pathname} view={view} />
+    </div>
+  )
+}

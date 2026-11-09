@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import appSource from './App.jsx?raw'
 import pkg from '../package.json'
 import { NOT_CHECKED, PAGES } from '../e2e/a11y.pages.js'
+import { GROUPS } from './components/AppShell'
 
 // The accessibility check (npm run a11y, e2e/a11y.spec.js) opens every page
 // of a running Exchequer in a real browser. These keep it pointed at a site
@@ -45,9 +46,11 @@ describe('the accessibility check', () => {
     expect(unchecked).toEqual([])
   })
 
-  it('opens each Home tab', () => {
-    const tabs = PAGES.filter((p) => p.path === '/' && p.click?.[0] === 'tab').map((p) => p.click[1].name.source)
-    expect(tabs).toEqual(['^Stored cases', '^Watchlist', '^Open requests', '^Bulk intake', '^Coverage'])
+  it('opens every page in the sidebar as an officer sees it, and More on a phone', () => {
+    const paths = GROUPS.flatMap(([, items]) => items.map((item) => item.to))
+    for (const path of paths) expect(PAGES.some((p) => p.path === path && p.as === 'investigator'), path).toBe(true)
+    const more = PAGES.find((p) => p.click?.[1]?.name === 'More')
+    expect(more?.size).toBe('phone')
   })
 
   it('opens the locked console a public site shows without the demo code', () => {

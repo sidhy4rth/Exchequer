@@ -10,10 +10,12 @@ from collections import OrderedDict
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 
 from .. import config, models, ownership, rate_limit
 from ..correlation import CaseIndex, related_cases
 from ..exchange_matcher import get_matcher, get_router_matcher
+from .cases import app_page
 
 router = APIRouter()
 
@@ -54,10 +56,13 @@ def _listing(caller: str | None, limit: int) -> dict[str, Any]:
     return {"count": len(kept), "cases": kept}
 
 
-@router.get("/cases")
-def cases(http: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
+@router.get("/cases", response_model=None)
+def cases(http: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any] | FileResponse:
     """History of past traces, most recent first: the caller's own cases (by
-    the owner key their browser sends) and the demo cases. See ownership.py."""
+    the owner key their browser sends) and the demo cases. See ownership.py.
+    A browser opening /cases gets the app's Cases page, uncounted."""
+    if (page := app_page(http)) is not None:
+        return page
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
     wait = case_lists.check(client)
     if wait is not None:

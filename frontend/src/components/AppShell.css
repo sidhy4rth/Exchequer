@@ -1,0 +1,106 @@
+/* The console shell (AppShell.jsx): a frosted sidebar of grouped pages, a
+   header with breadcrumbs and search, and the page. Below 720 px the sidebar
+   gives way to a tab bar fixed at the foot of the screen. Colours are the
+   Glass tokens only (styles.css). */
+.shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100%; }
+
+.skip-link { position: absolute; left: 12px; top: -48px; z-index: 50; padding: 8px 14px; border-radius: var(--r-pill); background: var(--panel); color: var(--text); border: 1px solid var(--line-strong); }
+.skip-link:focus { top: 12px; }
+
+/* Above the page's own stacking context, so the console's globe passes
+   behind the glass rather than over it. */
+.shell-side {
+  position: sticky; top: 20px; z-index: 2; align-self: start;
+  height: calc(100vh - 40px); margin: 20px 0 20px 20px; padding: 22px 16px 16px;
+  display: flex; flex-direction: column; gap: 18px; overflow-y: auto;
+  border-radius: var(--r-panel); background: var(--glass); border: 1px solid var(--glass-line);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.shell-brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+.shell-brand > span { display: flex; flex-direction: column; min-width: 0; }
+.shell-brand .mark { color: var(--text); }
+.shell-name { font-family: var(--serif); font-weight: 600; font-size: 15px; line-height: 24px; color: var(--text); text-decoration: none; align-self: flex-start; }
+.shell-brand small { font-size: 11px; color: var(--text-3); }
+.shell-demo { display: flex; flex-wrap: wrap; gap: 2px; margin: -10px 0 0 30px; }
+.shell-demo button, .shell-more button { font-size: 11.5px; min-height: 24px; }
+
+.shell-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.shell-group { display: block; font-size: 11px; color: var(--text-3); padding: 14px 10px 4px; }
+.shell-nav > div:first-child .shell-group { padding-top: 0; }
+.shell-link {
+  display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 10px;
+  border-radius: var(--r); border: 1px solid transparent; color: var(--text-2); text-decoration: none;
+  transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.shell-link:hover { color: var(--text); background: var(--panel-2); }
+.shell-link[aria-current] { color: var(--text); background: var(--panel-2); border-color: var(--line); }
+
+.shell-status { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: var(--r); background: var(--panel-2); font-size: 12px; }
+.shell-status > span { display: inline-flex; align-items: center; gap: 8px; }
+.shell-status small { font-size: 11px; color: var(--text-3); }
+.shell-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--line-strong); }
+.shell-dot.live { background: var(--go); }
+.shell-dot.down { background: var(--risk); }
+
+.shell-body { min-width: 0; display: flex; flex-direction: column; }
+.shell-head { position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 20px 24px 0; }
+.shell-head .grow { flex: 1; }
+.shell-crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3); }
+.shell-crumbs li { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.shell-crumbs a { color: var(--text-2); text-decoration: none; min-height: 24px; display: inline-flex; align-items: center; }
+.shell-crumbs a:hover { color: var(--text); text-decoration: underline; }
+.shell-crumbs [aria-current] { color: var(--text); }
+.shell-crumbs .mono { font-size: 12px; }
+
+.shell-find { position: relative; max-width: 100%; }
+.shell-find form {
+  display: flex; align-items: center; gap: 10px; width: 300px; max-width: 100%; height: 40px; padding: 0 16px;
+  border-radius: var(--r-pill); background: var(--glass-input); border: 1px solid var(--line-strong); color: var(--text-3);
+}
+.shell-find form:focus-within { outline: 2px solid var(--go); outline-offset: 2px; }
+.shell-find input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--text); font-size: 13px; }
+.shell-find input:focus-visible { outline: none; }
+.shell-find input::-webkit-search-cancel-button { display: none; }
+/* Below the field, over the page, so the header never moves. */
+.shell-find-missed {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 5; margin: 0; padding: 8px 12px;
+  border-radius: var(--r); background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  font-size: 12px; color: var(--risk);
+}
+
+.shell-main { min-width: 0; flex: 1; }
+.shell-main:focus { outline: none; }
+
+.shell-tabs { display: none; }
+
+@media (max-width: 720px) {
+  /* The tab bar sits over the foot of the page: focus and the last of the
+     page scroll clear of it. */
+  html { scroll-padding-bottom: 104px; }
+  .shell { display: block; padding-bottom: 96px; }
+  .shell-side { position: static; height: auto; margin: 0; padding: 14px 16px 0; overflow: visible; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .shell-side > :not(.shell-brand) { display: none; }
+  .shell-brand { padding: 0; }
+  .shell-head { padding: 10px 16px 0; flex-wrap: nowrap; }
+  .shell-crumbs, .shell-head .grow { display: none; }
+  .shell-find { flex: 1; min-width: 0; }
+  .shell-find form { width: 100%; }
+
+  .shell-tabs {
+    display: block; position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 30; padding: 6px;
+    border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  }
+  .shell-tabs ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .shell-tab {
+    width: 100%; min-height: 52px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    border: 0; border-radius: var(--r); background: none; color: var(--text-2); font-size: 11px; font-weight: 400; text-decoration: none; text-align: center;
+  }
+  .shell-tab[aria-current], .shell-tab.on, .shell-tab[aria-expanded="true"] { background: var(--panel-2); color: var(--text); }
+  .shell-more {
+    position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); padding: 8px; display: flex; flex-direction: column; gap: 2px;
+    border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  }
+  .shell-more a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: var(--r); color: var(--text-2); text-decoration: none; }
+  .shell-more a[aria-current] { background: var(--panel-2); color: var(--text); }
+  .shell-more button { align-self: flex-start; }
+}
