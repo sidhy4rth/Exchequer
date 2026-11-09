@@ -68,6 +68,11 @@ services:
       # /health/detail "client_ip" and set EXCHEQUER_PROXY_HOPS from it.
       - key: EXCHEQUER_TRUST_PROXY
         value: render
+      # Measured 9 Nov 2026 with /health/detail: X-Forwarded-For arrives as
+      # client, Cloudflare edge, Render's proxy. Only used if CF-Connecting-IP
+      # is ever missing; re-measure if Render changes its proxies.
+      - key: EXCHEQUER_PROXY_HOPS
+        value: "3"
       # Each wake from sleep starts with an empty provider cache; re-tracing
       # every demo then would spend the free quota and slow the first visitor
       # on a tenth of a CPU. The recorded demos open instantly instead.

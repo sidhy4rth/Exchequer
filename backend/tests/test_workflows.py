@@ -191,3 +191,13 @@ def test_render_deploys_each_merge_and_the_canary_can_see_it():
     assert service["autoDeployTrigger"] == "commit"
     on = load(ROOT / ".github" / "workflows" / "site-canary.yml")[True]
     assert "push" in on
+
+
+def test_render_names_the_measured_proxy_hops():
+    """Measured on the live site 9 Nov 2026 (/health/detail client_ip): the
+    X-Forwarded-For chain is client, Cloudflare edge, Render's proxy, so the
+    client is the third entry from the right. Used only when CF-Connecting-IP
+    is missing; set, the leftmost (client-chosen) entry is never the key."""
+    env = {e["key"]: e for e in load(ROOT / "render.yaml")["services"][0]["envVars"]}
+    assert env["EXCHEQUER_TRUST_PROXY"]["value"] == "render"
+    assert env["EXCHEQUER_PROXY_HOPS"]["value"] == "3"
