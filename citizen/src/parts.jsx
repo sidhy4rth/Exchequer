@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 
 // Line icons on a 16px grid, drawn in the text colour. Decorative only: every
 // icon sits beside words that say the same thing.
@@ -20,6 +21,9 @@ export const PATHS = {
   trend: 'M1.5 11.5l4-4 3 3 6-6M10 4.5h4.5V9',
   heart: 'M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.6a3 3 0 0 1 6 1.2c0 4.2-6 7.7-6 7.7z',
   shield: 'M8 1.5l5.5 2v4.2c0 3.2-2.3 5.6-5.5 6.8-3.2-1.2-5.5-3.6-5.5-6.8V3.5z',
+  plus: 'M8 3v10M3 8h10',
+  save: 'M8 2v8M4.5 6.5L8 10l3.5-3.5M3 13.5h10',
+  image: 'M2 3h12v10H2zM14 10.5L10.5 7 4 13M6 5.2a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z',
 }
 
 export function Icon({ name, size = 16 }) {
@@ -53,5 +57,27 @@ export function OfficialLinks() {
       <a className="btn btn-call" href="tel:1930"><Icon name="phone" size={18} />Call 1930</a>
       <PortalLink className="btn btn-line">Report at cybercrime.gov.in</PortalLink>
     </div>
+  )
+}
+
+// The three report steps; `at` is the current one. Confirming the payment
+// needs the blockchain lookup, which is not switched on yet.
+const STEPS = [['Find your payment', '/report'], ['Confirm it'], ['Complaint pack', '/report/pack']]
+
+export function ReportSteps({ at }) {
+  return (
+    <ol className="stepper" role="list" aria-label="Report steps">
+      {STEPS.map(([name, to], i) => {
+        const step = (<>
+          <span className="num" aria-hidden="true">{i + 1}</span>
+          <span className="step-name">{name}{!to && <span className="later"> · coming later</span>}</span>
+        </>)
+        return (
+          <li key={name} className={i === at ? 'is-on' : undefined} aria-current={i === at ? 'step' : undefined}>
+            {to && i !== at ? <Link className="step-link" to={to}>{step}</Link> : step}
+          </li>
+        )
+      })}
+    </ol>
   )
 }
