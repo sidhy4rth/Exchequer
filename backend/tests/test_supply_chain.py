@@ -13,10 +13,14 @@ import json
 import re
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+# The two npm projects: the officer app and the citizen site (its own Vercel
+# project, which installs with the command in citizen/vercel.json).
+NPM_DIRS = ("frontend", "citizen")
 DIGEST = re.compile(r"@sha256:[0-9a-f]{64}$")
 
 
@@ -54,7 +58,7 @@ def test_the_python_and_node_stages_stay_on_their_lines():
 
 def _npm_installs() -> list[tuple[str, str]]:
     found = []
-    for path in (ROOT / "Dockerfile", *WORKFLOWS):
+    for path in (ROOT / "Dockerfile", *WORKFLOWS, ROOT / "citizen" / "vercel.json"):
         found += [(path.name, line.strip()) for line in path.read_text().splitlines()
                   if re.search(r"\bnpm (ci|install|i)\b", line)]
     return found
@@ -62,23 +66,34 @@ def _npm_installs() -> list[tuple[str, str]]:
 
 def test_npm_installs_skip_install_scripts():
     installs = _npm_installs()
-    assert {name for name, _ in installs} >= {"Dockerfile", "test.yml", "site-canary.yml"}
+    assert {name for name, _ in installs} >= {"Dockerfile", "test.yml", "site-canary.yml", "vercel.json"}
     for name, line in installs:
         assert "npm ci --ignore-scripts" in line, f"{name}: {line}"
 
 
-def test_the_frontend_npmrc_turns_install_scripts_off():
-    """For an `npm ci` or `npm install` a person runs in frontend/ too."""
-    settings = dict(line.split("=", 1) for line in (ROOT / "frontend" / ".npmrc").read_text().splitlines()
+@pytest.mark.parametrize("folder", NPM_DIRS)
+def test_the_npmrc_turns_install_scripts_off(folder):
+    """For an `npm ci` or `npm install` a person runs in the folder too."""
+    settings = dict(line.split("=", 1) for line in (ROOT / folder / ".npmrc").read_text().splitlines()
                     if "=" in line and not line.startswith(("#", ";")))
     assert settings.get("ignore-scripts", "").strip() == "true"
 
 
-def test_only_fsevents_has_an_install_script():
+@pytest.mark.parametrize("folder", NPM_DIRS)
+def test_only_fsevents_has_an_install_script(folder):
     """A new dependency with an install hook shows up here, in review, not on a laptop."""
-    lock = json.loads((ROOT / "frontend" / "package-lock.json").read_text())
+    lock = json.loads((ROOT / folder / "package-lock.json").read_text())
     hooks = {path for path, entry in lock["packages"].items() if entry.get("hasInstallScript")}
     assert hooks <= {"node_modules/fsevents"}, sorted(hooks)
+
+
+def test_the_citizen_site_names_exact_versions():
+    """The public site takes no range: a new release reaches it only through a reviewed bump."""
+    package = json.loads((ROOT / "citizen" / "package.json").read_text())
+    pins = {**package["dependencies"], **package["devDependencies"]}
+    assert pins
+    for name, version in pins.items():
+        assert re.fullmatch(r"\d+\.\d+\.\d+", version), f"{name}: {version}"
 
 
 def _updates() -> list[dict]:
@@ -104,6 +119,11 @@ def test_dependabot_never_mixes_a_major_with_patches():
         if ecosystem != "github-actions":  # an action's major comes alone, ungrouped
             ignored = [rule for rule in update.get("ignore", []) if rule.get("dependency-name") == "*"]
             assert any("version-update:semver-major" in rule.get("update-types", []) for rule in ignored), ecosystem
+
+
+def test_dependabot_watches_both_npm_projects():
+    (npm,) = [u for u in _updates() if u["package-ecosystem"] == "npm"]
+    assert set(npm.get("directories") or [npm.get("directory")]) == {f"/{folder}" for folder in NPM_DIRS}
 
 
 def test_dependabot_keeps_python_on_312_and_node_on_24():
