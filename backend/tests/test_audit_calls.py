@@ -51,6 +51,8 @@ def recorded(monkeypatch):
     ("/trace/case-1/graph?format=csv", ("case.graph_export", "case-1", {"format": "csv"})),
     ("/trace/case-1/letters", ("case.letters_list", "case-1", None)),
     ("/trace/case-1/letter?to=exchange", ("case.letter_draft", "case-1", {"to": "exchange", "format": "text"})),
+    ("/trace/case-1/letter?to=exchange-freeze",
+     ("case.letter_draft", "case-1", {"to": "exchange-freeze", "format": "text"})),
     ("/trace/case-1/requests", ("request.list", "case-1", None)),
     ("/requests?open=true", ("request.list", None, {"open": True})),
 ])
@@ -113,3 +115,6 @@ def test_exports_keep_their_download_names(client):
     assert client.get("/trace/case-1/graph?format=csv").headers["content-type"].startswith("text/csv")
     assert client.get("/trace/case-1/letter?to=exchange").headers["content-disposition"] == \
         'attachment; filename="exchequer-case-1-request-exchange.txt"'
+    assert client.get("/trace/case-1/letter?to=exchange-freeze").headers["content-disposition"] == \
+        'attachment; filename="exchequer-case-1-request-exchange-freeze.txt"'
+    assert client.get("/trace/case-1/letter?to=freeze").status_code == 422  # not a letter the tool drafts

@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchGraph, fetchLetter, fetchLetters, fetchReport } from '../api'
+import { plain } from '../text'
+
+// The urgent "hold these funds now" letters: listed first, since they are sent first.
+const urgent = (letter) => letter.to.endsWith('-freeze')
 
 function save(content, type, filename) {
   const blob = content instanceof Blob ? content : new Blob([content], { type: `${type};charset=utf-8` })
@@ -27,7 +31,8 @@ export default function ExportButton({ caseId, address }) {
   const [letters, setLetters] = useState([])
 
   // Which request letters this case supports: to the exchange it reached,
-  // and to Tether when USDT or a Tether freeze is involved.
+  // and to Tether when USDT or a Tether freeze is involved; each with an
+  // urgent freeze letter when the case can name what to hold.
   useEffect(() => {
     if (!caseId) return undefined
     let live = true
@@ -107,10 +112,14 @@ export default function ExportButton({ caseId, address }) {
             Graph (.csv)<small>addresses and transfers, for a spreadsheet</small>
           </button>
           {letters.length > 0 && <span className="export-group">Draft letters</span>}
-          {letters.map((l) => (
+          {[...letters].sort((a, b) => urgent(b) - urgent(a)).map((l) => (
             <button key={l.to} role="menuitem" onClick={pick(() => draftLetter(l.to))} disabled={busy !== null}
-              title="A draft for the officer to complete and sign: the case facts filled in, the legal provision and signature left blank">
-              {l.title}<small>case facts filled in; provision and signature left blank</small>
+              title={urgent(l)
+                ? 'An urgent draft for the officer to complete and sign: hold these funds now, pending a formal request'
+                : 'A draft for the officer to complete and sign: the case facts filled in, the legal provision and signature left blank'}>
+              {plain(l.title)}<small>{urgent(l)
+                ? 'send first: hold the funds now; wallets, hashes, times and amount only'
+                : 'case facts filled in; provision and signature left blank'}</small>
             </button>
           ))}
           <a role="menuitem" href="/verify" target="_blank" rel="noopener">Verify a report…</a>

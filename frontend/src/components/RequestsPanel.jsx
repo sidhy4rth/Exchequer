@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { deleteRequest, fetchCaseRequests, fetchLetters, logRequest, updateRequest } from '../api'
+import { plain } from '../text'
 
 // Where this case's freeze requests stand. The letter is drafted from the
 // Export menu; this is the log of what was sent and what came back.
@@ -12,6 +13,10 @@ export const STATUS = {
   declined: { label: 'Declined', pill: 'red' },
   closed: { label: 'Closed', pill: '' },
 }
+
+// An urgent freeze letter (request_letters.py): logged as its own kind, apart
+// from the information letter to the same recipient.
+const freeze = (kind) => Boolean(kind?.endsWith('-freeze'))
 
 export default function RequestsPanel({ result }) {
   const [items, setItems] = useState([])
@@ -34,13 +39,13 @@ export default function RequestsPanel({ result }) {
   }
   const log = (recipient, kind) => run(() => logRequest({
     case_id: caseId, recipient, kind,
-    address: kind === 'exchange' ? (result.exchange_address ?? '') : '',
+    address: kind.startsWith('exchange') ? (result.exchange_address ?? '') : '',
     asset: result.asset ?? '',
   }))
-  const suggestions = letters.map((l) => ({
-    recipient: l.to === 'tether' ? 'Tether' : (result.exchange ?? 'the exchange'),
+  const suggestions = [...letters].sort((a, b) => freeze(b.to) - freeze(a.to)).map((l) => ({
+    recipient: l.to.startsWith('tether') ? 'Tether' : plain(result.exchange ?? 'the exchange'),
     kind: l.to,
-  })).filter((s) => !items.some((i) => i.recipient === s.recipient && i.status !== 'closed'))
+  })).filter((s) => !items.some((i) => i.recipient === s.recipient && freeze(i.kind) === freeze(s.kind) && i.status !== 'closed'))
 
   return (
     <details className="card sec" open={items.length > 0 || suggestions.length > 0}>
@@ -49,7 +54,7 @@ export default function RequestsPanel({ result }) {
         {items.map((r) => (
           <div className="request-row" key={r.request_id}>
             <div className="top">
-              <span className="nm">{r.recipient}</span>
+              <span className="nm">{plain(r.recipient)}{freeze(r.kind) && <span className="pill red" style={{ marginLeft: 8 }}>Urgent freeze</span>}</span>
               <span className={`pill ${STATUS[r.status]?.pill ?? ''}`}>{STATUS[r.status]?.label ?? r.status}</span>
             </div>
             {r.follow_up && <div className="follow-up">No reply for {r.days_waiting} days: follow up.</div>}
@@ -78,7 +83,11 @@ export default function RequestsPanel({ result }) {
           </div>
         ))}
         <div className="request-add">
-          {suggestions.map((s) => <button key={s.recipient} onClick={() => log(s.recipient, s.kind)}>Log a request to {s.recipient}</button>)}
+          {suggestions.map((s) => (
+            <button key={s.kind} onClick={() => log(s.recipient, s.kind)}>
+              Log {freeze(s.kind) ? 'an urgent freeze' : 'a'} request to {s.recipient}
+            </button>
+          ))}
           <span className="other">
             <input placeholder="Another recipient" value={other} onChange={(e) => setOther(e.target.value)} />
             <button disabled={!other.trim()} onClick={() => { log(other.trim(), 'other'); setOther('') }}>Log</button>

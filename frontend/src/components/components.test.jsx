@@ -352,6 +352,31 @@ describe('Freeze requests panel', () => {
     await user.selectOptions(screen.getByLabelText('Status'), 'sent')
     await waitFor(() => expect(calls.some((c) => c.method === 'PATCH' && c.body.status === 'sent')).toBe(true))
   })
+
+  it('suggests the urgent freeze letters first and logs one as its own kind', async () => {
+    let items = []
+    const calls = api({
+      'GET /trace/case-1/requests': () => ({ body: { count: items.length, requests: items } }),
+      'GET /trace/case-1/letters': { body: { letters: LETTERS } },
+      'POST /requests': (body) => {
+        items = [{ request_id: 'r1', ...body, status: 'drafted', history: [], reference: '', notes: '' }]
+        return { status: 201, body: items[0] }
+      },
+    })
+    const user = userEvent.setup()
+    inRouter(<RequestsPanel result={{ ...CASE, exchange: 'Bin\u200bance' }} />)
+    await screen.findByRole('button', { name: 'Log a request to Tether' })
+    expect(screen.getAllByRole('button', { name: /^Log (a|an urgent freeze) request to/ }).map((b) => b.textContent)).toEqual([
+      'Log an urgent freeze request to Binance', 'Log an urgent freeze request to Tether',
+      'Log a request to Binance', 'Log a request to Tether',
+    ])
+    await user.click(screen.getByRole('button', { name: 'Log an urgent freeze request to Binance' }))
+    expect(calls.find((c) => c.method === 'POST').body).toMatchObject({ recipient: 'Binance', kind: 'exchange-freeze', address: CASE.exchange_address })
+    expect(await screen.findByText('Urgent freeze')).toBeInTheDocument()
+    // Logged once, the urgent one to Binance is no longer suggested; the information letter still is.
+    expect(screen.queryByRole('button', { name: 'Log an urgent freeze request to Binance' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log a request to Binance' })).toBeInTheDocument()
+  })
 })
 
 describe('Bulk intake', () => {
@@ -389,6 +414,12 @@ describe('Bulk intake', () => {
   })
 })
 
+// The information letters first, as an older server listed them: the menu still puts the urgent ones first.
+const LETTERS = [
+  { to: 'exchange', title: 'Request to Binance' }, { to: 'tether', title: 'Request to Tether' },
+  { to: 'exchange-freeze', title: 'Urgent freeze request to Bin\u200bance' }, { to: 'tether-freeze', title: 'Urgent freeze request to Tether' },
+]
+
 describe('Export menu', () => {
   it('offers the PDF, both graph formats and the case\'s draft letters', async () => {
     api({ 'GET /trace/case-1/letters': { body: { letters: [{ to: 'exchange', title: 'Request to Binance' }] } } })
@@ -400,6 +431,21 @@ describe('Export menu', () => {
       expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument()
     }
     expect(await within(menu).findByRole('menuitem', { name: /Request to Binance/ })).toBeInTheDocument()
+  })
+
+  it('lists the urgent freeze letters first, named in plain text', async () => {
+    api({ 'GET /trace/case-1/letters': { body: { letters: LETTERS } } })
+    const user = userEvent.setup()
+    inRouter(<ExportButton caseId="case-1" address={CASE.address} />)
+    await user.click(screen.getByRole('button', { name: /Export/ }))
+    const menu = screen.getByRole('menu')
+    await within(menu).findByRole('menuitem', { name: /^Request to Tether/ })
+    const letters = within(menu).getAllByRole('menuitem', { name: /request to/i }).map((b) => b.textContent)
+    expect(letters.map((t) => t.split(/(?<=Binance|Tether)/)[0])).toEqual([
+      'Urgent freeze request to Binance', 'Urgent freeze request to Tether', 'Request to Binance', 'Request to Tether',
+    ])
+    expect(letters[0]).toContain('hold the funds now')
+    expect(letters[2]).not.toContain('hold the funds now')
   })
 })
 
