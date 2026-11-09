@@ -12,6 +12,7 @@
 // tiles; on a phone the console's Coverage tables (opened) scroll sideways
 // inside themselves and axe cannot see the cells they clip, and the
 // verified-example rows and a batch's empty cell run under their neighbours;
+// a case's transfer rows draw over a pseudo-element;
 // text cut by the bottom of the screen at rest (a tall exchange list, the
 // signing-key note on Verify inside the console, the Console's wallet bars, a
 // coverage row, the Cases page's linked wallet or New trace's direction at
@@ -56,6 +57,7 @@ const LINKED = {
 const CASES_STUB = (linked) => [{ url: /\/cases\?limit=\d+$/, body: CASES }, { url: /\/cases\/correlate$/, body: linked }]
 
 const H1 = (name) => ['heading', { level: 1, name }]
+const CASE_TAB = (name) => ['tab', { name, selected: true }]
 
 // On a phone the open sign-in card is drawn from tiles, and the "Preview"
 // paragraph sits over a seam between two of them. On Linux (CI) the card's
@@ -91,8 +93,15 @@ export const PAGES = [
   { name: 'Bulk intake', path: '/batch', as: 'investigator', ready: H1('Bulk intake') },
   { name: 'Watchlist', path: '/watchlist', as: 'investigator', ready: H1('Watchlist') },
   { name: 'Requests', path: '/requests', as: 'investigator', ready: H1('Requests') },
-  // A recorded trace: the case view, read from the recording, no chain consulted.
-  { name: 'recorded case 11', path: '/demo/11', as: 'investigator', ready: ['heading', { level: 2 }], unmeasured: { desktop: 19, phone: 28 } },
+  // A recorded trace: the case view, read from the recording, no chain
+  // consulted. It opens on Flow, and each tab has a URL of its own. On a
+  // phone a line of the finding sits at the foot of the screen at rest.
+  { name: 'recorded case 11', path: '/demo/11', as: 'investigator', ready: ['heading', { level: 2 }], unmeasured: { desktop: 8, phone: 9 } },
+  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
+  { name: 'recorded case 11, Timeline', path: '/demo/11?tab=timeline', as: 'investigator', ready: CASE_TAB('Timeline'), unmeasured: { desktop: 11, phone: 21 } },
+  { name: 'recorded case 11, Entities', path: '/demo/11?tab=entities', as: 'investigator', ready: CASE_TAB('Entities'), unmeasured: { phone: 1 } },
+  { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 } },
+  { name: 'recorded case 11, Letters', path: '/demo/11?tab=letters', as: 'investigator', ready: CASE_TAB('Letters'), unmeasured: { phone: 1 } },
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },
   { name: 'batch', path: '/batch/a11y-example', as: 'investigator', stub: { url: '**/batches/a11y-example', body: BATCH }, ready: ['heading', { level: 1, name: BATCH.name }], unmeasured: { phone: 1 } },

@@ -30,3 +30,74 @@
 .confirm-trace .confirm-address { overflow-wrap: anywhere; word-break: break-all; }
 .confirm-trace .confirm-hashes { margin: 0; padding-left: 16px; }
 .confirm-trace .confirm-cap { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+
+/* The case header (Glass, pack CaseTop): the reported address as the page's
+   heading with its actions, the case in pills, and where the trace began. */
+.case-top { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 4px; }
+.case-top-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.case-top .subject { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; min-width: 0; font: inherit; }
+.case-top .subject .addr { min-height: 24px; display: inline-flex; align-items: center; font-size: 13px; }
+.case-top .actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.icon-btn, .export-menu > summary.icon-btn {
+  width: 42px; height: 42px; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  background: var(--glass); border: 1px solid var(--line-strong); color: var(--text);
+}
+.export-menu > summary.icon-btn::after { content: none; }
+.case-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+.case-pill {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px;
+  border-radius: var(--r-pill); background: var(--glass); border: 1px solid var(--glass-line);
+  color: var(--text-3); font-size: 13px; white-space: nowrap;
+}
+.case-pill b { font-weight: 400; font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; }
+.case-pill.risk { background: var(--risk-tint); border-color: var(--risk); }
+.case-pill.risk, .case-pill.risk b { color: var(--risk); }
+.case-pill.go { background: var(--go-tint); color: var(--go-soft); border-color: transparent; }
+.case-origin { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 0 auto; min-height: 40px; font-size: 12px; color: var(--text-3); }
+.case-origin svg { stroke: var(--go); flex-shrink: 0; }
+
+/* The views: a tab's blocks stack as the old columns did. */
+.case-tabs [role="tabpanel"]:not([hidden]) { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.case-tabs [role="tabpanel"]:focus-visible { outline-offset: 4px; }
+.pill-tablist [role="tab"] svg { flex-shrink: 0; }
+.case-note { padding: 14px; }
+.draft-letters h2 { margin: 0; }
+.draft-letters > .body { flex-direction: row; flex-wrap: wrap; }
+.draft-letter { flex-direction: column; align-items: flex-start; gap: 2px; border-radius: var(--r); padding: 10px 14px; text-align: left; }
+.draft-letter small { font-size: 11px; font-weight: 400; color: var(--text-3); }
+
+/* A live trace while it runs (pack Tracing): four steps, the bar, Stop. */
+.tracing { display: flex; flex-direction: column; gap: 22px; }
+.tracing-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.tracing-head > div { min-width: 0; }
+.tracing-head .mono { margin: 0 0 6px; font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
+.tracing-head h1 { margin: 0; font-weight: 300; font-size: 32px; line-height: 1.15; }
+.tracing-stop { min-height: 40px; padding: 0 16px; background: transparent; border-color: var(--line-strong); color: var(--text-2); font-weight: 400; }
+.tracing-card { max-width: 560px; padding: 28px; border-radius: var(--r-panel); background: var(--glass); border: 1px solid var(--glass-line); display: flex; flex-direction: column; gap: 10px; }
+.tracing-steps { list-style: none; margin: 0; padding: 0; }
+.tracing-step { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 14px; padding-bottom: 22px; }
+.tracing-step:not(:last-child)::before { content: ''; position: absolute; left: 10.5px; top: 26px; bottom: 4px; width: 1px; background: var(--line-strong); }
+.tracing-step.done:not(:last-child)::before { background: var(--go); }
+.tracing-mark { grid-row: span 2; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line-strong); color: var(--ground); }
+.tracing-step.done .tracing-mark { background: var(--go); border-color: var(--go); }
+.tracing-step.now .tracing-mark { border: 2px solid var(--go); }
+.tracing-label { font-size: 14px; color: var(--text); }
+.tracing-step.now .tracing-label { color: var(--go-soft); }
+.tracing-step.next .tracing-label { color: var(--text-3); }
+.tracing-step small { font-size: 12px; color: var(--text-3); }
+.tracing .progress-line { margin: 0; font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
+.tracing-bar { height: 4px; border-radius: 2px; background: var(--panel-2); overflow: hidden; }
+.tracing-bar span { display: block; height: 100%; background: var(--go); transition: width 300ms var(--ease); }
+.tracing-foot { display: flex; justify-content: space-between; gap: 12px; margin: 0; font-size: 11px; color: var(--text-3); }
+.tracing-foot .mono { flex-shrink: 0; }
+
+@media (max-width: 720px) {
+  .case-top { padding: 16px 16px 0; }
+  .case-pill { min-height: 34px; padding: 0 14px; }
+  .case-origin { flex-basis: 100%; min-height: 0; margin-left: 0; }
+  /* Five tabs do not fit one row: two even rows in a rounded panel. */
+  .case-tabs .pill-tablist { display: flex; border-radius: var(--r-panel); }
+  .case-tabs .pill-tablist [role="tab"] { flex: 1 1 30%; justify-content: center; }
+  .tracing-card { padding: 20px; }
+  .tracing-head h1 { font-size: 26px; }
+}

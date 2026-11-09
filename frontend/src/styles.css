@@ -813,7 +813,7 @@ details.more summary:hover { color: var(--ink); }
 .pr-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 48px; font-size: 14px; color: var(--muted); }
 .pr-facts b { color: var(--ink); font-weight: 500; }
 .pr-handoff { grid-template-columns: 1.6fr 1fr; }
-.pr-actions { display: flex; gap: 12px; margin-top: 10px; }
+.pr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 10px; }
 .pr-actions button { padding: 12px 20px; font-size: 14px; }
 .pr-hash { display: flex; flex-direction: column; gap: 6px; }
 .pr-hash .mono { font-size: 13px; }

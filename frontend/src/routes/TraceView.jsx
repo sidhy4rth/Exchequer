@@ -3,11 +3,14 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace, stopTraceJob, traceJobRemembered } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
-import ThemeToggle from '../components/ThemeToggle'
-import ExportButton from '../components/ExportButton'
+import ExportButton, { DraftLetters } from '../components/ExportButton'
 import Present from '../components/Present'
 import WatchPanel from '../components/WatchPanel'
 import RequestsPanel from '../components/RequestsPanel'
+import { useCrumb } from '../components/AppShell'
+import CaseTabs from '../components/case/CaseTabs'
+import Tracing from '../components/case/Tracing'
+import { useCaseTab } from './caseTab'
 import './TraceView.css'
 import { plain } from '../text'
 import { BAND_RULE, bandLabel, bandOf, validationLine } from '../components/confidence'
@@ -89,7 +92,6 @@ const Icon = ({ d, size }) => (
 const ICONS = {
   alert: ['M12 3 2 20h20L12 3z', 'M12 10v4', 'M12 17.5h.01'],
   copy: ['M9 9h10v10H9z', 'M5 15V5h10'],
-  back: ['M15 6l-6 6 6 6'],
   redo: ['M4 12a8 8 0 1 1 2.3 5.7', 'M4 18v-6h6'],
   present: ['M3 5h18v11H3z', 'M8 20h8', 'M12 16v4'],
 }
@@ -110,25 +112,10 @@ function Address({ value, head = 10, tail = 8, className = '' }) {
   )
 }
 
-const STAGE_TEXT = {
-  starting: 'Starting',
-  screening: 'Walk finished · screening against sanctions, mixer and freeze lists',
-  attributing: 'Matching exchanges and inferring deposit addresses',
-  following_swap: 'Following the funds after a swap',
-  saving: 'Saving the case',
-}
-
-/** One line on what the background trace is doing right now. */
-function describeProgress(p) {
-  if (p.stage === 'walking') {
-    const hop = `Hop ${p.hop}${p.max_depth ? ` of ${p.max_depth}` : ''}`
-    const read = p.level_size > 1 ? ` · ${p.level_read ?? 0} of ${p.level_size} addresses read` : ''
-    const seen = p.addresses ? ` · ${p.addresses} address${p.addresses === 1 ? '' : 'es'} so far` : ''
-    return hop + read + seen
-  }
-  if (p.stage === 'following_swap') return `${STAGE_TEXT.following_swap}${p.follow_asset ? ` into ${p.follow_asset}` : ''}`
-  return STAGE_TEXT[p.stage] ?? ''
-}
+// A count and its noun: "1 wallet", "30 wallets".
+const many = (n, noun) => <><b>{n}</b> {noun}{n === 1 ? '' : 's'}</>
+// A date as it was in India, spelled out: "15 Nov 2023".
+const dayIST = (seconds) => new Date(seconds * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
 
 const METHOD_NAME = { fifo: 'FIFO', prorata: 'pro-rata', libr: 'LIBR' }
 
@@ -197,6 +184,7 @@ export default function TraceView() {
   // recorded DEMO.md trace, both without touching the chain.
   const { address: routeAddress, caseId, demoNo } = useParams()
   const [params] = useSearchParams()
+  const [tab, setTab] = useCaseTab()
   const navigate = useNavigate()
   const location = useLocation()
   const recorded = Boolean(demoNo)
@@ -290,7 +278,7 @@ export default function TraceView() {
         // case's own. A refresh or the back button then reopens the stored
         // case instead of running the traversal again -- another wait on the
         // provider and a duplicate row in the case store.
-        navigate(`/case/${data.case_id}`, { replace: true, state: { result: data } })
+        navigate(`/case/${data.case_id}${tab === 'flow' ? '' : `?tab=${tab}`}`, { replace: true, state: { result: data } })
       })
       .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false) } })
       .finally(() => clearInterval(tick))
@@ -339,6 +327,7 @@ export default function TraceView() {
   }, [hops])
 
   const address = routeAddress ?? result?.address ?? ''
+  useCrumb(result ? middle(plain(address)) : null)
   const reverse = (result?.direction ?? requestedDirection) === 'incoming'
   // Contract v2 (docs/contracts/case.md): a payment trace started from the
   // victim's payments; anything else followed the wallet's own history.
@@ -368,6 +357,13 @@ export default function TraceView() {
   const paymentCount = paidByHash.length
   const hashesWithheld = payments.length > 0 && payments.every((p) => !p.tx_hash)
   const windowStart = payments.length ? Math.min(...payments.map((p) => p.timestamp || Infinity)) : null
+  const ncrp = result?.intake?.ncrp_ack
+  const hopLimit = result?.max_depth ?? (stored ? null : depth)
+  // Wallets the issuer froze, counted per issuer: "2 frozen by Tether".
+  const frozenBy = Object.entries((result?.risk_matches ?? []).filter((m) => m.category === 'frozen').reduce((by, m) => {
+    const issuer = plain(m.issuer) || 'the issuer'
+    return { ...by, [issuer]: (by[issuer] ?? 0) + 1 }
+  }, {}))
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
   const findings = result?.findings ?? []
@@ -439,34 +435,44 @@ export default function TraceView() {
   return (
     <div className="results">
       {presenting && result && <Present result={result} related={related} unit={unit} onClose={() => setPresenting(false)} />}
-      <header className="topbar">
-        <div className="subject">
-          <span className="micro">{reverse ? 'Reported address (funded by)' : 'Reported address'}</span>
-          <Address value={address} head={12} tail={10} />
+      {/* A case's pills describe it, so none until it has loaded: a broken
+          link must not look like an archived Ethereum case. */}
+      {result && <header className="case-top">
+        <div className="case-top-row">
+          <h1 className="subject">
+            <span className="micro">{reverse ? 'Reported address (funded by)' : 'Reported address'}</span>
+            <Address value={address} head={12} tail={10} />
+          </h1>
+          <div className="actions">
+            {stored && (
+              <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />{recorded ? 'Trace live' : 'Re-trace'}</button>
+            )}
+            <button className="icon-btn" onClick={() => setPresenting(true)} title="The case as four big screens (P)"><Icon d={ICONS.present} size={16} /><span className="visually-hidden">Present</span></button>
+            {result.case_id && <ExportButton caseId={result.case_id} address={address} icon />}
+          </div>
         </div>
-        {/* A stored case's pills describe it, so none until it has loaded: a
-            broken link must not look like an archived Ethereum case. */}
-        {(result || !stored) && <div className="pills">
-          <span className="pill">{result?.chain_name ?? chain}</span>
-          <span className="pill mono">{unit}</span>
-          {(!stored || result?.max_depth) && <span className="pill mono">{stored ? result.max_depth : depth} hops</span>}
-          {reverse && <span className="pill navy" title="Incoming transfers walked backwards to the addresses that funded this one">Reverse trace</span>}
-          {(result ? result.time_budget_seconds : budget) && <span className="pill mono" title="The walk stopped expanding once this much time was spent">{mmss(result ? result.time_budget_seconds : budget)} cap</span>}
-          {recorded && <span className="pill navy" title="A verified trace as it came out when recorded. Live data moves; Trace live runs it again now.">Verified example {String(demoNo).padStart(2, '0')}{tracedAt ? ` · ${tracedAt.slice(0, 10)}` : ''}</span>}
-          {stored && !recorded && !justTraced && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
-          {justTraced && <span className="pill green" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
-        </div>}
-        <span className="grow" />
-        <div className="actions">
-          {result && <button onClick={() => setPresenting(true)} title="The case as four big screens (P)"><Icon d={ICONS.present} />Present</button>}
-          {result?.case_id && <ExportButton caseId={result.case_id} address={address} />}
-          {stored && result && (
-            <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />{recorded ? 'Trace live' : 'Re-trace'}</button>
+        <div className="case-pills">
+          <span className="case-pill"><b>{result.chain_name ?? chain}</b> {unit}</span>
+          {paymentTrace && result.reported_amount > 0 && <span className="case-pill"><b>{num(result.reported_amount)}</b> {unit} paid{windowStart > 0 && windowStart !== Infinity ? ` · ${dayIST(windowStart)}` : ''}</span>}
+          {hopLimit > 0 && <span className="case-pill">{many(hopLimit, 'hop')}</span>}
+          <span className="case-pill">{many(result.graph.nodes.length, 'wallet')}</span>
+          <span className="case-pill">{many(result.graph.edges.length, 'transfer')}</span>
+          {frozenBy.map(([issuer, n]) => <span className="case-pill risk" key={issuer}><b>{n}</b> frozen by {issuer}</span>)}
+          {reverse && <span className="case-pill" title="Incoming transfers walked backwards to the addresses that funded this one">Reverse trace</span>}
+          {result.time_budget_seconds > 0 && <span className="case-pill" title="The walk stopped expanding once this much time was spent">{mmss(result.time_budget_seconds)} cap</span>}
+          {recorded && <span className="case-pill" title="A verified trace as it came out when recorded. Live data moves; Trace live runs it again now.">Verified example {String(demoNo).padStart(2, '0')}{tracedAt ? ` · ${tracedAt.slice(0, 10)}` : ''}</span>}
+          {stored && !recorded && !justTraced && <span className="case-pill" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
+          {justTraced && <span className="case-pill go" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
+          {/* Where the trace began, at the right end of the row (pack CaseTop). */}
+          {!reverse && (
+            <p className="case-origin">
+              {paymentTrace
+                ? <><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" strokeWidth="1.5"><circle cx="8" cy="8" r="6.2" /><path d="M5.2 8.2l1.9 1.9 3.8-4" /></svg>Traced from the victim's payment{ncrp ? <> · NCRP <span aria-hidden="true">••••</span><span className="visually-hidden">ending </span>{String(ncrp).slice(-4)}</> : null}</>
+                : 'Exploratory, traced from the address'}
+            </p>
           )}
-          <button className="quiet" onClick={() => navigate('/')}><Icon d={ICONS.back} />New trace</button>
-          <ThemeToggle />
         </div>
-      </header>
+      </header>}
 
       <div className="results-body">
         {error && <div className="banner error">{error}</div>}
@@ -478,27 +484,21 @@ export default function TraceView() {
           />
         )}
 
-        {loading && (
+        {loading && !stored && !needsConfirm && (
+          <Tracing
+            address={routeAddress} chain={chain} asset={asset} reverse={reverse} payments={traceParams.payments.length > 0}
+            progress={progress} elapsed={elapsed} budget={budget} canStop={Boolean(jobId)} stopping={stopping}
+            onStop={() => { setStopping(true); stopTraceJob(jobId).catch((err) => { setStopping(false); setError(err.message) }) }}
+          />
+        )}
+
+        {loading && stored && (
           <div className="card">
             <div className="body loading">
-              <span className="micro">{recorded ? 'Opening verified example' : stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
-              <span className="elapsed">{elapsed.toFixed(1)} s{!stored && budget ? <small> · stops expanding at {mmss(budget)}{elapsed > budget ? ' — finishing what it has' : ''}</small> : null}</span>
-              {!stored && progress && <span className="progress-line" aria-live="polite">{describeProgress(progress)}</span>}
-              {!stored && jobId && (
-                <button className="quiet" disabled={stopping} onClick={() => { setStopping(true); stopTraceJob(jobId).catch((err) => { setStopping(false); setError(err.message) }) }}>
-                  {stopping ? 'Stopping…' : 'Stop this trace'}
-                </button>
-              )}
-              {!stored && progress?.stage === 'walking' && progress.level_size > 0
-                ? <div className="bar determinate"><span style={{ width: `${Math.round(100 * Math.min(1, (progress.level_read ?? 0) / progress.level_size))}%` }} /></div>
-                : <div className="bar"><span /></div>}
-              <p className="note">
-                {recorded
-                  ? 'Read from the recording; the chain is not consulted.'
-                  : stored
-                  ? 'Read from the case store; the chain is not consulted.'
-                  : 'One request per address, about two a second on a free key. Instant when the addresses have been seen before.'}
-              </p>
+              <span className="micro">{recorded ? 'Opening verified example' : 'Opening stored case'}</span>
+              <span className="elapsed">{elapsed.toFixed(1)} s</span>
+              <div className="bar"><span /></div>
+              <p className="note">{recorded ? 'Read from the recording; the chain is not consulted.' : 'Read from the case store; the chain is not consulted.'}</p>
             </div>
           </div>
         )}
@@ -644,8 +644,8 @@ export default function TraceView() {
         )}
 
         {result && (
-          <section className="split">
-            <div className="left">
+          <CaseTabs value={tab} onChange={setTab} panels={{
+            flow: <>
               <div className="card graph-card">
                 <div className="head">
                   <span className="micro">Money flow · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
@@ -671,7 +671,8 @@ export default function TraceView() {
                   {(f.result.risk_notes ?? []).map((note) => <p className="note risk-note" key={note}>{note}</p>)}
                 </div>
               ))}
-
+            </>,
+            timeline: <>
               <div className="card">
                 <div className="head">
                   <span className="micro">{showAll ? 'All transfers' : 'Transfers that matter'} · {visible.length}</span>
@@ -782,11 +783,20 @@ export default function TraceView() {
                   </div>
                 </details>
               )}
-            </div>
-
-            <aside className="rail">
-              {result.case_id && <WatchPanel result={result} />}
+            </>,
+            letters: <>
+              {result.case_id && <DraftLetters caseId={result.case_id} />}
               {result.case_id && <RequestsPanel result={result} />}
+              {result.case_id && <WatchPanel result={result} />}
+              {!result.case_id && (
+                <p className="card note case-note">
+                  Letters, freeze requests and watches need a stored case. {recorded
+                    ? 'This is a recorded example: Trace live runs it again now and stores it as a case.'
+                    : 'This trace was not saved, so it has none.'}
+                </p>
+              )}
+            </>,
+            entities: <>
               {inferred.length > 0 && (
                 <details className="card sec" open={Boolean(result.attribution_inferred)}>
                   <summary><span className="micro">Inferred deposit addresses · {inferred.length}</span><span className="pill amber">inference</span></summary>
@@ -908,8 +918,9 @@ export default function TraceView() {
                   </div>
                 </details>
               )}
-
-              <details className="card sec">
+            </>,
+            evidence: <>
+              <details className="card sec" open>
                 <summary><span className="micro">Scope and evidence</span><span className="note">{result.truncated ? 'truncated' : 'complete within limits'}</span></summary>
                 <div className="body">
                   <p className="note">{scopeLine || 'Nothing was left out.'}</p>
@@ -958,8 +969,8 @@ export default function TraceView() {
                   {result.warnings?.length > 0 && result.warnings.map((w) => <p className="note" key={w}>! {w}</p>)}
                 </div>
               </details>
-            </aside>
-          </section>
+            </>,
+          }} />
         )}
       </div>
     </div>

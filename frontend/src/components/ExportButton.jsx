@@ -14,20 +14,15 @@ function save(content, type, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-/**
- * Downloads the case report.
- *
- * The file is built in the browser from the backend's response rather than
- * pointed at with a plain link, so a failed request surfaces as a visible
- * error instead of navigating the user to an error page.
- */
-export default function ExportButton({ caseId, address }) {
+/** The request letters this case supports, each a draft to download: to the
+ * exchange it reached, and to Tether when USDT or a Tether freeze is
+ * involved. A card on the case's Letters tab; `bare`, just the buttons, for
+ * Present's handoff screen. */
+export function DraftLetters({ caseId, bare = false }) {
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
   const [letters, setLetters] = useState([])
 
-  // Which request letters this case supports: to the exchange it reached,
-  // and to Tether when USDT or a Tether freeze is involved.
   useEffect(() => {
     if (!caseId) return undefined
     let live = true
@@ -46,6 +41,36 @@ export default function ExportButton({ caseId, address }) {
       setBusy(null)
     }
   }
+
+  if (!letters.length) return null
+  const drafts = <>
+    {letters.map((l) => (
+      <button key={l.to} type="button" className="draft-letter" onClick={() => draftLetter(l.to)} disabled={busy !== null}
+        title="A draft for the officer to complete and sign: the case facts filled in, the legal provision and signature left blank">
+        {l.title}<small>case facts filled in; provision and signature left blank</small>
+      </button>
+    ))}
+    {error && <p className="error-line">The letter could not be drafted: {error}</p>}
+  </>
+  if (bare) return drafts
+  return (
+    <section className="card draft-letters" aria-labelledby="draft-letters">
+      <div className="head"><h2 id="draft-letters" className="micro">Draft letters · {letters.length}</h2></div>
+      <div className="body">{drafts}</div>
+    </section>
+  )
+}
+
+/**
+ * Downloads the case report.
+ *
+ * The file is built in the browser from the backend's response rather than
+ * pointed at with a plain link, so a failed request surfaces as a visible
+ * error instead of navigating the user to an error page.
+ */
+export default function ExportButton({ caseId, address, icon = false }) {
+  const [busy, setBusy] = useState(null)
+  const [error, setError] = useState(null)
 
   async function download(format) {
     setBusy(format)
@@ -86,10 +111,15 @@ export default function ExportButton({ caseId, address }) {
   const pick = (fn) => () => { fn(); if (menu.current) menu.current.open = false }
   return (
     <div className="export-row">
-      {/* One menu for the files, so the console bar keeps room for the
-          letters: four export buttons in a row pushed the last one off-screen. */}
+      {/* One menu for the files: a round icon button in the case header
+          (`icon`), a labelled one on Present's big screens. */}
       <details className="export-menu" ref={menu}>
-        <summary role="button" aria-haspopup="menu">{busy ? 'Preparing…' : 'Export'}</summary>
+        <summary role="button" aria-haspopup="menu" className={icon ? 'icon-btn' : undefined} title={busy ? 'Preparing…' : 'Export the signed report, the data or the graph'}>
+          {icon
+            ? <><svg aria-hidden="true" width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M9 2v9M5 7l4 4 4-4M3 14h12" /></svg>
+              <span className="visually-hidden">{busy ? 'Preparing…' : 'Export'}</span></>
+            : busy ? 'Preparing…' : 'Export'}
+        </summary>
         <div className="export-list" role="menu">
           <button role="menuitem" onClick={pick(() => download('pdf'))} disabled={busy !== null}>
             Report (.pdf)<small>summary page, then the signed text, attached</small>
@@ -106,13 +136,6 @@ export default function ExportButton({ caseId, address }) {
           <button role="menuitem" onClick={() => downloadGraph('csv')} disabled={busy !== null}>
             Graph (.csv)<small>addresses and transfers, for a spreadsheet</small>
           </button>
-          {letters.length > 0 && <span className="export-group">Draft letters</span>}
-          {letters.map((l) => (
-            <button key={l.to} role="menuitem" onClick={pick(() => draftLetter(l.to))} disabled={busy !== null}
-              title="A draft for the officer to complete and sign: the case facts filled in, the legal provision and signature left blank">
-              {l.title}<small>case facts filled in; provision and signature left blank</small>
-            </button>
-          ))}
           <a role="menuitem" href="/verify" target="_blank" rel="noopener">Verify a report…</a>
         </div>
       </details>

@@ -44,8 +44,9 @@ describe('the demo doors', () => {
     render(<MemoryRouter initialEntries={['/demo/9']}><App /></MemoryRouter>)
     await user.click(await screen.findByText(/click anywhere to enter/i))
     await user.click(screen.getByRole('button', { name: /open the console/i }))
-    // The case's pill, and the shell's breadcrumb.
-    expect(await screen.findAllByText(/Verified example 09/)).toHaveLength(2)
+    // The shell's breadcrumb names the case by its address; the case's pill says what it is.
+    expect(await within(screen.getByRole('navigation', { name: 'Breadcrumb' })).findByText('THWYhwUQnB…SoK4C5Ph')).toBeInTheDocument()
+    expect(screen.getAllByText(/Verified example 09/)).toHaveLength(1)
     // Inside the shell, which carries the one way home.
     expect(within(screen.getByRole('complementary', { name: 'Sidebar' })).getByRole('link', { name: 'Cases' })).toHaveAttribute('aria-current', 'true')
     expect(screen.getAllByRole('link', { name: 'Exchequer' })).toHaveLength(1)

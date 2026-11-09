@@ -10,11 +10,11 @@ import { stubFetch } from '../test/setup'
 // 0.90 rule is capped by a 6.4% share), with one amount-split pattern. Traced from the address alone.
 const demo = recordings.find((r) => r.demo === 11)
 
-async function openDemo11(overrides = {}) {
+async function openDemo11({ tab, ...overrides } = {}) {
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
   stubFetch({ '/demos/recorded/11': { body: { ...demo.result, case_id: null, created_at: demo.recorded_at, recorded_demo: 11, ...overrides } } })
   render(
-    <MemoryRouter initialEntries={['/demo/11']}>
+    <MemoryRouter initialEntries={[`/demo/11${tab ? `?tab=${tab}` : ''}`]}>
       <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
     </MemoryRouter>,
   )
@@ -39,7 +39,7 @@ describe('how sure the case is (R10)', () => {
   })
 
   it('folds patterns into hints with their measured hit rates', async () => {
-    await openDemo11()
+    await openDemo11({ tab: 'entities' })
     expect(screen.getByText('Hints · 1')).toBeInTheDocument()
     expect(screen.queryByText(/^Patterns ·/)).not.toBeInTheDocument()
     expect(screen.getByText(/6 of 32 documented fraud wallets and 5 of 47 ordinary ones/)).toBeInTheDocument()
@@ -102,7 +102,7 @@ describe('what the walk did not follow (R5)', () => {
     const untraced = [{ address: demo.result.address, counterparties: 2, value_native: 6, share_of_outflow: 0.13, rule: 'top_n' }]
     stubFetch({ '/demos/recorded/11': { body: { ...demo.result, untraced, case_id: null, created_at: demo.recorded_at, recorded_demo: 11 } } })
     render(
-      <MemoryRouter initialEntries={['/demo/11']}>
+      <MemoryRouter initialEntries={['/demo/11?tab=evidence']}>
         <Routes><Route path="/demo/:demoNo" element={<TraceView />} /></Routes>
       </MemoryRouter>,
     )
@@ -241,7 +241,7 @@ describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
     }
     stubFetch({ '/demos/recorded/11': { body: { ...demo.result, intake, reported_amount: 4005, explorer_url: 'https://etherscan.io', chain: 'ethereum', case_id: null, created_at: demo.recorded_at, recorded_demo: 11, ...extra } } })
     render(
-      <MemoryRouter initialEntries={['/demo/11']}>
+      <MemoryRouter initialEntries={['/demo/11?tab=timeline']}>
         <Routes>
           <Route path="/demo/:demoNo" element={<TraceView />} />
           <Route path="/trace/:address" element={<Landed />} />
@@ -329,7 +329,7 @@ describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
 
 describe('a case whose appendix lists only part of its transfers (r1-trace-engine-5)', () => {
   it('states the trace\'s total and how many are listed', async () => {
-    await openDemo11({ transfers_total: 5000, transfers_omitted: 5000 - demo.result.transfers.length })
+    await openDemo11({ tab: 'evidence', transfers_total: 5000, transfers_omitted: 5000 - demo.result.transfers.length })
     expect(screen.getByText(new RegExp(`5000 individual transactions \\(${demo.result.transfers.length} listed\\)`)))
       .toBeInTheDocument()
   })
@@ -338,6 +338,7 @@ describe('a case whose appendix lists only part of its transfers (r1-trace-engin
 describe('reads cut short by a record limit or a request budget', () => {
   it('groups the history-read-limit reasons and counts what the budget left unread', async () => {
     await openDemo11({
+      tab: 'evidence',
       truncated: true,
       addresses_unexpanded_by_budget: 4,
       truncation_reasons: [

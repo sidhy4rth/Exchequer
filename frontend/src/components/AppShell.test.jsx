@@ -2,7 +2,7 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import AppShell, { GROUPS } from './AppShell'
+import AppShell, { GROUPS, useCrumb } from './AppShell'
 import { stubFetch } from '../test/setup'
 import { ALL_CHAINS_READY } from '../../e2e/canary.lines.js'
 import canarySource from '../../e2e/canary.spec.js?raw'
@@ -78,6 +78,22 @@ describe('the sidebar', () => {
     at(`/trace/0x${'ab'.repeat(20)}?chain=ethereum`)
     expect(sidebar().getByRole('link', { name: 'New trace' })).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(/^New trace\/0xabababab/)
+  })
+
+  it('names a case by its address once the page knows it', () => {
+    function Named() {
+      useCrumb('TUVNGw2z3G…Krve5i3ts')
+      return null
+    }
+    stubFetch({ '/chains': { body: chains } })
+    render(
+      <MemoryRouter initialEntries={['/demo/11']}>
+        <Routes><Route element={<AppShell />}><Route path="*" element={<Named />} /></Route></Routes>
+      </MemoryRouter>,
+    )
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(crumbs).toHaveTextContent(/^Cases\/TUVNGw2z3G…Krve5i3ts$/)
+    expect(within(crumbs).getByText('TUVNGw2z3G…Krve5i3ts')).toHaveAttribute('aria-current', 'page')
   })
 
   it('reads a path with a trailing slash as the same page', () => {

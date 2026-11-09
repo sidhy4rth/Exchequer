@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import FlowView from './FlowView'
 import GraphView from './GraphView'
-import ExportButton from './ExportButton'
+import ExportButton, { DraftLetters } from './ExportButton'
 import { bandLabel, bandOf } from './confidence'
 import { plain } from '../text'
 
@@ -12,7 +12,7 @@ import { plain } from '../text'
 //   1  the finding        the exchange, how sure, the address to cite
 //   2  the route          the flow by hop, the traced transfers beneath
 //   3  what was left out  four numbers, and the one-line screening facts
-//   4  the handoff        the report, the hashes
+//   4  the handoff        the report, the draft letters, the hashes
 //
 // Arrow keys or space step; Escape returns to the console with everything
 // still there.
@@ -188,7 +188,7 @@ export default function Present({ result, related = [], unit, onClose }) {
             ? 'The report names the address, the transaction hashes, amounts and times, and everything the tool did not look at. An exchange wallet identifies where the money went, not who received it; only the exchange can link it to a customer, on a lawful request (PMLA s.12, s.50).'
             : 'The report still lists every address and transaction in the trace, so each can be re-checked on a public explorer, and says exactly what was not looked at.'}
         </p>
-        {result.case_id && <div className="pr-actions"><ExportButton caseId={result.case_id} address={result.address} /></div>}
+        {result.case_id && <div className="pr-actions"><ExportButton caseId={result.case_id} address={result.address} /><DraftLetters caseId={result.case_id} bare /></div>}
       </div>
       <div className="pr-side">
         {result.evidence?.manifest_sha256 && <div className="pr-hash"><span className="micro">Evidence manifest</span><span className="mono">{result.evidence.manifest_sha256.slice(0, 20)}…</span></div>}

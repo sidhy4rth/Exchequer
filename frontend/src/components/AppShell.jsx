@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { createContext, Suspense, useContext, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { fetchChains } from '../api'
 import { findTarget } from '../find'
@@ -61,6 +61,17 @@ function trail(path) {
   try { id = decodeURIComponent(raw) } catch { /* shown as typed */ }
   const label = kind === 'demo' ? `Verified example ${id.padStart(2, '0')}` : kind === 'batch' ? 'Batch' : middle(plain(id))
   return [{ label: item.label, to: item.to }, { label, mono: kind === 'trace' || kind === 'case' }]
+}
+
+// A page inside the shell can name what it shows in the last breadcrumb once
+// it knows (a case: its address), in place of what the path says.
+const Crumb = createContext(() => {})
+export function useCrumb(label) {
+  const name = useContext(Crumb)
+  useEffect(() => {
+    name(label || null)
+    return () => name(null)
+  }, [name, label])
 }
 
 /** What the sidebar can say for certain about the chains: how many can
@@ -172,7 +183,9 @@ export default function AppShell() {
   useEffect(() => {
     fetchChains().then(setHealth).catch(() => setHealth({ status: 'down' }))
   }, [])
+  const [named, setNamed] = useState(null)
   const crumbs = trail(pathname)
+  if (named && crumbs.length > 1) crumbs[crumbs.length - 1] = { label: named, mono: true }
 
   return (
     <div className="shell">
@@ -222,7 +235,7 @@ export default function AppShell() {
           <ThemeToggle />
         </header>
         <main id="main" className="shell-main" tabIndex={-1}>
-          <Suspense fallback={null}><Outlet /></Suspense>
+          <Crumb.Provider value={setNamed}><Suspense fallback={null}><Outlet /></Suspense></Crumb.Provider>
         </main>
       </div>
       <PhoneBar path={pathname} view={view} />
