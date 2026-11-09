@@ -194,11 +194,13 @@ export const PAGES = [
   // consulted. It opens on Flow, and each tab has a URL of its own. On a
   // phone a line of the finding sits at the foot of the screen at rest.
   { name: 'recorded case 11', path: '/demo/11', as: 'investigator', ready: ['heading', { level: 2 }], unmeasured: { desktop: 8, phone: 9 } },
-  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
+  // The card a case without a victim flow keeps (an older server's): the
+  // recording answered with its flow taken out. The backend builds one on
+  // read, so the entry above opens the drawn flow.
+  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: ({ victim_flow: _, ...body }) => body }, ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
   // The Flow tab drawn from the case's victim flow, whatever the backend: the
   // recording answered with the flow backend/app/victim_flow.py builds for it
-  // (src/test/victim-flow-11.json). The entry above checks the card a case
-  // without one keeps.
+  // (src/test/victim-flow-11.json).
   { name: 'recorded case 11, Flow drawn', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: (body) => ({ ...body, victim_flow: FLOW_11 }) }, ready: ['heading', { level: 2, name: /^Where the victim's share went$|can be acted on$/ }], unmeasured: { phone: 1 } },
   { name: 'recorded case 11, Timeline', path: '/demo/11?tab=timeline', as: 'investigator', ready: CASE_TAB('Timeline'), unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },
   // The lane chart opens on its first 14 days; the whole trace is a press away.

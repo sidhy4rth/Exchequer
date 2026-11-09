@@ -69,7 +69,9 @@ def test_the_owner_still_sees_everything(client):
 
 
 def test_an_address_case_is_returned_as_stored_to_anyone(client):
-    assert client.get("/trace/addr-case").json() == ADDRESS_CASE
+    body = client.get("/trace/addr-case").json()
+    assert body.pop("victim_flow")["status"] == "unavailable"  # built on read; this case has no graph
+    assert body == ADDRESS_CASE
 
 
 def test_the_stored_case_is_never_changed(client):
@@ -223,6 +225,7 @@ def test_a_non_owner_still_sees_how_much_was_paid_and_why_it_is_withheld(rich):
 
 def test_the_owner_still_gets_the_hashes_blocks_and_times_everywhere(rich):
     body = rich.get("/trace/rich-case", headers=OWNER).json()
+    body.pop("victim_flow")  # built on read (tests/test_victim_flow_read.py)
     assert body == rich_payment_case()
     text = rich.get("/trace/rich-case/report?format=text", headers=OWNER).text
     assert PAY_HASH in text and report_module._when(PAID_AT) in text

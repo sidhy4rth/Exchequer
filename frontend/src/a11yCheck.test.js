@@ -62,13 +62,15 @@ describe('the accessibility check', () => {
   })
 
   it('opens the Flow tab drawn from the victim flow, on a backend whose recording has none', () => {
-    const drawn = PAGES.find((p) => p.path === '/demo/11?tab=flow' && p.stub?.extend)
+    const drawn = PAGES.find((p) => p.name === 'recorded case 11, Flow drawn')
     expect(drawn?.stub.url).toBe('**/demos/recorded/11')
     const answered = drawn.stub.extend({ demo: 11, victim_flow: undefined })
     expect(answered.demo).toBe(11)
     expect(answered.victim_flow.status).toBe('estimated')
     expect(answered.victim_flow).toEqual(flow11)
-    expect(PAGES.filter((p) => p.path === '/demo/11?tab=flow' && !p.stub)).toHaveLength(1) // and the card a case without one keeps
+    // and the card a case without one keeps: the recording answered without the flow the backend adds
+    const card = PAGES.find((p) => p.name === 'recorded case 11, Flow')
+    expect(card.stub.extend({ demo: 11, victim_flow: flow11 })).toEqual({ demo: 11 })
   })
 
   it('opens the locked console a public site shows without the demo code', () => {

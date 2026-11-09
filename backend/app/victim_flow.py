@@ -53,6 +53,11 @@ from typing import Any, Callable, Mapping
 
 from .prorata import DILUTED
 
+# Which build() made a flow. Bump it whenever build() changes what it gives:
+# a stored flow of an older version (or none) is rebuilt on read, from the
+# stored case, whose transfers may be trimmed (with_flow, contracts.upgrade).
+VERSION = 1
+
 KINDS = ("exchange", "held", "left", "risk", "beyond_limit", "not_followed", "other")
 ACTIONS = {"exchange": "draft_letter", "held": "ask_issuer", "left": "watch", "beyond_limit": "trace_deeper"}
 HOLDS = frozenset({"frozen", "sanctioned", "seized"})
@@ -68,8 +73,19 @@ def build(result: Any, received_in_window: Mapping[str, float] | None = None) ->
     """The victim's share on every branch of a stored or fresh case. Never raises.
 
     `received_in_window` adds chain reads of wallets' inflow in their windows
-    ({address: amount}); pro-rata's own hops are read from the case.
+    ({address: amount}); pro-rata's own hops are read from the case. Every
+    flow carries the `version` of the build that made it.
     """
+    return {"version": VERSION, **_build(result, received_in_window)}
+
+
+def is_current(flow: Any) -> bool:
+    """Whether a flow a case carries came from this build (or a later one)."""
+    version = flow.get("version") if isinstance(flow, dict) else None
+    return isinstance(version, int) and version >= VERSION
+
+
+def _build(result: Any, received_in_window: Mapping[str, float] | None) -> dict[str, Any]:
     try:
         direction = result.get("direction", "outgoing")
         if direction == "incoming":
@@ -79,6 +95,22 @@ def build(result: Any, received_in_window: Mapping[str, float] | None = None) ->
         return _Flow(result, dict(received_in_window or {})).run()
     except Exception:  # noqa: BLE001 -- a display is never worth a failed case
         return _unavailable("the case's graph could not be read")
+
+
+def with_flow(result: dict[str, Any]) -> dict[str, Any]:
+    """`result` with its `victim_flow`, and each follow-on's, as upgrade()
+    gives them: a current one the case carries wins, else one built now.
+
+    The input is never changed: new top levels, never a deep copy. A route
+    passes the copy its reader may see (case_privacy.for_reader), so the flow
+    is built only from what that reader is shown."""
+    out = result if is_current(result.get("victim_flow")) else {**result, "victim_flow": build(result)}
+    ons = out.get("follow_ons")
+    if not isinstance(ons, list):
+        return out
+    return {**out, "follow_ons": [{**f, "result": with_flow(f["result"])}
+                                  if isinstance(f, dict) and isinstance(f.get("result"), dict) else f
+                                  for f in ons]}
 
 
 def _unavailable(reason: str) -> dict[str, Any]:
@@ -207,8 +239,8 @@ class _Flow:
             out = [self._value((seed, t)) for t in self.out[seed]]
             back_in = sum(self._value((s, seed)) for s in self.inn[seed])
             start = max(max(out), sum(out) + self.untraced[seed] - back_in) if out else self.untraced[seed]
-        if start <= 0:
-            return {"status": "not_applicable"}
+        if start <= 0:  # an outgoing trace, so it says why: not a reverse one
+            return {"status": "not_applicable", "reason": "the reported wallet sent nothing the trace saw"}
         prorata = r.get("prorata") or {}
         chain = {h["address"]: float(h["received_in_window"]) for h in prorata.get("hops") or []
                  if h.get("received_in_window")}

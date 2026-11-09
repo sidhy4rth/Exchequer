@@ -16,9 +16,9 @@ from functools import lru_cache
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
-from .. import config, request_letters
+from .. import config, request_letters, victim_flow
 
 router = APIRouter()
 
@@ -52,16 +52,20 @@ def list_recorded() -> dict[str, Any]:
     ]}
 
 
-@router.get("/demos/recorded/{demo}")
-def get_recorded(demo: int) -> dict[str, Any]:
+@router.get("/demos/recorded/{demo}", response_model=None)
+def get_recorded(demo: int) -> JSONResponse:
     """One recorded demo, in the shape of a stored case but with no case id:
     nothing that writes to a case (watches, request logs) applies. Its
-    letters are drafted below, marked as examples."""
+    letters are drafted below, marked as examples.
+
+    Recordings predate the victim flow, so it is built here, for each
+    follow-on too, and the case is rendered here as well: both in the worker
+    thread, as GET /trace/{id} does, never on the event loop."""
     row = _recordings().get(demo)
     if row is None:
         raise HTTPException(status_code=404, detail=f"No recording for demo {demo}")
-    return {**row["result"], "case_id": None, "created_at": row["recorded_at"],
-            "recorded_demo": demo}
+    return JSONResponse({**victim_flow.with_flow(row["result"]), "case_id": None,
+                         "created_at": row["recorded_at"], "recorded_demo": demo})
 
 
 def _recording(demo: int) -> dict[str, Any]:
