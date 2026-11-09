@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { checkHash } from '../hash.js'
-import { Icon, usePageTitle } from '../parts.jsx'
+import { Icon, ReportSteps, usePageTitle } from '../parts.jsx'
 
 // C3: where the transaction hash is, in words and a sketch of the screens,
 // and a box that checks its shape on the device. Confirming the payment on
-// the blockchain comes later, with the complaint pack.
+// the blockchain comes later.
 const GUIDES = {
   exchange: ['Exchange app', [
     ['Open the withdrawal history', 'Look under Assets, Wallet or History, then pick Withdrawals.'],
@@ -78,8 +78,7 @@ function HashCheck() {
       </form>
       <div className="result" role="status">{result && <Verdict {...result} />}</div>
       <p className="hint" id="check-note">This check runs on your device and sends nothing. It looks only at
-        the shape of the hash. Confirming the payment on the blockchain will be switched on later, with the
-        complaint pack.</p>
+        the shape of the hash. Confirming the payment on the blockchain will be switched on later.</p>
       <details className="fallback">
         <summary>Can't find it? Search by amount and date</summary>
         <p><span className="tag">Coming later</span> You will give the wallet you paid, the amount and the date,
@@ -99,14 +98,7 @@ export default function Find() {
         <Link to="/" className="back" aria-label="Back to home"><Icon name="back" /></Link>
         <div><p className="eyebrow">Report</p><h1>Find your payment</h1></div>
       </div>
-      <ol className="stepper" role="list" aria-label="Report steps">
-        {['Find your payment', 'Confirm it', 'Complaint pack'].map((name, i) => (
-          <li key={name} className={i ? undefined : 'is-on'} aria-current={i ? undefined : 'step'}>
-            <span className="num" aria-hidden="true">{i + 1}</span>
-            <span className="step-name">{name}{i > 0 && <span className="later"> · coming later</span>}</span>
-          </li>
-        ))}
-      </ol>
+      <ReportSteps at={0} />
       <div className="find">
         <section className="guide-part" aria-labelledby="guide-title">
           <h2 id="guide-title">Where to find the transaction hash</h2>
@@ -134,6 +126,7 @@ export default function Find() {
         </section>
         <HashCheck />
       </div>
+      <Link className="more" to="/report/pack">Next: your complaint pack<Icon name="arrow" /></Link>
     </>
   )
 }

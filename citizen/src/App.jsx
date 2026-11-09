@@ -4,6 +4,7 @@ import { Icon, PortalLink } from './parts.jsx'
 import Home from './pages/Home.jsx'
 import Find from './pages/Find.jsx'
 import Learn from './pages/Learn.jsx'
+import Pack from './pages/Pack.jsx'
 import RightNow from './pages/RightNow.jsx'
 import { ComingSoon, NotFound } from './pages/Soon.jsx'
 
@@ -11,7 +12,7 @@ import { ComingSoon, NotFound } from './pages/Soon.jsx'
 // on a laptop (styles.css). `also` keeps a tab lit on the pages under it.
 const TABS = [
   { to: '/', label: 'Home', icon: 'home', also: ['/right-now'] },
-  { to: '/report', label: 'Report', icon: 'report' },
+  { to: '/report', label: 'Report', icon: 'report', also: ['/report/pack'] },
   { to: '/my-case', label: 'My case', icon: 'case' },
   { to: '/learn', label: 'Learn', icon: 'learn' },
 ]
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/right-now" element={<RightNow />} />
         <Route path="/report" element={<Find />} />
+        <Route path="/report/pack" element={<Pack />} />
         <Route path="/my-case" element={
           <ComingSoon title="Track my complaint">
             Here you will sign in with your NCRP number to follow your complaint and read messages

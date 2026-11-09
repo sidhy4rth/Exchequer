@@ -9,6 +9,7 @@ const PAGES = {
   '/': 'Lost money? The first hours matter most.',
   '/right-now': 'Right now',
   '/report': 'Find your payment',
+  '/report/pack': 'Your complaint pack',
   '/my-case': 'Track my complaint',
   '/learn': 'Know the scams',
   '/no-such-page': 'Page not found',
@@ -190,14 +191,15 @@ describe('find your payment', () => {
     return screen.getByRole('status')
   }
 
-  it('is step 1 of 3, and says the other two come later', () => {
+  it('is step 1 of 3, with the complaint pack a link and confirming still to come', () => {
     at('/report')
     const steps = within(screen.getByRole('list', { name: 'Report steps' })).getAllByRole('listitem')
     expect(steps).toHaveLength(3)
     expect(steps[0]).toHaveAttribute('aria-current', 'step')
     expect(steps[0]).toHaveTextContent('Find your payment')
     expect(steps[1]).toHaveTextContent(/Confirm it.*coming later/)
-    expect(steps[2]).toHaveTextContent(/Complaint pack.*coming later/)
+    expect(within(steps[2]).getByRole('link', { name: /Complaint pack/ })).toHaveAttribute('href', '/report/pack')
+    expect(steps[2]).not.toHaveTextContent(/coming later/)
   })
 
   it('shows where to find the hash in each kind of app, naming none', async () => {
@@ -286,7 +288,8 @@ describe('find your payment', () => {
     const main = screen.getByRole('main')
     expect(main).toHaveTextContent(/runs on your device and sends nothing/)
     expect(main).toHaveTextContent(
-      'Confirming the payment on the blockchain will be switched on later, with the complaint pack.')
+      'Confirming the payment on the blockchain will be switched on later.')
+    expect(main).not.toHaveTextContent(/later, with the complaint pack/)
     const fallback = screen.getByText(/Search by amount and date/).closest('details')
     await user.click(screen.getByText(/Search by amount and date/))
     expect(fallback).toHaveAttribute('open')
