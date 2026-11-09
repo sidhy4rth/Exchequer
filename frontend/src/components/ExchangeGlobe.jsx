@@ -120,7 +120,8 @@ export function coverageFromChains(byKey) {
   return {
     wallets: sum((c) => c.exchange_wallets),
     deposits: sum((c) => c.deposit_addresses),
-    sanctioned: sum((c) => c.risk_labels?.sanctioned),
+    // A government seizure order counts with the designations here: both are a government's measure.
+    sanctioned: sum((c) => (c.risk_labels?.sanctioned ?? 0) + (c.risk_labels?.seized ?? 0)),
     frozen: sum((c) => c.risk_labels?.frozen),
     stolen: sum((c) => c.risk_labels?.stolen),
     mixer: sum((c) => c.risk_labels?.mixer),
@@ -714,7 +715,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
             <div><dt>Customer deposit addresses</dt><dd><CountUp to={coverage.deposits} /></dd></div>
             <div className="risk"><dt>Reported stolen or phishing</dt><dd><CountUp to={coverage.stolen} /></dd></div>
             <div className="risk"><dt>Frozen by issuer</dt><dd><CountUp to={coverage.frozen} /></dd></div>
-            <div className="risk"><dt>Under government sanctions</dt><dd><CountUp to={coverage.sanctioned} /></dd></div>
+            <div className="risk"><dt>Under government sanctions or seizure orders</dt><dd><CountUp to={coverage.sanctioned} /></dd></div>
             <div className="risk"><dt>Mixer pools</dt><dd><CountUp to={coverage.mixer} /></dd></div>
           </dl>
         )}

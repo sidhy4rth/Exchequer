@@ -63,7 +63,8 @@ def parse_swap_outputs(receipt: dict[str, Any], sender: str) -> list[dict[str, A
     """Every ERC-20 Transfer in `receipt` whose recipient is `sender`.
 
     These are the assets that came back to the wallet that sent the swap.
-    Returned raw (contract and integer units); the caller names them.
+    Returned raw (contract and integer units); the caller names them. A
+    Transfer from the sender to itself returns nothing and is left out.
     """
     sender = normalize_address(sender)
     outputs: list[dict[str, Any]] = []
@@ -71,7 +72,7 @@ def parse_swap_outputs(receipt: dict[str, Any], sender: str) -> list[dict[str, A
         topics = log.get("topics") or []
         if len(topics) < 3 or topics[0].lower() != TRANSFER_TOPIC:
             continue
-        if _topic_address(topics[2]) != sender:
+        if _topic_address(topics[2]) != sender or _topic_address(topics[1]) == sender:
             continue
         try:
             units = int(log.get("data") or "0x0", 16)
@@ -164,8 +165,15 @@ def detect_swaps(
                 if outputs:
                     # The largest single output is the swap's result; the rest
                     # are refunds or fee rebates and are listed, not summed.
-                    main = max(outputs, key=lambda o: o["units"])
-                    symbol, amount = _name_asset(chain, main["contract"], main["units"])
+                    # Raw units are not comparable across tokens (one unit of
+                    # an 18-decimal token outweighs 2,400 USDT), and the
+                    # swapper chooses what else the transaction pays him, so a
+                    # token Exchequer traces is compared in human units and
+                    # always wins over one whose decimals are unknown.
+                    named = [(o, *_name_asset(chain, o["contract"], o["units"])) for o in outputs]
+                    known = [n for n in named if n[2] is not None]
+                    main, symbol, amount = (max(known, key=lambda n: n[2]) if known
+                                            else max(named, key=lambda n: n[0]["units"]))
                     record.update(
                         asset_out=symbol,
                         asset_out_contract=main["contract"],
@@ -173,6 +181,10 @@ def detect_swaps(
                         amount_out_units=str(main["units"]),
                         output_read=True,
                         other_outputs=len(outputs) - 1,
+                        # Every output, largest traceable first, for the
+                        # follow-ons and the case file.
+                        outputs=[{"contract": o["contract"], "asset": sym, "units": str(o["units"]), "amount": amt}
+                                 for o, sym, amt in sorted(named, key=lambda n: (n[2] is None, -(n[2] or 0)))],
                     )
             swaps.append(record)
             findings.append(record)
@@ -201,9 +213,12 @@ def describe(swap: dict[str, Any]) -> str:
             else "Exchequer does not trace that token, so the trail stops here; its "
                  "transfers can be followed on the block explorer."
         )
+        others = swap.get("other_outputs") or 0
+        listed = (f" (and {others} other token output{'s' if others != 1 else ''}, listed in the case file)"
+                  if others else "")
         return (
             f"{swap['sender']} sent {swap['amount_in']:.4f} {swap['asset_in']} to {where} "
-            f"in transaction {swap['tx']} and received {out} back in the same "
+            f"in transaction {swap['tx']} and received {out}{listed} back in the same "
             f"transaction: a swap, not a payment. This trace follows "
             f"{swap['asset_in']} and ends here; {onward}"
         )

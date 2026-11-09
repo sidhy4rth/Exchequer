@@ -121,3 +121,144 @@ def test_the_command_line_replays_a_recording_with_no_network(monkeypatch, capsy
                                       str(FIXTURES / "demo_12_tron.json")])
     assert vc.main() == 0
     assert "5 transfers: 5 confirmed, 0 mismatch, 0 unchecked" in capsys.readouterr().out
+
+
+# -- JSON-RPC errors are failures, not answers (r1-scripts-6) -----------------------
+RATE_LIMITED = {"jsonrpc": "2.0", "id": 1, "error": {"code": -32005, "message": "rate limited"}}
+
+
+def nodes(*bodies_per_node):
+    """An httpx client whose Ethereum nodes answer in turn: node i gives bodies_per_node[i](method)."""
+    def handle(request: httpx.Request) -> httpx.Response:
+        index = vc.ETHEREUM_NODES.index(str(request.url).rstrip("/"))
+        method = json.loads(request.content)["method"]
+        return httpx.Response(200, json=bodies_per_node[index](method))
+    return httpx.Client(transport=httpx.MockTransport(handle))
+
+
+def live(http: httpx.Client):
+    return lambda chain, digest, token: vc.read_live(http, chain, digest, token)
+
+
+def recorded_eth(digest: str) -> dict:
+    return answers("demo_1_ethereum.json")[digest]
+
+
+def test_nodes_that_only_rate_limit_leave_the_transfer_unchecked_not_mismatched():
+    report = _demo_report(1)
+    report["appendix"]["transactions"] = report["appendix"]["transactions"][:1]
+    checks = verify(report, live(nodes(lambda _m: RATE_LIMITED, lambda _m: RATE_LIMITED)))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+    assert exit_code(checks) == 2
+
+
+def test_one_node_without_history_and_one_rate_limited_is_unchecked():
+    report = _demo_report(1)
+    report["appendix"]["transactions"] = report["appendix"]["transactions"][:1]
+    checks = verify(report, live(nodes(lambda _m: {"jsonrpc": "2.0", "id": 1, "result": None},
+                                       lambda _m: RATE_LIMITED)))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_both_nodes_saying_null_is_still_a_mismatch():
+    report = _demo_report(1)
+    report["appendix"]["transactions"] = report["appendix"]["transactions"][:1]
+    null = {"jsonrpc": "2.0", "id": 1, "result": None}
+    checks = verify(report, live(nodes(lambda _m: null, lambda _m: null)))
+    assert [c.outcome for c in checks] == [MISMATCH]
+
+
+def test_a_native_transfer_whose_receipt_was_rate_limited_is_never_confirmed():
+    report = _demo_report(1)
+    first = report["appendix"]["transactions"][0]
+    report["appendix"]["transactions"] = [first]
+    saved = recorded_eth(first["hash"])
+
+    def node(method):
+        if method == "eth_getTransactionByHash":
+            return {"jsonrpc": "2.0", "id": 1, "result": saved["transaction"]}
+        return RATE_LIMITED
+
+    checks = verify(report, live(nodes(node, node)))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_a_native_transfer_with_no_receipt_is_unchecked():
+    report = _demo_report(1)
+    first = report["appendix"]["transactions"][0]["hash"]
+    saved = answers("demo_1_ethereum.json")
+    saved[first] = {**saved[first], "receipt": None}
+    assert outcomes(report, saved)[0] == UNCHECKED
+
+
+def test_a_receipt_without_a_status_is_unchecked():
+    report = _demo_report(1)
+    first = report["appendix"]["transactions"][0]["hash"]
+    saved = answers("demo_1_ethereum.json")
+    saved[first] = {**saved[first], "receipt": {k: v for k, v in saved[first]["receipt"].items() if k != "status"}}
+    assert outcomes(report, saved)[0] == UNCHECKED
+
+
+# -- a provider's error or odd answer is a failure, not an answer (r1-scripts-6) ------
+def tronscan(body, status: int = 200) -> httpx.Client:
+    return httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(status, json=body)))
+
+
+def first_only(report: dict) -> dict:
+    report["appendix"]["transactions"] = report["appendix"]["transactions"][:1]
+    return report
+
+
+def test_a_tronscan_rate_limit_answer_is_unchecked_not_a_mismatch():
+    # TronScan's refusal can come as HTTP 200 with an error body and no transaction.
+    checks = verify(first_only(_demo_report(12)),
+                    live(tronscan({"Error": "request rate exceeded the allowed_rps(5)"})))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+    assert exit_code(checks) == 2
+
+
+def test_a_tronscan_answer_that_is_not_an_object_is_unchecked():
+    checks = verify(first_only(_demo_report(12)), live(tronscan(["not", "a", "transaction"])))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_an_empty_tronscan_answer_is_still_a_mismatch():
+    # {} is how TronScan says it has no such transaction: a real disagreement.
+    checks = verify(first_only(_demo_report(12)), live(tronscan({})))
+    assert [c.outcome for c in checks] == [MISMATCH]
+
+
+def test_an_ethereum_result_that_is_not_an_object_is_unchecked():
+    weird = {"jsonrpc": "2.0", "id": 1, "result": "0xdeadbeef"}
+    checks = verify(first_only(_demo_report(1)), live(nodes(lambda _m: weird, lambda _m: weird)))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_a_log_of_the_wrong_shape_is_unchecked_not_a_crash():
+    # A node's receipt whose logs are not objects is an odd answer, not a disagreement.
+    report = _demo_report(3, follow_on=True)
+    first = report["appendix"]["transactions"][0]["hash"]
+    saved = answers("demo_3_follow_on_usdt.json")
+    saved[first] = {**saved[first], "receipt": {**saved[first]["receipt"], "logs": ["not a log", 7]}}
+    checks = verify(report, replay(saved))
+    assert [c.outcome for c in checks] == [UNCHECKED]
+
+
+def test_a_tronscan_transfer_list_of_the_wrong_shape_is_unchecked_not_a_crash():
+    report, saved = first_only(_demo_report(12)), answers("demo_12_tron.json")
+    first = report["appendix"]["transactions"][0]["hash"]
+    saved[first] = {**saved[first], "trc20TransferInfo": ["not a transfer"]}
+    assert [c.outcome for c in verify(report, replay(saved))] == [UNCHECKED]
+
+
+def test_a_transfer_missing_from_a_recording_is_unchecked_not_a_mismatch(monkeypatch, capsys, tmp_path):
+    # A read that failed while recording is not saved; replayed, it is still a failed read.
+    saved = answers("demo_12_tron.json")
+    missing = _demo_report(12)["appendix"]["transactions"][0]["hash"]
+    del saved[missing]
+    recording = tmp_path / "recording.json"
+    recording.write_text(json.dumps(saved), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["verify_case", "--demo", "12", "--recorded", str(recording)])
+    assert vc.main() == 2
+    out = capsys.readouterr().out
+    assert "5 transfers: 4 confirmed, 0 mismatch, 1 unchecked" in out and "not in the recording" in out

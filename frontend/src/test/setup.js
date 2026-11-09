@@ -15,8 +15,8 @@ export function stubFetch(routes) {
     const path = String(url).replace(/^\/api/, '').split('?')[0]
     const hit = routes[path]
     if (!hit) return new Response(JSON.stringify({ detail: 'not stubbed' }), { status: 404 })
-    const { status = 200, body } = typeof hit === 'function' ? hit(url) : hit
-    return new Response(typeof body === 'string' ? body : JSON.stringify(body), { status })
+    const { status = 200, body, headers } = typeof hit === 'function' ? hit(url) : hit
+    return new Response(typeof body === 'string' ? body : JSON.stringify(body), { status, headers })
   })
   vi.stubGlobal('fetch', fetch)
   return fetch

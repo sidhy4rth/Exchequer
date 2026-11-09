@@ -97,6 +97,35 @@ def test_removed_watches_do_not_count(store):
     assert status["active_watches"] == 0 and status["stale"] is False
 
 
+def test_an_anonymous_caller_sees_only_whether_and_how_often_checks_run(store):
+    # The site-wide count and the time of anyone's last check are for the
+    # operator (/health/detail), not for whoever asks.
+    add_watch("w1", checked=45)
+    body = TestClient(app).get("/watches").json()
+    assert set(body["watcher"]) == {"enabled", "interval_seconds"}
+    assert "active_watches" not in str(body)
+
+
+def test_an_owner_sees_their_own_last_check_not_another_owners(store):
+    add_watch("alice", checked=45)
+    with models.session() as s:  # someone else's watch, checked a minute ago
+        s.add(models.Watch(id="bob", owner_hash=ownership.owner_hash("b" * 32), chain="ethereum",
+                           asset="ETH", address="0x" + "2" * 40, note="", created_at=ago(60),
+                           last_checked_at=ago(1), active=True))
+        s.commit()
+    watcher = TestClient(app).get("/watches", headers={ownership.OWNER_HEADER: OWNER}).json()["watcher"]
+    assert about(watcher["last_check_at"], 45) and watcher["stale"] is True
+    assert "active_watches" not in watcher
+
+
+def test_the_operator_still_sees_the_site_wide_count(store, monkeypatch):
+    add_watch("w1", checked=4)
+    add_watch("w2", checked=12)
+    monkeypatch.setattr(config, "HEALTH_TOKEN", TOKEN)
+    detail = TestClient(app).get("/health/detail", headers={"authorization": f"Bearer {TOKEN}"}).json()
+    assert detail["watcher"]["active_watches"] == 2
+
+
 def test_the_panel_and_the_operator_both_see_it(store, monkeypatch):
     add_watch("w1", checked=45)
     monkeypatch.setattr(config, "HEALTH_TOKEN", TOKEN)

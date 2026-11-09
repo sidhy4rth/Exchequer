@@ -78,3 +78,96 @@ def test_the_shipped_demo_list_is_valid_trace_requests():
         request = TraceRequest(**seed)
         chain = config.get_chain(request.chain)
         assert chain.validate_address(request.address), seed
+
+
+# -- when it may run: not where its cache cannot outlive the instance ------------
+@pytest.fixture
+def warm_on(monkeypatch, demo_file, tmp_path):
+    monkeypatch.setattr(config, "WARM_CACHE_AT_STARTUP", True)
+    monkeypatch.setattr(config, "WARM_CACHE_FORCED", False, raising=False)
+    monkeypatch.setattr(config, "TEMPORARY_DISK", False)
+    monkeypatch.setattr(config, "API_CACHE_PATH", tmp_path / "provider_cache.db")
+    started = []
+    monkeypatch.setattr(warmup, "_loop", lambda interval: started.append(interval))
+    monkeypatch.setattr(warmup, "_state", {**warmup._state, "enabled": False})
+    return started
+
+
+def test_warm_up_refuses_a_temporary_disk(warm_on, monkeypatch):
+    # Render's free plan wipes the cache at every sleep: each wake would
+    # re-trace every demo for nothing.
+    monkeypatch.setattr(config, "TEMPORARY_DISK", True)
+    assert warmup.start_in_background() is False
+    assert warmup.status()["skipped"] == "temporary disk"
+
+
+def test_warm_up_refuses_a_memory_only_cache(warm_on, monkeypatch):
+    monkeypatch.setattr(config, "API_CACHE_PATH", None)
+    assert warmup.start_in_background() is False
+
+
+def test_force_overrides_the_guard(warm_on, monkeypatch):
+    import time
+    monkeypatch.setattr(config, "TEMPORARY_DISK", True)
+    monkeypatch.setattr(config, "WARM_CACHE_FORCED", True)
+    assert warmup.start_in_background() is True
+    for _ in range(100):
+        if warm_on:
+            break
+        time.sleep(0.01)
+    assert warm_on
+
+
+def test_each_demo_takes_a_trace_slot(demo_file, monkeypatch):
+    # The warm-up shares the server's running ceiling with live traces
+    # instead of running beside all of them.
+    import threading
+
+    import app.pipeline as main
+    from app.routes import cases
+    monkeypatch.setattr(cases, "_running", threading.BoundedSemaphore(1))
+    held = []
+
+    def fake_run_trace(request):
+        held.append(not cases._running.acquire(blocking=False))
+        return {"exchange": None, "evidence": None}
+    monkeypatch.setattr(main, "run_trace", fake_run_trace)
+    warmup.warm_once()
+    assert held == [True, True]
+    assert cases._running.acquire(blocking=False)  # given back after each
+
+
+# -- the thread never dies quietly ------------------------------------------------
+def test_a_non_object_entry_is_skipped_and_the_rest_warm(demo_file, monkeypatch):
+    import app.pipeline as main
+    good = json.loads(demo_file.read_text())
+    demo_file.write_text(json.dumps([good[0], 7, good[1]]))
+    monkeypatch.setattr(main, "run_trace", lambda request: {"exchange": None, "evidence": None})
+    records = warmup.warm_once()
+    assert [r["address"] for r in records] == [good[0]["address"], good[1]["address"]]
+
+
+def test_a_demo_file_that_is_not_a_list_warms_nothing(demo_file):
+    demo_file.write_text(json.dumps({"address": "0x"}))
+    assert warmup.load_demo_requests() == []
+
+
+class _StopLoop(Exception):
+    pass
+
+
+def test_the_loop_survives_warm_once_raising(monkeypatch):
+    def broken():
+        raise RuntimeError("pipeline import failed")
+    monkeypatch.setattr(warmup, "warm_once", broken)
+
+    def stop(_seconds):
+        raise _StopLoop
+    monkeypatch.setattr(warmup, "_wait", stop, raising=False)
+    monkeypatch.setattr(warmup, "_state", {**warmup._state, "runs_completed": 0, "last_error": None})
+    with pytest.raises(_StopLoop):
+        warmup._loop(1)
+    state = warmup.status()
+    assert state["runs_completed"] == 1 and state["in_progress"] is False
+    assert state["last_error"] == "RuntimeError: pipeline import failed"
+    assert state["last_run"] == []

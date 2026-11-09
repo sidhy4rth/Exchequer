@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -40,7 +40,7 @@ describe('Verify page', () => {
   it('sends the pasted report and shows the verdict', async () => {
     const calls = api({
       'GET /signing-key': { body: { algorithm: 'Ed25519', fingerprint: 'abcd1234abcd1234', public_key_pem: 'PEM', persistent: true } },
-      'POST /verify': { body: { sealed: true, hash_ok: true, signed: true, signature_ok: true, key_fingerprint: 'abcd1234abcd1234', this_server_key: 'abcd1234abcd1234', detail: 'Genuine and unchanged: signed by this server, every byte as issued.' } },
+      'POST /verify': { body: { status: 'genuine', sealed: true, hash_ok: true, signed: true, signature_ok: true, key_fingerprint: 'abcd1234abcd1234', this_server_key: 'abcd1234abcd1234', genuine: true, extra_content: false, detail: 'Genuine and unchanged: signed by this server, and nothing was added below the signature.' } },
     })
     const user = userEvent.setup()
     inRouter(<Verify />)
@@ -54,13 +54,154 @@ describe('Verify page', () => {
   it('names an edited report as changed', async () => {
     api({
       'GET /signing-key': { body: { fingerprint: 'k', public_key_pem: '', persistent: true } },
-      'POST /verify': { body: { sealed: true, hash_ok: false, signed: true, signature_ok: false, key_fingerprint: 'k', this_server_key: 'k', detail: 'The signature does not match.' } },
+      'POST /verify': { body: { status: 'changed', sealed: true, hash_ok: false, signed: true, signature_ok: false, key_fingerprint: 'k', this_server_key: 'k', detail: 'The signature does not match.' } },
     })
     const user = userEvent.setup()
     inRouter(<Verify />)
     await user.type(screen.getByLabelText('Report text'), 'x')
     await user.click(screen.getByRole('button', { name: 'Verify' }))
     expect(await screen.findByRole('status')).toHaveTextContent('This report was changed')
+  })
+
+  it('never shows text added below the seal as genuine, even with a valid signature', async () => {
+    api({
+      'GET /signing-key': { body: { fingerprint: 'k', public_key_pem: '', persistent: true } },
+      'POST /verify': { body: { status: 'text_added', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: false, extra_content: true, extra_lines: 1, key_fingerprint: 'k', this_server_key: 'k', detail: 'The signed part is genuine, but 1 line was added below the seal.' } },
+    })
+    const user = userEvent.setup()
+    inRouter(<Verify />)
+    await user.type(screen.getByLabelText('Report text'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Verify' }))
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('Text was added after signing')
+    expect(status).not.toHaveTextContent('Genuine and unchanged')
+    expect(status).toHaveClass('red')
+  })
+
+  const verdictFor = async (body) => {
+    api({ 'GET /signing-key': { body: { fingerprint: 'k', public_key_pem: '', persistent: true } }, 'POST /verify': { body } })
+    const user = userEvent.setup()
+    inRouter(<Verify />)
+    await user.type(screen.getByLabelText('Report text'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Verify' }))
+    return screen.findByRole('status')
+  }
+
+  it('shows a removed signature in red', async () => {
+    const s = await verdictFor({ status: 'signature_missing', sealed: true, hash_ok: true, signed: false, signature_ok: false, detail: 'Signature missing.' })
+    expect(s).toHaveTextContent('Signature missing')
+    expect(s).toHaveClass('red')
+    expect(s).toHaveTextContent('self-consistent only')
+  })
+
+  it('never calls an unchecked key a different server', async () => {
+    const s = await verdictFor({ status: 'unknown_key', sealed: true, hash_ok: true, signed: true, signature_ok: false, signature_checked: false, claimed_key: 'deadbeefdeadbeef', detail: 'Unknown key.' })
+    expect(s).toHaveTextContent('Cannot be verified here')
+    expect(s).not.toHaveTextContent('different server')
+    expect(s).not.toHaveClass('amber')
+    expect(s).toHaveTextContent('not checked')
+    expect(s).toHaveTextContent('claimed key (not checked)')
+  })
+
+  it('shows a clone claiming this server as forged, in red', async () => {
+    const s = await verdictFor({ status: 'forged_issuer', sealed: true, hash_ok: true, signed: true, signature_ok: false, signature_checked: false, claimed_key: 'f'.repeat(64), detail: 'Claims to be issued by this server.' })
+    expect(s).toHaveTextContent('Forged')
+    expect(s).toHaveClass('red')
+    expect(s).toHaveTextContent('not checked')
+  })
+
+  it('shows who issued a genuine report and its full key, and whether the key is official', async () => {
+    const fp = 'abcd'.repeat(16)
+    const s = await verdictFor({ status: 'genuine', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: true, issued_by: 'https://exchequer.example', key_fingerprint: fp.slice(0, 16), key_fingerprint_sha256: fp, official: true, detail: 'Genuine.' })
+    expect(s).toHaveTextContent('https://exchequer.example')
+    expect(s).toHaveTextContent('abcd abcd abcd abcd')
+    expect(s).toHaveTextContent("in Exchequer's published list")
+  })
+
+  it('shows what the signed report says, to hold against a PDF summary page', async () => {
+    const s = await verdictFor({ status: 'genuine', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: true, detail: 'Genuine.', finding: { case_id: 'case-1', exchange: 'Binance', address: '0x' + 'a'.repeat(40), likely_arrived: 'about 9.5 of 10 ETH sent from the reported address (pro-rata)' } })
+    expect(s).toHaveTextContent('What the signed report says')
+    expect(s).toHaveTextContent('0x' + 'a'.repeat(40))
+    expect(s).toHaveTextContent('about 9.5 of 10 ETH')
+    expect(s).toHaveTextContent('not covered by the signature')
+  })
+
+  it('shows a report signed with an earlier official key as genuine', async () => {
+    const earlier = await verdictFor({ status: 'genuine_earlier_key', sealed: true, hash_ok: true, signed: true, signature_ok: true, official: true, detail: 'Earlier key.' })
+    expect(earlier).toHaveClass('green')
+    expect(earlier).toHaveTextContent('earlier Exchequer key')
+  })
+
+  it('shows a revoked key in red', async () => {
+    const s = await verdictFor({ status: 'revoked_key', sealed: true, hash_ok: true, signed: true, signature_ok: true, detail: 'Revoked.' })
+    expect(s).toHaveClass('red')
+  })
+
+  it('shows an unsigned report as unverifiable, not amber', async () => {
+    const s = await verdictFor({ status: 'unsigned', sealed: true, hash_ok: true, signed: false, signature_ok: false, detail: 'No signature.' })
+    expect(s).toHaveTextContent('Unsigned: cannot be verified')
+    expect(s).not.toHaveClass('amber')
+  })
+
+  it('treats a status it does not know as a warning, never as genuine', async () => {
+    const s = await verdictFor({ status: 'something_new', sealed: true, hash_ok: true, signed: true, signature_ok: true, detail: '?' })
+    expect(s).toHaveClass('red')
+    expect(s).not.toHaveTextContent('Genuine')
+  })
+
+  // r1-evidence-crypto-6, round 2: a PDF is sent whole, and a doctored page 1 is named.
+  const pdfFile = (size = 0) => {
+    const file = new File(['%PDF-1.4 fake'], 'exchequer-case-1.pdf', { type: 'application/pdf' })
+    if (size) Object.defineProperty(file, 'size', { value: size })
+    return file
+  }
+  const uploadPdf = async (body, file = pdfFile()) => {
+    const calls = api({ 'GET /signing-key': { body: { fingerprint: 'k', public_key_pem: '', persistent: true } }, 'POST /verify': { body } })
+    const user = userEvent.setup()
+    inRouter(<Verify />)
+    await user.upload(screen.getByLabelText('Open a .txt or .pdf file'), file)
+    return calls
+  }
+  const FINDING = { case_id: 'case-1', exchange: 'Binance', address: '0x' + 'a'.repeat(40), likely_arrived: 'about 2 of 10 ETH sent from the reported address (pro-rata)' }
+
+  it('sends a PDF as PDF bytes, not as text', async () => {
+    const calls = await uploadPdf({ status: 'genuine', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: true, detail: 'Genuine.', finding: FINDING, pdf: { pages_match: true, problems: [] } })
+    const post = await waitFor(() => { const c = calls.find((x) => x.method === 'POST'); expect(c).toBeTruthy(); return c })
+    expect(post.headers['Content-Type']).toBe('application/pdf')
+    expect(post.body).toBeInstanceOf(ArrayBuffer)
+    const s = await screen.findByRole('status')
+    expect(s).toHaveTextContent('Genuine and unchanged')
+    expect(s).toHaveTextContent('Page 1 and the printed copy show what the attached report states')
+    expect(screen.getByText('exchequer-case-1.pdf')).toBeInTheDocument()
+  })
+
+  it('names a page 1 that does not match the signed record, in red, with the true facts', async () => {
+    await uploadPdf({ status: 'summary_differs', sealed: true, hash_ok: true, signed: true, signature_ok: true, genuine: false, detail: 'The attached report is genuine, but page 1 of this PDF does not match it.', finding: FINDING, pdf: { pages_match: false, problems: ['Page 1 does not show the address the signed report names (0xaaaa).', 'Page 1 shows an address or hash the signed report never mentions: 0x9999.'] } })
+    const s = await screen.findByRole('status')
+    expect(s).toHaveClass('red')
+    expect(s).toHaveTextContent('Page 1 does not match the signed record')
+    expect(s).not.toHaveTextContent('Genuine and unchanged')
+    expect(within(s).getAllByRole('listitem')).toHaveLength(2)
+    expect(s).toHaveTextContent('never mentions: 0x9999')
+    expect(s).toHaveTextContent('What the signed report says')
+    expect(s).toHaveTextContent('0x' + 'a'.repeat(40))
+  })
+
+  it('shows the other PDF verdicts in red', async () => {
+    for (const [status, title] of [['printed_copy_differs', 'The printed pages do not match the signed record'], ['pdf_altered', 'This PDF was changed after it was issued'], ['pdf_no_report', 'No signed report in this PDF'], ['pdf_unreadable', 'This PDF cannot be read']]) {
+      const differs = status === 'printed_copy_differs' || status === 'pdf_altered'
+      await uploadPdf({ status, genuine: false, sealed: false, detail: 'x', pdf: { pages_match: differs ? false : null, problems: differs ? ['The printed copy (Part 2) differs from the attached file.'] : [] } })
+      const s = await screen.findByRole('status')
+      expect(s).toHaveClass('red')
+      expect(s).toHaveTextContent(title)
+      cleanup()
+    }
+  })
+
+  it('refuses a file over the size limit without sending it', async () => {
+    const calls = await uploadPdf({ status: 'genuine' }, pdfFile(2_000_001))
+    expect(await screen.findByText(/larger than any Exchequer report/)).toBeInTheDocument()
+    expect(calls.find((c) => c.method === 'POST')).toBeUndefined()
   })
 })
 
@@ -116,6 +257,70 @@ describe('Watchlist on the home page', () => {
     expect(calls.some((c) => c.method === 'POST' && c.path === '/alerts/read')).toBe(true)
   })
 
+  const alertRow = (i, kind, read = false) => ({ alert_id: `a${i}`, kind, value: 1, asset: 'ETH', counterparty: '0x' + String(i).padStart(40, '0'), counterparty_label: kind === 'exchange' ? 'Binance 14' : '', tx_time: 1700000000 + i, tx_url: '', tx_hash: `0x${i}`, read })
+  const listing = (alerts) => api({
+    'GET /watches': { body: { count: 1, watches: [{ watch_id: 'w1', address: '0x' + '7'.repeat(40), chain: 'ethereum', asset: 'ETH', last_checked_at: null, unread_alerts: alerts.length }] } },
+    'GET /alerts': { body: { count: alerts.length, alerts } },
+  })
+
+  it('pins an unread exchange alert above 30 newer moved alerts', async () => {
+    listing([...Array.from({ length: 40 }, (_, i) => alertRow(i + 1, 'moved')), alertRow(99, 'exchange')])
+    inRouter(<Watchlist />)
+    const rows = await screen.findAllByText(/into an exchange|^moved$/)
+    expect(rows[0]).toHaveTextContent('into an exchange')
+    expect(screen.getByText('Binance 14')).toBeInTheDocument()
+  })
+
+  it('does not pin dust sent to an exchange: only 30 of it show, after the pinned cash-out', async () => {
+    const dust = Array.from({ length: 40 }, (_, i) => ({ ...alertRow(i + 1, 'exchange'), value: 0.000001, dust: true }))
+    listing([{ ...alertRow(99, 'exchange'), value: 25 }, ...dust])
+    inRouter(<Watchlist />)
+    const rows = await screen.findAllByText(/into an exchange/)
+    expect(rows).toHaveLength(31)
+    expect(screen.getByRole('button', { name: 'Show all 41' })).toBeInTheDocument()
+    expect(screen.getAllByText(/· dust/)).toHaveLength(30)
+  })
+
+  it('offers Show all past 30 alerts', async () => {
+    listing(Array.from({ length: 45 }, (_, i) => alertRow(i + 1, 'moved')))
+    const user = userEvent.setup()
+    inRouter(<Watchlist />)
+    await user.click(await screen.findByRole('button', { name: 'Show all 45' }))
+    expect(screen.getAllByText('moved')).toHaveLength(45)
+  })
+
+  it('names a "more movements" notice for what it is', async () => {
+    listing([{ ...alertRow(1, 'more'), message: 'Not everything since the last check was read in one go.' }])
+    inRouter(<Watchlist />)
+    expect(await screen.findByText('more movements')).toBeInTheDocument()
+    expect(screen.getByText(/Not everything since the last check/)).toBeInTheDocument()
+  })
+
+  it("removes a watch's webhook and keeps the watch", async () => {
+    let watch = { watch_id: 'w1', address: '0x' + '7'.repeat(40), chain: 'ethereum', asset: 'ETH', last_checked_at: null, unread_alerts: 0, webhook: 'https://hooks.slack.com/…' }
+    const calls = api({
+      'GET /watches': () => ({ body: { count: 1, watches: [watch] } }),
+      'GET /alerts': { body: { count: 0, alerts: [] } },
+      'DELETE /watches/w1/webhook': () => { watch = { ...watch, webhook: null }; return { body: watch } },
+    })
+    const user = userEvent.setup()
+    inRouter(<Watchlist />)
+    expect(await screen.findByText(/posts to hooks.slack.com/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Remove webhook' }))
+    await waitFor(() => expect(screen.queryByText(/posts to hooks.slack.com/)).not.toBeInTheDocument())
+    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/watches/w1/webhook')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Check now' })).toBeInTheDocument()
+  })
+
+  it('says when a webhook must be entered again', async () => {
+    api({
+      'GET /watches': { body: { count: 1, watches: [{ watch_id: 'w1', address: '0x' + '7'.repeat(40), chain: 'ethereum', asset: 'ETH', last_checked_at: null, unread_alerts: 0, webhook: null, webhook_unreadable: true }] } },
+      'GET /alerts': { body: { count: 0, alerts: [] } },
+    })
+    inRouter(<Watchlist />)
+    expect(await screen.findByText(/webhook needs re-entering/)).toBeInTheDocument()
+  })
+
   it('renders nothing when this browser watches nothing', async () => {
     api({ 'GET /watches': { body: { count: 0, watches: [] } }, 'GET /alerts': { body: { count: 0, alerts: [] } } })
     const { container } = inRouter(<Watchlist />)
@@ -162,7 +367,7 @@ describe('Bulk intake', () => {
     await user.click(box)
     await user.paste('reference,address\nC-1,0xabc\nC-2,nope\n')
     await user.click(screen.getByRole('button', { name: 'Run batch of 2' }))
-    expect(await screen.findByText(/Row 2: 'nope' is not a valid/)).toBeInTheDocument()
+    expect(await screen.findByText(/Line 3: 'nope' is not a valid/)).toBeInTheDocument()
   })
 
   it('opens the batch page once the batch starts', async () => {
@@ -178,7 +383,7 @@ describe('Bulk intake', () => {
     )
     await user.click(screen.getByText('Bulk intake'))
     await user.click(screen.getByLabelText('Complaints CSV'))
-    await user.paste('0xabc\n')
+    await user.paste('0x' + 'a'.repeat(40) + '\n')
     await user.click(screen.getByRole('button', { name: 'Run batch of 1' }))
     expect(await screen.findByText('batch page')).toBeInTheDocument()
   })
@@ -234,6 +439,11 @@ describe('the front door figures (R14)', () => {
     expect(figures.flagged).toBe(9883182)
     expect(figures.poisoning).toBe(9861922)
   })
+
+  it('counts seizure orders with the government listings (r1-labels-data-12)', async () => {
+    const { coverageFromChains } = await import('./ExchangeGlobe')
+    expect(coverageFromChains({ tron: { risk_labels: { sanctioned: 49, seized: 488 } } }).sanctioned).toBe(537)
+  })
 })
 
 describe('what the watchlist says about the watcher (R30)', () => {
@@ -253,8 +463,18 @@ describe('what the watchlist says about the watcher (R30)', () => {
   it('says when the last check was, and stays calm when it was recent', async () => {
     oneWatch({ enabled: true, interval_seconds: 600, last_check_at: minutesAgo(4), stale: false })
     inRouter(<Watchlist />)
-    expect(await screen.findByText(/about every 10 min · last check 4 min ago/)).toBeInTheDocument()
+    expect(await screen.findByText(/about every 10 min · last check of your watches 4 min ago/)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('promises no schedule when the watch service cannot be reached', async () => {
+    api({
+      'GET /watches': { status: 500, body: { detail: 'down' } },
+      'GET /alerts': { body: { count: 1, alerts: [{ alert_id: 'a1', kind: 'moved', value: 1, asset: 'ETH', counterparty: '0x' + '9'.repeat(40), counterparty_label: '', tx_time: 1700000000, tx_url: '', tx_hash: '0x1', read: false }] } },
+    })
+    const { container } = inRouter(<Watchlist />)
+    expect(await screen.findByText(/could not reach the watch service/)).toBeInTheDocument()
+    expect(container).not.toHaveTextContent(/checked automatically|about every/)
   })
 
   it('warns when no check has run for too long', async () => {
@@ -279,5 +499,26 @@ describe('the watch panel when automatic checks are off (R30)', () => {
     await screen.findByText('Watch for movement')
     await new Promise((r) => setTimeout(r, 20))
     expect(screen.queryByText(/Automatic checks are off/)).not.toBeInTheDocument()
+  })
+
+  it('promises no schedule when checks run only on Check now', async () => {
+    api({ 'GET /watches': { body: { count: 0, watches: [], watcher: { enabled: false, interval_seconds: 600 } } } })
+    const { container } = inRouter(<WatchPanel result={result} />)
+    await screen.findByText(/Automatic checks are off on this site/)
+    expect(container).not.toHaveTextContent(/every ten minutes|about every/)
+    expect(container).toHaveTextContent(/Alerts appear on the home page/)
+  })
+
+  it('gives the real interval when automatic checks are on', async () => {
+    api({ 'GET /watches': { body: { count: 0, watches: [], watcher: { enabled: true, interval_seconds: 300 } } } })
+    inRouter(<WatchPanel result={result} />)
+    expect(await screen.findByText(/Checked automatically about every 5 min/)).toBeInTheDocument()
+  })
+
+  it('claims no schedule when the watch service cannot be reached', async () => {
+    api({ 'GET /watches': { status: 500, body: { detail: 'down' } } })
+    const { container } = inRouter(<WatchPanel result={result} />)
+    expect(await screen.findByText(/Could not reach the watch service/)).toBeInTheDocument()
+    expect(container).not.toHaveTextContent(/every ten minutes|about every/)
   })
 })

@@ -19,6 +19,7 @@ from app import config, risk_matcher
 from app.report import build_report, render_text_report
 from app.risk_matcher import is_stale, list_freshness
 
+from test_label_store import FIELDS, ROWS
 from test_report import full_result, stored
 
 TRACED = date(2026, 9, 15)  # the day test_report's stored() case was traced
@@ -176,3 +177,109 @@ def test_a_chain_this_build_does_not_know_still_renders(monkeypatch):
     report = build_report(stored(full_result()))
     assert report["screening_lists"] is None
     assert "could not be determined" in render_text_report(report)
+
+
+def test_the_stale_warning_says_listings_may_have_been_lifted(lists_dated):
+    """A stale list misses new listings and may still name lifted ones (r1-labels-data-3)."""
+    lists_dated(intl=OLD)
+    warning = list_freshness("ethereum", TRACED)["warning"]
+    assert "may still name addresses whose listing has since been lifted" in warning
+    assert "Other governments' sanctions lists and seizure orders (checked 2026-08-01)" in warning
+
+
+def test_a_list_says_how_many_of_its_orders_had_ended_by_the_trace(lists_dated):
+    """An order past its valid_until is not matched; the report says how many were left out (r1-labels-data-3)."""
+    chain = lists_dated()
+    labels = {f"T{c * 33}": {"category": "seized", "entity": "NBCTF 1", "valid_until": until}
+              for c, until in (("A", "2026-09-01"), ("B", "2026-09-14"), ("C", "2026-09-15"), ("D", None))}
+    chain.intl_sanctions_path.write_text(json.dumps({"_meta": {"last_reviewed": FRESH}, "labels": labels}))
+    risk_matcher.clear_label_caches()
+    intl = entry(list_freshness("ethereum", TRACED), "Other governments")
+    assert intl["lapsed"] == 2  # 1 and 14 September; the 15th was still its last day
+    assert "2 listings in it had ended by 2026-09-15 and were not matched" in intl["note"]
+    assert entry(list_freshness("ethereum", TRACED), "OFAC")["lapsed"] == 0
+    flat = " ".join(render_text_report(build_report(stored(full_result()))).split())
+    assert "2 listings in it had ended by 2026-09-15" in flat
+
+
+# -- every source a trace screens against is named (audit r1-labels-data-9) --------
+STORE = "Flagged-address label store"
+
+
+def _build(tmp_path, rows):
+    """A label store built from `rows` the way a release is (scripts/build_label_store.py)."""
+    import csv
+
+    from scripts.build_label_store import build
+
+    src = tmp_path / "new_flagged.csv"
+    with open(src, "w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+    build(src, tmp_path / "label_store.db")
+    return tmp_path / "label_store.db"
+
+
+@pytest.fixture
+def held_store(monkeypatch, tmp_path):
+    """The server holds a small label store (rows on Ethereum and Arbitrum only)."""
+    from app.label_store import LabelStore
+
+    store = LabelStore(_build(tmp_path, ROWS))  # 2 rows on Ethereum, 1 on Arbitrum
+    monkeypatch.setattr(risk_matcher, "get_label_store", lambda: store)
+    return store
+
+
+def test_the_gambling_list_is_named():
+    freshness = list_freshness("ethereum", date(2030, 1, 1))
+    gambling = entry(freshness, "Gambling platform wallets")
+    assert gambling["file"] == "gambling_labels.json" and gambling["state"] == "fixed_snapshot"
+
+
+def test_without_the_label_store_it_is_named_as_not_screened():
+    assert STORE in list_freshness("ethereum", TRACED)["not_held"]
+
+
+def test_the_label_store_is_listed_with_its_build_and_rows(held_store):
+    freshness = list_freshness("ethereum", date(2030, 1, 1))
+    store = entry(freshness, STORE)
+    assert store["file"] == "label_store.db" and store["rows"] == 2
+    assert store["built_from"] == "new_flagged.csv" and store["checked"] == store["built_at"][:10]
+    assert "2 addresses on this chain" in store["note"]
+    assert STORE not in freshness["not_held"]
+
+
+def test_the_store_records_the_release_the_image_was_built_with(held_store, monkeypatch):
+    """The Dockerfile bakes the release tag it fetched into EXCHEQUER_LABEL_STORE_TAG."""
+    monkeypatch.setenv("EXCHEQUER_LABEL_STORE_TAG", "labels-2026-11-05b")
+    recorded = risk_matcher.label_store_entry(held_store, "ethereum")
+    assert recorded["release"] == "labels-2026-11-05b"
+    store = entry(list_freshness("ethereum", TRACED, store=recorded), STORE)
+    assert store["release"] == "labels-2026-11-05b" and "Release labels-2026-11-05b, built" in store["note"]
+    monkeypatch.delenv("EXCHEQUER_LABEL_STORE_TAG")
+    assert risk_matcher.label_store_entry(held_store, "ethereum")["release"] is None
+    assert entry(list_freshness("ethereum", TRACED), STORE)["note"].startswith("Built ")
+
+
+def test_a_store_with_nothing_for_the_chain_is_not_screened_on_it(held_store):
+    assert STORE in list_freshness("polygon", date(2030, 1, 1))["not_held"]
+
+
+def test_the_store_the_trace_recorded_is_named_not_todays(held_store):
+    recorded = {"name": STORE, "file": "label_store.db", "built_at": "2026-09-01T10:00:00",
+                "built_from": "old_flagged.csv", "rows": 7}
+    store = entry(list_freshness("ethereum", TRACED, store=recorded), STORE)
+    assert (store["checked"], store["rows"]) == ("2026-09-01", 7)
+    assert "Recorded when this case was traced" in store["note"]
+    # Traced without one: not screened, although this server holds one now.
+    assert STORE in list_freshness("ethereum", TRACED, store=None)["not_held"]
+
+
+def test_the_report_names_the_store_its_trace_used():
+    recorded = {"name": STORE, "file": "label_store.db", "built_at": "2026-09-01T10:00:00",
+                "built_from": "new_flagged.csv", "rows": 7}
+    flat = " ".join(render_text_report(build_report(stored({**full_result(), "label_store": recorded}))).split())
+    assert f"{STORE} label_store.db: checked 2026-09-01" in flat
+    without = " ".join(render_text_report(build_report(stored({**full_result(), "label_store": None}))).split())
+    assert "so not screened:" in without and STORE in without.split("so not screened:")[1]

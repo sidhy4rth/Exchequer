@@ -221,3 +221,15 @@ def test_complaints_that_meet_only_after_a_swap_are_linked():
     assert [c["address"] for c in clusters] == [after]
     swapped = next(m for m in clusters[0]["cases"] if m["case_id"] == "c1")
     assert swapped["after_swap_to"] == "USDT"
+
+
+def test_a_mixer_tag_the_trace_went_past_is_still_an_intermediary():
+    """r2-g2-documented-claims-vs-code-7-5: only a pinned pool is a service every
+    user passes through; a wallet merely tagged as one may be the offender's."""
+    tagged = addr("f2")
+    cases = [a_case(f"c{i}", addr(str(i)), [{"id": tagged, "risk": "mixer"}]) for i in (1, 2)]
+    for case in cases:
+        result = json.loads(case.result_json)
+        result["graph"]["nodes"][1]["is_terminal"] = False
+        case.result_json = json.dumps(result)
+    assert [c["address"] for c in correlate(cases)] == [tagged]

@@ -23,6 +23,7 @@ GUARDED = [
     ("/batches", {"name": "b", "rows": [{"address": ADDRESS}]}),
     ("/watches", {"address": ADDRESS}),
     ("/watches/some-watch/check", None),
+    ("/requests", {"case_id": "case-1", "recipient": "Binance"}),
 ]
 
 
@@ -32,7 +33,8 @@ def client(tmp_path, monkeypatch):
     traced = []
     monkeypatch.setattr(pipeline, "run_trace",
                         lambda request: traced.append(request.address) or {"address": request.address, "chain": "ethereum"})
-    monkeypatch.setattr(access, "wrong_codes", rate_limit.SlidingWindowLimiter(10, 3600))
+    monkeypatch.setattr(access, "wrong_codes",
+                        rate_limit.SlidingWindowLimiter(access.wrong_codes.limit, access.wrong_codes.window))
     with TestClient(app) as c:
         c.traced = traced
         yield c
@@ -52,6 +54,43 @@ def post(client, path, body, code=None):
 def test_without_a_configured_code_tracing_stays_open(client):
     assert post(client, "/trace", GUARDED[0][1]).status_code == 200
     assert client.traced == [ADDRESS]
+
+
+def test_a_public_host_without_a_code_stays_open_but_says_so_loudly(client, monkeypatch, caplog):
+    """The live site must keep working before the operator sets the code, so
+    a missing code never closes it by itself -- it is reported instead."""
+    monkeypatch.setattr(config, "PUBLIC_HOST", True)
+    with caplog.at_level("WARNING", logger="app.access"):
+        access.report_at_startup()
+    assert any(r.levelname == "ERROR" and "EXCHEQUER_DEMO_CODE" in r.getMessage() for r in caplog.records)
+    assert client.get("/health").json()["access"] == "open"
+    assert post(client, "/trace", GUARDED[0][1]).status_code == 200
+
+
+def test_a_laptop_without_a_code_logs_no_alarm(monkeypatch, caplog):
+    monkeypatch.setattr(config, "PUBLIC_HOST", False)
+    with caplog.at_level("WARNING", logger="app.access"):
+        access.report_at_startup()
+    assert not caplog.records
+
+
+def test_a_short_code_is_warned_about(monkeypatch, caplog):
+    monkeypatch.setattr(config, "DEMO_CODE", CODE)
+    with caplog.at_level("WARNING", logger="app.access"):
+        access.report_at_startup()
+    assert any("guess" in r.getMessage() for r in caplog.records)
+
+
+def test_a_required_code_that_is_missing_closes_live_tracing(client, monkeypatch):
+    """EXCHEQUER_REQUIRE_DEMO_CODE: once the operator has set the code, a
+    deploy that loses it fails closed instead of silently opening."""
+    monkeypatch.setattr(config, "REQUIRE_DEMO_CODE", True)
+    refused = post(client, "/trace", GUARDED[0][1])
+    assert refused.status_code == 503 and "EXCHEQUER_DEMO_CODE" in refused.json()["detail"]
+    assert client.traced == []
+    assert client.get("/access").json() == {"demo_code_required": True}
+    assert client.get("/health").json()["access"] == "closed"
+    assert client.get("/cases", headers=OWNER).status_code == 200  # reading stays open
 
 
 # -- with a code configured -------------------------------------------------------
@@ -96,8 +135,83 @@ def test_a_refusal_still_carries_the_security_headers(client, code_set):
 def test_guessing_the_code_is_cut_off_after_ten_wrong_tries(client, code_set):
     for _ in range(10):
         assert post(client, "/trace", GUARDED[0][1], code="guess").status_code == 403
-    blocked = post(client, "/trace", GUARDED[0][1], code=CODE)  # even the right one, for now
+    # Even the right code, since CODE is short: answering it differently while
+    # locked out would turn the lockout into an unlimited guessing oracle. A
+    # pass gets through (and the right long code: see below).
+    blocked = post(client, "/trace", GUARDED[0][1], code=CODE)
     assert blocked.status_code == 429 and int(blocked.headers["retry-after"]) > 0
+    assert int(blocked.headers["retry-after"]) <= 900  # a prank lasts minutes, not an hour
+
+
+# -- the pass: a browser that entered the code is never locked out by others -------------
+def get_pass(client):
+    body = post(client, "/access/check", None, code=CODE).json()
+    assert body["ok"] is True and body["expires_in"] > 0
+    return body["pass"]
+
+
+def with_pass(client, path, body, token):
+    return client.post(path, json=body, headers={**OWNER, access.PASS_HEADER: token})
+
+
+def test_checking_the_right_code_returns_a_pass_that_unlocks_tracing(client, code_set):
+    token = get_pass(client)
+    assert CODE not in token
+    assert with_pass(client, "/trace", GUARDED[0][1], token).status_code == 200
+    assert client.traced == [ADDRESS]
+
+
+def test_a_browser_holding_a_pass_is_not_locked_out_by_wrong_guesses_on_its_connection(client, code_set):
+    token = get_pass(client)
+    for _ in range(10):
+        post(client, "/access/check", None, code="guess")
+    assert post(client, "/trace", GUARDED[0][1], code=CODE).status_code == 429  # no oracle
+    assert with_pass(client, "/trace", GUARDED[0][1], token).status_code == 200
+
+
+@pytest.mark.parametrize("tamper", [
+    lambda t: t[:-2] + ("AA" if not t.endswith("AA") else "BB"),
+    lambda t: t.replace("v1.", "v1.9", 1),
+    lambda t: "v1.99999999999.x.y",
+    lambda t: "garbage",
+    lambda t: t + "." + "a" * 5000,
+])
+def test_a_tampered_pass_is_refused_and_counts_no_guess(client, code_set, tamper):
+    token = tamper(get_pass(client))
+    for _ in range(12):
+        refused = with_pass(client, "/trace", GUARDED[0][1], token)
+        assert refused.status_code == 403
+    assert refused.headers.get("x-exchequer-demo-pass-invalid") == "1"
+    assert access.wrong_codes.remaining(rate_limit.client_ip({}, "testclient")) == 10
+    assert client.traced == []
+
+
+def test_an_expired_pass_is_refused(client, code_set, monkeypatch):
+    token = get_pass(client)
+    later = access.time.time() + config.DEMO_PASS_SECONDS + 1
+    monkeypatch.setattr(access.time, "time", lambda: later)
+    assert with_pass(client, "/trace", GUARDED[0][1], token).status_code == 403
+
+
+def test_a_pass_from_an_old_code_is_refused(client, code_set, monkeypatch):
+    token = get_pass(client)
+    monkeypatch.setattr(config, "DEMO_CODE", "a-new-code-after-the-event")
+    assert with_pass(client, "/trace", GUARDED[0][1], token).status_code == 403
+
+
+def test_rotating_the_leftmost_forwarded_entry_does_not_reset_the_guess_limit(client, code_set, monkeypatch):
+    monkeypatch.setattr(config, "TRUST_PROXY_HEADERS", True)
+    monkeypatch.setattr(config, "PROXY_CLIENT_FIRST", True)
+    monkeypatch.setattr(config, "CLIENT_IP_HEADER", "cf-connecting-ip")
+    for n in range(11):
+        headers = {access.CODE_HEADER: "guess", "cf-connecting-ip": "49.36.1.1",
+                   "x-forwarded-for": f"10.9.{n}.1, 49.36.1.1, 104.22.17.40"}
+        status = client.post("/access/check", headers=headers).status_code
+    assert status == 429
+    # ...and nobody can lock out another address by writing it there.
+    victim = {access.CODE_HEADER: "guess", "cf-connecting-ip": "49.36.7.7",
+              "x-forwarded-for": "49.36.1.1, 49.36.7.7, 104.22.17.40"}
+    assert client.post("/access/check", headers=victim).status_code == 403
 
 
 # -- watch creation is rate limited, code or not ----------------------------------------
@@ -119,10 +233,81 @@ def test_the_console_can_ask_whether_a_code_is_needed(client, monkeypatch):
 def test_checking_a_code_goes_through_the_same_gate(client, code_set):
     assert post(client, "/access/check", None).status_code == 403
     assert post(client, "/access/check", None, code="nope").status_code == 403
-    assert post(client, "/access/check", None, code=CODE).json() == {"ok": True}
+    assert post(client, "/access/check", None, code=CODE).json()["ok"] is True
 
 
 def test_checking_codes_counts_towards_the_guess_limit(client, code_set):
     for _ in range(10):
         post(client, "/access/check", None, code="guess")
     assert post(client, "/access/check", None, code=CODE).status_code == 429
+
+
+# -- a long code: the right one gets through a lockout ----------------------------------
+# 22 characters, the length of secrets.token_urlsafe(16): about 128 bits, so
+# telling a right guess from a wrong one during a lockout helps nobody.
+LONG_CODE = "Qm7v-Kp2xL9tRw4ZsY8nHa"
+
+
+@pytest.fixture
+def long_code_set(monkeypatch):
+    assert len(LONG_CODE) == 22
+    monkeypatch.setattr(config, "DEMO_CODE", LONG_CODE)
+
+
+def lock_out(client):
+    for _ in range(10):
+        assert post(client, "/access/check", None, code="guess").status_code == 403
+
+
+def test_with_a_long_code_the_right_code_at_the_code_box_gets_through_a_lockout(client, long_code_set):
+    """A judge's own laptop, a second presenter device, a new tab: none holds
+    a pass yet, and someone else's wrong guesses must not stop them."""
+    lock_out(client)
+    body = post(client, "/access/check", None, code=LONG_CODE)
+    assert body.status_code == 200 and body.json()["pass"]
+
+
+def test_with_a_long_code_a_raw_code_request_gets_through_a_lockout(client, long_code_set):
+    """The same for a script sending the code itself, as check_demos.py does."""
+    lock_out(client)
+    assert post(client, "/trace", GUARDED[0][1], code=LONG_CODE).status_code == 200
+    assert client.traced == [ADDRESS]
+
+
+def test_with_a_long_code_wrong_guesses_during_a_lockout_are_still_refused(client, long_code_set):
+    lock_out(client)
+    for _ in range(5):
+        refused = post(client, "/trace", GUARDED[0][1], code="guess")
+        assert refused.status_code == 429 and int(refused.headers["retry-after"]) > 0
+        refused = post(client, "/access/check", None, code=LONG_CODE[:-1] + "x")
+        assert refused.status_code == 429
+    assert post(client, "/trace", GUARDED[0][1]).status_code == 429  # no code at all
+    assert client.traced == []
+    # ...and the right code passing does not reset the count for the guesser.
+    assert post(client, "/access/check", None, code=LONG_CODE).status_code == 200
+    assert post(client, "/access/check", None, code="guess").status_code == 429
+
+
+def test_with_a_long_code_wrong_guesses_still_count_towards_the_lockout(client, long_code_set):
+    for n in range(10):
+        assert post(client, "/trace", GUARDED[0][1], code=f"guess-{n}").status_code == 403
+    assert access.wrong_codes.remaining(rate_limit.client_ip({}, "testclient")) == 0
+    assert post(client, "/trace", GUARDED[0][1], code="guess-10").status_code == 429
+
+
+def test_a_code_one_character_short_keeps_the_strict_lockout(client, monkeypatch):
+    """Below the length, telling right from wrong while locked out would
+    answer guesses: the right code is refused too, as before."""
+    monkeypatch.setattr(config, "DEMO_CODE", LONG_CODE[:-1])
+    lock_out(client)
+    assert post(client, "/access/check", None, code=LONG_CODE[:-1]).status_code == 429
+    assert post(client, "/trace", GUARDED[0][1], code=LONG_CODE[:-1]).status_code == 429
+    assert client.traced == []
+
+
+def test_health_detail_says_whether_the_code_is_long_enough_to_get_through_a_lockout(monkeypatch):
+    assert access.MIN_CODE_LENGTH == len(LONG_CODE)
+    monkeypatch.setattr(config, "DEMO_CODE", LONG_CODE)
+    assert access.code_is_long_enough()
+    monkeypatch.setattr(config, "DEMO_CODE", LONG_CODE[:-1])
+    assert not access.code_is_long_enough()

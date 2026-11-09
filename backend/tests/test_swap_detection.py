@@ -189,3 +189,59 @@ def test_a_contracts_internal_payout_to_a_router_is_not_its_swap():
     swaps = detect_swaps(graph, routers(), lambda h: RECEIPT, ETHEREUM, "ETH")
     assert swaps == []
     assert "swap" not in graph.edges[SENDER, ROUTER]
+
+
+# ---------------------------------------------------------------------------
+# Which output is the swap's (audit r1-attribution-integrity-4)
+# ---------------------------------------------------------------------------
+DECOY = "0xfa4e" + "0" * 36
+
+
+def transfer_to_sender(contract, units, frm=ROUTER, to=SENDER):
+    return {"address": contract, "data": hex(units),
+            "topics": [TRANSFER_TOPIC, "0x" + "0" * 24 + frm[2:], "0x" + "0" * 24 + to[2:]]}
+
+
+def test_a_huge_unknown_token_does_not_hide_the_usdt_output():
+    # 2,400 USDT is 2.4e9 raw units; one unit of an 18-decimal token is 1e18.
+    usdt = ETHEREUM.tokens[0]
+    receipt = {"logs": [transfer_to_sender(usdt.address, 2_400_000_000), transfer_to_sender(DECOY, 10**18)]}
+    (swap,) = detect_swaps(router_graph(), routers(), lambda h: receipt, ETHEREUM, "ETH")
+    assert swap["asset_out"] == "USDT" and swap["amount_out"] == pytest.approx(2400.0)
+    assert len(swap["outputs"]) == 2 and swap["other_outputs"] == 1
+    assert {o["asset"] for o in swap["outputs"]} == {"USDT", f"token {DECOY}"}
+    assert next(o for o in swap["outputs"] if o["asset"] == "USDT")["units"] == "2400000000"
+
+
+def test_on_bsc_the_stablecoin_wins_in_human_units():
+    bsc = config.CHAINS["bsc"]
+    usdt = bsc.find_token("USDT")
+    receipt = {"logs": [transfer_to_sender(usdt.address, 100 * 10**18), transfer_to_sender(DECOY, 5 * 10**20)]}
+    (swap,) = detect_swaps(router_graph(), routers(), lambda h: receipt, bsc, "BNB")
+    assert swap["asset_out"] == "USDT" and swap["amount_out"] == pytest.approx(100.0)
+
+
+def test_two_configured_outputs_pick_the_larger_amount():
+    usdt, usdc = ETHEREUM.find_token("USDT"), ETHEREUM.find_token("USDC")
+    receipt = {"logs": [transfer_to_sender(usdt.address, 100 * 10**6), transfer_to_sender(usdc.address, 200 * 10**6)]}
+    (swap,) = detect_swaps(router_graph(), routers(), lambda h: receipt, ETHEREUM, "ETH")
+    assert swap["asset_out"] == "USDC" and swap["amount_out"] == pytest.approx(200.0)
+
+
+def test_the_sentence_does_not_say_the_trail_stops_when_usdt_came_back():
+    usdt = ETHEREUM.tokens[0]
+    receipt = {"logs": [transfer_to_sender(usdt.address, 2_400_000_000), transfer_to_sender(DECOY, 10**18)]}
+    (swap,) = detect_swaps(router_graph(), routers(), lambda h: receipt, ETHEREUM, "ETH")
+    text = describe(swap)
+    assert "trail stops here" not in text and "re-run it on USDT" in text
+    assert "and 1 other token output" in text
+
+
+def test_the_wallet_moving_its_own_tokens_is_not_a_swap_output():
+    # A Transfer from the sender to itself in the same transaction returns
+    # nothing; counted, it could pose as a larger swap output.
+    usdt = ETHEREUM.tokens[0]
+    receipt = {"logs": [transfer_to_sender(usdt.address, 100 * 10**6),
+                        transfer_to_sender(usdt.address, 5_000 * 10**6, frm=SENDER)]}
+    (swap,) = detect_swaps(router_graph(), routers(), lambda h: receipt, ETHEREUM, "ETH")
+    assert swap["amount_out"] == pytest.approx(100.0) and len(swap["outputs"]) == 1

@@ -411,7 +411,7 @@ def test_results_keep_input_order_however_the_requests_finish():
         time.sleep(0.05 * (4 - int(address[3], 16)))
         return [tx(address, SEED, float(int(address[3], 16)))]
 
-    results = _fetch_level(pending, fetch, TraceConfig())
+    results = list(_fetch_level(pending, fetch, TraceConfig()))
 
     assert [txs[0].from_address for txs, _ in results] == [a for a, _ in pending]
 
@@ -425,7 +425,7 @@ def test_a_failure_is_returned_not_raised_so_the_caller_can_classify_it():
             raise EtherscanError("boom")
         return [tx(address, SEED, 1.0)]
 
-    results = _fetch_level([(addr("a1"), 1), (addr("a2"), 1)], fetch, TraceConfig())
+    results = list(_fetch_level([(addr("a1"), 1), (addr("a2"), 1)], fetch, TraceConfig()))
 
     assert results[0][1] is None
     assert isinstance(results[1][1], EtherscanError)
@@ -442,7 +442,7 @@ def test_a_single_address_is_fetched_without_a_thread_pool():
         calls.append(address)
         return [tx(address, SEED, 1.0)]
 
-    results = _fetch_level([(addr("a1"), 0)], fetch, TraceConfig())
+    results = list(_fetch_level([(addr("a1"), 0)], fetch, TraceConfig()))
 
     assert calls == [addr("a1")]
     assert results[0][1] is None

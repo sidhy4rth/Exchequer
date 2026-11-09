@@ -33,9 +33,13 @@ Every v1 field is still there, unchanged. v2 adds:
 |---|---|---|
 | `contract_version` | `2` | This contract. |
 | `intake.mode` | `"address"` or `"payment"` | `address`: the trace followed a wallet's history from an address. `payment`: it started from the victim's payment transactions (R1, behind the flag `EXCHEQUER_TX_INTAKE`; send `payments` and optionally `ncrp_ack` with `POST /trace`). |
-| `intake.payments[]` | list | Each payment: `tx_hash`, `chain`, `asset`, `amount`, `from`, `to`, `block`, `timestamp`, `found_by` (`victim` or `officer_search`). Empty in address mode. |
-| `intake.ncrp_ack` | string or null | The NCRP complaint acknowledgement number, when known. |
-| `reported_amount` | number or null | What the victim paid, in the traced asset. **Null in address mode**: nobody reported an amount, so nothing may be described as "the reported funds". |
+| `intake.payments[]` | list | One entry per transfer into the reported wallet: `tx_hash`, `chain`, `asset`, `amount`, `from`, `to`, `block`, `timestamp`, `found_by` (`victim` or `officer_search`, as stated by the requester; not checked by Exchequer). A hash that carried several transfers has one entry for each, with `leg` (0, 1, …); `leg` is absent on a one-transfer payment. Count distinct `tx_hash` values for the number of payments. Empty in address mode. `from` (the victim's wallet), `tx_hash`, `block` and `timestamp` are null unless the case is read by the browser that traced it: a payment's hash, block or time leads a block explorer to the victim's wallet. `amount` is always given. |
+| `intake.payments[].payer_label` | string or null | The sender's label when a label file names it: an exchange wallet (the victim withdrew from an exchange account) or a router or other contract. Payment mode only. |
+| `intake.payments[].payer_is_victim` | bool or null | Whether the sender is the victim's own wallet given with the complaint (`intake.victim_address`); null when none was given. A payment from another wallet also adds a warning to the case, naming no address. Payment mode only. |
+| `intake.ncrp_ack` | string or null | The NCRP complaint acknowledgement number as entered by the requester (10 to 20 digits), when known. Null unless the case is read by the browser that traced it (`backend/app/case_privacy.py`). |
+| `intake.victim_address` | string or absent | The victim's own paying wallet, when the complaint gives it (`victim_address` with `POST /trace`). A particular of the complaint, like `from`: never printed in the report, and null unless the case is read by the browser that traced it. |
+| `redacted` | list, only when something was withheld | The fields emptied for this reader: `intake.ncrp_ack`, `intake.victim_address`, `intake.payments[].from`, and on a payment case also `intake.payments[].tx_hash`, `.block` and `.timestamp`, `statement.credits` (its incoming rows list the same transfers and their senders), `statement.window_start` and the reported wallet's `graph.nodes[].window_start` (the first payment's time), and the payment hashes and first-payment date quoted in `warnings`. The reports, graph exports, letters and job status are made from the same redacted copy. A case link still opens the case for anyone holding it, since letters print the case id. |
+| `reported_amount` | number or null | What the victim paid, in the traced asset: the sum over every entry in `intake.payments`. **Null in address mode**: nobody reported an amount, so nothing may be described as "the reported funds". |
 | `attribution` | object or null | What the exchange address is. Null when the trace reached no exchange. |
 | `attribution.kind` | see below | Whether the exchange can tie the address to a customer. |
 | `attribution.source` | `label_file`, `inference`, `live_tag` | Where the attribution came from: a label file, the deposit-sweep inference, or an explorer tag read at trace time (TronScan). Independent of the kind. |
@@ -44,12 +48,19 @@ Every v1 field is still there, unchanged. v2 adds:
 | `attribution.depth` | int or null | Hops from the reported address. |
 | `estimates.prorata` | number or null | Pro-rata estimate of the traced funds reaching the exchange (the v1 `prorata.estimated`). |
 | `estimates.fifo`, `.libr` | number or null | FIFO (money leaves in the order it arrived) and LIBR (the victim's money leaves only when the balance falls below it), R4. Filled only when the flag `EXCHEQUER_TRACING_METHODS` is on and the wallets' windows could be read in full; null otherwise and in older cases. The per-wallet working is in `tracing_methods` (v1-style, beside `prorata`); worked examples in `backend/app/tracing_methods.py`. |
-| `estimates.conservative` | number or null | The smallest available estimate across the three methods. **The figure a letter states.** With the flag off it equals `estimates.prorata`. |
+| `estimates.conservative` | number or null | The smallest available estimate across the three methods. **The figure a letter states.** With the flag off it equals `estimates.prorata`. Every method starts from at most `reported_amount` on a payment trace, and at most `follow_ons[].cap.amount` on a follow-on (`prorata.seed_cap`), and the letter applies the same cap to an older case. |
 | `transfers[].block` | int or null | The block the transfer is in. Filled for every new trace; null in cases stored before v2. |
+| `transfers_total`, `transfers_omitted`, `transfers_sha256` | int, int, string; absent in older cases | The appendix lists at most `EXCHEQUER_TRANSFERS_APPENDIX_MAX` (2,000) transfers: every one out of (on a reverse trace, into) the reported address, on the route to the exchange and into each matched or inferred exchange address, then the largest of the rest by value, in time order. `transfers_total` is how many the trace had, `transfers_omitted` how many are not listed, and `transfers_sha256` the SHA-256 over all of them: one JSON line per transfer (`json.dumps(row, sort_keys=True, separators=(",", ":"))`, the fields `hash`, `from`, `to`, `value_native`, `timestamp`, `internal`, `block` as the trace produced them, before `log_index` is added), joined by `\n`, in time-then-hash order. |
 | `transfers[].log_index` | int or null | A token transfer's event position in its transaction. **Null in a trace, by design**: none of the providers' transfer lists (Etherscan `tokentx`, NodeReal, TronGrid TRC-20) returns it, and reading every receipt would roughly double a trace's API calls. Identify a transfer by `hash`, `from`, `to` and `value_native`; `verify_case` (R18, Lane B) may fill `log_index` from the receipt of each transfer a letter cites. |
 
 Each trace in `follow_ons[].result` (the money after a swap) is a full v2 case
 of its own, with its own `attribution` and `estimates` in its own asset.
+Its figures are capped by `follow_ons[].cap`: `swap_output` is what every swap
+by that wallet into that asset returned (`swaps` of them, listed in
+`follow_ons[].swaps` when more than one), and `amount` is that, or, when the
+traced money can have been only part of the `swap_input` (`traced_in` of it,
+`share`), that share of it (`basis` `swap_share`). `share` is null where the
+reported wallet of an address-only trace swapped itself.
 
 Two v1-style fields hold the working behind these figures; read them as data,
 they are not typed by the model. `tracing_methods` (R4) is FIFO's and LIBR's
@@ -60,17 +71,52 @@ largest destinations, the default) or `min_share` (flag
 `EXCHEQUER_TAINT_EXPANSION`). An empty list means nothing above dust was left
 behind. A report that states where the money went should state this too.
 
+What a trace cost and what stopped it (v1-style, read with `.get`, absent in
+older cases): `provider_units` is, per provider, `{requests, units, unit,
+case_limit}` for this trace's own network requests (follow-ons report theirs;
+`units` are compute units on NodeReal, requests elsewhere; cache hits cost
+nothing; `case_limit` is the whole case's, follow-ons included).
+`api_calls` is the total of those requests (in cases stored before November
+2026 it counted addresses read), and `addresses_read` how many addresses'
+transfers were fetched: a level is read in batches and stops at the node cap,
+so at most one batch is read past it.
+`stopped_by` is `"time"` or `"budget"` when the clock or a request budget cut
+the trace short, and `addresses_unexpanded_by_budget` counts the addresses a
+budget left unread; `truncation_reasons` names the budget either way.
+
+A read that stopped at its record limit (Etherscan's page, the 1,000-record
+scan on Tron and NodeReal; zero-value spam counts toward both) sets
+`history_capped: true` on that `graph.nodes[]` entry and adds a "history read
+limit at …" reason to `truncation_reasons`, so a trace that read nothing it
+could follow never says the address sent nothing.
+
+A transfer from an address to itself moves nothing, so it is never an edge or
+a branch: each `graph.nodes[]` entry carries `self_transfer_count` and
+`self_transfer_value_native` (0 when none, absent in older cases) instead,
+and the report lists where they were ignored.
+
+`provenance` (v1-style, optional, read with `.get`) is what the trace ran with,
+so a report rendered after a deploy can say so (`backend/app/provenance.py`):
+`tool_version`, `captured_at`, `lists` (for each screening and label list: its
+`file`, `sha256` and the `_meta` dates the report prints), `label_store`, and
+`settings` (`follow_swaps`, `max_follow_ons`, `live_tags`, `tx_intake`,
+`taint_expansion`, `tracing_methods`). Absent in cases stored before it; their
+reports say their version and lists were not recorded.
+
 ## Attribution kinds
 
 | `kind` | What it is | What a request letter can ask |
 |---|---|---|
-| `deposit_label` | A deposit address an explorer labels as the exchange's (for example Etherscan's "Bitget Dep" tags). | The account holder, KYC and statement for that address. |
+| `deposit_label` | A deposit address the checked label file names as the exchange's (for example Etherscan's "Bitget Dep" tags, imported into it). Never from a live explorer tag. | The account holder, KYC and statement for that address. |
 | `deposit_inferred` | An unlabelled address whose every outflow swept to one exchange wallet: probably a customer deposit address. | First, whether the exchange issued the address; then the same as above. |
 | `exchange_wallet` | The exchange's own wallet: hot, cold, a contract, or a label that doesn't say which. It belongs to no customer. | **Not** KYC for the wallet. List the transfers by hash, amount and time, and ask which customer accounts they were credited to. |
 
 A `live_tag` source means the address was attributed from the explorer's tag at
 trace time, not from a checked label file: the letter asks the exchange to
-confirm the address is theirs before anything else.
+confirm the address is theirs before anything else. Its `kind` is always
+`exchange_wallet`, even when the tag reads "Deposit" (`wallet_type` keeps
+`deposit_wallet`): an explorer's word never supports a request for the
+customer. The report calls this pair `explorer_tag`.
 
 ## Fixtures
 

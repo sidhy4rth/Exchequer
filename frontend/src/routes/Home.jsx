@@ -9,7 +9,7 @@ import Watchlist from '../components/Watchlist'
 import OpenRequests from '../components/OpenRequests'
 import BulkIntake from '../components/BulkIntake'
 import GlobeBackground from '../components/GlobeBackground'
-import { demoCode } from '../demoCode'
+import { hasDemoAccess } from '../demoCode'
 import { bandLabel, bandOf } from '../components/confidence'
 
 const middle = (a, head = 10, tail = 8) => (a && a.length > head + tail + 1 ? `${a.slice(0, head)}…${a.slice(-tail)}` : a)
@@ -28,7 +28,7 @@ export default function Home() {
   // answers, or if it cannot, the form shows: the backend refuses a trace
   // without the code either way, so the worst case is its message.
   const [access, setAccess] = useState(null)
-  const [unlocked, setUnlocked] = useState(() => Boolean(demoCode()))
+  const [unlocked, setUnlocked] = useState(() => hasDemoAccess())
   const [tab, setTab] = useState('cases')
   const [watchCount, setWatchCount] = useState(0)
   const [requestCount, setRequestCount] = useState(0)
@@ -186,12 +186,12 @@ export default function Home() {
               <div>
                 <div className="head"><span className="micro">Risk screening</span><span className="note">US, UK, EU, Israel, Japan, France · Tether freezes · explorer-tagged hacks and mixers</span></div>
                 <table>
-                  <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned</th><th style={{ textAlign: 'right' }}>Mixers</th><th style={{ textAlign: 'right' }}>Frozen</th><th style={{ textAlign: 'right' }}>Stolen funds</th></tr></thead>
+                  <thead><tr><th>Chain</th><th style={{ textAlign: 'right' }}>Sanctioned or seized</th><th style={{ textAlign: 'right' }}>Mixers</th><th style={{ textAlign: 'right' }}>Frozen</th><th style={{ textAlign: 'right' }}>Stolen funds</th></tr></thead>
                   <tbody>
                     {chains.map((c) => (
                       <tr key={c.key}>
                         <td title={c.name}><ChainDot chain={c.key} />{SHORT_CHAIN[c.key] ?? c.name}</td>
-                        <td className="num">{coverage[c.key]?.risk?.counts_by_category?.sanctioned ?? c.risk_labels?.sanctioned ?? 0}</td>
+                        <td className="num">{(coverage[c.key]?.risk?.counts_by_category?.sanctioned ?? c.risk_labels?.sanctioned ?? 0) + (coverage[c.key]?.risk?.counts_by_category?.seized ?? c.risk_labels?.seized ?? 0)}</td>
                         <td className="num">{coverage[c.key]?.risk?.counts_by_category?.mixer ?? c.risk_labels?.mixer ?? 0}</td>
                         <td className="num">{coverage[c.key]?.risk?.counts_by_category?.frozen ?? c.risk_labels?.frozen ?? 0}</td>
                         <td className="num">{coverage[c.key]?.risk?.counts_by_category?.stolen ?? c.risk_labels?.stolen ?? 0}</td>

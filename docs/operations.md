@@ -12,25 +12,45 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `TRONGRID_API_KEY` | — | Raises the Tron rate limit (Tron works without it). |
 | `TRONSCAN_API_KEY` | — | Live TronScan tag lookup on Tron traces. |
 | `EXCHEQUER_DB_PATH` | `exchequer.db` (`/data/exchequer.db` in the image) | The case store: cases, watches, alerts, freeze requests, batches. SQLite in WAL mode. |
-| `DATABASE_URL` | — | A `postgres://` URL moves the case store to Postgres (needed on a host without a disk, such as Render's free plan). Unset, the store is the SQLite file above. The volume backups and `/admin/backup` apply to SQLite only. |
+| `DATABASE_URL` | — | A `postgres://` URL moves the case store to Postgres (needed on a host without a disk, such as Render's free plan). Unset, the store is the SQLite file above. The volume backups and `/admin/backup` apply to SQLite only; a Postgres store is copied off-site by the backup workflow (Backups). |
 | `API_CACHE_PATH` | `provider_cache.db` beside the store | Provider response cache (24 h). `off` disables it. |
 | `EXCHEQUER_SIGNING_KEY` | — | Base64 32-byte Ed25519 seed for signing reports. Without it a key is made on first start at `report_signing_key.pem` beside the store (mode 0600). |
 | `EXCHEQUER_SIGNING_KEY_PATH` | `report_signing_key.pem` | Where that file lives. |
 | `EXCHEQUER_MAX_RUNNING_TRACES` | 4 | Traces running at once, server-wide. |
+| `EXCHEQUER_MAX_RUNNING_TRACES_PER_CLIENT` | 2 | Traces one connection may run at once (a batch row counts as one). `0` = no cap. |
+| `EXCHEQUER_RESERVED_TRACE_SLOTS` | 1 | The last free slots only a connection with nothing running may take: a connection already tracing (or running a batch row) is refused the last one, so a newcomer such as a presenter still finds a slot while others keep theirs busy. Filling every slot then takes as many connections as there are slots. With the demo code set every tracer holds the code, so the reserve goes by what a connection is running, not by the code. |
+| `EXCHEQUER_TRACE_SLOT_MINUTES_PER_HOUR` | 30 | Minutes in any hour one connection may hold trace slots, all its running traces together (batch rows, which run in the one batch slot, are not counted). A trace holds a slot for at most its wall clock (`EXCHEQUER_TRACE_TIME_BUDGET_MAX` + `_POST_WALK_SECONDS`, 6 min), so this is a few heavy traces an hour or dozens of quick ones. A venue's shared Wi-Fi counts as one connection: raise it for a large event. `0` = no limit. |
+| `EXCHEQUER_MAX_STORED_CASES` | 5000 | Cases the store keeps. When full, the oldest cases nobody is using give up their place to a new one: saved without an owner key (a script, curl), or kept by an owner key that has saved nothing for `EXCHEQUER_CASE_IDLE_DAYS` (30). Never a demo case, and never one a freeze request or an active watch refers to. With none left, a trace is shown but not saved. A deleted case's link answers 404. |
+| `EXCHEQUER_MAX_STORED_BYTES` | 300,000,000 | Every stored result together, in bytes of JSON (Neon's free plan holds 0.5 GB, and the other tables and the database's own overhead need room too). Bounded like the case count: the oldest unused cases make room first, then a trace is shown but not saved. `EXCHEQUER_MAX_CASE_BYTES` (4 MB) still refuses one case alone. `0` = no cap. |
+| `EXCHEQUER_MAX_CASES_PER_OWNER` | 200 | Cases one owner key keeps. |
+| `EXCHEQUER_MAX_CASES_PER_CLIENT_PER_DAY` | 150 | Cases one connection may save in 24 hours, whatever owner keys it sends (owner keys are free). A venue's shared Wi-Fi counts as one connection: raise it for a large event. `0` = no quota. |
+| `EXCHEQUER_MAX_BYTES_PER_CLIENT_PER_DAY` | 30,000,000 | Bytes of cases one connection may save in 24 hours, whatever owner keys it sends: a tenth of the store, so one connection needs ten days to fill it (an active owner's cases are never evicted, so the case count alone let one connection fill the store's bytes with dense cases in under two days). A case past it is shown but not saved. Raise it with the case quota for a large event. `0` = no quota. |
+| `EXCHEQUER_MAX_BYTES_PER_OWNER` | 50,000,000 | Bytes of cases one owner key may keep (a dense case is 1.2-1.5 MB, an average one about 32 KB). A case past it is shown but not saved. `0` = no quota. |
 | `EXCHEQUER_TRACES_PER_HOUR` | 30 | Traces one client may start per hour (a batch counts every row). `0` = no limit. |
-| `EXCHEQUER_DEMO_CODE` | — | Set, a live trace, a batch or a watch needs this code in the `X-Exchequer-Demo-Code` header; reading stays open. After 10 wrong codes in an hour a client is refused (429). Unset, nothing is guarded. See `backend/app/access.py`. |
+| `EXCHEQUER_TRACE_MAX_ETHERSCAN_CALLS`, `_NODEREAL_CU`, `_TRONGRID_CALLS`, `_TRONSCAN_CALLS` | 600, 60000, 400, 100 | What one case (a trace and its follow-ons) may spend per provider, in requests (compute units on NodeReal). Past it the walk stops, marked truncated with the reason (`stopped_by: "budget"`). `0` = no limit. |
+| `EXCHEQUER_ETHERSCAN_CALLS_PER_DAY`, `EXCHEQUER_TRONGRID_CALLS_PER_DAY`, `EXCHEQUER_TRONSCAN_CALLS_PER_DAY` | 60000, 50000, 20000 | What the whole site may spend per key in one UTC day: traces, watch checks and warm-ups together. Once spent, new traces on that chain get a 503 until 00:00 UTC. `0` = counted, not limited. `/health/detail` → `api_budget.meters` shows each key's spend (by digest). |
+| `EXCHEQUER_NODEREAL_CU_PER_MONTH` / `EXCHEQUER_NODEREAL_CU_PER_DAY` | 10,000,000 / month × 0.9 ÷ 31 | NodeReal's monthly compute units, from the key's plan page; the daily allowance spreads 90% of it over the month. Set `_PER_DAY` to override. |
+| `EXCHEQUER_CLIENT_SHARE_PERCENT` | 25 | The most of each day's allowance one connection may spend (`0` = no share). |
+| `EXCHEQUER_WATCH_SHARE_PERCENT` | 20 | The most of each day's allowance watch checks may spend, Check now and the background watcher together, so they can never use up what traces need. A Check now is also charged to the connection's share, and one connection's checks get `EXCHEQUER_CLIENT_SHARE_PERCENT` of this part. Check now is limited to 3 a minute per connection and 30 for the site. `0` = no part of their own. |
+| `EXCHEQUER_PERSIST_METERS` | on | Keep each key's spend for the day (and each connection's share, by a hash) in the case store, table `provider_meters`, so a restart -- Render's free plan sleeps after 15 idle minutes -- does not start the day's allowance again at zero. Rows older than a week are deleted as new ones are written. `0` = memory only. |
+| `EXCHEQUER_METER_SAVE_SECONDS` | 30 | How often, at most, a spending meter writes its row (and once at shutdown): a crash forgets at most this much spend. |
+| `EXCHEQUER_DEMO_CODE` | — | Set, a live trace, a batch or a watch needs this code in the `X-Exchequer-Demo-Code` header; reading stays open. After 10 wrong codes in 15 minutes a client is refused (429), the right code included. The right code returns a pass (sent as `X-Exchequer-Demo-Pass`, valid `EXCHEQUER_DEMO_PASS_HOURS`, default 12) that is never locked out; changing the code revokes every pass. Use a long random value: `python -c 'import secrets;print(secrets.token_urlsafe(16))'`. Unset, nothing is guarded. See `backend/app/access.py`. |
+| `EXCHEQUER_REQUIRE_DEMO_CODE` | off | Set once the code is in place: a deploy without `EXCHEQUER_DEMO_CODE` then refuses live tracing (503) instead of opening it. |
+| `EXCHEQUER_PUBLIC` | on when Render or Railway says so | A public host without a demo code logs an error at every start. |
 | `EXCHEQUER_WATCHES_PER_HOUR` | 20 | Watches one client may create per hour. `0` = no limit. |
-| `EXCHEQUER_TRUST_PROXY` | off (on in the image) | Read the client address from the proxy's headers. Only behind a proxy that sets them. `1`: `X-Real-IP`, else the last `X-Forwarded-For` entry (Railway). `render`: the first `X-Forwarded-For` entry. |
+| `EXCHEQUER_TRUST_PROXY` | `render` when Render sets `RENDER=true`, `1` on Railway, else off | Read the client address (the key of every per-client limit) from the proxy's headers. Only behind a proxy that sets them. `1`: `X-Real-IP`, else the last `X-Forwarded-For` entry (Railway). `render`: `EXCHEQUER_CLIENT_IP_HEADER` if the edge sent it, else entry `EXCHEQUER_PROXY_HOPS` from the right of `X-Forwarded-For`, else the leftmost entry (which a client can write; logged as a warning). `0` = never. |
+| `EXCHEQUER_CLIENT_IP_HEADER` | `cf-connecting-ip` | In `render` mode, a header the edge sets to the connecting address and overwrites if the client sent one (Cloudflare's). `none` ignores it. |
+| `EXCHEQUER_PROXY_HOPS` | 0 (not measured) | In `render` mode, how many proxies append to `X-Forwarded-For` after the client. Set it only from a measurement: `GET /health/detail` with `X-Exchequer-Probe-Me: <your public address>` answers `client_ip` with fingerprints (never addresses), whether each header equals you, and the value to set. Check from two networks. |
 | `EXCHEQUER_API_DOCS` | on (off in the image) | `/docs`, `/redoc`, `/openapi.json`. |
-| `EXCHEQUER_WATCHER` | off (on in the image; off in `render.yaml`) | Re-read watched addresses in the background. Only worth it on a host that stays awake: on one that sleeps when idle (Render's free plan) the watcher sleeps too. The watchlist and `/health/detail` report the last check and call it stale after three missed intervals. |
+| `EXCHEQUER_WATCHER` | off | Re-read watched addresses in the background. Only worth it on a host that stays awake: on one that sleeps when idle (Render's free plan) the watcher sleeps too, so on a temporary disk `1` is ignored and only `force` turns it on. The watchlist and `/health/detail` report the last check and call it stale after three missed intervals. |
 | `EXCHEQUER_WATCH_INTERVAL` | 600 | Seconds between checks of one watch (minimum 60). |
 | `EXCHEQUER_WEBHOOK_HOSTS` | — | Comma-separated hosts alert webhooks may post to, beyond Slack, Discord and Google Chat. |
-| `EXCHEQUER_BACKUPS` | off (on in the image) | A daily snapshot of the store in `backups/` beside it. |
+| `EXCHEQUER_BACKUPS` | off | A daily snapshot of a SQLite store in `backups/` beside it. Ignored on a temporary disk (`force` overrides). |
 | `EXCHEQUER_BACKUP_KEEP` | 7 | How many daily snapshots to keep. |
 | `EXCHEQUER_BACKUP_TOKEN` | — | Bearer token for `GET /admin/backup`. Unset, the endpoint answers 404. |
-| `EXCHEQUER_HEALTH_TOKEN` | — (Render generates one) | Bearer token for `GET /health/detail`: key status, per-chain detail, API budget, warm-cache status. Unset, the endpoint answers 404. Public `/health` says only `{"status": "ok"}`; `/chains` is the public list of what the site can trace. |
+| `EXCHEQUER_HEALTH_TOKEN` | — (`render.yaml` generates one) | Bearer token for `GET /health/detail`: key status, per-chain detail, API budget, warm-cache status, and under `runtime` which background jobs and proxy setting this instance actually runs with. Unset, the endpoint answers 404. Public `/health` says only `{"status": "ok"}` and `"access"` (`open`, `code` or `closed`); `/chains` is the public list of what the site can trace. |
 | `EXCHEQUER_TEMPORARY_DISK` | on when Render sets `RENDER=true`, else off | Whether a restart wipes the disk. `/health/detail` → `storage` then marks a SQLite case store and the provider cache as temporary: on Render's free plan, an empty `DATABASE_URL` means every stored case is lost when the instance sleeps. `0` or `1` overrides the guess. |
-| `EXCHEQUER_WARM_CACHE` | off (on in the image) | Trace the demo addresses at startup so they answer from cache. |
+| `EXCHEQUER_WARM_CACHE` | off | Trace the demo addresses at startup so they answer from cache. Ignored on a temporary disk or with the provider cache in memory only (`force` overrides). |
 
 ## Endpoints added in October 2026
 
@@ -39,11 +59,11 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `POST /trace/jobs`, `GET /trace/jobs/{id}`, `GET /trace/jobs/{id}/events` | Background trace with live progress (server-sent events). `POST /trace` still works and waits for the result. |
 | `GET /trace/{id}/graph?format=graphml\|csv` | The case's transfer graph for Gephi, yEd, Maltego or a spreadsheet. |
 | `GET /trace/{id}/report?format=pdf` | PDF report; the exact signed text is attached inside it. |
-| `GET /signing-key`, `POST /verify` | The public key reports are signed with; check a text report. Public. |
+| `GET /signing-key`, `POST /verify` | The public key reports are signed with; check a text report, or an Exchequer PDF (its attached report, and whether its pages match it). Public. |
 | `/watches`, `/alerts` | Watch an address; alerts when funds leave it. |
 | `/requests`, `GET /trace/{id}/requests` | Freeze requests sent about a case and their status. |
 | `/batches` | Trace up to 25 complaints and correlate them. |
-| `GET /admin/backup` | A snapshot of the store, for the nightly off-site copy. Needs `EXCHEQUER_BACKUP_TOKEN`. |
+| `GET /admin/backup` | A snapshot of a SQLite store, for a self-hosted off-site copy. Needs `EXCHEQUER_BACKUP_TOKEN`; 404 on Postgres. |
 
 ## Who sees what
 
@@ -53,6 +73,17 @@ belong to the key that made them, stored as its SHA-256. Demo cases (stored
 before ownership existed, address in `backend/data/demo_traces.json`) are
 public. A case id or job id is random and works as the permission to read
 that one case or job. See `backend/app/ownership.py` and `SECURITY.md`.
+
+The history list (`GET /cases`) reads only the summary stored with each case,
+never a stored result: the hosted database's transfer is metered. The demo
+list, the same for every visitor without an owner key, is kept for 30
+seconds, and one connection may list 60 times a minute.
+
+Correlation (`GET /cases/correlate`) reads every case the caller can see, so
+its answer is kept per set of visible cases, the least recently used set
+going first once the kept sets hold 100,000 (address, case) entries; a set
+larger than that on its own is kept alone. One connection may correlate 20
+times a minute, whatever owner keys it sends.
 
 Clearing a browser's site data loses its history list (the cases remain and
 open by link). Moving to real accounts later means mapping owner hashes to
@@ -73,6 +104,14 @@ to `main`. The free instance has no disk and sleeps after 15 idle minutes, so:
   (the recorded demos open instantly instead);
 - the first visit after a sleep waits for the container to start; the
   monitoring workflows knock on `/health` before they check anything.
+
+The image turns no background job on (watcher, snapshots, warm-up) and trusts
+no proxy header: `render.yaml` sets what the service needs. Values added to
+`render.yaml` after the service was created reach it only through a Blueprint
+sync (Dashboard → the Blueprint → Manual sync) or by setting them by hand in
+Environment; `/health/detail` shows what the instance runs with under
+`runtime`, and the site canary fails when the health token or the watcher
+setting has drifted.
 
 The monitors read the site address from the repository variable `SITE_URL`
 (`gh variable set SITE_URL --body https://<service>.onrender.com`).
@@ -103,13 +142,18 @@ way Railway does before anything is deployed.
 
 To put the site in front of the public without letting anyone spend the
 provider quota, set `EXCHEQUER_DEMO_CODE` in Render's environment and the
-same value as the repository secret `DEMO_CODE` (the Demo health job sends
+same value as the secret `DEMO_CODE` of the GitHub environment `live-checks` (the Demo health job sends
 it). Visitors then see the recorded demos, which open exactly as recorded,
 and a box for the code; with it, the console traces as before. The code
 stays in that browser tab only (`sessionStorage`) and is forgotten on sign
 out. Share it with the people presenting, and change it after an event.
-`scripts/check_demos.py` must send it (Lane A) before the code is set, or
-Demo health fails.
+Order: set the `live-checks` environment secret `DEMO_CODE` first (`scripts/check_demos.py`
+sends it), then `EXCHEQUER_DEMO_CODE` on Render with the same value, then
+`EXCHEQUER_REQUIRE_DEMO_CODE=1` there too, and the repository variable
+`EXPECT_DEMO_CODE=1` for the site canary. Until the code is set the site
+stays open, and says so: every start logs `THIS PUBLIC SITE IS OPEN`, and
+`/health` answers `"access": "open"` (`"code"` once set; `"closed"` if the
+code is required but missing, when live tracing answers 503).
 
 ## Database schema
 
@@ -138,42 +182,64 @@ real Postgres, including adopting a store made before migrations.
 
 ## Backups
 
-Two copies, for two different accidents:
+The production store is Neon Postgres (`DATABASE_URL` on Render). Its
+off-site copy is `.github/workflows/backup.yml`: every night at 03:00 IST it
+runs `pg_dump --format=custom` against the database with a read-only role,
+checks the archive holds the `cases` table, encrypts it with
+[age](https://age-encryption.org) and keeps it as a workflow artifact for 14
+days. The plain dump never leaves the runner, and the log prints no counts or
+table contents. Until it is set up the job fails, so a night with no copy is
+never green.
 
-- **On the volume:** with `EXCHEQUER_BACKUPS` on (the image turns it on), the
-  server writes `backups/exchequer-YYYY-MM-DD.db.gz` beside the store once a
-  day and keeps the last 7. That covers a bad deploy, a broken migration or a
-  mistaken delete. It does not cover losing the volume.
-- **Off the server:** `.github/workflows/backup.yml` pulls a fresh snapshot
-  from `GET /admin/backup` every night at 03:00 IST, checks it opens, encrypts
-  it with [age](https://age-encryption.org) and keeps it as a workflow
-  artifact for 30 days. The plain copy never leaves the runner.
-
-The snapshot holds every case and the alert webhooks, so the off-site copy is
-encrypted to the public key in `.github/backup-recipient.txt`; only the
-matching private key (`~/.config/exchequer/backup-age-key.txt` on the
+The dump holds every case, freeze request and alert webhook, so it is
+encrypted to the public key in the `backup` environment's
+`BACKUP_AGE_RECIPIENT` variable, which must equal `.github/backup-recipient.txt`
+(the job refuses otherwise: a changed file cannot re-target the backups).
+Only the matching private key (`~/.config/exchequer/backup-age-key.txt` on the
 maintainer's machine -- keep a second copy offline) opens it. A new key pair
-is `age-keygen -o <file>`, and `age-keygen -y <file>` prints the public half
-for the recipient file. To switch the nightly copy on:
+is `age-keygen -o <file>`, and `age-keygen -y <file>` prints the public half.
+
+To switch the nightly copy on, once:
+
+1. Neon console → SQL Editor, as the owner role, make a read-only role:
+
+   ```sql
+   CREATE ROLE exchequer_backup LOGIN PASSWORD '<long random password>';
+   GRANT CONNECT ON DATABASE <database> TO exchequer_backup;  -- the name in DATABASE_URL
+   GRANT USAGE ON SCHEMA public TO exchequer_backup;
+   GRANT SELECT ON ALL TABLES IN SCHEMA public TO exchequer_backup;
+   GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO exchequer_backup;
+   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO exchequer_backup;
+   ```
+
+   Its connection string (Neon → Connect, role `exchequer_backup`, direct, not
+   pooled) is `NEON_BACKUP_URL`.
+2. GitHub → Settings → Environments → New environment `backup`. Deployment
+   branches: selected, `main` only. Add the secret `NEON_BACKUP_URL` and the
+   variable `BACKUP_AGE_RECIPIENT` (the contents of
+   `.github/backup-recipient.txt`). If Neon's Postgres major version is newer
+   than 17, set the repository variable `BACKUP_PG_MAJOR` to it.
+3. Actions → Store backup → Run workflow (on `main`). It must be green with an
+   artifact `store-<run id>`.
+
+To restore (drill this once into a scratch Neon branch before relying on it):
 
 ```sh
-token=$(openssl rand -hex 32)
-gh secret set BACKUP_TOKEN --body "$token"
-railway variables --set EXCHEQUER_BACKUP_TOKEN="$token"
+age -d -i ~/.config/exchequer/backup-age-key.txt exchequer-<stamp>.pgdump.age > store.pgdump
+pg_restore --no-owner --no-privileges --dbname="$SCRATCH_DATABASE_URL" store.pgdump
 ```
 
-Then run the workflow once by hand (Actions → Store backup → Run workflow).
+then point a local run at it (`DATABASE_URL=$SCRATCH_DATABASE_URL`) and open a
+known case. To replace production, restore into a new Neon branch and switch
+`DATABASE_URL` on Render to it. The signing key is not in the backup;
+`EXCHEQUER_SIGNING_KEY` on Render keeps reports verifying.
 
-To restore, download the artifact and:
-
-```sh
-age -d -i ~/.config/exchequer/backup-age-key.txt exchequer-<stamp>.db.gz.age | gunzip > exchequer.db
-```
-
-and put `exchequer.db` where `EXCHEQUER_DB_PATH` points (on Railway,
-`/data/exchequer.db`, with the service stopped). The signing key is not in the
-backup; to survive losing the volume, set `EXCHEQUER_SIGNING_KEY` from the
-key file once.
+A self-hosted SQLite store has two more copies: with `EXCHEQUER_BACKUPS` on (a
+host with a lasting disk sets it) the server writes
+`backups/exchequer-YYYY-MM-DD.db.gz` beside the store once a day and keeps the
+last 7, and with `EXCHEQUER_BACKUP_TOKEN` set `GET /admin/backup` returns a
+fresh snapshot for that host's own off-site job. Neither exists on a Postgres
+store.
 
 ## Keys
 

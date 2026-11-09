@@ -1,23 +1,56 @@
-# Weekly dependency updates, one grouped PR per ecosystem so a solo
-# maintainer reviews four PRs a week at most, not forty. Security fixes are
-# raised as soon as an advisory lands, whatever this schedule says.
+# Weekly dependency updates. A version update waits a week after its release
+# (a major, a month), so a hijacked or broken release has usually been pulled
+# before it is proposed. Patches and minors arrive as separate pull requests,
+# and a major never rides along with either: the package majors are taken by
+# hand, one at a time. Security fixes skip all of this -- they are raised as
+# soon as an advisory lands, whatever the schedule or the cooldown says.
 version: 2
 updates:
-  - package-ecosystem: pip
+  # uv: it recompiles the hashed locks from requirements*.in (their headers
+  # name the options), where the pip updater would edit one line of a lock.
+  - package-ecosystem: uv
     directory: /backend
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7, semver-major-days: 30, semver-minor-days: 7, semver-patch-days: 7 }
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
-      python: { patterns: ["*"] }
+      python-patch: { patterns: ["*"], update-types: [patch] }
+      python-minor: { patterns: ["*"], update-types: [minor] }
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7, semver-major-days: 30, semver-minor-days: 7, semver-patch-days: 7 }
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
-      npm: { patterns: ["*"] }
+      npm-patch: { patterns: ["*"], update-types: [patch] }
+      npm-minor: { patterns: ["*"], update-types: [minor] }
+  # Actions are pinned to commits; Dependabot moves the pin and its version
+  # comment. A major (a new runtime) comes as its own pull request.
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    open-pull-requests-limit: 3
     groups:
-      actions: { patterns: ["*"] }
+      actions: { patterns: ["*"], update-types: [minor, patch] }
+  # The Dockerfile's images are pinned by digest; digest bumps still come.
+  # Node stays on 24 and Python on 3.12 (a Python minor is a new language
+  # version) until they are moved by hand.
   - package-ecosystem: docker
     directory: /
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "python"
+        update-types: ["version-update:semver-minor"]
+    groups:
+      images: { patterns: ["*"], update-types: [minor, patch] }

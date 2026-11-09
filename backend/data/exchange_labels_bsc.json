@@ -6,10 +6,11 @@
   "chain": "bsc",
   "chain_id": 56,
   "last_reviewed": "2026-09-22",
-  "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels && then cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc",
+  "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels && then cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc && then cd backend && .venv/bin/python -m scripts.port_evm_labels",
   "schema": "labels maps a lowercase address to {exchange, label, type}",
   "supplemented_from": "8 further labels imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a newer published scrape of the same explorer label pages, and verified on chain the same way, by backend/scripts/import_eth_labels.py.",
-  "ported_from_ethereum": "146 Ethereum-labelled exchange accounts added 2026-09-23 by backend/scripts/port_evm_labels.py: each has no contract code on BNB Smart Chain and has sent a transaction there (nonce > 0), read through NodeReal."
+  "ported_from_ethereum": "146 Ethereum-labelled exchange accounts added 2026-09-23 by backend/scripts/port_evm_labels.py: each has no contract code on BNB Smart Chain and has sent a transaction there (nonce > 0), read through NodeReal.",
+  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json."
  },
  "labels": {
   "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
@@ -55,11 +56,6 @@
   "0x0d0707963952f2fba59dd06f2b425ace40b492fe": {
    "exchange": "Gate.io",
    "label": "Gate.io",
-   "type": "exchange_wallet"
-  },
-  "0x1074253202528777561f83817d413e91bfa671d4": {
-   "exchange": "Binance",
-   "label": "Binance: Deployer 3",
    "type": "exchange_wallet"
   },
   "0x1619d743d7dc612e99d5d94ebd6b9695d46f0bf3": {
@@ -287,11 +283,6 @@
    "label": "AscendEX 2",
    "type": "exchange_wallet"
   },
-  "0x4c2f150fc90fed3d8281114c2349f1906cde5346": {
-   "exchange": "Gemini",
-   "label": "Gemini: Deployer 2",
-   "type": "exchange_wallet"
-  },
   "0x4d24eececb86041f47bca41265319e9f06ae2fcb": {
    "exchange": "CoinDCX",
    "label": "CoinDCX 4",
@@ -335,11 +326,6 @@
   "0x56de1961fda5454e6f8e6d0e3124ff648fd69400": {
    "exchange": "CoinSpot",
    "label": "CoinSpot 4",
-   "type": "exchange_wallet"
-  },
-  "0x5754284f345afc66a98fbb0a0afe71e0f007b949": {
-   "exchange": "Bitfinex",
-   "label": "Tether: Treasury",
    "type": "exchange_wallet"
   },
   "0x5a52e96bacdabb82fd05763e25335261b270efcb": {

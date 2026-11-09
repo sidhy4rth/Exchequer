@@ -6,7 +6,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app import config
+from app import config, report
 from app.main import app
 
 TOKEN = "t" * 40
@@ -18,8 +18,33 @@ def client():
         yield c
 
 
-def test_public_health_says_only_whether_it_is_up(client):
-    assert client.get("/health").json() == {"status": "ok"}
+def test_public_health_says_only_whether_it_is_up_open_and_which_build(client, monkeypatch):
+    """Up, whether anyone may start live traces -- the same fact GET /access
+    gives the console, shown where monitors look -- and which commit is
+    serving, which every report's footer already prints (the repository is
+    public). The site canary waits for the pushed commit by it (r1-ci-github-9)."""
+    build = report.tool_version()
+    monkeypatch.setattr(config, "DEMO_CODE", "")
+    assert client.get("/health").json() == {"status": "ok", "access": "open", "build": build}
+    monkeypatch.setattr(config, "DEMO_CODE", "a" * 22)
+    assert client.get("/health").json() == {"status": "ok", "access": "code", "build": build}
+
+
+def test_the_build_is_the_commit_the_host_deployed(monkeypatch):
+    """In the image there is no git; Render names the deployed commit."""
+    monkeypatch.delenv("EXCHEQUER_VERSION", raising=False)
+    monkeypatch.delenv("RAILWAY_GIT_COMMIT_SHA", raising=False)
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "0123456789abcdef0123456789abcdef01234567")
+    assert report._read_tool_version() == "0123456789ab"
+
+
+def test_health_detail_reports_the_access_state(client, monkeypatch):
+    monkeypatch.setattr(config, "HEALTH_TOKEN", TOKEN)
+    monkeypatch.setattr(config, "DEMO_CODE", "short")
+    body = client.get("/health/detail", headers={"authorization": f"Bearer {TOKEN}"}).json()
+    assert body["access"]["state"] == "code"
+    assert body["access"]["demo_code_long_enough"] is False
+    assert "short" not in repr(body)
 
 
 def test_chains_lists_what_the_console_needs(client):
@@ -133,3 +158,80 @@ def test_on_a_lasting_disk_nothing_is_called_temporary(client, monkeypatch):
 ])
 def test_a_temporary_disk_is_read_from_the_host(environ, temporary):
     assert config.temporary_disk(environ) is temporary
+
+
+# -- r1-scripts-12: whether the 10.9M-row label store is actually in use ---------
+def test_health_detail_reports_the_label_store(client, monkeypatch, tmp_path):
+    from app.label_store import get_label_store
+    from scripts.build_label_store import build
+
+    src = tmp_path / "flagged.csv"
+    src.write_text("address,chain,category,entity_or_incident,sources,source_refs,date\n"
+                   f"0x{'5c' * 20},ethereum|arbitrum,phishing/scam,Drainer,Threat-intel report: Check Point,,\n")
+    build(src, tmp_path / "store.db")
+    monkeypatch.setattr(config, "LABEL_STORE_REQUIRED", True)
+    monkeypatch.setattr(config, "LABEL_STORE_TAG", "labels-test")
+    try:
+        monkeypatch.setattr(config, "LABEL_STORE_PATH", tmp_path / "store.db")
+        get_label_store.cache_clear()
+        assert detail(client, monkeypatch)["label_store"] == {
+            "required": True, "loaded": True, "rows": 2, "tag": "labels-test"}
+        monkeypatch.setattr(config, "LABEL_STORE_PATH", tmp_path / "missing.db")
+        get_label_store.cache_clear()
+        assert detail(client, monkeypatch)["label_store"] == {
+            "required": True, "loaded": False, "rows": 0, "tag": "labels-test"}
+    finally:
+        get_label_store.cache_clear()
+
+
+@pytest.mark.parametrize("keys", [True, False])
+def test_chain_readiness_builds_no_provider_client(client, monkeypatch, keys):
+    """/chains is public and uncached; it used to build (and close) an httpx
+    client, TLS context and all, for every chain on every request just to
+    learn whether a key was set (r1-providers-8)."""
+    import httpx
+
+    from app.chain_data import provider_status
+
+    for name in ("ETHERSCAN_API_KEY", "NODEREAL_API_KEY"):
+        monkeypatch.setattr(config, name, "k" if keys else None)
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("a provider client was built")
+
+    monkeypatch.setattr(httpx.Client, "__init__", refuse)
+    status = provider_status()
+    assert status["tron"]["ready"] is True  # TronGrid answers without a key
+    for key in ("ethereum", "polygon", "arbitrum", "bsc"):
+        assert status[key]["ready"] is keys
+        assert (status[key]["detail"] is None) is keys
+    body = client.get("/chains").json()
+    assert {k: c["ready"] for k, c in body["chains"].items()} == {k: s["ready"] for k, s in status.items()}
+
+
+def test_chains_counts_its_labels_once_not_per_request(client, monkeypatch):
+    """/chains walked every exchange label and recounted every risk label on
+    each public request; the counts change only when a matcher is rebuilt
+    (r1-providers-8)."""
+    from app.exchange_matcher import ExchangeMatcher
+    from app.risk_matcher import RiskMatcher
+    from app.routes import coverage
+
+    coverage._COUNTS.clear()
+    walks = []
+    entries, counts = ExchangeMatcher.entries, RiskMatcher.counts_by_category
+    monkeypatch.setattr(ExchangeMatcher, "entries", lambda self: walks.append("x") or entries(self))
+    monkeypatch.setattr(RiskMatcher, "counts_by_category", lambda self: walks.append("r") or counts(self))
+    first = client.get("/chains").json()["chains"]
+    assert len(walks) == 2 * len(first)
+    for _ in range(3):
+        assert client.get("/chains").json()["chains"] == first
+    assert len(walks) == 2 * len(first)
+
+    # A rebuilt matcher (another label file, the store attached) is counted again.
+    from app.exchange_matcher import get_matcher
+
+    rebuilt = ExchangeMatcher({"0x" + "ab" * 20: {"exchange": "Test", "type": "hot_wallet"}}, chain="ethereum")
+    monkeypatch.setattr(coverage, "get_matcher", lambda key=None: rebuilt if key == "ethereum" else get_matcher(key))
+    again = client.get("/chains").json()["chains"]
+    assert again["ethereum"]["exchange_labels"] == 1 and again["polygon"] == first["polygon"]

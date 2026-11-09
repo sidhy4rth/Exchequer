@@ -68,7 +68,7 @@ def test_the_text_report_carries_every_section_an_officer_needs():
 
     assert "Case ID          : case-1" in text
     assert "Asset followed   : ETH" in text
-    assert "Tool version     : Exchequer" in text
+    assert "Rendered with    : Exchequer" in text and "Traced with      : " in text
     assert "SUMMARY" in text and "was followed across 3 addresses" in flat
     assert "infers to be a Binance deposit address" in flat
     assert "INFERRED from the wallet's behaviour" in text
@@ -144,3 +144,121 @@ def test_a_case_stored_before_hashing_says_so_and_still_seals():
     text = render_text_report(build_report(stored(full_result())))
     assert "No evidence manifest was stored with this case" in text
     assert verify_sealed_text(text)
+
+
+def test_the_summary_names_the_issuer_for_a_circle_freeze():
+    # Audit r1-labels-data-0: a Circle freeze is not Tether's.
+    circle = {"address": MID, "category": "frozen", "entity": "USDC frozen by Circle", "label": "USDC frozen by Circle",
+              "origin": "label_store", "token": "USDC", "issuer": "Circle", "source": "USDC freeze events"}
+    xsgd = {**circle, "entity": "XSGD frozen by its issuer", "label": "XSGD frozen by its issuer",
+            "token": "XSGD", "issuer": None}
+    summary = build_report(stored({**full_result(), "risk_flags": ["frozen"], "risk_matches": [circle, xsgd]}))["summary"]
+    assert "USDT frozen by Tether" not in summary
+    assert "frozen by its token's issuer (USDC by Circle; XSGD by its issuer)" in summary
+
+
+def test_a_tether_freeze_still_says_tether():
+    tether = {"address": MID, "category": "frozen", "entity": "Tether (USDT freeze)",
+              "label": "USDT frozen by Tether on 2021-08-05", "source": "Tether USDT contract on Ethereum"}
+    summary = build_report(stored({**full_result(), "risk_flags": ["frozen"], "risk_matches": [tether]}))["summary"]
+    assert "had its USDT frozen by Tether" in summary
+
+
+def test_a_seizure_only_case_does_not_say_sanctions_list():
+    """A government seizure order is not a designation (audit r1-labels-data-12)."""
+    result = full_result()
+    result["risk_flags"] = ["seized"]
+    summary = build_report(stored(result))["summary"]
+    assert "seizure or forfeiture order, which is not a sanctions designation" in summary
+    assert "on a published sanctions list" not in summary
+
+
+def test_the_summary_no_longer_credits_every_stolen_tag_to_the_explorer():
+    """ScamSniffer is not the block explorer, and a list's report is not a theft (r1-labels-data-6)."""
+    result = full_result()
+    result["risk_flags"] = ["stolen", "scam"]
+    summary = build_report(stored(result))["summary"]
+    assert "block explorer" not in summary
+    assert "tied by a published source to a known hack or exploit" in summary
+    assert "named by a published scam or phishing list" in summary
+
+
+def test_a_payment_case_prints_its_payments_and_window_but_no_particulars():
+    # 5-3: the time rule's basis is in the signed report so a reviewer can
+    # check it; the sender, the victim's wallet and the NCRP number are not.
+    victim, ncrp = addr("71c"), "31911250012345"
+    leg = {"tx_hash": "0x" + "aa" * 32, "chain": "ethereum", "asset": "ETH", "amount": 3999.0, "from": victim,
+           "to": SEED, "block": 18_000_000, "timestamp": 1_700_000_000, "found_by": "victim",
+           "payer_label": "Binance 14", "payer_is_victim": False, "leg": 0}
+    intake = {"mode": "payment", "ncrp_ack": ncrp, "victim_address": victim,
+              "payments": [leg, {**leg, "amount": 1.0, "leg": 1}]}
+    report = build_report(stored({**full_result(), "intake": intake, "reported_amount": 4000.0}))
+    assert report["intake"]["window_start"] == 1_700_000_000
+    text = render_text_report(report)
+    assert "VICTIM'S PAYMENTS" in text and "0x" + "aa" * 32 in text
+    assert "Window start" in text and "4000.0 ETH" in text and "transfer 2 of 2" in text
+    assert "Binance 14" in text and "not the victim's wallet" in text
+    for secret in (victim, ncrp):
+        assert secret not in json.dumps(report["intake"]) and secret not in text
+
+
+def test_an_address_case_has_no_payments_section():
+    report = build_report(stored(full_result()))
+    # The report says how it started (r2-g2-frontend-intake-rendering-3-4), but lists no payments.
+    assert report["intake"] == {"mode": "address", "reported_amount": None, "payments": []}
+    assert "VICTIM'S PAYMENTS" not in render_text_report(report)
+
+
+# -- r1-labels-data-2, round 2: the summary carries the tier --------------------
+UNVETTED = "; evidence: unvetted list (community reports or a machine-learning dataset), not checked"
+
+
+def risk(category, tier, source="HF ethereum_fraud_dataset (fesevu, CC BY 4.0)"):
+    match = {"address": MID, "category": category, "entity": "phishing", "label": "phishing",
+             "source": source, "origin": "label_store", "depth": 1}
+    if tier is not None:
+        match["tier"] = tier
+    return match
+
+
+def summary_for(*matches):
+    flags = sorted({m["category"] for m in matches})
+    return build_report(stored({**full_result(), "risk_flags": flags, "risk_matches": list(matches)}))["summary"]
+
+
+def test_a_tier_5_scam_is_a_lead_in_the_summary_not_a_listing():
+    summary = summary_for(risk("scam", 5))
+    assert "named by a published scam or phishing list" not in summary
+    assert "listed (reported scam) only by an unverified source" in summary
+    assert "treat it as a lead, not a finding" in summary
+
+
+def test_an_older_case_without_a_tier_is_read_from_its_source_text():
+    summary = summary_for(risk("scam", None, source="HF ethereum_fraud_dataset" + UNVETTED))
+    assert "named by a published scam or phishing list" not in summary and "unverified source" in summary
+
+
+def test_a_published_lookalike_is_not_on_chain_detection_in_the_summary():
+    summary = summary_for(risk("poisoning", 3, source="Poison-Hunter CCS24 ground truth"))
+    assert "found by on-chain detection" not in summary
+    assert "named as an address-poisoning lookalike by a published source" in summary
+    assert "found by on-chain detection" in summary_for(risk("poisoning", 4, source="Ethereum poisoning via BigQuery"))
+    mixed = summary_for(risk("poisoning", 3, source="Poison-Hunter CCS24 ground truth"), risk("poisoning", 5))
+    assert "found by on-chain detection" not in mixed and "by a published source" in mixed
+
+
+def test_tier_1_to_3_sentences_are_unchanged_beside_a_weak_one():
+    summary = summary_for(risk("scam", 3, source="Threat-intel report: Check Point"), risk("stolen", 5))
+    assert "named by a published scam or phishing list; a list's report is an accusation, not a finding." in summary
+    assert "tied by a published source to a known hack" not in summary
+    assert "listed (theft) only by an unverified source" in summary
+
+
+# -- r2-g2-documented-claims-vs-code-7-5: only a pinned pool stops the trace --
+def test_a_mixer_tag_that_did_not_stop_the_trace_is_not_called_a_stop():
+    tag = {"address": MID, "category": "mixer", "entity": "Tornado.Cash: Router", "label": "Tornado.Cash: Router",
+           "source": "Explorer tag", "origin": "label_store", "depth": 1, "is_terminal": False, "tier": 3}
+    summary = summary_for(tag)
+    assert "The trace stopped at a mixer" not in summary
+    assert "not on the pinned list of mixer pools, so the trace went on past it" in summary
+    assert "The trace stopped at a mixer" in summary_for({**tag, "is_terminal": True})

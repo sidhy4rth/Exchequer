@@ -13,10 +13,10 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import api_budget, config, models, ownership, warmup, watchlist
+from .. import access, api_budget, config, label_store, models, ownership, rate_limit, report, signing, warmup, watchlist, webhook_vault
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
-from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, STOLEN,
+from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, SEIZED, STOLEN,
                             get_risk_matcher)
 
 
@@ -24,12 +24,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/health")
-def health() -> dict[str, str]:
+# HEAD too: uptime monitors and keep-awake pingers often send HEAD, and 405
+# read as "down".
+@router.api_route("/health", methods=["GET", "HEAD"])
+async def health() -> dict[str, str]:
     """Liveness, for the host's health check and the uptime monitors: up or
-    not, and nothing else. What the site can trace is /chains; how it is
-    configured is /health/detail, for the operator."""
-    return {"status": "ok"}
+    not, and whether anyone may start live traces ("open"), only holders of
+    the demo code ("code"), or nobody ("closed") -- what GET /access already
+    tells the console, where a monitor sees it. What the site can trace is
+    /chains; how it is configured is /health/detail, for the operator.
+
+    async, so it runs on the event loop: a sync route needs one of the 40
+    worker threads, and when a slow database had them all, the host's health
+    check failed and restarted a site that was only busy.
+
+    `build` is the commit serving (every report's footer prints it too; the
+    repository is public), so the site canary can wait for a pushed commit
+    to go live instead of guessing (r1-ci-github-9)."""
+    return {"status": "ok", "access": access.state(), "build": report.tool_version()}
 
 
 # The label type of a customer's deposit address at an exchange, as opposed
@@ -43,13 +55,32 @@ DEPOSIT_TYPE = "deposit_wallet"
 def _chains() -> dict[str, dict[str, Any]]:
     chains = provider_status()
     for key, status in chains.items():
-        matcher = get_matcher(key)
-        deposits = sum(1 for _, meta in matcher.entries() if meta.get("type") == DEPOSIT_TYPE)
-        status["exchange_labels"] = len(matcher)
-        status["exchange_wallets"] = len(matcher) - deposits
-        status["deposit_addresses"] = deposits
-        status["risk_labels"] = get_risk_matcher(key).counts_by_category()
+        status.update(_label_counts(key))
     return chains
+
+
+# chain -> (the matchers it was counted from and their sizes, the counts).
+# Counting walks every label, and /chains is public and asked on every page
+# load; the matchers are built once per process, so count once per matcher
+# (r1-providers-8). A rebuilt or resized matcher is counted again.
+_COUNTS: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {}
+
+
+def _label_counts(key: str) -> dict[str, Any]:
+    matcher, risk = get_matcher(key), get_risk_matcher(key)
+    stamp = (matcher, len(matcher), risk, len(risk))
+    held = _COUNTS.get(key)
+    if held is None or held[0] != stamp:
+        deposits = sum(1 for _, meta in matcher.entries() if meta.get("type") == DEPOSIT_TYPE)
+        held = (stamp, {
+            "exchange_labels": len(matcher),
+            "exchange_wallets": len(matcher) - deposits,
+            "deposit_addresses": deposits,
+            "risk_labels": risk.counts_by_category(),
+        })
+        _COUNTS[key] = held
+    counts = held[1]
+    return {**counts, "risk_labels": dict(counts["risk_labels"])}
 
 
 @router.get("/chains")
@@ -64,6 +95,8 @@ def chains() -> dict[str, Any]:
     return {
         "default_chain": config.DEFAULT_CHAIN.key,
         "max_depth": config.TRACE_MAX_DEPTH,
+        # The deepest a request may ask for here.
+        "max_depth_ceiling": config.TRACE_MAX_DEPTH_CEILING,
         "chains": listed,
     }
 
@@ -86,6 +119,9 @@ def health_detail(request: Request) -> dict[str, Any]:
         "max_depth": config.TRACE_MAX_DEPTH,
         "exchange_labels_loaded": len(get_matcher()),
         "risk_labels_loaded": len(get_risk_matcher()),
+        # The on-disk label store (most of the 10.9M labels): an image built to
+        # carry it that runs without it screens far less than it claims.
+        "label_store": label_store.status(),
         "chains": _chains(),
         # Why a trace was slow. On the free tiers the provider, not the
         # traversal, is what costs the seconds: a high `rate_limit_penalties`
@@ -99,11 +135,38 @@ def health_detail(request: Request) -> dict[str, Any]:
         # When watches were last checked, and whether that was too long ago:
         # on a host that sleeps when idle, the watcher sleeps too (R30).
         "watcher": watchlist.watcher_status(),
+        # Whether watch webhook URLs are sealed at rest (EXCHEQUER_WEBHOOK_KEY).
+        "webhooks_sealed": webhook_vault.sealing(),
         # Which unfinished features are switched on here (config.FLAGS).
         "flags": config.FLAGS,
+        # What this instance actually runs with: the host's environment can
+        # drift from render.yaml (values added later reach Render only through
+        # a Blueprint sync or by hand), and the image no longer fills the gap.
+        "runtime": {
+            "watcher": config.WATCHER_ENABLED, "backups": config.BACKUPS_ENABLED,
+            "warm_cache": config.WARM_CACHE_AT_STARTUP, "trust_proxy": config._proxy_raw or "off",
+            "temporary_disk": config.TEMPORARY_DISK,
+        },
         # What a restart wipes. On a host without a lasting disk a SQLite case
         # store loses every case, and the provider cache starts cold.
         "storage": _storage(),
+        # Whether reports signed now will still verify after a restart: a
+        # temporary key means EXCHEQUER_SIGNING_KEY is missing or unreadable.
+        "signing_key": {"fingerprint": signing.get_signer().fingerprint,
+                        "source": signing.get_signer().source,
+                        "persistent": signing.get_signer().persistent},
+        # Whether live tracing needs the demo code, and whether that code is
+        # long enough not to be guessed -- which is also whether the right
+        # code gets through a wrong-code lockout. Never the code itself.
+        "access": {"state": access.state(), "public_host": config.PUBLIC_HOST,
+                   "demo_code_set": bool(config.DEMO_CODE),
+                   "demo_code_long_enough": access.code_is_long_enough(),
+                   "require_demo_code": config.REQUIRE_DEMO_CODE,
+                   "pass_hours": config.DEMO_PASS_SECONDS / 3600},
+        # Which address this request was counted against, and which header
+        # gave it -- as fingerprints, never addresses. Send your own address
+        # as X-Exchequer-Probe-Me to measure the proxy chain (rate_limit.probe).
+        "client_ip": rate_limit.probe(request.headers, request.client.host if request.client else None),
     }
 
 
@@ -177,9 +240,11 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
     except config.UnknownChainError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     # The sign-in page asks on every load, and the answer is ~30,000 label
-    # entries plus the demo cases: built once per chain and kept until a case
-    # is stored. `limit` only slices the shuffled list.
-    key = (selected.key, models.store_version())
+    # entries plus the public demo cases: built once per chain (and store).
+    # A saved trace never changes it: store_result always gives a case an
+    # owner, and only owner-less demo rows are read here. `limit` only slices
+    # the shuffled list.
+    key = (selected.key, models.engine())
     rows = _LEDGER_CACHE.get(key)
     if rows is None:
         rows = _build_ledger(selected.key)
@@ -189,7 +254,7 @@ def ledger(chain: str | None = Query(None), limit: int = Query(1400, ge=50, le=4
     return {"chain": selected.key, "count": len(rows), "entries": rows[:limit]}
 
 
-_LEDGER_CACHE: dict[tuple[str, int], list[dict[str, Any]]] = {}
+_LEDGER_CACHE: dict[tuple[str, Any], list[dict[str, Any]]] = {}
 
 
 def _build_ledger(chain_key: str) -> list[dict[str, Any]]:
@@ -206,7 +271,7 @@ def _build_ledger(chain_key: str) -> list[dict[str, Any]]:
         if meta["category"] == SANCTIONED and meta.get("source", "").startswith("OFAC"):
             add(address, "sanctioned", "", f"OFAC SDN · {meta.get('entity', '')}"[:48])
         else:
-            prefix = {SANCTIONED: "Sanctioned", MIXER: "Mixer", FROZEN: "Frozen",
+            prefix = {SANCTIONED: "Sanctioned", SEIZED: "Seizure order", MIXER: "Mixer", FROZEN: "Frozen",
                       STOLEN: "Stolen funds", GAMBLING: "Gambling platform",
                       POISONING: "Address poisoning", SCAM: "Reported scam",
                       LAUNDERING: "Laundering"}.get(meta["category"], "Flagged")

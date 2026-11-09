@@ -1,7 +1,8 @@
 import { OWNER_HEADER, ownerKey } from '../owner'
-import { demoCode } from '../demoCode'
+import { demoCode, demoPass, forgetDemoPass } from '../demoCode'
 
 const DEMO_CODE_HEADER = 'X-Exchequer-Demo-Code'
+const DEMO_PASS_HEADER = 'X-Exchequer-Demo-Pass'
 
 // Shared by every lane's API file: the base URL, the owner key on every
 // request, and the backend's own error messages. Lane C.
@@ -19,12 +20,21 @@ const DEMO_CODE_HEADER = 'X-Exchequer-Demo-Code'
 export const BASE = import.meta.env.VITE_API_BASE ?? '/api'
 
 /** fetch() with this browser's owner key attached (see owner.js), and the
- * demo code when the visitor has entered one (see demoCode.js). */
+ * demo pass (or an older tab's code) once the visitor has entered the code
+ * (see demoCode.js). A pass the server no longer accepts is forgotten, so
+ * the next visit to the console asks for the code again. */
 export function apiFetch(url, init = {}) {
-  const code = demoCode()
-  return fetch(url, {
+  const pass = demoPass()
+  const code = pass ? '' : demoCode()
+  const access = pass ? { [DEMO_PASS_HEADER]: pass } : code ? { [DEMO_CODE_HEADER]: code } : {}
+  const sent = fetch(url, {
     ...init,
-    headers: { ...(init.headers || {}), [OWNER_HEADER]: ownerKey(), ...(code ? { [DEMO_CODE_HEADER]: code } : {}) },
+    headers: { ...(init.headers || {}), [OWNER_HEADER]: ownerKey(), ...access },
+  })
+  if (!pass) return sent
+  return sent.then((response) => {
+    if (response.status === 403 && response.headers?.get?.('X-Exchequer-Demo-Pass-Invalid')) forgetDemoPass()
+    return response
   })
 }
 

@@ -8,21 +8,39 @@ import ThemeToggle from '../components/ThemeToggle'
 // One batch: progress while it runs, then the exchanges its complaints reached
 // and the wallets two or more of them share.
 
-const STATUS = { pending: 'waiting', running: 'tracing…', done: 'done', failed: 'failed', interrupted: 'interrupted' }
+const STATUS = { pending: 'waiting', running: 'tracing…', done: 'done', failed: 'failed', interrupted: 'interrupted', same: 'same as an earlier row' }
 const short = (a) => (a && a.length > 22 ? `${a.slice(0, 10)}…${a.slice(-8)}` : a)
+// Polls (3 s apart) in which no row finished before the page stops asking:
+// about 10 minutes. A row traces for 5 minutes at most, so a batch that quiet
+// has stopped moving, and an open tab must not poll it for ever.
+export const STALL_POLLS = 200
+const rowStatus = (r) => (r.status === 'same' && r.same_as ? `same as row ${r.same_as}` : (STATUS[r.status] ?? r.status))
 
 export default function Batch() {
   const { batchId } = useParams()
   const [batch, setBatch] = useState(null)
   const [error, setError] = useState(null)
   const [allShared, setAllShared] = useState(false)
+  const [stalled, setStalled] = useState(false)
 
   useEffect(() => {
     let live = true
     let timer
+    let finishedBefore = -1
+    let quiet = 0
     const load = () => fetchBatch(batchId)
-      .then((b) => { if (!live) return; setBatch(b); if (b.status === 'running') timer = setTimeout(load, 3000) })
+      .then((b) => {
+        if (!live) return
+        setBatch(b)
+        if (b.status !== 'running') return
+        const finished = b.done + b.failed + (b.interrupted ?? 0)
+        quiet = finished === finishedBefore ? quiet + 1 : 0
+        finishedBefore = finished
+        if (quiet >= STALL_POLLS) { setStalled(true); return }
+        timer = setTimeout(load, 3000)
+      })
       .catch((e) => live && setError(e.message))
+    setStalled(false)
     load()
     return () => { live = false; clearTimeout(timer) }
   }, [batchId])
@@ -35,6 +53,7 @@ export default function Batch() {
       </header>
       <main className="batch-body">
         {error && <div className="banner error">{error}</div>}
+        {stalled && <div className="banner">No row has finished for 10 minutes, so this page stopped checking. Reload to check again.</div>}
         {batch && (
           <>
             <span className="micro">Batch · {batch.status === 'running' ? `${batch.done + batch.failed} of ${batch.total} traced` : batch.status}</span>
@@ -52,7 +71,7 @@ export default function Batch() {
                         <td>{r.reference || '—'}</td>
                         <td className="mono">{r.case_id ? <Link to={`/case/${r.case_id}`}>{short(r.address)}</Link> : short(r.address)}</td>
                         <td>{r.chain} · {r.asset}</td>
-                        <td className={r.exchange ? '' : 'none'}>{r.status === 'done' ? (r.exchange ?? 'no match') : <span title={r.error ?? ''}>{STATUS[r.status] ?? r.status}{r.error ? `: ${r.error}` : ''}</span>}</td>
+                        <td className={r.exchange ? '' : 'none'}>{r.status === 'done' ? (r.exchange ?? 'no match') : <span title={r.error ?? ''}>{rowStatus(r)}{r.error ? `: ${r.error}` : ''}</span>}{r.same_as && r.status !== 'same' ? <span className="note"> · same as row {r.same_as}</span> : null}</td>
                         <td>{r.confidence == null ? '' : bandLabel(bandOf(r.confidence))}</td>
                       </tr>
                     ))}

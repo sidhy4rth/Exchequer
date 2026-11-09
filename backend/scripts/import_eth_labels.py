@@ -68,10 +68,14 @@ from app.etherscan_client import (  # noqa: E402
     is_valid_address,
     normalize_address,
 )
+from app.exchange_matcher import is_deposit_label  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
-from scripts.import_exchange_labels import has_value_history  # noqa: E402
+from scripts._label_files import chain_regenerate  # noqa: E402
+from scripts.import_exchange_labels import has_value_history, listed_elsewhere  # noqa: E402
 from scripts.seed_bsc_labels import ACTIVITY_LOOKBACK, bsc_activity  # noqa: E402
 from scripts.seed_tron_labels import CANONICAL as TRON_CANONICAL  # noqa: E402
+from app.tron_tags import clean_tag  # noqa: E402
+from scripts._tag_words import NOT_CASH_OUT, cleaned  # noqa: E402
 
 DATASET_REPO = "dawsbot/eth-labels"
 DATASET_COMMIT = "14247ba8cf4686b747938248bee34c66089fa9d9"
@@ -111,14 +115,26 @@ CANONICAL: dict[str, str] = {
 
 # Dataset slugs whose rows are never exchange wallets, whatever the tag says.
 SKIP_SLUG = re.compile(
-    r"exploit|ofac|charity|mixer|tornado|sybil|airdrop|nonprofit|take-action|endaoment|scam|heist|compromised"
+    r"exploit|ofac|charity|mixer|tornado|sybil|airdrop|nonprofit|take-action|endaoment|scam|heist|compromised|"
+    r"\bdex\b"
 )
-# Tags that name exchange infrastructure or a customer, not a cash-out wallet.
-SKIP_TAG = re.compile(
-    r"\bdep\b|deployer|funder|contract|token|charity|exploit|multisig|vesting|treasury|"
-    r"staking|bridge|swap|launchpad|operator|registry|^\.|^bitget wallet",
-    re.IGNORECASE,
-)
+# Tags that name exchange infrastructure or a customer, not a cash-out wallet:
+# the shared filter (scripts/_tag_words) plus, in this dataset, 'Dep' (one
+# customer's deposit address, imported only by deposit_candidates) and a tag
+# that starts with a dot.
+_ETH_ONLY = re.compile(r"\bdep\b|^\.")
+
+
+class _SkipTag:
+    """SKIP_TAG.search(tag): a match when `tag` is not an exchange's cash-out
+    wallet. The tag is cleaned first, whoever calls it."""
+
+    def search(self, tag: str | None):
+        text = cleaned(tag or "")
+        return NOT_CASH_OUT.search(text) or _ETH_ONLY.search(text)
+
+
+SKIP_TAG = _SkipTag()
 
 
 def tag_head(tag: str) -> str:
@@ -133,7 +149,7 @@ def wallet_type(tag: str) -> str:
     lowered = tag.lower()
     if "cold" in lowered:
         return "cold_wallet"
-    if "deposit" in lowered:
+    if is_deposit_label(tag):  # never the bare word: "Deposit Funder" is the exchange's own
         return "deposit_wallet"
     if "hot" in lowered:
         return "hot_wallet"
@@ -145,16 +161,20 @@ def candidates_by_chain() -> dict[str, dict[str, dict[str, str]]]:
         rows = csv.DictReader(io.StringIO(response.read().decode()))
         out: dict[str, dict[str, dict[str, str]]] = {key: {} for key in CHAIN_IDS}
         wanted = {cid: key for key, cid in CHAIN_IDS.items()}
+        # An address a router, risk, threat, frozen or sanctions file names is
+        # never imported as an exchange wallet (r1-scripts-0).
+        refused = {key: listed_elsewhere(key) for key in CHAIN_IDS}
         for row in rows:
             chain_key = wanted.get(row["chainId"])
             if chain_key is None or SKIP_SLUG.search(row["label"]):
                 continue
-            tag = (row["nameTag"] or "").strip()
+            # Invisible characters removed first, or "Treas\u200bury" hides from SKIP_TAG.
+            tag = clean_tag(row["nameTag"])
             if not tag or tag == "null" or SKIP_TAG.search(tag):
                 continue
             exchange = CANONICAL.get(tag_head(tag))
             addr = normalize_address(row["address"])
-            if exchange is None or not is_valid_address(addr):
+            if exchange is None or not is_valid_address(addr) or addr in refused[chain_key]:
                 continue
             out[chain_key][addr] = {"exchange": exchange, "label": tag, "type": wallet_type(tag)}
     return out
@@ -223,7 +243,7 @@ def deposit_candidates(exchange: str) -> dict[str, dict[str, str]]:
         for row in rows:
             if row["chainId"] != CHAIN_IDS["ethereum"]:
                 continue
-            tag = (row["nameTag"] or "").strip()
+            tag = clean_tag(row["nameTag"])
             match = DEPOSIT_TAG.match(tag)
             addr = normalize_address(row["address"])
             if match and CANONICAL.get(tag_head(match["name"])) == exchange and is_valid_address(addr):
@@ -357,10 +377,9 @@ def main() -> int:
             "label pages, and verified on chain the same way, by "
             "backend/scripts/import_eth_labels.py."
         )
-        meta["regenerate_with"] = (
-            f"{meta.get('regenerate_with', '').split(' && then ')[0]} && then "
-            f"cd backend && .venv/bin/python -m scripts.import_eth_labels --chain {chain_key}"
-        )
+        # Appended, never truncated: the file may list other importers after this one.
+        meta["regenerate_with"] = chain_regenerate(
+            meta.get("regenerate_with"), f"cd backend && .venv/bin/python -m scripts.import_eth_labels --chain {chain_key}")
         path.write_text(json.dumps(document, indent=2) + "\n")
         print(f"\nWrote {len(merged)} labels to {path} (+{len(accepted)})")
 

@@ -15,7 +15,11 @@ The key:
   verifying against the published key after a restart.
 
 The public half is served at GET /signing-key, and POST /verify checks a
-report against it. Offline, with OpenSSL:
+report against it. Since report format v2.2 the signed body itself names the
+issuing server and the key's full SHA-256 fingerprint (evidence.issuer_block),
+and backend/data/signing_keys.json lists Exchequer's official keys -- current,
+retired and revoked -- so a report from a clone of this repo, or one signed
+with an earlier key, is told apart. Offline, with OpenSSL:
 
     openssl pkeyutl -verify -pubin -inkey exchequer.pub.pem -rawin \\
         -in body.txt -sigfile sig.bin
@@ -28,13 +32,16 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import json
 import logging
 import os
+import re
 import threading
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
@@ -62,7 +69,12 @@ class Signer:
     @property
     def fingerprint(self) -> str:
         """First 16 hex digits of SHA-256 over the raw public key."""
-        return hashlib.sha256(self.public_raw).hexdigest()[:16]
+        return self.fingerprint_sha256[:16]
+
+    @property
+    def fingerprint_sha256(self) -> str:
+        """SHA-256 over the raw public key, all 64 hex digits: what reports sign and publish."""
+        return hashlib.sha256(self.public_raw).hexdigest()
 
     @property
     def public_pem(self) -> str:
@@ -97,19 +109,54 @@ def reset_for_tests(signer: Signer | None = None) -> None:
         _signer = signer
 
 
+def _seed_bytes(seed: str) -> bytes | None:
+    """A 32-byte seed from base64 (standard or URL-safe, padded or not) or hex."""
+    if len(seed) == 64:
+        try:
+            return bytes.fromhex(seed)
+        except ValueError:
+            pass
+    padded = seed + "=" * (-len(seed) % 4)
+    for decode in (base64.b64decode, base64.urlsafe_b64decode):
+        try:
+            raw = decode(padded, validate=True) if decode is base64.b64decode else decode(padded)
+        except (binascii.Error, ValueError):
+            continue
+        if len(raw) == 32:
+            return raw
+    return None
+
+
 def _load() -> Signer:
     seed = os.getenv("EXCHEQUER_SIGNING_KEY", "").strip()
     if seed:
-        try:
-            raw = base64.b64decode(seed, validate=True)
+        raw = _seed_bytes(seed)
+        if raw is not None:
             return Signer(Ed25519PrivateKey.from_private_bytes(raw), "environment")
-        except (binascii.Error, ValueError):
-            logger.error("EXCHEQUER_SIGNING_KEY is not a base64 32-byte Ed25519 seed; ignoring it")
+        logger.error("EXCHEQUER_SIGNING_KEY is not a 32-byte Ed25519 seed (base64 or hex); ignoring it")
+    signer = _load_file()
+    if signer.source == "file" and config.TEMPORARY_DISK:
+        # A disk wiped on restart takes the key file with it: every wake signs
+        # with a new key, and earlier reports stop verifying. Say so.
+        logger.error("The report signing key is kept on a disk this host wipes on restart; "
+                     "set EXCHEQUER_SIGNING_KEY so reports keep verifying")
+        return Signer(signer.private, "ephemeral")
+    return signer
 
+
+def _load_file() -> Signer:
     path: Path = config.SIGNING_KEY_PATH
     try:
         if path.is_file():
-            key = serialization.load_pem_private_key(path.read_bytes(), password=None)
+            try:
+                key = serialization.load_pem_private_key(path.read_bytes(), password=None)
+            except (ValueError, TypeError, UnsupportedAlgorithm) as exc:
+                # Empty, truncated, password-protected or not a key. It may be
+                # the real key and recoverable, so it is never overwritten;
+                # this process signs with a marked temporary key meanwhile.
+                logger.error("%s cannot be read as a private key (%s); fix or remove it. Signing with "
+                             "a temporary key until then", path, type(exc).__name__)
+                return Signer(Ed25519PrivateKey.generate(), "ephemeral")
             if isinstance(key, Ed25519PrivateKey):
                 return Signer(key, "file")
             logger.error("%s is not an Ed25519 key; making a new one in memory", path)
@@ -132,66 +179,221 @@ def _load() -> Signer:
 
 
 # ---------------------------------------------------------------------------
+# Official keys
+# ---------------------------------------------------------------------------
+# Exchequer's report-signing keys, committed so a verifier anywhere can pin
+# them. Append-only: a rotation adds the old key with `retired` set, so the
+# reports it signed keep verifying; a leaked key gets `revoked: true`.
+OFFICIAL_KEYS_PATH: Path = config.DATA_DIR / "signing_keys.json"
+
+
+@dataclass(frozen=True)
+class OfficialKey:
+    fingerprint_sha256: str
+    public: Ed25519PublicKey
+    in_use_from: str
+    retired: str | None
+    revoked: bool
+
+
+_official: list[OfficialKey] | None = None
+
+
+def _official_key(entry: object) -> OfficialKey:
+    if not isinstance(entry, dict):
+        raise ValueError("not an object")
+    raw = base64.b64decode(str(entry.get("public_key_b64", "")), validate=True)
+    fingerprint = str(entry.get("fingerprint_sha256", ""))
+    if len(raw) != 32 or hashlib.sha256(raw).hexdigest() != fingerprint:
+        raise ValueError("the fingerprint is not the SHA-256 of the public key")
+    retired = entry.get("retired")
+    for day in (entry.get("in_use_from"), retired):
+        if day is not None:
+            date.fromisoformat(str(day))
+    if not isinstance(entry.get("revoked", False), bool):
+        raise ValueError("revoked must be true or false")
+    return OfficialKey(fingerprint, Ed25519PublicKey.from_public_bytes(raw), str(entry.get("in_use_from")),
+                       str(retired) if retired else None, entry.get("revoked", False))
+
+
+def official_keys() -> list[OfficialKey]:
+    """The committed list, read once. A malformed entry is skipped and logged,
+    never trusted -- and never allowed to stop the server starting."""
+    global _official
+    with _lock:
+        if _official is None:
+            keys: list[OfficialKey] = []
+            try:
+                entries = json.loads(OFFICIAL_KEYS_PATH.read_text(encoding="utf-8")).get("keys") or []
+            except (OSError, ValueError, AttributeError) as exc:
+                logger.error("Cannot read the official signing keys at %s: %s", OFFICIAL_KEYS_PATH, exc)
+                entries = []
+            for n, entry in enumerate(entries):
+                try:
+                    keys.append(_official_key(entry))
+                except (ValueError, TypeError, binascii.Error) as exc:
+                    logger.error("Official signing key %d in %s is malformed (%s); ignoring it",
+                                 n, OFFICIAL_KEYS_PATH, exc)
+            _official = keys
+        return _official
+
+
+def _listed(fingerprint: str) -> OfficialKey | None:
+    return next((k for k in official_keys() if fingerprint in (k.fingerprint_sha256, k.fingerprint_sha256[:16])),
+                None)
+
+
+# ---------------------------------------------------------------------------
 # Verification
 # ---------------------------------------------------------------------------
+# The SIGNATURE line as seal_text writes it (a 64-hex key since v2.2, 16 before);
+# anything else is damaged. A strict pattern, so a fingerprint with a look-alike
+# or invisible character cannot pass as a foreign key.
+_SIG = re.compile(r"SIGNATURE \(Ed25519 over the same bytes, key (?P<fp>[0-9a-f]{64}|[0-9a-f]{16})\): "
+                  r"(?P<sig>[A-Za-z0-9+/]{86}==)")
+# Every report in this format or later is signed when issued (8fdbdbc), so one
+# without a signature had it removed. The version sits in text a forger can
+# edit: this only sharpens the message; an unsigned report never reads as fine.
+SIGNED_FROM = (2, 1)
+_FORMAT = re.compile(r"\(report format v(\d+)\.(\d+)\)")
+
+DETAILS = {
+    "not_a_report": "No CONTENT HASH line: this is not an Exchequer text report, or its last lines were cut off.",
+    "changed": "The text does not match its seal: it was changed after it was issued.",
+    "signature_missing": ("Signature missing. Every report in this format is signed when issued, so this one "
+                          "was altered. Do not rely on it."),
+    "unsigned": ("No signature, so nothing shows who made this report. Its content hash matches, but anyone "
+                 "can compute a content hash."),
+    "unknown_key": ("This report names a signing key this server does not know, so its signature cannot be "
+                    "checked here. Do not rely on it."),
+    "damaged": "The SIGNATURE line is damaged, so the signature cannot be checked. Do not rely on it.",
+    "hash_line_damaged": ("The CONTENT HASH line is not exactly as Exchequer writes it: words were added to it "
+                          "or changed in it, and nothing covers that line. Do not rely on this report."),
+    "genuine": "Genuine and unchanged: signed by this server, and nothing was added below the signature.",
+    "genuine_earlier_key": ("Genuine and unchanged: signed with an earlier official Exchequer key{retired}, and "
+                            "nothing was added below the signature."),
+    "forged_issuer": ("Claims to be issued by this server but is not signed with any key it has used. Treat it "
+                      "as forged."),
+    "revoked_key": ("Signed with an Exchequer key that has since been revoked, so the signature no longer shows "
+                    "who made it. Do not rely on it."),
+    "key_mismatch": ("The signed 'Signing key' line names a different key from the one that made the signature. "
+                     "Do not rely on it."),
+}
+
+
+def _declares_signed_format(body: str) -> bool:
+    from .evidence import read_issuer
+
+    return any((int(a), int(b)) >= SIGNED_FROM for a, b in _FORMAT.findall(body)) or read_issuer(body) is not None
+
+
 def verify_report(text: str) -> dict:
     """Check a sealed (and possibly signed) text report.
 
-    Returns what a reader needs: whether the content hash matches, whether a
-    signature is present, whether it verifies against this server's key."""
-    from .evidence import CONTENT_HASH_MARK, sha256_hex
+    `status` is the one verdict to act on: genuine, genuine_earlier_key,
+    text_added, changed, signature_missing, unsigned, unknown_key,
+    forged_issuer, revoked_key, damaged or not_a_report; the page shows it as
+    given. `genuine` is True only for "genuine". The hash and the signature
+    cover only the text above the CONTENT HASH line, so a line added below it
+    is text nobody signed (`extra_content`). `official` says whether the key
+    is in the committed list of Exchequer keys; `issued_by` is read from the
+    signed ISSUER block, and only once the signature has verified."""
+    from .evidence import read_issuer, read_seal, sha256_hex
 
-    text = text.replace("\r\n", "\n")
-    marker = f"\n{CONTENT_HASH_MARK} ("
-    idx = text.find(marker)
-    if idx < 0:
-        return {"sealed": False, "hash_ok": False, "signed": False, "signature_ok": False,
-                "detail": "No CONTENT HASH line: this is not an Exchequer text report, "
-                          "or its last lines were cut off."}
-    body = text[:idx]
-    tail = text[idx + 1:].split("\n")
-    claimed = tail[0].rsplit(": ", 1)[-1].strip()
-    hash_ok = sha256_hex(body) == claimed
+    seal = read_seal(text)
+    if seal is None:
+        return {"status": "not_a_report", "sealed": False, "hash_ok": False, "signed": False,
+                "signature_ok": False, "signature_checked": False, "genuine": False,
+                "extra_content": False, "finding": None, "detail": DETAILS["not_a_report"]}
+    body = seal.body
+    # The hash line must be exactly as seal_text writes it: no signature covers
+    # it, so text inside it would otherwise pass as part of the seal.
+    claimed = seal.claimed_hash
+    hash_ok = claimed is not None and sha256_hex(body) == claimed
+    extra = len(seal.extra)
+    added = (f"{extra} line{'s were' if extra != 1 else ' was'} added below the seal, and nothing "
+             f"covers {'them' if extra != 1 else 'it'}: treat everything below the CONTENT HASH line "
+             "as not issued by Exchequer.")
 
     signer = get_signer()
-    sig_line = next((line for line in tail[1:] if line.startswith(SIGNATURE_MARK + " (")), None)
+    sig_line = seal.signature_line
     result = {
         "sealed": True,
         "hash_ok": hash_ok,
         "content_sha256": sha256_hex(body),
         "signed": sig_line is not None,
         "signature_ok": False,
+        "signature_checked": False,
+        "genuine": False,
+        "extra_content": extra > 0,
+        "extra_lines": extra,
+        "hash_line_ok": claimed is not None,
+        "bom_removed": seal.bom_removed,
         "key_fingerprint": None,
+        "key_fingerprint_sha256": None,
+        "claimed_key": None,
+        "official": False,
+        "issued_by": None,
         "this_server_key": signer.fingerprint,
+        "this_server_key_sha256": signer.fingerprint_sha256,
+        "finding": None,
     }
-    if sig_line is None:
-        result["detail"] = (
-            "Unsigned report (made before reports were signed). The hash only shows "
-            "whether the text was changed after hashing, not who hashed it."
-            if hash_ok else "The text does not match its content hash: it was changed."
-        )
+
+    def done(status: str, detail: str | None = None) -> dict:
+        result["status"] = status
+        result["genuine"] = status == "genuine"
+        result["detail"] = detail or DETAILS[status]
+        if status in ("genuine", "genuine_earlier_key"):
+            # What the signed report says, so a reader can hold it against the
+            # PDF's summary page, which no signature covers.
+            from .report import signed_finding
+
+            result["finding"] = signed_finding(body)
+        if seal.bom_removed:
+            result["detail"] += " (A byte-order mark added by an editor was ignored.)"
         return result
 
-    fingerprint = sig_line.split("key ", 1)[-1].split(")", 1)[0].strip()
-    result["key_fingerprint"] = fingerprint
+    if claimed is None:
+        return done("damaged", DETAILS["hash_line_damaged"])
+    if sig_line is None:
+        if not hash_ok:
+            return done("changed")
+        status = "signature_missing" if _declares_signed_format(body) else "unsigned"
+        return done(status, f"{DETAILS[status]} Also, {added}" if extra else None)
+
+    match = _SIG.fullmatch(sig_line)
+    if match is None:
+        return done("damaged")
+    fingerprint = match.group("fp")
+    current = fingerprint in (signer.fingerprint, signer.fingerprint_sha256)
+    listed = _listed(fingerprint)
+    if not current and listed is None:
+        result["claimed_key"] = fingerprint
+        issuer = read_issuer(body)
+        if config.PUBLIC_URL and issuer and issuer["issued_by"] == config.PUBLIC_URL:
+            return done("forged_issuer")
+        return done("unknown_key")
+    public = signer.public if current else listed.public
+    full = signer.fingerprint_sha256 if current else listed.fingerprint_sha256
+    result["key_fingerprint"], result["key_fingerprint_sha256"] = full[:16], full
+    result["official"] = listed is not None and not listed.revoked
+    result["signature_checked"] = True
     try:
-        signature = base64.b64decode(sig_line.rsplit(": ", 1)[-1].strip(), validate=True)
-    except (binascii.Error, ValueError):
-        result["detail"] = "The SIGNATURE line is damaged."
-        return result
-    if fingerprint != signer.fingerprint:
-        result["detail"] = ("Signed with a different key than this server's "
-                            f"({fingerprint}, this server uses {signer.fingerprint}).")
-        return result
-    try:
-        signer.public.verify(signature, body.encode("utf-8"))
+        public.verify(base64.b64decode(match.group("sig"), validate=True), body.encode("utf-8"))
         result["signature_ok"] = True
-    except InvalidSignature:
-        pass
-    if result["signature_ok"] and hash_ok:
-        result["detail"] = "Genuine and unchanged: signed by this server, every byte as issued."
-    elif result["signature_ok"]:
-        result["detail"] = "The signature matches but the CONTENT HASH line was edited."
-    else:
-        result["detail"] = "The signature does not match: the report was changed after signing."
-    return result
+    except (InvalidSignature, binascii.Error, ValueError):
+        return done("changed")
+    issuer = read_issuer(body)
+    if issuer is not None and issuer["signing_key"] != full:
+        return done("damaged", DETAILS["key_mismatch"])
+    result["issued_by"] = issuer["issued_by"] if issuer else None
+    if not hash_ok:
+        return done("changed", "The signature matches but the CONTENT HASH line was edited.")
+    if listed is not None and listed.revoked:
+        return done("revoked_key")
+    if extra:
+        return done("text_added", f"The signed part is genuine, but {added}")
+    if current:
+        return done("genuine")
+    return done("genuine_earlier_key", DETAILS["genuine_earlier_key"].format(
+        retired=f" (retired {listed.retired})" if listed.retired else ""))

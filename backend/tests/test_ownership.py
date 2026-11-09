@@ -252,12 +252,14 @@ def test_client_ip_trusts_proxy_headers_only_when_told(monkeypatch):
     assert rate_limit.client_ip({"x-real-ip": "198.51.100.4", **headers}, "10.0.0.1") == "198.51.100.4"
 
 
-def test_client_ip_reads_the_first_forwarded_entry_behind_render(monkeypatch):
+def test_client_ip_behind_render_believes_the_edge_not_the_client(monkeypatch):
     monkeypatch.setattr(config, "TRUST_PROXY_HEADERS", True)
     monkeypatch.setattr(config, "PROXY_CLIENT_FIRST", True)
-    # Render puts the address it saw first and does not set X-Real-IP, so a
-    # client-sent X-Real-IP must not be believed.
-    headers = {"x-forwarded-for": "203.0.113.9, 10.1.2.3", "x-real-ip": "6.6.6.6"}
+    monkeypatch.setattr(config, "CLIENT_IP_HEADER", "cf-connecting-ip")
+    # Render keeps a client-sent X-Forwarded-For and does not set X-Real-IP,
+    # so neither a forged leftmost entry nor X-Real-IP may decide the key.
+    headers = {"x-forwarded-for": "6.6.6.6, 203.0.113.9, 104.22.17.40", "x-real-ip": "6.6.6.6",
+               "cf-connecting-ip": "203.0.113.9"}
     assert rate_limit.client_ip(headers, "10.0.0.1") == "203.0.113.9"
     assert rate_limit.client_ip({}, "10.0.0.1") == "10.0.0.1"
 
@@ -273,25 +275,28 @@ def test_repeated_demo_traces_are_listed_once(client):
 def test_correlation_is_recomputed_once_a_case_is_stored(client, monkeypatch):
     from app.routes import casebook as routes
     calls = []
-    real = routes.correlate
-    monkeypatch.setattr(routes, "correlate", lambda *a, **k: calls.append(1) or real(*a, **k))
+    real = routes.index_cases
+    monkeypatch.setattr(routes, "index_cases", lambda *a, **k: calls.append(1) or real(*a, **k))
     client.get("/cases/correlate")
     client.get("/cases/correlate")
     assert len(calls) == 1  # second answer from the cache
     trace(client, OTHER, ALICE)
+    client.get("/cases/correlate", headers={ownership.OWNER_HEADER: ALICE})
+    assert len(calls) == 2  # Alice's new case changes what she can correlate
     client.get("/cases/correlate")
-    assert len(calls) == 2  # a new case invalidates it
+    assert len(calls) == 2  # but not what a stranger can
 
 
 # -- the store's cap ------------------------------------------------------------
 def test_a_full_store_still_returns_the_trace_but_does_not_save_it(client, monkeypatch):
     from app import config
     monkeypatch.setattr(config, "MAX_STORED_CASES", 2)
-    assert trace(client, OTHER) and trace(client, OTHER)
+    # Owned and in use: neither gives up its place (an anonymous one would).
+    assert trace(client, OTHER, ALICE) and trace(client, OTHER, ALICE)
     third = client.post("/trace", json={"address": OTHER}).json()
     assert third["case_id"] is None
     assert any("case store is full" in w for w in third["warnings"])
-    assert models.case_count() == 2  # nothing deleted to make room
+    assert models.case_count() == 2  # nothing in use deleted to make room
 
 
 def test_a_failed_save_hands_back_no_case_id(client, monkeypatch):

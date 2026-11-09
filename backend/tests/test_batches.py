@@ -32,6 +32,8 @@ def fake_trace(request):
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(models, "_engine", create_engine(f"sqlite:///{tmp_path / 'b.db'}", future=True))
     models.init_db()
+    for name in ("traces", "traces_total"):  # earlier tests spent this client's hour
+        monkeypatch.setattr(rate_limit, name, rate_limit.SlidingWindowLimiter(100, 3600))
     monkeypatch.setattr(pipeline, "run_trace", fake_trace)
     with TestClient(app) as c:
         yield c
@@ -83,14 +85,24 @@ def test_bad_rows_come_back_by_number(client):
 
 def test_a_batch_is_charged_against_the_hourly_limit_in_full(client, monkeypatch):
     monkeypatch.setattr(rate_limit, "traces", rate_limit.SlidingWindowLimiter(2, 3600))
-    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}, {"address": A1}]},
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}, {"address": A3}]},
                     headers={ownership.OWNER_HEADER: ALICE})
     assert r.status_code == 429 and "needs 3 traces" in r.json()["detail"]
+
+
+def silence(batch_id, minutes=10):
+    """Make the batch's last heartbeat `minutes` old, as if its runner had died then."""
+    from datetime import datetime, timedelta, timezone
+    with models.session() as s:
+        s.get(models.Batch, batch_id).heartbeat_at = (
+            datetime.now(tz=timezone.utc) - timedelta(minutes=minutes)).isoformat(timespec="seconds")
+        s.commit()
 
 
 def test_a_restart_marks_unfinished_rows_interrupted(client):
     owner = ownership.owner_hash(ALICE)
     b = batches.create(owner, "", batches.validate_rows([{"address": A1}, {"address": A2}]))
+    silence(b.id)
     batches.mark_interrupted()
     body = batches.summary(batches.get(owner, b.id))
     assert body["status"] == "interrupted" and body["interrupted"] == 2
@@ -103,3 +115,222 @@ def test_cost_limiter_is_all_or_nothing():
     assert lim.remaining("k", now=1) == 2
     assert lim.check("k", now=1, cost=2) is None
     assert lim.check("k", now=61, cost=3) is None  # the first three expired
+
+
+def wait_settled(batch_id, owner_key=ALICE, timeout=10.0):
+    """The batch as stored once it has left 'running' (None if it never does)."""
+    owner = ownership.owner_hash(owner_key)
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        batch = batches.get(owner, batch_id)
+        if batch is not None and batch.status != "running":
+            return batches.summary(batch)
+        time.sleep(0.05)
+    return None
+
+
+@pytest.fixture
+def no_waits(monkeypatch):
+    monkeypatch.setattr(batches, "_sleep", lambda seconds: None, raising=False)
+
+
+def flaky_batch_sessions(monkeypatch, fail_on: set[int]):
+    """models.session() raises OperationalError on these calls (1-based) made
+    from a batch thread; the test's own polling is left alone."""
+    import threading
+
+    from sqlalchemy.exc import OperationalError
+    real, calls = models.session, []
+
+    def session():
+        if threading.current_thread().name.startswith("batch-"):
+            calls.append(1)
+            if len(calls) in fail_on:
+                raise OperationalError("UPDATE batches", {}, Exception("server closed the connection"))
+        return real()
+    monkeypatch.setattr(models, "session", session)
+    return calls
+
+
+def test_a_save_that_fails_once_does_not_stop_the_batch(client, monkeypatch, no_waits):
+    flaky_batch_sessions(monkeypatch, fail_on={3})  # the save after row 1 is traced
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    done = wait_settled(r.json()["batch_id"])
+    assert done is not None and done["status"] == "done" and done["done"] == 2
+
+
+def test_a_store_that_never_saves_ends_the_batch_failed_not_running(client, monkeypatch, no_waits):
+    from sqlalchemy.exc import OperationalError
+
+    def never(*args, **kwargs):
+        raise OperationalError("UPDATE batches", {}, Exception("quota exceeded"))
+    monkeypatch.setattr(batches, "_save_rows", never)
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    body = wait_settled(r.json()["batch_id"])
+    assert body is not None and body["status"] == "failed"
+    assert all(row["status"] == "failed" and "could not be written" in row["error"] for row in body["rows"])
+
+
+def test_rows_that_never_ran_are_refunded(client, monkeypatch, no_waits):
+    from sqlalchemy.exc import OperationalError
+    monkeypatch.setattr(rate_limit, "traces", rate_limit.SlidingWindowLimiter(10, 3600))
+
+    def never(*args, **kwargs):
+        raise OperationalError("UPDATE batches", {}, Exception("quota exceeded"))
+    monkeypatch.setattr(batches, "_save_rows", never)
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}, {"address": A3}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    assert wait_settled(r.json()["batch_id"]) is not None
+    for _ in range(100):  # the refund runs as the batch thread ends
+        if rate_limit.traces.remaining("testclient") == 10:
+            break
+        time.sleep(0.02)
+    assert rate_limit.traces.remaining("testclient") == 10
+
+
+def test_a_batch_that_cannot_start_is_marked_failed(client, monkeypatch):
+    from app.routes import batches as batch_routes
+    monkeypatch.setattr(rate_limit, "traces", rate_limit.SlidingWindowLimiter(10, 3600))
+
+    def cannot(*args, **kwargs):
+        raise RuntimeError("can't start new thread")
+    monkeypatch.setattr(batches, "start", cannot)
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    assert r.status_code == 503
+    assert rate_limit.traces.remaining("testclient") == 10
+    assert not batch_routes._active
+    (listed,) = client.get("/batches", headers={ownership.OWNER_HEADER: ALICE}).json()["batches"]
+    assert listed["status"] == "failed"
+
+
+def test_boot_leaves_a_batch_with_a_fresh_heartbeat_alone(client):
+    # During a deploy the old instance is still running it: not interrupted.
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}]))
+    batches.mark_interrupted()
+    assert batches.get(owner, b.id).status == "running"
+
+
+def test_boot_marks_a_batch_with_a_stale_heartbeat_interrupted(client):
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}, {"address": A2}]))
+    silence(b.id, minutes=batches.STALE_AFTER_SECONDS // 60 + 1)
+    batches.mark_interrupted()
+    body = batches.summary(batches.get(owner, b.id))
+    assert body["status"] == "interrupted" and body["interrupted"] == 2
+
+
+def test_get_marks_a_silent_running_batch_interrupted(client):
+    # Its instance died after boot-time clean-up ran elsewhere: the page says
+    # so (and stops polling) instead of showing "running" for ever.
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}]))
+    silence(b.id)
+    body = client.get(f"/batches/{b.id}", headers={ownership.OWNER_HEADER: ALICE}).json()
+    assert body["status"] == "interrupted" and body["rows"][0]["status"] == "interrupted"
+    listed = client.get("/batches", headers={ownership.OWNER_HEADER: ALICE}).json()["batches"]
+    assert [x["status"] for x in listed] == ["interrupted"]
+
+
+def test_a_runner_stops_once_its_batch_is_marked_interrupted(client, monkeypatch):
+    import threading
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}, {"address": A2}]))
+    tracing, go_on, traced = threading.Event(), threading.Event(), []
+
+    def slow(request):
+        traced.append(request.address)
+        tracing.set()
+        go_on.wait(5)
+        return fake_trace(request)
+    runner = threading.Thread(target=batches.run, args=(b.id, owner, lambda: True, lambda: None, slow,
+                                                        lambda payload, request, o: payload))
+    runner.start()
+    assert tracing.wait(5)
+    silence(b.id)
+    batches.mark_interrupted()  # another instance booting
+    go_on.set()
+    runner.join(5)
+    body = batches.summary(batches.get(owner, b.id))
+    assert traced == [A1]  # row 2 never started
+    assert body["status"] == "interrupted"
+    assert [r["status"] for r in body["rows"]] == ["interrupted", "interrupted"]
+
+
+def test_a_running_batch_keeps_its_heartbeat(client, monkeypatch):
+    import threading
+    monkeypatch.setattr(batches, "HEARTBEAT_SECONDS", 0.01)
+    beats, release_trace = [], threading.Event()
+    real = batches._beat_once
+
+    def beat(batch_id):
+        beats.append(batch_id)
+        return real(batch_id)
+    monkeypatch.setattr(batches, "_beat_once", beat)
+
+    def slow(request):
+        release_trace.wait(5)
+        return fake_trace(request)
+    monkeypatch.setattr(pipeline, "run_trace", slow)
+    r = client.post("/batches", json={"rows": [{"address": A1}]}, headers={ownership.OWNER_HEADER: ALICE})
+    batch_id = r.json()["batch_id"]
+    for _ in range(100):
+        if beats:
+            break
+        time.sleep(0.02)
+    release_trace.set()
+    assert wait_settled(batch_id)["status"] == "done"
+    assert beats and set(beats) == {batch_id}
+    count = len(beats)
+    time.sleep(0.1)
+    assert len(beats) <= count + 1  # the heartbeat stops with its batch
+
+
+def test_a_repeated_row_is_traced_once_and_points_at_the_first(client, monkeypatch):
+    # Five complaints often name the same scam wallet: one trace, one case.
+    traced = []
+
+    def counting(request):
+        traced.append(request.address)
+        return fake_trace(request)
+    monkeypatch.setattr(pipeline, "run_trace", counting)
+    rows = batches.validate_rows([{"address": A1, "reference": "C-1"}, {"address": A2, "reference": "C-2"},
+                                  {"address": A1, "reference": "C-3"}])
+    assert [(r["status"], r["same_as"]) for r in rows] == [("pending", None), ("pending", None), ("same", 1)]
+    r = client.post("/batches", json={"rows": [{"address": A1, "reference": "C-1"}, {"address": A2, "reference": "C-2"},
+                                               {"address": A1, "reference": "C-3"}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    done = wait_done(client, r.json()["batch_id"])
+    assert traced == [A1, A2]
+    first, _, third = done["rows"]
+    assert third["status"] == "done" and third["case_id"] == first["case_id"] and third["same_as"] == 1
+    assert third["exchange"] == first["exchange"]
+    assert done["done"] == 3 and done["total"] == 3
+    shared = {w["address"]: w for w in done["shared_wallets"]}
+    assert shared[SHARED]["rows"] == [1, 2, 3] and shared[SHARED]["references"] == ["C-1", "C-2", "C-3"]
+
+
+def test_a_batch_is_charged_for_distinct_rows_only(client, monkeypatch):
+    monkeypatch.setattr(rate_limit, "traces", rate_limit.SlidingWindowLimiter(2, 3600))
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2}, {"address": A1}]},
+                    headers={ownership.OWNER_HEADER: ALICE})
+    assert r.status_code == 202
+    wait_done(client, r.json()["batch_id"])
+
+
+def test_mixed_case_evm_addresses_count_as_one():
+    lower, upper = "0x" + "ab" * 20, "0x" + "AB" * 20
+    rows = batches.validate_rows([{"address": lower}, {"address": upper}, {"address": lower, "depth": 2}])
+    assert [r["status"] for r in rows] == ["pending", "same", "pending"]  # another depth is another trace
+
+
+def test_a_repeated_row_is_interrupted_with_its_first(client):
+    owner = ownership.owner_hash(ALICE)
+    b = batches.create(owner, "", batches.validate_rows([{"address": A1}, {"address": A1}]))
+    silence(b.id)
+    batches.mark_interrupted()
+    body = batches.summary(batches.get(owner, b.id))
+    assert [r["status"] for r in body["rows"]] == ["interrupted", "interrupted"]

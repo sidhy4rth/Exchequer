@@ -12,6 +12,7 @@ from app.exchange_matcher import ExchangeMatch
 from app.graph_builder import INCOMING, OUTGOING
 from app.pattern_detection import PatternFinding
 from app.scoring import (
+    PROXIMITY_REFERENCE_HOPS,
     WEIGHT_AMOUNT_CORRELATION,
     WEIGHT_HOP_PROXIMITY,
     WEIGHT_MATCH_DIRECTNESS,
@@ -49,13 +50,46 @@ def test_weights_sum_to_one():
 # Components
 # ---------------------------------------------------------------------------
 def test_hop_proximity_is_full_for_a_direct_deposit():
-    assert _hop_proximity(1, 4).raw_value == 1.0
+    assert _hop_proximity(1).raw_value == 1.0
 
 
 def test_hop_proximity_decays_linearly_and_never_goes_negative():
-    assert _hop_proximity(2, 4).raw_value == pytest.approx(0.75)
-    assert _hop_proximity(3, 4).raw_value == pytest.approx(0.50)
-    assert _hop_proximity(9, 4).raw_value == 0.0
+    assert _hop_proximity(2).raw_value == pytest.approx(0.75)
+    assert _hop_proximity(3).raw_value == pytest.approx(0.50)
+    assert _hop_proximity(9).raw_value == 0.0
+
+
+def test_hop_proximity_is_scored_against_a_fixed_reference():
+    # Four hops, as the default depth always was; the request's own depth
+    # plays no part (audit r1-attribution-integrity-8).
+    assert PROXIMITY_REFERENCE_HOPS == 4
+    assert _hop_proximity(4).raw_value == pytest.approx(0.25)
+    assert _hop_proximity(5).raw_value == 0.0
+    assert "fixed reference of 4 hops" in _hop_proximity(3).explanation
+
+
+def test_the_requested_depth_does_not_move_the_score():
+    # s -> a -> b -> c -> exchange, a hot wallet four hops out. Asking for a
+    # deeper trace used to lift it from moderate (0.665) to high (0.765).
+    a, b, c = addr("a"), addr("b"), addr("c")
+    graph = make_graph([(SEED, a, 10.0), (a, b, 9.5), (b, c, 9.2), (c, EXCHANGE, 9.0)], seed=SEED)
+    at_4 = score_case(graph, SEED, a_match(depth=4), max_depth=4)
+    at_6 = score_case(graph, SEED, a_match(depth=4), max_depth=6)
+    assert at_4.score == at_6.score and at_4.band == at_6.band
+    shallow = score_case(graph, SEED, a_match(depth=4), max_depth=2)
+    assert shallow.score == at_4.score
+
+
+def test_a_follow_on_counts_hops_from_the_reported_address():
+    # A direct deposit two hops after the swap's wallet, which sat two hops
+    # from the reported address: four hops in all, not one.
+    graph = make_graph([(SEED, EXCHANGE, 10.0)], seed=SEED)
+    direct = score_case(graph, SEED, a_match(depth=1), max_depth=4)
+    after_swap = score_case(graph, SEED, a_match(depth=1), max_depth=4, depth_offset=3)
+    proximity = next(c for c in after_swap.components if c.name == "hop_proximity")
+    assert proximity.raw_value == pytest.approx(0.25)
+    assert after_swap.score < direct.score
+    assert "4 hops from the reported address (1 after the swap)" in proximity.explanation
 
 
 def test_amount_correlation_is_full_when_the_money_survives_intact():
@@ -229,8 +263,8 @@ def test_amount_correlation_reads_the_path_the_money_moved():
 
 
 def test_hop_proximity_explains_a_direct_deposit_in_the_right_direction():
-    assert "received funds directly" in _hop_proximity(1, 4, OUTGOING).explanation
-    assert "sent funds directly" in _hop_proximity(1, 4, INCOMING).explanation
+    assert "received funds directly" in _hop_proximity(1, OUTGOING).explanation
+    assert "sent funds directly" in _hop_proximity(1, INCOMING).explanation
 
 
 def test_a_reverse_trace_summary_states_the_mirrored_claim():

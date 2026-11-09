@@ -59,7 +59,8 @@ PAGE = 50  # TronScan's page size for both listings
 
 # The rules for "does this tag name an exchange" live with the live lookup, so
 # the importer and a running trace can never disagree about a tag.
-from app.tron_tags import CANONICAL, NOT_AN_EXCHANGE, tag_head, wallet_type  # noqa: E402,F401
+from app.tron_tags import (CANONICAL, NOT_AN_EXCHANGE, WARNING_TAG, clean_tag,  # noqa: E402,F401
+                           exchange_for_tag, tag_head, wallet_type)
 
 
 def tagged_rows(client: httpx.Client, url: str, params: dict, key: str, count: int) -> list[tuple[str, str]]:
@@ -151,10 +152,13 @@ def main() -> int:
 
     with httpx.Client(timeout=40) as grid:
         for address, tag in sorted(candidates.items(), key=lambda kv: kv[1]):
-            if NOT_AN_EXCHANGE.search(tag):
+            # Same rules as a live trace: invisible characters cannot hide a
+            # deny word, and only an exchange's name plus a wallet qualifier counts.
+            tag = clean_tag(tag)
+            if NOT_AN_EXCHANGE.search(tag) or WARNING_TAG.search(tag):
                 not_exchange.append(f"{address}  {tag}")
                 continue
-            company = CANONICAL.get(tag_head(tag))
+            company = exchange_for_tag(tag)
             if company is None:
                 unknown.append(f"{address}  {tag}")
                 continue

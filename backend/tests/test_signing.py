@@ -50,14 +50,16 @@ def test_a_report_signed_by_another_key_is_named_as_such():
     signing.reset_for_tests(mine)
     result = signing.verify_report(sealed)
     assert result["signature_ok"] is False
-    assert "different key" in result["detail"]
+    # Not checked, and never presented as "signed by a different server".
+    assert result["status"] == "unknown_key" and result["signature_checked"] is False
 
 
 def test_old_unsigned_reports_still_check_their_hash():
     old = seal_text(REPORT, sign=False)
     result = signing.verify_report(old)
     assert result["hash_ok"] and not result["signed"]
-    assert "Unsigned" in result["detail"]
+    # The server cannot know when an unsigned report was made: no age claim.
+    assert result["status"] == "unsigned" and "made before" not in result["detail"]
 
 
 def test_windows_line_endings_do_not_break_verification():
@@ -99,11 +101,13 @@ def test_key_from_the_environment(monkeypatch):
 
 def assert_marked_as_temporary(signer):
     assert signer.source == "ephemeral" and not signer.persistent
+    previous = signing.get_signer()
     signing.reset_for_tests(signer)
     try:
         assert "temporary key" in seal_text(REPORT)
     finally:
-        signing.reset_for_tests(signing.Signer(Ed25519PrivateKey.generate(), "file"))
+        # Put the suite's key back: text other modules sealed at import must still verify.
+        signing.reset_for_tests(previous)
 
 
 @posix_only

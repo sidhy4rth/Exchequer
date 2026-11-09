@@ -1,10 +1,15 @@
 """Operator endpoints. Each one exists only when its token is configured.
 
-GET /admin/backup returns a fresh, consistent snapshot of the case store for
-the nightly off-site copy (.github/workflows/backup.yml). The store holds
-every case and the watch webhooks, so the endpoint answers 404 -- as if it
-were not there -- unless EXCHEQUER_BACKUP_TOKEN is set, and 401 to anything
-but that exact bearer token.
+GET /admin/backup returns a fresh, consistent snapshot of a SQLite case
+store, for a self-hosted instance's own off-site copy. The store holds every
+case (watch webhook URLs are left out of every snapshot, see
+backups._drop_secrets), so the endpoint answers 404 -- as if it were not
+there -- unless EXCHEQUER_BACKUP_TOKEN is set, and 401 to anything but that
+exact bearer token. On a Postgres store (DATABASE_URL, as on Render) it is
+always 404: the image ships no pg_dump and a web process is the wrong place
+for one; the nightly off-site copy there is .github/workflows/backup.yml,
+which runs pg_dump against the database itself (webhook URLs are sealed at
+rest, so the dump holds no usable one).
 """
 from __future__ import annotations
 
@@ -22,7 +27,7 @@ router = APIRouter()
 
 
 def _authorised(request: Request) -> None:
-    if not config.BACKUP_TOKEN or config.DATABASE_URL:  # a SQLite snapshot only
+    if not config.BACKUP_TOKEN or config.DATABASE_URL:  # a SQLite snapshot only; Postgres: backup.yml
         raise HTTPException(status_code=404, detail="Not Found")
     scheme, _, token = request.headers.get("authorization", "").partition(" ")
     if scheme.lower() != "bearer" or not hmac.compare_digest(

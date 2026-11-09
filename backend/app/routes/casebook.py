@@ -3,43 +3,83 @@ share (/cases/correlate). Queries over what is already stored -- no tracing."""
 
 from __future__ import annotations
 
+import hashlib
 import threading
+import time
 from collections import OrderedDict
 from typing import Any
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
-from .. import config, models, ownership
-from ..correlation import correlate, related_cases
+from .. import config, models, ownership, rate_limit
+from ..correlation import CaseIndex, related_cases
 from ..exchange_matcher import get_matcher, get_router_matcher
 
 router = APIRouter()
+
+
+# GET /cases needs no code and once read the whole stored result of every
+# visible case, uncached, from a database whose transfer is metered (about
+# 5.85 MB per anonymous request, the 8 Nov check). It now reads only the
+# summary stored with each case (models.list_summaries); the answer for a
+# caller with no owner key (the demo cases only, the same for everyone) is
+# kept for a short while; and each connection may list a limited number of
+# times a minute.
+CASE_LISTS_PER_MINUTE_PER_CLIENT = 60
+case_lists = rate_limit.SlidingWindowLimiter(CASE_LISTS_PER_MINUTE_PER_CLIENT, 60)
+_PUBLIC_LIST_SECONDS = 30.0
+_public_lists: dict[tuple, tuple[float, dict[str, Any]]] = {}
+_public_lock = threading.Lock()
+
+
+def clear_public_lists() -> None:
+    with _public_lock:
+        _public_lists.clear()
+
+
+def _listing(caller: str | None, limit: int) -> dict[str, Any]:
+    rows = models.list_summaries(limit=limit, owner_hash=caller, public_addresses=ownership.demo_addresses())
+    # The SQL keeps the newest copy of each demo; two saved in the same second
+    # are told apart here. Rows are newest first.
+    seen_demo: set[tuple[str, str]] = set()
+    kept = []
+    for owner, summary in rows:
+        demo = ownership.is_public(owner, summary["address"])
+        if demo:
+            key = (summary["address"].lower(), summary.get("direction") or "outgoing")
+            if key in seen_demo:
+                continue
+            seen_demo.add(key)
+        kept.append({**summary, "demo": demo})
+    return {"count": len(kept), "cases": kept}
 
 
 @router.get("/cases")
 def cases(http: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
     """History of past traces, most recent first: the caller's own cases (by
     the owner key their browser sends) and the demo cases. See ownership.py."""
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    wait = case_lists.check(client)
+    if wait is not None:
+        raise HTTPException(status_code=429, headers={"Retry-After": str(int(wait) + 1)},
+                            detail="This connection has listed the cases too often this minute. Try again shortly.")
     caller = ownership.owner_hash_from_headers(http.headers)
-    records = models.list_cases(limit=limit, owner_hash=caller,
-                                public_addresses=ownership.demo_addresses())
-    # The deployed store holds the demos several times over (seeded more than
-    # once); list each demo once, its newest trace. Records are newest first.
-    seen_demo: set[tuple[str, str]] = set()
-    kept = []
-    for c in records:
-        if ownership.is_public(c.owner_hash, c.address):
-            key = (c.address.lower(), c.result.get("direction", "outgoing"))
-            if key in seen_demo:
-                continue
-            seen_demo.add(key)
-        kept.append(c)
-    records = kept
-    return {
-        "count": len(records),
-        "cases": [{**c.summary(), "demo": ownership.is_public(c.owner_hash, c.address)}
-                  for c in records],
-    }
+    if caller is not None:
+        return _listing(caller, limit)
+    # Everyone without a key sees the same demo list: one read serves them all
+    # until a case is saved or evicted, or the kept answer is a little old.
+    key = (models.engine(), models.store_version(), limit)
+    now = time.monotonic()
+    with _public_lock:
+        kept = _public_lists.get(key)
+        if kept is not None and now - kept[0] < _PUBLIC_LIST_SECONDS:
+            return kept[1]
+    answer = _listing(None, limit)
+    with _public_lock:
+        for stale in [k for k, (at, _) in _public_lists.items() if now - at >= _PUBLIC_LIST_SECONDS or k[:2] != key[:2]]:
+            del _public_lists[stale]
+        _public_lists[key] = (now, answer)
+    return answer
 
 
 def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
@@ -50,39 +90,126 @@ def _known_contract_or_exchange(chain_key: str, address: str) -> bool:
         return False
 
 
-# Correlation reads and parses every case the caller may see, and the answer
-# only changes when a case is added, so it is kept per (caller, case,
-# min_cases) until the store's version moves. The caller is part of the key:
-# without it, one person's answer would be served to the next. A handful of
-# entries: the trace view asks once per case.
-_CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], list[dict[str, Any]]]]" = OrderedDict()
+# Correlation reads and parses every case the caller may see. Stored cases
+# never change, so the answer depends only on which cases go in: it is kept
+# per set of case ids the caller may see, and nothing else. Callers who see
+# the same cases -- every visitor with none of their own sees just the demos
+# -- share one answer, a fresh owner key costs one id-only read, and a save
+# changes only the answers of those who can see the new case. The key is what
+# the answer was really computed from, never what was asked for, so one set's
+# answer is never served to another.
+#
+# What the caller chooses -- min_cases, and which case the clusters must
+# include -- is applied to the kept answer after the lookup, never part of
+# the key: otherwise cycling through them would miss every time and reload
+# every visible case on each request (r1-dos-cost-12). The kept answer is
+# computed at the smallest min_cases (2), so every filter is a subset of it.
+#
+# A case the caller cannot list but holds the link to is not part of the key
+# either (the 8 Nov check: cycling other people's case ids reloaded every
+# visible case each time). The kept index of the caller's own set answers
+# for it: only that one case is read (models.get_case, itself cached), and
+# its addresses are looked up in the index. A case id that matches no case
+# reads nothing more.
+#
+# The cache is bounded by sets and by (address, case) entries over every kept
+# index, the least recently used set going first. A set larger than the
+# entry bound on its own is still kept, alone: refusing it (c8917c8) meant a
+# full reload of every case on every request for an owner with a dense case
+# book (the 8 Nov re-check, probe_corr_big). One set is itself bounded by
+# MAX_CASES_PER_OWNER cases of at most a few node limits each (about 240,000
+# entries, some 130 MB, at the defaults). And each connection may correlate
+# CORRELATIONS_PER_MINUTE_PER_CLIENT times a minute, whatever owner keys it
+# sends, so even a set that keeps being evicted costs a bounded amount.
+CORRELATIONS_PER_MINUTE_PER_CLIENT = 20
+correlations = rate_limit.SlidingWindowLimiter(CORRELATIONS_PER_MINUTE_PER_CLIENT, 60)
+_CLUSTER_CACHE: "OrderedDict[tuple, tuple[list[tuple[str, str | None, str]], CaseIndex, list[dict[str, Any]]]]" = OrderedDict()
 _CLUSTER_CACHE_SIZE = 128
+_CLUSTER_CACHE_ENTRIES = 100_000  # (address, case) entries over every kept index
+_cluster_entries = [0]
 _cluster_lock = threading.Lock()
+_FEWEST = 2  # the least min_cases the route accepts
 
 
-def _clusters(caller: str | None, case_id: str | None, min_cases: int):
-    """(store, clusters): who owns each case examined, and the raw clusters."""
-    key = (caller, case_id, min_cases, models.store_version())
+def _key(ids) -> tuple:
+    digest = hashlib.sha256("\n".join(sorted(ids)).encode()).digest()
+    return (digest, models.engine())  # ids are unique within one store
+
+
+def _keep(key: tuple, value) -> None:
+    """Keep `value` as the newest set; evict the least recently used until
+    the bounds hold, but never the set just kept (a set over the entry bound
+    is kept alone)."""
+    cost = value[1].entries()
+    with _cluster_lock:
+        if key in _CLUSTER_CACHE:
+            _CLUSTER_CACHE.move_to_end(key)
+            return
+        _CLUSTER_CACHE[key] = value
+        _cluster_entries[0] += cost
+        while len(_CLUSTER_CACHE) > 1 and (len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE
+                                           or _cluster_entries[0] > _CLUSTER_CACHE_ENTRIES):
+            _, old = _CLUSTER_CACHE.popitem(last=False)
+            _cluster_entries[0] -= old[1].entries()
+
+
+def clear_cluster_cache() -> None:
+    with _cluster_lock:
+        _CLUSTER_CACHE.clear()
+        _cluster_entries[0] = 0
+
+
+def _visible(caller: str | None, refs):
+    """(store, index, clusters) for the cases `caller` may list (`refs`, read just before)."""
+    key = _key([r[0] for r in refs])
     with _cluster_lock:
         if key in _CLUSTER_CACHE:
             _CLUSTER_CACHE.move_to_end(key)
             return _CLUSTER_CACHE[key]
-    records = ownership.correlatable_cases(caller, case_id)
-    clusters = correlate(records, only_case=case_id, min_cases=min_cases,
-                         excluded=_known_contract_or_exchange)
-    value = ([(c.id, c.owner_hash, c.address) for c in records], clusters)
-    with _cluster_lock:
-        _CLUSTER_CACHE[key] = value
-        while len(_CLUSTER_CACHE) > _CLUSTER_CACHE_SIZE:
-            _CLUSTER_CACHE.popitem(last=False)
+    records = ownership.correlatable_cases(caller)
+    index = index_cases(records, _known_contract_or_exchange)
+    value = ([(c.id, c.owner_hash, c.address) for c in records], index, index.clusters(min_cases=_FEWEST))
+    # Under the ids really read: a case saved since the id read above is in them.
+    _keep(_key([c.id for c in records]), value)
     return value
+
+
+def index_cases(records, excluded) -> CaseIndex:
+    return CaseIndex.of(records, excluded)
+
+
+def _all_clusters(caller: str | None, case_id: str | None):
+    """(store, clusters): who owns each case examined, and every cluster of
+    at least _FEWEST reported addresses among them (with an unlisted
+    case_id, only those that include it)."""
+    refs = ownership.correlatable_refs(caller)
+    linked = None
+    if case_id and all(ref[0] != case_id for ref in refs):
+        linked = models.get_case(case_id)
+        if linked is None:
+            return refs, []  # nothing more is read for an id that matches no case
+    store, index, clusters = _visible(caller, refs)
+    if linked is None:
+        return store, clusters
+    own = index_cases([linked], _known_contract_or_exchange)
+    return ([*store, (linked.id, linked.owner_hash, linked.address)],
+            index.merged(own).clusters(only_case=linked.id, min_cases=_FEWEST))
+
+
+def _clusters(caller: str | None, case_id: str | None, min_cases: int):
+    """(store, clusters) as correlate(only_case=case_id, min_cases=min_cases)
+    would give them: the kept answer, filtered. Filtering keeps its order."""
+    store, clusters = _all_clusters(caller, case_id)
+    return store, [c for c in clusters
+                   if len(c["reported_addresses"]) >= min_cases
+                   and (case_id is None or any(m["case_id"] == case_id for m in c["cases"]))]
 
 
 @router.get("/cases/correlate")
 def cases_correlate(
     http: Request,
     case_id: str | None = Query(None, description="only clusters that include this case"),
-    min_cases: int = Query(2, ge=2, le=50),
+    min_cases: int = Query(_FEWEST, ge=_FEWEST, le=50),
 ) -> dict[str, Any]:
     """Intermediary addresses shared by two or more of the caller's cases.
 
@@ -97,6 +224,12 @@ def cases_correlate(
     (they hold its link) are examined; nobody else's case is read. See
     ownership.py.
     """
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    wait = correlations.check(client)
+    if wait is not None:
+        raise HTTPException(status_code=429, headers={"Retry-After": str(int(wait) + 1)},
+                            detail="This connection has correlated the cases too often this minute. "
+                                   "Try again shortly.")
     caller = ownership.owner_hash_from_headers(http.headers)
     store, clusters = _clusters(caller, case_id, min_cases)
     may_see = {cid for cid, owner, address in store if ownership.visible_to(owner, address, caller)}

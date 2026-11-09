@@ -19,8 +19,11 @@ unlabelled, and it does other things with its money.
 The rule, stated plainly. An address is inferred to be a deposit address of
 exchange E when all of the following hold:
 
-  1. It is not the reported address and carries no label of its own.
-  2. It made at least `min_sweeps` outgoing transfers.
+  1. It is not the reported address and carries no label of its own --
+     neither an exchange label nor a risk label (a poisoning lookalike, a
+     scam or stolen-funds wallet, a freeze, a warning tag).
+  2. It made at least `min_sweeps` outgoing transfers, together worth more
+     than dust in the traced asset (DUST_FLOOR).
   3. Every one of them went to a single address H that the label file records
      as an E hot wallet (or exchange/contract/cold wallet) -- never to a
      labelled *deposit* wallet, because deposits sweep to hot wallets, and
@@ -48,6 +51,7 @@ from typing import Any, Callable
 
 import networkx as nx
 
+from .evidence import utc_now_iso
 from .exchange_matcher import INFERRED_DEPOSIT, ExchangeMatch, ExchangeMatcher
 
 logger = logging.getLogger(__name__)
@@ -60,6 +64,18 @@ logger = logging.getLogger(__name__)
 SWEEP_DESTINATION_TYPES = frozenset({"hot_wallet", "exchange_wallet", "cold_wallet"})
 
 
+# Below this much in all, an address moved dust and its pattern is not
+# evidence. Per asset, at roughly the same value (a dollar or a few): one
+# floor in every asset's own units was 0.001 ETH (about $3) but 0.001 USDT, a
+# fraction of a cent, so a poisoning lookalike's dust sends to a hot wallet
+# passed as sweeps.
+DUST_FLOOR = {"ETH": 0.001, "BNB": 0.005, "POL": 2.0, "TRX": 10.0, "USDT": 1.0, "USDC": 1.0}
+
+
+def dust_floor(asset: str | None) -> float:
+    return DUST_FLOOR.get((asset or "").upper(), DUST_FLOOR["ETH"])
+
+
 @dataclass(frozen=True)
 class DepositInferenceConfig:
     """Every threshold the inference uses, in one place."""
@@ -68,7 +84,15 @@ class DepositInferenceConfig:
     # to the same hot wallet and nothing else, is the sweep pattern.
     min_sweeps: int = 2
     # Below this the address moved dust, and the pattern is not evidence.
-    min_total_native: float = 0.001
+    # None: the traced asset's own floor (DUST_FLOOR). It applies to every
+    # sweep, not to their total: two 0.6 USDT sends total 1.2 over a 1 USDT
+    # floor, and named a lookalike a deposit address (8 Nov check).
+    min_total_native: float | None = None
+    # A deposit address passes on what it receives: what it sent to the hot
+    # wallet after the traced funds arrived must be at least this share of
+    # what it received along the trace. A wallet that kept the victim's 5,000
+    # USDT and sent 6 on is holding the money, not an exchange's deposit.
+    min_swept_share: float = 0.5
 
 
 def _sweep_destination(
@@ -90,6 +114,8 @@ def infer_deposit_addresses(
     cfg: DepositInferenceConfig | None = None,
     balance_of: Callable[[str], float] | None = None,
     native_symbol: str = "ETH",
+    asset: str | None = None,
+    is_flagged: Callable[[str], bool] | None = None,
 ) -> list[ExchangeMatch]:
     """Return one inferred match per address that satisfies the rule.
 
@@ -98,8 +124,13 @@ def infer_deposit_addresses(
     transfers the time rule later left out of the graph): the question here is
     what the address does with money in general, not what it did with the
     traced funds.
+
+    `asset` is the traced asset (its dust floor applies; the chain's coin
+    `native_symbol` when not given). `is_flagged` is the risk screening's
+    lookup: a wallet it names is not unlabelled.
     """
     cfg = cfg or DepositInferenceConfig()
+    floor = cfg.min_total_native if cfg.min_total_native is not None else dust_floor(asset or native_symbol)
     inferred: list[ExchangeMatch] = []
 
     for node, data in graph.nodes(data=True):
@@ -109,12 +140,28 @@ def infer_deposit_addresses(
         if len(outflows) != 1:
             continue
         (destination, stats), = outflows.items()
-        if stats.get("count", 0) < cfg.min_sweeps:
+        count = stats.get("count", 0)
+        if count < cfg.min_sweeps:
             continue
-        if stats.get("total", 0.0) < cfg.min_total_native:
+        # Each sweep, not their total (a record without "min" is an older
+        # shape: its average stands in).
+        smallest = stats.get("min")
+        if smallest is None:
+            smallest = stats.get("total", 0.0) / count
+        if stats.get("total", 0.0) < floor or smallest < floor:
             continue
         meta = _sweep_destination(matcher, destination)
         if meta is None:
+            continue
+        if is_flagged is not None and is_flagged(node):
+            continue
+        # What it received along the trace, and what it sent on to the hot
+        # wallet once the traced funds were there (the graph's edge, after the
+        # time rule): an exchange sweeps a deposit, it does not leave it.
+        received = sum(edge.get("value_native", 0.0) for _, _, edge in graph.in_edges(node, data=True))
+        swept_after = (graph.edges[node, destination].get("value_native", 0.0)
+                       if graph.has_edge(node, destination) else 0.0)
+        if received > 0 and swept_after < cfg.min_swept_share * received:
             continue
 
         evidence: dict[str, Any] = {
@@ -128,17 +175,24 @@ def infer_deposit_addresses(
             "share_of_outflow_to_destination": 1.0,
             "other_outgoing_destinations": 0,
             "total_swept_native": round(stats["total"], 6),
+            "smallest_sweep_native": round(smallest, 6),
+            "received_on_trace_native": round(received, 6),
+            "swept_after_arrival_native": round(swept_after, 6),
             "first_sweep": stats.get("first"),
             "last_sweep": stats.get("last"),
             "thresholds_applied": {
                 "min_sweeps": cfg.min_sweeps,
-                "min_total_native": cfg.min_total_native,
+                "min_total_native": floor,
+                "min_sweep_native": floor,
+                "min_swept_share_of_received": cfg.min_swept_share,
                 "required_share_to_one_destination": 1.0,
             },
         }
         if balance_of is not None:
             try:
                 evidence["current_balance_native"] = round(balance_of(node), 6)
+                # When it was read: a balance is a moment, not a fact about the address.
+                evidence["current_balance_at"] = utc_now_iso()
                 # The chain's own coin, whatever asset the trace follows: on a
                 # USDT trace this is the ETH left for gas, not USDT.
                 evidence["current_balance_symbol"] = native_symbol
@@ -161,9 +215,7 @@ def infer_deposit_addresses(
                 label=f"probable {meta['exchange']} deposit address (inferred)",
                 wallet_type=INFERRED_DEPOSIT,
                 depth=data.get("depth", 0),
-                value_received_native=sum(
-                    edge.get("value_native", 0.0) for _, _, edge in graph.in_edges(node, data=True)
-                ),
+                value_received_native=received,
                 evidence=evidence,
             )
         )
@@ -176,10 +228,14 @@ def describe(match: ExchangeMatch, native_symbol: str = "ETH") -> str:
     """One paragraph an investigator can paste into a report."""
     e = match.evidence or {}
     balance = e.get("current_balance_native")
-    balance_text = (
-        f" Its current balance is {balance:.4f} {e.get('current_balance_symbol') or native_symbol}."
-        if balance is not None else ""
-    )
+    unit = e.get("current_balance_symbol") or native_symbol
+    if balance is None:
+        balance_text = ""
+    elif e.get("current_balance_at"):
+        at = str(e["current_balance_at"]).replace("T", " ").replace("Z", " UTC")
+        balance_text = f" Its balance was {balance:.4f} {unit} when read at {at}."
+    else:  # a case stored before the read time was kept
+        balance_text = f" Its current balance is {balance:.4f} {unit}."
     scope = (
         f"Every one of its {e.get('sweep_count')} most recent outgoing transfers (older "
         f"history exists and was not read)"

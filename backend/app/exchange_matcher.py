@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -28,7 +29,7 @@ from typing import Any
 import networkx as nx
 
 from . import config
-from .etherscan_client import normalize_address
+from .etherscan_client import is_valid_address, normalize_address
 from .graph_builder import OUTGOING
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,20 @@ logger = logging.getLogger(__name__)
 # behaviour (deposit_inference.py) rather than read from a label file. Scoring
 # treats it as weaker, and the report says so.
 INFERRED_DEPOSIT = "inferred_deposit"
+DEPOSIT_WALLET = "deposit_wallet"
+
+# A per-customer deposit address, said so explicitly: "Binance Dep: 0x..." (the
+# deposit label sets) or "<Exchange>: Deposit Address|Wallet". The word
+# "deposit" alone also names the exchange's own infrastructure ("Deposit
+# Funder", "Eth2 Depositor", "Batch Deposit") and other firms' accounts at the
+# exchange ("AltCoinTrader: Binance Deposit 1"), and a deposit address is what
+# makes a letter ask the exchange for an account holder's KYC.
+DEPOSIT_LABEL = re.compile(r"\bDep:\s|^[^:]+:\s*Deposit (?:Address|Wallet)\b", re.IGNORECASE)
+
+
+def is_deposit_label(label: str | None) -> bool:
+    """True if the label itself says the address is one customer's deposit address."""
+    return bool(DEPOSIT_LABEL.search(label or ""))
 
 
 @dataclass(frozen=True)
@@ -75,6 +90,10 @@ class ExchangeMatch:
         return out
 
 
+def _text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
 class ExchangeMatcher:
     """Exact-match lookup of addresses against the labelled exchange database."""
 
@@ -91,7 +110,7 @@ class ExchangeMatcher:
     def from_file(cls, path: Path | None = None, chain: str | None = None) -> "ExchangeMatcher":
         path = path or config.EXCHANGE_LABELS_PATH
         try:
-            raw = json.loads(path.read_text())
+            raw = json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             # Not fatal: a chain with no label file still traces, it just
             # cannot attribute. Saying so beats pretending the funds went
@@ -102,29 +121,40 @@ class ExchangeMatcher:
                 path,
             )
             return cls({}, chain=chain)
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             logger.error("Exchange label file at %s is not valid JSON: %s", path, exc)
+            return cls({}, chain=chain)
+        except OSError as exc:  # a directory, no permission: unusable, never fatal
+            logger.error("Exchange label file at %s cannot be read: %s", path, exc)
             return cls({}, chain=chain)
 
         # Accept both the documented simple shape {"0x..": "Binance"} and the
         # richer shape {"0x..": {"exchange": ..., "label": ..., "type": ...}}.
-        entries = raw.get("labels", raw) if isinstance(raw, dict) else {}
+        # One bad entry is logged and skipped, never raised: the lifespan
+        # loads every chain's file, so an exception would stop the site.
+        entries = raw.get("labels", raw) if isinstance(raw, dict) else None
+        if not isinstance(entries, dict):
+            logger.error("Exchange label file at %s: labels is not an object; file not used", path)
+            return cls({}, chain=chain)
         labels: dict[str, dict[str, str]] = {}
         for address, value in entries.items():
-            if address.startswith("_"):  # metadata keys
+            if not isinstance(address, str) or address.startswith("_"):  # metadata keys
                 continue
             key = normalize_address(address)
-            if isinstance(value, str):
-                labels[key] = {"exchange": value, "label": value, "type": "unknown"}
+            if not is_valid_address(key):
+                logger.warning("Label entry key %r is not an address; skipped", address)
+                continue
+            if isinstance(value, str) and value.strip():
+                labels[key] = {"exchange": value.strip(), "label": value.strip(), "type": "unknown"}
             elif isinstance(value, dict):
-                exchange = value.get("exchange") or value.get("name")
+                exchange = _text(value.get("exchange")) or _text(value.get("name"))
                 if not exchange:
                     logger.warning("Label entry for %s has no exchange name; skipped", address)
                     continue
                 labels[key] = {
                     "exchange": exchange,
-                    "label": value.get("label", exchange),
-                    "type": value.get("type", "unknown"),
+                    "label": _text(value.get("label")) or exchange,
+                    "type": _text(value.get("type")) or "unknown",
                 }
             else:
                 logger.warning("Unrecognised label entry for %s; skipped", address)
@@ -202,21 +232,48 @@ class ExchangeMatcher:
         return matches
 
     @staticmethod
-    def primary_match(matches: list[ExchangeMatch]) -> ExchangeMatch | None:
+    def primary_match(matches: list[ExchangeMatch],
+                      shares: dict[str, float] | None = None) -> ExchangeMatch | None:
         """The match to attribute the case to.
 
-        Rule: the exchange reached in the fewest hops from the victim's
-        address. Rationale -- the shortest path is the least diluted by
-        intermediate mixing, so it is the strongest attribution. Ties are
-        broken by preferring a label-file match over an inferred one, then by
-        the larger value received.
+        Rule: follow the money. With `shares` (each match's share of what the
+        reported address sent; see pipeline.run_trace), the largest share
+        wins; shares within one percentage point count as equal, and then the
+        match fewest hops away wins, a label-file match before an inferred
+        one, then the larger value received. Closest-first alone let one dust
+        transfer to any exchange wallet, or to an innocent customer's deposit
+        address, become the case's exchange. An inferred deposit address keeps
+        its lead over the hot wallet it sweeps to: the hot wallet's share
+        through it can never be larger. Without `shares` the order is the
+        closest-first one, for callers that have no graph to measure.
+
+        Shares saturate at 1.0 when the denominator is smaller than what the
+        wallet sent (the victim's reported payments, a swap's output), so
+        every branch carrying at least that much ties. `MatchShares.by_value`
+        (each match's share of everything the wallet sent) breaks those ties
+        before hops do: the larger branch wins, not the closer one.
         """
         if not matches:
             return None
-        return min(matches, key=lambda m: (m.depth, m.inferred, -m.value_received_native))
+        if shares is None:
+            return min(matches, key=lambda m: (m.depth, m.inferred, -m.value_received_native))
+        by_value = getattr(shares, "by_value", None) or {}
+        return min(matches, key=lambda m: (-round(shares.get(m.address, 0.0), 2),
+                                           -round(by_value.get(m.address, shares.get(m.address, 0.0)), 2),
+                                           m.depth, m.inferred, -m.value_received_native))
 
 
-@lru_cache(maxsize=None)
+class MatchShares(dict):
+    """Each match's share of the traced funds (address -> share), as
+    pipeline._materiality measures it, plus `by_value`: each match's share of
+    everything the reported wallet sent, which breaks ties between shares that
+    saturated at 1.0 (see ExchangeMatcher.primary_match)."""
+
+    def __init__(self, shares: dict[str, float] | None = None, by_value: dict[str, float] | None = None):
+        super().__init__(shares or {})
+        self.by_value = dict(by_value or {})
+
+
 def get_router_matcher(chain_key: str | None = None) -> ExchangeMatcher:
     """DEX routers for one chain, in the same file shape as exchange labels.
 
@@ -225,18 +282,30 @@ def get_router_matcher(chain_key: str | None = None) -> ExchangeMatcher:
     always "router". A chain with no router file gets an empty matcher, so
     swaps simply go undetected there rather than failing the trace.
     """
-    chain = config.get_chain(chain_key)
-    if chain.router_labels_path is None:
-        return ExchangeMatcher({}, chain=chain.key)
-    return ExchangeMatcher.from_file(chain.router_labels_path, chain=chain.key)
+    return _router_matcher(config.get_chain(chain_key).key)
 
 
-@lru_cache(maxsize=None)
 def get_matcher(chain_key: str | None = None) -> ExchangeMatcher:
     """Matcher for one chain. Cached so each label file is read once.
 
     Called with no argument it serves the default chain, which keeps every
     existing caller working unchanged.
     """
-    chain = config.get_chain(chain_key)
+    return _matcher(config.get_chain(chain_key).key)
+
+
+# Cached on the chain's own key, never on what the caller typed: None, "eth"
+# and "ethereum" are one chain, and each spelling used to hold its own copy of
+# that chain's label files (tens of MB on a 512 MB host).
+@lru_cache(maxsize=None)
+def _router_matcher(key: str) -> ExchangeMatcher:
+    chain = config.get_chain(key)
+    if chain.router_labels_path is None:
+        return ExchangeMatcher({}, chain=chain.key)
+    return ExchangeMatcher.from_file(chain.router_labels_path, chain=chain.key)
+
+
+@lru_cache(maxsize=None)
+def _matcher(key: str) -> ExchangeMatcher:
+    chain = config.get_chain(key)
     return ExchangeMatcher.from_file(chain.labels_path, chain=chain.key)

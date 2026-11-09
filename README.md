@@ -326,11 +326,11 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |
 | `GET /risk-labels?chain=bsc` | What that chain's screening covers, by category: sanctioned, mixer, stolen |
 | `GET /ledger?chain=ethereum` | The labelled addresses the sign-in backdrop draws |
-| `GET /health` | Up or down, nothing else |
+| `GET /health` | Up or down, and whether live tracing is open to anyone (`"access": "open"`), needs the demo code (`"code"`) or is off (`"closed"`) |
 | `GET /chains` | Per-chain readiness, assets and label counts, with exchange wallets and customer deposit addresses counted apart |
 | `GET /health/detail` | Operator only (bearer `EXCHEQUER_HEALTH_TOKEN`): key status, per-chain detail, API budget, warm-cache status |
 | `GET /access` | Whether this site asks for a demo code before live tracing |
-| `POST /access/check` | Checks a demo code (sent as `X-Exchequer-Demo-Code`); 403 if wrong, 429 after 10 wrong tries an hour |
+| `POST /access/check` | Checks a demo code (sent as `X-Exchequer-Demo-Code`) and returns a pass to send as `X-Exchequer-Demo-Pass` instead; 403 if wrong, 429 after 10 wrong tries in 15 minutes (a code of 22+ characters still lets the right code through; a shorter one locks it out too) |
 
 ---
 
@@ -387,11 +387,15 @@ there, and the exchange later sweeps it to a hot wallet. That unlabelled deposit
 request has to name — a hot wallet receives from thousands of customers and identifies nobody.
 `backend/app/deposit_inference.py` calls an unlabelled wallet a **probable deposit address of exchange E** when:
 
-1. It is not the reported address and has no label of its own.
-2. It made **at least 2** outgoing transfers.
+1. It is not the reported address and has no label of its own — no exchange label and no risk label (a poisoning
+   lookalike, a scam wallet, a freeze, a warning tag).
+2. It made **at least 2** outgoing transfers, **each** worth more than dust in the traced asset (0.001 ETH,
+   0.005 BNB, 2 POL, 10 TRX, 1 USDT or USDC per transfer, not in all).
 3. **Every one** went to the **same** labelled E wallet (never a labelled *deposit* wallet) and nowhere else.
-4. Where cheap, its current balance is recorded as evidence — but never required, since an unswept deposit is
-   still a deposit address.
+4. It passed on what it received: after the traced funds arrived it sent that E wallet at least **half** of what it
+   received along the trace. A wallet that kept the victim's 5,000 USDT and sent a few dollars on is holding the
+   money, not an exchange's deposit. The cost: a deposit not yet swept when the trace ran is not inferred.
+5. Where cheap, its current balance is recorded as evidence.
 
 An inference is **scored as a weaker attribution**: `match_directness` is 0.5 instead of 1.0. The response says
 `attribution_inferred: true`, the sidebar reads *"Probable Binance deposit address (inferred — see evidence)"*,
@@ -438,9 +442,11 @@ arriving and the wallet sending on — not only the ones the trace followed — 
 forward: *share = victim funds in ÷ all funds in; victim funds on = amount sent on × share*. The victim amount
 can only shrink along the path. The case, the report and Present mode show the result as its own figure —
 "≈ 9.42 of 40 USDT of the reported funds likely arrived (pro-rata); 98 arrived in total, the rest from other
-sources" — and a share under 25% at any wallet is called out. Money a wallet already held before the funds
-arrived is not counted, so the estimate is an upper bound; where a wallet received too much in the window to read
-in full, the case says "not estimated" instead of guessing. On the demos it changed nothing where the money moved
+sources" — and a share under 25% at any wallet is called out. "All funds in" is new money only: the route's own
+transfer counts once, and a wallet paying itself or getting back coins it had just paid out (W → X → W) is netted
+out and said so. Money a wallet already held before the funds arrived is not counted; counting it would lower the
+estimate. Where a wallet received too much in the window to read in full, the case says "not estimated" instead of
+guessing, and the amount earns no credit in the score. On the demos it changed nothing where the money moved
 cleanly, and cut the scores of the paths it should: two of DEMO.md trace 10's three phishing wallets (0.58 and 0.50), and a real BSC
 wallet whose 40 USDT was 9.6% of what the next wallet received (0.73 → 0.47).
 
@@ -457,35 +463,40 @@ every hit names the list it came from.
 
 | Category | Meaning | Source | Effect on the trace |
 |---|---|---|---|
-| `sanctioned` | On a government sanctions or seizure list | US, UK, EU, Israel, Japan, France | Flagged; the trace continues — its transfers mean what they say |
+| `sanctioned` | On a government sanctions list | US, UK, EU, Japan, France | Flagged; the trace continues — its transfers mean what they say |
+| `seized` | Named in a government seizure or forfeiture order: one government's measure, often time-limited, not a designation | Israel (NBCTF orders) | Flagged; the trace continues; a dated order stops matching after its last day |
 | `mixer` | A tumbler's pool or entry router | Etherscan / BscScan tags | **The trace stops here** |
 | `frozen` | Tether has frozen the address's USDT | The USDT contract's own blacklist events | Flagged; the trace continues |
-| `stolen` | A hacker's wallet, or a reported phishing / scam wallet | Etherscan / BscScan tags, ScamSniffer | Flagged; the trace continues — where the thief moved the money is the point |
+| `stolen` | A wallet a tag names as the perpetrator of a hack or exploit | Etherscan / BscScan tags | Flagged; the trace continues — where the thief moved the money is the point |
+| `scam` | Reported by a published scam or phishing list | ScamSniffer, Etherscan's Phish/Hack label | Flagged as that list's report; the trace continues |
 | `reported` | TronScan's own warning tag ("Suspicious", "Scam", a phishing tag) | TronScan, **read live** during a Tron trace | Flagged as the explorer's warning — the weakest of the five; a label-file entry always outranks it |
 
-| Chain | Sanctioned | Mixers | Frozen by Tether | Stolen funds |
-|---|---:|---:|---:|---:|
-| Ethereum | 139 | 40 | 2,633 | 8,380 |
-| BNB Smart Chain | 7 | 14 | — | 560 |
-| Polygon PoS | 15 | — | — | — |
-| Arbitrum One | 9 | — | — | — |
-| Tron | 915 | — | 6,759 | — |
+| Chain | Sanctioned | Seizure orders | Mixers | Frozen by Tether | Stolen funds | Scam lists |
+|---|---:|---:|---:|---:|---:|---:|
+| Ethereum | 127 | 3 | 40 | 2,580 | 398 | 7,979 |
+| BNB Smart Chain | 4 | 2 | 14 | — | 31 | 529 |
+| Polygon PoS | 14 | 1 | — | — | — | — |
+| Arbitrum One | 7 | 2 | — | — | — | — |
+| Tron | 337 | 481 | — | 6,800 | — | — |
 
-<sub>Counts are after overlap: an address on a government list is reported as sanctioned, and a mixer pool Tether
-also froze stays a mixer. Before overlap the freeze list holds 2,763 Ethereum and 7,589 Tron addresses.</sub>
+<sub>Counts are after overlap: an address on a government list is reported as sanctioned or seized, and a mixer
+pool Tether also froze stays a mixer. Before overlap the freeze list holds 2,710 Ethereum and 7,588 Tron addresses.</sub>
 
 **Government lists** are loaded first and always win: where an address is also on an explorer's list, the
 government entry is the one reported, and an address several governments list names all of them — "designated
-by the US, the UK and Israel" is a stronger finding than any one alone.
+by the US and the UK, and named in an Israeli seizure order" is a stronger finding than any one alone.
 
 - **OFAC SDN list** (18 September 2026) — built straight from Treasury's XML, keeping the programs and exact
   `idType` of every entry: 124 Ethereum, 334 Tron, 1 BSC. `scripts/import_ofac_addresses.py`
 - **Five more governments** — the UK Sanctions List and the EU consolidated list, read directly (their addresses
   sit in free text, each filed under the chain the text names before it: `ETH:`, `BNB:`, `TRX:`); Israel's NBCTF
   counter-terror seizure orders, Japan's Ministry of Finance and France's DG Trésor, through OpenSanctions. Only
-  measures still in force count — a wallet named only in lifted Israeli seizure orders is left out. Israel's
-  orders alone name 585 Tron wallets, almost all USDT. Canada, Australia, Switzerland and the UN publish no crypto
-  addresses; all 95 official lists OpenSanctions carries were checked. `scripts/import_intl_sanctions.py`
+  measures still in force count — a wallet named only in lifted Israeli seizure orders is left out, and an order
+  with an end date stops matching after its last day, whether or not the list has been refreshed. A seizure order
+  is one government's measure against a wallet, not a designation, so a wallet only Israel's orders name is
+  reported as `seized`. Israel's orders in force alone name 488 Tron wallets, almost all USDT. Canada, Australia,
+  Switzerland and the UN publish no crypto addresses; all 95 official lists OpenSanctions carries were checked.
+  `scripts/import_intl_sanctions.py`
 
 **Tether's freeze list** is read from the chain itself. Tether can blacklist an address on its USDT contract — after
 a sanctions match, a law-enforcement request or a theft — and every freeze is an `AddedBlackList` event, every
@@ -493,6 +504,8 @@ release a `RemovedBlackList`. Replaying them in order gives the addresses frozen
 contract and the label; a random sample is checked against the contract's own `isBlackListed()` and the import
 refuses to write on any disagreement. Tether's list also holds the zero address and other tiny system addresses
 where tokens are burned; those are not wallets and are left out, so a burn in a trace is never read as a freeze.
+So are the USDT contract itself, DEX routers and other token contracts it names (`app/never_flag.py`): a swap
+through a router is never read as a freeze either.
 A freeze says the issuer acted, not why — and a request to Tether can ask.
 BNB Smart Chain's USDT is a Binance-issued peg with no Tether blacklist. `scripts/import_tether_freezes.py`
 
@@ -502,13 +515,18 @@ hand an investigator a confident-looking graph built on a false premise. Tornado
 2025 (*Van Loon v. Treasury*), and every mixer OFAC still lists is a Bitcoin service — so a sanctions-only screen
 would never stop at a mixer on these chains. The mixer category therefore comes from the explorer's own tags:
 only the pools and routers of Tornado Cash, Typhoon and Privacy Pools, never their governance, token or vesting
-contracts.
+contracts. The label store follows the same rule, and only on Ethereum, the chain its mixer tags were read on.
+A name in a list is not enough to cut a trail, so a store row stops a trace only at a pool or router kept in the
+repository (the threat file's mixer entries and `backend/data/mixer_pools.json`); any other store row named like
+a pool is shown as a mixer tag, and the trace goes on past it.
 
 **Stolen funds** are the wallets Etherscan tags as the perpetrator of a theft — the WazirX, Bybit, BingX, Ronin,
-Multichain and other exploiters — plus reported phishing and scam wallets from ScamSniffer's published blacklist
-and Etherscan's Phish/Hack label. Every one was checked to exist and to have been used on chain, and filed under
-each chain it has been used on (1,604 with no history on Ethereum or BSC were left out). A wallet on a scam list
-is that list's accusation, and the finding says whose. `scripts/import_threat_labels.py [--scam-lists]`
+Multichain and other exploiters; whitehat, rescue and bot tags are left out. **Scam-list** wallets are the reported
+phishing and scam wallets from ScamSniffer's published blacklist and Etherscan's Phish/Hack label, filed as `scam`:
+a report, not a finding that the wallet holds a theft's proceeds. Every one was checked to exist and to have been
+used on chain, and filed under each chain it has been used on (1,604 with no history on Ethereum or BSC were left
+out). A wallet on a scam list is that list's accusation, and the finding says whose.
+`scripts/import_threat_labels.py [--scam-lists]`
 
 > Screening degrades safely. With a label file missing, the trace still runs and still attributes an exchange —
 > it reports what it could not screen. `GET /risk-labels` reports `screened`, so a clean result is never ambiguous.
@@ -522,7 +540,7 @@ and matching one chain's address against the other's labels would manufacture an
 
 | File | Coverage |
 |---|---|
-| `exchange_labels.json` | **25,038 addresses / 92 exchanges** — 975 exchange wallets (the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX**, Bitget, Poloniex) plus **24,063 customer deposit addresses** (19,027 Bitget, 4,998 Binance, 38 at other exchanges) |
+| `exchange_labels.json` | **25,020 addresses / 92 exchanges** — 957 exchange wallets (the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX**, Bitget, Poloniex) plus **24,063 customer deposit addresses** (19,027 Bitget, 4,998 Binance, 38 at other exchanges) |
 | `exchange_labels_bsc.json` | **184 addresses / 56 exchanges** — the original 38 (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat) plus 146 Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`) |
 | `exchange_labels_tron.json` | **41 addresses / 19 exchanges** — read live from TronScan's own address tags |
 
@@ -703,8 +721,9 @@ cached answer can lag the newest blocks but never contradict them:
 | First trace of an address | ~35 | ~20 s |
 | Either direction, again | **0** | **0.03 s** |
 
-With `EXCHEQUER_WARM_CACHE=1` (on in the Docker image) the backend traces the `DEMO.md` addresses in the
-background at startup, so demos never go cold on a hosted instance. `GET /health/detail` (operator token) reports
+With `EXCHEQUER_WARM_CACHE=1` (for a host with a lasting disk; the free Render plan leaves it off and serves
+recorded demos instead) the backend traces the `DEMO.md` addresses in the background at startup, so demos never go
+cold on a hosted instance. `GET /health/detail` (operator token) reports
 `api_budget` and `warm_cache`.
 
 ---
@@ -816,9 +835,13 @@ One Docker image builds the frontend with Node and serves it from FastAPI — on
 deployment.
 
 ```bash
-docker build -t exchequer .
+docker build --build-arg LABEL_STORE_REQUIRED=0 -t exchequer .
 docker run -p 8000:8000 --env-file backend/.env -v exchequer-data:/data exchequer
 ```
+
+The label store comes from a private release and needs the `label_store_token` build secret; by default a
+build without it fails, so a deploy never ships without its labels unnoticed. `LABEL_STORE_REQUIRED=0` builds
+an image that screens against the label files only.
 
 The same image runs on Render, Railway, Fly or any VM. The live demo runs on Render's free plan from
 `render.yaml` (Dashboard → New → Blueprint), which deploys every push to `main`. That plan has no disk, so set

@@ -14,7 +14,6 @@ import pytest
 from pypdf import PdfReader
 
 from app import request_letters
-from app.evidence import seal_text
 from app.report import _when, _when_iso, build_report, render_text_report
 from app.report_pdf import render_pdf
 from app.request_letters import draft
@@ -105,7 +104,7 @@ def test_the_evidence_manifest_keeps_its_utc_record():
 
 
 def test_the_pdf_shows_when_it_was_traced_in_both_zones():
-    pdf = render_pdf(REPORT, seal_text("REPORT\n"))
+    pdf = render_pdf(REPORT, render_text_report(REPORT))
     assert "2026-10-13 12:51 IST (07:21 UTC)" in PdfReader(io.BytesIO(pdf)).pages[0].extract_text()
 
 

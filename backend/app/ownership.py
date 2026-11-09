@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import secrets
 from functools import lru_cache
@@ -38,6 +39,7 @@ from . import config, models
 
 OWNER_HEADER = "x-exchequer-owner"
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{22,128}$")
+logger = logging.getLogger(__name__)
 
 
 def owner_hash(token: str | None) -> str | None:
@@ -61,10 +63,15 @@ def orphan_hash() -> str:
 def demo_addresses() -> frozenset[str]:
     path = config.BACKEND_DIR / "data" / "demo_traces.json"
     try:
-        entries = json.loads(path.read_text())
+        entries = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
+        logger.error("%s unreadable; no case counts as a public demo", path.name)
         return frozenset()
-    return frozenset(e["address"].lower() for e in entries if e.get("address"))
+    if not isinstance(entries, list):
+        logger.error("%s is not a list of demos; no case counts as a public demo", path.name)
+        return frozenset()
+    return frozenset(e["address"].lower() for e in entries
+                     if isinstance(e, dict) and isinstance(e.get("address"), str) and e["address"])
 
 
 def is_public(owner: str | None, address: str | None) -> bool:
@@ -92,6 +99,21 @@ def correlatable_cases(caller: str | None, case_id: str | None = None,
         if linked is not None:
             records.append(linked)
     return records
+
+
+def correlatable_refs(caller: str | None, limit: int = 2000) -> list[tuple[str, str | None, str]]:
+    """(id, owner, address) of the cases correlatable_cases() would read,
+    without their results: what a cache of the answer is keyed on."""
+    from sqlalchemy import func, or_, select
+
+    case = models.Case
+    visible = [case.owner_hash.is_(None) & func.lower(case.address).in_(sorted(demo_addresses()))]
+    if caller:
+        visible.append(case.owner_hash == caller)
+    stmt = (select(case.id, case.owner_hash, case.address).where(or_(*visible))
+            .order_by(case.created_at.desc()).limit(limit))
+    with models.session() as s:
+        return [(row[0], row[1], row[2]) for row in s.execute(stmt)]
 
 
 # ---------------------------------------------------------------------------

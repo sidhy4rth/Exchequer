@@ -15,7 +15,14 @@ services:
     branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    autoDeployTrigger: commit
+    # Deploy a commit on main only once its GitHub checks pass (tests, image
+    # build, commit e-mails), so a red commit never reaches the live site
+    # (r1-deps-supplychain-4).
+    autoDeployTrigger: checksPass
+    # The build also needs a Secret File named label_store_token (Settings →
+    # Secret Files; a Blueprint cannot declare one): the read-only token for
+    # the private label-store release. Without it the build fails and the
+    # running deploy stays up (Dockerfile, LABEL_STORE_REQUIRED).
     envVars:
       # Provider keys (backend/.env.example says where each comes from).
       - key: ETHERSCAN_API_KEY
@@ -37,12 +44,25 @@ services:
       # read it in the dashboard. Public /health says only up or down.
       - key: EXCHEQUER_HEALTH_TOKEN
         generateValue: true
+      # Seals watch webhook URLs at rest (webhook_vault.py). Generated once;
+      # changing it means every officer re-enters their webhook.
+      - key: EXCHEQUER_WEBHOOK_KEY
+        generateValue: true
       # The demo code (access.py): set, the public site shows recorded demos
-      # and live tracing needs the code; blank, everything stays open. Keep
-      # the repository secret DEMO_CODE equal to it for the Demo health job.
+      # and live tracing needs the code. LEFT BLANK, THE SITE IS OPEN: anyone
+      # can spend the provider quota. Every start then logs an error and
+      # /health answers "access": "open". Use a long random value, 22+
+      # characters (python -c 'import secrets;print(secrets.token_urlsafe(16))'):
+      # only then does the right code get through a wrong-code lockout. Set the
+      # GitHub environment live-checks' secret DEMO_CODE to the same value first (Demo health
+      # sends it), then add EXCHEQUER_REQUIRE_DEMO_CODE=1 here by hand so a
+      # deploy that loses the code fails closed instead of opening.
       - key: EXCHEQUER_DEMO_CODE
         sync: false
-      # Render puts the client's address first in X-Forwarded-For.
+      # Render behind Cloudflare: the client is CF-Connecting-IP, which the
+      # edge overwrites. Render keeps a client-sent X-Forwarded-For and only
+      # appends, so its leftmost entry is never trusted once measured: see
+      # /health/detail "client_ip" and set EXCHEQUER_PROXY_HOPS from it.
       - key: EXCHEQUER_TRUST_PROXY
         value: render
       # Each wake from sleep starts with an empty provider cache; re-tracing

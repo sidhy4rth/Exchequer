@@ -83,6 +83,7 @@ def test_a_wallet_quiet_for_longer_than_the_lookback_is_found_by_its_nonce():
     record = {**_record(0, hex(10**18)), "blockNum": hex(old)}
     rpc = _Rpc([record], endless=False, sends_at=(old - 300_000, old))
     client = _client(rpc)
+    client.allow_deep_search(ADDRESS)  # the reported address (pipeline.run_trace)
     txs = client.get_outgoing_transactions(ADDRESS)
     assert [t.block_number for t in txs] == [old]
     assert client.deep_searched[ADDRESS][1] == old
@@ -90,6 +91,7 @@ def test_a_wallet_quiet_for_longer_than_the_lookback_is_found_by_its_nonce():
 
 def test_a_wallet_that_never_sent_costs_no_deep_search():
     client = _client(_Rpc([], endless=False))
+    client.allow_deep_search(ADDRESS)
     assert client.get_outgoing_transactions(ADDRESS) == []
     assert client.deep_searched == {} and ADDRESS in client.searched_from
 
@@ -98,6 +100,7 @@ def test_only_one_deep_search_per_trace():
     old = HEAD - 5_000_000
     rpc = _Rpc([], endless=False, sends_at=(old,))
     client = _client(rpc)
+    client.allow_deep_search(ADDRESS)
     client.get_outgoing_transactions(ADDRESS)
     client.get_outgoing_transactions(OTHER)
     assert list(client._send_ranges) == [ADDRESS]
@@ -120,5 +123,197 @@ def test_a_hop_is_searched_forward_from_when_the_funds_arrived():
             return super().handler(request)
 
     client = _client(Directional([], endless=False, sends_at=(paid_at,)))
+    client.allow_deep_search(ADDRESS)  # the reported wallet; OTHER is found from the arrival
     assert len(client.get_outgoing_transactions(ADDRESS)) == 1
     assert [t.to_address for t in client.get_outgoing_transactions(OTHER)] == [third]
+
+
+# -- r1-trace-engine-6: deep search is for the reported address alone ---------
+# The budget used to be a count checked before the slot was recorded, and a
+# level is fetched on several threads sharing one client: every quiet wallet
+# in the level passed the check and ran its ~27-51-call nonce search, and
+# which ones did depended on timing.
+def _quiet_level_rpc(jitter: bool):
+    import random
+    import threading
+    import time
+
+    seed = "0x" + "5e" * 20
+    quiet = ["0x" + f"{i:02x}" * 20 for i in range(1, 7)]
+    old = HEAD - 5_000_000
+    pays = [{**_record(i, hex(10**18)), "from": seed, "to": q, "blockNum": hex(HEAD - 100 - i)}
+            for i, q in enumerate(quiet)]
+    lock = threading.Lock()
+    calls: list[str] = []
+
+    class Rpc(_Rpc):
+        def handler(self, request):
+            body = json.loads(request.content)
+            if jitter:
+                time.sleep(random.uniform(0, 0.005))
+            if body["method"] == "nr_getAssetTransfers":
+                sender = body["params"][0].get("fromAddress")
+                self.records = [r for r in pays if r["from"] == sender]
+                with lock:
+                    calls.append(json.dumps(body["params"], sort_keys=True))
+            elif body["method"] == "eth_getTransactionCount":
+                with lock:
+                    calls.append("nonce " + json.dumps(body["params"]))
+            return super().handler(request)
+
+    # Every quiet wallet last sent long before the lookback.
+    return seed, quiet, Rpc([], endless=False, sends_at=(old,)), calls
+
+
+def test_a_concurrent_level_never_deep_searches_a_hop():
+    from app.graph_builder import TraceConfig, build_trace_graph
+
+    from app import api_budget
+
+    runs = []
+    for _ in range(3):
+        api_budget.reset()  # each run reads the provider, not the last run's cache
+        seed, quiet, rpc, calls = _quiet_level_rpc(jitter=True)
+        http = httpx.Client(transport=httpx.MockTransport(rpc.handler))
+        client = NoderealClient(api_key="k", client=http, min_interval=0.01)
+        client.allow_deep_search(seed)
+        build_trace_graph(seed, client, cfg=TraceConfig(max_depth=2, max_concurrent_fetches=6))
+        assert client.deep_searched == {} and client._send_ranges == {}
+        assert not any(c.startswith("nonce") for c in calls)
+        assert set(client.searched_from) == set(quiet)
+        runs.append(sorted(calls))
+    assert runs[0] == runs[1] == runs[2]  # the same requests whatever the thread order
+
+
+def test_a_client_never_told_deep_searches_nothing():
+    old = HEAD - 5_000_000
+    rpc = _Rpc([], endless=False, sends_at=(old,))
+    calls = []
+    original = rpc.handler
+
+    def counting(request):
+        calls.append(json.loads(request.content)["method"])
+        return original(request)
+    client = NoderealClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(counting)),
+                            min_interval=0)
+    assert client.get_outgoing_transactions(ADDRESS) == []
+    assert "eth_getTransactionCount" not in calls
+
+
+def test_a_quiet_wallet_is_read_in_aligned_windows_covering_the_whole_lookback():
+    seen = []
+    rpc = _Rpc([], endless=False)
+
+    def handler(request):
+        body = json.loads(request.content)
+        if body["method"] == "nr_getAssetTransfers":
+            q = body["params"][0]
+            seen.append((int(q["fromBlock"], 16), int(q["toBlock"], 16)))
+        return rpc.handler(request)
+    client = NoderealClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(handler)),
+                            min_interval=0, lookback_blocks=500_000)
+    client.get_outgoing_transactions(ADDRESS)
+    head = HEAD - 32
+    assert seen[0] == (head - head % 100_000, head)  # the newest window ends at the head
+    assert all(lo % 100_000 == 0 and hi == lo + 99_999 for lo, hi in seen[1:])  # the rest are whole
+    assert min(lo for lo, _ in seen) <= head - 500_000 + 1  # the lookback is covered in full
+    assert len(seen) == 6
+
+
+def test_a_re_trace_reads_only_the_window_at_the_new_head():
+    """Two traces of the same quiet address, the head having moved on: the
+    closed windows are history, read once."""
+    import app.nodereal_client as nr
+
+    calls = []
+
+    def make(head):
+        def handler(request):
+            body = json.loads(request.content)
+            calls.append(body["method"])
+            if body["method"] == "eth_blockNumber":
+                return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": hex(head)})
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": {"transfers": []}})
+        return NoderealClient(api_key="k", min_interval=0, client=httpx.Client(transport=httpx.MockTransport(handler)))
+    first = make(HEAD)
+    first.get_outgoing_transactions(ADDRESS)
+    reads = calls.count("nr_getAssetTransfers")
+    calls.clear()
+    second = make(HEAD + 20)  # the head moved, inside the same 100k window
+    second.get_outgoing_transactions(ADDRESS)
+    assert reads == 6 and calls.count("nr_getAssetTransfers") == 1
+    assert sum(r.from_cache for r in second.evidence.records) == 5
+    assert nr.INDEX_LAG_BLOCKS == 32
+    # Across a window boundary the old top window is now closed: read once more, then kept.
+    calls.clear()
+    third = make(HEAD + 60)
+    third.get_outgoing_transactions(ADDRESS)
+    assert calls.count("nr_getAssetTransfers") == 2
+
+
+def test_an_empty_answer_is_not_kept():
+    """A block or receipt the node does not have yet (null) is asked again."""
+    calls = []
+
+    def handler(request):
+        body = json.loads(request.content)
+        calls.append(body["method"])
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": None})
+    for _ in range(2):
+        client = NoderealClient(api_key="k", min_interval=0, client=httpx.Client(transport=httpx.MockTransport(handler)))
+        assert client.block_time(HEAD) is None
+        assert client.get_transaction_receipt("0x" + "11" * 32) is None
+    assert calls.count("eth_getBlockByNumber") == 2 and calls.count("eth_getTransactionReceipt") == 2
+
+
+def test_the_cache_keeps_only_the_fields_a_transfer_is_read_from():
+    """Kept answers are slimmed; a transfer read back from the cache parses the same."""
+    from app.nodereal_client import NoderealClient as C
+
+    raw = {**_record(1, hex(10**18)), "category": "external", "extra": "x" * 5000}
+    slim = C._slim("nr_getAssetTransfers", {"transfers": [raw, "junk"]})
+    assert "extra" not in slim["transfers"][0] and slim["transfers"][1] == "junk"
+    client = NoderealClient(api_key="k", min_interval=0)
+    assert client._to_transaction(slim["transfers"][0]) == client._to_transaction(raw)
+
+
+def test_a_hop_whose_funds_arrived_in_the_recent_window_is_not_deep_searched():
+    paid = {**_record(0, hex(10**18)), "to": OTHER, "blockNum": hex(HEAD - 50)}
+    rpc = _Rpc([], endless=False, sends_at=(HEAD - 5_000_000,))
+
+    class Rpc(_Rpc):
+        def handler(self, request):
+            body = json.loads(request.content)
+            if body["method"] == "nr_getAssetTransfers":
+                self.records = [paid] if body["params"][0].get("fromAddress") == ADDRESS else []
+            return super().handler(request)
+    rpc = Rpc([], endless=False, sends_at=(HEAD - 5_000_000,))
+    client = _client(rpc)
+    client.allow_deep_search(ADDRESS)
+    client.allow_deep_search(OTHER)
+    client.get_outgoing_transactions(ADDRESS)  # sees OTHER receive at HEAD - 50
+    client.get_outgoing_transactions(OTHER)
+    assert OTHER not in client._send_ranges
+
+
+def test_a_trace_allows_the_deep_search_for_its_reported_address_only(monkeypatch):
+    from contextlib import contextmanager
+
+    from app import pipeline
+    from app.pipeline import TraceRequest, run_trace
+
+    allowed = []
+
+    class Source:
+        def allow_deep_search(self, address):
+            allowed.append(address)
+
+        def get_outgoing_transactions(self, address, limit=None):
+            return []
+
+    @contextmanager
+    def open_source(chain, asset):
+        yield Source()
+    monkeypatch.setattr(pipeline, "open_source", open_source)
+    run_trace(TraceRequest(address=ADDRESS, chain="bsc", follow_swaps=False))
+    assert allowed == [ADDRESS]

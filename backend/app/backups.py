@@ -52,6 +52,7 @@ def snapshot(dest: Path, source: Path | None = None) -> Path:
             out = sqlite3.connect(raw)
             try:
                 src.backup(out)
+                _drop_secrets(out)
             finally:
                 out.close()
         finally:
@@ -61,6 +62,17 @@ def snapshot(dest: Path, source: Path | None = None) -> Path:
             shutil.copyfileobj(fin, fout)
         partial.replace(dest)  # never leave a half-written file under the real name
     return dest
+
+
+def _drop_secrets(copy: sqlite3.Connection) -> None:
+    """A snapshot leaves the server; webhook URLs, which let anyone post into
+    a police channel, stay behind. VACUUM so the freed pages keep no bytes."""
+    try:
+        copy.execute("UPDATE watches SET webhook_url = NULL")
+    except sqlite3.OperationalError:
+        return  # a store without the table
+    copy.commit()
+    copy.execute("VACUUM")
 
 
 def daily(now: datetime | None = None) -> Path | None:

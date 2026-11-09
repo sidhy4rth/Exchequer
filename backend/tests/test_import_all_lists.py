@@ -236,3 +236,150 @@ def test_the_workflow_stages_only_named_list_files():
 def test_two_refresh_runs_never_race_to_the_same_branch():
     text = (Path(__file__).resolve().parents[2] / ".github/workflows/refresh-lists.yml").read_text()
     assert "concurrency:\n  group: refresh-lists\n  cancel-in-progress: false" in text
+
+
+# -- small lists and vanished authorities (audit r1-scripts-2) ---------------------
+SIX = [addr(f"{i:02x}") for i in range(1, 7)]
+
+
+def _with_authorities(doc: dict, **counts) -> dict:
+    doc["_meta"]["counts"] = {"by_authority": counts}
+    return doc
+
+
+def test_losing_five_of_six_is_refused(tmp_path):
+    path = tmp_path / "intl_sanctions_bsc.json"
+    write(path, document("2026-11-02", *SIX))
+    outcome = run_family(family(path), importer_writing(path, document("2026-11-03", SIX[0])))
+    assert outcome.status == "refused" and "removed 5 of its 6" in outcome.detail
+    assert len(json.loads(path.read_text())["labels"]) == 6  # put back
+
+
+def test_losing_one_of_six_is_allowed(tmp_path):
+    path = tmp_path / "intl_sanctions_bsc.json"
+    write(path, document("2026-11-02", *SIX))
+    outcome = run_family(family(path), importer_writing(path, document("2026-11-03", *SIX[1:])))
+    assert outcome.status == "ok" and outcome.changes[path].removed == [SIX[0]]
+
+
+def test_an_authority_vanishing_is_refused(tmp_path):
+    path = tmp_path / "intl_sanctions.json"
+    many = [addr(f"{i:02x}") for i in range(1, 31)]
+    write(path, _with_authorities(document("2026-11-02", *many), **{"United Kingdom": 29, "Japan": 1}))
+    after = _with_authorities(document("2026-11-03", *many[1:]), **{"United Kingdom": 29})
+    outcome = run_family(family(path), importer_writing(path, after))
+    assert outcome.status == "refused" and "Japan" in outcome.detail
+
+
+def test_unverified_placements_are_named_in_the_summary(held):
+    after = document("2026-11-03", A, B)
+    after["_meta"]["unverified"] = [B]
+    after["_meta"]["bsc_not_checked"] = [A]
+    outcome = run_family(family(held), importer_writing(held, after))
+    summary = render_summary([outcome], "dates")
+    assert "Not re-checked in `risk_labels.json`" in summary and B in summary
+    assert "BSC not checked" in summary
+
+
+# -- additions and changes are gated too (audit r1-ci-github-3) --------------------
+USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+ONEINCH = next(a for a, m in json.loads((config.DATA_DIR / "router_labels.json").read_text())["labels"].items()
+               if m["exchange"].lower().startswith("1inch"))
+EXCHANGE = json.loads((config.DATA_DIR / "exchange_labels.json").read_text())["labels"]
+HOT = next(a for a, m in EXCHANGE.items() if m["type"] != "deposit_wallet")
+DEPOSIT = next(a for a, m in EXCHANGE.items() if m["type"] == "deposit_wallet")
+
+
+@pytest.fixture(autouse=True)
+def _no_demo_addresses(monkeypatch):
+    monkeypatch.setattr(lists, "_demo_addresses", lambda: frozenset())
+
+
+def _entry(category="sanctioned", entity="Someone"):
+    return {"category": category, "entity": entity, "label": entity, "source": "x"}
+
+
+def _risk_file(tmp_path, *addresses):
+    path = tmp_path / "risk_labels.json"
+    write(path, document("2026-11-02", *addresses))
+    return path
+
+
+def _after(path, **extra):
+    doc = json.loads(path.read_text())
+    doc["_meta"]["last_reviewed"] = "2026-11-03"
+    doc["labels"].update(extra)
+    return doc
+
+
+def test_an_added_exchange_hot_wallet_refuses_the_family(tmp_path):
+    path = _risk_file(tmp_path, A, B)
+    outcome = run_family(family(path), importer_writing(path, _after(path, **{HOT: _entry()})))
+    assert outcome.status == "refused" and HOT in outcome.detail and "exchange wallet" in outcome.detail
+    assert HOT not in json.loads(path.read_text())["labels"]  # put back
+
+
+def test_a_router_recategorised_as_mixer_is_refused(tmp_path):
+    path = _risk_file(tmp_path, A, ONEINCH)
+    outcome = run_family(family(path), importer_writing(path, _after(path, **{ONEINCH: _entry("mixer", "Tornado Cash")})))
+    assert outcome.status == "refused" and "DEX router" in outcome.detail
+
+
+def test_the_usdt_contract_added_as_mixer_is_refused(tmp_path):
+    path = _risk_file(tmp_path, A, B)
+    outcome = run_family(family(path), importer_writing(path, _after(path, **{USDT: _entry("mixer", "Blender.io")})))
+    assert outcome.status == "refused" and USDT in outcome.detail
+
+
+def test_a_deposit_wallet_added_as_sanctioned_passes_and_is_listed(tmp_path):
+    path = _risk_file(tmp_path, A, B)
+    outcome = run_family(family(path), importer_writing(path, _after(path, **{DEPOSIT: _entry()})))
+    assert outcome.status == "ok" and DEPOSIT in render_summary([outcome], "changed")
+
+
+def test_a_change_to_a_demo_address_is_refused(tmp_path, monkeypatch):
+    monkeypatch.setattr(lists, "_demo_addresses", lambda: frozenset({B}))
+    path = _risk_file(tmp_path, A, B)
+    outcome = run_family(family(path), importer_writing(path, _after(path, **{B: _entry("mixer", "X")})))
+    assert outcome.status == "refused" and "demo" in outcome.detail
+
+
+def test_the_demo_addresses_are_read_from_the_shipped_demos(monkeypatch):
+    monkeypatch.undo()  # the real reader, not the fixture's stand-in
+    lists._demo_addresses.cache_clear()
+    demo = json.loads((config.DATA_DIR / "demo_expectations.json").read_text())
+    first = next(iter(demo)) if isinstance(demo, dict) else demo[0]
+    text = json.dumps(first)
+    found = lists._EVM.findall(text) or lists._TRON.findall(text)
+    assert found and (found[0].lower() if found[0].startswith("0x") else found[0]) in lists._demo_addresses()
+
+
+def test_more_than_a_quarter_added_in_one_night_is_refused(tmp_path):
+    held = [addr(f"{i:03x}") for i in range(1, 201)]
+    path = _risk_file(tmp_path, *held)
+    extra = {addr(f"f{i:03x}"): _entry() for i in range(51)}
+    outcome = run_family(family(path), importer_writing(path, _after(path, **extra)))
+    assert outcome.status == "refused" and "added 51" in outcome.detail
+
+
+def test_a_first_fill_is_not_capped(tmp_path):
+    path = tmp_path / "risk_labels.json"
+    many = {addr(f"{i:03x}"): _entry() for i in range(1, 120)}
+    outcome = run_family(family(path), importer_writing(path, {"_meta": {"last_reviewed": "2026-11-03"}, "labels": many}))
+    assert outcome.status == "ok"
+
+
+def test_every_mixer_move_is_listed_in_full_with_its_old_category(tmp_path):
+    held = [addr(f"{i:03x}") for i in range(1, 300)]
+    path = _risk_file(tmp_path, *held)
+    moved = {a: _entry("mixer", f"Entity {a[-1]}") for a in held[:60]}
+    outcome = run_family(family(path), importer_writing(path, _after(path, **moved)))
+    summary = render_summary([outcome], "changed")
+    assert outcome.status == "ok"
+    assert all(f"`{a}` sanctioned -> mixer" in summary for a in held[:60])
+
+
+def test_altered_entries_show_old_and_new_category(tmp_path):
+    path = _risk_file(tmp_path, A, B)
+    outcome = run_family(family(path), importer_writing(path, _after(path, **{A: _entry("seized", "Entity a")})))
+    assert f"`{A}` sanctioned / Entity 0 -> seized / Entity a" in render_summary([outcome], "changed")

@@ -110,6 +110,9 @@ def tron_trace(monkeypatch):
         def get_outgoing_transactions(self, address, limit=None):
             return [t for t in history if t.from_address == address]
 
+        def is_contract(self, address):  # every wallet here is an account (ADR-0006)
+            return False
+
     @contextmanager
     def open_source(chain, asset):
         yield Source()

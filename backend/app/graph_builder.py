@@ -76,22 +76,26 @@ detection can look at the individual amounts later.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable
+from datetime import datetime, timezone
+from typing import Any, Callable, Iterable, Iterator
 
 import networkx as nx
 
-from . import config, progress
+from . import config, log_safety, progress
+from .api_budget import BudgetSpent, Cancelled, TraceStopped, fresh_reads
 from .etherscan_client import (
     EtherscanClient,
     Transaction,
     is_valid_address,
     normalize_address,
 )
+from .provider_errors import public_reason
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +146,16 @@ class TraceConfig:
     # it. Checked between batches of fetches, so the overshoot is at most one
     # batch of concurrent requests.
     time_budget_seconds: float | None = None
+    # The reported address is always read from the provider, never from the
+    # response cache: it is the wallet whose newest moves the officer is
+    # chasing, and a cached page of it could say "sent nothing" after the
+    # money left. Its fresh answer replaces the cached one for later reads.
+    fresh_seed: bool = True
+    # Pages one read of an address may take when a full page held nothing the
+    # walk could follow (zero-value or dust spam fills a page as well as real
+    # transfers do): 5 x 200 is the 1,000 records Tron and NodeReal scan.
+    # Only clients that read by page (Etherscan) page; each page is a request.
+    max_pages_per_address: int = 5
 
 
 @dataclass
@@ -165,7 +179,12 @@ class TraceResult:
     transfers_excluded_by_time: int = 0
     # Addresses reached but never expanded because the time budget ran out.
     addresses_unexpanded_by_time: int = 0
+    # ... or because a provider's request budget refused their read.
+    addresses_unexpanded_by_budget: int = 0
     seconds_elapsed: float = 0.0
+    # Addresses whose transfers were fetched, including any read past the node
+    # cap within the last batch (api_calls in a case counts the requests).
+    addresses_read: int = 0
     # Busy wallets whose newest page did not reach the funds' arrival, so they
     # were also read from that block forward.
     read_from_arrival: list[str] = field(default_factory=list)
@@ -279,12 +298,18 @@ class TimeBudgetExceeded(Exception):
     """Internal marker: the address was not fetched because the clock ran out."""
 
 
+class _NotRead(Exception):
+    """Internal marker: the address was not fetched because the walk had stopped (the node cap)."""
+
+
 def _fetch_level(
     pending: list[tuple[str, int]],
     fetch: Callable[..., list[Transaction]],
     cfg: TraceConfig,
     deadline: float | None = None,
-) -> list[tuple[list[Transaction], Exception | None]]:
+    stop: Callable[[], bool] | None = None,
+    result: "TraceResult | None" = None,
+) -> Iterator[tuple[list[Transaction], Exception | None]]:
     """Fetch every address at one depth together, preserving input order.
 
     The traversal used to make one request, wait for it, then make the next.
@@ -307,21 +332,29 @@ def _fetch_level(
     rule it already had -- fatal at the seed, a warning deeper in -- with the
     depth in hand.
 
-    With a `deadline` (a time.monotonic() instant), the level is fetched one
-    batch of `max_concurrent_fetches` at a time and stops once the deadline
-    has passed; the addresses never fetched come back with
-    TimeBudgetExceeded in place of a result.
+    The level is fetched one batch of `max_concurrent_fetches` at a time and
+    yielded batch by batch, so the caller processes each batch before the
+    next is sent. Before each batch `stop()` is asked (the node cap): once it
+    says so, and once a `deadline` (a time.monotonic() instant) has passed,
+    nothing more is read, and the addresses never fetched come back with
+    _NotRead or TimeBudgetExceeded in place of a result. Reading the whole
+    level first threw most of a wide trace's last level away (287 addresses
+    read for 120 used). `result.addresses_read` counts what was read.
     """
-    results: list[tuple[list[Transaction], Exception | None]] = [([], None)] * len(pending)
+    def counted() -> None:
+        if result is not None:
+            result.addresses_read += 1
 
     if len(pending) == 1:
         address, _ = pending[0]
         try:
-            return [(fetch(address, limit=cfg.max_txs_per_address), None)]
+            yield fetch(address, limit=cfg.max_txs_per_address), None
         except Exception as exc:  # noqa: BLE001 -- classified by the caller
-            return [([], exc)]
+            yield [], exc
         finally:
+            counted()
             progress.report(level_read=1)
+        return
 
     def one(index: int, address: str):
         try:
@@ -330,26 +363,28 @@ def _fetch_level(
             return index, [], exc
 
     read = 0
-    workers = min(cfg.max_concurrent_fetches, len(pending))
-    batch_size = workers if deadline is not None else len(pending)
+    workers = max(1, min(cfg.max_concurrent_fetches, len(pending)))
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="trace") as pool:
-        for start in range(0, len(pending), batch_size):
+        for start in range(0, len(pending), workers):
+            unread: Exception | None = None
             if deadline is not None and time.monotonic() >= deadline:
-                for index in range(start, len(pending)):
-                    results[index] = ([], TimeBudgetExceeded())
-                break
-            futures = [
-                pool.submit(one, index, address)
-                for index, (address, _depth) in enumerate(pending)
-                if start <= index < start + batch_size
-            ]
+                unread = TimeBudgetExceeded()
+            elif stop is not None and stop():
+                unread = _NotRead()
+            if unread is not None:
+                for _ in range(start, len(pending)):
+                    yield [], unread
+                return
+            batch: list[tuple[list[Transaction], Exception | None]] = [([], None)] * len(pending[start:start + workers])
+            futures = [pool.submit(one, index, address)
+                       for index, (address, _depth) in enumerate(pending[start:start + workers])]
             for future in as_completed(futures):
                 index, transfers, error = future.result()
-                results[index] = (transfers, error)
+                batch[index] = (transfers, error)
                 read += 1
+                counted()
                 progress.report(level_read=read)
-
-    return results
+            yield from batch
 
 
 def build_trace_graph(
@@ -359,15 +394,20 @@ def build_trace_graph(
     is_terminal: Callable[[str], bool] | None = None,
     direction: str = OUTGOING,
     seed_window: int | None = None,
+    seed_window_block: int | None = None,
 ) -> TraceResult:
     """Breadth-first trace of funds to or from `seed_address`.
 
     `seed_window` applies the time rule to the seed itself: only transfers the
-    seed made at or after that Unix time are followed. A reported address is
-    never windowed -- the trace cannot know when the victim's funds arrived --
-    but a follow-on trace after a swap does know: it starts when the swap's
-    output landed, and anything the wallet sent in that asset before then was
-    not the swapped money.
+    seed made at or after that Unix time are followed. An address-only trace
+    never windows its seed -- it cannot know when the victim's funds arrived --
+    but two traces do know: a payment trace starts when the victim's first
+    payment arrived, and a follow-on trace after a swap starts when the swap's
+    output landed. Anything the wallet sent before then was not that money.
+
+    `seed_window_block` is the block of that moment, when known (a payment
+    trace). With it a busy seed whose newest page does not reach back to the
+    payment is read again from that block forward, as any windowed address is.
 
     `direction` is OUTGOING (where the money went) or INCOMING (who sent it).
     See the module docstring for why that choice is investigative rather than
@@ -406,6 +446,10 @@ def build_trace_graph(
     since_time = (getattr(client, "get_outgoing_transactions_since_time", None)
                   if direction == OUTGOING else None)
     page_info = getattr(client, "newest_page_info", None)
+    # Whether a client's latest read of an address stopped at a record or scan
+    # limit. Zero-value or dust spam fills those limits as well as real
+    # transfers do, and is filtered out only after it has been counted.
+    read_capped = getattr(client, "history_capped", None)
     newest_page = fetch
 
     def page_reach(address: str, transfers: list[Transaction], limit: int | None) -> tuple[bool, int | None]:
@@ -419,32 +463,86 @@ def build_trace_graph(
         info = page_info(address) if page_info is not None else None
         if info is not None:
             return info
-        full = limit is not None and len(transfers) >= limit
+        capped = read_capped(address) if read_capped is not None else None
+        full = capped if capped is not None else (limit is not None and len(transfers) >= limit)
         return full, min((tx.timestamp for tx in transfers), default=None)
+
+    def later_capped(address: str, later: list[Transaction], limit: int) -> bool:
+        capped = read_capped(address) if read_capped is not None else None
+        return capped if capped is not None else len(later) >= limit
+
+    paged = direction == OUTGOING and bool(getattr(client, "reads_pages", False))
+
+    def past_spam(address: str, transfers: list[Transaction], arrived: int | None,
+                  read: Callable[[int], list[Transaction]], capped: Callable[[list[Transaction]], bool],
+                  ) -> list[Transaction]:
+        """Read the next pages of the same query while the page was full and
+        held nothing the walk could follow after `arrived`, up to
+        max_pages_per_address. Spam must not be able to hide a cash-out
+        behind one page; a page with a real outflow costs nothing extra."""
+        page, latest = 1, transfers
+        while (paged and page < cfg.max_pages_per_address and capped(latest)
+               and not any(tx.value_native >= cfg.min_value_native and (arrived is None or tx.timestamp >= arrived)
+                           for tx in transfers)
+               and (deadline is None or time.monotonic() < deadline)):
+            page += 1
+            latest = read(page)
+            known = {(tx.hash, tx.to_address, tx.value_wei) for tx in transfers}
+            transfers = transfers + [tx for tx in latest if (tx.hash, tx.to_address, tx.value_wei) not in known]
+        return transfers
 
     def fetch(address: str, limit: int | None = None) -> list[Transaction]:  # noqa: F811
         transfers = newest_page(address, limit=limit)
         start_block, arrived = window_block.get(address), window.get(address)
-        if arrived is None or limit is None:
+        if limit is None:
+            return transfers
+        if arrived is None:
+            # Newest first, older pages while they held nothing to follow.
+            transfers = past_spam(address, transfers, None, lambda p: newest_page(address, limit=limit, page=p),
+                                  lambda page: page_reach(address, page, limit)[0])
+        full, oldest = page_reach(address, transfers, limit)
+        if arrived is None:
+            # Read newest first and never from an arrival (the reported address
+            # of an address-only trace): a full read left its older history unread.
+            if full:
+                capped_at[address] = "older"
+            return transfers
+        if not full:
+            return transfers
+        if oldest is not None and oldest <= arrived:
+            if direction == INCOMING:
+                capped_at[address] = "older"  # money it received before then still goes back further
             return transfers
         if since is not None and start_block is not None:
             def read_later() -> list[Transaction]:
-                return since(address, start_block, limit=limit)
+                first = since(address, start_block, limit=limit)
+                return past_spam(address, first, arrived,
+                                 lambda p: since(address, start_block, limit=limit, page=p),
+                                 lambda page: later_capped(address, page, limit))
         elif since_time is not None:
             def read_later() -> list[Transaction]:
                 return since_time(address, arrived, limit=limit)
         else:
-            return transfers
-        full, oldest = page_reach(address, transfers, limit)
-        if not full or (oldest is not None and oldest <= arrived):
+            # No way to read forward from the arrival: the transfers between it
+            # and the oldest one read are missing, and the case must say so.
+            not_read_back[address] = oldest
             return transfers
         later = read_later()
+        if later_capped(address, later, limit):
+            # The read from the arrival came back full too: what it sent between
+            # that page's end and the newest page was not read.
+            capped_at[address] = "later"
         known = {(tx.hash, tx.to_address, tx.value_wei) for tx in transfers}
         added = [tx for tx in later if (tx.hash, tx.to_address, tx.value_wei) not in known]
         read_from_arrival.add(address)
         return transfers + added
 
     read_from_arrival: set[str] = set()
+    # Addresses whose read stopped at its record limit: which side went unread.
+    capped_at: dict[str, str] = {}
+    # Windowed addresses whose page stopped short of the arrival and could not
+    # be read forward: address -> time of the oldest record read.
+    not_read_back: dict[str, int | None] = {}
     seed = normalize_address(seed_address)
     graph = nx.DiGraph()
     graph.add_node(seed, address=seed, depth=0, is_seed=True, expanded=False)
@@ -461,7 +559,7 @@ def build_trace_graph(
     # address is first reached, read when it is expanded one level later.
     window: dict[str, int] = {seed: seed_window} if seed_window else {}
     # The block of that arrival, for reading a busy wallet from it forward.
-    window_block: dict[str, int] = {}
+    window_block: dict[str, int] = {seed: seed_window_block} if seed_window and seed_window_block else {}
 
     # One level of the search at a time, so the addresses at a given depth can
     # be fetched together. See _fetch_level for why that matters.
@@ -506,15 +604,32 @@ def build_trace_graph(
         progress.report(stage="walking", hop=pending[0][1] + 1, max_depth=cfg.max_depth,
                         level_size=len(pending), level_read=0,
                         addresses=graph.number_of_nodes())
-        fetched = _fetch_level(pending, fetch, cfg, deadline=deadline if pending[0][1] > 0 else None)
+        seed_level = pending[0][1] == 0
+        # Read batch by batch as the loop below takes them, until the node cap.
+        fetched = _fetch_level(pending, fetch, cfg, deadline=None if seed_level else deadline,
+                               stop=lambda: graph.number_of_nodes() >= cfg.max_nodes, result=result)
+        if seed_level:
+            # One address, read now on this thread, so the context applies.
+            with fresh_reads() if cfg.fresh_seed else contextlib.nullcontext():
+                fetched = iter(list(fetched))
         next_frontier: list[tuple[str, int]] = []
+        # Reads a request budget refused in this level, by the budget's reason.
+        budget_stops: dict[str, int] = {}
 
         for (address, depth), (transfers, error) in zip(pending, fetched, strict=True):
             if graph.number_of_nodes() >= cfg.max_nodes:
                 result.note_truncation(f"node limit of {cfg.max_nodes} addresses reached")
                 break
 
-            if isinstance(error, TimeBudgetExceeded):
+            if isinstance(error, Cancelled):
+                raise error  # a stop ends the whole trace, not just this branch
+            if isinstance(error, BudgetSpent) and depth > 0:
+                # The case's request budget (or the site's allowance) is spent:
+                # reached, never read, like the clock below; the walk ends here.
+                budget_stops[error.reason] = budget_stops.get(error.reason, 0) + 1
+                result.addresses_unexpanded_by_budget += 1
+                continue
+            if isinstance(error, (TimeBudgetExceeded, TraceStopped)) and depth > 0:
                 # Brake 6, mid-level: reached, never read. Not a failure of
                 # the provider and not this address's fault; counted so the
                 # report can say how much of the frontier the clock cut off.
@@ -536,9 +651,9 @@ def build_trace_graph(
                 # is also a truncation: everything past that address is
                 # missing, and the report must say so rather than present the
                 # partial graph as the complete picture.
-                logger.warning("Could not fetch %s: %s", address, error)
+                logger.warning("Could not fetch %s: %s", address, log_safety.redact(str(error)))
                 result.warnings.append(
-                    f"Could not fetch transactions for {address}: {error}"
+                    f"Could not fetch transactions for {address}: {public_reason(error)}"
                 )
                 result.note_truncation(
                     f"transactions of {address[:10]}... could not be fetched, so "
@@ -549,6 +664,13 @@ def build_trace_graph(
 
             graph.nodes[address]["expanded"] = True
             result.addresses_expanded += 1
+            if address in capped_at:
+                # Stated, never silent: spam can push the real cash-out past the limit.
+                graph.nodes[address]["history_capped"] = True
+                result.note_truncation(
+                    f"history read limit at {address[:10]}...: the read stopped at its record limit, "
+                    f"so {capped_at[address]} transfers were not read"
+                )
             result.depth_reached = max(result.depth_reached, depth)
 
             # What this address does with money in general, from its complete
@@ -558,13 +680,15 @@ def build_trace_graph(
             if direction == OUTGOING:
                 outflows: dict[str, dict] = {}
                 for tx in transfers:
-                    if not tx.to_address:
+                    if not tx.to_address or tx.to_address == address:  # a self-send is no outflow
                         continue
                     stats = outflows.setdefault(
-                        tx.to_address, {"count": 0, "total": 0.0, "first": None, "last": None}
+                        tx.to_address, {"count": 0, "total": 0.0, "min": None, "first": None, "last": None}
                     )
                     stats["count"] += 1
                     stats["total"] += tx.value_native
+                    # The smallest single send: deposit inference's dust floor is per sweep.
+                    stats["min"] = tx.value_native if stats["min"] is None else min(stats["min"], tx.value_native)
                     if tx.timestamp:
                         stats["first"] = min(stats["first"] or tx.timestamp, tx.timestamp)
                         stats["last"] = max(stats["last"] or tx.timestamp, tx.timestamp)
@@ -590,6 +714,19 @@ def build_trace_graph(
                 excluded = before - len(transfers)
                 graph.nodes[address]["excluded_by_time"] = excluded
                 result.transfers_excluded_by_time += excluded
+
+            # A wallet paying itself moves nothing anywhere: no branch, no edge.
+            # As a self-loop it took a fan-out slot, counted in the totals and
+            # made the wallet's degrees 2, which hid a peel chain. Counted apart.
+            own: list[Transaction] = []
+            rest: list[Transaction] = []
+            for tx in transfers:
+                far_end = tx.to_address if direction == OUTGOING else tx.from_address
+                (own if far_end == address else rest).append(tx)
+            if own:
+                transfers = rest
+                graph.nodes[address]["self_transfer_count"] = len(own)
+                graph.nodes[address]["self_transfer_value_native"] = round(sum(tx.value_native for tx in own), 6)
 
             # Brake 5: a service contract's payouts are not the traced money.
             # Only the reported address itself is exempt -- the trace starts
@@ -630,8 +767,9 @@ def build_trace_graph(
                         expanded=False,
                     )
                 else:
-                    # Keep the shortest known distance from the seed -- confidence
-                    # scoring rewards short paths, so this must not drift upward.
+                    # Keep the shortest known distance from the seed: the walk's
+                    # depth limit counts from it. (A match's hop count for the
+                    # score is its widest route's instead; see scoring.widest_routes.)
                     graph.nodes[counterparty]["depth"] = min(
                         graph.nodes[counterparty].get("depth", depth + 1), depth + 1
                     )
@@ -693,6 +831,16 @@ def build_trace_graph(
                 if counterparty not in visited:
                     visited.add(counterparty)
                     next_frontier.append((counterparty, depth + 1))
+        if hasattr(fetched, "close"):
+            fetched.close()  # a level left at the node cap reads no further batch
+
+        if budget_stops:
+            for reason, count in sorted(budget_stops.items()):
+                result.note_truncation(
+                    f"{reason} reached; {count} reached address{'es' if count != 1 else ''} "
+                    "were not expanded"
+                )
+            break
 
         # Anything the clock cut off mid-level is a truncation the report
         # must state; the frontier past it is also not walked.
@@ -707,6 +855,17 @@ def build_trace_graph(
 
         frontier = next_frontier
 
+    # Sorted: fetch runs in worker threads, and the reasons must come out in a fixed order.
+    for address in sorted(not_read_back):
+        if address in graph:
+            graph.nodes[address]["history_capped"] = True
+        oldest = not_read_back[address]
+        upto = (datetime.fromtimestamp(oldest, tz=timezone.utc).strftime("%d %b %Y %H:%M UTC")
+                if oldest else "the oldest one read")
+        result.note_truncation(
+            f"history read limit at {address[:10]}...: transfers between the funds' arrival "
+            f"and {upto} were not read"
+        )
     result.seconds_elapsed = round(time.monotonic() - started, 2)
     _annotate_node_totals(graph)
     result.read_from_arrival = sorted(read_from_arrival)
@@ -780,6 +939,11 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "window_start": data.get("window_start"),
             "window_end": data.get("window_end"),
             "excluded_by_time": data.get("excluded_by_time", 0),
+            # A read of this address stopped at its record limit (truncation_reasons says which side).
+            "history_capped": data.get("history_capped", False),
+            # Transfers the address made to itself: never an edge or a branch.
+            "self_transfer_count": data.get("self_transfer_count", 0),
+            "self_transfer_value_native": data.get("self_transfer_value_native", 0.0),
             "flags": sorted(data.get("flags", [])),
         }
         for node, data in graph.nodes(data=True)

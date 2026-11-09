@@ -13,6 +13,59 @@
     "deposit_addresses": {
       "Bitget": "19027 per-customer deposit addresses, tagged 'Bitget Dep' by Etherscan, imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9 and each confirmed to have at least one transaction or token transfer on chain; 0 never-used addresses left out. Regenerate: cd backend && .venv/bin/python -m scripts.import_eth_labels --deposits Bitget",
       "Binance": "4991 per-customer deposit addresses, tagged 'Binance Dep' by Etherscan, imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9 and each confirmed to have at least one transaction or token transfer on chain; 21 never-used addresses left out. Regenerate: cd backend && .venv/bin/python -m scripts.import_eth_labels --deposits Binance"
+    },
+    "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json.",
+    "deposits_retyped": {
+      "date": "2026-11-06",
+      "count": 45,
+      "labels": {
+        "0x0113a6b755fbad36b4249fd63002e2035e401143": "HitBTC: Deposit Funder 3",
+        "0x02412e9a81a98829716588f80458c8bf593cadc0": "FTX: Deposit",
+        "0x03599a2429871e6be1b154fb9c24691f9d301865": "Bithumb: Deposit Funder",
+        "0x061f7937b7b2bc7596539959804f86538b6368dc": "KuCoin: Deposit Funder",
+        "0x07ef60deca209ea0f3f3f08c1ad21a6db5ef9d33": "Huobi: Deposit Funder 5",
+        "0x0967aea99754974a4cc4dbf29009155a49588171": "CoinList: WBTC Merchant Deposit Address",
+        "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7": "AltCoinTrader: Binance Deposit 1",
+        "0x15ece0d7de25436bcfcf3d62a9085ddc7838aee9": "Binance: Deposit Funder 3",
+        "0x170c7c38419767816cc7ec519da67d1a4dc43826": "Binance: Deposit 1",
+        "0x18916e1a2933cb349145a280473a5de8eb6630cb": "Huobi: Deposit Funder 2",
+        "0x24c654f6b143dc5cae3c02fbb527ca63aa555dbc": "OKX: Deposit Supplier",
+        "0x2953452df5d7285b9a3a8a1e876a4bacb09a976e": "eToro: Binance Deposit 1",
+        "0x2a7077399b3e90f5392d55a1dc7046ad8d152348": "Bitcoin Suisse: Eth2 Depositor 4",
+        "0x2cf4e5b4fa8afa15f8dc7b5ada853e42776f3455": "AltCoinTrader: Celsius Deposit 1",
+        "0x2f47a1c2db4a3b78cda44eade915c3b19107ddcc": "Binance: Eth2 Depositor",
+        "0x3837ea2279b8e5c260a78f5f4181b783bbe76a8b": "Bitcoin Suisse: Eth2 Depositor 3",
+        "0x50a3f3b8855c2da88e56c7b0ef6e0e4a79f853f9": "Delta Exchange: Binance Deposit 1",
+        "0x622de9bb9ff8907414785a633097db438f9a2d86": "Bitcoin Suisse: Eth2 Depositor",
+        "0x6596da8b65995d5feacff8c2936f0b7a2051b0d0": "Gate.io: Deposit Funder",
+        "0x65b0bf8ee4947edd2a500d74e50a3d757dc79de0": "Nexo: WBTC Merchant Deposit Address",
+        "0x6ba7fe01eec4c6a4308c8e2b35970e0488ce9a86": "ChangeNOW: HTX Deposit",
+        "0x8365efb25d0822aaf15ee1d314147b6a7831c403": "Remitano: Deposit Funder",
+        "0x89fd00b8d2dcee0f40d8699970115bb861241a54": "OKX: Deposit Funder 3",
+        "0x8f80c66c70cbc52009babb04c1cadf9b40109289": "Binance: Deposit Funder 2",
+        "0x9430801ebaf509ad49202aabc5f5bc6fd8a3daf8": "Binance: Deposit Funder",
+        "0x9fae72d291949ed6fa8b74881328fdc123c645d3": "Deribit: Celsius Network Deposit",
+        "0xa40dfee99e1c85dc97fdc594b16a460717838703": "Kraken: Eth2 Depositor",
+        "0xaad8ad7dfa05bc354e011890dd61636842c2cb96": "OKX: Deposit Funder 4",
+        "0xad68942a95fdd56594aa5cf862b358790e37834c": "HitBTC: Deposit Funder 2",
+        "0xae45a8240147e6179ec7c9f92c5a18f9a97b3fca": "Crypto.com: Deposit Funder",
+        "0xb0afffd6f6ad77f61927803ade6dbd47f1a1c356": "BTSE: Cobo Deposit",
+        "0xb3f923eabaf178fc1bd8e13902fc5c61d3ddef5b": "Wintermute: Binance Deposit",
+        "0xbdd75a97c29294ff805fb2fee65abd99492b32a8": "Binance: Eth2 Depositor 2",
+        "0xc2288b408dc872a1546f13e6ebfa9c94998316a2": "Bitcoin Suisse: Eth2 Depositor 5",
+        "0xc5a93444cc4da6efb9e6fc6e5d3cb55a53b52396": "OKX: Deposit Funder",
+        "0xd2276af80582cac230edc4c42e9a9c096f3c09aa": "Coinbase: Deposit 1",
+        "0xdb0e89a9b003a28a4055ef772e345e8089987bfd": "Huobi: Deposit Funder 3",
+        "0xdd9663bd979f1ab1bada85e1bc7d7f13cafe71f8": "Bitcoin Suisse: Eth2 Depositor 1",
+        "0xe0d513cf39b52a09aefcef25e91dda3a2636329a": "Huobi: Deposit",
+        "0xec70e3c8afe212039c3f6a2df1c798003bf7cfe9": "Bitcoin Suisse: Eth2 Depositor 2",
+        "0xedc7001e99a37c3d23b5f7974f837387e09f9c93": "Coinbase Deposit 2",
+        "0xefe9a82d56cd965d7b332c7ac1feb15c53cd4340": "Coinbase: Batch Deposit 1",
+        "0xf0458aaaf6d49192d3b4711960635d5fa2114e71": "Huobi: Deposit Funder 4",
+        "0xfcb7edb966d320c7f3ae1f751a8c86f30fa5ad37": "Bitcoin Suisse: Binance Deposit 1",
+        "0xfdeda15e2922c5ed41fc1fdf36da2fb2623666b3": "HitBTC: Deposit Funder"
+      },
+      "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
     }
   },
   "labels": {
@@ -104,12 +157,12 @@
     "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7": {
       "exchange": "AltCoinTrader",
       "label": "AltCoinTrader: Binance Deposit 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x2cf4e5b4fa8afa15f8dc7b5ada853e42776f3455": {
       "exchange": "AltCoinTrader",
       "label": "AltCoinTrader: Celsius Deposit 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x87b7ba194ed714a871c91f6b9ba8dc8182ed3a5d": {
       "exchange": "AltCoinTrader",
@@ -174,7 +227,7 @@
     "0xb0afffd6f6ad77f61927803ade6dbd47f1a1c356": {
       "exchange": "BTSE",
       "label": "BTSE: Cobo Deposit",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x1619d743d7dc612e99d5d94ebd6b9695d46f0bf3": {
       "exchange": "BTSE",
@@ -25406,40 +25459,35 @@
       "label": "Binance: Contract",
       "type": "contract_wallet"
     },
-    "0x1074253202528777561f83817d413e91bfa671d4": {
-      "exchange": "Binance",
-      "label": "Binance: Deployer 3",
-      "type": "exchange_wallet"
-    },
     "0x170c7c38419767816cc7ec519da67d1a4dc43826": {
       "exchange": "Binance",
       "label": "Binance: Deposit 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x9430801ebaf509ad49202aabc5f5bc6fd8a3daf8": {
       "exchange": "Binance",
       "label": "Binance: Deposit Funder",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x8f80c66c70cbc52009babb04c1cadf9b40109289": {
       "exchange": "Binance",
       "label": "Binance: Deposit Funder 2",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x15ece0d7de25436bcfcf3d62a9085ddc7838aee9": {
       "exchange": "Binance",
       "label": "Binance: Deposit Funder 3",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x2f47a1c2db4a3b78cda44eade915c3b19107ddcc": {
       "exchange": "Binance",
       "label": "Binance: Eth2 Depositor",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xbdd75a97c29294ff805fb2fee65abd99492b32a8": {
       "exchange": "Binance",
       "label": "Binance: Eth2 Depositor 2",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x043a80999cee3711d372fb878768909fbe7f71e6": {
       "exchange": "Binance",
@@ -25449,7 +25497,7 @@
     "0xb3f923eabaf178fc1bd8e13902fc5c61d3ddef5b": {
       "exchange": "Binance",
       "label": "Wintermute: Binance Deposit",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xeea81c4416d71cef071224611359f6f99a4c4294": {
       "exchange": "BitMEX",
@@ -25584,37 +25632,37 @@
     "0xfcb7edb966d320c7f3ae1f751a8c86f30fa5ad37": {
       "exchange": "Bitcoin Suisse",
       "label": "Bitcoin Suisse: Binance Deposit 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x622de9bb9ff8907414785a633097db438f9a2d86": {
       "exchange": "Bitcoin Suisse",
       "label": "Bitcoin Suisse: Eth2 Depositor",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xdd9663bd979f1ab1bada85e1bc7d7f13cafe71f8": {
       "exchange": "Bitcoin Suisse",
       "label": "Bitcoin Suisse: Eth2 Depositor 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xec70e3c8afe212039c3f6a2df1c798003bf7cfe9": {
       "exchange": "Bitcoin Suisse",
       "label": "Bitcoin Suisse: Eth2 Depositor 2",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x3837ea2279b8e5c260a78f5f4181b783bbe76a8b": {
       "exchange": "Bitcoin Suisse",
       "label": "Bitcoin Suisse: Eth2 Depositor 3",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x2a7077399b3e90f5392d55a1dc7046ad8d152348": {
       "exchange": "Bitcoin Suisse",
       "label": "Bitcoin Suisse: Eth2 Depositor 4",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xc2288b408dc872a1546f13e6ebfa9c94998316a2": {
       "exchange": "Bitcoin Suisse",
       "label": "Bitcoin Suisse: Eth2 Depositor 5",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x36a85757645e8e8aec062a1dee289c7d615901ca": {
       "exchange": "Bitfinex",
@@ -25736,36 +25784,6 @@
       "label": "Bitfinex: Contract 2",
       "type": "contract_wallet"
     },
-    "0x5dbdebcae07cc958ba5290ff9deaae554e29e7b4": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 1",
-      "type": "exchange_wallet"
-    },
-    "0x2ee3b2df6534abc759ffe994f7b8dcdfaa02cd31": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 2",
-      "type": "exchange_wallet"
-    },
-    "0xe1f3c653248de6894d683cb2f10de7ca2253046f": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 3",
-      "type": "exchange_wallet"
-    },
-    "0x2903cadbe271e057edef157340b52a5898d7424f": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 4",
-      "type": "exchange_wallet"
-    },
-    "0x36928500bc1dcd7af6a2b4008875cc336b927d57": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 5",
-      "type": "exchange_wallet"
-    },
-    "0x14d06788090769f669427b6aea1c0240d2321f34": {
-      "exchange": "Bitfinex",
-      "label": "Bitfinex: Deployer 6",
-      "type": "contract_wallet"
-    },
     "0xab7c74abc0c4d48d1bdad5dcb26153fc8780f83e": {
       "exchange": "Bitfinex",
       "label": "Bitfinex: MultiSig 1",
@@ -25800,11 +25818,6 @@
       "exchange": "Bitfinex",
       "label": "Bitfinex: Old Contract 2",
       "type": "contract_wallet"
-    },
-    "0x5754284f345afc66a98fbb0a0afe71e0f007b949": {
-      "exchange": "Bitfinex",
-      "label": "Tether: Treasury",
-      "type": "exchange_wallet"
     },
     "0xe80623a9d41f2f05780d9cd9cea0f797fd53062a": {
       "exchange": "Bitget",
@@ -121214,7 +121227,7 @@
     "0x03599a2429871e6be1b154fb9c24691f9d301865": {
       "exchange": "Bithumb",
       "label": "Bithumb: Deposit Funder",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xbb5a0408fa54287b9074a2f47ab54c855e95ef82": {
       "exchange": "Bithumb",
@@ -121509,7 +121522,7 @@
     "0x6ba7fe01eec4c6a4308c8e2b35970e0488ce9a86": {
       "exchange": "ChangeNOW",
       "label": "ChangeNOW: HTX Deposit",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x975d9bd9928f398c7e01f6ba236816fa558cd94b": {
       "exchange": "ChangeNOW",
@@ -121784,7 +121797,7 @@
     "0x0967aea99754974a4cc4dbf29009155a49588171": {
       "exchange": "CoinList",
       "label": "CoinList: WBTC Merchant Deposit Address",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xf35a6bd6e0459a4b53a27862c51a2a7292b383d1": {
       "exchange": "CoinSpot",
@@ -122254,7 +122267,7 @@
     "0xedc7001e99a37c3d23b5f7974f837387e09f9c93": {
       "exchange": "Coinbase",
       "label": "Coinbase Deposit 2",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xa7927364e94e162102e7cf2447e33e01fc629e68": {
       "exchange": "Coinbase",
@@ -122274,7 +122287,7 @@
     "0xefe9a82d56cd965d7b332c7ac1feb15c53cd4340": {
       "exchange": "Coinbase",
       "label": "Coinbase: Batch Deposit 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x7915f087685fffd71608e5d118f3b70c27d9ef4e": {
       "exchange": "Coinbase",
@@ -122344,7 +122357,7 @@
     "0xd2276af80582cac230edc4c42e9a9c096f3c09aa": {
       "exchange": "Coinbase",
       "label": "Coinbase: Deposit 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x9620e530995d4b497f16652419dbb60f7834010a": {
       "exchange": "Coinbase",
@@ -122786,25 +122799,10 @@
       "label": "Crypto.com 6",
       "type": "exchange_wallet"
     },
-    "0xc42f0e95ff6c861164a86415eb6b3dabe7e13843": {
-      "exchange": "Crypto.com",
-      "label": "Crypto.com: Deployer",
-      "type": "exchange_wallet"
-    },
-    "0x494adb1ecac39d9df00fcda84ed2c1dc775107e7": {
-      "exchange": "Crypto.com",
-      "label": "Crypto.com: Deployer 2",
-      "type": "exchange_wallet"
-    },
-    "0x32047ac688997feb8fbf1d5d4aee39ec0202086d": {
-      "exchange": "Crypto.com",
-      "label": "Crypto.com: Deployer 3",
-      "type": "exchange_wallet"
-    },
     "0xae45a8240147e6179ec7c9f92c5a18f9a97b3fca": {
       "exchange": "Crypto.com",
       "label": "Crypto.com: Deposit Funder",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xdc4c0fda463435d19962e8dd465d5eba86fd02ec": {
       "exchange": "Crypto.com",
@@ -122834,7 +122832,7 @@
     "0x50a3f3b8855c2da88e56c7b0ef6e0e4a79f853f9": {
       "exchange": "Delta Exchange",
       "label": "Delta Exchange: Binance Deposit 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x904cc2b2694ffa78f04708d6f7de205108213126": {
       "exchange": "Deribit",
@@ -122899,7 +122897,7 @@
     "0x9fae72d291949ed6fa8b74881328fdc123c645d3": {
       "exchange": "Deribit",
       "label": "Deribit: Celsius Network Deposit",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xb61a16bda6d61d9b8ad493bf05962c5b98d1712f": {
       "exchange": "Deribit",
@@ -122994,7 +122992,7 @@
     "0x02412e9a81a98829716588f80458c8bf593cadc0": {
       "exchange": "FTX",
       "label": "FTX: Deposit",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xa98f8fda8cc449e99183229bb906cefb246a7ef3": {
       "exchange": "FTX",
@@ -123114,7 +123112,7 @@
     "0x6596da8b65995d5feacff8c2936f0b7a2051b0d0": {
       "exchange": "Gate.io",
       "label": "Gate.io: Deposit Funder",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xd24400ae8bfebb18ca49be86258a3c749cf46853": {
       "exchange": "Gemini",
@@ -123160,16 +123158,6 @@
       "exchange": "Gemini",
       "label": "Gemini: Contract 1",
       "type": "contract_wallet"
-    },
-    "0xdd51f01d9fc0fd084c1a4737bbfa5becb6ced9bc": {
-      "exchange": "Gemini",
-      "label": "Gemini: Deployer 1",
-      "type": "exchange_wallet"
-    },
-    "0x4c2f150fc90fed3d8281114c2349f1906cde5346": {
-      "exchange": "Gemini",
-      "label": "Gemini: Deployer 2",
-      "type": "exchange_wallet"
     },
     "0xdec042a90de005b22754e94a8a979c4b8c67fde5": {
       "exchange": "Gemini",
@@ -123224,17 +123212,17 @@
     "0xfdeda15e2922c5ed41fc1fdf36da2fb2623666b3": {
       "exchange": "HitBTC",
       "label": "HitBTC: Deposit Funder",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xad68942a95fdd56594aa5cf862b358790e37834c": {
       "exchange": "HitBTC",
       "label": "HitBTC: Deposit Funder 2",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x0113a6b755fbad36b4249fd63002e2035e401143": {
       "exchange": "HitBTC",
       "label": "HitBTC: Deposit Funder 3",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x6025d96932d378be7d0a46343b437678a126ecca": {
       "exchange": "HitBTC",
@@ -123491,35 +123479,30 @@
       "label": "Huobi Mining Pool",
       "type": "exchange_wallet"
     },
-    "0x63155828e949aeba75038a5e8a5f4edd5038d9a6": {
-      "exchange": "Huobi / HTX",
-      "label": "Huobi: Deployer",
-      "type": "exchange_wallet"
-    },
     "0xe0d513cf39b52a09aefcef25e91dda3a2636329a": {
       "exchange": "Huobi / HTX",
       "label": "Huobi: Deposit",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x18916e1a2933cb349145a280473a5de8eb6630cb": {
       "exchange": "Huobi / HTX",
       "label": "Huobi: Deposit Funder 2",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xdb0e89a9b003a28a4055ef772e345e8089987bfd": {
       "exchange": "Huobi / HTX",
       "label": "Huobi: Deposit Funder 3",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xf0458aaaf6d49192d3b4711960635d5fa2114e71": {
       "exchange": "Huobi / HTX",
       "label": "Huobi: Deposit Funder 4",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x07ef60deca209ea0f3f3f08c1ad21a6db5ef9d33": {
       "exchange": "Huobi / HTX",
       "label": "Huobi: Deposit Funder 5",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x1d1e10e8c66b67692f4c002c0cb334de5d485e41": {
       "exchange": "Huobi / HTX",
@@ -124126,15 +124109,10 @@
       "label": "Kraken: Cold Wallet 4",
       "type": "cold_wallet"
     },
-    "0x2e7542ec36df6429d8c397f88c4cf0c925948f44": {
-      "exchange": "Kraken",
-      "label": "Kraken: Deployer 1",
-      "type": "contract_wallet"
-    },
     "0xa40dfee99e1c85dc97fdc594b16a460717838703": {
       "exchange": "Kraken",
       "label": "Kraken: Eth2 Depositor",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xe9f7ecae3a53d2a67105292894676b00d1fab785": {
       "exchange": "Kraken",
@@ -124286,15 +124264,10 @@
       "label": "KuCoin Contract",
       "type": "contract_wallet"
     },
-    "0xf2b16510270a214130c6b17ff0e9bf87585126bd": {
-      "exchange": "KuCoin",
-      "label": "KuCoin: Deployer",
-      "type": "exchange_wallet"
-    },
     "0x061f7937b7b2bc7596539959804f86538b6368dc": {
       "exchange": "KuCoin",
       "label": "KuCoin: Deposit Funder",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xd91efec7e42f80156d1d9f660a69847188950747": {
       "exchange": "KuCoin",
@@ -124669,7 +124642,7 @@
     "0x65b0bf8ee4947edd2a500d74e50a3d757dc79de0": {
       "exchange": "Nexo",
       "label": "Nexo: WBTC Merchant Deposit Address",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x6cc5f688a315f3dc28a7781717a9a798a59fda7b": {
       "exchange": "OKX",
@@ -124806,35 +124779,25 @@
       "label": "OKX 9",
       "type": "exchange_wallet"
     },
-    "0x7d0ccaa3fac1e5a943c5168b6ced828691b46b36": {
-      "exchange": "OKX",
-      "label": "OKX: DEX Router 2",
-      "type": "exchange_wallet"
-    },
-    "0x156acd2bc5fc336d59baae602a2bd9b5e20d6672": {
-      "exchange": "OKX",
-      "label": "OKX: DEX Router 4",
-      "type": "exchange_wallet"
-    },
     "0xc5a93444cc4da6efb9e6fc6e5d3cb55a53b52396": {
       "exchange": "OKX",
       "label": "OKX: Deposit Funder",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x89fd00b8d2dcee0f40d8699970115bb861241a54": {
       "exchange": "OKX",
       "label": "OKX: Deposit Funder 3",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xaad8ad7dfa05bc354e011890dd61636842c2cb96": {
       "exchange": "OKX",
       "label": "OKX: Deposit Funder 4",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0x24c654f6b143dc5cae3c02fbb527ca63aa555dbc": {
       "exchange": "OKX",
       "label": "OKX: Deposit Supplier",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xf6be265fa72148dfb64106247d21bb15ce650e5e": {
       "exchange": "Oobit",
@@ -125019,7 +124982,7 @@
     "0x8365efb25d0822aaf15ee1d314147b6a7831c403": {
       "exchange": "Remitano",
       "label": "Remitano: Deposit Funder",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "0xb23360ccdd9ed1b15d45e5d3824bb409c8d7c460": {
       "exchange": "Revolut",
@@ -125204,7 +125167,7 @@
     "0x2953452df5d7285b9a3a8a1e876a4bacb09a976e": {
       "exchange": "eToro",
       "label": "eToro: Binance Deposit 1",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     }
   },
   "_unverified_pending": {

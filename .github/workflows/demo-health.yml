@@ -17,16 +17,21 @@ jobs:
   demos:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # DEMO_CODE lives in this environment, which deploys from main only, so a
+    # workflow edited on another branch never receives it.
+    environment: live-checks
     env:
       EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer-6gnl.onrender.com' }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       # Yesterday's misses: a demo built to move fails only if it reaches no
       # exchange two runs in a row (see check_demos.py --state).
-      - uses: actions/cache/restore@v6
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: demo_state.json
           key: demo-health-state-${{ github.run_id }}
@@ -43,12 +48,12 @@ jobs:
           echo "site did not answer /health within 4 minutes"; exit 1
       - name: Re-run the DEMO.md traces on the live site
         # The live site may ask for a demo code (backend/app/access.py); the
-        # repository secret DEMO_CODE holds the same value as Render's
-        # EXCHEQUER_DEMO_CODE. Empty when unset, which an open site ignores.
+        # live-checks environment's secret DEMO_CODE holds the same value as
+        # Render's EXCHEQUER_DEMO_CODE. Empty when unset, which an open site ignores.
         env:
           EXCHEQUER_DEMO_CODE: ${{ secrets.DEMO_CODE }}
         run: python backend/scripts/check_demos.py --state demo_state.json --base "$EXCHEQUER_URL"
-      - uses: actions/cache/save@v6
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always()
         with:
           path: demo_state.json

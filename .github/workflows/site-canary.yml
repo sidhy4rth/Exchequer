@@ -22,22 +22,28 @@ jobs:
     env:
       # Set the repository variable SITE_URL when the site moves host.
       EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer-6gnl.onrender.com' }}
+      # Set the repository variable EXPECT_DEMO_CODE to 1 once the demo code
+      # is on: the canary then goes red if the site is ever open to anyone.
+      EXPECT_DEMO_CODE: ${{ vars.EXPECT_DEMO_CODE }}
+      # What render.yaml gives the service; the canary fails when it has drifted.
+      # Opt-in: set the repository variables EXPECT_HEALTH_TOKEN=1 and
+      # EXPECT_WATCHER=0 once Render's Environment matches render.yaml.
+      EXPECT_HEALTH_TOKEN: ${{ vars.EXPECT_HEALTH_TOKEN }}
+      EXPECT_WATCHER: ${{ vars.EXPECT_WATCHER }}
     defaults:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
-      # After a push, wait out a redeploy (Render deploys main on push) so
-      # the check is more likely to see the new build than the old one.
-      - if: github.event_name == 'push'
-        run: sleep 240
       # The free Render instance sleeps after 15 idle minutes and takes up to
       # a minute or two to wake; knock first so the checks time the app, not
       # the boot.
@@ -48,9 +54,35 @@ jobs:
             sleep 10
           done
           echo "site did not answer /health within 4 minutes"; exit 1
+      # After a push, check the commit that was pushed, not whatever is up:
+      # /health names the build serving. Render deploys main on push; if the
+      # pushed commit is not live within 15 minutes, the deploy did not
+      # happen, and the run says so instead of passing the old build
+      # (r1-ci-github-9).
+      - name: Wait for the pushed commit to go live
+        if: github.event_name == 'push'
+        env:
+          WANT: ${{ github.sha }}
+        run: |
+          want="${WANT:0:12}"
+          live=""
+          for i in $(seq 1 60); do
+            live=$(curl -fsS -m 20 "$EXCHEQUER_URL/health" | python3 -c 'import json, sys; print(json.load(sys.stdin).get("build", ""))' 2>/dev/null || true)
+            if [ "$live" = "$want" ]; then echo "live build: $live"; exit 0; fi
+            case "$live" in unknown*)
+              echo "::warning::The site does not say which commit it serves; checking whatever is live."; exit 0 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::15 minutes after the push the site still serves ${live:-an unknown build}, not $want: the deploy did not happen or failed (see the Render dashboard)."
+          exit 1
+      - name: Say which build was checked
+        run: |
+          build=$(curl -fsS -m 20 "$EXCHEQUER_URL/health" | python3 -c 'import json, sys; print(json.load(sys.stdin).get("build", "unknown"))' || echo unknown)
+          echo "Checked live build \`$build\`." >> "$GITHUB_STEP_SUMMARY"
       - run: npm run canary
       - if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: canary-failure
           path: frontend/test-results/

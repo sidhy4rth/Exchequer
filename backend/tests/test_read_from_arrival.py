@@ -76,7 +76,7 @@ def test_a_quiet_wallet_costs_no_extra_request():
     assert client.since_calls == []
 
 
-def test_the_seed_is_never_windowed_so_never_re_read():
+def test_an_address_only_seed_is_never_re_read():
     client = BusyClient(later=8)
     client.history[SEED] = [tx(SEED, MID, 10.0, T0 + 100 + i, BLOCK0 + 10 + i, i) for i in range(9)]
     build_trace_graph(SEED, client, cfg=CFG, is_terminal=lambda a: a == EXCH, direction=OUTGOING)

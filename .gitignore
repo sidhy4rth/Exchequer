@@ -11,6 +11,13 @@ backend/.env
 # SQLite's write-ahead log and its index, beside every store in WAL mode.
 *.db-shm
 *.db-wal
+# The private label store: its build and download temp files, and any copy of
+# it under data/ (scripts/build_label_store.py, scripts/fetch_label_store.py).
+*.building
+*.partial
+backend/data/label_store*
+# Rows a store build refused (never_flag.py), listed beside the private hunt CSV.
+*.refused.tsv
 
 # Node
 frontend/node_modules/
@@ -39,3 +46,22 @@ frontend/playwright-report/
 
 # Report signing key (made on first start; see backend/app/signing.py)
 backend/*.pem
+
+# Anything private, at any depth (r1-secrets-history-2). The narrower lines
+# above matched only one folder; these cover case-store files and their
+# backups, dumps, keys and env files wherever a script writes them.
+**/*.db
+**/*.db-*
+**/*.db.*
+**/*.sqlite*
+**/backups/
+**/*.db.gz
+**/*.pgdump
+**/*.age
+**/*.pem
+**/*.key
+**/.env
+**/.env.*
+!backend/.env.example
+**/*keys*.env
+**/*_check.jsonl

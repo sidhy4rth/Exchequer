@@ -121,13 +121,17 @@ def check_ethereum(transfer: dict[str, Any], answer: dict[str, Any], token: Asse
         return Check(digest, MISMATCH, "the second provider does not have this transaction")
     if transfer.get("internal"):
         return Check(digest, UNCHECKED, "the transaction exists, but it was moved by a contract call")
-    if receipt and receipt.get("status") == "0x0":
+    if not receipt:
+        # Without the receipt, success cannot be shown: a reverted transfer
+        # carries the same from, to and value as one that went through.
+        return Check(digest, UNCHECKED, "the second provider returned no receipt, so success cannot be confirmed")
+    if receipt.get("status") == "0x0":
         return Check(digest, MISMATCH, "the transaction failed on chain")
+    if receipt.get("status") != "0x1":
+        return Check(digest, UNCHECKED, "the receipt does not say whether the transaction succeeded")
     if token.native:
         problem = _names(transfer, tx.get("from"), tx.get("to"), Decimal(int(tx.get("value", "0x0"), 16)) / 10**token.decimals)
         return Check(digest, MISMATCH, problem) if problem else Check(digest, CONFIRMED)
-    if not receipt:
-        return Check(digest, UNCHECKED, "the second provider returned no receipt for this token transfer")
     closest = "no matching Transfer event in the transaction"
     for log in receipt.get("logs") or []:
         topics = log.get("topics") or []
@@ -170,20 +174,32 @@ CHECKERS: dict[str, Callable[[dict[str, Any], dict[str, Any], Asset], Check]] = 
 
 # -- reading ---------------------------------------------------------------------
 def _ethereum_rpc(http: httpx.Client, method: str, digest: str) -> dict[str, Any] | None:
-    """The first node with an answer: one without old history returns null for a real transaction."""
-    errors = 0
+    """The first node with an answer: one without old history returns null for a real transaction.
+
+    None only when every node gave a clean null. A JSON-RPC error (how public
+    nodes answer when they rate-limit, with HTTP 200) is a failed node, not
+    "no such transaction": if any node failed and none answered, this raises,
+    and the transfer is unchecked rather than a mismatch."""
+    failures: list[str] = []
     for node in ETHEREUM_NODES:
         try:
             response = http.post(node, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": [digest]})
             response.raise_for_status()
-            result = response.json().get("result")
-        except (httpx.HTTPError, ValueError):
-            errors += 1
+            body = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            failures.append(f"{node}: {type(exc).__name__}")
             continue
-        if result:
-            return result
-    if errors == len(ETHEREUM_NODES):
-        raise httpx.HTTPError(f"no node answered {method}")
+        if not isinstance(body, dict) or "error" in body or "result" not in body:
+            error = body.get("error") if isinstance(body, dict) else None
+            failures.append(f"{node}: {error.get('message') if isinstance(error, dict) else 'no result'}")
+            continue
+        if body["result"] is not None and not isinstance(body["result"], dict):
+            failures.append(f"{node}: the result is not a transaction or a receipt")
+            continue
+        if body["result"]:
+            return body["result"]
+    if failures:
+        raise httpx.HTTPError(f"{method}: no clean answer ({'; '.join(failures)})")
     return None
 
 
@@ -191,7 +207,15 @@ def read_live(http: httpx.Client, chain_key: str, digest: str, token: Asset) -> 
     if chain_key == "tron":
         response = http.get(TRONSCAN, params={"hash": digest})
         response.raise_for_status()
-        return response.json()
+        body = response.json()
+        # {} is TronScan's "no such transaction"; a refusal can come as HTTP 200
+        # with an error and no transaction, which is a failed read, not an answer.
+        if not isinstance(body, dict):
+            raise ValueError("TronScan's answer is not an object")
+        error = body.get("Error") or body.get("error")
+        if error and not body.get("hash"):
+            raise httpx.HTTPError(f"TronScan refused: {str(error)[:60]}")
+        return body
     answer = {"transaction": _ethereum_rpc(http, "eth_getTransactionByHash", digest)}
     answer["receipt"] = _ethereum_rpc(http, "eth_getTransactionReceipt", digest) if answer["transaction"] else None
     return answer
@@ -219,7 +243,21 @@ def verify(report: dict[str, Any], read: Callable[[str, str, Asset], dict[str, A
                 checks.append(CHECKERS[chain_key](transfer, read(chain_key, digest, token), token))
             except (httpx.HTTPError, ValueError, KeyError) as exc:
                 checks.append(Check(digest, UNCHECKED, f"the second provider could not be read: {str(exc)[:80]}"))
+            except (TypeError, AttributeError):
+                # An answer whose parts are not the shape a provider gives (a log
+                # that is not an object, say) is a failed read, not a disagreement.
+                checks.append(Check(digest, UNCHECKED, "the second provider's answer is not in the shape expected"))
     return checks
+
+
+def appendix_note(report: dict[str, Any]) -> str | None:
+    """What a capped Appendix B leaves unchecked (pipeline._appendix), or None."""
+    appendix = report.get("appendix") or {}
+    if not appendix.get("transactions_omitted"):
+        return None
+    return (f"The report lists {len(appendix.get('transactions') or [])} of the trace's "
+            f"{appendix.get('transactions_total')} transfers; the other {appendix['transactions_omitted']} "
+            "are not in Appendix B, so they were not checked.")
 
 
 def exit_code(checks: list[Check]) -> int:
@@ -259,7 +297,10 @@ def main() -> int:
     with httpx.Client(timeout=30, headers={"User-Agent": "Exchequer verify_case"}) as http:
         def read(chain_key: str, digest: str, token: Asset) -> dict[str, Any]:
             if args.recorded:
-                return saved.get(digest) or {}
+                if digest not in saved:
+                    # --record saves only the reads that worked: a missing one failed.
+                    raise ValueError("this transfer is not in the recording")
+                return saved[digest]
             answer = read_live(http, chain_key, digest, token)
             recorded[digest] = answer
             time.sleep(SECONDS_BETWEEN_READS)
@@ -271,6 +312,8 @@ def main() -> int:
         print(f"{check.outcome:<10} {check.hash}" + (f"  {check.detail}" if check.detail else ""))
     tally = {o: sum(c.outcome == o for c in checks) for o in (CONFIRMED, MISMATCH, UNCHECKED)}
     print(f"\n{len(checks)} transfers: {tally[CONFIRMED]} confirmed, {tally[MISMATCH]} mismatch, {tally[UNCHECKED]} unchecked")
+    if appendix_note(report):
+        print(appendix_note(report))
     if report.get("follow_ons"):
         print("Follow-on traces after a swap are not in Appendix B, so they were not checked.")
     if args.record:

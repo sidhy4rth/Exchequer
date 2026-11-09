@@ -36,6 +36,12 @@ it almost always is, since only the key holder can send from it.
 
     cd backend && .venv/bin/python -m scripts.port_evm_labels --checkpoint port.jsonl
     cd backend && .venv/bin/python -m scripts.port_evm_labels --sanctions-only
+    cd backend && .venv/bin/python -m scripts.port_evm_labels --relabel
+
+`--relabel` re-reads each carried government listing from the Ethereum files,
+offline: a listing that changed there (a seizure order now filed as `seized`,
+a new end date) changes here, and one no longer held there is removed. It
+makes no chain call, because the account checks do not depend on the label.
 """
 from __future__ import annotations
 
@@ -52,8 +58,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import config  # noqa: E402
 from app.etherscan_client import EtherscanClient, EtherscanError, is_valid_address, normalize_address  # noqa: E402
+from app.nodereal_client import NoderealError  # noqa: E402
 from scripts.import_eth_labels import (CANONICAL, DATASET_COMMIT, DATASET_REPO, SKIP_SLUG,  # noqa: E402
                                        SKIP_TAG, tag_head, wallet_type)
+from app.tron_tags import clean_tag  # noqa: E402
 
 TARGETS = ("polygon", "arbitrum")
 # BNB Smart Chain has its own importers and a label file of its own; the port
@@ -69,14 +77,18 @@ SKIP_TYPES = {"deposit_wallet", "contract_wallet"}
 
 
 def ethereum_candidates() -> dict[str, dict[str, str]]:
+    """Ethereum exchange accounts to carry over: not deposits or contracts, and not a
+    tag SKIP_TAG names as infrastructure (a deposit funder, a peg or swap address)."""
     labels = json.loads(config.CHAINS["ethereum"].labels_path.read_text())["labels"]
-    return {a: {**m, "source": "ethereum"} for a, m in labels.items() if m.get("type") not in SKIP_TYPES}
+    return {a: {**m, "source": "ethereum"} for a, m in labels.items()
+            if m.get("type") not in SKIP_TYPES and not SKIP_TAG.search(m.get("label") or "")}
 
 
 def scrape_candidates(chain_key: str) -> dict[str, dict[str, str]]:
     out: dict[str, dict[str, str]] = {}
     with urllib.request.urlopen(BRIAN.format(site=BRIAN_SITE[chain_key]), timeout=300) as response:
         for address, tag in json.loads(response.read()).items():
+            tag = clean_tag(tag)  # before SKIP_TAG: invisible characters must not hide a word
             exchange = CANONICAL.get(tag_head(tag))
             if exchange and is_valid_address(address) and not SKIP_TAG.search(tag):
                 out[normalize_address(address)] = {"exchange": exchange, "label": tag,
@@ -86,7 +98,7 @@ def scrape_candidates(chain_key: str) -> dict[str, dict[str, str]]:
             for row in csv.DictReader(io.StringIO(response.read().decode())):
                 if row["chainId"] != DAWS_CHAIN_ID[chain_key] or SKIP_SLUG.search(row["label"]):
                     continue
-                tag = (row["nameTag"] or "").strip()
+                tag = clean_tag(row["nameTag"])
                 if not tag or tag == "null" or SKIP_TAG.search(tag):
                     continue
                 exchange = CANONICAL.get(tag_head(tag))
@@ -97,12 +109,16 @@ def scrape_candidates(chain_key: str) -> dict[str, dict[str, str]]:
     return out
 
 
+GOVERNMENT = ("sanctioned", "seized")
+
+
 def sanctioned_candidates() -> dict[str, dict[str, str]]:
+    """Every Ethereum account a government lists: designated, or named in a seizure order."""
     out: dict[str, dict[str, str]] = {}
     eth = config.CHAINS["ethereum"]
     for path in (eth.risk_labels_path, eth.intl_sanctions_path):
         for address, meta in json.loads(path.read_text())["labels"].items():
-            if meta.get("category") == "sanctioned" and address not in out:
+            if meta.get("category") in GOVERNMENT and address not in out:
                 out[address] = meta
     return out
 
@@ -162,6 +178,22 @@ def write_risk_labels(chain_key: str, listed: dict[str, dict[str, str]], today: 
     }, indent=1) + "\n")
 
 
+def relabel(dry_run: bool) -> int:
+    """Re-read each carried listing from the Ethereum files; drop one they no longer hold. Offline."""
+    current = sanctioned_candidates()
+    for chain_key in TARGETS:
+        chain = config.CHAINS[chain_key]
+        document = json.loads(chain.risk_labels_path.read_text())
+        held = document["labels"]
+        kept = {a: current[a] for a in held if a in current}
+        gone = sorted(set(held) - set(kept))
+        changed = sum(1 for a, m in kept.items() if m.get("category") != held[a].get("category"))
+        print(f"{chain.name}: {len(kept)} kept ({changed} re-filed), {len(gone)} removed: {gone}")
+        if not dry_run:
+            write_risk_labels(chain_key, kept, document["_meta"].get("last_reviewed", ""))
+    return 0
+
+
 def sanctions_only(dry_run: bool) -> int:
     """Re-check the sanctioned accounts and rewrite only the risk files.
 
@@ -196,8 +228,12 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--sanctions-only", action="store_true",
                         help="re-check only sanctioned accounts; stop on any failed check")
+    parser.add_argument("--relabel", action="store_true",
+                        help="re-read the carried listings from the Ethereum files, offline")
     args = parser.parse_args()
 
+    if args.relabel:
+        return relabel(args.dry_run)
     if args.sanctions_only:
         return sanctions_only(args.dry_run)
 
@@ -205,10 +241,12 @@ def main() -> int:
     if args.checkpoint.exists():
         for line in args.checkpoint.read_text().splitlines():
             r = json.loads(line)
-            done[(r["chain"], r["kind"], r["address"])] = r["result"]
+            if not str(r["result"]).startswith("error"):  # an old run's failed check is re-asked
+                done[(r["chain"], r["kind"], r["address"])] = r["result"]
 
     eth_exchanges, sanctioned = ethereum_candidates(), sanctioned_candidates()
     today = datetime.now(timezone.utc).date().isoformat()
+    status = 0
     with args.checkpoint.open("a") as log:
         for chain_key in (*TARGETS, *MERGE_TARGETS):
             chain = config.CHAINS[chain_key]
@@ -220,11 +258,15 @@ def main() -> int:
                   f"{len(todo)} left to check", flush=True)
             opened = NoderealProbe() if chain_key in MERGE_TARGETS else EtherscanClient(chain_id=chain.chain_id)
             with opened as client:
+                failed = 0
                 for i, (kind, address) in enumerate(todo, 1):
                     try:
                         result = check(client, address)
-                    except EtherscanError as exc:
-                        result = f"error: {exc}"[:120]
+                    except (EtherscanError, NoderealError, ValueError) as exc:
+                        # Unknown, not "no": never checkpointed, so the next run asks again.
+                        print(f"  ! {address}: {str(exc)[:80]}", flush=True)
+                        failed += 1
+                        continue
                     done[(chain_key, kind, address)] = result
                     log.write(json.dumps({"chain": chain_key, "kind": kind, "address": address,
                                           "result": result}) + "\n")
@@ -233,6 +275,11 @@ def main() -> int:
                         ok = sum(1 for (c, k, _), r in done.items() if c == chain_key and r == "ok")
                         print(f"  {i}/{len(todo)} checked · {ok} accepted so far", flush=True)
 
+            if failed:
+                print(f"  {failed} checks failed; re-run to finish before {chain.name}'s files are written",
+                      flush=True)
+                status = 1
+                continue
             accepted = {a: m for a, m in exchanges.items() if done.get((chain_key, "exchange", a)) == "ok"}
             listed = {a: m for a, m in sanctioned.items() if done.get((chain_key, "sanctioned", a)) == "ok"}
             by_source = {s: sum(1 for m in accepted.values() if m["source"] == s)
@@ -276,7 +323,7 @@ def main() -> int:
                            for a, m in sorted(accepted.items())},
             }, indent=1) + "\n")
             write_risk_labels(chain_key, listed, today)
-    return 0
+    return status
 
 
 if __name__ == "__main__":

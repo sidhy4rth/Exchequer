@@ -108,6 +108,8 @@ body {
 
 /* ---------- primitives ---------- */
 .mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-variant-ligatures: none; }
+/* A name from outside (a tag, a label list) never reorders the text around it. */
+.mono, .feed .pair .to { unicode-bidi: isolate; }
 .num { white-space: nowrap; }
 
 .micro {
@@ -164,6 +166,7 @@ a { color: var(--navy); }
 .pill.green { color: var(--green); border-color: var(--green); background: var(--green-soft); }
 .pill.amber { color: var(--amber); border-color: var(--amber); background: var(--amber-soft); }
 .pill.red { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.pill.grey { color: var(--muted); border-color: var(--muted); }
 .pill.navy { color: var(--navy); border-color: var(--navy); background: var(--navy-soft); }
 
 .card { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r); }
@@ -824,6 +827,7 @@ details.more summary:hover { color: var(--ink); }
 .verify-result.green { border-color: var(--green); }
 .verify-result.red { border-color: var(--red); }
 .verify-result.amber { border-color: var(--amber); }
+.verify-result.grey { border-color: var(--muted); }
 .verify-result p { margin: 0; color: var(--ink); font-size: 14px; }
 .verify-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 4px 0 0; font-size: 12px; }
 .verify-facts dt { color: var(--muted); }
@@ -890,6 +894,8 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .bulk-text { width: 100%; box-sizing: border-box; padding: 10px; font-size: 12px; border: 1px solid var(--rule); border-radius: var(--r); background: var(--panel); color: var(--ink); resize: vertical; }
 .bulk-name { flex: 1; min-width: 160px; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--panel); color: var(--ink); }
 .row-errors { margin: 0; padding-left: 18px; font-size: 12px; color: var(--red); }
+.bulk-preview { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; }
+.bulk-preview .bulk-address { overflow-wrap: anywhere; word-break: break-all; }
 .past-batches { display: flex; flex-direction: column; gap: 4px; font-size: 12px; border-top: 1px solid var(--rule); padding-top: 8px; }
 .past-batches a { color: var(--muted); }
 .batch-body { width: min(1240px, 100%); margin: 0 auto; padding: 28px 16px 48px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; }
@@ -996,3 +1002,5 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
   .console .intake .lede { font-size: 23px; }
   .flagged-total strong { font-size: 44px; }
 }
+.verify-problems { margin: 4px 0 0; padding-left: 18px; color: var(--ink); font-size: 14px; }
+.verify-problems li { margin: 2px 0; overflow-wrap: anywhere; }

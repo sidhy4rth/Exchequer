@@ -1,0 +1,24 @@
+# The packages the site runs on, pinned by hand. requirements.txt is compiled
+# from this file: every package the image installs, direct or not, pinned and
+# hashed, so a build installs exactly what was tested. Edit this file, never the
+# lock, then recompile (backend/, any machine):
+#   uv pip compile requirements.in --universal --python-version 3.12 --generate-hashes -o requirements.txt
+#   uv pip compile requirements-dev.in --universal --python-version 3.12 --generate-hashes -o requirements-dev.txt
+fastapi==0.143.0
+starlette==1.7.0
+uvicorn==0.54.0
+# What the "standard" uvicorn extra added that the site uses: the fast HTTP parser and
+# event loop. Not its WebSocket stack, reloader or YAML config (no route
+# speaks WebSocket; docker-entrypoint.sh runs --ws none).
+httptools==0.9.0
+uvloop==0.23.0; sys_platform != "win32"
+httpx==0.28.1
+networkx==3.7
+python-dotenv==1.2.4
+pydantic==2.14.1
+SQLAlchemy==2.0.54
+alembic==1.20.0
+psycopg[binary]==3.3.6
+cryptography==50.0.2
+reportlab==5.0.1
+pypdf==6.21.4

@@ -26,7 +26,6 @@ fields. A case stored before this contract existed is upgraded on read.
 """
 from __future__ import annotations
 
-import copy
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -50,29 +49,45 @@ class _Strict(BaseModel):
 
 
 class Payment(_Strict):
-    """One payment the victim made, read from the chain by its hash (R1)."""
+    """One transfer of a payment the victim made, read from the chain by its
+    hash (R1). A hash that carried several transfers into the reported wallet
+    has one entry per transfer, numbered by `leg`."""
 
-    tx_hash: str
+    # The hash, the block, the time and the sender are null unless read by
+    # the browser that traced the case (case_privacy.py): each of them leads
+    # a block explorer to the victim's wallet.
+    tx_hash: str | None
     chain: str
     asset: str
     amount: float
-    from_address: str = Field(alias="from")
+    from_address: str | None = Field(alias="from")
     to: str
     block: int | None = None
     timestamp: int | None = None
     # "victim": the hash came with the complaint. "officer_search": the officer
     # found it by searching the recipient wallet for the amount and date.
     found_by: Literal["victim", "officer_search"] = "victim"
+    # Which transfer of the hash this is, from 0; only on a hash with several.
+    leg: int | None = None
+    # The sender's label, when a label file names it (an exchange wallet: the
+    # victim withdrew from an exchange; a router or other contract).
+    payer_label: str | None = None
+    # Whether the sender is the victim's own wallet given with the complaint;
+    # None when no wallet was given.
+    payer_is_victim: bool | None = None
 
 
 class Intake(_Strict):
     mode: Literal["payment", "address"]
     payments: list[Payment] = []
     ncrp_ack: str | None = None
+    # The victim's own paying wallet, when the complaint gives it.
+    victim_address: str | None = None
 
 
 class Attribution(_Strict):
-    # deposit_label: a deposit address an explorer labels as the exchange's.
+    # deposit_label: a deposit address a checked label file names as the
+    #   exchange's (never from a live explorer tag: see _attribution).
     # deposit_inferred: an unlabelled address whose outflows sweep to one
     #   exchange wallet (deposit_inference.py).
     # exchange_wallet: the exchange's own wallet (hot, cold, contract, or a
@@ -98,13 +113,16 @@ class Estimates(_Strict):
     fifo: float | None = None
     prorata: float | None = None
     libr: float | None = None
-    # The smallest figure available: what a letter states.
+    # The smallest figure available: what a letter states (request_letters
+    # ._letter_amount), never above the victim's reported payments or, on a
+    # follow-on, the traced share of what the swaps returned.
     conservative: float | None = None
 
 
 class Transfer(_Strict):
     hash: str | None
-    from_address: str = Field(alias="from")
+    # Null unless read by the browser that traced the case (case_privacy.py).
+    from_address: str | None = Field(alias="from")
     to: str
     value_native: float
     timestamp: int | None
@@ -132,6 +150,12 @@ class CaseV2(BaseModel):
     attribution: Attribution | None
     estimates: Estimates
     transfers: list[Transfer]
+    # When the appendix lists fewer than all (pipeline._appendix): how many the
+    # trace had, how many are left out, and SHA-256 over all of them. Absent
+    # in cases stored before November 2026, which list every one.
+    transfers_total: int | None = None
+    transfers_omitted: int | None = None
+    transfers_sha256: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -144,22 +168,29 @@ def upgrade(result: dict[str, Any]) -> dict[str, Any]:
     is already v2 (the fields it has are kept), on a stored case from before
     the contract, and on each follow-on trace inside it.
     """
-    out = copy.deepcopy(result)
+    # A new top level, never a deep copy: the input is left as it was, and a
+    # multi-MB case is not copied whole once per follow-on.
+    out = dict(result)
     out["contract_version"] = CONTRACT_VERSION
     out.setdefault("intake", {"mode": "address", "payments": [], "ncrp_ack": None})
     out.setdefault("reported_amount", None)
     out["attribution"] = out.get("attribution") or _attribution(out)
     out.setdefault("estimates", _estimates(out))
     out["transfers"] = [_transfer(t) for t in out.get("transfers") or []]
-    for follow in out.get("follow_ons") or []:
-        if isinstance(follow.get("result"), dict):
-            follow["result"] = upgrade(follow["result"])
+    if "follow_ons" in out:
+        out["follow_ons"] = [{**f, "result": upgrade(f["result"])} if isinstance(f.get("result"), dict) else f
+                             for f in out.get("follow_ons") or []]
     return out
 
 
 def read_case(result: dict[str, Any]) -> CaseV2:
     """The way every other lane reads a trace result."""
     return CaseV2.model_validate(upgrade(result))
+
+
+def _says_deposit(label: str | None) -> bool:
+    from ..exchange_matcher import is_deposit_label  # here, so the contract module stays light to import
+    return is_deposit_label(label)
 
 
 def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
@@ -170,13 +201,6 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
     wallet_type = match.get("wallet_type")
     inferred = bool(result.get("attribution_inferred")) or wallet_type == INFERRED_DEPOSIT
 
-    if inferred:
-        kind = "deposit_inferred"
-    elif wallet_type == DEPOSIT_WALLET:
-        kind = "deposit_label"
-    else:
-        kind = "exchange_wallet"
-
     live = result.get("live_tags") or {}
     live_addresses = {f.get("address") for f in live.get("found") or []}
     if inferred:
@@ -185,6 +209,17 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
         source = "live_tag"
     else:
         source = "label_file"
+
+    if inferred:
+        kind = "deposit_inferred"
+    elif wallet_type == DEPOSIT_WALLET and source == "label_file" and _says_deposit(match.get("label")):
+        kind = "deposit_label"  # the same test as report.attribution_kind
+    else:
+        # The exchange's own wallet -- or an explorer's tag, whatever it says:
+        # a tag reading "Deposit" is TronScan's word, not a checked label, so
+        # it never supports a request for the customer (report.attribution_kind
+        # calls it explorer_tag; the letter asks the exchange to confirm first).
+        kind = "exchange_wallet"
 
     return {
         "kind": kind,

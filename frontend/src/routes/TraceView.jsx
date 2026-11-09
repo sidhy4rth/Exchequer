@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace } from '../api'
+import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace, stopTraceJob, traceJobRemembered } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
 import ThemeToggle from '../components/ThemeToggle'
@@ -10,10 +10,11 @@ import Present from '../components/Present'
 import WatchPanel from '../components/WatchPanel'
 import RequestsPanel from '../components/RequestsPanel'
 import './TraceView.css'
+import { plain } from '../text'
 import { BAND_RULE, bandLabel, bandOf, validationLine } from '../components/confidence'
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }
+const RISK_NAME = { sanctioned: 'Sanctioned entity', seized: 'Seizure order', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }
 const COMPONENT_NAME = {
   hop_proximity: 'Hop proximity',
   amount_correlation: 'Amount correlation',
@@ -23,7 +24,7 @@ const COMPONENT_NAME = {
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
 function groupReasons(reasons) {
-  const counts = { depth: 0, nodes: 0, fanout: 0, service: 0, fetch: 0, other: [] }
+  const counts = { depth: 0, nodes: 0, fanout: 0, service: 0, fetch: 0, history: 0, other: [] }
   ;(reasons ?? []).forEach((r) => {
     if (r.startsWith('time budget')) counts.other.push(r)
     else if (r.startsWith('depth limit')) counts.depth += 1
@@ -31,6 +32,7 @@ function groupReasons(reasons) {
     else if (r.startsWith('fan-out limit')) counts.fanout += 1
     else if (r.includes('pays out to many addresses')) counts.service += 1
     else if (r.includes('could not be fetched')) counts.fetch += 1
+    else if (r.startsWith('history read limit')) counts.history += 1
     else counts.other.push(r)
   })
   const out = []
@@ -39,6 +41,8 @@ function groupReasons(reasons) {
   if (counts.fanout) out.push(`only the 10 largest counterparties were followed at ${counts.fanout} address${counts.fanout === 1 ? '' : 'es'}`)
   if (counts.service) out.push(`${counts.service} service contract${counts.service === 1 ? '' : 's'} not expanded`)
   if (counts.fetch) out.push(`${counts.fetch} address${counts.fetch === 1 ? '' : 'es'} could not be fetched`)
+  // A read that stopped at its record limit: spam can fill one, so the case may miss transfers there.
+  if (counts.history) out.push(`history not read in full at ${counts.history} address${counts.history === 1 ? '' : 'es'} (each read stopped at its record limit)`)
   return out.concat(counts.other)
 }
 
@@ -56,6 +60,21 @@ function middle(address, head = 10, tail = 8) {
   if (!address || address.length <= head + tail + 1) return address
   return `${address.slice(0, head)}…${address.slice(-tail)}`
 }
+/** A transaction's page on the chain's explorer (Tronscan's is under #/). */
+function txUrl(explorer, chain, hash) {
+  if (!explorer || !hash) return null
+  return chain === 'tron' ? `${explorer}/#/transaction/${hash.replace(/^0x/, '')}` : `${explorer}/tx/${hash}`
+}
+// A whole number from the URL, kept within the backend's range; `fallback`
+// when absent or not a number.
+function clampInt(raw, lo, hi, fallback) {
+  const n = raw == null || raw === '' ? NaN : Math.trunc(Number(raw))
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback
+}
+// A payment hash as the backend accepts it.
+const PAY_HASH = /^(0x)?[0-9a-fA-F]{64}$/
+// The cap the confirmation card offers, as on the trace form.
+const LINK_BUDGET_SECONDS = 90
 const mmss = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
@@ -132,6 +151,47 @@ function MethodRange({ methods, unit }) {
   )
 }
 
+/** What a /trace link would run, with a button to run it. Shown instead of
+ * starting the trace when the link was opened rather than started here. */
+function ConfirmTrace({ address, chain, asset, depth, direction, budget, hashes, onRun }) {
+  const [capped, setCapped] = useState(!budget)
+  const bad = hashes.filter((h) => !PAY_HASH.test(h))
+  return (
+    <section className="card confirm-trace" aria-labelledby="confirm-trace-title">
+      <div className="body">
+        <span className="micro">This link asks for a new trace</span>
+        <h2 id="confirm-trace-title">Run this trace?</h2>
+        <p className="note">Opening a trace link does not start it. A trace reads the chain under this browser's key and counts against the hourly allowance, so check what it will do first.</p>
+        <div className="kv"><span className="k">Address</span><span className="v mono confirm-address">{address}</span></div>
+        <div className="kv"><span className="k">Chain</span><span className="v">{chain} · {asset}</span></div>
+        <div className="kv"><span className="k">Direction</span><span className="v">{direction === 'incoming' ? 'Who paid in' : 'Where it went'}</span></div>
+        <div className="kv"><span className="k">Depth</span><span className="v">{depth} hop{depth === 1 ? '' : 's'}</span></div>
+        {budget && <div className="kv"><span className="k">Time limit</span><span className="v mono">{mmss(budget)}</span></div>}
+        {hashes.length > 0 && (
+          <div className="kv">
+            <span className="k">Payments</span>
+            <ul className="v confirm-hashes">
+              {hashes.map((h) => (
+                <li key={h} className="mono">{middle(h)}{bad.includes(h) ? <span className="error-line"> · not a transaction hash</span> : null}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {!budget && (
+          <label className="confirm-cap">
+            <input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} />
+            Stop after <span className="mono">1:30</span>
+          </label>
+        )}
+        <div className="verify-actions">
+          <button className="primary" disabled={bad.length > 0} onClick={() => onRun(capped)}>Run this trace</button>
+          <Link to="/" className="quiet-link">Back to the console</Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function TraceView() {
   // One component serves all three routes. /trace/:address runs a fresh
   // traversal; /case/:caseId opens what was stored, and /demo/:demoNo a
@@ -149,14 +209,25 @@ export default function TraceView() {
 
   const chain = params.get('chain') || 'ethereum'
   const asset = params.get('asset') || 'ETH'
-  const depth = Number(params.get('depth') || 4)
+  const depth = clampInt(params.get('depth'), 1, 6, 4)
   const requestedDirection = params.get('direction') || 'outgoing'
   // Optional wall-clock cap, in seconds; absent means the trace runs its course.
-  const budget = Number(params.get('budget')) || null
-  // R1: the victim's payment hashes, from the URL; the NCRP number only ever
-  // travels in the navigation state (see TraceForm).
+  const budget = Number(params.get('budget')) > 0 ? clampInt(params.get('budget'), 10, 600, null) : null
+  // R1: the victim's payment hashes, from the URL; the NCRP number and the
+  // victim's own wallet only ever travel in the navigation state (see TraceForm).
   const pay = params.get('pay') || ''
   const ncrpAck = location.state?.ncrpAck || null
+  const victimAddress = location.state?.victimAddress || null
+  // A trace link alone never starts a trace: it would run under whoever opens
+  // it (their key, their access code, their hourly allowance) with whatever
+  // the link asks for. The form and Re-trace say they started it here; a
+  // reload of a trace this tab is running re-attaches without asking.
+  const startedHere = location.state?.startedHere === true
+  const traceParams = {
+    address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
+    payments: pay ? pay.split(',').filter(Boolean) : [], ncrpAck, victimAddress,
+  }
+  const needsConfirm = !stored && !justTraced && !startedHere && !traceJobRemembered(traceParams)
 
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -164,6 +235,9 @@ export default function TraceView() {
   const [elapsed, setElapsed] = useState(0)
   // What the background trace reports as it runs: stage, hop, addresses read.
   const [progress, setProgress] = useState(null)
+  // The running job, so the person who started the trace can stop it.
+  const [jobId, setJobId] = useState(null)
+  const [stopping, setStopping] = useState(false)
   const [revealed, setRevealed] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState('flow') // 'flow' | 'bubbles'
@@ -192,17 +266,19 @@ export default function TraceView() {
       setResult(location.state.result); setLoading(false); clearInterval(tick)
       return undefined
     }
-    setProgress(null)
+    setProgress(null); setJobId(null); setStopping(false)
+    if (needsConfirm) { setLoading(false); clearInterval(tick); return undefined }
     const request = recorded
       ? fetchRecordedDemo(demoNo)
       : stored
       ? fetchCase(caseId)
       : runTrace(
-        {
-          address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
-          payments: pay ? pay.split(',') : [], ncrpAck,
+        traceParams,
+        (snap) => {
+          if (cancelled) return
+          if (snap?.job_id) setJobId(snap.job_id)
+          if (snap?.progress) setProgress(snap.progress)
         },
-        (snap) => { if (!cancelled && snap?.progress) setProgress(snap.progress) },
       )
     request
       .then((data) => {
@@ -225,7 +301,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay, needsConfirm]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -245,7 +321,7 @@ export default function TraceView() {
           // How far from the reported address this transfer sits: the far end
           // of the edge, which is the sender on a reverse trace.
           hop: (backwards ? from.depth : to.depth) ?? 1,
-          toLabel: to.label,
+          toLabel: plain(to.label),
           toKind: to.risk_category ? 'red' : to.exchange ? 'green' : '',
           onPath: onPath.has(`${e.source}>${e.target}`),
         }
@@ -269,6 +345,30 @@ export default function TraceView() {
   // victim's payments; anything else followed the wallet's own history.
   const paymentTrace = result?.intake?.mode === 'payment'
   const payments = result?.intake?.payments ?? []
+  // A hash that carried several transfers has one entry per transfer (leg),
+  // so payments are counted by hash. A copy for anyone but the officer who
+  // traced the case has the hashes withheld (backend/app/case_privacy.py):
+  // each transfer is then its own row.
+  const paidByHash = useMemo(() => {
+    const byHash = new Map()
+    for (const [i, p] of payments.entries()) {
+      const key = p.tx_hash ?? `withheld-${i}`
+      const row = byHash.get(key) ?? { key, tx_hash: p.tx_hash, timestamp: p.timestamp, amount: 0, legs: 0, senders: [], labels: [], checks: [], found_by: p.found_by }
+      row.amount += p.amount || 0
+      row.legs += 1
+      if (p.from && !row.senders.includes(p.from)) row.senders.push(p.from)
+      if (p.payer_label && !row.labels.includes(p.payer_label)) row.labels.push(p.payer_label)
+      row.checks.push(p.payer_is_victim)
+      byHash.set(key, row)
+    }
+    // Any leg from another wallet marks the payment; all from the victim's clears it.
+    return [...byHash.values()].map((r) => ({
+      ...r, payerIsVictim: r.checks.includes(false) ? false : r.checks.length && r.checks.every((c) => c === true) ? true : null,
+    }))
+  }, [payments])
+  const paymentCount = paidByHash.length
+  const hashesWithheld = payments.length > 0 && payments.every((p) => !p.tx_hash)
+  const windowStart = payments.length ? Math.min(...payments.map((p) => p.timestamp || Infinity)) : null
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
   const findings = result?.findings ?? []
@@ -279,6 +379,10 @@ export default function TraceView() {
   const followed = result?.followed_attribution
   const inferred = result?.inferred_deposits ?? []
   const components = result?.confidence_detail?.components ?? []
+  // What the score cannot see, as the report lists it under its limitations.
+  const caveats = result?.confidence_detail?.caveats ?? []
+  // Pro-rata started from at most the victim's payments or the swap's output.
+  const capped = result?.prorata?.seed_cap?.applied ? result.prorata.seed_cap : null
   const serviceContracts = result?.graph.nodes.filter((n) => n.is_service_contract) ?? []
   const path = result?.trace_path ?? []
   const pathHashes = path.reduce((n, step) => n + (step.tx_hashes?.length ?? 0), 0)
@@ -316,8 +420,21 @@ export default function TraceView() {
       depth: String(result.max_depth ?? result.depth_reached ?? 3), direction: result.direction ?? 'outgoing',
     })
     if (result.time_budget_seconds) q.set('budget', String(result.time_budget_seconds))
-    navigate(`/trace/${result.address}?${q}`)
+    // A payment case is re-traced from the same payments (public chain data).
+    const hashes = [...new Set((result.intake?.mode === 'payment' ? result.intake.payments ?? [] : []).map((p) => p.tx_hash).filter(Boolean))]
+    if (hashes.length) q.set('pay', hashes.join(','))
+    navigate(`/trace/${result.address}?${q}`, { state: { startedHere: true } })
   }, [navigate, result])
+
+  // Run the trace a link asked for, once the officer has seen what it does.
+  const confirmRun = useCallback((capped) => {
+    const q = new URLSearchParams(params)
+    q.set('depth', String(depth))
+    if (budget) q.set('budget', String(budget))
+    else if (capped) q.set('budget', String(LINK_BUDGET_SECONDS))
+    else q.delete('budget')
+    navigate(`${location.pathname}?${q}`, { replace: true, state: { ...(location.state ?? {}), startedHere: true } })
+  }, [navigate, params, depth, budget, location.pathname, location.state])
 
 
   return (
@@ -356,12 +473,24 @@ export default function TraceView() {
       <div className="results-body">
         {error && <div className="banner error">{error}</div>}
 
+        {needsConfirm && (
+          <ConfirmTrace
+            address={routeAddress} chain={chain} asset={asset} depth={depth} direction={requestedDirection}
+            budget={budget} hashes={traceParams.payments} onRun={confirmRun}
+          />
+        )}
+
         {loading && (
           <div className="card">
             <div className="body loading">
               <span className="micro">{recorded ? 'Opening verified example' : stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
               <span className="elapsed">{elapsed.toFixed(1)} s{!stored && budget ? <small> · stops expanding at {mmss(budget)}{elapsed > budget ? ' — finishing what it has' : ''}</small> : null}</span>
               {!stored && progress && <span className="progress-line" aria-live="polite">{describeProgress(progress)}</span>}
+              {!stored && jobId && (
+                <button className="quiet" disabled={stopping} onClick={() => { setStopping(true); stopTraceJob(jobId).catch((err) => { setStopping(false); setError(err.message) }) }}>
+                  {stopping ? 'Stopping…' : 'Stop this trace'}
+                </button>
+              )}
               {!stored && progress?.stage === 'walking' && progress.level_size > 0
                 ? <div className="bar determinate"><span style={{ width: `${Math.round(100 * Math.min(1, (progress.level_read ?? 0) / progress.level_size))}%` }} /></div>
                 : <div className="bar"><span /></div>}
@@ -397,11 +526,12 @@ export default function TraceView() {
             <div>
               <div className="title">
                 {riskMatches.length === 1 ? 'Risk screening hit' : `${riskMatches.length} risk screening hits`}
-                {riskMatches.some((m) => m.category === 'mixer') ? ' — the trace stops at a mixer' : ''}
+                {/* A mixer tag that is not a pinned pool is shown, but the trace went past it. */}
+                {riskMatches.some((m) => m.category === 'mixer' && m.is_terminal !== false) ? ' — the trace stops at a mixer' : ''}
               </div>
               {riskMatches.map((m) => (
                 <div className="line" key={m.address}>
-                  <strong>{RISK_NAME[m.category] ?? m.category}:</strong> {m.entity} — <Address value={m.address} />
+                  <strong>{RISK_NAME[m.category] ?? m.category}:</strong> {plain(m.entity)} — <Address value={m.address} />
                   {' · '}{m.depth === 0 ? 'the reported address itself' : `${m.depth} hop${m.depth === 1 ? '' : 's'} away, ${num(m.value_received_native)} ${unit} reached it`}
                   {' · '}<span className="mono">{unambiguousDate(m.source)}</span>
                   {m.is_terminal && ' · A mixer pays out from a commingled pool, so transfers leaving it have no established link to the funds that arrived.'}
@@ -418,8 +548,10 @@ export default function TraceView() {
               <span className="q">{reverse ? 'Where the money came from' : 'Where the money went'}</span>
               {!reverse && (paymentTrace ? (
                 <span className="intake" title="The trace read the reported wallet only from when the first payment arrived.">
-                  From the victim's <span className="num">{num(result.reported_amount)} {unit}</span> in {payments.length} payment{payments.length === 1 ? '' : 's'}
-                  {result.intake.ncrp_ack ? <> · NCRP <span className="mono">{result.intake.ncrp_ack}</span></> : null}
+                  From the victim's <span className="num">{num(result.reported_amount)} {unit}</span> in {paymentCount} payment{paymentCount === 1 ? '' : 's'}
+                  {payments.length > paymentCount ? ` (${payments.length} transfers)` : ''}
+                  {result.intake.ncrp_ack ? <> · NCRP <span className="mono">{result.intake.ncrp_ack}</span> <span className="note">as entered</span></> : null}
+                  {!result.intake.ncrp_ack && result.redacted?.includes('intake.ncrp_ack') ? <> · NCRP on file (visible to the officer who traced it)</> : null}
                 </span>
               ) : (
                 <span className="intake exploratory" title="Traced from the address alone: it follows the wallet's whole recent history, which can include other people's money. Start from the victim's payment hashes to trace their money only.">
@@ -432,16 +564,22 @@ export default function TraceView() {
                   <div className="basis">
                     {result.attribution_inferred
                       ? <><strong>Inferred, not labelled</strong> — probable deposit address</>
-                      : <><strong>Exact match</strong> · label <span className="mono">{result.exchange_label}</span></>}
+                      : <><strong>Exact match</strong> · label <span className="mono">{plain(result.exchange_label)}</span></>}
                     {' · '}{result.hop_count} hop{result.hop_count === 1 ? '' : 's'}{reverse ? ' upstream' : ''}
                     {' · '}{reverse
                       ? <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> sent</>
                       : result.prorata?.status === 'estimated'
-                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(result.prorata.sent)} {unit}</span> {paymentTrace
-                            ? <>sent on after the victim's payment likely arrived</>
-                            : <>sent from this wallet likely arrived</>} <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span></>
+                        ? <><span className="num">≈ {num(result.prorata.estimated)} of {num(capped ? capped.amount : result.prorata.sent)} {unit}</span> {capped
+                            ? <>{capped.basis === 'swap_output' ? 'the swap returned' : 'the victim reported paying'} likely arrived</>
+                            : paymentTrace
+                              ? <>sent on after the victim's payment likely arrived</>
+                              : <>this wallet sent on this route likely arrived</>} <span className="note">(pro-rata{result.prorata.arrived_total > result.prorata.estimated * 1.05 ? `; ${num(result.prorata.arrived_total)} ${unit} arrived in total, the rest from other sources` : ''})</span>
+                            {!capped && !paymentTrace && <span className="note"> · may include other people's money, not only the complainant's</span>}</>
                         : <><span className="num">{num(result.value_received_native ?? 0)} {unit}</span> reached it along this path, including any funds from other sources</>}
                   </div>
+                  {!reverse && result.prorata?.status === 'unknown' && (
+                    <p className="note prorata-unknown">Pro-rata: not estimated — {result.prorata.reason}. The score gives the amount no credit.</p>
+                  )}
                   {!reverse && <MethodRange methods={result.tracing_methods} unit={unit} />}
                   <div className="cite">
                     <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
@@ -452,7 +590,7 @@ export default function TraceView() {
                 <>
                   <h2 className="green">{followed.exchange}</h2>
                   <div className="basis">
-                    <strong>After a swap to {followed.asset}</strong> · {followed.attribution_inferred ? 'probable deposit address' : <>label <span className="mono">{followed.exchange_label}</span></>}
+                    <strong>After a swap to {followed.asset}</strong> · {followed.attribution_inferred ? 'probable deposit address' : <>label <span className="mono">{plain(followed.exchange_label)}</span></>}
                     {' · '}{followed.hop_count} hop{followed.hop_count === 1 ? '' : 's'} in the {followed.asset} trace
                     {' · '}{bandOf(followed.confidence) ?? 'no'} confidence within that trace
                   </div>
@@ -497,6 +635,8 @@ export default function TraceView() {
                       <p className="score-working">Score <span className="num">{result.confidence.toFixed(2)}</span>, the sum of each input × its weight. {BAND_RULE}</p>
                       <p className="note">The score is the weighted sum of these three inputs and nothing else. A pattern never moves it. An exchange match identifies where funds arrived, not who controls the account; only the exchange can link an address to a customer, on a lawful request (PMLA s.12, s.50).</p>
                       {primaryInference && <p className="confirm">{primaryInference.evidence?.confirmation}</p>}
+                      {caveats.length > 0 && <p className="limitations-head"><strong>Limitations.</strong></p>}
+                      {caveats.map((c) => <p className="note limitation" key={c}>{c}</p>)}
                     </div>
                   </details>
                 </>
@@ -525,7 +665,7 @@ export default function TraceView() {
                 <div className="card graph-card" key={`${f.address}-${f.asset}`}>
                   <div className="head">
                     <span className="micro">
-                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${f.result.exchange_label} · ${f.result.confidence?.toFixed(2)}` : 'no exchange reached'}
+                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${plain(f.result.exchange_label)} · ${f.result.confidence?.toFixed(2)}` : 'no exchange reached'}
                     </span>
                     <span className="note">from <Address value={f.address} head={8} tail={6} /> · swap tx <Address value={f.swap?.tx} head={8} tail={6} /></span>
                   </div>
@@ -574,6 +714,44 @@ export default function TraceView() {
                 </div>
               </div>
 
+              {paymentTrace && payments.length > 0 && (
+                <details className="card sec payments-card" open>
+                  <summary>
+                    <span className="micro">Victim's payments · {paymentCount}</span>
+                    <span className="note">confirm each against the complaint{windowStart && windowStart !== Infinity ? ` · the trace reads the wallet from ${when(windowStart)} UTC` : ''}{hashesWithheld ? ' · hashes and times visible to the officer who traced it' : ''}</span>
+                  </summary>
+                  <div className="feed">
+                    {paidByHash.map((p) => {
+                      const link = p.tx_hash ? txUrl(result.explorer_url, result.chain, p.tx_hash) : null
+                      return (
+                        <div className="row" key={p.key}>
+                          <div className="hop">PAY</div>
+                          <div>
+                            <div className="pair">
+                              {p.tx_hash ? <Address value={p.tx_hash} head={10} tail={8} /> : <span className="note">hash withheld</span>}
+                              {link && <a className="note" href={link} target="_blank" rel="noreferrer">explorer</a>}
+                              {p.legs > 1 && <span className="note">{p.legs} transfers</span>}
+                            </div>
+                            <div className="sub">
+                              <span>{when(p.timestamp)}</span>
+                              <span>from {p.senders.length
+                                ? p.senders.map((a) => <Address key={a} value={a} head={8} tail={6} />)
+                                : <span className="note">hidden</span>}</span>
+                              {p.labels.map((l) => <span className="pill" key={l}>{l}</span>)}
+                              {p.payerIsVictim === true && <span className="pill green">the victim's wallet</span>}
+                              {p.payerIsVictim === false && <span className="pill red" title="A sender is not the victim's wallet entered with the complaint">not the victim's wallet</span>}
+                              {p.found_by === 'officer_search' && <span className="pill">found by the officer</span>}
+                            </div>
+                          </div>
+                          <div className="amount">{num(p.amount)}<span className="unit">{unit}</span></div>
+                        </div>
+                      )
+                    })}
+                    <p className="note" style={{ padding: '8px 12px' }}>Check these against the complaint before sending letters: the trace reads the wallet from the first one.</p>
+                  </div>
+                </details>
+              )}
+
               {result.statement && (result.statement.credits.length > 0 || result.statement.debits.length > 0) && (
                 <details className="card sec">
                   <summary>
@@ -586,14 +764,15 @@ export default function TraceView() {
                   <div className="feed">
                     {[['credits', 'Money in', 'from', '+'], ['debits', 'Money out', 'to', '−'], ['poisoning', 'Address-poisoning dust (lookalike senders)', 'from', '!']].filter(([key]) => key !== 'poisoning' || (result.statement.poisoning ?? []).length > 0).map(([key, title, dir, sign]) => (
                       <div key={key}>
-                        <p className="note" style={{ padding: '10px 12px 4px' }}><strong>{title}</strong>{(result.statement[key] ?? []).length === 0 ? ' — none found' : ''}{key === 'poisoning' ? ` — ${result.statement.lookalikes} in all; never copy an address from wallet history` : ''}</p>
+                        <p className="note" style={{ padding: '10px 12px 4px' }}><strong>{title}</strong>{key === 'credits' && result.redacted?.includes('statement.credits') ? ' — withheld: they list the victim\'s payments (visible to the officer who traced it)' : (result.statement[key] ?? []).length === 0 ? ' — none found' : ''}{key === 'poisoning' ? ` — ${result.statement.lookalikes} in all; never copy an address from wallet history` : ''}</p>
                         {(result.statement[key] ?? []).map((r) => (
-                          <div className="row" key={r.tx + key}>
+                          <div className={`row${r.before_window ? ' before-window' : ''}`} key={r.tx + key}>
                             <div className="hop">{sign}</div>
                             <div>
                               <div className="pair"><span className="note">{dir}</span> <Address value={r.counterparty} head={8} tail={6} /></div>
                               <div className="sub">
                                 <span>{when(r.time)}</span>
+                                {r.before_window && <span className="pill" title="Before the victim's first payment arrived, so it cannot be the victim's money">before the payment</span>}
                                 {r.lookalike && <span className="pill red" title="A stranger's address copying the start and end of one this wallet really paid — address poisoning. Never copy an address from history.">lookalike · address poisoning</span>}
                               </div>
                             </div>
@@ -756,9 +935,15 @@ export default function TraceView() {
                       <span className="t">addresses reached but not expanded<small>The {mmss(result.time_budget_seconds)} time cap ran out first; the graph beyond them is missing.</small></span>
                     </div>
                   )}
+                  {result.addresses_unexpanded_by_budget > 0 && (
+                    <div className="exclusion">
+                      <span className="n">{result.addresses_unexpanded_by_budget}</span>
+                      <span className="t">addresses reached but not expanded<small>The case's provider request budget ran out first; the graph beyond them is missing.</small></span>
+                    </div>
+                  )}
                   <div className="exclusion">
                     <span className="n">{result.api_calls}</span>
-                    <span className="t">provider requests<small>{result.transfers?.length ?? 0} individual transactions; depth {result.depth_reached} reached of {result.max_depth ?? depth}{result.seconds_elapsed ? `; ${result.seconds_elapsed} s` : ''}.</small></span>
+                    <span className="t">provider requests<small>{result.transfers_total ?? result.transfers?.length ?? 0} individual transactions{result.transfers_omitted ? ` (${result.transfers?.length ?? 0} listed)` : ''}; depth {result.depth_reached} reached of {result.max_depth ?? depth}{result.seconds_elapsed ? `; ${result.seconds_elapsed} s` : ''}.</small></span>
                   </div>
                   {result.evidence?.count > 0 && (
                     <div className="exclusion">

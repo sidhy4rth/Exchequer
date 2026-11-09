@@ -105,3 +105,60 @@ def test_polygon_and_arbitrum_are_etherscan_chains_with_their_own_stablecoins():
     assert (polygon.chain_id, polygon.native_symbol, polygon.provider) == (137, "POL", "etherscan")
     assert (arbitrum.chain_id, arbitrum.native_symbol, arbitrum.provider) == (42161, "ETH", "etherscan")
     assert polygon.find_token("USDT").address != config.CHAINS["ethereum"].find_token("USDT").address
+
+
+def test_relabel_re_reads_carried_listings_offline_and_drops_lapsed_ones(two_chains, monkeypatch):
+    """An Israeli order now filed as seized is seized on Polygon too; a lapsed one goes (r1-labels-data-12/-3)."""
+    chains, listed = two_chains
+    lapsed, seized = "0x" + "5" * 40, "0x" + "6" * 40
+    for chain in chains.values():
+        chain.risk_labels_path.write_text(json.dumps({"_meta": {"last_reviewed": "2026-09-23"}, "labels": {
+            a: {"category": "sanctioned", "entity": "E", "label": "E", "source": "old"} for a in (listed, lapsed, seized)}}))
+    monkeypatch.setattr(port, "sanctioned_candidates", lambda: {
+        listed: {"category": "sanctioned", "entity": "E", "label": "E", "source": "OFAC SDN list"},
+        seized: {"category": "seized", "entity": "NBCTF order FO 1/24", "label": "NBCTF order FO 1/24",
+                 "source": "Israel NBCTF seizure or forfeiture order FO 1/24 (via OpenSanctions)",
+                 "authorities": ["Israel"], "valid_until": "2028-02-16"}})
+    monkeypatch.setattr(port, "EtherscanClient", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no chain calls")))
+    assert port.relabel(dry_run=False) == 0
+    for chain in chains.values():
+        written = json.loads(chain.risk_labels_path.read_text())
+        assert set(written["labels"]) == {listed, seized}
+        assert written["labels"][seized]["category"] == "seized"
+        assert written["labels"][seized]["valid_until"] == "2028-02-16"
+        assert written["_meta"]["last_reviewed"] == "2026-09-23"
+
+
+def test_port_full_mode_retries_an_errored_check(tmp_path, monkeypatch):
+    """A failed check is never checkpointed as a result, so it is asked again (r1-scripts-2)."""
+    wallet = "0x" + "7" * 40
+    monkeypatch.setattr(port, "TARGETS", ("polygon",))
+    monkeypatch.setattr(port, "MERGE_TARGETS", ())
+    monkeypatch.setattr(port, "ethereum_candidates", lambda: {wallet: {"exchange": "Binance", "label": "Binance 1",
+                                                                        "type": "exchange_wallet", "source": "ethereum"}})
+    monkeypatch.setattr(port, "sanctioned_candidates", lambda: {})
+    monkeypatch.setattr(port, "scrape_candidates", lambda chain_key: {})
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    written = []
+    monkeypatch.setattr(port, "write_risk_labels", lambda *a: written.append(a))
+
+    class Client:
+        def __init__(self, **_):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *exc):
+            return False
+    monkeypatch.setattr(port, "EtherscanClient", Client)
+    checkpoint = tmp_path / "port.jsonl"
+    monkeypatch.setattr(port.sys, "argv", ["port_evm_labels", "--checkpoint", str(checkpoint)])
+
+    def down(client, address):
+        raise EtherscanError("rate limit")
+    monkeypatch.setattr(port, "check", down)
+    assert port.main() == 1
+    assert checkpoint.read_text() == "" and written == []  # not checkpointed, nothing written
+
+    monkeypatch.setattr(port, "check", lambda client, address: "ok")
+    assert port.main() == 0
+    assert wallet in json.loads((tmp_path / "exchange_labels_polygon.json").read_text())["labels"]

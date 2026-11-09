@@ -119,3 +119,97 @@ def test_an_unknown_job_is_a_404(client):
 
 def test_progress_outside_a_job_is_a_no_op():
     progress.report(stage="walking")  # nobody listening: must not raise
+
+
+def _running_job(client, monkeypatch):
+    gate = threading.Event()
+    monkeypatch.setattr(pipeline, "run_trace", lambda request: gate.wait(5) and {"address": request.address})
+    job_id = client.post("/trace/jobs", json={"address": ADDR}).json()["job_id"]
+    return job_id, gate
+
+
+def test_a_job_takes_only_a_few_progress_streams(client, monkeypatch):
+    # Each open stream wakes every 0.3 s on the one event loop; a job used to
+    # accept any number of them.
+    from app.routes import jobs as job_routes
+    job_id, gate = _running_job(client, monkeypatch)
+    now = time.monotonic()
+    monkeypatch.setattr(job_routes, "_streams", {job_id: {f"t{i}": now for i in range(job_routes.MAX_STREAMS_PER_JOB)}})
+    refused = client.get(f"/trace/jobs/{job_id}/events")
+    assert refused.status_code == 429
+    gate.set()
+
+
+def test_streams_left_behind_by_dropped_connections_expire(client, monkeypatch):
+    from app.routes import jobs as job_routes
+    job_id, gate = _running_job(client, monkeypatch)
+    old = time.monotonic() - job_routes.STREAM_MAX_SECONDS - 1
+    monkeypatch.setattr(job_routes, "_streams", {job_id: {f"t{i}": old for i in range(job_routes.MAX_STREAMS_PER_JOB)}})
+    gate.set()
+    with client.stream("GET", f"/trace/jobs/{job_id}/events") as stream:
+        assert stream.status_code == 200
+        "".join(stream.iter_text())
+    assert job_routes._streams.get(job_id, {}) == {}  # its own entry is gone too
+
+
+def test_a_stream_ends_after_its_lifetime_and_the_browser_reconnects(client, monkeypatch):
+    from app.routes import jobs as job_routes
+    monkeypatch.setattr(job_routes, "STREAM_MAX_SECONDS", 0.5)
+    job_id, gate = _running_job(client, monkeypatch)
+    start = time.monotonic()
+    with client.stream("GET", f"/trace/jobs/{job_id}/events") as stream:
+        text = "".join(stream.iter_text())
+    gate.set()
+    assert time.monotonic() - start < 3
+    assert "retry:" in text and "event: done" not in text
+
+
+def _slow_job(client, monkeypatch, owner):
+    # A trace that keeps reading until it is told to stop, as a slow provider does.
+    def slow(request, seed_window=None, budget=None):
+        from app import api_budget
+        budget = budget or api_budget.current_budget()
+        for _ in range(200):
+            budget.sleep(0.05)
+        return {"address": request.address, "chain": "ethereum"}
+    monkeypatch.setattr(pipeline, "run_trace", slow)
+    return client.post("/trace/jobs", json={"address": ADDR}, headers={ownership.OWNER_HEADER: owner}).json()["job_id"]
+
+
+def test_the_owner_can_stop_a_running_job_and_its_slot_is_freed(client, monkeypatch):
+    owner = "o" * 32
+    job_id = _slow_job(client, monkeypatch, owner)
+    stopped = client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: owner})
+    assert stopped.status_code == 202
+    deadline = time.monotonic() + 3
+    while client.get(f"/trace/jobs/{job_id}").json()["status"] == "running" and time.monotonic() < deadline:
+        time.sleep(0.05)
+    job = client.get(f"/trace/jobs/{job_id}").json()
+    assert job["status"] == "failed" and job["error"]["status_code"] == 409
+    assert "stopped" in job["error"]["detail"].lower()
+    assert cases._running.acquire(blocking=False) and cases._running.acquire(blocking=False)
+
+
+def test_someone_else_cannot_stop_your_job(client, monkeypatch):
+    job_id = _slow_job(client, monkeypatch, "o" * 32)
+    other = client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "x" * 32})
+    assert other.status_code == 403
+    assert client.delete(f"/trace/jobs/{job_id}").status_code == 403  # no owner key at all
+    client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "o" * 32})
+
+
+def test_stopping_an_unknown_job_is_a_404(client):
+    assert client.delete("/trace/jobs/nope", headers={ownership.OWNER_HEADER: "o" * 32}).status_code == 404
+
+
+def test_the_stream_sends_named_heartbeats(client, monkeypatch):
+    # A comment line never reaches the page's JavaScript; a named event does,
+    # so the browser can tell a quiet trace from a dead stream (4-5).
+    from app.routes import jobs as job_routes
+    monkeypatch.setattr(job_routes, "HEARTBEAT_SECONDS", 0.01)
+    monkeypatch.setattr(job_routes, "STREAM_MAX_SECONDS", 0.6)
+    job_id, gate = _running_job(client, monkeypatch)
+    with client.stream("GET", f"/trace/jobs/{job_id}/events") as stream:
+        text = "".join(stream.iter_text())
+    gate.set()
+    assert "event: heartbeat\ndata: {}\n\n" in text

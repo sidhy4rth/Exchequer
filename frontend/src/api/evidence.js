@@ -26,12 +26,16 @@ export async function fetchLetter(caseId, to) {
   return response.text()
 }
 
-/** Check a text report's content hash and signature (public; nothing stored). */
-export async function verifyReport(text) {
+/**
+ * Check a report's content hash and signature (public; nothing stored): a
+ * text report as a string, or an Exchequer PDF as its bytes, whose attached
+ * report is checked and whose pages are compared with it.
+ */
+export async function verifyReport(body, { pdf = false } = {}) {
   const response = await apiFetch(`${BASE}/verify`, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    body: text,
+    headers: { 'Content-Type': pdf ? 'application/pdf' : 'text/plain; charset=utf-8' },
+    body,
   })
   if (!response.ok) throw await toError(response)
   return response.json()

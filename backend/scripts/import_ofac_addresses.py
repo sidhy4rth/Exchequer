@@ -162,7 +162,7 @@ def parse(sdn_xml: Path) -> tuple[dict[str, dict], dict[str, int], str]:
                     continue
 
             chain = config.CHAINS.get(chain_key)
-            if chain is None or not chain.validate_address(address):
+            if chain is None or not chain.validate_address(address, checksum=False):
                 skipped[code] += 1
                 continue
 
@@ -243,6 +243,15 @@ def write_chain_file(chain_key: str, labels: dict[str, dict], published: str, dr
     path.write_text(json.dumps(document, indent=2) + "\n")
 
 
+def _held_count(chain_key: str) -> int:
+    """How many addresses the chain's OFAC file holds now (0 if none or unreadable)."""
+    path = config.CHAINS[chain_key].risk_labels_path
+    try:
+        return len(json.loads(path.read_text()).get("labels") or {})
+    except (OSError, ValueError, AttributeError):
+        return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -253,6 +262,8 @@ def main() -> int:
     parser.add_argument(
         "--dry-run", action="store_true", help="Report what would be written, write nothing"
     )
+    parser.add_argument("--allow-empty", action="store_true",
+                        help="let a chain's file go empty (OFAC really delisted every address on it)")
     args = parser.parse_args()
 
     if args.sdn_file:
@@ -283,6 +294,15 @@ def main() -> int:
     total = sum(len(v) for v in by_chain.values())
     print(f"\nOFAC SDN list published {published}")
     print(f"Found {total} addresses on chains Exchequer traces:\n")
+
+    # Nothing parsed, or a chain that had addresses now has none, is a format
+    # change (a new XML namespace) far more often than OFAC delisting them all:
+    # write nothing rather than empty the files.
+    emptied = [key for key in OFAC_CHAINS if not by_chain.get(key) and _held_count(key)]
+    if total == 0 or (emptied and not args.allow_empty):
+        print(f"Refusing to write: {'nothing parsed' if total == 0 else 'no addresses left for ' + ', '.join(emptied)}; "
+              "the files already held are kept.", file=sys.stderr)
+        return 1
 
     for chain_key in OFAC_CHAINS:
         write_chain_file(chain_key, by_chain.get(chain_key, {}), published, args.dry_run)

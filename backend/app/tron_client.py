@@ -24,18 +24,21 @@ enough for a demo. A free key raises the limit and is sent as TRON-PRO-API-KEY.
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import random
-import threading
 import time
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
+from .api_budget import (Cancelled, ResponseCache, ResponseTooLarge, SharedPacer, TraceStopped, get_cache, get_pacer,
+                         read_capped, spend)
 from .evidence import EvidenceLog
 
 from . import config
-from .etherscan_client import EtherscanError, Transaction, is_tron_address
+from .etherscan_client import (EtherscanError, ProviderResponseError, SinceRead, Transaction, is_tron_address,
+                               resolve_decimals, safe_int, split_page)
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +97,51 @@ MAX_PAGE = 200
 # wallet that paginated for minutes and never finished). Five pages is the
 # same budget as one fully-kept page on Etherscan, five times over.
 MAX_SCAN = MAX_PAGE * 5
+# A time range that ended this long ago is settled history: Tron solidifies a
+# block in about a minute, and only confirmed records are read.
+SETTLED_SECONDS = 300
+
+# The fields the parsers read; a cached record keeps only these.
+TRC20_FIELDS = ("type", "token_info", "value", "transaction_id", "from", "to", "block_timestamp")
+TOKEN_INFO_FIELDS = ("address", "decimals", "symbol")
+NATIVE_FIELDS = ("txID", "block_timestamp", "blockNumber")
+TRANSFER_VALUE_FIELDS = ("amount", "to_address", "owner_address")
+
+
+def _slim_trc20(raw: Any) -> Any:
+    """A /transactions/trc20 record cut to what _token_transfer reads."""
+    if not isinstance(raw, dict):
+        return raw
+    slim = {k: raw[k] for k in TRC20_FIELDS if k in raw}
+    info = slim.get("token_info")
+    if isinstance(info, dict):
+        slim["token_info"] = {k: info[k] for k in TOKEN_INFO_FIELDS if k in info}
+    return slim
+
+
+def _slim_native(raw: Any) -> Any:
+    """A /transactions record cut to what _native_transfer reads. Anything
+    not TransferContract keeps only its type (it still counts as scanned);
+    a record of a shape the parser would not read is kept as it came."""
+    if not isinstance(raw, dict):
+        return raw
+    try:
+        contract = raw["raw_data"]["contract"][0]
+        kind = contract.get("type")
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return raw
+    if kind != "TransferContract":
+        return {"raw_data": {"contract": [{"type": kind}]}}
+    param = contract.get("parameter")
+    value = param.get("value") if isinstance(param, dict) else None
+    if not isinstance(value, dict):
+        return raw
+    slim = {k: raw[k] for k in NATIVE_FIELDS if k in raw}
+    if "ret" in raw:
+        slim["ret"] = raw["ret"][:1] if isinstance(raw["ret"], list) else raw["ret"]
+    slim["raw_data"] = {"contract": [{"type": kind, "parameter": {
+        "value": {k: value[k] for k in TRANSFER_VALUE_FIELDS if k in value}}}]}
+    return slim
 
 
 class TronError(EtherscanError):
@@ -104,12 +152,30 @@ class TronError(EtherscanError):
     """
 
 
+class TronResponseError(TronError, ProviderResponseError):
+    """TronGrid answered with a shape Exchequer cannot read."""
+
+
+def _page(body: dict[str, Any]) -> tuple[list[Any], str | None]:
+    """(records, next fingerprint) of one TronGrid page, or TronResponseError."""
+    records = body.get("data") or []
+    meta = body.get("meta") or {}
+    fingerprint = meta.get("fingerprint") if isinstance(meta, dict) else None
+    if not isinstance(records, list) or not isinstance(meta, dict) or not isinstance(fingerprint, (str, type(None))):
+        raise TronResponseError("TronGrid returned a page in an unexpected shape")
+    return records, fingerprint or None
+
+
 class TronClient:
     """Transaction source for Tron.
 
     Satisfies the contract the graph builder relies on:
         client.get_outgoing_transactions(address) -> list[Transaction]
     """
+
+    # The case's clock and request budget (api_budget.TraceBudget), set by
+    # pipeline.run_trace; None outside a trace (scripts, the watcher).
+    budget = None
 
     def __init__(
         self,
@@ -121,11 +187,14 @@ class TronClient:
         max_retries: int = 3,
         min_interval: float | None = None,
         client: httpx.Client | None = None,
+        token_decimals: int | None = None,
     ) -> None:
         self.api_key = api_key if api_key is not None else config.TRONGRID_API_KEY
         # When set, this TRC-20 contract is followed instead of native TRX.
         self.contract_address = contract_address
         self.asset_symbol = asset_symbol
+        # The traced token's confirmed precision (config), as on the EVM chains.
+        self.token_decimals = token_decimals
         self.base_url = base_url.rstrip("/")
         self.max_retries = max_retries
         # Without a key TronGrid rate-limits aggressively (observed: 429 within
@@ -143,8 +212,21 @@ class TronClient:
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout, headers=headers)
         self.evidence = EvidenceLog()
-        self._lock = threading.Lock()
-        self._last_request_at = 0.0
+        # address -> whether its latest read stopped at a limit (history_capped).
+        self._capped: dict[str, bool] = {}
+        # TronGrid limits requests per key (or per IP without one) across every
+        # trace, so the pacer is shared by credential and widens on refusal; a
+        # pacer per instance let four keyless traces send four times the rate.
+        credential = hashlib.sha256(self.api_key.encode()).hexdigest()[:8] if self.api_key else "anon"
+        self._meter_key = credential  # the key's (or this address's) allowance for the day
+        interval = self.min_interval
+        self._pacer = get_pacer(f"trongrid:{credential}", lambda: SharedPacer(
+            interval=interval, min_interval=interval, max_interval=max(interval * 5, 6.0)))
+        # Re-traces, both directions and follow-ons read the same pages again.
+        # Shared by every key: the answer is the chain's, not the caller's.
+        self._cache = get_cache("trongrid:responses", lambda: ResponseCache(
+            ttl_seconds=config.API_CACHE_TTL_SECONDS, path=config.API_CACHE_PATH,
+            max_bytes=config.CACHE_SMALL_MEMORY_BYTES))
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -159,18 +241,30 @@ class TronClient:
 
     # -- internals ---------------------------------------------------------
     def _throttle(self) -> None:
-        with self._lock:
-            elapsed = time.monotonic() - self._last_request_at
-            if elapsed < self.min_interval:
-                time.sleep(self.min_interval - elapsed)
-            self._last_request_at = time.monotonic()
+        self._pacer.wait()
+
+    def _describe(self, path: str, params: dict[str, Any]) -> str:
+        query = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+        return f"GET {self.base_url}{path}?{query}"
 
     def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
+        return self._send("GET", path, self._describe(path, params), params=params)[0]
+
+    def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._send("POST", path, f"POST {self.base_url}{path} {json.dumps(payload, sort_keys=True)}",
+                          json=payload)[0]
+
+    def _send(self, method: str, path: str, request_desc: str, **kwargs: Any) -> tuple[dict[str, Any], Any]:
+        """(body, its evidence record)."""
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
+            spend("trongrid", self._meter_key, 1, self.budget)  # the case's clock and request budget, every attempt
             self._throttle()
             try:
-                response = self._client.get(f"{self.base_url}{path}", params=params)
+                response = read_capped(self._client, method, f"{self.base_url}{path}", **kwargs,
+                                       **({"timeout": self.budget.timeout(20.0)} if self.budget else {}))
+            except ResponseTooLarge as exc:
+                raise TronResponseError(f"TronGrid response too large: {exc}") from exc
             except httpx.RequestError as exc:
                 last_error = TronError(f"Network error contacting TronGrid: {exc}")
                 self._backoff(attempt, str(exc))
@@ -179,6 +273,8 @@ class TronClient:
             if response.status_code in (429, 403) or response.status_code >= 500:
                 # 403 here means the free rate limit, not a bad key.
                 last_error = TronError(f"TronGrid returned HTTP {response.status_code}")
+                if response.status_code in (429, 403):
+                    self._pacer.penalize()  # every trace on this key is going too fast
                 self._backoff(attempt, f"HTTP {response.status_code}")
                 continue
             if response.status_code != 200:
@@ -189,46 +285,103 @@ class TronClient:
             try:
                 body = response.json()
             except ValueError as exc:
-                raise TronError(f"TronGrid returned non-JSON: {exc}") from exc
+                raise TronResponseError(f"TronGrid returned non-JSON: {exc}") from exc
+            if not isinstance(body, dict):
+                raise TronResponseError(f"TronGrid returned a JSON {type(body).__name__}, not an object")
 
             if body.get("success") is False:
                 raise TronError(f"TronGrid error: {str(body.get('error'))[:200]}")
-            query = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
-            self.evidence.record("trongrid", f"GET {self.base_url}{path}?{query}", response.content)
-            return body
+            rec = self.evidence.record("trongrid", request_desc, response.content)
+            self._pacer.reward()
+            return body, rec
 
         raise TronError(
             f"TronGrid request failed after {self.max_retries + 1} attempts: {last_error}"
         )
 
+    def _read_pages(self, path: str, params: dict[str, Any], scope: Any, ttl: float,
+                    take: Callable[[list[Any], bool], bool]) -> None:
+        """Page through one read, handing each page's records to `take` with
+        whether more follow; `take` says whether to go on.
+
+        The read is cached whole -- every page it took, under its first
+        request and `scope` (what else decides where `take` stops) -- or not
+        at all: a fingerprint belongs to the read that made it, so a cached
+        first page is never followed by a live one. A hit replays the pages
+        as cached evidence, each with its own request and original hash."""
+        slim = _slim_trc20 if self.contract_address else _slim_native
+        key = (self.base_url, path, json.dumps(params, sort_keys=True), json.dumps(scope))
+        hit, pages = self._cache.get(key)
+        if hit and isinstance(pages, list):
+            for page in pages:
+                self.evidence.record_cached("trongrid", page["request"], page["meta"], page["data"])
+                if not take(page["data"], page["more"]):
+                    break
+            return
+        params, pages = dict(params), []
+        while True:
+            request_desc = self._describe(path, params)
+            body, rec = self._send("GET", path, request_desc, params=dict(params))
+            records, fingerprint = _page(body)
+            more = bool(fingerprint and records)
+            pages.append({"request": request_desc, "data": [slim(r) for r in records], "more": more,
+                          "meta": {"sha256": rec.sha256, "retrieved_at": rec.retrieved_at, "bytes": rec.bytes}})
+            if not take(records, more):
+                break
+            params["fingerprint"] = fingerprint
+        self._cache.put(key, pages, ttl=ttl)
+
     def _backoff(self, attempt: int, reason: str) -> None:
+        if attempt >= self.max_retries:
+            return  # nothing follows the last attempt to wait for
         delay = (0.5 * (2**attempt)) + random.uniform(0, 0.25)
         logger.warning("TronGrid retry %d/%d in %.2fs (%s)",
                        attempt + 1, self.max_retries + 1, delay, reason)
-        time.sleep(delay)
+        (self.budget.sleep(delay) if self.budget is not None else time.sleep(delay))
 
     # -- parsing -----------------------------------------------------------
     def _token_transfer(self, raw: dict[str, Any]) -> Transaction | None:
-        """One TRC-20 transfer from /transactions/trc20."""
+        """One TRC-20 transfer from /transactions/trc20, or None.
+
+        That endpoint also returns approval records (`type` "Approval"): an
+        approve() moves nothing, but read as a transfer it became an edge of
+        up to 2**256-1 units to the spender. Only rows that do not say they
+        are something else are transfers, and only of the token asked for."""
+        if not isinstance(raw, dict) or raw.get("type", "Transfer") != "Transfer":
+            return None
         try:
             info = raw.get("token_info") or {}
-            decimals = int(info.get("decimals", 6))
+            if not isinstance(info, dict):
+                return None
+            token = info.get("address")
+            # Only the traced token's rows: one from another contract, or one
+            # that names none, is dropped -- never stamped as the traced token.
+            if self.contract_address and token != self.contract_address:
+                logger.warning("Skipping TRC-20 record from another or no contract: %r", str(token)[:40])
+                return None
+            # ADR-0008: the record's own figure, else the configured one, else
+            # drop it -- never a guess. A stated figure that disagrees with the
+            # configured precision of the traced token is not trusted either.
+            decimals = resolve_decimals(info.get("decimals"), self.token_decimals)
+            if decimals is None or (self.token_decimals is not None and decimals != self.token_decimals):
+                logger.warning("Skipping TRC-20 record with unknown or unexpected decimals: %r", str(raw)[:120])
+                return None
             units = int(raw.get("value", "0") or "0")
             return Transaction(
                 hash=raw.get("transaction_id", ""),
                 from_address=(raw.get("from") or "").strip(),
                 to_address=(raw.get("to") or "").strip() or None,
-                value_native=units / (10**decimals) if decimals >= 0 else float(units),
+                value_native=units / (10**decimals),
                 value_wei=units,
                 # TronGrid reports milliseconds; the rest of Exchequer uses seconds.
                 timestamp=int(raw.get("block_timestamp", 0)) // 1000,
                 block_number=0,  # not returned by this endpoint
                 is_error=False,
                 asset=info.get("symbol") or self.asset_symbol,
-                contract_address=info.get("address") or self.contract_address,
+                contract_address=token or self.contract_address,
             )
-        except (TypeError, ValueError):
-            logger.warning("Skipping malformed TRC-20 transfer: %r", raw)
+        except (TypeError, ValueError, AttributeError):
+            logger.warning("Skipping malformed TRC-20 transfer: %r", str(raw)[:120])
             return None
 
     def _native_transfer(self, raw: dict[str, Any]) -> Transaction | None:
@@ -238,6 +391,8 @@ class TronClient:
         moves TRX. Anything else (token transfers, staking, votes, contract
         calls) is skipped rather than counted as a payment.
         """
+        if not isinstance(raw, dict):
+            return None
         try:
             contracts = (raw.get("raw_data") or {}).get("contract") or []
             if not contracts:
@@ -265,7 +420,7 @@ class TronClient:
                 asset="TRX",
                 contract_address=None,
             )
-        except (TypeError, ValueError, IndexError):
+        except (TypeError, ValueError, IndexError, KeyError, AttributeError):
             logger.warning("Skipping malformed TRX transfer: %r", str(raw)[:120])
             return None
 
@@ -326,7 +481,10 @@ class TronClient:
             path, parse = f"/v1/accounts/{address}/transactions/trc20", self._token_transfer
         else:
             path, parse = f"/v1/accounts/{address}/transactions", self._native_transfer
-        params: dict[str, Any] = {direction_param: "true", "limit": MAX_PAGE, "order_by": "block_timestamp,asc",
+        # only_confirmed: TronGrid otherwise also returns records not yet in
+        # a block, which evidence must never rest on.
+        params: dict[str, Any] = {direction_param: "true", "only_confirmed": "true",
+                                  "limit": MAX_PAGE, "order_by": "block_timestamp,asc",
                                   "min_timestamp": start_ts * 1000, "max_timestamp": end_ts * 1000}
         if self.contract_address:
             params["contract_address"] = self.contract_address
@@ -336,19 +494,24 @@ class TronClient:
 
         collected: list[Transaction] = []
         scanned = 0
-        while scanned < MAX_SCAN:
-            body = self._get(path, params)
-            records = body.get("data") or []
+        complete = False
+
+        def take(records: list[Any], more: bool) -> bool:
+            nonlocal scanned, complete
             scanned += len(records)
             for raw in records:
                 tx = parse(raw)
                 if tx and ours(tx) and not tx.is_error and tx.value_wei > 0:
                     collected.append(tx)
-            fingerprint = (body.get("meta") or {}).get("fingerprint")
-            if not fingerprint or not records:
-                return collected, True
-            params["fingerprint"] = fingerprint
-        return collected, False
+            complete = not more
+            return more and scanned < MAX_SCAN
+
+        # A range that ended a few minutes ago is history and keeps the day;
+        # one reaching the last minutes may still gain records.
+        settled = end_ts <= time.time() - SETTLED_SECONDS
+        ttl = config.API_CACHE_TTL_SECONDS if settled else config.API_CACHE_OPEN_TTL_SECONDS
+        self._read_pages(path, params, ["between", self.token_decimals], ttl, take)
+        return collected, complete
 
     def _get_directional_transactions(
         self, address: str, direction_param: str, limit: int | None = None,
@@ -367,7 +530,6 @@ class TronClient:
 
         cap = limit or config.TRACE_MAX_TXS_PER_ADDRESS
         collected: list[Transaction] = []
-        fingerprint: str | None = None
 
         if self.contract_address:
             path = f"/v1/accounts/{address}/transactions/trc20"
@@ -382,22 +544,21 @@ class TronClient:
         # "fingerprint does not match current set of params".
         page_size = min(MAX_PAGE, cap)
         scanned = 0
+        params: dict[str, Any] = {
+            direction_param: "true",
+            "only_confirmed": "true",  # never unconfirmed records (see _between)
+            "limit": page_size,
+            "order_by": "block_timestamp,desc" if since_ts is None else "block_timestamp,asc",
+        }
+        if since_ts is not None:
+            params["min_timestamp"] = int(since_ts) * 1000
+        if self.contract_address:
+            params["contract_address"] = self.contract_address
 
-        while len(collected) < cap and scanned < MAX_SCAN:
-            params: dict[str, Any] = {
-                direction_param: "true",
-                "limit": page_size,
-                "order_by": "block_timestamp,desc" if since_ts is None else "block_timestamp,asc",
-            }
-            if since_ts is not None:
-                params["min_timestamp"] = int(since_ts) * 1000
-            if self.contract_address:
-                params["contract_address"] = self.contract_address
-            if fingerprint:
-                params["fingerprint"] = fingerprint
+        capped = False
 
-            body = self._get(path, params)
-            records = body.get("data") or []
+        def take(records: list[Any], more: bool) -> bool:
+            nonlocal scanned, capped
             scanned += len(records)
             for raw in records:
                 tx = parse(raw)
@@ -405,12 +566,95 @@ class TronClient:
                 # moving; the rest is noise the trace must not follow.
                 if tx and tx.to_address and not tx.is_error and tx.value_wei > 0:
                     collected.append(tx)
+            go_on = len(collected) < cap and scanned < MAX_SCAN
+            capped = more and not go_on  # stopped at a limit with pages left unread
+            return more and go_on
 
-            fingerprint = (body.get("meta") or {}).get("fingerprint")
-            if not fingerprint or not records:
-                break
-
+        # Both read up to the newest records, which keep coming: minutes only.
+        self._read_pages(path, params, ["directional", cap, self.token_decimals],
+                         config.API_CACHE_OPEN_TTL_SECONDS, take)
+        self._capped[address] = capped
         return collected[:cap]
+
+    def history_capped(self, address: str) -> bool | None:
+        """Whether the latest read of `address` stopped at its record or scan
+        limit (zero-value spam counts toward the scan) with pages unread;
+        None if it has not been read."""
+        return self._capped.get(address)
+
+    def is_contract(self, address: str) -> bool | None:
+        """Whether `address` holds contract bytecode: True, False, or None when
+        TronGrid could not say. What ADR-0006 asks of a label before it can
+        name an exchange; the live TronScan tags are held to it too."""
+        if not is_tron_address(address):
+            return None
+        try:
+            body = self._post("/wallet/getcontract", {"value": address, "visible": True})
+        except Cancelled:
+            raise  # the owner pressed Stop: the trace ends here
+        except (TronError, TraceStopped) as exc:
+            # A budget or clock that runs out at this check leaves the address
+            # unknown, so no exchange is named for it; it must not fail the
+            # whole trace (r2-g2-documented-claims-vs-code-7-8).
+            logger.warning("Could not read whether %s is a contract: %s", address, type(exc).__name__)
+            return None
+        if body.get("Error"):
+            return None
+        return bool(body.get("bytecode"))
+
+    def read_outgoing_since(self, address: str, after: int, limit: int) -> SinceRead:
+        """What `address` sent after `after` (Unix seconds), oldest first, for a watch.
+
+        Confirmed records only, ascending from after+1 s, page after page until
+        `limit` transfers (and past the first second) or MAX_SCAN records.
+        Every record read counts toward `through` -- failed and zero-value
+        ones too, so a burst of dust can neither hide a transfer nor hold the
+        cursor back."""
+        if not is_tron_address(address):
+            raise ValueError(f"Not a valid Tron address: {address!r}")
+        if self.contract_address:
+            path, parse = f"/v1/accounts/{address}/transactions/trc20", self._token_transfer
+        else:
+            path, parse = f"/v1/accounts/{address}/transactions", self._native_transfer
+        params: dict[str, Any] = {"only_from": "true", "only_confirmed": "true",
+                                  "limit": min(MAX_PAGE, limit), "order_by": "block_timestamp,asc",
+                                  "min_timestamp": (int(after) + 1) * 1000}
+        if self.contract_address:
+            params["contract_address"] = self.contract_address
+        sent: list[Transaction] = []
+        stamps: list[int] = []
+        cut = None
+        scanned = 0
+        while True:
+            # A page of the wrong shape is a failed read (TronResponseError),
+            # never an empty one; a record with no readable time is skipped,
+            # so one garbled row cannot fail the watch every round
+            # (r1-providers-10).
+            data, fingerprint = _page(self._get(path, params))
+            scanned += len(data)
+            records = [(r, stamp // 1000) for r in data if isinstance(r, dict)
+                       for stamp in (safe_int(r.get("block_timestamp"), default=-1),) if stamp >= 0]
+            if len(records) < len(data):
+                logger.warning("Skipping %d unreadable TronGrid records for %s", len(data) - len(records), address)
+            stamps += [stamp for _, stamp in records]
+            for raw, _ in records:
+                tx = parse(raw)
+                if tx and tx.to_address and not tx.is_error and tx.value_wei > 0:
+                    sent.append(tx)
+            if fingerprint and not stamps and scanned >= MAX_SCAN:  # page after page of garbage
+                raise TronResponseError("TronGrid kept returning records Exchequer cannot read")
+            if not fingerprint or not data:
+                through, complete = split_page(stamps, after, full=False)
+                break
+            # Stop at the limit only once the read has left its first second:
+            # a second filled by one block's sends is read to its end.
+            if (len(sent) >= limit and min(stamps) != max(stamps)) or scanned >= MAX_SCAN:
+                through, complete = split_page(stamps, after, full=True)
+                if min(stamps) == max(stamps):
+                    cut = through  # one second held more than MAX_SCAN records
+                break
+            params["fingerprint"] = fingerprint
+        return SinceRead([t for t in sent if after < t.timestamp <= through], through, complete, cut)
 
     def get_transactions(self, address: str, limit: int | None = None, sort: str = "desc"):
         """Present for interface parity; callers pick a direction explicitly."""

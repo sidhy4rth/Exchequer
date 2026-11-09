@@ -37,6 +37,28 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
+# Whether this host's disk is wiped on restart, as on Render's free plan (no
+# disk; the instance also restarts after 15 idle minutes). /health/detail then
+# says a SQLite store and the provider cache are temporary. Render sets RENDER
+# in every service; EXCHEQUER_TEMPORARY_DISK=0 or 1 overrides it either way.
+def temporary_disk(environ: Mapping[str, str]) -> bool:
+    raw = environ.get("EXCHEQUER_TEMPORARY_DISK", "").strip().lower()
+    if raw:
+        return raw in ("1", "true", "yes", "on")
+    return environ.get("RENDER", "").strip().lower() == "true"
+
+
+def host_flag(environ: Mapping[str, str], name: str) -> bool:
+    """A background job's switch (watcher, snapshots, warm-up): on for 1, true,
+    yes or on -- unless this host's disk is temporary, where the host sleeps
+    and forgets and the job would only spend quota -- and on anywhere for
+    "force". The image sets none of them: each host opts in."""
+    raw = environ.get(name, "").strip().lower()
+    if raw == "force":
+        return True
+    return raw in ("1", "true", "yes", "on") and not temporary_disk(environ)
+
+
 # ---------------------------------------------------------------------------
 # Chains
 # ---------------------------------------------------------------------------
@@ -119,6 +141,12 @@ class Chain:
     # on the family it belongs to, so this is what makes "is this address valid
     # for the chain you picked" answerable.
     address_family: str = "evm"
+    # Blocks that must sit on top of one before its transfers count. A watch
+    # alerted on, and moved its cursor past, a transfer the next reorg could
+    # drop (r2-g2-watchlist-alerts-0-10); Etherscan reads drop rows above the
+    # head less this. BSC's matches NodeReal's indexed-head lag; Tron asks
+    # TronGrid for confirmed records instead. Tunable here, in one place.
+    confirmations: int = 0
     # Stablecoins traceable on this chain. A trace follows one asset at a time:
     # 1 BNB and 1 USDT are not comparable quantities, so summing them into a
     # single "value" would make the confidence score meaningless.
@@ -172,17 +200,29 @@ class Chain:
                       + [{**t.to_dict(), "native": False} for t in self.tokens],
         }
 
-    def validate_address(self, address: str) -> bool:
-        """True if `address` is well formed *for this chain*."""
-        from .etherscan_client import is_evm_address, is_tron_address
+    def validate_address(self, address: str, checksum: bool = True) -> bool:
+        """True if `address` is well formed *for this chain*.
 
-        checker = is_tron_address if self.address_family == "tron" else is_evm_address
-        return checker(address)
+        An EVM address typed in mixed case must also match its EIP-55
+        checksum (`checksum=False` for list importers, which keep an entry
+        as published)."""
+        from .etherscan_client import evm_checksum_ok, is_evm_address, is_tron_address
 
-    def address_hint(self) -> str:
-        """What a valid address looks like here, for an error message."""
+        if self.address_family == "tron":
+            return is_tron_address(address)
+        return is_evm_address(address) and (not checksum or evm_checksum_ok(address))
+
+    def address_hint(self, address: str | None = None) -> str:
+        """What a valid address looks like here, for an error message --
+        or, for a well-formed EVM address whose checksum fails, what that means."""
         if self.address_family == "tron":
             return "T followed by 33 Base58 characters"
+        from .etherscan_client import is_evm_address
+
+        if address and is_evm_address(address):
+            return ("a correct EIP-55 checksum: this address mixes upper and lower case, but the "
+                    "pattern does not match, which usually means a character was mistyped. "
+                    "Check it against the original")
         return "0x followed by 40 hexadecimal characters"
 
     def find_token(self, symbol: str) -> "Token | None":
@@ -202,6 +242,7 @@ CHAINS: dict[str, Chain] = {
         name="Ethereum Mainnet",
         native_symbol="ETH",
         explorer_url="https://etherscan.io",
+        confirmations=12,  # ~2.5 minutes
         labels_filename="exchange_labels.json",
         gambling_labels_filename="gambling_labels.json",
         risk_labels_filename="risk_labels.json",
@@ -220,6 +261,7 @@ CHAINS: dict[str, Chain] = {
         name="BNB Smart Chain",
         native_symbol="BNB",
         explorer_url="https://bscscan.com",
+        confirmations=32,  # nodereal_client.INDEX_LAG_BLOCKS
         labels_filename="exchange_labels_bsc.json",
         gambling_labels_filename="gambling_labels_bsc.json",
         risk_labels_filename="risk_labels_bsc.json",
@@ -246,6 +288,7 @@ CHAINS["polygon"] = Chain(
     name="Polygon PoS",
     native_symbol="POL",
     explorer_url="https://polygonscan.com",
+    confirmations=64,  # ~2 minutes; Polygon has had deep reorgs
     labels_filename="exchange_labels_polygon.json",
     gambling_labels_filename="gambling_labels_polygon.json",
     risk_labels_filename="risk_labels_polygon.json",
@@ -260,6 +303,7 @@ CHAINS["arbitrum"] = Chain(
     name="Arbitrum One",
     native_symbol="ETH",
     explorer_url="https://arbiscan.io",
+    confirmations=20,
     labels_filename="exchange_labels_arbitrum.json",
     gambling_labels_filename="gambling_labels_arbitrum.json",
     risk_labels_filename="risk_labels_arbitrum.json",
@@ -328,12 +372,18 @@ def get_chain(key: str | None = None) -> Chain:
     return chain
 
 
+def secret_env(name: str) -> str | None:
+    """A key from the environment, without the space or newline a paste into a
+    dashboard leaves: httpx refuses such a header and prints it in the error."""
+    return (os.getenv(name) or "").strip() or None
+
+
 def chain_by_id(chain_id: int) -> Chain | None:
     """Look up a chain by its Etherscan V2 chainid."""
     return _CHAINS_BY_ID.get(chain_id)
 
 
-ETHERSCAN_API_KEY: str | None = os.getenv("ETHERSCAN_API_KEY") or None
+ETHERSCAN_API_KEY: str | None = secret_env("ETHERSCAN_API_KEY")
 ETHERSCAN_BASE_URL: str = os.getenv("ETHERSCAN_BASE_URL", "https://api.etherscan.io/v2/api")
 
 # Which chain a request that names none is traced on. ETHERSCAN_CHAIN_ID is
@@ -347,22 +397,82 @@ else:
 # Kept for backwards compatibility with callers that expect a single chain id.
 ETHERSCAN_CHAIN_ID: int = DEFAULT_CHAIN.chain_id
 
-NODEREAL_API_KEY: str | None = os.getenv("NODEREAL_API_KEY") or None
+NODEREAL_API_KEY: str | None = secret_env("NODEREAL_API_KEY")
 # TronGrid works without a key at a low rate limit; a free key raises it. Sent
 # as the TRON-PRO-API-KEY header.
-TRONGRID_API_KEY: str | None = os.getenv("TRONGRID_API_KEY") or None
+TRONGRID_API_KEY: str | None = secret_env("TRONGRID_API_KEY")
 # TronScan's account endpoint, read during Tron traces for the explorer's own
 # address tag (app/tron_tags.py). Its own key, free from tronscan.org; without
 # one the live tag lookup is off and Tron attribution uses the label file only.
-TRONSCAN_API_KEY: str | None = os.getenv("TRONSCAN_API_KEY") or None
+TRONSCAN_API_KEY: str | None = secret_env("TRONSCAN_API_KEY")
 # How far back a NodeReal-served trace looks. Its API caps one query at 100,000
 # blocks (~3.5 days on BSC), so this is walked in windows: 500,000 blocks is
 # roughly 17 days and at most five requests per address. Raising it widens
 # coverage and costs proportionally more calls.
 NODEREAL_LOOKBACK_BLOCKS: int = _int_env("NODEREAL_LOOKBACK_BLOCKS", 500_000)
+# NodeReal meters compute units per second per key (CUPS), and one
+# nr_getAssetTransfers costs 250 CU. Its pricing page gives the free plan 150
+# CUPS in one place and 300 in another: the shared pacer starts at the lower
+# and narrows toward the higher while the provider keeps answering. Set both
+# from the key's plan page (MegaNode > Plan/Usage) on a paid plan.
+NODEREAL_CUPS_FLOOR: int = max(1, _int_env("NODEREAL_CUPS_FLOOR", 150))
+NODEREAL_CUPS: int = max(1, _int_env("NODEREAL_CUPS", 300))
 
 # Traversal safety limits -- a busy wallet must never make a trace run forever.
-TRACE_MAX_DEPTH: int = _int_env("TRACE_MAX_DEPTH", 4)
+# The deepest any trace may go, whatever a request or batch row asks for (1-6;
+# 6 is the request model's own bound). Lower it to save quota: a caller asking
+# for more is traced at this depth and told so.
+TRACE_MAX_DEPTH_CEILING: int = min(6, max(1, _int_env("TRACE_MAX_DEPTH_CEILING", 6)))
+TRACE_MAX_DEPTH: int = min(_int_env("TRACE_MAX_DEPTH", 4), TRACE_MAX_DEPTH_CEILING)
+# Every trace's wall clock (api_budget.TraceBudget): the walk stops expanding
+# after TRACE_TIME_BUDGET_DEFAULT seconds unless the request asks for less,
+# never later than TRACE_TIME_BUDGET_MAX, and the reads after the walk get
+# TRACE_POST_WALK_SECONDS more. Without it one slow trace held a slot for as
+# long as the provider let it.
+TRACE_TIME_BUDGET_DEFAULT: int = _int_env("EXCHEQUER_TRACE_TIME_BUDGET", 180)
+TRACE_TIME_BUDGET_MAX: int = _int_env("EXCHEQUER_TRACE_TIME_BUDGET_MAX", 300)
+TRACE_POST_WALK_SECONDS: int = _int_env("EXCHEQUER_TRACE_POST_WALK_SECONDS", 60)
+# What one case (a trace and its follow-ons) may spend per provider, in
+# requests (compute units on NodeReal; 0 = no limit). Counted at every network
+# request a client makes, retries included; a cache hit costs nothing. The walk
+# may use 85% of each, so the reads after it are not starved; past the limit
+# the walk stops, marked truncated with the reason. The heaviest depth-6
+# Etherscan trace measured 367 calls; the recorded demos use under 40. 60,000
+# NodeReal CU is about 240 transfer reads (250 CU each).
+TRACE_MAX_ETHERSCAN_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_ETHERSCAN_CALLS", 600)
+TRACE_MAX_NODEREAL_CU: int = _int_env("EXCHEQUER_TRACE_MAX_NODEREAL_CU", 60_000)
+TRACE_MAX_TRONGRID_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_TRONGRID_CALLS", 400)
+TRACE_MAX_TRONSCAN_CALLS: int = _int_env("EXCHEQUER_TRACE_MAX_TRONSCAN_CALLS", 100)
+# What the whole site may spend per provider credential in one UTC day, every
+# trace, watch check and warm-up together (api_budget.UnitMeter; 0 = counted,
+# not limited). Past it new traces on that chain are refused with a 503 until
+# 00:00 UTC, and a trace already running stops where it is, saying so. Sized
+# under the free tiers: Etherscan's 100,000 calls a day, TronGrid's 100,000 a
+# day per account, and NodeReal's monthly compute units spread over the month
+# with a tenth held back (set the month from the key's plan page).
+ETHERSCAN_CALLS_PER_DAY: int = _int_env("EXCHEQUER_ETHERSCAN_CALLS_PER_DAY", 60_000)
+NODEREAL_CU_PER_MONTH: int = _int_env("EXCHEQUER_NODEREAL_CU_PER_MONTH", 10_000_000)
+NODEREAL_CU_PER_DAY: int = _int_env("EXCHEQUER_NODEREAL_CU_PER_DAY", NODEREAL_CU_PER_MONTH * 9 // 10 // 31)
+TRONGRID_CALLS_PER_DAY: int = _int_env("EXCHEQUER_TRONGRID_CALLS_PER_DAY", 50_000)
+TRONSCAN_CALLS_PER_DAY: int = _int_env("EXCHEQUER_TRONSCAN_CALLS_PER_DAY", 20_000)
+# The most of each day's allowance one connection may spend (0 = no share), so
+# one visitor cannot use up the day for everyone; keyed like the hourly limits.
+PROVIDER_CLIENT_SHARE_PERCENT: int = _int_env("EXCHEQUER_CLIENT_SHARE_PERCENT", 25)
+# The most of each day's allowance watch checks may spend, Check now and the
+# background watcher together (0 = no part of their own): they cannot use up
+# what traces need. One connection's checks get the share above of this part.
+WATCH_SHARE_PERCENT: int = _int_env("EXCHEQUER_WATCH_SHARE_PERCENT", 20)
+# The day's count is kept in the case store too, so a restart (the free host
+# sleeps after 15 idle minutes) does not begin the day again at zero; it is
+# written at most this often while spending, and at shutdown.
+PERSIST_METERS: bool = os.getenv("EXCHEQUER_PERSIST_METERS", "1").strip().lower() not in ("0", "false", "no", "off")
+METER_SAVE_SECONDS: int = max(1, _int_env("EXCHEQUER_METER_SAVE_SECONDS", 30))
+# Attribution follows the money (pipeline.run_trace): a match whose share of
+# what the reported address sent is under this percentage is not "material",
+# and a case whose exchange received less is scored low at most; under a
+# majority, moderate at most.
+ATTRIBUTION_MATERIAL_SHARE: float = _int_env("EXCHEQUER_MATERIAL_SHARE_PERCENT", 10) / 100
+ATTRIBUTION_MAJORITY_SHARE: float = 0.50
 TRACE_MAX_TXS_PER_ADDRESS: int = _int_env("TRACE_MAX_TXS_PER_ADDRESS", 200)
 TRACE_MAX_NODES: int = _int_env("TRACE_MAX_NODES", 400)
 # How many addresses at one depth are fetched concurrently. Providers answer in
@@ -377,12 +487,60 @@ TRACE_CONCURRENCY: int = _int_env("TRACE_CONCURRENCY", 6)
 # for the next visitor. Past it, POST /trace answers 429 at once. One presenter
 # never comes near four; the demo-health job traces one address at a time.
 TRACE_MAX_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES", 4)
+# How many of those one connection may hold at once (0 = no per-connection
+# cap). Without it one visitor could take every slot and keep it while their
+# traces ran; two still lets a presenter open a second trace.
+TRACES_RUNNING_PER_CLIENT: int = _int_env("EXCHEQUER_MAX_RUNNING_TRACES_PER_CLIENT", 2)
+# The last free slots only a connection with no trace running may take, so a
+# newcomer finds one while others keep theirs busy (routes/cases.take_slot).
+TRACE_RESERVED_SLOTS: int = max(0, _int_env("EXCHEQUER_RESERVED_TRACE_SLOTS", 1))
+# How many minutes in any hour one connection may hold trace slots, all of its
+# running traces together (0 = no limit). A trace holds one for a few minutes
+# at most, so this is several heavy traces an hour, or dozens of quick ones;
+# keeping every slot busy all day then takes many connections, not two. A
+# venue's shared Wi-Fi is one connection: raise it for a large event.
+TRACE_SLOT_MINUTES_PER_HOUR: int = max(0, _int_env("EXCHEQUER_TRACE_SLOT_MINUTES_PER_HOUR", 30))
+
+# The most individual transfers a case lists in its appendix (0 = all). Every
+# transfer on the route to the exchange, out of the reported address and into
+# a matched address is always listed; the rest by value up to this. A dense
+# cluster listed 71,283 transfers (21 MB). The case keeps the full count and a
+# SHA-256 over all of them (pipeline._appendix).
+TRANSFERS_APPENDIX_MAX: int = _int_env("EXCHEQUER_TRANSFERS_APPENDIX_MAX", 2000)
+# The largest case the store keeps, in bytes of JSON (0 = no cap). A larger one
+# is shown, with a warning, and not saved: Neon's free tier holds 0.5 GB.
+MAX_CASE_BYTES: int = _int_env("EXCHEQUER_MAX_CASE_BYTES", 4 * 1024 * 1024)
+# Every stored result together, in bytes of JSON (0 = no cap). The count below
+# alone let a few hundred dense cases (~1.5 MB each) fill Neon's 0.5 GB; this
+# leaves room for the other tables, indexes and the database's own overhead.
+# Bounded like the count: the oldest unused cases make room first.
+MAX_STORED_BYTES: int = _int_env("EXCHEQUER_MAX_STORED_BYTES", 300 * 1000 * 1000)
 
 # The most cases the store keeps (0 = no cap). Anyone can save a trace, and a
 # free hosted Postgres holds 0.5 GB; a stored case averages ~32 KB, so 5,000 is
-# ~160 MB. Once full, a trace still runs and shows its result -- it is just not
-# stored. Nothing already stored is ever deleted to make room.
+# ~160 MB. Once full, the oldest cases nobody is using make room (CASE_IDLE_DAYS);
+# with none left, a trace still runs and shows its result -- it is just not stored.
 MAX_STORED_CASES: int = _int_env("EXCHEQUER_MAX_STORED_CASES", 5000)
+# The most of those one owner key may keep (0 = no quota), so one browser
+# cannot fill the store and stop everyone else's cases from being saved.
+MAX_CASES_PER_OWNER: int = _int_env("EXCHEQUER_MAX_CASES_PER_OWNER", 200)
+# Owner keys are free, so the quota above alone bounds nothing: the most cases
+# one connection (keyed like the hourly limits) may save in 24 hours, whatever
+# owner keys it sends (0 = no quota).
+MAX_CASES_PER_CLIENT_PER_DAY: int = _int_env("EXCHEQUER_MAX_CASES_PER_CLIENT_PER_DAY", 150)
+# The counts bound cases, not bytes, and an active owner's cases are never
+# evicted, so one connection with one key could fill MAX_STORED_BYTES with
+# dense cases in hours to two days. So bytes are bounded too (0 = no quota):
+# what one connection may save in 24 hours (a tenth of the store, so filling
+# it takes ten days from one connection), and what one owner key may keep
+# (a dense case is 1.2-1.5 MB, an average one ~32 KB).
+MAX_BYTES_PER_CLIENT_PER_DAY: int = _int_env("EXCHEQUER_MAX_BYTES_PER_CLIENT_PER_DAY", 30 * 1000 * 1000)
+MAX_BYTES_PER_OWNER: int = _int_env("EXCHEQUER_MAX_BYTES_PER_OWNER", 50 * 1000 * 1000)
+# When the store is full, the oldest cases nobody is using give up their place
+# to a new one (models.evict_cases): saved without an owner key, or kept by an
+# owner who has saved nothing for this many days. Never a demo case, and never
+# one a freeze request or an active watch refers to.
+CASE_IDLE_DAYS: int = max(1, _int_env("EXCHEQUER_CASE_IDLE_DAYS", 30))
 
 # Minimum spacing between Etherscan requests, in seconds.
 #
@@ -425,6 +583,13 @@ LABEL_STORE_PATH: Path | None = (
     else Path(_store_raw) if Path(_store_raw).is_absolute()
     else BACKEND_DIR / _store_raw
 )
+# Set by the Dockerfile from its build args: whether this image was built to
+# carry the store (a deploy without it is degraded screening, not "as before")
+# and which release it was built from. Shown on /health/detail.
+LABEL_STORE_REQUIRED: bool = (
+    os.getenv("EXCHEQUER_LABEL_STORE_REQUIRED", "").strip().lower() in ("1", "true", "yes", "on")
+)
+LABEL_STORE_TAG: str = os.getenv("EXCHEQUER_LABEL_STORE_TAG", "").strip()
 
 # Default-chain label file. Per-chain callers should use Chain.labels_path.
 EXCHANGE_LABELS_PATH: Path = DEFAULT_CHAIN.labels_path
@@ -440,6 +605,23 @@ EXCHANGE_LABELS_PATH: Path = DEFAULT_CHAIN.labels_path
 # network. A day, so a demo traced in the morning is still instant in the
 # afternoon; set it in seconds.
 API_CACHE_TTL_SECONDS: float = float(os.getenv("API_CACHE_TTL_SECONDS", str(24 * 3600)))
+# That holds for a closed block range only. A question about the chain's tip --
+# the newest page of a wallet, "no transactions yet", a read up to `latest` --
+# is a moving target: served for a day, a re-trace after the money moved
+# replayed "sent nothing". Those answers are kept this long instead; balances,
+# nonces and other `latest` state are never kept at all.
+API_CACHE_OPEN_TTL_SECONDS: float = float(os.getenv("API_CACHE_OPEN_TTL_SECONDS", "300"))
+
+# What one provider cache may hold, in bytes, in memory and on disk. Counted
+# entries alone let 2,048 raw pages pin ~0.7 GB on a 512 MB instance.
+CACHE_MEMORY_BYTES: int = _int_env("EXCHEQUER_CACHE_MEMORY_MB", 48) * 1024 * 1024
+CACHE_DISK_BYTES: int = _int_env("EXCHEQUER_CACHE_DISK_MB", 256) * 1024 * 1024
+# The largest provider response read at all. A page of 200 transactions with
+# large calldata was 52 MB; nothing a trace needs comes near this.
+PROVIDER_MAX_RESPONSE_BYTES: int = _int_env("EXCHEQUER_PROVIDER_MAX_RESPONSE_BYTES", 8 * 1024 * 1024)
+# The NodeReal and TronGrid caches hold smaller, rarer answers (whole quiet
+# windows and pages): a smaller memory share each, beside Etherscan's.
+CACHE_SMALL_MEMORY_BYTES: int = _int_env("EXCHEQUER_CACHE_SMALL_MEMORY_MB", 16) * 1024 * 1024
 
 # Where cached responses are kept between restarts. Beside the case store by
 # default (so a /data volume holds both); an empty value or "off" keeps the
@@ -454,10 +636,12 @@ API_CACHE_PATH: Path | None = (
 
 # Whether to trace the DEMO.md addresses in the background at startup so their
 # responses are cached before anyone asks. Off by default: on a laptop it
-# would spend the key's rate on every restart. The Docker image turns it on.
-WARM_CACHE_AT_STARTUP: bool = (
-    os.getenv("EXCHEQUER_WARM_CACHE", "").strip().lower() in ("1", "true", "yes", "on")
-)
+# would spend the key's rate on every restart; on a temporary disk the cache
+# it fills is wiped at the next sleep (host_flag). A host with a lasting disk
+# turns it on.
+WARM_CACHE_AT_STARTUP: bool = host_flag(os.environ, "EXCHEQUER_WARM_CACHE")
+# "force": run it even where its cache cannot outlive the instance (warmup.py).
+WARM_CACHE_FORCED: bool = os.getenv("EXCHEQUER_WARM_CACHE", "").strip().lower() == "force"
 
 # The interactive API docs (/docs, /redoc, /openapi.json). On for local
 # development; the Docker image turns them off, because on the public site
@@ -470,16 +654,43 @@ API_DOCS_ENABLED: bool = (
 # How many traces one client may start per hour (0 = no limit). Each trace
 # spends the shared free-tier provider quota; see rate_limit.py.
 TRACES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_TRACES_PER_HOUR", 30)
+# How many traces the whole site may start per hour, all clients together
+# (0 = no ceiling). The per-client limit trusts proxy headers a client may be
+# able to set; this one cannot be dodged, so it bounds the provider quota.
+TRACES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_TRACES_PER_HOUR_TOTAL", 120)
 
-# Read the client address from the proxy's headers. Only behind a proxy that
-# sets them; the Docker image turns it on. Proxies disagree on where the real
-# address goes: Railway sets X-Real-IP and appends to X-Forwarded-For ("1"),
-# while Render keeps whatever the client sent and puts the address it saw
-# FIRST in X-Forwarded-For, without setting X-Real-IP ("first"). Reading the
-# wrong end puts every visitor behind one proxy address, sharing one limit.
-_proxy_raw = os.getenv("EXCHEQUER_TRUST_PROXY", "").strip().lower()
+# Read the client address from the proxy's headers (rate_limit.client_ip),
+# which every per-client limit is keyed on. Only behind a proxy that sets
+# them: without one, those headers are whatever the client chose to send.
+#   unset   Render (RENDER=true) means "render", Railway means "1", else none
+#   "1"     Railway: X-Real-IP, else the last X-Forwarded-For entry
+#   render  Render behind Cloudflare. Render keeps whatever X-Forwarded-For
+#           the client sent and appends to it, so its leftmost entry can be
+#           chosen by the client. The key is CLIENT_IP_HEADER when the edge
+#           sent it, else the PROXY_HOPS-th entry from the right, else (not
+#           measured yet) the leftmost entry -- which a client can choose, but
+#           which never puts every visitor behind one edge address the way a
+#           wrong hop count would. /health/detail measures it; see client_ip.
+def proxy_mode(environ: Mapping[str, str]) -> str:
+    raw = environ.get("EXCHEQUER_TRUST_PROXY", "").strip().lower()
+    if raw:
+        return raw
+    if environ.get("RENDER", "").strip().lower() == "true":
+        return "render"
+    return "1" if environ.get("RAILWAY_ENVIRONMENT") else ""
+
+
+_proxy_raw = proxy_mode(os.environ)
 TRUST_PROXY_HEADERS: bool = _proxy_raw in ("1", "true", "yes", "on", "first", "render")
 PROXY_CLIENT_FIRST: bool = _proxy_raw in ("first", "render")
+# A header the edge itself sets to the address that connected to it,
+# overwriting any the client sent: Cloudflare's CF-Connecting-IP. "none" turns
+# it off, so a client-sent copy is ignored on a host without that edge.
+_ip_header = os.getenv("EXCHEQUER_CLIENT_IP_HEADER", "cf-connecting-ip").strip().lower()
+CLIENT_IP_HEADER: str = "" if _ip_header in ("", "0", "none", "off") else _ip_header
+# How many proxies append to X-Forwarded-For after the client, counted from
+# the right (0 = not measured). Set it only from the /health/detail probe.
+PROXY_HOPS: int = max(0, _int_env("EXCHEQUER_PROXY_HOPS", 0))
 
 # Where the report-signing private key is kept when EXCHEQUER_SIGNING_KEY is
 # not set: beside the case store, so on Railway it lives on the volume and
@@ -490,21 +701,22 @@ SIGNING_KEY_PATH: Path = (
 )
 
 # The watchlist poller (watchlist.py): off unless EXCHEQUER_WATCHER is set, so
-# a laptop or the test suite never spends the key on it; the image turns it
-# on. Each due watch costs one or two provider requests per round.
-WATCHER_ENABLED: bool = (
-    os.getenv("EXCHEQUER_WATCHER", "").strip().lower() in ("1", "true", "yes", "on")
-)
+# a laptop or the test suite never spends the key on it, and off on a host
+# that sleeps (host_flag) unless forced. Each due watch costs one or two
+# provider requests per round.
+WATCHER_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_WATCHER")
 WATCH_INTERVAL_SECONDS: int = max(60, _int_env("EXCHEQUER_WATCH_INTERVAL", 600))
 # Hosts beyond Slack, Discord and Google Chat that alert webhooks may post to.
 WEBHOOK_EXTRA_HOSTS: str = os.getenv("EXCHEQUER_WEBHOOK_HOSTS", "")
+# Seals watch webhook URLs at rest (webhook_vault.py). Any secret; keep it
+# with the signing key: changing it makes every stored webhook unreadable.
+WEBHOOK_KEY: str = os.getenv("EXCHEQUER_WEBHOOK_KEY", "").strip()
 
 # Daily snapshots of the store beside it (backups.py): off unless
-# EXCHEQUER_BACKUPS is set; the image turns it on. The last
-# EXCHEQUER_BACKUP_KEEP are kept.
-BACKUPS_ENABLED: bool = (
-    os.getenv("EXCHEQUER_BACKUPS", "").strip().lower() in ("1", "true", "yes", "on")
-)
+# EXCHEQUER_BACKUPS is set, and off on a temporary disk, where the snapshot
+# would be wiped with the store (host_flag). The last EXCHEQUER_BACKUP_KEEP
+# are kept.
+BACKUPS_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_BACKUPS")
 BACKUP_KEEP: int = max(1, _int_env("EXCHEQUER_BACKUP_KEEP", 7))
 # Bearer token for GET /admin/backup. Unset = the endpoint does not exist.
 BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
@@ -539,6 +751,20 @@ TRACE_MAX_BRANCHES_HARD: int = _int_env("EXCHEQUER_TRACE_MAX_BRANCHES_HARD", 50)
 LIST_STALE_DAYS: int = 7
 
 
+def _public_url(environ: Mapping[str, str]) -> str:
+    """The address this server is reached at, as signed into every report
+    ("Issued by"). Render sets RENDER_EXTERNAL_URL itself; any other host sets
+    EXCHEQUER_PUBLIC_URL. Anything that is not a plain http(s) URL is ignored."""
+    raw = (environ.get("EXCHEQUER_PUBLIC_URL", "").strip() or environ.get("RENDER_EXTERNAL_URL", "").strip())
+    url = raw.rstrip("/")
+    if url.startswith(("https://", "http://")) and url.isprintable() and " " not in url:
+        return url
+    return ""
+
+
+PUBLIC_URL: str = _public_url(os.environ)
+
+
 # ---------------------------------------------------------------------------
 # Lane C: platform and product
 # ---------------------------------------------------------------------------
@@ -547,23 +773,40 @@ LIST_STALE_DAYS: int = 7
 # sent as X-Exchequer-Demo-Code; unset, nothing is guarded. A shared secret
 # for a public demo, not an account.
 DEMO_CODE: str = os.getenv("EXCHEQUER_DEMO_CODE", "").strip()
+# Whether this is a public deployment: Render and Railway say so themselves,
+# EXCHEQUER_PUBLIC=1 for any other host. One running without a demo code logs
+# an error at startup and /health says "access": "open" (access.py).
+PUBLIC_HOST: bool = (
+    os.getenv("RENDER", "").strip().lower() == "true"
+    or bool(os.getenv("RAILWAY_ENVIRONMENT"))
+    or os.getenv("EXCHEQUER_PUBLIC", "").strip().lower() in ("1", "true", "yes", "on")
+)
+# Turn on once the code is set: a deploy that then loses it refuses live
+# tracing (503) rather than opening it to everyone. Off by default, so a site
+# whose code was never set keeps working.
+REQUIRE_DEMO_CODE: bool = (
+    os.getenv("EXCHEQUER_REQUIRE_DEMO_CODE", "").strip().lower() in ("1", "true", "yes", "on")
+)
+# How long the pass that POST /access/check hands a browser lasts (access.py):
+# an event day, so a presenter enters the code once.
+DEMO_PASS_SECONDS: int = max(60, int(float(os.getenv("EXCHEQUER_DEMO_PASS_HOURS", "12") or 12) * 3600))
 # Watches one client may create per hour (0 = no limit). Each is re-read on
 # a schedule for as long as it exists, spending the provider quota.
 WATCHES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR", 20)
+# Freeze-request writes (POST and PATCH /requests) one client may make per
+# hour (0 = no limit). An officer logs a few and updates them now and then;
+# this only stops a script filling the store.
+REQUEST_WRITES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_REQUEST_WRITES_PER_HOUR", 120)
+# Watches the whole site may create per hour (0 = no ceiling); see TRACES_PER_HOUR_TOTAL.
+WATCHES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR_TOTAL", 60)
+# Active watches one connection may hold, whatever owner keys it uses (owner
+# keys are free; two keys' worth by default). Raise it for a day when a whole
+# venue shares one address.
+WATCHES_PER_CLIENT: int = max(1, _int_env("EXCHEQUER_WATCHES_PER_CLIENT", 50))
 # Bearer token for GET /health/detail, the operator's view of keys, quota
 # and warm-up. Unset = the endpoint does not exist (404); /health stays public.
 HEALTH_TOKEN: str = os.getenv("EXCHEQUER_HEALTH_TOKEN", "").strip()
-# Whether this host's disk is wiped on restart, as on Render's free plan (no
-# disk; the instance also restarts after 15 idle minutes). /health/detail then
-# says a SQLite store and the provider cache are temporary. Render sets RENDER
-# in every service; EXCHEQUER_TEMPORARY_DISK=0 or 1 overrides it either way.
-def temporary_disk(environ: Mapping[str, str]) -> bool:
-    raw = environ.get("EXCHEQUER_TEMPORARY_DISK", "").strip().lower()
-    if raw:
-        return raw in ("1", "true", "yes", "on")
-    return environ.get("RENDER", "").strip().lower() == "true"
-
-
+# Whether this host's disk is wiped on restart (temporary_disk, at the top).
 TEMPORARY_DISK: bool = temporary_disk(os.environ)
 
 # ---------------------------------------------------------------------------

@@ -67,3 +67,52 @@ def test_the_audit_names_no_address_and_no_complaint_number(recorded):
 def test_the_real_audit_accepts_what_a_trace_records():
     # audit.record enforces what R24's log can store: a dotted event, JSON detail.
     cases.record_trace(finished(case_id="c2"))
+
+
+def test_a_batch_audits_its_creation_and_each_stored_row(monkeypatch, recorded, tmp_path):
+    import time
+
+    from sqlalchemy import create_engine
+
+    from app import models, ownership, rate_limit
+    monkeypatch.setattr(models, "_engine", create_engine(f"sqlite:///{tmp_path / 'b.db'}", future=True))
+    for name in ("traces", "traces_total"):  # earlier tests spent this client's hour
+        monkeypatch.setattr(rate_limit, name, rate_limit.SlidingWindowLimiter(100, 3600))
+    models.init_db()
+    monkeypatch.setattr(pipeline, "run_trace", lambda request, **kw: finished())
+    key = {ownership.OWNER_HEADER: "a" * 32}
+    rows = [{"address": addr(tag), "reference": NCRP} for tag in ("a1", "a2", "a3")]
+    with TestClient(app) as client:
+        batch_id = client.post("/batches", json={"rows": rows}, headers=key).json()["batch_id"]
+        for _ in range(200):
+            if client.get(f"/batches/{batch_id}", headers=key).json()["status"] != "running":
+                break
+            time.sleep(0.02)
+    events = [event for event, _ in recorded]
+    assert events == ["batch.create"] + ["case.trace"] * 3
+    assert recorded[0][1]["detail"] == {"rows": 3}
+    assert all(kw["detail"]["via"] == "batch" and kw["detail"]["saved"] for _, kw in recorded[1:])
+    text = json.dumps(recorded)
+    for secret in (*(r["address"] for r in rows), NCRP, SCAMMER):
+        assert secret not in text
+
+
+def test_the_audit_counts_payments_not_their_legs(recorded):
+    # One hash that arrived as two transfers is one payment (5-2).
+    leg = {"tx_hash": "0x" + "aa" * 32, "chain": "ethereum", "asset": "ETH", "amount": 2.0,
+           "from": addr("c0de"), "to": SCAMMER, "block": 1, "timestamp": 1, "found_by": "victim"}
+    payments = [{**leg, "leg": 0}, {**leg, "amount": 1.0, "leg": 1}]
+    cases.record_trace(finished(case_id="c3", intake={"mode": "payment", "payments": payments, "ncrp_ack": None}))
+    ((_, kw),) = recorded
+    assert kw["detail"]["payments"] == 1
+
+
+def test_the_audit_never_holds_the_victims_wallet(recorded):
+    victim = addr("71c")
+    payment = {"tx_hash": "0x" + "aa" * 32, "chain": "ethereum", "asset": "ETH", "amount": 2.0,
+               "from": victim, "to": SCAMMER, "block": 1, "timestamp": 1, "found_by": "victim",
+               "payer_label": None, "payer_is_victim": True}
+    cases.record_trace(finished(case_id="c4", intake={"mode": "payment", "payments": [payment],
+                                                       "ncrp_ack": NCRP, "victim_address": victim}))
+    ((_, kw),) = recorded
+    assert victim not in json.dumps(kw)

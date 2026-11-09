@@ -173,7 +173,33 @@ def test_main_writes_only_the_chains_ofac_names(sdn_file, monkeypatch):
     path = sdn_file(an_entry("LAZARUS GROUP", "DPRK3", "Digital Currency Address - ETH", LAZARUS))
     written = []
     monkeypatch.setattr(ofac, "write_chain_file", lambda chain_key, *_: written.append(chain_key))
+    monkeypatch.setattr(ofac, "_held_count", lambda chain_key: 0)  # nothing held, so nothing can be emptied
     monkeypatch.setattr(sys, "argv", ["import_ofac_addresses", "--sdn-file", str(path)])
 
     assert ofac.main() == 0
     assert set(written) == {"ethereum", "bsc", "tron"}
+
+
+# -- a parse that finds nothing never empties the files (audit r1-scripts-2) ------
+def test_ofac_refuses_to_write_when_nothing_parsed(sdn_file, monkeypatch):
+    """A namespace change parses as zero addresses; the held files must stay."""
+    path = sdn_file(an_entry("LAZARUS GROUP", "DPRK3", "Digital Currency Address - ETH", LAZARUS)
+                    ).read_text().replace("PublicationPreview", "SomethingNew")
+    moved = sdn_file("")
+    moved.write_text(path)
+    written = []
+    monkeypatch.setattr(ofac, "write_chain_file", lambda chain_key, *_: written.append(chain_key))
+    monkeypatch.setattr(sys, "argv", ["import_ofac_addresses", "--sdn-file", str(moved)])
+    assert ofac.main() == 1
+    assert written == []
+
+
+def test_ofac_refuses_to_empty_a_chain_file_unless_told(sdn_file, monkeypatch):
+    path = sdn_file(an_entry("LAZARUS GROUP", "DPRK3", "Digital Currency Address - ETH", LAZARUS))
+    written = []
+    monkeypatch.setattr(ofac, "write_chain_file", lambda chain_key, *_: written.append(chain_key))
+    monkeypatch.setattr(ofac, "_held_count", lambda chain_key: 3)  # Tron and BSC hold addresses today
+    monkeypatch.setattr(sys, "argv", ["import_ofac_addresses", "--sdn-file", str(path)])
+    assert ofac.main() == 1 and written == []
+    monkeypatch.setattr(sys, "argv", ["import_ofac_addresses", "--sdn-file", str(path), "--allow-empty"])
+    assert ofac.main() == 0 and set(written) == {"ethereum", "bsc", "tron"}

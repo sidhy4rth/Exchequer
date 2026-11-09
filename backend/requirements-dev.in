@@ -1,0 +1,9 @@
+# Test-only dependencies. Kept out of requirements.txt so the deployed image
+# does not carry them -- the Dockerfile installs the runtime lock alone. The
+# constraint keeps every shared package at the runtime lock's version.
+-r requirements.in
+-c requirements.txt
+pytest==9.1.1
+ruff==0.17.0
+# The workflow tests read .github/workflows/*.yml.
+PyYAML==6.0.3

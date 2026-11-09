@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.27.1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # Exchequer — one image, one service.
 #
 # Stage 1 builds the React bundle; stage 2 runs FastAPI and serves that bundle
@@ -9,12 +9,18 @@
 # A plain Dockerfile rather than a platform-specific config so the same image
 # runs on Railway, Fly, Render or any VM with Docker.
 
+# Each base image (and the syntax line above) names its version and the digest
+# that version had when it was pinned, so every build starts from the same
+# bytes; Dependabot proposes digest bumps, which run through CI like any change.
+
 # ---------- stage 1: build the frontend ----------
-FROM node:24-slim AS frontend
+FROM node:24.22.2-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS frontend
 
 WORKDIR /build
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
+# No dependency's install hook runs: none is needed (vite's native parts ship
+# as prebuilt packages), and a hook is how a hijacked release runs code.
+RUN npm ci --ignore-scripts
 
 COPY frontend/ ./
 # Empty base = same-origin requests (/health, /trace). In development this is
@@ -23,7 +29,7 @@ ENV VITE_API_BASE=""
 RUN npm run build
 
 # ---------- stage 2: the application ----------
-FROM python:3.12-slim AS app
+FROM python:3.12.16-slim-trixie@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54 AS app
 
 # Unbuffered so logs appear in the platform's log viewer immediately rather
 # than sitting in a pipe buffer.
@@ -33,23 +39,33 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# The lock pins and hashes every package (backend/requirements.in says how it
+# is made): pip refuses anything else, and installs wheels only, so no
+# package's setup.py runs here.
 COPY backend/requirements.txt ./backend/requirements.txt
-RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir --require-hashes --only-binary=:all: -r backend/requirements.txt
 
 COPY backend/ ./backend/
 
 # The risk-label store: millions of hunt addresses, kept in a PRIVATE release
 # rather than in git (too large, and not for publishing). Fetched here with a
 # read-only token from a build secret -- on Render, a Secret File named
-# label_store_token -- so the token never enters a layer. No token: the step
-# prints why and the image screens against the label files only, as before.
+# label_store_token -- so the token never enters a layer. No token fails the
+# build, so the live version stays up rather than a deploy shipping without
+# its labels; a build that has no secret on purpose (CI's image job, a fork, a
+# local build) passes --build-arg LABEL_STORE_REQUIRED=0 and screens against
+# the label files only. The mount stays optional so the script, not BuildKit,
+# prints the reason.
 # A new store = a new release tag + sha256 here. See backend/scripts/fetch_label_store.py.
 ARG LABEL_STORE_REPO="sidhy4rth/exchequer-labels"
-ARG LABEL_STORE_TAG="labels-2026-11-05b"
-ARG LABEL_STORE_SHA256="f3e1d3b597768234e5b3d2eec14e1365c0c14bdbd9cc771ecd0209dd954e9846"
+ARG LABEL_STORE_TAG="labels-2026-11-08b"
+ARG LABEL_STORE_SHA256="a59eaf9dd262e0f1720321a1c339ea30875a30da03262da2466c17c78e3d79f3"
+ARG LABEL_STORE_REQUIRED="1"
 RUN --mount=type=secret,id=label_store_token,required=false \
-    cd backend && LABEL_STORE_REPO="$LABEL_STORE_REPO" LABEL_STORE_TAG="$LABEL_STORE_TAG" \
-    LABEL_STORE_SHA256="$LABEL_STORE_SHA256" python -m scripts.fetch_label_store
+    cd backend && LABEL_STORE_REQUIRED="$LABEL_STORE_REQUIRED" LABEL_STORE_REPO="$LABEL_STORE_REPO" \
+    LABEL_STORE_TAG="$LABEL_STORE_TAG" LABEL_STORE_SHA256="$LABEL_STORE_SHA256" python -m scripts.fetch_label_store
+# What /health/detail reports: whether this image was built to carry the store, and which.
+ENV EXCHEQUER_LABEL_STORE_REQUIRED=${LABEL_STORE_REQUIRED} EXCHEQUER_LABEL_STORE_TAG=${LABEL_STORE_TAG}
 COPY --from=frontend /build/dist ./frontend/dist
 
 # The image has no .git, so the report's "tool version" line is baked in at
@@ -73,24 +89,23 @@ RUN groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 
 # The provider response cache also lives on the volume (beside the case
-# store, by default), so a redeploy does not forget every response; and the
-# demo addresses are traced in the background at startup so the first real
-# request finds them cached rather than paying the cold cost.
-ENV EXCHEQUER_WARM_CACHE=1
+# store, by default), so a redeploy does not forget every response.
 
 # No interactive API docs on the public site: they map every endpoint and
 # Swagger UI needs a looser content policy than the app (security_headers.py).
 ENV EXCHEQUER_API_DOCS=0
 
-# Railway's proxy sets X-Real-IP / X-Forwarded-For; the per-client trace limit
-# (rate_limit.py) reads the client from them only when this is on.
-ENV EXCHEQUER_TRUST_PROXY=1
-
-# Re-read watched addresses every 10 minutes (watchlist.py).
-ENV EXCHEQUER_WATCHER=1
-
-# A daily snapshot of the store on the volume, last 7 kept (backups.py).
-ENV EXCHEQUER_BACKUPS=1
+# Nothing that runs in the background or trusts a proxy is turned on here:
+# each host opts in, in its own settings (render.yaml for Render). An image
+# that turned them on relied on every host turning them off again, and a host
+# whose settings drifted ran them anyway. On a host with a lasting disk:
+#   EXCHEQUER_WARM_CACHE=1  trace the demos at startup so they answer from cache
+#   EXCHEQUER_WATCHER=1     re-read watched addresses every 10 minutes
+#   EXCHEQUER_BACKUPS=1     a daily snapshot of a SQLite store on the volume
+# (on a temporary disk they stay off unless set to "force"; config.host_flag).
+# No EXCHEQUER_TRUST_PROXY either: a host with no proxy in front would then key
+# every limit on a header the client wrote. Render and Railway are detected
+# from their own variables (config.proxy_mode); anything else sets it itself.
 
 WORKDIR /app/backend
 EXPOSE 8000

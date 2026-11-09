@@ -35,9 +35,10 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Callable, Iterable
 
-# Flagged, but not an intermediary: a sanctioned entity is already named, and a
-# mixer is a service every user of it passes through.
-NOT_INTERMEDIARY_RISKS = frozenset({"sanctioned", "mixer"})
+# Flagged, but not an intermediary: a sanctioned entity is already named (so is a
+# wallet a government seizure order names), and a mixer is a service every user
+# of it passes through.
+NOT_INTERMEDIARY_RISKS = frozenset({"sanctioned", "seized", "mixer"})
 
 # Decides whether (chain, address) is a labelled contract or wallet that must
 # never count as an intermediary. main.py passes the exchange and router
@@ -51,7 +52,12 @@ def _intermediaries(result: dict[str, Any], chain: str, excluded: Excluder | Non
     for node in result.get("graph", {}).get("nodes", []):
         if node.get("is_seed") or node.get("id") == seed:
             continue
-        if node.get("exchange") or node.get("is_router") or node.get("risk_category") in NOT_INTERMEDIARY_RISKS:
+        if node.get("exchange") or node.get("is_router"):
+            continue
+        risk = node.get("risk_category")
+        # Except a mixer tag the trace went past: not a pinned pool, so possibly
+        # the offender's own wallet (an older case marks every mixer terminal).
+        if risk in NOT_INTERMEDIARY_RISKS and not (risk == "mixer" and node.get("is_terminal") is False):
             continue
         # A contract that pays out to many addresses (WETH, a pool) is a
         # service every trace passes through; so is anything the label files
@@ -73,6 +79,100 @@ def _traces(result: dict[str, Any]) -> list[tuple[dict[str, Any], str | None]]:
     return out
 
 
+class CaseIndex:
+    """Every intermediary of a set of cases, with the cases that reach it:
+    what correlate() clusters. Kept apart from the clustering so a cached
+    index can answer for one more case without reading the set again
+    (routes/casebook.py): `merged` adds a case's own entries, `clusters`
+    builds the answer."""
+
+    def __init__(self) -> None:
+        self.by_key: dict[tuple[str, str], dict[str, dict[str, Any]]] = defaultdict(dict)
+        self.inferred: dict[tuple[str, str], str] = {}
+        self.flagged: dict[tuple[str, str], str] = {}
+
+    @classmethod
+    def of(cls, cases: Iterable[Any], excluded: Excluder | None = None) -> CaseIndex:
+        index = cls()
+        for case in cases:
+            result = case.result
+            if not result:
+                continue
+            chain = result.get("chain") or "ethereum"
+            for trace, swapped_to in _traces(result):
+                for node in _intermediaries(trace, chain, excluded):
+                    key = (chain, node["id"])
+                    if node.get("inferred_exchange"):
+                        index.inferred[key] = node["inferred_exchange"]
+                    if node.get("risk_category"):
+                        index.flagged[key] = node["risk_category"]
+                    # One entry per case per address; a case that touches the same
+                    # wallet twice is still one case.
+                    index.by_key[key].setdefault(case.id, {
+                        "case_id": case.id,
+                        "reported_address": result.get("address") or case.address,
+                        "direction": result.get("direction", "outgoing"),
+                        "asset": result.get("asset"),
+                        "traced_at": case.created_at,
+                        "depth": node.get("depth"),
+                        "value_in_native": node.get("total_in_native", 0.0),
+                        "exchange": result.get("exchange"),
+                        "after_swap_to": swapped_to,
+                    })
+        return index
+
+    def entries(self) -> int:
+        """How many (address, case) entries it holds: what it costs to keep."""
+        return sum(len(members) for members in self.by_key.values())
+
+    def merged(self, other: CaseIndex) -> CaseIndex:
+        """This index plus `other`'s cases, limited to the addresses `other`
+        reaches: every cluster that includes one of its cases, and no other.
+        `other` is read after this one, as correlate() reads cases in order."""
+        out = CaseIndex()
+        for key, members in other.by_key.items():
+            out.by_key[key] = {**self.by_key.get(key, {}), **members}
+            for mine, theirs, into in ((self.inferred, other.inferred, out.inferred),
+                                       (self.flagged, other.flagged, out.flagged)):
+                value = theirs.get(key) or mine.get(key)
+                if value:
+                    into[key] = value
+        return out
+
+    def clusters(self, only_case: str | None = None, min_cases: int = 2) -> list[dict[str, Any]]:
+        clusters = []
+        for (chain, address), members in self.by_key.items():
+            # Distinct *reported* addresses, not distinct cases: the same wallet
+            # traced twice is one complaint, not two converging on itself.
+            reported = {m["reported_address"] for m in members.values()}
+            if len(reported) < min_cases:
+                continue
+            if only_case is not None and only_case not in members:
+                continue
+            clusters.append({
+                "chain": chain,
+                "address": address,
+                "inferred_exchange": self.inferred.get((chain, address)),
+                "risk_category": self.flagged.get((chain, address)),
+                "reported_addresses": sorted(reported),
+                "case_count": len(members),
+                "max_value_in_native": max(m["value_in_native"] for m in members.values()),
+                "cases": sorted(members.values(), key=lambda m: m["traced_at"], reverse=True),
+            })
+
+        # Most complaints first; among equals, a probable deposit address (the
+        # one a request can name) before an anonymous wallet, then by the largest
+        # value that reached it -- so a sidebar that shows only the top few shows
+        # the ones worth acting on.
+        clusters.sort(key=lambda c: (
+            -len(c["reported_addresses"]),
+            0 if c["inferred_exchange"] else 1,
+            -c["max_value_in_native"],
+            c["address"],
+        ))
+        return clusters
+
+
 def correlate(
     cases: Iterable[Any],
     only_case: str | None = None,
@@ -86,67 +186,7 @@ def correlate(
     that case, which is what the trace view asks for. `excluded` says which
     addresses are known contracts or exchange wallets on a chain.
     """
-    by_key: dict[tuple[str, str], dict[str, dict[str, Any]]] = defaultdict(dict)
-    inferred: dict[tuple[str, str], str] = {}
-    flagged: dict[tuple[str, str], str] = {}
-
-    for case in cases:
-        result = case.result
-        if not result:
-            continue
-        chain = result.get("chain") or "ethereum"
-        for trace, swapped_to in _traces(result):
-            for node in _intermediaries(trace, chain, excluded):
-                key = (chain, node["id"])
-                if node.get("inferred_exchange"):
-                    inferred[key] = node["inferred_exchange"]
-                if node.get("risk_category"):
-                    flagged[key] = node["risk_category"]
-                # One entry per case per address; a case that touches the same
-                # wallet twice is still one case.
-                by_key[key].setdefault(case.id, {
-                    "case_id": case.id,
-                    "reported_address": result.get("address") or case.address,
-                    "direction": result.get("direction", "outgoing"),
-                    "asset": result.get("asset"),
-                    "traced_at": case.created_at,
-                    "depth": node.get("depth"),
-                    "value_in_native": node.get("total_in_native", 0.0),
-                    "exchange": result.get("exchange"),
-                    "after_swap_to": swapped_to,
-                })
-
-    clusters = []
-    for (chain, address), members in by_key.items():
-        # Distinct *reported* addresses, not distinct cases: the same wallet
-        # traced twice is one complaint, not two converging on itself.
-        reported = {m["reported_address"] for m in members.values()}
-        if len(reported) < min_cases:
-            continue
-        if only_case is not None and only_case not in members:
-            continue
-        clusters.append({
-            "chain": chain,
-            "address": address,
-            "inferred_exchange": inferred.get((chain, address)),
-            "risk_category": flagged.get((chain, address)),
-            "reported_addresses": sorted(reported),
-            "case_count": len(members),
-            "max_value_in_native": max(m["value_in_native"] for m in members.values()),
-            "cases": sorted(members.values(), key=lambda m: m["traced_at"], reverse=True),
-        })
-
-    # Most complaints first; among equals, a probable deposit address (the
-    # one a request can name) before an anonymous wallet, then by the largest
-    # value that reached it -- so a sidebar that shows only the top few shows
-    # the ones worth acting on.
-    clusters.sort(key=lambda c: (
-        -len(c["reported_addresses"]),
-        0 if c["inferred_exchange"] else 1,
-        -c["max_value_in_native"],
-        c["address"],
-    ))
-    return clusters
+    return CaseIndex.of(cases, excluded).clusters(only_case=only_case, min_cases=min_cases)
 
 
 def related_cases(clusters: list[dict[str, Any]], case_id: str) -> list[dict[str, Any]]:

@@ -30,8 +30,19 @@ law-enforcement request or a theft, and the event does not say which -- it is a
 strong signal that the address was involved in something an issuer acted on,
 and a reason to ask Tether, not a finding of guilt.
 
+What is left out
+----------------
+Tether has blacklisted contracts too: its own USDT contract, the MetaMask swap
+router, dozens of token contracts. Those are on every user's path, not anyone's
+wallet, so a trace through one must not read "Frozen by Tether". After the
+sample check (which covers them, so the replay still matches the contract),
+every address app/never_flag.py names as a token contract, a DEX router or a
+burn address is moved to `_meta.excluded`. A frozen exchange wallet that is not
+a per-customer deposit address stops the import for review instead.
+
     cd backend && .venv/bin/python -m scripts.import_tether_freezes
     cd backend && .venv/bin/python -m scripts.import_tether_freezes --dry-run
+    cd backend && .venv/bin/python -m scripts.import_tether_freezes --screen-held   # offline
 """
 from __future__ import annotations
 
@@ -48,6 +59,7 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import config  # noqa: E402
+from app import never_flag  # noqa: E402
 from app.etherscan_client import EtherscanClient, normalize_address  # noqa: E402
 from app.risk_matcher import FROZEN  # noqa: E402
 from app.tron_client import hex_to_base58  # noqa: E402
@@ -81,7 +93,11 @@ def eth_events(client: EtherscanClient, topic: str) -> list[tuple[int, int, str,
             break
         # Restart at the last block rather than after it: a page can end
         # partway through a block, and the dedupe above absorbs the overlap.
-        from_block = int(logs[-1]["blockNumber"], 16)
+        last_block = int(logs[-1]["blockNumber"], 16)
+        if last_block <= from_block:
+            # A full page inside one block would be asked for again for ever.
+            raise RuntimeError(f"more than 1000 {topic[:10]} events in block {from_block}; cannot page past it")
+        from_block = last_block
     return list(out.values())
 
 
@@ -165,7 +181,21 @@ def replay(added: list, removed: list) -> dict[str, tuple]:
     return {address: event for address, event in state.items() if event is not None}
 
 
-def write(chain_key: str, frozen: dict[str, dict], counts: dict, dry_run: bool) -> None:
+def leave_out(chain_key: str, labels: dict[str, dict]) -> tuple[dict[str, dict], dict[str, dict], list[str]]:
+    """(labels kept, excluded {address: why and label}, exchange wallets that need review)."""
+    usdt = ETH_USDT if chain_key == "ethereum" else TRON_USDT
+    reasons = never_flag.screen(chain_key, labels)
+    if usdt in labels:
+        reasons[usdt] = never_flag.TOKEN  # Tether blacklisted its own contract; not a wallet
+    review = sorted(a for a, why in reasons.items() if why == never_flag.EXCHANGE)
+    excluded = {a: {"why": why, "label": labels[a]["label"]} for a, why in sorted(reasons.items())
+                if why != never_flag.EXCHANGE}
+    kept = {a: m for a, m in labels.items() if a not in excluded}
+    return kept, excluded, review
+
+
+def write(chain_key: str, frozen: dict[str, dict], counts: dict, dry_run: bool,
+          excluded: dict[str, dict] | None = None) -> None:
     chain = config.CHAINS[chain_key]
     print(f"  {chain_key:<9} {len(frozen):>6} addresses frozen now -> {chain.frozen_labels_path.name}")
     if dry_run:
@@ -191,9 +221,12 @@ def write(chain_key: str, frozen: dict[str, dict], counts: dict, dry_run: bool) 
             ),
             "chain": chain_key,
             "last_reviewed": datetime.now(timezone.utc).date().isoformat(),
-            "counts": counts,
+            "counts": {**counts, "excluded": len(excluded or {})},
             "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_tether_freezes",
             "schema": "labels maps an address to {category, entity, label, source}",
+            "excluded_note": ("Frozen by Tether but left out: token contracts, DEX routers and burn "
+                              "addresses are on every user's path, not anyone's wallet (app/never_flag.py)."),
+            "excluded": excluded or {},
         },
         "labels": dict(sorted(frozen.items())),
     }
@@ -211,12 +244,52 @@ def record(chain_name: str, address: str, tx: str, when: datetime) -> dict:
     }
 
 
+def _screened(chain_key: str, labels: dict[str, dict], counts: dict, dry_run: bool) -> int:
+    """Apply the never-flag rules, then write; 1 (nothing written) if an exchange wallet needs review."""
+    kept, excluded, review = leave_out(chain_key, labels)
+    if review:
+        print(f"  {chain_key}: Tether froze exchange wallets that are not deposit addresses: {review}. "
+              "Review them (add an 'allow' entry to data/never_flag_tokens.json if right); not writing.")
+        return 1
+    print(f"  {chain_key}: {len(excluded)} left out (token contracts, routers, burn addresses)")
+    write(chain_key, kept, {**counts, "frozen": len(kept)}, dry_run, excluded)
+    return 0
+
+
+def screen_held(dry_run: bool) -> int:
+    """Apply the never-flag rules to the files already held. Reads and writes local files only."""
+    status = 0
+    for chain_key in ("ethereum", "tron"):
+        path = config.CHAINS[chain_key].frozen_labels_path
+        document = json.loads(path.read_text())
+        kept, excluded, review = leave_out(chain_key, document["labels"])
+        if review:
+            print(f"{chain_key}: exchange wallets need review, not changed: {review}")
+            status = 1
+            continue
+        meta = document["_meta"]
+        meta["excluded"] = {**(meta.get("excluded") or {}), **excluded}
+        meta["excluded_note"] = ("Frozen by Tether but left out: token contracts, DEX routers and burn "
+                                 "addresses are on every user's path, not anyone's wallet (app/never_flag.py).")
+        meta["counts"] = {**(meta.get("counts") or {}), "frozen": len(kept), "excluded": len(meta["excluded"])}
+        document["labels"] = dict(sorted(kept.items()))
+        print(f"{chain_key}: {len(excluded)} moved to _meta.excluded; {len(kept)} kept")
+        if not dry_run:
+            path.write_text(json.dumps(document, indent=1) + "\n")
+    return status
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--chain", choices=["ethereum", "tron", "all"], default="all")
+    parser.add_argument("--screen-held", action="store_true",
+                        help="apply the never-flag rules to the held files, offline")
     args = parser.parse_args()
+    if args.screen_held:
+        return screen_held(args.dry_run)
     rng = random.Random(7)
+    status = 0
 
     if args.chain in ("ethereum", "all"):
         with EtherscanClient(chain_id=1) as client:
@@ -235,8 +308,8 @@ def main() -> int:
             addr: record("Ethereum", addr, ev[3], datetime.fromtimestamp(ev[4], tz=timezone.utc))
             for addr, ev in frozen.items()
         }
-        write("ethereum", labels, {"frozen": len(labels), "freeze_events": len(added),
-                                   "release_events": len(removed)}, args.dry_run)
+        status |= _screened("ethereum", labels, {"freeze_events": len(added), "release_events": len(removed)},
+                            args.dry_run)
 
     if args.chain in ("tron", "all"):
         headers = {"Accept": "application/json"}
@@ -246,7 +319,6 @@ def main() -> int:
             added = tron_events(http, "AddedBlackList")
             removed = tron_events(http, "RemovedBlackList")
             frozen = replay(added, removed)
-            frozen.pop(TRON_USDT, None)  # Tether blacklisted its own contract; not a wallet
             frozen = {a: ev for a, ev in frozen.items() if not is_system_address(_tron_hex(a))}
             print(f"Tron: {len(added)} freezes, {len(removed)} releases, {len(frozen)} frozen now")
             released = sorted({e[2] for e in removed} - set(frozen))
@@ -264,12 +336,12 @@ def main() -> int:
             addr: record("Tron", addr, ev[3], datetime.fromtimestamp(ev[4] / 1000, tz=timezone.utc))
             for addr, ev in frozen.items()
         }
-        write("tron", labels, {"frozen": len(labels), "freeze_events": len(added),
-                               "release_events": len(removed)}, args.dry_run)
+        status |= _screened("tron", labels, {"freeze_events": len(added), "release_events": len(removed)},
+                            args.dry_run)
 
     if args.dry_run:
         print("\nDry run -- nothing written.")
-    return 0
+    return status
 
 
 if __name__ == "__main__":

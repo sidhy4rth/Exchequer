@@ -30,8 +30,8 @@ DEMOS = {d["demo"]: d["result"] for d in json.loads(
 HOT_WALLET, EXPLORER_TAG, INFERRED = DEMOS[9], DEMOS[12], DEMOS[6]
 
 
-def labelled(wallet_type: str = "deposit_wallet", **over) -> dict:
-    return case(matches=[{"address": DEPOSIT, "wallet_type": wallet_type}], **over)
+def labelled(wallet_type: str = "deposit_wallet", label: str = f"Binance Dep: {DEPOSIT}", **over) -> dict:
+    return case(matches=[{"address": DEPOSIT, "wallet_type": wallet_type, "label": label}], **over)
 
 
 # -- which kind ----------------------------------------------------------------------
@@ -48,6 +48,15 @@ def labelled(wallet_type: str = "deposit_wallet", **over) -> dict:
 ])
 def test_the_kind_comes_from_the_data_not_the_label_text(result, kind):
     assert attribution_kind(result) == kind
+
+
+@pytest.mark.parametrize("label", ["Binance: Deposit Funder", "Bitcoin Suisse: Eth2 Depositor 1",
+                                   "AltCoinTrader: Binance Deposit 1", "Coinbase: Batch Deposit 1", None])
+def test_an_exchanges_own_wallet_typed_deposit_is_not_a_customer_deposit(label):
+    """Older label files typed any label with "deposit" in it as one (r1-labels-data-5)."""
+    result = labelled(label=label)
+    assert attribution_kind(result) == "exchange_wallet"
+    assert "KYC" not in draft("case-1", result, "exchange")
 
 
 def test_a_tag_saying_deposit_is_still_only_a_tag():
@@ -152,7 +161,8 @@ def test_reports_do_not_claim_funds_nobody_reported_either():
                "hops": [{"address": "0xhop", "victim_share": 0.8, "received_in_window": 12.0}]}
     report = build_report(stored({**full_result(), "prorata": prorata}))
     text = render_text_report(report)
-    assert "about 9.5 of 10.0 ETH sent from the reported address" in " ".join(text.split())
+    # Of the route's own first hop, said so (8 Nov check, r1-attribution-integrity-2).
+    assert "about 9.5 of the 10.0 ETH this wallet sent on this route" in " ".join(text.split())
     assert "eported funds" not in text
     assert "eported funds" not in "".join(p.extract_text() for p in PdfReader(io.BytesIO(render_pdf(report, text))).pages)
 

@@ -12,7 +12,8 @@ import json
 
 import pytest
 
-from app.risk_matcher import FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, STOLEN, RiskMatcher
+from app import risk_matcher
+from app.risk_matcher import FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, SEIZED, STOLEN, RiskMatcher
 
 from conftest import addr, make_graph
 
@@ -50,7 +51,7 @@ def test_loads_both_categories(risk_file):
     matcher = RiskMatcher.from_file(risk_file)
 
     assert len(matcher) == 2
-    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, FROZEN: 0, STOLEN: 0, GAMBLING: 0, POISONING: 0, SCAM: 0, LAUNDERING: 0}
+    assert matcher.counts_by_category() == {SANCTIONED: 1, SEIZED: 0, MIXER: 1, FROZEN: 0, STOLEN: 0, GAMBLING: 0, POISONING: 0, SCAM: 0, LAUNDERING: 0}
     assert matcher.entities == ["LAZARUS GROUP", "TORNADO CASH"]
 
 
@@ -127,7 +128,7 @@ def threat_file(tmp_path):
 def test_the_threat_file_adds_stolen_funds_wallets(risk_file, threat_file):
     matcher = RiskMatcher.from_file(risk_file, extra_paths=(threat_file,))
 
-    assert matcher.counts_by_category() == {SANCTIONED: 1, MIXER: 1, FROZEN: 0, STOLEN: 1, GAMBLING: 0, POISONING: 0, SCAM: 0, LAUNDERING: 0}
+    assert matcher.counts_by_category() == {SANCTIONED: 1, SEIZED: 0, MIXER: 1, FROZEN: 0, STOLEN: 1, GAMBLING: 0, POISONING: 0, SCAM: 0, LAUNDERING: 0}
     assert matcher.lookup(HACK_ADDR)["source"] == "Etherscan label"
 
 
@@ -334,3 +335,97 @@ def test_the_zero_address_is_never_flagged(tmp_path):
     path.write_text(json.dumps({"labels": {zero: {
         "category": "frozen", "entity": "Tether (USDT freeze)", "label": "USDT frozen by Tether"}}}))
     assert RiskMatcher.from_file(path).lookup(zero) is None
+
+
+
+def test_a_freeze_file_entry_is_tethers_usdt(tmp_path):
+    from app.risk_matcher import is_tether_usdt_freeze
+    path = tmp_path / "frozen_labels.json"
+    path.write_text(json.dumps({"labels": {HACK_ADDR: {
+        "category": "frozen", "entity": "Tether (USDT freeze)",
+        "label": "USDT frozen by Tether on 2025-01-01", "source": "Tether USDT contract on Ethereum"}}}))
+    matcher = RiskMatcher.from_file(None, extra_paths=(path,))
+    (match,) = matcher.annotate(make_graph([(SEED, HACK_ADDR, 5.0)], seed=SEED))
+    assert (match.origin, match.token, match.issuer) == ("frozen_labels.json", "USDT", "Tether")
+    assert is_tether_usdt_freeze(match.to_dict())
+    assert match.describe().startswith("Frozen by Tether (USDT):")
+
+
+# ---------------------------------------------------------------------------
+# Government seizure orders, and orders that end (r1-labels-data-12, r1-labels-data-3)
+# ---------------------------------------------------------------------------
+ORDER_ADDR = addr("0de4")
+
+
+@pytest.fixture
+def intl_file(tmp_path):
+    path = tmp_path / "intl.json"
+    path.write_text(json.dumps({"labels": {
+        ORDER_ADDR: {"category": "seized", "entity": "NBCTF order FO 5/24", "label": "NBCTF order FO 5/24",
+                     "source": "Israel NBCTF seizure or forfeiture order FO 5/24 (via OpenSanctions)",
+                     "authorities": ["Israel"], "valid_until": "2026-12-31"},
+        SDN_ADDR: {"category": "seized", "entity": "SAEED KHUDRY", "label": "SAEED KHUDRY",
+                   "source": "Israel NBCTF seizure or forfeiture order FO 1/24 (via OpenSanctions)",
+                   "authorities": ["Israel"]},
+    }}))
+    return path
+
+
+@pytest.fixture
+def today(monkeypatch):
+    """date.today() as the matcher sees it; set `today_is` to move the clock."""
+    class Day(risk_matcher.date):
+        today_is = risk_matcher.date(2026, 11, 6)
+
+        @classmethod
+        def today(cls):
+            return cls.today_is
+    monkeypatch.setattr(risk_matcher, "date", Day)
+    return Day
+
+
+def test_a_seizure_order_is_not_called_a_sanctioned_entity(intl_file, today):
+    matcher = RiskMatcher.from_file(intl_file)
+    (match,) = matcher.annotate(make_graph([(SEED, ORDER_ADDR, 5.0)], seed=SEED))
+    sentence = match.describe()
+    assert match.category == SEIZED
+    assert sentence.startswith("Government seizure order:")
+    assert "Sanctioned" not in sentence and "not a sanctions designation" in sentence
+    assert "Listed holder" not in sentence  # the entity is only the order's id
+
+
+def test_a_seizure_order_with_a_named_holder_names_them(risk_file, intl_file, today):
+    matcher = RiskMatcher.from_file(intl_file)
+    (match,) = matcher.annotate(make_graph([(SEED, SDN_ADDR, 5.0)], seed=SEED))
+    assert "Listed holder: SAEED KHUDRY." in match.describe()
+
+
+def test_seized_does_not_end_a_trace(intl_file, today):
+    matcher = RiskMatcher.from_file(intl_file)
+    assert matcher.is_flagged(ORDER_ADDR) and not matcher.is_terminal(ORDER_ADDR)
+
+
+def test_an_ofac_designation_also_under_a_seizure_order_names_both(risk_file, intl_file, today):
+    meta = RiskMatcher.from_file(risk_file, extra_paths=(intl_file,)).lookup(SDN_ADDR)
+    assert meta["category"] == SANCTIONED
+    assert "also Israel NBCTF seizure or forfeiture order FO 1/24" in meta["source"]
+
+
+def test_an_entry_before_valid_until_still_matches(intl_file, today):
+    today.today_is = risk_matcher.date(2026, 12, 31)
+    assert RiskMatcher.from_file(intl_file).lookup(ORDER_ADDR)["valid_until"] == "2026-12-31"
+
+
+def test_an_entry_past_its_valid_until_is_not_matched(intl_file, today):
+    matcher = RiskMatcher.from_file(intl_file)
+    today.today_is = risk_matcher.date(2027, 1, 1)  # the order ended while the server ran
+    assert matcher.lookup(ORDER_ADDR) is None
+    assert RiskMatcher.from_file(intl_file).lookup(ORDER_ADDR) is None  # nor is it loaded again
+    assert matcher.lookup(SDN_ADDR) is not None  # an order with no end date still matches
+
+
+def test_the_load_log_counts_the_orders_left_out_as_ended(intl_file, today, caplog):
+    today.today_is = risk_matcher.date(2027, 1, 1)
+    with caplog.at_level("INFO", logger="app.risk_matcher"):
+        RiskMatcher.from_file(intl_file)
+    assert "Loaded 1 risk labels" in caplog.text and "1 past their end date, left out" in caplog.text

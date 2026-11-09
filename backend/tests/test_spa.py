@@ -56,7 +56,7 @@ def test_nothing_outside_the_app_folder_is_served(client):
 
 
 def test_the_api_itself_is_untouched(client):
-    assert client.get("/health", headers=NAVIGATE).json() == {"status": "ok"}
+    assert client.get("/health", headers=NAVIGATE).json()["status"] == "ok"
 
 
 def test_without_a_built_app_every_unknown_path_is_a_404(client, monkeypatch, tmp_path):

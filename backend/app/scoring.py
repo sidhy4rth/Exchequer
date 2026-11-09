@@ -30,6 +30,7 @@ exchange match. If nothing matched, the score is 0.0 and the verdict is
 """
 from __future__ import annotations
 
+import heapq
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -51,6 +52,12 @@ assert abs(WEIGHT_HOP_PROXIMITY + WEIGHT_AMOUNT_CORRELATION + WEIGHT_MATCH_DIREC
 
 # Bands used in the report so a reader is not left interpreting a bare decimal.
 BAND_THRESHOLDS = ((0.75, "high"), (0.50, "moderate"), (0.25, "low"))
+
+# The most a score may be when its band is capped (a small share of the funds
+# reached the exchange): the band's top, at two decimals. The stored number is
+# the capped one, so every reader that bands the number -- the case list,
+# batches, follow-ons, the report, the demo check -- shows the capped band.
+BAND_CEILING = {"moderate": 0.74, "low": 0.49, "very low": 0.24}
 
 
 @dataclass
@@ -93,15 +100,21 @@ class ConfidenceScore:
     components: list[ScoreComponent] = field(default_factory=list)
     summary: str = ""
     caveats: list[str] = field(default_factory=list)
+    # The components' sum before a materiality cap lowered `score`; None when
+    # no cap applied (the sum is then `score`).
+    score_uncapped: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "score": self.score,
             "band": self.band,
             "summary": self.summary,
             "components": [c.to_dict() for c in self.components],
             "caveats": self.caveats,
         }
+        if self.score_uncapped is not None:
+            out["score_uncapped"] = self.score_uncapped
+        return out
 
 
 def _band(score: float) -> str:
@@ -111,55 +124,216 @@ def _band(score: float) -> str:
     return "very low"
 
 
-def _hop_proximity(depth: int, max_depth: int, direction: str = OUTGOING) -> ScoreComponent:
+# Hop proximity is scored against this fixed distance (the default trace
+# depth), never the depth a request asked for: asking for a deeper trace must
+# not raise the score of the same path (audit r1-attribution-integrity-8).
+PROXIMITY_REFERENCE_HOPS = 4
+
+
+def _hop_proximity(depth: int, direction: str = OUTGOING, offset: int = 0) -> ScoreComponent:
     """Linear decay with distance from the victim's address.
 
     depth 1 scores 1.0 (a direct deposit to the exchange) and each further hop
-    costs an equal share, reaching 0 at one hop beyond the traversal limit.
-    Linear rather than exponential so the penalty stays easy to explain.
+    costs an equal share of PROXIMITY_REFERENCE_HOPS, reaching 0 at one hop
+    beyond it. Linear rather than exponential so the penalty stays easy to
+    explain. `offset` is the hops before this trace began: a follow-on after a
+    swap starts at the swapping wallet, which may sit hops from the reported
+    address.
     """
-    span = max(max_depth, 1)
-    raw = max(0.0, min(1.0, 1.0 - (depth - 1) / span))
-    if depth <= 1 and direction == OUTGOING:
+    hops = depth + offset
+    raw = max(0.0, min(1.0, 1.0 - (hops - 1) / PROXIMITY_REFERENCE_HOPS))
+    if hops <= 1 and direction == OUTGOING:
         explanation = (
             "The exchange wallet received funds directly from the reported "
             "address, with no intermediary."
         )
-    elif depth <= 1:
+    elif hops <= 1:
         explanation = (
             "The exchange wallet sent funds directly to the reported address, "
             "with no intermediary."
         )
     else:
+        after = f" ({depth} after the swap)" if offset else ""
         explanation = (
-            f"The exchange wallet is {depth} hops from the reported address. "
+            f"The exchange wallet is {hops} hops from the reported address{after}. "
             f"Each hop adds a wallet we cannot independently account for, so "
-            f"confidence decays with distance (limit: {max_depth} hops)."
+            f"confidence decays with distance, scored against a fixed reference of "
+            f"{PROXIMITY_REFERENCE_HOPS} hops ({PROXIMITY_REFERENCE_HOPS + 1} or more score 0)."
         )
     return ScoreComponent("hop_proximity", raw, WEIGHT_HOP_PROXIMITY, explanation)
 
 
-def principal_path(graph: nx.DiGraph, source: str, destination: str) -> list[str]:
+def principal_path(graph: nx.DiGraph, source: str, destination: str,
+                   direction: str = OUTGOING) -> list[str]:
     """The route the attribution is read along, chosen the same way every time.
 
-    Among the shortest paths from `source` to `destination`, the one whose
-    narrowest hop carried the most value -- the path that could have moved the
-    most of the traced funds. networkx's own shortest_path picks one of several
-    equal-length routes by insertion order, which is arbitrary from an
-    investigator's point of view: a dust transfer that happens to reach the
-    same exchange could be the path the score and the report were read from.
-    Ties are broken by address order so the choice is reproducible.
+    The widest route from `source` to `destination`: the one whose narrowest
+    hop carried the most value -- the route that could have moved the most of
+    the traced funds -- then the fewest hops among those, then the first in
+    address order from the reported address (see `_widest`). It used to be
+    the widest among the *shortest* routes only, so a dust transfer that
+    happened to reach the same exchange in fewer hops could be the path the
+    pro-rata estimate, the score and the report were read from; and listing
+    every shortest route grew exponentially on a lattice of wallets built to
+    do that.
+
+    The path is always in money order, `source` first. `direction` says which
+    end is the reported address: `source` on a forward trace, `destination`
+    on a reverse one (money from the exchange down to the reported address).
+    The search always starts at the reported address -- on a reverse trace
+    over its senders, then read back -- the same search `widest_routes` runs,
+    so the printed route and the case's hop count are one route (8 Nov
+    re-check: on reverse traces they came from two searches and an exact
+    width tie could give "2 hops upstream" over a 3-hop printed route).
 
     Raises the same exceptions as nx.shortest_path when there is no route.
     """
-    def bottleneck(path: list[str]) -> float:
-        return min(
-            graph.edges[path[i], path[i + 1]].get("value_native", 0.0)
-            for i in range(len(path) - 1)
-        ) if len(path) > 1 else 0.0
+    for end in (source, destination):
+        if end not in graph:
+            raise nx.NodeNotFound(f"{end} is not in the graph")
+    if destination == source:
+        return [source]
+    start, target = (source, destination) if direction == OUTGOING else (destination, source)
+    _, routes, _ = _widest(graph, start, forward=direction == OUTGOING, targets=[target])
+    if target not in routes:
+        raise nx.NetworkXNoPath(f"no path from {source} to {destination}")
+    path = routes[target]
+    return path if direction == OUTGOING else path[::-1]
 
-    paths = list(nx.all_shortest_paths(graph, source, destination))
-    return min(paths, key=lambda p: (-bottleneck(p), p))
+
+def _widths(graph: nx.DiGraph, source: str, forward: bool) -> dict[str, float]:
+    """For every address reachable from `source`, the most value that could
+    have reached it along any route: the largest narrowest hop. Dijkstra on
+    the bottleneck, O(E log V). Widths only: which route carries a width is
+    `_widest`'s question, because the shortest of the widest routes is not
+    found by extending the widest route to each address (a wider prefix with
+    more hops can end at the same bottleneck as a narrower, shorter one)."""
+    step = graph.successors if forward else graph.predecessors
+    best: dict[str, float] = {source: float("inf")}
+    done: set[str] = set()
+    heap: list[tuple[float, str]] = [(-float("inf"), source)]
+    while heap:
+        _, near = heapq.heappop(heap)
+        if near in done:
+            continue
+        done.add(near)
+        for far in step(near):
+            if far in done:
+                continue
+            edge = graph.edges[near, far] if forward else graph.edges[far, near]
+            width = min(best[near], float(edge.get("value_native", 0.0)))
+            if far not in best or width > best[far]:
+                best[far] = width
+                heapq.heappush(heap, (-width, far))
+    return best
+
+
+def _widest(graph: nx.DiGraph, source: str, forward: bool = True, targets: Any = None,
+            ) -> tuple[dict[str, float], dict[str, list[str]], dict[str, int]]:
+    """Widest routes from `source`, one rule for every caller: for each
+    address, the most value that could have reached it (the largest narrowest
+    hop), and its route -- the widest, then the fewest hops among the widest,
+    then the first in address order read from `source` -- with that route's
+    hop count. `targets` limits which routes are built (all, by default); the
+    widths are always every address's.
+
+    Per distinct width, one breadth-first search over the hops that carried
+    at least that much, each level in route order, so the first route to
+    reach an address is the fewest hops and then the first in address order.
+    A lattice of equally wide routes is read once per width, never listed.
+
+    `forward=False` reads incoming edges -- money moving towards `source`, as
+    on a reverse trace -- and the routes run from `source` over the senders
+    (callers reverse them into money order)."""
+    if source not in graph:
+        raise nx.NodeNotFound(f"{source} is not in the graph")
+    step = graph.successors if forward else graph.predecessors
+    best = _widths(graph, source, forward)
+    best.pop(source, None)
+    wanted = best if targets is None else {t: best[t] for t in targets if t in best}
+    by_width: dict[float, set[str]] = {}
+    for address, width in wanted.items():
+        by_width.setdefault(width, set()).add(address)
+
+    def carried(near: str, far: str) -> float:
+        edge = graph.edges[near, far] if forward else graph.edges[far, near]
+        return float(edge.get("value_native", 0.0))
+
+    routes: dict[str, list[str]] = {}
+    for width, group in by_width.items():
+        parent: dict[str, str] = {}
+        left = set(group)
+        seen, frontier = {source}, [source]
+        while frontier and left:
+            level = []
+            for near in frontier:  # in route order, so the first parent found is the first route
+                for far in sorted(step(near)):
+                    if far in seen or carried(near, far) < width:
+                        continue
+                    seen.add(far)
+                    parent[far] = near
+                    level.append(far)
+                    left.discard(far)
+            frontier = level
+        for address in group:
+            if address not in parent:  # cannot happen: its width was reached along these hops
+                continue
+            path = [address]
+            while path[-1] != source:
+                path.append(parent[path[-1]])
+            routes[address] = path[::-1]
+    hops = {a: len(p) - 1 for a, p in routes.items()}
+    return best, routes, hops
+
+
+def reach_bottlenecks(graph: nx.DiGraph, source: str, direction: str = OUTGOING) -> dict[str, float]:
+    """For every address, the most value that could have reached it from
+    `source`: the narrowest hop of its widest route (see `_widest`). A route
+    through a dust transfer can never carry more than the dust, so a decoy
+    near the source cannot outweigh the route the money took, however short
+    the decoy's route is. On a reverse trace the routes run towards `source`.
+    `source` itself is not in the result."""
+    if source not in graph:
+        return {}
+    best = _widths(graph, source, forward=direction == OUTGOING)
+    best.pop(source, None)
+    return best
+
+
+def widest_routes(graph: nx.DiGraph, source: str, direction: str = OUTGOING, targets: Any = None,
+                  ) -> tuple[dict[str, float], dict[str, int]]:
+    """`reach_bottlenecks` plus the hop count of each address's route (of
+    each of `targets`, when given) -- the route `principal_path` returns, from
+    the same search, so the case's hop count, its proximity score and the
+    printed route all describe one path, forward and reverse (a dust send
+    that reached the exchange in fewer hops used to set the hop count while
+    the route shown ran through the real cash-out)."""
+    if source not in graph:
+        return {}, {}
+    best, _, hops = _widest(graph, source, forward=direction == OUTGOING, targets=targets)
+    return best, hops
+
+
+def seed_outflow(graph: nx.DiGraph, seed: str, direction: str = OUTGOING,
+                 untraced: list[dict[str, Any]] | None = None) -> float:
+    """What the reported wallet sent (or, on a reverse trace, received), as
+    the trace saw it: its edges, plus value it sent to counterparties the
+    trace did not follow, minus value that came back to it from wallets the
+    trace did follow (a round trip must not count twice). Never below its
+    largest single transfer.
+    """
+    if seed not in graph:
+        return 0.0
+    if direction == OUTGOING:
+        out = [d.get("value_native", 0.0) for _, _, d in graph.out_edges(seed, data=True)]
+        back = sum(d.get("value_native", 0.0) for _, _, d in graph.in_edges(seed, data=True))
+    else:
+        out = [d.get("value_native", 0.0) for _, _, d in graph.in_edges(seed, data=True)]
+        back = sum(d.get("value_native", 0.0) for _, _, d in graph.out_edges(seed, data=True))
+    left = sum(u.get("value_native", 0.0) for u in (untraced or []) if u.get("address") == seed)
+    if not out:
+        return float(left)
+    return max(max(out), sum(out) + left - back)
 
 
 def _amount_correlation(
@@ -191,7 +365,7 @@ def _amount_correlation(
         (seed, exchange_address) if direction == OUTGOING else (exchange_address, seed)
     )
     try:
-        path = principal_path(graph, source, destination)
+        path = principal_path(graph, source, destination, direction)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         # Defensive: the matcher found the address in the graph, so a path
         # should exist. Score neutrally rather than inventing a number.
@@ -243,13 +417,28 @@ def _amount_correlation(
     )
 
 
+# What a pro-rata cap (prorata.estimate's seed_cap) is, in words.
+CAP_WORDING = {"reported_amount": "the victim reported paying", "swap_output": "the swap returned",
+               # A follow-on whose swapping wallet added money of its own.
+               "swap_share": "the swap returned for the traced funds (their share of its input, at most)"}
+
+
 def _prorata_component(prorata: dict[str, Any], native_symbol: str) -> ScoreComponent:
     """Amount correlation measured pro-rata (see prorata.py)."""
     sent, est, ratio = prorata["sent"], prorata["estimated"], prorata["ratio"]
-    lines = [
-        f"Pro-rata estimate: about {est:,.4f} of the {sent:,.4f} {native_symbol} that left the "
-        f"reported address on this path likely reached the exchange ({ratio * 100:.1f}%)."
-    ]
+    cap = prorata.get("seed_cap") or {}
+    if cap.get("applied"):
+        lines = [
+            f"Pro-rata estimate: about {est:,.4f} of the {cap['amount']:,.4f} {native_symbol} "
+            f"{CAP_WORDING.get(cap.get('basis'), 'the trace started from')} likely reached the exchange "
+            f"({ratio * 100:.1f}%). The reported wallet sent {sent:,.4f} along this path, more than that, "
+            "so the estimate starts from the smaller figure."
+        ]
+    else:
+        lines = [
+            f"Pro-rata estimate: about {est:,.4f} of the {sent:,.4f} {native_symbol} that left the "
+            f"reported address on this path likely reached the exchange ({ratio * 100:.1f}%)."
+        ]
     for h in prorata.get("hops") or []:
         lines.append(
             f"At {h['address']} the traced funds were {h['victim_share'] * 100:.1f}% of the "
@@ -263,6 +452,27 @@ def _prorata_component(prorata: dict[str, Any], native_symbol: str) -> ScoreComp
             f"came from other sources."
         )
     return ScoreComponent("amount_correlation", ratio, WEIGHT_AMOUNT_CORRELATION, " ".join(lines))
+
+
+def _not_estimated(prorata: dict[str, Any], materiality: dict[str, Any] | None,
+                   native_symbol: str) -> ScoreComponent:
+    """Pro-rata could not be read along the path, so the amount earns nothing.
+
+    The fallback used to be the last hop over the first, capped at 1, which
+    scores the most diluted paths highest: a read cut short by a busy wallet
+    scored above a complete one on the same path (audit
+    r2-g2-documented-claims-vs-code-7-2). With no credit, a less complete
+    read can never score above a complete one.
+    """
+    lines = [f"Not estimated: {prorata.get('reason') or 'the wallets on the path could not be read'}."]
+    if materiality and materiality.get("denominator") and materiality.get("primary_reach") is not None:
+        reach, of = materiality["primary_reach"], materiality["denominator"]
+        lines.append(f"At most {reach:,.4f} of the {of:,.4f} {native_symbol} ({min(1.0, reach / of) * 100:.1f}%) "
+                     "could have reached it along this route;")
+    else:
+        lines.append("Whatever reached it along this route may include other people's money;")
+    lines.append("no credit is given for an amount that could not be measured.")
+    return ScoreComponent("amount_correlation", 0.0, WEIGHT_AMOUNT_CORRELATION, " ".join(lines))
 
 
 def _match_directness(match: ExchangeMatch) -> ScoreComponent:
@@ -316,8 +526,15 @@ def score_case(
     direction: str = OUTGOING,
     internal_transfers_read: bool = False,
     prorata: dict[str, Any] | None = None,
+    materiality: dict[str, Any] | None = None,
+    depth_offset: int = 0,
 ) -> ConfidenceScore:
     """Compute the confidence score for one traced case.
+
+    `max_depth` is kept for callers but no longer moves the score: hop
+    proximity is measured against PROXIMITY_REFERENCE_HOPS. `depth_offset`
+    is the hops between the reported address and where this trace started
+    (a follow-on after a swap).
 
     On a reverse trace the three components measure the same quantities, but
     the claim they support is the mirror image: not "the funds reached this
@@ -328,6 +545,10 @@ def score_case(
     transaction list); the limitations paragraph is worded to match.
     """
     findings = findings or []
+    # A read stopped at its record limit somewhere: "read in full" would be untrue.
+    # Its own name: the band cap below once reused `capped`, and every matched
+    # case then claimed a read had hit its limit (8 Nov check).
+    history_capped = any(data.get("history_capped") for _, data in graph.nodes(data=True))
 
     if primary_match is None:
         return ConfidenceScore(
@@ -347,21 +568,54 @@ def score_case(
                 "the substantive result of a reverse trace."
             ),
             caveats=_caveats(findings, truncated, matched=False, asset=native_symbol,
-                             internal_transfers_read=internal_transfers_read),
+                             internal_transfers_read=internal_transfers_read,
+                             history_capped=history_capped),
         )
 
+    status = (prorata or {}).get("status")
     components = [
-        _hop_proximity(primary_match.depth, max_depth, direction),
-        (_prorata_component(prorata, native_symbol)
-         if prorata and prorata.get("status") == "estimated"
+        _hop_proximity(primary_match.depth, direction, depth_offset),
+        (_prorata_component(prorata, native_symbol) if status == "estimated"
+         else _not_estimated(prorata, materiality, native_symbol) if status == "unknown"
          else _amount_correlation(graph, seed, primary_match.address, native_symbol, direction)),
         _match_directness(primary_match),
     ]
     score = round(sum(c.contribution for c in components), 4)
     band = _band(score)
+    share_band = _materiality_cap(band, materiality)
+    # Value that went round through an exchange never lowers a share; when
+    # counting it once would put another exchange first, the case is at most
+    # moderate (pipeline._note_round_trips).
+    capped_band = _lower_band(share_band, (materiality or {}).get("band_cap"))
+    material_caveat = []
+    uncapped = None
+    if share_band != band and materiality:
+        material_caveat.append(
+            f"Only {materiality['primary_share'] * 100:.1f}% of what the reported address sent "
+            f"(about {materiality.get('primary_reach', 0):g} of {materiality.get('denominator', 0):g} "
+            f"{native_symbol}) reached this exchange, so confidence is capped at {share_band}: the rest of "
+            "the funds went elsewhere."
+        )
+    if capped_band != share_band and materiality:
+        recycled = materiality.get("recycled") or {}
+        material_caveat.append(
+            f"The reported address got value back from {', '.join(recycled.get('by_exchange') or {})} after "
+            f"paying it in; counted once as the same coins, {recycled.get('lead_if_netted')} would carry the "
+            f"larger share, so confidence is capped at {capped_band} and that exchange is named as also reached."
+        )
+    if capped_band != band and materiality:
+        band = capped_band
+        # The number goes down with the band (8 Nov check): it used to stay
+        # 1.0 under a "low" band, and every reader banding the number said High.
+        uncapped, score = score, min(score, BAND_CEILING[capped_band])
 
     hops = f"{primary_match.depth} hop{'s' if primary_match.depth != 1 else ''}"
-    if direction == OUTGOING:
+    if direction == OUTGOING and depth_offset:
+        claim = (
+            f"the swapped funds reached {primary_match.exchange} at {primary_match.address}, "
+            f"{hops} after the swap ({primary_match.depth + depth_offset} from the reported address)"
+        )
+    elif direction == OUTGOING:
         claim = (
             f"funds from the reported address reached {primary_match.exchange} "
             f"at {primary_match.address}, {hops} from the source"
@@ -381,39 +635,74 @@ def score_case(
         band=band,
         components=components,
         summary=summary,
-        caveats=_caveats(findings, truncated, matched=True, asset=native_symbol,
-                         internal_transfers_read=internal_transfers_read) + _prorata_caveats(prorata, native_symbol),
+        score_uncapped=uncapped,
+        caveats=material_caveat + _caveats(findings, truncated, matched=True, asset=native_symbol,
+                                           internal_transfers_read=internal_transfers_read,
+                                           history_capped=history_capped)
+        + _prorata_caveats(prorata, native_symbol),
     )
+
+
+_BAND_ORDER = ("very low", "low", "moderate", "high")
+
+
+def _materiality_cap(band: str, materiality: dict[str, Any] | None) -> str:
+    """Below the material share the band can be at most low; below a majority, at most moderate."""
+    if not materiality or materiality.get("primary_share") is None:
+        return band
+    share = materiality["primary_share"]
+    cap = ("low" if share < materiality.get("threshold", 0.10)
+           else "moderate" if share < materiality.get("majority", 0.50) else "high")
+    return _lower_band(band, cap)
+
+
+def _lower_band(band: str, cap: str | None) -> str:
+    """`band`, or `cap` if that is lower."""
+    if cap not in _BAND_ORDER:
+        return band
+    return band if _BAND_ORDER.index(band) <= _BAND_ORDER.index(cap) else cap
 
 
 def _prorata_caveats(prorata: dict[str, Any] | None, native_symbol: str) -> list[str]:
     if not prorata or prorata.get("status") == "not_applicable":
         return []
-    if prorata.get("status") == "unknown":
-        return [
-            f"How much of the value at the exchange was the reported funds could not be "
-            f"estimated: {prorata.get('reason')}. The amount component compares the first and "
-            f"last hop only, which overstates the match when other money joined on the way."
-        ]
     out = []
-    if prorata.get("diluted"):
+    if prorata.get("status") == "unknown":
+        out.append(
+            f"How much of the value at the exchange was the traced funds could not be "
+            f"estimated: {prorata.get('reason')}. No amount credit was given."
+        )
+    if prorata.get("diluted") and prorata.get("hops"):
         low = min(prorata["hops"], key=lambda h: h["victim_share"])
         out.append(
             f"At {low['address']} the traced funds were only {low['victim_share'] * 100:.1f}% of "
             f"what the wallet received before sending on; most of what it moved came from elsewhere."
         )
-    if prorata.get("hops"):
+    for h in prorata.get("hops") or []:
+        netted = (h.get("self_transfers") or 0.0) + (h.get("recycled_in_window") or 0.0)
+        if netted > 0:
+            parts = []
+            if h.get("self_transfers"):
+                parts.append(f"sent {h['self_transfers']:,.4f} {native_symbol} to itself")
+            if h.get("recycled_in_window"):
+                via = ", ".join(v["address"] for v in h.get("recycled_via") or [])
+                parts.append(f"got {h['recycled_in_window']:,.4f} {native_symbol} back out of what it had "
+                             f"paid out in the window, from {via} (straight back, or through other wallets "
+                             "the trace followed)")
+            out.append(f"{h['address']} {' and '.join(parts)}; that was its own money moving, not anyone "
+                       "else's, and was netted out of what it received.")
+    if prorata.get("status") == "estimated" and prorata.get("hops"):
         out.append(
             "The pro-rata estimate counts what each wallet received while the traced funds "
-            "passed through it, not money it already held; an older balance would lower the "
-            "estimate, so read it as an upper bound."
+            "passed through it. Money a wallet already held before they arrived is not counted; "
+            "counting it would lower the estimate."
         )
     return out
 
 
 def _caveats(
     findings: list[PatternFinding], truncated: bool, matched: bool, asset: str = "ETH",
-    internal_transfers_read: bool = False,
+    internal_transfers_read: bool = False, history_capped: bool = False,
 ) -> list[str]:
     """Limitations a reader must know before acting on the score.
 
@@ -453,7 +742,10 @@ def _caveats(
             "across a bridge to another chain is not covered. Value moved by a "
             "contract call was read for addresses that signed no outgoing "
             "transfer of their own (contracts) and for every address on a "
-            "reverse trace; a wallet's own signed transfers were read in full."
+            "reverse trace; "
+            + ("a wallet's own signed transfers were read up to each read's record limit, "
+               "which some reads reached (see the truncation notes)."
+               if history_capped else "a wallet's own signed transfers were read in full.")
         )
     else:
         caveats.append(

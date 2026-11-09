@@ -77,6 +77,10 @@ export async function removeWatch(watchId) {
   return jsonOrThrow(await apiFetch(`${BASE}/watches/${encodeURIComponent(watchId)}`, { method: 'DELETE' }))
 }
 
+export async function removeWatchHook(watchId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/watches/${encodeURIComponent(watchId)}/webhook`, { method: 'DELETE' }))
+}
+
 export async function checkWatchNow(watchId) {
   return jsonOrThrow(await apiFetch(`${BASE}/watches/${encodeURIComponent(watchId)}/check`, { method: 'POST' }))
 }

@@ -18,8 +18,10 @@ path: share = victim funds in ÷ all funds in (read from the chain for the
 window, not just the transfers the trace followed); victim onward = amount
 sent on × share. The result is shown as its own figure, feeds the amount
 correlation part of the score, and a share under 25% at any wallet is called
+out. "All funds in" is new money only: the route's own transfer once, with
+self-sends and coins the wallet got back from wallets it had paid netted
 out. Where a wallet's incoming history could not be read in full, the case
-says "not estimated" instead of guessing.
+says "not estimated" instead of guessing, and the amount earns no credit.
 
 ## Alternatives Considered
 
@@ -36,7 +38,7 @@ says "not estimated" instead of guessing.
 - The letters carry a defensible amount. On the demos it changed nothing where money moved cleanly and lowered the scores of the diluted paths, among them two of DEMO.md trace 10's three phishing wallets.
 
 ### Negative
-- Money a wallet held before the funds arrived is not counted, so the estimate is an upper bound.
+- Money a wallet held before the funds arrived is not counted; counting it would lower the estimate.
 
 ### Risks
 - A very busy intermediate wallet cannot be read in full; that path reports "not estimated" rather than a wrong number.

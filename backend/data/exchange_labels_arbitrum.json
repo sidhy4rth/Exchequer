@@ -10,7 +10,8 @@
    "dawsbot": 3,
    "brianleect": 1
   },
-  "regenerate_with": "cd backend && .venv/bin/python -m scripts.port_evm_labels"
+  "regenerate_with": "cd backend && .venv/bin/python -m scripts.port_evm_labels",
+  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json."
  },
  "labels": {
   "0x0363bfc09b48616190d15ddee5987ae2d05da6f4": {
@@ -153,11 +154,6 @@
    "label": "AscendEX 2",
    "type": "exchange_wallet"
   },
-  "0x4c2f150fc90fed3d8281114c2349f1906cde5346": {
-   "exchange": "Gemini",
-   "label": "Gemini: Deployer 2",
-   "type": "exchange_wallet"
-  },
   "0x4d24eececb86041f47bca41265319e9f06ae2fcb": {
    "exchange": "CoinDCX",
    "label": "CoinDCX 4",
@@ -181,11 +177,6 @@
   "0x563537412ad5d49faa7fa442b9193b8238d98c3c": {
    "exchange": "Coinbase",
    "label": "Coinbase 4",
-   "type": "exchange_wallet"
-  },
-  "0x5754284f345afc66a98fbb0a0afe71e0f007b949": {
-   "exchange": "Bitfinex",
-   "label": "Tether: Treasury",
    "type": "exchange_wallet"
   },
   "0x58edf78281334335effa23101bbe3371b6a36a51": {

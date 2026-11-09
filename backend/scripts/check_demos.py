@@ -48,9 +48,16 @@ TOLERANCE = 0.05
 
 def trace(base: str, demo: dict) -> dict:
     body = {k: demo[k] for k in ("address", "chain", "asset", "max_depth", "direction")}
+    headers = {"content-type": "application/json"}
+    # A live trace needs the demo code once the site sets one (app/access.py).
+    # The Action passes the live-checks environment's secret DEMO_CODE in this variable;
+    # unset, nothing is sent and an open site does not ask.
+    code = os.environ.get("EXCHEQUER_DEMO_CODE", "").strip()
+    if code:
+        headers["x-exchequer-demo-code"] = code
     request = urllib.request.Request(
         f"{base}/trace", data=json.dumps({**body, "save": False}).encode(),
-        headers={"content-type": "application/json"}, method="POST")
+        headers=headers, method="POST")
     with urllib.request.urlopen(request, timeout=400) as response:
         return json.loads(response.read())
 
@@ -61,8 +68,18 @@ def trace_with_retry(base: str, demo: dict, wait: float = 15.0) -> dict:
     The live site has answered a trace that never reached this script (a
     one-off stall between the host's edge and the runner); failing the job and
     e-mailing over that says nothing about the demo. A second failure does.
+
+    A 4xx is the site's answer, not a lost request, and is never retried: a
+    wrong or stale demo code sent again only adds to the site's wrong-code
+    lockout (r1-ci-github-6).
     """
     try:
+        return trace(base, demo)
+    except urllib.error.HTTPError as exc:
+        if 400 <= exc.code < 500:
+            raise
+        print(f"  demo {demo['demo']:>2}  retrying after: {exc}")
+        time.sleep(wait)
         return trace(base, demo)
     except (urllib.error.URLError, TimeoutError, http.client.HTTPException, ConnectionError) as exc:
         print(f"  demo {demo['demo']:>2}  retrying after: {exc}")
@@ -127,6 +144,16 @@ def main() -> int:
         started = time.monotonic()
         try:
             seen = observed(trace_with_retry(args.base, demo))
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403, 429):
+                # The demo code is wrong, stale or locked out: every other demo
+                # would be refused too, and each try counts toward the lockout.
+                print(f"✗ demo {demo['demo']:>2}  refused ({exc.code}): the demo code is wrong or stale; check the DEMO_CODE secret matches "
+                      "the site's EXCHEQUER_DEMO_CODE; stopping so no more wrong codes are sent")
+                return 1
+            print(f"✗ demo {demo['demo']:>2}  could not trace: {exc}")
+            failures += 1
+            continue
         except (urllib.error.URLError, TimeoutError, ValueError) as exc:
             print(f"✗ demo {demo['demo']:>2}  could not trace, twice: {exc}")
             failures += 1

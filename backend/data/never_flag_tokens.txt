@@ -1,0 +1,16 @@
+# Token contracts no label-store row may name (app/never_flag.py), besides each
+# chain's traced tokens in config.py. One address per line, "#" for notes. An
+# EVM address applies on every EVM chain, a Tron address on Tron. A longer
+# token list (CoinGecko, Uniswap) can be appended as it is.
+#
+# 5 Nov false-positive review: WETH, stETH, wstETH, DAI, WBTC (Ethereum).
+0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
+0xae7ab96520de3a18e5e111b5eaab095312d7fe84
+0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0
+0x6b175474e89094c44da98b954eedeac495271d0f
+0x2260fac5e5542a773aa44fbcfedf7c193bc2c599
+# Wrapped native coins: WBNB (BSC), WPOL (Polygon), WETH (Arbitrum), WTRX (Tron).
+0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c
+0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270
+0x82af49447d8a07e3bd95bd0d56f35241523fbab1
+TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR

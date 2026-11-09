@@ -27,6 +27,10 @@ scrape and must be re-checked on bscscan.com before evidentiary use.
 
     cd backend && .venv/bin/python -m scripts.seed_bsc_labels
     cd backend && .venv/bin/python -m scripts.seed_bsc_labels --dry-run
+
+The file is shared: import_eth_labels --chain bsc and port_evm_labels add to
+it. This script replaces only the entries its own source names, keeps every
+other one, and keeps an entry whose check failed (unknown is never "no").
 """
 from __future__ import annotations
 
@@ -42,7 +46,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import config  # noqa: E402
 from app.etherscan_client import is_valid_address, normalize_address  # noqa: E402
+from app.exchange_matcher import is_deposit_label  # noqa: E402
 from app.nodereal_client import NoderealClient, NoderealError  # noqa: E402
+from scripts._label_files import ShrinkRefused, chain_regenerate, merge_owned  # noqa: E402
+
+# Every script that writes the file, in the order a full rebuild runs them.
+REGENERATE = (
+    "cd backend && .venv/bin/python -m scripts.seed_bsc_labels",
+    "cd backend && .venv/bin/python -m scripts.import_eth_labels --chain bsc",
+    "cd backend && .venv/bin/python -m scripts.port_evm_labels",
+)
 
 DATASET_REPO = "brianleect/etherscan-labels"
 DATASET_COMMIT = "923aba72c7e2d0682f7ae6194b6140bd90668dc9"
@@ -92,7 +105,7 @@ def wallet_type(label: str) -> str:
     lowered = label.lower()
     if "cold" in lowered:
         return "cold_wallet"
-    if "deposit" in lowered:
+    if is_deposit_label(label):  # never the bare word: "Deposit Funder" is the exchange's own
         return "deposit_wallet"
     if "hot" in lowered:
         return "hot_wallet"
@@ -132,6 +145,8 @@ def bsc_activity(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--allow-shrink", action="store_true",
+                        help="let this run remove more than a handful of its own entries")
     args = parser.parse_args()
 
     if not config.NODEREAL_API_KEY:
@@ -162,6 +177,7 @@ def main() -> int:
     kept: dict[str, dict[str, str]] = {}
     dropped: list[str] = []
     errors: list[str] = []
+    errored: set[str] = set()
 
     native = NoderealClient(chain_slug="bsc-mainnet", lookback_blocks=ACTIVITY_LOOKBACK)
     token = NoderealClient(
@@ -181,6 +197,7 @@ def main() -> int:
             except (NoderealError, ValueError) as exc:
                 print(f"{address:<44} {meta['exchange']:<14} {'ERROR':>9} {'-':>13}  {str(exc)[:24]}")
                 errors.append(f"{address}: {exc}")
+                errored.add(address)
                 continue
 
             active = moves > 0 or balance > 0.01
@@ -196,43 +213,55 @@ def main() -> int:
     print("\n" + "=" * 92)
     print(f"candidates={len(candidates)}  kept={len(kept)}  inactive={len(dropped)}  errors={len(errors)}")
 
+    document = json.loads(BSC.labels_path.read_text()) if BSC.labels_path.exists() else {"_meta": {}, "labels": {}}
+    held = document["labels"]
+    if errored - set(held):
+        print(f"\n{len(errored - set(held))} new candidates could not be checked; re-run to finish before writing.")
+        return 1
+    try:
+        labels, merge = merge_owned(held, kept, owned=lambda a, _e: a in candidates,
+                                    unknown=errored, allow_shrink=args.allow_shrink)
+    except ShrinkRefused as exc:
+        print(f"\nRefused, nothing written: {exc}")
+        return 1
+    print(f"merged: {dict(merge)}")
+
     if args.dry_run:
         print("\n--dry-run: nothing written.")
         return 0
-    if not kept:
+    if not labels:
         print("\nNothing verified; refusing to write an empty label file.")
         return 1
 
-    document = {
-        "_meta": {
-            "description": (
-                "Known centralised-exchange wallets on BNB Smart Chain. A match "
-                "against one of these is what lets Exchequer say 'the funds "
-                "were cashed out here'."
-            ),
-            "provenance": (
-                f"Imported from {DATASET_REPO} @ {DATASET_COMMIT}, a published "
-                "scrape of BscScan's own exchange label pages, by "
-                "backend/scripts/seed_bsc_labels.py."
-            ),
-            "verification_note": (
-                "Every address below was confirmed against live BNB Smart Chain "
-                "data to be economically active -- recent BNB or BEP-20 USDT "
-                "transfers, or a non-trivial BNB balance. That proves the address "
-                "is real and handles funds; it does NOT independently confirm "
-                "which company operates it, since no free API exposes BscScan's "
-                "label data. Re-verify on bscscan.com before evidentiary use."
-            ),
-            "chain": "bsc",
-            "chain_id": BSC.chain_id,
-            "last_reviewed": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d"),
-            "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_bsc_labels",
-            "schema": "labels maps a lowercase address to {exchange, label, type}",
-        },
-        "labels": dict(sorted(kept.items(), key=lambda kv: (kv[1]["exchange"], kv[1]["label"]))),
-    }
+    meta = document.setdefault("_meta", {})
+    meta.update({
+        "description": (
+            "Known centralised-exchange wallets on BNB Smart Chain. A match "
+            "against one of these is what lets Exchequer say 'the funds "
+            "were cashed out here'."
+        ),
+        "provenance": (
+            f"Imported from {DATASET_REPO} @ {DATASET_COMMIT}, a published "
+            "scrape of BscScan's own exchange label pages, by "
+            "backend/scripts/seed_bsc_labels.py."
+        ),
+        "verification_note": (
+            "Every address below was confirmed against live BNB Smart Chain "
+            "data to be economically active -- recent BNB or BEP-20 USDT "
+            "transfers, or a non-trivial BNB balance. That proves the address "
+            "is real and handles funds; it does NOT independently confirm "
+            "which company operates it, since no free API exposes BscScan's "
+            "label data. Re-verify on bscscan.com before evidentiary use."
+        ),
+        "chain": "bsc",
+        "chain_id": BSC.chain_id,
+        "last_reviewed": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d"),
+        "regenerate_with": chain_regenerate(meta.get("regenerate_with"), *REGENERATE),
+        "schema": "labels maps a lowercase address to {exchange, label, type}",
+    })
+    document["labels"] = dict(sorted(labels.items(), key=lambda kv: (kv[1]["exchange"], kv[1]["label"])))
     BSC.labels_path.write_text(json.dumps(document, indent=2) + "\n")
-    print(f"\nWrote {len(kept)} labels to {BSC.labels_path}")
+    print(f"\nWrote {len(labels)} labels to {BSC.labels_path}")
     return 0
 
 

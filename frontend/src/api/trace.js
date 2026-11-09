@@ -111,20 +111,31 @@ async function jobSnapshot(jobId) {
 }
 
 function settle(snapshot) {
-  if (snapshot.status === 'done') return snapshot.result
+  if (snapshot.status === 'done') {
+    // A finished job holds a stored case's result only briefly; the store has it by id.
+    if (snapshot.result) return snapshot.result
+    if (snapshot.case_id) return fetchCase(snapshot.case_id)
+    throw new Error('The trace finished, but its result was not saved and is no longer held. Run the trace again.')
+  }
   const err = new Error(snapshot.error?.detail || 'The trace failed.')
   err.status = snapshot.error?.status_code
   throw err
 }
+
+// A stream silent this long is treated as lost: while a trace runs the server
+// sends a heartbeat event every 15 s (routes/jobs.py).
+const STREAM_SILENCE_MS = 45_000
 
 function watchJob(jobId, onProgress) {
   return new Promise((resolve, reject) => {
     let finished = false
     let failures = 0
     let source = null
+    let watchdog = null
     const finish = async () => {
       if (finished) return
       finished = true
+      clearTimeout(watchdog)
       source?.close()
       try {
         const snap = await jobSnapshot(jobId)
@@ -143,25 +154,45 @@ function watchJob(jobId, onProgress) {
         await new Promise((r) => setTimeout(r, 1500))
       }
     }
+    // Poll instead of the stream. poll() then sees a lost job's 404 and says
+    // so, rather than leaving the progress bar spinning forever.
+    const fallBack = () => {
+      clearTimeout(watchdog)
+      if (finished || !source) return
+      source.close(); source = null
+      poll()
+    }
+    const alive = () => { failures = 0; clearTimeout(watchdog); watchdog = setTimeout(fallBack, STREAM_SILENCE_MS) }
     if (typeof EventSource === 'undefined') { poll(); return }
     source = new EventSource(`${BASE}/trace/jobs/${encodeURIComponent(jobId)}/events`)
-    source.addEventListener('progress', (e) => { failures = 0; try { onProgress?.(JSON.parse(e.data)) } catch { /* ignore */ } })
+    alive()
+    source.addEventListener('progress', (e) => { alive(); try { onProgress?.(JSON.parse(e.data)) } catch { /* ignore */ } })
+    source.addEventListener('heartbeat', alive)
     source.addEventListener('done', finish)
     source.addEventListener('failed', finish)
     source.onerror = () => {
       failures += 1
-      if (failures >= 3 && !finished) { source.close(); source = null; poll() }
+      // A reconnect that is refused (the new instance's 404 after a restart,
+      // a 502 while it comes back) closes the source for good, with no third
+      // error to wait for.
+      if (source && (source.readyState === EventSource.CLOSED || failures >= 3)) fallBack()
     }
   })
 }
 
-/**
- * Run a trace as a background job and resolve with its result.
- * `onProgress(snapshot)` receives { status, progress: { stage, hop, max_depth,
- * level_size, level_read, addresses }, elapsed } as the trace moves.
- */
-export function runTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments, ncrpAck }, onProgress) {
-  const body = JSON.stringify({
+/** Ask the server to stop a running trace job. Only the browser that started
+ * it may (the owner key goes with every request); the job then ends as failed
+ * with a "stopped" error, which runTrace's promise rejects with. */
+export async function stopTraceJob(jobId) {
+  const response = await apiFetch(`${BASE}/trace/jobs/${encodeURIComponent(jobId)}`, { method: 'DELETE' })
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+// The trace a job runs, without the complaint's particulars: what a running
+// job is remembered under for the tab, and in sessionStorage across a reload.
+function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments }) {
+  return {
     address,
     ...(maxDepth ? { max_depth: maxDepth } : {}),
     ...(chain ? { chain } : {}),
@@ -171,15 +202,48 @@ export function runTrace({ address, maxDepth, chain, asset, direction, timeBudge
     // R1: start from the victim's payments. The backend checks each one is an
     // incoming transfer to `address`, and reads the wallet from the first.
     ...(payments?.length ? { payments: payments.map((h) => ({ tx_hash: h })) } : {}),
+  }
+}
+
+// What identifies the trace in this tab: everything but the complaint's
+// particulars (the NCRP number and the victim's own wallet), which go to the
+// server in the POST body only and are never kept in sessionStorage.
+function jobKey(params) {
+  return JSON.stringify(jobTrace(params))
+}
+
+function jobBody(params) {
+  const { payments, ncrpAck, victimAddress } = params
+  return JSON.stringify({
+    ...jobTrace(params),
     ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}),
+    // The victim's own wallet: the backend compares each payment's sender with it.
+    ...(victimAddress && payments?.length ? { victim_address: victimAddress } : {}),
   })
-  const existing = jobsInFlight.get(body)
+}
+
+/** Whether this tab already runs (or ran until a reload) this exact trace, so
+ * opening its page again re-attaches to the job instead of asking first. */
+export function traceJobRemembered(params) {
+  const key = jobKey(params)
+  return jobsInFlight.has(key) || Boolean(recalledJob(key))
+}
+
+/**
+ * Run a trace as a background job and resolve with its result.
+ * `onProgress(snapshot)` receives { status, progress: { stage, hop, max_depth,
+ * level_size, level_read, addresses }, elapsed } as the trace moves.
+ */
+export function runTrace(params, onProgress) {
+  const body = jobBody(params)
+  const key = jobKey(params)
+  const existing = jobsInFlight.get(key)
   if (existing) { existing.listeners.add(onProgress); return existing.promise }
   const listeners = new Set([onProgress])
   const broadcast = (snap) => listeners.forEach((fn) => fn?.(snap))
   const promise = (async () => {
     try {
-      let jobId = recalledJob(body)
+      let jobId = recalledJob(key)
       if (jobId && !(await jobSnapshot(jobId).catch(() => null))) jobId = null
       if (!jobId) {
         let response
@@ -194,14 +258,14 @@ export function runTrace({ address, maxDepth, chain, asset, direction, timeBudge
         const started = await response.json()
         jobId = started.job_id
         broadcast(started)
-        rememberJob(body, jobId)
+        rememberJob(key, jobId)
       }
       return await watchJob(jobId, broadcast)
     } finally {
-      rememberJob(body, null)
-      jobsInFlight.delete(body)
+      rememberJob(key, null)
+      jobsInFlight.delete(key)
     }
   })()
-  jobsInFlight.set(body, { promise, listeners })
+  jobsInFlight.set(key, { promise, listeners })
   return promise
 }

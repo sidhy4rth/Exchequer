@@ -150,7 +150,10 @@ def test_the_label_files_outrank_the_store(store_path):
 def test_a_freeze_by_another_issuer_is_not_attributed_to_tether():
     m = RiskMatch(address=addr("f2"), category="frozen", entity="USDC", label="USDC frozen by Circle",
                   source="USDC contract freeze events", depth=1, value_received_native=1.0)
-    assert m.describe().startswith("Frozen by the token's issuer:")
+    assert m.describe().startswith("Frozen by Circle (USDC):")
+    x = RiskMatch(address=addr("f4"), category="frozen", entity="XSGD frozen by its issuer",
+                  label="XSGD frozen by its issuer", source="XSGD freeze events", depth=1, value_received_native=1.0)
+    assert x.describe().startswith("Frozen by the token's issuer (XSGD):")
     t = RiskMatch(address=addr("f3"), category="frozen", entity="Tether", label="Frozen by Tether",
                   source="USDT blacklist", depth=1, value_received_native=1.0)
     assert t.describe().startswith("Frozen by Tether:")
@@ -171,3 +174,394 @@ def test_no_store_or_a_stale_one_means_screening_as_before(tmp_path, monkeypatch
         assert label_store.SCHEMA_VERSION == 1
     finally:
         get_label_store.cache_clear()
+
+
+# -- what a row may claim, and how it reads (r1-labels-data-2, -13, -17) ---------
+HF = "HF ethereum_fraud_dataset (fesevu, CC BY 4.0)"
+DETECTOR = "Ethereum poisoning via BigQuery full-history scan (8-char lookalike)"
+
+
+def old_store(tmp_path, rows, *, tier=None, texts=None):
+    """A store as an earlier build wrote it: tiers set by the hunt category,
+    text copied verbatim. Built with today's code, then rewritten to match."""
+    src = tmp_path / "old.csv"
+    with open(src, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+    out = tmp_path / "old.db"
+    build(src, out)
+    db = sqlite3.connect(out)
+    if tier is not None:
+        db.execute("UPDATE labels SET tier=?", (tier,))
+    for old, new in (texts or {}).items():
+        db.execute("UPDATE texts SET text=? WHERE text=?", (new, old))
+    db.commit()
+    db.close()
+    return LabelStore(out)
+
+
+def test_an_ml_dataset_row_is_not_called_threat_intelligence(tmp_path):
+    hf = row(address=SCAMMER, chain="ethereum", category="phishing/scam", entity_or_incident="phishing",
+             sources=HF, source_refs="https://huggingface.co/datasets/fesevu/ethereum_fraud_dataset_by_activity")
+    assert map_row(hf)[0][0][-1] == 5
+    mixed = row(**{**hf, "sources": f"ScamSniffer scam-database @87c9e14 ; {HF}"})
+    assert map_row(mixed)[0][0][-1] == 5
+    research = row(**{**hf, "sources": f"Elliptic Binance hack blocklist ; {HF}", "category": "hack proceeds"})
+    assert map_row(research)[0][0][-1] == 3
+    # A store built before the rule (tier 3) reads the same way.
+    hit = old_store(tmp_path, [hf], tier=3).lookup("ethereum", SCAMMER)
+    assert "published threat intelligence" not in hit["source"]
+    assert hit["source"].endswith("evidence: unvetted list (community reports or a machine-learning dataset), "
+                                  "not checked")
+
+
+def test_a_published_lookalike_list_is_not_on_chain_detection(tmp_path):
+    slowmist = "Threat-intel report: SlowMist (via DeFiHackLabs substack): Analysis of fake Zoom"
+    listed = row(address=POISONER, chain="ethereum", category="address poisoning",
+                 entity_or_incident=f"lookalike of {TARGET}", sources=slowmist)
+    assert map_row(listed)[0][0][-1] == 3
+    fake = row(**{**listed, "entity_or_incident": "Fake token contract used to poison victims"})
+    rows, _ = map_row(fake)
+    assert rows[0][-1] == 3 and rows[0][3] == "Fake token contract used in address poisoning"
+    ours = row(**{**listed, "sources": DETECTOR})
+    assert map_row(ours)[0][0][-1] == 4
+    # A dataset's "Fake token transfer" names a transfer, not the contract.
+    transfer = row(**{**listed, "entity_or_incident": "Fake token transfer", "sources": HF})
+    rows, _ = map_row(transfer)
+    assert rows[0][3] == "Fake token transfer" and rows[0][-1] == 5
+    # Read back from a store that filed it as detection.
+    hit = old_store(tmp_path, [listed], tier=4).lookup("ethereum", POISONER)
+    assert hit["source"].endswith("evidence: published threat intelligence")
+
+
+def test_no_source_text_names_a_team_member(tmp_path):
+    named = {
+        "Tron operator expansion (operator-level verification) ; Tron poisoning via BigQuery full-history "
+        "scan (base58 4+4 lookalike)":
+            "Tron operator expansion (Mukesh, operator-level verification) ; Tron poisoning via BigQuery "
+            "full-history scan (base58 4+4 lookalike)",
+    }
+    rows = [row(address="0x" + "b7" * 20, chain="tron", category="address poisoning",
+                entity_or_incident="lookalike sent by verified poisoning operator",
+                sources=list(named.values())[0]),
+            row(address=SCAMMER, chain="ethereum", category="stablecoin freeze", entity_or_incident="USDC",
+                sources="XSGD freeze/restriction events (on-chain replay, Mukesh)"),
+            row(address=POISONER, chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}",
+                sources="Tron poisoning detection by Mukesh (TronGrid, 8-char lookalike)"),
+            row(address=addr("1a"), chain="tron|ethereum", category="laundering (reported)",
+                entity_or_incident="HuionePay",
+                sources="Laundering source (Mukesh): SlowMist KYT: On-chain analysis of HuionePay")]
+    for r in rows:
+        built, _ = map_row(r)
+        assert "mukesh" not in built[0][8].lower()
+    assert map_row(rows[0])[0][0][-1] == 4  # still our own detection
+    assert map_row(rows[3])[0][0][8] == "Laundering source: SlowMist KYT: On-chain analysis of HuionePay"
+    # A store built before the rule, its texts restored to the names, reads without them.
+    store = old_store(tmp_path, rows[1:], texts={
+        "XSGD freeze/restriction events (on-chain replay)": "XSGD freeze/restriction events (on-chain replay, Mukesh)",
+        "Tron poisoning detection (TronGrid, 8-char lookalike)":
+            "Tron poisoning detection by Mukesh (TronGrid, 8-char lookalike)"})
+    for chain, address in (("ethereum", SCAMMER), ("ethereum", POISONER)):
+        hit = store.lookup(chain, address)
+        assert "mukesh" not in hit["source"].lower()
+    assert store.lookup("ethereum", SCAMMER)["source"].startswith("XSGD freeze/restriction events (on-chain replay)")
+
+
+def test_a_null_entity_never_reaches_a_report(tmp_path):
+    null = row(address=SCAMMER, chain="ethereum", category="phishing/scam", entity_or_incident="null",
+               sources="Explorer tag via dawsbot/eth-labels @d9b21ae", source_refs="label:phish-hack")
+    rows, _ = map_row(null)
+    assert rows[0][3] == "phishing/scam"
+    for value in ("NULL", "none", "N/A", "-", "nan"):
+        assert map_row(row(**{**null, "entity_or_incident": value}))[0][0][3] == "phishing/scam"
+    assert map_row(row(**{**null, "sources": "null", "source_refs": "null"}))[0][0][8] == ""
+    # A store that holds the literal "null" reads as the category's default.
+    store = old_store(tmp_path, [null], texts={"phishing/scam": "null"})
+    hit = store.lookup("ethereum", SCAMMER)
+    assert hit["entity"] == "Reported scam wallet" and hit["label"] == "Reported scam wallet"
+
+
+# -- only a mixer's own pool may end a trace (r2-g2-documented-claims-vs-code-7-5) --
+POOL = "Tornado.Cash: 0.1 WBTC (OFAC-delisted Mar 2025)"
+REGISTRY = "Tornado.Cash: Relayer Registry (OFAC-delisted Mar 2025)"
+TAG = "PYUSD contract freeze events (on-chain replay) ; Explorer tag via dawsbot/eth-labels @d9b21ae"
+
+
+def mixer_row(address, entity, chain="ethereum"):
+    return row(address=address, chain=chain, category="mixer", entity_or_incident=entity, sources=TAG)
+
+
+def test_tornado_governance_and_registry_rows_are_not_mixers(tmp_path):
+    for entity in (REGISTRY, "Tornado.Cash: Trees", "Tornado.Cash: Donate", "Tornado.Cash: L1 Helper"):
+        assert map_row(mixer_row(SCAMMER, entity)) == ([], "mixer contract that is not a pool")
+    # A store built before the rule still holds it: it reads as nothing, so the walk goes on.
+    store = old_store(tmp_path, [mixer_row(SCAMMER, POOL)], texts={POOL: REGISTRY})
+    assert store.lookup("ethereum", SCAMMER) is None
+    assert not RiskMatcher({}, chain="ethereum", store=store).is_terminal(SCAMMER)
+
+
+# The real 0.1 WBTC pool: in the store's explorer tags, not in threat_labels.json,
+# and so on the pinned list (data/mixer_pools.json).
+WBTC_POOL = "0x178169b423a011fff22b9e3f3abea13414ddd0f1"
+
+
+def test_a_tornado_pool_in_the_store_still_ends_a_trace(tmp_path):
+    rows, _ = map_row(mixer_row(WBTC_POOL, POOL))
+    assert [r[2] for r in rows] == ["mixer"]
+    store = old_store(tmp_path, [mixer_row(WBTC_POOL, POOL)])
+    assert RiskMatcher({}, chain="ethereum", store=store).is_terminal(WBTC_POOL)
+
+
+def test_an_ethereum_pool_filed_under_arbitrum_is_not_a_mixer_there(tmp_path):
+    rows, _ = map_row(mixer_row(SCAMMER, POOL, chain="ethereum|arbitrum"))
+    assert [r[1] for r in rows] == [label_store.CHAIN_IDS["ethereum"]]
+    assert map_row(mixer_row(SCAMMER, POOL, chain="arbitrum")) == ([], "mixer tag read on another chain")
+    # An older store filed it under both.
+    store = old_store(tmp_path, [mixer_row(SCAMMER, POOL)])
+    db = sqlite3.connect(store.path)
+    db.execute("INSERT INTO labels SELECT address, ?, category, entity, label, peer, tx, date, source, tier "
+               "FROM labels", (label_store.CHAIN_IDS["arbitrum"],))
+    db.commit()
+    db.close()
+    store = LabelStore(store.path)
+    assert store.lookup("ethereum", SCAMMER)["category"] == "mixer"
+    assert store.lookup("arbitrum", SCAMMER) is None
+
+
+def test_a_store_only_non_pool_does_not_stop_the_walk(tmp_path):
+    from app.graph_builder import build_trace_graph
+    from test_graph_builder import SEED, FakeClient, tx
+
+    registry, beyond = SCAMMER, addr("be70d")
+    store = old_store(tmp_path, [mixer_row(registry, POOL)], texts={POOL: REGISTRY})
+    matcher = RiskMatcher({}, chain="ethereum", store=store)
+    client = FakeClient({SEED: [tx(SEED, registry, 5.0)], registry: [tx(registry, beyond, 5.0)]})
+    graph = build_trace_graph(SEED, client, is_terminal=matcher.is_terminal).graph
+    assert beyond in graph
+
+
+# -- r1-labels-data-1: a store row never labels infrastructure at run time ------
+BINANCE_14 = "0x28c6c06298d514db089934071355e5743bf21d60"     # exchange_labels.json: hot wallet
+DEPOSIT = "0x000f9f5f6db6d63bb64bb55d58272a1ce660fd90"        # exchange_labels.json: a Binance customer deposit address
+ROUTER_1INCH = "0x11111112542d85b3ef69ae05771c2dccff4faa26"   # router_labels.json
+USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"           # config: a traced token
+WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"           # data/never_flag_tokens.txt
+CLOUDBET = "TAJ3SYGtVjGqm61qoGzZN9bQY6MST2JQVL"               # gambling_labels_tron.json
+
+
+def test_a_store_row_on_infrastructure_reads_as_nothing(tmp_path):
+    binance_raw = "0x" + "77" * 20
+    rows = [row(address=binance_raw, chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}", sources=DETECTOR),
+            row(address=SCAMMER, chain="ethereum", category="mixer", entity_or_incident="Tornado.Cash: 0.1 WBTC",
+                sources="Explorer tag via dawsbot/eth-labels @d9b21ae")]
+    store = old_store(tmp_path, rows)
+    # Point the two rows at real infrastructure, as an older or mistaken build might.
+    db = sqlite3.connect(store.path)
+    db.execute("UPDATE labels SET address=? WHERE address=?", (encode_address(BINANCE_14), encode_address(binance_raw)))
+    db.execute("UPDATE labels SET address=? WHERE address=?", (encode_address(ROUTER_1INCH), encode_address(SCAMMER)))
+    for address in (USDT, WETH, DEPOSIT, "0x" + "0" * 40):
+        db.execute("INSERT INTO labels SELECT ?, chain, category, entity, label, peer, tx, date, source, tier "
+                   "FROM labels WHERE address=?", (encode_address(address), encode_address(BINANCE_14)))
+    db.execute("INSERT INTO labels SELECT ?, ?, category, entity, label, peer, tx, date, source, tier "
+               "FROM labels WHERE address=?", (encode_address(CLOUDBET), label_store.CHAIN_IDS["tron"],
+                                                encode_address(BINANCE_14)))
+    db.commit()
+    db.close()
+    store = LabelStore(store.path)
+    matcher = RiskMatcher({}, chain="ethereum", store=store)
+    for address in (BINANCE_14, USDT, WETH, DEPOSIT, "0x" + "0" * 40, ROUTER_1INCH):
+        assert matcher.lookup(address) is None, address
+    assert not matcher.is_terminal(ROUTER_1INCH)  # a mixer row on a router no longer ends the trace
+    # The gambling file outranks the store at run time; the store alone would still say poisoning.
+    assert store.lookup("tron", CLOUDBET)["category"] == "poisoning"
+    # A label file's own entry on the same address still applies.
+    filed = {BINANCE_14: {"category": SANCTIONED, "entity": "x", "label": "x", "source": "OFAC"}}
+    assert RiskMatcher(filed, chain="ethereum", store=store).lookup(BINANCE_14)["category"] == SANCTIONED
+
+
+
+CIRCLE_FROZEN = addr("c17c1e")
+
+
+@pytest.fixture
+def freeze_store(tmp_path):
+    src = tmp_path / "freezes.csv"
+    with open(src, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerow(row(address=CIRCLE_FROZEN, chain="ethereum", category="stablecoin freeze",
+                       entity_or_incident="USDC frozen by Circle",
+                       sources="USDC contract freeze events (on-chain replay)"))
+    build(src, tmp_path / "freezes.db")
+    return LabelStore(tmp_path / "freezes.db")
+
+
+def test_a_store_freeze_carries_its_token_and_issuer(freeze_store):
+    # Audit r1-labels-data-0: the store's freezes are other issuers', and say so.
+    matcher = RiskMatcher({}, chain="ethereum", store=freeze_store)
+    graph = nx.DiGraph()
+    graph.add_node(CIRCLE_FROZEN, depth=1)
+    graph.add_edge(addr("51c7"), CIRCLE_FROZEN, value_native=1.0)
+    [match] = matcher.annotate(graph)
+    assert (match.category, match.token, match.issuer) == ("frozen", "USDC", "Circle")
+    assert match.to_dict()["issuer"] == "Circle" and match.describe().startswith("Frozen by Circle (USDC):")
+
+
+def test_a_store_row_is_marked_as_coming_from_the_store(store_path, freeze_store):
+    assert RiskMatcher({}, chain="ethereum", store=freeze_store).lookup(CIRCLE_FROZEN)["origin"] == "label_store"
+    assert RiskMatcher({}, chain="ethereum", store=LabelStore(store_path)).lookup(POISONER)["origin"] == "label_store"
+
+
+# -- r1-labels-data-2, round 2: the tier reaches the sentence -------------------
+CCS24 = "Poison-Hunter CCS24 ground truth"
+
+
+def one_match(store, address, chain="ethereum"):
+    graph = nx.DiGraph()
+    graph.add_node(address, depth=2)
+    graph.add_edge(addr("51c7"), address, value_native=1.5)
+    [match] = RiskMatcher({}, chain=chain, store=store).annotate(graph)
+    return match
+
+
+def test_probe_d_a_listed_lookalike_is_not_called_our_on_chain_detection(tmp_path):
+    """Probe D: an HF (tier 5) or Poison-Hunter (tier 3) poisoning row said
+    "This is an on-chain detection, not a designation." in the signed note."""
+    rows = [row(address=POISONER, chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}", sources=CCS24),
+            row(address=SCAMMER, chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}", sources=HF),
+            row(address=addr("de7"), chain="ethereum", category="address poisoning",
+                entity_or_incident=f"lookalike of {TARGET}", sources=DETECTOR)]
+    store = old_store(tmp_path, rows)
+    published, listed, ours = (one_match(store, a) for a in (POISONER, SCAMMER, addr("de7")))
+    assert (published.tier, listed.tier, ours.tier) == (3, 5, 4)
+    assert published.to_dict()["tier"] == 3
+
+    text = published.describe()
+    assert "This is an on-chain detection" not in text
+    assert text.startswith(f"Address poisoning: {POISONER} is a lookalike address")
+    assert "found by that source, not by this tool's own on-chain detection" in text
+
+    text = listed.describe()
+    assert "on-chain detection" not in text
+    assert text.startswith(f"Unverified listing: {SCAMMER} is listed as Lookalike of {TARGET}")
+    assert "treat it as a lead to verify, not as a finding" in text
+
+    # Our own detectors' rows read exactly as before.
+    assert ours.describe().endswith("This is an on-chain detection, not a designation.")
+
+
+def test_a_tier_5_scam_reads_as_an_unverified_lead_and_tier_3_reads_as_before(tmp_path):
+    rows = [row(address=SCAMMER, chain="ethereum", category="phishing/scam", entity_or_incident="phishing",
+                sources=HF),
+            row(address=POISONER, chain="ethereum", category="phishing/scam",
+                entity_or_incident="Inferno Drainer receiver", sources="Threat-intel report: Check Point")]
+    store = old_store(tmp_path, rows)
+    weak, strong = one_match(store, SCAMMER), one_match(store, POISONER)
+    text = weak.describe()
+    assert text.startswith(f"Unverified listing: {SCAMMER} is listed as phishing (a reported scam), per {HF}")
+    assert "The source ties the wallet to a scam" not in text
+    assert "a community report or a machine-learning dataset that nobody has checked" in text
+    assert strong.describe() == (
+        f"Reported scam: {POISONER} is attributed as Inferno Drainer receiver by "
+        f"Threat-intel report: Check Point; evidence: published threat intelligence. It received 1.5000 ETH "
+        f"within this trace, 2 hops from the reported address. The source ties the wallet to a scam or "
+        f"fraud; it is not a sanctions designation, and not a finding that any other counterparty took "
+        f"part in it.")
+
+
+def test_a_label_file_match_has_no_tier_and_reads_as_before():
+    files = {SCAMMER: {"category": "stolen", "entity": "Ronin Bridge Exploiter", "label": "Ronin Bridge Exploiter",
+                       "source": "Etherscan address tag"}}
+    graph = nx.DiGraph()
+    graph.add_node(SCAMMER, depth=1)
+    [match] = RiskMatcher(files, chain="ethereum").annotate(graph)
+    assert match.tier is None and "tier" not in match.to_dict()
+    assert match.describe().startswith(f"Stolen funds: {SCAMMER} is tagged as Ronin Bridge Exploiter")
+
+
+# -- r2-g2-documented-claims-vs-code-7-5, round 2: a name alone never ends a trace --
+WALLET_4C = "0x" + "4c" * 20
+
+
+def test_probe_a_a_store_row_named_like_a_pool_does_not_stop_the_trace(tmp_path):
+    """Probe A: an arbitrary wallet filed as 'Tornado.Cash: Router' by an explorer-tag
+    row, or as 'Tornado.Cash: 100 ETH' by ScamSniffer, ended every trace through it."""
+    from app.graph_builder import build_trace_graph
+    from test_graph_builder import SEED, FakeClient, tx
+
+    rows = [mixer_row(WALLET_4C, "Tornado.Cash: Router"),
+            row(address=SCAMMER, chain="ethereum", category="mixer", entity_or_incident="Tornado.Cash: 100 ETH",
+                sources="ScamSniffer scam-database @87c9e14")]
+    store = old_store(tmp_path, rows)
+    matcher = RiskMatcher({}, chain="ethereum", store=store)
+    for address in (WALLET_4C, SCAMMER):
+        assert matcher.lookup(address)["category"] == "mixer"  # still shown: an annotation
+        assert not matcher.is_terminal(address), address
+
+    beyond = addr("be70d")
+    client = FakeClient({SEED: [tx(SEED, WALLET_4C, 5.0)], WALLET_4C: [tx(WALLET_4C, beyond, 5.0)]})
+    graph = build_trace_graph(SEED, client, is_terminal=matcher.is_terminal).graph
+    assert beyond in graph
+
+    [match] = matcher.annotate(graph.subgraph([SEED, WALLET_4C]).copy())
+    assert not match.is_terminal and match.to_dict()["is_terminal"] is False
+    assert not graph.nodes[WALLET_4C].get("is_terminal")
+    text = match.describe()
+    assert text.startswith(f"Mixer tag: {WALLET_4C} is tagged Tornado.Cash: Router")
+    assert "not one of the mixer pools or routers on this tool's pinned list" in text
+    assert "The trace stops here" not in text
+
+
+def test_the_pinned_pools_and_the_file_mixers_still_stop_a_trace(tmp_path):
+    from app.risk_matcher import get_risk_matcher
+
+    tornado_01_eth = "0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc"  # threat_labels.json
+    typhoon_bsc = "0x66e90e4f92f39873c2feb394ab87616b37afffdb"     # threat_labels_bsc.json
+    assert get_risk_matcher("ethereum").is_terminal(tornado_01_eth)
+    assert get_risk_matcher("bsc").is_terminal(typhoon_bsc)
+    # The same pool, held only by the store, is pinned too.
+    store = old_store(tmp_path, [mixer_row(tornado_01_eth, "Tornado.Cash: 0.1 ETH"), mixer_row(WBTC_POOL, POOL)])
+    matcher = RiskMatcher({}, chain="ethereum", store=store)
+    assert matcher.is_terminal(tornado_01_eth) and matcher.is_terminal(WBTC_POOL)
+    graph = nx.DiGraph()
+    graph.add_node(WBTC_POOL, depth=1)
+    [match] = matcher.annotate(graph)
+    assert match.is_terminal and "The trace stops here" in match.describe()
+
+
+def test_the_pinned_list_holds_only_pools_and_every_file_mixer():
+    import json
+
+    from app import label_store as ls
+
+    for chain in ("ethereum", "bsc"):
+        path = config.get_chain(chain).threat_labels_path
+        filed = {encode_address(a) for a, v in json.loads(path.read_text())["labels"].items()
+                 if not a.startswith("_") and v.get("category") == "mixer"}
+        assert filed and filed <= ls.pinned_mixers(chain), chain
+    document = json.loads((config.DATA_DIR / ls.MIXER_POOLS_FILE).read_text())
+    from app import label_rules, never_flag
+
+    for chain, pools in document.items():
+        if chain.startswith("_"):
+            continue
+        for address, name in pools.items():
+            assert label_rules.mixer_service(name), name  # a pool or entry point, never governance
+            assert never_flag.kind(chain, address) is None, address
+    assert ls.pinned_mixers("polygon") == frozenset()
+
+
+def test_a_build_counts_the_mixer_tags_it_could_not_pin(tmp_path):
+    rows = [mixer_row(WALLET_4C, "Tornado.Cash: Router"), mixer_row(WBTC_POOL, POOL)]
+    src = tmp_path / "flagged.csv"
+    with open(src, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+    report = build(src, tmp_path / "label_store.db")
+    assert report["rows"] == 2 and report["unpinned_mixers"] == 1

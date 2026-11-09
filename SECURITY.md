@@ -24,12 +24,23 @@ Exchequer has no accounts. What it does instead:
   everything that spends the provider quota or keeps running afterwards: live
   traces, batches and watches. Reading -- recorded demos, a stored case by its
   link -- stays open. The code is compared in constant time and a client gets
-  10 wrong tries an hour. It is a shared demo secret, not an account. Creating
-  watches is also rate limited per client. See `backend/app/access.py`.
+  10 wrong tries per 15 minutes. The right code returns a signed pass that the
+  console sends instead, so a browser that entered it is never locked out by
+  someone else's wrong guesses on the same network. With a code of 22 or more
+  characters (`secrets.token_urlsafe(16)`), the right code also gets through
+  a lockout, from a new browser or a script; wrong codes are still refused.
+  With a shorter code the lockout refuses the right code too, so that it never
+  tells a right guess from a wrong one. It is a shared demo secret, not an
+  account: make it long and random. Creating watches is also
+  rate limited per client. See `backend/app/access.py`.
 - **Reports are signed.** Every text report ends in a SHA-256 content hash and
   an Ed25519 signature made with the server's key. Anyone can check one at
   `/verify` or offline with the key from `/signing-key`. See
-  `backend/app/signing.py`.
+  `backend/app/signing.py`. A PDF report's pages are not signed (only its
+  attached text is, and page 1 says so); upload the PDF at `/verify` and it
+  checks the attachment and says if the pages do not match it. That check
+  reads the pages' text, so act on the attached report. See
+  `backend/app/pdf_verify.py`.
 - **API keys never reach the logs**: HTTP client logging is turned down and
   every log line is scrubbed. See `backend/app/log_safety.py`.
 - Every response carries a content security policy and the usual hardening
@@ -48,8 +59,30 @@ Provider keys live in `backend/.env` locally and in the platform's variables
 when deployed; neither is committed. The report-signing key is made on first
 start beside the case store (`report_signing_key.pem`, mode 0600) or comes
 from `EXCHEQUER_SIGNING_KEY`. If a key may have leaked, rotate it at the
-provider and update the variable; for the signing key, previously issued
-reports will then verify only against the old public key.
+provider and update the variable. For the signing key, add the old key to
+`backend/data/signing_keys.json` in the same change (see below): with
+`retired` set, reports it signed keep verifying; with `revoked: true`, they
+read as signed with a revoked key.
+
+## Report signing key
+
+Since report format v2.2 every signed report ends with an ISSUER block that
+the signature covers: the server that issued it (`Issued by`, from
+`EXCHEQUER_PUBLIC_URL` or Render's `RENDER_EXTERNAL_URL`) and the full SHA-256
+fingerprint of its Ed25519 key. This repository is public, so anyone can run a
+copy that signs reports with a key of its own and calls them genuine on its own
+`/verify`. What tells the two apart is the key, so compare the report's
+`Signing key` with Exchequer's official keys, listed here and in
+`backend/data/signing_keys.json` (which `/verify` and `/signing-key` read):
+
+| SHA-256 fingerprint of the public key | In use from | Retired | Revoked |
+|---|---|---|---|
+| *not yet recorded: the owner adds the live key here and in `signing_keys.json`* | | | |
+
+The list is append-only. A report signed with a retired key reads "Genuine,
+signed with an earlier Exchequer key"; one signed with a revoked key never
+reads as genuine; one that names this server but is signed with any other key
+reads as forged.
 
 `GET /admin/backup` returns the whole store. It exists only when
 `EXCHEQUER_BACKUP_TOKEN` is set, compares the bearer token in constant time,

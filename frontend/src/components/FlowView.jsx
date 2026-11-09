@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { plain } from '../text'
 
 // The money flow as a layered diagram: one column per hop, the reported
 // address at one end and whatever it reached at the other, every arrow
@@ -45,7 +46,7 @@ const num = (value) =>
 const when = (seconds) =>
   seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
 
-const RISK_WORD = { sanctioned: 'sanctioned', mixer: 'mixer', frozen: 'frozen by issuer', stolen: 'stolen funds', reported: 'TronScan warning', gambling: 'gambling platform', poisoning: 'address poisoning', scam: 'reported scam', laundering: 'laundering' }
+const RISK_WORD = { sanctioned: 'sanctioned', seized: 'seizure order', mixer: 'mixer', frozen: 'frozen by issuer', stolen: 'stolen funds', reported: 'TronScan warning', gambling: 'gambling platform', poisoning: 'address poisoning', scam: 'reported scam', laundering: 'laundering' }
 
 /** What a node is called on the canvas: the label if it has one, else nothing. */
 function captionOf(node, role) {
@@ -131,7 +132,7 @@ function layout(data, tracePath, direction, width) {
       placed.set(n.id, {
         node: n, role, x, y: top + (row.get(n.id) + 0.5) * rowGap,
         r: onPath.has(n.id) ? Math.max(RADIUS[role], 5) : RADIUS[role],
-        onPath: onPath.has(n.id), caption: captionOf(n, role), column: c,
+        onPath: onPath.has(n.id), caption: plain(captionOf(n, role)), column: c,
       })
     })
     // Adjacent addresses with the same caption would print it on top of

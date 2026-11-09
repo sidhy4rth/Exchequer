@@ -8,33 +8,43 @@ warm-up both call it; nothing here knows about requests or storage."""
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import re
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any
 
 import networkx as nx
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from . import config, log_safety, progress
-from .chain_data import ProviderNotConfiguredError, UnknownAssetError, open_source
+from .api_budget import PROVIDER_NAMES, BudgetSpent, Cancelled, TraceBudget, TraceStopped, current_budget
+from .chain_data import ProviderNotConfiguredError, UnknownAssetError, allowance_spent, open_source
 from .contracts import upgrade as upgrade_to_contract
+from .provenance import capture as capture_provenance
 from .payment_intake import (
     PaymentError,
     PaymentRef,
     intake_record,
+    leg_warnings,
+    normalize_hash,
     reported_amount,
     resolve_payments,
-    window_start,
+    review_payments,
+    window_anchor,
 )
 from .etherscan_client import (
+    ProviderQuotaError,
     EtherscanConfigError,
     EtherscanError,
     EtherscanRateLimitError,
     normalize_address,
 )
 from .deposit_inference import describe as describe_inference, infer_deposit_addresses
-from .exchange_matcher import ExchangeMatcher, get_matcher, get_router_matcher
+from .exchange_matcher import ExchangeMatcher, MatchShares, get_matcher, get_router_matcher
 from .swap_detection import describe as describe_swap, detect_swaps
 from .graph_builder import (
     INCOMING,
@@ -49,8 +59,8 @@ from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .risk_matcher import MIXER, REPORTED, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
 from .prorata import estimate as estimate_prorata
-from .scoring import principal_path, score_case
-from .tracing_methods import compare as compare_methods
+from .scoring import principal_path, score_case, seed_outflow, widest_routes
+from .tracing_methods import compare as compare_methods, read_once
 
 
 logger = logging.getLogger(__name__)
@@ -59,10 +69,17 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Request / response models
 # ---------------------------------------------------------------------------
+# An NCRP acknowledgement number: ASCII digits only (no letters, spaces,
+# control or direction-changing characters).
+_NCRP = re.compile(r"[0-9]{10,20}")
+
+
 class TraceRequest(BaseModel):
-    address: str = Field(..., description="The victim-reported wallet address")
+    # No address is near 128 characters; a longer one is refused before it is read.
+    address: str = Field(..., max_length=128, description="The victim-reported wallet address")
     max_depth: int | None = Field(
-        None, ge=1, le=6, description="Override the hop limit (default 4, capped at 6)"
+        None, ge=1, le=6,
+        description="Override the hop limit (default 4). Never deeper than the server's ceiling (6 by default)",
     )
     chain: str | None = Field(
         None,
@@ -84,10 +101,10 @@ class TraceRequest(BaseModel):
     time_budget_seconds: int | None = Field(
         None, ge=10, le=600,
         description=(
-            "Optional wall-clock cap. With it set the walk stops expanding once "
-            "the time is spent and returns what it has, marked truncated with the "
-            "reason. Without it the trace runs until the depth, fan-out and size "
-            "limits stop it, however long that takes on the provider's free tier."
+            "A shorter wall-clock cap than the server's. The walk stops expanding "
+            "once the time is spent and returns what it has, marked truncated with "
+            "the reason. Without it the server's default applies (180 s unless "
+            "configured), and no request may run longer than the server's maximum."
         ),
     )
     direction: str = Field(
@@ -131,28 +148,65 @@ class TraceRequest(BaseModel):
     )
     ncrp_ack: str | None = Field(
         None, max_length=64,
-        description="The NCRP complaint acknowledgement number, recorded with the case.",
+        description=(
+            "The NCRP complaint acknowledgement number, recorded with the case "
+            "as entered by the requester: 10 to 20 digits."
+        ),
     )
+
+    victim_address: str | None = Field(
+        None, max_length=100,
+        description=(
+            "The victim's own paying wallet, if the complaint gives it. Sent with "
+            "`payments` only: each payment's sender is compared with it, and a "
+            "payment from another wallet is warned about in the case."
+        ),
+    )
+
+    @field_validator("victim_address", mode="before")
+    @classmethod
+    def _victim_blank(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+    @field_validator("ncrp_ack", mode="before")
+    @classmethod
+    def _ncrp_shape(cls, value: Any) -> Any:
+        # Digits only: free text here was shown on the case page as "NCRP
+        # <value>", lending a police reference to any anonymous trace.
+        if value is None or not isinstance(value, str):
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        if not _NCRP.fullmatch(value):
+            raise ValueError("An NCRP acknowledgement number is 10 to 20 digits.")
+        return value
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 def _trace_path(
-    graph: nx.DiGraph, seed: str, target: str, direction: str = OUTGOING
+    graph: nx.DiGraph, seed: str, target: str, direction: str = OUTGOING,
+    route_graph: nx.DiGraph | None = None,
 ) -> list[dict[str, Any]]:
-    """The shortest chain of addresses between the reported address and
-    `target`, with the amount moved at each step. This is what goes in the
-    report.
+    """The widest route between the reported address and `target` (the one
+    whose narrowest hop carried the most; see scoring.principal_path), with
+    the amount moved at each step. This is what goes in the report, and its
+    length is the case's hop count.
 
     Always read in the direction the money moved, so a reverse trace's path
     runs from the exchange down to the reported address rather than being
     printed backwards. The same route the score was computed along, so the
-    report and the confidence working never describe two different paths.
+    report and the confidence working never describe two different paths:
+    `route_graph` is the graph the score measured when that differs from
+    the chain's figures, while the amounts printed are the chain's own.
     """
     source, destination = (seed, target) if direction == OUTGOING else (target, seed)
     try:
-        path = principal_path(graph, source, destination)
+        path = principal_path(route_graph if route_graph is not None else graph, source, destination, direction)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return []
 
@@ -200,6 +254,52 @@ def _all_transfers(graph: nx.DiGraph) -> list[dict[str, Any]]:
             })
     rows.sort(key=lambda r: (r["timestamp"] or 0, r["hash"] or ""))
     return rows
+
+
+def appendix_sha256(rows: list[dict[str, Any]]) -> str:
+    """SHA-256 over every transfer of a trace, one canonical JSON line each
+    (sorted keys, no spaces) in _all_transfers order (docs/contracts/case.md)."""
+    lines = "\n".join(json.dumps(r, sort_keys=True, separators=(",", ":")) for r in rows)
+    return hashlib.sha256(lines.encode("utf-8")).hexdigest()
+
+
+def _appendix(rows: list[dict[str, Any]], keep_edges: set[tuple[str, str]],
+              keep_to: set[str]) -> dict[str, Any]:
+    """The transfers a case lists, and what it commits to about all of them.
+
+    The appendix listed every transfer on every followed edge, so a dense
+    cluster made a 21 MB case. Past config.TRANSFERS_APPENDIX_MAX it keeps
+    every transfer on `keep_edges` (the route to the exchange and the
+    reported address's own hops) and into `keep_to` (each matched or
+    inferred exchange address, whose transfers a letter lists), then the
+    largest of the rest by value. The full count and a hash over all of
+    them are kept, so the case still commits to every transfer."""
+    limit = config.TRANSFERS_APPENDIX_MAX
+    listed = rows
+    if limit and len(rows) > limit:
+        must = [r for r in rows if (r["from"], r["to"]) in keep_edges or r["to"] in keep_to]
+        kept = {id(r) for r in must}
+        rest = sorted((r for r in rows if id(r) not in kept), key=lambda r: -(r["value_native"] or 0))
+        chosen = {id(r) for r in must + rest[:max(0, limit - len(must))]}
+        listed = [r for r in rows if id(r) in chosen]  # in the full list's order
+    return {"transfers": listed, "transfers_total": len(rows), "transfers_omitted": len(rows) - len(listed),
+            "transfers_sha256": appendix_sha256(rows)}
+
+
+def _appendix_edges(graph: nx.DiGraph, seed: str, direction: str, primary: Any,
+                    route_graph: nx.DiGraph | None = None) -> set[tuple[str, str]]:
+    """The edges whose every transfer a case lists: the reported address's own
+    (out of it, or into it on a reverse trace) and each on the route to the exchange."""
+    edges = set(graph.out_edges(seed) if direction == OUTGOING else graph.in_edges(seed))
+    if primary is not None:
+        source, destination = (seed, primary.address) if direction == OUTGOING else (primary.address, seed)
+        try:
+            path = principal_path(route_graph if route_graph is not None else graph, source, destination,
+                                  direction)
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            path = []
+        edges |= set(zip(path, path[1:], strict=False))
+    return edges
 
 
 def _hops_covered(graph: nx.DiGraph) -> int:
@@ -252,12 +352,16 @@ def _direct_senders(graph: nx.DiGraph, seed: str) -> list[dict[str, Any]]:
 STATEMENT_ROWS = 25
 
 
-def _wallet_statement(client: Any, address: str) -> dict[str, Any] | None:
+def _wallet_statement(client: Any, address: str, window_start: int | None = None) -> dict[str, Any] | None:
     """The reported address's latest credits and debits, newest first.
 
     Read from the same provider as the trace (the outgoing side is usually a
     cache hit, since the walk just asked for it). A provider that cannot list
     incoming transfers, or fails, costs the statement, never the trace.
+
+    `window_start` (a payment trace) marks each row from before the first
+    payment arrived with `before_window`: shown, never hidden, since the
+    officer may still want to see what the wallet did beforehand.
     """
     def rows(txs: list[Any], counterparty: str) -> list[dict[str, Any]]:
         return [{"tx": t.hash, "time": t.timestamp, "amount": round(t.value_native, 6),
@@ -283,13 +387,18 @@ def _wallet_statement(client: Any, address: str) -> dict[str, Any] | None:
         c = (row["counterparty"] or "").lower()
         row["lookalike"] = bool(c) and c not in paid and (c[:6], c[-4:]) in shapes
     lookalikes = [r for r in credits if r["lookalike"]]
-    return {
+    statement = {
         "debits": debits,
         "credits": [r for r in credits if not r["lookalike"]][:STATEMENT_ROWS],
         "poisoning": lookalikes[:10],
         "rows_per_side": STATEMENT_ROWS,
         "lookalikes": len(lookalikes),
     }
+    if window_start is not None:
+        statement["window_start"] = window_start
+        for row in debits + credits:
+            row["before_window"] = (row["time"] or 0) < window_start
+    return statement
 
 
 # How many swaps one trace will follow into another asset. Each follow-on is a
@@ -319,11 +428,13 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
     # and telling the user which format this chain expects is more use than
     # calling it invalid.
     if not chain.validate_address(address):
+        # Quoted short: the error repeats what was typed, never all of it.
+        shown = address if len(address) <= 64 else address[:64] + "…"
         raise HTTPException(
             status_code=400,
             detail=(
-                f"'{address}' is not a valid {chain.name} address. "
-                f"Expected {chain.address_hint()}."
+                f"'{shown}' is not a valid {chain.name} address. "
+                f"Expected {chain.address_hint(address)}."
             ),
         )
 
@@ -336,6 +447,11 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
                 f"Available: {chain.native_symbol}, " + ", ".join(t.symbol for t in chain.tokens)
             ),
         )
+    # Today's provider allowance for the whole site (api_budget.UnitMeter):
+    # once it is used up, a new trace is refused before it is admitted.
+    wait = allowance_spent(chain)
+    if wait is not None:
+        raise HTTPException(status_code=503, detail=allowance_used_up(chain), headers={"Retry-After": str(wait)})
     # Payments (R1) are checked here too, before anything is spent: the flag
     # must be on, and a payment starts a trace of where the money went.
     if request.payments:
@@ -349,14 +465,260 @@ def check_request(request: TraceRequest) -> tuple[config.Chain, str]:
                 status_code=400,
                 detail="Payments start a trace of where the money went: use direction 'outgoing'.",
             )
+        seen: set[str] = set()
+        for ref in request.payments:
+            key = normalize_hash(ref.tx_hash)
+            if key in seen:
+                raise HTTPException(status_code=400, detail=f"Payment {ref.tx_hash} is listed twice.")
+            seen.add(key)
+    # The victim's own wallet is only ever compared with their payments. Never
+    # echoed back: it is the complaint's, not the reported address.
+    if request.victim_address is not None:
+        if not request.payments:
+            raise HTTPException(
+                status_code=400,
+                detail="The victim's wallet is compared with their payments: send it with the payment hashes.",
+            )
+        if not chain.validate_address(request.victim_address):
+            raise HTTPException(
+                status_code=400,
+                detail=f"The victim's wallet is not a valid {chain.name} address. Expected {chain.address_hint()}.",
+            )
+        if normalize_address(request.victim_address) == normalize_address(address):
+            raise HTTPException(
+                status_code=400,
+                detail="The victim's wallet is the reported wallet: enter the wallet the victim paid from.",
+            )
     return chain, address
 
 
-def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str, Any]:
+def allowance_used_up(chain: config.Chain) -> str:
+    name = PROVIDER_NAMES.get(chain.provider, chain.provider)
+    return (f"Today's {name} allowance for this site is used up, so live tracing on {chain.name} "
+            "resumes at 00:00 UTC. Stored cases and the verified examples still open.")
+
+
+def _seed_cap(intake: dict[str, Any] | None, seed_amount: float | None,
+              seed_amount_basis: str | None, seed_share: float | None = None,
+              ) -> tuple[float | None, str | None]:
+    """What the traced figure may never exceed, and why: the victim's reported
+    payments on an intake trace, or what the swaps returned on a follow-on.
+    With `seed_share` below 1 a follow-on's cap is only the traced money's
+    share of that output ("swap_share"): the swapping wallet added its own."""
+    if intake and intake.get("payments"):
+        return reported_amount(intake["payments"]), "reported_amount"
+    if seed_amount is not None and seed_amount > 0:
+        if seed_share is not None and seed_share < 1:
+            return round(float(seed_amount) * seed_share, 6), "swap_share"
+        return float(seed_amount), seed_amount_basis or "swap_output"
+    return None, None
+
+
+def _field(tx: Any, name: str) -> Any:
+    """A transfer's field, whether it is a graph edge's dict or a client's Transaction."""
+    return tx.get(name) if isinstance(tx, dict) else getattr(tx, name, None)
+
+
+def _exchange_round_trips(graph: nx.DiGraph, seed: str, matches: list, flows_between: Any,
+                          exchange_of: Any) -> dict[str, Any] | None:
+    """Value the reported wallet paid straight into an exchange and got back
+    from that same exchange later: the same coins going round, not more money.
+
+    A wallet that pays 1 ETH into its own exchange deposit and withdraws it,
+    150 times, shows a 150 ETH edge to that deposit address (the exchange's
+    hot wallet, which pays the withdrawals, is never expanded). Counted at face
+    value it took the case from the 99 ETH sent elsewhere. Here the wallet's
+    inflows over the window of its sends are read once (`flows_between`),
+    and each inflow from an address labelled as an exchange takes back what
+    the wallet had paid that exchange before it -- one pass in order, as
+    prorata._recycled does at each hop. Only direct payments (the wallet's own
+    edge to a matched address) are matched; a round trip through other wallets
+    is not seen. Returns None when there is nothing to check; never raises.
+
+    What this finds never lowers an exchange's share (see _note_round_trips):
+    an inflow from an address labelled with the exchange's name may be another
+    customer's withdrawal, and netting on that once hid the exchange that held
+    the victim's coins. `netted_edges` is the graph as it would read if it
+    were all the same coins, used only to see what that would change.
+    """
+    direct = {m.address: m.exchange for m in matches if m.address != seed and graph.has_edge(seed, m.address)}
+    if not direct or flows_between is None:
+        return None
+    paid = [(tx, direct[a]) for a in direct for tx in graph.edges[seed, a].get("transactions") or []]
+    sent = [tx for _, _, d in graph.out_edges(seed, data=True) for tx in d.get("transactions") or []]
+    blocks = [t["block_number"] for t, _ in paid if t.get("block_number")]
+    all_blocks = [t["block_number"] for t in sent if t.get("block_number")]
+    times = [t["timestamp"] for t, _ in paid if t.get("timestamp")]
+    all_times = [t["timestamp"] for t in sent if t.get("timestamp")]
+    by_block = bool(blocks)
+    if not by_block and not times:
+        return None
+    try:
+        received, _, complete = flows_between(
+            seed, min(blocks) if blocks else 0, max(all_blocks) if all_blocks else 0,
+            min(times) if times else 0, max(all_times) if all_times else 0)
+    except Exception as exc:  # noqa: BLE001 -- a check is never worth a failed trace
+        logger.warning("Round-trip read for %s failed: %s", seed, log_safety.redact(str(exc)))
+        return {"checked": False, "complete": False, "by_exchange": {}, "total": 0.0, "netted_edges": {}}
+    def pos(tx: Any) -> int:
+        return int(_field(tx, "block_number" if by_block else "timestamp") or 0)
+
+    events = [(pos(t), 0, exch, float(_field(t, "value_native") or 0.0)) for t, exch in paid]
+    for tx in received:
+        sender = normalize_address(_field(tx, "from_address") or "")
+        exch = direct.get(sender) or ((exchange_of(sender) or {}).get("exchange") if sender else None)
+        if exch:
+            events.append((pos(tx), 1, exch, float(_field(tx, "value_native") or 0.0)))
+    owed: dict[str, float] = {}
+    back: dict[str, float] = {}
+    for _, is_in, exch, value in sorted(events, key=lambda e: (e[0], e[1])):
+        if not is_in:
+            owed[exch] = owed.get(exch, 0.0) + value
+            continue
+        taken = min(owed.get(exch, 0.0), value)
+        if taken > 0:
+            owed[exch] -= taken
+            back[exch] = back.get(exch, 0.0) + taken
+    netted: dict[tuple[str, str], float] = {}
+    for exch, value in back.items():
+        edges = [a for a, e in direct.items() if e == exch]
+        total = sum(float(graph.edges[seed, a].get("value_native", 0.0)) for a in edges)
+        keep = max(0.0, 1.0 - value / total) if total else 0.0
+        for a in edges:
+            netted[(seed, a)] = float(graph.edges[seed, a].get("value_native", 0.0)) * keep
+    return {"checked": True, "complete": bool(complete),
+            "by_exchange": {e: round(v, 6) for e, v in sorted(back.items()) if v > 0},
+            "total": round(sum(back.values()), 6), "netted_edges": netted}
+
+
+def _netted_graph(graph: nx.DiGraph, round_trips: dict[str, Any] | None) -> nx.DiGraph:
+    """The graph with the reported wallet's round-tripped value taken off its
+    edges into each exchange: what the shares would be if it were all the same
+    coins (_note_round_trips). Never the graph a case is attributed on."""
+    if not round_trips or not round_trips.get("netted_edges"):
+        return graph
+    netted = graph.copy()
+    for (u, v), value in round_trips["netted_edges"].items():
+        netted.edges[u, v]["value_native"] = value
+    return netted
+
+
+def _note_round_trips(warnings: list[str], materiality: dict[str, Any], round_trips: dict[str, Any],
+                      matches: list, shares: dict[str, float], netted_shares: dict[str, float],
+                      lead: Any, asset_symbol: str) -> None:
+    """What value that came back from an exchange changes in a case: never a share.
+
+    The rule (8 Nov re-check, r1-trace-engine-0): which exchange the case names
+    is read on the chain's own figures. A payment from an exchange's wallet to
+    the reported wallet may be its own coins coming back (a deposit-withdraw
+    loop that inflates one edge) or a withdrawal from another customer's
+    account; the chain does not say which. Netting it away once took the
+    exchange that held the victim's coins out of the case altogether. So the
+    round trips only ever add: every exchange material with them counted once
+    (`netted_shares`) is material too, so the letter names it as also reached;
+    the case says what came back; and when counting it once would put another
+    exchange first, `band_cap` holds confidence at moderate."""
+    threshold = materiality["threshold"]
+    netted_material = sorted(m.address for m in matches if netted_shares.get(m.address, 0.0) >= threshold)
+    materiality["material_if_netted"] = netted_material
+    material = set(materiality["material_exchanges"]) | {m.exchange for m in matches if m.address in netted_material}
+    materiality["material_exchanges"] = sorted(material)
+    materiality["multiple_exchanges"] = len(material) > 1
+    alt = ExchangeMatcher.primary_match(matches, netted_shares)
+    if_netted: dict[str, float] = {}
+    for m in matches:
+        if_netted[m.exchange] = max(if_netted.get(m.exchange, 0.0), netted_shares.get(m.address, 0.0))
+    recycled = materiality["recycled"]
+    recycled["lead_if_netted"] = alt.exchange if alt else None
+    recycled["shares_if_netted"] = {e: round(v, 4) for e, v in sorted(if_netted.items())}
+    other = alt.exchange if alt is not None and lead is not None and alt.exchange != lead.exchange else None
+    if other:
+        materiality["band_cap"] = "moderate"
+    warnings.append(
+        f"The reported address got back {round_trips['total']:g} {asset_symbol} from "
+        + ", ".join(f"{e} ({v:g})" for e, v in round_trips["by_exchange"].items())
+        + " after paying it in directly. That can be the same coins going round or a withdrawal of someone "
+        "else's money, so no exchange's share is reduced for it"
+        + (f". Counted once, {other} would carry the larger share: it is named as also reached and "
+           "confidence is at most moderate" if other else "")
+        + ("" if round_trips["complete"] else " (its inflows could not all be read, so more may have come back)")
+        + ".")
+
+
+def _materiality(graph: nx.DiGraph, seed: str, direction: str, matches: list,
+                 untraced: list[dict[str, Any]], intake: dict[str, Any] | None,
+                 seed_amount: float | None = None, seed_amount_basis: str | None = None,
+                 ) -> tuple[dict[str, Any], dict[str, float]]:
+    """Each match's share of what the reported address sent, and the case's
+    materiality record (pipeline.run_trace fills in the primary's figures).
+
+    Share = the most value that could have reached the match along its
+    widest route (scoring.widest_routes) / a denominator: the victim's reported
+    payments for an intake trace, the swap's output for a follow-on, else the
+    reported wallet's outflow as the trace saw it (scoring.seed_outflow).
+    `hops` is each address's hop count along that same route: a match's hop
+    count (and so the case's) is the route the money took, not a shorter one
+    a dust send happened to take."""
+    reach, hops = widest_routes(graph, seed, direction, targets=[m.address for m in matches])
+    outflow = seed_outflow(graph, seed, direction, untraced)
+    cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis)
+    denominator, basis = (cap, cap_basis) if cap else (outflow, "seed_outflow")
+    shares = MatchShares()
+    for m in matches:
+        if m.address == seed:
+            shares[m.address] = shares.by_value[m.address] = 1.0
+            continue
+        if denominator:
+            shares[m.address] = min(1.0, reach.get(m.address, 0.0) / denominator)
+        # Its share of everything the wallet sent: breaks the tie when several
+        # branches carry at least the reported payments (or the swap's output).
+        if outflow:
+            shares.by_value[m.address] = min(1.0, reach.get(m.address, 0.0) / outflow)
+    threshold = config.ATTRIBUTION_MATERIAL_SHARE
+    material = sorted({m.exchange for m in matches if shares.get(m.address, 0.0) >= threshold})
+    return {
+        "basis": basis,
+        "denominator": round(denominator or 0.0, 6),
+        "seed_outflow": round(outflow, 6),
+        "threshold": threshold,
+        "majority": config.ATTRIBUTION_MAJORITY_SHARE,
+        "primary_share": None,
+        "primary_reach": None,
+        "reach_method": "path_upper_bound",
+        "material_exchanges": material,
+        "multiple_exchanges": len(material) > 1,
+        "reach": reach,
+        "hops": hops,
+    }, shares
+
+
+# How the 502 below names the provider (an exception's class name read as
+# "ProviderResponse" or "TronResponse" once failures had kinds).
+_PROVIDER_NAMES = {"etherscan": "Etherscan", "nodereal": "NodeReal", "trongrid": "TronGrid"}
+
+
+def run_trace(request: TraceRequest, seed_window: int | None = None,
+              budget: TraceBudget | None = None, depth_offset: int = 0,
+              seed_amount: float | None = None, seed_amount_basis: str | None = None,
+              *, is_follow_on: bool = False, seed_share: float | None = None,
+              seed_supply: list[tuple[int, float]] | None = None) -> dict[str, Any]:
     """Run one trace and return the full result, without storing it.
 
-    `seed_window` is set only for a follow-on trace after a swap: the time rule
-    then applies to the starting wallet too (see build_trace_graph).
+    `seed_window` is a time rule for the starting wallet (see
+    build_trace_graph): a follow-on after a swap passes the swap's time, and a
+    payment trace sets it from the first payment. `is_follow_on` says this
+    trace follows a swap: it then keeps no wallet statement and follows no
+    further swaps. The two were once one test (`seed_window is None`), which
+    switched both off for every payment trace too. For a follow-on,
+    `depth_offset` is the swapping wallet's hops from the reported address, so
+    the follow-on's hop proximity counts from there, and `seed_amount` what the
+    swaps returned: the follow-on's amounts are capped at it, because the wallet
+    may have sent on money that was not the swap's. `seed_share` is the most
+    of the swaps' input the traced money can have been; the pro-rata start is
+    that share of `seed_amount`, while which exchange got the money is still
+    read against the whole output. `seed_supply` is each swap's (time,
+    output): shares count a send only up to what the swaps had returned by
+    then (_swap_supply_cap).
 
     Everything the endpoint does except the case record: the endpoint gives
     the result a case id and saves it; the startup warm-up runs the demo
@@ -370,12 +732,20 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     matcher = get_matcher(chain.key)
     risk_matcher = get_risk_matcher(chain.key)
     routers = get_router_matcher(chain.key)
+    # Every trace has a wall clock (api_budget.TraceBudget): the server's default
+    # unless the request asks for less, never above its maximum.
+    budget = budget or current_budget() or TraceBudget.for_request(request.time_budget_seconds)
+    # The budget is the case's, shared with follow-ons: this trace reports its own part.
+    units_before = budget.usage()
+    # The operator's ceiling wins over the request (and over the default).
+    max_depth = min(request.max_depth or config.TRACE_MAX_DEPTH, config.TRACE_MAX_DEPTH_CEILING)
     trace_config = TraceConfig(
-        max_depth=request.max_depth or config.TRACE_MAX_DEPTH,
+        max_depth=max_depth,
         # R5: every branch carrying a share of the funds, not the top ten.
         branch_min_share=config.TRACE_BRANCH_MIN_SHARE_PERCENT / 100 if config.TAINT_EXPANSION else None,
         max_branches_hard=config.TRACE_MAX_BRANCHES_HARD,
-        time_budget_seconds=float(request.time_budget_seconds) if request.time_budget_seconds else None,
+        # The walk stops at the case's walk deadline, shared with any follow-on.
+        time_budget_seconds=max(0.001, budget.walk_remaining()),
     )
 
     # Which asset this trace follows. Everything downstream -- edge values,
@@ -388,17 +758,30 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     live: LiveTronExchanges | None = None
     try:
         with open_source(chain, asset_symbol) as client:
+            try:
+                client.budget = budget  # checked before every request the client makes
+            except AttributeError:
+                pass
+            # A provider that searches a bounded window (NodeReal) may look
+            # further back for the reported address alone, never for a hop.
+            if hasattr(client, "allow_deep_search"):
+                client.allow_deep_search(seed)
             # On Tron, a wallet no label file names is asked about: TronScan's
             # own tag, read live, attributes it when it names an exchange.
             if chain.key == "tron":
                 live = LiveTronExchanges(
                     TronScanTags(config.TRONSCAN_API_KEY, evidence=getattr(client, "evidence", None)),
                     matcher.is_exchange,
+                    # ADR-0006: a tag names an exchange only for an account, never a contract.
+                    is_contract=getattr(client, "is_contract", None) or (lambda a: None),
                 )
+                live.tags.budget = budget
             # R1: read the victim's payments from the chain first. They must be
             # incoming transfers to the reported wallet, and the walk then reads
             # that wallet only from when the first one arrived.
             intake = None
+            seed_block = None
+            payer_warnings: list[str] = []
             if request.payments:
                 try:
                     payments = resolve_payments(
@@ -407,32 +790,64 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                     )
                 except PaymentError as exc:
                     raise HTTPException(status_code=400, detail=str(exc)) from exc
-                intake = intake_record(payments, request.ncrp_ack)
-                seed_window = window_start(payments)
-            result = build_trace_graph(
-                seed,
-                client,
-                cfg=trace_config,
-                # Three quite different reasons to stop. An exchange is where
-                # the trail *ends*: the funds arrived, and those wallets have
-                # millions of unrelated transactions. A mixer is where the trail
-                # *breaks*: its payouts come from a commingled pool, so
-                # expanding through one would invent a path the transactions do
-                # not support. A swap router is where the trail *changes
-                # asset*: the funds came straight back to the sender as a
-                # different token, and a router contract has no outgoing
-                # transfers of its own to follow anyway.
-                is_terminal=lambda a: (
-                    matcher.is_exchange(a) or risk_matcher.is_terminal(a) or routers.is_exchange(a)
-                    or (live is not None and live.is_exchange(a))
-                ),
-                direction=direction,
-                seed_window=seed_window,
-            )
+                # Who paid each one, and whether it was the victim's own wallet.
+                payer_warnings = review_payments(
+                    payments, victim_address=request.victim_address,
+                    exchange_of=matcher.lookup, router_of=routers.lookup,
+                )
+                intake = intake_record(payments, request.ncrp_ack, request.victim_address)
+                # Read the wallet from the first payment's block, not from its
+                # newest page (Etherscan) or the oldest inflow the lookup saw
+                # (NodeReal).
+                seed_window, seed_block = window_anchor(payments)
+                anchor = getattr(client, "set_arrival", None)
+                if anchor is not None and seed_block:
+                    anchor(seed, seed_block)
+            budget.walking = True  # the walk may spend only part of each request budget
+            try:
+                result = build_trace_graph(
+                    seed,
+                    client,
+                    cfg=trace_config,
+                    # Three quite different reasons to stop. An exchange is where
+                    # the trail *ends*: the funds arrived, and those wallets have
+                    # millions of unrelated transactions. A mixer is where the trail
+                    # *breaks*: its payouts come from a commingled pool, so
+                    # expanding through one would invent a path the transactions do
+                    # not support. A swap router is where the trail *changes
+                    # asset*: the funds came straight back to the sender as a
+                    # different token, and a router contract has no outgoing
+                    # transfers of its own to follow anyway.
+                    is_terminal=lambda a: (
+                        matcher.is_exchange(a) or risk_matcher.is_terminal(a) or routers.is_exchange(a)
+                        or (live is not None and live.is_exchange(a))
+                    ),
+                    direction=direction,
+                    seed_window=seed_window,
+                    seed_window_block=seed_block,
+                )
+            finally:
+                budget.walking = False
+            walk_stopped_by = budget.stopped_by
+            if request.max_depth and request.max_depth > max_depth:
+                result.warnings.append(
+                    f"Depth capped at {max_depth} hops by this server; the request asked for {request.max_depth}."
+                )
+            if getattr(client, "confirmed_bound_applied", True) is False:
+                # The head could not be read, so the newest rows were kept uncut.
+                result.warnings.append(
+                    "The chain's newest block could not be read, so the newest blocks may include "
+                    "unconfirmed transfers that a reorganisation could still drop."
+                )
+            if intake is not None:
+                # A payment hash that carried several transfers says so (5-2),
+                # as does a payment not from the victim's own wallet (5-3).
+                result.warnings.extend(leg_warnings(intake["payments"]) + payer_warnings)
             if live is not None:
                 # The last hop is never checked during the walk; ask now, then
                 # attribute against the file's labels plus what TronScan named.
                 live.sweep(result.graph)
+                file_matcher = matcher
                 if live.found:
                     matcher = ExchangeMatcher({**matcher._labels, **live.found}, chain=chain.key)
                 if live.warnings:
@@ -458,10 +873,15 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             progress.report(stage="attributing")
             inferred = []
             if direction == OUTGOING:
+                # Only a label file's wallet is a sweep destination: an inference
+                # resting on an explorer tag read live would be two guesses deep.
                 inferred = infer_deposit_addresses(
-                    result.graph, matcher,
+                    result.graph, matcher if live is None else file_matcher,
                     balance_of=getattr(client, "get_balance_native", None),
                     native_symbol=chain.native_symbol,
+                    # Dust is measured in the traced asset; a wallet the risk
+                    # lists name (a poisoning lookalike) is not unlabelled.
+                    asset=asset_symbol, is_flagged=risk_matcher.is_flagged,
                 )
             # Every provider response the trace was computed from, hashed on
             # arrival. Taken while the client is still open, after the last
@@ -470,22 +890,74 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             # exchange, reading what else joined them in each wallet on the path.
             prorata = None
             methods = None
-            lead = ExchangeMatcher.primary_match(matches + inferred)
+            # Follow the money: each match's share of what the reported address
+            # sent picks the case's exchange, not its hop count alone (one dust
+            # transfer used to name any exchange, or an innocent deposit address).
+            # Shares are measured on the chain's own figures. Value that came back
+            # to the reported wallet from an exchange it had paid directly is
+            # read (_exchange_round_trips) but never taken off that exchange's
+            # share (8 Nov re-check): a withdrawal from an exchange can be another
+            # customer's money, and netting it away named Kraken with no word of
+            # Binance, where the victim's coins were. Counted once instead, it can
+            # only add: an exchange material with the round trips netted is
+            # material too (named as also reached), the case warns, and when
+            # netting would put another exchange first the band is at most
+            # moderate (scoring.score_case).
+            round_trips = (_exchange_round_trips(result.graph, seed, matches + inferred,
+                                                 getattr(client, "get_flows_between", None), matcher.lookup)
+                           if direction == OUTGOING else None)
+            measured = _swap_supply_cap(result.graph, seed, seed_supply) if is_follow_on else result.graph
+            materiality, shares = _materiality(measured, seed, direction, matches + inferred,
+                                               result.untraced, intake, seed_amount, seed_amount_basis)
+            materiality["recycled"] = ({k: v for k, v in round_trips.items() if k != "netted_edges"}
+                                       if round_trips else None)
+            netted_shares = None
+            if round_trips and round_trips["total"] > 0:
+                _, netted_shares = _materiality(_netted_graph(result.graph, round_trips), seed, direction,
+                                                matches + inferred, result.untraced, intake,
+                                                seed_amount, seed_amount_basis)
+            # Each match's hop count is its widest route's, the route the score,
+            # the report and the letter are read along (8 Nov check).
+            route_hops = materiality["hops"]
+            matches = [replace(m, depth=route_hops.get(m.address, m.depth)) for m in matches]
+            inferred = [replace(m, depth=route_hops.get(m.address, m.depth)) for m in inferred]
+            # The figure is never more than the victim reported paying, or
+            # than the traced money's part of what the swaps returned (follow-on).
+            cap, cap_basis = _seed_cap(intake, seed_amount, seed_amount_basis, seed_share)
+            lead = ExchangeMatcher.primary_match(matches + inferred, shares)
+            if lead is not None:
+                materiality["primary_share"] = round(shares.get(lead.address, 0.0), 4)
+                materiality["primary_reach"] = round(materiality["reach"].get(lead.address, 0.0), 6)
+            if round_trips and round_trips["total"] > 0:
+                _note_round_trips(result.warnings, materiality, round_trips, matches + inferred,
+                                  shares, netted_shares, lead, asset_symbol)
+            elif round_trips and not round_trips["checked"]:
+                result.warnings.append(
+                    "Whether the reported address got back what it paid into an exchange could not be "
+                    "read, so value it moved round in and out of one may be counted more than once.")
             if direction == OUTGOING and lead is not None and lead.address != seed:
                 try:
-                    lead_path = principal_path(result.graph, seed, lead.address)
+                    lead_path = principal_path(measured, seed, lead.address)
                 except (nx.NetworkXNoPath, nx.NodeNotFound):
                     lead_path = []
+                # One read of each wallet's flows in its window, shared by
+                # pro-rata and R4: pro-rata needs what the wallet paid out too,
+                # to net out coins it got back (W -> X -> W).
+                flows = getattr(client, "get_flows_between", None)
+                flows = read_once(flows) if flows else None
+                # The chain's figures along the route the shares chose: pro-rata
+                # caps at the swaps' output itself (and says so).
                 prorata = estimate_prorata(result.graph, lead_path,
-                                           getattr(client, "get_incoming_between", None))
+                                           getattr(client, "get_incoming_between", None), flows_between=flows,
+                                           seed_cap=cap, cap_basis=cap_basis)
                 # R4: FIFO and LIBR beside pro-rata, on the same path. Before
                 # the evidence manifest below, so their reads are in it.
                 if config.TRACING_METHODS and lead_path:
-                    methods = compare_methods(result.graph, lead_path,
-                                              getattr(client, "get_flows_between", None), prorata)
+                    methods = compare_methods(result.graph, lead_path, flows, prorata, seed_cap=cap)
             # The reported wallet's own statement: what it received and sent in
             # this asset, whether or not anything could be followed onward.
-            statement = _wallet_statement(client, seed) if seed_window is None else None
+            statement = (None if is_follow_on else
+                         _wallet_statement(client, seed, window_start=seed_window if intake else None))
             # A provider that searches a block range (NodeReal) says how far
             # back it looked when it found nothing, so "sent nothing" is never
             # claimed for history the search did not reach.
@@ -494,10 +966,42 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             if floor is not None and hasattr(client, "block_time"):
                 searched_since = client.block_time(floor)
             deep = (getattr(client, "deep_searched", None) or {}).get(seed)
+            if budget.stopped_by in ("time", "budget") and walk_stopped_by is None:
+                # A read after the walk was refused: each stage keeps going without it.
+                result.note_truncation(
+                    f"the case's {'time limit' if budget.stopped_by == 'time' else 'request budget'} ran out "
+                    "in the reads after the walk, so some later figures (swap receipts, balances, pro-rata "
+                    "windows, the wallet statement) may be missing"
+                )
             evidence = client.evidence.manifest() if hasattr(client, "evidence") else None
             # Whether contract-moved value was part of the data, for the
             # limitations paragraph. Only the Etherscan native path reads it.
             internal_read = bool(getattr(client, "include_internal", False)) and is_native
+    except Cancelled as exc:
+        raise HTTPException(status_code=409, detail="The trace was stopped by the person who started it.") from exc
+    except BudgetSpent as exc:
+        # The reported address itself could not be read within the budget
+        # (deeper addresses just truncate the walk). Fixed sentences only.
+        name = PROVIDER_NAMES.get(exc.provider, exc.provider)
+        if exc.scope == "trace":
+            detail = (f"The reported address could not be read within this case's {name} request budget. "
+                      "Try a smaller depth.")
+        elif exc.scope == "client":
+            detail = (f"This connection has used its share of today's {name} allowance, so it cannot start "
+                      f"live traces on {chain.name} until 00:00 UTC. Stored cases and the verified examples "
+                      "still open.")
+        else:
+            detail = allowance_used_up(chain)
+        raise HTTPException(status_code=429 if exc.scope == "client" else 503, detail=detail) from exc
+    except TraceStopped as exc:
+        # The reported address itself could not be read before the case's
+        # time ran out (deeper addresses just truncate the walk). A fixed
+        # sentence: never provider text.
+        raise HTTPException(
+            status_code=503,
+            detail=(f"The reported address could not be read before the trace's {exc.reason} "
+                    f"of {budget.walk_seconds:g} s. Try again in a few minutes."),
+        ) from exc
     except UnknownAssetError as exc:
         # Edge case: the request named an asset this chain does not carry.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -508,6 +1012,14 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     except EtherscanConfigError as exc:
         # Edge case: no API key configured.
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ProviderQuotaError as exc:
+        # The provider's daily or monthly allowance is spent: waiting seconds
+        # will not help, and the officer should know what still works.
+        raise HTTPException(
+            status_code=503,
+            detail=(f"The {chain.name} data provider's quota is used up for now, so live tracing on "
+                    f"{chain.name} is paused until it resets. Stored cases and the verified examples still open."),
+        ) from exc
     except EtherscanRateLimitError as exc:
         # Edge case: Etherscan rate limit survived all retries.
         raise HTTPException(
@@ -526,7 +1038,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             status_code=502,
             detail=(
                 "Could not reach the blockchain data provider "
-                f"({type(exc).__name__.removesuffix('Error')}). Try again in a minute."
+                f"({_PROVIDER_NAMES.get(chain.provider, chain.provider)}). Try again in a minute."
             ),
         ) from exc
     except InvalidAddressError as exc:  # defensive; validated above
@@ -543,7 +1055,15 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     # wallet is the address a lawful request must name, so it leads when it
     # is closer; a label-file match wins any tie.
     matches = matches + inferred
-    primary = ExchangeMatcher.primary_match(matches)
+    primary = lead  # chosen once, above, so pro-rata and the case name the same address
+    if primary is not None and prorata and prorata.get("status") == "estimated" and materiality["denominator"]:
+        # A follow-on's estimate counts only the traced share of the swaps'
+        # output; the denominator is the whole output, so compare like with like.
+        scale = seed_share if seed_share is not None and 0 < seed_share < 1 else 1.0
+        reached = prorata["estimated"] / scale
+        materiality["primary_reach"] = round(min(reached, materiality["denominator"]), 6)
+        materiality["primary_share"] = round(min(1.0, reached / materiality["denominator"]), 4)
+        materiality["reach_method"] = "prorata"
     # Sanctions / mixer screening. Runs after exchange annotation so a node
     # that is somehow on both lists keeps both sets of tags.
     risk_matches = risk_matcher.annotate(graph, direction)
@@ -551,7 +1071,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         graph, PatternConfig(native_symbol=asset_symbol), matcher.is_exchange
     )
     confidence = score_case(
-        graph,
+        measured,  # the graph shares were measured on
         seed,
         primary,
         findings,
@@ -561,15 +1081,24 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         direction=direction,
         internal_transfers_read=internal_read,
         prorata=prorata,
+        materiality=materiality,
+        depth_offset=depth_offset,
     )
 
     # Swaps into a stablecoin this chain carries are followed as their own
     # traces, before the message is written, so the message can say where the
     # money went after it changed asset.
+    # This trace's own requests, before any follow-on spends from the same budget.
+    provider_units = budget.usage_since(units_before)
+    stopped_by = ("budget" if result.addresses_unexpanded_by_budget else
+                  "time" if result.addresses_unexpanded_by_time else
+                  budget.stopped_by if budget.stopped_by in ("time", "budget") else None)
     follow_ons: list[dict[str, Any]] = []
-    if direction == OUTGOING and request.follow_swaps and seed_window is None and swaps:
+    if direction == OUTGOING and request.follow_swaps and not is_follow_on and swaps:
         follow_ons = _follow_swaps(request, chain, asset_symbol, graph, swaps, trace_config.max_depth,
-                                   seconds_spent=result.seconds_elapsed or 0.0)
+                                   budget=budget, seed=seed,
+                                   reported=reported_amount(intake["payments"]) if intake else None,
+                                   seed_since=seed_window if intake else None)
     followed = next((f for f in follow_ons if (f.get("result") or {}).get("exchange")), None)
 
     # Edge case: the address has never sent anything. Not an error -- a finding.
@@ -582,7 +1111,17 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
             f" since {datetime.fromtimestamp(searched_since, tz=timezone.utc):%d %b %Y}"
             if searched_since else ""
         )
-        if direction == OUTGOING and since:
+        if graph.nodes[seed].get("history_capped"):
+            # The read stopped at its record limit (spam can fill it), so
+            # "sent nothing" or "received nothing" is not a claim it can make.
+            verb = "sent" if direction == OUTGOING else "received"
+            message = (
+                f"The newest records read for this address held no {asset_symbol} it {verb} with value, "
+                f"and the rest of its history was not read (the read stopped at its record limit), so "
+                f"Exchequer cannot say it {verb} nothing. It may have moved the money in older records, "
+                "or as a different asset" + alternatives
+            )
+        elif direction == OUTGOING and since:
             message = (
                 f"No {asset_symbol} with value was sent by this address in the history "
                 f"searched ({chain.name}{since}). "
@@ -612,11 +1151,12 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
                 "sent funds, or the money may have arrived as a different asset"
                 + alternatives
             )
-    elif primary is None and any(m.category == MIXER for m in risk_matches):
+    elif primary is None and any(m.category == MIXER and m.is_terminal for m in risk_matches):
         # Edge case: the trail did not go cold, it was deliberately cut. Saying
         # "no exchange found" here would understate what was actually
-        # discovered, which is that the funds were sent to a tumbler.
-        mixers = [m for m in risk_matches if m.category == MIXER]
+        # discovered, which is that the funds were sent to a tumbler. A mixer
+        # tag the trace went past (not a pinned pool) is not that.
+        mixers = [m for m in risk_matches if m.category == MIXER and m.is_terminal]
         names = sorted({m.entity for m in mixers})
         message = (
             f"The trace stopped at {'a mixer' if len(mixers) == 1 else 'mixers'} "
@@ -723,13 +1263,25 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         "value_received_native": (
             round(primary.value_received_native, 6) if primary else None
         ),
-        "matches": [m.to_dict() for m in matches],
+        "matches": [{**m.to_dict(),
+                     "share": round(shares.get(m.address, 0.0), 4),
+                     "reach_native": round(materiality["reach"].get(m.address, 0.0), 6),
+                     "material": (shares.get(m.address, 0.0) >= materiality["threshold"]
+                                  or m.address in materiality.get("material_if_netted", ()))}
+                    for m in matches],
+        # How much of what the reported address sent reached the attributed
+        # exchange, and on what basis; also which exchanges received a
+        # material share (more than one: a letter may be needed to each).
+        "materiality": {k: v for k, v in materiality.items() if k not in ("reach", "hops", "material_if_netted")},
         # Sanctions / mixer screening. `risk_flags` mirrors `flags` so the
         # frontend can render both the same way; `risk_notes` are report-ready
         # sentences so neither the UI nor the report has to re-phrase them.
         "risk_matches": [m.to_dict() for m in risk_matches],
         "risk_flags": sorted({m.category for m in risk_matches}),
         "risk_notes": [m.describe(asset_symbol) for m in risk_matches],
+        # The label-store build this trace screened against (None: it had
+        # none), so a later report names the build that made, or missed, a flag.
+        "label_store": risk_matcher.store_entry(),
         "findings": [f.to_dict() for f in findings],
         # Transfers into DEX routers, with what came back where the receipt
         # showed it. The graph edge carries the same record as `swap`.
@@ -756,26 +1308,39 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
         ),
         "confidence_detail": confidence.to_dict(),
         "trace_path": (
-            _trace_path(graph, seed, primary.address, direction) if primary else []
+            _trace_path(graph, seed, primary.address, direction, route_graph=measured) if primary else []
         ),
         # Only populated on a reverse trace: the seed has no inbound edges when
         # the walk ran outward.
         "direct_senders": _direct_senders(graph, seed),
-        "transfers": _all_transfers(graph),
+        # transfers, transfers_total, transfers_omitted, transfers_sha256 (_appendix).
+        **_appendix(_all_transfers(graph), _appendix_edges(graph, seed, direction, primary, measured),
+                    {m.address for m in matches}),
         "depth_reached": result.depth_reached,
         "max_depth": trace_config.max_depth,
         # The clock, if the caller set one, and what it cost: how long the walk
         # took and how many reached addresses it left unexpanded.
         "time_budget_seconds": request.time_budget_seconds,
+        # The limit this trace actually ran under, and whether it cut the walk short.
+        "time_limit_seconds": budget.walk_seconds,
+        # "time" or "budget" when either cut this trace short (truncation_reasons says where).
+        "stopped_by": stopped_by,
         "seconds_elapsed": result.seconds_elapsed,
         "addresses_unexpanded_by_time": result.addresses_unexpanded_by_time,
+        "addresses_unexpanded_by_budget": result.addresses_unexpanded_by_budget,
+        # What this trace spent per provider ({requests, units, case_limit, unit}),
+        # follow-ons apart; the limit is the whole case's.
+        "provider_units": provider_units,
         "addresses_expanded": result.addresses_expanded,
         # Busy wallets also read from when the funds arrived (graph_builder).
         "read_from_arrival": result.read_from_arrival,
         # What the walk did not follow, with its value (brake 2; R5).
         "untraced": result.untraced,
         "transfers_excluded_by_time": result.transfers_excluded_by_time,
-        "api_calls": result.api_calls,
+        # Network requests this trace sent (provider_units), not addresses read;
+        # cache hits are in the evidence manifest instead.
+        "api_calls": sum(u["requests"] for u in provider_units.values()),
+        "addresses_read": result.addresses_read,
         # Hash-and-timestamp of every response above; see app/evidence.py.
         "evidence": evidence,
         "truncated": result.truncated,
@@ -785,9 +1350,139 @@ def run_trace(request: TraceRequest, seed_window: int | None = None) -> dict[str
     if intake is not None:
         payload["intake"] = intake
         payload["reported_amount"] = reported_amount(intake["payments"])
+    # What this trace ran with, so its report can say so after a deploy (provenance.py).
+    payload["provenance"] = capture_provenance(
+        chain.key, follow_swaps=request.follow_swaps, max_follow_ons=MAX_FOLLOW_ONS,
+        live_tags=bool(live is not None and getattr(live.tags, "enabled", False)))
     # Every result leaves here under the case contract (contracts/case_v2.py):
     # the v1 fields above, untouched, plus the v2 fields the other lanes read.
     return upgrade_to_contract(payload)
+
+
+def _traced_into(flow: nx.DiGraph, seed: str, wallet: str) -> float:
+    """The most of the reported wallet's money that could have reached
+    `wallet` through the trace: the maximum flow, each edge's value its
+    capacity. The widest single route would undercount money that split and
+    joined again, and this is a ceiling."""
+    if seed not in flow or wallet not in flow:
+        return 0.0
+    return float(nx.maximum_flow_value(flow, seed, wallet))
+
+
+def _swap_groups(swaps: list[dict[str, Any]], traceable: set[str], asset_symbol: str,
+                 ) -> dict[tuple[str, str], dict[str, Any]]:
+    """Every read swap's traceable outputs, grouped by (wallet, asset): the
+    swaps in each group, what they returned and what went into them. One
+    receipt paying the same token twice is one output; a transaction seen on
+    two router edges adds its input, never its output again."""
+    groups: dict[tuple[str, str], dict[str, Any]] = {}
+    for swap in swaps:
+        if not swap.get("output_read"):
+            continue
+        got: dict[str, float] = {}
+        for o in swap.get("outputs") or [{"asset": swap.get("asset_out"), "amount": swap.get("amount_out")}]:
+            if o.get("asset") in traceable and o.get("asset") != asset_symbol and o.get("amount") is not None:
+                got[o["asset"]] = got.get(o["asset"], 0.0) + float(o["amount"])
+        paid_in, total = float(swap.get("amount_in") or 0.0), sum(got.values()) or 1.0
+        for asset_out, amount in got.items():
+            g = groups.setdefault((swap["sender"], asset_out), {"swaps": [], "out": 0.0, "in": 0.0, "bought": 0.0})
+            g["in"] += paid_in
+            # The part of this input that bought this asset (stablecoins, so
+            # comparable): what ranks a decoy output below the real one.
+            g["bought"] += paid_in * amount / total
+            if swap.get("tx") and any(s.get("tx") == swap["tx"] for s in g["swaps"]):
+                continue
+            g["swaps"].append({**swap, "asset_out": asset_out, "amount_out": amount})
+            g["out"] += amount
+    return groups
+
+
+def _arrival(graph: nx.DiGraph, wallet: str, seed: str | None, seed_since: int | None,
+             largest_in: float) -> int | None:
+    """When the traced money had reached `wallet`, the swapping wallet: the
+    time of the transfer into it, along the trace, that brought what it had
+    received to the material share (config.ATTRIBUTION_MATERIAL_SHARE) of its
+    largest swap's input, or of all it received along the trace if that is
+    less. A dust send ahead of the money does not count as it arriving, and
+    more money arriving later does not move it. For the reported wallet itself
+    it is `seed_since` (a payment trace's first payment), else unknown: an
+    address-only trace treats everything the wallet held as traced. None when
+    the transfers carry no times."""
+    if seed is None or wallet == seed:
+        return seed_since
+    rows = sorted((int(tx["timestamp"]), float(tx.get("value_native") or 0.0))
+                  for _, _, data in graph.in_edges(wallet, data=True)
+                  for tx in data.get("transactions") or [] if tx.get("timestamp"))
+    total = sum(v for _, v in rows)
+    if not rows or total <= 0:
+        return None
+    need = config.ATTRIBUTION_MATERIAL_SHARE * min(largest_in, total) if largest_in > 0 else 0.0
+    got = 0.0
+    for when, value in rows:
+        got += value
+        if got >= need and got > 0:
+            return when
+    return rows[-1][0]
+
+
+def _window_swaps(group: list[dict[str, Any]], arrived: int | None = None,
+                  ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The swaps a follow-on covers, from the first that can carry the traced
+    value, and the ones left out (`group` in time order).
+
+    A swap made before the traced money reached the swapping wallet
+    (`arrived`, see _arrival) cannot have carried it, however large: it is
+    always left out (8 Nov re-check: a decoy of 20% of the real swap, made a
+    month before the money arrived, opened the window and named the exchange
+    that got only money the wallet already held). Of the rest, the window
+    used to open at the earliest swap into the asset, so a 0.0001 ETH swap a
+    month before the real one pulled in everything the wallet sent in the new
+    asset in between; it opens at the first swap whose input is at least the
+    material share (config.ATTRIBUTION_MATERIAL_SHARE) of the largest swap's.
+    Earlier swaps are left out only while together they carry less than that
+    share of all the input, so a run of small real swaps still opens the
+    window. With no swap at or after the arrival, the window is empty."""
+    if arrived is not None:
+        early = [s.get("timestamp") is not None and s["timestamp"] < arrived for s in group]
+        if any(early):
+            before = [s for s, e in zip(group, early, strict=True) if e]
+            window, left = _window_swaps([s for s, e in zip(group, early, strict=True) if not e])
+            return window, sorted(before + left, key=lambda s: s.get("timestamp") or 0)
+    inputs = [float(s.get("amount_in") or 0.0) for s in group]
+    share = config.ATTRIBUTION_MATERIAL_SHARE
+    largest, total = max(inputs, default=0.0), sum(inputs)
+    first = next((i for i, v in enumerate(inputs) if v >= share * largest), 0)
+    if first and sum(inputs[:first]) < share * total:
+        return group[first:], group[:first]
+    return group, []
+
+
+def _swap_supply_cap(graph: nx.DiGraph, seed: str, supply: list[tuple[int, float]] | None) -> nx.DiGraph:
+    """A follow-on's graph with each of the swapping wallet's sends counted
+    only up to what its swaps had returned by then: money sent before a swap
+    returned it cannot be that swap's output (8 Nov re-check: 4,900 USDT paid
+    to Kraken when the swaps had returned 360 counted as 4,900 of them). Per
+    edge, never netted against other edges, so one exchange's figure is never
+    lowered for what another got. Only for measuring shares: the case prints
+    the chain's figures. Unchanged when any swap or send has no time."""
+    if not supply or seed not in graph or any(t is None for t, _ in supply):
+        return graph
+    steps = sorted((int(t), float(a or 0.0)) for t, a in supply)
+
+    def returned_by(when: int) -> float:
+        return sum(a for t, a in steps if t <= when)
+    capped = None
+    for _, dst, data in graph.out_edges(seed, data=True):
+        sends = sorted(data.get("transactions") or [], key=lambda t: t.get("timestamp") or 0)
+        if not sends or any(not t.get("timestamp") for t in sends):
+            continue
+        carried = 0.0
+        for tx in sends:
+            carried = min(carried + float(tx.get("value_native") or 0.0), returned_by(int(tx["timestamp"])))
+        if carried < float(data.get("value_native", 0.0)):
+            capped = capped if capped is not None else graph.copy()
+            capped.edges[seed, dst]["value_native"] = carried
+    return capped if capped is not None else graph
 
 
 def _follow_swaps(
@@ -797,55 +1492,126 @@ def _follow_swaps(
     graph: Any,
     swaps: list[dict[str, Any]],
     max_depth: int,
-    seconds_spent: float = 0.0,
+    budget: TraceBudget | None = None,
+    seed: str | None = None,
+    reported: float | None = None,
+    seed_since: int | None = None,
 ) -> list[dict[str, Any]]:
     """Trace the output asset of each swap into a stablecoin this chain carries.
 
     One follow-on per (wallet, output asset), at most MAX_FOLLOW_ONS, over the
     hops the original trace had left beyond the swapping wallet (at least one).
-    The follow-on starts at the swap: the time rule excludes anything the
-    wallet sent in the new asset before the swap's output arrived. It follows
+    The follow-on starts at that wallet's first swap into the asset that
+    carries the traced value (_window_swaps; a dust swap before it is left
+    out): the time rule excludes anything it sent in the new asset before. It follows
     everything the wallet sent in that asset afterwards, which may include
-    money that was not the swap's output; the swap's amount is kept beside the
-    result so a reader can compare. Follow-ons never follow further swaps.
+    money that was not the swaps' output, so its amounts are capped (`cap`):
+    at what all those swaps returned, and, where the traced money was only
+    part of what went into them, at that share of it. The share is the most
+    of the reported wallet's money (at most `reported`, the victim's payments,
+    on a payment trace) that could have reached the swapping wallet, over
+    what it swapped. An address-only trace's own swaps are taken whole: its
+    starting figure is everything the reported wallet sent.
+
+    Follow-ons are chosen by how much traced money went into them, not by the
+    order the swaps were found, so a dust swap or a decoy output cannot take
+    the place of the real one. `route` is the original asset's path from the
+    reported address (`seed`) to the swapping wallet, for the letter.
+    Follow-ons never follow further swaps.
 
     A time budget covers the whole case, not each trace: follow-ons share what
     the original trace left of it, and one that would start with less than the
     minimum budget is recorded as not traced rather than run over the limit.
     """
-    traceable = {t.symbol for t in chain.tokens}
-    seen: set[tuple[str, str]] = set()
+    groups = _swap_groups(swaps, {t.symbol for t in chain.tokens}, asset_symbol)
+    flow = None
+    ranked = []
+    for (sender, asset_out), g in groups.items():
+        ordered = sorted(g["swaps"], key=lambda s: s.get("timestamp") or 0)
+        arrived = _arrival(graph, sender, seed, seed_since,
+                           max((float(s.get("amount_in") or 0.0) for s in ordered), default=0.0))
+        group, left_out = _window_swaps(ordered, arrived)
+        if not group:
+            # Every swap was made before the traced money reached the wallet:
+            # none of what they bought can be it.
+            continue
+        if left_out:
+            # What the follow-on covers is the window's swaps only.
+            kept_in = max(0.0, g["in"] - sum(float(s.get("amount_in") or 0.0) for s in left_out))
+            g = {**g, "out": sum(s["amount_out"] for s in group), "in": kept_in,
+                 "bought": g["bought"] * (kept_in / g["in"]) if g["in"] > 0 else 0.0}
+        if seed is None or sender == seed:
+            traced = reported
+        else:
+            if flow is None:
+                flow = nx.DiGraph()
+                flow.add_edges_from((u, v, {"capacity": float(d.get("value_native") or 0.0)})
+                                    for u, v, d in graph.edges(data=True))
+            traced = _traced_into(flow, seed, sender)
+            if reported is not None:
+                traced = min(traced, reported)
+        share = min(1.0, traced / g["in"]) if traced is not None and g["in"] > 0 else None
+        ranked.append((g["bought"] * (share if share is not None else 1.0), sender, asset_out, g, traced, share,
+                       group, left_out, arrived))
+    # Most traced money first; ties keep the order the swaps were found in.
+    ranked.sort(key=lambda r: -r[0])
+
     out: list[dict[str, Any]] = []
-    for swap in swaps:
-        asset_out = swap.get("asset_out")
-        if not swap.get("output_read") or asset_out not in traceable or asset_out == asset_symbol:
-            continue
-        key = (swap["sender"], asset_out)
-        if key in seen:
-            continue
-        seen.add(key)
-        if len(out) >= MAX_FOLLOW_ONS:
-            break
-        depth_at = (graph.nodes.get(swap["sender"]) or {}).get("depth", 0)
+    for _, sender, asset_out, g, traced, share, group, left_out, arrived in ranked[:MAX_FOLLOW_ONS]:
+        swap = max(group, key=lambda s: s["amount_out"])  # the swap the letter names
+        returned = round(g["out"], 6)
+        cap, basis = _seed_cap(None, returned, "swap_output", share)
+        depth_at = (graph.nodes.get(sender) or {}).get("depth", 0)
         remaining = max(1, max_depth - depth_at)
-        follow = {"swap": swap, "asset": asset_out, "address": swap["sender"], "max_depth": remaining}
-        budget = None
-        if request.time_budget_seconds:
-            budget = int(request.time_budget_seconds - seconds_spent)
-            if budget < 10:
-                follow["error"] = "not traced: the case's time budget was spent before this swap could be followed"
-                out.append(follow)
-                continue
+        route = _trace_path(graph, seed, sender, OUTGOING) if seed else []
+        follow = {"swap": swap, "asset": asset_out, "address": sender, "max_depth": remaining,
+                  "route": route,
+                  # What the follow-on may state, and why (see the docstring).
+                  "cap": {"amount": cap, "basis": basis, "swap_output": returned,
+                          "swap_input": round(g["in"], 6),
+                          "traced_in": round(traced, 6) if traced is not None else None,
+                          "share": round(share, 6) if share is not None else None, "swaps": len(group)}}
+        if len(group) > 1:
+            follow["swaps"] = [{k: s.get(k) for k in ("tx", "timestamp", "router_label", "amount_in", "amount_out")}
+                               for s in group]
+        if left_out:
+            follow["swaps_left_out"] = [
+                {**{k: s.get(k) for k in ("tx", "timestamp", "router_label", "amount_in", "amount_out")},
+                 # Why it cannot carry the traced funds (_window_swaps).
+                 "why": ("before_arrival" if arrived is not None and s.get("timestamp") is not None
+                         and s["timestamp"] < arrived else "too_small")}
+                for s in left_out]
+        starts = [s["timestamp"] for s in group if s.get("timestamp") is not None]
+        # One clock for the whole case: a follow-on uses what is left of it.
+        if budget is not None and budget.walk_over():
+            follow["error"] = "not traced: the case's time budget was spent before this swap could be followed"
+            out.append(follow)
+            continue
+        if budget is not None and budget.stopped_by == "budget":
+            follow["error"] = ("not traced: the case's provider request budget was spent before this swap "
+                               "could be followed")
+            out.append(follow)
+            continue
         sub = TraceRequest(
-            address=swap["sender"], chain=chain.key, asset=asset_out, max_depth=remaining,
-            direction=OUTGOING, time_budget_seconds=budget, follow_swaps=False,
+            address=sender, chain=chain.key, asset=asset_out, max_depth=remaining,
+            direction=OUTGOING, follow_swaps=False,
         )
         progress.report(stage="following_swap", follow_asset=asset_out)
         try:
-            follow["result"] = run_trace(sub, seed_window=swap.get("timestamp"))
-            seconds_spent += follow["result"].get("seconds_elapsed") or 0.0
+            follow["result"] = run_trace(sub, seed_window=min(starts) if starts else None, budget=budget,
+                                         # Hops before the swap: the printed route's.
+                                         depth_offset=len(route) - 1 if route else depth_at,
+                                         seed_amount=returned,
+                                         seed_amount_basis="swap_output", is_follow_on=True, seed_share=share,
+                                         seed_supply=[(s.get("timestamp"), s["amount_out"]) for s in group])
         except HTTPException as exc:
+            if budget is not None and budget.cancelled:
+                raise  # a stop ends the whole case, follow-ons included
             # A follow-on that fails must not cost the trace that found it.
             follow["error"] = str(exc.detail)
+        except Exception:  # noqa: BLE001 -- nor may any other failure
+            logger.exception("Follow-on trace of %s after a swap failed", asset_out)
+            follow["error"] = ("not traced: the follow-on could not be traced because of an unexpected "
+                               "error; the original trace above is complete")
         out.append(follow)
     return out

@@ -29,6 +29,9 @@ config.API_CACHE_PATH = None
 # Nor may it screen against a label store built on this machine: the suite
 # must give the same answers here as on CI, where no store exists.
 config.LABEL_STORE_PATH = None
+# Nor carry one test's provider spend into the next through the case store:
+# tests/test_provider_allowance.py turns the stored meter on where it is tested.
+config.PERSIST_METERS = False
 
 # Reports are signed; the suite signs with a key of its own rather than
 # creating report_signing_key.pem beside the real case store.
@@ -164,7 +167,24 @@ def _reset_api_budget(monkeypatch):
 @pytest.fixture(autouse=True)
 def _fresh_trace_rate_limit():
     """The per-client trace limit is process-wide; the suite's TestClient is
-    one client, so without this the 31st trace in a run would be refused."""
+    one client, so without this the 31st trace in a run would be refused.
+    The site-wide ceilings are process-wide too."""
     from app import rate_limit
-    rate_limit.traces.reset()
+    from app.routes import casebook, cases
+    for limiter in (rate_limit.traces, rate_limit.traces_total, rate_limit.watches_total, casebook.case_lists,
+                    casebook.correlations):
+        limiter.reset()
+    # Likewise the minutes each connection held trace slots, and the kept demo list.
+    cases._slot_clock.reset()
+    casebook.clear_public_lists()
     yield
+
+
+@pytest.fixture(autouse=True)
+def _fresh_report_cache():
+    """Rendered reports and the PDF render limits are process-wide (report_cache.py);
+    a report kept from one test must not answer the next."""
+    from app import report_cache
+    report_cache.reset()
+    yield
+    report_cache.reset()

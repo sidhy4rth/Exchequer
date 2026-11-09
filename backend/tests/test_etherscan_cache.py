@@ -126,3 +126,28 @@ def test_rate_limit_widens_the_shared_interval():
         client.get_transactions(ADDR)
     assert client._pacer.interval > before
     assert client._pacer.stats()["rate_limit_penalties"] >= 1
+
+
+def test_a_tampered_disk_row_is_fetched_again_and_recorded_afresh(tmp_path, monkeypatch):
+    """r1-providers-11: an edited cache row must not feed a trace under the old hash."""
+    import sqlite3
+
+    from app import api_budget, config
+
+    path = tmp_path / "provider_cache.db"
+    monkeypatch.setattr(config, "API_CACHE_PATH", path)
+    api_budget.reset()
+    client, seen = make_client(OK)
+    client.get_transactions(ADDR)
+    assert len(seen) == 1
+    db = sqlite3.connect(str(path))
+    db.execute("UPDATE responses SET value = replace(value, '0xBBbb', '0x9999')")
+    db.commit()
+    db.close()
+    api_budget.reset()  # a restart: memory is empty, the disk is not
+
+    client, seen = make_client(OK)
+    txs = client.get_transactions(ADDR)
+    assert len(seen) == 1  # asked the provider again
+    assert all(t.to_address.lower().startswith("0xbbbb") for t in txs)
+    assert [r.from_cache for r in client.evidence.records] == [False]

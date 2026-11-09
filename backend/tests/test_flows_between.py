@@ -94,7 +94,8 @@ def test_tron_reads_each_direction_once_in_the_window():
     incoming, outgoing, complete = client.get_flows_between(wallet, 0, 0, 1_700_000_000, 1_700_000_100)
     assert complete is True
     assert [t.to_address for t in incoming] == [wallet] and [t.from_address for t in outgoing] == [wallet]
-    assert {"only_to", "only_from"} == {k for p in seen for k in p if k.startswith("only_")}
+    assert {"only_to", "only_from"} == {k for p in seen for k in p if k in ("only_to", "only_from")}
+    assert all(p.get("only_confirmed") == "true" for p in seen)  # never unconfirmed records
     assert all(p["min_timestamp"] == str(1_700_000_000_000) for p in seen)
 
 
@@ -213,9 +214,11 @@ def test_with_the_flag_on_the_case_carries_all_three_figures(traced):
 
 
 def test_with_the_flag_off_nothing_changes_and_nothing_extra_is_read(traced):
+    # Pro-rata reads each hop wallet's flows once (it nets out coins the wallet
+    # got back from wallets it paid), the same one read R4 shares when on.
     result, chain = traced(False)
     case = read_case(result)
     assert result["tracing_methods"] is None
     assert (case.estimates.fifo, case.estimates.libr) == (None, None)
     assert case.estimates.prorata == case.estimates.conservative == 20.0
-    assert chain.flow_reads == []
+    assert chain.flow_reads == [MID]

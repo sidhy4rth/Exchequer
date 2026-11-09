@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { checkWatchNow, fetchAlerts, fetchWatches, logRequest, markAlertsRead, removeWatch } from '../api'
+import { plain } from '../text'
+import { checkWatchNow, fetchAlerts, fetchWatches, logRequest, markAlertsRead, removeWatch, removeWatchHook } from '../api'
 
 // The home page's watchlist: what this browser watches and what moved.
 // Refreshes every minute while open; the server checks on its own schedule,
@@ -11,7 +12,15 @@ const KIND = {
   exchange: { pill: 'green', text: 'into an exchange' },
   risk: { pill: 'red', text: 'into a flagged address' },
   moved: { pill: 'amber', text: 'moved' },
+  more: { pill: '', text: 'more movements' },
 }
+// Unread exchange and flagged alerts are pinned above the rest: however much
+// dust moved since, the alert a freeze request is sent on stays in view.
+// Dust sent to an exchange or a flagged address (below the asset's dust
+// floor, `dust` from the server) is not pinned: a burst of it would bury
+// the real cash-out among the pins.
+const urgent = (a) => !a.read && !a.dust && (a.kind === 'exchange' || a.kind === 'risk')
+const SHOWN = 30
 const amount = (v) => Number(v).toLocaleString('en-US', { maximumFractionDigits: 6 })
 const short = (a) => (a && a.length > 20 ? `${a.slice(0, 10)}…${a.slice(-8)}` : a)
 const ago = (iso) => {
@@ -26,13 +35,16 @@ const ago = (iso) => {
 export default function Watchlist({ onCount } = {}) {
   const [watches, setWatches] = useState([])
   const [alerts, setAlerts] = useState([])
-  const [watcher, setWatcher] = useState(null)
+  // undefined while loading, null if the watch service could not be reached:
+  // no schedule is promised that has not been seen.
+  const [watcher, setWatcher] = useState(undefined)
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
   const [logged, setLogged] = useState({})
+  const [showAll, setShowAll] = useState(false)
 
   const load = useCallback(() => {
-    fetchWatches().then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) }).catch(() => {})
+    fetchWatches().then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) }).catch(() => setWatcher(null))
     fetchAlerts().then((d) => setAlerts(d.alerts ?? [])).catch(() => {})
   }, [])
   useEffect(() => {
@@ -44,6 +56,9 @@ export default function Watchlist({ onCount } = {}) {
 
   if (watches.length === 0 && alerts.length === 0) return null
   const unread = alerts.filter((a) => !a.read).length
+  const pinned = alerts.filter(urgent)
+  const others = alerts.filter((a) => !urgent(a))
+  const shown = [...pinned, ...(showAll ? others : others.slice(0, SHOWN))]
 
   async function act(id, fn) {
     setBusy(id); setError(null)
@@ -57,7 +72,11 @@ export default function Watchlist({ onCount } = {}) {
           <span className="micro">Watchlist · {watches.length}{unread ? <span className="pill red" style={{ marginLeft: 8 }}>{unread} new</span> : null}</span>
           <span className="note">{watcher?.enabled === false
             ? 'automatic checks are off on this site · press Check now · this browser only'
-            : `checked automatically about every ${Math.round((watcher?.interval_seconds ?? 600) / 60)} min · last check ${ago(watcher?.last_check_at)} · this browser only`}</span>
+            : watcher?.enabled === true
+              ? `checked automatically about every ${Math.round((watcher.interval_seconds ?? 600) / 60)} min · last check of your watches ${ago(watcher.last_check_at)} · this browser only`
+              : watcher === null
+                ? 'could not reach the watch service · press Check now before relying on a watch · this browser only'
+                : 'this browser only'}</span>
         </div>
         <div className="body">
           {watcher?.stale && (
@@ -70,10 +89,11 @@ export default function Watchlist({ onCount } = {}) {
             <div className="watch-row" key={w.watch_id}>
               <div>
                 <span className="mono">{short(w.address)}</span>
-                <small>{w.chain} · {w.asset}{w.note ? ` · ${w.note}` : ''} · checked {ago(w.last_checked_at)}{w.webhook ? ` · posts to ${w.webhook.replace('https://', '').replace('/…', '')}` : ''}{w.last_error ? ` · ${w.last_error}` : ''}</small>
+                <small>{w.chain} · {w.asset}{w.note ? ` · ${w.note}` : ''} · checked {ago(w.last_checked_at)}{w.webhook ? ` · posts to ${w.webhook.replace('https://', '').replace('/…', '')}` : ''}{w.webhook_unreadable ? ' · webhook needs re-entering' : ''}{w.last_error ? ` · ${w.last_error}` : ''}</small>
               </div>
               <span className="watch-actions">
                 {w.case_id && <Link to={`/case/${w.case_id}`} className="quiet-link">case</Link>}
+                {(w.webhook || w.webhook_unreadable) && <button className="quiet" disabled={busy !== null} onClick={() => act(w.watch_id, () => removeWatchHook(w.watch_id))}>Remove webhook</button>}
                 <button className="quiet" disabled={busy !== null} onClick={() => act(w.watch_id, () => checkWatchNow(w.watch_id))}>{busy === w.watch_id ? 'Checking…' : 'Check now'}</button>
                 <button className="quiet" disabled={busy !== null} onClick={() => act(w.watch_id, () => removeWatch(w.watch_id))}>Stop</button>
               </span>
@@ -86,13 +106,15 @@ export default function Watchlist({ onCount } = {}) {
                 <span className="micro">Alerts</span>
                 {unread > 0 && <button className="quiet" onClick={() => act('read', () => markAlertsRead())}>Mark all read</button>}
               </div>
-              {alerts.slice(0, 30).map((a) => (
+              {shown.map((a) => (
                 <div className={`alert-row${a.read ? '' : ' unread'}`} key={a.alert_id}>
                   <span className={`pill ${KIND[a.kind]?.pill ?? ''}`}>{KIND[a.kind]?.text ?? a.kind}</span>
-                  <span className="msg">
-                    {amount(a.value)} {a.asset} to <span className="mono">{a.counterparty_label || short(a.counterparty)}</span>
-                    <small> · {new Date(a.tx_time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC · {a.tx_url ? <a href={a.tx_url} target="_blank" rel="noopener noreferrer">transaction</a> : short(a.tx_hash)}</small>
-                  </span>
+                  {a.kind === 'more'
+                    ? <span className="msg">{a.message}</span>
+                    : <span className="msg">
+                        {amount(a.value)} {a.asset} to <span className="mono">{plain(a.counterparty_label) || short(a.counterparty)}</span>
+                        <small> · {new Date(a.tx_time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC · {a.tx_url ? <a href={a.tx_url} target="_blank" rel="noopener noreferrer">transaction</a> : short(a.tx_hash)}{a.dust ? ' · dust' : ''}</small>
+                      </span>}
                   {a.kind === 'exchange' && a.exchange && a.case_id && (
                     logged[a.alert_id]
                       ? <Link to={`/case/${a.case_id}`} className="quiet-link">request logged</Link>
@@ -104,6 +126,9 @@ export default function Watchlist({ onCount } = {}) {
                   )}
                 </div>
               ))}
+              {!showAll && others.length > SHOWN && (
+                <button className="quiet link-like" onClick={() => setShowAll(true)}>Show all {alerts.length}</button>
+              )}
             </div>
           )}
         </div>

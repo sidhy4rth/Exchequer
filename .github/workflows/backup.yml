@@ -1,14 +1,17 @@
 name: Store backup
 
-# Pulls a snapshot of the live case store once a night and keeps it here,
-# encrypted, so losing the Railway volume does not lose the cases. The
-# snapshot is encrypted with age to a public key before it is stored; only the
-# holder of the matching private key can open it, and the plain copy never
-# leaves the runner. See docs/operations.md, "Backups".
+# Dumps the case store (Neon Postgres, DATABASE_URL on Render) once a night
+# and keeps the dump here, encrypted, so losing the Neon project does not lose
+# the cases, freeze requests and watches. The dump is encrypted with age to a
+# public key before it is stored; only the holder of the matching private key
+# can open it, and the plain dump never leaves the runner. See
+# docs/operations.md, "Backups".
 #
-# The public key is .github/backup-recipient.txt. The job needs the
-# BACKUP_TOKEN secret (same value as EXCHEQUER_BACKUP_TOKEN on Railway); until
-# it is set the job says so and stops without failing.
+# Set up in the `backup` environment (Settings -> Environments; deployment
+# branches: main only): the secret NEON_BACKUP_URL (a read-only Neon role's
+# connection string) and the variable BACKUP_AGE_RECIPIENT (the age public
+# key, the same as .github/backup-recipient.txt). Until both exist the job
+# fails, so a backup that copies nothing never shows green.
 on:
   schedule:
     - cron: "30 21 * * *" # 03:00 IST
@@ -17,43 +20,70 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: store-backup
+  cancel-in-progress: false
+
 jobs:
   backup:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    environment: backup
+    timeout-minutes: 20
     env:
-      BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
-      SITE: ${{ vars.SITE_URL || 'https://exchequer-6gnl.onrender.com' }}
+      # pg_dump must be at least the server's major version (Neon's console
+      # shows it); the repository variable BACKUP_PG_MAJOR names a newer one.
+      PG_MAJOR: ${{ vars.BACKUP_PG_MAJOR || '17' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The secret and the recipient reach the two steps that use them, not
+      # the actions around them.
       - name: Check the job is set up
-        id: setup
+        env:
+          NEON_BACKUP_URL: ${{ secrets.NEON_BACKUP_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
         run: |
-          if [ -z "$BACKUP_TOKEN" ]; then
-            echo "::notice::Backups not set up yet (BACKUP_TOKEN secret). Nothing pulled."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
+          if [ -z "${NEON_BACKUP_URL:-}" ] || [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+            echo "::error::Backups are not set up: the 'backup' environment needs the NEON_BACKUP_URL secret and the BACKUP_AGE_RECIPIENT variable (docs/operations.md, Backups)."
+            exit 1
           fi
-      - name: Pull, check and encrypt the snapshot
-        if: steps.setup.outputs.ready == 'true'
+          # The recipient comes from the protected environment, not from the
+          # checked-out commit: a changed file cannot re-target the backups.
+          if [ "$(tr -d '[:space:]' < .github/backup-recipient.txt)" != "$(printf '%s' "$BACKUP_AGE_RECIPIENT" | tr -d '[:space:]')" ]; then
+            echo "::error::.github/backup-recipient.txt differs from the BACKUP_AGE_RECIPIENT variable; refusing to encrypt to either."
+            exit 1
+          fi
+      - name: Dump, check and encrypt the store
+        env:
+          NEON_BACKUP_URL: ${{ secrets.NEON_BACKUP_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
         run: |
           set -euo pipefail
-          sudo apt-get install -y -qq age sqlite3 > /dev/null
+          # Each image is pinned by digest: it reads every case in plain text.
+          # A new major needs its own line here (tag and digest together).
+          case "$PG_MAJOR" in
+            16) PG_IMAGE=postgres:16.15-bookworm@sha256:5264710be20f409750ac6dc4e5706dcef929c87e241605463f0f9aefa932a8d9 ;;
+            17) PG_IMAGE=postgres:17.11-bookworm@sha256:665dc7b37ac52a17e298511414c21d23ffa4e6a6ef6225b3e5d59c7afb35e994 ;;
+            18) PG_IMAGE=postgres:18.6-bookworm@sha256:f1ea2a1a4fb7b68d4836be1fdcb8a6466a89b072158bf9d97663600538c294c5 ;;
+            *) echo "::error::No pinned pg_dump image for BACKUP_PG_MAJOR=$PG_MAJOR; add one to backup.yml."; exit 1 ;;
+          esac
+          sudo apt-get install -y -qq age > /dev/null
           stamp=$(date -u +%Y%m%dT%H%M%SZ)
-          curl -fsS --max-time 300 -H "Authorization: Bearer $BACKUP_TOKEN" \
-            "$SITE/admin/backup" -o snapshot.db.gz
-          gunzip -c snapshot.db.gz > snapshot.db
-          test "$(sqlite3 snapshot.db 'PRAGMA integrity_check')" = ok
-          echo "cases: $(sqlite3 snapshot.db 'SELECT count(*) FROM cases')"
-          age -R .github/backup-recipient.txt -o "exchequer-$stamp.db.gz.age" snapshot.db.gz
-          rm -f snapshot.db snapshot.db.gz
-          echo "FILE=exchequer-$stamp.db.gz.age" >> "$GITHUB_ENV"
-      - name: Keep it for 30 days
-        if: steps.setup.outputs.ready == 'true'
-        uses: actions/upload-artifact@v7
+          docker run --rm -e NEON_BACKUP_URL "$PG_IMAGE" \
+            sh -c 'pg_dump --format=custom --no-owner --no-privileges --dbname="$NEON_BACKUP_URL"' > store.pgdump
+          # A readable archive that holds the cases table's rows; prints nothing.
+          # (grep reads it all: -q would close the pipe early under pipefail.)
+          docker run --rm -i "$PG_IMAGE" pg_restore --list < store.pgdump | grep 'TABLE DATA public cases ' > /dev/null
+          age -r "$BACKUP_AGE_RECIPIENT" -o "exchequer-$stamp.pgdump.age" store.pgdump
+          rm -f store.pgdump
+          echo "FILE=exchequer-$stamp.pgdump.age" >> "$GITHUB_ENV"
+      # Artifacts of a public repository can be downloaded by any signed-in
+      # user: only ciphertext is uploaded, and kept two weeks.
+      - name: Keep the encrypted dump
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: store-${{ github.run_id }}
           path: ${{ env.FILE }}
-          retention-days: 30
+          retention-days: 14
           if-no-files-found: error

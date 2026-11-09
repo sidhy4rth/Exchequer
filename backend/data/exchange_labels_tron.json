@@ -53,7 +53,15 @@
       "TCGVFGDd62LSrfZEaz3M3fYifWWdSDHRL8  Vaneck",
       "TQgxyP1jDXGBvmgwqnJ7jKkEqWEogfRM5V  Well Wallet Hot 2"
     ],
-    "rejected_on_chain": []
+    "rejected_on_chain": [],
+    "deposits_retyped": {
+      "date": "2026-11-06",
+      "count": 1,
+      "labels": {
+        "TTR9YAXwFCfLKboX8e9eg5fY8eDMrSgE6V": "Poloniex Deposit"
+      },
+      "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
+    }
   },
   "labels": {
     "TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm": {
@@ -379,7 +387,7 @@
     "TTR9YAXwFCfLKboX8e9eg5fY8eDMrSgE6V": {
       "exchange": "Poloniex",
       "label": "Poloniex Deposit",
-      "type": "deposit_wallet"
+      "type": "exchange_wallet"
     },
     "TWQZEUfSPuMYjm4oHvmsktYcjD6rc5yyWq": {
       "exchange": "UEEx",
