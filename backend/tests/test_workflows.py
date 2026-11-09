@@ -201,3 +201,13 @@ def test_render_names_the_measured_proxy_hops():
     env = {e["key"]: e for e in load(ROOT / "render.yaml")["services"][0]["envVars"]}
     assert env["EXCHEQUER_TRUST_PROXY"]["value"] == "render"
     assert env["EXCHEQUER_PROXY_HOPS"]["value"] == "3"
+
+
+def test_the_nightly_list_refresh_waits_for_the_owner_to_switch_it_on():
+    """9 Nov: with no keys in the `lists` environment every night was red and
+    e-mailed the owner. Scheduled runs need the repository variable
+    REFRESH_LISTS=on; a run started by hand always runs, and once on, a
+    missing key is still red (--strict)."""
+    jobs = refresh_jobs()
+    assert jobs["refresh"]["if"] == "github.event_name == 'workflow_dispatch' || vars.REFRESH_LISTS == 'on'"
+    assert "needs.refresh.outputs.tested == 'true'" in jobs["publish"]["if"]

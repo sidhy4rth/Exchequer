@@ -10,8 +10,11 @@ name: Store backup
 # Set up in the `backup` environment (Settings -> Environments; deployment
 # branches: main only): the secret NEON_BACKUP_URL (a read-only Neon role's
 # connection string) and the variable BACKUP_AGE_RECIPIENT (the age public
-# key, the same as .github/backup-recipient.txt). Until both exist the job
-# fails, so a backup that copies nothing never shows green.
+# key, the same as .github/backup-recipient.txt). Then set the repository
+# variable STORE_BACKUP=on: until it is on, a scheduled night is skipped (no
+# failure e-mail while there is nothing to copy). Once on, or run by hand,
+# a job that is not set up fails, so a backup that copies nothing never
+# shows green.
 on:
   schedule:
     - cron: "30 21 * * *" # 03:00 IST
@@ -26,6 +29,7 @@ concurrency:
 
 jobs:
   backup:
+    if: github.event_name == 'workflow_dispatch' || vars.STORE_BACKUP == 'on'
     runs-on: ubuntu-24.04
     environment: backup
     timeout-minutes: 20
