@@ -1,0 +1,185 @@
+/* Glass, dark: the officer app's colour values, copied (this site imports
+   nothing from frontend/). Contrast measured by hand, worst case over any
+   panel it sits on: --text 13:1, --text-2 8.3:1, --text-3 5.2:1, --go 9.3:1,
+   --risk 8.3:1. Phone first; the laptop layout starts at 900px. */
+:root {
+  --ground: #0A0A0A;
+  --panel: rgba(255, 255, 255, .04);
+  --panel-2: rgba(255, 255, 255, .07);
+  --panel-3: rgba(255, 255, 255, .10);
+  --line: rgba(255, 255, 255, .07);
+  --line-2: rgba(255, 255, 255, .2);
+  --text: #EDEDED;
+  --text-2: #BDBDBD;
+  --text-3: #8E8E8E;
+  --go: #3DD68C;
+  --go-soft: #8EEBC0;
+  --risk: #FF8A80;
+  --risk-line: #FF5A4E;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --serif: 'IBM Plex Serif', Georgia, serif;
+  --tabs-bottom: max(12px, env(safe-area-inset-bottom));
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+/* Focus scrolls stop above the phone tab bar (66px tall), never under it. */
+html { background: var(--ground); scroll-padding-bottom: calc(var(--tabs-bottom) + 80px); }
+body {
+  margin: 0; min-height: 100vh; color: var(--text); font: 400 15px/1.5 var(--sans);
+  background: var(--ground) radial-gradient(420px 320px at 0 0, #1A1A1A, rgba(10, 10, 10, 0) 70%) no-repeat;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, p, ol, ul { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+a { color: inherit; text-decoration: none; }
+code { font-family: var(--mono); }
+:focus-visible { outline: 2px solid var(--go); outline-offset: 2px; }
+main:focus { outline: none; }
+svg { flex: none; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.skip {
+  position: absolute; left: 16px; top: -80px; z-index: 20; padding: 10px 16px;
+  border-radius: 999px; background: #fff; color: var(--ground); font-weight: 600;
+}
+.skip:focus { top: 12px; }
+
+/* Shell: header, page, safety footer; on a phone the tabs sit at the bottom. */
+.shell { max-width: 1148px; margin: 0 auto; padding: 0 16px 112px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0 12px; }
+.brand { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; }
+.brand-name { font: 600 18px var(--serif); }
+.brand-tag { font-size: 12px; color: var(--text-3); }
+.call {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px;
+  border-radius: 999px; background: #fff; color: var(--ground); font-weight: 600;
+}
+.tabs {
+  position: fixed; z-index: 10; left: 12px; right: 12px; bottom: var(--tabs-bottom);
+  max-width: 480px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px; padding: 6px; border-radius: 22px; background: rgba(20, 20, 20, .94);
+  border: 1px solid rgba(255, 255, 255, .1); backdrop-filter: blur(12px);
+}
+.tab {
+  min-height: 52px; border-radius: 16px; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px; font-size: 12px; color: var(--text-3);
+}
+.tab:hover { color: var(--text); }
+.tab.is-on { background: var(--panel-3); color: #fff; }
+main { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+.foot {
+  margin-top: 24px; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px;
+  border-radius: 18px; background: rgba(255, 255, 255, .025); border: 1px solid rgba(255, 90, 78, .25);
+}
+.safety { display: flex; flex-direction: column; gap: 8px; }
+.safety li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+.safety svg { color: var(--risk); margin-top: 3px; }
+.note { font-size: 12.5px; color: var(--text-3); }
+.note a { color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; }
+.note svg { margin-left: 2px; vertical-align: -2px; }
+
+/* Shared pieces */
+.eyebrow { font-size: 12px; font-weight: 400; color: var(--text-3); }
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px;
+  padding: 0 22px; border-radius: 999px; font-size: 14px;
+}
+.btn-call { min-height: 56px; background: #fff; color: var(--ground); font-weight: 600; font-size: 16px; }
+.btn-line { border: 1px solid var(--line-2); }
+.btn-line:hover, .row:hover, .back:hover { background: var(--panel-2); }
+.btn-go {
+  background: #0F0F0F; border: 1px solid rgba(61, 214, 140, .55); box-shadow: 0 0 0 4px rgba(61, 214, 140, .1);
+  font-weight: 500;
+}
+.btn-go svg, .more svg { color: var(--go-soft); }
+.official { display: flex; flex-direction: column; gap: 10px; }
+
+/* C1 Home */
+.home { display: flex; flex-direction: column; gap: 16px; }
+.hero {
+  display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 24px;
+  background: linear-gradient(160deg, rgba(255, 90, 78, .2), rgba(255, 255, 255, .03) 70%);
+  border: 1px solid rgba(255, 90, 78, .35);
+}
+.hero h1 { font-weight: 300; font-size: 26px; line-height: 1.2; }
+.lede { color: var(--text-2); font-size: 14px; }
+.steps { display: flex; flex-direction: column; gap: 10px; }
+.steps h2 { padding: 0 4px; }
+.rows { display: flex; flex-direction: column; gap: 12px; }
+.row {
+  display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 20px;
+  background: var(--panel); border: 1px solid var(--line);
+}
+.row > svg { color: var(--text-3); }
+.row-icon {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center;
+  border-radius: 14px; background: var(--panel-2);
+}
+.row-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.row-sub { font-size: 12.5px; color: var(--text-3); }
+
+/* C2 Right now */
+.page-head { display: flex; align-items: center; gap: 12px; }
+.page-head h1 { font-size: 22px; font-weight: 400; line-height: 1.2; }
+.back {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center;
+  border-radius: 50%; background: rgba(255, 255, 255, .06);
+}
+.dodont { display: grid; gap: 20px; }
+.dodont h2 { font-size: 13px; font-weight: 500; padding: 0 4px 8px; }
+.do h2 { color: var(--go); }
+.dont h2 { color: var(--risk); }
+.items { display: flex; flex-direction: column; gap: 10px; }
+.item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; border-radius: 18px; }
+.do .item { background: rgba(61, 214, 140, .06); border: 1px solid rgba(61, 214, 140, .2); }
+.dont .item { background: rgba(255, 90, 78, .06); border: 1px solid rgba(255, 90, 78, .22); }
+.mark {
+  width: 26px; height: 26px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  font-size: 12px; font-weight: 600;
+}
+.do .mark { background: var(--go); color: var(--ground); }
+.dont .mark { border: 1.5px solid var(--risk-line); color: var(--risk); }
+.item-title { display: block; font-size: 15px; font-weight: 500; }
+.item-text { display: block; font-size: 13px; color: var(--text-2); }
+.next {
+  display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 22px;
+  background: var(--panel); border: 1px solid var(--line);
+}
+
+/* Coming soon and not found */
+.soon { display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
+.soon h1 { font-weight: 300; font-size: 28px; line-height: 1.2; }
+.soon p { color: var(--text-2); }
+.tag {
+  align-self: flex-start; padding: 4px 12px; border-radius: 999px;
+  background: var(--panel-2); font-size: 12px; color: var(--text-2);
+}
+.more { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; align-self: flex-start; }
+
+/* Laptop: the tabs move into the header as pills; pages use two columns. */
+@media (min-width: 900px) {
+  html { scroll-padding-bottom: 0; }
+  .shell { padding: 0 32px 48px; }
+  .top { padding: 28px 0 40px; }
+  .tabs {
+    position: static; display: flex; gap: 6px; margin: 0 0 0 auto; max-width: none; padding: 0;
+    background: none; border: 0; border-radius: 0; backdrop-filter: none;
+  }
+  .tab { flex-direction: row; min-height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; color: var(--text-2); }
+  .tab svg { display: none; }
+  .home { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+  .hero { padding: 24px 0 0; background: none; border: 0; border-radius: 0; gap: 22px; }
+  .hero h1 { font-size: 52px; }
+  .lede { font-size: 15px; max-width: 30em; }
+  .official { flex-direction: row; }
+  .page-head h1, .soon h1 { font-size: 40px; font-weight: 300; }
+  .back { display: none; }
+  .dodont { grid-template-columns: 1fr 1fr; gap: 24px; }
+  .next { flex-direction: row; align-items: center; justify-content: space-between; }
+  .foot { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 32px; margin-top: 48px; }
+  .safety { flex-direction: row; gap: 24px; }
+}
