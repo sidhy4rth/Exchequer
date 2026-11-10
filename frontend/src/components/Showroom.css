@@ -66,3 +66,14 @@
   .showroom .addr-long { display: none; }
   .showroom .addr-short { display: inline; }
 }
+
+/* A site closed to officers: the sign-in in place of the code box. */
+.showroom .showroom-officer {
+  margin: 0;
+}
+
+.showroom .showroom-officer a {
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
+}

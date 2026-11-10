@@ -258,3 +258,73 @@ def test_g4_recheck_1_goes_down_and_up_again_keeping_the_cases(engine):
     assert revision(engine) == head() and drift(engine) == []
     assert models.get_case("kept") is not None
     assert models.recheck_for("kept") == (True, None)  # the downgrade dropped it; the case stays
+
+
+def test_g5_accounts_1_goes_down_and_up_again_keeping_the_cases(engine):
+    """Officer accounts (R23): units, officers, sessions, and a case's officer and unit."""
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"chain": "ethereum"}, officer_id=1, unit_id=2)
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g4_recheck_1")
+    tables = set(inspect(engine).get_table_names())
+    assert not tables & {"units", "officers", "sessions"}
+    assert not {"officer_id", "unit_id"} & {c["name"] for c in inspect(engine).get_columns("cases")}
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    case = models.get_case("kept")
+    assert case is not None and (case.officer_id, case.unit_id) == (None, None)
+
+
+def test_g5_signoff_1_goes_down_and_up_again_keeping_the_requests(engine):
+    """Second-officer sign-off: a request's drafting officer and unit, and who signed it off when."""
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"chain": "ethereum"})
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO freeze_requests (id, owner_hash, case_id, recipient, kind, status, address, "
+                          "reference, asset, notes, created_at, updated_at, history_json) VALUES ('r1', 'o', 'kept', "
+                          "'Binance', 'exchange', 'sent', '', '', '', '', 'x', 'x', '[]')"))
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g5_accounts_1")
+    added = {"officer_id", "unit_id", "signed_off_by", "signed_off_name", "signed_off_at"}
+    assert not added & {c["name"] for c in inspect(engine).get_columns("freeze_requests")}
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT status, unit_id, signed_off_at FROM freeze_requests")).all() == [("sent", None, None)]
+
+
+def test_g6_unit_limits_1_goes_down_and_up_again_keeping_the_units(engine):
+    """A unit's own per-officer limits (case_refs PR): one NULL-able column."""
+    from app import accounts
+    models.init_db()
+    unit = accounts.create_unit("Cyber Cell North")
+    accounts.set_unit_limits(unit.id, {"trace": {"per_hour": 3, "per_day": 9}})
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g5_signoff_1")
+    assert "limits_json" not in {c["name"] for c in inspect(engine).get_columns("units")}
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    assert [u.name for u in accounts.units()] == ["Cyber Cell North"]
+    assert accounts.unit_limits(unit.id) == {}
+
+
+def test_g5_audit_1_goes_down_and_up_again(engine):
+    """audit_events: R24's hash-chained log (app/audit.py)."""
+    from app import audit
+    models.init_db()
+    audit.record("case.report_export", case_id="c1", detail={"format": "pdf"})
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g6_unit_limits_1")
+    assert not inspect(engine).has_table("audit_events")
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    audit.record("case.report_export", case_id="c1", detail={"format": "pdf"})
+    assert audit.verify() == {"ok": True, "rows": 1, "first_bad_seq": None}

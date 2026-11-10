@@ -15,6 +15,11 @@ Labels are per chain and never shared between them. Binance's hot wallet on
 Ethereum and Binance's hot wallet on BNB Smart Chain are different addresses,
 and matching an address seen on one chain against the other chain's labels
 would manufacture an attribution that no transaction supports.
+
+An instant exchanger (a no-KYC swap service) is matched here too, as the
+cash-out point it is: its record carries `category: instant_exchanger`, from
+data/instant_exchangers.json (addresses this repository's label files already
+name) or a label-store row, so a case can say which order to ask it about.
 """
 from __future__ import annotations
 
@@ -28,7 +33,7 @@ from typing import Any
 
 import networkx as nx
 
-from . import config
+from . import config, label_rules
 from .etherscan_client import is_valid_address, normalize_address
 from .graph_builder import OUTGOING
 
@@ -39,6 +44,8 @@ logger = logging.getLogger(__name__)
 # treats it as weaker, and the report says so.
 INFERRED_DEPOSIT = "inferred_deposit"
 DEPOSIT_WALLET = "deposit_wallet"
+INSTANT_EXCHANGER = label_rules.INSTANT_EXCHANGER
+INSTANT_EXCHANGERS_FILE = "instant_exchangers.json"  # in config.DATA_DIR
 
 # A per-customer deposit address, said so explicitly: "Binance Dep: 0x..." (the
 # deposit label sets) or "<Exchange>: Deposit Address|Wallet". The word
@@ -70,6 +77,9 @@ class ExchangeMatch:
     value_received_native: float
     # Present only on an inferred match: everything the inference looked at.
     evidence: dict[str, Any] | None = None
+    # INSTANT_EXCHANGER for a swap service's wallet (or a deposit address that
+    # sweeps into one); None for an ordinary exchange.
+    category: str | None = None
 
     @property
     def inferred(self) -> bool:
@@ -87,11 +97,35 @@ class ExchangeMatch:
         }
         if self.evidence is not None:
             out["evidence"] = self.evidence
+        if self.category is not None:
+            out["category"] = self.category
         return out
 
 
 def _text(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
+
+
+def read_instant_exchangers(path: Path, chain: str) -> dict[str, dict[str, str]]:
+    """One chain's rows of the instant-exchanger seed, {address: {service,
+    source, checked_on}}. A missing or malformed file is an empty seed, never
+    an error: the exchanges keep their labels either way."""
+    try:
+        rows = json.loads(path.read_text(encoding="utf-8")).get("rows")
+        if not isinstance(rows, list):
+            raise ValueError("rows is not a list")
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError, AttributeError) as exc:
+        logger.error("Instant-exchanger seed at %s is unusable, so it is empty: %s", path, exc)
+        return {}
+    out = {}
+    for row in rows:
+        if isinstance(row, dict) and row.get("chain") == chain and _text(row.get("service")) \
+                and is_valid_address(normalize_address(_text(row.get("address")))):
+            out[normalize_address(row["address"].strip())] = {k: _text(row.get(k))
+                                                              for k in ("service", "source", "checked_on")}
+    return out
 
 
 class ExchangeMatcher:
@@ -101,9 +135,17 @@ class ExchangeMatcher:
         self,
         labels: dict[str, dict[str, str]] | None = None,
         chain: str | None = None,
+        instant: dict[str, dict[str, str]] | None = None,
+        store: Any = None,
     ) -> None:
         self._labels: dict[str, dict[str, str]] = labels or {}
         self.chain = chain or config.DEFAULT_CHAIN.key
+        # The label store's instant-exchanger rows, for addresses no file names.
+        self.store = store
+        if instant:  # a label file's record keeps its name and type; the seed says what kind of service it is
+            self._labels = {**self._labels, **{
+                a: {**(self._labels.get(a) or {"exchange": r["service"], "label": r["service"], "type": "unknown"}),
+                    "category": INSTANT_EXCHANGER} for a, r in instant.items()}}
 
     # -- loading -----------------------------------------------------------
     @classmethod
@@ -173,7 +215,11 @@ class ExchangeMatcher:
 
     def lookup(self, address: str) -> dict[str, str] | None:
         """Return the label record for `address`, or None if unknown."""
-        return self._labels.get(normalize_address(address))
+        key = normalize_address(address)
+        found = self._labels.get(key)
+        if found is None and self.store is not None:
+            found = self.store.instant_exchanger(self.chain, key)
+        return found
 
     def entries(self) -> list[tuple[str, dict[str, str]]]:
         """Every (address, record) pair, for anything that lists the database."""
@@ -186,7 +232,7 @@ class ExchangeMatcher:
         stops expanding here, because the funds have reached their cash-out
         point and exchange hot wallets have millions of unrelated transactions.
         """
-        return normalize_address(address) in self._labels
+        return self.lookup(address) is not None
 
     # -- graph annotation --------------------------------------------------
     def annotate(self, graph: nx.DiGraph, direction: str = OUTGOING) -> list[ExchangeMatch]:
@@ -216,6 +262,7 @@ class ExchangeMatcher:
             data["wallet_type"] = meta["type"]
             data["is_exchange"] = True
             data["is_terminal"] = True
+            data["exchange_category"] = meta.get("category")
 
             matches.append(
                 ExchangeMatch(
@@ -225,6 +272,7 @@ class ExchangeMatcher:
                     wallet_type=meta["type"],
                     depth=data.get("depth", 0),
                     value_received_native=value_in,
+                    category=meta.get("category"),
                 )
             )
 
@@ -307,5 +355,10 @@ def _router_matcher(key: str) -> ExchangeMatcher:
 
 @lru_cache(maxsize=None)
 def _matcher(key: str) -> ExchangeMatcher:
+    from .label_store import get_label_store  # label_store reads never_flag, which reads this module
+
     chain = config.get_chain(key)
-    return ExchangeMatcher.from_file(chain.labels_path, chain=chain.key)
+    matcher = ExchangeMatcher.from_file(chain.labels_path, chain=chain.key)
+    return ExchangeMatcher(matcher._labels, chain=chain.key,
+                           instant=read_instant_exchangers(config.DATA_DIR / INSTANT_EXCHANGERS_FILE, chain.key),
+                           store=get_label_store())

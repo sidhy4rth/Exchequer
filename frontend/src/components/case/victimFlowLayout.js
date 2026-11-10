@@ -9,8 +9,8 @@
 // is ordered (the route to the exchange, then flagged wallets, then by
 // amount) and each bucket sits at the weighted average row of its sources.
 
-export const KIND_ORDER = ['exchange', 'held', 'risk', 'not_followed', 'other', 'beyond_limit', 'left']
-const COLOUR = { exchange: 'go', held: 'risk', risk: 'risk' }
+export const KIND_ORDER = ['exchange', 'instant_exchanger', 'held', 'risk', 'not_followed', 'other', 'beyond_limit', 'left']
+const COLOUR = { exchange: 'go', instant_exchanger: 'go', held: 'risk', risk: 'risk' }
 const RANK = { solid: 0, faded: 1, dashed: 2 }
 const worse = (a, b) => (RANK[a] >= RANK[b] ? a : b)
 const EPS = 1e-6

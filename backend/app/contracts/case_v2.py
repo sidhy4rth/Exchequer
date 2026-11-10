@@ -81,6 +81,8 @@ class Intake(_Strict):
     mode: Literal["payment", "address"]
     payments: list[Payment] = []
     ncrp_ack: str | None = None
+    # The case a signed-in officer traced under (FIR, NCRP or GD number; case_refs.py).
+    case_ref: str | None = None
     # The victim's own paying wallet, when the complaint gives it.
     victim_address: str | None = None
 

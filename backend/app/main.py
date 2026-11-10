@@ -41,15 +41,15 @@ from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from . import batches as batch_runner
 from . import api_budget, backups, config, log_safety, models, rate_limit, warmup, watchlist, webhook_vault
-from . import access
+from . import access, audit
 from .access import DemoCodeMiddleware
 from .input_rules import ControlCharMiddleware
 from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import (admin, batches, casebook, cases, coverage, demos, evidence, jobs, payments, recheck,
-                     requests, verify, watches)
+from .routes import (accounts, admin, audit_log, batches, casebook, cases, coverage, demos, evidence, jobs, payments,
+                     recheck, requests, verify, watches)
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -203,6 +203,8 @@ app.add_middleware(DemoCodeMiddleware)
 app.add_middleware(ControlCharMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+# Who each request is, for the audit log (audit.py).
+app.add_middleware(audit.ActorMiddleware)
 
 # The React dev server runs on a different origin during development.
 app.add_middleware(
@@ -236,6 +238,8 @@ app.include_router(requests.router)
 app.include_router(batches.router)
 app.include_router(payments.router)
 app.include_router(admin.router)
+app.include_router(accounts.router)
+app.include_router(audit_log.router)
 
 
 # ---------------------------------------------------------------------------

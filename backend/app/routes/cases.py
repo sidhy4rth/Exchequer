@@ -18,8 +18,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from .. import api_budget, audit, case_privacy, config, models, ownership, pipeline, rate_limit
-from ..auth import CurrentUser
+from .. import api_budget, audit, case_privacy, case_refs, config, models, ownership, pipeline, rate_limit
+from ..auth import CurrentUser, is_page_load
 from ..contracts import on_read
 from ..pipeline import TraceRequest
 
@@ -134,10 +134,10 @@ def take_slot(client: str, timed: bool = True) -> str | None:
     return None
 
 
-def admit(http: Request) -> str:
+def admit(http: Request, user: Any = None) -> str:
     """Refuse a trace this client may not start now (take_slot's rules, then
-    its hourly limit). On success the caller holds a running slot and must
-    hand the returned token to `release()`.
+    its hourly limit, and a signed-in officer's own). On success the caller
+    holds a running slot and must hand the returned token to `release()`.
 
     The hourly allowance is charged last, once a slot is taken: a visitor
     turned away because the server is busy has started nothing."""
@@ -145,9 +145,11 @@ def admit(http: Request) -> str:
     refused_slot = take_slot(client)
     if refused_slot is not None:
         raise _refusal(refused_slot)
-    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client)
+    officer = case_refs.spender(user, "trace") if user is not None else None
+    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client, officer=officer)
     if refused is not None:
         release(client)
+        case_refs.refused(officer, refused)
         wait, who = refused
         started = (f"This site has started {config.TRACES_PER_HOUR_TOTAL} traces" if who == "site"
                    else f"This connection has started {config.TRACES_PER_HOUR_PER_CLIENT} traces")
@@ -215,11 +217,15 @@ def _make_room(rows: int, nbytes: int) -> tuple[int, int]:
 
 
 def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | None,
-                 client: str | None = None) -> dict[str, Any]:
+                 client: str | None = None, officer: tuple[int | None, int | None] = (None, None)) -> dict[str, Any]:
     """Give a finished trace its case id and, unless asked not to, store it.
-    `client` is the admit() token of the connection that started it."""
+    `client` is the admit() token of the connection that started it;
+    `officer` the signed-in officer's (id, unit id) that traced it."""
     case_id = models.new_case_id()
     created_at = models.utc_now_iso()
+    if request.case_ref:  # kept as payment_intake keeps the NCRP number
+        payload["intake"] = {**(payload.get("intake") or {"mode": "address", "payments": [], "ncrp_ack": None}),
+                             "case_ref": request.case_ref}
     payload["case_id"] = case_id
     payload["created_at"] = created_at
     if not request.save:
@@ -295,7 +301,8 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
     try:
         models.save_case(case_id, payload["address"], payload, created_at=created_at,
                          owner_hash=owner or ownership.orphan_hash(), result_json=text,
-                         client_hash=connection, anonymous=owner is None)
+                         client_hash=connection, anonymous=owner is None,
+                         officer_id=officer[0], unit_id=officer[1])
     except Exception:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
         # No id for a case that does not exist: the page would open it, find
@@ -311,8 +318,9 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
 def record_trace(payload: dict[str, Any], via: str | None = None) -> None:
     """Audit a finished trace (CLAUDE.md rule 5): what kind of trace, not whose.
 
-    No address and no NCRP number goes into the detail: until R24 the audit
-    trail is a log line, and logs are no place for a complaint's particulars.
+    No address and no NCRP number goes into the detail, and the case
+    reference only masked: the audit log is kept for good, and is no place
+    for a complaint's particulars.
     `via` names a path other than the API and jobs ("batch").
     """
     intake = payload.get("intake") or {}
@@ -326,9 +334,20 @@ def record_trace(payload: dict[str, Any], via: str | None = None) -> None:
         "saved": bool(payload.get("case_id")),
         "exchange_reached": bool(payload.get("exchange")),
     }
+    if intake.get("case_ref"):
+        detail["case_ref"] = case_refs.mask(intake["case_ref"])
     if via:
         detail["via"] = via
     audit.record("case.trace", case_id=payload.get("case_id"), detail=detail)
+
+
+def record_start(request: TraceRequest, via: str | None = None) -> None:
+    """Audit that a trace began: what kind, as record_trace says it, never whose."""
+    detail = {"chain": request.chain, "asset": request.asset, "direction": request.direction,
+              "mode": "payments" if request.payments else "address"}
+    if via:
+        detail["via"] = via
+    audit.record("case.trace_start", detail=detail)
 
 
 def record_trace_safely(payload: dict[str, Any]) -> None:
@@ -349,15 +368,17 @@ def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, 
     other people who paid it. The whole trace runs inside this request; the
     app itself uses POST /trace/jobs, which runs it in the background.
     """
+    request.case_ref = case_refs.required(user, request.case_ref)
     pipeline.check_request(request)
-    slot = admit(http)
+    slot = admit(http, user)
+    record_start(request)
     try:
         # The admit() token: this connection's share of the day's provider allowance.
         with api_budget.using(api_budget.TraceBudget.for_request(request.time_budget_seconds, client=slot)):
             payload = pipeline.run_trace(request)
     finally:
         release(slot)
-    stored = store_result(payload, request, user.owner_hash, client=slot)
+    stored = store_result(payload, request, user.owner_hash, client=slot, officer=(user.officer_id, user.unit_id))
     record_trace_safely(stored)
     return stored
 
@@ -367,10 +388,7 @@ _INDEX_HTML = config.BACKEND_DIR.parent / "frontend" / "dist" / "index.html"
 
 def _is_page_load(http: Request) -> bool:
     """A browser opening the URL, as opposed to the app's own fetch()."""
-    mode = http.headers.get("sec-fetch-mode")
-    if mode:
-        return mode == "navigate"
-    return "text/html" in http.headers.get("accept", "")
+    return is_page_load(http)
 
 
 def app_page(http: Request) -> FileResponse | None:
@@ -392,7 +410,7 @@ def trace_intake() -> dict[str, Any]:
 
 
 @router.get("/trace/{case_id}", response_model=None)
-def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
+def get_trace(case_id: str, http: Request, user: CurrentUser) -> JSONResponse | FileResponse:
     """Retrieve a previously traced case.
 
     /trace/<address> is also the app's own URL for a trace in progress, and
@@ -405,7 +423,7 @@ def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
 
     Anyone holding the id gets the case -- it is the reference letters print
     -- but a complaint's particulars only reach the browser that traced it
-    (case_privacy.py). What a read adds to a case stored before it (a
+    and its officer's unit (case_privacy.py, ownership.reader). What a read adds to a case stored before it (a
     current victim flow, freeze dates, which wallets the walk read) is built
     from that same copy, so it names nothing the copy withholds."""
     if (page := app_page(http)) is not None:
@@ -413,5 +431,4 @@ def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
-    caller = ownership.owner_hash_from_headers(http.headers)
-    return JSONResponse(on_read(case_privacy.for_reader(case.result, case.owner_hash, caller)))
+    return JSONResponse(on_read(case_privacy.for_reader(case.result, case.owner_hash, ownership.reader(case, user))))

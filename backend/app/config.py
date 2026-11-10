@@ -706,6 +706,12 @@ SIGNING_KEY_PATH: Path = (
 # provider requests per round.
 WATCHER_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_WATCHER")
 WATCH_INTERVAL_SECONDS: int = max(60, _int_env("EXCHEQUER_WATCH_INTERVAL", 600))
+# Bearer token for POST /watches/check-due, which a scheduled GitHub job
+# (.github/workflows/watch-cron.yml) calls every 15 minutes: it wakes a host
+# that sleeps and checks the due watches. Unset = the endpoint does not exist.
+WATCH_CRON_TOKEN: str = os.getenv("EXCHEQUER_WATCH_CRON_TOKEN", "").strip()
+# The most watches one scheduled call checks; the rest wait for the next call.
+WATCH_CRON_BATCH: int = max(1, _int_env("EXCHEQUER_WATCH_CRON_BATCH", 10))
 # Hosts beyond Slack, Discord and Google Chat that alert webhooks may post to.
 WEBHOOK_EXTRA_HOSTS: str = os.getenv("EXCHEQUER_WEBHOOK_HOSTS", "")
 # Seals watch webhook URLs at rest (webhook_vault.py). Any secret; keep it
@@ -720,6 +726,9 @@ BACKUPS_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_BACKUPS")
 BACKUP_KEEP: int = max(1, _int_env("EXCHEQUER_BACKUP_KEEP", 7))
 # Bearer token for GET /admin/backup. Unset = the endpoint does not exist.
 BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
+# Makes the first admin account (POST /auth/bootstrap) while no admin exists.
+# Unset, or once an admin exists, the route answers 404.
+BOOTSTRAP_TOKEN: str = os.getenv("EXCHEQUER_BOOTSTRAP_TOKEN", "").strip()
 
 
 # ===========================================================================
@@ -787,6 +796,19 @@ PUBLIC_HOST: bool = (
 REQUIRE_DEMO_CODE: bool = (
     os.getenv("EXCHEQUER_REQUIRE_DEMO_CODE", "").strip().lower() in ("1", "true", "yes", "on")
 )
+# The owner's console switch (access.py). "open", the default, keeps the
+# site as it is for the judges; "officers" closes every live or spending
+# action to a signed-in officer, and a demo code no longer opens them.
+# Anything else is read as "open" and reported at every start.
+CONSOLE_MODES = ("open", "officers")
+
+
+def console_mode(environ: Mapping[str, str]) -> str:
+    raw = environ.get("EXCHEQUER_CONSOLE", "").strip().lower()
+    return raw if raw in CONSOLE_MODES else "open"
+
+
+CONSOLE: str = console_mode(os.environ)
 # How long the pass that POST /access/check hands a browser lasts (access.py):
 # an event day, so a presenter enters the code once.
 DEMO_PASS_SECONDS: int = max(60, int(float(os.getenv("EXCHEQUER_DEMO_PASS_HOURS", "12") or 12) * 3600))
@@ -804,6 +826,17 @@ WATCHES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR_TOTAL", 60)
 # from TronScan or the public Ethereum nodes.
 RECHECKS_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_RECHECKS_PER_HOUR", 6)
 RECHECKS_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_RECHECKS_PER_HOUR_TOTAL", 30)
+# What one signed-in officer may start per hour and per 24 hours, whatever
+# connection they use (0 = no limit): live traces (batch rows and payment
+# searches count as traces), watches, rechecks and a watch's manual checks. An admin may set a unit's
+# own (PUT /admin/units/{id}/limits). Demo callers have the limits above only.
+OFFICER_LIMITS: dict[str, tuple[int, int]] = {
+    "trace": (_int_env("EXCHEQUER_OFFICER_TRACES_PER_HOUR", 20), _int_env("EXCHEQUER_OFFICER_TRACES_PER_DAY", 80)),
+    "watch": (_int_env("EXCHEQUER_OFFICER_WATCHES_PER_HOUR", 10), _int_env("EXCHEQUER_OFFICER_WATCHES_PER_DAY", 40)),
+    "recheck": (_int_env("EXCHEQUER_OFFICER_RECHECKS_PER_HOUR", 6),
+                _int_env("EXCHEQUER_OFFICER_RECHECKS_PER_DAY", 24)),
+    "check": (_int_env("EXCHEQUER_OFFICER_CHECKS_PER_HOUR", 30), _int_env("EXCHEQUER_OFFICER_CHECKS_PER_DAY", 120)),
+}
 # Rechecks running at once, site-wide (one per connection): each holds a
 # server thread for up to a minute and shares TronScan's pacer with live traces.
 RECHECKS_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_RECHECKS", 2)

@@ -1,8 +1,8 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation, useMatch } from 'react-router-dom'
 import AppShell from './components/AppShell'
 import DemoBanner from './components/DemoBanner'
-import { role } from './session'
+import { checkAccount, role, useAccount, watchAccount } from './session'
 
 // Each page is its own chunk. The sign-in globe (map data, d3-geo) and the
 // trace graph (force layout) are the heavy parts and no page needs both, so a
@@ -15,17 +15,31 @@ const Verify = lazy(() => import('./routes/Verify'))
 const Batch = lazy(() => import('./routes/Batch'))
 const Cases = lazy(() => import('./routes/Cases'))
 const Work = lazy(() => import('./routes/Work'))
+const Admin = lazy(() => import('./routes/Admin'))
 
-/** The demo front doors: each part of the app needs the tab to have chosen
- * the matching view once, and says on every page that it is a demo with no
- * accounts (the citizen's banner; the console's sidebar). Not security --
- * see session.js. */
+/** An officer signed in, with a password of their own, is in the console. */
+function useOfficerIn() {
+  const { officer } = useAccount()
+  return Boolean(officer && !officer.must_change_password)
+}
+
+/** The front doors: the console needs a signed-in officer or the tab to
+ * have chosen the investigator's demo view once; the citizen's page needs
+ * the citizen's view. A demo says so on every page (the citizen's banner;
+ * the console's sidebar). An officer with a temporary password goes back to
+ * the door to change it. Not security: the backend checks every call. */
 function Gate({ as, children }) {
   const location = useLocation()
+  const { status, officer } = useAccount()
   const current = role()
+  const from = location.pathname + location.search
+  if (as === 'investigator' && officer) {
+    return officer.must_change_password ? <Navigate to="/signin/investigator" replace state={{ from }} /> : children
+  }
   if (current === as) return as === 'citizen' ? <><DemoBanner as={as} />{children}</> : children
+  if (status === 'unknown' || status === 'checking') return null // not yet known whether an officer is signed in
   if (current) return <Navigate to={current === 'citizen' ? '/citizen' : '/'} replace />
-  return <Navigate to={`/signin/${as}`} replace state={{ from: location.pathname + location.search }} />
+  return <Navigate to={`/signin/${as}`} replace state={{ from }} />
 }
 
 /** The investigator's console: every page inside the one shell, kept
@@ -34,12 +48,17 @@ function Gate({ as, children }) {
  * on its own. */
 function Console() {
   const verify = useMatch('/verify')
-  if (verify && role() !== 'investigator') return <Outlet />
+  const inside = useOfficerIn() || role() === 'investigator'
+  if (verify && !inside) return <Outlet />
   return <Gate as="investigator"><AppShell /></Gate>
 }
-const VerifyPage = () => <Verify embedded={role() === 'investigator'} />
+function VerifyPage() {
+  const inside = useOfficerIn() || role() === 'investigator'
+  return <Verify embedded={inside} />
+}
 
 export default function App() {
+  useEffect(() => { checkAccount(); return watchAccount() }, [])
   return (
     <Suspense fallback={null}>
     <Routes>
@@ -68,6 +87,7 @@ export default function App() {
         <Route path="/case/:caseId" element={<TraceView />} />
         <Route path="/demo/:demoNo" element={<TraceView />} />
         <Route path="/batch/:batchId" element={<Batch />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Home />} />
       </Route>
     </Routes>

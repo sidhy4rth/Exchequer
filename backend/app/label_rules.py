@@ -19,6 +19,12 @@ import re
 from functools import lru_cache
 
 POISONING = "poisoning"
+# A no-KYC swap service's wallet (FixedFloat, ChangeNOW, SideShift...): an
+# order pays one asset in and the service pays another out, to an address its
+# customer gives. A cash-out point a request can be sent to, like an exchange,
+# never a risk row: app/exchange_matcher.py reads these, the risk screening
+# does not. Seeded from data/instant_exchangers.json; the store adds more.
+INSTANT_EXCHANGER = "instant_exchanger"
 
 # Evidence tiers, strongest first; label_store.TIERS words them.
 GOVERNMENT, ISSUER, PUBLISHED, DETECTION, UNVETTED = 1, 2, 3, 4, 5
@@ -187,4 +193,5 @@ DEFAULT_ENTITY = {
     "poisoning": "Address-poisoning operator",
     "frozen": "Frozen by its token's issuer",
     "mixer": "Mixer",
+    INSTANT_EXCHANGER: "Instant exchanger",
 }

@@ -1,7 +1,10 @@
 import { createContext, Suspense, useContext, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { fetchChains } from '../api'
+import { signOut } from '../api/accounts'
+import { forgetDemoCode } from '../demoCode'
 import { findTarget } from '../find'
+import { isAdmin, leave, signedOut, useAccount } from '../session'
 import { plain } from '../text'
 import { useDemoView } from './DemoBanner'
 import Mark from './Mark'
@@ -21,6 +24,7 @@ const ICON = {
   requests: 'M2.5 2.5h8l3 3v8h-11zM5 8h6M5 10.5h6',
   verify: 'M8 1.8l5 2v4.1c0 3-2.2 5.2-5 6.3-2.8-1.1-5-3.3-5-6.3V3.8zM5.6 8.1l1.7 1.7 3.2-3.3',
   more: 'M3.5 8h.01M8 8h.01M12.5 8h.01',
+  people: 'M8 7a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM3 14c.4-2.8 2.4-4.5 5-4.5s4.6 1.7 5 4.5',
 }
 const Icon = ({ name }) => (
   <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={name === 'more' ? 2.4 : 1.4} strokeLinecap="round" strokeLinejoin="round"><path d={ICON[name]} /></svg>
@@ -42,7 +46,9 @@ export const GROUPS = [
     { to: '/verify', label: 'Verify a report', icon: 'verify', inside: [] },
   ]],
 ]
-const ITEMS = GROUPS.flatMap(([, items]) => items)
+// Shown to an admin only; the backend refuses everyone else.
+export const ADMIN_GROUP = ['Admin', [{ to: '/admin', label: 'Admin', icon: 'people', inside: [] }]]
+const ITEMS = [...GROUPS, ADMIN_GROUP].flatMap(([, items]) => items)
 // The phone's tab bar: the four most used, and More for the rest.
 const ON_BAR = ['/', '/trace/new', '/cases', '/watchlist']
 
@@ -122,11 +128,44 @@ function Find({ health }) {
   )
 }
 
-/** The phone's tab bar. More opens the other pages and the demo's two ways
- * out just above it, next after More in the Tab order. A choice, Escape,
+/** Who is at the console, and the way out: the officer signed in, or the
+ * demo's two ways out. */
+function useWayOut(view) {
+  const navigate = useNavigate()
+  const { officer } = useAccount()
+  const [error, setError] = useState(null)
+  async function signOutNow() {
+    try { await signOut() } catch (failed) { setError(`Could not sign out: ${failed.message}`); return }
+    signedOut()
+    leave()
+    forgetDemoCode()
+    navigate('/signin/investigator')
+  }
+  return { officer, admin: isAdmin(officer), error, signOutNow, view }
+}
+
+function WayOut({ out }) {
+  if (!out.officer) {
+    return (
+      <>
+        <button type="button" className="quiet" onClick={out.view.switchView}>Switch to {out.view.other.toLowerCase()} view</button>
+        <button type="button" className="quiet" onClick={out.view.exit}>Leave</button>
+      </>
+    )
+  }
+  return (
+    <>
+      <button type="button" className="quiet" onClick={out.signOutNow}>Sign out</button>
+      {out.error && <p className="shell-out-error" role="alert">{out.error}</p>}
+    </>
+  )
+}
+
+/** The phone's tab bar. More opens the other pages and the way out just
+ * above it, next after More in the Tab order. A choice, Escape,
  * focus moving on or a press outside closes it, so the open menu never sits
  * over the control that has focus. */
-function PhoneBar({ path, view }) {
+function PhoneBar({ path, out }) {
   const [open, setOpen] = useState(false)
   const bar = useRef(null)
   const button = useRef(null)
@@ -148,7 +187,7 @@ function PhoneBar({ path, view }) {
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
-  const rest = ITEMS.filter((i) => !ON_BAR.includes(i.to))
+  const rest = ITEMS.filter((i) => !ON_BAR.includes(i.to) && (out.admin || i !== ADMIN_GROUP[1][0]))
   return (
     <nav ref={bar} className="shell-tabs" aria-label="Sections">
       <ul>
@@ -165,8 +204,7 @@ function PhoneBar({ path, view }) {
               {rest.map((item) => (
                 <Link key={item.to} to={item.to} aria-current={where(item, path)}><Icon name={item.icon} />{item.label}</Link>
               ))}
-              <button type="button" className="quiet" onClick={view.switchView}>Switch to {view.other.toLowerCase()} view</button>
-              <button type="button" className="quiet" onClick={view.exit}>Leave</button>
+              <WayOut out={out} />
             </div>
           )}
         </li>
@@ -178,7 +216,8 @@ function PhoneBar({ path, view }) {
 export default function AppShell() {
   // The router reads /cases/ as /cases; so do the sidebar and breadcrumbs.
   const pathname = useLocation().pathname.replace(/(.)\/+$/, '$1')
-  const view = useDemoView('investigator')
+  const out = useWayOut(useDemoView('investigator'))
+  const { officer } = out
   const [health, setHealth] = useState(null)
   useEffect(() => {
     fetchChains().then(setHealth).catch(() => setHealth({ status: 'down' }))
@@ -195,15 +234,16 @@ export default function AppShell() {
           <Mark size={20} />
           <span>
             <Link to="/" className="shell-name">Exchequer</Link>
-            <small>Demo mode · {view.name}</small>
+            {officer
+              ? <small className="shell-who"><span>{plain(officer.name)}</span><span>{plain(officer.unit?.name)}</span></small>
+              : <small>Demo mode · {out.view.name}</small>}
           </span>
         </div>
         <div className="shell-demo">
-          <button type="button" className="quiet" onClick={view.switchView}>Switch to {view.other.toLowerCase()} view</button>
-          <button type="button" className="quiet" onClick={view.exit}>Leave</button>
+          <WayOut out={out} />
         </div>
         <nav aria-label="Main" className="shell-nav">
-          {GROUPS.map(([group, items]) => (
+          {(out.admin ? [...GROUPS, ADMIN_GROUP] : GROUPS).map(([group, items]) => (
             <div key={group}>
               <span className="shell-group" id={`shell-${group}`}>{group}</span>
               <ul aria-labelledby={`shell-${group}`}>
@@ -238,7 +278,7 @@ export default function AppShell() {
           <Crumb.Provider value={setNamed}><Suspense fallback={null}><Outlet /></Suspense></Crumb.Provider>
         </main>
       </div>
-      <PhoneBar path={pathname} view={view} />
+      <PhoneBar path={pathname} out={out} />
     </div>
   )
 }

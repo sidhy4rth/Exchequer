@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchRecheck, runRecheck } from '../../api'
 import { useCaseFiles } from '../ExportButton'
+import CaseRefField, { refOk, tidyRef, useSignedIn } from '../CaseRefField'
 import { plain } from '../../text'
 import { ist, middle, mmss, num, txUrl } from './format'
 
@@ -108,7 +109,7 @@ function Hash({ value }) {
 
 /** The case's last second-provider recheck, and a way to run one. null hides
  * it: none yet asked for, or this server has no recheck (404, 405). */
-function useRecheck(id) {
+function useRecheck(id, caseRef) {
   const [recheck, setRecheck] = useState(null)
   const [running, setRunning] = useState(false)
   const [refused, setRefused] = useState(null)
@@ -124,7 +125,7 @@ function useRecheck(id) {
     setRunning(true)
     setRefused(null)
     try {
-      setRecheck(await runRecheck(id))
+      setRecheck(await runRecheck(id, caseRef))
     } catch (err) {
       setRefused(err.message)
     } finally {
@@ -149,7 +150,10 @@ export default function EvidenceTab({ result, unit, depth, recorded, recheckId }
   const [showAll, setShowAll] = useState(false)
   const rows = useMemo(() => chainRows(result), [result])
   const labels = useMemo(() => new Map(result.graph.nodes.filter((n) => n.label).map((n) => [n.id, plain(n.label)])), [result])
-  const { recheck, running, refused, run } = useRecheck(recheckId)
+  // A signed-in officer rechecks a case kept under no reference only under one they give (case_refs.py).
+  const asks = useSignedIn() === true && !result.intake?.case_ref
+  const [caseRef, setCaseRef] = useState('')
+  const { recheck, running, refused, run } = useRecheck(recheckId, asks && refOk(caseRef) ? tidyRef(caseRef) : null)
   const checks = useMemo(() => {
     const byHash = new Map()
     for (const t of recheck?.transfers ?? []) {
@@ -186,7 +190,7 @@ export default function EvidenceTab({ result, unit, depth, recorded, recheckId }
           <p className="note">{result.direction === 'incoming' ? 'From the exchange to the reported address.' : 'From the payment to the exchange.'} Every row can be re-read on the chain.</p>
         </div>
         {recheck && (
-          <button type="button" className="ev-go" onClick={run} disabled={running}>
+          <button type="button" className="ev-go" onClick={run} disabled={running || (asks && !refOk(caseRef))}>
             <Glyph d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3" />{running ? 'Re-reading…' : 'Re-read from a second provider'}
           </button>
         )}
@@ -199,6 +203,7 @@ export default function EvidenceTab({ result, unit, depth, recorded, recheckId }
           {recheck.recorded_demo ? " · a recorded example's recheck is shown, not kept" : ''}
         </>}</p>
       )}
+      {recheck && asks && <div className="ev-chain-line"><CaseRefField id="recheck-case-ref" value={caseRef} onChange={setCaseRef} /></div>}
       {refused && <p className="error-line ev-chain-line" role="alert">The recheck did not run: {refused}</p>}
       {rows.length === 0 ? <p className="note ev-chain-line">{attributed(result) ? 'The case holds no transfers on the route.' : 'The trace reached no exchange, so the case cites no transfers.'}</p> : (
         // Where the columns are wider than the card it scrolls, never cuts them off.

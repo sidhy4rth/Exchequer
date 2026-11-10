@@ -149,11 +149,11 @@ def client(tmp_path, monkeypatch):
 
 
 def test_a_flow_stored_before_stops_is_rebuilt_on_every_read(client):
-    assert victim_flow.VERSION == 2
+    assert victim_flow.VERSION >= 2
     old = {k: v for k, v in build(BY_DEMO[11]).items() if k != "stops"}
     old["version"] = 1  # what g/victim-flow-read's build stored
     stored = {**copy.deepcopy(BY_DEMO[11]), "victim_flow": old}
     models.save_case("v1-flow", BY_DEMO[11]["address"], stored)
     for flow in (upgrade(stored)["victim_flow"], client.get("/trace/v1-flow").json()["victim_flow"]):
-        assert flow["version"] == 2 and stops(flow)["hop_limit"]["note"] == "The trace stopped at 2 hops."
+        assert flow["version"] == victim_flow.VERSION and stops(flow)["hop_limit"]["note"] == "The trace stopped at 2 hops."
     assert models.get_case("v1-flow").result["victim_flow"] == old, "the stored case is never rewritten"

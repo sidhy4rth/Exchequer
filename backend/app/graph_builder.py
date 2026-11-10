@@ -926,6 +926,8 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             # Set by deposit_inference when the address's outgoing history is
             # nothing but sweeps into one labelled exchange wallet.
             "inferred_exchange": data.get("inferred_exchange"),
+            # "instant_exchanger": a no-KYC swap service's wallet, or a deposit address that sweeps into one.
+            "exchange_category": data.get("exchange_category"),
             # A DEX router: funds sent here were swapped, not paid.
             "is_router": data.get("is_router", False),
             "router": data.get("router"),

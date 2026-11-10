@@ -17,7 +17,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from .. import api_budget, audit, batches, config, ownership, pipeline, rate_limit
+from .. import api_budget, audit, batches, case_refs, config, ownership, pipeline, rate_limit
+from ..auth import CurrentUser
 from ..chain_data import allowance_spent
 from ..input_rules import OneLine
 from . import casebook, cases
@@ -30,6 +31,7 @@ class BatchRequest(BaseModel):
     # Checked here, before the route charges the trace allowance for the rows.
     name: OneLine = Field("", max_length=120)
     rows: list[dict[str, Any]] = Field(..., max_length=batches.MAX_ROWS * 4)
+    case_ref: case_refs.CaseRef = None  # the whole batch's; required of a signed-in officer
 
 
 def _owner(http: Request) -> str:
@@ -68,10 +70,11 @@ def _release(client: str = _NO_CLIENT) -> None:
     _batch_slots.release()
 
 
-def _refund(client: str, rows: int) -> None:
+def _refund(client: str, rows: int, officer: rate_limit.OfficerCharge | None = None) -> None:
     if rows > 0:
         rate_limit.traces.refund(client, rows)
         rate_limit.traces_total.refund(rate_limit.TOTAL, rows)
+        rate_limit.refund_officer(officer, rows)
 
 
 def _admit_batch(owner: str) -> None:
@@ -91,14 +94,28 @@ def _admit_batch_locked(owner: str) -> None:
                                    "Try again later.")
 
 
+def _batch_ref(rows: list[dict[str, Any]], ref: str | None) -> str | None:
+    """An officer's batch: each row is traced under its own reference (its
+    complaint's, in the reference column), and `ref` is for the rows without
+    one; refused with a 400 when some row has neither."""
+    lacking = sum(1 for r in rows if r["status"] == batches.PENDING and not case_refs.of_row(r["reference"]))
+    if lacking and not ref:
+        raise HTTPException(status_code=400, detail=(
+            f"{lacking} row{' has' if lacking == 1 else 's have'} no case reference of {'its' if lacking == 1 else 'their'} "
+            "own (the FIR, NCRP or GD number in the reference column). Add one to each row, or enter one "
+            "for the rows without. It is kept with the case, never in links or logs."))
+    return ref if lacking else None
+
+
 @router.post("/batches", status_code=202)
-def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
+def start_batch(body: BatchRequest, http: Request, user: CurrentUser) -> JSONResponse:
     owner = _owner(http)
     _admit_batch(owner)
     try:
         rows = batches.validate_rows(body.rows)
     except batches.BatchError as exc:
         return JSONResponse(status_code=400, content={"detail": str(exc), "row_errors": exc.row_errors})
+    ref = None if user.demo else _batch_ref(rows, body.case_ref)
     # A chain whose provider allowance is used up today cannot trace its rows.
     for key in sorted({row["chain"] for row in rows}):
         chain = config.get_chain(key)
@@ -108,8 +125,10 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
                                 headers={"Retry-After": str(wait)})
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
     charged = batches.traces_needed(rows)  # a repeated row is traced once
-    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client, cost=charged)
+    officer = case_refs.spender(user, "trace")
+    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client, cost=charged, officer=officer)
     if refused is not None:
+        case_refs.refused(officer, refused, charged)
         wait, who = refused
         if who == "site":
             left = rate_limit.traces_total.remaining(rate_limit.TOTAL)
@@ -125,10 +144,10 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
             _admit_batch_locked(owner)  # again: another request may have started one meanwhile
             batch = batches.create(owner, body.name, rows)
         except Exception:
-            _refund(client, charged)
+            _refund(client, charged, officer)
             raise
         _active[batch.id] = owner
-    audit.record("batch.create", detail={"rows": len(rows)})
+    audit.record("batch.create", detail={"rows": len(rows), **({"case_ref": case_refs.mask(ref)} if ref else {})})
 
     # Rows that never reach a trace (the store failed, the batch was stopped)
     # are given back to the hourly allowance when the batch ends.
@@ -143,14 +162,18 @@ def start_batch(body: BatchRequest, http: Request) -> JSONResponse:
     def done(batch_id: str = batch.id) -> None:
         with _active_lock:
             _active.pop(batch_id, None)
-        _refund(client, charged - traced[0])
+        _refund(client, charged - traced[0], officer)
 
     def record(payload: dict[str, Any]) -> None:
-        cases.record_trace(payload, via="batch")
+        with audit.acting_as(owner):  # the batch's own thread, working for its sender
+            cases.record_trace(payload, via="batch")
 
     def store(payload: dict[str, Any], request, owner_hash: str | None) -> dict[str, Any]:
         # Saved rows count against the starting connection's saves for the day.
-        return cases.store_result(payload, request, owner_hash, client=client)
+        # The row's own reference (batches.run), else the batch's; none for a demo caller.
+        request.case_ref = None if user.demo else request.case_ref or ref
+        return cases.store_result(payload, request, owner_hash, client=client,
+                                  officer=(user.officer_id, user.unit_id))
     try:
         batches.start(batch.id, owner, lambda: _acquire(client), lambda: _release(client), trace,
                       store, on_done=done,

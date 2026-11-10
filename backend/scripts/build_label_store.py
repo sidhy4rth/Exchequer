@@ -75,6 +75,8 @@ CATEGORY_MAP: dict[str, tuple[str, int] | None] = {
     "investment fraud (regulator)": ("scam", 1),
     "drainer": ("scam", 3),  # a wallet-drainer kit's receiver
     "malware (clipper/stealer)": ("stolen", 3),  # what the clipper swapped in received stolen coins
+    # A no-KYC swap service: read by the exchange matcher, never as a risk row.
+    "instant exchanger": (label_rules.INSTANT_EXCHANGER, 3),
     "gambling platform": None,
     "laundering-linked (1 hop)": None,
     "seizure order (gov, may be lapsed)": None,
@@ -88,7 +90,8 @@ NEVER_FLAG = "never-flag: "
 # Two rows for one address on one chain: the stronger tier wins; at an equal
 # tier, the more specific category. A mixer sits below a scam, so a tie never
 # makes an address end a trace.
-PRIORITY = {"stolen": 0, "laundering": 1, "frozen": 2, "scam": 3, "mixer": 4, "poisoning": 5}
+PRIORITY = {"stolen": 0, "laundering": 1, "frozen": 2, "scam": 3, "mixer": 4, "poisoning": 5,
+            label_rules.INSTANT_EXCHANGER: 6}
 STRONG_SHOWN = 20
 
 

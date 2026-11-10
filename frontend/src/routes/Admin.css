@@ -1,0 +1,50 @@
+/* The admin's page (Admin.jsx): units beside the officers, each officer a
+   row of who they are and what can change. Glass tokens only. */
+.admin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr); gap: 20px; align-items: start; }
+.admin-card { padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.admin h2 { margin: 0; font-size: 15px; font-weight: 400; }
+.admin h3 { margin: 0; font-size: 14px; font-weight: 500; }
+.admin label { font-size: 12px; color: var(--text-2); }
+.admin select, .admin input:not([type="checkbox"]) { min-height: 36px; min-width: 0; }
+
+.admin-units { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.admin-units li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.admin-unit-new { display: flex; flex-direction: column; gap: 6px; }
+.admin-unit-new > span { display: flex; gap: 8px; }
+.admin-unit-new input { flex: 1; }
+
+.admin-list { list-style: none; margin: 0; padding: 0; }
+.admin-officer { border-top: 1px solid var(--line); padding: 14px 0; }
+.admin-officer form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 20px; align-items: start; }
+.admin-officer .error-line { grid-column: 1 / -1; }
+.admin-who { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12.5px; }
+.admin-who .mono { overflow-wrap: anywhere; color: var(--text-2); }
+.admin-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-pills:empty { display: none; }
+.admin-edit { display: grid; grid-template-columns: auto minmax(0, 160px); gap: 6px 10px; align-items: center; }
+.admin-check { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 8px; min-height: 24px; }
+.admin-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--go); }
+.admin-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-actions button { min-height: 32px; }
+
+.admin-new { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; align-items: center; padding-top: 16px; border-top: 1px solid var(--line); }
+.admin-new h3, .admin-new .error-line, .admin-new button { grid-column: 1 / -1; }
+.admin-new button { justify-self: start; min-height: 36px; }
+
+/* The temporary password: a green edge, the value large enough to read out. */
+.admin-once { padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; border-color: var(--go); }
+.admin-once:focus-visible { outline-offset: 4px; }
+.admin-once-row { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.admin-once-row .mono { user-select: all; font-size: 18px; letter-spacing: 0.04em; overflow-wrap: anywhere; color: var(--text); }
+.admin-once-row button { min-height: 32px; }
+.admin-warn { margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--risk-tint); color: var(--risk-soft); font-size: 12.5px; line-height: 1.5; }
+.admin-once > .quiet { align-self: flex-start; min-height: 32px; }
+
+@media (max-width: 1100px) {
+  .admin-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .admin-card { padding: 18px 16px; }
+  .admin-officer form { grid-template-columns: minmax(0, 1fr); }
+  .admin-edit { grid-template-columns: auto minmax(0, 1fr); }
+}

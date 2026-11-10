@@ -12,6 +12,7 @@ import EvidenceTab from '../components/case/EvidenceTab'
 import TimelineTab from '../components/case/TimelineTab'
 import LettersTab from '../components/case/LettersTab'
 import VictimFlow from '../components/case/VictimFlow'
+import CaseRefField, { refOk, tidyRef, useSignedIn } from '../components/CaseRefField'
 import { useCaseTab } from './caseTab'
 import './TraceView.css'
 import { plain } from '../text'
@@ -83,8 +84,11 @@ function MethodRange({ methods, unit }) {
 
 /** What a /trace link would run, with a button to run it. Shown instead of
  * starting the trace when the link was opened rather than started here. */
-function ConfirmTrace({ address, chain, asset, depth, direction, budget, hashes, onRun }) {
+function ConfirmTrace({ address, chain, asset, depth, direction, budget, hashes, officer, onRun }) {
   const [capped, setCapped] = useState(!budget)
+  // A signed-in officer runs it only under a case reference (case_refs.py);
+  // officer is null until GET /auth/me answers, and the button waits for it.
+  const [caseRef, setCaseRef] = useState('')
   const bad = hashes.filter((h) => !PAY_HASH.test(h))
   return (
     <section className="card confirm-trace" aria-labelledby="confirm-trace-title">
@@ -113,8 +117,10 @@ function ConfirmTrace({ address, chain, asset, depth, direction, budget, hashes,
             Stop after <span className="mono">1:30</span>
           </label>
         )}
+        {officer && <CaseRefField id="confirm-case-ref" value={caseRef} onChange={setCaseRef} />}
         <div className="verify-actions">
-          <button className="primary" disabled={bad.length > 0} onClick={() => onRun(capped)}>Run this trace</button>
+          <button className="primary" disabled={bad.length > 0 || officer === null || (officer && !refOk(caseRef))}
+            onClick={() => onRun(capped, officer ? tidyRef(caseRef) : null)}>Run this trace</button>
           <Link to="/" className="quiet-link">Back to the console</Link>
         </div>
       </div>
@@ -155,8 +161,11 @@ export default function TraceView() {
   // R1: the victim's payment hashes, from the URL; the NCRP number and the
   // victim's own wallet only ever travel in the navigation state (see TraceForm).
   const pay = params.get('pay') || ''
+  const found = params.get('found') || ''
   const ncrpAck = location.state?.ncrpAck || null
   const victimAddress = location.state?.victimAddress || null
+  const caseRef = location.state?.caseRef || null // a signed-in officer's, likewise
+  const officer = useSignedIn() // null until GET /auth/me answers
   // A trace link alone never starts a trace: it would run under whoever opens
   // it (their key, their access code, their hourly allowance) with whatever
   // the link asks for. The form and Re-trace say they started it here; a
@@ -164,7 +173,9 @@ export default function TraceView() {
   const startedHere = location.state?.startedHere === true
   const traceParams = {
     address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
-    payments: pay ? pay.split(',').filter(Boolean) : [], ncrpAck, victimAddress,
+    payments: pay ? pay.split(',').filter(Boolean) : [], ncrpAck, victimAddress, caseRef,
+    // The payments the officer found by searching the wallet, not given by the victim.
+    officerFound: found ? found.split(',').filter(Boolean) : [],
   }
   const needsConfirm = !stored && !justTraced && !startedHere && !traceJobRemembered(traceParams)
 
@@ -244,7 +255,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay, needsConfirm]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay, found, needsConfirm]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -367,8 +378,14 @@ export default function TraceView() {
     // A payment case is re-traced from the same payments (public chain data).
     const hashes = [...new Set((result.intake?.mode === 'payment' ? result.intake.payments ?? [] : []).map((p) => p.tx_hash).filter(Boolean))]
     if (hashes.length) q.set('pay', hashes.join(','))
-    navigate(`/trace/${result.address}?${q}`, deeper ? undefined : { state: { startedHere: true } })
-  }, [navigate, result])
+    const searched = hashes.filter((h) => result.intake.payments.some((p) => p.tx_hash === h && p.found_by === 'officer_search'))
+    if (searched.length) q.set('found', searched.join(','))
+    // Under the case's own reference, when this reader sees it (an officer's
+    // case); an officer with none to carry is asked for one first (ConfirmTrace).
+    const kept = result.intake?.case_ref ? { caseRef: result.intake.case_ref } : {}
+    const ask = deeper || (officer !== false && !kept.caseRef)
+    navigate(`/trace/${result.address}?${q}`, { state: ask ? kept : { startedHere: true, ...kept } })
+  }, [navigate, result, officer])
   // A Flow card's action opens another view and puts the keyboard there,
   // unless the view already took it (the letter the card asked for).
   const jump = useRef(null)
@@ -381,13 +398,13 @@ export default function TraceView() {
   }, [tab])
 
   // Run the trace a link asked for, once the officer has seen what it does.
-  const confirmRun = useCallback((capped) => {
+  const confirmRun = useCallback((capped, caseRef) => {
     const q = new URLSearchParams(params)
     q.set('depth', String(depth))
     if (budget) q.set('budget', String(budget))
     else if (capped) q.set('budget', String(LINK_BUDGET_SECONDS))
     else q.delete('budget')
-    navigate(`${location.pathname}?${q}`, { replace: true, state: { ...(location.state ?? {}), startedHere: true } })
+    navigate(`${location.pathname}?${q}`, { replace: true, state: { ...(location.state ?? {}), startedHere: true, ...(caseRef ? { caseRef } : {}) } })
   }, [navigate, params, depth, budget, location.pathname, location.state])
 
   // Every wallet and transfer, by hop or as bubbles: the Flow tab when the
@@ -455,7 +472,7 @@ export default function TraceView() {
         {needsConfirm && (
           <ConfirmTrace
             address={routeAddress} chain={chain} asset={asset} depth={depth} direction={requestedDirection}
-            budget={budget} hashes={traceParams.payments} onRun={confirmRun}
+            budget={budget} hashes={traceParams.payments} officer={caseRef ? false : officer} onRun={confirmRun}
           />
         )}
 

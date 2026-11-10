@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { plain, plainSentence } from '../../text'
 import { bandLabel, bandOf } from '../confidence'
+import { instantService } from './letterChecks'
 import { KIND_ORDER, shareText, spreadColumns, victimFlowLayout } from './victimFlowLayout'
 import './VictimFlow.css'
 
@@ -35,7 +36,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   const match = (a) => (result.risk_matches ?? []).find((m) => m.address === a)
   const hops = result.max_depth
   const deeper = hops ? Math.min(2, DEEPEST - hops) : 0
-  const acted = (bucket.exchange?.share ?? 0) + (bucket.held?.share ?? 0)
+  const acted = (bucket.exchange?.share ?? 0) + (bucket.instant_exchanger?.share ?? 0) + (bucket.held?.share ?? 0)
   const band = bandLabel(result.confidence_detail?.band ?? bandOf(result.confidence))
   const victimAt = new Map(flow.nodes.map((n) => [n.address, n.victim_in]))
   // Each exchange address with its own share: one deposit address's label
@@ -48,7 +49,15 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
     return { address: a, amount: victimAt.get(a) ?? 0, name: plain(own ? result.exchange : n.exchange ?? n.inferred_exchange), label: plain(own ? result.exchange_label : n.label) }
   })
   const exOne = exRows.length === 1 ? exRows[0] : null
-  const exName = named ? plain(result.exchange) : exOne?.name
+  // A no-KYC swap service (an instant exchanger): a card of its own, dashed when every wallet in it is inferred.
+  const instAt = bucket.instant_exchanger?.addresses ?? []
+  const instOwn = Boolean(result.exchange) && instAt.includes(result.exchange_address)
+  const instRows = instAt.map((a) => {
+    const n = known.get(a) ?? {}
+    const own = instOwn && a === result.exchange_address
+    return { address: a, amount: victimAt.get(a) ?? 0, name: plain(own ? result.exchange : n.exchange ?? n.inferred_exchange), inferred: Boolean(n.inferred_exchange && !n.exchange) }
+  })
+  const exName = named || instOwn ? plain(result.exchange) : exOne?.name
   const exNames = [...new Set(exRows.map((r) => r.name).filter(Boolean))]
   const leftAt = bucket.left?.addresses ?? []
   const heldAt = bucket.held?.addresses ?? []
@@ -68,11 +77,11 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   const allHops = hopAmount > 0 && unopened <= tiny
   const NAME = {
     exchange: exOne ? exOne.label || exOne.name || 'Exchange' : exNames.length === 1 ? `At ${exNames[0]}` : 'At exchanges',
-    held: 'Held', risk: ENDS[riskEnd?.kind] ?? 'At a mixer', not_followed: 'Not followed',
+    instant_exchanger: 'At an instant exchanger', held: 'Held', risk: ENDS[riskEnd?.kind] ?? 'At a mixer', not_followed: 'Not followed',
     other: 'Other', beyond_limit: allHops ? `Beyond ${hops} hops` : 'Not opened', left: leftAt.length === 1 ? `Left in ${short(leftAt[0])}` : `Left in ${leftAt.length} wallets`,
   }
   const SAYS = {
-    exchange: 'reached an exchange', held: 'is held where it was stopped', risk: 'reached a mixer, bridge or privacy service',
+    exchange: 'reached an exchange', instant_exchanger: 'reached an instant exchanger', held: 'is held where it was stopped', risk: 'reached a mixer, bridge or privacy service',
     not_followed: 'was not followed', other: 'went to a swap or back up the route', beyond_limit: allHops ? `is beyond the trace's ${hops} hops` : 'is in wallets the trace did not open',
     left: `is left in ${leftAt.length === 1 ? 'a wallet' : `${leftAt.length} wallets`}`,
   }
@@ -112,7 +121,22 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
       </ul>}
       {flow.lead?.reached != null && Math.abs(flow.lead.reached - amount('exchange')) > 0.005 && <p className="note">{fmt(flow.lead.reached)} {unit} of it along the route the finding names.</p>}
       {/* The urgent freeze letter: it goes first (the Letters tab falls back to the information letter). */}
-      {result.exchange && <button type="button" className="primary" onClick={() => onLetters('exchange-freeze')}>Draft letter to {plain(result.exchange)}</button>}
+      {result.exchange && !instOwn && <button type="button" className="primary" onClick={() => onLetters('exchange-freeze')}>Draft letter to {plain(result.exchange)}</button>}
+    </article>)
+  if (amount('instant_exchanger') > 0) cards.push(
+    <article key="instant" className={`vf-card vf-instant${instRows.every((r) => r.inferred) ? ' inferred' : ''}`}>
+      <div className="vf-card-top"><h3>At an instant exchanger</h3>{instOwn && band && <span className="vf-tag">{band} · {result.attribution_inferred ? 'inferred' : 'exact label'}</span>}</div>
+      {figure(amount('instant_exchanger'))}
+      <ul className="vf-rows">{instRows.map((r) => (
+        <li key={r.address}>
+          <span className="vf-name">{[r.name || 'Swap service', r.inferred && 'inferred'].filter(Boolean).join(' · ')}</span>
+          <span className="mono vf-address">{plain(r.address)}</span>
+          {instRows.length > 1 && <span className="num">{fmt(r.amount)} {unit}</span>}
+        </li>))}
+      </ul>
+      <p className="note">A swap service that checks no identity. It can say which order this paid for and where the payout went.</p>
+      {/* Named as the letter is: the case's own exchange first, else the first one reached, not the largest. */}
+      <button type="button" className="primary" onClick={() => onLetters('instant-freeze')}>Draft letter to {instantService(result) ?? ((instOwn ? plain(result.exchange) : instRows[0]?.name) || 'the swap service')}</button>
     </article>)
   // A frozen wallet that still holds money has its Held card, not this one too.
   for (const p of (flow.passed_through ?? []).filter((x) => !heldAt.includes(x.address))) {
@@ -187,7 +211,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
           <svg viewBox={`0 0 ${lay.width} ${H}`} preserveAspectRatio="none" aria-hidden="true">
             {lay.ribbons.map((r, i) => <path key={i} className={`vf-ribbon vf-${r.colour} vf-${r.style}`} d={r.path} />)}
             {[lay.seed, ...hopLabels, ...lay.buckets].map((n, i) => (
-              <rect key={i} className={`vf-bar${n.risk ? ' risk' : ''}${n.kind === 'exchange' ? ' go' : ''}`} x={n.x} width={lay.bar}
+              <rect key={i} className={`vf-bar${n.risk ? ' risk' : ''}${n.colour === 'go' ? ' go' : ''}`} x={n.x} width={lay.bar}
                 y={Math.min(n.y0, (n.y0 + n.y1) / 2 - 1)} height={Math.max(2, n.y1 - n.y0)} />
             ))}
           </svg>
@@ -208,7 +232,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
         </div>
       </section>
       <div className="vf-cards">{cards}</div>
-      {named && band && <p className="vf-phone vf-band"><span className="vf-tag">{band}</span> that it reached {exName} · not a probability</p>}
+      {(named || instOwn) && band && <p className="vf-phone vf-band"><span className="vf-tag">{band}</span> that it reached {exName} · not a probability</p>}
       <div className="card vf-notes">
         {flow.stops?.length > 0 && <>
           <h3>Where tracing stopped</h3>

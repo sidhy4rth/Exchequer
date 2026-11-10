@@ -8,7 +8,9 @@ vulnerability), and I will reply within a few days.
 
 ## What the deployed site protects, and what it does not
 
-Exchequer has no accounts. What it does instead:
+Officers sign in with accounts (see the end of this section); everyone
+else, citizens and demo visitors, uses the site without one. What
+protects it:
 
 - **Cases are private to the browser that traced them.** Each browser sends a
   random owner key; the history list shows only that browser's cases plus the
@@ -33,6 +35,13 @@ Exchequer has no accounts. What it does instead:
   tells a right guess from a wrong one. It is a shared demo secret, not an
   account: make it long and random. Creating watches is also
   rate limited per client. See `backend/app/access.py`.
+- **The owner can close live work to officers** (`EXCHEQUER_CONSOLE=officers`;
+  the default, `open`, changes nothing). Then every live or spending action
+  -- traces, batches, payment searches, watches and their checks, freeze
+  requests, rechecks and sign-offs -- needs a signed-in officer session,
+  checked before any route runs; the demo code and its pass no longer open
+  them. Recorded demos, `/verify` and reading stay open. `/health` says which
+  mode is on.
 - **Reports are signed.** Every text report ends in a SHA-256 content hash and
   an Ed25519 signature made with the server's key. Anyone can check one at
   `/verify` or offline with the key from `/signing-key`. See
@@ -47,11 +56,15 @@ Exchequer has no accounts. What it does instead:
   headers; the interactive API docs are off on the deployed image; the app
   runs as an unprivileged user.
 
-There are no accounts yet, and the site says so: the front door and a banner
-on every page read "Demo mode", and choosing the investigator or citizen view
-grants nothing. Without `EXCHEQUER_DEMO_CODE`, anyone who can reach the site
-can run a trace; with it, live tracing needs the code. Accounts and roles
-come with R23.
+Officers sign in at the investigator's door with accounts an admin makes
+on the Admin page; there is no public sign-up, and a temporary password
+must be changed at the first sign-in. The session is an HttpOnly cookie,
+and every call that changes something must carry the
+`X-Exchequer-Request` header, which a form on another site cannot send.
+Anyone can still look around as a demo, and the site says so: choosing the
+investigator or citizen view grants nothing, and citizens have no accounts
+yet. Without `EXCHEQUER_DEMO_CODE`, anyone who can reach the site can run a
+trace; with it, live tracing needs the code.
 
 ## Keys and secrets
 

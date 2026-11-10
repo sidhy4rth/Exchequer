@@ -1,0 +1,115 @@
+{
+  "_meta": {
+    "description": "Instant exchangers: no-KYC swap services (an order pays one asset in and another out, to an address the customer gives). A cash-out point a request can be sent to, never a sanction hit. Read by app/exchange_matcher.py together with the label store's instant_exchanger rows.",
+    "provenance": "Every row is an address this repository already labels in the exchange label file its source names, under that service's name. None was added from outside the repository: rows from other lists come in through a label-store release (docs/label-releases.md).",
+    "checked_on": "The day the row was checked against the file it names; that file's own provenance says where the address came from.",
+    "schema": "rows: [{address, chain, service, source, checked_on}]"
+  },
+  "rows": [
+    {
+      "address": "0xa12e1462d0ced572f396f58b6e2d03894cd7c8a4",
+      "chain": "ethereum",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels.json (label \"ChangeNOW 10\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0xbac051bbf79c5321c0f825ea9bca71f992144029",
+      "chain": "ethereum",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels.json (label \"ChangeNOW 11\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x3a0d24d59af3a3444dc6ef12cdb0c6e38c985288",
+      "chain": "ethereum",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels.json (label \"ChangeNOW 6\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x3421230289980b8ea81781b170ef7d475673102b",
+      "chain": "ethereum",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels.json (label \"ChangeNOW 8\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x9bc2f223026c252c8ef5f7f33f00f4bee21434b8",
+      "chain": "ethereum",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels.json (label \"ChangeNOW 9\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x6ba7fe01eec4c6a4308c8e2b35970e0488ce9a86",
+      "chain": "ethereum",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels.json (label \"ChangeNOW: HTX Deposit\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x975d9bd9928f398c7e01f6ba236816fa558cd94b",
+      "chain": "ethereum",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels.json (label \"ChangeNOW: Hot Wallet 1\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0xa96be652a08d9905f15b7fbe2255708709becd09",
+      "chain": "ethereum",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels.json (label \"ChangeNOW: Hot Wallet 2\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x3421230289980b8ea81781b170ef7d475673102b",
+      "chain": "bsc",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels_bsc.json (label \"ChangeNOW 8\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x4727250679294802377dd6ca6541b8e459077c95",
+      "chain": "bsc",
+      "service": "FixedFloat",
+      "source": "backend/data/exchange_labels_bsc.json (label \"FixedFloat: Hot Wallet\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x975d9bd9928f398c7e01f6ba236816fa558cd94b",
+      "chain": "bsc",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels_bsc.json (label \"ChangeNOW: Hot Wallet 1\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0xa96be652a08d9905f15b7fbe2255708709becd09",
+      "chain": "bsc",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels_bsc.json (label \"ChangeNOW: Hot Wallet 2\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0xbac051bbf79c5321c0f825ea9bca71f992144029",
+      "chain": "bsc",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels_bsc.json (label \"ChangeNOW 11\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "0x3a0d24d59af3a3444dc6ef12cdb0c6e38c985288",
+      "chain": "polygon",
+      "service": "ChangeNOW",
+      "source": "backend/data/exchange_labels_polygon.json (label \"ChangeNOW 6\")",
+      "checked_on": "2026-11-10"
+    },
+    {
+      "address": "TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf",
+      "chain": "tron",
+      "service": "FixedFloat",
+      "source": "backend/data/exchange_labels_tron.json (label \"FixedFloat Exchange Hot Wallet\")",
+      "checked_on": "2026-11-10"
+    }
+  ]
+}

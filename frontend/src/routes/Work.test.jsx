@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -125,9 +125,54 @@ describe('the new trace page', () => {
     expect(screen.getByRole('radio', { name: 'Ethereum' })).toBeChecked()
   })
 
+  it('asks for the demo code inside the search when it finds the site locked, and keeps the form', async () => {
+    const user = userEvent.setup()
+    const tron = { status: 'ok', default_chain: 'tron', chains: { tron: { key: 'tron', name: 'Tron', ready: true, address_family: 'tron', assets: [{ symbol: 'USDT' }] } } }
+    let calls = 0
+    open('new', { extra: { '/chains': { body: tron }, '/trace/intake': { body: { payments: true } }, '/access/check': { body: { pass: 'p1' } },
+      '/payments/search': () => (calls++ === 0
+        ? { status: 403, body: { detail: 'Live tracing on this site needs an access code.' } }
+        : { body: { matches: [], more_matches: false, scanned: 3, complete: true } }) } })
+    await user.type(await screen.findByLabelText('Wallet the victim paid'), 'TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts')
+    await user.click(await screen.findByRole('button', { name: "I don't have the payment hash" }))
+    await user.type(screen.getByLabelText('Exact amount paid'), '10')
+    fireEvent.change(screen.getByLabelText('When the victim paid, in IST'), { target: { value: '2026-11-09T14:30' } })
+    await user.click(screen.getByRole('button', { name: 'Search the wallet' }))
+    await user.type(await screen.findByLabelText('Access code'), 'letmein')
+    await user.click(screen.getByRole('button', { name: 'Unlock and search again' }))
+    expect(await screen.findByText(/No transfer of exactly 10 USDT/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Wallet the victim paid')).toHaveValue('TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts')
+    expect(screen.queryByText('Verified examples')).not.toBeInTheDocument()
+  })
+
   it('asks for the demo code on a public site instead', async () => {
     open('new', { access: { demo_code_required: true } })
     expect(await screen.findByLabelText('Access code')).toBeInTheDocument()
     expect(screen.queryByLabelText('Wallet the victim paid')).not.toBeInTheDocument()
+  })
+})
+
+describe('a site the owner has closed to officers', () => {
+  const closed = { demo_code_required: false, console: 'officers', officer: false }
+
+  it('sends the new trace page to the officer sign-in instead of the code box', async () => {
+    open('new', { access: closed })
+    const link = await screen.findByRole('link', { name: 'Sign in as an officer to trace live' })
+    expect(link).toHaveAttribute('href', '/signin/investigator')
+    expect(screen.queryByLabelText('Access code')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Wallet the victim paid')).not.toBeInTheDocument()
+  })
+
+  it.each(['watchlist', 'batch'])('keeps %s shut until an officer signs in', async (page) => {
+    open(page, { access: closed })
+    expect(await screen.findByText(/needs a signed-in officer/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Complaints CSV')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /sign in as an officer/i })).toHaveAttribute('href', '/signin/investigator')
+  })
+
+  it('opens every page to a signed-in officer', async () => {
+    open('batch', { access: { ...closed, officer: true } })
+    expect(await screen.findByLabelText('Complaints CSV')).toBeVisible()
+    expect(screen.queryByText(/needs a signed-in officer/)).not.toBeInTheDocument()
   })
 })

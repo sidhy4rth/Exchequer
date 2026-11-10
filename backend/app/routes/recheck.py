@@ -23,8 +23,9 @@ import threading
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
-from .. import audit, case_privacy, config, models, ownership, rate_limit, second_provider
+from .. import audit, case_privacy, case_refs, config, models, ownership, rate_limit, second_provider
 from ..auth import CurrentUser
 from . import demos
 
@@ -71,12 +72,23 @@ def _target(case_id: str, owner: str | None) -> tuple[dict[str, Any], bool]:
     return case.result, True
 
 
+class RecheckRequest(BaseModel):
+    # Required of a signed-in officer when the case was traced under none.
+    case_ref: case_refs.CaseRef = None
+
+
 @router.post("/trace/{case_id}/recheck")
-def recheck(case_id: str, user: CurrentUser, http: Request) -> dict[str, Any]:
+def recheck(case_id: str, user: CurrentUser, http: Request, sent: RecheckRequest | None = None) -> dict[str, Any]:
     """Reread the transfers the case cites on its route to the exchange, at most
     second_provider.RECHECK_MAX_TRANSFERS, and say of each whether the second
-    provider matches, differs, does not have it, or could not be read."""
+    provider matches, differs, does not have it, or could not be read. A
+    signed-in officer's recheck runs under the case's reference, or one sent."""
     result, keep = _target(case_id, user.owner_hash)
+    # The case's own reference only when this officer reads it in full: a
+    # public case another unit traced is rechecked under the officer's own.
+    given = sent.case_ref if sent else None
+    known = None if user.demo or given or DEMO_ID.match(case_id) else case_refs.known(models.get_case(case_id), user)
+    ref = case_refs.required(user, given or known, "recheck")
     chain_key, cited = second_provider.cited_transfers(result)
     if not cited:
         raise HTTPException(status_code=400, detail="This case cites no transfers on a route to an exchange, "
@@ -100,8 +112,10 @@ def recheck(case_id: str, user: CurrentUser, http: Request) -> dict[str, Any]:
     if busy is not None:
         raise HTTPException(status_code=429, headers={"Retry-After": "30"}, detail=busy)
     try:
-        refused = rate_limit.charge(rate_limit.rechecks, rate_limit.rechecks_total, client)
+        officer = case_refs.spender(user, "recheck")
+        refused = rate_limit.charge(rate_limit.rechecks, rate_limit.rechecks_total, client, officer=officer)
         if refused is not None:
+            case_refs.refused(officer, refused)
             wait, who = refused
             started = (f"This site has run {config.RECHECKS_PER_HOUR_TOTAL} rechecks" if who == "site"
                        else f"This connection has run {config.RECHECKS_PER_HOUR_PER_CLIENT} rechecks")
@@ -122,7 +136,8 @@ def recheck(case_id: str, user: CurrentUser, http: Request) -> dict[str, Any]:
         except Exception:  # noqa: BLE001 -- the answer is still shown; only keeping it failed
             logger.exception("Could not keep the recheck of case %s", case_id)
     audit.record("case.recheck", case_id=None if demo else case_id,
-                 detail={"chain": chain_key, "checked": body["checked"], **body["counts"], "saved": saved})
+                 detail={"chain": chain_key, "checked": body["checked"], **body["counts"], "saved": saved,
+                         **({"case_ref": case_refs.mask(ref)} if ref else {})})
     return {**body, "saved": saved}
 
 

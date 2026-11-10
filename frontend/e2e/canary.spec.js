@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { ALL_CHAINS_READY, CONSOLE_FIELD } from './canary.lines.js'
+import { ALL_CHAINS_READY, CONSOLE_FIELD, DEMO_BUTTON, OFFICER_SIGN_IN } from './canary.lines.js'
 
 // What a judge does first: open the link, sign in, look at a case. If any of
 // that is broken the demo-health job would not notice -- it talks to the API
@@ -16,15 +16,22 @@ function watchForErrors(page) {
 
 async function enter(page) {
   await page.getByText(/click anywhere to enter/i).click()
-  await page.getByRole('button', { name: /open the console/i }).click()
+  await page.getByRole('button', { name: DEMO_BUTTON }).click()
 }
+
+/** What the console opens on, however the owner has set it. */
+const consoleReady = (page) => page.getByLabel(CONSOLE_FIELD).or(page.getByLabel('Access code'))
+  .or(page.getByRole('link', { name: OFFICER_SIGN_IN }))
 
 test('the API is up and the label files are loaded', async ({ request }) => {
   const health = await (await request.get('/health')).json()
   expect(health.status).toBe('ok')
   // "open" means anyone can start live traces; once the code is set, say so
   // with the repository variable EXPECT_DEMO_CODE and losing it turns this red.
-  if (process.env.EXPECT_DEMO_CODE) expect(health.access, 'live tracing must need the demo code').toBe('code')
+  // A site closed to officers (EXCHEQUER_CONSOLE=officers) is closed too.
+  if (process.env.EXPECT_DEMO_CODE && health.console !== 'officers') {
+    expect(health.access, 'live tracing must need the demo code').toBe('code')
+  }
   const { chains } = await (await request.get('/chains')).json()
   // Well below today's counts; this catches a deploy that shipped without
   // its data files, not ordinary growth or pruning.
@@ -61,8 +68,9 @@ test('the front door opens the console with every chain live', async ({ page }) 
   await page.goto('/')
   await expect(page).toHaveURL(/\/signin\/investigator/)
   await enter(page)
-  // The console's field; with EXCHEQUER_DEMO_CODE set, the access code instead.
-  await expect(page.getByLabel(CONSOLE_FIELD).or(page.getByLabel('Access code'))).toBeVisible()
+  // The console's field; with EXCHEQUER_DEMO_CODE set, the access code
+  // instead; closed to officers, the link to the officer sign-in.
+  await expect(consoleReady(page)).toBeVisible()
   // The sidebar's status line: "All 5 chains ready to trace" (Glass shell).
   await expect(page.getByRole('complementary', { name: 'Sidebar' }).getByText(ALL_CHAINS_READY)).toBeVisible()
   const loadMs = Date.now() - started
@@ -82,7 +90,7 @@ test('the front door and the console load nothing from another site', async ({ p
   })
   await page.goto('/')
   await enter(page)
-  await expect(page.getByLabel(CONSOLE_FIELD).or(page.getByLabel('Access code'))).toBeVisible()
+  await expect(consoleReady(page)).toBeVisible()
   await page.waitForLoadState('networkidle')
   // The bundled fonts are the ones in use, not a fallback.
   expect(await page.evaluate(() => document.fonts.check('13px "IBM Plex Sans"') && document.fonts.check('13px "IBM Plex Mono"'))).toBe(true)

@@ -47,7 +47,7 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
-from . import config, models
+from . import case_refs, config, models
 from .correlation import correlate
 from .pipeline import TraceRequest
 
@@ -235,7 +235,8 @@ def run(batch_id: str, owner: str, acquire, release, trace_fn, store_fn, record_
             payload = None
             try:
                 request = TraceRequest(address=row["address"], chain=row["chain"], asset=row["asset"],
-                                       direction=row["direction"], max_depth=row["max_depth"])
+                                       direction=row["direction"], max_depth=row["max_depth"],
+                                       case_ref=case_refs.of_row(row.get("reference")))
                 payload = store_fn(trace_fn(request), request, owner)
                 row.update(status=DONE, case_id=payload.get("case_id"), exchange=payload.get("exchange"),
                            confidence=payload.get("confidence"))

@@ -131,7 +131,7 @@ describe('background traces', () => {
     })
     const { runTrace } = await import('./api')
     const victim = '0x' + 'b1c7'.repeat(10)
-    const running = runTrace({ address, payments: ['0x' + 'a'.repeat(64)], ncrpAck: '31911250012345', victimAddress: victim })
+    const running = runTrace({ address, payments: ['0x' + 'a'.repeat(64)], ncrpAck: '31911250012345', victimAddress: victim, caseRef: 'FIR 0457/2026' })
     const stored = () => Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i))
       .map((k) => k + sessionStorage.getItem(k)).join('|')
     await vi.waitFor(() => expect(stored()).toContain('j9'))
@@ -139,6 +139,8 @@ describe('background traces', () => {
     expect(stored()).not.toContain('31911250012345')
     expect(posted[0].victim_address).toBe(victim)  // the victim's wallet is a particular too
     expect(stored()).not.toContain(victim)
+    expect(posted[0].case_ref).toBe('FIR 0457/2026')  // an officer's case reference, likewise
+    expect(stored()).not.toContain('0457')
     resolveJob()
     expect(await running).toEqual({ case_id: 'c9' })
   })

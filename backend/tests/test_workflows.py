@@ -31,7 +31,8 @@ def all_steps():
 
 
 def test_there_are_workflows_to_check():
-    assert {"test.yml", "backup.yml", "demo-health.yml", "refresh-lists.yml", "site-canary.yml"} <= {
+    assert {"test.yml", "backup.yml", "demo-health.yml", "refresh-lists.yml", "site-canary.yml",
+            "watch-cron.yml"} <= {
         p.name for p in WORKFLOWS}
 
 
@@ -61,7 +62,7 @@ def test_checkouts_do_not_persist_the_token():
 # -- secrets (r1-ci-github-7) and the backup (r1-ci-github-5) ---------------------------
 # Each environment is set to deploy from main only (Settings -> Environments), so
 # a pushed branch or a dispatch from one never receives its secrets.
-LOCKED = {"backup", "live-checks", "lists", "list-publish"}
+LOCKED = {"backup", "live-checks", "lists", "list-publish", "watch-cron"}
 SECRET = re.compile(r"secrets\.(\w+)")
 
 
@@ -231,3 +232,64 @@ def test_the_a11y_job_checks_a_build_served_on_the_runner_with_no_keys():
     assert at("uvicorn app.main:app --host 127.0.0.1") < at("npm run a11y")
     assert at("npx playwright install --with-deps chromium") < at("npm run a11y")
     assert job["env"]["EXCHEQUER_URL"].startswith("http://127.0.0.1:")
+
+
+# -- scheduled watch checks (Phase 5, mule-wallet alerts) -----------------------------------
+def watch_cron() -> dict:
+    return load(ROOT / ".github" / "workflows" / "watch-cron.yml")
+
+
+def test_the_watch_cron_runs_every_15_minutes_once_the_owner_switches_it_on():
+    """Like the backup and the list refresh: a scheduled run waits for the
+    repository variable WATCH_CRON=on, so nothing is red before the token is
+    in place; a run started by hand always runs."""
+    flow = watch_cron()
+    assert flow[True]["schedule"] == [{"cron": "*/15 * * * *"}] and "workflow_dispatch" in flow[True]
+    assert flow["permissions"] == {}
+    (job,) = flow["jobs"].values()
+    assert job["if"] == "github.event_name == 'workflow_dispatch' || vars.WATCH_CRON == 'on'"
+    assert job["environment"] == "watch-cron" and job["timeout-minutes"] <= 15  # under the 15-minute cadence
+
+
+def test_the_watch_cron_only_knocks_with_curl_and_never_puts_the_token_on_a_command_line():
+    (job,) = watch_cron()["jobs"].values()
+    assert not any("uses" in step for step in job["steps"])  # no action at all
+    text = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "/watches/check-due" in text and "--max-time" in text and "--retry" in text
+    assert "-H @-" in text  # the header comes in on stdin, not argv
+    assert not [line for line in text.splitlines() if "curl" in line and "WATCH_CRON_TOKEN" in line]
+    for step in job["steps"]:
+        if "WATCH_CRON_TOKEN" in yaml.safe_dump(step.get("env") or {}):
+            assert "secrets.WATCH_CRON_TOKEN" in step["env"]["WATCH_CRON_TOKEN"]
+
+
+def test_the_watch_cron_keeps_the_answer_out_of_the_public_log():
+    """The repository is public, so are its run logs: the counts (alerts
+    raised, watches checked, the next due time) would tell a mule wallet's
+    holder someone is watching. Only the status code is printed; the body is
+    shown only for a failure, which carries no counts."""
+    (job,) = watch_cron()["jobs"].values()
+    (step,) = [s for s in job["steps"] if "/watches/check-due" in s.get("run", "")]
+    run = step["run"]
+    assert "-o " in run and "-w '%{http_code}'" in run and "--fail-with-body" not in run
+    assert "200)" in run and 'cat "$answer"' not in run.split("200)")[1].split(";;")[0]
+
+
+def test_the_watch_cron_retries_only_what_can_succeed_and_a_batch_still_running_is_fine():
+    """No --retry-all-errors: it re-sent a 401 or 404, and a POST that timed out
+    while the batch ran on got 409 on the retry and turned the run red. curl's
+    own --retry covers the waking proxy's 502/503, and 409 is not a failure."""
+    from app import watchlist
+    (job,) = watch_cron()["jobs"].values()
+    (step,) = [s for s in job["steps"] if "/watches/check-due" in s.get("run", "")]
+    run = step["run"]
+    assert "--retry-all-errors" not in run and "--retry " in run and "409)" in run
+    max_time = int(re.search(r"--max-time (\d+)", run).group(1))
+    assert max_time >= 2 * watchlist.CRON_SECONDS  # the 90 s cap plus a slow last check
+    retries = int(re.search(r"--retry (\d+)", run).group(1))
+    assert 6 * 40 + (retries + 1) * max_time + retries * 20 <= job["timeout-minutes"] * 60
+
+
+def test_render_generates_the_watch_cron_token():
+    env = {e["key"]: e for e in load(ROOT / "render.yaml")["services"][0]["envVars"]}
+    assert env["EXCHEQUER_WATCH_CRON_TOKEN"] == {"key": "EXCHEQUER_WATCH_CRON_TOKEN", "generateValue": True}

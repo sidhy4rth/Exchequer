@@ -2,8 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import appSource from './App.jsx?raw'
 import pkg from '../package.json'
 import { NOT_CHECKED, PAGES } from '../e2e/a11y.pages.js'
-import { GROUPS } from './components/AppShell'
+import { ADMIN_GROUP, GROUPS } from './components/AppShell'
 import flow11 from './test/victim-flow-11.json'
+import flow11Instant from './test/victim-flow-11-instant.json'
 
 // The accessibility check (npm run a11y, e2e/a11y.spec.js) opens every page
 // of a running Exchequer in a real browser. These keep it pointed at a site
@@ -61,6 +62,25 @@ describe('the accessibility check', () => {
     expect(more?.size).toBe('phone')
   })
 
+  it('opens the Admin group\'s pages as an admin sees them: /auth/me answered with one', () => {
+    const me = (p) => [p.stub ?? []].flat().find((s) => s.url === '**/auth/me')?.body
+    for (const item of ADMIN_GROUP[1]) {
+      const page = PAGES.find((p) => p.path === item.to && me(p))
+      expect(page, item.to).toBeTruthy()
+      expect(me(page).role).toBe(['ad', 'min'].join(''))
+      expect(me(page).must_change_password).toBe(false)
+    }
+  })
+
+  it('opens the sign-in form, and the password change an officer with a temporary one meets first', () => {
+    const form = PAGES.find((p) => p.name === 'investigator sign-in, door open')
+    expect(form.ready).toEqual(['textbox', { name: 'E-mail' }])
+    const change = PAGES.find((p) => p.name === 'investigator sign-in, choose a password')
+    expect(change.path).toBe('/signin/investigator')
+    expect([change.stub].flat().find((s) => s.url === '**/auth/me').body.must_change_password).toBe(true)
+    expect(change.ready).toEqual(['heading', { name: 'Choose your own password' }])
+  })
+
   it('opens the Flow tab drawn from the victim flow, on a backend whose recording has none', () => {
     const drawn = PAGES.find((p) => p.name === 'recorded case 11, Flow drawn')
     expect(drawn?.stub.url).toBe('**/demos/recorded/11')
@@ -71,6 +91,14 @@ describe('the accessibility check', () => {
     // and the card a case without one keeps: the recording answered without the flow the backend adds
     const card = PAGES.find((p) => p.name === 'recorded case 11, Flow')
     expect(card.stub.extend({ demo: 11, victim_flow: flow11 })).toEqual({ demo: 11 })
+  })
+
+  it('opens the instant exchanger card, which no recorded demo reaches, from a stubbed flow', () => {
+    const stubbed = PAGES.find((p) => p.name === 'recorded case 11, Flow, instant exchanger (stub)')
+    expect(stubbed?.stub.url).toBe('**/demos/recorded/11')
+    expect(stubbed.stub.extend({ demo: 11 })).toEqual({ demo: 11, victim_flow: flow11Instant })
+    expect(flow11Instant.buckets.find((b) => b.kind === 'instant_exchanger').amount).toBeGreaterThan(0)
+    expect(stubbed.ready).toEqual(['heading', { level: 3, name: 'At an instant exchanger' }])
   })
 
   it('opens the locked console a public site shows without the demo code', () => {

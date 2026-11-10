@@ -26,7 +26,9 @@ How it works, in order:
     wallet did not send on stays "left", or "held" at a wallet that is
     frozen, sanctioned or seized.
   * The money ends at an exchange (including an inferred deposit address),
-    a mixer ("risk"), a wallet the trace did not expand ("beyond the limit"),
+    an instant exchanger (a no-KYC swap service, or a deposit address that
+    sweeps into one: a cash-out point that can say which order it paid and
+    where the payout went), a mixer ("risk"), a wallet the trace did not expand ("beyond the limit"),
     or "other": a swap, or money that came back to a wallet earlier on the
     route, which is counted once. Every bucket together is the start.
   * `stops` says where the trace stopped following the money and why, in
@@ -56,16 +58,18 @@ from collections import defaultdict
 from typing import Any, Callable, Mapping
 
 from .contracts.case_v2 import expanded_nodes
+from .label_rules import INSTANT_EXCHANGER
 from .prorata import DILUTED
 
 # Which build() made a flow. Bump it whenever build() changes what it gives:
 # a stored flow of an older version (or none) is rebuilt on read, from the
 # stored case, whose transfers may be trimmed (contracts.on_read, .upgrade).
 # 2: `stops`; a bridge or a privacy service ends the money like a mixer.
-VERSION = 2
+# 3: an instant exchanger has its own bucket and stop.
+VERSION = 3
 
-KINDS = ("exchange", "held", "left", "risk", "beyond_limit", "not_followed", "other")
-ACTIONS = {"exchange": "draft_letter", "held": "ask_issuer", "left": "watch", "beyond_limit": "trace_deeper"}
+KINDS = ("exchange", INSTANT_EXCHANGER, "held", "left", "risk", "beyond_limit", "not_followed", "other")
+ACTIONS = {"exchange": "draft_letter", INSTANT_EXCHANGER: "draft_letter", "held": "ask_issuer", "left": "watch", "beyond_limit": "trace_deeper"}
 HOLDS = frozenset({"frozen", "sanctioned", "seized"})
 UPPER = frozenset({"traced_only", "edge_bounds"})
 CUT = re.compile(r"(?:fan-out limit|safety cap) of (\d+) counterparties per address applied at (\S+?)\.\.\.")
@@ -165,6 +169,9 @@ class _Flow:
         self.inferred |= {a for a, n in self.nodes.items() if n.get("inferred_exchange") and not n.get("exchange")}
         self.exchanges = self.inferred | {m.get("address") for m in result.get("matches") or []}
         self.exchanges |= {a for a, n in self.nodes.items() if n.get("exchange")}
+        self.instant = {m.get("address") for m in [*(result.get("matches") or []), *(result.get("inferred_deposits") or [])]
+                        if m.get("category") == INSTANT_EXCHANGER}
+        self.instant |= {a for a, n in self.nodes.items() if n.get("exchange_category") == INSTANT_EXCHANGER}
 
     def _value(self, key: tuple[str, str]) -> float:
         return float(self.edges[key].get("value_native") or 0)
@@ -184,6 +191,8 @@ class _Flow:
     def _kind(self, a: str) -> str | None:
         """The bucket for money that reaches `a`, or None for a wallet it passes through."""
         n = self.nodes[a]
+        if a in self.instant:
+            return INSTANT_EXCHANGER
         if a in self.exchanges:
             return "exchange"
         if n.get("risk_category") in ENDS:
@@ -376,6 +385,7 @@ class _Flow:
             # A labelled exchange, then a probable deposit address: a guess, said as one.
             ("exchange", {a: v for a, v in amounts["exchange"].items() if a not in self.inferred}),
             ("inferred", {a: v for a, v in amounts["exchange"].items() if a in self.inferred}),
+            (INSTANT_EXCHANGER, amounts[INSTANT_EXCHANGER]),
             ("no_outflow", {a: info[a]["left"] for a in wallets if not self.out[a] and not self.untraced.get(a)}),
         ]
         stops = []
@@ -384,7 +394,9 @@ class _Flow:
             if addresses:
                 stops.append({"kind": "exchange" if kind == "inferred" else kind, "addresses": addresses,
                               "amount": _r(sum(where[a] for a in addresses)),
-                              "note": self._stop_note(kind, addresses), "inferred": kind == "inferred"})
+                              "note": self._stop_note(kind, addresses),
+                              "inferred": kind == "inferred" or kind == INSTANT_EXCHANGER
+                              and all(a in self.inferred for a in addresses)})
         return stops
 
     def _stop_note(self, kind: str, addresses: list[str]) -> str:
@@ -398,6 +410,13 @@ class _Flow:
             return (f"Reached {'a probable exchange deposit address' if one else 'probable exchange deposit addresses'}"
                     f", inferred and not confirmed: a letter asking the exchange to confirm {'it' if one else 'them'} "
                     "is the next step.")
+        if kind == INSTANT_EXCHANGER:
+            if all(a in self.inferred for a in addresses):
+                return ("Reached what is probably an instant exchanger's order deposit address, inferred and not "
+                        "confirmed: a letter asking the swap service to confirm the order, and where it paid out, "
+                        "is the next step.")
+            return ("Reached an instant exchanger, a swap service that pays out to an address its customer gives: "
+                    "tracing ends here, and a letter asking it for the order and its payout is the next step.")
         if kind == "no_outflow":
             return "Nothing was seen leaving after the money arrived, so it may still be there."
         if kind != "fanout_limit":

@@ -47,6 +47,14 @@ services:
       # read it in the dashboard. Public /health says only up or down.
       - key: EXCHEQUER_HEALTH_TOKEN
         generateValue: true
+      # Makes the first admin account (routes/accounts.py): read it in the
+      # dashboard and POST it to /auth/bootstrap with the admin's e-mail,
+      # name, password and unit. It works once: after an admin exists the
+      # route answers 404 whatever is sent. Officers then get accounts from
+      # that admin; nobody signs up. Without a session the site works as
+      # before, recorded demos included.
+      - key: EXCHEQUER_BOOTSTRAP_TOKEN
+        generateValue: true
       # Seals watch webhook URLs at rest (webhook_vault.py). Generated once;
       # changing it means every officer re-enters their webhook.
       - key: EXCHEQUER_WEBHOOK_KEY
@@ -61,6 +69,14 @@ services:
       # sends it), then add EXCHEQUER_REQUIRE_DEMO_CODE=1 here by hand so a
       # deploy that loses the code fails closed instead of opening.
       - key: EXCHEQUER_DEMO_CODE
+        sync: false
+      # The owner's console switch (access.py): "open" (the default, also
+      # when unset) keeps live tracing as above, for the judges; "officers"
+      # closes every live or spending action to a signed-in officer, and the
+      # demo code no longer opens them. Recorded demos, /verify and reading
+      # stay open. /health says which ("console"). Tell the judges first, and
+      # only once /signin/investigator has the officer password form.
+      - key: EXCHEQUER_CONSOLE
         sync: false
       # Render behind Cloudflare: the client is CF-Connecting-IP, which the
       # edge overwrites. Render keeps a client-sent X-Forwarded-For and only
@@ -80,11 +96,18 @@ services:
         value: "0"
       # The free plan sleeps after 15 idle minutes and the watcher sleeps with
       # it, so a watch set at noon would go unchecked all night while the panel
-      # promised every ten minutes. Off: watches are checked when someone
-      # presses Check now, and the panel says so (watchlist.watcher_status).
-      # Turn it on with a host that stays awake.
+      # promised every ten minutes. Off: watches are checked by the scheduled
+      # job below, or when someone presses Check now, and the panel says which
+      # (watchlist.watcher_status). Turn it on with a host that stays awake.
       - key: EXCHEQUER_WATCHER
         value: "0"
+      # Bearer token for POST /watches/check-due, which the GitHub job
+      # .github/workflows/watch-cron.yml calls every 15 minutes: it wakes the
+      # instance and checks the due watches, so alerts no longer wait for
+      # Check now. Copy it into the `watch-cron` environment's WATCH_CRON_TOKEN
+      # secret (docs/operations.md, Scheduled watch checks).
+      - key: EXCHEQUER_WATCH_CRON_TOKEN
+        generateValue: true
       # The daily snapshot copies a SQLite file on the volume; there is none.
       - key: EXCHEQUER_BACKUPS
         value: "0"

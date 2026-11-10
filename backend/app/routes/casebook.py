@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from .. import config, models, ownership, rate_limit
 from ..correlation import CaseIndex, related_cases
 from ..exchange_matcher import get_matcher, get_router_matcher
+from ..auth import CurrentUser
 from .cases import app_page
 
 router = APIRouter()
@@ -39,8 +40,9 @@ def clear_public_lists() -> None:
         _public_lists.clear()
 
 
-def _listing(caller: str | None, limit: int) -> dict[str, Any]:
-    rows = models.list_summaries(limit=limit, owner_hash=caller, public_addresses=ownership.demo_addresses())
+def _listing(caller: str | None, limit: int, unit_id: int | None = None) -> dict[str, Any]:
+    rows = models.list_summaries(limit=limit, owner_hash=caller, public_addresses=ownership.demo_addresses(),
+                                 unit_id=unit_id)
     # The SQL keeps the newest copy of each demo; two saved in the same second
     # are told apart here. Rows are newest first.
     seen_demo: set[tuple[str, str]] = set()
@@ -57,9 +59,10 @@ def _listing(caller: str | None, limit: int) -> dict[str, Any]:
 
 
 @router.get("/cases", response_model=None)
-def cases(http: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any] | FileResponse:
+def cases(http: Request, user: CurrentUser, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any] | FileResponse:
     """History of past traces, most recent first: the caller's own cases (by
-    the owner key their browser sends) and the demo cases. See ownership.py.
+    the owner key their browser sends), a signed-in officer's unit's cases,
+    and the demo cases. See ownership.py.
     A browser opening /cases gets the app's Cases page, uncounted."""
     if (page := app_page(http)) is not None:
         return page
@@ -68,9 +71,9 @@ def cases(http: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]
     if wait is not None:
         raise HTTPException(status_code=429, headers={"Retry-After": str(int(wait) + 1)},
                             detail="This connection has listed the cases too often this minute. Try again shortly.")
-    caller = ownership.owner_hash_from_headers(http.headers)
-    if caller is not None:
-        return _listing(caller, limit)
+    caller = user.owner_hash
+    if caller is not None or user.unit_id is not None:
+        return _listing(caller, limit, user.unit_id)
     # Everyone without a key sees the same demo list: one read serves them all
     # until a case is saved or evicted, or the kept answer is a little old.
     key = (models.engine(), models.store_version(), limit)

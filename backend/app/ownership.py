@@ -7,7 +7,9 @@ stored case to anyone who asked. Now:
 * Each browser makes a random owner key once and sends it with every request
   (header `X-Exchequer-Owner`). A case stores the SHA-256 of the key that
   traced it, never the key.
-* The history list shows the caller's own cases plus the demo cases.
+* The history list shows the caller's own cases plus the demo cases, and a
+  signed-in officer's list adds their unit's cases, which they read in full
+  as if they had traced them (reader(), R23).
 * A case id is a random UUID, so a link to a case works as the permission to
   read it: /trace/{id}, the report and the letters open for whoever holds
   the link, as they always have. Nothing lists ids that are not yours.
@@ -76,6 +78,16 @@ def demo_addresses() -> frozenset[str]:
 
 def is_public(owner: str | None, address: str | None) -> bool:
     return owner is None and (address or "").lower() in demo_addresses()
+
+
+def reader(case: models.Case, user: Any) -> str | None:
+    """The owner key `user` (an auth.User) reads `case` with: the case's own
+    when a signed-in officer of the unit that traced it reads it, so its
+    particulars reach the whole unit (R23); else the caller's browser key,
+    and case_privacy withholds them from anyone else."""
+    if user.unit_id is not None and case.unit_id == user.unit_id:
+        return case.owner_hash
+    return user.owner_hash
 
 
 def visible_to(owner: str | None, address: str | None, caller: str | None) -> bool:

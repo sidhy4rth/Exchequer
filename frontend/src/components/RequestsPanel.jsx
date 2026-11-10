@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { deleteRequest, fetchCaseRequests, fetchLetters, logRequest, updateRequest } from '../api'
 import { plain } from '../text'
+import { addressOf, kindOf, recipientOf } from './case/letterChecks'
 
 // Where this case's freeze requests stand. The letter is drafted beside it,
 // on the Letters tab; this is the log of what was sent and what came back.
 
 export const STATUS = {
   drafted: { label: 'Drafted', pill: '' },
+  awaiting_signoff: { label: 'Awaiting a second officer', pill: 'amber' },
+  ready: { label: 'Signed off · ready to send', pill: 'green' },
   sent: { label: 'Sent · awaiting reply', pill: 'navy' },
   acknowledged: { label: 'Acknowledged', pill: 'amber' },
   frozen: { label: 'Frozen', pill: 'green' },
@@ -18,8 +21,17 @@ export const STATUS = {
 // from the information letter to the same recipient.
 const freeze = (kind) => Boolean(kind?.endsWith('-freeze'))
 
+const BEFORE = ['drafted', 'awaiting_signoff']
+/** The statuses a row may move to (freeze_requests.py): an urgent letter
+ * goes on only once a second officer signs it off, which only they can do. */
+export function choices(r) {
+  const all = Object.keys(STATUS)
+  if (!r.needs_signoff) return all.filter((k) => k !== 'awaiting_signoff' && k !== 'ready')
+  return r.signoff ? all.filter((k) => !BEFORE.includes(k)) : [...BEFORE, 'closed']
+}
+
 export default function RequestsPanel({ result, onChange }) {
-  const [items, setItems] = useState([])
+  const [rows, setItems] = useState([])
   const [letters, setLetters] = useState([])
   const [other, setOther] = useState('')
   const [error, setError] = useState(null)
@@ -32,20 +44,21 @@ export default function RequestsPanel({ result, onChange }) {
   }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!caseId) return null
+  // Another officer's request in the unit shows on the Letters tab, to sign off; this log is the browser's own.
+  const items = rows.filter((r) => r.mine !== false)
 
   async function run(fn) {
     setError(null)
     try { await fn(); await load(); onChange?.() } catch (e) { setError(e.message) }
   }
-  const log = (recipient, kind) => run(() => logRequest({
-    case_id: caseId, recipient, kind,
-    address: kind.startsWith('exchange') ? (result.exchange_address ?? '') : '',
-    asset: result.asset ?? '',
+  const log = (recipient, kind, address = '') => run(() => logRequest({
+    case_id: caseId, recipient, kind, address, asset: result.asset ?? '',
   }))
+  // Each letter under the name and kind the Letters tab logs it with, so a row
+  // from either place stands for the same letter.
   const suggestions = [...letters].sort((a, b) => freeze(b.to) - freeze(a.to)).map((l) => ({
-    recipient: l.to.startsWith('tether') ? 'Tether' : plain(result.exchange ?? 'the exchange'),
-    kind: l.to,
-  })).filter((s) => !items.some((i) => i.recipient === s.recipient && freeze(i.kind) === freeze(s.kind) && i.status !== 'closed'))
+    to: l.to, recipient: recipientOf(l, result), kind: kindOf(l.to), address: addressOf(l, result),
+  })).filter((s) => !items.some((i) => i.recipient === s.recipient && i.kind === s.kind && i.status !== 'closed'))
 
   return (
     <details className="card sec" open={items.length > 0 || suggestions.length > 0}>
@@ -61,7 +74,7 @@ export default function RequestsPanel({ result, onChange }) {
             <div className="fields">
               <label>Status
                 <select value={r.status} onChange={(e) => run(() => updateRequest(r.request_id, { status: e.target.value }))}>
-                  {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  {choices(r).map((k) => <option key={k} value={k}>{STATUS[k].label}</option>)}
                 </select>
               </label>
               <label>Their reference
@@ -84,7 +97,7 @@ export default function RequestsPanel({ result, onChange }) {
         ))}
         <div className="request-add">
           {suggestions.map((s) => (
-            <button key={s.kind} onClick={() => log(s.recipient, s.kind)}>
+            <button key={s.to} onClick={() => log(s.recipient, s.kind, s.address)}>
               Log {freeze(s.kind) ? 'an urgent freeze' : 'a'} request to {s.recipient}
             </button>
           ))}

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import VictimFlow from './VictimFlow'
 import flow from '../../test/victim-flow-11.json'
+import instantFlow from '../../test/victim-flow-11-instant.json'
 import recordings from '../../../../backend/data/recorded_demos.json'
 
 // The Flow tab: where the victim's share went (backend victim_flow), drawn
@@ -260,5 +261,71 @@ describe('money beyond the hop limit and money the trace did not open', () => {
     expect(card('Not opened')).toHaveTextContent('10 ETH')
     expect(screen.queryByRole('button', { name: /hops? deeper/ })).not.toBeInTheDocument()
     expect(screen.queryByText(/is beyond the trace's/)).not.toBeInTheDocument()
+  })
+})
+
+// A stub: demo 11 as the backend builds it when its exchange wallet is an
+// instant exchanger (src/test/victim-flow-11-instant.json). No recorded demo
+// reaches one, so the figures are demo 11's own.
+describe('money at an instant exchanger', () => {
+  const instant = (over = {}) => draw({ victim_flow: instantFlow, ...over })
+
+  it('has a card of its own, outlined green, that drafts the urgent letter to the swap service', async () => {
+    const user = userEvent.setup()
+    const { onLetters } = instant()
+    const at = card('At an instant exchanger')
+    expect(at).toHaveClass('vf-card', 'vf-instant')
+    expect(at).not.toHaveClass('inferred')
+    expect(at).toHaveTextContent('959.58')
+    expect(at).toHaveTextContent('TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf')
+    expect(at).toHaveTextContent(/which order this paid for and where the payout went/)
+    expect(within(at).getByText('Low · exact label')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 3, name: 'At an exchange' })).toBeNull()
+    await user.click(within(at).getByRole('button', { name: 'Draft letter to Binance' }))
+    expect(onLetters).toHaveBeenCalledWith('instant-freeze')
+  })
+
+  it('counts as a place someone can act on, green in the drawing and the bar', () => {
+    const { container } = instant()
+    expect(screen.getByRole('heading', { level: 2, name: '9.7% can be acted on' })).toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveAccessibleName(expect.stringContaining('959.58 USDT reached an instant exchanger'))
+    expect([...container.querySelectorAll('.vf-bar-all span')].map((c) => c.className)).toEqual(['go instant_exchanger', 'grey not_followed', 'grey beyond_limit', 'grey left'])
+    expect(screen.getByText('At an instant exchanger · 959.58')).toHaveClass('go')
+  })
+
+  it('is dashed, and says so, when the wallet is an inferred order deposit address', () => {
+    const nodes = demo.graph.nodes.map((n) => (n.address === demo.exchange_address ? { ...n, exchange: null, inferred_exchange: 'ChangeNOW' } : n))
+    instant({ graph: { ...demo.graph, nodes }, exchange: 'ChangeNOW', attribution_inferred: true })
+    const at = card('At an instant exchanger')
+    expect(at).toHaveClass('inferred')
+    expect(at).toHaveTextContent('ChangeNOW · inferred')
+  })
+})
+
+// Two swap services reached: the button names the one its letter goes to
+// (backend request_letters._instant), never simply the larger.
+describe('the instant exchanger card with two services', () => {
+  const FF = 'TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf'
+  const two = (over = {}) => {
+    const buckets = instantFlow.buckets.map((b) => (b.kind === 'instant_exchanger' ? { ...b, addresses: [FF, demo.exchange_address] } : b))
+    const nodes = [...instantFlow.nodes, { address: FF, role: 'instant_exchanger', victim_in: 3000, share: null, basis: null, left: 0 }]
+    const graph = { ...demo.graph, nodes: [...demo.graph.nodes, { address: FF, exchange: 'FixedFloat' }] }
+    const own = { address: demo.exchange_address, exchange: 'ChangeNOW', category: 'instant_exchanger' }
+    const side = { address: FF, exchange: 'FixedFloat', category: 'instant_exchanger' }
+    return draw({ victim_flow: { ...instantFlow, buckets, nodes }, graph, exchange: 'ChangeNOW', matches: [side, own], ...over })
+  }
+
+  it("names the case's own exchange when it is one, though another got more", async () => {
+    const user = userEvent.setup()
+    const { onLetters } = two()
+    await user.click(within(card('At an instant exchanger')).getByRole('button', { name: 'Draft letter to ChangeNOW' }))
+    expect(onLetters).toHaveBeenCalledWith('instant-freeze')
+  })
+
+  it('names the first the trace reached when the case’s exchange is none of them', () => {
+    const graph = { ...demo.graph, nodes: [...demo.graph.nodes, { address: FF, exchange: 'FixedFloat' }, { address: 'TSmall', exchange: 'SideShift' }] }
+    const first = { address: 'TSmall', exchange: 'Side​Shift', category: 'instant_exchanger' }
+    two({ exchange: 'Binance', graph, matches: [{ address: demo.exchange_address, exchange: 'Binance' }, first, { address: FF, exchange: 'FixedFloat', category: 'instant_exchanger' }] })
+    expect(within(card('At an instant exchanger')).getByRole('button', { name: 'Draft letter to SideShift' })).toBeInTheDocument()
   })
 })

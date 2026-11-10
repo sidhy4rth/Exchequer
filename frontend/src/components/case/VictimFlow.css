@@ -56,6 +56,10 @@
 .vf-card.go { background: linear-gradient(160deg, var(--go-tint), var(--panel) 60%); border-color: var(--go); }
 .vf-card.risk { background: var(--risk-tint); border-color: var(--risk); }
 .vf-card.dashed { border: 1px dashed var(--line-strong); }
+/* An instant exchanger: an exchange's green outline, without its fill; dashed when inferred. */
+.vf-card.vf-instant { border-color: var(--go); }
+.vf-card.vf-instant.inferred { border-style: dashed; }
+.vf-card.vf-instant h3 { color: var(--go-soft); }
 .vf-card h3 { font-size: 13px; color: var(--text-2); }
 .vf-card.go h3 { color: var(--go-soft); }
 .vf-card.risk h3 { color: var(--risk); }
@@ -95,7 +99,7 @@
   .vf-phone { display: block; }
   .vf-meter { display: block; align-self: stretch; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
   .vf-meter span { display: block; height: 100%; background: var(--text-3); }
-  .vf-card.go .vf-meter span { background: var(--go); }
+  .vf-card.go .vf-meter span, .vf-card.vf-instant .vf-meter span { background: var(--go); }
   .vf-card.risk .vf-meter span { background: var(--risk); }
   .vf-notes li { grid-template-columns: 7.5em minmax(0, 1fr); }
   .vf-phone h2 { margin: 2px 0 0; font-size: 26px; font-weight: 300; }

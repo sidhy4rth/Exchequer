@@ -90,14 +90,16 @@ def test_secret_values_are_redacted_wherever_they_appear(sink, monkeypatch):
     monkeypatch.setattr(config, "HEALTH_TOKEN", "health-token-abcdef123")
     monkeypatch.setattr(config, "BACKUP_TOKEN", "backup-token-abcdef456")
     monkeypatch.setattr(config, "DEMO_CODE", "demo-code-abcdef789")
+    monkeypatch.setattr(config, "WATCH_CRON_TOKEN", "watch-cron-token-abc321")
     monkeypatch.setattr(config, "DATABASE_URL", "postgres://user:db-pass-word-42@host.neon.tech/db")
     monkeypatch.setenv("EXCHEQUER_SIGNING_KEY", "c2lnbmluZy1rZXktc2VlZC0zMi1ieXRlcy1sb25nIQ==")
     logging.getLogger("app.x").warning(
-        "a=%s b=%s c=%s d=%s e=%s", "health-token-abcdef123", "backup-token-abcdef456",
-        "demo-code-abcdef789", "postgres://user:db-pass-word-42@host", "c2lnbmluZy1rZXktc2VlZC0zMi1ieXRlcy1sb25nIQ==")
+        "a=%s b=%s c=%s d=%s e=%s f=%s", "health-token-abcdef123", "backup-token-abcdef456",
+        "demo-code-abcdef789", "watch-cron-token-abc321", "postgres://user:db-pass-word-42@host", "c2lnbmluZy1rZXktc2VlZC0zMi1ieXRlcy1sb25nIQ==")
     logging.getLogger("app.x").warning("Authorization: Bearer some.other-token_99 sent")
     text = sink.getvalue()
     for secret in ("health-token-abcdef123", "backup-token-abcdef456", "demo-code-abcdef789",
+                   "watch-cron-token-abc321",
                    "db-pass-word-42", "c2lnbmluZy1rZXk", "some.other-token_99"):
         assert secret not in text
 

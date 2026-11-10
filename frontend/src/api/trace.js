@@ -77,13 +77,21 @@ export async function fetchTraceIntake() {
  * are Dates, sent as UTC. Resolves with { matches: [{ tx_hash, timestamp,
  * amount, from, to, chain, asset, found_by }], more_matches, scanned, complete }.
  */
-export async function searchPayments({ chain, asset, wallet, amount, from, to }) {
+export async function searchPayments({ chain, asset, wallet, amount, from, to, caseRef }) {
   const response = await apiFetch(`${BASE}/payments/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chain, asset, wallet, amount: String(amount), from: from.toISOString(), to: to.toISOString() }),
+    body: JSON.stringify({
+      chain, asset, wallet, amount: String(amount), from: from.toISOString(), to: to.toISOString(),
+      ...(caseRef ? { case_ref: caseRef } : {}), // a signed-in officer's case reference
+    }),
   })
-  if (!response.ok) throw await toError(response)
+  if (!response.ok) {
+    // The status says which refusal it was: the demo code, a rate limit, the provider.
+    const err = await toError(response)
+    err.status = response.status
+    throw err
+  }
   return response.json()
 }
 
@@ -208,7 +216,7 @@ export async function stopTraceJob(jobId) {
 
 // The trace a job runs, without the complaint's particulars: what a running
 // job is remembered under for the tab, and in sessionStorage across a reload.
-function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments }) {
+function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments, officerFound }) {
   return {
     address,
     ...(maxDepth ? { max_depth: maxDepth } : {}),
@@ -218,22 +226,28 @@ function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSecond
     ...(timeBudgetSeconds ? { time_budget_seconds: timeBudgetSeconds } : {}),
     // R1: start from the victim's payments. The backend checks each one is an
     // incoming transfer to `address`, and reads the wallet from the first.
-    ...(payments?.length ? { payments: payments.map((h) => ({ tx_hash: h })) } : {}),
+    // One the officer found by searching the wallet (POST /payments/search)
+    // says so, and the case shows it.
+    ...(payments?.length ? { payments: payments.map((h) => ({
+      tx_hash: h, ...(officerFound?.includes(h) ? { found_by: 'officer_search' } : {}),
+    })) } : {}),
   }
 }
 
 // What identifies the trace in this tab: everything but the complaint's
-// particulars (the NCRP number and the victim's own wallet), which go to the
+// particulars (the NCRP number, the victim's own wallet and an officer's case
+// reference), which go to the
 // server in the POST body only and are never kept in sessionStorage.
 function jobKey(params) {
   return JSON.stringify(jobTrace(params))
 }
 
 function jobBody(params) {
-  const { payments, ncrpAck, victimAddress } = params
+  const { payments, ncrpAck, victimAddress, caseRef } = params
   return JSON.stringify({
     ...jobTrace(params),
     ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}),
+    ...(caseRef ? { case_ref: caseRef } : {}),
     // The victim's own wallet: the backend compares each payment's sender with it.
     ...(victimAddress && payments?.length ? { victim_address: victimAddress } : {}),
   })

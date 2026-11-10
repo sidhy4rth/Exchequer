@@ -21,6 +21,7 @@ import secrets
 import threading
 import time
 from collections import defaultdict, deque
+from dataclasses import dataclass
 from typing import Any
 
 from . import config
@@ -182,21 +183,23 @@ class SlidingWindowLimiter:
         while len(self._hits) > self.MAX_KEYS:  # oldest-seen first
             del self._hits[next(iter(self._hits))]
 
-    def check(self, key: str, now: float | None = None, cost: int = 1) -> float | None:
+    def check(self, key: str, now: float | None = None, cost: int = 1, limit: int | None = None) -> float | None:
         """Record `cost` hits for `key`. None if allowed, else seconds until it would be.
 
-        A cost above one (a batch of traces) is all or nothing."""
-        if self.limit <= 0:
+        A cost above one (a batch of traces) is all or nothing. `limit`, when
+        given, is this key's own in place of the limiter's (an officer's unit)."""
+        limit = self.limit if limit is None else limit
+        if limit <= 0:
             return None
         now = time.monotonic() if now is None else now
         with self._lock:
             hits = self._hits[key]
             while hits and hits[0] <= now - self.window:
                 hits.popleft()
-            if cost > self.limit:
+            if cost > limit:
                 return float(self.window)
-            if len(hits) + cost > self.limit:
-                return max(1.0, hits[len(hits) + cost - self.limit - 1] + self.window - now)
+            if len(hits) + cost > limit:
+                return max(1.0, hits[len(hits) + cost - limit - 1] + self.window - now)
             hits.extend([now] * cost)
             self._prune(now)
             return None
@@ -209,19 +212,20 @@ class SlidingWindowLimiter:
             for _ in range(min(cost, len(hits) if hits else 0)):
                 hits.pop()
 
-    def remaining(self, key: str, now: float | None = None) -> int:
-        if self.limit <= 0:
+    def remaining(self, key: str, now: float | None = None, limit: int | None = None) -> int:
+        limit = self.limit if limit is None else limit
+        if limit <= 0:
             return 10**6
         now = time.monotonic() if now is None else now
         with self._lock:
             hits = self._hits.get(key)  # asking about a client never adds it
             if hits is None:
-                return self.limit
+                return limit
             while hits and hits[0] <= now - self.window:
                 hits.popleft()
             if not hits:
                 del self._hits[key]
-            return max(0, self.limit - len(hits))
+            return max(0, limit - len(hits))
 
     def reset(self) -> None:
         with self._lock:
@@ -245,15 +249,131 @@ watches_total = SlidingWindowLimiter(config.WATCHES_PER_HOUR_TOTAL, 3600)
 rechecks_total = SlidingWindowLimiter(config.RECHECKS_PER_HOUR_TOTAL, 3600)
 
 
+# Per officer (R26 extended): a signed-in officer's own hourly and daily
+# allowance for each action that spends provider quota, on top of the limits
+# above, which still apply (officers at one station share a connection). The
+# defaults are config.OFFICER_LIMITS; a unit's admin may set its own
+# (accounts.unit_limits). Keyed "officer-<id>"; demo callers are not counted.
+OFFICER_KINDS = {"trace": ("live trace", "live traces", "started"), "watch": ("watch", "watches", "created"),
+                 "recheck": ("recheck", "rechecks", "run"), "check": ("manual check", "manual checks", "made")}
+officer_hour = {kind: SlidingWindowLimiter(0, 3600) for kind in OFFICER_KINDS}
+officer_day = {kind: SlidingWindowLimiter(0, 86400) for kind in OFFICER_KINDS}
+
+
+@dataclass(frozen=True)
+class OfficerCharge:
+    key: str
+    kind: str
+    per_hour: int
+    per_day: int
+
+
+def officer_caps(kind: str, unit: dict[str, Any] | None = None) -> tuple[int, int]:
+    """(per hour, per day) for one officer: the unit's own, else the default."""
+    own = (unit or {}).get(kind)
+    return (own["per_hour"], own["per_day"]) if own else config.OFFICER_LIMITS[kind]
+
+
 def charge(per_client: SlidingWindowLimiter, total: SlidingWindowLimiter, client: str,
-           cost: int = 1) -> tuple[float, str] | None:
-    """Charge `cost` to the client's limit and to the site-wide one, all or
-    nothing. None if allowed; else (seconds to wait, "client" or "site")."""
-    wait = per_client.check(client, cost=cost)
-    if wait is not None:
-        return wait, "client"
-    wait = total.check(TOTAL, cost=cost)
-    if wait is not None:
-        per_client.refund(client, cost)
-        return wait, "site"
+           cost: int = 1, officer: OfficerCharge | None = None) -> tuple[float, str] | None:
+    """Charge `cost` to the officer's own hour and day (when signed in), the
+    client's limit and the site-wide one, all or nothing. None if allowed;
+    else (seconds to wait, "hour", "day", "client" or "site")."""
+    steps = [(per_client, client, None, "client"), (total, TOTAL, None, "site")]
+    if officer is not None:
+        steps[:0] = [(officer_hour[officer.kind], officer.key, officer.per_hour, "hour"),
+                     (officer_day[officer.kind], officer.key, officer.per_day, "day")]
+    charged: list[tuple[SlidingWindowLimiter, str]] = []
+    for limiter, key, limit, who in steps:
+        wait = limiter.check(key, cost=cost, limit=limit)
+        if wait is not None:
+            for done, done_key in charged:
+                done.refund(done_key, cost)
+            return wait, who
+        charged.append((limiter, key))
     return None
+
+
+def refund_officer(officer: OfficerCharge | None, cost: int) -> None:
+    if officer is not None and cost > 0:
+        officer_hour[officer.kind].refund(officer.key, cost)
+        officer_day[officer.kind].refund(officer.key, cost)
+
+
+def officer_refusal(officer: OfficerCharge, who: str, wait: float, cost: int = 1) -> str:
+    """The sentence for a refusal by the officer's own hour or day."""
+    one, many, verb = OFFICER_KINDS[officer.kind]
+    limiter, cap, span = ((officer_hour[officer.kind], officer.per_hour, "hour") if who == "hour"
+                          else (officer_day[officer.kind], officer.per_day, "24 hours"))
+    later = f"{int(wait // 60) + 1} min" if wait < 3600 else f"{int(wait // 3600) + 1} h"
+    if cost > 1:
+        left = limiter.remaining(officer.key, limit=cap)
+        return (f"This needs {cost} {many} and you can start {left} more in this {span} (your limit is "
+                f"{cap}). Send fewer, or try again in {later}.")
+    return (f"You have {verb} {cap} {one if cap == 1 else many} in the last {span}, the most one officer "
+            f"may. Try again in {later}.")
+
+
+class GrowingDelay:
+    """Sign-in failures slow a key down; they never shut it out for good.
+
+    The first `free` failures cost nothing; after that each one makes the key
+    wait twice as long as the last, from `first` up to `cap` seconds. A key
+    with no failure for `forget` seconds starts again, and a success clears
+    it. A permanent lockout would let anyone lock an officer out by typing
+    their e-mail with a wrong password; this only slows the guessing."""
+
+    MAX_KEYS = 50_000
+
+    def __init__(self, free: int, first: float = 1.0, cap: float = 30.0, forget: float = 900.0) -> None:
+        self.free, self.first, self.cap, self.forget = free, first, cap, forget
+        self._seen: dict[str, tuple[int, float]] = {}  # key -> (failures, time of the last)
+        self._lock = threading.Lock()
+
+    def failures(self, key: str, now: float | None = None) -> int:
+        now = time.monotonic() if now is None else now
+        with self._lock:
+            count, last = self._seen.get(key, (0, now))
+            return count if now - last < self.forget else 0
+
+    def wait(self, key: str, now: float | None = None) -> float | None:
+        """Seconds `key` must still wait before its next try, or None."""
+        now = time.monotonic() if now is None else now
+        with self._lock:  # one read: a success may drop the key at any moment
+            count, last = self._seen.get(key, (0, now))
+        if now - last >= self.forget or count <= self.free:
+            return None
+        left = min(self.cap, self.first * 2 ** (count - self.free - 1)) - (now - last)
+        return left if left > 0 else None
+
+    def failed(self, key: str, now: float | None = None) -> None:
+        now = time.monotonic() if now is None else now
+        count = self.failures(key, now)
+        with self._lock:
+            self._seen.pop(key, None)
+            self._seen[key] = (count + 1, now)
+            while len(self._seen) > self.MAX_KEYS:  # oldest-seen first
+                del self._seen[next(iter(self._seen))]
+
+    def succeeded(self, key: str) -> None:
+        with self._lock:
+            self._seen.pop(key, None)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._seen.clear()
+
+
+# Sign-in (routes/accounts.py): attempts per client, and failures per e-mail
+# from one client (keyed "e-mail client"), in 15 minutes; a growing wait
+# after repeated failures by a client, by a client for one e-mail, and for
+# an e-mail from everywhere. The e-mail-wide wait holds only a client that
+# has failed for that e-mail itself, so nobody can shut an officer out by
+# failing for them: an officer who has not mistyped is never held by anyone
+# else, and one who has is held at most until that failure is forgotten.
+login_clients = SlidingWindowLimiter(30, 900)
+login_emails = SlidingWindowLimiter(10, 900)
+login_client_delay = GrowingDelay(free=5)
+login_pair_delay = GrowingDelay(free=3)
+login_email_delay = GrowingDelay(free=3)
+LOGIN_LIMITS = (login_clients, login_emails, login_client_delay, login_pair_delay, login_email_delay)

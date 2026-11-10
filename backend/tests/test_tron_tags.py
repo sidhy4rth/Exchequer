@@ -216,3 +216,38 @@ def test_a_warning_on_the_reported_address_itself_is_read(tron_trace, monkeypatc
     hit = next(m for m in result["risk_matches"] if m["address"] == SEED)
     assert hit["category"] == "reported" and hit["depth"] == 0
     assert result["exchange"] is None  # the seed's own tag is never an attribution
+
+
+def test_a_store_instant_exchanger_is_still_named_once_tronscan_names_another_wallet(tron_trace, monkeypatch):
+    # TronScan names EXCH; the label store names SWAP an instant exchanger. The
+    # matcher rebuilt with the live tags must keep reading the store, or SWAP
+    # (made terminal during the walk) ends as an unlabelled dead end.
+    from app.exchange_matcher import INSTANT_EXCHANGER, ExchangeMatcher
+
+    swap = "TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf"
+
+    class Store:
+        def instant_exchanger(self, chain, address):
+            return {"exchange": "FixedFloat", "label": "FixedFloat", "type": "unknown",
+                    "category": INSTANT_EXCHANGER, "source": "test"} if address == swap else None
+
+    history = [tx(SEED, HOP, 100.0, 1_700_000_000), tx(HOP, EXCH, 49.0, 1_700_000_100),
+               tx(HOP, swap, 50.0, 1_700_000_200)]
+
+    class Source:
+        def get_outgoing_transactions(self, address, limit=None):
+            return [t for t in history if t.from_address == address]
+
+        def is_contract(self, address):
+            return False
+
+    @contextmanager
+    def open_source(chain, asset):
+        yield Source()
+
+    monkeypatch.setattr(main, "open_source", open_source)
+    monkeypatch.setattr(main, "get_matcher", lambda key=None: ExchangeMatcher({}, chain="tron", store=Store()))
+    result = run_trace(TraceRequest(address=SEED, chain="tron", asset="USDT", max_depth=3))
+    assert result["live_tags"]["found"][0]["address"] == EXCH
+    hit = next(m for m in result["matches"] if m["address"] == swap)
+    assert hit["exchange"] == "FixedFloat" and hit["category"] == INSTANT_EXCHANGER

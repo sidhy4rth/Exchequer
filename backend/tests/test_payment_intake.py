@@ -146,6 +146,13 @@ def test_hashes_match_without_case_or_prefix():
     assert payment["tx_hash"] == PAYMENT.hash and payment["found_by"] == "victim"
 
 
+def test_a_payment_the_officer_found_by_search_says_so():
+    # What New trace sends for a hash picked from POST /payments/search.
+    (payment,) = resolve_payments(FakeClient(), SCAMMER, [PaymentRef(tx_hash=PAYMENT.hash, found_by="officer_search")],
+                                  chain_key="ethereum", asset="ETH", limit=100)
+    assert payment["found_by"] == "officer_search"
+
+
 def test_a_failed_transaction_is_not_a_payment():
     failed = replace(tx("0x" + "ff" * 32, VICTIM, SCAMMER, 1.0, PAID_AT), is_error=True)
 

@@ -36,6 +36,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_METER_SAVE_SECONDS` | 30 | How often, at most, a spending meter writes its row (and once at shutdown): a crash forgets at most this much spend. |
 | `EXCHEQUER_DEMO_CODE` | — | Set, a live trace, a batch or a watch needs this code in the `X-Exchequer-Demo-Code` header; reading stays open. After 10 wrong codes in 15 minutes a client is refused (429), the right code included. The right code returns a pass (sent as `X-Exchequer-Demo-Pass`, valid `EXCHEQUER_DEMO_PASS_HOURS`, default 12) that is never locked out; changing the code revokes every pass. Use a long random value: `python -c 'import secrets;print(secrets.token_urlsafe(16))'`. Unset, nothing is guarded. See `backend/app/access.py`. |
 | `EXCHEQUER_REQUIRE_DEMO_CODE` | off | Set once the code is in place: a deploy without `EXCHEQUER_DEMO_CODE` then refuses live tracing (503) instead of opening it. |
+| `EXCHEQUER_CONSOLE` | `open` | The owner's switch. `open` leaves live tracing as the two rows above say. `officers`: every live or spending action (`POST /trace`, `/trace/jobs`, `/batches`, `/payments/search`, `/watches`, `/watches/{id}/check`, `/requests`, `/trace/{id}/recheck`, a sign-off, and stopping a job) needs a signed-in officer session, and the demo code or a pass no longer opens them (403 "Sign in as an officer to trace live."). Recorded demos, `/verify`, the citizen site and every read stay open. `/health` and `/access` report it as `"console"`. Any other value is read as `open` and logged as an error at start. The Demo health job's live traces are then refused too, so turn that job off first; the site canary accepts the closed console. Needs the officer sign-in form at `/signin/investigator` first (see below). |
 | `EXCHEQUER_PUBLIC` | on when Render or Railway says so | A public host without a demo code logs an error at every start. |
 | `EXCHEQUER_WATCHES_PER_HOUR` | 20 | Watches one client may create per hour. `0` = no limit. |
 | `EXCHEQUER_TRUST_PROXY` | `render` when Render sets `RENDER=true`, `1` on Railway, else off | Read the client address (the key of every per-client limit) from the proxy's headers. Only behind a proxy that sets them. `1`: `X-Real-IP`, else the last `X-Forwarded-For` entry (Railway). `render`: `EXCHEQUER_CLIENT_IP_HEADER` if the edge sent it, else entry `EXCHEQUER_PROXY_HOPS` from the right of `X-Forwarded-For`, else the leftmost entry (which a client can write; logged as a warning). `0` = never. |
@@ -44,6 +45,8 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_API_DOCS` | on (off in the image) | `/docs`, `/redoc`, `/openapi.json`. |
 | `EXCHEQUER_WATCHER` | off | Re-read watched addresses in the background. Only worth it on a host that stays awake: on one that sleeps when idle (Render's free plan) the watcher sleeps too, so on a temporary disk `1` is ignored and only `force` turns it on. The watchlist and `/health/detail` report the last check and call it stale after three missed intervals. |
 | `EXCHEQUER_WATCH_INTERVAL` | 600 | Seconds between checks of one watch (minimum 60). |
+| `EXCHEQUER_WATCH_CRON_TOKEN` | — (`render.yaml` generates one) | Bearer token for `POST /watches/check-due`, which the scheduled job calls (Scheduled watch checks). Unset, the endpoint answers 404. |
+| `EXCHEQUER_WATCH_CRON_BATCH` | 10 | The most watches one scheduled call checks, oldest first; the rest wait for the next call. |
 | `EXCHEQUER_WEBHOOK_HOSTS` | — | Comma-separated hosts alert webhooks may post to, beyond Slack, Discord and Google Chat. |
 | `EXCHEQUER_BACKUPS` | off | A daily snapshot of a SQLite store in `backups/` beside it. Ignored on a temporary disk (`force` overrides). |
 | `EXCHEQUER_BACKUP_KEEP` | 7 | How many daily snapshots to keep. |
@@ -155,6 +158,21 @@ stays open, and says so: every start logs `THIS PUBLIC SITE IS OPEN`, and
 `/health` answers `"access": "open"` (`"code"` once set; `"closed"` if the
 code is required but missing, when live tracing answers 503).
 
+To close the console to officers, once the judges have been told, set
+`EXCHEQUER_CONSOLE=officers` on Render. Live work then needs an officer
+signed in at `/signin/investigator`, whatever the demo code; the console
+shows "Sign in as an officer to trace live" in place of the code box, and the
+recorded demos still open. `/health` answers `"console": "officers"`; with
+`EXPECT_DEMO_CODE=1` the site canary takes that as closed, and its console
+checks accept the sign-in link. Remove the variable (or set `open`) to open
+it again.
+
+Do not set it until `/signin/investigator` has the officer password form
+(it calls `POST /auth/login`, then asks for a new password when the account
+is on a temporary one). Without that form the page is only the role picker,
+nobody can sign in from the browser, and the link leads back to the same
+closed console.
+
 ## Database schema
 
 The schema lives in numbered Alembic migrations in `backend/migrations/`,
@@ -179,6 +197,55 @@ Postgres.
 
 CI runs the suite's migration tests on SQLite and the same migrations on a
 real Postgres, including adopting a store made before migrations.
+
+## Scheduled watch checks
+
+Render's free instance sleeps after 15 idle minutes and the in-process
+watcher (`EXCHEQUER_WATCHER`) sleeps with it, so without help a watch is
+checked only when someone presses Check now. `.github/workflows/watch-cron.yml`
+fixes that on the free tier: every 15 minutes it knocks on `/health` until the
+instance is awake, then calls `POST /watches/check-due` with a bearer token.
+Each call checks at most `EXCHEQUER_WATCH_CRON_BATCH` due watches, never
+checked first and then the longest unchecked, inside the part of the day's
+provider allowance kept for watch checks (`EXCHEQUER_WATCH_SHARE_PERCENT`).
+Alerts go to the app and to each watch's webhook, as a Check now's do, and
+each check is audit-recorded. The answer is counts only:
+`{"checked", "alerts", "skipped_budget", "next_due"}`, and the job prints only
+its status code: the repository's run logs are public, and the counts would
+tell a wallet's holder that someone is watching it. The counts are in the
+Render log (`audit watch.check` lines) and `/health/detail`. `skipped_budget` counts
+watches the allowance stopped; each says so on its row and is tried again
+next call.
+
+To switch it on, once:
+
+1. Render → the service → Environment: `EXCHEQUER_WATCH_CRON_TOKEN`. A
+   Blueprint sync (Dashboard → the Blueprint → Manual sync) generates it;
+   without one, add it by hand with a long random value
+   (`python -c 'import secrets;print(secrets.token_urlsafe(32))'`). Saving
+   redeploys. Copy the value.
+2. GitHub → Settings → Environments → New environment `watch-cron`.
+   Deployment branches: selected, `main` only. Add the secret
+   `WATCH_CRON_TOKEN` with the value from step 1.
+3. Actions → Watch checks → Run workflow (on `main`). It must be green
+   ("Checked (HTTP 200)").
+4. Settings → Secrets and variables → Actions → Variables: the repository
+   variable `WATCH_CRON` = `on`, so the 15-minute schedule starts.
+
+The watchlist says watches are checked automatically only while scheduled
+calls keep arriving (one within the last 30 minutes), so a token with no job
+behind it promises nothing. The interval it gives grows with the backlog: one
+call checks `EXCHEQUER_WATCH_CRON_BATCH` watches, so 25 active watches at 10 a
+call are each checked about every 45 minutes, and the stale warning waits
+three of those. To stop, set `WATCH_CRON` to `off`; removing the Render value
+makes the endpoint answer 404.
+
+Two things to know. Calls every 15 minutes keep the instance awake almost
+all the time, which uses about 744 of the workspace's 750 free instance
+hours a month: a second free service in the same Render workspace would run
+both out before the month ends. And GitHub pauses scheduled workflows in a
+repository with no activity for 60 days; Actions shows a button to turn the
+schedule back on.
 
 ## Backups
 

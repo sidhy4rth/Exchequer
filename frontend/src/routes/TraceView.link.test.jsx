@@ -64,6 +64,14 @@ describe('a trace link asks before it runs (3-5)', () => {
     expect(posts[0]).not.toHaveProperty('time_budget_seconds')
   })
 
+  it('sends a payment the officer found by search as found by officer search', async () => {
+    const posts = api()
+    const other = 'cd'.repeat(32)
+    open({ pathname: `/trace/${ADDR}`, search: `?chain=ethereum&asset=ETH&depth=3&direction=outgoing&pay=${HASH},0x${other}&found=${HASH}`, state: { startedHere: true } })
+    await screen.findByRole('button', { name: 'Stop this trace' })
+    expect(posts[0].payments).toEqual([{ tx_hash: HASH, found_by: 'officer_search' }, { tx_hash: `0x${other}` }])
+  })
+
   it('clamps depth and budget from the link to what the backend takes', async () => {
     const posts = api()
     open(`/trace/${ADDR}?chain=ethereum&depth=99&budget=5000`)

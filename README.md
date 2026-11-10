@@ -180,9 +180,10 @@ npm install
 npm run dev                                           # → http://localhost:5173
 ```
 
-The first screen is the front door, in **demo mode**: there are no accounts yet, so there is nothing to sign in
-with. Anyone can enter as an investigator (the tracing console) or a citizen (a page still to be built), and a
-banner on every page says so and switches between the two. A public deployment can ask for a demo code before
+The first screen is the front door. At the investigator's door, officers sign in with the account their unit's
+admin made on the Admin page; a new account's temporary password is changed at the first sign-in. Anyone else
+can still look around as a demo, as an investigator (the tracing console) or a citizen (a page still to be built,
+with no accounts yet), and the demo says so on every page. A public deployment can ask for a demo code before
 live tracing (`EXCHEQUER_DEMO_CODE`, see `docs/operations.md`).
 
 <details>

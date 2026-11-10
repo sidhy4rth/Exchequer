@@ -26,6 +26,11 @@ only what the recipient needs to act -- the wallets, the hashes with their
 times, the chain and token, and the one amount the information letter states
 -- and no narrative. Every letter says it is not valid until an officer signs
 it on official letterhead, so an unsigned draft cannot pass as a police request.
+
+An instant exchanger (a no-KYC swap service) gets its own pair: a payment into
+it paid for an order, so they ask for the order, its payout address and asset,
+and the account, e-mail and IP that placed it, never an account holder's KYC.
+When the case's exchange is one, its pair replaces the exchange letters.
 """
 from __future__ import annotations
 
@@ -36,6 +41,7 @@ from typing import Any
 from . import config, provenance
 from .case_privacy import WITHHELD
 from .display_text import one_line, short
+from .label_rules import INSTANT_EXCHANGER
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
                      _amount, _paid_at, _when, _when_iso, also_reached, also_reached_line, attribution_kind)
 from .risk_matcher import _list_meta, is_tether_usdt_freeze
@@ -44,7 +50,9 @@ EXCHANGE = "exchange"
 TETHER = "tether"
 EXCHANGE_FREEZE = "exchange-freeze"  # urgent: hold the funds now, pending a formal request
 TETHER_FREEZE = "tether-freeze"
-LETTERS = (EXCHANGE_FREEZE, TETHER_FREEZE, EXCHANGE, TETHER)  # the freeze letters first: they go first
+INSTANT = "instant"  # to an instant exchanger: the orders a payment into it paid for
+INSTANT_FREEZE = "instant-freeze"
+LETTERS = (EXCHANGE_FREEZE, INSTANT_FREEZE, TETHER_FREEZE, EXCHANGE, INSTANT, TETHER)  # the freeze letters go first
 
 NOT_VALID = "This is a DRAFT. It is not valid until an officer signs it on official letterhead."
 
@@ -75,6 +83,26 @@ def _attribution(result: dict[str, Any]) -> dict[str, Any] | None:
                     "route": follow.get("route"), "cap": follow.get("cap"), "swaps": follow.get("swaps"),
                     "left_out": follow.get("swaps_left_out")}
     return None
+
+
+def _instant(result: dict[str, Any]) -> dict[str, Any] | None:
+    """The instant exchanger to write to: the case's exchange when it is one
+    (`found`, its attribution, then gives the letter's amount), else the
+    first one a trace reached. None on a reverse trace or with none."""
+    if result.get("direction", "outgoing") != "outgoing":
+        return None
+    found = _attribution(result)
+    picks = [(t, m) for t in _all_traces(result)
+             for m in [*(t.get("matches") or []), *(t.get("inferred_deposits") or [])]
+             if m.get("category") == INSTANT_EXCHANGER and m.get("address")]
+    for trace, m in picks:
+        if found and found["trace"] is trace and m["address"] == trace.get("exchange_address"):
+            return {"trace": trace, "match": m, "found": found, "service": trace["exchange"], "asset": found["asset"]}
+    if not picks:
+        return None
+    trace, m = picks[0]
+    return {"trace": trace, "match": m, "found": None, "service": m.get("exchange") or "the swap service",
+            "asset": trace.get("asset")}
 
 
 METHOD_NAME = {"fifo": "FIFO", "libr": "LIBR", "prorata": "pro-rata"}
@@ -262,10 +290,15 @@ def available(result: dict[str, Any]) -> list[dict[str, str]]:
     """Which letters this case can support, for the interface to offer: the
     urgent freeze letters first, since they are sent first."""
     urgent, info = [], []
-    found = _attribution(result)
-    if found and result.get("direction", "outgoing") == "outgoing":
+    found, instant = _attribution(result), _instant(result)
+    if found and result.get("direction", "outgoing") == "outgoing" and not (instant and instant["found"]):
         urgent.append({"to": EXCHANGE_FREEZE, "title": f"Urgent freeze request to {found['trace']['exchange']}"})
         info.append({"to": EXCHANGE, "title": f"Request to {found['trace']['exchange']}"})
+    if instant:
+        # The wallet each is about, for the requests log: the service may not be the case's exchange.
+        at = instant["match"]["address"]
+        urgent.append({"to": INSTANT_FREEZE, "title": f"Urgent freeze request to {instant['service']}", "address": at})
+        info.append({"to": INSTANT, "title": f"Request to {instant['service']}", "address": at})
     if _tether_holds(result):
         urgent.append({"to": TETHER_FREEZE, "title": "Urgent freeze request to Tether"})
     if _frozen(result) or _usdt_traces(result):
@@ -653,10 +686,23 @@ FREEZE_ASK = {  # what the case holds about the address decides what may be held
 }
 
 
-def _freeze_header(to_line: str, subject: str, ask: str) -> list[str]:
+AWAITING = "Awaiting a second officer's approval: not ready to send until one of this unit approves it."
+
+
+def _approval_line(approval: dict[str, Any] | None) -> str:
+    """An urgent letter is ready only once a second officer of the unit signs
+    it off (freeze_requests.sign_off): who, with their rank left blank, and when."""
+    if not approval:
+        return AWAITING
+    at = datetime.fromisoformat(approval["at"]).astimezone(IST)
+    return f"Approved by a second officer: {short(approval['by'], 40)}, {BLANK} (rank), {at.day} {at:%b %Y, %H:%M} IST"
+
+
+def _freeze_header(to_line: str, subject: str, ask: str, approval: dict[str, Any] | None = None) -> list[str]:
     return [
         "DRAFT — URGENT freeze request, for the investigating officer to complete and sign.",
         NOT_VALID,
+        _approval_line(approval),
         "Generated by Exchequer from a stored case. Nothing below has been sent.",
         "",
         f"From      : {BLANK} (officer's name and rank)",
@@ -721,13 +767,27 @@ def _carrying(trace: dict[str, Any], i: int, amount: float | None) -> list[dict[
 SIGN_OFF = ["", BLANK, "(signature, name, rank, seal)"]
 
 
-def _exchange_freeze(result: dict[str, Any]) -> str:
+def _exchange_freeze(result: dict[str, Any], approval: dict[str, Any] | None = None) -> str:
     found = _attribution(result)
     if not found or result.get("direction", "outgoing") != "outgoing":
         raise LetterNotApplicable("This case reached no exchange, so there is no exchange to write to.")
     trace, asset = found["trace"], found["asset"]
     exchange, address, kind = trace["exchange"], trace["exchange_address"], attribution_kind(trace)
     stated = _letter_amount(result, found)
+    pairs, count, note = _freeze_pairs(trace, address, kind, stated)
+    lines = _freeze_header(
+        f"{exchange} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
+        f"hold funds credited through {address}", FREEZE_ASK[kind].format(a=address), approval)
+    lines += [f"Chain     : {trace.get('chain_name') or result.get('chain_name')}", f"Token     : {asset}",
+              f"Wallet    : {address}", *_freeze_amount(stated, asset), *_hash_lines(pairs, "it", count), *note,
+              *SIGN_OFF]
+    return "\n".join(lines) + "\n"
+
+
+def _freeze_pairs(trace: dict[str, Any], address: str, kind: str,
+                  stated: dict[str, Any] | None) -> tuple[list[tuple[str, int | None]], int, list[str]]:
+    """The transactions a freeze letter lists into `address`, how many there
+    were, and a note on those it leaves out."""
     i = next((n for n, s in enumerate(trace.get("trace_path") or []) if s.get("address") == address), 0)
     every, note = _transfers_into(trace, address), []
     if kind in COMPANY_WALLET_KINDS:
@@ -745,22 +805,95 @@ def _exchange_freeze(result: dict[str, Any]) -> str:
         pairs, count = [(t.get("hash"), t.get("timestamp")) for t in every], len(every)
     else:
         pairs, count = _route_into(trace, i)
+    return pairs, count, note
+
+
+# -- the instant exchanger's pair ---------------------------------------------------
+INSTANT_ASK = ("Please hold, now, any payout or refund not yet made for the exchange orders paid for by the "
+               "transactions below into your wallet {a}, and keep each order's record: its order ID, the payout "
+               "address and asset, and the account, e-mail address and IP address used to place it")
+INSTANT_REQUESTS = [
+    "   you are requested to identify the exchange order or orders paid for by each transaction",
+    "   listed in paragraph 3, and to furnish for each order:",
+    "   (a) the order (exchange) ID, its status and its times;",
+    "   (b) the asset and amount paid out, the payout address and the payout transaction hash;",
+    "   (c) any refund address given;",
+    "   (d) the account, e-mail address, IP addresses and device details used to place the order;",
+    "   (e) any other order placed with the same account, e-mail address, IP address or payout address.",
+    "",
+    "5. You are further requested to preserve all records relating to these orders and to hold",
+    f"   any payout or refund not yet made pending this investigation {BLANK}.",
+]
+
+
+def _instant_parts(result: dict[str, Any]) -> tuple[dict[str, Any], str, dict[str, Any] | None,
+                                                     list[tuple[str, int | None]], int, list[str]]:
+    """(the target, its address, the amount stated, the transactions into it,
+    how many, a note). Only the case's own exchange has an amount: the case's
+    estimate is for it, so another instant exchanger's letter leaves a blank."""
+    inst = _instant(result)
+    if inst is None:
+        raise LetterNotApplicable("This case reached no instant exchanger, so there is no swap service to write to.")
+    trace, address = inst["trace"], inst["match"]["address"]
+    stated = _letter_amount(result, inst["found"]) if inst["found"] else None
+    if inst["found"]:
+        return (inst, address, stated, *_freeze_pairs(trace, address, attribution_kind(trace), stated))
+    every = [(t.get("hash"), t.get("timestamp")) for t in _transfers_into(trace, address)]
+    return inst, address, None, every, len(every), []
+
+
+def _instant_freeze(result: dict[str, Any], approval: dict[str, Any] | None = None) -> str:
+    inst, address, stated, pairs, count, note = _instant_parts(result)
     lines = _freeze_header(
-        f"{exchange} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
-        f"hold funds credited through {address}", FREEZE_ASK[kind].format(a=address))
-    lines += [f"Chain     : {trace.get('chain_name') or result.get('chain_name')}", f"Token     : {asset}",
-              f"Wallet    : {address}", *_freeze_amount(stated, asset), *_hash_lines(pairs, "it", count), *note,
-              *SIGN_OFF]
+        f"{inst['service']} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
+        f"hold the payout of orders paid into {address}", INSTANT_ASK.format(a=address), approval)
+    lines += [f"Chain     : {inst['trace'].get('chain_name') or result.get('chain_name')}",
+              f"Token     : {inst['asset']}", f"Wallet    : {address}", *_freeze_amount(stated, inst["asset"]),
+              *_hash_lines(pairs, "it", count), *note, *SIGN_OFF]
     return "\n".join(lines) + "\n"
 
 
-def _tether_freeze(result: dict[str, Any]) -> str:
+def _instant_letter(case_id: str, result: dict[str, Any]) -> str:
+    inst, address, stated, *_ = _instant_parts(result)
+    service, asset, match = inst["service"], inst["asset"], inst["match"]
+    every = _transfers_into(inst["trace"], address)  # each one may have paid for an order
+    guess = match.get("wallet_type") == INFERRED_DEPOSIT
+    lines = _header(
+        case_id, result,
+        f"{service} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
+        f"Request for the exchange orders paid into {address} ({inst['trace'].get('chain_name')})")
+    what = (f"which we have reason to believe is an order deposit address of {service}: every transfer out of it "
+            f"went to {service}'s labelled wallet. This is an inference from public records, which only {service} "
+            "can confirm." if guess else
+            f"which is publicly labelled as a wallet of {service} (label: {_plain_label(match.get('label'))}; "
+            f"{_label_source(inst['trace'])}).")
+    lines += [*_opening(result), "", f"2. Public blockchain records show {asset} moving to the address {address},",
+              *textwrap.wrap(f"{what} {service} is an instant exchange service: each payment into it pays for an "
+                             "exchange order, paid out in another asset to an address the customer gives.",
+                             width=95, initial_indent="   ", subsequent_indent="   ", break_long_words=False),
+              *(_amount_lines(asset, stated) if stated else ["", f"   The amount: {BLANK} (officer to state)."]),
+              "", f"3. The transfers into {address} in this trace (times in IST, with UTC):",
+              *(line for t in every for line in (f"     {t.get('value_native', 0):,.6f} {asset}, "
+                                                 f"{_when(t.get('timestamp'))}", f"       tx {t.get('hash')}")),
+              *([f"     {BLANK} (officer to add)"] if not every else []),
+              "", f"4. In exercise of the powers under {BLANK}",
+              "   [e.g. Section 94 of the Bharatiya Nagarik Suraksha Sanhita, 2023 — officer to confirm],",
+              *INSTANT_REQUESTS, "",
+              "6. This request identifies an address, not a person. The attached Exchequer report sets",
+              "   out every address and transaction relied on, so each can be verified independently on",
+              "   a public block explorer.", "",
+              "Attachment: Exchequer report for case " + case_id + " (text), with evidence manifest.",
+              "", BLANK, "(signature, name, designation, seal)"]
+    return "\n".join(lines) + "\n"
+
+
+def _tether_freeze(result: dict[str, Any], approval: dict[str, Any] | None = None) -> str:
     holds = _tether_holds(result)
     if not holds:
         raise LetterNotApplicable("This case has no USDT wallet on Ethereum or Tron for Tether to freeze.")
     lines = _freeze_header(
         f"Tether Operations Limited — law-enforcement requests team {BLANK} (officer to find and confirm the right channel)",
-        "freeze USDT at the wallets below", "Please freeze, now, the USDT held at the wallets below")
+        "freeze USDT at the wallets below", "Please freeze, now, the USDT held at the wallets below", approval)
     found = _attribution(result)
     for trace, wallets, left in holds:
         # The figure the exchange letter states, when this trace reached that exchange: it went on past these wallets.
@@ -775,14 +908,20 @@ def _tether_freeze(result: dict[str, Any]) -> str:
     return "\n".join(lines[:-1] + SIGN_OFF) + "\n"
 
 
-def draft(case_id: str, result: dict[str, Any], to: str) -> str:
+def draft(case_id: str, result: dict[str, Any], to: str, approval: dict[str, Any] | None = None) -> str:
+    """The letter `to` for the case. An urgent freeze letter says whether a
+    second officer approved it (`approval`: {"by", "at"}) or still must."""
     result = _cleaned(result)
     if to == EXCHANGE_FREEZE:
-        return _exchange_freeze(result)
+        return _exchange_freeze(result, approval)
     if to == TETHER_FREEZE:
-        return _tether_freeze(result)
+        return _tether_freeze(result, approval)
     if to == EXCHANGE:
         return _exchange_letter(case_id, result)
     if to == TETHER:
         return _tether_letter(case_id, result)
+    if to == INSTANT_FREEZE:
+        return _instant_freeze(result, approval)
+    if to == INSTANT:
+        return _instant_letter(case_id, result)
     raise ValueError(f"Unknown letter '{to}'. Expected one of: {', '.join(LETTERS)}.")

@@ -174,6 +174,8 @@ def _fresh_trace_rate_limit():
     for limiter in (rate_limit.traces, rate_limit.traces_total, rate_limit.watches_total, casebook.case_lists,
                     casebook.correlations, rate_limit.rechecks, rate_limit.rechecks_total):
         limiter.reset()
+    for limiter in (*rate_limit.officer_hour.values(), *rate_limit.officer_day.values()):
+        limiter.reset()
     # Likewise the minutes each connection held trace slots, and the kept demo list.
     cases._slot_clock.reset()
     casebook.clear_public_lists()

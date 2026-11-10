@@ -90,6 +90,14 @@ export async function updateRequest(requestId, changes) {
   }))
 }
 
+/** A second signed-in officer of the drafter's unit approves an urgent freeze
+ * letter. The header shows the server the app sent it, not a cross-site form. */
+export async function signOffRequest(requestId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}/signoff`, {
+    method: 'POST', headers: { 'X-Exchequer-Request': '1' },
+  }))
+}
+
 export async function deleteRequest(requestId) {
   return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' }))
 }
@@ -112,6 +120,8 @@ export async function fetchRecheck(id) {
 }
 
 /** Reread the case's cited transfers now (gated and rate-limited like a trace). */
-export async function runRecheck(id) {
-  return recheckOrNull(await apiFetch(`${BASE}/trace/${encodeURIComponent(id)}/recheck`, { method: 'POST' }))
+export async function runRecheck(id, caseRef = null) {
+  // A signed-in officer's case reference, in the body only (case_refs.py).
+  const body = caseRef ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ case_ref: caseRef }) } : {}
+  return recheckOrNull(await apiFetch(`${BASE}/trace/${encodeURIComponent(id)}/recheck`, { method: 'POST', ...body }))
 }

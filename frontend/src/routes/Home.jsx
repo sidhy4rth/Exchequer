@@ -5,7 +5,7 @@ import ChainDot from '../components/ChainDot'
 import Showroom from '../components/Showroom'
 import { DEMOS, SHORT_CHAIN } from '../components/TraceForm'
 import { bandLabel, bandOf } from '../components/confidence'
-import { hasDemoAccess } from '../demoCode'
+import { hasDemoAccess, liveLock } from '../demoCode'
 import { ADDRESS_RE, HASH_RE, findTarget } from '../find'
 import { usePhone } from '../phone'
 import { plain } from '../text'
@@ -239,7 +239,9 @@ export default function Home() {
   const allReady = chains.length > 1 && chains.every((c) => c.ready)
   // A public site without the code: verified examples only, nothing that would
   // spend the provider quota or keep running.
-  const locked = Boolean(access?.demo_code_required) && !unlocked
+  // A site closed to officers: the same, until an officer signs in.
+  const lock = liveLock(access, unlocked)
+  const locked = Boolean(lock)
 
   return (
     <div className="home console">
@@ -248,7 +250,7 @@ export default function Home() {
           {allReady && <p className="hero-status"><i aria-hidden="true" />{`All ${chains.length} chains ready to trace`}</p>}
           <h1>Follow a payment to the exchange that can freeze it</h1>
         </div>
-        {locked ? <Showroom onUnlock={() => setUnlocked(true)} /> : (
+        {locked ? <Showroom officers={lock === 'officer'} onUnlock={() => setUnlocked(true)} /> : (
           <section className="card glass hero-card" aria-label="Start a trace">
             <QuickTrace health={health} />
             <TryRecorded />

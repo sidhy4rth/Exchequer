@@ -296,5 +296,5 @@ def test_every_search_is_audited_without_the_complaints_particulars(chain, caplo
     with caplog.at_level(logging.INFO, logger="exchequer.audit"):
         assert search().status_code == 200
     lines = [r.getMessage() for r in caplog.records if r.name == "exchequer.audit"]
-    assert len(lines) == 1 and "payment.search" in lines[0] and '"matches": 1' in lines[0]
+    assert len(lines) == 1 and "payment.search" in lines[0] and "detail=sha256:" in lines[0]
     assert WALLET not in lines[0] and VICTIM not in lines[0] and PAID.hash not in lines[0]

@@ -206,6 +206,7 @@ def infer_deposit_addresses(
         )
 
         data["inferred_exchange"] = meta["exchange"]
+        data["exchange_category"] = meta.get("category")  # an instant exchanger's order deposit address
         data["inferred_evidence"] = evidence
         data["is_exchange"] = True  # the pattern rules exempt exchanges
         inferred.append(
@@ -217,6 +218,7 @@ def infer_deposit_addresses(
                 depth=data.get("depth", 0),
                 value_received_native=received,
                 evidence=evidence,
+                category=meta.get("category"),
             )
         )
 

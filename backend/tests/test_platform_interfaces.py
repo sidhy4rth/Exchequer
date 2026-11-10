@@ -51,7 +51,8 @@ def test_record_writes_one_line_with_event_case_and_detail(caplog):
     with caplog.at_level(logging.INFO, logger="exchequer.audit"):
         audit.record("case.export", case_id="c1", detail={"format": "pdf"})
     [line] = caplog.messages
-    assert "case.export" in line and "c1" in line and '"format": "pdf"' in line
+    # The detail is kept in the audit table; the line carries only its hash.
+    assert "case.export" in line and "c1" in line and "detail=sha256:" in line and "pdf" not in line
 
 
 def test_record_needs_no_case_or_detail(caplog):

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchBatches, startBatch } from '../api'
 import { readComplaints } from '../csv'
+import CaseRefField, { refOk, tidyRef, useSignedIn } from './CaseRefField'
 
 // Home page: paste or open a CSV of complaints and trace them as one batch.
 const SAMPLE = 'reference,address,chain,asset\nNCRP-2026-0001,0x…,ethereum,ETH\nNCRP-2026-0002,T…,tron,USDT'
@@ -14,12 +15,19 @@ export default function BulkIntake({ defaultOpen = false } = {}) {
   const [rowErrors, setRowErrors] = useState([])
   const [busy, setBusy] = useState(false)
   const [past, setPast] = useState([])
+  // A signed-in officer runs a batch only under a case reference (case_refs.py).
+  const officer = useSignedIn()
+  const [caseRef, setCaseRef] = useState('')
   useEffect(() => { fetchBatches().then((d) => setPast(d.batches ?? [])).catch(() => {}) }, [])
 
   const read = text.trim() ? readComplaints(text) : null
   // A file with any bad line sends nothing: one shifted column can put the
   // victim's wallet where the suspect's address should be.
   const rows = read && read.errors.length === 0 ? read.rows : []
+  // Each row is traced under its own complaint's reference; the batch's is
+  // for the rows without one (routes/batches.py). Wait for GET /auth/me.
+  const lacking = officer ? rows.filter((r) => !refOk(r.reference ?? '')).length : 0
+  const needsRef = officer === null || (lacking > 0 && !refOk(caseRef))
 
   async function onFile(file) {
     if (!file) return
@@ -29,7 +37,7 @@ export default function BulkIntake({ defaultOpen = false } = {}) {
   async function start() {
     setBusy(true); setError(null); setRowErrors([])
     try {
-      const batch = await startBatch(name, rows.map(({ line, ...row }) => row))
+      const batch = await startBatch(name, rows.map(({ line, ...row }) => row), lacking ? tidyRef(caseRef) : null)
       navigate(`/batch/${batch.batch_id}`)
     } catch (e) {
       // The server numbers the rows it was sent; name the file line instead.
@@ -50,10 +58,12 @@ export default function BulkIntake({ defaultOpen = false } = {}) {
           </div>
         )}
         {rows.length > 0 && <Preview rows={rows} columns={read.columns} />}
+        {officer && (lacking > 0 || rows.length === 0) && <CaseRefField id="batch-case-ref" value={caseRef} onChange={setCaseRef}
+          hint={`${lacking ? `${lacking} row${lacking === 1 ? ' has' : 's have'} no reference of ${lacking === 1 ? 'its' : 'their'} own: this one is used for ${lacking === 1 ? 'it' : 'them'}` : 'For the rows without a reference of their own'} · never in links or logs`} />}
         <div className="verify-actions">
           <label className="button-like">Open a .csv<input type="file" accept=".csv,text/csv,text/plain" hidden onChange={(e) => onFile(e.target.files?.[0])} /></label>
           <input className="bulk-name" placeholder="Batch name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
-          <button className="primary" disabled={busy || rows.length === 0} onClick={start}>
+          <button className="primary" disabled={busy || rows.length === 0 || needsRef} onClick={start}>
             {busy ? 'Starting…' : rows.length ? `Run batch of ${rows.length}` : 'Run batch'}
           </button>
         </div>
