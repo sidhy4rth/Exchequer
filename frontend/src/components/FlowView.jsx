@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useMedia } from '../phone'
 import { plain } from '../text'
 import RoleSwatch from './RoleSwatch'
 
@@ -11,25 +12,31 @@ import RoleSwatch from './RoleSwatch'
 // exchange -- and everything else is thin.
 //
 // Colour carries meaning exactly as elsewhere: green for a labelled exchange,
-// red for a sanctions or mixer hit. An inference or a fired pattern is a faded
-// dot with a dashed edge (styles.css); a gambling platform's wallet is grey
-// with a dashed halo (an attribution, not a designation). The key draws them
-// the same way (RoleSwatch). Dashed means inferred, so the traced funds stay
-// solid even where a pattern fired on them.
+// an inferred deposit and the traced route, nothing else. Red is risk: solid
+// with a halo for a confirmed hit (sanctions, mixer, frozen...), faded with a
+// dashed ring for a possible flag (a pattern fired; not confirmed). A gambling
+// platform's wallet is grey with a dashed halo (an attribution, not a
+// designation). The key draws them the same way (RoleSwatch). Dashed means
+// unconfirmed, so the traced funds stay solid even where a pattern fired on them.
+//
+// In motion: the columns arrive one after another on first sight, the lines
+// drawing on as their far end appears, then a light runs the traced funds.
+// "Pause motion" stops the light and the sweeps; reduced motion draws the
+// final picture at once and runs nothing.
 
 const ROLE_NAME = {
   seed: 'Reported address',
-  risk: 'Sanctioned / mixer',
+  risk: 'Sanctioned / mixer / frozen (confirmed)',
   gambling: 'Gambling platform wallet',
   exchange: 'Labelled exchange wallet',
   inferred: 'Probable deposit address (inferred)',
   service: 'Service contract or router, not expanded',
-  flagged: 'Flagged by a pattern',
+  flagged: 'Possible flag · pattern (not confirmed)',
   node: 'Traced address',
 }
 const ROLE_VAR = {
   seed: 'var(--text)', risk: 'var(--risk)', gambling: 'var(--text-2)', exchange: 'var(--go)', inferred: 'var(--go-soft)',
-  service: 'var(--line-strong)', flagged: 'var(--text-2)', node: 'var(--text-3)',
+  service: 'var(--line-strong)', flagged: 'var(--risk)', node: 'var(--text-3)',
 }
 const RADIUS = { seed: 7, risk: 6.5, gambling: 6.5, exchange: 6.5, inferred: 6, service: 4, flagged: 4.5, node: 3.5 }
 
@@ -45,6 +52,7 @@ function roleOf(node) {
 }
 
 const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`
+const short4 = (a) => `${a.slice(0, 4)}…${a.slice(-4)}`
 const num = (value) =>
   value >= 1000 ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
                 : Number((value || 0).toFixed(6)).toString()
@@ -62,6 +70,13 @@ function captionOf(node, role) {
   if (role === 'gambling') return node.risk_entity ?? 'gambling platform'
   if (role === 'service') return node.router ?? node.label ?? null
   return null
+}
+
+/** A transfer as a gentle S from the sender's dot to the receiver's. */
+function curve(a, b) {
+  const x1 = a.x + a.r; const x2 = b.x - b.r
+  const dx = Math.max(24, (x2 - x1) * 0.45)
+  return `M${x1},${a.y} C${x1 + dx},${a.y} ${x2 - dx},${b.y} ${x2},${b.y}`
 }
 
 const PAD_X = 70
@@ -165,11 +180,13 @@ function layout(data, tracePath, direction, width) {
       const a = placed.get(e.source); const b = placed.get(e.target)
       if (!a || !b) return null
       return {
-        edge: e, a, b,
+        edge: e, a, b, d: curve(a, b),
         onPath: pathEdges.has(`${e.source}>${e.target}`),
         pathIndex: pathEdges.get(`${e.source}>${e.target}`),
         width: 0.8 + 2.2 * Math.sqrt((e.value_native || 0) / maxValue),
         flagged: Boolean(e.flags?.length),
+        // A line draws on as its far end's column arrives.
+        column: Math.max(a.column, b.column),
       }
     })
     .filter(Boolean)
@@ -188,17 +205,67 @@ function layout(data, tracePath, direction, width) {
 const STAGE_HEIGHT = 560
 const ZOOM_MIN = 0.15
 const ZOOM_MAX = 4
+// Room above the diagram for the map's controls, so they never sit on a
+// column heading. On a phone the controls are 44 px tall.
+const TOP_RESERVE = 40
+const TOP_RESERVE_COMPACT = 62
 
 const COMET_HEAD = 0.28   // fraction of a segment the light covers
 const COMET_SEGMENT_MS = 700
 const COMET_PAUSE_MS = 900
 
-export default function FlowView({ data, tracePath, unit = '', direction = 'outgoing' }) {
+// The entrance (the motion system): a column every 450 ms, its dots popping
+// top to bottom 40 ms apart (spread over at most 360 ms, so a tall column
+// keeps time), its lines drawing on in 500 ms as their far end arrives.
+export const COLUMN_STEP_MS = 450
+const NODE_STAGGER_MS = 40
+const STAGGER_SPAN_MS = 360
+const POP_MS = 450
+const DRAW_MS = 500
+const REVEAL_TAIL_MS = Math.max(STAGGER_SPAN_MS + POP_MS, DRAW_MS)
+const WAITING = -1
+const DONE = Number.POSITIVE_INFINITY
+
+// "Show only flags": everything but the flags, the confirmed risk wallets and
+// the reported address recedes this far.
+const FLAGS_NODE_ALPHA = 0.12
+const FLAGS_LINK_ALPHA = 0.08
+// A phone tap selects the nearest dot within this many screen pixels: rows
+// sit close there, so a big hit circle would pick a neighbour.
+const TAP_REACH = 22
+
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
+
+/**
+ * The hop map.
+ *
+ * selected / onSelect: the selected address. With onSelect the selection is
+ * the caller's (shared with the bubble map): a click copies the address and
+ * calls onSelect(id); a second click, a click on the empty stage or Escape on
+ * the focused stage calls onSelect(null). Without it the map keeps its own.
+ * flagsOnly: fade everything but possible flags, confirmed risk and the seed.
+ * compact: the phone layout (tap to select, no tooltip, 44 px controls).
+ * active: false while the map is hidden; the moving light stops.
+ */
+export default function FlowView({
+  data, tracePath, unit = '', direction = 'outgoing',
+  selected = null, onSelect, flagsOnly = false, compact = false, active = true,
+}) {
   const box = useRef(null)
+  const svg = useRef(null)
   const cometRefs = useRef(new Map()) // pathIndex -> [glow, core] elements
+  const uid = `flow${useId().replace(/[^\w-]/g, '')}`
+  const reduced = useMedia(REDUCED_MOTION)
   const [width, setWidth] = useState(900)
   const [hover, setHover] = useState(null) // { kind: 'node'|'link', item, x, y }
   const [copied, setCopied] = useState(null)
+  const [ownSelected, setOwnSelected] = useState(null)
+  const [motionPaused, setMotionPaused] = useState(false)
+  const [said, setSaid] = useState('')
+  // How far the entrance has got: the last column shown, WAITING before it
+  // starts, DONE once everything is in place.
+  const [stage, setStage] = useState(() => (reduced ? DONE : WAITING))
+  const [run, setRun] = useState(0)
 
   useEffect(() => {
     const el = box.current
@@ -209,21 +276,64 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
     return () => ro.disconnect()
   }, [])
 
-  // Layout in world units, then the scale that fits it in the stage. The
-  // world is laid out wider when it will be scaled down, so at fit it fills
-  // the stage edge to edge rather than shrinking into the middle.
+  // Layout in world units, then the scale that fits it in the stage under
+  // the controls. The world is laid out wider when it will be scaled down,
+  // so at fit it fills the stage edge to edge rather than shrinking into the middle.
+  const reserve = compact ? TOP_RESERVE_COMPACT : TOP_RESERVE
   const { placed, links, height, columns, fit } = useMemo(() => {
     const first = layout(data, tracePath, direction, width)
-    const k = Math.min(1, STAGE_HEIGHT / first.height)
+    const k = Math.min(1, (STAGE_HEIGHT - reserve) / first.height)
     const world = k < 1 ? layout(data, tracePath, direction, width / k) : first
-    return { ...world, fit: { k, tx: 0, ty: 0 } }
-  }, [data, tracePath, direction, width])
+    return { ...world, fit: { k, tx: 0, ty: reserve } }
+  }, [data, tracePath, direction, width, reserve])
   const maxColumn = Math.max(0, ...columns.map((c) => c.column))
-  const stageHeight = Math.min(STAGE_HEIGHT, height)
+  const stageHeight = Math.min(STAGE_HEIGHT, Math.round(height * fit.k) + reserve)
 
   const [view, setView] = useState(fit)
   useEffect(() => { setView(fit) }, [fit])
   const drag = useRef(null)
+  const justDragged = useRef(false)
+
+  // Each dot's delay inside its column, top to bottom.
+  const delays = useMemo(() => {
+    const byColumn = new Map()
+    placed.forEach((p) => {
+      if (!byColumn.has(p.column)) byColumn.set(p.column, [])
+      byColumn.get(p.column).push(p)
+    })
+    const out = new Map()
+    byColumn.forEach((list) => {
+      const step = list.length > 1 ? Math.min(NODE_STAGGER_MS, STAGGER_SPAN_MS / (list.length - 1)) : 0
+      list.sort((a, b) => a.y - b.y).forEach((p, i) => out.set(p.node.id, Math.round(i * step)))
+    })
+    return out
+  }, [placed])
+
+  // The entrance plays once, the first time the map is shown, and again on
+  // Replay. Hiding and showing the map (active) does not replay it.
+  const played = useRef(null)
+  useEffect(() => {
+    if (reduced) { setStage(DONE); return undefined }
+    if (!active || played.current === run) return undefined
+    played.current = run
+    setStage(0)
+    let finished = false
+    const timers = []
+    for (let c = 1; c <= maxColumn; c += 1) timers.push(setTimeout(() => setStage(c), c * COLUMN_STEP_MS))
+    timers.push(setTimeout(() => { finished = true; setStage(DONE) }, maxColumn * COLUMN_STEP_MS + REVEAL_TAIL_MS))
+    return () => {
+      timers.forEach(clearTimeout)
+      // Interrupted (hidden mid-way): play it from the start next time.
+      if (!finished) played.current = null
+    }
+  }, [run, active, reduced, maxColumn])
+  const revealing = stage !== DONE
+  const replay = () => { setStage(WAITING); setRun((r) => r + 1) }
+
+  // Hidden: nothing is under the pointer any more.
+  useEffect(() => {
+    if (!active) { setHover(null); drag.current = null }
+  }, [active])
 
   const zoomBy = (factor, cx = width / 2, cy = stageHeight / 2) => {
     setView((v) => {
@@ -248,6 +358,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
 
   const onMouseDown = (e) => {
     if (e.button !== 0) return
+    justDragged.current = false
     drag.current = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty, moved: false }
   }
   const onMouseMove = (e) => {
@@ -257,31 +368,77 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
     if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true
     if (d.moved) setView((v) => ({ ...v, tx: d.tx + dx, ty: d.ty + dy }))
   }
-  const endDrag = () => { drag.current = null }
+  const endDrag = () => {
+    if (drag.current?.moved) justDragged.current = true
+    drag.current = null
+  }
+  // A click that ends a drag is not a click.
+  const wasDrag = () => {
+    const was = justDragged.current
+    justDragged.current = false
+    return was
+  }
   // Captions and dots stay legible when the world is scaled down.
   const counter = Math.min(1 / view.k, 2.2)
   const textCounter = Math.min(1 / view.k, 3.2)
 
+  // The selection: the caller's when it listens, else this map's own.
+  const controlled = typeof onSelect === 'function'
+  const selectedId = (controlled ? selected : ownSelected) || null
+  const selectedPlace = selectedId ? placed.get(selectedId) ?? null : null
+  const select = (id) => {
+    setSaid(id ? `Selected ${short(id)}` : 'Selection cleared')
+    if (controlled) onSelect(id)
+    else setOwnSelected(id)
+  }
+
   // Hovering an address lights its own transfers; everything else recedes.
+  // Without a hover the selected address stays lit the same way.
+  const focus = useMemo(
+    () => hover ?? (selectedPlace ? { kind: 'node', item: selectedPlace } : null),
+    [hover, selectedPlace],
+  )
   const lit = useMemo(() => {
-    if (!hover) return null
-    if (hover.kind === 'node') {
-      const id = hover.item.node.id
+    if (!focus) return null
+    if (focus.kind === 'node') {
+      const id = focus.item.node.id
       const s = new Set([id])
       links.forEach((l) => { if (l.a.node.id === id || l.b.node.id === id) { s.add(l.a.node.id); s.add(l.b.node.id) } })
       return s
     }
-    return new Set([hover.item.a.node.id, hover.item.b.node.id])
-  }, [hover, links])
+    return new Set([focus.item.a.node.id, focus.item.b.node.id])
+  }, [focus, links])
+
+  // "Show only flags": what stays, and the counts the chip states.
+  const flags = useMemo(() => {
+    const keep = new Set()
+    let possible = 0; let confirmed = 0
+    data.nodes.forEach((n) => {
+      const role = roleOf(n)
+      if (role === 'flagged') possible += 1
+      if (n.risk_category && n.risk_category !== 'gambling') confirmed += 1
+      if (role === 'flagged' || role === 'risk' || n.is_seed) keep.add(n.id)
+    })
+    return { keep, possible, confirmed }
+  }, [data])
+  const flagsSeen = useRef(flagsOnly)
+  useEffect(() => {
+    if (flagsSeen.current === flagsOnly) return
+    flagsSeen.current = flagsOnly
+    setSaid(flagsOnly ? 'Showing only possible flags and confirmed risk wallets' : 'Showing every address')
+  }, [flagsOnly])
+
+  // Moving light, on or off: off while paused, hidden, entering or reduced.
+  const moving = active && !motionPaused && !reduced && !revealing
 
   // The traced funds as one light running the whole chain, hop by hop, with
   // a breath at the end before it runs again. Paused while something is
   // hovered: the animation then belongs to what is under the pointer.
   const chainLength = (tracePath?.length ?? 1) - 1
-  const paused = Boolean(hover)
+  const cometOn = moving && chainLength >= 1 && !hover
   useEffect(() => {
     const refs = cometRefs.current
-    if (chainLength < 1 || paused) {
+    if (!cometOn) {
       refs.forEach((els) => els.forEach((el) => { if (el) el.style.opacity = 0 }))
       return undefined
     }
@@ -290,7 +447,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
     const start = performance.now()
     const ease = (u) => u * u * (3 - 2 * u) // smoothstep
     const tick = (now) => {
-      const t = (now - start) % cycle
+      const t = Math.max(0, now - start) % cycle
       const travelling = t < chainLength * COMET_SEGMENT_MS
       const c = travelling ? t / COMET_SEGMENT_MS : chainLength + 1
       const k = Math.floor(c)
@@ -311,12 +468,17 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [chainLength, paused, links])
+  }, [chainLength, cometOn, links])
 
   const copy = (address) => {
     navigator.clipboard?.writeText(address).then(() => {
       setCopied(address); setTimeout(() => setCopied(null), 1100)
     }, () => {})
+  }
+  // A click copies the address and selects it; a second click clears it.
+  const pick = (id) => {
+    copy(id)
+    select(selectedId === id ? null : id)
   }
 
   const place = (event) => {
@@ -324,13 +486,71 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
     return { x: event.clientX - rect.left, y: event.clientY - rect.top }
   }
 
+  // Phone taps: the nearest shown address within TAP_REACH screen pixels.
+  const nearest = (event) => {
+    const rect = svg.current.getBoundingClientRect()
+    const sx = width / (rect.width || width)
+    const sy = stageHeight / (rect.height || stageHeight)
+    const wx = ((event.clientX - rect.left) * sx - view.tx) / view.k
+    const wy = ((event.clientY - rect.top) * sy - view.ty) / view.k
+    const reach = (TAP_REACH * sx) / view.k
+    let best = null; let bestDistance = Infinity
+    placed.forEach((p) => {
+      if (p.column > stage) return
+      const d = Math.hypot(p.x - wx, p.y - wy)
+      if (d <= reach && d < bestDistance) { best = p; bestDistance = d }
+    })
+    return best
+  }
+  const onStageClick = (e) => {
+    if (wasDrag()) return
+    if (compact) {
+      const near = nearest(e)
+      if (near) { pick(near.node.id); return }
+    }
+    if (selectedId) select(null)
+  }
+  const onNodeClick = (e, p) => {
+    // On the phone the stage resolves the tap to the nearest dot.
+    if (compact) return
+    e.stopPropagation()
+    if (wasDrag()) return
+    pick(p.node.id)
+  }
+  const onKey = (e) => {
+    if (e.target !== e.currentTarget) return
+    const pan = (dx, dy) => setView((v) => ({ ...v, tx: v.tx + dx, ty: v.ty + dy }))
+    switch (e.key) {
+      case '+': case '=': zoomBy(1.4); break
+      case '-': case '_': zoomBy(1 / 1.4); break
+      case '0': setView(fit); break
+      case 'ArrowLeft': pan(60, 0); break
+      case 'ArrowRight': pan(-60, 0); break
+      case 'ArrowUp': pan(0, 60); break
+      case 'ArrowDown': pan(0, -60); break
+      case 'Escape': setHover(null); if (selectedId) select(null); break
+      default: return
+    }
+    e.preventDefault()
+  }
+
   const alpha = (id) => (lit && !lit.has(id) ? 0.18 : 1)
+  // What the entrance does to an element of a column: hidden until its
+  // column arrives, animated in while the entrance runs, plain after.
+  const entering = (column) => (column > stage ? ' pre' : revealing ? ' in' : '')
+  const narrow = compact || width < 640
+  const hoverOn = !compact && active
 
   return (
-    <div className={`flow${drag.current?.moved ? ' dragging' : ''}`} ref={box}>
+    <div className={`flow${drag.current?.moved ? ' dragging' : ''}${compact ? ' compact' : narrow ? ' narrow' : ''}`} ref={box}>
+      <div
+        className="flow-stage" tabIndex={0} role="group" onKeyDown={onKey}
+        aria-label={`Hop map. Drag to pan, scroll to zoom. ${compact ? 'Tap' : 'Click'} an address to select it and copy it. Keys: plus and minus zoom, arrows pan, 0 fits the whole trace, Escape clears the selection.`}
+      >
       <svg
+        ref={svg}
         width={width} height={stageHeight} viewBox={`0 0 ${width} ${stageHeight}`} role="img" aria-label="Money flow by hop"
-        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={endDrag} onMouseLeave={endDrag}
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={endDrag} onMouseLeave={endDrag} onClick={onStageClick}
       >
         <defs>
           <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
@@ -339,35 +559,49 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
           <marker id="arrow-path" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
             <path d="M0 0.5 L8 4 L0 7.5 z" style={{ fill: 'var(--go)' }} />
           </marker>
+          {/* A dashed line cannot draw itself on with its own dashes: a mask does it. */}
+          {revealing && links.map((l, i) => (l.flagged && !l.onPath && l.column <= stage ? (
+            <mask key={i} id={`${uid}-m${i}`} maskUnits="userSpaceOnUse" x="-100000" y="-100000" width="200000" height="200000">
+              <path d={l.d} pathLength="1" className="flow-draw-mask" />
+            </mask>
+          ) : null))}
         </defs>
 
         <g transform={`translate(${view.tx} ${view.ty}) scale(${view.k})`}>
         {columns.map((h) => (
-          <text key={h.column} className="flow-col" x={h.x} y={16} textAnchor="middle" style={{ fontSize: 10.5 * textCounter }}>{h.text}</text>
+          <text key={h.column} className={`flow-col${entering(h.column)}`} x={h.x} y={16} textAnchor="middle" style={{ fontSize: 10.5 * textCounter }}>{h.text}</text>
         ))}
 
-        {links.map((l) => {
-          const x1 = l.a.x + l.a.r; const x2 = l.b.x - l.b.r
-          const dx = Math.max(24, (x2 - x1) * 0.45)
-          const d = `M${x1},${l.a.y} C${x1 + dx},${l.a.y} ${x2 - dx},${l.b.y} ${x2},${l.b.y}`
+        {links.map((l, i) => {
+          const d = l.d
           const faded = lit && !(lit.has(l.a.node.id) && lit.has(l.b.node.id))
-          // Under the pointer the movement belongs to what is hovered: that
-          // line, or every transfer of that address. Otherwise the traced
-          // funds run on their own (the comet below, driven per frame).
-          const swept = hover && (
-            hover.kind === 'link' ? hover.item === l
-              : (hover.item.node.id === l.a.node.id || hover.item.node.id === l.b.node.id)
+          // Under the pointer (or on the selected address) the movement
+          // belongs to that line, or every transfer of that address.
+          // Otherwise the traced funds run on their own (the comet below,
+          // driven per frame).
+          const swept = moving && focus && (
+            focus.kind === 'link' ? focus.item === l
+              : (focus.item.node.id === l.a.node.id || focus.item.node.id === l.b.node.id)
           )
           const tone = l.onPath ? ' on-path' : l.flagged ? ' flagged' : ''
           const key = `${l.edge.source}>${l.edge.target}`
-          const enter = (e) => setHover({ kind: 'link', item: l, ...place(e) })
-          const move = (e) => setHover((h) => (h ? { ...h, ...place(e) } : h))
-          const leave = () => setHover(null)
+          const shown = l.column <= stage
+          const drawing = shown && revealing
+          const masked = drawing && l.flagged && !l.onPath
+          const kept = flags.keep.has(l.a.node.id) && flags.keep.has(l.b.node.id)
+          const enter = hoverOn ? (e) => setHover({ kind: 'link', item: l, ...place(e) }) : undefined
+          const move = hoverOn ? (e) => setHover((h) => (h ? { ...h, ...place(e) } : h)) : undefined
+          const leave = hoverOn ? () => setHover(null) : undefined
           return (
-            <g key={key}>
+            <g
+              key={key} className={`flow-lg${shown ? '' : ' pre'}`} data-edge={key}
+              style={flagsOnly && !kept ? { opacity: FLAGS_LINK_ALPHA } : undefined}
+              mask={masked ? `url(#${uid}-m${i})` : undefined}
+            >
               <path
                 d={d}
-                className={`flow-link${tone}`}
+                className={`flow-link${tone}${drawing && !masked ? ' drawing' : ''}`}
+                pathLength={drawing && !masked ? 1 : undefined}
                 strokeWidth={l.onPath ? Math.max(2.4, l.width) : l.width}
                 vectorEffect="non-scaling-stroke"
                 style={{ opacity: faded ? 0.08 : undefined }}
@@ -399,43 +633,100 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
           )
         })}
 
-        {[...placed.values()].map((p) => (
-          <g
-            key={p.node.id}
-            className={`flow-node role-${p.role}${p.onPath ? ' on-path' : ''}`}
-            style={{ opacity: alpha(p.node.id) }}
-            onMouseEnter={(e) => setHover({ kind: 'node', item: p, ...place(e) })}
-            onMouseMove={(e) => setHover((h) => (h ? { ...h, ...place(e) } : h))}
-            onMouseLeave={() => setHover(null)}
-            onClick={() => { if (!drag.current?.moved) copy(p.node.id) }}
-          >
-            {(p.role === 'exchange' || p.role === 'risk' || p.role === 'gambling' || p.node.risk_category) && <circle cx={p.x} cy={p.y} r={(p.r + 5) * counter} className="halo" vectorEffect="non-scaling-stroke" style={p.node.risk_category ? { stroke: p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : ROLE_VAR.risk } : undefined} />}
-            <circle cx={p.x} cy={p.y} r={(p.r + 6) * counter} fill="transparent" />
-            <circle cx={p.x} cy={p.y} r={p.r * counter} fill={p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]} vectorEffect="non-scaling-stroke" />
-            {p.caption && (
-              <text
-                className="flow-cap"
-                style={{ fontSize: 11 * textCounter }}
-                x={p.column === 0 ? p.x + (p.r + 6) * counter : p.column === maxColumn ? p.x - (p.r + 6) * counter : p.x}
-                y={p.column === 0 || p.column === maxColumn ? p.y : p.y - (p.r + 5) * counter}
-                textAnchor={p.column === 0 ? 'start' : p.column === maxColumn ? 'end' : 'middle'}
-                dominantBaseline={p.column === 0 || p.column === maxColumn ? 'middle' : 'auto'}
-                fill={p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]}
-              >{p.caption}</text>
-            )}
-          </g>
-        ))}
+        {[...placed.values()].map((p) => {
+          const id = p.node.id
+          const enter = entering(p.column)
+          const delay = enter === ' in' ? { animationDelay: `${delays.get(id) ?? 0}ms` } : undefined
+          const kept = flags.keep.has(id)
+          const colour = p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]
+          const halo = p.role === 'exchange' || p.role === 'risk' || p.role === 'gambling' || Boolean(p.node.risk_category)
+          const isSelected = selectedPlace === p
+          // Outside the halo or the green path ring when there is one.
+          const ringGap = halo || p.onPath ? 9 : 5
+          // While only flags show, every possible flag carries its address.
+          let caption = p.caption
+          if (!caption && flagsOnly && p.role === 'flagged') caption = compact ? short4(id) : `possible flag · ${short4(id)}`
+          // Captions sit beside the dot in the first and last columns, and
+          // everywhere on a phone, where rows are too close for one above.
+          const first = p.column === 0; const last = p.column === maxColumn
+          const side = first || last || compact
+          const fromStart = first || (compact && !last)
+          const capX = fromStart ? p.x + (p.r + 6) * counter : last ? p.x - (p.r + 6) * counter : p.x
+          const capY = side ? p.y : p.y - (p.r + 5) * counter
+          // Phone: the reported wallet's long caption would run into hop 1, so
+          // it takes two short lines.
+          const cut = compact && first && caption ? caption.indexOf(' · ') : -1
+          return (
+            <g
+              key={id} data-address={id}
+              className={`flow-node role-${p.role}${p.onPath ? ' on-path' : ''}${isSelected ? ' selected' : ''}`}
+              style={{ opacity: alpha(id) * (flagsOnly && !kept ? FLAGS_NODE_ALPHA : 1) }}
+              onMouseEnter={hoverOn ? (e) => setHover({ kind: 'node', item: p, ...place(e) }) : undefined}
+              onMouseMove={hoverOn ? (e) => setHover((h) => (h ? { ...h, ...place(e) } : h)) : undefined}
+              onMouseLeave={hoverOn ? () => setHover(null) : undefined}
+              onClick={(e) => onNodeClick(e, p)}
+            >
+              <g className={`flow-pop${enter}`} style={delay}>
+                {halo && <circle cx={p.x} cy={p.y} r={(p.r + 5) * counter} className="halo" vectorEffect="non-scaling-stroke" style={p.node.risk_category ? { stroke: p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : ROLE_VAR.risk } : undefined} />}
+                <circle cx={p.x} cy={p.y} r={(p.r + 6) * counter} fill="transparent" />
+                <circle cx={p.x} cy={p.y} r={p.r * counter} className="dot" fill={colour} vectorEffect="non-scaling-stroke" />
+                {isSelected && <circle cx={p.x} cy={p.y} r={(p.r + ringGap) * counter} className="sel-ring" vectorEffect="non-scaling-stroke" />}
+              </g>
+              {caption && (
+                <text
+                  className={`flow-cap${enter}`}
+                  style={{ fontSize: 11 * textCounter, ...delay }}
+                  x={capX}
+                  y={capY}
+                  textAnchor={fromStart ? 'start' : last ? 'end' : 'middle'}
+                  dominantBaseline={side ? 'middle' : 'auto'}
+                  fill={colour}
+                >
+                  {cut > 0 ? (
+                    <>
+                      <tspan x={capX} y={p.y - 6.5 * textCounter}>{caption.slice(0, cut)}</tspan>
+                      <tspan x={capX} y={p.y + 6.5 * textCounter}>{caption.slice(cut + 3)}</tspan>
+                    </>
+                  ) : caption}
+                </text>
+              )}
+            </g>
+          )
+        })}
         </g>
       </svg>
 
-      <div className="flow-controls">
+      <div className="flow-controls" role="group" aria-label="Map controls">
         <button type="button" onClick={() => zoomBy(1.4)} title="Zoom in">+</button>
         <button type="button" onClick={() => zoomBy(1 / 1.4)} title="Zoom out">−</button>
         <button type="button" onClick={() => setView(fit)} title="Fit the whole trace on screen">Fit</button>
+        <button
+          type="button" aria-pressed={motionPaused} aria-label="Pause motion" disabled={reduced}
+          title={reduced ? 'Motion is reduced on this device' : 'Stop the moving light on the traced funds'}
+          onClick={() => setMotionPaused((v) => !v)}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" className="ico"><path d="M4.5 3v8M9.5 3v8" /></svg>
+          {!narrow && <span>Pause motion</span>}
+        </button>
+        <button
+          type="button" aria-label="Replay the entrance" disabled={reduced}
+          title={reduced ? 'Motion is reduced on this device' : 'Play the column-by-column entrance again'}
+          onClick={replay}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" className="ico"><path d="M3.2 7.6a4 4 0 1 0 1.1-3.6" /><path d="M3.6 1.6v2.8h2.8" /></svg>
+          {!narrow && <span>Replay</span>}
+        </button>
       </div>
-      {height > STAGE_HEIGHT && view.k === fit.k && (
+      {flagsOnly ? (
+        <div className="flow-chip">
+          <RoleSwatch role="flagged" color={ROLE_VAR.flagged} />
+          <span>Showing {flags.possible} possible flag{flags.possible === 1 ? '' : 's'} · {flags.confirmed} confirmed</span>
+        </div>
+      ) : !compact && fit.k < 1 && view.k === fit.k && (
         <div className="flow-hint">Scaled to fit · scroll to zoom · drag to pan</div>
       )}
+      </div>
+      <div className="visually-hidden" aria-live="polite">{said}</div>
 
       {hover && (
         <div className="flow-tip" style={{ left: Math.min(hover.x + 14, width - 300), top: hover.y + 14 }}>
@@ -448,7 +739,7 @@ export default function FlowView({ data, tracePath, unit = '', direction = 'outg
               <div className="r"><span className="k">sent on</span><span className="v">{num(hover.item.node.total_out_native)} {unit}</span></div>
               {hover.item.node.excluded_by_time > 0 && <div className="r"><span className="k">left out (before arrival)</span><span className="v">{hover.item.node.excluded_by_time}</span></div>}
               {hover.item.node.flags?.length > 0 && <div className="r"><span className="k">pattern</span><span className="v">{hover.item.node.flags.join(', ').replace(/_/g, ' ')}</span></div>}
-              <div className="gt-foot">click to copy the address</div>
+              <div className="gt-foot">{selectedId === hover.item.node.id ? 'selected · click again to clear the selection' : 'click to select and copy the address'}</div>
             </>
           ) : (
             <>
