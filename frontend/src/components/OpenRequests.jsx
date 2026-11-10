@@ -16,7 +16,7 @@ export default function OpenRequests({ onCount } = {}) {
       <div className="card">
         <div className="head">
           <span className="micro">Open requests · {items.length}{overdue ? <span className="pill red" style={{ marginLeft: 8 }}>{overdue} to follow up</span> : null}</span>
-          <span className="note">drafted, sent or acknowledged · this browser only</span>
+          <span className="note">waiting on a sign-off or a reply · this browser only</span>
         </div>
         <div className="body">
           {sorted.map((r) => (

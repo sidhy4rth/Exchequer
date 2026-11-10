@@ -12,7 +12,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
-from .. import audit, case_privacy, models, ownership, rate_limit, report_cache, request_letters
+from .. import audit, case_privacy, freeze_requests, models, ownership, rate_limit, report_cache, request_letters
 from ..auth import CurrentUser
 from ..report_pdf import render_pdf
 
@@ -137,7 +137,8 @@ def get_letter(
     """
     case = _case_or_404(case_id, user)
     try:
-        text = request_letters.draft(case_id, case.result, to)
+        signed = freeze_requests.approval(case_id, to, user) if freeze_requests.needs_signoff(to) else None
+        text = request_letters.draft(case_id, case.result, to, signed)
     except request_letters.LetterNotApplicable as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     audit.record("case.letter_draft", case_id=case_id, detail={"to": to, "format": "text"})

@@ -120,7 +120,8 @@ def test_a_patch_that_keeps_conflicting_is_a_409(client, monkeypatch):
 def test_an_urgent_freeze_letter_can_be_logged_as_its_own_kind(client, kind):
     from app.request_letters import LETTERS
 
-    assert set(LETTERS) <= set(fr.KINDS)  # every letter the tool drafts can be logged as sent
-    made = client.post("/requests", json={"case_id": "case-1", "recipient": "Binance", "kind": kind,
-                                          "status": "sent"}, headers=h(ALICE))
-    assert made.status_code == 201 and made.json()["kind"] == kind and made.json()["sent_at"]
+    assert set(LETTERS) <= set(fr.KINDS)  # every letter the tool drafts can be logged
+    # Drafted, not sent: a second officer signs it off first (test_freeze_signoff.py).
+    made = client.post("/requests", json={"case_id": "case-1", "recipient": "Binance", "kind": kind},
+                       headers=h(ALICE))
+    assert made.status_code == 201 and made.json()["kind"] == kind and made.json()["needs_signoff"]

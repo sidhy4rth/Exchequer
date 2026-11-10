@@ -45,10 +45,11 @@ async function open(page, p, theme) {
   }, [theme, p.as])
   await page.route('**/*', (route) => (['GET', 'HEAD'].includes(route.request().method()) ? route.fallback() : route.abort()))
   for (const stub of [p.stub ?? []].flat()) {
-    await page.route(stub.url, async (route) => route.fulfill({
-      status: stub.status ?? 200,
-      json: stub.extend ? stub.extend(await (await route.fetch()).json()) : stub.body,
-    }))
+    await page.route(stub.url, async (route) => {
+      const answer = stub.extend || stub.from ? await route.fetch(stub.from ? { url: stub.from(route.request().url()) } : undefined) : null
+      if (stub.from && !stub.extend) return route.fulfill({ response: answer })
+      return route.fulfill({ status: stub.status ?? 200, json: stub.extend ? stub.extend(await answer.json()) : stub.body })
+    })
   }
 
   await page.goto(p.path)

@@ -90,6 +90,14 @@ export async function updateRequest(requestId, changes) {
   }))
 }
 
+/** A second signed-in officer of the drafter's unit approves an urgent freeze
+ * letter. The header shows the server the app sent it, not a cross-site form. */
+export async function signOffRequest(requestId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}/signoff`, {
+    method: 'POST', headers: { 'X-Exchequer-Request': '1' },
+  }))
+}
+
 export async function deleteRequest(requestId) {
   return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' }))
 }

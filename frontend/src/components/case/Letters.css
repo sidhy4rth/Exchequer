@@ -26,6 +26,11 @@
 .lt-card { display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); }
 .lt-card.risk { background: var(--risk-tint); border-color: var(--risk-tint); }
 .lt-card h2 { margin: 0; font-size: 15px; font-weight: 400; color: var(--text); }
+/* Second officer: the sign-off an urgent freeze letter needs before it is ready. */
+.lt-card .lt-state { margin: 0; font-size: 13px; color: var(--text); }
+.lt-card .note { margin: 0; font-size: 12.5px; color: var(--text-2); }
+.lt-card .lt-sign { align-self: flex-start; min-height: 44px; padding: 0 20px; border-color: var(--go); background: var(--go-tint); color: var(--go-soft); font-size: 13px; font-weight: 500; }
+.lt-card .lt-sign:hover { border-color: var(--go-soft); }
 .lt-ticks, .lt-fill { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .lt-ticks { gap: 14px; }
 .lt-ticks li { display: grid; grid-template-columns: 20px 1fr; column-gap: 12px; row-gap: 2px; font-size: 13px; }

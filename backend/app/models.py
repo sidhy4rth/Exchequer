@@ -230,6 +230,13 @@ class FreezeRequest(Base):
     # Checked and bumped by every UPDATE and DELETE: a write made from a stale
     # read fails (StaleDataError) instead of replacing what another wrote.
     row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    # The signed-in officer and unit that drafted it (NULL without a sign-in),
+    # and the second officer of that unit who approved an urgent freeze letter.
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    signed_off_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    signed_off_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    signed_off_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     __mapper_args__ = {"version_id_col": row_version}
 

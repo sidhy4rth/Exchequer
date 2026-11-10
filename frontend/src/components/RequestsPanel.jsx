@@ -8,6 +8,8 @@ import { addressOf, kindOf, recipientOf } from './case/letterChecks'
 
 export const STATUS = {
   drafted: { label: 'Drafted', pill: '' },
+  awaiting_signoff: { label: 'Awaiting a second officer', pill: 'amber' },
+  ready: { label: 'Signed off · ready to send', pill: 'green' },
   sent: { label: 'Sent · awaiting reply', pill: 'navy' },
   acknowledged: { label: 'Acknowledged', pill: 'amber' },
   frozen: { label: 'Frozen', pill: 'green' },
@@ -19,8 +21,17 @@ export const STATUS = {
 // from the information letter to the same recipient.
 const freeze = (kind) => Boolean(kind?.endsWith('-freeze'))
 
+const BEFORE = ['drafted', 'awaiting_signoff']
+/** The statuses a row may move to (freeze_requests.py): an urgent letter
+ * goes on only once a second officer signs it off, which only they can do. */
+export function choices(r) {
+  const all = Object.keys(STATUS)
+  if (!r.needs_signoff) return all.filter((k) => k !== 'awaiting_signoff' && k !== 'ready')
+  return r.signoff ? all.filter((k) => !BEFORE.includes(k)) : [...BEFORE, 'closed']
+}
+
 export default function RequestsPanel({ result, onChange }) {
-  const [items, setItems] = useState([])
+  const [rows, setItems] = useState([])
   const [letters, setLetters] = useState([])
   const [other, setOther] = useState('')
   const [error, setError] = useState(null)
@@ -33,6 +44,8 @@ export default function RequestsPanel({ result, onChange }) {
   }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!caseId) return null
+  // Another officer's request in the unit shows on the Letters tab, to sign off; this log is the browser's own.
+  const items = rows.filter((r) => r.mine !== false)
 
   async function run(fn) {
     setError(null)
@@ -61,7 +74,7 @@ export default function RequestsPanel({ result, onChange }) {
             <div className="fields">
               <label>Status
                 <select value={r.status} onChange={(e) => run(() => updateRequest(r.request_id, { status: e.target.value }))}>
-                  {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  {choices(r).map((k) => <option key={k} value={k}>{STATUS[k].label}</option>)}
                 </select>
               </label>
               <label>Their reference

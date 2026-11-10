@@ -7,8 +7,9 @@
 // neither here nor in NOT_CHECKED.
 //
 // A `stub` answers a request with `body` (and `status`, if not 200), or with
-// what the server sent passed through `extend`. `before(page)` presses and
-// fills what comes before `click`, for a state a single press cannot reach.
+// what the server sent passed through `extend`; `from` asks the server another
+// URL for that answer. `before(page)` presses and fills what comes before
+// `click`, for a state a single press cannot reach.
 //
 // `unmeasured` pins, per size, how much text axe still cannot measure for
 // contrast with the canvases and gradients hidden (a11y.spec.js lists it).
@@ -197,6 +198,22 @@ async function saidBesideButton(page) {
   if (top < 0 || top > height) throw new Error(`the prompt is out of view (top ${Math.round(top)} px)`)
 }
 
+// A stored case's Letters tab, where an urgent freeze letter waits for a
+// second officer's sign-off (backend freeze_requests.py). Recording 11 is
+// served as stored case a11y-case, its letters drafted from the recording,
+// and its freeze log answers with the urgent letter to Binance in one state.
+const STORED = 'a11y-case'
+const AS_RECORDING = (url) => url.replace(`/trace/${STORED}`, '/demos/recorded/11')
+const URGENT = { request_id: 'a11y-r1', case_id: STORED, recipient: 'Binance', kind: 'exchange-freeze', history: [], reference: '', notes: '', needs_signoff: true, signoff: null, mine: true, can_sign_off: false, signoff_reason: null }
+const STORED_LETTERS = (row) => [
+  { url: `**/trace/${STORED}`, from: AS_RECORDING, extend: (body) => ({ ...body, case_id: STORED }) },
+  { url: `**/trace/${STORED}/letters`, from: AS_RECORDING },
+  { url: `**/trace/${STORED}/letter?*`, from: AS_RECORDING },
+  { url: `**/trace/${STORED}/requests`, body: row ? { count: 1, requests: [{ ...URGENT, ...row }] } : NOT_SIGNED_IN },
+]
+// A caller who is not signed in is told why before pressing anything.
+const NOT_SIGNED_IN = { count: 0, requests: [], ask_reason: 'An urgent freeze letter needs a signed-in drafter and a second officer of the same unit: sign in to ask for a sign-off.' }
+
 export const PAGES = [
   { name: 'investigator sign-in', path: '/signin/investigator', ready: DOOR },
   // The open card: an officer's e-mail and password, and the demo below.
@@ -266,6 +283,12 @@ export const PAGES = [
   { name: 'recorded case 11, Letters', path: '/demo/11?tab=letters', as: 'investigator', ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
   { name: 'recorded case 11, Letters, to Tether', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Request to Tether', exact: true }], ready: ['article', { name: 'Draft: Request to Tether', exact: true }], unmeasured: { desktop: 1, phone: 1 } },
   { name: 'recorded case 11, Letters, marked as sent', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Mark as sent' }], ready: ['link', { name: 'Open a stored case' }], unmeasured: { desktop: 1, phone: 1 }, layout: saidBesideButton },
+  // The drafter waits, told why the sign-off is not theirs; a second officer
+  // of the unit gets Sign off; once signed, the card names who and when.
+  { name: 'stored case, Letters, not signed in to ask for a sign-off', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS(null), ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
+  { name: 'stored case, Letters, awaiting sign-off', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS({ status: 'awaiting_signoff', signoff_reason: 'You drafted this letter: a second officer of your unit must sign it off.' }), ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
+  { name: 'stored case, Letters, a second officer may sign off', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS({ status: 'awaiting_signoff', mine: false, can_sign_off: true }), ready: ['button', { name: 'Sign off' }], unmeasured: { desktop: 1, phone: 1 } },
+  { name: 'stored case, Letters, signed off', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS({ status: 'ready', signoff: { by: 'Second Officer', at: '2026-11-10T09:00:00+00:00' } }), ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },
   { name: 'batch', path: '/batch/a11y-example', as: 'investigator', stub: { url: '**/batches/a11y-example', body: BATCH }, ready: ['heading', { level: 1, name: BATCH.name }], unmeasured: { phone: 1 } },
@@ -280,7 +303,6 @@ export const PAGES = [
 
 export const NOT_CHECKED = {
   '/signin': 'sends the browser on to /signin/investigator',
-  '/case/:caseId': 'needs a stored case; /demo/11 opens the same case view from a recording',
   '*': 'any other path shows the console',
 }
 

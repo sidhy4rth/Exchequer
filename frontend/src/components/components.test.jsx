@@ -406,6 +406,29 @@ describe('Freeze requests panel', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Log an urgent freeze request to FixedFloat' })).not.toBeInTheDocument())
     expect(screen.getByRole('button', { name: 'Log a request to FixedFloat' })).toBeInTheDocument()
   })
+
+  it('offers an urgent letter only the statuses its sign-off allows, and shows the unit\'s rows on the Letters tab only', async () => {
+    const row = (over) => ({ case_id: 'case-1', recipient: 'Binance', history: [], reference: '', notes: '', mine: true, ...over })
+    api({
+      'GET /trace/case-1/requests': { body: { count: 4, requests: [
+        row({ request_id: 'r1', kind: 'exchange-freeze', status: 'awaiting_signoff', needs_signoff: true, signoff: null }),
+        row({ request_id: 'r2', kind: 'tether-freeze', recipient: 'Tether', status: 'ready', needs_signoff: true, signoff: { by: 'Bina Iyer', at: '2026-11-10T09:00:00+00:00' } }),
+        row({ request_id: 'r3', kind: 'exchange', status: 'sent', needs_signoff: false }),
+        row({ request_id: 'r4', kind: 'exchange-freeze', recipient: 'Elsewhere', status: 'awaiting_signoff', needs_signoff: true, mine: false }),
+      ] } },
+      'GET /trace/case-1/letters': { body: { letters: [] } },
+    })
+    inRouter(<RequestsPanel result={CASE} />)
+    await screen.findByText('Tether', { selector: '.nm' })
+    expect(screen.queryByText('Elsewhere', { selector: '.nm' })).not.toBeInTheDocument()
+    const [waiting, ready, info] = screen.getAllByLabelText('Status')
+    const options = (select) => [...select.options].map((o) => o.value)
+    expect(options(waiting)).toEqual(['drafted', 'awaiting_signoff', 'closed'])
+    expect(options(ready)).toEqual(['ready', 'sent', 'acknowledged', 'frozen', 'declined', 'closed'])
+    expect(options(info)).toEqual(['drafted', 'sent', 'acknowledged', 'frozen', 'declined', 'closed'])
+    expect(screen.getByText('Awaiting a second officer', { selector: '.pill' })).toBeInTheDocument()
+    expect(screen.getByText('Signed off · ready to send', { selector: '.pill' })).toBeInTheDocument()
+  })
 })
 
 describe('Bulk intake', () => {

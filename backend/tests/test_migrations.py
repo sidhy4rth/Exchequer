@@ -275,3 +275,23 @@ def test_g5_accounts_1_goes_down_and_up_again_keeping_the_cases(engine):
     assert revision(engine) == head() and drift(engine) == []
     case = models.get_case("kept")
     assert case is not None and (case.officer_id, case.unit_id) == (None, None)
+
+
+def test_g5_signoff_1_goes_down_and_up_again_keeping_the_requests(engine):
+    """Second-officer sign-off: a request's drafting officer and unit, and who signed it off when."""
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"chain": "ethereum"})
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO freeze_requests (id, owner_hash, case_id, recipient, kind, status, address, "
+                          "reference, asset, notes, created_at, updated_at, history_json) VALUES ('r1', 'o', 'kept', "
+                          "'Binance', 'exchange', 'sent', '', '', '', '', 'x', 'x', '[]')"))
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g5_accounts_1")
+    added = {"officer_id", "unit_id", "signed_off_by", "signed_off_name", "signed_off_at"}
+    assert not added & {c["name"] for c in inspect(engine).get_columns("freeze_requests")}
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT status, unit_id, signed_off_at FROM freeze_requests")).all() == [("sent", None, None)]

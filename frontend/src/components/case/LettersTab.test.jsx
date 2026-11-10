@@ -58,6 +58,13 @@ const STORED = {
   'GET /watches': { body: { count: 0, watches: [] } },
 }
 
+// An urgent letter's row in the freeze log as the backend shows it to this
+// caller (freeze_requests.summary): whether they may sign it off, and if
+// not, why. The officer states come from the server's session, not the page.
+const ROW = { case_id: 'c1', recipient: 'Binance', kind: 'exchange-freeze', history: [], reference: '', notes: '', needs_signoff: true, signoff: null, mine: true }
+const AWAITING = { ...ROW, request_id: 'r1', status: 'awaiting_signoff', can_sign_off: false, signoff_reason: 'You drafted this letter: a second officer of your unit must sign it off.' }
+const SIGNED = { ...ROW, request_id: 'r1', status: 'ready', can_sign_off: false, signoff: { by: 'Bina Iyer', at: '2026-11-10T09:00:00+00:00' } }
+
 const open = (result = CASE, recorded = null) => render(<MemoryRouter><LettersTab result={result} recorded={recorded} /></MemoryRouter>)
 const sheet = () => screen.getByRole('article', { name: /^Draft: / })
 // What a button says back sits beside the buttons, in the side column.
@@ -214,9 +221,11 @@ describe('the Letters tab of a stored case', () => {
     })
     open()
     await screen.findByText(/Binance — urgent/)
+    await user.click(screen.getByRole('button', { name: 'Request to Binance' }))
+    await screen.findByText('To: Binance', { selector: '.ln' })
     await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
     expect(calls.find((c) => c.method === 'POST').body).toEqual({
-      case_id: 'c1', recipient: 'Binance', kind: 'exchange-freeze', address: CASE.exchange_address, asset: 'USDT', status: 'sent',
+      case_id: 'c1', recipient: 'Binance', kind: 'exchange', address: CASE.exchange_address, asset: 'USDT', status: 'sent',
     })
     await waitFor(() => expect(within(side()).getByRole('status')).toHaveTextContent('Logged as sent to Binance.'))
     expect(await screen.findByText(/Freeze requests · 1/)).toBeInTheDocument()
@@ -246,8 +255,9 @@ describe('the Letters tab of a stored case', () => {
     })
     render(<MemoryRouter><LettersTab result={CASE} recorded={null} /></MemoryRouter>)
     await screen.findByText('To: FixedFloat', { selector: '.ln' })
-    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
-    await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ recipient: 'FixedFloat', kind: 'instant-freeze', address: FF }))
+    // An urgent letter is logged when its drafter asks for the second officer's sign-off.
+    await user.click(await within(await screen.findByRole('region', { name: 'Second officer' })).findByRole('button', { name: 'Ask for sign-off' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ recipient: 'FixedFloat', kind: 'instant-freeze', address: FF, status: 'awaiting_signoff' }))
   })
 
   it('reads a letter already logged as sent from the freeze log, and logs it no second time', async () => {
@@ -267,15 +277,15 @@ describe('the Letters tab of a stored case', () => {
     await user.click(screen.getByRole('button', { name: 'Request to Binance' }))
     await screen.findByText('To: Binance', { selector: '.ln' })
     expect(screen.getByRole('button', { name: 'Mark as sent' })).not.toHaveAttribute('aria-disabled', 'true')
-    // Removed from the log, it can be marked again.
+    // Removed from the log, it starts again: a second officer signs it off first.
     await user.click(screen.getByRole('button', { name: 'Urgent freeze request to Binance' }))
     await user.click(screen.getByRole('button', { name: 'Remove' }))
-    expect(await screen.findByRole('button', { name: 'Mark as sent' })).not.toHaveAttribute('aria-disabled', 'true')
+    expect(await screen.findByRole('button', { name: 'Ask for sign-off' })).toBeInTheDocument()
   })
 
-  it('moves a drafted request in the log on to sent, rather than logging a second one', async () => {
+  it('moves a signed-off request in the log on to sent, rather than logging a second one', async () => {
     const user = userEvent.setup()
-    let items = [{ request_id: 'r1', case_id: 'c1', recipient: 'Binance', kind: 'exchange-freeze', status: 'drafted', history: [], reference: '', notes: '' }]
+    let items = [{ ...SIGNED, request_id: 'r1' }]
     const calls = api({
       ...STORED,
       'GET /trace/c1/requests': () => ({ body: { count: items.length, requests: items } }),
@@ -303,6 +313,147 @@ describe('the Letters tab of a stored case', () => {
     api({ ...STORED, 'GET /trace/c1/letter?to=exchange-freeze': { status: 400, body: { detail: 'This case reached no exchange.' } } })
     open()
     await waitFor(() => expect(within(side()).getByRole('alert')).toHaveTextContent('The letter could not be drafted: This case reached no exchange.'))
+  })
+})
+
+describe('a second officer signs off an urgent freeze letter', () => {
+  const card = () => screen.getByRole('region', { name: 'Second officer' })
+  const log = (items, more = {}) => {
+    const box = { items }
+    const calls = api({ ...STORED, 'GET /trace/c1/requests': () => ({ body: { count: box.items.length, requests: box.items } }), ...more(box) })
+    return calls
+  }
+
+  it('asks for a sign-off, and Mark as sent waits until there is one', async () => {
+    const user = userEvent.setup()
+    const calls = log([], (box) => ({
+      'POST /requests': (body) => { box.items = [{ ...AWAITING, ...body }]; return { status: 201, body: box.items[0] } },
+    }))
+    open()
+    await screen.findByText(/Binance — urgent/)
+    expect(card()).toHaveTextContent('A second officer of your unit must approve this urgent letter before it is ready to send.')
+    const sendButton = screen.getByRole('button', { name: 'Mark as sent' })
+    expect(sendButton).toHaveAttribute('aria-disabled', 'true')
+    await user.click(sendButton)
+    expect(within(side()).getByRole('status')).toHaveTextContent('A second officer must sign this letter off before it can be marked as sent.')
+    await user.click(within(card()).getByRole('button', { name: 'Ask for sign-off' }))
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({
+      case_id: 'c1', recipient: 'Binance', kind: 'exchange-freeze', address: CASE.exchange_address, asset: 'USDT', status: 'awaiting_signoff',
+    })
+    await waitFor(() => expect(card()).toHaveTextContent("Awaiting a second officer's approval."))
+    // The drafter is told why the button is not theirs, and gets none.
+    expect(card()).toHaveTextContent('You drafted this letter: a second officer of your unit must sign it off.')
+    expect(within(card()).queryByRole('button')).not.toBeInTheDocument()
+    expect(calls.filter((c) => c.path === '/trace/c1/letter' && c.query === 'to=exchange-freeze')).toHaveLength(2) // redrafted
+  })
+
+  it('moves a drafted request on to awaiting a sign-off', async () => {
+    const user = userEvent.setup()
+    const calls = log([{ ...ROW, request_id: 'r1', status: 'drafted', can_sign_off: false, signoff_reason: AWAITING.signoff_reason }], (box) => ({
+      'PATCH /requests/r1': (body) => { box.items = [{ ...AWAITING, ...body }]; return { body: box.items[0] } },
+    }))
+    open()
+    await user.click(await within(await screen.findByRole('region', { name: 'Second officer' })).findByRole('button', { name: 'Ask for sign-off' }))
+    expect(calls.filter((c) => c.method === 'PATCH').map((c) => c.body)).toEqual([{ status: 'awaiting_signoff' }])
+  })
+
+  it('lets an eligible officer sign it off, and then shows who did and when, in IST', async () => {
+    const user = userEvent.setup()
+    const calls = log([{ ...AWAITING, mine: false, can_sign_off: true, signoff_reason: null }], (box) => ({
+      'POST /requests/r1/signoff': () => { box.items = [{ ...SIGNED, mine: false }]; return { body: box.items[0] } },
+    }))
+    open()
+    const sign = await within(await screen.findByRole('region', { name: 'Second officer' })).findByRole('button', { name: 'Sign off' })
+    await user.click(sign)
+    const post = calls.find((c) => c.path === '/requests/r1/signoff')
+    expect(post.method).toBe('POST')
+    await waitFor(() => expect(card()).toHaveTextContent('Approved by Bina Iyer, 10 Nov 2026 14:30 IST.'))
+    expect(within(side()).getByRole('status')).toHaveTextContent('Signed off. The letter is ready to send.')
+    // Not this browser's request: its drafter logs it as sent.
+    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
+    expect(within(side()).getByRole('status')).toHaveTextContent('The officer who drafted this letter logs it as sent.')
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false)
+  })
+
+  it('sends the request header a sign-off needs', async () => {
+    const user = userEvent.setup()
+    const seen = []
+    log([{ ...AWAITING, mine: false, can_sign_off: true, signoff_reason: null }], () => ({}))
+    const stubbed = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url, init = {}) => { seen.push(init.headers ?? {}); return stubbed(url, init) }))
+    open()
+    await user.click(await within(await screen.findByRole('region', { name: 'Second officer' })).findByRole('button', { name: 'Sign off' }))
+    await waitFor(() => expect(seen.some((h) => h['X-Exchequer-Request'] === '1')).toBe(true))
+  })
+
+  it('tells anyone who may not sign it off why, with no button', async () => {
+    const reason = 'A demo user cannot sign off a freeze letter: a second officer must sign in to their own account.'
+    log([{ ...AWAITING, mine: false, signoff_reason: reason }], () => ({}))
+    open()
+    await waitFor(() => expect(card()).toHaveTextContent(reason))
+    expect(within(card()).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('tells a caller who is not signed in, before any click, that no one could sign it off', async () => {
+    const reason = 'An urgent freeze letter needs a signed-in drafter and a second officer of the same unit: sign in to ask for a sign-off.'
+    api({ ...STORED, 'GET /trace/c1/requests': { body: { count: 0, requests: [], ask_reason: reason } } })
+    open()
+    await waitFor(() => expect(card()).toHaveTextContent(reason))
+    expect(within(card()).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('says the same of a drafted row no unit could sign, with no Ask button', async () => {
+    const reason = 'This letter was drafted without signing in, so no unit\'s officer can sign it off. Sign in and draft it again.'
+    log([{ ...ROW, request_id: 'r1', status: 'drafted', can_sign_off: false, signoff_reason: reason, ask_reason: reason }], () => ({}))
+    open()
+    await waitFor(() => expect(card()).toHaveTextContent(reason))
+    expect(within(card()).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('keeps the keyboard in the card after Ask for sign-off swaps its button for a note', async () => {
+    const user = userEvent.setup()
+    log([], (box) => ({
+      'POST /requests': (body) => { box.items = [{ ...AWAITING, ...body }]; return { status: 201, body: box.items[0] } },
+    }))
+    open()
+    await screen.findByText(/Binance — urgent/)
+    within(card()).getByRole('button', { name: 'Ask for sign-off' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(card()).toHaveTextContent("Awaiting a second officer's approval."))
+    await waitFor(() => expect(document.activeElement).toBe(card().querySelector('#lt-signoff-state')))
+  })
+
+  it('keeps the keyboard in the card after Sign off removes its button', async () => {
+    const user = userEvent.setup()
+    log([{ ...AWAITING, mine: false, can_sign_off: true, signoff_reason: null }], (box) => ({
+      'POST /requests/r1/signoff': () => { box.items = [{ ...SIGNED, mine: false }]; return { body: box.items[0] } },
+    }))
+    open()
+    ;(await within(await screen.findByRole('region', { name: 'Second officer' })).findByRole('button', { name: 'Sign off' })).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(card()).toHaveTextContent('Approved by Bina Iyer'))
+    await waitFor(() => expect(document.activeElement).toBe(card().querySelector('#lt-signoff-state')))
+  })
+
+  it('marks nothing on an information letter', async () => {
+    const user = userEvent.setup()
+    log([], () => ({}))
+    open()
+    await screen.findByText(/Binance — urgent/)
+    await user.click(screen.getByRole('button', { name: 'Request to Binance' }))
+    await screen.findByText('To: Binance', { selector: '.ln' })
+    expect(screen.queryByRole('region', { name: 'Second officer' })).not.toBeInTheDocument()
+  })
+
+  it('on a recorded example, says a recording cannot be signed off', async () => {
+    api({
+      'GET /demos/recorded/11/letters': { body: { case_id: null, recorded_demo: 11, letters: LETTERS.slice(0, 1) } },
+      'GET /demos/recorded/11/letter?to=exchange-freeze': { body: LETTER('Binance — urgent') },
+    })
+    open({ ...CASE, case_id: null }, 11)
+    await screen.findByText(/Binance — urgent/)
+    expect(card()).toHaveTextContent('A recorded example cannot be signed off: Trace live stores it as a case.')
+    expect(within(card()).queryByRole('button')).not.toBeInTheDocument()
   })
 })
 
