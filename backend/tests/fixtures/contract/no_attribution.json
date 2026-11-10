@@ -740,6 +740,13 @@
     "share": 0.0
    },
    {
+    "action": "draft_letter",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "instant_exchanger",
+    "share": 0.0
+   },
+   {
     "action": "ask_issuer",
     "addresses": [],
     "amount": 0.0,
@@ -968,7 +975,7 @@
    "basis": "seed_outflow",
    "denominator": 2.373876
   },
-  "version": 2
+  "version": 3
  },
  "warnings": []
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { deleteRequest, fetchCaseRequests, fetchLetters, logRequest, updateRequest } from '../api'
 import { plain } from '../text'
+import { addressOf, kindOf, recipientOf } from './case/letterChecks'
 
 // Where this case's freeze requests stand. The letter is drafted beside it,
 // on the Letters tab; this is the log of what was sent and what came back.
@@ -37,15 +38,14 @@ export default function RequestsPanel({ result, onChange }) {
     setError(null)
     try { await fn(); await load(); onChange?.() } catch (e) { setError(e.message) }
   }
-  const log = (recipient, kind) => run(() => logRequest({
-    case_id: caseId, recipient, kind,
-    address: kind.startsWith('exchange') ? (result.exchange_address ?? '') : '',
-    asset: result.asset ?? '',
+  const log = (recipient, kind, address = '') => run(() => logRequest({
+    case_id: caseId, recipient, kind, address, asset: result.asset ?? '',
   }))
+  // Each letter under the name and kind the Letters tab logs it with, so a row
+  // from either place stands for the same letter.
   const suggestions = [...letters].sort((a, b) => freeze(b.to) - freeze(a.to)).map((l) => ({
-    recipient: l.to.startsWith('tether') ? 'Tether' : plain(result.exchange ?? 'the exchange'),
-    kind: l.to,
-  })).filter((s) => !items.some((i) => i.recipient === s.recipient && freeze(i.kind) === freeze(s.kind) && i.status !== 'closed'))
+    to: l.to, recipient: recipientOf(l, result), kind: kindOf(l.to), address: addressOf(l, result),
+  })).filter((s) => !items.some((i) => i.recipient === s.recipient && i.kind === s.kind && i.status !== 'closed'))
 
   return (
     <details className="card sec" open={items.length > 0 || suggestions.length > 0}>
@@ -84,7 +84,7 @@ export default function RequestsPanel({ result, onChange }) {
         ))}
         <div className="request-add">
           {suggestions.map((s) => (
-            <button key={s.kind} onClick={() => log(s.recipient, s.kind)}>
+            <button key={s.to} onClick={() => log(s.recipient, s.kind, s.address)}>
               Log {freeze(s.kind) ? 'an urgent freeze' : 'a'} request to {s.recipient}
             </button>
           ))}

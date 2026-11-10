@@ -79,6 +79,13 @@ describe('the Letters tab, asked for one letter by a Flow card', () => {
     await waitFor(() => expect(exchange).toHaveFocus())
   })
 
+  it("opens the instant exchanger's information letter when its urgent one is not listed", async () => {
+    const letters = [{ to: 'tether', title: 'Request to Tether' }, { to: 'instant', title: 'Request to ChangeNOW' }]
+    api({ ...STORED, 'GET /trace/c1/letters': { body: { case_id: 'c1', letters } }, 'GET /trace/c1/letter?to=instant': { body: LETTER('ChangeNOW') } })
+    render(<MemoryRouter><LettersTab result={CASE} recorded={null} pick="instant-freeze" /></MemoryRouter>)
+    expect(await screen.findByRole('button', { name: 'Request to ChangeNOW', pressed: true })).toBeInTheDocument()
+  })
+
   it('opens the first letter when the one asked for is not listed', async () => {
     api(STORED)
     render(<MemoryRouter><LettersTab result={CASE} recorded={null} pick="nobody" /></MemoryRouter>)
@@ -225,6 +232,22 @@ describe('the Letters tab of a stored case', () => {
     await screen.findByText('To: State Bank', { selector: '.ln' })
     await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
     expect(calls.filter((c) => c.method === 'POST')[1].body).toMatchObject({ recipient: 'State Bank', kind: 'other', address: '' })
+  })
+
+  it("logs an instant exchanger's letter with the wallet it is about", async () => {
+    const user = userEvent.setup()
+    const FF = 'TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf'
+    const letters = [{ to: 'instant-freeze', title: 'Urgent freeze request to FixedFloat', address: FF }]
+    const calls = api({
+      ...STORED,
+      'GET /trace/c1/letters': { body: { case_id: 'c1', letters } },
+      'GET /trace/c1/letter?to=instant-freeze': { body: LETTER('FixedFloat') },
+      'POST /requests': (body) => ({ status: 201, body: { request_id: 'r1', ...body, history: [], reference: '', notes: '' } }),
+    })
+    render(<MemoryRouter><LettersTab result={CASE} recorded={null} /></MemoryRouter>)
+    await screen.findByText('To: FixedFloat', { selector: '.ln' })
+    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ recipient: 'FixedFloat', kind: 'instant-freeze', address: FF }))
   })
 
   it('reads a letter already logged as sent from the freeze log, and logs it no second time', async () => {

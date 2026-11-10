@@ -54,7 +54,7 @@ def test_the_freeze_letters_are_offered_first_and_the_information_letters_keep_t
         {"to": "exchange-freeze", "title": "Urgent freeze request to Binance"},
         {"to": "tether-freeze", "title": "Urgent freeze request to Tether"},
         {"to": "exchange", "title": "Request to Binance"}, {"to": "tether", "title": "Request to Tether"}]
-    assert LETTERS == ("exchange-freeze", "tether-freeze", "exchange", "tether")
+    assert LETTERS == ("exchange-freeze", "instant-freeze", "tether-freeze", "exchange", "instant", "tether")
 
 
 def test_no_exchange_means_no_exchange_freeze_letter():

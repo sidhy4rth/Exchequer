@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blanks, checks, kindOf, lines, pieces, recipientOf } from './letterChecks'
+import { addressOf, blanks, checks, instantService, kindOf, lines, pieces, recipientOf } from './letterChecks'
 
 // What the Letters tab says about a draft (request_letters.py): the blanks
 // the officer must fill, named from the words beside each, and the checks
@@ -190,10 +190,32 @@ describe('who a letter goes to', () => {
     expect(recipientOf({ to: 'exchange-freeze', title: 'Urgent freeze request to Binance' }, result)).toBe('Binance')
     expect(recipientOf({ to: 'tether-freeze', title: 'Urgent freeze request to Tether' }, result)).toBe('Tether')
     expect(recipientOf({ to: 'bank', title: 'Request to State‮ Bank' }, result)).toBe('State Bank')
+    expect(recipientOf({ to: 'instant-freeze', title: 'Urgent freeze request to Change​NOW' }, result)).toBe('ChangeNOW')
   })
 
   it('logs a letter the requests API knows under its own kind, and any other as other', () => {
-    expect(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'bank', 'exchange-x'].map(kindOf))
-      .toEqual(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'other', 'other'])
+    expect(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'instant', 'instant-freeze', 'bank', 'exchange-x'].map(kindOf))
+      .toEqual(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'instant', 'instant-freeze', 'other', 'other'])
+  })
+})
+
+describe('the wallet a letter is about', () => {
+  const result = { exchange: 'Binance', exchange_address: 'TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf' }
+  it("is the case's exchange wallet for an exchange letter, the listed one for an instant exchanger's, else none", () => {
+    expect(addressOf({ to: 'exchange-freeze' }, result)).toBe(result.exchange_address)
+    expect(addressOf({ to: 'instant', address: 'TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf' }, result)).toBe('TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf')
+    expect(addressOf({ to: 'tether' }, result)).toBe('')
+    expect(addressOf({ to: 'instant-freeze' }, { exchange: 'ChangeNOW', exchange_address: 'TOwn' })).toBe('')
+  })
+})
+
+describe('the instant exchanger a letter goes to', () => {
+  const m = (address, exchange) => ({ address, exchange, category: 'instant_exchanger' })
+  it("is the case's own exchange when it is one, else the first the trace reached, as the backend picks", () => {
+    expect(instantService({ exchange: 'ChangeNOW', exchange_address: 'B', matches: [m('A', 'FixedFloat'), m('B', 'ChangeNOW')] })).toBe('ChangeNOW')
+    expect(instantService({ exchange: 'Binance', exchange_address: 'X', matches: [{ address: 'X', exchange: 'Binance' }], inferred_deposits: [m('A', 'Fixed\u200bFloat')] })).toBe('FixedFloat')
+    expect(instantService({ follow_ons: [{ result: { exchange: 'SideShift', exchange_address: 'C', matches: [m('C', 'SideShift')] } }] })).toBe('SideShift')
+    expect(instantService({ exchange: 'Binance', matches: [{ address: 'X', exchange: 'Binance' }] })).toBeNull()
+    expect(instantService({ matches: [m('A', null)] })).toBe('the swap service')
   })
 })

@@ -4,7 +4,7 @@ import { fetchCaseRequests, fetchLetter, fetchLetters, fetchRecordedLetter, fetc
 import { plain } from '../../text'
 import RequestsPanel from '../RequestsPanel'
 import WatchPanel from '../WatchPanel'
-import { blanks, checks, kindOf, lines, recipientOf } from './letterChecks'
+import { addressOf, blanks, checks, kindOf, lines, recipientOf } from './letterChecks'
 import './Letters.css'
 
 const Tick = () => (
@@ -23,7 +23,7 @@ function printSheet() {
   window.print()
 }
 
-const FALLBACK = { 'exchange-freeze': 'exchange' } // a case that lists no freeze letter opens the information letter
+const FALLBACK = { 'exchange-freeze': 'exchange', 'instant-freeze': 'instant' } // a case that lists no freeze letter opens the information letter
 
 /** The case's Letters tab: the drafts the backend offers for it, one at a
  * time on a paper sheet, then the freeze-request log and the watches. A
@@ -107,7 +107,7 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
       else if (!row) {
         await logRequest({
           case_id: caseId, recipient, kind: kindOf(to),
-          address: to.startsWith('exchange') ? (result.exchange_address ?? '') : '',
+          address: addressOf(letter, result),
           asset: result.asset ?? '', status: 'sent',
         })
       }

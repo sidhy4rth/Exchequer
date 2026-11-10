@@ -127,7 +127,28 @@ export function recipientOf(letter, result) {
   return plain(letter.title).replace(/^(urgent freeze )?request to /i, '')
 }
 
-const KINDS = new Set(['exchange', 'tether', 'exchange-freeze', 'tether-freeze']) // backend freeze_requests.KINDS
+/** The wallet a letter is about, for its row in the requests log: the one an
+ * instant exchanger's letter names (it need not be the case's exchange), the
+ * case's exchange wallet for an exchange letter, else none. */
+export function addressOf(letter, result) {
+  if (letter.to.startsWith('instant')) return letter.address ?? ''
+  return letter.to.startsWith('exchange') ? (result.exchange_address ?? '') : ''
+}
+
+/** The instant exchanger the letters go to, as request_letters._instant picks
+ * it: the case's own exchange when it is one, else the first a trace reached.
+ * Null when the case's matches name none. */
+export function instantService(result) {
+  const traces = [result, ...(result.follow_ons ?? []).map((f) => f.result).filter(Boolean)]
+  const found = traces.find((t) => t.exchange)
+  const picks = traces.flatMap((t) => [...(t.matches ?? []), ...(t.inferred_deposits ?? [])]
+    .filter((m) => m.category === 'instant_exchanger' && m.address).map((m) => ({ t, m })))
+  const own = picks.find(({ t, m }) => t === found && m.address === t.exchange_address)
+  if (!picks.length) return null
+  return plain(own ? own.t.exchange : picks[0].m.exchange) || 'the swap service'
+}
+
+const KINDS = new Set(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'instant', 'instant-freeze']) // backend freeze_requests.KINDS
 
 /** The requests log's kind for a letter: its own when the log knows it, else "other". */
 export const kindOf = (to) => (KINDS.has(to) ? to : 'other')

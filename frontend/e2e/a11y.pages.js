@@ -23,6 +23,7 @@
 // the fold) cannot be sampled; the graph draws its labels over SVG shapes.
 
 import FLOW_11 from '../src/test/victim-flow-11.json' with { type: 'json' }
+import FLOW_11_INSTANT from '../src/test/victim-flow-11-instant.json' with { type: 'json' }
 
 const DOOR = ['button', { name: /click anywhere to enter/i }]
 
@@ -234,6 +235,10 @@ export const PAGES = [
   // recording answered with the flow backend/app/victim_flow.py builds for it
   // (src/test/victim-flow-11.json).
   { name: 'recorded case 11, Flow drawn', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: (body) => ({ ...body, victim_flow: FLOW_11 }) }, ready: ['heading', { level: 2, name: /^Where the victim's share went$|can be acted on$/ }], unmeasured: { phone: 1 } },
+  // No recorded demo reaches an instant exchanger (a no-KYC swap service), so
+  // its card is measured from a stub: the flow the backend builds for demo 11
+  // with its exchange wallet marked as one (src/test/victim-flow-11-instant.json).
+  { name: 'recorded case 11, Flow, instant exchanger (stub)', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: (body) => ({ ...body, victim_flow: FLOW_11_INSTANT }) }, ready: ['heading', { level: 3, name: 'At an instant exchanger' }], unmeasured: { phone: 1 } },
   { name: 'recorded case 11, Timeline', path: '/demo/11?tab=timeline', as: 'investigator', ready: CASE_TAB('Timeline'), unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },
   // The lane chart opens on its first 14 days; the whole trace is a press away.
   { name: 'recorded case 11, Timeline, every day', path: '/demo/11?tab=timeline', as: 'investigator', click: ['button', { name: /^All \d+ days$/ }], ready: ['button', { name: /^All \d+ days$/, pressed: true }], unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },

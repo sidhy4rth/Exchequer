@@ -851,7 +851,9 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 live.sweep(result.graph)
                 file_matcher = matcher
                 if live.found:
-                    matcher = ExchangeMatcher({**matcher._labels, **live.found}, chain=chain.key)
+                    # The store still names the instant exchangers no file or tag does.
+                    matcher = ExchangeMatcher({**matcher._labels, **live.found}, chain=chain.key,
+                                              store=matcher.store)
                 if live.warnings:
                     # A label file's entry always outranks the explorer's warning.
                     risk_matcher = RiskMatcher({**live.risk_labels(REPORTED), **risk_matcher._labels},

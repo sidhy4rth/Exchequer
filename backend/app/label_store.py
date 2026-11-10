@@ -184,6 +184,8 @@ class LabelStore:
         if row is None:
             return None
         category, entity_id, label, peer, tx, date, source_id, tier = row
+        if category == label_rules.INSTANT_EXCHANGER:
+            return None  # a cash-out point, not a risk row: instant_exchanger() reads it
         if category == "mixer" and (chain not in label_rules.STORE_MIXER_CHAINS
                                     or not label_rules.mixer_service(self._texts.get(entity_id, ""))):
             # Only a mixer's own pool ends a trace, and only on the chain its
@@ -219,6 +221,28 @@ class LabelStore:
         # a report quotes can say what kind of evidence it is (RiskMatch.describe).
         return {"category": category, "entity": entity, "label": label or entity, "source": source, "tier": tier,
                 **terminal}
+
+    def instant_exchanger(self, chain: str, address: str) -> dict[str, str] | None:
+        """The store's instant-exchanger row for `address`, as an exchange label
+        reads ({exchange, label, type, category, source}); None without one.
+        Read raw, never through never_flag: an instant exchanger's wallet is
+        the kind of infrastructure that list protects, not a flag on it."""
+        chain_id, raw = CHAIN_IDS.get(chain), encode_address(address)
+        if chain_id is None or raw is None:
+            return None
+        with self._lock:
+            row = self._db.execute("SELECT entity, label, source, tier FROM labels WHERE address=? AND chain=? "
+                                   "AND category=?", (raw, chain_id, label_rules.INSTANT_EXCHANGER)).fetchone()
+        if row is None:
+            return None
+        entity_id, label, source_id, tier = row
+        name = (label_rules.clean_text(self._texts.get(entity_id, ""))
+                or label_rules.DEFAULT_ENTITY[label_rules.INSTANT_EXCHANGER])
+        source = label_rules.clean_text(self._texts.get(source_id, ""))
+        tier = self._tier(source_id, label_rules.INSTANT_EXCHANGER, tier)
+        return {"exchange": name, "label": label_rules.clean_text(label) or name, "type": "unknown",
+                "category": label_rules.INSTANT_EXCHANGER,
+                "source": f"{source}; evidence: {TIERS[tier]}" if tier in TIERS else source}
 
     def _tier(self, source_id: int, category: str, stored: int) -> int:
         key = (source_id, category, stored)

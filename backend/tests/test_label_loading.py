@@ -126,7 +126,9 @@ def test_the_app_starts_when_a_label_file_is_malformed(broken_data):
     with TestClient(main.app) as client:
         assert client.get("/health").status_code == 200
     assert len(risk_matcher.get_risk_matcher("bsc")) > 0
-    assert len(exchange_matcher.get_matcher("tron")) == 0
+    # The file's labels are not used; the instant-exchanger seed is a file of its own.
+    seed = exchange_matcher.read_instant_exchangers(broken_data / exchange_matcher.INSTANT_EXCHANGERS_FILE, "tron")
+    assert {a for a, _ in exchange_matcher.get_matcher("tron").entries()} == set(seed)
 
 
 @pytest.mark.parametrize("path", sorted(config.DATA_DIR.glob("*_labels*.json"))
