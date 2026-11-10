@@ -149,3 +149,19 @@ def test_no_file_here_reads_a_key_or_an_e_mail_or_sms_service():
     for word in ("API_KEY", "apikey", "TRON-PRO-API-KEY", "smtp", "twilio", "sendgrid"):
         assert word.lower() not in text.lower()
     assert Path(API / "_lib").is_dir()
+
+
+def test_every_function_file_defines_a_top_level_handler_class():
+    """Vercel finds a Python function by reading the file for a top-level
+    `class handler(...)` (or `app`). A `handler = ...` assignment works when
+    imported, but Vercel's scan skips the file, and the deploy then fails with
+    "The pattern api/*.py doesn't match any Serverless Functions"."""
+    import ast
+    import pathlib
+    api = pathlib.Path(__file__).resolve().parent.parent
+    files = sorted(p for p in api.glob("*.py") if not p.name.startswith("_"))
+    assert files, "no function files found"
+    for path in files:
+        tree = ast.parse(path.read_text())
+        classes = [n.name for n in tree.body if isinstance(n, ast.ClassDef)]
+        assert "handler" in classes, f"{path.name} has no top-level `class handler`"
