@@ -355,3 +355,23 @@ def test_the_rollback_note_names_the_line_that_marks_a_safe_target():
     marker = "newer than this build: opened as it is"
     assert marker in Path(models.__file__).read_text()
     assert marker in " ".join(rollback.split()) and "011b176" in rollback and "November" not in rollback
+
+
+CITIZEN_TABLES = {"complaints", "complaint_payments", "complaint_messages", "tracking_codes",
+                  "citizen_sessions", "citizen_attempts"}
+
+
+def test_g6_citizen_1_goes_down_and_up_again_keeping_the_cases(engine):
+    """The citizen site's tables (app/complaints.py, citizen/api/): added on their own."""
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"chain": "ethereum"})
+    assert CITIZEN_TABLES <= set(inspect(engine).get_table_names())
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "-1")
+    assert not CITIZEN_TABLES & set(inspect(engine).get_table_names())
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    assert CITIZEN_TABLES <= set(inspect(engine).get_table_names())
+    assert models.get_case("kept") is not None

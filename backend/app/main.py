@@ -40,7 +40,7 @@ from sqlalchemy.exc import DataError, InterfaceError, OperationalError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from . import batches as batch_runner
-from . import api_budget, backups, config, log_safety, models, rate_limit, warmup, watchlist, webhook_vault
+from . import api_budget, backups, complaints, config, log_safety, models, rate_limit, warmup, watchlist, webhook_vault
 from . import access, audit
 from .access import DemoCodeMiddleware
 from .input_rules import ControlCharMiddleware
@@ -97,6 +97,11 @@ def _open_store() -> bool:
             logger.info("Sealed %d stored webhook URLs", sealed)
     except Exception as exc:  # noqa: BLE001 -- the hooks still work unsealed
         logger.error("Could not seal stored webhook URLs: %s", _short(exc))
+    try:
+        # Officers only: a complaint whose paid wallet a stored case reported.
+        complaints.flag_case_matches()
+    except Exception as exc:  # noqa: BLE001 -- the next scheduled run tries again
+        logger.error("Could not tag complaints that pay a case's wallet: %s", _short(exc))
     return True
 
 
@@ -157,9 +162,12 @@ async def lifespan(_app: FastAPI):
     watchlist.start_in_background()
     # A daily snapshot of the store beside it (off unless EXCHEQUER_BACKUPS).
     backups.start_in_background()
+    # Complaints paying a stored case's wallet, tagged for officers (complaints.py).
+    complaints.start_matching()
     yield
     backups.stop()
     watchlist.stop()
+    complaints.stop_matching()
     api_budget.flush_meters()  # the day's provider spend survives the restart
 
 

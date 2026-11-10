@@ -1,0 +1,5 @@
+# Never deployed: the citizen functions' tests (a file in api/ would become a
+# function) and local caches.
+api/tests
+**/__pycache__
+node_modules

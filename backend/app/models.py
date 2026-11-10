@@ -805,3 +805,8 @@ def recheck_for(case_id: str) -> tuple[bool, dict[str, Any] | None]:
 def session() -> Session:
     """A session on the case store, for modules with tables of their own here."""
     return Session(_engine)
+
+
+# The citizen site's tables live on this Base too, so the migrations and
+# `alembic check` see them (app/complaints.py).
+from . import complaints  # noqa: E402,F401

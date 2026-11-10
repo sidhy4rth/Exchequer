@@ -80,8 +80,16 @@ describe('vercel.json', () => {
   const headers = Object.fromEntries(vercel.headers.find((h) => h.source === '/(.*)').headers
     .map(({ key, value }) => [key, value]))
 
-  it('sends every route to the app', () => {
-    expect(vercel.rewrites).toEqual([{ source: '/(.*)', destination: '/index.html' }])
+  it('sends every route but /api/ to the app', () => {
+    expect(vercel.rewrites).toEqual([{ source: '/((?!api/).*)', destination: '/index.html' }])
+    const [rule] = vercel.rewrites
+    const matches = (path) => new RegExp(`^${rule.source}$`).test(path)
+    expect(['/', '/report/pack', '/my-case', '/apiary'].every(matches)).toBe(true)
+    expect(['/api/session', '/api/my-case'].some(matches)).toBe(false)
+  })
+
+  it('runs the citizen functions near India', () => {
+    expect(vercel.regions).toEqual(['sin1'])
   })
 
   it('sends a strict content policy and the other security headers', () => {
