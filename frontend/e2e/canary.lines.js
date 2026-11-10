@@ -11,3 +11,8 @@ export const CONSOLE_FIELD = 'Payment hash or wallet'
 // The investigator door's way in without an account (routes/SignIn.jsx),
 // which the canary clicks. SignIn.test.jsx checks the door still says it.
 export const DEMO_BUTTON = 'Look around as a demo'
+
+// What the console shows instead of that field once the owner closes live
+// tracing to officers (EXCHEQUER_CONSOLE=officers, components/Showroom.jsx).
+// Home.test.jsx checks the closed console still shows this link.
+export const OFFICER_SIGN_IN = 'Sign in as an officer to trace live'

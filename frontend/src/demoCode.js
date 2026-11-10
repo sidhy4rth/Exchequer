@@ -51,3 +51,13 @@ export function forgetDemoCode() {
 
 /** Whether this tab has unlocked live tracing. */
 export function hasDemoAccess() { return Boolean(demoPass() || demoCode()) }
+
+/** What stands between this tab and live tracing, from GET /access
+ * (backend/app/access.py): 'officer' when the owner has closed the console
+ * to signed-in officers and this caller is not one (a demo code does not
+ * help then), 'code' when the site wants the demo code and this tab has not
+ * given it, else null. */
+export function liveLock(access, unlocked) {
+  if (access?.console === 'officers') return access.officer ? null : 'officer'
+  return access?.demo_code_required && !unlocked ? 'code' : null
+}

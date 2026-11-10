@@ -790,6 +790,19 @@ PUBLIC_HOST: bool = (
 REQUIRE_DEMO_CODE: bool = (
     os.getenv("EXCHEQUER_REQUIRE_DEMO_CODE", "").strip().lower() in ("1", "true", "yes", "on")
 )
+# The owner's console switch (access.py). "open", the default, keeps the
+# site as it is for the judges; "officers" closes every live or spending
+# action to a signed-in officer, and a demo code no longer opens them.
+# Anything else is read as "open" and reported at every start.
+CONSOLE_MODES = ("open", "officers")
+
+
+def console_mode(environ: Mapping[str, str]) -> str:
+    raw = environ.get("EXCHEQUER_CONSOLE", "").strip().lower()
+    return raw if raw in CONSOLE_MODES else "open"
+
+
+CONSOLE: str = console_mode(os.environ)
 # How long the pass that POST /access/check hands a browser lasts (access.py):
 # an event day, so a presenter enters the code once.
 DEMO_PASS_SECONDS: int = max(60, int(float(os.getenv("EXCHEQUER_DEMO_PASS_HOURS", "12") or 12) * 3600))

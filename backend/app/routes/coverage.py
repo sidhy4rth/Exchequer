@@ -41,7 +41,8 @@ async def health() -> dict[str, str]:
     `build` is the commit serving (every report's footer prints it too; the
     repository is public), so the site canary can wait for a pushed commit
     to go live instead of guessing (r1-ci-github-9)."""
-    return {"status": "ok", "access": access.state(), "build": report.tool_version()}
+    return {"status": "ok", "access": access.state(), "console": config.CONSOLE,
+            "build": report.tool_version()}
 
 
 # The label type of a customer's deposit address at an exchange, as opposed
@@ -161,7 +162,7 @@ def health_detail(request: Request) -> dict[str, Any]:
         "access": {"state": access.state(), "public_host": config.PUBLIC_HOST,
                    "demo_code_set": bool(config.DEMO_CODE),
                    "demo_code_long_enough": access.code_is_long_enough(),
-                   "require_demo_code": config.REQUIRE_DEMO_CODE,
+                   "require_demo_code": config.REQUIRE_DEMO_CODE, "console": config.CONSOLE,
                    "pass_hours": config.DEMO_PASS_SECONDS / 3600},
         # Which address this request was counted against, and which header
         # gave it -- as fingerprints, never addresses. Send your own address

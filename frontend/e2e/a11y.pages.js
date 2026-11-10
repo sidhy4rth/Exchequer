@@ -162,6 +162,9 @@ const DEMO_11 = RECORDINGS.find((r) => r.demo === 11)
 const STORED_CASE = { url: '**/trace/a11y-case', body: { ...DEMO_11.result, case_id: 'a11y-case', created_at: DEMO_11.recorded_at } }
 const REF_FIELD = ['textbox', { name: 'Case reference' }]
 
+// GET /access on a site closed to officers, to a caller who has not signed in.
+const OFFICERS = { demo_code_required: false, console: 'officers', officer: false }
+
 const H1 = (name) => ['heading', { level: 1, name }]
 
 // New trace's search for a payment by amount and time. The wallet typed in
@@ -240,6 +243,12 @@ export const PAGES = [
   // What a public site shows until the demo code is given (render.yaml sets
   // one): the verified examples, and no way to start a trace.
   { name: 'Console, locked (demo code)', path: '/', as: 'investigator', stub: { url: '**/access', body: { demo_code_required: true } }, ready: ['heading', { name: 'Verified examples' }], unmeasured: { desktop: 2, phone: 1 } },
+  // The owner closed the console to officers (EXCHEQUER_CONSOLE=officers):
+  // the verified examples, and the officer sign-in where the code box was.
+  { name: 'Console, closed to officers', path: '/', as: 'investigator', stub: { url: '**/access', body: OFFICERS }, ready: ['link', { name: 'Sign in as an officer to trace live' }], unmeasured: { desktop: 2, phone: 1 } },
+  // On a phone the ninth verified example is cut by the bottom of the screen at rest.
+  { name: 'New trace, closed to officers', path: '/trace/new', as: 'investigator', stub: { url: '**/access', body: OFFICERS }, ready: ['link', { name: 'Sign in as an officer to trace live' }], unmeasured: { phone: 2 } },
+  { name: 'Watchlist, closed to officers', path: '/watchlist', as: 'investigator', stub: { url: '**/access', body: OFFICERS }, ready: ['link', { name: 'Sign in as an officer' }] },
   { name: 'More, on a phone', path: '/', as: 'investigator', size: 'phone', click: ['button', { name: 'More' }], ready: ['link', { name: 'Verify a report' }] },
   { name: 'New trace', path: '/trace/new', as: 'investigator', ready: H1('New trace'), unmeasured: { phone: 1 } },
   // A signed-in officer is asked for the case reference (backend/app/case_refs.py).

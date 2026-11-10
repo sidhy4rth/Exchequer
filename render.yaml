@@ -70,6 +70,14 @@ services:
       # deploy that loses the code fails closed instead of opening.
       - key: EXCHEQUER_DEMO_CODE
         sync: false
+      # The owner's console switch (access.py): "open" (the default, also
+      # when unset) keeps live tracing as above, for the judges; "officers"
+      # closes every live or spending action to a signed-in officer, and the
+      # demo code no longer opens them. Recorded demos, /verify and reading
+      # stay open. /health says which ("console"). Tell the judges first, and
+      # only once /signin/investigator has the officer password form.
+      - key: EXCHEQUER_CONSOLE
+        sync: false
       # Render behind Cloudflare: the client is CF-Connecting-IP, which the
       # edge overwrites. Render keeps a client-sent X-Forwarded-For and only
       # appends, so its leftmost entry is never trusted once measured: see

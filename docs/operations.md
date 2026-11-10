@@ -36,6 +36,7 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_METER_SAVE_SECONDS` | 30 | How often, at most, a spending meter writes its row (and once at shutdown): a crash forgets at most this much spend. |
 | `EXCHEQUER_DEMO_CODE` | — | Set, a live trace, a batch or a watch needs this code in the `X-Exchequer-Demo-Code` header; reading stays open. After 10 wrong codes in 15 minutes a client is refused (429), the right code included. The right code returns a pass (sent as `X-Exchequer-Demo-Pass`, valid `EXCHEQUER_DEMO_PASS_HOURS`, default 12) that is never locked out; changing the code revokes every pass. Use a long random value: `python -c 'import secrets;print(secrets.token_urlsafe(16))'`. Unset, nothing is guarded. See `backend/app/access.py`. |
 | `EXCHEQUER_REQUIRE_DEMO_CODE` | off | Set once the code is in place: a deploy without `EXCHEQUER_DEMO_CODE` then refuses live tracing (503) instead of opening it. |
+| `EXCHEQUER_CONSOLE` | `open` | The owner's switch. `open` leaves live tracing as the two rows above say. `officers`: every live or spending action (`POST /trace`, `/trace/jobs`, `/batches`, `/payments/search`, `/watches`, `/watches/{id}/check`, `/requests`, `/trace/{id}/recheck`, a sign-off, and stopping a job) needs a signed-in officer session, and the demo code or a pass no longer opens them (403 "Sign in as an officer to trace live."). Recorded demos, `/verify`, the citizen site and every read stay open. `/health` and `/access` report it as `"console"`. Any other value is read as `open` and logged as an error at start. The Demo health job's live traces are then refused too, so turn that job off first; the site canary accepts the closed console. Needs the officer sign-in form at `/signin/investigator` first (see below). |
 | `EXCHEQUER_PUBLIC` | on when Render or Railway says so | A public host without a demo code logs an error at every start. |
 | `EXCHEQUER_WATCHES_PER_HOUR` | 20 | Watches one client may create per hour. `0` = no limit. |
 | `EXCHEQUER_TRUST_PROXY` | `render` when Render sets `RENDER=true`, `1` on Railway, else off | Read the client address (the key of every per-client limit) from the proxy's headers. Only behind a proxy that sets them. `1`: `X-Real-IP`, else the last `X-Forwarded-For` entry (Railway). `render`: `EXCHEQUER_CLIENT_IP_HEADER` if the edge sent it, else entry `EXCHEQUER_PROXY_HOPS` from the right of `X-Forwarded-For`, else the leftmost entry (which a client can write; logged as a warning). `0` = never. |
@@ -154,6 +155,21 @@ sends it), then `EXCHEQUER_DEMO_CODE` on Render with the same value, then
 stays open, and says so: every start logs `THIS PUBLIC SITE IS OPEN`, and
 `/health` answers `"access": "open"` (`"code"` once set; `"closed"` if the
 code is required but missing, when live tracing answers 503).
+
+To close the console to officers, once the judges have been told, set
+`EXCHEQUER_CONSOLE=officers` on Render. Live work then needs an officer
+signed in at `/signin/investigator`, whatever the demo code; the console
+shows "Sign in as an officer to trace live" in place of the code box, and the
+recorded demos still open. `/health` answers `"console": "officers"`; with
+`EXPECT_DEMO_CODE=1` the site canary takes that as closed, and its console
+checks accept the sign-in link. Remove the variable (or set `open`) to open
+it again.
+
+Do not set it until `/signin/investigator` has the officer password form
+(it calls `POST /auth/login`, then asks for a new password when the account
+is on a temporary one). Without that form the page is only the role picker,
+nobody can sign in from the browser, and the link leads back to the same
+closed console.
 
 ## Database schema
 

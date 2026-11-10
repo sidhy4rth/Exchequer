@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import Home from './Home'
 import { stubFetch } from '../test/setup'
-import { CONSOLE_FIELD } from '../../e2e/canary.lines.js'
+import { CONSOLE_FIELD, OFFICER_SIGN_IN } from '../../e2e/canary.lines.js'
 import canarySource from '../../e2e/canary.spec.js?raw'
 import recorded from '../../../backend/data/recorded_demos.json'
 
@@ -374,5 +374,56 @@ describe('a public site that asks for a demo code', () => {
       expect(headers.get('X-Exchequer-Demo-Pass')).toBe('v1.1999999999.nonce.mac')
       expect(headers.has('X-Exchequer-Demo-Code')).toBe(false)
     }
+  })
+})
+
+describe('a site the owner has closed to officers', () => {
+  const recordings = { demos: [{ demo: 6, recorded_at: '2026-10-14T16:44:03+00:00', address: '0x00000000072d54638c2c2a3da3f715360269eea1', exchange: 'Binance', confidence: 0.875 }] }
+
+  function renderClosedHome(access) {
+    stubFetch({
+      '/chains': { body: health }, '/cases': { body: NO_CASES }, '/demos/recorded': { body: recordings },
+      '/watches': { body: { count: 0, watches: [] } }, '/access': { body: access },
+    })
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/demo/:n" element={<Landed />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  it('sends a visitor to the officer sign-in instead of asking for the demo code, and the demos still open', async () => {
+    const user = userEvent.setup()
+    renderClosedHome({ demo_code_required: true, console: 'officers', officer: false })
+    const link = await screen.findByRole('link', { name: 'Sign in as an officer to trace live' })
+    expect(link).toHaveAttribute('href', '/signin/investigator')
+    expect(screen.queryByLabelText('Access code')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(CONSOLE_FIELD)).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('link', { name: /reached Binance/ }))
+    expect(screen.getByTestId('landed')).toHaveTextContent('/demo/6')
+  })
+
+  it('gives a signed-in officer the trace field, with no code asked', async () => {
+    renderClosedHome({ demo_code_required: true, console: 'officers', officer: true })
+    expect(await screen.findByLabelText(CONSOLE_FIELD)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Access code')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Sign in as an officer to trace live' })).not.toBeInTheDocument()
+  })
+
+  it('is the link the site canary accepts in place of the field, so closing the site keeps the canary green', async () => {
+    renderClosedHome({ demo_code_required: false, console: 'officers', officer: false })
+    expect(await screen.findByRole('link', { name: OFFICER_SIGN_IN })).toBeInTheDocument()
+    // The canary waits for the console through one helper that accepts the
+    // link, in both tests that open it (the front door; nothing from elsewhere).
+    const helper = /const consoleReady = [^]*?\n\n/.exec(canarySource)?.[0] ?? ''
+    expect(helper).toContain('getByLabel(CONSOLE_FIELD)')
+    expect(helper).toContain("getByRole('link', { name: OFFICER_SIGN_IN })")
+    expect(canarySource.match(/expect\(consoleReady\(page\)\)\.toBeVisible\(\)/g)).toHaveLength(2)
+    expect(canarySource.split('getByLabel(CONSOLE_FIELD)')).toHaveLength(2)
+    // /health keeps "access": "open" when no code is set; closed to officers is closed too.
+    expect(canarySource).toMatch(/EXPECT_DEMO_CODE && health.console !== 'officers'/)
   })
 })

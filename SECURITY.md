@@ -35,6 +35,13 @@ protects it:
   tells a right guess from a wrong one. It is a shared demo secret, not an
   account: make it long and random. Creating watches is also
   rate limited per client. See `backend/app/access.py`.
+- **The owner can close live work to officers** (`EXCHEQUER_CONSOLE=officers`;
+  the default, `open`, changes nothing). Then every live or spending action
+  -- traces, batches, payment searches, watches and their checks, freeze
+  requests, rechecks and sign-offs -- needs a signed-in officer session,
+  checked before any route runs; the demo code and its pass no longer open
+  them. Recorded demos, `/verify` and reading stay open. `/health` says which
+  mode is on.
 - **Reports are signed.** Every text report ends in a SHA-256 content hash and
   an Ed25519 signature made with the server's key. Anyone can check one at
   `/verify` or offline with the key from `/signing-key`. See

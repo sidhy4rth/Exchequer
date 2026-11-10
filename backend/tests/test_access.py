@@ -91,7 +91,7 @@ def test_a_required_code_that_is_missing_closes_live_tracing(client, monkeypatch
     refused = post(client, "/trace", GUARDED[0][1])
     assert refused.status_code == 503 and "EXCHEQUER_DEMO_CODE" in refused.json()["detail"]
     assert client.traced == []
-    assert client.get("/access").json() == {"demo_code_required": True}
+    assert client.get("/access").json()["demo_code_required"] is True
     assert client.get("/health").json()["access"] == "closed"
     assert client.get("/cases", headers=OWNER).status_code == 200  # reading stays open
 
@@ -228,9 +228,9 @@ def test_one_client_cannot_create_watches_without_end(client, monkeypatch):
 
 # -- what the console asks before showing the trace form ------------------------------
 def test_the_console_can_ask_whether_a_code_is_needed(client, monkeypatch):
-    assert client.get("/access").json() == {"demo_code_required": False}
+    assert client.get("/access").json()["demo_code_required"] is False
     monkeypatch.setattr(config, "DEMO_CODE", CODE)
-    assert client.get("/access").json() == {"demo_code_required": True}
+    assert client.get("/access").json()["demo_code_required"] is True
 
 
 def test_checking_a_code_goes_through_the_same_gate(client, code_set):

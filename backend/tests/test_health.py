@@ -25,9 +25,9 @@ def test_public_health_says_only_whether_it_is_up_open_and_which_build(client, m
     public). The site canary waits for the pushed commit by it (r1-ci-github-9)."""
     build = report.tool_version()
     monkeypatch.setattr(config, "DEMO_CODE", "")
-    assert client.get("/health").json() == {"status": "ok", "access": "open", "build": build}
+    assert client.get("/health").json() == {"status": "ok", "access": "open", "console": "open", "build": build}
     monkeypatch.setattr(config, "DEMO_CODE", "a" * 22)
-    assert client.get("/health").json() == {"status": "ok", "access": "code", "build": build}
+    assert client.get("/health").json() == {"status": "ok", "access": "code", "console": "open", "build": build}
 
 
 def test_the_build_is_the_commit_the_host_deployed(monkeypatch):

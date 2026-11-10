@@ -151,3 +151,28 @@ describe('the new trace page', () => {
     expect(screen.queryByLabelText('Wallet the victim paid')).not.toBeInTheDocument()
   })
 })
+
+describe('a site the owner has closed to officers', () => {
+  const closed = { demo_code_required: false, console: 'officers', officer: false }
+
+  it('sends the new trace page to the officer sign-in instead of the code box', async () => {
+    open('new', { access: closed })
+    const link = await screen.findByRole('link', { name: 'Sign in as an officer to trace live' })
+    expect(link).toHaveAttribute('href', '/signin/investigator')
+    expect(screen.queryByLabelText('Access code')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Wallet the victim paid')).not.toBeInTheDocument()
+  })
+
+  it.each(['watchlist', 'batch'])('keeps %s shut until an officer signs in', async (page) => {
+    open(page, { access: closed })
+    expect(await screen.findByText(/needs a signed-in officer/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Complaints CSV')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /sign in as an officer/i })).toHaveAttribute('href', '/signin/investigator')
+  })
+
+  it('opens every page to a signed-in officer', async () => {
+    open('batch', { access: { ...closed, officer: true } })
+    expect(await screen.findByLabelText('Complaints CSV')).toBeVisible()
+    expect(screen.queryByText(/needs a signed-in officer/)).not.toBeInTheDocument()
+  })
+})

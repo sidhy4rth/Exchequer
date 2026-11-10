@@ -43,6 +43,13 @@ Whether the right code itself gets through a lockout depends on its length:
 So make the code long and random (secrets.token_urlsafe(16)); the lockout is
 a backstop, not what keeps it secret.
 
+The owner's switch, EXCHEQUER_CONSOLE (config.CONSOLE), sits above all of
+this. "open", the default, is everything above: the site stays open for the
+judges. "officers" closes OFFICER_ONLY, every live or spending route, to a
+signed-in officer session (accounts.py); a demo code or a pass no longer
+opens them, and an officer needs neither. Reading, the recorded demos and
+/verify stay open either way, and /health and /access say which mode is on.
+
 One table here rather than a check in each route: what the public may do is
 a single decision, and it should be readable in one place. tests/test_access.py
 checks every guarded route by path, so a route that moves cannot slip out.
@@ -54,14 +61,16 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import re
 import secrets
 import time
 from typing import Any, Awaitable, Callable
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from starlette.concurrency import run_in_threadpool
 
-from . import config, rate_limit
+from . import accounts, config, rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +101,14 @@ GUARDED: list[tuple[str, re.Pattern[str]]] = [
     ("POST", re.compile(r"^/access/check/?$")),
 ]
 
+# With EXCHEQUER_CONSOLE=officers, only a signed-in officer may call these:
+# every guarded route but the code box, and the second officer's sign-off.
+OFFICER_ONLY: list[tuple[str, re.Pattern[str]]] = [
+    *[(m, p) for m, p in GUARDED if not p.match("/access/check")],
+    ("POST", re.compile(r"^/requests/[^/]+/signoff/?$")),
+]
+OFFICER_REFUSAL = "Sign in as an officer to trace live."
+
 # Wrong codes per client: enough for typos, too few to guess one, and a
 # prank on shared Wi-Fi lasts minutes rather than the afternoon.
 wrong_codes = rate_limit.SlidingWindowLimiter(10, 900)
@@ -105,6 +122,17 @@ def is_guarded(method: str, path: str) -> bool:
     return any(method == m and pattern.match(path) for m, pattern in GUARDED)
 
 
+def officer_only(method: str, path: str) -> bool:
+    return config.CONSOLE == "officers" and any(method == m and p.match(path) for m, p in OFFICER_ONLY)
+
+
+def is_officer(token: str | None) -> bool:
+    """Whether this session cookie is a live officer session that may act
+    (a temporary password must be changed first)."""
+    found = accounts.signed_in(token) if token else None
+    return found is not None and not found[0].must_change_password
+
+
 def state() -> str:
     """"code" (guarded), "open" (no code: anyone may trace) or "closed" (a
     code is required but missing: nobody may)."""
@@ -115,11 +143,17 @@ def state() -> str:
 
 def report_at_startup() -> None:
     """Say loudly, at every start, when a public site is open to anyone."""
+    raw = os.environ.get("EXCHEQUER_CONSOLE", "").strip().lower()
+    if raw and raw not in config.CONSOLE_MODES:
+        logger.error("EXCHEQUER_CONSOLE=%r is not one of %s: the console stays open",
+                     raw[:20], ", ".join(config.CONSOLE_MODES))
+    if config.CONSOLE == "officers":
+        logger.warning("EXCHEQUER_CONSOLE=officers: live tracing needs a signed-in officer")
     current = state()
     if current == "closed":
         logger.error("EXCHEQUER_REQUIRE_DEMO_CODE is on but EXCHEQUER_DEMO_CODE is not set: "
                      "live traces, batches and watches are refused (503) until it is")
-    elif current == "open" and config.PUBLIC_HOST:
+    elif current == "open" and config.PUBLIC_HOST and config.CONSOLE != "officers":
         logger.error("THIS PUBLIC SITE IS OPEN: EXCHEQUER_DEMO_CODE is not set, so anyone can start "
                      "live traces, batches and watches that spend the provider quota. Set it in the "
                      "host's environment, and the secret DEMO_CODE of the GitHub environment live-checks to the same value")
@@ -169,6 +203,13 @@ class DemoCodeMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and officer_only(scope["method"], scope["path"]):
+            # Checked off the event loop: it reads the session store.
+            if await run_in_threadpool(is_officer, Request(scope).cookies.get(accounts.COOKIE)):
+                await self.app(scope, receive, send)
+            else:
+                await _refuse(send, 403, OFFICER_REFUSAL)
+            return
         if scope["type"] != "http" or not is_guarded(scope["method"], scope["path"]):
             await self.app(scope, receive, send)
             return
@@ -229,10 +270,13 @@ router = APIRouter()
 
 
 @router.get("/access")
-def access() -> dict[str, bool]:
+def access(request: Request) -> dict[str, Any]:
     """Whether this deployment asks for a demo code, so the console knows
-    to show the recorded demos and a code box instead of the trace form."""
-    return {"demo_code_required": state() != "open"}
+    to show the recorded demos and a code box instead of the trace form;
+    which console mode is on; and whether the caller is a signed-in officer,
+    who in "officers" mode gets the trace form."""
+    return {"demo_code_required": state() != "open", "console": config.CONSOLE,
+            "officer": is_officer(request.cookies.get(accounts.COOKIE))}
 
 
 @router.post("/access/check")
