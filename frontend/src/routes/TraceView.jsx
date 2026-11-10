@@ -3,47 +3,25 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace, stopTraceJob, traceJobRemembered } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
-import ThemeToggle from '../components/ThemeToggle'
-import Mark from '../components/Mark'
 import ExportButton from '../components/ExportButton'
 import Present from '../components/Present'
-import WatchPanel from '../components/WatchPanel'
-import RequestsPanel from '../components/RequestsPanel'
+import { useCrumb } from '../components/AppShell'
+import CaseTabs from '../components/case/CaseTabs'
+import Tracing from '../components/case/Tracing'
+import EvidenceTab from '../components/case/EvidenceTab'
+import TimelineTab from '../components/case/TimelineTab'
+import LettersTab from '../components/case/LettersTab'
+import VictimFlow from '../components/case/VictimFlow'
+import { useCaseTab } from './caseTab'
 import './TraceView.css'
 import { plain } from '../text'
-import { BAND_RULE, bandLabel, bandOf, validationLine } from '../components/confidence'
-
-const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
-const RISK_NAME = { sanctioned: 'Sanctioned entity', seized: 'Seizure order', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }
+import { BAND_RULE, bandLabel, bandOf } from '../components/confidence'
+import EntitiesTab from '../components/case/EntitiesTab'
+import { Address, PATTERN_NAME, RISK_NAME, middle, mmss, num, txUrl, when } from '../components/case/format'
 const COMPONENT_NAME = {
   hop_proximity: 'Hop proximity',
   amount_correlation: 'Amount correlation',
   match_directness: 'Match directness',
-}
-
-/** Truncation reasons come back one sentence per address. Grouped by kind
- * they read as a summary rather than a wall. */
-function groupReasons(reasons) {
-  const counts = { depth: 0, nodes: 0, fanout: 0, service: 0, fetch: 0, history: 0, other: [] }
-  ;(reasons ?? []).forEach((r) => {
-    if (r.startsWith('time budget')) counts.other.push(r)
-    else if (r.startsWith('depth limit')) counts.depth += 1
-    else if (r.startsWith('node limit')) counts.nodes += 1
-    else if (r.startsWith('fan-out limit')) counts.fanout += 1
-    else if (r.includes('pays out to many addresses')) counts.service += 1
-    else if (r.includes('could not be fetched')) counts.fetch += 1
-    else if (r.startsWith('history read limit')) counts.history += 1
-    else counts.other.push(r)
-  })
-  const out = []
-  if (counts.depth) out.push('the hop limit was reached')
-  if (counts.nodes) out.push('the address limit was reached')
-  if (counts.fanout) out.push(`only the 10 largest counterparties were followed at ${counts.fanout} address${counts.fanout === 1 ? '' : 'es'}`)
-  if (counts.service) out.push(`${counts.service} service contract${counts.service === 1 ? '' : 's'} not expanded`)
-  if (counts.fetch) out.push(`${counts.fetch} address${counts.fetch === 1 ? '' : 'es'} could not be fetched`)
-  // A read that stopped at its record limit: spam can fill one, so the case may miss transfers there.
-  if (counts.history) out.push(`history not read in full at ${counts.history} address${counts.history === 1 ? '' : 'es'} (each read stopped at its record limit)`)
-  return out.concat(counts.other)
 }
 
 /** OFAC stamps its list "MM/DD/YYYY"; an Indian reader parses that as day-first.
@@ -55,16 +33,6 @@ function unambiguousDate(text) {
   })
 }
 
-/** Middle-truncated address: both ends carry identity, the middle does not. */
-function middle(address, head = 10, tail = 8) {
-  if (!address || address.length <= head + tail + 1) return address
-  return `${address.slice(0, head)}…${address.slice(-tail)}`
-}
-/** A transaction's page on the chain's explorer (Tronscan's is under #/). */
-function txUrl(explorer, chain, hash) {
-  if (!explorer || !hash) return null
-  return chain === 'tron' ? `${explorer}/#/transaction/${hash.replace(/^0x/, '')}` : `${explorer}/tx/${hash}`
-}
 // A whole number from the URL, kept within the backend's range; `fallback`
 // when absent or not a number.
 function clampInt(raw, lo, hi, fallback) {
@@ -75,12 +43,6 @@ function clampInt(raw, lo, hi, fallback) {
 const PAY_HASH = /^(0x)?[0-9a-fA-F]{64}$/
 // The cap the confirmation card offers, as on the trace form.
 const LINK_BUDGET_SECONDS = 90
-const mmss = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
-const when = (seconds) =>
-  seconds ? new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ') : ''
-const num = (value) =>
-  value >= 1000 ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                : Number((value || 0).toFixed(6)).toString()
 
 const Icon = ({ d, size }) => (
   <svg className="icon" viewBox="0 0 24 24" aria-hidden="true" style={size ? { width: size, height: size } : undefined}>
@@ -90,46 +52,14 @@ const Icon = ({ d, size }) => (
 const ICONS = {
   alert: ['M12 3 2 20h20L12 3z', 'M12 10v4', 'M12 17.5h.01'],
   copy: ['M9 9h10v10H9z', 'M5 15V5h10'],
-  back: ['M15 6l-6 6 6 6'],
   redo: ['M4 12a8 8 0 1 1 2.3 5.7', 'M4 18v-6h6'],
   present: ['M3 5h18v11H3z', 'M8 20h8', 'M12 16v4'],
 }
 
-/** An address that copies itself when clicked and shows the full value on hover. */
-function Address({ value, head = 10, tail = 8, className = '' }) {
-  const [copied, setCopied] = useState(false)
-  const copy = () => {
-    navigator.clipboard?.writeText(value).then(
-      () => { setCopied(true); setTimeout(() => setCopied(false), 1100) },
-      () => {},
-    )
-  }
-  return (
-    <button type="button" className={`addr ${copied ? 'copied' : ''} ${className}`} title={`${value} — click to copy`} onClick={copy}>
-      {copied ? 'copied' : middle(value, head, tail)}
-    </button>
-  )
-}
-
-const STAGE_TEXT = {
-  starting: 'Starting',
-  screening: 'Walk finished · screening against sanctions, mixer and freeze lists',
-  attributing: 'Matching exchanges and inferring deposit addresses',
-  following_swap: 'Following the funds after a swap',
-  saving: 'Saving the case',
-}
-
-/** One line on what the background trace is doing right now. */
-function describeProgress(p) {
-  if (p.stage === 'walking') {
-    const hop = `Hop ${p.hop}${p.max_depth ? ` of ${p.max_depth}` : ''}`
-    const read = p.level_size > 1 ? ` · ${p.level_read ?? 0} of ${p.level_size} addresses read` : ''
-    const seen = p.addresses ? ` · ${p.addresses} address${p.addresses === 1 ? '' : 'es'} so far` : ''
-    return hop + read + seen
-  }
-  if (p.stage === 'following_swap') return `${STAGE_TEXT.following_swap}${p.follow_asset ? ` into ${p.follow_asset}` : ''}`
-  return STAGE_TEXT[p.stage] ?? ''
-}
+// A count and its noun: "1 wallet", "30 wallets".
+const many = (n, noun) => <><b>{n}</b> {noun}{n === 1 ? '' : 's'}</>
+// A date as it was in India, spelled out: "15 Nov 2023".
+const dayIST = (seconds) => new Date(seconds * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
 
 const METHOD_NAME = { fifo: 'FIFO', prorata: 'pro-rata', libr: 'LIBR' }
 
@@ -192,12 +122,21 @@ function ConfirmTrace({ address, chain, asset, depth, direction, budget, hashes,
   )
 }
 
+// A wallet a link asks the watch panel to offer, only when the case's flow
+// leaves some of the victim's money there: a link alone says nothing of a case.
+function flowWallet(result, address) {
+  const flow = result.victim_flow
+  if (!address || flow?.status !== 'estimated') return null
+  return (flow.buckets ?? []).some((b) => b.kind === 'left' && b.amount > 0 && b.addresses?.includes(address)) ? address : null
+}
+
 export default function TraceView() {
   // One component serves all three routes. /trace/:address runs a fresh
   // traversal; /case/:caseId opens what was stored, and /demo/:demoNo a
   // recorded DEMO.md trace, both without touching the chain.
   const { address: routeAddress, caseId, demoNo } = useParams()
   const [params] = useSearchParams()
+  const [tab, setTab] = useCaseTab()
   const navigate = useNavigate()
   const location = useLocation()
   const recorded = Boolean(demoNo)
@@ -241,19 +180,23 @@ export default function TraceView() {
   const [revealed, setRevealed] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState('flow') // 'flow' | 'bubbles'
+  const [everyWallet, setEveryWallet] = useState(false)
   // Present mode: the case as four big screens. P opens it, Esc closes it.
   const [presenting, setPresenting] = useState(false)
   const timers = useRef([])
 
-  // Stored cases that share an intermediary with this one. Loaded after the
-  // trace, from the case store only; a failure here must not disturb the trace.
-  const [related, setRelated] = useState([])
+  // Stored cases that share an intermediary with this one (GET
+  // /cases/correlate). Loaded after the trace, from the case store only; a
+  // failure here must not disturb the trace.
+  const [correlation, setCorrelation] = useState(null)
+  const related = correlation?.related_cases ?? []
   useEffect(() => {
-    if (!result?.case_id) { setRelated([]); return undefined }
+    setCorrelation(null)
+    if (!result?.case_id) return undefined
     let cancelled = false
     fetchRelatedCases(result.case_id)
-      .then((r) => { if (!cancelled) setRelated(r.related_cases || []) })
-      .catch(() => { if (!cancelled) setRelated([]) })
+      .then((r) => { if (!cancelled) setCorrelation(r) })
+      .catch(() => { if (!cancelled) setCorrelation({ failed: true }) })
     return () => { cancelled = true }
   }, [result?.case_id])
 
@@ -291,7 +234,7 @@ export default function TraceView() {
         // case's own. A refresh or the back button then reopens the stored
         // case instead of running the traversal again -- another wait on the
         // provider and a duplicate row in the case store.
-        navigate(`/case/${data.case_id}`, { replace: true, state: { result: data } })
+        navigate(`/case/${data.case_id}${tab === 'flow' ? '' : `?tab=${tab}`}`, { replace: true, state: { result: data } })
       })
       .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false) } })
       .finally(() => clearInterval(tick))
@@ -340,6 +283,7 @@ export default function TraceView() {
   }, [hops])
 
   const address = routeAddress ?? result?.address ?? ''
+  useCrumb(result ? middle(plain(address)) : null)
   const reverse = (result?.direction ?? requestedDirection) === 'incoming'
   // Contract v2 (docs/contracts/case.md): a payment trace started from the
   // victim's payments; anything else followed the wallet's own history.
@@ -369,11 +313,16 @@ export default function TraceView() {
   const paymentCount = paidByHash.length
   const hashesWithheld = payments.length > 0 && payments.every((p) => !p.tx_hash)
   const windowStart = payments.length ? Math.min(...payments.map((p) => p.timestamp || Infinity)) : null
+  const ncrp = result?.intake?.ncrp_ack
+  const hopLimit = result?.max_depth ?? (stored ? null : depth)
+  // Wallets the issuer froze, counted per issuer: "2 frozen by Tether".
+  const frozenBy = Object.entries((result?.risk_matches ?? []).filter((m) => m.category === 'frozen').reduce((by, m) => {
+    const issuer = plain(m.issuer) || 'the issuer'
+    return { ...by, [issuer]: (by[issuer] ?? 0) + 1 }
+  }, {}))
   const unit = result?.asset ?? result?.native_symbol ?? asset
   const tracedAt = result?.created_at ? result.created_at.replace('T', ' ').slice(0, 16) : null
-  const findings = result?.findings ?? []
   const riskMatches = result?.risk_matches ?? []
-  const funders = result?.direct_senders ?? []
   const swaps = result?.swaps ?? []
   const followOns = (result?.follow_ons ?? []).filter((f) => f.result)
   const followed = result?.followed_attribution
@@ -383,7 +332,6 @@ export default function TraceView() {
   const caveats = result?.confidence_detail?.caveats ?? []
   // Pro-rata started from at most the victim's payments or the swap's output.
   const capped = result?.prorata?.seed_cap?.applied ? result.prorata.seed_cap : null
-  const serviceContracts = result?.graph.nodes.filter((n) => n.is_service_contract) ?? []
   const path = result?.trace_path ?? []
   const pathHashes = path.reduce((n, step) => n + (step.tx_hashes?.length ?? 0), 0)
   const primaryInference = inferred.find((m) => m.address === result?.exchange_address)
@@ -395,13 +343,6 @@ export default function TraceView() {
   }, [hops])
   const visible = showAll ? hops : notable
   const shown = visible.slice(0, revealed)
-  const grouped = groupReasons(result?.truncation_reasons)
-  const scopeLine = result ? [
-    result.transfers_excluded_by_time ? `${result.transfers_excluded_by_time} pre-arrival transfers left out` : null,
-    serviceContracts.length ? `${serviceContracts.length} service contract${serviceContracts.length === 1 ? '' : 's'}` : null,
-    swaps.length ? `${swaps.length} swap${swaps.length === 1 ? '' : 's'}` : null,
-    result.evidence?.count ? `${result.evidence.count} responses hashed` : null,
-  ].filter(Boolean).join(' · ') : ''
 
   useEffect(() => {
     const onKey = (e) => {
@@ -413,18 +354,31 @@ export default function TraceView() {
     return () => window.removeEventListener('keydown', onKey)
   }, [result, presenting])
 
-  const retrace = useCallback(() => {
+  // The case traced again, at its own depth or deeper. Re-trace says it was
+  // started here; a deeper trace from a Flow card asks first (ConfirmTrace),
+  // as it spends the allowance.
+  const traceAgain = useCallback((deeper) => {
     if (!result) return
     const q = new URLSearchParams({
       chain: result.chain, asset: result.asset,
-      depth: String(result.max_depth ?? result.depth_reached ?? 3), direction: result.direction ?? 'outgoing',
+      depth: String(deeper ?? result.max_depth ?? result.depth_reached ?? 3), direction: result.direction ?? 'outgoing',
     })
     if (result.time_budget_seconds) q.set('budget', String(result.time_budget_seconds))
     // A payment case is re-traced from the same payments (public chain data).
     const hashes = [...new Set((result.intake?.mode === 'payment' ? result.intake.payments ?? [] : []).map((p) => p.tx_hash).filter(Boolean))]
     if (hashes.length) q.set('pay', hashes.join(','))
-    navigate(`/trace/${result.address}?${q}`, { state: { startedHere: true } })
+    navigate(`/trace/${result.address}?${q}`, deeper ? undefined : { state: { startedHere: true } })
   }, [navigate, result])
+  // A Flow card's action opens another view and puts the keyboard there,
+  // unless the view already took it (the letter the card asked for).
+  const jump = useRef(null)
+  const openTab = (to, asks) => { jump.current = to; setTab(to, asks) }
+  useEffect(() => {
+    if (jump.current !== tab) return
+    jump.current = null
+    const panel = document.querySelector('.case-tabs [role="tabpanel"]:not([hidden])')
+    if (panel && !panel.contains(document.activeElement)) panel.focus()
+  }, [tab])
 
   // Run the trace a link asked for, once the officer has seen what it does.
   const confirmRun = useCallback((capped) => {
@@ -436,39 +390,64 @@ export default function TraceView() {
     navigate(`${location.pathname}?${q}`, { replace: true, state: { ...(location.state ?? {}), startedHere: true } })
   }, [navigate, params, depth, budget, location.pathname, location.state])
 
+  // Every wallet and transfer, by hop or as bubbles: the Flow tab when the
+  // case has no victim flow, and a click away under it when it has one.
+  const moneyFlow = result && (
+    <div className="card graph-card">
+      <div className="head">
+        <span className="micro">Money flow · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
+        <span className="seg">
+          <button className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
+          <button className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
+        </span>
+      </div>
+      {view === 'flow'
+        ? <FlowView data={result.graph} tracePath={result.trace_path} unit={unit} direction={result.direction} />
+        : <div className="stage"><GraphView data={result.graph} tracePath={result.trace_path} unit={unit} /></div>}
+    </div>
+  )
 
   return (
     <div className="results">
       {presenting && result && <Present result={result} related={related} unit={unit} onClose={() => setPresenting(false)} />}
-      <header className="topbar">
-        <Link to="/" className="brand"><Mark size={18} />Exchequer<small>Case view</small></Link>
-        <div className="subject">
-          <span className="micro">{reverse ? 'Reported address (funded by)' : 'Reported address'}</span>
-          <Address value={address} head={12} tail={10} />
+      {/* A case's pills describe it, so none until it has loaded: a broken
+          link must not look like an archived Ethereum case. */}
+      {result && <header className="case-top">
+        <div className="case-top-row">
+          <h1 className="subject">
+            <span className="micro">{reverse ? 'Reported address (funded by)' : 'Reported address'}</span>
+            <Address value={address} head={12} tail={10} />
+          </h1>
+          <div className="actions">
+            {stored && (
+              <button onClick={() => traceAgain()} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />{recorded ? 'Trace live' : 'Re-trace'}</button>
+            )}
+            <button className="icon-btn" onClick={() => setPresenting(true)} title="The case as four big screens (P)"><Icon d={ICONS.present} size={16} /><span className="visually-hidden">Present</span></button>
+            {result.case_id && <ExportButton caseId={result.case_id} address={address} icon />}
+          </div>
         </div>
-        {/* A stored case's pills describe it, so none until it has loaded: a
-            broken link must not look like an archived Ethereum case. */}
-        {(result || !stored) && <div className="pills">
-          <span className="pill">{result?.chain_name ?? chain}</span>
-          <span className="pill mono">{unit}</span>
-          {(!stored || result?.max_depth) && <span className="pill mono">{stored ? result.max_depth : depth} hops</span>}
-          {reverse && <span className="pill navy" title="Incoming transfers walked backwards to the addresses that funded this one">Reverse trace</span>}
-          {(result ? result.time_budget_seconds : budget) && <span className="pill mono" title="The walk stopped expanding once this much time was spent">{mmss(result ? result.time_budget_seconds : budget)} cap</span>}
-          {recorded && <span className="pill navy" title="A verified trace as it came out when recorded. Live data moves; Trace live runs it again now.">Verified example {String(demoNo).padStart(2, '0')}{tracedAt ? ` · ${tracedAt.slice(0, 10)}` : ''}</span>}
-          {stored && !recorded && !justTraced && <span className="pill amber" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
-          {justTraced && <span className="pill green" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
-        </div>}
-        <span className="grow" />
-        <div className="actions">
-          {result && <button onClick={() => setPresenting(true)} title="The case as four big screens (P)"><Icon d={ICONS.present} />Present</button>}
-          {result?.case_id && <ExportButton caseId={result.case_id} address={address} />}
-          {stored && result && (
-            <button onClick={retrace} title="Run the traversal again against current chain data"><Icon d={ICONS.redo} />{recorded ? 'Trace live' : 'Re-trace'}</button>
+        <div className="case-pills">
+          <span className="case-pill"><b>{result.chain_name ?? chain}</b> {unit}</span>
+          {paymentTrace && result.reported_amount > 0 && <span className="case-pill"><b>{num(result.reported_amount)}</b> {unit} paid{windowStart > 0 && windowStart !== Infinity ? ` · ${dayIST(windowStart)}` : ''}</span>}
+          {hopLimit > 0 && <span className="case-pill">{many(hopLimit, 'hop')}</span>}
+          <span className="case-pill">{many(result.graph.nodes.length, 'wallet')}</span>
+          <span className="case-pill">{many(result.graph.edges.length, 'transfer')}</span>
+          {frozenBy.map(([issuer, n]) => <span className="case-pill risk" key={issuer}><b>{n}</b> frozen by {issuer}</span>)}
+          {reverse && <span className="case-pill" title="Incoming transfers walked backwards to the addresses that funded this one">Reverse trace</span>}
+          {result.time_budget_seconds > 0 && <span className="case-pill" title="The walk stopped expanding once this much time was spent">{mmss(result.time_budget_seconds)} cap</span>}
+          {recorded && <span className="case-pill" title="A verified trace as it came out when recorded. Live data moves; Trace live runs it again now.">Verified example {String(demoNo).padStart(2, '0')}{tracedAt ? ` · ${tracedAt.slice(0, 10)}` : ''}</span>}
+          {stored && !recorded && !justTraced && <span className="case-pill" title="Loaded from the case store — the evidence as it stood, not re-traced">Archived{tracedAt ? ` · ${tracedAt}` : ''}</span>}
+          {justTraced && <span className="case-pill go" title="Stored the moment it completed; this URL reopens it without re-tracing">Saved{tracedAt ? ` · ${tracedAt}` : ''}</span>}
+          {/* Where the trace began, at the right end of the row (pack CaseTop). */}
+          {!reverse && (
+            <p className="case-origin">
+              {paymentTrace
+                ? <><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" strokeWidth="1.5"><circle cx="8" cy="8" r="6.2" /><path d="M5.2 8.2l1.9 1.9 3.8-4" /></svg>Traced from the victim's payment{ncrp ? <> · NCRP <span aria-hidden="true">••••</span><span className="visually-hidden">ending </span>{String(ncrp).slice(-4)}</> : null}</>
+                : 'Exploratory, traced from the address'}
+            </p>
           )}
-          <button className="quiet" onClick={() => navigate('/')}><Icon d={ICONS.back} />New trace</button>
-          <ThemeToggle />
         </div>
-      </header>
+      </header>}
 
       <div className="results-body">
         {error && <div className="banner error">{error}</div>}
@@ -480,27 +459,21 @@ export default function TraceView() {
           />
         )}
 
-        {loading && (
+        {loading && !stored && !needsConfirm && (
+          <Tracing
+            address={routeAddress} chain={chain} asset={asset} reverse={reverse} payments={traceParams.payments.length > 0}
+            progress={progress} elapsed={elapsed} budget={budget} canStop={Boolean(jobId)} stopping={stopping}
+            onStop={() => { setStopping(true); stopTraceJob(jobId).catch((err) => { setStopping(false); setError(err.message) }) }}
+          />
+        )}
+
+        {loading && stored && (
           <div className="card">
             <div className="body loading">
-              <span className="micro">{recorded ? 'Opening verified example' : stored ? 'Opening stored case' : reverse ? 'Walking incoming transfers backwards' : 'Following outgoing transfers'}</span>
-              <span className="elapsed">{elapsed.toFixed(1)} s{!stored && budget ? <small> · stops expanding at {mmss(budget)}{elapsed > budget ? ' — finishing what it has' : ''}</small> : null}</span>
-              {!stored && progress && <span className="progress-line" aria-live="polite">{describeProgress(progress)}</span>}
-              {!stored && jobId && (
-                <button className="quiet" disabled={stopping} onClick={() => { setStopping(true); stopTraceJob(jobId).catch((err) => { setStopping(false); setError(err.message) }) }}>
-                  {stopping ? 'Stopping…' : 'Stop this trace'}
-                </button>
-              )}
-              {!stored && progress?.stage === 'walking' && progress.level_size > 0
-                ? <div className="bar determinate"><span style={{ width: `${Math.round(100 * Math.min(1, (progress.level_read ?? 0) / progress.level_size))}%` }} /></div>
-                : <div className="bar"><span /></div>}
-              <p className="note">
-                {recorded
-                  ? 'Read from the recording; the chain is not consulted.'
-                  : stored
-                  ? 'Read from the case store; the chain is not consulted.'
-                  : 'One request per address, about two a second on a free key. Instant when the addresses have been seen before.'}
-              </p>
+              <span className="micro">{recorded ? 'Opening verified example' : 'Opening stored case'}</span>
+              <span className="elapsed">{elapsed.toFixed(1)} s</span>
+              <div className="bar"><span /></div>
+              <p className="note">{recorded ? 'Read from the recording; the chain is not consulted.' : 'Read from the case store; the chain is not consulted.'}</p>
             </div>
           </div>
         )}
@@ -646,20 +619,17 @@ export default function TraceView() {
         )}
 
         {result && (
-          <section className="split">
-            <div className="left">
-              <div className="card graph-card">
-                <div className="head">
-                  <span className="micro">Money flow · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
-                  <span className="seg">
-                    <button className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
-                    <button className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
-                  </span>
-                </div>
-                {view === 'flow'
-                  ? <FlowView data={result.graph} tracePath={result.trace_path} unit={unit} direction={result.direction} />
-                  : <div className="stage"><GraphView data={result.graph} tracePath={result.trace_path} unit={unit} /></div>}
-              </div>
+          <CaseTabs value={tab} onChange={setTab} panels={{
+            flow: <>
+              {result.victim_flow?.status === 'estimated' && <>
+                <VictimFlow result={result} unit={unit} onDeeper={traceAgain}
+                  onLetters={(letter) => openTab('letters', { letter })} onWatch={(watch) => openTab('letters', { watch })} />
+                <details className="card sec every-wallet" onToggle={(e) => setEveryWallet(e.currentTarget.open)}>
+                  <summary><span className="micro">Every wallet · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span></summary>
+                  {everyWallet && moneyFlow}
+                </details>
+              </>}
+              {result.victim_flow?.status !== 'estimated' && moneyFlow}
 
               {followOns.map((f) => (
                 <div className="card graph-card" key={`${f.address}-${f.asset}`}>
@@ -673,7 +643,9 @@ export default function TraceView() {
                   {(f.result.risk_notes ?? []).map((note) => <p className="note risk-note" key={note}>{note}</p>)}
                 </div>
               ))}
-
+            </>,
+            timeline: <>
+              <TimelineTab result={result} unit={unit} />
               <div className="card">
                 <div className="head">
                   <span className="micro">{showAll ? 'All transfers' : 'Transfers that matter'} · {visible.length}</span>
@@ -703,7 +675,7 @@ export default function TraceView() {
                         <div className="sub">
                           <span>{h.tx_count} transfer{h.tx_count === 1 ? '' : 's'}{h.internal_tx_count ? ` (${h.internal_tx_count} by contract call)` : ''}</span>
                           {h.last_seen ? <span>{when(h.last_seen)}</span> : null}
-                          {h.onPath && <span className="pill red">traced funds</span>}
+                          {h.onPath && <span className="pill green">traced funds</span>}
                           {h.swap && <span className="pill amber">swap at {h.swap.router_label}</span>}
                           {h.flags?.map((f) => <span className="pill amber" key={f}>{PATTERN_NAME[f] ?? f}</span>)}
                         </div>
@@ -784,184 +756,12 @@ export default function TraceView() {
                   </div>
                 </details>
               )}
-            </div>
-
-            <aside className="rail">
-              {result.case_id && <WatchPanel result={result} />}
-              {result.case_id && <RequestsPanel result={result} />}
-              {inferred.length > 0 && (
-                <details className="card sec" open={Boolean(result.attribution_inferred)}>
-                  <summary><span className="micro">Inferred deposit addresses · {inferred.length}</span><span className="pill amber">inference</span></summary>
-                  <div className="body">
-                    {inferred.map((m) => {
-                      const e = m.evidence ?? {}
-                      return (
-                        <div className="rule-block" key={m.address}>
-                          <div className="top"><span className="nm amber">Probable {m.exchange} deposit address</span><span className="st">{m.depth} hop{m.depth === 1 ? '' : 's'}</span></div>
-                          <Address value={m.address} head={12} tail={10} />
-                          <div className="thresholds">
-                            <span className="tk">outgoing transfers</span><span className="tv">{e.sweep_count}{e.outgoing_history_capped ? ' (newest only)' : ''}</span>
-                            <span className="tk">all to</span><span className="tv">{e.sweep_destination_label}</span>
-                            <span className="tk">total swept</span><span className="tv">{num(e.total_swept_native ?? 0)} {unit}</span>
-                            {e.current_balance_native != null && <><span className="tk">current balance</span><span className="tv">{num(e.current_balance_native)} {e.current_balance_symbol ?? result?.chain_native_symbol ?? unit}</span></>}
-                            {e.first_sweep && <><span className="tk">sweeps between</span><span className="tv">{when(e.first_sweep).slice(0, 10)} – {when(e.last_sweep).slice(0, 10)}</span></>}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </details>
-              )}
-
-              {findings.length > 0 ? (
-                <details className="card sec">
-                  <summary><span className="micro">Hints · {findings.length}</span><span className="pill amber">a shape, not evidence</span></summary>
-                  <div className="body">
-                    {findings.map((f) => (
-                      <div className="rule-block" key={f.pattern}>
-                        <div className="top"><span className="nm amber">{PATTERN_NAME[f.pattern] ?? f.pattern}</span></div>
-                        <div className="desc">{f.description}</div>
-                        {validationLine(f.pattern) && <p className="hint-rate">{validationLine(f.pattern)}</p>}
-                        {f.evidence?.thresholds_applied && (
-                          <div className="thresholds">
-                            {Object.entries(f.evidence.thresholds_applied).map(([k, v]) => (
-                              <span key={k} style={{ display: 'contents' }}><span className="tk">{k}</span><span className="tv">{String(v)}</span></span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    <p className="note">A hint is a reason to look closer, not a finding: it never moves the score and should not appear in a request as evidence.</p>
-                  </div>
-                </details>
-              ) : (
-                <div className="card sec flat"><span className="micro">Hints · none</span><span className="note">no peel chain or amount split</span></div>
-              )}
-
-              {swaps.length > 0 && (
-                <details className="card sec" open={!result.exchange}>
-                  <summary><span className="micro">Swaps · {swaps.length}</span><span className="note">the trace changes asset here</span></summary>
-                  <div className="body">
-                    {swaps.map((s) => (
-                      <div className="swap" key={s.tx}>
-                        <Address value={s.sender} head={8} tail={6} /> sent <span className="num">{num(s.amount_in)} {s.asset_in}</span> to <strong>{s.router_label}</strong>
-                        {s.output_read
-                          ? s.amount_out != null
-                            ? <> and got <span className="num">{num(s.amount_out)} {s.asset_out}</span> back. {followOns.some((f) => f.address === s.sender && f.asset === s.asset_out)
-                              ? <>The {s.asset_out} is followed from here — see <em>Continued in {s.asset_out}</em>.</>
-                              : <>Re-run on {s.asset_out} from the sender to follow it further.</>}</>
-                            : <> and got <span className="num">{s.amount_out_units}</span> raw units of an unlisted token{s.asset_out_contract ? <> (<Address value={s.asset_out_contract} head={8} tail={6} />)</> : null} back. Its decimals are not known, so the amount is not converted, and Exchequer does not trace that token — the trail stops here.</>
-                          : <>. Nothing came back to the sender in the receipt — a swap into the native coin looks like this — so the output is unread, not guessed.</>}
-                        <div className="grid">
-                          <span className="k">tx</span><Address value={s.tx} head={12} tail={10} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
-
-              {related.length > 0 ? (
-                <details className="card sec" open>
-                  <summary><span className="micro">Related cases · {related.length}</span><span className="note">same wallets, other complaints</span></summary>
-                  <div className="body">
-                    {related.slice(0, 8).map((c) => (
-                      <div className="related-case" key={c.case_id ?? c.ref}>
-                        <div className="top">
-                          {c.hidden
-                            ? <span className="mono" title="Traced by someone else; only the wallets it shares with this case are shown">{c.ref}</span>
-                            : <a href={`/case/${c.case_id}`} className="mono" title={c.reported_address}>{middle(c.reported_address, 10, 8)}</a>}
-                          <span className="st">{c.shared_count} shared wallet{c.shared_count === 1 ? '' : 's'}</span>
-                        </div>
-                        <div className="ent">{c.exchange ? `reached ${c.exchange}` : 'no exchange matched'}{c.traced_at ? ` · traced ${String(c.traced_at).slice(0, 10)}` : ''}</div>
-                        {c.shared.slice(0, 3).map((s) => (
-                          <div className="row" key={s.address}>
-                            <Address value={s.address} head={10} tail={8} />
-                            <span className="via">{s.inferred_exchange ? `probable ${s.inferred_exchange} deposit · ` : ''}{s.risk_category ? `${RISK_NAME[s.risk_category] ?? s.risk_category} · ` : ''}{s.value_in_native == null ? (s.after_swap_to ? `after a swap to ${s.after_swap_to}` : c.asset) : `${num(s.value_in_native)} ${s.after_swap_to ?? c.asset}${s.after_swap_to ? ' after a swap' : ''}`}</span>
-                          </div>
-                        ))}
-                        {c.shared_count > 3 && <div className="ent">…and {c.shared_count - 3} more</div>}
-                      </div>
-                    ))}
-                    {related.length > 8 && <p className="note">…and {related.length - 8} more related cases.</p>}
-                    <p className="note">Only wallets no list names count — unlabelled, probable deposit addresses, or flagged but unnamed (a Tether freeze, a warning tag). A shared exchange is a shared bank, not a shared offender.</p>
-                  </div>
-                </details>
-              ) : (
-                <div className="card sec flat"><span className="micro">Related cases · none</span><span className="note">no other stored complaint shares a wallet</span></div>
-              )}
-
-              {reverse && funders.length > 0 && (
-                <details className="card sec" open>
-                  <summary><span className="micro">Funded this address · {funders.length}</span><span className="note">{funders.filter((f) => f.exchange).length} are exchange withdrawals</span></summary>
-                  <div className="body">
-                    {funders.map((f) => (
-                      <div className="funder" key={f.address}>
-                        <Address value={f.address} head={12} tail={10} />
-                        <span className="amt">{num(f.value_native)} {unit}</span>
-                        <span className="sub">
-                          {f.tx_count} transfer{f.tx_count === 1 ? '' : 's'}{f.last_seen ? ` · ${when(f.last_seen)}` : ''}
-                          {f.exchange && <span className="pill green">{f.exchange} withdrawal, not a victim</span>}
-                          {f.risk_category && <span className="pill red">{RISK_NAME[f.risk_category] ?? f.risk_category}</span>}
-                        </span>
-                      </div>
-                    ))}
-                    <p className="note">Candidate victims where the reported address is an offender's — but a sender may equally be the offender's own wallet; the exchanges are marked.</p>
-                  </div>
-                </details>
-              )}
-
-              <details className="card sec">
-                <summary><span className="micro">Scope and evidence</span><span className="note">{result.truncated ? 'truncated' : 'complete within limits'}</span></summary>
-                <div className="body">
-                  <p className="note">{scopeLine || 'Nothing was left out.'}</p>
-                  <div className="exclusion">
-                    <span className={`n ${result.transfers_excluded_by_time ? '' : 'zero'}`}>{result.transfers_excluded_by_time ?? 0}</span>
-                    <span className="t">transfers before the traced funds arrived<small>Money cannot be forwarded before it is received; these were left out.</small></span>
-                  </div>
-                  <div className="exclusion">
-                    <span className={`n ${serviceContracts.length ? '' : 'zero'}`}>{serviceContracts.length}</span>
-                    <span className="t">service contracts not expanded<small>WETH, pools, routers: their payouts are other people's money.</small></span>
-                  </div>
-                  {result.untraced?.length > 0 && (
-                    <div className="exclusion untraced">
-                      <span className="n num">{num(result.untraced.reduce((sum, u) => sum + u.value_native, 0))}</span>
-                      <span className="t">{unit} sent on but not followed<small>{result.untraced.reduce((sum, u) => sum + u.counterparties, 0)} smaller destinations of {result.untraced.length} address{result.untraced.length === 1 ? '' : 'es'}: {result.untraced.some((u) => u.rule === 'top_n') ? 'the walk follows the ten largest of each' : 'each carried less than the share the walk follows'}. Where these went is not in this case.</small></span>
-                    </div>
-                  )}
-                  {result.addresses_unexpanded_by_time > 0 && (
-                    <div className="exclusion">
-                      <span className="n">{result.addresses_unexpanded_by_time}</span>
-                      <span className="t">addresses reached but not expanded<small>The {mmss(result.time_budget_seconds)} time cap ran out first; the graph beyond them is missing.</small></span>
-                    </div>
-                  )}
-                  {result.addresses_unexpanded_by_budget > 0 && (
-                    <div className="exclusion">
-                      <span className="n">{result.addresses_unexpanded_by_budget}</span>
-                      <span className="t">addresses reached but not expanded<small>The case's provider request budget ran out first; the graph beyond them is missing.</small></span>
-                    </div>
-                  )}
-                  <div className="exclusion">
-                    <span className="n">{result.api_calls}</span>
-                    <span className="t">provider requests<small>{result.transfers_total ?? result.transfers?.length ?? 0} individual transactions{result.transfers_omitted ? ` (${result.transfers?.length ?? 0} listed)` : ''}; depth {result.depth_reached} reached of {result.max_depth ?? depth}{result.seconds_elapsed ? `; ${result.seconds_elapsed} s` : ''}.</small></span>
-                  </div>
-                  {result.evidence?.count > 0 && (
-                    <div className="exclusion">
-                      <span className="n">{result.evidence.count}</span>
-                      <span className="t">responses hashed as evidence<small>
-                        SHA-256 at arrival{result.evidence.from_cache > 0 ? ` (${result.evidence.from_cache} from cache, with their original time)` : ''}. Manifest{' '}
-                        <span className="mono" title={result.evidence.manifest_sha256}>{result.evidence.manifest_sha256.slice(0, 16)}…</span>; full list in the report, which carries its own content hash.
-                      </small></span>
-                    </div>
-                  )}
-                  {grouped.length > 0 && (
-                    <ul className="reasons">{grouped.map((r) => <li key={r}>{r}</li>)}</ul>
-                  )}
-                  {result.warnings?.length > 0 && result.warnings.map((w) => <p className="note" key={w}>! {w}</p>)}
-                </div>
-              </details>
-            </aside>
-          </section>
+            </>,
+            letters: <LettersTab result={result} recorded={recorded ? demoNo : null}
+              pick={params.get('letter')} watch={flowWallet(result, params.get('watch'))} />,
+            entities: <EntitiesTab result={result} unit={unit} correlation={correlation} />,
+            evidence: <EvidenceTab result={result} unit={unit} depth={depth} recorded={recorded} recheckId={recorded ? `demo-${demoNo}` : result.case_id ?? null} />,
+          }} />
         )}
       </div>
     </div>

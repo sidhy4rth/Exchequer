@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import BulkIntake from './BulkIntake'
-import ExportButton from './ExportButton'
+import ExportButton, { DraftLetters } from './ExportButton'
 import RequestsPanel from './RequestsPanel'
 import WatchPanel from './WatchPanel'
 import Watchlist from './Watchlist'
@@ -390,7 +390,7 @@ describe('Bulk intake', () => {
 })
 
 describe('Export menu', () => {
-  it('offers the PDF, both graph formats and the case\'s draft letters', async () => {
+  it('offers the PDF and both graph formats', async () => {
     api({ 'GET /trace/case-1/letters': { body: { letters: [{ to: 'exchange', title: 'Request to Binance' }] } } })
     const user = userEvent.setup()
     inRouter(<ExportButton caseId="case-1" address={CASE.address} />)
@@ -399,7 +399,14 @@ describe('Export menu', () => {
     for (const name of [/Report \(\.pdf\)/, /Report \(\.txt\)/, /Data \(\.json\)/, /Graph \(\.graphml\)/, /Graph \(\.csv\)/]) {
       expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument()
     }
-    expect(await within(menu).findByRole('menuitem', { name: /Request to Binance/ })).toBeInTheDocument()
+  })
+
+  // The letters moved to the case's Letters tab (DraftLetters).
+  it('leaves the case\'s draft letters to the Letters tab, which offers each', async () => {
+    api({ 'GET /trace/case-1/letters': { body: { letters: [{ to: 'exchange', title: 'Request to Binance' }] } } })
+    inRouter(<DraftLetters caseId="case-1" />)
+    expect(await screen.findByRole('button', { name: /Request to Binance/ })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Draft letters · 1' })).toBeInTheDocument()
   })
 })
 

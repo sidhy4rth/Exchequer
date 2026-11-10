@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fetchCase, traceAddress } from './api'
+import { fetchCase, fetchRecheck, runRecheck, traceAddress } from './api'
 import { stubFetch } from './test/setup'
 
 describe('error messages', () => {
@@ -260,5 +260,29 @@ describe('the demo code', () => {
     await apiFetch('/api/trace/jobs', { method: 'POST' })
     expect(demoPass()).toBe('')
     forgetDemoCode()
+  })
+})
+
+// POST/GET /trace/{id}/recheck (routes/recheck.py). A server without them
+// answers 404 (GET) or 405 (POST): null, so the page hides the column.
+describe('the second-provider recheck', () => {
+  const kept = { case_id: 'c1', checked_at: '2026-11-10T05:00:00+00:00', transfers: [{ hash: 'h', status: 'matches' }] }
+
+  it('reads the last recheck, and runs one with a POST', async () => {
+    const fetch = stubFetch({ '/trace/c1/recheck': { body: kept } })
+    expect(await fetchRecheck('c1')).toEqual(kept)
+    expect(await runRecheck('c1')).toEqual(kept)
+    expect(fetch.mock.calls.map(([, init]) => init?.method ?? 'GET')).toEqual(['GET', 'POST'])
+  })
+
+  it.each([404, 405])('reads a %s as no recheck on this server', async (status) => {
+    stubFetch({ '/trace/c1/recheck': { status, body: { detail: 'Not Found' } } })
+    expect(await fetchRecheck('c1')).toBeNull()
+    expect(await runRecheck('c1')).toBeNull()
+  })
+
+  it("carries the server's reason when a recheck is refused", async () => {
+    stubFetch({ '/trace/c1/recheck': { status: 503, body: { detail: "This site has used today's TronScan allowance." } } })
+    await expect(runRecheck('c1')).rejects.toThrow("today's TronScan allowance")
   })
 })

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import FlowView from './FlowView'
 import GraphView from './GraphView'
-import ExportButton from './ExportButton'
+import ExportButton, { DraftLetters } from './ExportButton'
 import { bandLabel, bandOf } from './confidence'
 import { plain } from '../text'
 
@@ -12,7 +12,7 @@ import { plain } from '../text'
 //   1  the finding        the exchange, how sure, the address to cite
 //   2  the route          the flow by hop, the traced transfers beneath
 //   3  what was left out  four numbers, and the one-line screening facts
-//   4  the handoff        the report, the hashes
+//   4  the handoff        the report, the draft letters, the hashes
 //
 // Arrow keys or space step; Escape returns to the console with everything
 // still there.
@@ -135,7 +135,7 @@ export default function Present({ result, related = [], unit, onClose }) {
       <div className="pr-rowhead">
         <span className="micro">How it got there · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
         <span className="pr-rowright">
-          <span className="micro">{view === 'flow' ? (reverse ? 'money flows into the reported wallet, right' : 'the traced funds in red, left to right') : 'bubble area = value moved · arrows the way the money went'}</span>
+          <span className="micro">{view === 'flow' ? (reverse ? 'money flows into the reported wallet, right' : 'the traced funds in green, left to right') : 'bubble area = value moved · arrows the way the money went'}</span>
           <span className="seg">
             <button type="button" className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
             <button type="button" className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
@@ -150,7 +150,7 @@ export default function Present({ result, related = [], unit, onClose }) {
       <div className="pr-hops">
         {path.slice(1).map((s, i) => (
           <div className="pr-hop" key={s.address}>
-            <span className="red">Hop {i + 1}</span>
+            <span className="green">Hop {i + 1}</span>
             <span className="mono">{short(path[i].address)} <span className="faint">→</span> {s.exchange ? <span className="green">{plain(s.label ?? s.exchange)}</span> : short(s.address)}</span>
             <span className="mono">{num(s.value_native ?? 0)} {unit}</span>
           </div>
@@ -188,7 +188,7 @@ export default function Present({ result, related = [], unit, onClose }) {
             ? 'The report names the address, the transaction hashes, amounts and times, and everything the tool did not look at. An exchange wallet identifies where the money went, not who received it; only the exchange can link it to a customer, on a lawful request (PMLA s.12, s.50).'
             : 'The report still lists every address and transaction in the trace, so each can be re-checked on a public explorer, and says exactly what was not looked at.'}
         </p>
-        {result.case_id && <div className="pr-actions"><ExportButton caseId={result.case_id} address={result.address} /></div>}
+        {result.case_id && <div className="pr-actions"><ExportButton caseId={result.case_id} address={result.address} /><DraftLetters caseId={result.case_id} bare /></div>}
       </div>
       <div className="pr-side">
         {result.evidence?.manifest_sha256 && <div className="pr-hash"><span className="micro">Evidence manifest</span><span className="mono">{result.evidence.manifest_sha256.slice(0, 20)}…</span></div>}

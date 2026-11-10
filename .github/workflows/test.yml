@@ -152,6 +152,57 @@ jobs:
         env:
           VITE_API_BASE: ""
 
+  # WCAG 2.2 AA, checked by axe in a real browser on every page in both
+  # themes, at a desktop and a phone size (frontend/e2e/a11y.spec.js). The
+  # backend serves the fresh build on this runner with no provider key: the
+  # pages and a recorded demo need none, and nothing here starts a trace.
+  a11y:
+    name: accessibility (WCAG 2.2 AA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXCHEQUER_URL: http://127.0.0.1:8000
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install --require-hashes -r requirements.txt
+        working-directory: backend
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+        env:
+          VITE_API_BASE: ""
+      - name: Serve the build from the backend
+        working-directory: backend
+        run: |
+          nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 --ws none > "$RUNNER_TEMP/uvicorn.log" 2>&1 &
+          for i in $(seq 1 30); do curl -fsS "$EXCHEQUER_URL/health" >/dev/null && exit 0; sleep 2; done
+          echo "the backend did not answer /health within a minute"; exit 1
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run a11y
+        working-directory: frontend
+      - if: failure()
+        run: cat "$RUNNER_TEMP/uvicorn.log"
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: a11y-failure
+          path: frontend/test-results/
+          retention-days: 7
+
   image:
     name: docker image builds and runs as non-root
     runs-on: ubuntu-latest

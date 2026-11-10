@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { deleteRequest, fetchCaseRequests, fetchLetters, logRequest, updateRequest } from '../api'
 
-// Where this case's freeze requests stand. The letter is drafted from the
-// Export menu; this is the log of what was sent and what came back.
+// Where this case's freeze requests stand. The letter is drafted beside it,
+// on the Letters tab; this is the log of what was sent and what came back.
 
 export const STATUS = {
   drafted: { label: 'Drafted', pill: '' },
@@ -13,7 +13,7 @@ export const STATUS = {
   closed: { label: 'Closed', pill: '' },
 }
 
-export default function RequestsPanel({ result }) {
+export default function RequestsPanel({ result, onChange }) {
   const [items, setItems] = useState([])
   const [letters, setLetters] = useState([])
   const [other, setOther] = useState('')
@@ -30,7 +30,7 @@ export default function RequestsPanel({ result }) {
 
   async function run(fn) {
     setError(null)
-    try { await fn(); await load() } catch (e) { setError(e.message) }
+    try { await fn(); await load(); onChange?.() } catch (e) { setError(e.message) }
   }
   const log = (recipient, kind) => run(() => logRequest({
     case_id: caseId, recipient, kind,
@@ -85,7 +85,7 @@ export default function RequestsPanel({ result }) {
           </span>
         </div>
         {error && <p className="error-line">{error}</p>}
-        <p className="note">Draft the letter from Export, send it, then log it here. Kept in this browser&apos;s records, like its cases.</p>
+        <p className="note">{letters.length ? 'Draft the letter above, send it, then log it here.' : 'Send the request, then log it here.'} Kept in this browser&apos;s records, like its cases.</p>
       </div>
     </details>
   )

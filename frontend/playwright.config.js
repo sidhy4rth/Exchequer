@@ -6,6 +6,8 @@ import { defineConfig } from '@playwright/test'
 // EXCHEQUER_URL=http://localhost:8000 npm run canary.
 export default defineConfig({
   testDir: './e2e',
+  // npm run a11y runs that check, against a local build (playwright.a11y.config.js).
+  testIgnore: /a11y\.spec\.js$/,
   timeout: 60_000,
   retries: 1,
   reporter: [['list']],

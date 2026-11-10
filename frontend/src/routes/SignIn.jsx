@@ -69,7 +69,8 @@ export default function SignIn({ as }) {
   }
 
   return (
-    <div className={`gate gate-${as} gate-${phase}`}>
+    // main: the landmark a screen reader skips to past the header (WCAG 2.4.1).
+    <main className={`gate gate-${as} gate-${phase}`}>
       <ExchangeGlobe
         open={phase === 'open'}
         onOpen={openDoor}
@@ -138,6 +139,6 @@ export default function SignIn({ as }) {
         </div>
       )}
 
-    </div>
+    </main>
   )
 }

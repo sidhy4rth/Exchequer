@@ -11,11 +11,13 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from .. import audit, freeze_requests, rate_limit
 from ..auth import CurrentUser, User
 from ..input_rules import NoNul, OneLine
+from .cases import app_page
 
 router = APIRouter()
 
@@ -63,8 +65,11 @@ def _conflict() -> HTTPException:
                                                  "Reload it and make the change again.")
 
 
-@router.get("/requests")
-def list_requests(user: CurrentUser, open: bool = Query(False)) -> dict[str, Any]:  # noqa: A002
+@router.get("/requests", response_model=None)
+def list_requests(user: CurrentUser, http: Request, open: bool = Query(False)) -> dict[str, Any] | FileResponse:  # noqa: A002
+    """The caller's freeze requests; a browser opening /requests gets the app's page."""
+    if (page := app_page(http)) is not None:
+        return page
     items = freeze_requests.list_for(user.owner_hash, open_only=open) if user.owner_hash else []
     audit.record("request.list", detail={"open": open})
     return {"count": len(items), "requests": items}

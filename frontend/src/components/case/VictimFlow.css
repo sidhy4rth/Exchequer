@@ -1,0 +1,107 @@
+/* The Flow tab (pack Flow): the Sankey beside its cards when there is room
+   for both, above them when there is room for the chart alone, and on a
+   phone (or any space too narrow to read the chart) the cards alone under
+   the headline. The space is the tab's own width, not the screen's. Green is money at an exchange, red a
+   frozen or flagged wallet, grey the rest; dashed is an upper bound or an
+   inference, faded a diluted share. */
+.vf-box { container: vflow / inline-size; }
+.vflow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.vf-chart { display: flex; flex-direction: column; gap: 14px; padding: 22px; min-width: 0; }
+.vf-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.vf-head h2, .vf-card h3, .vf-notes h3 { margin: 0; font-size: 15px; font-weight: 500; }
+.vf-chart > .note { margin: 0; }
+.vf-rule { display: flex; gap: 4px; margin: 0; padding: 4px; border: 0; border-radius: var(--r); background: var(--panel-2); }
+.vf-rule label { position: relative; display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border-radius: 8px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+.vf-rule label.on { background: var(--go-tint); color: var(--go-soft); font-weight: 500; }
+.vf-rule label:has(:disabled) { color: var(--text-3); cursor: default; }
+.vf-rule input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: inherit; }
+.vf-rule label:has(:focus-visible) { outline: 2px solid var(--go); outline-offset: 2px; }
+.vf-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; font-size: 11px; color: var(--text-3); }
+.vf-cols span:nth-child(2) { text-align: center; }
+.vf-cols span:last-child { text-align: right; }
+.vf-stage { position: relative; }
+.vf-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.vf-ribbon.vf-go { fill: var(--go); color: var(--go); }
+.vf-ribbon.vf-risk { fill: var(--risk); color: var(--risk); }
+.vf-ribbon.vf-grey { fill: var(--text-3); color: var(--text-3); }
+.vf-ribbon.vf-solid { fill-opacity: 0.5; }
+.vf-ribbon.vf-grey.vf-solid { fill-opacity: 0.22; }
+.vf-ribbon.vf-faded { fill-opacity: 0.22; }
+.vf-ribbon.vf-dashed { fill-opacity: 0.14; stroke: currentColor; stroke-opacity: 0.6; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.vf-bar { fill: var(--text); }
+.vf-bar.go { fill: var(--go); }
+.vf-bar.risk { fill: var(--risk); }
+.vf-chip {
+  position: absolute; transform: translateY(-50%); max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 3px 8px; border-radius: 6px; background: var(--panel); font-size: 12px; color: var(--text);
+}
+.vf-chip.mono { font-size: 11px; }
+.vf-chip.go { color: var(--go-soft); }
+.vf-chip.risk { color: var(--risk); }
+.vf-chip.grey { color: var(--text-2); }
+.vf-at-seed { left: calc(1.2% + 6px); }
+.vf-at-hop { left: calc(50.6% + 6px); max-width: calc(48.2% - 18px); }
+.vf-via { color: var(--risk); }
+.vf-at-end { right: calc(1.2% + 6px); }
+.vf-foot { display: flex; flex-wrap: wrap; gap: 6px 20px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-2); }
+.vf-foot p { margin: 0; }
+.vf-foot b { font-weight: 500; color: var(--text); }
+.vf-bar-all { flex-basis: 100%; display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--panel-2); }
+.vf-bar-all .go { background: var(--go); }
+.vf-bar-all .risk { background: var(--risk); }
+.vf-bar-all .grey { background: var(--text-3); opacity: 0.45; }
+.vf-bar-all .beyond_limit { opacity: 0.3; }
+.vf-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); align-items: start; gap: 12px; min-width: 0; }
+.vf-card { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 20px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); min-width: 0; }
+.vf-card.go { background: linear-gradient(160deg, var(--go-tint), var(--panel) 60%); border-color: var(--go); }
+.vf-card.risk { background: var(--risk-tint); border-color: var(--risk); }
+.vf-card.dashed { border: 1px dashed var(--line-strong); }
+.vf-card h3 { font-size: 13px; color: var(--text-2); }
+.vf-card.go h3 { color: var(--go-soft); }
+.vf-card.risk h3 { color: var(--risk); }
+.vf-card p { margin: 0; }
+.vf-card-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; align-self: stretch; }
+.vf-tag { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); background: var(--panel-2); font-size: 11px; color: var(--text); }
+.vf-amount { font-size: 13px; color: var(--text-3); }
+.vf-amount b { font-weight: 300; font-size: 30px; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.vf-name { font-size: 14px; }
+.vf-address { font-size: 11px; color: var(--text-2); overflow-wrap: anywhere; }
+.vf-rows { margin: 0; padding: 0; list-style: none; align-self: stretch; display: flex; flex-direction: column; gap: 10px; }
+.vf-rows li { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid var(--line); min-width: 0; }
+.vf-rows .num { font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
+.vf-card button { min-height: 40px; padding: 0 16px; }
+.vf-left { flex-direction: row; align-items: center; justify-content: space-between; }
+.vf-left > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.vf-left .vf-amount b { font-size: 20px; }
+.vf-notes { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; }
+.vf-notes ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-2); }
+.vf-notes li { display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: 12px; }
+.vf-notes li .num { text-align: right; color: var(--text); }
+.vf-notes .note { margin: 0; }
+.vf-phone, .vf-meter { display: none; }
+
+@container vflow (min-width: 1040px) {
+  .vflow { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+  .vf-chart { grid-area: 1 / 1; }
+  .vf-cards { grid-area: 1 / 2 / span 2; display: flex; flex-direction: column; }
+  .vf-notes { grid-area: 2 / 1; }
+}
+
+/* Under 700px (any phone, or a laptop window with the sidebar) the chart
+   cannot be read: the cards alone. */
+@container vflow (max-width: 699px) {
+  .vf-chart { display: none; }
+  .vf-cards { display: flex; flex-direction: column; }
+  .vf-phone { display: block; }
+  .vf-meter { display: block; align-self: stretch; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+  .vf-meter span { display: block; height: 100%; background: var(--text-3); }
+  .vf-card.go .vf-meter span { background: var(--go); }
+  .vf-card.risk .vf-meter span { background: var(--risk); }
+  .vf-notes li { grid-template-columns: 7.5em minmax(0, 1fr); }
+  .vf-phone h2 { margin: 2px 0 0; font-size: 26px; font-weight: 300; }
+  .vf-kicker { margin: 0; font-size: 12px; color: var(--text-3); }
+  .vf-band { margin: 0; padding: 12px 14px; border-radius: var(--r-panel); background: var(--panel); font-size: 12px; color: var(--text-2); }
+}
+
+/* Every wallet (TraceView): the money-flow card, opened under the flow. */
+.every-wallet > .graph-card { border: 0; border-radius: 0 0 var(--r-panel) var(--r-panel); }

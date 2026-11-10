@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { plain } from './text'
+import { plain, plainSentence } from './text'
 
 describe('plain (r2-g2-frontend-intake-rendering-3-3)', () => {
   it('removes characters that print nothing', () => {
@@ -23,5 +23,17 @@ describe('plain (r2-g2-frontend-intake-rendering-3-3)', () => {
     expect(plain(3)).toBe('3')
     expect(plain(null)).toBe(null)
     expect(plain(undefined)).toBe(undefined)
+  })
+})
+
+describe('plainSentence: Exchequer\'s own sentence that quotes an address', () => {
+  it('removes what prints nothing and keeps the sentence on one line', () => {
+    expect(plainSentence('Followed at TZ7L\u200B\u202E…9cNz.\nNext')).toBe('Followed at TZ7L…9cNz. Next')
+  })
+
+  it('keeps its own punctuation, which plain() would rewrite', () => {
+    expect(plainSentence('at TZ7LmC…9cNz.')).toBe('at TZ7LmC…9cNz.')
+    expect(plain('at TZ7LmC…9cNz.')).toBe('at TZ7LmC...9cNz.')
+    expect(plainSentence(null)).toBe(null)
   })
 })

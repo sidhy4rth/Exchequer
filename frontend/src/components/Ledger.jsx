@@ -27,8 +27,8 @@ const EXCHANGE = {
   Remitano: [255, 211, 110], Bittrex: [166, 182, 255],
 }
 const PALETTE = {
-  dark: { bg: '#07090c', sanctioned: [255, 92, 92], wallet: [176, 182, 188], ink: '236,236,234', red: '255,92,92' },
-  light: { bg: '#f3f1ea', sanctioned: [179, 38, 30], wallet: [70, 76, 84], ink: '22,25,29', red: '179,38,30' },
+  dark: { bg: '#0a0a0a', sanctioned: [255, 138, 128], wallet: [189, 189, 189], ink: '237,237,237', red: '255,138,128' },
+  light: { bg: '#f4f4f4', sanctioned: [189, 35, 41], wallet: [61, 61, 61], ink: '10,10,10', red: '189,35,41' },
 }
 const AMBIENT = { sanctioned: 0.36, flagged: 0.36, exchange: 0.36, inferred: 0.22, wallet: 0.11 }
 

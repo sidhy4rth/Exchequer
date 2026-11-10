@@ -372,6 +372,15 @@ def _is_page_load(http: Request) -> bool:
     return "text/html" in http.headers.get("accept", "")
 
 
+def app_page(http: Request) -> FileResponse | None:
+    """The app, for a browser opening a URL the API claims first: the app's
+    own pages /trace/<address>, /cases and /requests are API paths too, and a
+    shared link or a reload must not show the API's JSON. None for fetch()."""
+    if _is_page_load(http) and _INDEX_HTML.is_file():
+        return FileResponse(_INDEX_HTML, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return None
+
+
 @router.get("/trace/intake")
 def trace_intake() -> dict[str, Any]:
     """What the trace form may offer: whether a trace can start from the victim's
@@ -396,8 +405,8 @@ def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
     Anyone holding the id gets the case -- it is the reference letters print
     -- but a complaint's particulars only reach the browser that traced it
     (case_privacy.py)."""
-    if _is_page_load(http) and _INDEX_HTML.is_file():
-        return FileResponse(_INDEX_HTML, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    if (page := app_page(http)) is not None:
+        return page
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")

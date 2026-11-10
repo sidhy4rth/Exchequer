@@ -1,7 +1,9 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import Present from './Present'
 import recordings from '../../../backend/data/recorded_demos.json'
+import { stubFetch } from '../test/setup'
 
 const demo = recordings.find((r) => r.demo === 11)
 
@@ -40,5 +42,20 @@ describe('Present mode, screen 1', () => {
     const lede = container.querySelector('.pr-lede')
     expect(lede).toHaveTextContent("About 635 of 635 USDT sent on after the victim's payment likely reached")
     expect(lede).not.toHaveTextContent("other people's money")
+  })
+})
+
+describe('Present mode, the handoff screen', () => {
+  // The letters left the Export menu for the case's Letters tab; the screen
+  // that says to send the request must still offer them.
+  it('offers the draft letter beside a labelled Export', async () => {
+    stubFetch({ '/trace/c1/letters': { body: { letters: [{ to: 'exchange', title: 'Request to Binance' }] } } })
+    open({ case_id: 'c1' })
+    await userEvent.setup().keyboard('{ArrowRight}{ArrowRight}{ArrowRight}')
+    expect(screen.getByText('Send the request to Binance.')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Request to Binance/ })).toBeInTheDocument()
+    const exportMenu = screen.getByRole('button', { name: 'Export' })
+    expect(exportMenu).not.toHaveClass('icon-btn')
+    expect(exportMenu.querySelector('.visually-hidden')).toBeNull()
   })
 })

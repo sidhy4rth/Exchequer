@@ -3,37 +3,41 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import { plain } from '../text'
 import { forceCollide } from 'd3-force-3d'
+import RoleSwatch, { DASH, FADED, FADED_ROLES } from './RoleSwatch'
 
 // Kept in sync with the custom properties in styles.css. The canvas paints in
 // JS and cannot read CSS variables, so these values are duplicated here on
 // purpose — change one, change both.
 //
-// Three things carry colour: a sanctions or mixer hit (red), a confirmed
-// exchange (accent green) and a fired pattern (amber). The reported address is
-// bright neutral rather than coloured, and ordinary traced addresses are dim,
-// so the eye lands on the answer instead of on decoration.
+// Two things carry colour: a sanctions or mixer hit (red) and a confirmed
+// exchange (green). An inferred deposit address is a faded green and a fired
+// pattern a faded grey, each with a dashed ring (RoleSwatch), and a flagged
+// transfer off the traced route is dashed. The reported address is bright
+// neutral rather than coloured, and ordinary traced addresses are dim, so the
+// eye lands on the answer instead of on decoration. tokens.test.js holds
+// these to the styles.css tokens.
 //
 // Red is reserved for the risk lists and outranks the rest. A published
 // government designation is a fact from outside this tool, and it should not
 // have to compete for attention with the tool's own inferences.
-const PALETTES = {
+export const PALETTES = {
   light: {
-    seed: '#16191d', risk: '#b3261e', exchange: '#1d7a4c', inferred: '#9a5b00', gambling: '#6b3fa0',
-    service: '#b9b5ac', flagged: '#c98a1e', node: '#8a9098',
-    link: 'rgba(22,25,29,0.16)', linkPath: '#1d7a4c', linkFlagged: '#c98a1e',
-    text: '#16191d', dim: '#5b6169', background: '#ffffff',
-    haloExchange: 'rgba(29,122,76,0.16)', haloRisk: 'rgba(179,38,30,0.16)', haloGambling: 'rgba(107,63,160,0.16)',
-    ring: 'rgba(255,255,255,0.8)', ringInk: 'rgba(22,25,29,0.6)', ringSelected: 'rgba(22,25,29,0.85)',
+    seed: '#0a0a0a', risk: '#bd2329', exchange: '#196e44', inferred: '#145a37', gambling: '#3d3d3d',
+    service: '#b3b3b3', flagged: '#3d3d3d', node: '#8e8e8e',
+    link: 'rgba(10,10,10,0.16)', linkPath: '#196e44', linkFlagged: 'rgba(10,10,10,0.45)', linkFaded: 'rgba(10,10,10,0.05)',
+    text: '#0a0a0a', dim: '#3d3d3d', background: '#ffffff',
+    haloExchange: 'rgba(25,110,68,0.16)', haloRisk: 'rgba(189,35,41,0.16)', haloGambling: 'rgba(10,10,10,0.1)',
+    ring: 'rgba(255,255,255,0.8)', ringInk: 'rgba(10,10,10,0.6)', ringSelected: 'rgba(10,10,10,0.85)',
     labelBox: 'rgba(255,255,255,0.88)',
   },
   dark: {
-    seed: '#ececea', risk: '#ff5c5c', exchange: '#2fd3a2', inferred: '#e0a44a', gambling: '#b388ff',
-    service: '#4a5057', flagged: '#e0a44a', node: '#5b6167',
-    link: 'rgba(236,236,234,0.13)', linkPath: '#2fd3a2', linkFlagged: '#e0a44a',
-    text: '#ececea', dim: '#9a9fa6', background: '#111316',
-    haloExchange: 'rgba(47,211,162,0.18)', haloRisk: 'rgba(255,92,92,0.2)', haloGambling: 'rgba(179,136,255,0.2)',
-    ring: 'rgba(17,19,22,0.9)', ringInk: 'rgba(236,236,234,0.6)', ringSelected: 'rgba(236,236,234,0.9)',
-    labelBox: 'rgba(17,19,22,0.85)',
+    seed: '#ededed', risk: '#ff8a80', exchange: '#3dd68c', inferred: '#8eebc0', gambling: '#bdbdbd',
+    service: '#4a4a4a', flagged: '#bdbdbd', node: '#5e5e5e',
+    link: 'rgba(237,237,237,0.13)', linkPath: '#3dd68c', linkFlagged: 'rgba(237,237,237,0.4)', linkFaded: 'rgba(237,237,237,0.05)',
+    text: '#ededed', dim: '#bdbdbd', background: '#141414',
+    haloExchange: 'rgba(61,214,140,0.18)', haloRisk: 'rgba(255,138,128,0.2)', haloGambling: 'rgba(189,189,189,0.16)',
+    ring: 'rgba(20,20,20,0.9)', ringInk: 'rgba(237,237,237,0.6)', ringSelected: 'rgba(237,237,237,0.9)',
+    labelBox: 'rgba(20,20,20,0.85)',
   },
 }
 let COLORS = PALETTES[currentTheme()]
@@ -84,7 +88,7 @@ const ROLE_NAME = {
 function roleOf(node) {
   if (node.is_seed) return 'seed'
   // A gambling platform is an attribution, like an exchange -- not a risk-list
-  // hit -- so it gets its own colour instead of borrowing sanctions red.
+  // hit -- so it gets its own mark, a dashed halo, instead of sanctions red.
   if (node.risk_category === 'gambling') return 'gambling'
   if (node.risk_category) return 'risk'
   if (node.exchange && !node.inferred_exchange) return 'exchange'
@@ -541,13 +545,25 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     ctx.beginPath()
     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI)
     ctx.fillStyle = COLORS[role]
+    const alpha = ctx.globalAlpha
+    if (FADED_ROLES.has(role)) ctx.globalAlpha = alpha * FADED
     ctx.fill()
+    ctx.globalAlpha = alpha
 
     if (isActive) {
       ctx.strokeStyle = COLORS.text
       ctx.lineWidth = 1.6 / globalScale
       ctx.stroke()
-    } else if (role === 'exchange' || role === 'seed' || role === 'inferred') {
+    } else if (role === 'inferred' || role === 'flagged') {
+      // An inference or a fired pattern: a dashed ring, not a colour of its own.
+      ctx.strokeStyle = COLORS[role]
+      ctx.lineWidth = 1.2 / globalScale
+      ctx.setLineDash(DASH.map((d) => d / globalScale))
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, radius + 1.8, 0, 2 * Math.PI)
+      ctx.stroke()
+      ctx.setLineDash([])
+    } else if (role === 'exchange' || role === 'seed') {
       ctx.strokeStyle = COLORS.ring
       ctx.lineWidth = 1.2 / globalScale
       ctx.stroke()
@@ -559,9 +575,12 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (node.risk_category) {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 2.2, 0, 2 * Math.PI)
-      ctx.strokeStyle = node.risk_category === 'gambling' ? COLORS.gambling : COLORS.risk
+      const gambling = node.risk_category === 'gambling'
+      ctx.strokeStyle = gambling ? COLORS.gambling : COLORS.risk
       ctx.lineWidth = 1.6 / globalScale
+      if (gambling) ctx.setLineDash(DASH.map((d) => d / globalScale))
       ctx.stroke()
+      ctx.setLineDash([])
     }
 
     // A pinned bubble is marked, so a deliberate arrangement is readable as
@@ -685,11 +704,16 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
             const key = `${idOf(link.source)}>${idOf(link.target)}`
             if (hoverLinkRef.current === link) return COLORS.text
             if (isFaded(idOf(link.source)) || isFaded(idOf(link.target))) {
-              return 'rgba(22,25,29,0.05)'
+              return COLORS.linkFaded
             }
             if (pathEdges.has(key)) return COLORS.linkPath
             if (link.flags?.length) return COLORS.linkFlagged
             return COLORS.link
+          }}
+          linkLineDash={(link) => {
+            // Dashed means a pattern fired, never on the traced route itself.
+            const key = `${idOf(link.source)}>${idOf(link.target)}`
+            return link.flags?.length && !pathEdges.has(key) ? [2, 2] : null
           }}
           linkWidth={(link) => {
             const key = `${idOf(link.source)}>${idOf(link.target)}`
@@ -716,32 +740,40 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
 
       {hasData && (
         <>
-          <div className="graph-stats">
-            {graphData.nodes.length} addresses · {graphData.links.length} transfers
-          </div>
+          {/* Along the top: the hint on the left, and the counts over the zoom
+              buttons on the right, in one row: on a narrow stage the hint
+              narrows instead of covering the counts. */}
+          <div className="graph-top">
+            <div className="graph-hint">
+              Hover any bubble for detail · click to keep it highlighted · drag to
+              pin · right-click to release · scroll to zoom · bubble size = value
+              moved
+            </div>
 
-          <div className="graph-controls">
-            <button onClick={() => zoomBy(1.4)} title="Zoom in" aria-label="Zoom in">+</button>
-            <button onClick={() => zoomBy(1 / 1.4)} title="Zoom out" aria-label="Zoom out">&minus;</button>
-            <button
-              onClick={fitToView}
-              title="Fit the whole graph in view (f)"
-            >
-              Fit
-            </button>
-            <button
-              onClick={releaseAll}
-              disabled={pinnedCount === 0}
-              title="Release every pinned bubble and let the layout settle again"
-            >
-              Release {pinnedCount > 0 ? `(${pinnedCount})` : ''}
-            </button>
-          </div>
+            <div className="graph-side">
+              <div className="graph-stats">
+                {/* On a phone the counts break at the dot, never inside one. */}
+                {graphData.nodes.length}&nbsp;addresses · {graphData.links.length}&nbsp;transfers
+              </div>
 
-          <div className="graph-hint">
-            Hover any bubble for detail · click to keep it highlighted · drag to
-            pin · right-click to release · scroll to zoom · bubble size = value
-            moved
+              <div className="graph-controls">
+                <button onClick={() => zoomBy(1.4)} title="Zoom in"><span aria-hidden="true">+</span><span className="visually-hidden">Zoom in</span></button>
+                <button onClick={() => zoomBy(1 / 1.4)} title="Zoom out"><span aria-hidden="true">&minus;</span><span className="visually-hidden">Zoom out</span></button>
+                <button
+                  onClick={fitToView}
+                  title="Fit the whole graph in view (f)"
+                >
+                  Fit
+                </button>
+                <button
+                  onClick={releaseAll}
+                  disabled={pinnedCount === 0}
+                  title="Release every pinned bubble and let the layout settle again"
+                >
+                  Release {pinnedCount > 0 ? `(${pinnedCount})` : ''}
+                </button>
+              </div>
+            </div>
           </div>
 
           {landmarks.length > 0 && (
@@ -756,7 +788,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
                     onClick={() => flyTo(node)}
                     title={node.address}
                   >
-                    <span className="swatch" style={{ background: COLORS[role] }} />
+                    <RoleSwatch role={role} color={COLORS[role]} />
                     <span className="name">
                       {role === 'risk' || role === 'gambling'
                         ? plain(node.risk_entity) ?? RISK_NAME[node.risk_category] ?? 'Listed'
@@ -772,35 +804,35 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
 
           <div className="legend">
             <div className="item">
-              <span className="swatch" style={{ background: COLORS.seed }} />
+              <RoleSwatch role="seed" color={COLORS.seed} />
               Reported address
             </div>
             <div className="item">
-              <span className="swatch" style={{ background: COLORS.risk }} />
+              <RoleSwatch role="risk" color={COLORS.risk} />
               Sanctioned / mixer
             </div>
             <div className="item">
-              <span className="swatch" style={{ background: COLORS.gambling }} />
+              <RoleSwatch role="gambling" color={COLORS.gambling} />
               Gambling platform wallet
             </div>
             <div className="item">
-              <span className="swatch" style={{ background: COLORS.exchange }} />
+              <RoleSwatch role="exchange" color={COLORS.exchange} />
               Labelled exchange wallet
             </div>
             <div className="item">
-              <span className="swatch" style={{ background: COLORS.inferred }} />
+              <RoleSwatch role="inferred" color={COLORS.inferred} />
               Probable deposit address (inferred)
             </div>
             <div className="item">
-              <span className="swatch" style={{ background: COLORS.service }} />
+              <RoleSwatch role="service" color={COLORS.service} />
               Service contract / router, not expanded
             </div>
             <div className="item">
-              <span className="swatch" style={{ background: COLORS.flagged }} />
+              <RoleSwatch role="flagged" color={COLORS.flagged} />
               Flagged by a pattern
             </div>
             <div className="item">
-              <span className="swatch" style={{ background: COLORS.node }} />
+              <RoleSwatch role="node" color={COLORS.node} />
               Traced address
             </div>
           </div>

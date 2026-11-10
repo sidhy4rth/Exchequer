@@ -26,6 +26,18 @@ export async function fetchLetter(caseId, to) {
   return response.text()
 }
 
+/** A recorded example's letters (routes/demos.py): listed and drafted from
+ * the recording as a case's are, though none can be logged as sent. */
+export async function fetchRecordedLetters(demo) {
+  return jsonOrThrow(await apiFetch(`${BASE}/demos/recorded/${encodeURIComponent(demo)}/letters`))
+}
+
+export async function fetchRecordedLetter(demo, to) {
+  const response = await apiFetch(`${BASE}/demos/recorded/${encodeURIComponent(demo)}/letter?to=${encodeURIComponent(to)}`)
+  if (!response.ok) throw await toError(response)
+  return response.text()
+}
+
 /**
  * Check a report's content hash and signature (public; nothing stored): a
  * text report as a string, or an Exchequer PDF as its bytes, whose attached
@@ -80,4 +92,26 @@ export async function updateRequest(requestId, changes) {
 
 export async function deleteRequest(requestId) {
   return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' }))
+}
+
+// ---------------------------------------------------------------------------
+// Second-provider recheck (backend/app/routes/recheck.py): the transfers a
+// case cites, reread from a provider the trace did not use. `id` is a case
+// id, or "demo-<n>" for a recorded example. A server without the endpoints
+// answers 404 (GET) or 405 (POST): null, and the page shows no recheck.
+// ---------------------------------------------------------------------------
+async function recheckOrNull(response) {
+  if (response.status !== 404 && response.status !== 405) return jsonOrThrow(response)
+  await response.text().catch(() => {}) // read to the end: a body left unread keeps the request open
+  return null
+}
+
+/** The case's last recheck; `checked_at` is null before the first. */
+export async function fetchRecheck(id) {
+  return recheckOrNull(await apiFetch(`${BASE}/trace/${encodeURIComponent(id)}/recheck`))
+}
+
+/** Reread the case's cited transfers now (gated and rate-limited like a trace). */
+export async function runRecheck(id) {
+  return recheckOrNull(await apiFetch(`${BASE}/trace/${encodeURIComponent(id)}/recheck`, { method: 'POST' }))
 }

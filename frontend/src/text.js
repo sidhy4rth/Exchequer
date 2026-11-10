@@ -13,3 +13,11 @@ export function plain(text) {
   if (text === null || text === undefined) return text
   return String(text).normalize('NFKC').replace(HIDDEN, '').replace(CONTROL, ' ').replace(/\s+/g, ' ').trim()
 }
+
+/** One of Exchequer's own sentences that quotes outside text, such as an
+ * address: what prints nothing removed and kept on one line, as plain() does,
+ * but its own punctuation (an ellipsis) kept as written. */
+export function plainSentence(text) {
+  if (text === null || text === undefined) return text
+  return String(text).replace(HIDDEN, '').replace(CONTROL, ' ').replace(/\s+/g, ' ').trim()
+}

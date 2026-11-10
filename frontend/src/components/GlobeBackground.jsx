@@ -3,10 +3,11 @@ import globeData from '../data/exchange_globe.json'
 import { ERAS, landDots } from './ExchangeGlobe'
 import './GlobeBackground.css'
 
-// The investigator console's backdrop: the sign-in globe, half off the right
-// edge, so the console and its front door read as one place. Dotted land, a
-// sparse sea lattice, every placed exchange lit in its founding era's colour,
-// and a red rim. It turns once in about 80 s. In the empty parts of the page
+// A page backdrop, kept though no page draws it now (the Glass console stands
+// on the bare ground): the sign-in globe, half off the right edge, so a page
+// and its front door read as one place. Dotted land, a sparse sea lattice,
+// every placed exchange lit in its founding era's colour, and a red rim. It
+// turns once in about 80 s. In the empty parts of the page
 // it can be taken by hand: drag to spin (it coasts back to its turn), hover an
 // exchange for its name, click one for a ripple. It never takes a click or a
 // key from a form control, and under reduced motion it holds still.
@@ -16,6 +17,10 @@ const CRUISE = -4.5 // degrees of longitude per second
 const RIPPLE_MS = 1800
 // Strength of the whole drawing, tuned on the design canvas (intensity 0.6 × 1.45).
 const K = 0.87
+// The red rim's colour in each theme and its strongest alpha: the brightest
+// glow behind the console's glass (tokens.test.js holds the console's text
+// and field edges to it).
+export const RIM = { light: [189, 35, 41], dark: [255, 90, 78], alpha: 0.34 * K }
 // Where a pointer belongs to the page rather than to the globe.
 const CONTROLS = 'input,select,textarea,button,a,label,summary,[role="tab"],table,form'
 
@@ -98,19 +103,19 @@ export default function GlobeBackground() {
         return [cx + R * x, cy - R * y, z]
       }
       const light = state.light
-      const accent = light ? '200, 40, 40' : '255, 92, 92'
-      const ink = light ? '22, 25, 29' : '236, 236, 234'
+      const accent = (light ? RIM.light : RIM.dark).join(', ')
+      const ink = light ? '10, 10, 10' : '237, 237, 237'
 
       ctx.clearRect(0, 0, w, h)
       const rim = ctx.createRadialGradient(cx, cy, R * 0.86, cx, cy, R * 1.18)
       rim.addColorStop(0, `rgba(${accent}, 0)`)
-      rim.addColorStop(0.42, `rgba(${accent}, ${(0.34 * K).toFixed(3)})`)
+      rim.addColorStop(0.42, `rgba(${accent}, ${RIM.alpha.toFixed(3)})`)
       rim.addColorStop(1, `rgba(${accent}, 0)`)
       ctx.fillStyle = rim
       ctx.beginPath(); ctx.arc(cx, cy, R * 1.18, 0, Math.PI * 2); ctx.fill()
       const body = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R)
       body.addColorStop(0, light ? 'rgba(255, 255, 255, 0.35)' : 'rgba(40, 22, 26, 0.55)')
-      body.addColorStop(1, light ? 'rgba(240, 238, 233, 0.15)' : 'rgba(12, 10, 12, 0.25)')
+      body.addColorStop(1, light ? 'rgba(244, 244, 244, 0.15)' : 'rgba(12, 10, 12, 0.25)')
       ctx.fillStyle = body
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill()
 

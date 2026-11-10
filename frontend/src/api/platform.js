@@ -10,10 +10,22 @@ export async function fetchCases(limit = 20) {
 
 /**
  * Stored cases whose traced funds passed through the same intermediary as
- * `caseId`. A query over the case store, so it never touches the chain.
+ * `caseId`; with no `caseId`, every wallet two or more stored complaints
+ * share. A query over the case store, so it never touches the chain.
  */
 export async function fetchRelatedCases(caseId) {
-  const response = await apiFetch(`${BASE}/cases/correlate?case_id=${encodeURIComponent(caseId)}`)
+  const response = await apiFetch(`${BASE}/cases/correlate${caseId ? `?case_id=${encodeURIComponent(caseId)}` : ''}`)
+  if (!response.ok) throw await toError(response)
+  return response.json()
+}
+
+/**
+ * Every wallet that two or more of the cases this browser may see (its own
+ * and the demos) both reach: the Cases page's linked complaints. Also a
+ * query over the case store.
+ */
+export async function fetchLinkedComplaints() {
+  const response = await apiFetch(`${BASE}/cases/correlate`)
   if (!response.ok) throw await toError(response)
   return response.json()
 }

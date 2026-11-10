@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { addWatch, fetchWatches, removeWatch } from '../api'
+import { plain } from '../text'
 
 // "Tell me when it moves", on the case itself. Offers the reported wallet and,
 // when the trace inferred one, the probable deposit address -- never a
 // labelled hot wallet, which moves all day and would only make noise.
 
-const short = (a) => (a && a.length > 20 ? `${a.slice(0, 10)}…${a.slice(-8)}` : a)
+const short = (a) => { const p = plain(a); return p && p.length > 20 ? `${p.slice(0, 10)}…${p.slice(-8)}` : p }
 
-export default function WatchPanel({ result }) {
+export default function WatchPanel({ result, extra = null }) {
   const [watches, setWatches] = useState([])
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
@@ -27,6 +28,9 @@ export default function WatchPanel({ result }) {
   if (result.attribution_inferred && result.exchange_address && result.exchange_address !== result.address) {
     candidates.push({ address: result.exchange_address, what: `the probable ${result.exchange} deposit address` })
   }
+  // A wallet a Flow card asked to watch: where the case's flow leaves some of
+  // the money (TraceView offers it only then).
+  if (extra && !candidates.some((c) => c.address === extra)) candidates.push({ address: extra, what: "a wallet where some of the victim's money is left" })
   const watching = (address) => watches.find((w) => w.address.toLowerCase() === address.toLowerCase() && w.chain === result.chain && w.asset === result.asset)
 
   async function watch(c) {

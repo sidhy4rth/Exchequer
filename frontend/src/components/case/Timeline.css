@@ -1,0 +1,73 @@
+/* The Timeline tab (pack 2-glass-05): stat cards, the lane chart and the
+   selected transfer. Colours are the Glass tokens only. */
+.tl-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.tl-stat { display: flex; flex-direction: column; gap: 6px; padding: 20px 22px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); }
+.tl-stat strong { font-size: 28px; font-weight: 300; line-height: 1.1; color: var(--text); font-variant-numeric: tabular-nums; }
+.tl-stat span { font-size: 12.5px; color: var(--text-2); text-wrap: pretty; }
+.tl-stat.go { background: var(--go-tint); border-color: var(--go-tint); }
+.tl-stat.go span { color: var(--go-soft); }
+.tl-stat.risk { background: var(--risk-tint); border-color: var(--risk-tint); }
+.tl-stat.risk span { color: var(--risk-soft); }
+
+.tl-chart { --tl-name: 170px; padding: 20px 22px; }
+.tl-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+.tl-head h2 { margin: 0 auto 0 0; font-size: 15px; font-weight: 400; color: var(--text); }
+.tl-seg button { min-height: 26px; }
+.tl-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; width: 100%; font-size: 12px; color: var(--text-2); }
+.tl-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.tl-key { width: 9px; height: 9px; border-radius: 50%; background: var(--text-3); border: 1.5px solid var(--text-3); }
+.tl-key.in { background: transparent; }
+.tl-key.go { background: var(--go); border-color: var(--go); }
+.tl-key.risk { background: var(--risk); border-color: var(--risk); }
+
+.tl-axis { position: relative; height: 20px; margin: 0 10px 0 var(--tl-name); font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+.tl-axis span { position: absolute; top: 0; white-space: nowrap; transform: translateX(-2px); }
+.tl-lanes { border-radius: var(--r); }
+.tl-lane { display: grid; grid-template-columns: var(--tl-name) minmax(0, 1fr); align-items: center; min-height: 56px; border-top: 1px solid var(--line); }
+.tl-name { display: flex; flex-direction: column; gap: 2px; padding-right: 12px; font-size: 13px; color: var(--text); min-width: 0; }
+.tl-name.go { color: var(--go-soft); }
+.tl-name.risk { color: var(--risk-soft); }
+.tl-name .mono { font-size: 11px; color: var(--text-3); }
+.tl-track { position: relative; height: 40px; margin-right: 10px; }
+.tl-track::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--line); }
+.tl-grid { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+/* The span is the hit area (24 px or more); ::after draws the dot at --d. */
+.tl-dot { position: absolute; top: 50%; width: max(24px, var(--d)); height: max(24px, var(--d)); transform: translate(-50%, -50%); cursor: pointer; }
+.tl-dot::after {
+  content: ''; position: absolute; inset: 0; margin: auto; width: var(--d); height: var(--d); box-sizing: border-box; border-radius: 50%;
+  background: var(--text-3); border: 1.5px solid var(--text-3);
+}
+.tl-dot.in::after { background: var(--panel); }
+.tl-dot.go::after { border-color: var(--go); }
+.tl-dot.go.out::after { background: var(--go); }
+.tl-dot.risk::after { border-color: var(--risk); }
+.tl-dot.risk.out::after { background: var(--risk); }
+.tl-dot.on { z-index: 1; }
+.tl-dot.on::after { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--text); }
+
+.tl-picked { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 32px; padding: 18px 22px; }
+.tl-picked.go { background: var(--go-tint); border-color: var(--go-tint); }
+.tl-picked > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tl-picked strong { font-size: 15px; font-weight: 400; color: var(--text); }
+.tl-picked .mono { font-size: 12.5px; color: var(--text); }
+.tl-tx { flex: 1 1 260px; }
+.tl-tx .mono { overflow-wrap: anywhere; }
+.tl-open { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 14px; border: 1px solid var(--line-strong); border-radius: var(--r-pill); color: var(--text); text-decoration: none; }
+.tl-open:hover { background: var(--panel-2); }
+.tl-picked .tl-step { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-left: auto; }
+.tl-step > span:last-child { display: inline-flex; gap: 8px; }
+.tl-step button { font: inherit; font-size: 13px; background: transparent; cursor: pointer; }
+.tl-step button:disabled { color: var(--text-3); cursor: default; background: transparent; }
+
+@media (max-width: 720px) {
+  .tl-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tl-stat { padding: 16px; }
+  .tl-stat strong { font-size: 22px; }
+  .tl-chart { --tl-name: 0px; padding: 16px; }
+  .tl-axis { font-size: 10px; }
+  .tl-axis span:nth-child(even) { visibility: hidden; }
+  .tl-lane { grid-template-columns: minmax(0, 1fr); padding-top: 8px; }
+  .tl-name { flex-direction: row; align-items: baseline; gap: 8px; }
+  .tl-track, .tl-axis { margin: 0 8px; }
+  .tl-picked { padding: 16px; gap: 12px 20px; }
+}
