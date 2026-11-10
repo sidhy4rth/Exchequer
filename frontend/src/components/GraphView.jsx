@@ -1,5 +1,5 @@
 import { currentTheme } from '../theme'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import { plain } from '../text'
 import { useMedia } from '../phone'
@@ -82,6 +82,19 @@ const LINK_HIT_PAD = 4
 
 const PATTERN_NAME = { peel_chain: 'Peel chain', amount_split: 'Amount split' }
 const RISK_NAME = { sanctioned: 'Sanctioned entity', seized: 'Seizure order', mixer: 'Mixer', frozen: 'Frozen by issuer', stolen: 'Stolen funds', reported: 'TronScan warning', gambling: 'Gambling platform', poisoning: 'Address poisoning', scam: 'Reported scam', laundering: 'Laundering' }
+/** The tags a tooltip shows as possible flags: the patterns that fired, never
+ * a confirmed category. Real traces carry the confirmed category in flags too
+ * ('sanctioned', 'frozen', 'stolen'...); that is a fact, shown solid in the
+ * Category row, and must not appear as a dashed "not confirmed" pill. */
+export function possibleFlags(item) {
+  return (item.flags ?? []).filter((f) => !(f in RISK_NAME) && f !== item.risk_category)
+}
+
+/** Roles whose colour means nothing: their text is painted in the dim ink,
+ * which holds 4.5:1 on the label box and the tooltip in both themes. */
+const QUIET_ROLES = new Set(['node', 'service'])
+const inkOf = (role) => (QUIET_ROLES.has(role) ? COLORS.dim : COLORS[role])
+
 const ROLE_NAME = {
   seed: 'Reported address',
   risk: 'Sanctioned / seized / mixer / frozen / stolen / scam / poisoning',
@@ -98,6 +111,9 @@ const ROLE_NAME = {
 // motion system's pop easing.
 const HOP_MS = 600
 const GROW_MS = 450
+// After a hop-by-hop reveal the map is framed when the simulation settles;
+// this frames it anyway if the simulation never reports that it has.
+const SETTLE_FALLBACK_MS = 6000
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
 
 /** A CSS cubic-bezier(x1, y1, x2, y2) timing function, as t -> eased value. */
@@ -196,13 +212,14 @@ function nodeTooltip(node, unit) {
     ['Sent', `${num(node.total_out_native)}${suffix}`],
     ['Transfers', node.activity_count],
   ])
-  const flags = node.flags?.length
-    ? `<div class="tags">${node.flags
+  const patterns = possibleFlags(node)
+  const flags = patterns.length
+    ? `<div class="tags">${patterns
         .map((f) => `<span>${esc(PATTERN_NAME[f] ?? f)}</span>`)
         .join('')}</div>`
     : ''
   return `<div class="gt">
-    <div class="gt-head" style="color:${COLORS[role]}">${esc(ROLE_NAME[role])}</div>
+    <div class="gt-head" style="color:${inkOf(role)}">${esc(ROLE_NAME[role])}</div>
     <div class="gt-addr">${esc(node.address)}</div>
     ${body}${flags}
     <div class="gt-foot">Click to keep this highlighted</div>
@@ -218,8 +235,9 @@ function linkTooltip(link, unit) {
     ['First', when(link.first_seen)],
     ['Last', when(link.last_seen)],
   ])
-  const flags = link.flags?.length
-    ? `<div class="tags">${link.flags
+  const patterns = possibleFlags(link)
+  const flags = patterns.length
+    ? `<div class="tags">${patterns
         .map((f) => `<span>${esc(PATTERN_NAME[f] ?? f)}</span>`)
         .join('')}</div>`
     : ''
@@ -432,6 +450,14 @@ export default function GraphView({
     : revealed.key === revealKey ? revealed.level
     : levels[0] ?? Infinity
   const revealDone = shownLevel === Infinity
+  const revealKeyRef = useRef(revealKey)
+  revealKeyRef.current = revealKey
+  const revealDoneRef = useRef(revealDone)
+  revealDoneRef.current = revealDone
+  // The run whose hops were released into the simulation one by one. Its last
+  // hop is born packed inside its parents, so it is framed once the layout has
+  // settled (engine stop), never on a timer that would crop it.
+  const animatedRef = useRef(null)
 
   const shownData = useMemo(() => {
     if (shownLevel === Infinity) return graphData
@@ -492,6 +518,7 @@ export default function GraphView({
     for (let i = from + 1; i < levels.length; i += 1) {
       timers.push(setTimeout(() => {
         spawnLevel(levels[i])
+        animatedRef.current = revealKey
         setRevealed({ key: revealKey, level: i === levels.length - 1 ? Infinity : levels[i] })
       }, HOP_MS * (i - from)))
     }
@@ -574,13 +601,35 @@ export default function GraphView({
 
   useEffect(() => {
     if (graphData.nodes.length === 0 || !revealDone || !active) return undefined
-    const timers = [300, 700, 1200, 2000, 3000].map((delay) =>
+    // After a hop-by-hop reveal, engine stop frames it; this is only the
+    // fallback for a simulation that never reports one.
+    const delays = animatedRef.current === revealKey ? [SETTLE_FALLBACK_MS] : [300, 700, 1200, 2000, 3000]
+    const timers = delays.map((delay) =>
       setTimeout(() => {
         if (needsFit.current && fitToView()) needsFit.current = false
       }, delay),
     )
     return () => timers.forEach(clearTimeout)
-  }, [graphData, runId, revealDone, active, fitToView])
+  }, [graphData, runId, revealKey, revealDone, active, fitToView])
+
+  // While a trace is revealed hop by hop the canvas is handed a new graph at
+  // every step, and force-graph re-zooms to its node count after each one as
+  // long as the camera sits where it last put it -- a jump per hop. On the
+  // first tick of a run (after the canvas has applied the reported address
+  // alone) the camera is set once to the framing of the whole trace, which
+  // takes it off that automatic zoom; the final fit then glides from there.
+  const heldCamera = useRef({ key: null, fg: null })
+  const handleEngineTick = useCallback(() => {
+    const canvas = graphRef.current
+    if (!canvas || revealDoneRef.current || instantRef.current) return
+    const key = revealKeyRef.current
+    const held = heldCamera.current
+    if (held.key === key && held.fg === canvas) return
+    // A replay eases there from wherever the officer left the camera.
+    const replaying = held.key !== null && held.key.graphData === key.graphData
+    heldCamera.current = { key, fg: canvas }
+    canvas.zoom?.(4 / Math.cbrt(Math.max(1, graphData.nodes.length)), replaying ? 400 : 0)
+  }, [graphData])
 
   const handleEngineStop = useCallback(() => {
     if (needsFit.current && fitToView()) needsFit.current = false
@@ -735,6 +784,9 @@ export default function GraphView({
         flowOf(b) - flowOf(a))
   }, [graphData])
 
+  const [jumpOpen, setJumpOpen] = useState(false)
+  const jumpId = useId()
+
   const flyTo = useCallback(
     (node) => {
       const fg = graphRef.current
@@ -760,7 +812,9 @@ export default function GraphView({
       const tag = event.target?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return
       if (event.key === 'Escape') handleSelect(null)
-      else if (event.key === 'f' || event.key === 'F') fitToView()
+      // A bare letter is a shortcut only while focus is inside the map, so it
+      // never fires from elsewhere on the page (WCAG 2.1.4).
+      else if ((event.key === 'f' || event.key === 'F') && containerRef.current?.contains(document.activeElement)) fitToView()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -922,7 +976,7 @@ export default function GraphView({
 
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = important ? COLORS[role] : COLORS.dim
+    ctx.fillStyle = important ? inkOf(role) : COLORS.dim
     ctx.fillText(text, x, y)
     ctx.restore()
   }
@@ -934,6 +988,28 @@ export default function GraphView({
     const key = `${idOf(link.source)}>${idOf(link.target)}`
     return pathEdges.has(key) ? 3 : 0
   }, [pathEdges])
+  const jumpButtons = () => landmarks.map((node) => {
+    const role = roleOf(node)
+    return (
+      <button
+        key={node.id}
+        type="button"
+        className={activeSelected === node.id ? 'active' : ''}
+        aria-current={activeSelected === node.id ? 'true' : undefined}
+        onClick={() => { flyTo(node); setJumpOpen(false) }}
+        title={node.address}
+      >
+        <RoleSwatch role={role} color={COLORS[role]} />
+        <span className="name">
+          {role === 'risk' || role === 'gambling'
+            ? plain(node.risk_entity) ?? RISK_NAME[node.risk_category] ?? 'Listed'
+            : role === 'inferred' ? `${node.inferred_exchange} deposit (inferred)`
+            : plain(node.label ?? node.exchange)}
+        </span>
+        <span className="addr">{short(node.address)}</span>
+      </button>
+    )
+  })
   const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`
 
   return (
@@ -1006,6 +1082,7 @@ export default function GraphView({
           linkDirectionalParticles={particlesOn ? particles : 0}
           linkDirectionalParticleWidth={2.4}
           linkDirectionalParticleColor={() => COLORS.exchange}
+          onEngineTick={handleEngineTick}
           onEngineStop={handleEngineStop}
           cooldownTicks={200}
           d3VelocityDecay={0.28}
@@ -1083,29 +1160,31 @@ export default function GraphView({
             </div>
           </div>
 
-          {!compact && landmarks.length > 0 && (
+          {/* The landmarks are the keyboard's way to every answer on the map
+              (bubbles on a canvas cannot take focus), so a phone keeps them
+              too: behind a finger-sized "Jump to" button. */}
+          {landmarks.length > 0 && !compact && (
             <div className="jump-panel">
               <span className="micro">Jump to</span>
-              {landmarks.map((node) => {
-                const role = roleOf(node)
-                return (
-                  <button
-                    key={node.id}
-                    className={activeSelected === node.id ? 'active' : ''}
-                    onClick={() => flyTo(node)}
-                    title={node.address}
-                  >
-                    <RoleSwatch role={role} color={COLORS[role]} />
-                    <span className="name">
-                      {role === 'risk' || role === 'gambling'
-                        ? plain(node.risk_entity) ?? RISK_NAME[node.risk_category] ?? 'Listed'
-                        : role === 'inferred' ? `${node.inferred_exchange} deposit (inferred)`
-                        : plain(node.label ?? node.exchange)}
-                    </span>
-                    <span className="addr">{short(node.address)}</span>
-                  </button>
-                )
-              })}
+              {jumpButtons()}
+            </div>
+          )}
+          {landmarks.length > 0 && compact && (
+            <div className="graph-jump-compact">
+              {jumpOpen && (
+                <div className="jump-panel compact" id={jumpId} role="group" aria-label="Jump to a wallet">
+                  {jumpButtons()}
+                </div>
+              )}
+              <button
+                type="button"
+                className="graph-jump-toggle"
+                aria-expanded={jumpOpen}
+                aria-controls={jumpId}
+                onClick={() => setJumpOpen((open) => !open)}
+              >
+                Jump to · {landmarks.length}
+              </button>
             </div>
           )}
 

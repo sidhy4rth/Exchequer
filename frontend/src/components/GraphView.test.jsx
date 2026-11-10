@@ -205,10 +205,44 @@ describe('the bubble graph in motion', () => {
     expect(ids()).toEqual(data.nodes.map((n) => n.id).sort())
     expect(graph.props.graphData.links).toHaveLength(data.edges.length)
     expect(typeof graph.props.linkDirectionalParticles).toBe('function')
-    // Framed only once everything is on screen.
+    // Framed only once the layout has settled, never while the last hop is
+    // still packed inside its parents.
+    act(() => vi.advanceTimersByTime(3000))
     expect(graph.api.zoomToFit).not.toHaveBeenCalled()
-    act(() => vi.advanceTimersByTime(300))
+    act(() => graph.props.onEngineStop())
     expect(graph.api.zoomToFit).toHaveBeenCalledTimes(1)
+    act(() => graph.props.onEngineStop())
+    act(() => vi.runAllTimers())
+    expect(graph.api.zoomToFit).toHaveBeenCalledTimes(1)
+  })
+
+  it('frames a revealed trace anyway when the simulation never reports a stop', () => {
+    vi.useFakeTimers()
+    render(<GraphView data={data} tracePath={route} />)
+    act(() => vi.advanceTimersByTime(1200))
+    act(() => vi.advanceTimersByTime(5900))
+    expect(graph.api.zoomToFit).not.toHaveBeenCalled()
+    act(() => vi.advanceTimersByTime(200))
+    expect(graph.api.zoomToFit).toHaveBeenCalledTimes(1)
+  })
+
+  it('holds the camera still through the reveal: set once per run, not at every hop', () => {
+    vi.useFakeTimers()
+    render(<GraphView data={data} tracePath={route} />)
+    const held = () => graph.api.zoom.mock.calls.filter((call) => call.length === 2)
+    act(() => graph.props.onEngineTick())
+    expect(held()).toEqual([[4 / Math.cbrt(data.nodes.length), 0]])
+    act(() => vi.advanceTimersByTime(600))
+    act(() => graph.props.onEngineTick())
+    act(() => vi.advanceTimersByTime(600))
+    act(() => graph.props.onEngineTick())
+    expect(held()).toHaveLength(1)
+    // A replay is a new run: the camera eases back to the same framing once.
+    fireEvent.click(screen.getByRole('button', { name: 'Replay' }))
+    act(() => graph.props.onEngineTick())
+    act(() => graph.props.onEngineTick())
+    expect(held()).toHaveLength(2)
+    expect(held()[1]).toEqual([4 / Math.cbrt(data.nodes.length), 400])
   })
 
   it('grows a newly revealed bubble from nothing with the pop easing', () => {
@@ -321,7 +355,6 @@ describe('the bubble graph in motion', () => {
     expect(graph.props.linkLabel).toBeNull()
     expect(container.querySelector('.graph-hint')).toBeNull()
     expect(container.querySelector('.legend')).toBeNull()
-    expect(container.querySelector('.jump-panel')).toBeNull()
     expect(container.querySelector('.graph-view.compact')).not.toBeNull()
     const arcs = []
     const ctx = { beginPath() {}, fill() {}, arc(x, y, r) { arcs.push(r) } }
@@ -333,6 +366,60 @@ describe('the bubble graph in motion', () => {
     expect(arcs[0] - drawn[0]).toBeGreaterThanOrEqual(22)
     act(() => graph.props.onNodeClick(node))
     expect(onSelect).toHaveBeenCalledWith(node)
+  })
+
+  it('on a phone keeps the Jump-to list behind a finger-sized toggle, and a jump selects', () => {
+    reduceMotion()
+    const onSelect = vi.fn()
+    render(<GraphView data={data} tracePath={route} compact onSelect={onSelect} selected={null} />)
+    const toggle = screen.getByRole('button', { name: /^Jump to/ })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const list = screen.getByRole('group', { name: 'Jump to a wallet' })
+    // One button per exchange, inferred deposit and gambling platform.
+    expect(list.querySelectorAll('button')).toHaveLength(3)
+    fireEvent.click(screen.getByRole('button', { name: /Binance 14/ }))
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: CEX }))
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('shows only fired patterns as possible-flag tags, never a confirmed category', () => {
+    reduceMotion()
+    render(<GraphView data={data} tracePath={route} />)
+    const tags = (html) => [...new DOMParser().parseFromString(html, 'text/html').querySelectorAll('.tags span')].map((t) => t.textContent)
+    const sanctioned = { id: 'x', address: addr('9'), depth: 2, flags: ['sanctioned'], risk_category: 'sanctioned' }
+    expect(tags(graph.props.nodeLabel(sanctioned))).toEqual([])
+    expect(graph.props.nodeLabel(sanctioned)).toContain('Sanctioned entity')
+    const split = { id: 'y', address: addr('8'), depth: 2, flags: ['amount_split', 'frozen'], risk_category: 'frozen' }
+    expect(tags(graph.props.nodeLabel(split))).toEqual(['Amount split'])
+  })
+
+  it('names quiet addresses in the dim ink, which holds its contrast in both themes', () => {
+    reduceMotion()
+    render(<GraphView data={data} tracePath={route} onSelect={() => {}} selected={SEED} />)
+    const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+    const texts = []
+    const ctx = { globalAlpha: 1, fillStyle: '', save() {}, restore() {}, beginPath() {}, arc() {}, fill() {}, stroke() {}, setLineDash() {},
+      translate() {}, scale() {}, fillRect() {}, measureText: () => ({ width: 1 }), fillText(t) { texts.push(ctx.fillStyle) } }
+    // An ordinary address beside the selected one is named, in the dim ink.
+    const plainNode = { id: MID, address: MID, depth: 1, total_in_native: 100 }
+    graph.props.nodeCanvasObject({ ...plainNode, x: 0, y: 0 }, ctx, 1)
+    expect(texts).toEqual([PALETTES[theme].dim])
+    expect(graph.props.nodeLabel(plainNode)).toContain(`color:${PALETTES[theme].dim}`)
+  })
+
+  it('re-frames on f only while focus is inside the map', () => {
+    reduceMotion()
+    vi.useFakeTimers()
+    render(<GraphView data={data} tracePath={route} />)
+    act(() => vi.runAllTimers())
+    const before = graph.api.zoomToFit.mock.calls.length
+    fireEvent.keyDown(window, { key: 'f' })
+    expect(graph.api.zoomToFit).toHaveBeenCalledTimes(before)
+    screen.getByRole('button', { name: 'Fit' }).focus()
+    fireEvent.keyDown(window, { key: 'f' })
+    expect(graph.api.zoomToFit).toHaveBeenCalledTimes(before + 1)
   })
 
   it('a parent that owns the selection is asked to clear it when the selected bubble is clicked again', () => {
