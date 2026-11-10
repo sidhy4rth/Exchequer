@@ -242,6 +242,13 @@ describe('the cases page', () => {
     expect(screen.queryByRole('group', { name: 'Filter cases' })).not.toBeInTheDocument()
   })
 
+  it('says the cases are loading until /cases answers', async () => {
+    open()
+    expect(screen.getByRole('status')).toHaveTextContent('Loading cases…')
+    await table()
+    expect(screen.queryByText('Loading cases…')).not.toBeInTheDocument()
+  })
+
   it('says the cases cannot be reached, never that there are none, when /cases fails', async () => {
     open({ cases: { status: 500, body: { detail: 'down' } } })
     expect(await screen.findByText('Stored cases cannot be reached right now.')).toBeInTheDocument()

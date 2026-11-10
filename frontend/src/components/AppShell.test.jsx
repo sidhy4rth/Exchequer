@@ -1,7 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import AppShell, { ADMIN_GROUP, GROUPS, useCrumb } from './AppShell'
 import { signedInAs } from '../session'
 import { stubFetch } from '../test/setup'
@@ -137,6 +137,36 @@ describe('the sidebar', () => {
     stubFetch({})
     render(<MemoryRouter><Routes><Route element={<AppShell />}><Route path="*" element={<Landed />} /></Route></Routes></MemoryRouter>)
     expect(await sidebar().findByText('Backend unreachable')).toBeInTheDocument()
+  })
+
+  // One miss (a restart, a 502 from the proxy) must not last the session.
+  const flaky = (misses) => {
+    let calls = 0
+    return vi.fn(() => (++calls <= misses ? { status: 502, body: 'Bad gateway' } : { body: chains }))
+  }
+
+  it('asks again on its own after the backend could not be reached, and says when it is back', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const answer = flaky(1)
+      stubFetch({ '/chains': answer })
+      render(<MemoryRouter><Routes><Route element={<AppShell />}><Route path="*" element={<Landed />} /></Route></Routes></MemoryRouter>)
+      expect(await sidebar().findByText('Backend unreachable')).toBeInTheDocument()
+      await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+      expect(await sidebar().findByText('1 of 2 chains ready to trace')).toBeInTheDocument()
+      expect(answer).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('asks again when you open another page while the backend is unreachable', async () => {
+    const user = userEvent.setup()
+    stubFetch({ '/chains': flaky(1) })
+    render(<MemoryRouter><Routes><Route element={<AppShell />}><Route path="*" element={<Landed />} /></Route></Routes></MemoryRouter>)
+    expect(await sidebar().findByText('Backend unreachable')).toBeInTheDocument()
+    await user.click(sidebar().getByRole('link', { name: 'Cases' }))
+    expect(await sidebar().findByText('1 of 2 chains ready to trace')).toBeInTheDocument()
   })
 })
 

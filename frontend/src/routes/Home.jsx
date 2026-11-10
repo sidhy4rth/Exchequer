@@ -137,6 +137,7 @@ function RecentCases() {
   return (
     <section className="card glass console-card" aria-labelledby="console-recent">
       <div className="console-card-head"><h2 id="console-recent">Recent cases</h2><Link to="/cases">All cases</Link></div>
+      {cases === undefined && <p className="note" role="status">Loading cases…</p>}
       {cases?.length === 0 && <p className="note">No cases yet. Cases you trace show here, in this browser only.</p>}
       {cases === null && <p className="note">Recent cases cannot be reached right now.</p>}
       {cases?.length > 0 && (

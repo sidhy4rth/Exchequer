@@ -18,6 +18,9 @@
 .letter-text { font-family: var(--serif); font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
 .letter-text .ln { min-height: 1.65em; margin: 0; }
 .lt-wait { margin: 0; font-size: 13px; color: var(--sheet-text-2); }
+.lt-failed { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.lt-failed p { margin: 0; }
+.lt-failed button { min-height: 40px; padding: 0 16px; border-color: var(--sheet-line); background: transparent; color: var(--sheet-text); }
 /* The blank's spoken label stays out of a copy made by selecting the sheet. */
 .letter-blank .no-copy { -webkit-user-select: none; user-select: none; }
 .letter-blank { padding: 0 3px; border-radius: 3px; background: var(--sheet-blank); color: var(--sheet-blank-text); font-weight: 500; }

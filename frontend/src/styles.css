@@ -1070,7 +1070,9 @@ button.link-like { align-self: flex-start; font-size: 12px; padding: 2px 0; }
 .work .foot-note { padding: 8px 14px; }
 .cases-table td a { color: var(--text); text-decoration: none; }
 .cases-table td a:hover { text-decoration: underline; }
-.work-empty { padding: 18px 22px; }
+.work-list { display: flex; flex-direction: column; gap: inherit; }
+.work-empty { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 18px 22px; }
+.work-empty .note { margin: 0; }
 
 /* The Cases page (Cases.jsx): search beside the heading, filter pills, the
    table (a card per case on a phone), then the linked complaints. */

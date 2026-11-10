@@ -193,6 +193,7 @@ export default function Cases() {
         )}
       </header>
 
+      {cases === undefined && <p className="note" role="status">Loading cases…</p>}
       {cases === null && <p className="note">Stored cases cannot be reached right now.</p>}
       {cases?.length === 0 && <p className="note">No cases yet. Cases you trace show here, in this browser only.</p>}
       {cases?.length > 0 && (

@@ -213,15 +213,35 @@ function PhoneBar({ path, out }) {
   )
 }
 
+/** GET /chains for the shell's whole life. A miss (a restart, a 502 from
+ * the proxy) says the backend is unreachable, then asks again after 2, 4, 8…
+ * seconds (at most a minute apart), and at once when another page opens,
+ * until an answer replaces it. */
+function useChains(pathname) {
+  const [health, setHealth] = useState(null)
+  const [nudge, setNudge] = useState(0)
+  const down = health?.status === 'down'
+  useEffect(() => { if (down) setNudge((n) => n + 1) }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let live = true
+    let timer
+    const ask = (miss) => fetchChains().then((h) => live && setHealth(h)).catch(() => {
+      if (!live) return
+      setHealth({ status: 'down' })
+      timer = setTimeout(() => ask(miss + 1), Math.min(60_000, 2_000 * 2 ** miss))
+    })
+    ask(0)
+    return () => { live = false; clearTimeout(timer) }
+  }, [nudge])
+  return health
+}
+
 export default function AppShell() {
   // The router reads /cases/ as /cases; so do the sidebar and breadcrumbs.
   const pathname = useLocation().pathname.replace(/(.)\/+$/, '$1')
   const out = useWayOut(useDemoView('investigator'))
   const { officer } = out
-  const [health, setHealth] = useState(null)
-  useEffect(() => {
-    fetchChains().then(setHealth).catch(() => setHealth({ status: 'down' }))
-  }, [])
+  const health = useChains(pathname)
   const [named, setNamed] = useState(null)
   const crumbs = trail(pathname)
   if (named && crumbs.length > 1) crumbs[crumbs.length - 1] = { label: named, mono: true }

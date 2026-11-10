@@ -234,6 +234,14 @@ describe('recent cases', () => {
     expect(await screen.findByText(/No cases yet/)).toBeInTheDocument()
   })
 
+  it('says the cases are loading until /cases answers', async () => {
+    renderHome()
+    const card = within(screen.getByRole('region', { name: 'Recent cases' }))
+    expect(card.getByRole('status')).toHaveTextContent('Loading cases…')
+    expect(await card.findByText(/No cases yet/)).toBeInTheDocument()
+    expect(card.queryByText('Loading cases…')).not.toBeInTheDocument()
+  })
+
   it('says the cases cannot be reached, never that there are none, when /cases fails', async () => {
     renderHome({ extra: { '/cases': { status: 500, body: { detail: 'down' } } } })
     const card = within(await screen.findByRole('region', { name: 'Recent cases' }))

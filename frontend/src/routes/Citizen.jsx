@@ -1,8 +1,8 @@
 import Mark from '../components/Mark'
 import ThemeToggle from '../components/ThemeToggle'
 
-// The citizen's side of Exchequer. Deliberately empty for now; the demo
-// banner (App.jsx) is the way back out.
+// The citizen's side of Exchequer, inside the console. Deliberately empty
+// for now; the demo banner (App.jsx) is the way back out.
 export default function Citizen() {
   return (
     <div className="citizen">
@@ -16,7 +16,7 @@ export default function Citizen() {
         <div className="citizen-empty">
           <span className="micro">Citizen portal</span>
           <h1>This page is still to be built.</h1>
-          <p>The citizen's side of Exchequer is not open yet. Until it is, the banner above switches back to the investigator view.</p>
+          <p>The citizen side is not open in this preview yet. Switch back to the investigator view to trace a case.</p>
         </div>
       </main>
     </div>
