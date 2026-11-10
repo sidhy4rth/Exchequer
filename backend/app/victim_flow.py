@@ -23,14 +23,21 @@ How it works, in order:
     are known, so the denominator is the larger of what came in and what went
     out (`traced_only`), and the share is an upper bound. Each transfer out
     carries its value times the share, never more than came in. What the
-    wallet did not send on stays "left", or "held" at a wallet that is
-    frozen, sanctioned or seized.
+    wallet did not send on stays "left", or "held" at a wallet its issuer
+    froze or that was seized. A sanctions listing freezes nothing (the
+    owner can still move the native coin), so money at a sanctioned wallet
+    is left there, and `passed_through` marks the wallet. A gap no larger
+    than the rounding of the stored amounts is not money left anywhere.
   * The money ends at an exchange (including an inferred deposit address),
     an instant exchanger (a no-KYC swap service, or a deposit address that
     sweeps into one: a cash-out point that can say which order it paid and
     where the payout went), a mixer ("risk"), a wallet the trace did not expand ("beyond the limit"),
     or "other": a swap, or money that came back to a wallet earlier on the
-    route, which is counted once. Every bucket together is the start.
+    route, which is counted once. Every bucket together is the start, within
+    that rounding. Each bucket's `bounded_amount` is the part of it that
+    came through a wallet whose share is an upper bound. That is not the
+    same as the dashed links: a link into an inferred deposit address is
+    dashed too, though its money is no bound.
   * `stops` says where the trace stopped following the money and why, in
     plain words: its hop limit, its fan-out limit, a mixer, a bridge or a
     privacy service, an exchange (a probable deposit address apart, marked
@@ -40,10 +47,9 @@ On the lead route the next link keeps pro-rata's own figure and the
 wallet's other transfers share what is left, so the money that took that
 route is exactly pro-rata's estimate. That holds at the reported wallet
 too: when the start is less than it sent (money came back to it, or the
-victim reported paying less), its link on the route keeps its value, as
-pro-rata's start does. Only a cap below that link's value (the reported
-payments or a swap's output; pro-rata's `seed_cap.applied`) scales its
-whole split, the route's link with the rest.
+victim reported paying less), its link on the route carries the smaller of
+the start and the link's value, as pro-rata's start does (`seed_cap`), and
+its other transfers share what is left of the start.
 
 Its limits: money a wallet held before the victim's arrived is not seen; off
 the lead route the shares are upper bounds; where the case does not list a
@@ -65,12 +71,14 @@ from .prorata import DILUTED
 # a stored flow of an older version (or none) is rebuilt on read, from the
 # stored case, whose transfers may be trimmed (contracts.on_read, .upgrade).
 # 2: `stops`; a bridge or a privacy service ends the money like a mixer.
-# 3: an instant exchanger has its own bucket and stop.
+# 3: an instant exchanger has its own bucket and stop; a cap keeps the route
+#    at pro-rata's start; `bounded_amount`; rounding dust is dropped; a
+#    sanctioned wallet's money is left, not held.
 VERSION = 3
 
 KINDS = ("exchange", INSTANT_EXCHANGER, "held", "left", "risk", "beyond_limit", "not_followed", "other")
 ACTIONS = {"exchange": "draft_letter", INSTANT_EXCHANGER: "draft_letter", "held": "ask_issuer", "left": "watch", "beyond_limit": "trace_deeper"}
-HOLDS = frozenset({"frozen", "sanctioned", "seized"})
+HOLDS = frozenset({"frozen", "seized"})
 UPPER = frozenset({"traced_only", "edge_bounds"})
 CUT = re.compile(r"(?:fan-out limit|safety cap) of (\d+) counterparties per address applied at (\S+?)\.\.\.")
 # Where the money ends for good (risk), and how its stop is said.
@@ -254,9 +262,13 @@ class _Flow:
         inside: dict[str, float] = {}
         info: dict[str, dict[str, Any]] = {}
         amounts = {k: defaultdict(float) for k in KINDS}
+        # The part that came through a wallet whose share is an upper bound.
+        vbound: dict[str, float] = defaultdict(float)
+        bound = {k: defaultdict(float) for k in KINDS}
         for w in order:
             if kinds[w]:
                 amounts[kinds[w]][w] += vin[w]
+                bound[kinds[w]][w] += vbound[w]
                 info[w] = {"role": kinds[w], "share": None, "basis": None, "left": 0.0}
                 continue
             feeds = [s for s in self.inn[w] if (s, w) in victim and (s, w) not in back]
@@ -286,38 +298,47 @@ class _Flow:
                 den, how = max(came, sent), "edge_bounds" if loose else "traced_only"
             share = min(1.0, inside[w] / den) if den > 0 else 0.0
             # On the lead route the next link keeps pro-rata's own figure (at
-            # the reported wallet its whole value, unless a cap below it
-            # scales the split); the rest share what is left, never more
+            # the reported wallet, as pro-rata starts: the smaller of the
+            # start and its value); the rest share what is left, never more
             # than came in.
-            lead = nxt in gross and (w != seed or basis == "seed_outflow" or start >= gross[nxt])
+            lead = nxt in gross
             first = min(inside[w], gross[nxt] * (1.0 if w == seed else share)) if lead else 0.0
             rest = (sent - gross[nxt] if lead else sent) * share
             scale = (inside[w] - first) / rest if rest > inside[w] - first else 1.0
+            # Each stored amount is rounded to 6 places on its own, so sums
+            # can miss each other by a few 1e-7: a gap this small is rounding.
+            dust = 1e-6 * (2 + len(gross) + len(self.inn[w]))
+            came_bound = min(1.0, vbound[w] / vin[w]) if vin[w] > 0 else 0.0
+            part = 1.0 if how in UPPER else came_bound
             for t, g in gross.items():
                 victim[(w, t)] = v = first if lead and t == nxt else g * share * scale
                 if (w, t) in back or self.edges[(w, t)].get("swap"):
                     amounts["other"][t] += v
+                    bound["other"][t] += v * part
                 else:
                     vin[t] += v
+                    vbound[t] += v * part
             amounts["not_followed"][w] += self.untraced[w] * share * scale
+            bound["not_followed"][w] += self.untraced[w] * share * scale * part
             left = max(0.0, vin[w] - first - rest * scale)
+            left = 0.0 if left <= dust else left
             where = ("not_followed" if any(w.startswith(c) for c in self.cut)
                      else "held" if self.nodes[w].get("risk_category") in HOLDS else "left")
             amounts[where][w] += left
+            bound[where][w] += left * came_bound
             info[w] = {"role": "seed" if w == seed else "wallet", "share": share, "basis": how,
                        "left": 0.0 if where == "not_followed" else left, "lead": lead,
-                       # Each stored amount is rounded to 6 places on its own,
-                       # so the start can miss what was sent by a few 1e-7.
-                       "short": w == seed and sent - start > 1e-6 * (2 + len(gross) + len(self.inn[w]))}
+                       "capped": lead and w == seed and gross[nxt] - first > dust,
+                       "short": w == seed and sent - start > dust}
 
         reached = None
         if len(path) > 1 and all((a, b) in victim for a, b in zip(path, path[1:], strict=False)):
             reached = victim[(path[0], path[1])]
             for prev, w, nxt in zip(path, path[1:], path[2:], strict=False):
                 reached *= kept.get((prev, w), 0.0) * victim[(w, nxt)] / inside[w] if inside[w] > 0 else 0.0
-        return self._shape(start, basis, order, info, vin, victim, back, amounts, path, reached)
+        return self._shape(start, basis, order, info, vin, victim, back, amounts, bound, path, reached)
 
-    def _shape(self, start, basis, order, info, vin, victim, back, amounts, path, reached) -> dict[str, Any]:
+    def _shape(self, start, basis, order, info, vin, victim, back, amounts, bound, path, reached) -> dict[str, Any]:
         def style(s: str, t: str) -> str:
             if info[s]["basis"] in UPPER or t in self.inferred:
                 return "dashed"
@@ -326,7 +347,8 @@ class _Flow:
         for kind in KINDS:
             amount = sum(amounts[kind].values(), 0.0)
             buckets.append({"kind": kind, "amount": _r(amount), "share": round(amount / start, 6),
-                            "addresses": _ranked(amounts[kind]), "action": ACTIONS.get(kind)})
+                            "addresses": _ranked(amounts[kind]), "action": ACTIONS.get(kind),
+                            "bounded_amount": _r(min(amount, sum(bound[kind].values(), 0.0)))})
         bases = {i["basis"] for i in info.values()}
         notes = ["A display of where the victim's share may have gone. Letters state the conservative "
                  "estimate, not these figures."]
@@ -343,6 +365,9 @@ class _Flow:
         if not seed["share"]:
             notes.append("The trace saw no transfer out of the reported wallet, so the money is shown "
                          "still there.")
+        elif seed["capped"]:
+            notes.append("The reported wallet sent more than the starting figure. Its transfer on the route "
+                         "to the exchange carries all of it, as pro-rata's does, and its other transfers none.")
         elif seed["short"] and seed["lead"]:
             why = ("Money came back to the reported wallet, so the starting figure is less than it sent"
                    if basis == "seed_outflow" and any(self._value((s, self.seed)) > 0 for s in self.inn[self.seed])

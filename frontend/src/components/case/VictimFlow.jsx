@@ -8,7 +8,8 @@ import './VictimFlow.css'
 // The Flow tab (pack Flow): where the victim's share went, as a Sankey sized
 // by the victim's money (victim_flow, backend/app/victim_flow.py), and a card
 // for each place it ended with what an officer can do there. On a phone the
-// cards alone, under "N% can be acted on". A display: letters and the score
+// cards alone, under "N% can be acted on": only what is not an upper bound,
+// with the bound said apart. A display: letters and the score
 // keep the conservative estimate. Every name from outside goes through plain();
 // the flow's notes, Exchequer's own sentences that may quote an address,
 // through plainSentence().
@@ -36,7 +37,18 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   const match = (a) => (result.risk_matches ?? []).find((m) => m.address === a)
   const hops = result.max_depth
   const deeper = hops ? Math.min(2, DEEPEST - hops) : 0
+  // What reached an exchange, an instant exchanger or a held wallet; the part
+  // through a wallet whose share is an upper bound is never stated as fact.
+  // Worked from the amounts: the shares are rounded, the bound part is not.
   const acted = (bucket.exchange?.share ?? 0) + (bucket.instant_exchanger?.share ?? 0) + (bucket.held?.share ?? 0)
+  const bounded = (kind) => bucket[kind]?.bounded_amount ?? 0
+  const upTo = (kind) => (bounded(kind) > 1e-6 * flow.totals.denominator ? 'up to ' : '')
+  const ACTED = ['exchange', 'instant_exchanger', 'held']
+  const solid = ACTED.reduce((sum, kind) => sum + amount(kind) - bounded(kind), 0)
+  const firm = solid > 1e-6 * flow.totals.denominator ? solid / flow.totals.denominator : 0
+  const loose = ACTED.some(upTo) ? shareText(acted) : null
+  // Said by what it is, never by how the chart draws it (a phone has none).
+  const BOUND = 'counting money through wallets whose shares are only upper bounds'
   const band = bandLabel(result.confidence_detail?.band ?? bandOf(result.confidence))
   const victimAt = new Map(flow.nodes.map((n) => [n.address, n.victim_in]))
   // Each exchange address with its own share: one deposit address's label
@@ -99,8 +111,8 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
     return <button type="button" onClick={() => onLetters('tether')}>Ask Tether</button>
   }
   // A card's figure; on a phone, with a bar of its part of the start.
-  const figure = (v, after = '') => <>
-    <p className="vf-amount"><b>{fmt(v)}</b> {unit}{after}</p>
+  const figure = (v, after = '', before = '') => <>
+    <p className="vf-amount">{before}<b>{fmt(v)}</b> {unit}{after}</p>
     <span className="vf-meter" aria-hidden="true"><span style={{ width: `${Math.min(100, (v / flow.totals.denominator) * 100)}%` }} /></span>
   </>
 
@@ -108,7 +120,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   if (amount('exchange') > 0) cards.push(
     <article key="exchange" className="vf-card go">
       <div className="vf-card-top"><h3>At an exchange</h3>{named && band && <span className="vf-tag">{band} · {result.attribution_inferred ? 'inferred' : 'exact label'}</span>}</div>
-      {figure(amount('exchange'))}
+      {figure(amount('exchange'), '', upTo('exchange'))}
       {exOne ? <>
         <p className="vf-name">{[exOne.name, exOne.label].filter(Boolean).join(' · ')}</p>
         <p className="mono vf-address">{plain(exOne.address)}</p>
@@ -126,7 +138,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   if (amount('instant_exchanger') > 0) cards.push(
     <article key="instant" className={`vf-card vf-instant${instRows.every((r) => r.inferred) ? ' inferred' : ''}`}>
       <div className="vf-card-top"><h3>At an instant exchanger</h3>{instOwn && band && <span className="vf-tag">{band} · {result.attribution_inferred ? 'inferred' : 'exact label'}</span>}</div>
-      {figure(amount('instant_exchanger'))}
+      {figure(amount('instant_exchanger'), '', upTo('instant_exchanger'))}
       <ul className="vf-rows">{instRows.map((r) => (
         <li key={r.address}>
           <span className="vf-name">{[r.name || 'Swap service', r.inferred && 'inferred'].filter(Boolean).join(' · ')}</span>
@@ -147,6 +159,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
         <h3>{p.category === 'frozen' ? `Through a wallet ${issuer || 'its issuer'} froze` : `Through a ${plain(p.category)} wallet`}</h3>
         {figure(p.victim_in, ' reached it')}
         <p className="mono vf-address">{plain(p.address)}{frozenOn ? ` · frozen ${day(frozenOn)}` : ''}</p>
+        {p.category === 'sanctioned' && <p className="note">A sanctions listing freezes nothing: the money can still move unless a token's issuer has frozen it.</p>}
         {tether(p.address)}
       </article>)
   }
@@ -161,7 +174,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
     cards.push(
       <article key="held" className="vf-card risk">
         <h3>{category === 'frozen' ? `Held at a wallet ${issuer || 'its issuer'} froze` : `Held at a ${category} wallet`}</h3>
-        {figure(amount('held'), came > amount('held') + tiny ? ` of the ${fmt(came)} ${unit} that reached it` : '')}
+        {figure(amount('held'), came > amount('held') + tiny ? ` of the ${fmt(came)} ${unit} that reached it` : '', upTo('held'))}
         <p className="mono vf-address">{plain(at)}{heldAt.length > 1 ? ` and ${heldAt.length - 1} more` : ''}{frozenOn ? ` · frozen ${day(frozenOn)}` : ''}</p>
         {heldAt.map(tether).find(Boolean)}
       </article>)
@@ -190,7 +203,8 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
     <div className="vf-box"><div className="vflow">
       <div className="vf-phone">
         <p className="vf-kicker">Where the money is now</p>
-        <h2>{shareText(acted)} can be acted on</h2>
+        <h2>{shareText(firm)} can be acted on</h2>
+        {loose && <p className="note">up to {loose} {BOUND}</p>}
       </div>
       <section className="card vf-chart" aria-labelledby={`${id}-title`}>
         <div className="vf-head">
@@ -226,7 +240,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
         </div>
         <div className="vf-foot">
           <div className="vf-bar-all" aria-hidden="true">{barOrder.map((b) => <span key={b.kind} className={`${b.colour} ${b.kind}`} style={{ width: `${(b.amount / flow.totals.denominator) * 100}%` }} />)}</div>
-          <p><b>{shareText(acted)}</b> reached a place someone can act on</p>
+          <p><b>{shareText(firm)}</b> reached a place someone can act on{loose && <>, up to <b>{loose}</b> {BOUND}</>}</p>
           {hopAmount > 0 && <p><b>{shareText(hopAmount / flow.totals.denominator)}</b> is beyond the trace's {hops} hops</p>}
           <p className="note">widths are the victim's money, not the totals that passed through</p>
         </div>

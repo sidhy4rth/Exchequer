@@ -1,9 +1,8 @@
 import Mark from '../components/Mark'
 import ThemeToggle from '../components/ThemeToggle'
 
-// The citizen's side of Exchequer. Deliberately empty: it is to be built
-// during the 24-hour in-person hackathon; the demo banner (App.jsx) is the
-// way back out.
+// The citizen's side of Exchequer. Deliberately empty for now; the demo
+// banner (App.jsx) is the way back out.
 export default function Citizen() {
   return (
     <div className="citizen">
@@ -17,7 +16,7 @@ export default function Citizen() {
         <div className="citizen-empty">
           <span className="micro">Citizen portal</span>
           <h1>This page is still to be built.</h1>
-          <p>It will be built from the ground up during the 24‑hour in‑person hackathon.</p>
+          <p>The citizen's side of Exchequer is coming soon.</p>
         </div>
       </main>
     </div>

@@ -736,6 +736,7 @@
     "action": "draft_letter",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "exchange",
     "share": 0.0
    },
@@ -743,6 +744,7 @@
     "action": "draft_letter",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "instant_exchanger",
     "share": 0.0
    },
@@ -750,6 +752,7 @@
     "action": "ask_issuer",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "held",
     "share": 0.0
    },
@@ -758,10 +761,10 @@
     "addresses": [
      "0x1d3a1a9bbda6e8204f3e534f12cc76d84d15f54c",
      "0x31ab75452f89c824972ec3cd671a089801981bd7",
-     "0x43c2f567b124d6dd9dcc505b93fd9f0c158956db",
-     "0xc09fdb988520802fdd0330cede96821cfdb0a9f9"
+     "0x43c2f567b124d6dd9dcc505b93fd9f0c158956db"
     ],
-    "amount": 0.004805698,
+    "amount": 0.004804312,
+    "bounded_amount": 0.002704312,
     "kind": "left",
     "share": 0.002024
    },
@@ -769,6 +772,7 @@
     "action": null,
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "risk",
     "share": 0.0
    },
@@ -779,6 +783,7 @@
      "0xafaac41b9c716496a909c87ea4a33a8af501c5fd"
     ],
     "amount": 2.369070302,
+    "bounded_amount": 2.369070302,
     "kind": "beyond_limit",
     "share": 0.997976
    },
@@ -786,6 +791,7 @@
     "action": null,
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "not_followed",
     "share": 0.0
    },
@@ -793,6 +799,7 @@
     "action": null,
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "other",
     "share": 0.0
    }
@@ -911,7 +918,7 @@
    {
     "address": "0xc09fdb988520802fdd0330cede96821cfdb0a9f9",
     "basis": "traced_only",
-    "left": 1.386e-06,
+    "left": 0.0,
     "role": "wallet",
     "share": 0.069284,
     "victim_in": 0.228233126
@@ -971,7 +978,7 @@
    }
   ],
   "totals": {
-   "accounted": 2.373876,
+   "accounted": 2.373874614,
    "basis": "seed_outflow",
    "denominator": 2.373876
   },

@@ -164,7 +164,8 @@ def test_money_at_an_instant_exchanger_has_its_own_bucket_and_a_letter_to_draft(
     flow = victim_flow.build(flow_case())
     buckets = {b["kind"]: b for b in flow["buckets"]}
     assert buckets["instant_exchanger"] == {"kind": "instant_exchanger", "amount": 60.0, "share": 0.6,
-                                            "addresses": [SWAP], "action": "draft_letter"}
+                                            "addresses": [SWAP], "action": "draft_letter",
+                                            "bounded_amount": 0.0}
     assert buckets["exchange"]["amount"] == 40.0 and buckets["exchange"]["addresses"] == [HOT]
     assert victim_flow.KINDS.index("instant_exchanger") == victim_flow.KINDS.index("exchange") + 1
     stop = next(s for s in flow["stops"] if s["kind"] == "instant_exchanger")

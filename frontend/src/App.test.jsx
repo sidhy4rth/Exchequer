@@ -64,6 +64,7 @@ describe('the demo doors', () => {
     expect(side.getByText('Demo mode · Investigator')).toBeInTheDocument()
     await user.click(side.getByRole('button', { name: /switch to citizen view/i }))
     expect(await screen.findByText(/This page is still to be built/)).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/\bSIH\b|smart india|hackathon/i)
     expect(screen.getByRole('note', { name: 'Preview' })).toHaveTextContent(/no accounts yet · viewing as Citizen/)
   })
 
