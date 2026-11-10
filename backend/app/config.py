@@ -569,6 +569,10 @@ ETHERSCAN_INCLUDE_INTERNAL: bool = (
 # off the local disk -- needed where the disk does not survive a restart, as on
 # Render's free tier. Unset, the store is the SQLite file at DB_PATH.
 DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
+# Connect to the database host's IPv4 address (the name is still sent for TLS
+# and Neon's routing). Render's free instances cannot open IPv6 connections,
+# and Neon's hosts answer IPv6 first. 0 turns it off.
+DB_PREFER_IPV4: bool = os.getenv("EXCHEQUER_DB_PREFER_IPV4", "1").strip() != "0"
 
 _db_raw = os.getenv("EXCHEQUER_DB_PATH", "exchequer.db")
 DB_PATH: Path = Path(_db_raw) if Path(_db_raw).is_absolute() else BACKEND_DIR / _db_raw

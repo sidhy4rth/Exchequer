@@ -10,6 +10,7 @@ from __future__ import annotations
 import inspect
 
 import pytest
+import sqlalchemy
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 from sqlalchemy import exc
@@ -24,7 +25,7 @@ def test_postgres_engine_fails_fast_and_bounds_its_pool(monkeypatch):
 
     def spy(url, **kwargs):
         seen.update(url=url, **kwargs)
-        return object()
+        return sqlalchemy.create_engine("sqlite://")  # a real engine, so the connect hook can attach
     monkeypatch.setattr(config, "DATABASE_URL", "postgres://u:p@localhost/x")
     monkeypatch.setattr(models, "create_engine", spy)
     models._make_engine()
