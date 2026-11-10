@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchAccess, fetchCases, fetchChains, fetchExchanges, fetchRecordedDemos, fetchRiskLabels, fetchWatches } from '../api'
 import ChainDot from '../components/ChainDot'
@@ -45,9 +45,9 @@ function savedPause() {
 /** The field's hint, typed in once a character at a time, over an empty
  * field only. Drawn for the eye alone: the field keeps its label and its
  * placeholder, and nothing here takes a click or a key. */
-function TypedHint({ text }) {
+function TypedHint({ text, done }) {
   return (
-    <span className="hero-typed" aria-hidden="true">
+    <span className={`hero-typed${done ? ' typed' : ''}`} aria-hidden="true">
       {[...text].map((ch, i) => <span key={i} style={{ '--i': i }}>{ch}</span>)}
     </span>
   )
@@ -86,6 +86,11 @@ function QuickTrace({ health }) {
   const [missed, setMissed] = useState(false)
   const phone = usePhone()
   const hint = phone ? 'Payment hash or wallet' : HINT
+  // Typed in once: a hint that changes later (a tablet turned across the
+  // phone width) is swapped in place, already written.
+  const firstHint = useRef(hint)
+  const hintMoved = useRef(false)
+  if (hint !== firstHint.current) hintMoved.current = true
   const options = choices(health)
   const chosen = options.find((o) => o.value === picked) ?? options.find((o) => o.chain === health?.default_chain) ?? options[0]
 
@@ -117,7 +122,7 @@ function QuickTrace({ health }) {
           <input id="console-find" value={text} onChange={(e) => change(e.target.value)} spellCheck={false} autoComplete="off"
             placeholder={hint}
             aria-invalid={missed || undefined} aria-describedby={missed ? 'console-find-missed' : undefined} />
-          <TypedHint key={hint} text={hint} />
+          <TypedHint text={hint} done={hintMoved.current} />
         </span>
       </div>
       <label htmlFor="console-chain" className="visually-hidden">Chain and asset</label>
@@ -296,6 +301,7 @@ export default function Home() {
       <div className="console-ambient" aria-hidden="true"><i /></div>
       <div className="home-body">
         <div className="hero">
+          {(allReady || !reduced) && (
           <div className="hero-top console-rise" style={rise(0)}>
             {allReady && <p className="hero-status"><i aria-hidden="true" />{`All ${chains.length} chains ready to trace`}</p>}
             {!reduced && (
@@ -307,6 +313,7 @@ export default function Home() {
               </button>
             )}
           </div>
+          )}
           <h1 className="console-rise blur" style={rise(1)}>Follow a payment to the exchange that can freeze it</h1>
         </div>
         {locked ? <Showroom officers={lock === 'officer'} onUnlock={() => setUnlocked(true)} /> : (

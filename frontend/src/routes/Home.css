@@ -65,6 +65,9 @@
 }
 @keyframes console-type { from { opacity: 0; } }
 @keyframes console-caret { from { box-shadow: 1.5px 0 0 currentColor; } to { box-shadow: none; } }
+/* A hint swapped in later (the field crossing the phone width) is not typed again. */
+.console-home .hero-typed.typed span,
+.console-home .hero-typed.typed span:last-child { animation: none; }
 @keyframes console-blink { 0% { box-shadow: 1.5px 0 0 currentColor; } 50%, 100% { box-shadow: none; } }
 /* High contrast draws its own colours: the field's placeholder is shown as is. */
 @media (forced-colors: active) {
@@ -134,6 +137,10 @@ html[data-theme="dark"] .console-home { --console-glow: rgba(255, 255, 255, 0.04
 /* ---- On a phone a switch is a 44 px target ---- */
 @media (max-width: 720px) {
   .motion-toggle { min-height: 44px; padding: 0 14px; }
+  /* The edge light and the glow cost a phone a repaint and a re-blur of the
+     glass every frame, and hardly show at this size: both rest here. */
+  .console-home .console-ambient i,
+  .console-home .hero-card::before { animation: none; }
 }
 
 /* ---- Pause motion: the loops stop where they rest ---- */

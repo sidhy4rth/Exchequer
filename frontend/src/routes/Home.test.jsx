@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
@@ -542,6 +542,41 @@ describe('motion', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Follow a payment to the exchange that can freeze it' })).toBeInTheDocument()
     expect(screen.getByLabelText(CONSOLE_FIELD)).toBeInTheDocument()
     expect(await screen.findByText(/Nothing watched yet/)).toBeInTheDocument()
+  })
+
+  it('leaves no empty row above the headline under reduced motion while a chain is not ready', async () => {
+    vi.stubGlobal('matchMedia', reduceMotion)
+    renderHome({ chains: { ...health, chains: { ...health.chains, tron: { ...health.chains.tron, ready: false } } } })
+    await loaded()
+    expect(document.querySelector('.hero-top')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Follow a payment to the exchange that can freeze it' })).toBeInTheDocument()
+  })
+
+  it('types the hint in once: crossing the phone width swaps it in place, already written', async () => {
+    let narrow = false
+    const listeners = new Set()
+    vi.stubGlobal('matchMedia', (query) => ({
+      get matches() { return query === '(max-width: 720px)' && narrow },
+      addEventListener: (_, fn) => listeners.add(fn),
+      removeEventListener: (_, fn) => listeners.delete(fn),
+    }))
+    renderHome()
+    await loaded()
+    const typed = document.querySelector('.hero-typed')
+    expect(typed).not.toHaveClass('typed')
+    narrow = true
+    act(() => { for (const fn of [...listeners]) fn() })
+    expect(screen.getByLabelText(CONSOLE_FIELD)).toHaveAttribute('placeholder', CONSOLE_FIELD)
+    const after = document.querySelector('.hero-typed')
+    expect(after).toBe(typed)
+    expect(after).toHaveClass('typed')
+    expect(after.textContent).toBe(CONSOLE_FIELD)
+    expect(motionCss).toMatch(/\.hero-typed\.typed span,\s*\.console-home \.hero-typed\.typed span:last-child \{ animation: none; \}/)
+  })
+
+  it('rests the edge light and the glow on a phone', () => {
+    const phone = /@media \(max-width: 720px\) \{([\s\S]*?)\}\s*\}/.exec(motionCss)?.[1] ?? ''
+    expect(phone).toMatch(/\.console-home \.console-ambient i,\s*\.console-home \.hero-card::before \{ animation: none;/)
   })
 
   it('turns every animation it starts off under reduced motion, in CSS and under .still', () => {
