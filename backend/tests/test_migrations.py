@@ -5,6 +5,8 @@ Runs against throwaway SQLite files; CI runs the same upgrade on Postgres.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
@@ -328,3 +330,28 @@ def test_g5_audit_1_goes_down_and_up_again(engine):
     assert revision(engine) == head() and drift(engine) == []
     audit.record("case.report_export", case_id="c1", detail={"format": "pdf"})
     assert audit.verify() == {"ok": True, "rows": 1, "first_bad_seq": None}
+
+
+def test_a_store_a_later_build_migrated_still_opens_after_a_rollback(engine, caplog):
+    """Rolled back to this build, a store at a revision only a later build
+    knows still opens (migrations add, never take away) rather than leaving
+    every case unreachable; it is left at that revision, and the log says so."""
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"chain": "ethereum"})
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE alembic_version SET version_num = 'zz_a_later_build'"))
+    models.init_db()
+    assert revision(engine) == "zz_a_later_build"
+    assert models.get_case("kept") is not None
+    assert "zz_a_later_build" in caplog.text and "newer than this build" in caplog.text
+
+
+def test_the_rollback_note_names_the_line_that_marks_a_safe_target():
+    """The operations note tells a safe rollback target by the log line its
+    init_db carries, not by a date: a month cannot tell 011b176 from a build
+    with the fix, and an operator who trusted it would take every case offline."""
+    note = (config.BACKEND_DIR.parent / "docs" / "operations.md").read_text()
+    rollback = note[note.index("**Rolling back.**"):note.index("**Two heads**")]
+    marker = "newer than this build: opened as it is"
+    assert marker in Path(models.__file__).read_text()
+    assert marker in " ".join(rollback.split()) and "011b176" in rollback and "November" not in rollback

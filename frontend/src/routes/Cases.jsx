@@ -12,7 +12,9 @@ import { plain } from '../text'
 // loaded. Below them, the complaints that meet at one wallet
 // (GET /cases/correlate). Every figure is the backend's.
 
-const LIMIT = 50
+// The backend's most: a browser keeps up to 200 cases (MAX_CASES_PER_OWNER)
+// and sees the recorded demos too, so the search reaches its oldest case.
+const LIMIT = 500
 // Above the phone break the sidebar keeps 248 px, and the seven columns need
 // about 700 px beside it to fit with each wallet on two lines at most; below
 // this a tablet (744 to 834 px) shows the cases as cards, as a phone does.
@@ -172,6 +174,7 @@ export default function Cases() {
   const q = query.trim().toLowerCase()
   const shown = (cases ?? []).filter((c) => pressed.keeps(c) && matches(c, q))
   const narrowed = Boolean(cases?.length) && shown.length < cases.length
+  const cut = cases?.length >= LIMIT
   const List = cards ? CaseCards : CaseTable
 
   return (
@@ -206,8 +209,8 @@ export default function Cases() {
           </div>
           {shown.length > 0
             ? <div className="card glass cases-card"><List cases={shown} /></div>
-            : <p className="note">No case matches.</p>}
-          <p className="note">{cases.length >= LIMIT ? `The newest ${LIMIT} are listed. ` : ''}Only this browser sees your own cases. Opening one does not re-trace.</p>
+            : <p className="note">{cut ? `No case among the newest ${LIMIT} matches.` : 'No case matches.'}</p>}
+          <p className="note">{cut ? `The newest ${LIMIT} are listed, and the search covers only these. ` : ''}Only this browser sees your own cases. Opening one does not re-trace.</p>
         </>
       )}
 

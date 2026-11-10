@@ -191,6 +191,16 @@ Postgres.
   `alembic revision --autogenerate --rev-id 0002 -m "add x to y"`, read the
   generated file, and run `alembic upgrade head && alembic check`. Never edit
   a migration that has merged.
+- **Rolling back.** Only a build whose `init_db` (app/models.py) logs
+  "newer than this build: opened as it is" opens a store a later build
+  migrated, as it is (migrations only add). Any build without that line,
+  011b176 and the earlier g/ builds such as 263e9ee included, refuses a
+  revision it has never seen and runs without the case store: every case
+  answers 503. Before a rollback, check the target with
+  `git grep -c "newer than this build" <commit> -- backend/app/models.py`.
+  If it prints nothing, first run `alembic downgrade <the target's head>`
+  against the store (`alembic heads` in the target's checkout; sec7_cap_4
+  for 011b176).
 - **Two heads** (`alembic heads` prints two lines) means two branches each
   added a migration. The later one rebases, renumbers its `revision` and
   sets `down_revision` to the other. CI fails until there is one head.

@@ -430,10 +430,20 @@ def init_db() -> None:
     the same tables the same way. See migrations/versions/0001_baseline.py."""
     from alembic import command
     from alembic.config import Config
+    from alembic.migration import MigrationContext
+    from alembic.script import ScriptDirectory
 
     ensure_storage_dir()
     settings = Config(str(config.BACKEND_DIR / "alembic.ini"))
+    known = {rev.revision for rev in ScriptDirectory.from_config(settings).walk_revisions()}
     with _engine.begin() as conn:
+        # A store a later build migrated, after a rollback to this one: its
+        # migrations only add, so it still opens, rather than every case
+        # answering 503. Downgrade it before rolling back further than that.
+        at = MigrationContext.configure(conn).get_current_revision()
+        if at is not None and at not in known:
+            logger.warning("The case store is at revision %s, newer than this build: opened as it is", at)
+            return
         settings.attributes["connection"] = conn
         command.upgrade(settings, "head")
     if _engine.dialect.name == "sqlite":

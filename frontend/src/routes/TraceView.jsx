@@ -297,16 +297,6 @@ export default function TraceView() {
       .sort((a, b) => a.hop - b.hop || b.value_native - a.value_native)
   }, [result])
 
-  // Reveal in sequence once the data lands: the order the traversal found it.
-  useEffect(() => {
-    timers.current.forEach(clearTimeout)
-    timers.current = []
-    if (!hops.length) return undefined
-    const step = hops.length > 60 ? 6 : 20
-    for (let i = 1; i <= hops.length; i += 1) timers.current.push(setTimeout(() => setRevealed(i), i * step))
-    return () => timers.current.forEach(clearTimeout)
-  }, [hops])
-
   const address = routeAddress ?? result?.address ?? ''
   useCrumb(result ? middle(plain(address)) : null)
   const reverse = (result?.direction ?? requestedDirection) === 'incoming'
@@ -366,6 +356,21 @@ export default function TraceView() {
     const picked = hops.filter((h) => h.onPath || h.toKind === 'red' || h.swap || h.flags?.length)
     return picked.length ? picked : hops.slice(0, 12)
   }, [hops])
+  // Reveal the rows worth reading first in sequence once the data lands, in
+  // at most 20 steps: each step re-renders the whole case, so a dense case
+  // revealed a row at a time kept the page busy for a minute. The last step
+  // reveals everything, so Show all has nothing left to wait for.
+  useEffect(() => {
+    timers.current.forEach(clearTimeout)
+    timers.current = []
+    if (!notable.length) return undefined
+    const steps = Math.min(notable.length, 20)
+    for (let k = 1; k <= steps; k += 1) {
+      const upTo = k === steps ? Infinity : Math.ceil((k * notable.length) / steps)
+      timers.current.push(setTimeout(() => setRevealed(upTo), k * 30))
+    }
+    return () => timers.current.forEach(clearTimeout)
+  }, [notable])
   const visible = showAll ? hops : notable
   const shown = visible.slice(0, revealed)
 
@@ -681,7 +686,7 @@ export default function TraceView() {
                 <div className="head">
                   <span className="micro">{showAll ? 'All transfers' : 'Transfers that matter'} · {visible.length}</span>
                   {hops.length > notable.length && (
-                    <button className="quiet" onClick={() => { setShowAll((v) => !v); setRevealed(hops.length) }}>
+                    <button className="quiet" onClick={() => { timers.current.forEach(clearTimeout); setShowAll((v) => !v); setRevealed(Infinity) }}>
                       {showAll ? 'Show fewer' : `Show all ${hops.length}`}
                     </button>
                   )}

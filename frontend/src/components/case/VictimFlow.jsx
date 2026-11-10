@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { plain, plainSentence } from '../../text'
 import { bandLabel, bandOf } from '../confidence'
 import { instantService } from './letterChecks'
@@ -28,7 +28,8 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   const id = useId()
   const [rule, setRule] = useState('prorata')
   const flow = result.victim_flow
-  const lay = victimFlowLayout(flow, { graph: result.graph, height: H })
+  // Worked out once per case: a dense case's layout takes tens of ms.
+  const lay = useMemo(() => victimFlowLayout(flow, { graph: result.graph, height: H }), [flow, result.graph])
   if (!lay) return null
   const bucket = Object.fromEntries(flow.buckets.map((b) => [b.kind, b]))
   const amount = (kind) => bucket[kind]?.amount ?? 0

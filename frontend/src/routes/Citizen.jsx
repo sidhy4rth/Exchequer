@@ -16,7 +16,7 @@ export default function Citizen() {
         <div className="citizen-empty">
           <span className="micro">Citizen portal</span>
           <h1>This page is still to be built.</h1>
-          <p>The citizen's side of Exchequer is not open yet.</p>
+          <p>The citizen's side of Exchequer is not open yet. Until it is, the banner above switches back to the investigator view.</p>
         </div>
       </main>
     </div>

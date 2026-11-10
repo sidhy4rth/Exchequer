@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchCaseRequests, fetchLetter, fetchLetters, fetchRecordedLetter, fetchRecordedLetters, logRequest, signOffRequest, updateRequest } from '../../api'
 import { plain } from '../../text'
@@ -31,7 +31,7 @@ const FALLBACK = { 'exchange-freeze': 'exchange', 'instant-freeze': 'instant' } 
  * recorded example (`recorded` is its number) shows its drafts, but only a
  * stored case can log one as sent. A Flow card can ask for one letter
  * (`pick`, its `to`) or one more wallet to watch (`watch`). */
-export default function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
+function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   const caseId = result.case_id
   const source = caseId ? { list: () => fetchLetters(caseId), one: (to) => fetchLetter(caseId, to) }
     : recorded ? { list: () => fetchRecordedLetters(recorded), one: (to) => fetchRecordedLetter(recorded, to) } : null
@@ -264,3 +264,6 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
     </div>
   )
 }
+
+// Skips a render while its props are the same (see TimelineTab).
+export default memo(LettersTab)
