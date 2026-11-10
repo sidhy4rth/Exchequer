@@ -356,8 +356,15 @@ describe('the sidebar in motion', () => {
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function height() {
       return this.classList?.contains('shell-link') ? 40 : 0
     })
-    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function top() {
-      return this.classList?.contains('shell-link') ? order.indexOf(this.getAttribute('href')) * 44 : 0
+    // Measured from the nav's box (getBoundingClientRect), as a browser lays
+    // it out: the nav starts 100 px down the page. offsetTop is left lying
+    // (0, as Gecko reports it while each <li> is mid-slide) so a pill placed
+    // from it would sit on the wrong page.
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(() => 0)
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function box() {
+      const top = this.classList?.contains('shell-link') ? 100 + order.indexOf(this.getAttribute('href')) * 44
+        : this.classList?.contains('shell-nav') ? 100 : 0
+      return { top, bottom: top + 40, left: 0, right: 0, width: 0, height: 40, x: 0, y: top, toJSON() {} }
     })
   }
   /** The screen asks for reduced motion (or not). */
@@ -468,6 +475,14 @@ describe('the motion tokens', () => {
     expect(still).toMatch(/\.shell-sheen \{ display: none; \}/)
     const phone = /@media \(max-width: 720px\) \{([\s\S]*)\n\}/.exec(shellCss)[1]
     expect(phone).toMatch(/\.shell-side\.intro \{ animation: none; \}/)
+  })
+
+  it('slides the links, not their <li>s, and keeps the pill under the group headings', () => {
+    // A transformed <li> would become the link's offsetParent in some engines.
+    expect(shellCss).toMatch(/\.shell-side\.intro \.shell-nav \.shell-link \{\s*animation: shell-slide/)
+    expect(shellCss).not.toMatch(/\.shell-side\.intro \.shell-nav li \{/)
+    expect(shellCss).toMatch(/\.shell-nav \{[^}]*isolation: isolate/)
+    expect(shellCss).toMatch(/\.shell-pill \{[^}]*z-index: -1/)
   })
 
   it('marks the current page with a bar as well as a shade, and loops nothing', () => {

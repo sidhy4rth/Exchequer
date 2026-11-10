@@ -240,8 +240,19 @@ function useNavPill(nav, place) {
   const [pill, setPill] = useState(null)
   useLayoutEffect(() => {
     const measure = () => {
-      const on = nav.current?.querySelector('.shell-link[aria-current]')
-      const next = on && on.offsetHeight > 0 ? { top: on.offsetTop, height: on.offsetHeight, to: on.getAttribute('href') } : null
+      const box = nav.current
+      const on = box?.querySelector('.shell-link[aria-current]')
+      // Measured against the nav's own box, not offsetTop: during the opening
+      // each <li> may be mid-transform, and some engines (Gecko) then count
+      // it as the link's offsetParent, which would put the pill at 0. The
+      // opening only slides on X, so the Y difference is exact throughout.
+      const next = on && on.offsetHeight > 0
+        ? {
+          top: Math.round(on.getBoundingClientRect().top - box.getBoundingClientRect().top - box.clientTop + box.scrollTop),
+          height: on.offsetHeight,
+          to: on.getAttribute('href'),
+        }
+        : null
       setPill((was) => {
         if (!next) return null
         if (was && was.top === next.top && was.height === next.height && was.to === next.to) return was
@@ -305,7 +316,7 @@ export default function AppShell() {
   const still = useMedia(STILL)
   const intro = useIntro(still)
   const nav = useRef(null)
-  const pill = useNavPill(nav, `${pathname} ${out.admin}`)
+  const pill = useNavPill(nav, `${pathname} ${out.admin} ${intro}`)
   const [named, setNamed] = useState(null)
   const crumbs = trail(pathname)
   if (named && crumbs.length > 1) crumbs[crumbs.length - 1] = { label: named, mono: true }
