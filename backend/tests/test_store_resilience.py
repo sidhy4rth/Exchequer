@@ -10,6 +10,8 @@ Runs against a throwaway SQLite file and a stub pipeline: no network.
 """
 from __future__ import annotations
 
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -41,10 +43,12 @@ def client(tmp_path, monkeypatch):
 def _job(client, body):
     started = client.post("/trace/jobs", json=body, headers=OWNER)
     assert started.status_code == 202
-    for _ in range(200):
+    deadline = time.monotonic() + 10  # by the clock: a slow CI runner may need more than 200 quick reads
+    while time.monotonic() < deadline:
         job = client.get(f"/trace/jobs/{started.json()['job_id']}").json()
         if job["status"] != "running":
             return job
+        time.sleep(0.02)
     raise AssertionError("job never finished")
 
 

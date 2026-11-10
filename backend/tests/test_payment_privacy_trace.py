@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
@@ -347,10 +348,12 @@ def test_a_finished_payment_job_hides_the_anchored_reads_from_strangers(client, 
     monkeypatch.setattr(pipeline, "run_trace", lambda request: result)
     chain, asset, seed = SCENARIOS[name][:3]
     started = client.post("/trace/jobs", json={"address": seed, "chain": chain, "asset": asset}, headers=OWNER).json()
-    for _ in range(200):
+    deadline = time.monotonic() + 10  # by the clock: a slow CI runner may need more than 200 quick reads
+    while True:
         mine = client.get(f"/trace/jobs/{started['job_id']}", headers=OWNER)
-        if mine.json()["status"] != jobs.RUNNING:
+        if mine.json()["status"] != jobs.RUNNING or time.monotonic() > deadline:
             break
+        time.sleep(0.02)
     assert mine.json()["result"]["evidence"] == result["evidence"]  # the owner's browser gets the reads as made
     for headers in ({}, OTHER):
         assert leaks(client.get(f"/trace/jobs/{started['job_id']}", headers=headers).text, SCENARIOS[name]) == []
