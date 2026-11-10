@@ -277,7 +277,88 @@ def test_work_outside_a_request_is_the_systems(engine):
     assert rows(engine)[1]["actor"] == f"demo:{OWNER}"
 
 
+def _officer_client(monkeypatch):
+    """A client signed in as an officer of a unit (app/accounts.py)."""
+    from app import accounts, rate_limit
+    monkeypatch.setattr(accounts, "SCRYPT_N", 2**4)
+    for limiter in rate_limit.LOGIN_LIMITS:
+        limiter.reset()
+    unit = accounts.create_unit("Cyber Cell North")
+    officer, _ = accounts.create_officer("om@example.org", "Om Officer", unit.id, "officer",
+                                         password="officer-password-long-2")
+    client = TestClient(app, base_url="https://testserver")
+    signed = client.post("/auth/login", json={"email": "om@example.org", "password": "officer-password-long-2"},
+                         headers={accounts.CSRF_HEADER: "1"})
+    assert signed.status_code == 200
+    return client, officer, unit
+
+
+def test_a_signed_in_officer_is_recorded_by_officer_id_and_unit(engine, monkeypatch):
+    client, officer, unit = _officer_client(monkeypatch)
+    models.save_case("case-1", "0xseed", {"chain": "ethereum"}, owner_hash=OWNER)
+    assert client.get("/trace/case-1/graph", headers=HEADERS).status_code == 200
+    row = rows(engine)[-1]
+    assert (row["actor"], row["unit_id"], row["action"]) == (f"officer:{officer.id}", str(unit.id), "case.graph_export")
+    assert "om@example.org" not in json.dumps(rows(engine)) and "Om Officer" not in json.dumps(rows(engine))
+    # Signed out, the same browser is its demo identity again.
+    client.cookies.clear()
+    assert client.get("/trace/case-1/graph", headers=HEADERS).status_code == 200
+    assert rows(engine)[-1]["actor"] == f"demo:{OWNER}"
+
+
+def test_a_background_job_is_recorded_as_the_officer_who_started_it(engine):
+    with audit.acting_as(OWNER, officer=(7, 3)):
+        audit.record("case.trace", case_id="c1", detail={})
+    with audit.acting_as(OWNER, officer=(None, None)):  # a demo caller's job
+        audit.record("case.trace", case_id="c1", detail={})
+    assert [(r["actor"], r["unit_id"]) for r in rows(engine)] == [("officer:7", "3"), (f"demo:{OWNER}", "demo")]
+
+
+def test_an_officer_reads_their_own_events_as_their_own(engine, monkeypatch):
+    client, officer, _ = _officer_client(monkeypatch)
+    models.save_case("case-1", "0xseed", {"chain": "ethereum"}, owner_hash=OWNER)
+    assert client.get("/trace/case-1/graph", headers=HEADERS).status_code == 200
+    events = client.get("/audit?case_id=case-1", headers=HEADERS).json()["events"]
+    assert [e["actor"] for e in events] == [f"officer:{officer.id}"]
+    # Another browser, not signed in, sees that officer only as another browser.
+    stranger = TestClient(app)
+    assert stranger.get("/trace/case-1/graph", headers=HEADERS).status_code == 200
+    assert [e["actor"] for e in stranger.get("/audit?case_id=case-1", headers=HEADERS).json()["events"]] == \
+        ["another browser", f"demo:{OWNER}"]
+
+
 # -- the endpoints ---------------------------------------------------------------
+
+def test_the_whole_unit_reads_its_cases_audit_log(engine, monkeypatch):
+    """The unit reads its cases in full (ownership.reader), so a second
+    officer of the unit, on another browser, reads the case's audit log too,
+    and sees a fellow officer by id; an officer of another unit cannot."""
+    from app import accounts
+    client, first, unit = _officer_client(monkeypatch)
+    accounts.create_officer("oz@example.org", "Oz Officer", unit.id, "officer",
+                            password="officer-password-long-3")
+    other_unit = accounts.create_unit("Cyber Cell South")
+    accounts.create_officer("ox@example.org", "Ox Officer", other_unit.id, "officer",
+                            password="officer-password-long-4")
+    models.save_case("case-1", "0xseed", {"chain": "ethereum"}, owner_hash=OWNER,
+                     officer_id=first.id, unit_id=unit.id)
+    assert client.get("/trace/case-1/graph", headers=HEADERS).status_code == 200
+
+    def signed_in(email: str, password: str) -> TestClient:
+        other = TestClient(app, base_url="https://testserver")
+        assert other.post("/auth/login", json={"email": email, "password": password},
+                          headers={accounts.CSRF_HEADER: "1"}).status_code == 200
+        return other
+
+    elsewhere = {ownership.OWNER_HEADER: "c" * 32}
+    colleague = signed_in("oz@example.org", "officer-password-long-3")
+    answer = colleague.get("/audit?case_id=case-1", headers=elsewhere)
+    assert answer.status_code == 200
+    assert [e["actor"] for e in answer.json()["events"]] == [f"officer:{first.id}"]
+
+    outsider = signed_in("ox@example.org", "officer-password-long-4")
+    assert outsider.get("/audit?case_id=case-1", headers=elsewhere).status_code == 403
+
 
 def test_verify_answers_only_the_health_token(engine, monkeypatch):
     client = TestClient(app)
