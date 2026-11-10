@@ -1,11 +1,14 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { NETWORK_KEYS, amountText, checkPayment, istTime, refusal } from '../api.js'
+import { addToPack } from '../draft.js'
 import { checkHash } from '../hash.js'
 import { Icon, ReportSteps, usePageTitle } from '../parts.jsx'
 
 // C3: where the transaction hash is, in words and a sketch of the screens,
-// and a box that checks its shape on the device. Confirming the payment on
-// the blockchain comes later.
+// and a box that checks its shape on the device. C4: then, if the citizen
+// asks, that one payment read from the blockchain (GET /api/payment): who
+// paid whom, how much and when, and nothing after it.
 const GUIDES = {
   exchange: ['Exchange app', [
     ['Open the withdrawal history', 'Look under Assets, Wallet or History, then pick Withdrawals.'],
@@ -66,26 +69,86 @@ function Verdict(result) {
   </>)
 }
 
-function HashCheck() {
+/** C4: the citizen's own payment, as the blockchain has it, to confirm or not. */
+function Payment({ p, onNo }) {
+  const navigate = useNavigate()
+  // Focus moves here, so a screen reader reads what was found and the question.
+  const head = useRef(null)
+  useEffect(() => head.current?.focus(), [])
+  return (
+    <section className="found" aria-labelledby="found-title">
+      <h3 id="found-title" ref={head} tabIndex={-1} className="verdict ok"><Icon name="check" />Found on the blockchain</h3>
+      {!p.succeeded && <p className="err">This payment failed on the blockchain: the money did not move.</p>}
+      <p className="found-amount"><span className="amt">{amountText(p.amount)}</span> <span>{p.token}</span></p>
+      <p>{istTime(p.time)} · {p.network}</p>
+      <div className="ends">
+        <div className="end"><span className="end-name">From your wallet</span><code>{p.from}</code></div>
+        <div className="end to"><span className="end-name">The wallet you paid</span><code>{p.to}</code></div>
+      </div>
+      <div className="confirm" role="group" aria-labelledby="mine-title">
+        <p id="mine-title">Is this your payment?</p>
+        <button type="button" className="btn btn-go" onClick={() => { addToPack(p); navigate('/report/pack') }}>
+          Yes, it's mine</button>
+        <button type="button" className="btn btn-line" onClick={onNo}>No, look again</button>
+      </div>
+      <p className="hint">We only show your own payment. Where the money went next is for the investigating
+        officer, so the people who took it are not warned.</p>
+    </section>
+  )
+}
+
+function Lookup({ hash, networks, found, setFound, onNo }) {
+  const [network, setNetwork] = useState(NETWORK_KEYS[networks[0]])
+  const [alert, setAlert] = useState('')
+  const [busy, setBusy] = useState(false)
+  async function look(e) {
+    e.preventDefault()
+    setBusy(true)
+    setAlert('')
+    setFound(null)
+    const res = await checkPayment(network, hash)
+    setBusy(false)
+    if (res.ok && res.data.payment) setFound(res.data.payment)
+    else setAlert(refusal(res))
+  }
+  return (<>
+    <form className="lookup" onSubmit={look}>
+      <div className="field">
+        <label htmlFor="network">Network</label>
+        <select id="network" value={network} onChange={(e) => { setNetwork(e.target.value); setFound(null) }}>
+          {networks.map((name) => <option key={name} value={NETWORK_KEYS[name]}>{name}</option>)}
+        </select>
+      </div>
+      <button className="btn btn-go" type="submit" disabled={busy}>Check on the blockchain<Icon name="arrow" /></button>
+    </form>
+    {alert && <p className="err" role="alert">{alert}</p>}
+    {found && <Payment p={found} onNo={onNo} />}
+  </>)
+}
+
+function HashCheck({ found, setFound }) {
   const [text, setText] = useState('')
   const [result, setResult] = useState(null)
+  const box = useRef(null)
   return (
     <section className="card check" aria-labelledby="check-title">
       <h2 id="check-title">Check the hash</h2>
-      <form className="check-form" onSubmit={(e) => { e.preventDefault(); setResult(checkHash(text)) }}>
+      <form className="check-form" onSubmit={(e) => { e.preventDefault(); setFound(null); setResult(checkHash(text)) }}>
         <label htmlFor="hash">Paste it here</label>
-        <textarea id="hash" rows={3} value={text} spellCheck={false} autoCapitalize="off" autoComplete="off"
+        <textarea id="hash" ref={box} rows={3} value={text} spellCheck={false} autoCapitalize="off" autoComplete="off"
           autoCorrect="off" aria-describedby="hash-hint key-note check-note"
           aria-invalid={(result?.ok === false && result.reason !== 'empty') || undefined}
-          onChange={(e) => { setText(e.target.value); setResult(null) }} />
+          onChange={(e) => { setText(e.target.value); setResult(null); setFound(null) }} />
         <p className="hint" id="key-note">A transaction hash is safe to share. A private key or a seed phrase
           is not: never paste one here or give it to anyone, because whoever has it can take what is left in
           the wallet.</p>
         <button className="btn btn-go" type="submit">Check this hash<Icon name="arrow" /></button>
       </form>
       <div className="result" role="status">{result && <Verdict {...result} />}</div>
-      <p className="hint" id="check-note">This check runs on your device and sends nothing. It looks only at
-        the shape of the hash. Confirming the payment on the blockchain will be switched on later.</p>
+      {result?.ok && <Lookup key={result.hash} hash={result.hash} networks={result.networks} found={found}
+        setFound={setFound} onNo={() => { setFound(null); box.current?.focus() }} />}
+      <p className="hint" id="check-note">Checking the shape runs on your device and sends nothing. Check on the
+        blockchain sends only the hash and the network, to look up that one payment.</p>
       <details className="fallback">
         <summary>Can't find it? Search by amount and date</summary>
         <p><span className="tag">Coming later</span> You will give the wallet you paid, the amount and the date,
@@ -99,13 +162,14 @@ function HashCheck() {
 export default function Find() {
   usePageTitle('Find your payment')
   const [source, setSource] = useState('exchange')
+  const [found, setFound] = useState(null)
   return (
     <>
       <div className="page-head">
         <Link to="/" className="back" aria-label="Back to home"><Icon name="back" /></Link>
         <div><p className="eyebrow">Report</p><h1>Find your payment</h1></div>
       </div>
-      <ReportSteps at={0} />
+      <ReportSteps at={found ? 1 : 0} />
       <div className="find">
         <section className="guide-part" aria-labelledby="guide-title">
           <h2 id="guide-title">Where to find the transaction hash</h2>
@@ -131,7 +195,7 @@ export default function Find() {
           <p className="hint" id="hash-hint">It may be called Transaction ID, TxID or Hash: a long string of
             letters and numbers.</p>
         </section>
-        <HashCheck />
+        <HashCheck found={found} setFound={setFound} />
       </div>
       <Link className="more" to="/report/pack">Next: your complaint pack<Icon name="arrow" /></Link>
     </>

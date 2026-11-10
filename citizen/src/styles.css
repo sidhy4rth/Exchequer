@@ -16,6 +16,10 @@
   --go-soft: #8EEBC0;
   --risk: #FF8A80;
   --risk-line: #FF5A4E;
+  --go-tint: rgba(61, 214, 140, .08);
+  --go-edge: rgba(61, 214, 140, .4);
+  --risk-tint: rgba(255, 90, 78, .07);
+  --risk-edge: rgba(255, 90, 78, .32);
   --sans: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --serif: 'IBM Plex Serif', Georgia, serif;
@@ -90,7 +94,7 @@ main { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
   padding: 0 22px; border-radius: 999px; font-size: 14px;
 }
 .btn-call { min-height: 56px; background: #fff; color: var(--ground); font-weight: 600; font-size: 16px; }
-.btn-line { border: 1px solid var(--line-2); }
+.btn-line { border: 1px solid var(--line-2); background: none; }
 .btn-line:hover, .row:hover, .back:hover { background: var(--panel-2); }
 .btn-go {
   background: #0F0F0F; border: 1px solid rgba(61, 214, 140, .55); box-shadow: 0 0 0 4px rgba(61, 214, 140, .1);
@@ -253,6 +257,22 @@ textarea[aria-invalid="true"] { border-color: var(--risk-line); }
    Field borders are 3.8:1 on the card, placeholders 5.9:1; the paper's grey is 6.8:1. */
 .pack { display: grid; gap: 16px; }
 .pack-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.send-form { display: flex; flex-direction: column; gap: 12px; }
+.consent { display: flex; gap: 12px; align-items: flex-start; font-size: 13.5px; color: var(--text-2); cursor: pointer; }
+.consent input { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--go); }
+.code-name { font-size: 13px; color: var(--text-2); }
+.code {
+  padding: 14px 16px; border-radius: 16px; background: var(--go-tint); border: 1px solid var(--go-edge);
+  font-size: 26px; letter-spacing: .06em; overflow-wrap: anywhere;
+}
+.code-warn, .warn {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px;
+  background: var(--risk-tint); border: 1px solid var(--risk-edge); font-size: 13.5px;
+}
+.code-warn { font-weight: 500; }
+.warn svg { margin-top: 3px; color: var(--risk); }
+.sent-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.send h2:focus, .signin h1:focus, .case h1:focus, .found h3:focus { outline: none; }
 .fields { display: grid; gap: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .field label, .payment legend { padding: 0 4px; font-size: 13px; color: var(--text-2); }
@@ -305,6 +325,68 @@ textarea[aria-invalid="true"] { border-color: var(--risk-line); }
 .paper-note { margin-top: 8px; color: #555; }
 .paper-note:last-child { margin-top: 18px; padding-top: 10px; border-top: 1px solid #CCC; }
 
+/* C4 Your payment: found on the blockchain, inside the check card */
+.lookup { display: flex; flex-direction: column; gap: 10px; }
+.found {
+  display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 18px;
+  background: var(--panel-2); border: 1px solid var(--line); font-size: 13.5px; color: var(--text-2);
+}
+.found h3 { font-size: 16px; }
+.found-amount { color: var(--text); }
+.amt { font-size: 36px; font-weight: 300; line-height: 1.1; }
+.ends { display: grid; gap: 8px; }
+.end { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--panel); }
+.end code { color: var(--text); font-size: 12.5px; overflow-wrap: anywhere; }
+.end-name { font-size: 12px; }
+.end.to { background: var(--risk-tint); border: 1px solid var(--risk-edge); }
+.end.to .end-name { color: var(--risk); }
+.confirm { display: flex; flex-direction: column; gap: 8px; }
+.confirm p { color: var(--text); font-weight: 500; }
+
+/* C6 Sign in */
+.signin { display: grid; gap: 20px; }
+.signin-intro { display: flex; flex-direction: column; gap: 12px; }
+.signin-intro h1, .case-head h1 { font-size: 26px; font-weight: 300; line-height: 1.2; }
+.ticks { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.ticks li { display: flex; gap: 10px; align-items: center; }
+.ticks svg { color: var(--go); }
+.signin-form { gap: 14px; }
+
+/* C7 My case: steps, messages, what was given, the warning */
+.case { display: grid; gap: 16px; }
+.case-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.case-head .small { align-self: auto; min-height: 40px; }
+.mono { font-family: var(--mono); }
+.progress { gap: 14px; }
+.progress li { position: relative; display: grid; grid-template-columns: 24px 1fr; column-gap: 12px; }
+.dot {
+  grid-row: span 2; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%;
+  border: 1.5px solid var(--line-2);
+}
+.progress .done .dot { background: var(--go); border-color: var(--go); color: var(--ground); }
+.progress .now .dot { border-color: var(--go); }
+.step-title { font-size: 15px; }
+.step-sub { grid-column: 2; font-size: 12.5px; color: var(--text-3); }
+.progress li:not(.done):not(.now) .step-title { color: var(--text-3); }
+.messages h2, .gave h2 { font-size: 15px; font-weight: 400; }
+.thread { display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 88%; padding: 10px 14px; border-radius: 16px; background: var(--panel-2); }
+.msg.mine { align-self: flex-end; background: var(--go-tint); border: 1px solid var(--go-edge); }
+.msg-head { font-size: 12px; color: var(--text-3); }
+.msg.mine .msg-head { color: var(--text-2); }
+.msg-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.reply { display: flex; flex-direction: column; gap: 8px; }
+.reply label { font-size: 13px; color: var(--text-2); }
+.reply textarea { font: 16px/1.5 var(--sans); border-color: var(--line-2); }
+.reply .btn { align-self: flex-end; min-width: 120px; }
+.gave h3 { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.gave-pays { display: flex; flex-direction: column; gap: 10px; }
+.gave-pays li { display: flex; flex-direction: column; gap: 4px; }
+.gave-pays .hint { padding: 0; }
+.answers { margin: 0; display: grid; gap: 6px; font-size: 13.5px; }
+.answers dt { color: var(--text-3); font-size: 12.5px; }
+.answers dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 /* Laptop: the tabs move into the header as pills; pages use two columns. */
 @media (min-width: 900px) {
   html { scroll-padding-bottom: 0; }
@@ -340,14 +422,22 @@ textarea[aria-invalid="true"] { border-color: var(--risk-line); }
   .foot { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 32px; margin-top: 48px; }
   .safety { flex-direction: row; gap: 24px; }
   .pack {
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
     gap: 20px 32px; align-items: start;
   }
-  .pack-form { grid-row: span 3; }
+  .pack-form { grid-row: span 4; }
   .fields { grid-template-columns: 1fr 1fr; }
   .field.wide { grid-column: 1 / -1; }
   .field input, .field select, .field textarea { font-size: 14px; }
   .paper { display: block; }
+  .signin { grid-template-columns: 1fr minmax(0, 460px); gap: 64px; align-items: center; padding-top: 24px; }
+  .signin-intro h1, .case-head h1 { font-size: 40px; }
+  .case { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px 24px; align-items: start; }
+  .case-head, .progress { grid-column: 1 / -1; }
+  .messages { grid-row: span 2; }
+  .progress { flex-direction: row; }
+  .progress li { flex: 1; }
+  .ends { grid-template-columns: 1fr 1fr; }
 }
 
 /* Save as PDF: only the paper, black on white, on A4. */
@@ -355,6 +445,12 @@ textarea[aria-invalid="true"] { border-color: var(--risk-line); }
   @page { size: A4; margin: 16mm 14mm; }
   html, body { min-height: 0; background: #fff; color: #000; }
   .skip, .top, .tabs, .foot, main > :not(.pack), .pack > :not(.paper) { display: none; }
+  /* Only Print the code (Pack.jsx) prints the code, alone: never in the pack. */
+  .print-code .pack > .is-sent { display: block; }
+  .print-code .paper { display: none; }
+  .is-sent { margin-bottom: 8mm; color: #000; background: none; border: 1px solid #000; }
+  .is-sent .code { background: none; border-color: #000; }
+  .is-sent .sent-actions, .is-sent .status, .is-sent .more { display: none; }
   .shell, main { max-width: none; padding: 0; }
   .pack { display: block; }
   .paper { display: block; padding: 0; border-radius: 0; background: none; color: #000; font-size: 10.5pt; }

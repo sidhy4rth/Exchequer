@@ -25,11 +25,21 @@ describe('what the site loads and says', () => {
     expect(text).not.toMatch(/\bSIH\b|hackathon/i)
   })
 
-  it.each(shipped)('%s makes no network calls and sets no inline styles', (_, text) => {
-    // Nothing a citizen types leaves the device yet, and style-src 'self'
-    // would block style attributes.
-    expect(text).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
-    expect(text).not.toMatch(/\sstyle=/)
+  it.each(shipped.filter(([file]) => file !== './api.js'))('%s makes no network calls and sets no inline styles',
+    (_, text) => {
+      // Only api.js talks to the server, and style-src 'self' would block
+      // style attributes.
+      expect(text).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
+      expect(text).not.toMatch(/\sstyle=/)
+    })
+
+  it('talks to this site\'s own /api/ only, from one place', () => {
+    // default-src 'self': a call anywhere else would be blocked, and must
+    // not be written in the first place.
+    const api = sources['./api.js']
+    const calls = [...api.matchAll(/\bfetch\s*\(([^,)]*)/g)].map((m) => m[1].trim())
+    expect(calls).toEqual(['`/api/${path}`'])
+    expect(api).not.toMatch(/XMLHttpRequest|WebSocket|EventSource|sendBeacon|https?:/)
   })
 
   it.each(shipped)('%s uses no regex lookbehind, which iPhones before iOS 16.4 cannot parse', (_, text) => {
@@ -69,6 +79,16 @@ describe('styles.css', () => {
       .filter(([, selector]) => /\.result\b/.test(selector))
     expect(rules.length).toBeGreaterThan(0)
     for (const [rule] of rules) expect(rule).not.toMatch(/display:\s*none|visibility:\s*hidden/)
+  })
+
+  it('prints the tracking code only from its own button, and never with the pack', () => {
+    // Save as PDF makes the pack the citizen gives to others: the code, which
+    // opens My case, must not be in it.
+    const print = sources['./styles.css'].split('@media print')[1]
+    const hidden = print.match(/\n {2}([^{}]*)\{ display: none; \}/)[1]
+    expect(hidden).toMatch(/\.pack > :not\(\.paper\)(?=[,\s])/)
+    expect(print).toMatch(/\n {2}\.print-code \.pack > \.is-sent \{ display: block; \}/)
+    expect(print).toMatch(/\n {2}\.print-code \.paper[^{]*\{ display: none; \}/)
   })
 
   it('gives the paste box 16px text on a phone, so iPhone does not zoom in on it', () => {

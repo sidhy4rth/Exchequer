@@ -6,7 +6,8 @@ import Find from './pages/Find.jsx'
 import Learn from './pages/Learn.jsx'
 import Pack from './pages/Pack.jsx'
 import RightNow from './pages/RightNow.jsx'
-import { ComingSoon, NotFound } from './pages/Soon.jsx'
+import MyCase from './pages/MyCase.jsx'
+import { NotFound } from './pages/Soon.jsx'
 
 // One nav for both sizes: a bottom tab bar on a phone, pills in the header
 // on a laptop (styles.css). `also` keeps a tab lit on the pages under it.
@@ -73,11 +74,7 @@ export default function App() {
         <Route path="/right-now" element={<RightNow />} />
         <Route path="/report" element={<Find />} />
         <Route path="/report/pack" element={<Pack />} />
-        <Route path="/my-case" element={
-          <ComingSoon title="Track my complaint">
-            Here you will sign in with your NCRP number to follow your complaint and read messages
-            from your officer. This part is not switched on yet.
-          </ComingSoon>} />
+        <Route path="/my-case" element={<MyCase />} />
         <Route path="/learn" element={<Learn />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
