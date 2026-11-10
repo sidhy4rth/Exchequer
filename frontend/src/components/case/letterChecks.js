@@ -120,19 +120,38 @@ export function checks(text, result) {
   return out
 }
 
+/** The exchange a case's letters go to, its address and the asset that
+ * reached it: the trace's own, else the first follow-on's that reached one,
+ * as the backend picks it (request_letters._attribution). */
+export function exchangeOf(result) {
+  if (result.exchange) return { name: result.exchange, address: result.exchange_address ?? '', asset: result.asset ?? '' }
+  const follow = (result.follow_ons ?? []).find((f) => f.result?.exchange)
+  if (!follow) return { name: null, address: '', asset: result.asset ?? '' }
+  return { name: follow.result.exchange, address: follow.result.exchange_address ?? '', asset: follow.asset ?? follow.result.asset ?? result.asset ?? '' }
+}
+
+/** The asset a logged request is in: what reached the exchange, USDT for
+ * Tether (its letters are about USDT alone), else the trace's own. */
+export function assetOf(to, result) {
+  if (to.startsWith('tether')) return 'USDT'
+  if (to.startsWith('exchange')) return exchangeOf(result).asset
+  return result.asset ?? ''
+}
+
 /** Who a letter listed by GET /trace/{id}/letters goes to, as the requests log names them. */
 export function recipientOf(letter, result) {
   if (letter.to.startsWith('tether')) return 'Tether'
-  if (letter.to.startsWith('exchange')) return plain(result.exchange ?? 'the exchange')
+  if (letter.to.startsWith('exchange')) return plain(exchangeOf(result).name ?? 'the exchange')
   return plain(letter.title).replace(/^(urgent freeze )?request to /i, '')
 }
 
 /** The wallet a letter is about, for its row in the requests log: the one an
  * instant exchanger's letter names (it need not be the case's exchange), the
- * case's exchange wallet for an exchange letter, else none. */
+ * exchange's wallet for an exchange letter (exchangeOf: a follow-on's when the
+ * trace itself reached none), else none. */
 export function addressOf(letter, result) {
   if (letter.to.startsWith('instant')) return letter.address ?? ''
-  return letter.to.startsWith('exchange') ? (result.exchange_address ?? '') : ''
+  return letter.to.startsWith('exchange') ? exchangeOf(result).address : ''
 }
 
 /** The instant exchanger the letters go to, as request_letters._instant picks

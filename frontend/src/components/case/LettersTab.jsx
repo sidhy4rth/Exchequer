@@ -5,7 +5,7 @@ import { plain } from '../../text'
 import RequestsPanel from '../RequestsPanel'
 import WatchPanel from '../WatchPanel'
 import { ist } from './format'
-import { addressOf, blanks, checks, kindOf, lines, recipientOf } from './letterChecks'
+import { addressOf, assetOf, blanks, checks, kindOf, lines, recipientOf } from './letterChecks'
 import './Letters.css'
 
 const Tick = () => (
@@ -121,7 +121,7 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
       await logRequest({
         case_id: caseId, recipient: recipientOf(letter, result), kind: kindOf(to),
         address: addressOf(letter, result),
-        asset: result.asset ?? '', status: next,
+        asset: assetOf(to, result), status: next,
       })
     }
     return true

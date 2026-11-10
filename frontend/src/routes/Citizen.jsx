@@ -16,7 +16,7 @@ export default function Citizen() {
         <div className="citizen-empty">
           <span className="micro">Citizen portal</span>
           <h1>This page is still to be built.</h1>
-          <p>The citizen's side of Exchequer is coming soon.</p>
+          <p>The citizen's side of Exchequer is not open yet.</p>
         </div>
       </main>
     </div>

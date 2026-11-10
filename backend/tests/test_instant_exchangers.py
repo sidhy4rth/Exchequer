@@ -228,7 +228,9 @@ def test_the_information_letter_asks_for_the_order_the_payout_and_who_placed_it(
     text = draft("case-1", instant_case(), "instant")
     flat = " ".join(text.split())
     assert text.startswith("DRAFT") and NOT_VALID in text
-    assert "instant exchange" in flat and SWAP in text and TX1 in text and TX2 in text
+    assert "instant exchange" in flat and SWAP in text and TX1 in text
+    # Only what can carry the traced 1.75, as the urgent letter: the other order is someone else's.
+    assert TX2 not in text and "1 other transfer into it in this trace is not part of this request" in flat
     assert "about 1.750000" in flat  # the conservative estimate, never the gross 2.5
     assert re.search(r"\d IST.*\d UTC", text)
     for asked in ("order (exchange) ID", "payout address", "asset and amount paid out",

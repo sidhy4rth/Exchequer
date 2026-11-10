@@ -479,6 +479,18 @@ describe('the Letters tab of a recorded example', () => {
   })
 })
 
+describe('the Letters tab of a case that reached its exchange through a swap', () => {
+  it("logs the follow-on's exchange and address, not 'the exchange'", async () => {
+    const user = userEvent.setup()
+    const calls = api({ ...STORED, 'POST /requests': (body) => ({ status: 201, body: { request_id: 'r1', ...body, history: [] } }) })
+    open({ ...CASE, asset: 'ETH', exchange: null, exchange_address: null, follow_ons: [{ asset: 'USDT', result: { exchange: 'Binance', exchange_address: '0xde9' } }] })
+    await screen.findByText(/Binance — urgent/)
+    // The urgent letter is logged when its drafter asks for the second officer's sign-off.
+    await user.click(await within(await screen.findByRole('region', { name: 'Second officer' })).findByRole('button', { name: 'Ask for sign-off' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ recipient: 'Binance', address: '0xde9', asset: 'USDT' }))
+  })
+})
+
 describe('the Letters tab of a trace that was not saved', () => {
   it('drafts nothing and says why', async () => {
     const calls = api({})

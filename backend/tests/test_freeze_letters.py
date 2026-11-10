@@ -236,11 +236,14 @@ DEMO3_END, DEMO3_TX = "0xc6aafd1238694e165bf82ce50a5bff879e822177", (
     "0x6e60845518b36c8ccce7b3bac7cbc6a753dcb853ed4ce38e2e109d23b2999e31")
 
 
-def test_demo_3s_tether_freeze_names_where_the_usdt_went_not_the_empty_swapping_wallet():
-    text = draft("case-1", DEMOS[3], "tether-freeze")
-    assert DEMO3_END in text and DEMO3_TX in text
-    assert "0x35cf7c174375653e9f28d388aada53e6c34d58f7" not in text  # it sent all 5,215 USDT on
-    assert "2026-10-14" in text  # the hash's time
+def test_demo_3s_tether_freeze_names_neither_the_empty_swapping_wallet_nor_one_never_read():
+    # 0x35cf... sent all 5,215 USDT on to DEMO3_END, at the depth limit: the
+    # walk never read what that wallet sent, so the case cannot say the USDT
+    # stopped there, and there is no wallet left to ask Tether to freeze.
+    assert all(letter["to"] != "tether-freeze" for letter in available(DEMOS[3]))
+    with pytest.raises(LetterNotApplicable):
+        draft("case-1", DEMOS[3], "tether-freeze")
+    assert DEMO3_END in draft("case-1", DEMOS[3], "tether") and DEMO3_TX in draft("case-1", DEMOS[3], "tether")
 
 
 def node(address, out=0.0, into=0.0, **over):

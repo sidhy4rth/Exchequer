@@ -38,8 +38,9 @@ import textwrap
 from datetime import datetime, timezone
 from typing import Any
 
-from . import config, provenance
+from . import config, never_flag, provenance
 from .case_privacy import WITHHELD
+from .contracts.case_v2 import expanded_nodes
 from .display_text import one_line, short
 from .label_rules import INSTANT_EXCHANGER
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
@@ -131,10 +132,12 @@ def _swap_cap(result: dict[str, Any], found: dict[str, Any]) -> dict[str, Any] |
 def _letter_amount(result: dict[str, Any], found: dict[str, Any]) -> dict[str, Any] | None:
     """The one amount a letter states, or None when the case has none.
 
-    The smallest figure the tracing rules gave (estimates.conservative, which
-    the case view promises is what a letter states), else the pro-rata
-    estimate; never more than the victim reported paying (an intake trace) or
-    than the swap returned (a follow-on), whatever an older stored case holds.
+    The smallest figure the tracing rules gave (estimates.conservative), else
+    the pro-rata estimate. A rule that finds none asks for nothing, so when
+    the smallest is zero the letter states the smallest that finds any and
+    names the rules that found none (`none_by`), as the case view says. Never
+    more than the victim reported paying (an intake trace) or than the swap
+    returned (a follow-on), whatever an older stored case holds.
     """
     trace = found["trace"]
     prorata = trace.get("prorata") or {}
@@ -145,6 +148,15 @@ def _letter_amount(result: dict[str, Any], found: dict[str, Any]) -> dict[str, A
         amount, method = methods["conservative"], methods.get("conservative_method")
     if amount is None and prorata.get("status") == "estimated":
         amount, method = prorata["estimated"], "prorata"
+    none_by = None
+    if amount is not None and float(amount) <= 1e-9:
+        # A rule that finds none of the funds here asks for nothing: hold to
+        # the smallest rule that finds any, and say which found none.
+        figures = {**(methods.get("figures") or {}), **(trace.get("estimates") or {})}
+        rules = {k: float(v) for k, v in figures.items() if k in METHOD_NAME and isinstance(v, (int, float))}
+        some = sorted((v, k) for k, v in rules.items() if v > 1e-9)
+        none_by = [k for k in METHOD_NAME if rules.get(k, 1.0) <= 1e-9] or [method or "conservative"]
+        amount, method = some[0] if some else (None, None)
     if amount is None:
         return None
     swap = found["via_swap"]
@@ -157,7 +169,8 @@ def _letter_amount(result: dict[str, Any], found: dict[str, Any]) -> dict[str, A
         cap, basis = float(result["reported_amount"]), "reported_amount"
     rng = methods.get("range") if methods.get("range") and methods["range"]["low"] != methods["range"]["high"] else None
     return {"amount": min(float(amount), cap) if cap is not None else float(amount),
-            "method": method or "prorata", "range": rng, "cap": cap, "basis": basis, "swap_cap": swap_cap,
+            "method": method or "prorata", "range": None if none_by else rng, "none_by": none_by,
+            "cap": cap, "basis": basis, "swap_cap": swap_cap,
             "asset_in": (swap or {}).get("asset_in"), "intake": bool(result.get("reported_amount")),
             "arrived": prorata.get("arrived_total") if prorata.get("status") == "estimated" else None}
 
@@ -167,7 +180,7 @@ def _amount_lines(asset: str, stated: dict[str, Any]) -> list[str]:
     x = f"{stated['amount']:,.6f}"
     how = (f" (by {METHOD_NAME.get(stated['method'], stated['method'])}, the smallest of the tracing rules "
            f"applied; they give {stated['range']['low']:,.6f} to {stated['range']['high']:,.6f})"
-           if stated["range"] else "")
+           if stated["range"] else f" ({_none_by(stated)})" if stated["none_by"] else "")
     lead = "On a pro-rata estimate" if stated["method"] == "prorata" else "On an estimate"
     # Only an intake trace starts from the victim's own payments; anything
     # else starts from what the reported wallet sent.
@@ -206,6 +219,20 @@ def _amount_lines(asset: str, stated: dict[str, Any]) -> list[str]:
             "   This is an estimate; your own records of the deposits are authoritative."]
 
 
+def _none_by(stated: dict[str, Any]) -> str:
+    """Why the stated figure is not the smallest: the smallest found none."""
+    return (f"by {METHOD_NAME.get(stated['method'], stated['method'])}, the smallest estimate that finds any; "
+            f"{_found_none(stated['none_by'])}")
+
+
+def _found_none(keys: list[str]) -> str:
+    """'FIFO finds none', 'FIFO and LIBR find none'."""
+    names = [METHOD_NAME[k] for k in keys if k in METHOD_NAME]
+    if not names:
+        return "another tracing rule finds none"
+    return " and ".join(names) + (" finds none" if len(names) == 1 else " find none")
+
+
 def _all_traces(result: dict[str, Any]) -> list[dict[str, Any]]:
     return [result] + [f["result"] for f in result.get("follow_ons") or [] if f.get("result")]
 
@@ -216,7 +243,17 @@ def _frozen(result: dict[str, Any]) -> list[dict[str, Any]]:
     in the report's screening notes: the Tether letter says each listed
     address is on the USDT contract's blacklist."""
     return [m for t in _all_traces(result) if t.get("chain") in USDT_CHAINS
-            for m in t.get("risk_matches") or [] if is_tether_usdt_freeze(m)]
+            for m in t.get("risk_matches") or [] if is_tether_usdt_freeze(m) and _still_frozen(t["chain"], m)]
+
+
+def _still_frozen(chain: str, match: dict[str, Any]) -> bool:
+    """Whether the freeze list held today would still carry this match: a case
+    recorded before an address was excluded from it (a DEX router, 5 Nov) must
+    not have a letter call that address frozen."""
+    address = str(match.get("address") or "")
+    path = config.get_chain(chain).frozen_labels_path
+    excluded = ((_list_meta(path) if path else None) or {}).get("excluded") or {}
+    return address not in excluded and address.lower() not in excluded and not never_flag.reason(chain, address)
 
 
 def _usdt_traces(result: dict[str, Any]) -> list[dict[str, Any]]:
@@ -245,10 +282,13 @@ STOPS_MAX = 5  # a freeze request names a few wallets, never every end of a wide
 
 def _stops(trace: dict[str, Any], frozen: set[str]) -> tuple[list[dict[str, Any]], int]:
     """Where a trace that reached no exchange left the USDT: the unlabelled
-    wallets that received it and sent none on (the start, if it sent
-    nothing), the largest first, and how many more there were."""
-    graph = trace.get("graph") or {}
+    wallets the walk read that received it and sent none on (the start, if
+    it sent nothing), the largest first, and how many more there were."""
+    graph, read = trace.get("graph") or {}, expanded_nodes(trace)
+    # A wallet the walk never read past (the depth limit, the clock) sent
+    # nothing that the case knows of, not nothing: it is not where USDT stopped.
     ends = sorted((n for n in graph.get("nodes") or [] if n.get("address") and not n.get("total_out_native")
+                   and read.get(n["address"]) is True
                    and n["address"] not in frozen and not any(n.get(k) for k in NOT_A_HOLDER)),
                   key=lambda n: -(n.get("total_in_native") or 0))
     wallets = []
@@ -421,7 +461,8 @@ def _requests(kind: str, exchange: str, address: str) -> list[str]:
             f"   This request is not about the wallet {address} itself.",
             "",
             "5. You are further requested to preserve all records relating to those accounts and to",
-            f"   consider restricting withdrawals from them pending this investigation {BLANK}.",
+            "   consider restricting withdrawals from them pending this investigation",
+            f"   {BLANK} (officer to state the period, or the order it is sought under).",
         ]
     ask = (f"   you are requested to confirm whether {address} is a deposit address you issued and,\n"
            f"   if it is, to furnish in respect of the account(s) associated with it:"
@@ -437,7 +478,8 @@ def _requests(kind: str, exchange: str, address: str) -> list[str]:
         "   (e) any other deposit addresses issued to the same account.",
         "",
         "5. You are further requested to preserve all records relating to this account and to",
-        f"   consider restricting withdrawals from it pending this investigation {BLANK}.",
+        "   consider restricting withdrawals from it pending this investigation",
+        f"   {BLANK} (officer to state the period, or the order it is sought under).",
     ]
 
 
@@ -467,6 +509,19 @@ def _path_lines(trace: dict[str, Any], asset: str, *, list_all: bool = False, le
         if (step.get("tx_count") or 0) > len(shown):
             lines.append(f"         (first {len(shown)} of {step.get('tx_count')} transfers shown; "
                          "all are listed in the attached report)")
+    return lines
+
+
+def _sent_lines(trace: dict[str, Any]) -> list[str]:
+    """A trace with no route: what its start sent, and where, the first ten."""
+    sent = sorted((t for t in trace.get("transfers") or [] if t.get("from") == trace.get("address")),
+                  key=lambda t: t.get("timestamp") or 0)
+    lines = []
+    for t in sent[:10]:
+        lines += [f"  {t.get('value_native') or 0:,.6f} USDT to {t.get('to')}, {_when(t.get('timestamp'))}",
+                  f"         tx {t.get('hash')}"]
+    if len(sent) > 10:
+        lines.append(f"  (first 10 of {len(sent)} transfers shown; all are listed in the attached report)")
     return lines
 
 
@@ -595,8 +650,9 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
                   *(f"     {also_reached_line(o)}" for o in others),
                   "   [Officer to confirm that this exchange is the right addressee; a separate request",
                   "   may be needed to each.]"]
-    listed = _transfers_into(trace, address) if kind in COMPANY_WALLET_KINDS else []
-    path = _path_lines(trace, asset, list_all=kind in COMPANY_WALLET_KINDS, leave_out=address if listed else None)
+    listed, others, every = (_company_listed(trace, address, stated) if kind in COMPANY_WALLET_KINDS
+                             else ([], 0, []))
+    path = _path_lines(trace, asset, list_all=kind in COMPANY_WALLET_KINDS, leave_out=address if every else None)
     lines += ["", "3. The transfers, hop by hop:", f"  Reported address: {result.get('address')}"]
     if swap:
         # The reported address's own route to the swap, in the asset it sent;
@@ -607,11 +663,15 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
         lines.append(f"  Swapping wallet (follow-on start): {sender}"
                      + (" (the reported address itself)" if sender == result.get("address") else ""))
     lines += path
-    if listed:
-        lines += ["", f"   Every transfer into {address} in this trace:"]
+    if every:
+        # The same transfers the urgent freeze letter names, so the two
+        # letters never ask about different customers.
+        lines += ["", (f"   The transfers into {address} that can carry the traced funds:" if others
+                       else f"   Every transfer into {address} in this trace:")]
         for transfer in listed:
             lines += [f"     {transfer.get('value_native', 0):,.6f} {asset}, {_when(transfer.get('timestamp'))}",
                       f"       tx {transfer.get('hash')}"]
+        lines += _left_out(others) if listed else [f"     {BLANK} (officer to add)"]
     lines += ["", f"4. In exercise of the powers under {BLANK}",
               "   [e.g. Section 94 of the Bharatiya Nagarik Suraksha Sanhita, 2023, and/or the",
               "   provisions of the PMLA, 2002 applicable to this investigation — officer to confirm],",
@@ -652,8 +712,10 @@ def _tether_letter(case_id: str, result: dict[str, Any]) -> str:
         n += 1
     for trace in usdt:
         found = trace.get("exchange")
-        lines += [f"{n}. USDT on {trace.get('chain_name')} moved from {trace.get('address')} as follows:",
-                  *_path_lines(trace, "USDT")]
+        moved = _path_lines(trace, "USDT") or _sent_lines(trace)
+        lines += ([f"{n}. USDT on {trace.get('chain_name')} moved from {trace.get('address')} as follows:", *moved]
+                  if moved else [f"{n}. USDT on {trace.get('chain_name')} was traced from {trace.get('address')},",
+                                 "   but the trace did not follow it further."])
         if found:
             lines.append(f"   It reached {found} at {trace.get('exchange_address')}.")
         lines.append("")
@@ -729,8 +791,12 @@ def _freeze_amount(stated: dict[str, Any] | None, asset: str, reached: str | Non
         return [f"Amount    : {BLANK} (officer to state)"]
     hedge = "" if stated["intake"] else "; it can include other people's money"
     went = f" passed through these wallets and reached {reached}" if reached else ""
+    which, zero = "the smallest estimate the case holds", ""
+    if stated["none_by"]:  # the smallest found none: the smallest that finds any, and which found none
+        which = f"by {METHOD_NAME.get(stated['method'], stated['method'])}, the smallest estimate that finds any"
+        zero = f"; {_found_none(stated['none_by'])}"
     return [f"Amount    : about {stated['amount']:,.6f} {asset}{went}",
-            f"            (the smallest estimate the case holds, from the public records{hedge})"]
+            f"            ({which}, from the public records{zero}{hedge})"]
 
 
 def _hash_lines(pairs: list[tuple[str, int | None]], into: str, count: int = 0) -> list[str]:
@@ -764,6 +830,30 @@ def _carrying(trace: dict[str, Any], i: int, amount: float | None) -> list[dict[
     return listed
 
 
+def _index(trace: dict[str, Any], address: str) -> int:
+    return next((n for n, s in enumerate(trace.get("trace_path") or []) if s.get("address") == address), 0)
+
+
+def _company_listed(trace: dict[str, Any], address: str,
+                    stated: dict[str, Any] | None) -> tuple[list[dict[str, Any]], int, list[dict[str, Any]]]:
+    """For a wallet the exchange runs: the transfers into it that can carry
+    the traced funds, how many others the trace holds, and every one. Each
+    credits some customer, so both letters name only these: no one else's
+    money is held, and no one else's account is asked about."""
+    i, every = _index(trace, address), _transfers_into(trace, address)
+    listed = _carrying(trace, i, stated["amount"] if stated else None) if i else []
+    return listed, len(every) - len(listed) if listed else 0, every
+
+
+def _left_out(others: int) -> list[str]:
+    if not others:
+        return []
+    return textwrap.wrap(f"(the earliest that can carry the traced funds; {others} other transfer"
+                         f"{'s' if others != 1 else ''} into it in this trace "
+                         f"{'are' if others != 1 else 'is'} not part of this request)",
+                         width=95, initial_indent="     ", subsequent_indent="     ")
+
+
 SIGN_OFF = ["", BLANK, "(signature, name, rank, seal)"]
 
 
@@ -788,19 +878,12 @@ def _freeze_pairs(trace: dict[str, Any], address: str, kind: str,
                   stated: dict[str, Any] | None) -> tuple[list[tuple[str, int | None]], int, list[str]]:
     """The transactions a freeze letter lists into `address`, how many there
     were, and a note on those it leaves out."""
-    i = next((n for n, s in enumerate(trace.get("trace_path") or []) if s.get("address") == address), 0)
+    i = _index(trace, address)
     every, note = _transfers_into(trace, address), []
     if kind in COMPANY_WALLET_KINDS:
-        # Every transfer into a wallet the exchange runs credits some customer:
-        # only those that can carry the traced funds, so no one else's is held.
-        listed = _carrying(trace, i, stated["amount"] if stated else None) if i else []
+        listed, others, _ = _company_listed(trace, address, stated)
         pairs, count = [(t.get("hash"), t.get("timestamp")) for t in listed], len(listed)
-        others = len(every) - len(listed) if listed else 0
-        if others:
-            note = textwrap.wrap(f"(the earliest that can carry the traced funds; {others} other transfer"
-                                 f"{'s' if others != 1 else ''} into it in this trace "
-                                 f"{'are' if others != 1 else 'is'} not part of this request)",
-                                 width=95, initial_indent="     ", subsequent_indent="     ")
+        note = _left_out(others)
     elif every:
         pairs, count = [(t.get("hash"), t.get("timestamp")) for t in every], len(every)
     else:
@@ -856,7 +939,11 @@ def _instant_freeze(result: dict[str, Any], approval: dict[str, Any] | None = No
 def _instant_letter(case_id: str, result: dict[str, Any]) -> str:
     inst, address, stated, *_ = _instant_parts(result)
     service, asset, match = inst["service"], inst["asset"], inst["match"]
-    every = _transfers_into(inst["trace"], address)  # each one may have paid for an order
+    every, others = _transfers_into(inst["trace"], address), 0  # each one may have paid for an order
+    if inst["found"] and attribution_kind(inst["trace"]) in COMPANY_WALLET_KINDS:
+        # A wallet the service runs takes every customer's orders: name only the
+        # transfers the urgent letter names, so no one else's order is asked about.
+        every, others, _ = _company_listed(inst["trace"], address, stated)
     guess = match.get("wallet_type") == INFERRED_DEPOSIT
     lines = _header(
         case_id, result,
@@ -875,7 +962,7 @@ def _instant_letter(case_id: str, result: dict[str, Any]) -> str:
               "", f"3. The transfers into {address} in this trace (times in IST, with UTC):",
               *(line for t in every for line in (f"     {t.get('value_native', 0):,.6f} {asset}, "
                                                  f"{_when(t.get('timestamp'))}", f"       tx {t.get('hash')}")),
-              *([f"     {BLANK} (officer to add)"] if not every else []),
+              *(_left_out(others) if every else [f"     {BLANK} (officer to add)"]),
               "", f"4. In exercise of the powers under {BLANK}",
               "   [e.g. Section 94 of the Bharatiya Nagarik Suraksha Sanhita, 2023 — officer to confirm],",
               *INSTANT_REQUESTS, "",

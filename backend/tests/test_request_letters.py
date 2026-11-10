@@ -302,7 +302,9 @@ def test_a_tether_freeze_from_the_freeze_file_is_still_listed():
     assert "USDT frozen by Tether on 2026-09-11" in text and "USDC frozen by Circle" not in text
 
 
-@pytest.mark.parametrize("demo", [3, 11])
+# Demo 3's only freeze was the MetaMask Swap Router's, which the freeze list
+# now excludes (test_letter_audit): its letter no longer calls it frozen.
+@pytest.mark.parametrize("demo", [11])
 def test_an_older_case_still_gets_its_tether_letter(demo):
     import json
 

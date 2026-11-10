@@ -64,6 +64,17 @@ const dayIST = (seconds) => new Date(seconds * 1000).toLocaleDateString('en-GB',
 
 const METHOD_NAME = { fifo: 'FIFO', prorata: 'pro-rata', libr: 'LIBR' }
 
+// The figure a letter states (request_letters._letter_amount): the smallest,
+// or when that is zero, the smallest that finds any and the rules that found none.
+function statedFigure(methods, names) {
+  const figures = methods.figures
+  if (methods.conservative > 1e-9) return { amount: methods.conservative, by: METHOD_NAME[methods.conservative_method] }
+  const some = names.filter((m) => figures[m] > 1e-9).sort((a, b) => figures[a] - figures[b])
+  if (!some.length) return null
+  const none = names.filter((m) => figures[m] <= 1e-9).map((m) => METHOD_NAME[m])
+  return { amount: figures[some[0]], by: METHOD_NAME[some[0]], none: `${none.join(' and ')} find${none.length === 1 ? 's' : ''} none` }
+}
+
 // R4: how much reached the exchange by each tracing rule, and the figure a
 // letter states. Shown only when the trace computed more than one method.
 function MethodRange({ methods, unit }) {
@@ -71,13 +82,16 @@ function MethodRange({ methods, unit }) {
   const names = ['fifo', 'prorata', 'libr'].filter((m) => figures[m] != null)
   if (names.length < 2 || !methods.range) return null
   const same = methods.range.low === methods.range.high
+  const stated = statedFigure(methods, names)
   return (
     <div className="method-range">
       {same
         ? <>All {names.length} tracing rules agree: <span className="num">{num(methods.range.low)} {unit}</span></>
         : <>By tracing rule: <span className="num">{num(methods.range.low)} to {num(methods.range.high)} {unit}</span></>}
       {' · '}{names.map((m) => `${METHOD_NAME[m]} ${num(figures[m])}`).join(' · ')}
-      {!same && <span className="note"> · a letter states the smallest, {num(methods.conservative)} {unit} ({METHOD_NAME[methods.conservative_method]})</span>}
+      {!same && stated && (
+        <span className="note"> · a letter states the smallest{stated.none ? ' that finds any' : ''}, {num(stated.amount)} {unit} ({stated.by}){stated.none ? `; ${stated.none}` : ''}</span>
+      )}
     </div>
   )
 }
