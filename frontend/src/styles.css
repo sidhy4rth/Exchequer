@@ -373,6 +373,8 @@ details.more summary:hover { color: var(--ink); }
   padding: 10px 14px 10px 26px; border-top: 1px solid var(--rule); animation: rise 160ms var(--ease) both;
   position: relative;
 }
+/* Not inside a closed disclosure: there Chrome never finishes it. */
+details:not([open]) .feed .row { animation: none; }
 /* A timeline down the left: one line, one mark per transfer, so the feed reads
    as a sequence rather than a table. The line carries a slow downward flow so
    the hops read as money moving; on the attributed path it runs green and

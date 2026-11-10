@@ -11,6 +11,7 @@ import { useCrumb } from '../components/AppShell'
 import CaseTabs from '../components/case/CaseTabs'
 import Tracing from '../components/case/Tracing'
 import EvidenceTab from '../components/case/EvidenceTab'
+import TimelineTab from '../components/case/TimelineTab'
 import { middle, mmss, num, txUrl } from '../components/case/format'
 import { useCaseTab } from './caseTab'
 import './TraceView.css'
@@ -628,6 +629,7 @@ export default function TraceView() {
               ))}
             </>,
             timeline: <>
+              <TimelineTab result={result} unit={unit} />
               <div className="card">
                 <div className="head">
                   <span className="micro">{showAll ? 'All transfers' : 'Transfers that matter'} · {visible.length}</span>

@@ -89,6 +89,50 @@ async function amountsAligned(page, size) {
   if (head !== figure) throw new Error(`the Amount heading ends at x=${head}, its figures at x=${figure}`)
 }
 
+/** The Timeline tab's lane chart: the day axis spans the same box as the
+ * lanes, so a label sits on its grid line; every dot has a hit area of 24 px
+ * or more; a tap picks a dot in every lane, and from it Earlier and Later in
+ * the strip below reach the rest of the lane (dots on one day can still sit
+ * on top of each other). Taps go where elementFromPoint says a finger lands. */
+async function timelineReachable(page) {
+  const problems = await page.evaluate(async () => {
+    const out = []
+    const rest = window.scrollY
+    const axis = document.querySelector('.tl-axis').getBoundingClientRect()
+    for (const track of document.querySelectorAll('.tl-track')) {
+      const r = track.getBoundingClientRect()
+      if (Math.abs(axis.left - r.left) > 0.5 || Math.abs(axis.right - r.right) > 0.5) out.push(`the day axis runs x=${axis.left}–${axis.right}, a lane x=${r.left}–${r.right}`)
+    }
+    const at = [0.5, 0.1, 0.3, 0.7, 0.9]
+    for (const lane of document.querySelectorAll('.tl-lane')) {
+      lane.scrollIntoView({ block: 'center' })
+      const name = lane.getAttribute('aria-label')
+      let reached = 0
+      for (const d of lane.querySelectorAll('.tl-dot')) {
+        const r = d.getBoundingClientRect()
+        if (r.width < 24 || r.height < 24) out.push(`a dot in "${name}" is ${r.width}×${r.height} px`)
+        tap: for (const fx of at) for (const fy of at) {
+          const [x, y] = [r.left + fx * r.width, r.top + fy * r.height]
+          const el = document.elementFromPoint(x, y)
+          if (el?.closest('.tl-lane') !== lane) continue
+          el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: x, clientY: y }))
+          await new Promise((done) => setTimeout(done))
+          if (d.getAttribute('aria-selected') === 'true') { reached += 1; break tap }
+        }
+      }
+      if (!reached) out.push(`no dot in "${name}" can be tapped`)
+    }
+    for (const label of ['Earlier transfer in this lane', 'Later transfer in this lane']) {
+      const b = document.querySelector(`.tl-picked button[aria-label="${label}"]`)
+      const r = b?.getBoundingClientRect()
+      if (!r || r.width < 24 || r.height < 24) out.push(`"${label}" is missing or under 24 px`)
+    }
+    window.scrollTo(0, rest) // the contrast check reads the page at rest
+    return out
+  })
+  if (problems.length) throw new Error(problems.join('\n'))
+}
+
 const H1 = (name) => ['heading', { level: 1, name }]
 const CASE_TAB = (name) => ['tab', { name, selected: true }]
 
@@ -131,7 +175,9 @@ export const PAGES = [
   // phone a line of the finding sits at the foot of the screen at rest.
   { name: 'recorded case 11', path: '/demo/11', as: 'investigator', ready: ['heading', { level: 2 }], unmeasured: { desktop: 8, phone: 9 } },
   { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
-  { name: 'recorded case 11, Timeline', path: '/demo/11?tab=timeline', as: 'investigator', ready: CASE_TAB('Timeline'), unmeasured: { desktop: 11, phone: 21 } },
+  { name: 'recorded case 11, Timeline', path: '/demo/11?tab=timeline', as: 'investigator', ready: CASE_TAB('Timeline'), unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },
+  // The lane chart opens on its first 14 days; the whole trace is a press away.
+  { name: 'recorded case 11, Timeline, every day', path: '/demo/11?tab=timeline', as: 'investigator', click: ['button', { name: /^All \d+ days$/ }], ready: ['button', { name: /^All \d+ days$/, pressed: true }], unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },
   { name: 'recorded case 11, Entities', path: '/demo/11?tab=entities', as: 'investigator', ready: CASE_TAB('Entities'), unmeasured: { phone: 1 } },
   { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   { name: 'recorded case 11, Evidence, rechecked', path: '/demo/11?tab=evidence', as: 'investigator', stub: { url: '**/trace/demo-11/recheck', body: RECHECK }, ready: ['button', { name: 'Re-read from a second provider' }], unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
