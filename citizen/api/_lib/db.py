@@ -38,6 +38,34 @@ class DB:
         return self._run(sql, params).rowcount
 
 
+def ipv4_hostaddr(url: str, resolve: Any = None) -> dict:
+    """{"hostaddr": <IPv4>} for the URL's host, or {} (see the main app's
+    models.prefer_ipv4): a host that answers IPv6 first must not leave the
+    functions unable to connect. CITIZEN_DB_PREFER_IPV4=0 turns it off."""
+    import ipaddress
+    import socket
+    if os.environ.get("CITIZEN_DB_PREFER_IPV4", "1").strip() == "0":
+        return {}
+    from psycopg.conninfo import conninfo_to_dict
+    try:
+        info = conninfo_to_dict(url)
+    except Exception:  # noqa: BLE001 -- a URL the driver will reject anyway
+        return {}
+    host = str(info.get("host") or "")
+    if info.get("hostaddr") or not host or "," in host or host.startswith("/"):
+        return {}
+    try:
+        ipaddress.ip_address(host)
+        return {}
+    except ValueError:
+        pass
+    try:
+        infos = (resolve or socket.getaddrinfo)(host, int(info.get("port") or 5432), socket.AF_INET, socket.SOCK_STREAM)
+    except (OSError, ValueError):
+        return {}
+    return {"hostaddr": infos[0][4][0]} if infos else {}
+
+
 @contextmanager
 def connect() -> Iterator[DB]:
     """One transaction: committed when the block ends, rolled back on an error."""
@@ -48,7 +76,8 @@ def connect() -> Iterator[DB]:
         elif url.startswith(("postgres://", "postgresql://")):
             import psycopg
             # No prepared statements: Neon's pooled address runs PgBouncer.
-            conn, postgres = psycopg.connect(url, connect_timeout=5, prepare_threshold=None), True
+            conn, postgres = psycopg.connect(url, connect_timeout=5, prepare_threshold=None,
+                                              **ipv4_hostaddr(url)), True
         else:
             raise Unavailable("CITIZEN_DATABASE_URL is not set")
     except Unavailable:

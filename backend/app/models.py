@@ -10,8 +10,10 @@ to Postgres later is a connection-string change, not a rewrite.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
+import socket
 import sqlite3
 import threading
 import uuid
@@ -349,13 +351,48 @@ POSTGRES_ENGINE_OPTIONS: dict = dict(pool_pre_ping=True, pool_recycle=300, pool_
                                      pool_timeout=10, connect_args={"connect_timeout": 5})
 
 
-def _make_engine() -> Engine:
+def prefer_ipv4(cparams: dict, resolve: Callable = socket.getaddrinfo) -> None:
+    """Point the driver at the host's IPv4 address, keeping the name.
+
+    Render's free instances cannot open IPv6 connections, and Neon's hosts
+    resolve to IPv6 as well as IPv4: the driver tried IPv6 and the store
+    stayed unreachable ("Network is unreachable"). libpq connects to
+    `hostaddr` and still sends `host` for TLS and Neon's endpoint routing.
+    An IP address, a socket path, a host list, a host with no IPv4 address,
+    an explicit hostaddr, or EXCHEQUER_DB_PREFER_IPV4=0 is left as it is.
+    """
+    host = str(cparams.get("host") or "")
+    if not config.DB_PREFER_IPV4 or cparams.get("hostaddr") or not host or "," in host or host.startswith("/"):
+        return
+    try:
+        ipaddress.ip_address(host)
+        return
+    except ValueError:
+        pass
+    try:
+        infos = resolve(host, int(cparams.get("port") or 5432), socket.AF_INET, socket.SOCK_STREAM)
+    except (OSError, ValueError):
+        return
+    if infos:
+        cparams["hostaddr"] = infos[0][4][0]
+
+
+def _prefer_ipv4_on_connect(_dialect, _conn_rec, _cargs, cparams) -> None:
+    prefer_ipv4(cparams)  # resolved on every connect: Neon's addresses can change
+
+
+def postgres_engine(url: str) -> Engine:
     # hide_parameters: a database error's text then names the statement but
     # not its values -- an address, a case's JSON, an officer's note -- and
     # that text reaches the platform's logs.
+    made = create_engine(url, future=True, hide_parameters=True, **POSTGRES_ENGINE_OPTIONS)
+    event.listen(made, "do_connect", _prefer_ipv4_on_connect)
+    return made
+
+
+def _make_engine() -> Engine:
     if config.DATABASE_URL:
-        return create_engine(_postgres_url(config.DATABASE_URL), future=True, hide_parameters=True,
-                             **POSTGRES_ENGINE_OPTIONS)
+        return postgres_engine(_postgres_url(config.DATABASE_URL))
     return create_engine(
         f"sqlite:///{config.DB_PATH}", future=True, hide_parameters=True,
         # Wait up to 15 s for a lock rather than failing at once: background
