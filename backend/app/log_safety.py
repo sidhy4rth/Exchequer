@@ -48,6 +48,8 @@ _PATTERNS = (
     (re.compile(r"(?i)(tron-pro-api-key|x-exchequer-demo-code|x-exchequer-demo-pass)(['\"]?\s*[:=]\s*['\"]?)"
                 r"[^\s'\",}]+"), r"\1\2<redacted>"),
     (re.compile(r"(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]+"), r"\1<redacted>"),
+    # An officer's session cookie (accounts.py), wherever a header is printed.
+    (re.compile(r"(exchequer_session=)[^;\s\"']+"), r"\1<redacted>"),
 )
 # Complaint particulars: hashes first, so a hash is never read as an address.
 _MASKS = (
@@ -81,7 +83,7 @@ def _secret_values() -> tuple[str, ...]:
     characters are skipped: they would mask ordinary words."""
     values: list[str | None] = [getattr(config, name, None) for name in _PROVIDER_KEYS]
     values += [os.getenv(name) for name in _PROVIDER_KEYS]
-    values += [config.HEALTH_TOKEN, config.BACKUP_TOKEN, config.DEMO_CODE,
+    values += [config.HEALTH_TOKEN, config.BACKUP_TOKEN, config.BOOTSTRAP_TOKEN, config.DEMO_CODE,
                os.getenv("EXCHEQUER_SIGNING_KEY"), _db_password(config.DATABASE_URL)]
     found = {v.strip() for v in values if v and len(v.strip()) >= 8}
     return tuple(sorted(found, key=len, reverse=True))

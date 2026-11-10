@@ -33,7 +33,8 @@ HEARTBEAT_SECONDS = 15.0
 POLL_SECONDS = 0.3
 
 
-def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | None = None) -> None:
+def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | None = None,
+         officer: tuple[int | None, int | None] = (None, None)) -> None:
     token = progress.listen(lambda fields: jobs.store.report(job, fields))
     try:
         with api_budget.using(job.budget):
@@ -42,7 +43,7 @@ def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | No
         # From here the trace is done and its provider calls are spent: a
         # failure to store or audit it is a warning on the result, never "failed".
         try:
-            stored = cases.store_result(payload, request, owner, client=slot)
+            stored = cases.store_result(payload, request, owner, client=slot, officer=officer)
         except Exception:  # noqa: BLE001
             logger.exception("Trace job %s finished but could not be stored", job.id)
             stored = {**payload, "case_id": None}
@@ -75,7 +76,7 @@ def start_job(request: TraceRequest, http: Request, user: CurrentUser) -> JSONRe
         # The admit() token: this connection's share of the day's provider allowance.
         job = jobs.store.create(owner=owner, budget=api_budget.TraceBudget.for_request(
             request.time_budget_seconds, client=slot))
-        threading.Thread(target=_run, args=(job, request, owner, slot),
+        threading.Thread(target=_run, args=(job, request, owner, slot, (user.officer_id, user.unit_id)),
                          name=f"trace-job-{job.id[:8]}", daemon=True).start()
     except Exception:
         cases.release(slot)

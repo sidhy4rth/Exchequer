@@ -47,6 +47,14 @@ services:
       # read it in the dashboard. Public /health says only up or down.
       - key: EXCHEQUER_HEALTH_TOKEN
         generateValue: true
+      # Makes the first admin account (routes/accounts.py): read it in the
+      # dashboard and POST it to /auth/bootstrap with the admin's e-mail,
+      # name, password and unit. It works once: after an admin exists the
+      # route answers 404 whatever is sent. Officers then get accounts from
+      # that admin; nobody signs up. Without a session the site works as
+      # before, recorded demos included.
+      - key: EXCHEQUER_BOOTSTRAP_TOKEN
+        generateValue: true
       # Seals watch webhook URLs at rest (webhook_vault.py). Generated once;
       # changing it means every officer re-enters their webhook.
       - key: EXCHEQUER_WEBHOOK_KEY

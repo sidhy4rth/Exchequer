@@ -12,7 +12,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
-from .. import audit, case_privacy, models, rate_limit, report_cache, request_letters
+from .. import audit, case_privacy, models, ownership, rate_limit, report_cache, request_letters
 from ..auth import CurrentUser
 from ..report_pdf import render_pdf
 
@@ -30,7 +30,7 @@ def _case_or_404(case_id: str, user: CurrentUser) -> models.Case:
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
-    return case_privacy.case_for_reader(case, user.owner_hash)
+    return case_privacy.case_for_reader(case, ownership.reader(case, user))
 
 
 def _pdf(case: models.Case, http: Request) -> bytes:

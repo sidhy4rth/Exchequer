@@ -19,8 +19,8 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from sqlalchemy import (BigInteger, Boolean, Float, Index, Integer, String, Text, create_engine, event, func, or_,
-                        select, text)
+from sqlalchemy import (BigInteger, Boolean, Float, ForeignKey, Index, Integer, String, Text, create_engine, event,
+                        func, or_, select, text)
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
@@ -64,6 +64,10 @@ class Case(Base):
     # NULL until one runs. Never loaded with the case and read on its own
     # (recheck_for): the result above never changes, and a cached case stays right.
     recheck_json: Mapped[str | None] = mapped_column(Text, nullable=True, deferred=True)
+    # The signed-in officer who traced it and their unit at the time (R23);
+    # NULL for a demo-user trace. Officers of that unit read it as its owner.
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, index=True, nullable=True)
 
     # -- convenience -------------------------------------------------------
     @property
@@ -246,6 +250,45 @@ class Batch(Base):
     heartbeat_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
+class Unit(Base):
+    """A police unit (a cyber cell): its officers share its cases (accounts.py)."""
+
+    __tablename__ = "units"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+
+
+class Officer(Base):
+    """An account an admin made. Never deleted, only made inactive."""
+
+    __tablename__ = "officers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True)  # lowercased
+    name: Mapped[str] = mapped_column(String(120))
+    unit_id: Mapped[int] = mapped_column(ForeignKey("units.id"), index=True)
+    role: Mapped[str] = mapped_column(String(16))  # accounts.OFFICER_ROLES
+    password_hash: Mapped[str] = mapped_column(String(200))
+    must_change_password: Mapped[bool] = mapped_column(Boolean)
+    active: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[str] = mapped_column(String(32))
+    last_login_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+
+class OfficerSession(Base):
+    """A signed-in browser. Only the SHA-256 of its cookie's token is kept."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token_sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    officer_id: Mapped[int] = mapped_column(ForeignKey("officers.id"), index=True)
+    created_at: Mapped[str] = mapped_column(String(32))
+    last_seen_at: Mapped[str] = mapped_column(String(32))
+    expires_at: Mapped[str] = mapped_column(String(32))
+
+
 class ProviderMeter(Base):
     """What one provider credential spent in one UTC day (api_budget.UnitMeter),
     so a restart does not start the day's allowance again at zero."""
@@ -390,6 +433,8 @@ def save_case(
     result_json: str | None = None,
     client_hash: str | None = None,
     anonymous: bool | None = None,
+    officer_id: int | None = None,
+    unit_id: int | None = None,
 ) -> Case:
     """Persist one completed trace, and the deposit addresses it inferred.
     `result_json` is `result` already serialised, when the caller has it."""
@@ -407,6 +452,8 @@ def save_case(
         owner_hash=owner_hash,
         client_hash=client_hash,
         anonymous=anonymous,
+        officer_id=officer_id,
+        unit_id=unit_id,
         size_bytes=len(text),
         direction=direction[:16] if isinstance(direction, str) else None,
         summary_json=summary,
@@ -652,15 +699,18 @@ def list_cases(
 
 
 def list_summaries(limit: int = 50, owner_hash: str | None = None,
-                   public_addresses: frozenset[str] | None = None) -> list[tuple[str | None, dict[str, Any]]]:
+                   public_addresses: frozenset[str] | None = None,
+                   unit_id: int | None = None) -> list[tuple[str | None, dict[str, Any]]]:
     """The history list, newest first: (owner_hash, summary) of the owner's
-    own cases and of the demo cases, never reading a stored result (only a
+    own cases, their unit's (a signed-in officer) and the demo cases, never reading a stored result (only a
     row without a stored summary reads its own). A demo address stored more
     than once (seeded several times) is listed by its newest copy for each
     direction, chosen in SQL."""
     visible = []
     if owner_hash:
         visible.append(Case.owner_hash == owner_hash)
+    if unit_id is not None:
+        visible.append(Case.unit_id == unit_id)
     if public_addresses:
         later = Case.__table__.alias("later")
         newer_copy = select(later.c.id).where(

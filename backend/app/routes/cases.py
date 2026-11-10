@@ -19,7 +19,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from .. import api_budget, audit, case_privacy, config, models, ownership, pipeline, rate_limit
-from ..auth import CurrentUser
+from ..auth import CurrentUser, is_page_load
 from ..contracts import on_read
 from ..pipeline import TraceRequest
 
@@ -215,9 +215,10 @@ def _make_room(rows: int, nbytes: int) -> tuple[int, int]:
 
 
 def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | None,
-                 client: str | None = None) -> dict[str, Any]:
+                 client: str | None = None, officer: tuple[int | None, int | None] = (None, None)) -> dict[str, Any]:
     """Give a finished trace its case id and, unless asked not to, store it.
-    `client` is the admit() token of the connection that started it."""
+    `client` is the admit() token of the connection that started it;
+    `officer` the signed-in officer's (id, unit id) that traced it."""
     case_id = models.new_case_id()
     created_at = models.utc_now_iso()
     payload["case_id"] = case_id
@@ -295,7 +296,8 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
     try:
         models.save_case(case_id, payload["address"], payload, created_at=created_at,
                          owner_hash=owner or ownership.orphan_hash(), result_json=text,
-                         client_hash=connection, anonymous=owner is None)
+                         client_hash=connection, anonymous=owner is None,
+                         officer_id=officer[0], unit_id=officer[1])
     except Exception:  # storage must never lose a completed trace
         logger.exception("Failed to persist case %s", case_id)
         # No id for a case that does not exist: the page would open it, find
@@ -357,7 +359,7 @@ def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, 
             payload = pipeline.run_trace(request)
     finally:
         release(slot)
-    stored = store_result(payload, request, user.owner_hash, client=slot)
+    stored = store_result(payload, request, user.owner_hash, client=slot, officer=(user.officer_id, user.unit_id))
     record_trace_safely(stored)
     return stored
 
@@ -367,10 +369,7 @@ _INDEX_HTML = config.BACKEND_DIR.parent / "frontend" / "dist" / "index.html"
 
 def _is_page_load(http: Request) -> bool:
     """A browser opening the URL, as opposed to the app's own fetch()."""
-    mode = http.headers.get("sec-fetch-mode")
-    if mode:
-        return mode == "navigate"
-    return "text/html" in http.headers.get("accept", "")
+    return is_page_load(http)
 
 
 def app_page(http: Request) -> FileResponse | None:
@@ -392,7 +391,7 @@ def trace_intake() -> dict[str, Any]:
 
 
 @router.get("/trace/{case_id}", response_model=None)
-def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
+def get_trace(case_id: str, http: Request, user: CurrentUser) -> JSONResponse | FileResponse:
     """Retrieve a previously traced case.
 
     /trace/<address> is also the app's own URL for a trace in progress, and
@@ -405,7 +404,7 @@ def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
 
     Anyone holding the id gets the case -- it is the reference letters print
     -- but a complaint's particulars only reach the browser that traced it
-    (case_privacy.py). What a read adds to a case stored before it (a
+    and its officer's unit (case_privacy.py, ownership.reader). What a read adds to a case stored before it (a
     current victim flow, freeze dates, which wallets the walk read) is built
     from that same copy, so it names nothing the copy withholds."""
     if (page := app_page(http)) is not None:
@@ -413,5 +412,4 @@ def get_trace(case_id: str, http: Request) -> JSONResponse | FileResponse:
     case = models.get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail=f"No case with id {case_id}")
-    caller = ownership.owner_hash_from_headers(http.headers)
-    return JSONResponse(on_read(case_privacy.for_reader(case.result, case.owner_hash, caller)))
+    return JSONResponse(on_read(case_privacy.for_reader(case.result, case.owner_hash, ownership.reader(case, user))))

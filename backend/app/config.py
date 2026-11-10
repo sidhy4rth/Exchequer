@@ -720,6 +720,9 @@ BACKUPS_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_BACKUPS")
 BACKUP_KEEP: int = max(1, _int_env("EXCHEQUER_BACKUP_KEEP", 7))
 # Bearer token for GET /admin/backup. Unset = the endpoint does not exist.
 BACKUP_TOKEN: str = os.getenv("EXCHEQUER_BACKUP_TOKEN", "").strip()
+# Makes the first admin account (POST /auth/bootstrap) while no admin exists.
+# Unset, or once an admin exists, the route answers 404.
+BOOTSTRAP_TOKEN: str = os.getenv("EXCHEQUER_BOOTSTRAP_TOKEN", "").strip()
 
 
 # ===========================================================================

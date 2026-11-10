@@ -48,8 +48,8 @@ from .security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from .chain_data import provider_status
 from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
-from .routes import (admin, batches, casebook, cases, coverage, demos, evidence, jobs, payments, recheck,
-                     requests, verify, watches)
+from .routes import (accounts, admin, batches, casebook, cases, coverage, demos, evidence, jobs, payments,
+                     recheck, requests, verify, watches)
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -236,6 +236,7 @@ app.include_router(requests.router)
 app.include_router(batches.router)
 app.include_router(payments.router)
 app.include_router(admin.router)
+app.include_router(accounts.router)
 
 
 # ---------------------------------------------------------------------------

@@ -258,3 +258,20 @@ def test_g4_recheck_1_goes_down_and_up_again_keeping_the_cases(engine):
     assert revision(engine) == head() and drift(engine) == []
     assert models.get_case("kept") is not None
     assert models.recheck_for("kept") == (True, None)  # the downgrade dropped it; the case stays
+
+
+def test_g5_accounts_1_goes_down_and_up_again_keeping_the_cases(engine):
+    """Officer accounts (R23): units, officers, sessions, and a case's officer and unit."""
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"chain": "ethereum"}, officer_id=1, unit_id=2)
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g4_recheck_1")
+    tables = set(inspect(engine).get_table_names())
+    assert not tables & {"units", "officers", "sessions"}
+    assert not {"officer_id", "unit_id"} & {c["name"] for c in inspect(engine).get_columns("cases")}
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    case = models.get_case("kept")
+    assert case is not None and (case.officer_id, case.unit_id) == (None, None)

@@ -257,3 +257,68 @@ def charge(per_client: SlidingWindowLimiter, total: SlidingWindowLimiter, client
         per_client.refund(client, cost)
         return wait, "site"
     return None
+
+
+class GrowingDelay:
+    """Sign-in failures slow a key down; they never shut it out for good.
+
+    The first `free` failures cost nothing; after that each one makes the key
+    wait twice as long as the last, from `first` up to `cap` seconds. A key
+    with no failure for `forget` seconds starts again, and a success clears
+    it. A permanent lockout would let anyone lock an officer out by typing
+    their e-mail with a wrong password; this only slows the guessing."""
+
+    MAX_KEYS = 50_000
+
+    def __init__(self, free: int, first: float = 1.0, cap: float = 30.0, forget: float = 900.0) -> None:
+        self.free, self.first, self.cap, self.forget = free, first, cap, forget
+        self._seen: dict[str, tuple[int, float]] = {}  # key -> (failures, time of the last)
+        self._lock = threading.Lock()
+
+    def failures(self, key: str, now: float | None = None) -> int:
+        now = time.monotonic() if now is None else now
+        with self._lock:
+            count, last = self._seen.get(key, (0, now))
+            return count if now - last < self.forget else 0
+
+    def wait(self, key: str, now: float | None = None) -> float | None:
+        """Seconds `key` must still wait before its next try, or None."""
+        now = time.monotonic() if now is None else now
+        with self._lock:  # one read: a success may drop the key at any moment
+            count, last = self._seen.get(key, (0, now))
+        if now - last >= self.forget or count <= self.free:
+            return None
+        left = min(self.cap, self.first * 2 ** (count - self.free - 1)) - (now - last)
+        return left if left > 0 else None
+
+    def failed(self, key: str, now: float | None = None) -> None:
+        now = time.monotonic() if now is None else now
+        count = self.failures(key, now)
+        with self._lock:
+            self._seen.pop(key, None)
+            self._seen[key] = (count + 1, now)
+            while len(self._seen) > self.MAX_KEYS:  # oldest-seen first
+                del self._seen[next(iter(self._seen))]
+
+    def succeeded(self, key: str) -> None:
+        with self._lock:
+            self._seen.pop(key, None)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._seen.clear()
+
+
+# Sign-in (routes/accounts.py): attempts per client, and failures per e-mail
+# from one client (keyed "e-mail client"), in 15 minutes; a growing wait
+# after repeated failures by a client, by a client for one e-mail, and for
+# an e-mail from everywhere. The e-mail-wide wait holds only a client that
+# has failed for that e-mail itself, so nobody can shut an officer out by
+# failing for them: an officer who has not mistyped is never held by anyone
+# else, and one who has is held at most until that failure is forgotten.
+login_clients = SlidingWindowLimiter(30, 900)
+login_emails = SlidingWindowLimiter(10, 900)
+login_client_delay = GrowingDelay(free=5)
+login_pair_delay = GrowingDelay(free=3)
+login_email_delay = GrowingDelay(free=3)
+LOGIN_LIMITS = (login_clients, login_emails, login_client_delay, login_pair_delay, login_email_delay)
