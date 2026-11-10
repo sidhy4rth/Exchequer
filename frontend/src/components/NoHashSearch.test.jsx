@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import TraceForm from './TraceForm'
+import { forgetSignIn } from './CaseRefField'
 import { stubFetch } from '../test/setup'
 
 // New trace's "I don't have the payment hash" path: the officer searches the
@@ -27,10 +28,10 @@ function Landed() {
   return <p data-testid="landed">{pathname + search}</p>
 }
 
-async function renderForm({ payments = true, search = found(), onUnlock, check = { body: { pass: 'p1' } } } = {}) {
+async function renderForm({ payments = true, search = found(), onUnlock, check = { body: { pass: 'p1' } }, me } = {}) {
   const fetch = stubFetch({
     '/trace/intake': { body: { payments, lookup_limit: 1000 } }, '/demos/recorded': { body: { demos: [] } },
-    '/payments/search': search, '/access/check': check,
+    '/payments/search': search, '/access/check': check, ...(me ? { '/auth/me': { body: me } } : {}),
   })
   render(
     <MemoryRouter initialEntries={['/']}>
@@ -272,5 +273,36 @@ describe("New trace without the payment hash", () => {
     await user.type(screen.getByLabelText('Exact amount paid'), '12,5')
     expect(screen.getByLabelText('Exact amount paid')).toHaveAttribute('aria-invalid', 'true')
     expect(searches(fetch)).toEqual([])
+  })
+})
+
+// A signed-in officer searches under the case reference, as a trace runs
+// (backend case_refs.required): the search waits for it, then sends it.
+describe('the search by a signed-in officer', () => {
+  const OFFICER = { id: 2, name: 'Om Officer', role: 'officer', unit: { id: 1, name: 'Cyber Cell North' }, must_change_password: false }
+  beforeEach(() => forgetSignIn())
+  afterEach(() => forgetSignIn())
+
+  it('waits for the case reference, then sends it with the search', async () => {
+    const user = userEvent.setup()
+    const fetch = await renderForm({ me: OFFICER })
+    await screen.findByLabelText('Case reference')
+    await fillIn(user)
+    expect(screen.getByText('Enter the case reference above first.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Search the wallet' })).toBeDisabled()
+    expect(searches(fetch)).toHaveLength(0)
+    await user.type(screen.getByLabelText('Case reference'), 'FIR 0457/2026')
+    await user.click(screen.getByRole('button', { name: 'Search the wallet' }))
+    expect(await screen.findByRole('list', { name: 'Payments that match exactly' })).toBeInTheDocument()
+    expect(JSON.parse(searches(fetch)[0][1].body)).toMatchObject({ case_ref: 'FIR 0457/2026', wallet: WALLET })
+  })
+
+  it('sends no case reference for a demo user', async () => {
+    const user = userEvent.setup()
+    const fetch = await renderForm()
+    await fillIn(user)
+    await user.click(screen.getByRole('button', { name: 'Search the wallet' }))
+    await screen.findByRole('list', { name: 'Payments that match exactly' })
+    expect(JSON.parse(searches(fetch)[0][1].body)).not.toHaveProperty('case_ref')
   })
 })

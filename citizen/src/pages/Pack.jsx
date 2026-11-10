@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { NCRP_NEEDED, ncrpShape, refusal, sendComplaint } from '../api.js'
+import { readDraft, writeDraft } from '../draft.js'
 import { checkHash } from '../hash.js'
 import { Icon, OfficialLinks, ReportSteps, usePageTitle } from '../parts.jsx'
 
 // C5: a complaint pack the citizen fills in and saves as a PDF through the
-// browser's print screen (styles.css lays it out on A4). Nothing is sent: the
-// draft stays in this tab's sessionStorage, and screenshots are listed by
-// file name only, never read.
-const KEY = 'exchequer-citizen-pack'
+// browser's print screen (styles.css lays it out on A4). The draft stays in
+// this tab's sessionStorage, and screenshots are listed by file name only,
+// never read. Only if the citizen asks, and agrees, are its text details sent
+// to the cyber cell queue (POST /api/complaints): never the screenshots.
 const TEXT = ['name', 'mobile', 'started', 'app', 'link', 'contacts', 'upi', 'story']
 const PAY = ['hash', 'amount', 'token', 'network', 'paidAt', 'wallet']
 const OTHER = 'Another network'
@@ -16,20 +18,23 @@ const NETWORKS = ['Tron (TRC20)', 'Ethereum (ERC20)', 'BNB Smart Chain (BEP20)',
 let lastId = 0
 const strings = (keys, from) => Object.fromEntries(keys.map((k) => [k, typeof from?.[k] === 'string' ? from[k] : '']))
 const payment = (from) => ({ ...strings(PAY, from), id: ++lastId })
-const empty = () => ({ ...strings(TEXT), payments: [payment()], files: [] })
+// `sent` is the reference once this pack is sent (never the code), so it is not sent twice.
+const empty = () => ({ ...strings(TEXT), payments: [payment()], files: [], sent: '' })
 const emptyPayment = (p) => PAY.every((k) => !p[k].trim())
-const blank = (form) => !form.files.length && TEXT.every((k) => !form[k].trim()) && form.payments.every(emptyPayment)
+const blank = (form) => !form.sent && !form.files.length && TEXT.every((k) => !form[k].trim()) && form.payments.every(emptyPayment)
 
 function load() {
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(KEY))
-    if (Array.isArray(saved?.payments) && saved.payments.length) {
-      const files = Array.isArray(saved.files) ? saved.files.filter((name) => typeof name === 'string') : []
-      return { ...strings(TEXT, saved), payments: saved.payments.map(payment), files }
-    }
-  } catch { /* storage blocked, or a draft that does not read: start empty */ }
-  return empty()
+  // Storage blocked, or a draft that does not read: start empty.
+  const saved = readDraft()
+  if (!Array.isArray(saved?.payments) || !saved.payments.length) return empty()
+  const files = Array.isArray(saved.files) ? saved.files.filter((name) => typeof name === 'string') : []
+  return { ...strings(TEXT, saved), payments: saved.payments.map(payment), files,
+    sent: typeof saved.sent === 'string' ? saved.sent : '' }
 }
+
+/** What is sent: the text answers and the payments given, never the screenshots. */
+const toSend = (form, ncrp) => ({ ncrp, ...strings(TEXT, form),
+  payments: form.payments.filter((p) => !emptyPayment(p)).map((p) => strings(PAY, p)) })
 
 const ELSEWHERE = ' On another network, choose "Another network".'
 const HASH_PROBLEMS = {
@@ -132,6 +137,104 @@ function Paper({ form }) {
   )
 }
 
+/** Prints the sent card alone (styles.css): Save as PDF never prints the code. */
+const PRINT_CODE = 'print-code'
+const codePrinted = () => document.documentElement.classList.remove(PRINT_CODE)
+function printCode() {
+  document.documentElement.classList.add(PRINT_CODE)
+  window.addEventListener('afterprint', codePrinted, { once: true })
+  window.print()
+}
+
+/** Send to the cyber cell queue, then the tracking code, shown this once. */
+function Send({ form, ready, onSent }) {
+  const [ncrp, setNcrp] = useState('')
+  const [agreed, setAgreed] = useState(false)
+  const [alert, setAlert] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [sent, setSent] = useState(null)
+  const [copied, setCopied] = useState('')
+  const head = useRef(null)
+  useEffect(() => { if (sent) head.current?.focus() }, [sent])
+  useEffect(() => codePrinted, [])
+
+  async function send(e) {
+    e.preventDefault()
+    const wrong = !ncrpShape(ncrp) ? ['ncrp', NCRP_NEEDED]
+      : !agreed ? ['consent', 'Tick the box to agree to what is sent.'] : null
+    if (wrong) document.getElementById(wrong[0])?.focus()
+    const problem = wrong?.[1] || ready()
+    setAlert(problem)
+    if (problem) return
+    setBusy(true)
+    const res = await sendComplaint(toSend(form, ncrp.trim()))
+    setBusy(false)
+    if (!res.ok) return setAlert(refusal(res))
+    setSent(res.data)
+    onSent(String(res.data.reference ?? ''))
+  }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(sent.tracking_code)
+      setCopied('Copied.')
+    } catch { setCopied('This browser could not copy it: write it down.') }
+  }
+
+  if (sent) {
+    return (
+      <section className="card send is-sent" aria-labelledby="sent-title">
+        <h2 id="sent-title" ref={head} tabIndex={-1}>Sent. Write this code down now</h2>
+        <p>Your complaint is in the cyber cell queue, as <strong className="mono">{sent.reference}</strong>.</p>
+        <p className="code-name">Your tracking code</p>
+        <p className="code mono">{sent.tracking_code}</p>
+        <p className="code-warn">We cannot show it again, and we cannot send it to you. With your NCRP number, it
+          opens your complaint under My case.</p>
+        <div className="sent-actions">
+          <button type="button" className="btn btn-line" onClick={copy}>Copy the code</button>
+          <button type="button" className="btn btn-line" onClick={printCode}>Print the code</button>
+        </div>
+        <p className="status" role="status">{copied}</p>
+        <Link className="more" to="/my-case">Open My case<Icon name="arrow" /></Link>
+        <p className="warn"><Icon name="ban" />Never share this code with anyone who calls you, even someone who says
+          they are police.</p>
+      </section>)
+  }
+  if (form.sent) {
+    return (
+      <section className="card send" aria-labelledby="send-title">
+        <h2 id="send-title">Sent to the cyber cell queue</h2>
+        <p>This pack is in the queue as <strong className="mono">{form.sent}</strong>. Follow it under My case,
+          with your NCRP number and tracking code.</p>
+        <Link className="more" to="/my-case">Open My case<Icon name="arrow" /></Link>
+        <p className="hint">To send a different complaint, clear this form first.</p>
+      </section>)
+  }
+  return (
+    <section className="card send" aria-labelledby="send-title">
+      <h2 id="send-title">Send to the cyber cell queue</h2>
+      <p className="hint">Already reported on 1930 or cybercrime.gov.in? Send this pack here too, so a cyber cell
+        officer can read it and write back to you under My case.</p>
+      <form className="send-form" onSubmit={send} noValidate>
+        <div className="field">
+          <label htmlFor="ncrp">NCRP acknowledgement number</label>
+          <input id="ncrp" className="mono" value={ncrp} onChange={(e) => setNcrp(e.target.value)} autoComplete="off"
+            autoCapitalize="characters" spellCheck={false} aria-describedby="ncrp-hint" />
+          <p className="hint" id="ncrp-hint">The number you got from 1930 or cybercrime.gov.in. You sign in with it.</p>
+        </div>
+        <label className="consent">
+          <input id="consent" type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+          <span>Send the text details in this pack, your answers and payments, to the cyber cell queue. Your
+            screenshots are not sent: they stay on this device.</span>
+        </label>
+        {alert && <p className="err" role="alert">{alert}</p>}
+        <button className="btn btn-go" type="submit" disabled={busy}>Send to the cyber cell queue<Icon name="arrow" />
+        </button>
+      </form>
+      <p className="hint">Only officers who review complaints read it. Nothing here is public.</p>
+    </section>
+  )
+}
+
 export default function Pack() {
   usePageTitle('Your complaint pack')
   const [form, setForm] = useState(load)
@@ -140,12 +243,7 @@ export default function Pack() {
   const focusNext = useRef(null)
   const found = tried ? problems(form) : {}
 
-  useEffect(() => {
-    try {
-      if (blank(form)) sessionStorage.removeItem(KEY)
-      else sessionStorage.setItem(KEY, JSON.stringify(form))
-    } catch { /* storage blocked: the pack still works, it is just not kept */ }
-  }, [form])
+  useEffect(() => { writeDraft(blank(form) ? null : form) }, [form])
   useEffect(() => {
     if (focusNext.current) document.getElementById(focusNext.current)?.focus()
     focusNext.current = null
@@ -175,17 +273,21 @@ export default function Pack() {
     focusNext.current = 'shots'
     change((f) => ({ ...f, files: f.files.filter((n) => n !== name) }))
   }
-  function save() {
+  /** '' when nothing is marked; otherwise what to check, with focus on the first. */
+  function ready() {
     const wrong = Object.keys(problems(form))
     setTried(true)
-    if (!wrong.length) {
-      setNote('')
-      window.print()
-      return
-    }
-    setNote(wrong.length === 1 ? 'Check the answer marked in red first.'
-      : `Check the ${wrong.length} answers marked in red first.`)
+    if (!wrong.length) return ''
     document.getElementById(wrong[0])?.focus()
+    return wrong.length === 1 ? 'Check the answer marked in red first.'
+      : `Check the ${wrong.length} answers marked in red first.`
+  }
+  function save() {
+    const wrong = ready()
+    setNote(wrong)
+    if (wrong) return
+    codePrinted()
+    window.print()
   }
   function clear() {
     if (!window.confirm('Clear everything in this form?')) return
@@ -287,10 +389,11 @@ export default function Pack() {
           <p className="hint">Your print screen opens: choose Save as PDF (on an iPhone, tap Share, then Save to
             Files). If nothing opens, open this page in Chrome or Safari.</p>
           <p className="status" role="status">{note}</p>
-          <p className="hint">Nothing you type here is sent anywhere. It is kept only in this browser tab. On a
-            shared device, press Clear this form when you are done.</p>
+          <p className="hint">Nothing you type here is sent unless you choose Send to the cyber cell queue. It is
+            kept only in this browser tab. On a shared device, press Clear this form when you are done.</p>
           <button type="button" className="btn btn-line" onClick={clear}>Clear this form</button>
         </div>
+        <Send form={form} ready={ready} onSent={(ref) => change((f) => ({ ...f, sent: ref }))} />
         <section className="card pack-next" aria-labelledby="next-title">
           <h2 id="next-title">Then report it</h2>
           <ol className="next-steps" role="list">

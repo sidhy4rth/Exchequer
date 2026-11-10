@@ -61,7 +61,7 @@ export function OfficialLinks() {
 }
 
 // The three report steps; `at` is the current one. Confirming the payment
-// needs the blockchain lookup, which is not switched on yet.
+// (C4) is reached from the check on Find your payment, so it has no link.
 const STEPS = [['Find your payment', '/report'], ['Confirm it'], ['Complaint pack', '/report/pack']]
 
 export function ReportSteps({ at }) {
@@ -70,7 +70,7 @@ export function ReportSteps({ at }) {
       {STEPS.map(([name, to], i) => {
         const step = (<>
           <span className="num" aria-hidden="true">{i + 1}</span>
-          <span className="step-name">{name}{!to && <span className="later"> · coming later</span>}</span>
+          <span className="step-name">{name}</span>
         </>)
         return (
           <li key={name} className={i === at ? 'is-on' : undefined} aria-current={i === at ? 'step' : undefined}>

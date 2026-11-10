@@ -2,15 +2,16 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import axe from 'axe-core'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App.jsx'
+import { OFFLINE, fakeServer } from './test/server.js'
 
 const PAGES = {
   '/': 'Lost money? The first hours matter most.',
   '/right-now': 'Right now',
   '/report': 'Find your payment',
   '/report/pack': 'Your complaint pack',
-  '/my-case': 'Track my complaint',
+  '/my-case': 'Follow your complaint',
   '/learn': 'Know the scams',
   '/no-such-page': 'Page not found',
 }
@@ -19,9 +20,20 @@ function at(path) {
   return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
 }
 
+// My case asks the server whether there is a session; here there is none.
+beforeEach(() => { fakeServer({ 'GET /api/my-case': [401, { error: 'Please sign in again.' }] }) })
+afterEach(() => vi.unstubAllGlobals())
+
 describe.each(Object.entries(PAGES))('%s', (path, title) => {
-  it('renders its page in the landmarks, with one h1 and no skipped levels', () => {
-    at(path)
+  // Each check runs on the page as shown, once its h1 is there.
+  async function shown() {
+    const view = at(path)
+    await screen.findByRole('heading', { level: 1, name: new RegExp(title.replace('?', '\\?')) })
+    return view
+  }
+
+  it('renders its page in the landmarks, with one h1 and no skipped levels', async () => {
+    await shown()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(title)
     expect(document.title).toContain('Exchequer')
     expect(screen.getByRole('banner')).toBeInTheDocument()
@@ -32,20 +44,20 @@ describe.each(Object.entries(PAGES))('%s', (path, title) => {
     levels.forEach((level, i) => expect(level - (levels[i - 1] ?? 0)).toBeLessThanOrEqual(1))
   })
 
-  it('shows both safety lines and says it is not an official site', () => {
-    at(path)
+  it('shows both safety lines and says it is not an official site', async () => {
+    await shown()
     expect(screen.getByText('Police never charge a fee to recover money.')).toBeVisible()
     expect(screen.getByText('We never ask for your seed phrase or private key.')).toBeVisible()
     expect(screen.getByRole('contentinfo')).toHaveTextContent(/not a government or police site/i)
   })
 
-  it('marks every list as a list, which Safari forgets when list-style is none', () => {
-    const { container } = at(path)
+  it('marks every list as a list, which Safari forgets when list-style is none', async () => {
+    const { container } = await shown()
     for (const list of container.querySelectorAll('ul, ol')) expect(list).toHaveAttribute('role', 'list')
   })
 
-  it('links out only to the official portal, safely, and calls only 1930', () => {
-    at(path)
+  it('links out only to the official portal, safely, and calls only 1930', async () => {
+    await shown()
     for (const link of screen.getAllByRole('link')) {
       const href = link.getAttribute('href')
       if (href.startsWith('tel:')) expect(href).toBe('tel:1930')
@@ -60,7 +72,7 @@ describe.each(Object.entries(PAGES))('%s', (path, title) => {
   })
 
   it('passes the axe structural rules (contrast is checked by hand)', async () => {
-    const { container } = at(path)
+    const { container } = await shown()
     const result = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })
     expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(' ')}`)).toEqual([])
   })
@@ -105,26 +117,16 @@ describe('right now', () => {
   })
 })
 
-describe('coming soon pages', () => {
-  it('/my-case says it is not switched on and where to report meanwhile', () => {
-    at('/my-case')
-    const main = within(screen.getByRole('main'))
-    expect(main.getByText(/not switched on yet/)).toBeInTheDocument()
-    expect(main.getByRole('link', { name: /Call 1930/ })).toHaveAttribute('href', 'tel:1930')
-    expect(main.getByRole('link', { name: /cybercrime\.gov\.in/ })).toHaveAttribute('href', 'https://cybercrime.gov.in')
-  })
-})
-
 describe('navigation', () => {
   it('moves between the tabs and marks the current one', async () => {
     const user = userEvent.setup()
     at('/')
     const nav = within(screen.getByRole('navigation', { name: 'Main' }))
     expect(nav.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
-    for (const [tab, title] of [['Report', 'Find your payment'], ['My case', 'Track my complaint'],
+    for (const [tab, title] of [['Report', 'Find your payment'], ['My case', 'Follow your complaint'],
       ['Learn', 'Know the scams'], ['Home', 'Lost money?']]) {
       await user.click(nav.getByRole('link', { name: tab }))
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(title)
+      expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(title)
       expect(nav.getByRole('link', { name: tab })).toHaveAttribute('aria-current', 'page')
       expect(screen.getByRole('main')).toHaveFocus()
     }
@@ -191,15 +193,15 @@ describe('find your payment', () => {
     return screen.getByRole('status')
   }
 
-  it('is step 1 of 3, with the complaint pack a link and confirming still to come', () => {
+  it('is step 1 of 3, with the complaint pack a link and confirming reached by the check', () => {
     at('/report')
     const steps = within(screen.getByRole('list', { name: 'Report steps' })).getAllByRole('listitem')
     expect(steps).toHaveLength(3)
     expect(steps[0]).toHaveAttribute('aria-current', 'step')
     expect(steps[0]).toHaveTextContent('Find your payment')
-    expect(steps[1]).toHaveTextContent(/Confirm it.*coming later/)
+    expect(steps[1]).toHaveTextContent('Confirm it')
     expect(within(steps[2]).getByRole('link', { name: /Complaint pack/ })).toHaveAttribute('href', '/report/pack')
-    expect(steps[2]).not.toHaveTextContent(/coming later/)
+    expect(screen.getByRole('main')).not.toHaveTextContent(/coming later/)
   })
 
   it('shows where to find the hash in each kind of app, naming none', async () => {
@@ -298,18 +300,16 @@ describe('find your payment', () => {
     expect(bitcoin).toHaveTextContent(/A hash from another network, such as Bitcoin, can look the same\./)
   })
 
-  it('says it sends nothing, and that confirming the payment and searching by amount come later', async () => {
+  it('says what the shape check and the blockchain check each send, and that searching by amount comes later', async () => {
     const user = userEvent.setup()
     at('/report')
     const main = screen.getByRole('main')
-    expect(main).toHaveTextContent(/runs on your device and sends nothing/)
-    expect(main).toHaveTextContent(
-      'Confirming the payment on the blockchain will be switched on later.')
-    expect(main).not.toHaveTextContent(/later, with the complaint pack/)
+    expect(main).toHaveTextContent(/Checking the shape runs on your device and sends nothing/)
+    expect(main).toHaveTextContent(/Check on the blockchain sends only the hash and the network/)
     const fallback = screen.getByText(/Search by amount and date/).closest('details')
     await user.click(screen.getByText(/Search by amount and date/))
     expect(fallback).toHaveAttribute('open')
-    expect(fallback).toHaveTextContent(/coming later.*wallet you paid.*amount.*date/is)
+    expect(fallback).toHaveTextContent(/Coming later.*wallet you paid.*amount.*date/is)
   })
 
   it('passes the axe structural rules with a verdict shown and the fallback open', async () => {
@@ -319,5 +319,130 @@ describe('find your payment', () => {
     await user.click(screen.getByText(/Search by amount and date/))
     const result = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })
     expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(' ')}`)).toEqual([])
+  })
+
+  describe('on the blockchain (C4)', () => {
+    const FROM = 'TDsz2w97tz9pL3vhBsvJj1aGuKUnzYXkpc'
+    const TO = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
+    // What GET /api/payment answers (citizen/api/_lib/chain.py lookup), plus
+    // what a faulty server might add about where the money went next.
+    const FOUND = { payment: { network: 'Tron', hash: HASH, from: FROM, to: TO, token: 'USDT', amount: '2500',
+      time: '2026-10-05T09:00:00Z', succeeded: true, next: ['TNextHopWallet'], exchange: 'Binance', label: 'Mule 4' } }
+    const lookUp = async (user) => {
+      await check(user, HASH)
+      await user.click(screen.getByRole('button', { name: 'Check on the blockchain' }))
+    }
+
+    it('offers the networks the hash could be on, most likely first', async () => {
+      fakeServer({})
+      const user = userEvent.setup()
+      at('/report')
+      await check(user, HASH)
+      const network = screen.getByLabelText('Network')
+      expect([...network.options].map((o) => o.textContent)).toEqual(
+        ['Tron', 'Ethereum', 'BNB Smart Chain', 'Polygon', 'Arbitrum'])
+      expect(network).toHaveValue('tron')
+      await check(user, `0x${HASH}`)
+      expect(screen.getByLabelText('Network')).toHaveValue('ethereum')
+    })
+
+    it('shows only the citizen\'s own payment, and marks step 2', async () => {
+      const server = fakeServer({ 'GET /api/payment': [200, FOUND] })
+      const user = userEvent.setup()
+      at('/report')
+      await lookUp(user)
+      const card = within(await screen.findByRole('region', { name: 'Found on the blockchain' }))
+      // Focus moves to it, so a screen reader reads what was found.
+      expect(screen.getByRole('heading', { name: 'Found on the blockchain' })).toHaveFocus()
+      expect(server.calls[0].query).toEqual({ network: 'tron', hash: HASH })
+      expect(card.getByText('2,500')).toBeInTheDocument()
+      expect(card.getByText('USDT')).toBeInTheDocument()
+      expect(card.getByText(/5 Oct 2026, 2:30 pm IST · Tron/)).toBeInTheDocument()
+      expect(card.getByText(FROM).closest('div')).toHaveTextContent(/From your wallet/)
+      expect(card.getByText(TO).closest('div')).toHaveTextContent(/The wallet you paid/)
+      expect(screen.getByRole('main').textContent).not.toMatch(/TNextHopWallet|Binance|Mule 4/)
+      expect(screen.getByRole('main')).toHaveTextContent(
+        /We only show your own payment\. Where the money went next is for the investigating officer/)
+      const steps = within(screen.getByRole('list', { name: 'Report steps' })).getAllByRole('listitem')
+      expect(steps[1]).toHaveAttribute('aria-current', 'step')
+    })
+
+    it('adds the payment to the complaint pack once, when it is the citizen\'s', async () => {
+      sessionStorage.clear()
+      fakeServer({ 'GET /api/payment': [200, FOUND] })
+      const user = userEvent.setup()
+      at('/report')
+      await lookUp(user)
+      await user.click(await screen.findByRole('button', { name: "Yes, it's mine" }))
+      expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Your complaint pack')
+      const first = within(screen.getByRole('group', { name: 'Payment 1' }))
+      expect(first.getByLabelText('Transaction hash')).toHaveValue(HASH)
+      expect(first.getByLabelText('Amount')).toHaveValue('2500')
+      expect(first.getByLabelText('Token')).toHaveValue('USDT')
+      expect(first.getByLabelText('Network')).toHaveValue('Tron (TRC20)')
+      expect(first.getByLabelText('Date and time')).toHaveValue('2026-10-05T14:30')
+      expect(first.getByLabelText('Wallet you paid')).toHaveValue(TO)
+      expect(screen.queryByRole('group', { name: 'Payment 2' })).toBeNull()
+      // A second time adds nothing new.
+      await user.click(screen.getByRole('link', { name: /Find your payment/ }))
+      await lookUp(user)
+      await user.click(await screen.findByRole('button', { name: "Yes, it's mine" }))
+      await screen.findByRole('group', { name: 'Payment 1' })
+      expect(screen.queryByRole('group', { name: 'Payment 2' })).toBeNull()
+      sessionStorage.clear()
+    })
+
+    it('goes back to the box when it is not the citizen\'s payment', async () => {
+      fakeServer({ 'GET /api/payment': [200, FOUND] })
+      const user = userEvent.setup()
+      at('/report')
+      await lookUp(user)
+      await user.click(await screen.findByRole('button', { name: 'No, look again' }))
+      expect(screen.queryByRole('region', { name: 'Found on the blockchain' })).toBeNull()
+      expect(screen.getByLabelText('Paste it here')).toHaveFocus()
+    })
+
+    it('says when the payment did not go through', async () => {
+      fakeServer({ 'GET /api/payment': [200, { payment: { ...FOUND.payment, succeeded: false } }] })
+      const user = userEvent.setup()
+      at('/report')
+      await lookUp(user)
+      expect(await screen.findByText(/This payment failed on the blockchain/)).toBeInTheDocument()
+    })
+
+    it.each([
+      [404, 'No payment with this hash was found on that network. Check the hash and the network.'],
+      [422, 'This transaction is not a payment we can read here. Give its hash in your complaint as it is.'],
+      [503, 'We could not check this payment right now. Please try again later.'],
+    ])('says what the server said when it answers %i', async (status, error) => {
+      fakeServer({ 'GET /api/payment': [status, { error }] })
+      const user = userEvent.setup()
+      at('/report')
+      await lookUp(user)
+      expect(await screen.findByRole('alert')).toHaveTextContent(error)
+      expect(screen.queryByRole('button', { name: "Yes, it's mine" })).toBeNull()
+    })
+
+    it('says how long to wait after too many checks, and when it is offline', async () => {
+      fakeServer({ 'GET /api/payment': [429, { error: 'Too many tries for now. Please try again later.' },
+        { 'Retry-After': '600' }] })
+      const user = userEvent.setup()
+      at('/report')
+      await lookUp(user)
+      expect(await screen.findByRole('alert')).toHaveTextContent(/Too many tries for now.*in about 10 minutes/)
+      fakeServer({ 'GET /api/payment': OFFLINE })
+      await user.click(screen.getByRole('button', { name: 'Check on the blockchain' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/could not reach the site/)
+    })
+
+    it('passes the axe structural rules with the payment shown', async () => {
+      fakeServer({ 'GET /api/payment': [200, FOUND] })
+      const user = userEvent.setup()
+      const { container } = at('/report')
+      await lookUp(user)
+      await screen.findByRole('region', { name: 'Found on the blockchain' })
+      const result = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })
+      expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(' ')}`)).toEqual([])
+    })
   })
 })

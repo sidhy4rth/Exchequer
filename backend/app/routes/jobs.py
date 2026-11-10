@@ -35,7 +35,7 @@ POLL_SECONDS = 0.3
 
 def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | None = None,
          officer: tuple[int | None, int | None] = (None, None)) -> None:
-    with audit.acting_as(owner):  # this thread works for the browser that started it
+    with audit.acting_as(owner, officer):  # this thread works for whoever started it
         _run_job(job, request, owner, slot, officer)
 
 

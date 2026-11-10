@@ -5,7 +5,7 @@ import { Icon, OfficialLinks, usePageTitle } from '../parts.jsx'
 const STEPS = [
   { to: '/right-now', icon: 'steps', title: 'What to do right now', sub: "three do's and three don'ts, two minutes" },
   { to: '/report', icon: 'search', title: 'Find your payment', sub: 'where to find its hash, and check it' },
-  { to: '/my-case', icon: 'case', title: 'Track my complaint', sub: 'with your NCRP number · coming soon' },
+  { to: '/my-case', icon: 'case', title: 'Track my complaint', sub: 'with your NCRP number and tracking code' },
 ]
 
 export default function Home() {

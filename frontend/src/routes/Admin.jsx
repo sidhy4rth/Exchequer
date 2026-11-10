@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { createOfficer, createUnit, fetchOfficers, fetchUnits, updateOfficer } from '../api/accounts'
+import { createOfficer, createUnit, fetchOfficers, fetchUnitLimits, fetchUnits, setUnitLimits, updateOfficer } from '../api/accounts'
 import { isAdmin, recheckAccount, ROLE_NAMES, signedInAs, useAccount } from '../session'
 import { plain } from '../text'
 import './Admin.css'
@@ -119,6 +119,98 @@ function Officer({ officer, units, me, onSaved, onPassword }) {
   )
 }
 
+// The kinds an officer is limited in (backend rate_limit.OFFICER_KINDS), as a page names them.
+const KINDS = { trace: 'Live traces', watch: 'Watches', recheck: 'Rechecks', check: 'Manual checks' }
+const whole = (v) => /^\d+$/.test(String(v).trim()) && Number(v) >= 1
+// The most the backend takes (routes/accounts.py Cap).
+const MOST = { per_hour: 10_000, per_day: 100_000 }
+
+/** Why a kind's two boxes cannot be sent, and the box to fix; or null. */
+function refusal(v) {
+  const key = ['per_hour', 'per_day'].find((k) => !whole(v[k]))
+  if (key) return [key, 'give each limit as a whole number, 1 or more.']
+  const over = ['per_hour', 'per_day'].find((k) => Number(v[k]) > MOST[k])
+  if (over) return [over, "an hour's limit can be at most 10,000, and a day's at most 100,000."]
+  return Number(v.per_day) < Number(v.per_hour) ? ['per_day', "a day's limit cannot be below an hour's."] : null
+}
+
+/** A unit's own limits for each officer in it, an hour and a day per kind;
+ * a kind left at its default is not sent, so it follows the default. The
+ * per-connection and site-wide limits still apply on top (backend). */
+function UnitLimits({ unit }) {
+  const [loaded, setLoaded] = useState(null)
+  const [draft, setDraft] = useState({})
+  const [said, setSaid] = useState(null)
+  const [bad, setBad] = useState(null) // the kind a refusal is about
+  const [busy, setBusy] = useState(false)
+  const name = plain(unit.name)
+  const ids = `limits-${unit.id}`
+  const take = (got) => {
+    setLoaded(got)
+    setDraft(Object.fromEntries(Object.entries(got.limits).map(([k, v]) => [k, { per_hour: String(v.per_hour), per_day: String(v.per_day) }])))
+  }
+  useEffect(() => {
+    fetchUnitLimits(unit.id).then(take).catch((failed) => refused(failed, (text) => setSaid({ alert: true, text })))
+  }, [unit.id])
+
+  async function send(limits, done) {
+    setBusy(true)
+    setBad(null)
+    setSaid(null)
+    try { take(await setUnitLimits(unit.id, limits)); setSaid({ text: done }) } catch (failed) { refused(failed, (text) => setSaid({ alert: true, text })) }
+    setBusy(false)
+  }
+  function save(event) {
+    event.preventDefault()
+    const own = {}
+    for (const [kind, v] of Object.entries(draft)) {
+      const was = loaded.limits[kind]
+      const refuse = refusal(v)
+      if (refuse) {
+        setBad(kind)
+        setSaid({ alert: true, text: `${KINDS[kind] ?? kind}: ${refuse[1]}` })
+        document.getElementById(`${ids}-${kind}-${refuse[0]}`)?.focus()
+        return
+      }
+      const cap = { per_hour: Number(v.per_hour), per_day: Number(v.per_day) }
+      const def = loaded.defaults[kind]
+      if (was.set_for_unit || cap.per_hour !== def.per_hour || cap.per_day !== def.per_day) own[kind] = cap
+    }
+    send(own, `Saved the limits for ${name}.`)
+  }
+  if (!loaded) return said ? <p className="error-line" role="alert">{said.text}</p> : <p className="note">Loading the limits…</p>
+  return (
+    <form className="admin-limits" aria-label={`Limits for ${name}`} onSubmit={save} noValidate>
+      <p className="note">Each officer in {name}, on top of the per-connection and site-wide limits.</p>
+      {Object.entries(draft).map(([kind, v]) => {
+        const label = KINDS[kind] ?? kind
+        const def = loaded.defaults[kind]
+        const field = (key, per) => (
+          <label key={key}>{per}
+            <input id={`${ids}-${kind}-${key}`} type="number" min="1" max={MOST[key]} step="1" inputMode="numeric" value={v[key]}
+              aria-label={`${label} ${per}`} aria-invalid={bad === kind || undefined} aria-describedby={bad === kind ? `${ids}-alert` : undefined}
+              onChange={(e) => setDraft({ ...draft, [kind]: { ...v, [key]: e.target.value } })} />
+          </label>
+        )
+        return (
+          <fieldset key={kind}>
+            <legend>{label}</legend>
+            {field('per_hour', 'per hour')}{field('per_day', 'per day')}
+            <span className="note">{loaded.limits[kind].set_for_unit ? `Set for this unit (default ${def.per_hour} an hour, ${def.per_day} a day)` : 'The default'}</span>
+          </fieldset>
+        )
+      })}
+      {/* Both always in place, so a screen reader is already listening when they speak. */}
+      <p className="note said" role="status">{said && !said.alert ? said.text : ''}</p>
+      <p className="error-line said" role="alert" id={`${ids}-alert`}>{said?.alert ? said.text : ''}</p>
+      <span className="admin-actions">
+        <button type="submit" className="primary" disabled={busy}>Save limits</button>
+        <button type="button" className="quiet" disabled={busy} onClick={() => send({}, `${name} now has the default limits.`)}>Use the defaults</button>
+      </span>
+    </form>
+  )
+}
+
 /** A new account: name, e-mail, unit and role. */
 function NewOfficer({ units, onMade }) {
   const blank = { name: '', email: '', unit_id: '', role: 'officer' }
@@ -171,6 +263,7 @@ export default function Admin() {
   const [unitName, setUnitName] = useState('')
   const [error, setError] = useState(null)
   const [shown, setShown] = useState(null)
+  const [limitsOf, setLimitsOf] = useState(null) // the unit whose limits are open
   // Where focus goes when the one-time password is put away: the button
   // that made it, or the Officers heading if that row has gone.
   const back = useRef(null)
@@ -224,7 +317,13 @@ export default function Admin() {
               <h2 id="admin-units">Units</h2>
               <ul className="admin-units" aria-labelledby="admin-units">
                 {units.map((u) => (
-                  <li key={u.id}><span>{plain(u.name)}</span><span className="note">{count(u)} {count(u) === 1 ? 'officer' : 'officers'}</span></li>
+                  <li key={u.id}>
+                    <span>{plain(u.name)}</span><span className="note">{count(u)} {count(u) === 1 ? 'officer' : 'officers'}</span>
+                    {/* Named in full: a hidden span would read as "Limits , <unit>" in Chromium. */}
+                    <button type="button" className="quiet" aria-expanded={limitsOf === u.id} aria-label={`Limits, ${plain(u.name)}`}
+                      onClick={() => setLimitsOf(limitsOf === u.id ? null : u.id)}>Limits</button>
+                    {limitsOf === u.id && <UnitLimits unit={u} />}
+                  </li>
                 ))}
               </ul>
               <form className="admin-unit-new" onSubmit={addUnit} noValidate>

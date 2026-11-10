@@ -36,7 +36,9 @@ function failure(err) {
   return 'Cannot reach the Exchequer backend. Check the connection, then search again.'
 }
 
-export default function NoHashSearch({ chain, chainName, asset, wallet, walletValid, intakeOn, onPick, onUnlock }) {
+/** `caseRef` is a signed-in officer's case reference, sent with the search as
+ * a trace sends it; `needsRef` holds the search until the officer gives one. */
+export default function NoHashSearch({ chain, chainName, asset, wallet, walletValid, intakeOn, onPick, onUnlock, caseRef = '', needsRef = false }) {
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState('')
   const [at, setAt] = useState('')
@@ -57,8 +59,9 @@ export default function NoHashSearch({ chain, chainName, asset, wallet, walletVa
   const centre = fromIst(at)
   const from = centre && new Date(centre.getTime() - span * HOUR)
   const to = centre && new Date(centre.getTime() + span * HOUR)
-  const ready = walletValid && amountOk && centre
-  const missing = !walletValid ? 'Enter the wallet the victim paid above first.'
+  const ready = walletValid && amountOk && centre && !needsRef
+  const missing = needsRef ? 'Enter the case reference above first.'
+    : !walletValid ? 'Enter the wallet the victim paid above first.'
     : !amountOk ? 'Enter the exact amount: digits, with one decimal point.'
       : !centre ? 'Enter when the victim paid.' : ''
 
@@ -67,7 +70,7 @@ export default function NoHashSearch({ chain, chainName, asset, wallet, walletVa
     const asked = { amount, asset, from, to }
     setBusy(true)
     try {
-      setOutcome({ asked, result: await searchPayments({ chain, asset, wallet, amount, from, to }) })
+      setOutcome({ asked, result: await searchPayments({ chain, asset, wallet, amount, from, to, caseRef }) })
     } catch (error) {
       setOutcome({ asked, error })
       if (error.status === 403) setTimeout(() => codeRef.current?.focus())

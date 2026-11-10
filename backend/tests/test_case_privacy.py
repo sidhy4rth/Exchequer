@@ -15,6 +15,7 @@ Throwaway SQLite file and a stub pipeline: no network.
 from __future__ import annotations
 
 import hashlib
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -92,10 +93,14 @@ def test_exports_never_carry_the_ncrp_number(client, path):
 def test_a_finished_job_is_redacted_for_anyone_but_its_owner(client, monkeypatch):
     monkeypatch.setattr(pipeline, "run_trace", lambda request: dict(PAYMENT_CASE))
     started = client.post("/trace/jobs", json={"address": SCAMMER}, headers=OWNER).json()
-    for _ in range(200):
+    # Wait by the clock, not by a count of quick polls: on a slow CI runner
+    # 200 back-to-back reads could all land before the job thread finished.
+    deadline = time.monotonic() + 10
+    while True:
         mine = client.get(f"/trace/jobs/{started['job_id']}", headers=OWNER).json()
-        if mine["status"] != jobs.RUNNING:
+        if mine["status"] != jobs.RUNNING or time.monotonic() > deadline:
             break
+        time.sleep(0.02)
     assert mine["status"] == "done"
     assert mine["result"]["intake"]["ncrp_ack"] == NCRP
     for headers in ({}, OTHER):
@@ -244,10 +249,12 @@ def test_the_owner_and_a_stranger_get_different_reports_from_the_cache(rich):
 def test_a_finished_payment_job_hides_the_hashes_from_a_non_owner(client, monkeypatch):
     monkeypatch.setattr(pipeline, "run_trace", lambda request: rich_payment_case())
     started = client.post("/trace/jobs", json={"address": SCAMMER}, headers=OWNER).json()
-    for _ in range(200):
+    deadline = time.monotonic() + 10  # by the clock: a slow CI runner may need more than 200 quick reads
+    while True:
         mine = client.get(f"/trace/jobs/{started['job_id']}", headers=OWNER)
-        if mine.json()["status"] != jobs.RUNNING:
+        if mine.json()["status"] != jobs.RUNNING or time.monotonic() > deadline:
             break
+        time.sleep(0.02)
     assert PAY_HASH in mine.text
     for headers in ({}, OTHER):
         assert leaks(client.get(f"/trace/jobs/{started['job_id']}", headers=headers).text) == []

@@ -4,7 +4,9 @@
   "installCommand": "npm ci --ignore-scripts",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "regions": ["sin1"],
+  "functions": { "api/*.py": { "maxDuration": 15 } },
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
   "headers": [
     {
       "source": "/(.*)",

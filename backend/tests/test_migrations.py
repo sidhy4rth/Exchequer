@@ -355,3 +355,43 @@ def test_the_rollback_note_names_the_line_that_marks_a_safe_target():
     marker = "newer than this build: opened as it is"
     assert marker in Path(models.__file__).read_text()
     assert marker in " ".join(rollback.split()) and "011b176" in rollback and "November" not in rollback
+
+
+CITIZEN_TABLES = {"complaints", "complaint_payments", "complaint_messages", "tracking_codes",
+                  "citizen_sessions", "citizen_attempts"}
+
+
+def test_g6_citizen_1_goes_down_and_up_again_keeping_the_cases(engine):
+    """The citizen site's tables (app/complaints.py, citizen/api/): added on their own."""
+    models.init_db()
+    models.save_case("kept", ADDRESS, {"chain": "ethereum"})
+    assert CITIZEN_TABLES <= set(inspect(engine).get_table_names())
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g5_audit_1")
+    assert not CITIZEN_TABLES & set(inspect(engine).get_table_names())
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    assert CITIZEN_TABLES <= set(inspect(engine).get_table_names())
+    assert models.get_case("kept") is not None
+
+
+def test_g6_queue_2_goes_down_and_up_again_keeping_the_complaints(engine):
+    """complaint_claims: which unit claimed a complaint (routes/complaints.py), a table of its own."""
+    from app.complaints import Complaint, ComplaintClaim
+    models.init_db()
+    with models.session() as s:
+        s.add(Complaint(id="c1", reference="EXQ-KEPT001", ncrp="31234567890123", status="received",
+                        details_json="{}", created_at="x", updated_at="x"))
+        s.add(ComplaintClaim(complaint_id="c1", unit_id=1, officer_id=2, claimed_at="x"))
+        s.commit()
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g6_queue_1")
+    assert "complaint_claims" not in set(inspect(engine).get_table_names())
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    with models.session() as s:
+        assert s.get(Complaint, "c1") is not None and s.get(ComplaintClaim, "c1") is None

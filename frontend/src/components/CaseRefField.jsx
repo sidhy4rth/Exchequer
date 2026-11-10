@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchMe } from '../api'
+import { account, checkAccount, resetAccount, useAccount } from '../session'
 import './TraceForm.css'
 
 // The case a signed-in officer's live work runs under: an FIR, NCRP or GD
@@ -10,23 +10,18 @@ const CASE_REF_RE = /^(?=.*[0-9])[A-Za-z0-9][A-Za-z0-9 /.-]{2,39}$/
 export const tidyRef = (value) => value.trim().replace(/\s+/g, ' ')
 export const refOk = (value) => CASE_REF_RE.test(tidyRef(value))
 
-let asked = null
-/** Whether an officer is signed in (GET /auth/me, asked once a page load):
- * null until the answer comes, so a start button waits for it. A demo
- * visitor, a server without accounts or no answer reads as not. */
+/** Whether an officer is signed in, from the app's one account store
+ * (session.js, GET /auth/me): null until it knows, so a start button waits
+ * for the answer. A demo visitor, a server without accounts or no answer
+ * reads as not. Signing in or out in the tab updates it at once. */
 export function useSignedIn() {
-  const [officer, setOfficer] = useState(null)
-  useEffect(() => {
-    let live = true
-    asked ??= fetchMe().then((me) => Boolean(me && !me.demo && me.id != null)).catch(() => false)
-    asked.then((yes) => { if (live) setOfficer(yes) })
-    return () => { live = false }
-  }, [])
-  return officer
+  const { status } = useAccount()
+  useEffect(() => { if (account().status === 'unknown') checkAccount() }, [])
+  return status === 'officer' ? true : status === 'none' ? false : null
 }
 
-/** For tests, and after signing in or out (the sign-in page, at integration). */
-export function forgetSignIn() { asked = null }
+/** For tests: back to before the first check. */
+export const forgetSignIn = resetAccount
 
 export default function CaseRefField({ id = 'case-ref', value, onChange, hint = 'FIR, NCRP or GD number · never in links or logs' }) {
   const [show, setShow] = useState(false)

@@ -4,3 +4,4 @@
 export * from './api/trace'
 export * from './api/evidence'
 export * from './api/platform'
+export * from './api/complaints'

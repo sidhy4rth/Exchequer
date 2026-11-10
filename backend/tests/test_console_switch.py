@@ -38,6 +38,12 @@ OFFICER_ONLY = [
     # Added by the sign-off branch; guarded here by path so it is closed the
     # moment it lands.
     ("POST", "/requests/some-request/signoff", None),
+    # A complaint's actions (routes/complaints.py): what an officer does with
+    # a citizen's complaint, never a demo caller's once the console is closed.
+    ("POST", "/complaints/EXQ-NOSUCH1/status", {"status": "with_cell"}),
+    ("POST", "/complaints/EXQ-NOSUCH1/messages", {"body": "We have your complaint."}),
+    ("POST", "/complaints/EXQ-NOSUCH1/link-case", {"case_id": "case-1"}),
+    ("POST", "/complaints/EXQ-NOSUCH1/claim", None),
 ]
 
 

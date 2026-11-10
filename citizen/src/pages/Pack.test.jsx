@@ -4,6 +4,7 @@ import axe from 'axe-core'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App.jsx'
+import { OFFLINE, fakeServer } from '../test/server.js'
 
 const HASH = 'fde547813899a616a09c79842f0a413ac561505e0baa6db6b11f910a34a02e8e'
 const WALLET = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
@@ -34,12 +35,13 @@ afterEach(() => {
 })
 
 describe('complaint pack', () => {
-  it('is step 3 of 3, with step 1 a link back and step 2 still to come', () => {
+  it('is step 3 of 3, with step 1 a link back and step 2 reached from it', () => {
     at()
     const steps = within(screen.getByRole('list', { name: 'Report steps' })).getAllByRole('listitem')
     expect(steps[2]).toHaveAttribute('aria-current', 'step')
     expect(within(steps[0]).getByRole('link', { name: /Find your payment/ })).toHaveAttribute('href', '/report')
-    expect(steps[1]).toHaveTextContent(/Confirm it.*coming later/)
+    expect(steps[1]).toHaveTextContent('Confirm it')
+    expect(steps[1]).not.toHaveTextContent(/coming later/)
   })
 
   it('asks for what the portal and a cyber cell need, name and mobile optional', () => {
@@ -244,7 +246,8 @@ describe('complaint pack', () => {
     expect(within(next).getByRole('link', { name: /Call 1930/ })).toHaveAttribute('href', 'tel:1930')
     expect(within(next).getByRole('link', { name: /cybercrime\.gov\.in/ }))
       .toHaveAttribute('href', 'https://cybercrime.gov.in')
-    expect(screen.getByRole('main')).toHaveTextContent(/Nothing you type here is sent anywhere/)
+    expect(screen.getByRole('main')).toHaveTextContent(
+      /Nothing you type here is sent unless you choose Send to the cyber cell queue/)
   })
 
   it('says how to save on a phone, and promises no more than the page does', () => {
@@ -268,6 +271,169 @@ describe('complaint pack', () => {
     await addPayment(user)
     await user.upload(shots(), new File(['a'], 'chat-1.png', { type: 'image/png' }))
     await save(user)
+    const result = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })
+    expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(' ')}`)).toEqual([])
+  })
+})
+
+describe('sending the pack to the cyber cell queue', () => {
+  const CODE = 'ABCD-EFGH-JKMN'
+  const SENT = [201, { reference: 'EXQ-7KQ2M9PD', tracking_code: CODE }]
+  const card = () => within(screen.getByRole('region', { name: 'Send to the cyber cell queue' }))
+  const send = (user) => user.click(card().getByRole('button', { name: 'Send to the cyber cell queue' }))
+  const agree = (user) => user.click(card().getByRole('checkbox'))
+
+  it('says exactly what is sent, and that screenshots stay on the device', () => {
+    at()
+    const consent = card().getByRole('checkbox')
+    expect(consent).not.toBeChecked()
+    expect(consent.labels[0]).toHaveTextContent(
+      /send the text details in this pack.*to the cyber cell queue.*screenshots are not sent.*stay on this device/i)
+    expect(card().getByLabelText('NCRP acknowledgement number')).toHaveAccessibleDescription(/1930 or cybercrime\.gov\.in/)
+  })
+
+  it('needs the NCRP number, the consent and a pack with no problems before it sends', async () => {
+    const server = fakeServer({ 'POST /api/complaints': SENT })
+    const user = userEvent.setup()
+    at()
+    await send(user)
+    expect(card().getByRole('alert')).toHaveTextContent('Give the NCRP acknowledgement number')
+    expect(card().getByLabelText('NCRP acknowledgement number')).toHaveFocus()
+    await fill(user, 'NCRP acknowledgement number', '12', card())
+    await send(user)
+    expect(card().getByRole('alert')).toHaveTextContent(/8 to 20 letters and digits/)
+    await fill(user, 'NCRP acknowledgement number', '31234567890123', card())
+    await send(user)
+    expect(card().getByRole('alert')).toHaveTextContent(/Tick the box/)
+    expect(card().getByRole('checkbox')).toHaveFocus()
+    await agree(user)
+    await fill(user, 'Your mobile number (optional)', '12345')
+    await send(user)
+    expect(card().getByRole('alert')).toHaveTextContent('Check the answer marked in red first.')
+    expect(screen.getByLabelText('Your mobile number (optional)')).toHaveFocus()
+    expect(server).not.toHaveBeenCalled()
+  })
+
+  it('sends only the text details, then shows the tracking code once with copy and print', async () => {
+    const server = fakeServer({ 'POST /api/complaints': SENT })
+    const user = userEvent.setup()
+    at()
+    await fill(user, 'Your name (optional)', 'Asha Rao')
+    await fill(user, 'What happened, in your words', 'A mentor on Telegram showed me profits.')
+    await fill(user, 'Transaction hash', HASH, payment(1))
+    await fill(user, 'Amount', '2500', payment(1))
+    await addPayment(user)
+    await user.upload(shots(), new File(['private'], 'chat-1.png', { type: 'image/png' }))
+    await fill(user, 'NCRP acknowledgement number', '31234567890123', card())
+    await agree(user)
+    await send(user)
+
+    const receipt = within(await screen.findByRole('region', { name: /Write this code down/ }))
+    expect(server.calls).toHaveLength(1)
+    expect(server.calls[0].body).toEqual({
+      ncrp: '31234567890123', name: 'Asha Rao', mobile: '', started: '', app: '', link: '', contacts: '', upi: '',
+      story: 'A mentor on Telegram showed me profits.',
+      payments: [{ hash: HASH, amount: '2500', token: '', network: '', paidAt: '', wallet: '' }],
+    })
+    expect(JSON.stringify(server.calls[0].body)).not.toMatch(/chat-1|files/)
+    expect(receipt.getByText(CODE)).toBeInTheDocument()
+    expect(receipt.getByText('EXQ-7KQ2M9PD')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /Write this code down/ }))
+      .toHaveTextContent(/we cannot show it again/i)
+    expect(screen.getByRole('heading', { name: /Write this code down/ })).toHaveFocus()
+    await user.click(receipt.getByRole('button', { name: 'Copy the code' }))
+    expect(await navigator.clipboard.readText()).toBe(CODE)
+    expect(receipt.getByRole('status')).toHaveTextContent('Copied.')
+    // Printing the code marks the page for it, so it prints the code alone,
+    // until the print screen closes.
+    let marked
+    print.mockImplementation(() => { marked = document.documentElement.classList.contains('print-code') })
+    await user.click(receipt.getByRole('button', { name: 'Print the code' }))
+    expect(print).toHaveBeenCalledTimes(1)
+    expect(marked).toBe(true)
+    window.dispatchEvent(new Event('afterprint'))
+    expect(document.documentElement).not.toHaveClass('print-code')
+    expect(receipt.getByRole('link', { name: /My case/ })).toHaveAttribute('href', '/my-case')
+    // Sent once: there is no second send, and the code is kept nowhere.
+    expect(screen.queryByRole('button', { name: 'Send to the cyber cell queue' })).toBeNull()
+    expect(sessionStorage.getItem(KEY) ?? '').not.toContain(CODE)
+    expect(localStorage.length).toBe(0)
+  })
+
+  it('never prints the tracking code into the saved pack, which is given to others', async () => {
+    fakeServer({ 'POST /api/complaints': SENT })
+    const user = userEvent.setup()
+    at()
+    await fill(user, 'NCRP acknowledgement number', '31234567890123', card())
+    await agree(user)
+    await send(user)
+    const receipt = within(await screen.findByRole('region', { name: /Write this code down/ }))
+    // Even if the print screen of the code never said it closed.
+    print.mockImplementation(() => {})
+    await user.click(receipt.getByRole('button', { name: 'Print the code' }))
+    let marked
+    print.mockImplementation(() => { marked = document.documentElement.classList.contains('print-code') })
+    await save(user)
+    expect(print).toHaveBeenCalledTimes(2)
+    expect(marked).toBe(false)
+  })
+
+  it('shows a sent pack as sent when the page is opened again, so it is not sent twice', async () => {
+    const server = fakeServer({ 'POST /api/complaints': SENT })
+    const user = userEvent.setup()
+    const { unmount } = at()
+    await fill(user, 'Your name (optional)', 'Asha Rao')
+    await fill(user, 'NCRP acknowledgement number', '31234567890123', card())
+    await agree(user)
+    await send(user)
+    await screen.findByRole('region', { name: /Write this code down/ })
+    unmount()
+    at()
+    const sent = within(screen.getByRole('region', { name: 'Sent to the cyber cell queue' }))
+    expect(sent.getByText('EXQ-7KQ2M9PD')).toBeInTheDocument()
+    expect(sent.getByRole('link', { name: /My case/ })).toHaveAttribute('href', '/my-case')
+    expect(screen.queryByRole('button', { name: 'Send to the cyber cell queue' })).toBeNull()
+    expect(screen.getByRole('main')).not.toHaveTextContent(CODE)
+    expect(sessionStorage.getItem(KEY)).not.toContain(CODE)
+    expect(server.calls).toHaveLength(1)
+    // A cleared form is a new pack, and can be sent.
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await user.click(screen.getByRole('button', { name: 'Clear this form' }))
+    expect(card().getByRole('button', { name: 'Send to the cyber cell queue' })).toBeEnabled()
+  })
+
+  it.each([
+    ['the number is full', [409, { error: 'This NCRP number already has as many complaints here as we can take.' }],
+      /as many complaints here as we can take/],
+    ['too many tries', [429, { error: 'Too many tries for now. Please try again later.' }, { 'Retry-After': '3600' }],
+      /Too many tries for now.*in about an hour/],
+    ['the server refuses a field', [400, { error: 'Payment 1: write the amount as a number.' }],
+      /Payment 1: write the amount as a number\./],
+    ['the site is down', [503, { error: 'This site cannot take requests right now. Please try again later.' }],
+      /cannot take requests right now/],
+    ['the site cannot be reached', OFFLINE, /could not reach the site/],
+  ])('says so, and keeps the form, when %s', async (_, answer, said) => {
+    fakeServer({ 'POST /api/complaints': answer })
+    const user = userEvent.setup()
+    at()
+    await fill(user, 'Your name (optional)', 'Asha Rao')
+    await fill(user, 'NCRP acknowledgement number', '31234567890123', card())
+    await agree(user)
+    await send(user)
+    expect(await card().findByRole('alert')).toHaveTextContent(said)
+    expect(card().getByRole('button', { name: 'Send to the cyber cell queue' })).toBeEnabled()
+    expect(screen.getByLabelText('Your name (optional)')).toHaveValue('Asha Rao')
+    expect(screen.queryByRole('region', { name: /Write this code down/ })).toBeNull()
+  })
+
+  it('passes the axe structural rules with the tracking code shown', async () => {
+    fakeServer({ 'POST /api/complaints': SENT })
+    const user = userEvent.setup()
+    const { container } = at()
+    await fill(user, 'NCRP acknowledgement number', '31234567890123', card())
+    await agree(user)
+    await send(user)
+    await screen.findByRole('region', { name: /Write this code down/ })
     const result = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })
     expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(' ')}`)).toEqual([])
   })

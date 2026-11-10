@@ -117,6 +117,22 @@ describe('the new trace page', () => {
     expect(screen.queryByText(/Not a valid .* transaction hash/)).not.toBeInTheDocument()
   })
 
+  it('fills in the wallet and the masked NCRP number a complaint sent, and waits for the officer', async () => {
+    const hash = 'd'.repeat(64)
+    const wallet = 'TJ' + 'a'.repeat(32)
+    const both = { ...oneChain, chains: { ...oneChain.chains, tron: { key: 'tron', name: 'Tron', ready: true, address_family: 'tron', assets: [{ symbol: 'USDT' }] } } }
+    const fetch = open('new', {
+      path: { pathname: '/trace/new', search: `?pay=${hash}&chain=tron&asset=USDT`, state: { prefill: { address: wallet, ncrpAck: '31234567890123' } } },
+      extra: { '/chains': { body: both }, '/trace/intake': { body: { payments: true } } },
+    })
+    expect(await screen.findByLabelText('Wallet the victim paid')).toHaveValue(wallet)
+    expect(await screen.findByLabelText(/victim's payment hashes/i)).toHaveValue(hash)
+    const ack = screen.getByLabelText('NCRP acknowledgement')
+    expect(ack).toHaveValue('31234567890123')
+    expect(ack).toHaveClass('masked')
+    expect(fetch.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+  })
+
   it('starts a hash on the chain and asset the console chose for it', async () => {
     const hash = `0x${'d'.repeat(64)}`
     const three = { ...oneChain, chains: { ethereum: { ...oneChain.chains.ethereum, assets: [{ symbol: 'ETH' }, { symbol: 'USDT' }, { symbol: 'USDC' }] } } }

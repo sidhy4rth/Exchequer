@@ -165,7 +165,7 @@ def start_batch(body: BatchRequest, http: Request, user: CurrentUser) -> JSONRes
         _refund(client, charged - traced[0], officer)
 
     def record(payload: dict[str, Any]) -> None:
-        with audit.acting_as(owner):  # the batch's own thread, working for its sender
+        with audit.acting_as(owner, (user.officer_id, user.unit_id)):  # the batch's own thread, working for its sender
             cases.record_trace(payload, via="batch")
 
     def store(payload: dict[str, Any], request, owner_hash: str | None) -> dict[str, Any]:

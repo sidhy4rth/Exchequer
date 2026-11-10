@@ -11,8 +11,10 @@ what the detail says, and appends a row to the
 audit_events table (a read that changes nothing, in LOG_ONLY, is the log
 line alone). Who did it is not a parameter: it is taken from the
 request (ActorMiddleware), so a route never passes it and can never pass the
-wrong one. Work in a thread of its own (a background trace, a batch) says
-whose it is with `acting_as`; anything else is "system".
+wrong one: a signed-in officer as "officer:<id>" with their unit's id, by
+number, never a name or an e-mail; anyone else as their browser. Work in a
+thread of its own (a background trace, a batch) says whose it is with
+`acting_as`; anything else is "system".
 
 The table is append-only and hash-chained. Each row stores the hash of the
 row before it (64 zeros for the first) and its own:
@@ -53,8 +55,9 @@ from typing import Any, Iterator
 from sqlalchemy import insert, select, text
 from sqlalchemy.exc import IntegrityError
 from starlette.datastructures import Headers
+from starlette.requests import HTTPConnection
 
-from . import log_safety, models, ownership
+from . import accounts, log_safety, models, ownership
 
 logger = logging.getLogger("exchequer.audit")
 
@@ -62,24 +65,52 @@ _EVENT_RE = re.compile(r"^[a-z][a-z_]*(\.[a-z][a-z_]*)+$")
 GENESIS = "0" * 64
 # Any fixed number other than models.MIGRATION_LOCK_KEY.
 LOCK_KEY = 727202624
-DEMO_UNIT = "demo"  # auth.DEMO_UNIT, until R23 brings units
+DEMO_UNIT = "demo"  # auth.DEMO_UNIT: a demo caller has no unit
 
-SYSTEM: tuple[str, str | None] = ("system", None)
-_actor: ContextVar[tuple[str, str | None]] = ContextVar("audit_actor", default=SYSTEM)
+Actor = tuple[str, str | None]
+SYSTEM: Actor = ("system", None)
 _lock = threading.Lock()
 
 # -- who ---------------------------------------------------------------------
 
 
-def actor_for(owner_hash: str | None) -> tuple[str, str | None]:
-    """The demo identity of a browser: its owner hash, never its key."""
+def actor_for(owner_hash: str | None, officer: tuple[int | None, int | None] | None = None) -> Actor:
+    """An officer (officer_id, unit_id) by id, else the demo identity of a
+    browser: its owner hash, never its key."""
+    if officer and officer[0] is not None:
+        return f"officer:{officer[0]}", None if officer[1] is None else str(officer[1])
     return f"demo:{owner_hash or 'anonymous'}", DEMO_UNIT
 
 
+class _FromRequest:
+    """A request's actor, worked out when its first row is written: the
+    officer its session cookie signs in (as auth.current_user reads it),
+    else its browser. Requests that record nothing never look the session up."""
+
+    def __init__(self, owner_hash: str | None, session: str | None) -> None:
+        self.owner_hash, self.session, self.found = owner_hash, session, None
+
+    def resolve(self) -> Actor:
+        if self.found is None:
+            signed = accounts.signed_in(self.session) if self.session else None
+            officer = signed[0] if signed is not None and not signed[0].must_change_password else None
+            self.found = actor_for(self.owner_hash, (officer.id, officer.unit_id) if officer else None)
+        return self.found
+
+
+_actor: ContextVar[Actor | _FromRequest] = ContextVar("audit_actor", default=SYSTEM)
+
+
+def _current() -> Actor:
+    found = _actor.get()
+    return found.resolve() if isinstance(found, _FromRequest) else found
+
+
 @contextmanager
-def acting_as(owner_hash: str | None) -> Iterator[None]:
-    """Record what runs inside as the browser with this owner hash."""
-    token = _actor.set(actor_for(owner_hash))
+def acting_as(owner_hash: str | None, officer: tuple[int | None, int | None] | None = None) -> Iterator[None]:
+    """Record what runs inside as this officer (officer_id, unit_id), or,
+    for a demo caller, as the browser with this owner hash."""
+    token = _actor.set(actor_for(owner_hash, officer))
     try:
         yield
     finally:
@@ -87,7 +118,7 @@ def acting_as(owner_hash: str | None) -> Iterator[None]:
 
 
 class ActorMiddleware:
-    """Every request is recorded as the browser that sent it."""
+    """Every request is recorded as its signed-in officer, else as the browser that sent it."""
 
     def __init__(self, app: Any) -> None:
         self.app = app
@@ -96,7 +127,8 @@ class ActorMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        token = _actor.set(actor_for(ownership.owner_hash_from_headers(Headers(scope=scope))))
+        session = HTTPConnection(scope).cookies.get(accounts.COOKIE)
+        token = _actor.set(_FromRequest(ownership.owner_hash_from_headers(Headers(scope=scope)), session))
         try:
             await self.app(scope, receive, send)
         finally:
@@ -177,7 +209,7 @@ def _write_lock(conn: Any) -> None:
 
 def _append(action: str, case_id: str | None, detail: str) -> int:
     table = models.AuditEvent.__table__
-    actor, unit = _actor.get()
+    actor, unit = _current()
     with _lock:
         for attempt in range(5):
             try:
@@ -252,14 +284,23 @@ def _hash_or_none(row: dict[str, Any]) -> str | None:
 OTHER_BROWSER = "another browser"
 
 
-def events_for(case_id: str, viewer: str | None = None, limit: int = 1000) -> list[dict[str, Any]]:
+def events_for(case_id: str, viewer: str | None = None, limit: int = 1000,
+               officer_id: int | None = None, unit_id: int | None = None) -> list[dict[str, Any]]:
     """A case's events, oldest first, as the browser with owner hash `viewer`
-    may see them: its own actor and "system" as stored, any other browser as
-    "another browser", so an owner cannot follow one stranger across cases."""
-    own = actor_for(viewer)[0] if viewer else None
+    (signed in as `officer_id`, if it is) may see them: its own actor,
+    "system" and, for an officer of the unit `unit_id` that traced the case,
+    that unit's officers as stored; anyone else as "another browser", so an
+    owner cannot follow one stranger across cases."""
+    own = {actor_for(viewer)[0] if viewer else None, actor_for(None, (officer_id, None))[0] if officer_id else None}
+    own.discard(None)
     table = models.AuditEvent.__table__
     with models.engine().connect() as conn:
         found = conn.execute(select(table).where(table.c.case_id == case_id)
                              .order_by(table.c.seq).limit(limit)).mappings().all()
     return [{**row, "detail": json.loads(row["detail"]),
-             "actor": row["actor"] if row["actor"] in (own, SYSTEM[0]) else OTHER_BROWSER} for row in found]
+             "actor": row["actor"] if row["actor"] in own | {SYSTEM[0]} or _same_unit(row, unit_id)
+             else OTHER_BROWSER} for row in found]
+
+
+def _same_unit(row: Any, unit_id: int | None) -> bool:
+    return unit_id is not None and row["actor"].startswith("officer:") and row["unit_id"] == str(unit_id)
