@@ -2,29 +2,34 @@ import { currentTheme } from '../theme'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import { plain } from '../text'
+import { useMedia } from '../phone'
 import { forceCollide } from 'd3-force-3d'
 import RoleSwatch, { DASH, FADED, FADED_ROLES } from './RoleSwatch'
+import './GraphView.css'
 
 // Kept in sync with the custom properties in styles.css. The canvas paints in
 // JS and cannot read CSS variables, so these values are duplicated here on
 // purpose — change one, change both.
 //
-// Two things carry colour: a sanctions or mixer hit (red) and a confirmed
-// exchange (green). An inferred deposit address is a faded green and a fired
-// pattern a faded grey, each with a dashed ring (RoleSwatch), and a flagged
-// transfer off the traced route is dashed. The reported address is bright
-// neutral rather than coloured, and ordinary traced addresses are dim, so the
-// eye lands on the answer instead of on decoration. tokens.test.js holds
-// these to the styles.css tokens.
+// Two things carry colour: risk (red) and a confirmed exchange (green). A
+// confirmed risk hit (sanctions, mixer, freeze...) is solid red with a halo.
+// A possible flag -- a pattern such as a peel chain fired, nothing confirmed
+// -- is the same red but faded, with a dashed ring (RoleSwatch), and a
+// flagged transfer off the traced route is dashed and red-tinted: dashed
+// versus solid carries "possible" versus "confirmed", never colour alone. An
+// inferred deposit address is a faded green with a dashed ring. The reported
+// address is bright neutral rather than coloured, and ordinary traced
+// addresses are dim, so the eye lands on the answer instead of on decoration.
+// tokens.test.js holds these to the styles.css tokens.
 //
-// Red is reserved for the risk lists and outranks the rest. A published
-// government designation is a fact from outside this tool, and it should not
-// have to compete for attention with the tool's own inferences.
+// Solid red outranks the rest. A published government designation is a fact
+// from outside this tool, and it should not have to compete for attention
+// with the tool's own inferences.
 export const PALETTES = {
   light: {
     seed: '#0a0a0a', risk: '#bd2329', exchange: '#196e44', inferred: '#145a37', gambling: '#3d3d3d',
-    service: '#b3b3b3', flagged: '#3d3d3d', node: '#8e8e8e',
-    link: 'rgba(10,10,10,0.16)', linkPath: '#196e44', linkFlagged: 'rgba(10,10,10,0.45)', linkFaded: 'rgba(10,10,10,0.05)',
+    service: '#b3b3b3', flagged: '#bd2329', node: '#8e8e8e',
+    link: 'rgba(10,10,10,0.16)', linkPath: '#196e44', linkFlagged: 'rgba(189,35,41,0.5)', linkFaded: 'rgba(10,10,10,0.05)',
     text: '#0a0a0a', dim: '#3d3d3d', background: '#ffffff',
     haloExchange: 'rgba(25,110,68,0.16)', haloRisk: 'rgba(189,35,41,0.16)', haloGambling: 'rgba(10,10,10,0.1)',
     ring: 'rgba(255,255,255,0.8)', ringInk: 'rgba(10,10,10,0.6)', ringSelected: 'rgba(10,10,10,0.85)',
@@ -32,8 +37,8 @@ export const PALETTES = {
   },
   dark: {
     seed: '#ededed', risk: '#ff8a80', exchange: '#3dd68c', inferred: '#8eebc0', gambling: '#bdbdbd',
-    service: '#4a4a4a', flagged: '#bdbdbd', node: '#5e5e5e',
-    link: 'rgba(237,237,237,0.13)', linkPath: '#3dd68c', linkFlagged: 'rgba(237,237,237,0.4)', linkFaded: 'rgba(237,237,237,0.05)',
+    service: '#4a4a4a', flagged: '#ff8a80', node: '#5e5e5e',
+    link: 'rgba(237,237,237,0.13)', linkPath: '#3dd68c', linkFlagged: 'rgba(255,138,128,0.45)', linkFaded: 'rgba(237,237,237,0.05)',
     text: '#ededed', dim: '#bdbdbd', background: '#141414',
     haloExchange: 'rgba(61,214,140,0.18)', haloRisk: 'rgba(255,138,128,0.2)', haloGambling: 'rgba(189,189,189,0.16)',
     ring: 'rgba(20,20,20,0.9)', ringInk: 'rgba(237,237,237,0.6)', ringSelected: 'rgba(237,237,237,0.9)',
@@ -68,6 +73,8 @@ const DIMMED_ALPHA = 0.12
 // interactive. Dividing by the live zoom holds the padding constant on screen
 // at every framing, so every bubble is reachable however far out you are.
 const HIT_PAD = 9
+// On a phone a finger, not a cursor, picks the bubble.
+const COMPACT_HIT_PAD = 22
 // Same reasoning for edges, kept smaller so a link never steals the pointer
 // from a bubble sitting on top of it.
 const LINK_HIT_PAD = 4
@@ -81,8 +88,52 @@ const ROLE_NAME = {
   exchange: 'Labelled exchange wallet',
   inferred: 'Probable deposit address (inferred)',
   service: 'Service contract or router, not expanded',
-  flagged: 'Flagged by a pattern',
+  flagged: 'Possible flag · pattern (not confirmed)',
   node: 'Traced address',
+}
+
+// The hop-by-hop reveal: the reported address first, then each hop
+// HOP_MS after the one before, every bubble growing from nothing with the
+// motion system's pop easing.
+const HOP_MS = 600
+const GROW_MS = 450
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
+
+/** A CSS cubic-bezier(x1, y1, x2, y2) timing function, as t -> eased value. */
+export function cubicBezier(x1, y1, x2, y2) {
+  const cx = 3 * x1
+  const bx = 3 * (x2 - x1) - cx
+  const ax = 1 - cx - bx
+  const cy = 3 * y1
+  const by = 3 * (y2 - y1) - cy
+  const ay = 1 - cy - by
+  const x = (t) => ((ax * t + bx) * t + cx) * t
+  const dx = (t) => (3 * ax * t + 2 * bx) * t + cx
+  return (p) => {
+    if (p <= 0) return 0
+    if (p >= 1) return 1
+    let t = p
+    for (let i = 0; i < 8; i += 1) {
+      const error = x(t) - p
+      if (Math.abs(error) < 1e-5) break
+      const slope = dx(t)
+      if (Math.abs(slope) < 1e-6) break
+      t = Math.min(1, Math.max(0, t - error / slope))
+    }
+    return ((ay * t + by) * t + cy) * t
+  }
+}
+export const EASE_POP = cubicBezier(0.34, 1.56, 0.64, 1)
+
+/** The reveal step an address appears at: the reported address first, then by hop. */
+function levelOf(node) {
+  if (node.is_seed) return 0
+  return Number.isFinite(node.depth) ? Math.max(1, node.depth) : 1
+}
+
+/** Kept bright by "Show only flags": possible flags, confirmed risk, the reported address. */
+export function keptByFlags(node) {
+  return roleOf(node) === 'flagged' || !!node.risk_category || !!node.is_seed
 }
 
 function roleOf(node) {
@@ -176,10 +227,40 @@ function linkTooltip(link, unit) {
   </div>`
 }
 
-export default function GraphView({ data, tracePath, onSelect, selected, unit = '' }) {
+export default function GraphView({
+  data, tracePath, onSelect, selected, unit = '',
+  // Fade everything but the possible flags, the confirmed risk and the seed.
+  flagsOnly = false,
+  // Phone layout: tap selects, no hover tooltips, finger-sized controls; the
+  // page around the map shows the key and the jump list.
+  compact = false,
+  // False while the page hides the map: the canvas stops drawing and the
+  // camera is not framed until it is shown again.
+  active = true,
+}) {
   const containerRef = useRef(null)
   const graphRef = useRef(null)
+  // The mounted canvas, as state: ForceGraph2D only mounts once the container
+  // has a size (and remounts on a theme flip), so anything configured on it
+  // has to wait for this, not for the first render.
+  const [fg, setFg] = useState(null)
+  const attachGraph = useCallback((instance) => {
+    graphRef.current = instance
+    setFg(instance)
+  }, [])
   const [size, setSize] = useState({ width: 0, height: 0 })
+  const reducedMotion = useMedia(REDUCED_MOTION)
+  // Pause motion: no particles on the route, no reveal. Starts pressed for
+  // anyone whose system asks for reduced motion.
+  const [paused, setPaused] = useState(reducedMotion)
+  useEffect(() => { if (reducedMotion) setPaused(true) }, [reducedMotion])
+  const instant = reducedMotion || paused
+  const activeRef = useRef(active)
+  activeRef.current = active
+  const instantRef = useRef(instant)
+  instantRef.current = instant
+  const flagsRef = useRef(flagsOnly)
+  flagsRef.current = flagsOnly
   // The canvas painter reads COLORS on every frame; swap the palette and
   // force a repaint when the skin flips.
   const [theme, setTheme] = useState(currentTheme())
@@ -225,7 +306,9 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     if (!element) return
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
-      setSize({ width, height })
+      // A page that hides the map collapses it to nothing; keep the last real
+      // size so the canvas, and the layout it holds, stay mounted.
+      setSize((last) => (width > 0 && height > 0) || last.width === 0 ? { width, height } : last)
     })
     observer.observe(element)
     return () => observer.disconnect()
@@ -286,8 +369,12 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
 
   // Physics. Collision is what produces the packed-bubble look: without it,
   // large bubbles sit on top of each other and the sizing is unreadable.
+  //
+  // This waits for the mounted canvas (fg). It used to read graphRef in an
+  // effect that ran before ForceGraph2D existed -- the canvas mounts only once
+  // the container reports a width -- found nothing, and never ran again, so
+  // the live map settled with the library's default forces.
   useEffect(() => {
-    const fg = graphRef.current
     if (!fg || graphData.nodes.length === 0) return
     fg.d3Force('collide', forceCollide((node) => radiusOf(node) + 2.5).iterations(2))
     // Repulsion scales with bubble size so a big bubble clears room for itself
@@ -295,7 +382,156 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     fg.d3Force('charge')?.strength((node) => -18 - 3.2 * radiusOf(node))
     fg.d3Force('link')?.distance((link) => 24 + radiusOf(link.source) + radiusOf(link.target))
     fg.d3ReheatSimulation()
-  }, [graphData, radiusOf])
+  }, [fg, graphData, radiusOf])
+
+  // A hidden map draws nothing.
+  useEffect(() => {
+    if (!fg) return
+    if (active) fg.resumeAnimation?.()
+    else fg.pauseAnimation?.()
+  }, [fg, active])
+
+  // -- the hop-by-hop reveal ---------------------------------------------
+  // The canvas is fed the graph a hop at a time: the reported address, then
+  // each hop's addresses, born at their parent's position and released into
+  // the simulation (a new graphData reheats it). Links follow once both ends
+  // are on screen. Reduced motion, or Pause motion, shows everything at once.
+  const levels = useMemo(
+    () => [...new Set(graphData.nodes.map(levelOf))].sort((a, b) => a - b),
+    [graphData],
+  )
+  const nodeById = useMemo(() => new Map(graphData.nodes.map((n) => [n.id, n])), [graphData])
+  // Each address's parent: the neighbour nearer the seed that sent or took the
+  // most value, preferring the hop just before it.
+  const parents = useMemo(() => {
+    const best = new Map()
+    for (const link of graphData.links) {
+      const s = nodeById.get(idOf(link.source))
+      const t = nodeById.get(idOf(link.target))
+      if (!s || !t) continue
+      for (const [child, other] of [[s, t], [t, s]]) {
+        const near = levelOf(other)
+        const own = levelOf(child)
+        if (near >= own) continue
+        const score = (near === own - 1 ? 1e15 : 0) + (link.value_native || 0)
+        if (!best.has(child.id) || score > best.get(child.id).score) best.set(child.id, { score, parent: other })
+      }
+    }
+    return new Map([...best].map(([id, { parent }]) => [id, parent]))
+  }, [graphData, nodeById])
+
+  const [runId, setRunId] = useState(0)
+  const revealKey = useMemo(() => ({ graphData, runId }), [graphData, runId])
+  const [revealed, setRevealedState] = useState({ key: null, level: 0 })
+  const revealedRef = useRef(revealed)
+  const setRevealed = useCallback((next) => { revealedRef.current = next; setRevealedState(next) }, [])
+  const shownLevel = instant ? Infinity
+    : revealed.key === revealKey ? revealed.level
+    : levels[0] ?? Infinity
+  const revealDone = shownLevel === Infinity
+
+  const shownData = useMemo(() => {
+    if (shownLevel === Infinity) return graphData
+    const nodes = graphData.nodes.filter((n) => levelOf(n) <= shownLevel)
+    const ids = new Set(nodes.map((n) => n.id))
+    return { nodes, links: graphData.links.filter((l) => ids.has(idOf(l.source)) && ids.has(idOf(l.target))) }
+  }, [graphData, shownLevel])
+
+  /** Put a hop's addresses beside their parents, born now. */
+  const spawnLevel = useCallback((level) => {
+    const now = performance.now()
+    const seed = graphData.nodes.find((n) => n.is_seed)
+    const siblings = new Map()
+    for (const node of graphData.nodes) {
+      if (levelOf(node) !== level) continue
+      node.__bornAt = now
+      const parent = parents.get(node.id)
+      if (!parent || !Number.isFinite(parent.x) || !Number.isFinite(parent.y)) continue
+      const j = siblings.get(parent.id) ?? 0
+      siblings.set(parent.id, j + 1)
+      // Outward from the seed, fanned; around the seed itself, the golden angle.
+      const out = seed && seed !== parent && Number.isFinite(seed.x)
+        ? Math.atan2(parent.y - seed.y, parent.x - seed.x) : null
+      const angle = out === null ? j * 2.399963 : out + (j % 2 ? 1 : -1) * Math.ceil(j / 2) * 0.35
+      const reach = Math.max(3, radiusOf(parent) * 0.55)
+      node.x = parent.x + Math.cos(angle) * reach
+      node.y = parent.y + Math.sin(angle) * reach
+      node.vx = Math.cos(angle) * 1.6
+      node.vy = Math.sin(angle) * 1.6
+    }
+  }, [graphData, parents, radiusOf])
+
+  useEffect(() => {
+    if (graphData.nodes.length === 0) return undefined
+    const current = revealedRef.current
+    const mine = current.key === revealKey
+    if (mine && current.level === Infinity) return undefined
+    // Motion off, or the map hidden part-way: show the rest at once.
+    if (instant || (!active && mine)) {
+      setRevealed({ key: revealKey, level: Infinity })
+      return undefined
+    }
+    // Not started, and hidden: wait until it is shown.
+    if (!active) return undefined
+    let from = mine ? Math.max(0, levels.indexOf(current.level)) : 0
+    if (!mine) {
+      // A fresh run (a new trace, or Replay): the first step grows in now.
+      const now = performance.now()
+      for (const node of graphData.nodes) node.__bornAt = levelOf(node) === levels[0] ? now : undefined
+      from = 0
+      if (levels.length > 1) setRevealed({ key: revealKey, level: levels[0] })
+    }
+    if (from >= levels.length - 1) {
+      setRevealed({ key: revealKey, level: Infinity })
+      return undefined
+    }
+    const timers = []
+    for (let i = from + 1; i < levels.length; i += 1) {
+      timers.push(setTimeout(() => {
+        spawnLevel(levels[i])
+        setRevealed({ key: revealKey, level: i === levels.length - 1 ? Infinity : levels[i] })
+      }, HOP_MS * (i - from)))
+    }
+    return () => timers.forEach(clearTimeout)
+  }, [revealKey, instant, active, graphData, levels, spawnLevel, setRevealed])
+
+  // Replay gathers every address back to the middle before the canvas is
+  // handed the first step again, so the simulation never holds a node
+  // without a position.
+  const replay = useCallback(() => {
+    if (instantRef.current) return
+    graphData.nodes.forEach((node, i) => {
+      node.x = i ? Math.cos(i * 2.399963) * 4 : 0
+      node.y = i ? Math.sin(i * 2.399963) * 4 : 0
+      node.vx = 0
+      node.vy = 0
+      node.fx = undefined
+      node.fy = undefined
+      node.pinned = false
+      node.__bornAt = undefined
+    })
+    setPinTick((t) => t + 1)
+    graphRef.current?.centerAt?.(0, 0, 400)
+    setRunId((r) => r + 1)
+  }, [graphData])
+
+  // Every link of the traced route on screen: only then does money move on it.
+  const routeShown = useMemo(() => {
+    if (pathEdges.size === 0) return false
+    const on = new Set(shownData.links.map((l) => `${idOf(l.source)}>${idOf(l.target)}`))
+    return [...pathEdges].every((key) => on.has(key))
+  }, [pathEdges, shownData])
+
+  // -- Show only flags -----------------------------------------------------
+  const kept = useMemo(() => new Set(graphData.nodes.filter(keptByFlags).map((n) => n.id)), [graphData])
+  const keptRef = useRef(kept)
+  keptRef.current = kept
+  const flagCounts = useMemo(() => ({
+    possible: graphData.nodes.filter((n) => roleOf(n) === 'flagged').length,
+    confirmed: graphData.nodes.filter((n) => n.risk_category).length,
+  }), [graphData])
+  const offFlags = (id) => flagsRef.current && !keptRef.current.has(id)
+  const linkOffFlags = (link) => offFlags(idOf(link.source)) || offFlags(idOf(link.target))
 
   // Frame the whole graph once its layout has settled.
   //
@@ -311,7 +547,8 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
 
   const fitToView = useCallback(() => {
     const fg = graphRef.current
-    if (!fg) return false
+    // A hidden map is framed when it is shown, not while it has no size.
+    if (!fg || !activeRef.current) return false
     // A degenerate box means the nodes have no positions yet -- fitting to it
     // would zoom the camera somewhere the graph is not.
     const bbox = fg.getGraphBbox?.()
@@ -326,16 +563,21 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     return true
   }, [])
 
+  // Framed once the reveal has finished; a map hidden until then is framed
+  // when it is first shown.
   useEffect(() => {
-    if (graphData.nodes.length === 0) return undefined
-    needsFit.current = true
+    if (graphData.nodes.length > 0 && revealDone) needsFit.current = true
+  }, [graphData, runId, revealDone])
+
+  useEffect(() => {
+    if (graphData.nodes.length === 0 || !revealDone || !active) return undefined
     const timers = [300, 700, 1200, 2000, 3000].map((delay) =>
       setTimeout(() => {
         if (needsFit.current && fitToView()) needsFit.current = false
       }, delay),
     )
     return () => timers.forEach(clearTimeout)
-  }, [graphData, fitToView])
+  }, [graphData, runId, revealDone, active, fitToView])
 
   const handleEngineStop = useCallback(() => {
     if (needsFit.current && fitToView()) needsFit.current = false
@@ -390,6 +632,8 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
 
   const handleHover = useCallback(
     (node) => {
+      // A phone has no hover: a tap selects instead.
+      if (compact) return
       hoverRef.current = node?.id ?? null
       // Cursor feedback is mutated directly rather than held in state: this
       // fires on every pointer move across the canvas, and a re-render per
@@ -399,15 +643,16 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
       }
       resolveFocus()
     },
-    [resolveFocus],
+    [compact, resolveFocus],
   )
 
   const handleLinkHover = useCallback(
     (link) => {
+      if (compact) return
       hoverLinkRef.current = link ?? null
       resolveFocus()
     },
-    [resolveFocus],
+    [compact, resolveFocus],
   )
 
   const isFaded = (id) => {
@@ -503,6 +748,8 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
   // focus so the search box on the surrounding page keeps working.
   useEffect(() => {
     const onKey = (event) => {
+      // A hidden map leaves the keys to the one on screen.
+      if (!activeRef.current) return
       const tag = event.target?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return
       if (event.key === 'Escape') handleSelect(null)
@@ -517,9 +764,23 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     const radius = radiusOf(node)
     const isActive = focusRef.current.id === node.id
     const isSelected = selectedRef.current === node.id
-    const faded = isFaded(node.id)
+    const faded = isFaded(node.id) || offFlags(node.id)
+    // Show only flags names every flag and risk hit it keeps bright.
+    const keptLabel = flagsRef.current && keptRef.current.has(node.id)
+
+    // A bubble just revealed grows from nothing, overshooting a little.
+    let grow = 1
+    if (node.__bornAt !== undefined && !instantRef.current) {
+      const t = (performance.now() - node.__bornAt) / GROW_MS
+      if (t < 1) grow = Math.max(EASE_POP(Math.max(0, t)), 0.001)
+    }
 
     ctx.save()
+    if (grow !== 1) {
+      ctx.translate(node.x, node.y)
+      ctx.scale(grow, grow)
+      ctx.translate(-node.x, -node.y)
+    }
     if (faded) ctx.globalAlpha = DIMMED_ALPHA
 
     // Halo on the exchange node so the answer is findable at a glance.
@@ -555,7 +816,8 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
       ctx.lineWidth = 1.6 / globalScale
       ctx.stroke()
     } else if (role === 'inferred' || role === 'flagged') {
-      // An inference or a fired pattern: a dashed ring, not a colour of its own.
+      // An inference or a possible flag: a dashed ring, so it never reads as
+      // the confirmed exchange or the confirmed risk hit beside it.
       ctx.strokeStyle = COLORS[role]
       ctx.lineWidth = 1.2 / globalScale
       ctx.setLineDash(DASH.map((d) => d / globalScale))
@@ -612,8 +874,8 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
     // current focus is labelled too: naming the counterparties is most of the
     // value of focusing an address in the first place.
     const inFocus = !!focusRef.current.set && focusRef.current.set.has(node.id)
-    const important = ANSWER_ROLES.has(role) || isActive || inFocus
-    if ((!important && globalScale < 1.6) || faded) {
+    const important = ANSWER_ROLES.has(role) || isActive || inFocus || keptLabel
+    if ((!important && globalScale < 1.6) || (faded && !keptLabel) || grow !== 1) {
       ctx.restore()
       return
     }
@@ -659,24 +921,31 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
   }
 
   const hasData = graphData.nodes.length > 0
+  const hitPad = compact ? COMPACT_HIT_PAD : HIT_PAD
+  const particlesOn = !paused && routeShown && !flagsOnly
+  const particles = useCallback((link) => {
+    const key = `${idOf(link.source)}>${idOf(link.target)}`
+    return pathEdges.has(key) ? 3 : 0
+  }, [pathEdges])
+  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+    <div ref={containerRef} className={`graph-view${compact ? ' compact' : ''}`} style={{ width: '100%', height: '100%' }}>
       {hasData && size.width > 0 && (
         <ForceGraph2D
           key={theme}
-          ref={graphRef}
+          ref={attachGraph}
           width={size.width}
           height={size.height}
-          graphData={graphData}
+          graphData={shownData}
           backgroundColor={COLORS.background}
           nodeRelSize={4}
           nodeCanvasObject={drawNode}
-          nodeLabel={(node) => nodeTooltip(node, unit)}
+          nodeLabel={compact ? null : (node) => nodeTooltip(node, unit)}
           nodePointerAreaPaint={(node, color, ctx) => {
             ctx.fillStyle = color
             ctx.beginPath()
-            ctx.arc(node.x, node.y, radiusOf(node) + HIT_PAD / zoomRef.current, 0, 2 * Math.PI)
+            ctx.arc(node.x, node.y, radiusOf(node) + hitPad / zoomRef.current, 0, 2 * Math.PI)
             ctx.fill()
           }}
           onZoom={({ k }) => { zoomRef.current = k || 1 }}
@@ -687,7 +956,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
           onBackgroundClick={() => handleSelect(null)}
           enableNodeDrag
           onNodeDragEnd={handleDragEnd}
-          linkLabel={(link) => linkTooltip(link, unit)}
+          linkLabel={compact ? null : (link) => linkTooltip(link, unit)}
           onLinkHover={handleLinkHover}
           linkPointerAreaPaint={(link, color, ctx) => {
             const s = link.source
@@ -703,7 +972,7 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
           linkColor={(link) => {
             const key = `${idOf(link.source)}>${idOf(link.target)}`
             if (hoverLinkRef.current === link) return COLORS.text
-            if (isFaded(idOf(link.source)) || isFaded(idOf(link.target))) {
+            if (isFaded(idOf(link.source)) || isFaded(idOf(link.target)) || linkOffFlags(link)) {
               return COLORS.linkFaded
             }
             if (pathEdges.has(key)) return COLORS.linkPath
@@ -723,13 +992,11 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
           }}
           linkDirectionalArrowLength={4}
           linkDirectionalArrowRelPos={1}
-          linkDirectionalArrowColor={() => COLORS.dim}
+          linkDirectionalArrowColor={(link) => (linkOffFlags(link) ? COLORS.linkFaded : COLORS.dim)}
           // Animated particles only along the attributed path: a direct visual
-          // answer to "where did the money go".
-          linkDirectionalParticles={(link) => {
-            const key = `${idOf(link.source)}>${idOf(link.target)}`
-            return pathEdges.has(key) ? 3 : 0
-          }}
+          // answer to "where did the money go". They start once the whole
+          // route is on screen, and Pause motion stops them.
+          linkDirectionalParticles={particlesOn ? particles : 0}
           linkDirectionalParticleWidth={2.4}
           linkDirectionalParticleColor={() => COLORS.exchange}
           onEngineStop={handleEngineStop}
@@ -744,10 +1011,23 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
               buttons on the right, in one row: on a narrow stage the hint
               narrows instead of covering the counts. */}
           <div className="graph-top">
-            <div className="graph-hint">
-              Hover any bubble for detail · click to keep it highlighted · drag to
-              pin · right-click to release · scroll to zoom · bubble size = value
-              moved
+            <div className="graph-lead">
+              {!compact && (
+                <div className="graph-hint">
+                  Hover any bubble for detail · click to keep it highlighted · drag to
+                  pin · right-click to release · scroll to zoom · bubble size = value
+                  moved
+                </div>
+              )}
+              {flagsOnly && (
+                <div className="graph-flags-chip" role="status">
+                  <RoleSwatch role="flagged" color={COLORS.flagged} />
+                  <RoleSwatch role="risk" color={COLORS.risk} />
+                  <span>
+                    Showing {plural(flagCounts.possible, 'possible flag')} · {flagCounts.confirmed}&nbsp;confirmed
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="graph-side">
@@ -766,17 +1046,37 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
                   Fit
                 </button>
                 <button
+                  className="wide"
                   onClick={releaseAll}
                   disabled={pinnedCount === 0}
                   title="Release every pinned bubble and let the layout settle again"
                 >
                   Release {pinnedCount > 0 ? `(${pinnedCount})` : ''}
                 </button>
+                <button
+                  type="button"
+                  className="wide"
+                  aria-pressed={paused}
+                  onClick={() => setPaused((p) => !p)}
+                  title="Stop the moving money on the traced route and the hop-by-hop reveal"
+                >
+                  Pause motion
+                </button>
+                <button
+                  type="button"
+                  className="wide"
+                  onClick={replay}
+                  disabled={instant}
+                  title={reducedMotion ? 'Motion is off (reduced motion setting)'
+                    : paused ? 'Motion is paused' : 'Replay the trace hop by hop'}
+                >
+                  Replay
+                </button>
               </div>
             </div>
           </div>
 
-          {landmarks.length > 0 && (
+          {!compact && landmarks.length > 0 && (
             <div className="jump-panel">
               <span className="micro">Jump to</span>
               {landmarks.map((node) => {
@@ -802,14 +1102,18 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
             </div>
           )}
 
-          <div className="legend">
+          {!compact && <div className="legend">
             <div className="item">
               <RoleSwatch role="seed" color={COLORS.seed} />
               Reported address
             </div>
             <div className="item">
               <RoleSwatch role="risk" color={COLORS.risk} />
-              Sanctioned / mixer
+              Sanctioned / mixer / frozen (confirmed)
+            </div>
+            <div className="item">
+              <RoleSwatch role="flagged" color={COLORS.flagged} />
+              Possible flag · pattern (not confirmed)
             </div>
             <div className="item">
               <RoleSwatch role="gambling" color={COLORS.gambling} />
@@ -828,14 +1132,10 @@ export default function GraphView({ data, tracePath, onSelect, selected, unit = 
               Service contract / router, not expanded
             </div>
             <div className="item">
-              <RoleSwatch role="flagged" color={COLORS.flagged} />
-              Flagged by a pattern
-            </div>
-            <div className="item">
               <RoleSwatch role="node" color={COLORS.node} />
               Traced address
             </div>
-          </div>
+          </div>}
         </>
       )}
     </div>

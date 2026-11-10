@@ -154,9 +154,11 @@ describe.each(['dark', 'light'])('the %s theme', (theme) => {
     }
   })
 
+  // A possible flag is the risk red, faded and dashed (RoleSwatch), so it
+  // reads as red but never as the solid red of a confirmed hit.
   it('the graph canvas paints with the same colours (GraphView PALETTES)', () => {
     const p = PALETTES[theme]
-    const pinned = { seed: '--text', text: '--text', dim: '--text-2', risk: '--risk', exchange: '--go', inferred: '--go-soft', gambling: '--text-2', flagged: '--text-2', background: '--panel' }
+    const pinned = { seed: '--text', text: '--text', dim: '--text-2', risk: '--risk', exchange: '--go', inferred: '--go-soft', gambling: '--text-2', flagged: '--risk', background: '--panel' }
     for (const [key, name] of Object.entries(pinned)) expect(`${key}: ${p[key].toLowerCase()}`).toBe(`${key}: ${value(theme, name).toLowerCase()}`)
   })
 })

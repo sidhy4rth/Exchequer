@@ -511,7 +511,8 @@ details:not([open]) .feed .row { animation: none; }
 .graph-tooltip .r .k { color: var(--faint); }
 .graph-tooltip .r .v { color: var(--ink); font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
 .graph-tooltip .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
-.graph-tooltip .tags span { font-size: 10px; padding: 1px 6px; border-radius: var(--r-pill); border: 1px dashed var(--line-strong); color: var(--text-2); }
+/* A fired pattern is a possible flag: red, dashed, never solid like a confirmed hit. */
+.graph-tooltip .tags span { font-size: 10px; padding: 1px 6px; border-radius: var(--r-pill); border: 1px dashed var(--risk); color: var(--risk); }
 .graph-tooltip .gt-foot { margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--rule); font-size: 10px; color: var(--faint); }
 
 /* =========================================================================
