@@ -1,6 +1,7 @@
-import { render, screen, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import EntitiesTab from './EntitiesTab'
 import recordings from '../../../../backend/data/recorded_demos.json'
 import { stubFetch } from '../../test/setup'
@@ -9,6 +10,15 @@ import { stubFetch } from '../../test/setup'
 // plays in the case (not by who owns them), a card for the group chosen, and
 // the other complaints that reached the same wallets.
 const demo = recordings.find((r) => r.demo === 11).result
+
+// Both maps are stood in for, so the tests read the props the tab hands
+// each one: the maps themselves are tested in their own files.
+const seen = vi.hoisted(() => ({ graph: [], flow: [] }))
+vi.mock('../GraphView', () => ({ default: (props) => { seen.graph.push(props); return <div data-testid="bubble-map" /> } }))
+vi.mock('../FlowView', () => ({ default: (props) => { seen.flow.push(props); return <div data-testid="hop-map" /> } }))
+const lastGraph = () => seen.graph.at(-1)
+const lastFlow = () => seen.flow.at(-1)
+beforeEach(() => { seen.graph.length = 0; seen.flow.length = 0 })
 const SPLIT = 'TT4yg2GguWvN5j8Xeb7nUB5Hg2wWd1dFp3'
 const ROUTE = 'TXgo8gtf6bPQURfHftYWPRv1QPuLQaBBVU'
 
@@ -128,15 +138,218 @@ describe('the card for the group chosen', () => {
   })
 })
 
+const FROZEN = 'TZ7LmC6zBipRx6tDMavbzaF8piBpw89cNz'
+const node = (address) => demo.graph.nodes.find((n) => n.address === address)
+/** A screen as wide as `phone` says: the phone breakpoint matches or not. */
+const screenIs = ({ phone }) => vi.stubGlobal('matchMedia', (query) => ({
+  matches: phone && query === '(max-width: 720px)', media: query, addEventListener() {}, removeEventListener() {},
+}))
+async function everyWallet({ phone = false } = {}) {
+  const user = userEvent.setup()
+  show()
+  screenIs({ phone })
+  await user.click(screen.getByRole('button', { name: 'Every wallet' }))
+  return user
+}
+const pick = (address) => act(() => lastGraph().onSelect(node(address)))
+
 describe('every wallet', () => {
-  it('shows the graph with the flow by hop beside it, in place of the groups', async () => {
-    const user = userEvent.setup()
-    show()
-    await user.click(screen.getByRole('button', { name: 'Every wallet' }))
+  it('shows the bubble map, with the hop map mounted but hidden', async () => {
+    await everyWallet()
     expect(screen.getByRole('button', { name: 'Every wallet' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('group', { name: '30 wallets in 8 groups' })).not.toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'Money flow by hop' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Map view' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Bubble map' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Hop map' })).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByTestId('bubble-map').closest('.ent-mapwrap')).not.toHaveAttribute('hidden')
+    expect(screen.getByTestId('hop-map').closest('.ent-mapwrap')).toHaveAttribute('hidden')
+    expect(lastGraph()).toMatchObject({ data: demo.graph, tracePath: demo.trace_path, unit: 'USDT', active: true, selected: null, flagsOnly: false, compact: false })
+    expect(lastFlow()).toMatchObject({ data: demo.graph, tracePath: demo.trace_path, unit: 'USDT', direction: demo.direction, active: false, selected: null, flagsOnly: false, compact: false })
+  })
+
+  it('switches to the hop map and back, by click and by the arrow keys, keeping both mounted', async () => {
+    const user = await everyWallet()
+    await user.click(screen.getByRole('radio', { name: 'Hop map' }))
+    expect(screen.getByRole('radio', { name: 'Hop map' })).toHaveAttribute('aria-checked', 'true')
+    expect(lastGraph().active).toBe(false)
+    expect(lastFlow().active).toBe(true)
+    expect(screen.getByTestId('bubble-map').closest('.ent-mapwrap')).toHaveAttribute('hidden')
+    expect(screen.getByTestId('hop-map').closest('.ent-mapwrap')).not.toHaveAttribute('hidden')
+    expect(screen.getByRole('radiogroup', { name: 'Map view' })).toHaveClass('hop')
+    // Only the chosen radio takes Tab; the arrows move and choose.
+    expect(screen.getByRole('radio', { name: 'Bubble map' })).toHaveAttribute('tabindex', '-1')
+    await user.keyboard('{ArrowLeft}')
+    expect(screen.getByRole('radio', { name: 'Bubble map' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Bubble map' })).toHaveFocus()
+    expect(lastGraph().active).toBe(true)
+    await user.keyboard('{End}')
+    expect(screen.getByRole('radio', { name: 'Hop map' })).toHaveFocus()
+    expect(lastFlow().active).toBe(true)
+  })
+
+  it('counts the possible flags and the confirmed ones from the graph', async () => {
+    await everyWallet()
+    // 8 wallets a pattern flagged that no list names; 2 a list confirms (the
+    // reported wallet and one more, both frozen by Tether).
+    const note = document.querySelector('.ent-flag-note')
+    expect([...note.querySelectorAll('span')].map((t) => t.textContent)).toEqual(['8 possible flags', '·', '2 confirmed'])
+    expect(note.querySelector('.role-flagged circle')).toHaveAttribute('stroke-dasharray')
+    expect(note.querySelector('.role-risk circle')).not.toHaveAttribute('stroke-dasharray')
+  })
+
+  it('passes Show only flags to both maps, as a switch', async () => {
+    const user = await everyWallet()
+    const flags = screen.getByRole('switch', { name: 'Show only flags' })
+    expect(flags).toHaveAttribute('aria-checked', 'false')
+    await user.click(flags)
+    expect(flags).toHaveAttribute('aria-checked', 'true')
+    expect(flags).toHaveClass('on')
+    expect(lastGraph().flagsOnly).toBe(true)
+    expect(lastFlow().flagsOnly).toBe(true)
+    await user.click(flags)
+    expect(lastGraph().flagsOnly).toBe(false)
+  })
+
+  it('shares one selection across both maps, from either one', async () => {
+    const user = await everyWallet()
+    expect(screen.getByText(/^Select a wallet on either map/)).toBeInTheDocument()
+    pick(SPLIT)
+    expect(lastGraph().selected).toBe(SPLIT)
+    expect(lastFlow().selected).toBe(SPLIT)
+    await user.click(screen.getByRole('radio', { name: 'Hop map' }))
+    expect(lastFlow().selected).toBe(SPLIT)
+    // The hop map may hand back the id alone.
+    act(() => lastFlow().onSelect(ROUTE))
+    expect(lastGraph().selected).toBe(ROUTE)
+    expect(lastFlow().selected).toBe(ROUTE)
+    act(() => lastFlow().onSelect(null))
+    expect(lastGraph().selected).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Selected wallet' })).not.toBeInTheDocument()
+  })
+
+  it('cards a possible flag as unconfirmed, in red, with the pattern named', async () => {
+    await everyWallet()
+    pick(SPLIT)
+    const card = screen.getByRole('region', { name: 'Selected wallet' })
+    expect(within(card).getByText('Possible flag · Amount split')).toBeInTheDocument()
+    expect(within(card).getByText('Possible flag · Amount split')).toHaveStyle({ color: 'var(--risk)' })
+    expect(card.querySelector('.role-flagged circle')).toHaveAttribute('stroke-dasharray')
+    expect(within(card).getByText(/a lead to check, not a finding/)).toBeInTheDocument()
+    expect(within(card).getByText(SPLIT)).toBeInTheDocument()
+    const rows = [...card.querySelectorAll('.ent-pick-rows div')].map((r) => r.textContent)
+    expect(rows).toEqual(['Hop1', 'Received6,000 USDT', 'Sent5,997.7 USDT'])
+    expect(within(card).getByText(/^Selected on both maps/)).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Show on hop map' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Copy address' })).toBeInTheDocument()
+  })
+
+  it('cards a confirmed risk by the list that confirms it, with no green', async () => {
+    await everyWallet()
+    pick(FROZEN)
+    const card = screen.getByRole('region', { name: 'Selected wallet' })
+    expect(within(card).getByText('Confirmed risk · Tether (USDT freeze)')).toHaveStyle({ color: 'var(--risk)' })
+    expect(card.querySelector('.role-risk circle')).not.toHaveAttribute('stroke-dasharray')
+    expect(within(card).getByText('USDT frozen by Tether on 2026-09-11')).toBeInTheDocument()
+    expect(card.querySelector('.ent-pick-route')).toBeNull()
+  })
+
+  it('cards the reported address, an exchange, and a wallet on the traced route', async () => {
+    await everyWallet()
+    pick(demo.address)
+    let card = screen.getByRole('region', { name: 'Selected wallet' })
+    expect(within(card).getByText('Reported address')).toBeInTheDocument()
+    expect(within(card).getByText('Frozen by issuer')).toBeInTheDocument()
+    expect(card.querySelector('.ent-pick-rows')).toHaveTextContent('Hop0 · reported')
+    pick('TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf')
+    card = screen.getByRole('region', { name: 'Selected wallet' })
+    expect(within(card).getByText('Labelled exchange · Binance-Hot 7')).toHaveStyle({ color: 'var(--go)' })
+    pick(ROUTE)
+    card = screen.getByRole('region', { name: 'Selected wallet' })
+    expect(within(card).getByText('Traced address')).toBeInTheDocument()
+    expect(card.querySelector('.ent-pick-route')).toHaveTextContent(/^On the traced route/)
+  })
+
+  it('shows the selected wallet on the other map, and Clear lets it go on both', async () => {
+    const user = await everyWallet()
+    pick(SPLIT)
+    await user.click(screen.getByRole('button', { name: 'Show on hop map' }))
+    expect(screen.getByRole('radio', { name: 'Hop map' })).toHaveAttribute('aria-checked', 'true')
+    expect(lastFlow()).toMatchObject({ active: true, selected: SPLIT })
+    expect(screen.getByRole('button', { name: 'Show on bubble map' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(screen.queryByRole('region', { name: 'Selected wallet' })).not.toBeInTheDocument()
+    expect(lastGraph().selected).toBeNull()
+    expect(lastFlow().selected).toBeNull()
+    // Focus goes back to the map switch, not to the page.
+    expect(screen.getByRole('radio', { name: 'Hop map' })).toHaveFocus()
+  })
+
+  it('lets Escape clear the card', async () => {
+    const user = await everyWallet()
+    pick(SPLIT)
+    screen.getByRole('button', { name: 'Show on hop map' }).focus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('region', { name: 'Selected wallet' })).not.toBeInTheDocument()
+  })
+
+  it('copies the full address from the card', async () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    const user = await everyWallet()
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    pick(SPLIT)
+    await user.click(screen.getByRole('button', { name: 'Copy address' }))
+    expect(writeText).toHaveBeenCalledWith(SPLIT)
+    expect(await screen.findByText('Address copied')).toBeInTheDocument()
+  })
+})
+
+describe('every wallet on a phone', () => {
+  it('makes both maps compact and opens a bottom sheet for the selected wallet', async () => {
+    const user = await everyWallet({ phone: true })
+    expect(lastGraph().compact).toBe(true)
+    expect(lastFlow().compact).toBe(true)
+    // No card beside the maps, and the sheet waits, closed, until a pick.
+    expect(screen.queryByText(/^Select a wallet on either map/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Selected wallet' })).not.toBeInTheDocument()
+    pick(SPLIT)
+    const sheet = screen.getByRole('region', { name: 'Selected wallet' })
+    expect(sheet).toHaveClass('ent-sheet', 'open')
+    expect(sheet).toHaveAttribute('aria-hidden', 'false')
+    expect(within(sheet).getByText('Possible flag · Amount split')).toBeInTheDocument()
+    expect(within(sheet).getByText(SPLIT)).toBeInTheDocument()
+    expect(within(sheet).getByText('Hop 1')).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Copy address' })).toBeInTheDocument()
+    await user.click(within(sheet).getByRole('button', { name: 'See on hop map' }))
+    expect(lastFlow()).toMatchObject({ active: true, selected: SPLIT })
+    await user.click(within(sheet).getByRole('button', { name: 'Close' }))
+    expect(lastGraph().selected).toBeNull()
+    // It slides away with its wallet still in it, hidden from assistive tech.
+    const closed = document.querySelector('.ent-sheet')
+    expect(closed).not.toHaveClass('open')
+    expect(closed).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByRole('radio', { name: 'Hop map' })).toHaveFocus()
+  })
+})
+
+describe('motion on the maps', () => {
+  // A literal path here would be rewritten by Vite into an asset URL.
+  const sheet = './EntitiesTab.css'
+  const css = readFileSync(new URL(sheet, import.meta.url), 'utf8')
+  const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'))
+
+  it('slides the pill, the knob and the sheet with the motion system\'s easings', () => {
+    expect(css).toMatch(/\.ent-seg-pill \{[^}]*transition: transform var\(--ent-tab\) var\(--ent-enter\)/)
+    expect(css).toMatch(/--ent-tab: var\(--dur-tab, 240ms\)/)
+    expect(css).toMatch(/\.ent-sheet\.open \{[^}]*transition: transform 360ms var\(--ent-enter\)/)
+    expect(css).toMatch(/\.ent-mapwrap \{ animation: ent-fade var\(--ent-tab\)/)
+  })
+
+  it('renders every final state at once under reduced motion', () => {
+    expect(reduced).not.toBe('')
+    for (const moving of ['.ent-seg-pill', '.ent-switch-knob', '.ent-sheet', '.ent-sheet.open']) {
+      expect(reduced).toMatch(new RegExp(`${moving.replace(/\./g, '\\.')}[^{]*\\{ transition: none; \\}`))
+    }
+    expect(reduced).toMatch(/\.ent-mapwrap, \.ent-pick \{ animation: none; \}/)
   })
 })
 
