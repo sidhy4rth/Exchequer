@@ -409,7 +409,7 @@ describe('motion on the maps', () => {
   it('renders every final state at once under reduced motion', () => {
     expect(reduced).not.toBe('')
     for (const moving of ['.ent-seg-pill', '.ent-switch-knob', '.ent-sheet', '.ent-sheet.open']) {
-      expect(reduced).toMatch(new RegExp(`${moving.replace(/\./g, '\\.')}[^{]*\\{ transition: none; \\}`))
+      expect(reduced).toMatch(new RegExp(`${moving.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^{]*\\{ transition: none; \\}`))
     }
     expect(reduced).toMatch(/\.ent-mapwrap, \.ent-pick \{ animation: none; \}/)
     expect(reduced).toMatch(/\.ent-mapwrap, \.ent-mapwrap\.off \{ transition: none; \}/)
