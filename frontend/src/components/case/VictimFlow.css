@@ -4,15 +4,27 @@
    the headline. The space is the tab's own width, not the screen's. Green is money at an exchange, red a
    frozen or flagged wallet, grey the rest; dashed is an upper bound or an
    inference, faded a diluted share. */
-.vf-box { container: vflow / inline-size; }
+.vf-box {
+  container: vflow / inline-size;
+  /* The motion system's easings: entering, and moving between states. */
+  --vf-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --vf-move: cubic-bezier(0.45, 0, 0.2, 1);
+}
 .vflow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 .vf-chart { display: flex; flex-direction: column; gap: 14px; padding: 22px; min-width: 0; }
 .vf-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .vf-head h2, .vf-card h3, .vf-notes h3 { margin: 0; font-size: 15px; font-weight: 500; }
 .vf-chart > .note { margin: 0; }
-.vf-rule { display: flex; gap: 4px; margin: 0; padding: 4px; border: 0; border-radius: var(--r); background: var(--panel-2); }
-.vf-rule label { position: relative; display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border-radius: 8px; font-size: 12px; color: var(--text-2); cursor: pointer; }
-.vf-rule label.on { background: var(--go-tint); color: var(--go-soft); font-weight: 500; }
+.vf-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* Three equal places, so the chosen rule's pill slides by its own width. */
+.vf-rule { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; margin: 0; padding: 4px; border: 0; border-radius: var(--r); background: var(--panel-2); }
+.vf-rule-pill {
+  position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 16px) / 3); border-radius: 8px;
+  background: var(--panel); box-shadow: inset 0 0 0 1px var(--line-strong);
+  transform: translateX(calc(var(--vf-at, 0) * (100% + 4px)));
+}
+.vf-rule label { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 0 12px; border-radius: 8px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+.vf-rule label.on { color: var(--text); font-weight: 500; }
 .vf-rule label:has(:disabled) { color: var(--text-3); cursor: default; }
 .vf-rule input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: inherit; }
 .vf-rule label:has(:focus-visible) { outline: 2px solid var(--go); outline-offset: 2px; }
@@ -84,6 +96,85 @@
 .vf-notes .note { margin: 0; }
 .vf-phone, .vf-meter { display: none; }
 
+/* Pause motion: stops the loops (the lights on the ribbons, the glow); what
+   is drawn stays. Shown only while something loops. */
+.vf-pause { display: inline-flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 12px; font-size: 12px; }
+.vf-pause-mark { width: 8px; height: 10px; border-left: 3px solid currentColor; border-right: 3px solid currentColor; box-sizing: border-box; }
+.vf-pause[aria-pressed="true"] { background: var(--panel-2); border-color: var(--line-strong); color: var(--text); }
+.vf-pause[aria-pressed="true"] .vf-pause-mark { width: 0; height: 0; border: 0; border-left: 8px solid currentColor; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+
+/* A counting figure: its own text stays in the page, see-through while the
+   running number (aria-hidden) is drawn over it. */
+.vf-count { position: relative; }
+.vf-count[data-counting] { -webkit-text-fill-color: transparent; }
+.vf-count[data-counting] > .vf-run::after {
+  content: attr(data-n); position: absolute; left: 0; top: 0; white-space: nowrap;
+  -webkit-text-fill-color: currentColor; font-variant-numeric: tabular-nums;
+}
+
+/* The lights: x runs straight across, y eases by the ribbons' own curve, so
+   each light rides the middle of its ribbons. */
+.vf-lights { position: absolute; inset: 0; pointer-events: none; }
+.vf-light { position: absolute; left: 0; top: 0; width: 100%; height: 0; opacity: 0; color: var(--text-2); }
+.vf-light.go { color: var(--go); }
+.vf-light > span { position: absolute; left: 0; top: 0; }
+.vf-light i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px 2px color-mix(in srgb, currentColor 40%, transparent); }
+
+/* ---- Motion: only with .vf-motion, which reduced motion never sets. ---- */
+.vf-motion .vf-rule-pill { transition: transform 240ms var(--vf-enter); }
+.vf-motion .vf-chart { animation: vf-rise 600ms var(--vf-enter) both; }
+.vf-motion .vf-hero { animation: vf-rise 600ms var(--vf-enter) 50ms both; }
+/* The columns grow, then the ribbons are drawn left to right in two stages. */
+.vf-motion .vf-bar { transform-box: fill-box; transform-origin: 50% 50%; animation: vf-grow-y 600ms var(--vf-enter) var(--vf-d, 0ms) both; }
+.vf-motion .vf-stage1 { animation: vf-reveal 900ms var(--vf-move) 400ms both; }
+.vf-motion .vf-stage2 { animation: vf-reveal 1000ms var(--vf-move) 1100ms both; }
+.vf-motion .vf-chip { animation: vf-fade 450ms var(--vf-enter) var(--vf-d, 0ms) both; }
+.vf-motion .vf-bar-all span { transform-origin: left center; animation: vf-grow-x 700ms var(--vf-enter) var(--vf-d, 0ms) both; }
+.vf-motion .vf-light { animation: vf-light-x 4.8s linear var(--vf-d) infinite; }
+.vf-motion .vf-light > span { animation: vf-light-y 4.8s cubic-bezier(0.5, 0, 0.5, 1) var(--vf-d) infinite; }
+/* The cards cascade in, 60 ms apart (eight steps at most); a phone's bars fill after each. */
+.vf-motion .vf-cards > * { animation: vf-rise 600ms var(--vf-enter) calc(250ms + var(--vf-i, 0) * 60ms) both; }
+.vf-motion .vf-meter span { transform-origin: left center; animation: vf-grow-x 900ms var(--vf-enter) calc(500ms + var(--vf-i, 0) * 60ms) both; }
+.vf-cards > :nth-child(2) { --vf-i: 1; }
+.vf-cards > :nth-child(3) { --vf-i: 2; }
+.vf-cards > :nth-child(4) { --vf-i: 3; }
+.vf-cards > :nth-child(5) { --vf-i: 4; }
+.vf-cards > :nth-child(6) { --vf-i: 5; }
+.vf-cards > :nth-child(7) { --vf-i: 6; }
+.vf-cards > :nth-child(n + 8) { --vf-i: 7; }
+/* Money at an exchange breathes a soft glow, slowly. */
+.vf-motion .vf-card.go, .vf-motion .vf-card.vf-instant, .vf-motion .vf-hero.vf-glow { position: relative; }
+.vf-motion .vf-card.go::after, .vf-motion .vf-card.vf-instant::after, .vf-motion .vf-hero.vf-glow::after {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 22px 2px color-mix(in srgb, var(--go) 28%, transparent);
+  opacity: 0; animation: vf-breathe 3.2s ease-in-out 1.8s infinite;
+}
+.vf-motion.vf-paused .vf-light, .vf-motion.vf-paused .vf-light > span,
+.vf-motion.vf-paused .vf-card.go::after, .vf-motion.vf-paused .vf-card.vf-instant::after, .vf-motion.vf-paused .vf-hero.vf-glow::after { animation-play-state: paused; }
+
+@keyframes vf-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes vf-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vf-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes vf-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes vf-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes vf-breathe { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes vf-light-x {
+  0% { transform: translateX(var(--x0)); opacity: 0; }
+  6%, 94% { opacity: 1; }
+  50% { transform: translateX(var(--x1)); }
+  100% { transform: translateX(var(--x2)); opacity: 0; }
+}
+@keyframes vf-light-y {
+  0% { transform: translateY(var(--y0)); }
+  50% { transform: translateY(var(--y1)); }
+  100% { transform: translateY(var(--y2)); }
+}
+/* Reduced motion: the final picture at once, nothing moving. */
+@media (prefers-reduced-motion: reduce) {
+  .vflow *, .vflow *::after { animation: none !important; transition: none !important; }
+  .vf-lights { display: none; }
+}
+
 @container vflow (min-width: 1040px) {
   .vflow { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
   .vf-chart { grid-area: 1 / 1; }
@@ -97,12 +188,16 @@
   .vf-chart { display: none; }
   .vf-cards { display: flex; flex-direction: column; }
   .vf-phone { display: block; }
+  .vf-hero { padding: 18px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); }
+  .vf-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .vf-hero .note { margin: 6px 0 0; }
+  .vf-pause { min-height: 44px; padding: 0 14px; }
   .vf-meter { display: block; align-self: stretch; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
   .vf-meter span { display: block; height: 100%; background: var(--text-3); }
   .vf-card.go .vf-meter span, .vf-card.vf-instant .vf-meter span { background: var(--go); }
   .vf-card.risk .vf-meter span { background: var(--risk); }
   .vf-notes li { grid-template-columns: 7.5em minmax(0, 1fr); }
-  .vf-phone h2 { margin: 2px 0 0; font-size: 26px; font-weight: 300; }
+  .vf-phone h2 { margin: 2px 0 0; font-size: 26px; font-weight: 300; font-variant-numeric: tabular-nums; }
   .vf-kicker { margin: 0; font-size: 12px; color: var(--text-3); }
   .vf-band { margin: 0; padding: 12px 14px; border-radius: var(--r-panel); background: var(--panel); font-size: 12px; color: var(--text-2); }
 }
