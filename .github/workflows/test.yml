@@ -265,6 +265,11 @@ jobs:
           uid=$(docker exec app awk '/^Uid:/{print $2}' /proc/1/status)
           echo "uvicorn uid: $uid"
           test "$uid" = "10001"
+          # HOME is the volume, not root's home: libpq reads ~/.postgresql
+          # there and must never meet a directory it may not open.
+          # Read as uid 10001: Docker drops CAP_SYS_PTRACE, so root may not read
+          # another user's /proc/<pid>/environ, but a process's own user may.
+          docker exec -u 10001 app sh -c 'tr "\0" "\n" < /proc/1/environ' | grep -x 'HOME=/data'
           curl -fsS localhost:8000/signing-key >/dev/null
           docker exec app stat -c '%u %n' /data/exchequer.db /data/report_signing_key.pem
           test "$(docker exec app stat -c '%u' /data/report_signing_key.pem)" = "10001"

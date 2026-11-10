@@ -14,6 +14,11 @@ if [ "$(id -u)" = "0" ] && command -v setpriv >/dev/null 2>&1 && id app >/dev/nu
   mkdir -p /data
   chown -R app:app /data 2>/dev/null
   if setpriv --reuid=app --regid=app --init-groups sh -c 'test -w /data' 2>/dev/null; then
+    # The app user has no home of its own, and setpriv keeps root's
+    # HOME=/root, which uid 10001 may not read. libpq looks there for an
+    # optional client certificate and refuses to connect on "Permission
+    # denied", so point HOME at the volume the app user now owns.
+    export HOME=/data
     # shellcheck disable=SC2086
     exec setpriv --reuid=app --regid=app --init-groups $CMD
   fi
