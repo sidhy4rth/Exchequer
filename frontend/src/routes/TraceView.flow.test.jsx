@@ -52,12 +52,12 @@ describe('the Flow tab', () => {
     expect(within(panel()).getByRole('button', { name: 'By hop' })).toBeInTheDocument()
   })
 
-  it('opens the Letters tab from Draft letter, naming the letter', async () => {
+  it('opens the Letters tab from Draft letter, naming the urgent freeze letter', async () => {
     const user = userEvent.setup()
     await openDemo11({ victim_flow: flow })
     await user.click(screen.getByRole('button', { name: 'Draft letter to Binance' }))
     expect(screen.getByRole('tab', { selected: true })).toHaveTextContent('Letters')
-    expect(where()).toBe('/demo/11?tab=letters&letter=exchange')
+    expect(where()).toBe('/demo/11?tab=letters&letter=exchange-freeze')
     await waitFor(() => expect(panel()).toHaveFocus())
   })
 
@@ -95,6 +95,17 @@ describe('the Letters tab, opened from a flow card', () => {
     await openDemo11({ search: '?tab=letters&letter=tether', case_id: 'c1', routes })
     const tether = await within(panel()).findByRole('button', { name: /Request to Tether/ })
     await waitFor(() => expect(tether).toHaveFocus())
+  })
+
+  it.each([
+    ['the urgent freeze letter, which goes first', [{ to: 'exchange-freeze', title: 'Urgent freeze request to Binance' }, { to: 'exchange', title: 'Request to Binance' }], 'Urgent freeze request to Binance'],
+    ['the information letter, when the case lists no freeze letter', [{ to: 'exchange', title: 'Request to Binance' }, { to: 'tether', title: 'Request to Tether' }], 'Request to Binance'],
+  ])('takes Draft letter to %s', async (_, letters, title) => {
+    const user = userEvent.setup()
+    await openDemo11({ case_id: 'c1', victim_flow: flow, routes: { ...routes, '/trace/c1/letters': { body: { letters } } } })
+    await user.click(screen.getByRole('button', { name: 'Draft letter to Binance' }))
+    const asked = await within(panel()).findByRole('button', { name: title, pressed: true })
+    await waitFor(() => expect(asked).toHaveFocus())
   })
 
   it('offers to watch the wallet it was asked to', async () => {

@@ -72,6 +72,13 @@ describe('the Letters tab, asked for one letter by a Flow card', () => {
     expect(await screen.findByRole('article', { name: 'Draft: Request to Tether' })).toBeInTheDocument()
   })
 
+  it('opens the information letter when the urgent freeze letter asked for is not listed', async () => {
+    api({ ...STORED, 'GET /trace/c1/letters': { body: { case_id: 'c1', letters: LETTERS.slice(1) } } })
+    render(<MemoryRouter><LettersTab result={CASE} recorded={null} pick="exchange-freeze" /></MemoryRouter>)
+    const exchange = await screen.findByRole('button', { name: 'Request to Binance', pressed: true })
+    await waitFor(() => expect(exchange).toHaveFocus())
+  })
+
   it('opens the first letter when the one asked for is not listed', async () => {
     api(STORED)
     render(<MemoryRouter><LettersTab result={CASE} recorded={null} pick="nobody" /></MemoryRouter>)

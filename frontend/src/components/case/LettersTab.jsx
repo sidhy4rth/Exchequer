@@ -23,6 +23,8 @@ function printSheet() {
   window.print()
 }
 
+const FALLBACK = { 'exchange-freeze': 'exchange' } // a case that lists no freeze letter opens the information letter
+
 /** The case's Letters tab: the drafts the backend offers for it, one at a
  * time on a paper sheet, then the freeze-request log and the watches. A
  * recorded example (`recorded` is its number) shows its drafts, but only a
@@ -67,9 +69,11 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
   }, [to]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The letter a Flow card asked for opens on the sheet and takes the keyboard.
+  const listed = (wanted) => (letters?.some((l) => l.to === wanted) ? wanted : null)
+  const ask = asked && (listed(asked) ?? listed(FALLBACK[asked]))
   useEffect(() => {
-    if (asked && letters?.some((l) => l.to === asked)) { setTo(asked); setSaid(null); setManual(false) }
-  }, [asked, letters])
+    if (ask) { setTo(ask); setSaid(null); setManual(false) }
+  }, [ask])
   useEffect(() => { picked.current?.focus() }, [letters, asked])
 
   const letter = letters?.find((l) => l.to === to)
@@ -123,7 +127,7 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
         <div className="lt-body">
           <div className="lt-switch" role="group" aria-label="Letter to">
             {letters.map((l) => (
-              <button key={l.to} ref={l.to === asked ? picked : undefined} type="button" aria-pressed={l.to === to} onClick={() => pick(l.to)}>{plain(l.title)}</button>
+              <button key={l.to} ref={l.to === ask ? picked : undefined} type="button" aria-pressed={l.to === to} onClick={() => pick(l.to)}>{plain(l.title)}</button>
             ))}
           </div>
           <article className="letter-sheet" aria-labelledby="letter-title">

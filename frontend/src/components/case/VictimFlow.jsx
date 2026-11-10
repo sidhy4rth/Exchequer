@@ -111,7 +111,8 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
         </li>))}
       </ul>}
       {flow.lead?.reached != null && Math.abs(flow.lead.reached - amount('exchange')) > 0.005 && <p className="note">{fmt(flow.lead.reached)} {unit} of it along the route the finding names.</p>}
-      {result.exchange && <button type="button" className="primary" onClick={() => onLetters('exchange')}>Draft letter to {plain(result.exchange)}</button>}
+      {/* The urgent freeze letter: it goes first (the Letters tab falls back to the information letter). */}
+      {result.exchange && <button type="button" className="primary" onClick={() => onLetters('exchange-freeze')}>Draft letter to {plain(result.exchange)}</button>}
     </article>)
   // A frozen wallet that still holds money has its Held card, not this one too.
   for (const p of (flow.passed_through ?? []).filter((x) => !heldAt.includes(x.address))) {

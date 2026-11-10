@@ -96,7 +96,7 @@ describe('the victim-flow Sankey', () => {
 })
 
 describe('the bucket cards and what each lets an officer do', () => {
-  it('drafts the letter to the exchange', async () => {
+  it('drafts the urgent freeze letter to the exchange: it is the one sent first', async () => {
     const user = userEvent.setup()
     const { onLetters } = draw()
     const exchange = card('At an exchange')
@@ -106,7 +106,7 @@ describe('the bucket cards and what each lets an officer do', () => {
     expect(within(exchange).getByText('Low · exact label')).toBeInTheDocument()
     expect(exchange.textContent).not.toMatch(/0\.49/)
     await user.click(within(exchange).getByRole('button', { name: 'Draft letter to Binance' }))
-    expect(onLetters).toHaveBeenCalledWith('exchange')
+    expect(onLetters).toHaveBeenCalledWith('exchange-freeze')
   })
 
   it('asks Tether about the frozen wallet the money passed through', async () => {
