@@ -76,9 +76,11 @@
 }
 
 /* ---- The hero's edge: a slow light goes round it ---- */
-.console-home .hero-card { position: relative; }
+/* The ring sits under the card's own content: the card isolates its stack,
+   so the light never covers the text inside it. */
+.console-home .hero-card { position: relative; isolation: isolate; }
 .console-home .hero-card::before {
-  content: ''; position: absolute; inset: -1px; padding: 1px; border-radius: inherit; pointer-events: none;
+  content: ''; position: absolute; inset: -1px; padding: 1px; border-radius: inherit; pointer-events: none; z-index: -1;
   background: conic-gradient(from var(--sweep),
     transparent 0deg,
     color-mix(in srgb, var(--text) 38%, transparent) 40deg,
@@ -129,7 +131,9 @@
   position: absolute; top: -160px; right: -120px; width: 760px; height: 560px; max-width: 120%;
   background: radial-gradient(closest-side, var(--console-glow), transparent);
 }
-.console-home { --console-glow: rgba(255, 255, 255, 0.7); }
+/* The glow stays inside the Console and behind everything on it: without a
+   positioned, isolated parent it spread over the whole page, sidebar included. */
+.console-home { position: relative; isolation: isolate; --console-glow: rgba(255, 255, 255, 0.7); }
 html[data-theme="dark"] .console-home { --console-glow: rgba(255, 255, 255, 0.045); }
 .console-home .console-ambient i { animation: console-drift 18s ease-in-out infinite; }
 @keyframes console-drift { 50% { transform: translate(-30px, 18px); } }
