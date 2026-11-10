@@ -7,8 +7,9 @@ import { DEMOS, SHORT_CHAIN } from '../components/TraceForm'
 import { bandLabel, bandOf } from '../components/confidence'
 import { hasDemoAccess, liveLock } from '../demoCode'
 import { ADDRESS_RE, HASH_RE, findTarget } from '../find'
-import { usePhone } from '../phone'
+import { useMedia, usePhone } from '../phone'
 import { plain } from '../text'
+import './Home.css'
 
 // The console's first page (/): one field to start from (a victim's payment
 // hash or the wallet they paid), three recorded cases to try, this browser's
@@ -26,6 +27,31 @@ const and = new Intl.ListFormat('en', { type: 'conjunction' })
 // The field's hint: the pack's sentence, or on a phone, where the field holds
 // about 38 characters, its label.
 const HINT = "Victim's payment hash, or the wallet they paid"
+
+// Motion (Home.css): the cards rise in one after another, the hint types
+// itself in once, and a few slow loops (the hero's edge, the status dot, the
+// empty watchlist's radar, the glow behind the page) run until paused. With
+// reduced motion asked for, every one of them is drawn at its final state.
+const REDUCED = '(prefers-reduced-motion: reduce)'
+const PAUSE_KEY = 'exchequer-console-motion'
+const STAGGER_STEPS = 8
+/** A section's place in the entrance, capped so the last never waits long. */
+const rise = (n) => ({ '--rise': Math.min(n, STAGGER_STEPS) })
+
+function savedPause() {
+  try { return localStorage.getItem(PAUSE_KEY) === 'paused' } catch { return false }
+}
+
+/** The field's hint, typed in once a character at a time, over an empty
+ * field only. Drawn for the eye alone: the field keeps its label and its
+ * placeholder, and nothing here takes a click or a key. */
+function TypedHint({ text }) {
+  return (
+    <span className="hero-typed" aria-hidden="true">
+      {[...text].map((ch, i) => <span key={i} style={{ '--i': i }}>{ch}</span>)}
+    </span>
+  )
+}
 
 /** Each ready chain's assets as one choice, "Tron · USDT". On Tron USDT
  * comes first: the money in a complaint is almost always USDT. */
@@ -59,6 +85,7 @@ function QuickTrace({ health }) {
   const [picked, setPicked] = useState(null)
   const [missed, setMissed] = useState(false)
   const phone = usePhone()
+  const hint = phone ? 'Payment hash or wallet' : HINT
   const options = choices(health)
   const chosen = options.find((o) => o.value === picked) ?? options.find((o) => o.chain === health?.default_chain) ?? options[0]
 
@@ -86,9 +113,12 @@ function QuickTrace({ health }) {
       <div className="hero-field">
         <svg aria-hidden="true" width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" /></svg>
         <label htmlFor="console-find" className="visually-hidden">Payment hash or wallet</label>
-        <input id="console-find" value={text} onChange={(e) => change(e.target.value)} spellCheck={false} autoComplete="off"
-          placeholder={phone ? 'Payment hash or wallet' : HINT}
-          aria-invalid={missed || undefined} aria-describedby={missed ? 'console-find-missed' : undefined} />
+        <span className="hero-input">
+          <input id="console-find" value={text} onChange={(e) => change(e.target.value)} spellCheck={false} autoComplete="off"
+            placeholder={hint}
+            aria-invalid={missed || undefined} aria-describedby={missed ? 'console-find-missed' : undefined} />
+          <TypedHint key={hint} text={hint} />
+        </span>
       </div>
       <label htmlFor="console-chain" className="visually-hidden">Chain and asset</label>
       <span className="hero-chain">
@@ -135,7 +165,7 @@ function RecentCases() {
   const [cases, setCases] = useState(undefined)
   useEffect(() => { fetchCases(5).then((d) => setCases(d.cases ?? [])).catch(() => setCases(null)) }, [])
   return (
-    <section className="card glass console-card" aria-labelledby="console-recent">
+    <section className="card glass console-card console-rise" style={rise(3)} aria-labelledby="console-recent">
       <div className="console-card-head"><h2 id="console-recent">Recent cases</h2><Link to="/cases">All cases</Link></div>
       {cases === undefined && <p className="note" role="status">Loading cases…</p>}
       {cases?.length === 0 && <p className="note">No cases yet. Cases you trace show here, in this browser only.</p>}
@@ -171,7 +201,7 @@ function ExchangeWallets({ health }) {
   const top = chains[0]?.exchange_wallets || 1
   const deposits = chains.filter((c) => c.deposit_addresses > 0).map((c) => `${count(c.deposit_addresses)} ${nameOf(c.key, c)}`)
   return (
-    <section className="card glass console-card" aria-labelledby="console-wallets">
+    <section className="card glass console-card console-rise" style={rise(4)} aria-labelledby="console-wallets">
       <div className="console-card-head">
         <h2 id="console-wallets">Exchange wallets on file</h2>
         {chains.length > 0 && <span className="console-figure">{count(chains.reduce((s, c) => s + c.exchange_wallets, 0))}</span>}
@@ -179,10 +209,10 @@ function ExchangeWallets({ health }) {
       {chains.length === 0 && <p className="note">{health?.status === 'down' ? 'Backend unreachable' : 'Connecting…'}</p>}
       {chains.length > 0 && (
         <ul className="wallet-bars" aria-label="Exchange wallets per chain">
-          {chains.map((c) => (
+          {chains.map((c, i) => (
             <li key={c.key}>
               <span>{nameOf(c.key, c)}</span>
-              <span className="bar" aria-hidden="true"><i style={{ width: `${Math.max(1.5, (c.exchange_wallets / top) * 100)}%` }} /></span>
+              <span className="bar" aria-hidden="true"><i style={{ width: `${Math.max(1.5, (c.exchange_wallets / top) * 100)}%`, '--i': Math.min(i, STAGGER_STEPS) }} /></span>
               <span className="num">{count(c.exchange_wallets)}</span>
             </li>
           ))}
@@ -199,9 +229,15 @@ function WatchCard() {
   const [watched, setWatched] = useState(undefined)
   useEffect(() => { fetchWatches().then((d) => setWatched(d.count ?? d.watches?.length ?? 0)).catch(() => setWatched(null)) }, [])
   return (
-    <section className={`card glass console-card${watched ? '' : ' quiet-card'}`} aria-labelledby="console-watch">
+    <section className={`card glass console-card console-rise${watched ? '' : ' quiet-card'}`} style={rise(5)} aria-labelledby="console-watch">
       <div className="console-card-head"><h2 id="console-watch">Watchlist</h2>{watched > 0 && <span className="console-figure">{count(watched)}</span>}</div>
-      {watched === 0 && <p className="note">Nothing watched yet. Watch a wallet from any case to hear when money moves.</p>}
+      {watched === 0 && (
+        <div className="watch-empty">
+          {/* Listening, with nothing to hear yet. */}
+          <span className="watch-radar" aria-hidden="true"><i className="radar-sweep" /><i className="radar-ping" /><i className="radar-dot" /></span>
+          <p className="note">Nothing watched yet. Watch a wallet from any case to hear when money moves.</p>
+        </div>
+      )}
       {watched === null && <p className="note">The watchlist cannot be reached right now.</p>}
       {watched > 0 && <p className="note">{`${watched} ${watched === 1 ? 'wallet' : 'wallets'} watched.`} <Link to="/watchlist">Open the watchlist</Link></p>}
     </section>
@@ -216,6 +252,14 @@ export default function Home() {
   // without the code either way, so the worst case is its message.
   const [access, setAccess] = useState(null)
   const [unlocked, setUnlocked] = useState(() => hasDemoAccess())
+  const reduced = useMedia(REDUCED)
+  const [paused, setPaused] = useState(savedPause)
+
+  function togglePause() {
+    const next = !paused
+    setPaused(next)
+    try { if (next) localStorage.setItem(PAUSE_KEY, 'paused'); else localStorage.removeItem(PAUSE_KEY) } catch { /* private mode */ }
+  }
 
   // Every path out of this page leads to a trace; fetch that page's code
   // (the graph layout is most of it) before the button is pressed.
@@ -248,14 +292,25 @@ export default function Home() {
   const locked = Boolean(lock)
 
   return (
-    <div className="home console">
+    <div className={`home console console-home${reduced ? ' still' : ''}${paused ? ' paused' : ''}`}>
+      <div className="console-ambient" aria-hidden="true"><i /></div>
       <div className="home-body">
         <div className="hero">
-          {allReady && <p className="hero-status"><i aria-hidden="true" />{`All ${chains.length} chains ready to trace`}</p>}
-          <h1>Follow a payment to the exchange that can freeze it</h1>
+          <div className="hero-top console-rise" style={rise(0)}>
+            {allReady && <p className="hero-status"><i aria-hidden="true" />{`All ${chains.length} chains ready to trace`}</p>}
+            {!reduced && (
+              <button type="button" className="motion-toggle" aria-pressed={paused} onClick={togglePause}>
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                  {paused ? <path d="M3 1.8v8.4L10 6z" /> : <path d="M3 2h2v8H3zM7 2h2v8H7z" />}
+                </svg>
+                Pause motion
+              </button>
+            )}
+          </div>
+          <h1 className="console-rise blur" style={rise(1)}>Follow a payment to the exchange that can freeze it</h1>
         </div>
         {locked ? <Showroom officers={lock === 'officer'} onUnlock={() => setUnlocked(true)} /> : (
-          <section className="card glass hero-card" aria-label="Start a trace">
+          <section className="card glass hero-card console-rise" style={rise(2)} aria-label="Start a trace">
             <QuickTrace health={health} />
             <TryRecorded />
           </section>
@@ -270,7 +325,7 @@ export default function Home() {
         </div>
 
         {/* Closed until asked for: the detail behind the wallets on file. */}
-        <details className="card glass sec" aria-label="Coverage">
+        <details className="card glass sec console-rise" style={rise(6)} aria-label="Coverage">
           <summary><span className="micro">Coverage</span><span className="note">Exchange labels and risk screening per chain</span></summary>
           <div className="coverage">
             <div>
@@ -325,7 +380,7 @@ export default function Home() {
         </details>
       </div>
 
-      <footer className="foot">
+      <footer className="foot console-rise" style={rise(7)}>
         <span>Names an exchange, never a person.</span>
       </footer>
     </div>

@@ -1,0 +1,181 @@
+/* The Console's motion (Home.jsx). Layout and colour stay in styles.css;
+   this file only moves what is already there.
+
+   Every element is styled at its final state, and an animation only plays
+   it in from somewhere else (fill-mode backwards), so taking an animation
+   away (reduced motion, .still) leaves the page exactly as it ends up. The
+   loops are slow (3 s or more), neutral grey from --text, never green, and
+   stop with Pause motion (.paused). Easing comes from the shell's tokens
+   when it declares them. */
+
+@property --sweep { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+/* ---- Entrance: each section rises 14 px and fades in, 60 ms apart ---- */
+.console-home .console-rise,
+.console-home .showroom {
+  animation: console-rise 600ms var(--ease-enter, cubic-bezier(0.22, 1, 0.36, 1)) backwards;
+  animation-delay: calc(var(--rise, 0) * 60ms);
+}
+.console-home .showroom { --rise: 2; }
+/* The headline also clears from a 4 px blur. */
+.console-home .console-rise.blur { animation-name: console-rise-blur; }
+
+@keyframes console-rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes console-rise-blur { from { opacity: 0; transform: translateY(14px); filter: blur(4px); } }
+
+/* ---- The status line and the Pause motion switch ---- */
+.hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 24px; }
+.console-home .hero-status i { background: var(--text-2); animation: console-pulse 3s ease-out infinite; }
+@keyframes console-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--text) 35%, transparent); }
+  60%, 100% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--text) 0%, transparent); }
+}
+
+.motion-toggle {
+  margin-left: auto; min-height: 24px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px;
+  border: 1px solid transparent; border-radius: var(--r-pill); background: transparent;
+  color: var(--text-2); font: inherit; font-size: 12px; font-weight: 400; cursor: pointer;
+  transition: background-color var(--fast, 120ms) var(--ease-move, cubic-bezier(0.45, 0, 0.2, 1)), border-color var(--fast, 120ms) var(--ease-move, cubic-bezier(0.45, 0, 0.2, 1));
+}
+.motion-toggle:hover { background: var(--panel-2); color: var(--text); }
+.motion-toggle:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.motion-toggle[aria-pressed="true"] { border-color: var(--line-strong); background: var(--panel-2); color: var(--text); }
+
+/* ---- The hint types itself in once ---- */
+/* The field's own placeholder is drawn by this copy, letter by letter; the
+   copy stands aside the moment the field holds anything, and never takes a
+   click (the field under it does). */
+.hero-input { position: relative; flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; }
+.hero-input input { width: 100%; }
+.hero-input input::placeholder { color: transparent; }
+.hero-typed {
+  position: absolute; inset: 0; display: flex; align-items: center; overflow: hidden;
+  font-family: var(--sans); font-size: 13.5px; color: var(--faint); white-space: pre; pointer-events: none;
+}
+.hero-input input:not(:placeholder-shown) + .hero-typed { visibility: hidden; }
+/* About 2.3 s for the long hint; the caret rides the newest letter, then
+   blinks three times at the end and is gone. */
+.console-home .hero-typed span {
+  animation: console-type 1ms steps(1, end) backwards, console-caret 80ms steps(1, end);
+  animation-delay: calc(500ms + var(--i, 0) * 38ms);
+}
+.console-home .hero-typed span:last-child {
+  animation: console-type 1ms steps(1, end) backwards, console-blink 800ms steps(1, end) 3;
+  animation-delay: calc(500ms + var(--i, 0) * 38ms);
+}
+@keyframes console-type { from { opacity: 0; } }
+@keyframes console-caret { from { box-shadow: 1.5px 0 0 currentColor; } to { box-shadow: none; } }
+@keyframes console-blink { 0% { box-shadow: 1.5px 0 0 currentColor; } 50%, 100% { box-shadow: none; } }
+/* High contrast draws its own colours: the field's placeholder is shown as is. */
+@media (forced-colors: active) {
+  .hero-typed { display: none; }
+  .hero-input input::placeholder { color: GrayText; }
+}
+
+/* ---- The hero's edge: a slow light goes round it ---- */
+.console-home .hero-card { position: relative; }
+.console-home .hero-card::before {
+  content: ''; position: absolute; inset: -1px; padding: 1px; border-radius: inherit; pointer-events: none;
+  background: conic-gradient(from var(--sweep),
+    transparent 0deg,
+    color-mix(in srgb, var(--text) 38%, transparent) 40deg,
+    color-mix(in srgb, var(--text) 24%, transparent) 70deg,
+    transparent 120deg,
+    color-mix(in srgb, var(--text) 6%, transparent) 240deg,
+    transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: console-sweep 5s linear infinite;
+}
+@keyframes console-sweep { to { --sweep: 360deg; } }
+
+/* ---- Bars grow from their start ---- */
+.console-home .wallet-bars .bar i {
+  transform-origin: left center;
+  animation: console-grow 1.1s var(--ease-enter, cubic-bezier(0.22, 1, 0.36, 1)) backwards;
+  animation-delay: calc(450ms + var(--i, 0) * 60ms);
+}
+@keyframes console-grow { from { transform: scaleX(0); } }
+
+/* ---- The newest case is lit once as it arrives ---- */
+.console-home .recent-cases > li:first-child > a { animation: console-newest 1.8s ease-in-out 900ms; }
+@keyframes console-newest { 30% { background: color-mix(in srgb, var(--text) 10%, var(--glass-input)); } }
+
+/* ---- The empty watchlist listens: a radar sweep and a ping ---- */
+.watch-empty { display: flex; align-items: center; gap: 16px; }
+.watch-radar {
+  position: relative; flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+}
+.watch-radar i { position: absolute; border-radius: 50%; }
+.watch-radar .radar-sweep {
+  inset: 0;
+  background: conic-gradient(from 0deg, color-mix(in srgb, var(--text) 20%, transparent), transparent 70deg);
+}
+.watch-radar .radar-ping { left: 18px; top: 18px; width: 10px; height: 10px; border: 1px solid var(--text-2); opacity: 0; }
+.watch-radar .radar-dot { left: 21px; top: 21px; width: 4px; height: 4px; background: var(--text-2); }
+.console-home .watch-radar .radar-sweep { animation: console-radar 3.2s linear infinite; }
+.console-home .watch-radar .radar-ping { animation: console-ping 3.2s ease-out infinite; }
+@keyframes console-radar { to { transform: rotate(360deg); } }
+@keyframes console-ping { 0% { transform: scale(0.4); opacity: 0.9; } 100% { transform: scale(2.6); opacity: 0; } }
+
+/* ---- A very slow glow behind the page ---- */
+.console-ambient { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.console-ambient i {
+  position: absolute; top: -160px; right: -120px; width: 760px; height: 560px; max-width: 120%;
+  background: radial-gradient(closest-side, var(--console-glow), transparent);
+}
+.console-home { --console-glow: rgba(255, 255, 255, 0.7); }
+html[data-theme="dark"] .console-home { --console-glow: rgba(255, 255, 255, 0.045); }
+.console-home .console-ambient i { animation: console-drift 18s ease-in-out infinite; }
+@keyframes console-drift { 50% { transform: translate(-30px, 18px); } }
+
+/* ---- On a phone a switch is a 44 px target ---- */
+@media (max-width: 720px) {
+  .motion-toggle { min-height: 44px; padding: 0 14px; }
+}
+
+/* ---- Pause motion: the loops stop where they rest ---- */
+.console-home.paused .hero-status i,
+.console-home.paused .hero-card::before,
+.console-home.paused .watch-radar .radar-sweep,
+.console-home.paused .watch-radar .radar-ping,
+.console-home.paused .console-ambient i {
+  animation: none !important;
+}
+
+/* ---- Reduced motion: every animation off, the page at its final state.
+   .still is the same, set from the same question (Home.jsx), so a browser
+   that answers it in script and not in CSS is covered too. ---- */
+.console-home.still .console-rise,
+.console-home.still .console-rise.blur,
+.console-home.still .showroom,
+.console-home.still .hero-status i,
+.console-home.still .hero-typed span,
+.console-home.still .hero-typed span:last-child,
+.console-home.still .hero-card::before,
+.console-home.still .wallet-bars .bar i,
+.console-home.still .recent-cases > li:first-child > a,
+.console-home.still .watch-radar .radar-sweep,
+.console-home.still .watch-radar .radar-ping,
+.console-home.still .console-ambient i {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .console-home .console-rise,
+  .console-home .console-rise.blur,
+  .console-home .showroom,
+  .console-home .hero-status i,
+  .console-home .hero-typed span,
+  .console-home .hero-typed span:last-child,
+  .console-home .hero-card::before,
+  .console-home .wallet-bars .bar i,
+  .console-home .recent-cases > li:first-child > a,
+  .console-home .watch-radar .radar-sweep,
+  .console-home .watch-radar .radar-ping,
+  .console-home .console-ambient i {
+    animation: none !important;
+  }
+  .motion-toggle { display: none; }
+}
