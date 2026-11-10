@@ -1,0 +1,73 @@
+name: Watch checks
+
+# Checks watched addresses every 15 minutes, so a mule wallet's cash-out is
+# heard about without anyone pressing Check now. Render's free instance
+# sleeps after 15 idle minutes and the in-process watcher sleeps with it;
+# this job knocks on /health until the instance is awake, then calls
+# POST /watches/check-due, which checks a bounded batch of the due watches
+# (oldest first, inside the part of the day's provider allowance kept for
+# watch checks) and sends their alerts to the app and each watch's webhook.
+#
+# Set up by the repository's owner (docs/operations.md, "Scheduled watch
+# checks"): the secret WATCH_CRON_TOKEN in the environment `watch-cron`
+# (deployment branches: main only), equal to EXCHEQUER_WATCH_CRON_TOKEN on
+# Render, then the repository variable WATCH_CRON=on. Until it is on, a
+# scheduled run is skipped instead of failing every 15 minutes; a run
+# started by hand always runs, and is red when the job is not set up.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: watch-cron
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.event_name == 'workflow_dispatch' || vars.WATCH_CRON == 'on'
+    runs-on: ubuntu-24.04
+    environment: watch-cron
+    timeout-minutes: 12
+    env:
+      EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer-6gnl.onrender.com' }}
+    steps:
+      # A sleeping free instance takes a minute or more to answer.
+      - name: Wake the site
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsS --max-time 30 "$EXCHEQUER_URL/health" > /dev/null && exit 0
+            echo "Not awake yet (attempt $attempt); waiting."
+            sleep 10
+          done
+          echo "::error::$EXCHEQUER_URL/health did not answer."
+          exit 1
+      # The token reaches this step only, and curl reads the header from
+      # stdin, so it is never on a command line. The repository is public and
+      # so is this log: the answer's counts (alerts raised, watches checked)
+      # would tell a wallet's holder it is watched, so only the status code
+      # is printed. curl's --retry re-sends a timeout or a waking proxy's
+      # 502/503, never a 401 or 404; a 409 means a batch started by the first
+      # attempt is still running, which is fine.
+      - name: Check the due watches
+        env:
+          WATCH_CRON_TOKEN: ${{ secrets.WATCH_CRON_TOKEN }}
+        run: |
+          if [ -z "${WATCH_CRON_TOKEN:-}" ]; then
+            echo "::error::The 'watch-cron' environment has no WATCH_CRON_TOKEN secret (docs/operations.md, Scheduled watch checks)."
+            exit 1
+          fi
+          answer="$RUNNER_TEMP/answer.json"
+          code=$(printf 'Authorization: Bearer %s\n' "$WATCH_CRON_TOKEN" |
+            curl -sS --max-time 200 --retry 1 --retry-delay 20 \
+              -o "$answer" -w '%{http_code}' \
+              -X POST -H @- "$EXCHEQUER_URL/watches/check-due") || true
+          case "$code" in
+            200) echo "Checked (HTTP 200)." ;;
+            409) echo "A batch started by the first attempt is still running (HTTP 409)." ;;
+            *) echo "::error::POST /watches/check-due answered HTTP ${code:-000}."
+               head -c 300 "$answer" 2>/dev/null; echo
+               exit 1 ;;
+          esac

@@ -83,7 +83,7 @@ def _secret_values() -> tuple[str, ...]:
     characters are skipped: they would mask ordinary words."""
     values: list[str | None] = [getattr(config, name, None) for name in _PROVIDER_KEYS]
     values += [os.getenv(name) for name in _PROVIDER_KEYS]
-    values += [config.HEALTH_TOKEN, config.BACKUP_TOKEN, config.BOOTSTRAP_TOKEN, config.DEMO_CODE,
+    values += [config.HEALTH_TOKEN, config.BACKUP_TOKEN, config.BOOTSTRAP_TOKEN, config.DEMO_CODE, config.WATCH_CRON_TOKEN,
                os.getenv("EXCHEQUER_SIGNING_KEY"), _db_password(config.DATABASE_URL)]
     found = {v.strip() for v in values if v and len(v.strip()) >= 8}
     return tuple(sorted(found, key=len, reverse=True))

@@ -45,6 +45,8 @@ The README explains what the tool finds; this file is for whoever keeps it up.
 | `EXCHEQUER_API_DOCS` | on (off in the image) | `/docs`, `/redoc`, `/openapi.json`. |
 | `EXCHEQUER_WATCHER` | off | Re-read watched addresses in the background. Only worth it on a host that stays awake: on one that sleeps when idle (Render's free plan) the watcher sleeps too, so on a temporary disk `1` is ignored and only `force` turns it on. The watchlist and `/health/detail` report the last check and call it stale after three missed intervals. |
 | `EXCHEQUER_WATCH_INTERVAL` | 600 | Seconds between checks of one watch (minimum 60). |
+| `EXCHEQUER_WATCH_CRON_TOKEN` | — (`render.yaml` generates one) | Bearer token for `POST /watches/check-due`, which the scheduled job calls (Scheduled watch checks). Unset, the endpoint answers 404. |
+| `EXCHEQUER_WATCH_CRON_BATCH` | 10 | The most watches one scheduled call checks, oldest first; the rest wait for the next call. |
 | `EXCHEQUER_WEBHOOK_HOSTS` | — | Comma-separated hosts alert webhooks may post to, beyond Slack, Discord and Google Chat. |
 | `EXCHEQUER_BACKUPS` | off | A daily snapshot of a SQLite store in `backups/` beside it. Ignored on a temporary disk (`force` overrides). |
 | `EXCHEQUER_BACKUP_KEEP` | 7 | How many daily snapshots to keep. |
@@ -195,6 +197,55 @@ Postgres.
 
 CI runs the suite's migration tests on SQLite and the same migrations on a
 real Postgres, including adopting a store made before migrations.
+
+## Scheduled watch checks
+
+Render's free instance sleeps after 15 idle minutes and the in-process
+watcher (`EXCHEQUER_WATCHER`) sleeps with it, so without help a watch is
+checked only when someone presses Check now. `.github/workflows/watch-cron.yml`
+fixes that on the free tier: every 15 minutes it knocks on `/health` until the
+instance is awake, then calls `POST /watches/check-due` with a bearer token.
+Each call checks at most `EXCHEQUER_WATCH_CRON_BATCH` due watches, never
+checked first and then the longest unchecked, inside the part of the day's
+provider allowance kept for watch checks (`EXCHEQUER_WATCH_SHARE_PERCENT`).
+Alerts go to the app and to each watch's webhook, as a Check now's do, and
+each check is audit-recorded. The answer is counts only:
+`{"checked", "alerts", "skipped_budget", "next_due"}`, and the job prints only
+its status code: the repository's run logs are public, and the counts would
+tell a wallet's holder that someone is watching it. The counts are in the
+Render log (`audit watch.check` lines) and `/health/detail`. `skipped_budget` counts
+watches the allowance stopped; each says so on its row and is tried again
+next call.
+
+To switch it on, once:
+
+1. Render → the service → Environment: `EXCHEQUER_WATCH_CRON_TOKEN`. A
+   Blueprint sync (Dashboard → the Blueprint → Manual sync) generates it;
+   without one, add it by hand with a long random value
+   (`python -c 'import secrets;print(secrets.token_urlsafe(32))'`). Saving
+   redeploys. Copy the value.
+2. GitHub → Settings → Environments → New environment `watch-cron`.
+   Deployment branches: selected, `main` only. Add the secret
+   `WATCH_CRON_TOKEN` with the value from step 1.
+3. Actions → Watch checks → Run workflow (on `main`). It must be green
+   ("Checked (HTTP 200)").
+4. Settings → Secrets and variables → Actions → Variables: the repository
+   variable `WATCH_CRON` = `on`, so the 15-minute schedule starts.
+
+The watchlist says watches are checked automatically only while scheduled
+calls keep arriving (one within the last 30 minutes), so a token with no job
+behind it promises nothing. The interval it gives grows with the backlog: one
+call checks `EXCHEQUER_WATCH_CRON_BATCH` watches, so 25 active watches at 10 a
+call are each checked about every 45 minutes, and the stale warning waits
+three of those. To stop, set `WATCH_CRON` to `off`; removing the Render value
+makes the endpoint answer 404.
+
+Two things to know. Calls every 15 minutes keep the instance awake almost
+all the time, which uses about 744 of the workspace's 750 free instance
+hours a month: a second free service in the same Render workspace would run
+both out before the month ends. And GitHub pauses scheduled workflows in a
+repository with no activity for 60 days; Actions shows a button to turn the
+schedule back on.
 
 ## Backups
 

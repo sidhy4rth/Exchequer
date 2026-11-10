@@ -706,6 +706,12 @@ SIGNING_KEY_PATH: Path = (
 # provider requests per round.
 WATCHER_ENABLED: bool = host_flag(os.environ, "EXCHEQUER_WATCHER")
 WATCH_INTERVAL_SECONDS: int = max(60, _int_env("EXCHEQUER_WATCH_INTERVAL", 600))
+# Bearer token for POST /watches/check-due, which a scheduled GitHub job
+# (.github/workflows/watch-cron.yml) calls every 15 minutes: it wakes a host
+# that sleeps and checks the due watches. Unset = the endpoint does not exist.
+WATCH_CRON_TOKEN: str = os.getenv("EXCHEQUER_WATCH_CRON_TOKEN", "").strip()
+# The most watches one scheduled call checks; the rest wait for the next call.
+WATCH_CRON_BATCH: int = max(1, _int_env("EXCHEQUER_WATCH_CRON_BATCH", 10))
 # Hosts beyond Slack, Discord and Google Chat that alert webhooks may post to.
 WEBHOOK_EXTRA_HOSTS: str = os.getenv("EXCHEQUER_WEBHOOK_HOSTS", "")
 # Seals watch webhook URLs at rest (webhook_vault.py). Any secret; keep it

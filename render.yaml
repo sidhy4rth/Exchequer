@@ -96,11 +96,18 @@ services:
         value: "0"
       # The free plan sleeps after 15 idle minutes and the watcher sleeps with
       # it, so a watch set at noon would go unchecked all night while the panel
-      # promised every ten minutes. Off: watches are checked when someone
-      # presses Check now, and the panel says so (watchlist.watcher_status).
-      # Turn it on with a host that stays awake.
+      # promised every ten minutes. Off: watches are checked by the scheduled
+      # job below, or when someone presses Check now, and the panel says which
+      # (watchlist.watcher_status). Turn it on with a host that stays awake.
       - key: EXCHEQUER_WATCHER
         value: "0"
+      # Bearer token for POST /watches/check-due, which the GitHub job
+      # .github/workflows/watch-cron.yml calls every 15 minutes: it wakes the
+      # instance and checks the due watches, so alerts no longer wait for
+      # Check now. Copy it into the `watch-cron` environment's WATCH_CRON_TOKEN
+      # secret (docs/operations.md, Scheduled watch checks).
+      - key: EXCHEQUER_WATCH_CRON_TOKEN
+        generateValue: true
       # The daily snapshot copies a SQLite file on the volume; there is none.
       - key: EXCHEQUER_BACKUPS
         value: "0"

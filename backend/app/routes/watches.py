@@ -7,12 +7,16 @@
     DELETE /watches/{id}/webhook       stop posting this watch's alerts to a webhook
     GET    /alerts                     this browser's alerts: unread exchange and flagged first, then newest
     POST   /alerts/read                mark some or all read
+    POST   /watches/check-due          the scheduled job: check a batch of due watches
 
 Everything here belongs to the owner key the browser sends (ownership.py);
-without one there is nothing to list and nothing can be watched.
+without one there is nothing to list and nothing can be watched. The one
+exception is check-due, which only the bearer token EXCHEQUER_WATCH_CRON_TOKEN
+reaches (.github/workflows/watch-cron.yml).
 """
 from __future__ import annotations
 
+import hmac
 import threading
 from typing import Any
 
@@ -91,11 +95,15 @@ def get_watches(http: Request) -> dict[str, Any]:
     # Whether and how often checks run is for anyone. When they last ran is
     # said only of this browser's own watches: the site-wide count and the
     # time of anyone's last check stay in the token-gated /health/detail.
-    watcher: dict[str, Any] = {"enabled": config.WATCHER_ENABLED,
-                               "interval_seconds": config.WATCH_INTERVAL_SECONDS}
+    # The interval grows with the site's backlog, so with no owner key it
+    # leaves the backlog out, and with one it is rounded up (to within a
+    # factor of two) rather than a count of everyone's watches.
+    enabled, interval = watchlist.schedule(backlog="none")
+    watcher: dict[str, Any] = {"enabled": enabled, "interval_seconds": interval}
     if owner:
         mine = watchlist.watcher_status(owner)
-        watcher |= {"stale": mine["stale"], "last_check_at": mine["last_check_at"]}
+        watcher |= {"enabled": mine["enabled"], "interval_seconds": mine["interval_seconds"],
+                    "stale": mine["stale"], "last_check_at": mine["last_check_at"]}
     return {"count": len(watches), "watches": watches,
             "interval_seconds": config.WATCH_INTERVAL_SECONDS,
             "running": config.WATCHER_ENABLED,
@@ -198,3 +206,33 @@ def get_alerts(http: Request, unread: bool = Query(False), limit: int = Query(10
 @router.post("/alerts/read")
 def read_alerts(body: ReadRequest, http: Request) -> dict[str, Any]:
     return {"marked": watchlist.mark_read(_owner(http), body.alert_ids)}
+
+
+# One scheduled batch at a time: the job's curl retries a slow answer, and a
+# retry must not start a second batch beside the first.
+_cron_lock = threading.Lock()
+
+
+def _cron_authorised(http: Request) -> None:
+    """404 unless the token is set (as if the route were not there), 401 to
+    anything but that exact bearer token."""
+    if not config.WATCH_CRON_TOKEN:
+        raise HTTPException(status_code=404, detail="Not Found")
+    scheme, _, token = http.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not hmac.compare_digest(
+            token.strip().encode(), config.WATCH_CRON_TOKEN.encode()):
+        raise HTTPException(status_code=401, detail="Not authorised.")
+
+
+@router.post("/watches/check-due", include_in_schema=False)
+def check_due(http: Request) -> dict[str, Any]:
+    """Check up to EXCHEQUER_WATCH_CRON_BATCH due watches, oldest first, inside
+    the part of the day's provider allowance kept for watch checks. Alerts go
+    to the app and each watch's webhook, as a Check now's do."""
+    _cron_authorised(http)
+    if not _cron_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="A scheduled check is already running.")
+    try:
+        return watchlist.check_due(config.WATCH_CRON_BATCH)
+    finally:
+        _cron_lock.release()

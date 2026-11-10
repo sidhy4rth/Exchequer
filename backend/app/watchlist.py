@@ -43,8 +43,8 @@ from urllib.parse import urlsplit
 import httpx
 from sqlalchemy import and_, case, delete, func, or_, select, update
 
-from . import config, models, ownership, webhook_vault
-from .api_budget import TraceBudget, charged_to, fresh_reads
+from . import audit, config, models, ownership, webhook_vault
+from .api_budget import BudgetSpent, TraceBudget, charged_to, fresh_reads
 from .deposit_inference import DUST_FLOOR, dust_floor
 from .chain_data import open_source
 from .etherscan_client import normalize_address
@@ -710,11 +710,14 @@ def _read(client: Any, chain: config.Chain, address: str, cursor: int | None,
 
 
 def check_watch(watch_id: str, source: Source = open_source,
-                post: Callable[[str, dict[str, Any]], None] | None = None) -> list[dict[str, Any]]:
+                post: Callable[[str, dict[str, Any]], None] | None = None,
+                raise_budget: bool = False) -> list[dict[str, Any]]:
     """Read what one watch's address sent since its cursor; store and send any new ones.
 
     Returns the new alerts. A provider failure is recorded on the watch and
-    tried again next round, never raised."""
+    tried again next round, never raised -- except, with `raise_budget`, a
+    spent allowance (BudgetSpent), raised after it is recorded, so a
+    scheduled batch can count what the budget stopped."""
     post = post or post_webhook
     # Read what the check needs, then let go of the database: the provider can
     # take seconds (longer with retries), and an open SQLite transaction for
@@ -734,10 +737,14 @@ def check_watch(watch_id: str, source: Source = open_source,
             fresh, seen_block, notice = _read(client, chain, address, cursor, _anchor(created_at))
             unconfirmed = getattr(client, "confirmed_bound_applied", True) is False
     except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
-        _finish_check(watch_id, error=f"Could not read the address this round ({type(exc).__name__}).")
+        spent = isinstance(exc, BudgetSpent)
+        _finish_check(watch_id, error=f"Not checked: the {exc.reason} is used up." if spent else
+                      f"Could not read the address this round ({type(exc).__name__}).")
         logger.warning("Watch %s: provider failure: %s", watch_id, exc)
         if hook:  # the outbox does not wait for the chain
             _deliver_safely(watch_id, address, chain_key, case_id, post)
+        if spent and raise_budget:
+            raise
         return []
     if unconfirmed:
         # The head could not be read, so the newest rows may not have settled:
@@ -1092,7 +1099,105 @@ def due_watch_ids(interval_seconds: float) -> list[str]:
         stmt = select(models.Watch.id).where(models.Watch.active).where(
             (models.Watch.last_checked_at.is_(None)) | (models.Watch.last_checked_at <= cutoff))
         return list(s.scalars(stmt.order_by(models.Watch.last_checked_at.is_not(None),
-                                            models.Watch.last_checked_at)))
+                                            models.Watch.last_checked_at, models.Watch.created_at)))
+
+
+# How often the scheduled job calls check_due (.github/workflows/watch-cron.yml).
+CRON_INTERVAL_SECONDS = 15 * 60
+# A scheduled call starts no new check after this long: Render's proxy and
+# the job's curl both wait, and what is left is due again next call.
+CRON_SECONDS = 90.0
+
+
+def check_due(limit: int, seconds: float = CRON_SECONDS) -> dict[str, Any]:
+    """Check up to `limit` due watches, never checked first, then the longest
+    unchecked, each inside the part of the day kept for watch checks. A watch
+    the allowance stops is recorded on it (so it goes to the back, not to the
+    front of every call until midnight) and counted in `skipped_budget`.
+    Every check is audit-recorded. `next_due` is when a watch is next due
+    (now, if some were left over), or None with no active watch."""
+    global _last_cron_call
+    started = _last_cron_call = time.monotonic()
+    checked = alerts = skipped = 0
+    batch = due_watch_ids(config.WATCH_INTERVAL_SECONDS)[:limit]
+    with models.session() as s:  # so each check is recorded against its case
+        cases = dict(s.execute(select(models.Watch.id, models.Watch.case_id)
+                               .where(models.Watch.id.in_(batch))).all()) if batch else {}
+    for watch_id in batch:
+        if time.monotonic() - started > seconds:
+            break
+        result, found = "checked", 0
+        try:
+            with charged_to(None, watch=True):
+                found = len(check_watch(watch_id, raise_budget=True))
+            checked, alerts = checked + 1, alerts + found
+        except BudgetSpent:
+            result, skipped = "budget", skipped + 1
+        except Exception:  # noqa: BLE001 -- one watch must not stop the rest
+            logger.exception("Watch %s: scheduled check failed", watch_id)
+            result = "error"
+        audit.record("watch.check", case_id=cases.get(watch_id),
+                     detail={"watch_id": watch_id, "trigger": "schedule",
+                             "result": result, "alerts": found})
+    return {"checked": checked, "alerts": alerts, "skipped_budget": skipped,
+            "next_due": _next_due(config.WATCH_INTERVAL_SECONDS)}
+
+
+def _next_due(interval: float) -> str | None:
+    from datetime import datetime, timedelta
+    with models.session() as s:
+        active = models.Watch.active.is_(True)
+        if s.scalar(select(models.Watch.id).where(active, models.Watch.last_checked_at.is_(None)).limit(1)):
+            return models.utc_now_iso()
+        oldest = s.scalar(select(func.min(models.Watch.last_checked_at)).where(active))
+    if oldest is None:
+        return None
+    due = (datetime.fromisoformat(oldest) + timedelta(seconds=interval)).isoformat(timespec="seconds")
+    return max(due, models.utc_now_iso())
+
+
+# When the last authorised scheduled call arrived (time.monotonic()), or None.
+# Evidence that the job runs: the token alone can be set long before the
+# GitHub variable is on, or after GitHub pauses an idle schedule. In memory:
+# a restart forgets it until the next call, and until then the watchlist
+# says to press Check now, which is the safe thing to say.
+_last_cron_call: float | None = None
+
+
+def schedule(backlog: str = "exact") -> tuple[bool, int]:
+    """Whether watches are checked without anyone pressing Check now, and
+    about how often: the in-process watcher, else the scheduled job while
+    its calls keep arriving. One call checks WATCH_CRON_BATCH watches, so a
+    backlog stretches the interval: 25 watches at 10 a call take 3 calls.
+
+    That interval is a count of every active watch on the site, to within
+    one batch, so only the operator gets it `exact`. The open watchlist gets
+    it `rounded` (rounded_interval) or, with no owner key, with the backlog
+    left out (`none`)."""
+    if config.WATCHER_ENABLED:
+        return True, config.WATCH_INTERVAL_SECONDS
+    if (config.WATCH_CRON_TOKEN and _last_cron_call is not None
+            and time.monotonic() - _last_cron_call <= 2 * CRON_INTERVAL_SECONDS):
+        count = 0
+        if backlog != "none":
+            with models.session() as s:
+                count = s.scalar(select(func.count()).select_from(models.Watch)
+                                 .where(models.Watch.active.is_(True))) or 0
+        interval = CRON_INTERVAL_SECONDS * max(1, -(-count // config.WATCH_CRON_BATCH))
+        if backlog == "rounded":
+            interval = rounded_interval(interval)
+        return True, max(config.WATCH_INTERVAL_SECONDS, interval)
+    return False, config.WATCH_INTERVAL_SECONDS
+
+
+def rounded_interval(seconds: int) -> int:
+    """Up to 15, 30, 60, 120 minutes and so on: never shorter than the truth,
+    under twice it, and the same for 21 watches as for 40, so the open
+    watchlist gives the site's backlog only to within a factor of two."""
+    shown = CRON_INTERVAL_SECONDS
+    while shown < seconds:
+        shown *= 2
+    return shown
 
 
 def _iso_ago(seconds: float) -> str:
@@ -1123,8 +1228,8 @@ def watcher_status(owner: str | None = None) -> dict[str, Any]:
     intervals -- or, for a watch never checked, since it was made.
 
     With `owner`, only that browser's watches count; without, the whole site
-    (for the operator's /health/detail only)."""
-    interval = config.WATCH_INTERVAL_SECONDS
+    (for the operator's /health/detail only), with the exact interval."""
+    enabled, interval = schedule("exact" if owner is None else "rounded")
     with models.session() as s:
         active = models.Watch.active.is_(True)
         if owner is not None:
@@ -1136,10 +1241,10 @@ def watcher_status(owner: str | None = None) -> dict[str, Any]:
     # The newest check; with none yet, the oldest watch still waiting for one.
     # (ISO-8601 UTC strings in one format, so they compare as text.)
     reference = last or never
-    stale = bool(config.WATCHER_ENABLED and count and reference
+    stale = bool(enabled and count and reference
                  and reference < _iso_ago(STALE_AFTER_INTERVALS * interval))
     return {
-        "enabled": config.WATCHER_ENABLED,
+        "enabled": enabled,
         "running": _thread is not None and _thread.is_alive(),
         "interval_seconds": interval,
         "active_watches": count,
