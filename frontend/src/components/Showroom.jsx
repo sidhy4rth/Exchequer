@@ -6,6 +6,15 @@ import './Showroom.css'
 
 const middle = (a, head = 10, tail = 8) => (a && a.length > head + tail + 1 ? `${a.slice(0, head)}…${a.slice(-tail)}` : a)
 
+/** Check a demo code with the backend and keep what unlocks live tracing:
+ * the pass it returns, or the code itself from a server too old to issue
+ * one. Throws the backend's reason when the code is refused. */
+export async function unlockLive(code) {
+  const checked = await checkDemoCode(code)
+  if (checked?.pass) rememberDemoPass(checked.pass)
+  else rememberDemoCode(code)
+}
+
 /** The public console before a demo code is entered (backend/app/access.py):
  * the recorded demos, which open exactly as recorded and never trace, and a
  * box for the code that unlocks live tracing. `onUnlock` runs once the
@@ -27,10 +36,7 @@ export default function Showroom({ onUnlock }) {
     setChecking(true)
     setError('')
     try {
-      const checked = await checkDemoCode(typed)
-      // Keep the pass, not the code; a server too old to issue one gets the code.
-      if (checked?.pass) rememberDemoPass(checked.pass)
-      else rememberDemoCode(typed)
+      await unlockLive(typed)
       onUnlock()
     } catch (err) {
       setError(err.message)

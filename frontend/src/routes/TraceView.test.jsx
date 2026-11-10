@@ -264,6 +264,15 @@ describe("the victim's payments on the case page (5-3, 5-2, 5-5, 5-1)", () => {
     expect(landed).toHaveAttribute('data-started', 'true')
   })
 
+  it('Trace live keeps the mark on a payment the officer found by search', async () => {
+    const intake = { mode: 'payment', payments: [pay({ tx_hash: H1, amount: 3999, timestamp: 1_700_000_000 }), pay({ tx_hash: H2, amount: 5, timestamp: 1_700_086_400, found_by: 'officer_search' })] }
+    await openPaymentCase({ intake })
+    await userEvent.setup().click(screen.getByRole('button', { name: /Trace live/ }))
+    const landed = new URLSearchParams(screen.getByTestId('landed').textContent.split('?')[1])
+    expect(landed.get('pay')).toBe(`${H1},${H2}`)
+    expect(landed.get('found')).toBe(H2)
+  })
+
   it('counts payments by hash, not by transfer, and marks the NCRP number as entered', async () => {
     await openPaymentCase()
     const line = document.querySelector('.finding-bar .intake')

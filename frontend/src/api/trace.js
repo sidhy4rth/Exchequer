@@ -83,7 +83,12 @@ export async function searchPayments({ chain, asset, wallet, amount, from, to })
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chain, asset, wallet, amount: String(amount), from: from.toISOString(), to: to.toISOString() }),
   })
-  if (!response.ok) throw await toError(response)
+  if (!response.ok) {
+    // The status says which refusal it was: the demo code, a rate limit, the provider.
+    const err = await toError(response)
+    err.status = response.status
+    throw err
+  }
   return response.json()
 }
 
@@ -208,7 +213,7 @@ export async function stopTraceJob(jobId) {
 
 // The trace a job runs, without the complaint's particulars: what a running
 // job is remembered under for the tab, and in sessionStorage across a reload.
-function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments }) {
+function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSeconds, payments, officerFound }) {
   return {
     address,
     ...(maxDepth ? { max_depth: maxDepth } : {}),
@@ -218,7 +223,11 @@ function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSecond
     ...(timeBudgetSeconds ? { time_budget_seconds: timeBudgetSeconds } : {}),
     // R1: start from the victim's payments. The backend checks each one is an
     // incoming transfer to `address`, and reads the wallet from the first.
-    ...(payments?.length ? { payments: payments.map((h) => ({ tx_hash: h })) } : {}),
+    // One the officer found by searching the wallet (POST /payments/search)
+    // says so, and the case shows it.
+    ...(payments?.length ? { payments: payments.map((h) => ({
+      tx_hash: h, ...(officerFound?.includes(h) ? { found_by: 'officer_search' } : {}),
+    })) } : {}),
   }
 }
 

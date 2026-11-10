@@ -6,8 +6,9 @@
 // fails when App.jsx routes to a page, or the sidebar lists one, that is
 // neither here nor in NOT_CHECKED.
 //
-// A `stub` answers a GET with `body`, or with what the server sent passed
-// through `extend`.
+// A `stub` answers a request with `body` (and `status`, if not 200), or with
+// what the server sent passed through `extend`. `before(page)` presses and
+// fills what comes before `click`, for a state a single press cannot reach.
 //
 // `unmeasured` pins, per size, how much text axe still cannot measure for
 // contrast with the canvases and gradients hidden (a11y.spec.js lists it).
@@ -139,6 +140,34 @@ async function timelineReachable(page) {
 }
 
 const H1 = (name) => ['heading', { level: 1, name }]
+
+// New trace's search for a payment by amount and time. The wallet typed in
+// is one of whichever chain the site opens on (Tron, where it traces Tron).
+const NO_HASH_OPEN = ['button', { name: "I don't have the payment hash" }]
+const SEARCH = ['button', { name: 'Search the wallet' }]
+const INTAKE_ON = { url: '**/trace/intake', body: { payments: true, lookup_limit: 1000 } }
+async function fillSearch(page) {
+  const tron = await page.getByRole('radio', { name: 'Tron' }).isChecked()
+  await page.getByLabel('Wallet the victim paid').fill(tron ? 'TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts' : `0x${'7c'.repeat(20)}`)
+  await page.getByRole(...NO_HASH_OPEN).click()
+  await page.getByLabel('Exact amount paid').fill('1500.25')
+  await page.getByLabel('When the victim paid, in IST').fill('2026-11-09T14:30')
+}
+const searched = (name, answer, ready, unmeasured) => ({
+  name: `New trace, no-hash search, ${name}`, path: '/trace/new', as: 'investigator',
+  stub: [INTAKE_ON, { url: '**/payments/search', ...answer }], before: fillSearch, click: SEARCH, ready, unmeasured,
+})
+const MATCH = { tx_hash: 'ab'.repeat(32), timestamp: 1_762_678_800, amount: '1500.25', from: `0x${'b1'.repeat(20)}`, to: '', chain: '', asset: 'USDT', found_by: 'officer_search' }
+const NO_HASH = [
+  { name: 'New trace, no-hash search open', path: '/trace/new', as: 'investigator', stub: INTAKE_ON, click: NO_HASH_OPEN, ready: ['textbox', { name: 'Exact amount paid' }] },
+  // On Linux (CI) the form wraps taller and its "Load a verified example" select crosses the bottom of the screen at rest, where axe cannot sample it.
+  { name: 'New trace, no-hash search, payments off', path: '/trace/new', as: 'investigator', stub: { ...INTAKE_ON, body: { payments: false } }, click: NO_HASH_OPEN, ready: ['button', { ...NO_HASH_OPEN[1], expanded: true }], unmeasured: { desktop: 1, phone: 1 } },
+  searched('a match', { body: { matches: [MATCH], more_matches: false, scanned: 40, complete: true } }, ['list', { name: 'Payments that match exactly' }]),
+  searched('no match', { body: { matches: [], more_matches: false, scanned: 40, complete: false } }, ['status']),
+  searched('locked', { status: 403, body: { detail: 'Live tracing on this site needs an access code.' } }, ['button', { name: 'Unlock and search again' }]),
+  searched('rate limited', { status: 429, body: { detail: 'This site has started 30 traces in the last hour. Try again in 42 min.' } }, ['status']),
+  searched('provider error', { status: 502, body: { detail: 'The wallet could not be searched: the data provider did not answer. Try again later.' } }, ['status']),
+]
 const CASE_TAB = (name) => ['tab', { name, selected: true }]
 const FILL = ['region', { name: /^For you to fill · \d+$/ }] // shows once the letter is drafted
 
@@ -181,6 +210,9 @@ export const PAGES = [
   // The victim's payments opened: the hashes, the victim's wallet and the
   // masked NCRP number (on a site that traces from payment hashes).
   { name: 'New trace, payments open', path: '/trace/new', as: 'investigator', stub: { url: '**/trace/intake', body: { payments: true } }, click: ['button', { name: /Victim's payments/ }], ready: ['textbox', { name: "The victim's payment hashes, one per line" }] },
+  // I don't have the payment hash: the search form, then each answer the
+  // search can give (POST /payments/search, stubbed: the check starts nothing).
+  ...NO_HASH,
   // A searched hash on a site that cannot trace from one says so.
   { name: 'New trace, hash with payments off', path: `/trace/new?pay=0x${'c'.repeat(64)}`, as: 'investigator', stub: { url: '**/trace/intake', body: { payments: false } }, ready: H1('New trace') },
   // The table on a desktop, a card per case on a phone; a pressed filter, and

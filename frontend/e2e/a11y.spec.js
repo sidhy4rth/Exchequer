@@ -46,11 +46,17 @@ async function open(page, p, theme) {
   await page.route('**/*', (route) => (['GET', 'HEAD'].includes(route.request().method()) ? route.fallback() : route.abort()))
   for (const stub of [p.stub ?? []].flat()) {
     await page.route(stub.url, async (route) => route.fulfill({
+      status: stub.status ?? 200,
       json: stub.extend ? stub.extend(await (await route.fetch()).json()) : stub.body,
     }))
   }
 
   await page.goto(p.path)
+  // A state reached by more than one press: what comes before the last one.
+  if (p.before) {
+    await settle(page)
+    await p.before(page)
+  }
   // A click scrolls what it presses into view, so it waits for the page to
   // load: content landing above it later would leave the page at rest in a
   // different place on each run, with other text under the see-through top

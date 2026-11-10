@@ -155,6 +155,7 @@ export default function TraceView() {
   // R1: the victim's payment hashes, from the URL; the NCRP number and the
   // victim's own wallet only ever travel in the navigation state (see TraceForm).
   const pay = params.get('pay') || ''
+  const found = params.get('found') || ''
   const ncrpAck = location.state?.ncrpAck || null
   const victimAddress = location.state?.victimAddress || null
   // A trace link alone never starts a trace: it would run under whoever opens
@@ -165,6 +166,8 @@ export default function TraceView() {
   const traceParams = {
     address: routeAddress, maxDepth: depth, chain, asset, direction: requestedDirection, timeBudgetSeconds: budget,
     payments: pay ? pay.split(',').filter(Boolean) : [], ncrpAck, victimAddress,
+    // The payments the officer found by searching the wallet, not given by the victim.
+    officerFound: found ? found.split(',').filter(Boolean) : [],
   }
   const needsConfirm = !stored && !justTraced && !startedHere && !traceJobRemembered(traceParams)
 
@@ -244,7 +247,7 @@ export default function TraceView() {
       timers.current.forEach(clearTimeout)
       timers.current = []
     }
-  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay, needsConfirm]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stored, caseId, demoNo, routeAddress, chain, asset, depth, requestedDirection, budget, pay, found, needsConfirm]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hops, ordered the way the traversal found them: nearest the seed first,
   // then by value within a hop.
@@ -367,6 +370,8 @@ export default function TraceView() {
     // A payment case is re-traced from the same payments (public chain data).
     const hashes = [...new Set((result.intake?.mode === 'payment' ? result.intake.payments ?? [] : []).map((p) => p.tx_hash).filter(Boolean))]
     if (hashes.length) q.set('pay', hashes.join(','))
+    const searched = hashes.filter((h) => result.intake.payments.some((p) => p.tx_hash === h && p.found_by === 'officer_search'))
+    if (searched.length) q.set('found', searched.join(','))
     navigate(`/trace/${result.address}?${q}`, deeper ? undefined : { state: { startedHere: true } })
   }, [navigate, result])
   // A Flow card's action opens another view and puts the keyboard there,

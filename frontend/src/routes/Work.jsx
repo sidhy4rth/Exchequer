@@ -36,7 +36,7 @@ function NewTrace({ locked, onUnlock }) {
   useEffect(() => { fetchChains().then(setHealth).catch(() => setHealth({ status: 'down' })) }, [])
   const pay = params.get('pay') ?? ''
   if (locked) return <Showroom onUnlock={onUnlock} />
-  return <TraceForm key={pay} health={health} payments={pay} startChain={params.get('chain')} startAsset={params.get('asset')} />
+  return <TraceForm key={pay} health={health} payments={pay} startChain={params.get('chain')} startAsset={params.get('asset')} onUnlock={onUnlock} />
 }
 
 /** What an empty page says, on a quiet card where its list would be. */

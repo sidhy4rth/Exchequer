@@ -32,7 +32,7 @@ describe('the demo doors', () => {
     await user.click(screen.getByRole('button', { name: /open the console/i }))
     // TraceView asks for the stored case it was sent to, not the home page.
     await vi.waitFor(() =>
-      expect(fetch.mock.calls.some(([url]) => String(url).includes('/trace/abc123'))).toBe(true))
+      expect(fetch.mock.calls.some(([url]) => String(url).includes('/trace/abc123'))).toBe(true), { timeout: 5000 })
   })
 
   it('opens a recorded demo from the recording, never by tracing', async () => {

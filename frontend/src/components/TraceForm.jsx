@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchRecordedDemos, fetchTraceIntake } from '../api'
 // The address and hash rules the backend enforces, checked here only so an
 // obvious typo gets immediate feedback instead of a round trip.
 import { ADDRESS_RE, HASH_RE } from '../find'
+import NoHashSearch from './NoHashSearch'
 import './TraceForm.css'
 
 // The ten verified traces in DEMO.md, one click each. Addresses and hooks
@@ -48,6 +49,10 @@ export function parseHashes(text) {
   return [...new Set(text.split(/[\s,]+/).map((h) => h.trim()).filter(Boolean))]
 }
 
+/** A hash as the backend compares it (normalize_hash): one payment typed in
+ * capitals, or with or without 0x, is the same payment. */
+const sameHash = (h) => h.toLowerCase().replace(/^0x/, '')
+
 // Short names for the chain picker; the full name stays in its tooltip.
 export const SHORT_CHAIN = { ethereum: 'Ethereum', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum', tron: 'Tron' }
 
@@ -70,8 +75,9 @@ const NEXT = [
  * loaded it (null while connecting, { status: 'down' } when unreachable).
  * `payments` fills the victim's payment hashes, as the search box sends one,
  * and `startChain` and `startAsset` the chain and asset to start on when the
- * site has them. */
-export default function TraceForm({ health, payments = '', startChain = null, startAsset = null }) {
+ * site has them. `onUnlock` runs when the code is entered in the search, after
+ * it found the site wants one. */
+export default function TraceForm({ health, payments = '', startChain = null, startAsset = null, onUnlock }) {
   const navigate = useNavigate()
   const [address, setAddress] = useState('')
   const [chain, setChain] = useState('ethereum')
@@ -94,6 +100,12 @@ export default function TraceForm({ health, payments = '', startChain = null, st
   const [showAck, setShowAck] = useState(false)
   const [victimText, setVictimText] = useState('')
   const [showPayments, setShowPayments] = useState(Boolean(payments))
+  // Hashes the officer found by searching the wallet (NoHashSearch): the
+  // trace says they were not given by the victim.
+  const [officerFound, setOfficerFound] = useState([])
+  const hashesRef = useRef(null)
+  const [picked, setPicked] = useState(0)
+  useEffect(() => { if (picked) hashesRef.current?.focus() }, [picked])
 
   // Trace on the deployment's default chain once /health names it (or the
   // first chain that is on, when the default is off), or on the chain (and
@@ -147,6 +159,7 @@ export default function TraceForm({ health, payments = '', startChain = null, st
   const victimIsReported = victim !== '' && (family === 'tron' ? victim === trimmed : victim.toLowerCase() === trimmed.toLowerCase())
   const badVictim = victim !== '' && (!(ADDRESS_RE[family] ?? ADDRESS_RE.evm).test(victim) || victimIsReported)
   const blocked = badHashes.length > 0 || badAck || badVictim
+  const searched = hashes.filter((h) => officerFound.includes(sameHash(h)))
 
   // Switching chain resets the asset: BNB does not exist on Ethereum, so the
   // symbol cannot be carried across.
@@ -167,10 +180,20 @@ export default function TraceForm({ health, payments = '', startChain = null, st
     // another browser's view of the case (backend/app/case_privacy.py). The
     // victim's wallet is the complaint's too, so it travels the same way.
     if (hashes.length) q.set('pay', hashes.join(','))
+    if (searched.length) q.set('found', searched.join(','))
     // startedHere: the trace page runs it at once; a link opened from elsewhere asks first.
     const state = { startedHere: true, ...(ack ? { ncrpAck: ack } : {}), ...(victim ? { victimAddress: victim } : {}) }
     navigate(`/trace/${addr}?${q}`, { state })
-  }, [navigate, chain, asset, depth, direction, capped, hashes, ack, victim])
+  }, [navigate, chain, asset, depth, direction, capped, hashes, searched, ack, victim])
+
+  /** A payment the search found, added to the hashes and marked as found by the officer. */
+  function takeMatch(hash) {
+    const key = sameHash(hash)
+    setPaymentText((text) => (parseHashes(text).some((h) => sameHash(h) === key) ? text : [text.trim(), hash].filter(Boolean).join('\n')))
+    setOfficerFound((found) => (found.includes(key) ? found : [...found, key]))
+    setShowPayments(true)
+    setPicked((n) => n + 1)
+  }
 
   // Fill the form from one of the verified DEMO.md traces. The trace is not
   // started: the officer still presses the same button they would for a real
@@ -247,13 +270,13 @@ export default function TraceForm({ health, payments = '', startChain = null, st
                 <div className="nt-field">
                   <label className="nt-k" htmlFor="payment-hashes">The victim's payment hashes, one per line</label>
                   <textarea
-                    id="payment-hashes" rows={2} value={paymentText} className="fld mono"
+                    id="payment-hashes" ref={hashesRef} rows={2} value={paymentText} className="fld mono"
                     onChange={(e) => setPaymentText(e.target.value)}
                     placeholder={family === 'tron' ? 'One per line: 64 hex characters' : 'One per line: 0x followed by 64 hex characters'}
                     spellCheck={false} autoComplete="off" aria-invalid={badHashes.length > 0}
                   />
                   <p className="nt-hint nt-count" role="status">
-                    {hashes.length > 0 && <>{badHashes.length === 0 && <CheckIcon />}{hashes.length} payment{hashes.length === 1 ? '' : 's'} · read on the chain when the trace starts</>}
+                    {hashes.length > 0 && <>{badHashes.length === 0 && <CheckIcon />}{hashes.length} payment{hashes.length === 1 ? '' : 's'} · read on the chain when the trace starts{searched.length > 0 && ` · ${searched.length} found by officer search`}</>}
                   </p>
                 </div>
                 <div className="nt-pair">
@@ -279,6 +302,11 @@ export default function TraceForm({ health, payments = '', startChain = null, st
               </>
             )}
           </div>
+        )}
+
+        {intake && direction === 'outgoing' && (
+          <NoHashSearch chain={chain} chainName={active?.name ?? chain} asset={asset} wallet={trimmed} walletValid={valid}
+            intakeOn={paymentMode} onPick={takeMatch} onUnlock={onUnlock} />
         )}
 
         <div className="nt-pair">
