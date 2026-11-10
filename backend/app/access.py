@@ -102,10 +102,13 @@ GUARDED: list[tuple[str, re.Pattern[str]]] = [
 ]
 
 # With EXCHEQUER_CONSOLE=officers, only a signed-in officer may call these:
-# every guarded route but the code box, and the second officer's sign-off.
+# every guarded route but the code box (the payment search among them), the
+# second officer's sign-off, and what an officer does with a citizen's
+# complaint (routes/complaints.py): its status, a reply, a link to a case.
 OFFICER_ONLY: list[tuple[str, re.Pattern[str]]] = [
     *[(m, p) for m, p in GUARDED if not p.match("/access/check")],
     ("POST", re.compile(r"^/requests/[^/]+/signoff/?$")),
+    ("POST", re.compile(r"^/complaints/[^/]+/(?:status|messages|link-case)/?$")),
 ]
 OFFICER_REFUSAL = "Sign in as an officer to trace live."
 

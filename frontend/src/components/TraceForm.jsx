@@ -317,7 +317,7 @@ export default function TraceForm({ health, payments = '', startChain = null, st
 
         {intake && direction === 'outgoing' && (
           <NoHashSearch chain={chain} chainName={active?.name ?? chain} asset={asset} wallet={trimmed} walletValid={valid}
-            intakeOn={paymentMode} onPick={takeMatch} onUnlock={onUnlock} />
+            intakeOn={paymentMode} onPick={takeMatch} onUnlock={onUnlock} caseRef={ref} needsRef={officer !== false && !ref} />
         )}
 
         <div className="nt-pair">

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -6,6 +6,7 @@ import BulkIntake from './BulkIntake'
 import TraceForm from './TraceForm'
 import { forgetSignIn } from './CaseRefField'
 import { stubFetch } from '../test/setup'
+import { signedInAs, signedOut } from '../session'
 
 // A signed-in officer works only under a case reference (backend/app/case_refs.py):
 // the New trace form and Bulk intake ask for one. Demo visitors see neither.
@@ -65,6 +66,23 @@ describe('the case reference on New trace', () => {
       document.body.innerHTML = ''
       forgetSignIn()
     }
+  })
+})
+
+describe('signing in or out in the same tab', () => {
+  it('asks for a case reference once a demo visitor signs in, without a reload', async () => {
+    await renderForm({ demo: true })
+    await screen.findByRole('button', { name: /^start trace/i })
+    expect(screen.queryByLabelText('Case reference')).not.toBeInTheDocument()
+    act(() => signedInAs(OFFICER))
+    expect(await screen.findByLabelText('Case reference')).toBeRequired()
+  })
+
+  it('stops asking once the officer signs out', async () => {
+    await renderForm(OFFICER)
+    await screen.findByLabelText('Case reference')
+    act(() => signedOut())
+    expect(screen.queryByLabelText('Case reference')).not.toBeInTheDocument()
   })
 })
 

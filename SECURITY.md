@@ -38,7 +38,8 @@ protects it:
 - **The owner can close live work to officers** (`EXCHEQUER_CONSOLE=officers`;
   the default, `open`, changes nothing). Then every live or spending action
   -- traces, batches, payment searches, watches and their checks, freeze
-  requests, rechecks and sign-offs -- needs a signed-in officer session,
+  requests, rechecks, sign-offs and what is done with a citizen's complaint
+  (its status, a reply, a link to a case) -- needs a signed-in officer session,
   checked before any route runs; the demo code and its pass no longer open
   them. Recorded demos, `/verify` and reading stay open. `/health` says which
   mode is on.
