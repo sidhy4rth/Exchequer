@@ -1,7 +1,8 @@
 # Runs on every push and pull request: the backend test suite on a machine
 # with no .env and no API key -- the suite never touches the network -- and the
-# frontend's component tests plus a production build. Matches what the Dockerfile builds, so a
-# green run here means the image will build too.
+# frontend's component tests plus a production build (the citizen site's too).
+# Matches what the Dockerfile builds, so a green run here means the image will
+# build too.
 name: tests
 
 on:
@@ -202,6 +203,26 @@ jobs:
           name: a11y-failure
           path: frontend/test-results/
           retention-days: 7
+
+  # The citizen site (its own Vercel project): page tests, then the build.
+  citizen:
+    name: citizen site tests + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: citizen
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: citizen/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run build
 
   image:
     name: docker image builds and runs as non-root
