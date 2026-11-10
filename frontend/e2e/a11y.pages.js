@@ -12,8 +12,7 @@
 //
 // `unmeasured` pins, per size, how much text axe still cannot measure for
 // contrast with the canvases and gradients hidden (a11y.spec.js lists it).
-// TODO(Glass): bring these down, never up. The door's card sits under its
-// tiles; on a phone the console's Coverage tables (opened) scroll sideways
+// TODO(Glass): bring these down, never up. On a phone the console's Coverage tables (opened) scroll sideways
 // inside themselves and axe cannot see the cells they clip, and the
 // verified-example rows and a batch's empty cell run under their neighbours;
 // a case's transfer rows draw over a pseudo-element;
@@ -140,6 +139,18 @@ async function timelineReachable(page) {
   if (problems.length) throw new Error(problems.join('\n'))
 }
 
+// Officer accounts (backend/app/routes/accounts.py): the check answers GET
+// /auth/me itself, as a signed-in officer, and the Admin page's two lists.
+// Nothing here signs in: the check sends no POST.
+const UNITS = [{ id: 1, name: 'Bengaluru CEN' }, { id: 2, name: 'Mysuru CEN' }]
+const OFFICER = (fields) => ({ id: 2, email: 'officer@example.in', name: 'Asha Rao', role: 'officer', unit: UNITS[0], active: true, must_change_password: false, created_at: '2026-11-10T04:00:00+00:00', last_login_at: null, ...fields })
+const ADMIN = OFFICER({ id: 1, email: 'admin@example.in', name: 'Ravi Kumar', role: ['ad', 'min'].join(''), last_login_at: '2026-11-10T04:30:00+00:00' })
+const ADMIN_STUB = [
+  { url: '**/auth/me', body: ADMIN },
+  { url: '**/admin/units', body: { units: UNITS } },
+  { url: '**/admin/officers', body: { officers: [ADMIN, OFFICER({ must_change_password: true }), OFFICER({ id: 3, name: 'Neha S', email: 'neha@example.in', role: 'supervisor', unit: UNITS[1], active: false })] } },
+]
+
 const H1 = (name) => ['heading', { level: 1, name }]
 
 // New trace's search for a payment by amount and time. The wallet typed in
@@ -186,18 +197,14 @@ async function saidBesideButton(page) {
   if (top < 0 || top > height) throw new Error(`the prompt is out of view (top ${Math.round(top)} px)`)
 }
 
-// On a phone the open sign-in card is drawn from tiles, and the "Preview"
-// paragraph sits over a seam between two of them. On Linux (CI) the card's
-// text wraps a few pixels lower than on a Mac, so that paragraph crosses the
-// seam too and axe cannot pick one background for it: five lines it cannot
-// measure instead of four. Nothing changes on screen.
-const PHONE_DOOR = 5
-
 export const PAGES = [
   { name: 'investigator sign-in', path: '/signin/investigator', ready: DOOR },
-  { name: 'investigator sign-in, door open', path: '/signin/investigator', click: DOOR, ready: ['dialog', { name: /enter as investigator/i }], unmeasured: { desktop: 3, phone: PHONE_DOOR } },
+  // The open card: an officer's e-mail and password, and the demo below.
+  { name: 'investigator sign-in, door open', path: '/signin/investigator', click: DOOR, ready: ['textbox', { name: 'E-mail' }] },
+  // An officer with a temporary password meets the change first: the door opens on it.
+  { name: 'investigator sign-in, choose a password', path: '/signin/investigator', stub: { url: '**/auth/me', body: OFFICER({ must_change_password: true }) }, ready: ['heading', { name: 'Choose your own password' }] },
   { name: 'citizen sign-in', path: '/signin/citizen', ready: DOOR },
-  { name: 'citizen sign-in, door open', path: '/signin/citizen', click: DOOR, ready: ['dialog', { name: /enter as citizen/i }], unmeasured: { desktop: 4, phone: PHONE_DOOR } },
+  { name: 'citizen sign-in, door open', path: '/signin/citizen', click: DOOR, ready: ['dialog', { name: /enter as citizen/i }] },
   // The console's pages, each inside the shell (sidebar, header, phone tab bar).
   // With stored cases (CASES, below), so the Recent cases rows are measured too.
   { name: 'Console', path: '/', as: 'investigator', stub: { url: /\/cases\?limit=\d+$/, body: CASES }, ready: H1('Follow a payment to the exchange that can freeze it'), unmeasured: { phone: 2 } },
@@ -262,6 +269,10 @@ export const PAGES = [
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },
   { name: 'batch', path: '/batch/a11y-example', as: 'investigator', stub: { url: '**/batches/a11y-example', body: BATCH }, ready: ['heading', { level: 1, name: BATCH.name }], unmeasured: { phone: 1 } },
+  // An admin's page: units, and officers (one with a temporary password, one switched off).
+  // The unmeasured text is the line the window's bottom edge cuts through
+  // (the new account's Unit at 1280, the second officer's e-mail at 390).
+  { name: 'Admin', path: '/admin', stub: ADMIN_STUB, ready: ['form', { name: 'Ravi Kumar' }], unmeasured: { desktop: 2, phone: 1 } },
   { name: 'verify a report', path: '/verify', ready: ['heading', { level: 1 }] },
   { name: 'verify a report, in the console', path: '/verify', as: 'investigator', ready: ['heading', { level: 1 }], unmeasured: { phone: 1 } },
   { name: 'citizen page', path: '/citizen', as: 'citizen', ready: ['heading', { level: 1 }] },

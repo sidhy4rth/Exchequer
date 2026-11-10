@@ -1,12 +1,14 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
+import { resetAccount } from '../session'
 
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   sessionStorage.clear()
+  resetAccount() // the officer signed in by one test is never the next one's
 })
 
 /** A fetch stub answering by path; anything unlisted is a 404. */

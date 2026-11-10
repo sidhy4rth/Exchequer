@@ -7,3 +7,7 @@ export const ALL_CHAINS_READY = /^All \d+ chains ready to trace$/
 // The field the console opens on (routes/Home.jsx). Home.test.jsx renders
 // the console and checks it still carries this label.
 export const CONSOLE_FIELD = 'Payment hash or wallet'
+
+// The investigator door's way in without an account (routes/SignIn.jsx),
+// which the canary clicks. SignIn.test.jsx checks the door still says it.
+export const DEMO_BUTTON = 'Look around as a demo'

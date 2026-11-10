@@ -23,6 +23,9 @@
 .shell-brand small { font-size: 11px; color: var(--text-3); }
 .shell-demo { display: flex; flex-wrap: wrap; gap: 2px; margin: -10px 0 0 30px; }
 .shell-demo button, .shell-more button { font-size: 11.5px; min-height: 24px; }
+.shell-who { display: flex; flex-direction: column; }
+.shell-who > span:first-child { color: var(--text-2); }
+.shell-out-error { flex-basis: 100%; margin: 0; font-size: 11.5px; color: var(--risk); }
 
 .shell-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .shell-group { display: block; font-size: 11px; color: var(--text-3); padding: 14px 10px 4px; }

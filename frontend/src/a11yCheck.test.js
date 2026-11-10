@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import appSource from './App.jsx?raw'
 import pkg from '../package.json'
 import { NOT_CHECKED, PAGES } from '../e2e/a11y.pages.js'
-import { GROUPS } from './components/AppShell'
+import { ADMIN_GROUP, GROUPS } from './components/AppShell'
 import flow11 from './test/victim-flow-11.json'
 import flow11Instant from './test/victim-flow-11-instant.json'
 
@@ -60,6 +60,25 @@ describe('the accessibility check', () => {
     for (const path of paths) expect(PAGES.some((p) => p.path === path && p.as === 'investigator'), path).toBe(true)
     const more = PAGES.find((p) => p.click?.[1]?.name === 'More')
     expect(more?.size).toBe('phone')
+  })
+
+  it('opens the Admin group\'s pages as an admin sees them: /auth/me answered with one', () => {
+    const me = (p) => [p.stub ?? []].flat().find((s) => s.url === '**/auth/me')?.body
+    for (const item of ADMIN_GROUP[1]) {
+      const page = PAGES.find((p) => p.path === item.to && me(p))
+      expect(page, item.to).toBeTruthy()
+      expect(me(page).role).toBe(['ad', 'min'].join(''))
+      expect(me(page).must_change_password).toBe(false)
+    }
+  })
+
+  it('opens the sign-in form, and the password change an officer with a temporary one meets first', () => {
+    const form = PAGES.find((p) => p.name === 'investigator sign-in, door open')
+    expect(form.ready).toEqual(['textbox', { name: 'E-mail' }])
+    const change = PAGES.find((p) => p.name === 'investigator sign-in, choose a password')
+    expect(change.path).toBe('/signin/investigator')
+    expect([change.stub].flat().find((s) => s.url === '**/auth/me').body.must_change_password).toBe(true)
+    expect(change.ready).toEqual(['heading', { name: 'Choose your own password' }])
   })
 
   it('opens the Flow tab drawn from the victim flow, on a backend whose recording has none', () => {

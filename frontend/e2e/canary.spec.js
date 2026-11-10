@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { ALL_CHAINS_READY, CONSOLE_FIELD } from './canary.lines.js'
+import { ALL_CHAINS_READY, CONSOLE_FIELD, DEMO_BUTTON } from './canary.lines.js'
 
 // What a judge does first: open the link, sign in, look at a case. If any of
 // that is broken the demo-health job would not notice -- it talks to the API
@@ -16,7 +16,7 @@ function watchForErrors(page) {
 
 async function enter(page) {
   await page.getByText(/click anywhere to enter/i).click()
-  await page.getByRole('button', { name: /open the console/i }).click()
+  await page.getByRole('button', { name: DEMO_BUTTON }).click()
 }
 
 test('the API is up and the label files are loaded', async ({ request }) => {

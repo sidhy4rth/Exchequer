@@ -2,7 +2,8 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import AppShell, { GROUPS, useCrumb } from './AppShell'
+import AppShell, { ADMIN_GROUP, GROUPS, useCrumb } from './AppShell'
+import { signedInAs } from '../session'
 import { stubFetch } from '../test/setup'
 import { ALL_CHAINS_READY } from '../../e2e/canary.lines.js'
 import canarySource from '../../e2e/canary.spec.js?raw'
@@ -233,5 +234,33 @@ describe('the phone tab bar', () => {
     const skip = screen.getByRole('link', { name: 'Skip to the page' })
     expect(skip).toHaveAttribute('href', '#main')
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main')
+  })
+})
+
+describe('signed in as an officer', () => {
+  const asha = { id: 3, name: 'Asha Rao', email: 'asha@cell.in', role: 'officer', unit: { id: 1, name: 'Bengaluru CEN' }, active: true, must_change_password: false }
+
+  it('names the officer and their unit with Sign out, in place of the demo line', () => {
+    signedInAs(asha)
+    at('/')
+    expect(sidebar().getByText('Asha Rao')).toBeInTheDocument()
+    expect(sidebar().getByText('Bengaluru CEN')).toBeInTheDocument()
+    expect(sidebar().getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(sidebar().queryByText(/Demo mode/)).toBeNull()
+    expect(sidebar().queryByRole('button', { name: /switch to/i })).toBeNull()
+    expect(sidebar().queryByRole('list', { name: 'Admin' })).toBeNull()
+  })
+
+  it("gives an admin the Admin group, and the phone's More menu its page and Sign out", async () => {
+    const user = userEvent.setup()
+    signedInAs({ ...asha, role: ['ad', 'min'].join('') })
+    at('/')
+    expect(ADMIN_GROUP[0]).toBe('Admin')
+    expect(within(sidebar().getByRole('list', { name: 'Admin' })).getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')])).toEqual([['Admin', '/admin']])
+    await user.click(phoneBar().getByRole('button', { name: 'More' }))
+    const menu = within(document.getElementById('shell-more'))
+    expect(menu.getAllByRole('link').map((a) => a.textContent)).toEqual(['Bulk intake', 'Requests', 'Verify a report', 'Admin'])
+    expect(menu.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(menu.queryByRole('button', { name: /switch to/i })).toBeNull()
   })
 })

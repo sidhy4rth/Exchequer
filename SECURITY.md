@@ -8,7 +8,9 @@ vulnerability), and I will reply within a few days.
 
 ## What the deployed site protects, and what it does not
 
-Exchequer has no accounts. What it does instead:
+Officers sign in with accounts (see the end of this section); everyone
+else, citizens and demo visitors, uses the site without one. What
+protects it:
 
 - **Cases are private to the browser that traced them.** Each browser sends a
   random owner key; the history list shows only that browser's cases plus the
@@ -47,11 +49,15 @@ Exchequer has no accounts. What it does instead:
   headers; the interactive API docs are off on the deployed image; the app
   runs as an unprivileged user.
 
-There are no accounts yet, and the site says so: the front door and a banner
-on every page read "Demo mode", and choosing the investigator or citizen view
-grants nothing. Without `EXCHEQUER_DEMO_CODE`, anyone who can reach the site
-can run a trace; with it, live tracing needs the code. Accounts and roles
-come with R23.
+Officers sign in at the investigator's door with accounts an admin makes
+on the Admin page; there is no public sign-up, and a temporary password
+must be changed at the first sign-in. The session is an HttpOnly cookie,
+and every call that changes something must carry the
+`X-Exchequer-Request` header, which a form on another site cannot send.
+Anyone can still look around as a demo, and the site says so: choosing the
+investigator or citizen view grants nothing, and citizens have no accounts
+yet. Without `EXCHEQUER_DEMO_CODE`, anyone who can reach the site can run a
+trace; with it, live tracing needs the code.
 
 ## Keys and secrets
 

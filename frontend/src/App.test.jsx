@@ -29,7 +29,7 @@ describe('the demo doors', () => {
     const user = userEvent.setup()
     at('/case/abc123')
     await user.click(await screen.findByText(/click anywhere to enter/i))
-    await user.click(screen.getByRole('button', { name: /open the console/i }))
+    await user.click(screen.getByRole('button', { name: 'Look around as a demo' }))
     // TraceView asks for the stored case it was sent to, not the home page.
     await vi.waitFor(() =>
       expect(fetch.mock.calls.some(([url]) => String(url).includes('/trace/abc123'))).toBe(true), { timeout: 5000 })
@@ -43,7 +43,7 @@ describe('the demo doors', () => {
     stubFetch({ '/chains': { body: health }, '/demos/recorded/9': { body: { ...recorded.result, case_id: null, created_at: recorded.recorded_at, recorded_demo: 9 } } })
     render(<MemoryRouter initialEntries={['/demo/9']}><App /></MemoryRouter>)
     await user.click(await screen.findByText(/click anywhere to enter/i))
-    await user.click(screen.getByRole('button', { name: /open the console/i }))
+    await user.click(screen.getByRole('button', { name: 'Look around as a demo' }))
     // The shell's breadcrumb names the case by its address; the case's pill says what it is.
     expect(await within(screen.getByRole('navigation', { name: 'Breadcrumb' })).findByText('THWYhwUQnB…SoK4C5Ph')).toBeInTheDocument()
     expect(screen.getAllByText(/Verified example 09/)).toHaveLength(1)
@@ -54,18 +54,6 @@ describe('the demo doors', () => {
     // No case id, so nothing that reads or writes a case is offered.
     expect(screen.queryByText('Export')).not.toBeInTheDocument()
     expect(fetch.mock.calls.some(([url]) => /\/trace(\/jobs)?$/.test(String(url).split('?')[0]))).toBe(false)
-  })
-
-  it('asks for no name or password at either door, and says why', async () => {
-    const user = userEvent.setup()
-    for (const door of ['investigator', 'citizen']) {
-      at(`/signin/${door}`)
-      await user.click(await screen.findByText(/click anywhere to enter/i))
-      expect(screen.getByText(/no accounts yet/i)).toBeInTheDocument()
-      expect(screen.queryAllByRole('textbox')).toEqual([])
-      expect(document.querySelector('input[type="password"]')).toBeNull()
-      cleanup()
-    }
   })
 
   it('says it is a demo on every page behind the door, and switches views', async () => {

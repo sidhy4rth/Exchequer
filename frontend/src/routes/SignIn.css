@@ -8,3 +8,17 @@
   font-size: 13.5px;
   line-height: 1.5;
 }
+
+/* The investigator's card: the sign-in form, then the demo under a rule.
+   A card taller than the screen scrolls inside the door rather than being
+   cut off at the top. */
+.portal { overflow-y: auto; place-items: safe center; }
+.door-demo-investigator { padding-top: 18px; border-top: 1px solid var(--line); }
+.door-demo-investigator + .door-form, .door-form + .door-demo-investigator { margin-top: 20px; }
+.door-form button.door-out { align-self: center; min-height: 24px; }
+/* Once the tiles have sealed into one card, the card's body takes their
+   colour as one solid fill and the tiles go (SignIn.jsx), so its text sits on one
+   surface, not across the seams of sixteen (the accessibility check
+   measures it there). */
+.portal-body { border-radius: 6px; animation-name: portal-body, portal-solid; animation-duration: 480ms, 1ms; animation-delay: 1450ms, 2200ms; animation-fill-mode: both, both; }
+@keyframes portal-solid { to { background-color: var(--panel); } }

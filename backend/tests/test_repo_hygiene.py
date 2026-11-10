@@ -190,3 +190,13 @@ def test_the_key_patterns_catch_the_usual_forms():
         assert any(p.search(sample.encode()) for p in KEY_PATTERNS), sample
     assert not any(p.search(b"ETHERSCAN_API_KEY=your_key_here") for p in KEY_PATTERNS)
     assert not any(p.search(b"NODEREAL_API_KEY=") for p in KEY_PATTERNS)
+
+
+def test_the_security_page_never_says_there_are_no_accounts():
+    """Officers have accounts now; the page must not open by denying them
+    and then describe them further down (accounts-ui review, round 2)."""
+    text = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    flat = " ".join(text.split()).lower()
+    for stale in ("has no accounts", "there are no accounts", "accounts and roles come with"):
+        assert stale not in flat, stale
+    assert "officers sign in" in flat
