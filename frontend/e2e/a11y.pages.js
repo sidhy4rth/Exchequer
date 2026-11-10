@@ -14,8 +14,8 @@
 // verified-example rows and a batch's empty cell run under their neighbours;
 // text cut by the bottom of the screen at rest (a tall exchange list, the
 // signing-key note on Verify inside the console, the Console's wallet bars, a
-// coverage row or the Cases page's linked wallet at the fold) cannot be
-// sampled; the graph draws its labels over SVG shapes.
+// coverage row, the Cases page's linked wallet or New trace's direction at
+// the fold) cannot be sampled; the graph draws its labels over SVG shapes.
 
 const DOOR = ['button', { name: /click anywhere to enter/i }]
 
@@ -78,7 +78,10 @@ export const PAGES = [
   // one): the verified examples, and no way to start a trace.
   { name: 'Console, locked (demo code)', path: '/', as: 'investigator', stub: { url: '**/access', body: { demo_code_required: true } }, ready: ['heading', { name: 'Verified examples' }], unmeasured: { desktop: 2, phone: 1 } },
   { name: 'More, on a phone', path: '/', as: 'investigator', size: 'phone', click: ['button', { name: 'More' }], ready: ['link', { name: 'Verify a report' }] },
-  { name: 'New trace', path: '/trace/new', as: 'investigator', ready: H1('New trace') },
+  { name: 'New trace', path: '/trace/new', as: 'investigator', ready: H1('New trace'), unmeasured: { phone: 1 } },
+  // The victim's payments opened: the hashes, the victim's wallet and the
+  // masked NCRP number (on a site that traces from payment hashes).
+  { name: 'New trace, payments open', path: '/trace/new', as: 'investigator', stub: { url: '**/trace/intake', body: { payments: true } }, click: ['button', { name: /Victim's payments/ }], ready: ['textbox', { name: "The victim's payment hashes, one per line" }] },
   // A searched hash on a site that cannot trace from one says so.
   { name: 'New trace, hash with payments off', path: `/trace/new?pay=0x${'c'.repeat(64)}`, as: 'investigator', stub: { url: '**/trace/intake', body: { payments: false } }, ready: H1('New trace') },
   // The table on a desktop, a card per case on a phone; a pressed filter, and

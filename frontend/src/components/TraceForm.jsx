@@ -51,17 +51,32 @@ export function parseHashes(text) {
 // Short names for the chain picker; the full name stays in its tooltip.
 export const SHORT_CHAIN = { ethereum: 'Ethereum', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum', tron: 'Tron' }
 
-/** The intake card: a reported address, how to trace it, and the DEMO.md
- * examples to fill it from. `health` is GET /health as the page loaded it
- * (null while connecting, { status: 'down' } when unreachable). `payments`
- * fills the victim's payment hashes, as the search box sends one, and
- * `startChain` and `startAsset` the chain and asset to start on when the
+// The chips' order on the New trace page: Tron first, where most complaints' USDT is.
+const CHAIN_ORDER = ['tron', 'ethereum', 'bsc', 'polygon', 'arbitrum']
+const byKey = (a, b) => (CHAIN_ORDER.indexOf(a) + 1 || 99) - (CHAIN_ORDER.indexOf(b) + 1 || 99)
+const byOrder = (a, b) => byKey(a.key, b.key)
+const listed = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`)
+
+// What a trace does once started, beside the form (as the Tracing screen's steps).
+const NEXT = [
+  ['Find the payment on the chain', 'with payment hashes, the trace starts when the money arrived', DownIcon],
+  ['Follow it, hop by hop', 'only money that left after it arrived', SplitIcon],
+  ['Screen every wallet', 'exchanges, sanctions, freezes, gambling', ShieldIcon],
+  ['Show where it is now', 'and who to write to', PageIcon],
+]
+
+/** The New trace page: the wallet the victim paid, how to trace it, and the
+ * DEMO.md examples to fill it from. `health` is GET /chains as the page
+ * loaded it (null while connecting, { status: 'down' } when unreachable).
+ * `payments` fills the victim's payment hashes, as the search box sends one,
+ * and `startChain` and `startAsset` the chain and asset to start on when the
  * site has them. */
 export default function TraceForm({ health, payments = '', startChain = null, startAsset = null }) {
   const navigate = useNavigate()
   const [address, setAddress] = useState('')
   const [chain, setChain] = useState('ethereum')
   const [asset, setAsset] = useState('ETH')
+  // Four hops unless chosen: the depth the recorded results were traced at.
   const [depth, setDepth] = useState(4)
   const [direction, setDirection] = useState('outgoing')
   // Off by default: the trace runs its full course. On, it stops at 1:30 and
@@ -76,17 +91,21 @@ export default function TraceForm({ health, payments = '', startChain = null, st
   const [intake, setIntake] = useState(null)
   const [paymentText, setPaymentText] = useState(payments)
   const [ncrpAck, setNcrpAck] = useState('')
+  const [showAck, setShowAck] = useState(false)
   const [victimText, setVictimText] = useState('')
   const [showPayments, setShowPayments] = useState(Boolean(payments))
 
-  // Trace on the deployment's default chain once /health names it, or on
-  // the chain (and asset) asked for when it is one the site traces. On Tron,
-  // the money in a complaint is almost always USDT.
+  // Trace on the deployment's default chain once /health names it (or the
+  // first chain that is on, when the default is off), or on the chain (and
+  // asset) asked for when it is one the site traces. On Tron, the money in a
+  // complaint is almost always USDT.
   useEffect(() => {
-    const first = health?.chains?.[startChain]?.ready ? startChain : health?.default_chain
+    const on = (key) => health?.chains?.[key]?.ready
+    const first = [startChain, health?.default_chain, ...Object.keys(health?.chains ?? {}).sort(byKey)].find(on) ?? health?.default_chain
     if (!first) return
     const symbols = (health.chains?.[first]?.assets ?? []).map((a) => a.symbol)
-    const asked = first === startChain && [startAsset, 'USDT'].find((s) => symbols.includes(s))
+    const asked = [first === startChain && startAsset, (first === startChain || first === 'tron') && 'USDT']
+      .find((s) => s && symbols.includes(s))
     setChain(first)
     setAsset(asked || (symbols[0] ?? 'ETH'))
   }, [health, startChain, startAsset])
@@ -102,7 +121,8 @@ export default function TraceForm({ health, payments = '', startChain = null, st
       .catch(() => {})
   }, [])
 
-  const chains = health?.chains ? Object.values(health.chains) : []
+  const chains = health?.chains ? Object.values(health.chains).sort(byOrder) : []
+  const off = chains.filter((c) => !c.ready).map((c) => SHORT_CHAIN[c.key] ?? c.name)
   const active = health?.chains?.[chain]
   const assets = active?.assets ?? []
   const family = active?.address_family ?? 'evm'
@@ -176,157 +196,186 @@ export default function TraceForm({ health, payments = '', startChain = null, st
     if (valid && !blocked) open(trimmed)
   }
 
+  const outgoing = direction === 'outgoing'
   return (
-    <div className="card trace-card">
-      <div className="body">
-        <h2 className="lede">Where did the money go?</h2>
-        <form onSubmit={submit} className="fgrid">
-          <label className={`fld addr ${showInvalid ? 'invalid' : ''}`} style={{ gridColumn: 'span 12' }}>
-            <SearchIcon />
-            <span className="col">
-              <span className="k">Reported wallet</span>
-              <input
-                className="address-field mono"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                onBlur={() => setTouched(true)}
-                placeholder="Paste the address from the complaint"
-                spellCheck={false} autoComplete="off"
-                aria-label="Reported wallet address" aria-invalid={showInvalid}
-              />
-            </span>
-            <span className="fmt" aria-hidden="true"><span>0x… EVM</span><span>T… Tron</span></span>
-          </label>
-          <label className="fld" style={{ gridColumn: 'span 3' }}>
-            <span className="k">Direction</span>
-            <select value={direction} onChange={(e) => setDirection(e.target.value)} aria-label="Trace direction" title="Outgoing follows where this address sent funds. Incoming finds the addresses that paid it.">
-              <option value="outgoing">Where it went</option>
-              <option value="incoming">Who paid in</option>
-            </select>
-            <Chevron />
-          </label>
-          <label className="fld" style={{ gridColumn: 'span 3' }}>
-            <span className="k">Chain</span>
-            <select value={chain} onChange={(e) => changeChain(e.target.value)} aria-label="Blockchain" title="The same address can exist on several chains; it is never inferred.">
-              {chains.map((c) => <option key={c.key} value={c.key} disabled={!c.ready} title={c.name}>{SHORT_CHAIN[c.key] ?? c.name}{c.ready ? '' : ' (off)'}</option>)}
-            </select>
-            <Chevron />
-          </label>
-          <label className="fld" style={{ gridColumn: 'span 2' }}>
-            <span className="k">Asset</span>
-            <select value={asset} onChange={(e) => setAsset(e.target.value)} aria-label="Asset" title="One asset per trace — amounts in different assets are not comparable.">
-              {assets.map((a) => <option key={a.symbol} value={a.symbol}>{a.symbol}</option>)}
-            </select>
-            <Chevron />
-          </label>
-          <label className="fld" style={{ gridColumn: 'span 2' }}>
-            <span className="k">Depth</span>
-            <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} aria-label="Trace depth" title="How many hops to follow. More finds more and takes longer.">
-              {[1, 2, 3, 4, 5, 6].map((d) => <option key={d} value={d}>{d} hop{d === 1 ? '' : 's'}</option>)}
-            </select>
-            <Chevron />
-          </label>
-          <button type="submit" className="go" style={{ gridColumn: 'span 2' }} disabled={!valid || blocked || backendDown}>
-            {direction === 'outgoing' ? 'Trace' : 'Trace back'}<ArrowIcon />
-          </button>
-          {payments && intake && !intake.payments && (
-            <p className="note pay-note" role="status" style={{ gridColumn: 'span 12' }}>
-              Tracing from a payment hash is off on this site, so <span className="mono pay-hash">{payments}</span> is
-              not used. Paste the wallet the victim paid into instead.
-            </p>
-          )}
-          {paymentMode && showPayments && (
-            <>
-              <label className="fld" htmlFor="payment-hashes" style={{ gridColumn: 'span 9' }}>
-                <span className="k">Victim's payment transaction hash{hashes.length === 1 ? '' : 'es'}</span>
-                <textarea
-                  id="payment-hashes" rows={2} value={paymentText} className="mono"
-                  onChange={(e) => setPaymentText(e.target.value)}
-                  placeholder={family === 'tron' ? 'One per line: 64 hex characters' : 'One per line: 0x followed by 64 hex characters'}
-                  spellCheck={false} autoComplete="off" aria-invalid={badHashes.length > 0}
-                />
+    <div className="trace-new">
+      <form onSubmit={submit} className="card trace-card" aria-label="New trace">
+        <fieldset className="nt-group">
+          <legend className="nt-k">Chain and asset</legend>
+          <div className="nt-chips" role="radiogroup" aria-label="Blockchain" title="The same address can exist on several chains; it is never inferred.">
+            {chains.map((c) => (
+              <label key={c.key} className="nt-chip" title={c.name}>
+                <input type="radio" name="chain" value={c.key} checked={chain === c.key} disabled={!c.ready} onChange={() => changeChain(c.key)} />
+                {SHORT_CHAIN[c.key] ?? c.name}{!c.ready && <span className="nt-off"> off</span>}
               </label>
-              <label className="fld" htmlFor="ncrp-ack" style={{ gridColumn: 'span 3' }}>
-                <span className="k">NCRP acknowledgement number</span>
-                <input id="ncrp-ack" className="mono" value={ncrpAck} onChange={(e) => setNcrpAck(e.target.value)}
-                  maxLength={64} spellCheck={false} autoComplete="off" placeholder="Optional" disabled={hashes.length === 0}
-                  inputMode="numeric" pattern="[0-9]{10,20}" aria-invalid={badAck} />
+            ))}
+          </div>
+          <div className="nt-chips" role="radiogroup" aria-label="Asset" title="One asset per trace — amounts in different assets are not comparable.">
+            {assets.map((a) => (
+              <label key={a.symbol} className="nt-chip mono">
+                <input type="radio" name="asset" value={a.symbol} checked={asset === a.symbol} onChange={() => setAsset(a.symbol)} />{a.symbol}
               </label>
-              <label className="fld" htmlFor="victim-wallet" style={{ gridColumn: 'span 12' }}>
-                <span className="k">Victim's own wallet</span>
-                <input id="victim-wallet" className="mono" value={victimText} onChange={(e) => setVictimText(e.target.value)}
-                  maxLength={100} spellCheck={false} autoComplete="off" disabled={hashes.length === 0} aria-invalid={badVictim}
-                  placeholder="Optional: the wallet the victim paid from, to check each payment came from it" />
-              </label>
-              <p className="note pay-note" style={{ gridColumn: 'span 12' }}>Optional. With them, the trace starts when the money arrived and the case records what the victim paid. Without them, it follows the wallet's whole recent history and is marked exploratory.</p>
-            </>
-          )}
-          <div className="frow" style={{ gridColumn: 'span 12' }}>
+            ))}
+          </div>
+          {off.length > 0 && <p className="nt-hint">{listed(off)} {off.length === 1 ? 'is' : 'are'} off on this site: no chain data provider is set up for {off.length === 1 ? 'it' : 'them'}.</p>}
+        </fieldset>
+
+        <div className="nt-field">
+          <label className="nt-k" htmlFor="reported-wallet">Wallet the victim paid</label>
+          <input
+            id="reported-wallet" className={`fld mono ${showInvalid ? 'invalid' : ''}`} value={address}
+            onChange={(e) => setAddress(e.target.value)} onBlur={() => setTouched(true)}
+            placeholder="Paste the address from the complaint" spellCheck={false} autoComplete="off"
+            aria-invalid={showInvalid} aria-describedby="reported-wallet-hint"
+          />
+          <span id="reported-wallet-hint" className="nt-hint">The reported wallet · 0x… on EVM chains, T… on Tron</span>
+        </div>
+
+        {payments && intake && !intake.payments && (
+          <p className="note pay-note" role="status">
+            Tracing from a payment hash is off on this site, so <span className="mono pay-hash">{payments}</span> is
+            not used. Paste the wallet the victim paid into instead.
+          </p>
+        )}
+        {paymentMode && (
+          <div className="nt-pay">
+            <button type="button" className="nt-toggle" aria-expanded={showPayments} onClick={() => setShowPayments((v) => !v)}>
+              <PlusIcon />Victim's payments{!showPayments && entered.length > 0 ? ` · ${entered.length} entered, not sent` : ''}
+            </button>
+            {showPayments && (
+              <>
+                <div className="nt-field">
+                  <label className="nt-k" htmlFor="payment-hashes">The victim's payment hashes, one per line</label>
+                  <textarea
+                    id="payment-hashes" rows={2} value={paymentText} className="fld mono"
+                    onChange={(e) => setPaymentText(e.target.value)}
+                    placeholder={family === 'tron' ? 'One per line: 64 hex characters' : 'One per line: 0x followed by 64 hex characters'}
+                    spellCheck={false} autoComplete="off" aria-invalid={badHashes.length > 0}
+                  />
+                  <p className="nt-hint nt-count" role="status">
+                    {hashes.length > 0 && <>{badHashes.length === 0 && <CheckIcon />}{hashes.length} payment{hashes.length === 1 ? '' : 's'} · read on the chain when the trace starts</>}
+                  </p>
+                </div>
+                <div className="nt-pair">
+                  <div className="nt-field">
+                    <label className="nt-k" htmlFor="victim-wallet">Victim's own wallet</label>
+                    <input id="victim-wallet" className="fld mono" value={victimText} onChange={(e) => setVictimText(e.target.value)}
+                      maxLength={100} spellCheck={false} autoComplete="off" disabled={hashes.length === 0} aria-invalid={badVictim}
+                      placeholder="Optional: the wallet the victim paid from" />
+                  </div>
+                  <div className="nt-field">
+                    <label className="nt-k" htmlFor="ncrp-ack">NCRP acknowledgement</label>
+                    <span className="nt-secret">
+                      {/* Masked by the stylesheet, not type=password, so no browser offers to save it. */}
+                      <input id="ncrp-ack" type="text" className={`fld mono${showAck ? '' : ' masked'}`} value={ncrpAck} onChange={(e) => setNcrpAck(e.target.value)}
+                        maxLength={64} spellCheck={false} autoComplete="off" placeholder="Optional" disabled={hashes.length === 0}
+                        inputMode="numeric" pattern="[0-9]{10,20}" aria-invalid={badAck} aria-describedby="ncrp-note" />
+                      <button type="button" className="nt-reveal" aria-pressed={showAck} aria-label="Show the NCRP number" onClick={() => setShowAck((v) => !v)}>Show</button>
+                    </span>
+                    <span id="ncrp-note" className="nt-hint"><LockIcon />never in links or logs</span>
+                  </div>
+                </div>
+                <p className="nt-hint">Optional. With them, the trace starts when the money arrived and the case records what the victim paid. Without them, it follows the wallet's whole recent history and is marked exploratory.</p>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className="nt-pair">
+          <fieldset className="nt-field" title="How many hops to follow. More finds more and takes longer.">
+            <legend className="nt-k">How far to follow</legend>
+            <div className="nt-seg">
+              {[1, 2, 3, 4].map((d) => (
+                <label key={d}>
+                  <input type="radio" name="depth" value={d} checked={depth === d} onChange={() => setDepth(d)} aria-label={`${d} hop${d === 1 ? '' : 's'}`} />{d}
+                </label>
+              ))}
+            </div>
+            <span className="nt-hint">hops · more hops, more provider requests</span>
+          </fieldset>
+          <div className="nt-field">
             <label className="tog" title="With this on, the trace stops expanding after 1 minute 30 seconds and reports what it reached, marked truncated. Off, it runs until the depth, fan-out and size limits stop it -- which on a busy wallet at 4 hops can take several minutes.">
               <input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} />
               <span className="track" aria-hidden="true"><span className="knob" /></span>
               <span>Stop after <span className="mono">1:30</span></span>
             </label>
-            {paymentMode && (
-              <button type="button" className="pill-btn" aria-expanded={showPayments} onClick={() => setShowPayments((v) => !v)}>
-                <PlusIcon />Victim's payments{!showPayments && entered.length > 0 ? ` · ${entered.length} entered, not sent` : ''}
-              </button>
-            )}
-            {hashes.length > 0 && (
-              <span className="pay-chip" role="status">{hashes.length} payment{hashes.length === 1 ? '' : 's'} attached</span>
-            )}
-            <label className="fld slim" htmlFor="example">
-              <StarIcon />
-              <select id="example" aria-label="Load a verified example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
-                <option value="">Load a verified example</option>
-                {DEMOS.map((d) => (
-                  <option key={d.n} value={d.n} title={d.hook}>
-                    {d.n} · {d.title} · {{ tron: 'Tron', bsc: 'BNB Chain', polygon: 'Polygon', arbitrum: 'Arbitrum' }[d.chain] ?? 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}
-                  </option>
-                ))}
-              </select>
-              <Chevron />
-            </label>
-            {recording && (
-              <Link className="recorded-link" to={`/demo/${Number(demoInForm.n)}`} title="The trace as recorded on that date. Opens instantly; nothing is re-traced.">
-                Open as recorded · <span className="mono">{recording.recorded_at.slice(0, 10)}</span>
-              </Link>
-            )}
+            <span className="nt-hint">reports what it reached by then, marked truncated</span>
           </div>
-          {showInvalid && (
-            <div className="banner warn" style={{ gridColumn: 'span 12' }}>
-              Not a valid {active?.name ?? 'wallet'} address — expected {family === 'tron' ? 'T followed by 33 Base58 characters' : '0x followed by 40 hexadecimal characters'}.
-            </div>
+        </div>
+
+        {showInvalid && (
+          <div className="banner warn">
+            Not a valid {active?.name ?? 'wallet'} address — expected {family === 'tron' ? 'T followed by 33 Base58 characters' : '0x followed by 40 hexadecimal characters'}.
+          </div>
+        )}
+        {badHashes.length > 0 && (
+          <div className="banner warn">
+            Not a valid {active?.name ?? ''} transaction hash: <span className="mono">{badHashes[0]}</span>{badHashes.length > 1 ? ` and ${badHashes.length - 1} more` : ''}.
+          </div>
+        )}
+        {badAck && <div className="banner warn">An NCRP acknowledgement number is 10 to 20 digits, as on the complaint's acknowledgement.</div>}
+        {badVictim && (
+          <div className="banner warn">
+            {victimIsReported
+              ? "The victim's wallet is the reported wallet: enter the wallet the victim paid from."
+              : `The victim's wallet is not a valid ${active?.name ?? ''} address.`}
+          </div>
+        )}
+        {backendDown && (
+          <div className="banner error">Cannot reach the backend. Start it with <span className="mono">uvicorn app.main:app --reload --port 8000</span>.</div>
+        )}
+
+        <div className="nt-foot">
+          <p className="nt-direction">
+            <span>Direction:</span> {outgoing ? 'where the money went' : 'who paid in'}
+            <button type="button" className="quiet" onClick={() => setDirection(outgoing ? 'incoming' : 'outgoing')}
+              title="Where it went follows what this address sent. Who paid in finds the addresses that paid it.">
+              {outgoing ? 'Trace who paid in instead' : 'Trace where it went instead'}
+            </button>
+          </p>
+          <button type="submit" className="primary nt-go" disabled={!valid || blocked || backendDown}>
+            {outgoing ? 'Start trace' : 'Start trace back'}<ArrowIcon />
+          </button>
+        </div>
+        <div className="nt-examples">
+          <label className="nt-example" htmlFor="example">
+            <StarIcon />
+            <select id="example" aria-label="Load a verified example" value="" onChange={(e) => { loadDemo(e.target.value); e.target.value = '' }} disabled={backendDown}>
+              <option value="">Load a verified example</option>
+              {DEMOS.map((d) => (
+                <option key={d.n} value={d.n} title={d.hook}>
+                  {d.n} · {d.title} · {SHORT_CHAIN[d.chain] ?? 'Ethereum'} {d.asset} · {d.depth} hop{d.depth === 1 ? '' : 's'}{d.direction === 'incoming' ? ' · reverse' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          {recording && (
+            <Link className="recorded-link" to={`/demo/${Number(demoInForm.n)}`} title="The trace as recorded on that date. Opens instantly; nothing is re-traced.">
+              Open as recorded · <span className="mono">{recording.recorded_at.slice(0, 10)}</span>
+            </Link>
           )}
-          {badHashes.length > 0 && (
-            <div className="banner warn" style={{ gridColumn: 'span 12' }}>
-              Not a valid {active?.name ?? ''} transaction hash: <span className="mono">{badHashes[0]}</span>{badHashes.length > 1 ? ` and ${badHashes.length - 1} more` : ''}.
-            </div>
-          )}
-          {badAck && (
-            <div className="banner warn" style={{ gridColumn: 'span 12' }}>
-              An NCRP acknowledgement number is 10 to 20 digits, as on the complaint's acknowledgement.
-            </div>
-          )}
-          {badVictim && (
-            <div className="banner warn" style={{ gridColumn: 'span 12' }}>
-              {victimIsReported
-                ? "The victim's wallet is the reported wallet: enter the wallet the victim paid from."
-                : `The victim's wallet is not a valid ${active?.name ?? ''} address.`}
-            </div>
-          )}
-          {backendDown && (
-            <div className="banner error" style={{ gridColumn: 'span 12' }}>Cannot reach the backend. Start it with <span className="mono">uvicorn app.main:app --reload --port 8000</span>.</div>
-          )}
-        </form>
-      </div>
+        </div>
+      </form>
+
+      <section className="card glass nt-next" aria-labelledby="nt-next-title">
+        <h2 id="nt-next-title">What happens next</h2>
+        <ol>
+          {NEXT.map(([step, line, Icon]) => (
+            <li key={step}><span className="nt-icon"><Icon /></span><span><b>{step}</b><span className="nt-hint">{line}</span></span></li>
+          ))}
+        </ol>
+      </section>
     </div>
   )
 }
 
 const svg = { fill: 'none', stroke: 'currentColor', strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
-const Chevron = () => <svg className="chev" width="12" height="12" viewBox="0 0 12 12" strokeWidth="1.5" {...svg}><path d="M3 4.5l3 3 3-3" /></svg>
-const SearchIcon = () => <svg className="lead" width="18" height="18" viewBox="0 0 24 24" strokeWidth="1.6" {...svg}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-const ArrowIcon = () => <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.6" {...svg}><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+const ArrowIcon = () => <svg width="14" height="14" viewBox="0 0 14 14" strokeWidth="1.5" {...svg}><path d="M2 7h10M8 3l4 4-4 4" /></svg>
 const PlusIcon = () => <svg width="12" height="12" viewBox="0 0 12 12" strokeWidth="1.5" {...svg}><path d="M6 2v8M2 6h8" /></svg>
-const StarIcon = () => <svg className="lead" width="15" height="15" viewBox="0 0 24 24" strokeWidth="1.6" {...svg}><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z" /></svg>
+const StarIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" strokeWidth="1.6" {...svg}><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z" /></svg>
+const CheckIcon = () => <svg className="ok" width="14" height="14" viewBox="0 0 16 16" strokeWidth="1.5" {...svg}><circle cx="8" cy="8" r="6.2" /><path d="M5.2 8.2l1.9 1.9 3.8-4" /></svg>
+const LockIcon = () => <svg width="12" height="12" viewBox="0 0 16 16" strokeWidth="1.4" {...svg}><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>
+function DownIcon() { return <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.4" {...svg}><path d="M8 2v8M4.5 6.5L8 10l3.5-3.5M3 13.5h10" /></svg> }
+function SplitIcon() { return <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.4" {...svg}><path d="M1.5 4c5 0 6 8 13 8M1.5 8h13M1.5 12c5 0 6-8 13-8" /></svg> }
+function ShieldIcon() { return <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.4" {...svg}><path d="M8 1.8l5 2v4.1c0 3-2.2 5.2-5 6.3-2.8-1.1-5-3.3-5-6.3V3.8z" /></svg> }
+function PageIcon() { return <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.4" {...svg}><path d="M2.5 2.5h8l3 3v8h-11zM5 8h6M5 10.5h6" /></svg> }

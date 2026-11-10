@@ -1,118 +1,98 @@
-/* The payment fields of the trace form (R1). Lane A: kept beside the component
-   rather than in styles.css, per CLAUDE.md. */
-.payments {
-  display: grid;
-  gap: 6px;
-  margin-top: 10px;
-}
-.payments label {
-  display: grid;
-  gap: 2px;
-  font-size: 13px;
-}
-.payments label small {
-  color: var(--muted, inherit);
-  opacity: 0.8;
-  font-weight: normal;
-}
-.payments textarea {
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 12px;
-  width: 100%;
-  min-width: 0;
-  resize: vertical;
-}
-.payments textarea[aria-invalid="true"] {
-  outline: 1px solid var(--risk);
-}
-.payments .ncrp input {
-  max-width: 22rem;
-}
+/* The New trace page (TraceForm.jsx, pack 2-glass-02): the form on a glass
+   card, what happens next beside it. Glass tokens only (styles.css). */
+.trace-new { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+.trace-card { flex: 2 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 24px; padding: 30px; }
+.trace-card fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.trace-card legend { padding: 0; }
+.nt-group, .nt-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.nt-group { gap: 10px; }
+.nt-k { font-size: 12px; color: var(--text-2); }
+.nt-hint { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 11.5px; color: var(--text-3); }
+.nt-hint svg.ok { color: var(--go); }
+.nt-count { min-height: 18px; color: var(--text-2); }
+.nt-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 
-/* ---- Console v3 field tiles (design: "Globe 2", .fgrid/.fld/.go/.tog/.pill-btn/.frow).
-   Scoped to the trace card so nothing else changes. ---- */
-.trace-card {
-  --gf: rgba(255, 255, 255, 0.45); --gf2: rgba(255, 255, 255, 0.65); --gb: rgba(10, 10, 10, 0.12);
-  --gh: rgba(255, 255, 255, 0.9); --gs: rgba(10, 10, 10, 0.08);
-  --ring: rgba(25, 110, 68, 0.55); --halo: rgba(25, 110, 68, 0.10); --on: rgba(25, 110, 68, 0.28); --on-rule: rgba(25, 110, 68, 0.55);
+/* Chain and asset: one chip per choice, a radio underneath. */
+.nt-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.nt-chip {
+  position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px;
+  border-radius: var(--r-pill); border: 1px solid var(--line); color: var(--text-2); font-size: 13px; cursor: pointer;
 }
-html[data-theme="dark"] .trace-card {
-  --gf: rgba(255, 255, 255, 0.04); --gf2: rgba(255, 255, 255, 0.08); --gb: rgba(255, 255, 255, 0.12);
-  --gh: rgba(255, 255, 255, 0.22); --gs: rgba(0, 0, 0, 0.25);
-  --ring: rgba(61, 214, 140, 0.55); --halo: rgba(61, 214, 140, 0.12); --on: rgba(61, 214, 140, 0.25); --on-rule: rgba(61, 214, 140, 0.55);
-}
-.trace-card > .body { padding: 28px 28px 20px; gap: 16px; }
-.trace-card .lede { margin: 0; }
-.trace-card .fgrid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; }
+.nt-chip.mono { min-height: 36px; padding: 0 14px; font-size: 12px; }
+.nt-chip input, .nt-seg input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: inherit; }
+.nt-chip:hover:not(:has(:disabled)) { background: var(--panel-2); color: var(--text); }
+.nt-chip:has(:checked) { background: var(--panel-2); border-color: var(--line-strong); color: var(--text); font-weight: 500; }
+.nt-chip:has(:disabled) { color: var(--text-3); border-style: dashed; cursor: not-allowed; }
+.nt-chip .nt-off { margin-left: 6px; font-size: 11px; }
+.nt-chip:has(:focus-visible), .nt-seg label:has(:focus-visible) { outline: 2px solid var(--go); outline-offset: 2px; }
 
+/* A field: label above, a rounded box. */
 .trace-card .fld {
-  position: relative; display: flex; flex-direction: column; justify-content: center; gap: 3px;
-  min-height: 60px; padding: 9px 34px 9px 14px; box-sizing: border-box; min-width: 0;
-  border-radius: 12px; background: var(--gf); border: 1px solid var(--line-strong); box-shadow: inset 0 1px 0 var(--gh);
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s; cursor: text;
+  width: 100%; min-width: 0; min-height: 50px; padding: 0 16px; border-radius: 16px;
+  background: var(--glass-input); border: 1px solid var(--line-strong); color: var(--text); font-size: 13px;
 }
-.trace-card .fld:hover { background: var(--gf2); }
-.trace-card .fld:focus-within { border-color: var(--ring); box-shadow: inset 0 1px 0 var(--gh), 0 0 0 4px var(--halo); }
-.trace-card .fld.invalid { border-color: var(--risk); }
-.trace-card .fld .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); line-height: 1; }
-.trace-card .fld input, .trace-card .fld select, .trace-card .fld textarea {
-  background: transparent !important; border: 0 !important; box-shadow: none !important; outline: none;
-  -webkit-backdrop-filter: none; backdrop-filter: none; min-height: 0; padding: 0; border-radius: 0;
-  width: 100%; min-width: 0; font-size: 15px; line-height: 1.4; color: var(--ink);
-}
-.trace-card .fld select { -webkit-appearance: none; appearance: none; background-image: none; cursor: pointer; text-overflow: ellipsis; }
-.trace-card .fld textarea { resize: vertical; font-size: 13px; }
-.trace-card .fld textarea[aria-invalid="true"] { color: var(--red); }
-.trace-card .fld input:disabled { opacity: 0.5; }
-.trace-card .fld input::placeholder, .trace-card .fld textarea::placeholder { color: var(--muted); opacity: 0.65; }
-.trace-card .fld .chev { position: absolute; right: 14px; bottom: 16px; pointer-events: none; color: var(--muted); }
+.trace-card textarea.fld { padding: 14px 16px; line-height: 1.6; resize: vertical; font-size: 12.5px; }
+.trace-card .fld:hover:not(:disabled) { border-color: var(--text-2); }
+.trace-card .fld:focus-visible { border-color: var(--go); }
+.trace-card .fld[aria-invalid="true"], .trace-card .fld.invalid { border-color: var(--risk); }
+.trace-card .fld:disabled { opacity: 0.6; cursor: not-allowed; }
+.trace-card .fld::placeholder { font-family: var(--sans); color: var(--text-3); }
+.nt-secret { position: relative; display: flex; }
+.nt-secret .fld { padding-right: 76px; }
+.trace-card .fld.masked { -webkit-text-security: disc; }
+.nt-reveal { position: absolute; right: 8px; top: 50%; translate: 0 -50%; min-height: 32px; padding: 0 12px; font-size: 12px; font-weight: 400; color: var(--text-2); background: transparent; border-color: transparent; }
+.nt-reveal[aria-pressed="true"] { color: var(--text); border-color: var(--line-strong); }
 
-.trace-card .fld.addr { flex-direction: row; align-items: center; gap: 14px; min-height: 72px; padding: 12px 16px; }
-.trace-card .fld.addr .col { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
-.trace-card .fld.addr input { font-size: 17px; letter-spacing: 0.01em; }
-.trace-card .fld .lead { color: var(--muted); flex: none; }
-.trace-card .fld.addr:focus-within .lead { color: var(--ink); }
-.trace-card .fld .fmt { display: flex; gap: 6px; flex: none; }
-.trace-card .fld .fmt span { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--gb); background: var(--gf); }
-
-.trace-card .fld.slim { flex: 1 1 320px; flex-direction: row; align-items: center; gap: 10px; min-height: 44px; padding: 0 34px 0 12px; }
-.trace-card .fld.slim .chev { bottom: auto; top: 50%; margin-top: -6px; }
-.trace-card .fld.slim select { font-size: 13.5px; }
-
-.trace-card .go {
-  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 60px;
-  border-radius: var(--r-pill); border: 1px solid var(--go); background: var(--panel); color: var(--text);
-  font: inherit; font-weight: 600; font-size: 15px; cursor: pointer;
-  box-shadow: 0 0 0 4px var(--go-tint), 0 8px 24px var(--gs); transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
-}
-.trace-card .go:hover:not(:disabled) { transform: translateY(-1px); background: var(--go-tint); box-shadow: 0 0 0 4px var(--go-tint), 0 12px 28px var(--gs); }
-.trace-card .go:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
-.trace-card .go:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-
-.trace-card .frow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--gb); padding-top: 14px; }
-.trace-card .tog { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; cursor: pointer; min-height: 44px; position: relative; }
-.trace-card .tog input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
-.trace-card .tog .track { position: relative; width: 36px; height: 22px; border-radius: 999px; background: var(--gf2); border: 1px solid var(--gb); transition: background 0.2s, border-color 0.2s; flex: none; }
-.trace-card .tog .knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); transition: transform 0.2s, background 0.2s; }
-.trace-card .tog input:checked + .track { background: var(--on); border-color: var(--on-rule); }
-.trace-card .tog input:checked + .track .knob { transform: translateX(14px); background: var(--ink); }
-.trace-card .tog input:focus-visible + .track { outline: 2px solid var(--green); outline-offset: 2px; }
-.trace-card .pill-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--gb); background: var(--gf); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; box-shadow: inset 0 1px 0 var(--gh); }
-.trace-card .pill-btn:hover { background: var(--gf2); }
-.trace-card .pill-btn[aria-expanded="true"] { border-color: var(--on-rule); }
-.trace-card .recorded-link { font-size: 13px; }
-.trace-card .pay-note { margin: -2px 2px 0; font-size: 12px; }
+/* The victim's payments: a disclosure, then the hashes and particulars. */
+.nt-pay { display: flex; flex-direction: column; gap: 16px; }
+.nt-toggle { align-self: flex-start; min-height: 36px; padding: 0 14px; font-weight: 400; font-size: 13px; color: var(--text); background: transparent; border-color: var(--line-strong); }
+.nt-toggle[aria-expanded="true"] { background: var(--panel-2); }
+.trace-card .pay-note { font-size: 12px; }
 .trace-card .pay-hash { overflow-wrap: anywhere; }
-.trace-card .pay-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--on-rule); background: var(--on); font-size: 12px; }
 .trace-card .banner { margin: 0; }
 
-@media (max-width: 760px) {
-  .trace-card > .body { padding: 18px 16px 14px; }
-  .trace-card .fgrid > .fld:not(.addr), .trace-card .fgrid > .go { grid-column: span 6 !important; }
-  .trace-card .fgrid > .go { grid-column: span 12 !important; }
-  .trace-card .fgrid > .fld[for="payment-hashes"], .trace-card .fgrid > .fld[for="ncrp-ack"] { grid-column: span 12 !important; }
-  .trace-card .fld .fmt { display: none; }
-  .trace-card .fld.slim { flex-basis: 100%; }
+/* How far to follow: four segments on one track. */
+.nt-seg { display: flex; gap: 4px; padding: 4px; min-height: 50px; border-radius: 14px; background: var(--glass-input); border: 1px solid var(--line); }
+.nt-seg label { position: relative; flex: 1; display: grid; place-items: center; min-height: 40px; border-radius: 10px; color: var(--text-2); font-weight: 500; cursor: pointer; }
+.nt-seg label:hover { color: var(--text); }
+.nt-seg label:has(:checked) { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-strong); }
+
+/* Stop after 1:30: a switch. */
+.trace-card .tog { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 50px; color: var(--text-2); font-size: 13px; cursor: pointer; }
+.trace-card .tog input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.trace-card .tog .track { position: relative; flex: none; width: 36px; height: 22px; border-radius: var(--r-pill); background: var(--panel-2); border: 1px solid var(--line-strong); }
+.trace-card .tog .knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--text-2); transition: transform var(--fast) var(--ease); }
+.trace-card .tog input:checked + .track { background: var(--go-tint); border-color: var(--go); }
+.trace-card .tog input:checked + .track .knob { transform: translateX(14px); background: var(--go); }
+.trace-card .tog input:focus-visible + .track { outline: 2px solid var(--go); outline-offset: 2px; }
+
+/* The direction in words, then Start trace. */
+.nt-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+.nt-direction { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; font-size: 12px; color: var(--text-2); }
+.nt-direction .quiet { min-height: 32px; font-size: 12px; font-weight: 400; text-decoration: underline; text-underline-offset: 3px; }
+.trace-card .nt-go { min-height: 52px; padding: 0 28px; gap: 10px; font-size: 14px; }
+.trace-card .nt-go svg { color: var(--go-soft); }
+.nt-examples { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: -12px; }
+.nt-example { position: relative; display: inline-flex; align-items: center; gap: 6px; max-width: 100%; color: var(--text-2); }
+.trace-card .nt-example select {
+  min-height: 32px; max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--text-2); font-size: 12px;
+  text-decoration: underline; text-underline-offset: 3px; appearance: none; -webkit-appearance: none; text-overflow: ellipsis;
 }
-/* styles.css pads .intake .address-field for the old row layout; inside a tile it must not. */
-.trace-card .fld.addr input.address-field { padding: 0; font-size: 17px; grid-column: auto; }
+.nt-example:hover, .nt-example:hover select { color: var(--text); }
+.trace-card .recorded-link { min-height: 32px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text); }
+
+/* What happens next. */
+.nt-next { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 26px; }
+.nt-next h2 { margin: 0; font-size: 15px; font-weight: 400; }
+.nt-next ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 20px; }
+.nt-next li { display: flex; align-items: flex-start; gap: 14px; }
+.nt-next li > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.nt-next b { font-size: 13px; font-weight: 400; }
+.nt-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; background: var(--panel-2); color: var(--text); }
+
+@media (max-width: 720px) {
+  .trace-new { gap: 16px; }
+  .trace-card { padding: 20px 16px; gap: 20px; }
+  .nt-next { padding: 20px 16px; }
+  .trace-card .nt-go { flex: 1 1 100%; justify-content: center; }
+}

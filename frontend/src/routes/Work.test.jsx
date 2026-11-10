@@ -88,13 +88,13 @@ describe('the new trace page', () => {
   it('holds the trace form', async () => {
     open('new', { extra: { '/trace/intake': { body: { payments: true } } } })
     expect(screen.getByRole('heading', { level: 1, name: 'New trace' })).toBeInTheDocument()
-    expect(await screen.findByLabelText('Reported wallet address')).toBeInTheDocument()
+    expect(await screen.findByLabelText('Wallet the victim paid')).toBeInTheDocument()
   })
 
   it('fills in a payment hash it was sent', async () => {
     const hash = `0x${'c'.repeat(64)}`
     open('new', { path: `/trace/new?pay=${hash}`, extra: { '/trace/intake': { body: { payments: true } } } })
-    expect(await screen.findByLabelText(/Victim's payment transaction hash/)).toHaveValue(hash)
+    expect(await screen.findByLabelText(/victim's payment hashes/i)).toHaveValue(hash)
   })
 
   it('says so when this site does not trace from a payment hash, and keeps the hash in view', async () => {
@@ -103,16 +103,16 @@ describe('the new trace page', () => {
     const note = await screen.findByText(/Tracing from a payment hash is off on this site/)
     expect(note).toHaveTextContent(hash)
     expect(note).toHaveTextContent(/paste the wallet the victim paid/i)
-    expect(screen.queryByLabelText(/Victim's payment transaction hash/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/victim's payment hashes/i)).not.toBeInTheDocument()
   })
 
   it('starts a Tron hash on Tron, whatever the site\'s default chain', async () => {
     const hash = 'd'.repeat(64)
     const both = { ...oneChain, chains: { ...oneChain.chains, tron: { key: 'tron', name: 'Tron', ready: true, address_family: 'tron', assets: [{ symbol: 'USDT' }] } } }
     open('new', { path: `/trace/new?pay=${hash}&chain=tron`, extra: { '/chains': { body: both }, '/trace/intake': { body: { payments: true } } } })
-    expect(await screen.findByLabelText(/Victim's payment transaction hash/)).toHaveValue(hash)
-    await waitFor(() => expect(screen.getByLabelText('Blockchain')).toHaveValue('tron'))
-    expect(screen.getByLabelText('Asset')).toHaveValue('USDT')
+    expect(await screen.findByLabelText(/victim's payment hashes/i)).toHaveValue(hash)
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Tron' })).toBeChecked())
+    expect(screen.getByRole('radio', { name: 'USDT' })).toBeChecked()
     expect(screen.queryByText(/Not a valid .* transaction hash/)).not.toBeInTheDocument()
   })
 
@@ -120,14 +120,14 @@ describe('the new trace page', () => {
     const hash = `0x${'d'.repeat(64)}`
     const three = { ...oneChain, chains: { ethereum: { ...oneChain.chains.ethereum, assets: [{ symbol: 'ETH' }, { symbol: 'USDT' }, { symbol: 'USDC' }] } } }
     open('new', { path: `/trace/new?pay=${hash}&chain=ethereum&asset=USDC`, extra: { '/chains': { body: three }, '/trace/intake': { body: { payments: true } } } })
-    expect(await screen.findByLabelText(/Victim's payment transaction hash/)).toHaveValue(hash)
-    await waitFor(() => expect(screen.getByLabelText('Asset')).toHaveValue('USDC'))
-    expect(screen.getByLabelText('Blockchain')).toHaveValue('ethereum')
+    expect(await screen.findByLabelText(/victim's payment hashes/i)).toHaveValue(hash)
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'USDC' })).toBeChecked())
+    expect(screen.getByRole('radio', { name: 'Ethereum' })).toBeChecked()
   })
 
   it('asks for the demo code on a public site instead', async () => {
     open('new', { access: { demo_code_required: true } })
     expect(await screen.findByLabelText('Access code')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Reported wallet address')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Wallet the victim paid')).not.toBeInTheDocument()
   })
 })

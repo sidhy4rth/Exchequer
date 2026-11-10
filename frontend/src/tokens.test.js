@@ -129,16 +129,15 @@ describe.each(['dark', 'light'])('the %s theme', (theme) => {
     })
 
   // A field's edge stands 3:1 against its own fill and against the glass
-  // around it: the trace form's tiles, at rest and under the pointer, and
-  // the console's plain fields.
+  // around it: the new trace form's fields and the console's plain fields.
   it.each(Object.keys(under))("edges the console's fields at 3:1 against their fill and the glass, over %s", (what) => {
-    const card = { ...block('.trace-card', traceForm), ...(theme === 'dark' ? block('html[data-theme="dark"] .trace-card', traceForm) : {}) }
-    const tileEdge = /\n\.trace-card \.fld \{[^}]*border: 1px solid var\((--[\w-]+)\)/.exec(traceForm)[1]
+    const field = /\n\.trace-card \.fld \{([^}]*)\}/.exec(traceForm)[1]
+    const tileEdge = /border: 1px solid var\((--[\w-]+)\)/.exec(field)[1]
+    const tileFill = /background: var\((--[\w-]+)\)/.exec(field)[1]
     const plainEdge = /\ninput, select \{[^}]*border: 1px solid var\((--[\w-]+)\)/.exec(css)[1]
     const back = glass(what)
     const fields = [
-      ['a trace form tile', tileEdge, card['--gf']],
-      ['a trace form tile under the pointer', tileEdge, card['--gf2']],
+      ['a trace form field', tileEdge, value(theme, tileFill)],
       ['a plain field', plainEdge, value(theme, '--glass-input')],
     ]
     for (const [field, name, fill] of fields) {

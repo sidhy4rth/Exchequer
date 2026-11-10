@@ -129,7 +129,7 @@ describe('the console shell', () => {
     shellAt('/cases', { '/trace/intake': { body: { payments: true } }, '/demos/recorded': { body: { demos: [] } } })
     await user.type(await screen.findByRole('searchbox', { name: 'Wallet, transaction hash or case ID' }), `${hash}{Enter}`)
     expect(await screen.findByRole('heading', { level: 1, name: 'New trace' })).toBeInTheDocument()
-    expect(await screen.findByLabelText(/Victim's payment transaction hash/)).toHaveValue(hash)
+    expect(await screen.findByLabelText(/victim's payment hashes/i)).toHaveValue(hash)
   })
 
   it('opens each page of the sidebar inside the shell', async () => {
