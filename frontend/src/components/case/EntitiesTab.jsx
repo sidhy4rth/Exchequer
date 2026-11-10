@@ -202,6 +202,18 @@ const ROLE_TONE = {
   gambling: 'var(--text-2)', service: 'var(--text-2)', node: 'var(--text-2)',
 }
 
+/** The bubble map's key, in its words, for the phone where the map is compact. */
+const BUBBLE_KEY = [
+  ['seed', 'Reported address'],
+  ['risk', 'Sanctioned / mixer / frozen (confirmed)'],
+  ['flagged', 'Possible flag · pattern (not confirmed)'],
+  ['gambling', 'Gambling platform wallet'],
+  ['exchange', 'Labelled exchange wallet'],
+  ['inferred', 'Probable deposit address (inferred)'],
+  ['service', 'Service contract / router, not expanded'],
+  ['node', 'Traced address'],
+]
+
 /** The pattern names a wallet's flags carry, in words. */
 const patternsOf = (node) => (node.flags ?? []).filter((f) => f !== node.risk_category).map((f) => PATTERN_NAME[f] ?? String(f).replace(/_/g, ' '))
 
@@ -383,6 +395,14 @@ function WalletMaps({ result, unit }) {
         <div className="ent-maps-stage">
           <div className="ent-mapwrap bubble" role="group" aria-label="Bubble map" hidden={view !== 'bubble'}>
             <div className="stage"><GraphView {...shared} active={view === 'bubble'} /></div>
+            {/* A compact bubble map leaves its key to the page; the hop map keeps its own. */}
+            {phone && (
+              <div className="flow-legend ent-bubble-key" aria-label="Bubble map key" role="group">
+                {BUBBLE_KEY.map(([role, name]) => (
+                  <span key={role}><RoleSwatch role={role} color={ROLE_TONE[role]} />{name}</span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="ent-mapwrap hop" role="group" aria-label="Hop map" hidden={view !== 'hop'}>
             <FlowView {...shared} direction={result.direction} active={view === 'hop'} />

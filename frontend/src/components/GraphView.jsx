@@ -5,6 +5,7 @@ import { plain } from '../text'
 import { useMedia } from '../phone'
 import { forceCollide } from 'd3-force-3d'
 import RoleSwatch, { DASH, FADED, FADED_ROLES } from './RoleSwatch'
+import { isConfirmedRisk } from './mapRoles'
 import './GraphView.css'
 
 // Kept in sync with the custom properties in styles.css. The canvas paints in
@@ -131,9 +132,11 @@ function levelOf(node) {
   return Number.isFinite(node.depth) ? Math.max(1, node.depth) : 1
 }
 
-/** Kept bright by "Show only flags": possible flags, confirmed risk, the reported address. */
+/** Kept bright by "Show only flags": possible flags, confirmed risk, the
+ * reported address. A gambling platform is an attribution, not a confirmed
+ * risk, so it fades with the rest -- the same rule as the hop map's. */
 export function keptByFlags(node) {
-  return roleOf(node) === 'flagged' || !!node.risk_category || !!node.is_seed
+  return roleOf(node) === 'flagged' || isConfirmedRisk(node) || !!node.is_seed
 }
 
 function roleOf(node) {
@@ -528,7 +531,7 @@ export default function GraphView({
   keptRef.current = kept
   const flagCounts = useMemo(() => ({
     possible: graphData.nodes.filter((n) => roleOf(n) === 'flagged').length,
-    confirmed: graphData.nodes.filter((n) => n.risk_category).length,
+    confirmed: graphData.nodes.filter(isConfirmedRisk).length,
   }), [graphData])
   const offFlags = (id) => flagsRef.current && !keptRef.current.has(id)
   const linkOffFlags = (link) => offFlags(idOf(link.source)) || offFlags(idOf(link.target))
@@ -667,10 +670,14 @@ export default function GraphView({
       // returned to its unfocused state without hunting for empty background.
       if (!controlled) {
         setOwnSelected((current) => (node && current === node.id ? null : node?.id ?? null))
+        onSelect?.(node)
+        return
       }
-      onSelect?.(node)
+      // A parent that owns the selection is told to let go, the same as the
+      // hop map does, so a second click clears the selection on both maps.
+      onSelect?.(node && selected === node.id ? null : node)
     },
-    [controlled, onSelect],
+    [controlled, onSelect, selected],
   )
 
   // Dragging pins. A bubble the user has deliberately moved should stay where

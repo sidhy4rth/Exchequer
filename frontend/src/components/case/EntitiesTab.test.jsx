@@ -304,6 +304,21 @@ describe('every wallet', () => {
 })
 
 describe('every wallet on a phone', () => {
+  it('shows the compact bubble map\'s key on the page, with the possible and confirmed flags told apart', async () => {
+    await everyWallet({ phone: true })
+    const key = screen.getByRole('group', { name: 'Bubble map key' })
+    expect(key).toHaveTextContent('Sanctioned / mixer / frozen (confirmed)')
+    expect(key).toHaveTextContent('Possible flag · pattern (not confirmed)')
+    // Dashed and faded for a possible flag, solid for a confirmed hit: not colour alone.
+    expect(key.querySelector('.role-flagged .dot')).toHaveAttribute('stroke-dasharray')
+    expect(key.querySelector('.role-risk .dot')).not.toHaveAttribute('stroke-dasharray')
+  })
+
+  it('leaves the key to the bubble map itself on a desk', async () => {
+    await everyWallet()
+    expect(screen.queryByRole('group', { name: 'Bubble map key' })).not.toBeInTheDocument()
+  })
+
   it('makes both maps compact and opens a bottom sheet for the selected wallet', async () => {
     const user = await everyWallet({ phone: true })
     expect(lastGraph().compact).toBe(true)

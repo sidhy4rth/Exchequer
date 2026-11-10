@@ -7,8 +7,8 @@
 .vf-box {
   container: vflow / inline-size;
   /* The motion system's easings: entering, and moving between states. */
-  --vf-enter: cubic-bezier(0.22, 1, 0.36, 1);
-  --vf-move: cubic-bezier(0.45, 0, 0.2, 1);
+  --vf-enter: var(--ease-enter, cubic-bezier(0.22, 1, 0.36, 1));
+  --vf-move: var(--ease-move, cubic-bezier(0.45, 0, 0.2, 1));
 }
 .vflow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 .vf-chart { display: flex; flex-direction: column; gap: 14px; padding: 22px; min-width: 0; }

@@ -288,7 +288,8 @@ describe('the bubble graph in motion', () => {
       reduceMotion()
       render(<GraphView data={withRisk} tracePath={route} flagsOnly />)
       const bright = withRisk.nodes.filter((n) => draw(n).alpha > 0.2).map((n) => n.id).sort()
-      expect(bright).toEqual([SEED, MID, BET, SIDE, listed.id].sort())
+      // The gambling platform is an attribution, not a confirmed hit: it fades, as on the hop map.
+      expect(bright).toEqual([SEED, MID, SIDE, listed.id].sort())
       expect(withRisk.nodes.filter(keptByFlags).map((n) => n.id).sort()).toEqual(bright)
       // Every kept flag and hit is named, even an ordinary pattern hit.
       expect(draw(withRisk.nodes.find((n) => n.id === SIDE)).labelled).toBe(true)
@@ -306,8 +307,9 @@ describe('the bubble graph in motion', () => {
       expect(screen.queryByRole('status')).toBeNull()
       expect(draw(data.nodes.find((n) => n.id === CEX)).alpha).toBe(1)
       rerender(<GraphView data={withRisk} tracePath={route} flagsOnly />)
-      // MID and SIDE fired a pattern; the gambling wallet and the frozen one are listed.
-      expect(screen.getByRole('status')).toHaveTextContent('Showing 2 possible flags · 2 confirmed')
+      // MID and SIDE fired a pattern; only the frozen wallet is a confirmed hit
+      // (the gambling platform is an attribution), the same count as the hop map.
+      expect(screen.getByRole('status')).toHaveTextContent('Showing 2 possible flags · 1 confirmed')
     })
   })
 
@@ -331,6 +333,20 @@ describe('the bubble graph in motion', () => {
     expect(arcs[0] - drawn[0]).toBeGreaterThanOrEqual(22)
     act(() => graph.props.onNodeClick(node))
     expect(onSelect).toHaveBeenCalledWith(node)
+  })
+
+  it('a parent that owns the selection is asked to clear it when the selected bubble is clicked again', () => {
+    reduceMotion()
+    const onSelect = vi.fn()
+    const node = () => graph.props.graphData.nodes.find((n) => n.id === MID)
+    const { rerender } = render(<GraphView data={data} tracePath={route} onSelect={onSelect} selected={null} />)
+    act(() => graph.props.onNodeClick(node()))
+    expect(onSelect).toHaveBeenLastCalledWith(node())
+    rerender(<GraphView data={data} tracePath={route} onSelect={onSelect} selected={MID} />)
+    act(() => graph.props.onNodeClick(node()))
+    expect(onSelect).toHaveBeenLastCalledWith(null)
+    act(() => graph.props.onBackgroundClick())
+    expect(onSelect).toHaveBeenLastCalledWith(null)
   })
 
   it('keeps the hover tooltip and the key on a desk', () => {

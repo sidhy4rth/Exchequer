@@ -328,9 +328,9 @@ details.more summary:hover { color: var(--ink); }
 .flow {
   position: relative; padding: 4px 0 0; overflow: hidden;
   /* The motion system's curves: arriving, moving, popping into place. */
-  --m-enter: cubic-bezier(0.22, 1, 0.36, 1);
-  --m-move: cubic-bezier(0.45, 0, 0.2, 1);
-  --m-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --m-enter: var(--ease-enter);
+  --m-move: var(--ease-move);
+  --m-pop: var(--ease-pop);
 }
 .flow svg { display: block; cursor: grab; }
 .flow.dragging svg { cursor: grabbing; }
