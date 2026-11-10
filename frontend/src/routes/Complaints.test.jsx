@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import Complaints from './Complaints'
+import { resetAccount, signedInAs } from '../session'
 import { stubFetch } from '../test/setup'
 
 // The Complaints page (/complaints): the officers' review queue of what
@@ -219,7 +221,7 @@ describe('a complaint', () => {
     await user.click(screen.getByRole('button', { name: 'Save status' }))
     const sent = fetch.mock.calls.find(([url]) => String(url).endsWith('/status'))
     expect(JSON.parse(sent[1].body)).toEqual({ status: 'closed' })
-    expect(await screen.findByRole('status')).toHaveTextContent('Status saved: Closed')
+    expect(await within(screen.getByRole('region', { name: 'Status and case' })).findByRole('status')).toHaveTextContent('Status saved: Closed')
   })
 
   it('links a stored case and then opens it', async () => {
@@ -230,5 +232,71 @@ describe('a complaint', () => {
     await user.type(await screen.findByLabelText('Stored case ID'), 'case-9')
     await user.click(screen.getByRole('button', { name: 'Link case' }))
     expect(await screen.findByRole('link', { name: 'Open case case-9' })).toHaveAttribute('href', '/case/case-9')
+  })
+})
+
+// A complaint belongs to no unit until an officer claims it for theirs
+// (POST /complaints/{ref}/claim); a signed-in officer claims it before
+// replying or changing its status. A demo user's queue is as it was.
+describe('claiming a complaint for a unit', () => {
+  const NORTH = { id: 1, name: 'Cyber Cell North' }
+  const ASHA = { id: 2, name: 'Asha Rao', role: 'officer', unit: NORTH, must_change_password: false }
+  afterEach(() => resetAccount())
+
+  it('says in the queue which unit has each complaint, or that none has', async () => {
+    open('/complaints', { '/complaints': { body: { ...QUEUE, complaints: [{ ...QUEUE.complaints[0], unit: NORTH }, { ...QUEUE.complaints[1], unit: null }] } } })
+    const rows = await screen.findAllByRole('row')
+    expect(rows[1]).toHaveTextContent('Cyber Cell North')
+    expect(rows[2]).toHaveTextContent('Unclaimed')
+  })
+
+  it('lets a signed-in officer claim an unclaimed complaint, and only then reply or change its status', async () => {
+    signedInAs(ASHA)
+    const user = userEvent.setup()
+    let claimed = false
+    const fetch = open('/complaints/EXQ-NEWER222', {
+      '/complaints/EXQ-NEWER222': () => ({ body: { ...ONE, unit: claimed ? NORTH : null } }),
+      '/complaints/EXQ-NEWER222/claim': () => { claimed = true; return { body: { reference: 'EXQ-NEWER222', unit: NORTH } } },
+    })
+    const card = within(await screen.findByRole('region', { name: 'Unit' }))
+    expect(card.getByText('No unit has claimed this complaint yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Send to the citizen' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save status' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('Claim this complaint for your unit to change its status, link a case or reply.')).toHaveLength(2)
+    await user.click(card.getByRole('button', { name: 'Claim for my unit' }))
+    expect(await card.findByRole('status')).toHaveTextContent('Claimed for Cyber Cell North.')
+    expect(fetch.mock.calls.some(([url, init]) => String(url).endsWith('/complaints/EXQ-NEWER222/claim') && init?.method === 'POST')).toBe(true)
+    expect(card.queryByRole('button', { name: 'Claim for my unit' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send to the citizen' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save status' })).toBeInTheDocument()
+  })
+
+  it('keeps the claim button as wide as its words, and the empty status line out of the way', async () => {
+    signedInAs(ASHA)
+    open('/complaints/EXQ-NEWER222', { '/complaints/EXQ-NEWER222': { body: { ...ONE, unit: null } } })
+    const card = within(await screen.findByRole('region', { name: 'Unit' }))
+    expect(card.getByRole('button', { name: 'Claim for my unit' })).toHaveClass('cq-claim')
+    expect(card.getByRole('status')).toHaveClass('cq-said')
+    // A literal path here would be rewritten by Vite into an asset URL.
+    const sheet = './Complaints.css'
+    const css = readFileSync(new URL(sheet, import.meta.url), 'utf8')
+    expect(/\.cq-claim \{([^}]*)\}/.exec(css)?.[1] ?? '').toMatch(/align-self: flex-start/)
+    expect(/\.cq-said:empty \{([^}]*)\}/.exec(css)?.[1] ?? '').toMatch(/position: absolute/)
+  })
+
+  it("names the unit of a complaint already claimed, with no claim to make", async () => {
+    signedInAs(ASHA)
+    open('/complaints/EXQ-NEWER222', { '/complaints/EXQ-NEWER222': { body: { ...ONE, unit: NORTH } } })
+    const card = within(await screen.findByRole('region', { name: 'Unit' }))
+    expect(card.getByText('Claimed by Cyber Cell North.')).toBeInTheDocument()
+    expect(card.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('keeps the demo queue as it was: no claim, and the reply box open', async () => {
+    open('/complaints/EXQ-NEWER222', { '/complaints/EXQ-NEWER222': { body: { ...ONE, unit: null } } })
+    const card = within(await screen.findByRole('region', { name: 'Unit' }))
+    expect(card.getByText('No unit has claimed this complaint yet. Officers claim one for their unit once signed in.')).toBeInTheDocument()
+    expect(card.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send to the citizen' })).toBeInTheDocument()
   })
 })

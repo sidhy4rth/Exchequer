@@ -117,6 +117,20 @@ class ComplaintLink(Base):
     linked_at: Mapped[str] = mapped_column(String(32))
 
 
+class ComplaintClaim(Base):
+    """Officers only: the unit that claimed a complaint, which then sees it
+    alone (routes/complaints.py). A complaint comes in with none. A table
+    of its own, so the citizen role, granted the complaints table, is never
+    granted this one and cannot learn which unit has its complaint."""
+
+    __tablename__ = "complaint_claims"
+
+    complaint_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    unit_id: Mapped[int] = mapped_column(Integer, index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    claimed_at: Mapped[str] = mapped_column(String(32))
+
+
 def merge_tags(current: str | None, tag: str) -> str:
     return ",".join(sorted({t for t in (current or "").split(",") if t} | {tag}))
 

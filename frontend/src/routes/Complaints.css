@@ -11,6 +11,9 @@
 .cq-card dl { display: grid; gap: 10px; margin: 0; }
 .cq-card dt { font-size: 11.5px; color: var(--text-3); }
 .cq-card dd { margin: 2px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+.cq-claim { align-self: flex-start; }
+/* The claim's status line keeps its place for a screen reader but, empty, takes no room. */
+.cq-said:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .cq-payments, .cq-messages { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .cq-payment { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 .cq-payment:first-child { padding-top: 0; border-top: 0; }

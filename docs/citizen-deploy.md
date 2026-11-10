@@ -152,3 +152,9 @@ The main app reads the queue (`complaints`, `complaint_payments`,
 whose paid wallet is a stored case's reported address. An officer's reply is
 a `complaint_messages` row with `sender = 'officer'`; only those, and the
 citizen's own, are shown back.
+
+A complaint comes in claimed by no unit. A signed-in officer sees their
+unit's complaints and the unclaimed ones, and claims one for their unit
+(`complaint_claims`, officers only: the citizen role is never granted it)
+before changing its status, replying or linking a case; then no other unit
+sees it.

@@ -375,3 +375,23 @@ def test_g6_citizen_1_goes_down_and_up_again_keeping_the_cases(engine):
     assert revision(engine) == head() and drift(engine) == []
     assert CITIZEN_TABLES <= set(inspect(engine).get_table_names())
     assert models.get_case("kept") is not None
+
+
+def test_g6_queue_2_goes_down_and_up_again_keeping_the_complaints(engine):
+    """complaint_claims: which unit claimed a complaint (routes/complaints.py), a table of its own."""
+    from app.complaints import Complaint, ComplaintClaim
+    models.init_db()
+    with models.session() as s:
+        s.add(Complaint(id="c1", reference="EXQ-KEPT001", ncrp="31234567890123", status="received",
+                        details_json="{}", created_at="x", updated_at="x"))
+        s.add(ComplaintClaim(complaint_id="c1", unit_id=1, officer_id=2, claimed_at="x"))
+        s.commit()
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g6_queue_1")
+    assert "complaint_claims" not in set(inspect(engine).get_table_names())
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    with models.session() as s:
+        assert s.get(Complaint, "c1") is not None and s.get(ComplaintClaim, "c1") is None

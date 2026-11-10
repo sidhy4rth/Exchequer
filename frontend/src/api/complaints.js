@@ -27,3 +27,8 @@ export async function sendComplaintMessage(reference, body) {
 export async function linkComplaintCase(reference, caseId) {
   return jsonOrThrow(await post(path(reference, '/link-case'), { case_id: caseId }))
 }
+
+/** Claim the complaint for the signed-in officer's unit: { reference, unit: { id, name } }. */
+export async function claimComplaint(reference) {
+  return jsonOrThrow(await post(path(reference, '/claim'), {}))
+}

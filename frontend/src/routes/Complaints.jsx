@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { fetchChains, fetchComplaint, fetchComplaints, linkComplaintCase, sendComplaintMessage, setComplaintStatus } from '../api'
+import { claimComplaint, fetchChains, fetchComplaint, fetchComplaints, linkComplaintCase, sendComplaintMessage, setComplaintStatus } from '../api'
 import { useMedia } from '../phone'
+import { useAccount } from '../session'
 import { plain } from '../text'
 import './Complaints.css'
 
@@ -10,7 +11,9 @@ import './Complaints.css'
 // one complaint at /complaints/<reference>. Data flows one way: the only
 // thing that goes back to the citizen is a message written here. Whether
 // the wallet paid is in other complaints is for officers alone. A trace
-// starts only when the officer presses for it on the New trace page.
+// starts only when the officer presses for it on the New trace page. A
+// complaint belongs to no unit until a signed-in officer claims it for
+// theirs, and they claim it before acting on it; a demo user's queue is as it was.
 
 export const STATUS = { received: 'Received', with_cell: 'With a cyber cell', investigating: 'Under investigation', closed: 'Closed' }
 // The citizen site's networks (citizen/api/_lib/complaint.py), each with the chain it is traced on.
@@ -37,6 +40,8 @@ const total = (totals) => (totals.length ? totals.map((t) => money(t.amount, t.t
 /** The citizen's own words: every line read as plain() reads a name, the lines kept. */
 const lines = (text) => String(text ?? '').split('\n').map(plain).join('\n')
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+const unitOf = (c) => (c.unit ? plain(c.unit.name) : 'Unclaimed')
+const CLAIM_FIRST = 'Claim this complaint for your unit to change its status, link a case or reply.'
 
 const Flags = ({ c }) => (c.in_other_complaints || c.in_stored_case) && (
   <span className="cq-flags">
@@ -50,7 +55,7 @@ function Table({ rows }) {
   return (
     <table className="cases-list" aria-label="Complaints">
       <thead>
-        <tr><th>Reference</th><th>Received (IST)</th><th>NCRP</th><th className="end">Payments</th><th className="end">Total</th><th>Status</th></tr>
+        <tr><th>Reference</th><th>Received (IST)</th><th>NCRP</th><th className="end">Payments</th><th className="end">Total</th><th>Status</th><th>Unit</th></tr>
       </thead>
       <tbody>
         {rows.map((c) => (
@@ -61,6 +66,7 @@ function Table({ rows }) {
             <td className="num">{c.payments}</td>
             <td className="num">{total(c.totals)}</td>
             <td>{STATUS[c.status] ?? plain(c.status)}</td>
+            <td className="soft">{unitOf(c)}</td>
           </tr>
         ))}
       </tbody>
@@ -75,7 +81,7 @@ function Cards({ rows }) {
         <li key={c.reference}>
           <Link to={`/complaints/${c.reference}`}>
             <span className="mono recent-address">{c.reference}</span>
-            <span className="recent-meta">{[inIst(c.received_at), `NCRP ${c.ncrp}`, plural(c.payments, 'payment')].join(' · ')}<Flags c={c} /></span>
+            <span className="recent-meta">{[inIst(c.received_at), `NCRP ${c.ncrp}`, plural(c.payments, 'payment'), unitOf(c)].join(' · ')}<Flags c={c} /></span>
             <span className="recent-reached">{total(c.totals)}</span>
             <span className="recent-band">{STATUS[c.status] ?? plain(c.status)}</span>
           </Link>
@@ -188,7 +194,34 @@ function Payment({ p, n, ncrp, health }) {
   )
 }
 
-function Handling({ c }) {
+/** Which unit has the complaint; a signed-in officer claims an unclaimed
+ * one for theirs, and the keyboard stays on what the claim said. */
+function Claim({ c, officer, onClaimed }) {
+  const [said, setSaid] = useState('')
+  const [busy, setBusy] = useState(false)
+  const line = useRef(null)
+  async function claim() {
+    setBusy(true)
+    try {
+      const { unit } = await claimComplaint(c.reference)
+      onClaimed(unit)
+      setSaid(`Claimed for ${plain(unit.name)}.`)
+    } catch (e) { setSaid(e.message) } finally { setBusy(false) }
+    line.current?.focus()
+  }
+  return (
+    <section className="card glass cq-card" aria-labelledby="cq-unit">
+      <h2 id="cq-unit">Unit</h2>
+      {c.unit ? <p>{`Claimed by ${plain(c.unit.name)}.`}</p> : <p className="note">{officer
+        ? 'No unit has claimed this complaint yet.'
+        : 'No unit has claimed this complaint yet. Officers claim one for their unit once signed in.'}</p>}
+      {!c.unit && officer && <button type="button" className="primary cq-claim" disabled={busy} onClick={claim}>Claim for my unit</button>}
+      <p role="status" className="note cq-said" ref={line} tabIndex={-1}>{said}</p>
+    </section>
+  )
+}
+
+function Handling({ c, held }) {
   const [status, setStatus] = useState(c.status)
   const [caseId, setCaseId] = useState(c.case_id)
   const [caseText, setCaseText] = useState('')
@@ -208,6 +241,7 @@ function Handling({ c }) {
   return (
     <section className="card glass cq-card" aria-labelledby="cq-handling">
       <h2 id="cq-handling">Status and case</h2>
+      {held ? <p className="note">{CLAIM_FIRST}</p> : <>
       <form className="cq-row" onSubmit={save}>
         <label htmlFor="cq-status">Status</label>
         <select id="cq-status" value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -222,12 +256,13 @@ function Handling({ c }) {
         <input id="cq-case" className="mono" value={caseText} onChange={(e) => setCaseText(e.target.value)} spellCheck={false} autoComplete="off" maxLength={36} />
         <button type="submit" disabled={busy || !caseText.trim()}>Link case</button>
       </form>
+      </>}
       <p role="status" className="note">{said}</p>
     </section>
   )
 }
 
-function Thread({ reference, initial }) {
+function Thread({ reference, initial, held }) {
   const [messages, setMessages] = useState(initial)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -250,18 +285,19 @@ function Thread({ reference, initial }) {
               <p className="cq-body">{lines(m.body)}</p>
             </li>))}</ol>
         : <p className="note">No messages yet.</p>}
-      <form onSubmit={send}>
+      {held ? <p className="note">{CLAIM_FIRST}</p> : <form onSubmit={send}>
         <label htmlFor="cq-reply">Message to the citizen</label>
         <p id="cq-reply-note" className="note">The citizen sees only what you write here. Never name where the money went, an exchange, other complaints or what a case found.</p>
         <textarea id="cq-reply" rows={4} maxLength={2000} value={text} onChange={(e) => setText(e.target.value)} aria-describedby="cq-reply-note" />
         {error && <p className="note banner" role="alert">{error}</p>}
         <button type="submit" className="primary" disabled={busy || !text.trim()}>Send to the citizen</button>
-      </form>
+      </form>}
     </section>
   )
 }
 
 function Complaint({ reference }) {
+  const { officer } = useAccount()
   const [c, setC] = useState(undefined)
   const [error, setError] = useState('')
   const [health, setHealth] = useState(null)
@@ -280,6 +316,7 @@ function Complaint({ reference }) {
         <p className="cq-flags"><Ncrp value={c.ncrp} /><Flags c={c} /></p>
       </header>
       <div className="cq-grid">
+        <Claim c={c} officer={officer} onClaimed={(unit) => setC((now) => ({ ...now, unit }))} />
         <section className="card glass cq-card" aria-labelledby="cq-sent">
           <h2 id="cq-sent">What the citizen wrote</h2>
           {sent.length ? <dl>{sent.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{lines(c.details[key])}</dd></div>)}</dl>
@@ -290,8 +327,8 @@ function Complaint({ reference }) {
           {c.payments.length ? <ol className="cq-payments">{c.payments.map((p, i) => <Payment key={i} p={p} n={i} ncrp={c.ncrp} health={health} />)}</ol>
             : <p className="note">No payment was sent with this complaint.</p>}
         </section>
-        <Handling c={c} />
-        <Thread reference={c.reference} initial={c.messages} />
+        <Handling c={c} held={Boolean(officer) && !c.unit} />
+        <Thread reference={c.reference} initial={c.messages} held={Boolean(officer) && !c.unit} />
       </div>
     </div>
   )
