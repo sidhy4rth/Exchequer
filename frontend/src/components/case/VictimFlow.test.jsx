@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import VictimFlow from './VictimFlow'
@@ -477,6 +477,51 @@ describe('the Flow figure in motion', () => {
     const { container } = draw()
     expect(container.querySelector('.vf-hero')).toHaveClass('vf-glow')
   })
+
+  it('plays the entrance once: after it, a panel shown again is drawn final at once', () => {
+    vi.useFakeTimers()
+    try {
+      const { container } = draw()
+      const fig = container.querySelector('.vflow')
+      expect(fig).toHaveClass('vf-motion', 'vf-intro')
+      act(() => { vi.advanceTimersByTime(4599) })
+      expect(fig).toHaveClass('vf-intro')
+      act(() => { vi.advanceTimersByTime(1) })
+      expect(fig).not.toHaveClass('vf-intro')
+      // The loops (the lights, the glow) and Pause stay.
+      expect(fig).toHaveClass('vf-motion')
+      expect(container.querySelectorAll('.vf-lights .vf-light').length).toBeGreaterThan(0)
+      expect(screen.getAllByRole('button', { name: 'Pause motion' }).length).toBeGreaterThan(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('has no entrance at all with reduced motion', () => {
+    still()
+    const { container } = draw()
+    expect(container.querySelector('.vflow')).not.toHaveClass('vf-intro')
+  })
+
+  it('offers the phone a Pause only when something there loops (the glow): its lights live in the chart', () => {
+    made({ nodes: [[S, 'seed', 10], [X, 'beyond_limit', 10]], links: [[S, X, 10]], buckets: [{ kind: 'beyond_limit', amount: 10, addresses: [X] }] })
+    expect(document.querySelector('.vf-pause-phone')).toBeNull()
+    cleanup()
+    const { container } = draw()
+    expect(container.querySelector('.vf-pause-phone')).toBeInTheDocument()
+    expect(container.querySelector('.vf-pause-chart')).toBeInTheDocument()
+  })
+
+  it('does not glow for an instant exchanger whose every wallet is only inferred', () => {
+    const nodes = demo.graph.nodes.map((n) => (n.address === demo.exchange_address ? { ...n, exchange: null, inferred_exchange: 'ChangeNOW' } : n))
+    const { container } = draw({ victim_flow: instantFlow, graph: { ...demo.graph, nodes }, exchange: 'ChangeNOW', attribution_inferred: true })
+    expect(card('At an instant exchanger')).toHaveClass('inferred')
+    expect(container.querySelector('.vf-hero')).not.toHaveClass('vf-glow')
+    expect(container.querySelector('.vf-pause-phone')).toBeNull()
+    cleanup()
+    const labelled = draw({ victim_flow: instantFlow })
+    expect(labelled.container.querySelector('.vf-hero')).toHaveClass('vf-glow')
+  })
 })
 
 // The motion lives in the stylesheet: every animation only under .vf-motion
@@ -491,6 +536,15 @@ describe('the Flow figure\'s stylesheet', () => {
     const moving = rules.filter(([, body]) => /(^|;|\s)(animation|transition)\s*:/.test(body))
     expect(moving.length).toBeGreaterThan(5)
     for (const [sel] of moving) for (const s of sel.split(',')) expect(s.trim()).toMatch(/^\.vf-motion\b/)
+  })
+
+  it('plays its one-off entrance only under .vf-intro; the loops and the pill stay under .vf-motion', () => {
+    const anim = rules.filter(([, body]) => /(^|;|\s)animation\s*:/.test(body))
+    const once = anim.filter(([, body]) => !/infinite/.test(body))
+    const loops = anim.filter(([, body]) => /infinite/.test(body))
+    expect(once.length).toBeGreaterThan(5)
+    for (const [sel] of once) for (const s of sel.split(',')) expect(s.trim()).toMatch(/^\.vf-motion\.vf-intro /)
+    for (const [sel] of loops) for (const s of sel.split(',')) expect(s.trim()).not.toMatch(/\.vf-intro/)
   })
 
   it('loops nothing faster than 3 seconds', () => {

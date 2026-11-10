@@ -69,6 +69,21 @@ describe('the lights on the ribbons', () => {
     expect(steps[0] * lights.length).toBeCloseTo(4.8)
   })
 
+  it('put no light, green or not, on a hairline route: a sliver at an exchange draws no eye', () => {
+    const hair = {
+      width: 100,
+      ribbons: [
+        { from: 's', to: 'a', amount: 0.4, x0: 0, x1: 50, sy0: 0, sy1: 1, ty0: 0, ty1: 1 },
+        { from: 'a', to: 'ex', kind: 'exchange', colour: 'go', amount: 0.4, x0: 50, x1: 100, sy0: 0, sy1: 1, ty0: 0, ty1: 1 },
+        { from: 's', to: 'b', amount: 99.6, x0: 0, x1: 50, sy0: 1, sy1: 400, ty0: 1, ty1: 400 },
+        { from: 'b', to: 'left', kind: 'left', colour: 'grey', amount: 99.6, x0: 50, x1: 100, sy0: 1, sy1: 400, ty0: 1, ty1: 400 },
+      ],
+    }
+    const out = particleRoutes(hair)
+    expect(out.filter((l) => l.colour === 'go')).toEqual([])
+    expect(out.map((l) => l.kind)).toEqual(['left'])
+  })
+
   it('never exceed the number asked for, and need a layout', () => {
     expect(particleRoutes(lay, { max: 2 })).toHaveLength(2)
     expect(particleRoutes(null)).toEqual([])

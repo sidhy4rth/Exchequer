@@ -120,21 +120,24 @@
 .vf-light > span { position: absolute; left: 0; top: 0; }
 .vf-light i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px 2px color-mix(in srgb, currentColor 40%, transparent); }
 
-/* ---- Motion: only with .vf-motion, which reduced motion never sets. ---- */
+/* ---- Motion: only with .vf-motion, which reduced motion never sets. The
+   one-off entrance also needs .vf-intro, which comes off once it has played:
+   a hidden panel shown again (display:none restarts CSS animations) is drawn
+   final at once. The loops and the pill stay under .vf-motion. ---- */
 .vf-motion .vf-rule-pill { transition: transform 240ms var(--vf-enter); }
-.vf-motion .vf-chart { animation: vf-rise 600ms var(--vf-enter) both; }
-.vf-motion .vf-hero { animation: vf-rise 600ms var(--vf-enter) 50ms both; }
+.vf-motion.vf-intro .vf-chart { animation: vf-rise 600ms var(--vf-enter) both; }
+.vf-motion.vf-intro .vf-hero { animation: vf-rise 600ms var(--vf-enter) 50ms both; }
 /* The columns grow, then the ribbons are drawn left to right in two stages. */
-.vf-motion .vf-bar { transform-box: fill-box; transform-origin: 50% 50%; animation: vf-grow-y 600ms var(--vf-enter) var(--vf-d, 0ms) both; }
-.vf-motion .vf-stage1 { animation: vf-reveal 900ms var(--vf-move) 400ms both; }
-.vf-motion .vf-stage2 { animation: vf-reveal 1000ms var(--vf-move) 1100ms both; }
-.vf-motion .vf-chip { animation: vf-fade 450ms var(--vf-enter) var(--vf-d, 0ms) both; }
-.vf-motion .vf-bar-all span { transform-origin: left center; animation: vf-grow-x 700ms var(--vf-enter) var(--vf-d, 0ms) both; }
+.vf-motion.vf-intro .vf-bar { transform-box: fill-box; transform-origin: 50% 50%; animation: vf-grow-y 600ms var(--vf-enter) var(--vf-d, 0ms) both; }
+.vf-motion.vf-intro .vf-stage1 { animation: vf-reveal 900ms var(--vf-move) 400ms both; }
+.vf-motion.vf-intro .vf-stage2 { animation: vf-reveal 1000ms var(--vf-move) 1100ms both; }
+.vf-motion.vf-intro .vf-chip { animation: vf-fade 450ms var(--vf-enter) var(--vf-d, 0ms) both; }
+.vf-motion.vf-intro .vf-bar-all span { transform-origin: left center; animation: vf-grow-x 700ms var(--vf-enter) var(--vf-d, 0ms) both; }
 .vf-motion .vf-light { animation: vf-light-x 4.8s linear var(--vf-d) infinite; }
 .vf-motion .vf-light > span { animation: vf-light-y 4.8s cubic-bezier(0.5, 0, 0.5, 1) var(--vf-d) infinite; }
 /* The cards cascade in, 60 ms apart (eight steps at most); a phone's bars fill after each. */
-.vf-motion .vf-cards > * { animation: vf-rise 600ms var(--vf-enter) calc(250ms + var(--vf-i, 0) * 60ms) both; }
-.vf-motion .vf-meter span { transform-origin: left center; animation: vf-grow-x 900ms var(--vf-enter) calc(500ms + var(--vf-i, 0) * 60ms) both; }
+.vf-motion.vf-intro .vf-cards > * { animation: vf-rise 600ms var(--vf-enter) calc(250ms + var(--vf-i, 0) * 60ms) both; }
+.vf-motion.vf-intro .vf-meter span { transform-origin: left center; animation: vf-grow-x 900ms var(--vf-enter) calc(500ms + var(--vf-i, 0) * 60ms) both; }
 .vf-cards > :nth-child(2) { --vf-i: 1; }
 .vf-cards > :nth-child(3) { --vf-i: 2; }
 .vf-cards > :nth-child(4) { --vf-i: 3; }
@@ -143,14 +146,14 @@
 .vf-cards > :nth-child(7) { --vf-i: 6; }
 .vf-cards > :nth-child(n + 8) { --vf-i: 7; }
 /* Money at an exchange breathes a soft glow, slowly. */
-.vf-motion .vf-card.go, .vf-motion .vf-card.vf-instant, .vf-motion .vf-hero.vf-glow { position: relative; }
-.vf-motion .vf-card.go::after, .vf-motion .vf-card.vf-instant::after, .vf-motion .vf-hero.vf-glow::after {
+.vf-motion .vf-card.go, .vf-motion .vf-card.vf-instant:not(.inferred), .vf-motion .vf-hero.vf-glow { position: relative; }
+.vf-motion .vf-card.go::after, .vf-motion .vf-card.vf-instant:not(.inferred)::after, .vf-motion .vf-hero.vf-glow::after {
   content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
   box-shadow: 0 0 22px 2px color-mix(in srgb, var(--go) 28%, transparent);
   opacity: 0; animation: vf-breathe 3.2s ease-in-out 1.8s infinite;
 }
 .vf-motion.vf-paused .vf-light, .vf-motion.vf-paused .vf-light > span,
-.vf-motion.vf-paused .vf-card.go::after, .vf-motion.vf-paused .vf-card.vf-instant::after, .vf-motion.vf-paused .vf-hero.vf-glow::after { animation-play-state: paused; }
+.vf-motion.vf-paused .vf-card.go::after, .vf-motion.vf-paused .vf-card.vf-instant:not(.inferred)::after, .vf-motion.vf-paused .vf-hero.vf-glow::after { animation-play-state: paused; }
 
 @keyframes vf-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes vf-fade { from { opacity: 0; } to { opacity: 1; } }

@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useMedia } from '../../phone'
 import { plain, plainSentence } from '../../text'
 import { bandLabel, bandOf } from '../confidence'
@@ -27,6 +27,11 @@ const DEEPEST = 6 // the most hops a trace takes (TraceView's depth limit)
 const ENDS = { mixer: 'At a mixer', bridge: 'At a bridge to another chain', privacy: 'At a privacy service' }
 const STILL = '(prefers-reduced-motion: reduce)'
 const easeOut = (t) => 1 - (1 - t) ** 3
+// The longest one-off entrance: the share bar's last part (1700 + 7 x 300 ms
+// delay, 700 ms grow). After it the entrance classes come off, so a panel
+// hidden and shown again (a tab switch, the phone breakpoint) draws its final
+// state at once instead of replaying the entrance.
+const INTRO_MS = 4600
 
 /** A figure that counts up once, from zero to its own text. The text in the
  * page is always the final figure (a screen reader, a copy and a test read
@@ -63,6 +68,12 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   // drawn final at once. Pause stops the loops (the lights, the glow).
   const motion = !useMedia(STILL)
   const [paused, setPaused] = useState(false)
+  const [intro, setIntro] = useState(motion)
+  useEffect(() => {
+    if (!intro) return undefined
+    const t = setTimeout(() => setIntro(false), INTRO_MS)
+    return () => clearTimeout(t)
+  }, [intro])
   const flow = result.victim_flow
   // Worked out once per case: a dense case's layout takes tens of ms.
   const lay = useMemo(() => victimFlowLayout(flow, { graph: result.graph, height: H }), [flow, result.graph])
@@ -238,10 +249,11 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   note('not_followed', plainSentence(stop('fanout_limit')?.note) ?? 'Sent on to destinations the trace did not follow.')
   note('other', 'A swap, or money that came back to a wallet earlier on the route, counted once.')
 
-  // Only money at an exchange or an instant exchanger glows: green is for exchanges and the route.
-  const glows = amount('exchange') + amount('instant_exchanger') > 0
-  const looping = motion && (glows || lights.length > 0)
-  const pause = (where) => looping && (
+  // Only money at a labelled exchange or instant exchanger glows: green is for
+  // exchanges and the route, and an inferred deposit stays soft (no glow).
+  const glows = amount('exchange') > 0 || (amount('instant_exchanger') > 0 && !instRows.every((r) => r.inferred))
+  // Each Pause controls what loops where it sits: the phone has no lights (no chart).
+  const pause = (where, loops) => motion && loops && (
     <button type="button" className={`vf-pause ${where}`} aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
       <span className="vf-pause-mark" aria-hidden="true" />Pause motion
     </button>)
@@ -252,9 +264,9 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
   const rulePos = Math.max(0, RULES.findIndex(([key]) => key === rule))
 
   return (
-    <div className="vf-box"><div className={`vflow${motion ? ' vf-motion' : ''}${paused ? ' vf-paused' : ''}`}>
+    <div className="vf-box"><div className={`vflow${motion ? ' vf-motion' : ''}${motion && intro ? ' vf-intro' : ''}${paused ? ' vf-paused' : ''}`}>
       <div className={`vf-phone vf-hero${glows ? ' vf-glow' : ''}`}>
-        <div className="vf-hero-top"><p className="vf-kicker">Where the money is now</p>{pause('vf-pause-phone')}</div>
+        <div className="vf-hero-top"><p className="vf-kicker">Where the money is now</p>{pause('vf-pause-phone', glows)}</div>
         <h2><Count text={shareText(firm)} motion={motion} delay={200} /> can be acted on</h2>
         {loose && <p className="note">up to {loose} {BOUND}</p>}
       </div>
@@ -262,7 +274,7 @@ export default function VictimFlow({ result, unit, onLetters, onWatch, onDeeper 
         <div className="vf-head">
           <h2 id={`${id}-title`}>Where the victim's share went</h2>
           <div className="vf-tools">
-            {pause('vf-pause-chart')}
+            {pause('vf-pause-chart', glows || lights.length > 0)}
             <fieldset className="vf-rule" aria-describedby={why ? `${id}-rule` : undefined}>
               <legend className="visually-hidden">Tracing rule</legend>
               {/* The chosen rule's pill: it slides to the rule picked. */}

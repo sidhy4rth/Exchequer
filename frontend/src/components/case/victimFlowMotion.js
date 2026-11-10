@@ -48,8 +48,8 @@ export function particleRoutes(lay, { max = 5, start = 2.2, period = 4.8 } = {})
     })
   }
   const wide = (p, q) => q.amount - p.amount
-  const go = routes.filter((r) => r.go).sort(wide)
-  // A hairline route carries no light: it would be a dot on nothing.
+  // A hairline route carries no light, green or not: it would be a dot on nothing.
+  const go = routes.filter((r) => r.go && r.thick >= 2).sort(wide)
   const rest = routes.filter((r) => !r.go && r.thick >= 2).sort(wide)
   const picks = [...(go.length ? Array.from({ length: Math.min(3, max) }, (_, i) => go[i % go.length]) : []), ...rest.slice(0, 2)].slice(0, max)
   return picks.map((r, i) => ({ key: `${r.kind}-${i}`, kind: r.kind, colour: r.go ? 'go' : 'grey', x: r.x, y: r.y, delay: round(start + (i * period) / picks.length, 3) }))
