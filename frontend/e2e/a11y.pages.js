@@ -181,6 +181,9 @@ const ADMIN_STUB = [
   { url: '**/admin/units', body: { units: UNITS } },
   { url: '**/admin/officers', body: { officers: [ADMIN, OFFICER({ must_change_password: true }), OFFICER({ id: 3, name: 'Neha S', email: 'neha@example.in', role: 'supervisor', unit: UNITS[1], active: false })] } },
 ]
+// A unit's own limits (PUT /admin/units/{id}/limits): live traces set for the unit, the rest the defaults.
+const LIMIT_DEFAULTS = { trace: { per_hour: 20, per_day: 80 }, watch: { per_hour: 10, per_day: 40 }, recheck: { per_hour: 6, per_day: 24 }, check: { per_hour: 30, per_day: 120 } }
+const UNIT_LIMITS = { url: '**/admin/units/1/limits', body: { unit: UNITS[0], defaults: LIMIT_DEFAULTS, limits: Object.fromEntries(Object.entries(LIMIT_DEFAULTS).map(([k, d]) => [k, k === 'trace' ? { per_hour: 5, per_day: 15, set_for_unit: true } : { ...d, set_for_unit: false }])) } }
 
 // The same officer as a stub of GET /auth/me.
 const SIGNED_IN = { url: '**/auth/me', body: OFFICER() }
@@ -362,6 +365,9 @@ export const PAGES = [
   // The unmeasured text is the line the window's bottom edge cuts through
   // (the new account's Unit at 1280, the second officer's e-mail at 390).
   { name: 'Admin', path: '/admin', stub: ADMIN_STUB, ready: ['form', { name: 'Ravi Kumar' }], unmeasured: { desktop: 2, phone: 1 } },
+  // A unit's limits opened under its row. On a phone the window's bottom
+  // edge cuts the last kind's two boxes (Manual checks, per hour and per day).
+  { name: 'Admin, a unit\'s limits', path: '/admin', stub: [...ADMIN_STUB, UNIT_LIMITS], click: ['button', { name: 'Limits, Bengaluru CEN' }], ready: ['form', { name: 'Limits for Bengaluru CEN' }], unmeasured: { desktop: 2, phone: 2 } },
   { name: 'verify a report', path: '/verify', ready: ['heading', { level: 1 }] },
   { name: 'verify a report, in the console', path: '/verify', as: 'investigator', ready: ['heading', { level: 1 }], unmeasured: { phone: 1 } },
   { name: 'citizen page', path: '/citizen', as: 'citizen', ready: ['heading', { level: 1 }] },

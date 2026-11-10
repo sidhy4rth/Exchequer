@@ -8,7 +8,18 @@
 .admin select, .admin input:not([type="checkbox"]) { min-height: 36px; min-width: 0; }
 
 .admin-units { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.admin-units li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.admin-units li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.admin-units li > span:first-child { flex: 1; min-width: 0; }
+.admin-units li > button { min-height: 28px; }
+.admin-limits { flex-basis: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px 0 2px; }
+.admin-limits fieldset { margin: 0; padding: 8px 0 0; border: 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: end; gap: 6px 12px; }
+.admin-limits legend { padding: 0; font-size: 13px; color: var(--text); }
+.admin-limits fieldset label { display: flex; flex-direction: column; gap: 4px; }
+.admin-limits input { width: 96px; }
+.admin-limits fieldset .note { flex-basis: 100%; font-size: 12px; }
+.admin-limits input[aria-invalid] { border-color: var(--risk); }
+/* An empty live line keeps its place for a screen reader but takes no room. */
+.admin-limits .said:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .admin-unit-new { display: flex; flex-direction: column; gap: 6px; }
 .admin-unit-new > span { display: flex; gap: 8px; }
 .admin-unit-new input { flex: 1; }

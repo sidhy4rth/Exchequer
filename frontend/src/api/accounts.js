@@ -60,3 +60,7 @@ export const fetchOfficers = () => call('/admin/officers')
 export const createOfficer = (fields) => call('/admin/officers', 'POST', fields)
 /** Only the fields given change; { reset_password: true } returns a new temporary password. */
 export const updateOfficer = (id, changes) => call(`/admin/officers/${id}`, 'PATCH', changes)
+/** A unit's own per-officer limits and the defaults: { unit, defaults, limits: { kind: { per_hour, per_day, set_for_unit } } }. */
+export const fetchUnitLimits = (unitId) => call(`/admin/units/${unitId}/limits`)
+/** Replace the unit's own limits ({ kind: { per_hour, per_day } }); {} goes back to the defaults. */
+export const setUnitLimits = (unitId, limits) => call(`/admin/units/${unitId}/limits`, 'PUT', limits)

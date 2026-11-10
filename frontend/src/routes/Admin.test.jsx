@@ -61,7 +61,7 @@ describe('the Admin page', () => {
     admin()
     expect(await screen.findByRole('heading', { level: 1, name: 'Admin' })).toBeInTheDocument()
     const units = within(await screen.findByRole('list', { name: 'Units' }))
-    expect(units.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Bengaluru CEN2 officers', 'Mysuru CEN0 officers'])
+    expect(units.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Bengaluru CEN2 officersLimits', 'Mysuru CEN0 officersLimits'])
     const asha = await officer('Asha Rao')
     expect(asha.getByText('asha@cell.in')).toBeInTheDocument()
     expect(asha.getByText('Must change password')).toBeInTheDocument()
@@ -207,5 +207,112 @@ describe('the Admin page', () => {
     await user.selectOptions(ravi.getByLabelText(/^Role/), 'Officer')
     await user.click(ravi.getByRole('button', { name: /^Save/ }))
     expect(await ravi.findByRole('alert')).toHaveTextContent(detail)
+  })
+})
+
+// A unit's own per-officer limits (PUT /admin/units/{id}/limits, case_refs
+// PR): each kind an hour and a day, the defaults said beside them.
+describe("a unit's limits", () => {
+  const DEFAULTS = { trace: { per_hour: 20, per_day: 80 }, watch: { per_hour: 10, per_day: 40 }, recheck: { per_hour: 6, per_day: 24 }, check: { per_hour: 30, per_day: 120 } }
+  const LIMITS = (own = {}) => ({
+    unit: UNITS[0], defaults: DEFAULTS,
+    limits: Object.fromEntries(Object.entries(DEFAULTS).map(([k, d]) => [k, { ...(own[k] ?? d), set_for_unit: k in own }])),
+  })
+  const open = async (user) => {
+    await user.click(await screen.findByRole('button', { name: 'Limits, Bengaluru CEN' }))
+    return within(await screen.findByRole('form', { name: 'Limits for Bengaluru CEN' }))
+  }
+
+  it('opens from the unit, with each kind an hour and a day and the defaults beside them', async () => {
+    const { user } = admin({ 'GET /admin/units/1/limits': { body: LIMITS({ trace: { per_hour: 5, per_day: 15 } }) } })
+    const units = within(await screen.findByRole('list', { name: 'Units' }))
+    expect(units.getAllByRole('listitem').map((li) => li.querySelector('span').textContent)).toEqual(['Bengaluru CEN', 'Mysuru CEN'])
+    const button = await screen.findByRole('button', { name: 'Limits, Bengaluru CEN' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    const form = await open(user)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    expect(form.getByRole('group', { name: 'Live traces' })).toHaveTextContent('Set for this unit (default 20 an hour, 80 a day)')
+    expect(form.getByRole('spinbutton', { name: 'Live traces per hour' })).toHaveValue(5)
+    expect(form.getByRole('spinbutton', { name: 'Live traces per day' })).toHaveValue(15)
+    expect(form.getByRole('group', { name: 'Watches' })).toHaveTextContent('The default')
+    expect(form.getByRole('spinbutton', { name: 'Manual checks per day' })).toHaveValue(120)
+  })
+
+  it("saves the kinds the unit sets, with the header, and says so", async () => {
+    let sent = null
+    const { user, fetch } = admin({
+      'GET /admin/units/1/limits': { body: LIMITS({ trace: { per_hour: 5, per_day: 15 } }) },
+      'PUT /admin/units/1/limits': (body) => { sent = body; return { body: LIMITS(body) } },
+    })
+    const form = await open(user)
+    await user.clear(form.getByRole('spinbutton', { name: 'Watches per day' }))
+    await user.type(form.getByRole('spinbutton', { name: 'Watches per day' }), '12')
+    await user.click(form.getByRole('button', { name: 'Save limits' }))
+    expect(await form.findByText('Saved the limits for Bengaluru CEN.')).toHaveAttribute('role', 'status')
+    // The unit's own traces, and the watches just changed; the rest keep the defaults.
+    expect(sent).toEqual({ trace: { per_hour: 5, per_day: 15 }, watch: { per_hour: 10, per_day: 12 } })
+    expect(sentTo(fetch, 'PUT /admin/units/1/limits')[0].csrf).toBe('1')
+  })
+
+  it('goes back to the defaults when asked', async () => {
+    const { user, fetch } = admin({
+      'GET /admin/units/1/limits': { body: LIMITS({ trace: { per_hour: 5, per_day: 15 } }) },
+      'PUT /admin/units/1/limits': (body) => ({ body: LIMITS(body) }),
+    })
+    const form = await open(user)
+    await user.click(form.getByRole('button', { name: 'Use the defaults' }))
+    expect(await form.findByText('Bengaluru CEN now has the default limits.')).toHaveAttribute('role', 'status')
+    expect(sentTo(fetch, 'PUT /admin/units/1/limits')[0].body).toEqual({})
+    expect(form.getByRole('spinbutton', { name: 'Live traces per hour' })).toHaveValue(20)
+  })
+
+  it('refuses a day below an hour, or a blank, before sending anything', async () => {
+    const { user, fetch } = admin({ 'GET /admin/units/1/limits': { body: LIMITS() } })
+    const form = await open(user)
+    await user.clear(form.getByRole('spinbutton', { name: 'Rechecks per day' }))
+    await user.type(form.getByRole('spinbutton', { name: 'Rechecks per day' }), '3')
+    await user.click(form.getByRole('button', { name: 'Save limits' }))
+    expect(await form.findByRole('alert')).toHaveTextContent("Rechecks: a day's limit cannot be below an hour's.")
+    expect(form.getByRole('spinbutton', { name: 'Rechecks per day' })).toHaveAttribute('aria-invalid', 'true')
+    await user.clear(form.getByRole('spinbutton', { name: 'Rechecks per day' }))
+    await user.click(form.getByRole('button', { name: 'Save limits' }))
+    expect(await form.findByRole('alert')).toHaveTextContent('Rechecks: give each limit as a whole number, 1 or more.')
+    expect(sentTo(fetch, 'PUT /admin/units/1/limits')).toEqual([])
+  })
+
+  it("refuses more than the backend allows, on the box it is about, and moves there", async () => {
+    const { user, fetch } = admin({ 'GET /admin/units/1/limits': { body: LIMITS() } })
+    const form = await open(user)
+    const hour = form.getByRole('spinbutton', { name: 'Watches per hour' })
+    await user.clear(hour)
+    await user.type(hour, '20000')
+    await user.click(form.getByRole('button', { name: 'Save limits' }))
+    const alert = await form.findByRole('alert')
+    expect(alert).toHaveTextContent("Watches: an hour's limit can be at most 10,000, and a day's at most 100,000.")
+    expect(hour).toHaveFocus()
+    expect(hour.getAttribute('aria-describedby')).toBe(alert.id)
+    await user.clear(hour)
+    await user.type(hour, '10')
+    const day = form.getByRole('spinbutton', { name: 'Watches per day' })
+    await user.clear(day)
+    await user.type(day, '100001')
+    await user.click(form.getByRole('button', { name: 'Save limits' }))
+    expect(day).toHaveFocus()
+    expect(sentTo(fetch, 'PUT /admin/units/1/limits')).toEqual([])
+  })
+
+  it('keeps one status line and one alert line in place, empty until there is something to say', async () => {
+    const { user } = admin({
+      'GET /admin/units/1/limits': { body: LIMITS() },
+      'PUT /admin/units/1/limits': (body) => ({ body: LIMITS(body) }),
+    })
+    const form = await open(user)
+    const status = form.getByRole('status')
+    const alert = form.getByRole('alert')
+    expect(status).toBeEmptyDOMElement()
+    expect(alert).toBeEmptyDOMElement()
+    await user.click(form.getByRole('button', { name: 'Use the defaults' }))
+    expect(await form.findByText('Bengaluru CEN now has the default limits.')).toBe(status)
+    expect(form.getByRole('alert')).toBe(alert)
   })
 })
