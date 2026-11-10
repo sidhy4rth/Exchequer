@@ -83,6 +83,19 @@
   --r-pill: 999px;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --fast: 120ms;
+  /* Motion, one set for both skins. Enter: something arriving settles in;
+     move: something already there goes somewhere else; pop: a node lands
+     with a small overshoot. A list staggers --stagger per item, at most 8
+     steps. Under prefers-reduced-motion everything shows its final state. */
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-move: cubic-bezier(0.45, 0, 0.2, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-hover: var(--fast);
+  --dur-tab: 240ms;
+  --dur-pop: 450ms;
+  --dur-enter: 600ms;
+  --dur-route: 1400ms;
+  --stagger: 60ms;
 }
 
 /* The sign-in scene (.gate) is always this skin. */

@@ -1,8 +1,9 @@
-import { createContext, Suspense, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, Suspense, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { fetchChains } from '../api'
 import { signOut } from '../api/accounts'
 import { forgetDemoCode } from '../demoCode'
+import { useMedia } from '../phone'
 import { findTarget } from '../find'
 import { isAdmin, leave, signedOut, useAccount } from '../session'
 import { plain } from '../text'
@@ -14,6 +15,17 @@ import './AppShell.css'
 // The investigator's console around every page behind its front door: a
 // sidebar of grouped pages, a header with breadcrumbs and a search box, and
 // below 720 px a tab bar at the foot of the screen instead of the sidebar.
+//
+// Motion: when the shell first opens the sidebar slides in from the left, a
+// sheen passes down it once and its pages slide in one after another. A
+// pill sits behind the page you are on and glides to the next one when you
+// move. Nothing loops; with reduced motion asked for, all of it is still.
+
+const STILL = '(prefers-reduced-motion: reduce)'
+// The opening runs about 2.3 s; its classes come off after this, so nothing
+// added later (the Admin group, say) replays it.
+const INTRO_MS = 2600
+const STAGGER_STEPS = 8
 
 const ICON = {
   console: 'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z',
@@ -219,6 +231,48 @@ function PhoneBar({ path, out }) {
   )
 }
 
+/** Where the sidebar's pill sits: over the link marked aria-current inside
+ * `nav`, measured again whenever `place` changes (the route, the Admin
+ * group) or the sidebar resizes. Null while there is nothing to sit behind
+ * (no current page here, or the sidebar hidden on a phone): the current
+ * link then keeps its own background. Placed once, it glides from then on. */
+function useNavPill(nav, place) {
+  const [pill, setPill] = useState(null)
+  useLayoutEffect(() => {
+    const measure = () => {
+      const on = nav.current?.querySelector('.shell-link[aria-current]')
+      const next = on && on.offsetHeight > 0 ? { top: on.offsetTop, height: on.offsetHeight, to: on.getAttribute('href') } : null
+      setPill((was) => {
+        if (!next) return null
+        if (was && was.top === next.top && was.height === next.height && was.to === next.to) return was
+        return { ...next, glide: Boolean(was) }
+      })
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure)
+      return () => window.removeEventListener('resize', measure)
+    }
+    const watch = new ResizeObserver(measure)
+    if (nav.current) watch.observe(nav.current)
+    return () => watch.disconnect()
+  }, [nav, place])
+  return pill
+}
+
+/** True for the shell's opening moments, unless reduced motion is asked
+ * for (then never); the opening's classes come off once it has played. */
+function useIntro(still) {
+  const [intro, setIntro] = useState(!still)
+  useEffect(() => {
+    if (!intro) return undefined
+    if (still) { setIntro(false); return undefined }
+    const timer = setTimeout(() => setIntro(false), INTRO_MS)
+    return () => clearTimeout(timer)
+  }, [intro, still])
+  return intro && !still
+}
+
 /** GET /chains for the shell's whole life. A miss (a restart, a 502 from
  * the proxy) says the backend is unreachable, then asks again after 2, 4, 8…
  * seconds (at most a minute apart), and at once when another page opens,
@@ -248,6 +302,10 @@ export default function AppShell() {
   const out = useWayOut(useDemoView('investigator'))
   const { officer } = out
   const health = useChains(pathname)
+  const still = useMedia(STILL)
+  const intro = useIntro(still)
+  const nav = useRef(null)
+  const pill = useNavPill(nav, `${pathname} ${out.admin}`)
   const [named, setNamed] = useState(null)
   const crumbs = trail(pathname)
   if (named && crumbs.length > 1) crumbs[crumbs.length - 1] = { label: named, mono: true }
@@ -264,7 +322,8 @@ export default function AppShell() {
   return (
     <div className="shell">
       <a className="skip-link" href="#main">Skip to the page</a>
-      <aside className="shell-side" aria-label="Sidebar">
+      <aside className={`shell-side${intro ? ' intro' : ''}`} aria-label="Sidebar">
+        {intro && <span className="shell-sheen" aria-hidden="true" />}
         <div className="shell-brand">
           <Mark size={20} />
           <span>
@@ -277,13 +336,19 @@ export default function AppShell() {
         <div className="shell-demo">
           <WayOut out={out} />
         </div>
-        <nav aria-label="Main" className="shell-nav">
+        <nav ref={nav} aria-label="Main" className={`shell-nav${pill ? ' has-pill' : ''}`}>
+          {pill && (
+            <span aria-hidden="true" data-on={pill.to} className={`shell-pill${pill.glide && !still ? ' glide' : ''}`}
+              style={{ transform: `translateY(${pill.top}px)`, height: pill.height }} />
+          )}
           {(out.admin ? [...GROUPS, ADMIN_GROUP] : GROUPS).map(([group, items]) => (
             <div key={group}>
               <span className="shell-group" id={`shell-${group}`}>{group}</span>
               <ul aria-labelledby={`shell-${group}`}>
                 {items.map((item) => (
-                  <li key={item.to}><Link className="shell-link" to={item.to} aria-current={where(item, pathname)}><Icon name={item.icon} />{item.label}</Link></li>
+                  <li key={item.to} style={intro ? { '--i': Math.min(ITEMS.indexOf(item), STAGGER_STEPS) } : undefined}>
+                    <Link className="shell-link" to={item.to} aria-current={where(item, pathname)}><Icon name={item.icon} />{item.label}</Link>
+                  </li>
                 ))}
               </ul>
             </div>
