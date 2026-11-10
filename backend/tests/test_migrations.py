@@ -369,7 +369,7 @@ def test_g6_citizen_1_goes_down_and_up_again_keeping_the_cases(engine):
     settings = Config(ALEMBIC_INI)
     with engine.begin() as conn:
         settings.attributes["connection"] = conn
-        command.downgrade(settings, "-1")
+        command.downgrade(settings, "g5_audit_1")
     assert not CITIZEN_TABLES & set(inspect(engine).get_table_names())
     models.init_db()
     assert revision(engine) == head() and drift(engine) == []

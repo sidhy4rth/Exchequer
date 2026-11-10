@@ -106,6 +106,17 @@ class CitizenAttempt(Base):
     __table_args__ = (Index("ix_citizen_attempts_last_at", "last_at"),)
 
 
+class ComplaintLink(Base):
+    """Officers only: the stored case a complaint was traced in
+    (routes/complaints.py). The citizen role is never granted this table."""
+
+    __tablename__ = "complaint_links"
+
+    complaint_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    case_id: Mapped[str] = mapped_column(String(36))
+    linked_at: Mapped[str] = mapped_column(String(32))
+
+
 def merge_tags(current: str | None, tag: str) -> str:
     return ",".join(sorted({t for t in (current or "").split(",") if t} | {tag}))
 

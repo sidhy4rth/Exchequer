@@ -19,8 +19,9 @@
 // a case's transfer rows draw over a pseudo-element;
 // text cut by the bottom of the screen at rest (a tall exchange list, the
 // signing-key note on Verify inside the console, the Console's wallet bars, a
-// coverage row, the Cases page's linked wallet or New trace's direction at
-// the fold) cannot be sampled; the graph draws its labels over SVG shapes.
+// coverage row, the Cases page's linked wallet, New trace's direction or a
+// complaint's Status and case card at the fold) cannot be sampled; the
+// graph draws its labels over SVG shapes.
 
 import FLOW_11 from '../src/test/victim-flow-11.json' with { type: 'json' }
 import FLOW_11_INSTANT from '../src/test/victim-flow-11-instant.json' with { type: 'json' }
@@ -77,6 +78,34 @@ const RECHECK = {
     { hash: '821965673662c740fe8b51126bc3dd3e6d53047f2282f7def00ee750c748f974', status: 'error', differences: [], detail: 'the second provider could not be read' },
   ],
 }
+
+// The Complaints page (routes/complaints.py) needs complaints from the
+// citizen site, so the check answers the queue's GET /complaints?limit= with
+// two (one whose wallet is in other complaints) and one of them with a
+// payment and a message each way. The page loads still reach the server.
+const COMPLAINT_REF = 'EXQ-A11YCHK1'
+const COMPLAINTS = {
+  count: 2, total: 2,
+  complaints: [
+    { reference: COMPLAINT_REF, received_at: '2026-11-09T10:00:00+00:00', ncrp: '••••0001', status: 'received', payments: 1,
+      totals: [{ token: 'USDT', amount: '250' }], in_other_complaints: true, in_stored_case: false },
+    { reference: 'EXQ-A11YCHK2', received_at: '2026-11-08T10:00:00+00:00', ncrp: '••••0002', status: 'closed', payments: 0,
+      totals: [], in_other_complaints: false, in_stored_case: true },
+  ],
+}
+const COMPLAINT = {
+  reference: COMPLAINT_REF, received_at: '2026-11-09T10:00:00+00:00', updated_at: '2026-11-09T10:00:00+00:00', status: 'received',
+  ncrp: '10000000000001', in_other_complaints: true, in_stored_case: false, case_id: null,
+  details: { name: 'Accessibility check', mobile: '', started: '2026-11-01', app: 'Example app', link: '', contacts: '', upi: '', story: 'A line of text.\nAnd a second line.' },
+  payments: [{ hash: '7'.repeat(64), amount: '250', token: 'USDT', network: 'Tron (TRC20)', paid_at: '2026-11-01T10:30', wallet: `T${'A'.repeat(33)}` }],
+  messages: [
+    { from: 'citizen', body: 'Is there any news?', at: '2026-11-09T11:00:00+00:00' },
+    { from: 'officer', body: 'We are looking into it.', at: '2026-11-09T12:00:00+00:00' },
+  ],
+}
+const COMPLAINTS_STUB = [{ url: /\/complaints\?limit=\d+/, body: COMPLAINTS }, { url: new RegExp(`/complaints/${COMPLAINT_REF}$`), body: COMPLAINT }]
+// A queue longer than its first page: the note and the button that loads the older ones.
+const COMPLAINTS_MORE_STUB = [{ url: /\/complaints\?limit=\d+/, body: { ...COMPLAINTS, total: 150 } }]
 
 /** The Amount heading sits over its figures, right-aligned as they are. */
 async function amountsAligned(page, size) {
@@ -272,6 +301,9 @@ export const PAGES = [
   { name: 'Requests', path: '/requests', as: 'investigator', ready: H1('Requests') },
   // A list the backend did not answer says so, with Try again.
   { name: 'Watchlist, not reached', path: '/watchlist', as: 'investigator', stub: { url: /\/watches$/, status: 503, body: { detail: 'asleep' } }, ready: ['button', { name: 'Try again' }] },
+  { name: 'Complaints', path: '/complaints', as: 'investigator', stub: COMPLAINTS_STUB, ready: ['link', { name: COMPLAINT_REF }] },
+  { name: 'Complaints, older ones to load', path: '/complaints', as: 'investigator', stub: COMPLAINTS_MORE_STUB, ready: ['button', { name: 'Show older complaints' }] },
+  { name: 'Complaints, a complaint', path: `/complaints/${COMPLAINT_REF}`, as: 'investigator', stub: COMPLAINTS_STUB, ready: H1(COMPLAINT_REF), unmeasured: { phone: 1 } },
   // A recorded trace: the case view, read from the recording, no chain
   // consulted. It opens on Flow, and each tab has a URL of its own. On a
   // phone a line of the finding sits at the foot of the screen at rest.

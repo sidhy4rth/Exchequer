@@ -22,6 +22,7 @@ const ICON = {
   bulk: 'M2.5 4h11M2.5 8h11M2.5 12h7',
   watch: 'M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 6a2 2 0 1 0 0 4a2 2 0 1 0 0-4',
   requests: 'M2.5 2.5h8l3 3v8h-11zM5 8h6M5 10.5h6',
+  complaints: 'M2.5 9.5h3l1 1.5h3l1-1.5h3M2.5 9.5l1.5-6h8l1.5 6v4h-11z',
   verify: 'M8 1.8l5 2v4.1c0 3-2.2 5.2-5 6.3-2.8-1.1-5-3.3-5-6.3V3.8zM5.6 8.1l1.7 1.7 3.2-3.3',
   more: 'M3.5 8h.01M8 8h.01M12.5 8h.01',
   people: 'M8 7a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM3 14c.4-2.8 2.4-4.5 5-4.5s4.6 1.7 5 4.5',
@@ -41,6 +42,7 @@ export const GROUPS = [
   ['Monitor', [
     { to: '/watchlist', label: 'Watchlist', icon: 'watch', inside: [] },
     { to: '/requests', label: 'Requests', icon: 'requests', inside: [] },
+    { to: '/complaints', label: 'Complaints', icon: 'complaints', inside: ['/complaints/'] },
   ]],
   ['Evidence', [
     { to: '/verify', label: 'Verify a report', icon: 'verify', inside: [] },

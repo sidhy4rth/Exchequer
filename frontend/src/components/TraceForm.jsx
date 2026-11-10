@@ -78,10 +78,12 @@ const NEXT = [
  * `payments` fills the victim's payment hashes, as the search box sends one,
  * and `startChain` and `startAsset` the chain and asset to start on when the
  * site has them. `onUnlock` runs when the code is entered in the search, after
- * it found the site wants one. */
-export default function TraceForm({ health, payments = '', startChain = null, startAsset = null, onUnlock }) {
+ * it found the site wants one. `startAddress` and `startAck` fill the wallet
+ * and the NCRP number from a complaint (Complaints.jsx); nothing starts until
+ * pressed. */
+export default function TraceForm({ health, payments = '', startChain = null, startAsset = null, onUnlock, startAddress = '', startAck = '' }) {
   const navigate = useNavigate()
-  const [address, setAddress] = useState('')
+  const [address, setAddress] = useState(startAddress)
   const [chain, setChain] = useState('ethereum')
   const [asset, setAsset] = useState('ETH')
   // Four hops unless chosen: the depth the recorded results were traced at.
@@ -98,7 +100,7 @@ export default function TraceForm({ health, payments = '', startChain = null, st
   // hashes and NCRP number the officer entered.
   const [intake, setIntake] = useState(null)
   const [paymentText, setPaymentText] = useState(payments)
-  const [ncrpAck, setNcrpAck] = useState('')
+  const [ncrpAck, setNcrpAck] = useState(startAck)
   const [showAck, setShowAck] = useState(false)
   const [victimText, setVictimText] = useState('')
   const [showPayments, setShowPayments] = useState(Boolean(payments))

@@ -14,6 +14,7 @@ const TraceView = lazy(() => import('./routes/TraceView'))
 const Verify = lazy(() => import('./routes/Verify'))
 const Batch = lazy(() => import('./routes/Batch'))
 const Cases = lazy(() => import('./routes/Cases'))
+const Complaints = lazy(() => import('./routes/Complaints'))
 const Work = lazy(() => import('./routes/Work'))
 const Admin = lazy(() => import('./routes/Admin'))
 
@@ -73,6 +74,8 @@ export default function App() {
         <Route path="/cases" element={<Cases />} />
         <Route path="/watchlist" element={<Work page="watchlist" />} />
         <Route path="/requests" element={<Work page="requests" />} />
+        <Route path="/complaints" element={<Complaints />} />
+        <Route path="/complaints/:reference" element={<Complaints />} />
         <Route path="/batch" element={<Work page="batch" />} />
         {/* The address is the subject of the investigation, so it belongs in the
             path; chain, asset and depth are parameters of how it is traced and

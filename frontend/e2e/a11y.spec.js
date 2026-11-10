@@ -44,8 +44,11 @@ async function open(page, p, theme) {
     if (as) sessionStorage.setItem('exchequer-demo-session', as)
   }, [theme, p.as])
   await page.route('**/*', (route) => (['GET', 'HEAD'].includes(route.request().method()) ? route.fallback() : route.abort()))
+  // A stub answers the app's own requests, never the page load: an app page
+  // that is also an API path (/complaints/<ref>) still gets the app.
   for (const stub of [p.stub ?? []].flat()) {
     await page.route(stub.url, async (route) => {
+      if (route.request().resourceType() === 'document') return route.fallback()
       const answer = stub.extend || stub.from ? await route.fetch(stub.from ? { url: stub.from(route.request().url()) } : undefined) : null
       if (stub.from && !stub.extend) return route.fulfill({ response: answer })
       return route.fulfill({ status: stub.status ?? 200, json: stub.extend ? stub.extend(await answer.json()) : stub.body })

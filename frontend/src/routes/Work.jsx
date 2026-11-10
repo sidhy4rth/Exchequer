@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { fetchAccess, fetchChains } from '../api'
 import BulkIntake from '../components/BulkIntake'
 import OpenRequests from '../components/OpenRequests'
@@ -33,11 +33,14 @@ function useLocked() {
 
 function NewTrace({ locked, onUnlock }) {
   const [params] = useSearchParams()
+  // A complaint's wallet and NCRP number ride in this tab's state, never the URL.
+  const prefill = useLocation().state?.prefill ?? {}
   const [health, setHealth] = useState(null)
   useEffect(() => { fetchChains().then(setHealth).catch(() => setHealth({ status: 'down' })) }, [])
   const pay = params.get('pay') ?? ''
   if (locked) return <Showroom officers={locked === 'officer'} onUnlock={onUnlock} />
-  return <TraceForm key={pay} health={health} payments={pay} startChain={params.get('chain')} startAsset={params.get('asset')} onUnlock={onUnlock} />
+  return <TraceForm key={pay} health={health} payments={pay} startChain={params.get('chain')} startAsset={params.get('asset')}
+    onUnlock={onUnlock} startAddress={prefill.address ?? ''} startAck={prefill.ncrpAck ?? ''} />
 }
 
 /** What a monitor page says when it has no list to show: still loading,
