@@ -316,7 +316,7 @@ export const PAGES = [
   // The card a case without a victim flow keeps (an older server's): the
   // recording answered with its flow taken out. The backend builds one on
   // read, so the entry above opens the drawn flow.
-  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: ({ victim_flow: _, ...body }) => body }, ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
+  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: ({ victim_flow: _, ...body }) => body }, ready: CASE_TAB('Flow'), unmeasured: { desktop: 10, phone: 9 } },  // +2: the hop map's Pause motion and Replay sit over its drawing, like Fit
   // The Flow tab drawn from the case's victim flow, whatever the backend: the
   // recording answered with the flow backend/app/victim_flow.py builds for it
   // (src/test/victim-flow-11.json).
@@ -330,11 +330,12 @@ export const PAGES = [
   { name: 'recorded case 11, Timeline, every day', path: '/demo/11?tab=timeline', as: 'investigator', click: ['button', { name: /^All \d+ days$/ }], ready: ['button', { name: /^All \d+ days$/, pressed: true }], unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },
   { name: 'recorded case 11, Entities', path: '/demo/11?tab=entities', as: 'investigator', ready: CASE_TAB('Entities'), unmeasured: { phone: 1 } },
   // Entities opens on the groups with the split wallet's card; its wallets
-  // open on request, and Every wallet shows the graph beside the flow by hop,
-  // whose labels sit over SVG shapes as on Flow (on a phone the graph's own
-  // panels also overlap inside its stage).
+  // open on request, and Every wallet shows the bubble map (the graph) with a
+  // switch to the hop map (the flow by hop), both mounted and one shown, whose
+  // labels sit over SVG shapes as on Flow (on a phone the graph's own panels
+  // also overlap inside its stage).
   { name: 'recorded case 11, Entities, a group\'s wallets', path: '/demo/11?tab=entities', as: 'investigator', click: ['button', { name: /^(Open|Hide) the 8 wallets$/ }], ready: ['button', { name: 'Hide the 8 wallets', expanded: true }], unmeasured: { phone: 1 } },
-  { name: 'recorded case 11, Entities, every wallet', path: '/demo/11?tab=entities', as: 'investigator', click: ['button', { name: 'Every wallet' }], ready: ['img', { name: 'Money flow by hop' }], unmeasured: { desktop: 8, phone: 18 }, layout: graphPanelsApart },
+  { name: 'recorded case 11, Entities, every wallet', path: '/demo/11?tab=entities', as: 'investigator', click: ['button', { name: 'Every wallet' }], ready: ['radio', { name: 'Bubble map', checked: true }], unmeasured: { desktop: 8, phone: 18 }, layout: graphPanelsApart },
   { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   // An officer rechecks a case kept under no reference only under one they give.
   { name: 'recorded case 11, Evidence, signed in', path: '/demo/11?tab=evidence', as: 'investigator', stub: SIGNED_IN, ready: REF_FIELD, unmeasured: { phone: 1 }, tablet: true },
@@ -385,8 +386,10 @@ export const NOT_CHECKED = {
  * stage: the hint once covered the counts' first figures, and on Linux axe
  * could not measure them. */
 async function graphPanelsApart(page) {
-  const clashes = await page.locator('.ent-every .stage').evaluate((stage) => {
-    const panels = ['.graph-hint', '.graph-stats', '.graph-controls'].map((s) => [s, stage.querySelector(s).getBoundingClientRect()])
+  const clashes = await page.locator('.ent-maps .stage').evaluate((stage) => {
+    // A compact (phone) bubble map draws no hint, so only the panels shown are compared.
+    const panels = ['.graph-hint', '.graph-stats', '.graph-controls'].map((s) => [s, stage.querySelector(s)])
+      .filter(([, el]) => el).map(([s, el]) => [s, el.getBoundingClientRect()])
     return panels.flatMap(([a, ra], i) => panels.slice(i + 1)
       .filter(([, rb]) => ra.left < rb.right && rb.left < ra.right && ra.top < rb.bottom && rb.top < ra.bottom)
       .map(([b]) => `${a} covers ${b}`))

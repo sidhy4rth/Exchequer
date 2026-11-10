@@ -36,9 +36,120 @@
 .ent-node.on .ent-label { font-weight: 600; }
 .ent-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; font-size: 11px; color: var(--text-2); }
 
-/* Every wallet: the graph, and the flow by hop beside it. */
-.ent-every { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
-.ent-every .stage { position: relative; height: 520px; border-radius: var(--r); overflow: hidden; }
+/* Every wallet: the bubble map and the hop map, one shown at a time, both
+   mounted; the selected wallet's card beside them, never over them. */
+/* The motion system's easings and tab duration, with the same values as a
+   fallback; the sheet is set on the page's body, so it declares them too. */
+.ent-maps, .ent-sheet {
+  --ent-enter: var(--ease-enter, cubic-bezier(0.22, 1, 0.36, 1));
+  --ent-move: var(--ease-move, cubic-bezier(0.45, 0, 0.2, 1));
+  --ent-pop: var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
+  --ent-tab: var(--dur-tab, 240ms);
+}
+.ent-maps { display: flex; flex-direction: column; gap: 12px; }
+.ent-maps-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+
+/* Bubble map | Hop map: the chosen pill slides under its label. */
+.ent-seg { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--panel-2); }
+.ent-seg-pill {
+  position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: var(--r-pill);
+  background: var(--panel); box-shadow: inset 0 0 0 1px var(--line-strong);
+  transition: transform var(--ent-tab) var(--ent-enter); pointer-events: none;
+}
+.ent-seg.hop .ent-seg-pill { transform: translateX(100%); }
+.ent-seg button { position: relative; z-index: 1; min-height: 36px; min-width: 120px; justify-content: center; padding: 0 16px; border: 0; background: transparent; color: var(--text-2); font-weight: 400; transition: color var(--ent-tab) var(--ent-enter); }
+.ent-seg button:hover:not(:disabled) { background: transparent; color: var(--text); }
+.ent-seg button[aria-checked="true"] { color: var(--text); font-weight: 500; }
+
+/* Show only flags: a switch whose knob slides, risk red when on. */
+.ent-switch { min-height: 36px; gap: 10px; padding: 0 14px 0 8px; border-color: var(--line); color: var(--text); font-weight: 400; transition: border-color var(--ent-tab) var(--ent-enter), background-color var(--ent-tab) var(--ent-enter); }
+.ent-switch.on { border-color: var(--risk); background: var(--risk-tint); }
+.ent-switch.on:hover:not(:disabled) { border-color: var(--risk); background: var(--risk-tint); }
+.ent-switch-track { position: relative; flex: none; width: 38px; height: 22px; box-sizing: border-box; border-radius: 11px; border: 1px solid var(--line-strong); background: var(--panel-2); transition: background-color var(--ent-tab) var(--ent-enter), border-color var(--ent-tab) var(--ent-enter); }
+.ent-switch-knob { position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--text-2); transition: transform var(--ent-tab) var(--ent-pop), background-color var(--ent-tab) var(--ent-enter); }
+.ent-switch.on .ent-switch-track { border-color: var(--risk); background: var(--risk); }
+.ent-switch.on .ent-switch-knob { transform: translateX(16px); background: var(--ground); }
+.ent-flag-note { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+
+/* The stage and the card column beside it; stacked below a wide screen. */
+.ent-maps-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.ent-maps-stage { position: relative; min-width: 0; }
+.ent-mapwrap { animation: ent-fade var(--ent-tab) var(--ent-enter); transition: opacity var(--ent-tab) var(--ent-enter), visibility 0s; }
+/* The map not shown lies under the one shown, as wide as it, so it never
+   re-lays out or loses its zoom; it fades out, then hides. */
+.ent-mapwrap.off {
+  position: absolute; top: 0; left: 0; right: 0; height: 100%; overflow: hidden;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity var(--ent-tab) var(--ent-enter), visibility 0s linear var(--ent-tab);
+}
+.ent-mapwrap .stage { position: relative; height: 600px; border-radius: var(--r); overflow: hidden; }
+@keyframes ent-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 1180px) {
+  .ent-maps-body { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The selected wallet, beside the maps. */
+.ent-maps-side { min-width: 0; }
+.ent-pick-empty { margin: 0; padding: 14px 16px; border-radius: var(--r); border: 1px dashed var(--line-strong); }
+.ent-pick {
+  display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--r-panel);
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  animation: ent-card-in 320ms var(--ent-enter);
+}
+@keyframes ent-card-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+.ent-pick-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ent-pick-role { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; font-weight: 600; }
+.ent-pick-role .key-swatch { flex: none; }
+.ent-pick-tag { align-self: flex-start; padding: 2px 9px; border-radius: var(--r-pill); border: 1px solid var(--risk); color: var(--risk); font-size: 12px; }
+.ent-pick-fact { margin: 0; font-size: 12px; line-height: 1.45; color: var(--text-2); }
+.ent-pick-fact.risk { color: var(--risk); }
+.ent-pick-route { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12.5px; color: var(--go); }
+.ent-pick-route span { width: 16px; height: 2px; border-radius: 1px; background: var(--go); }
+.ent-pick-addr-row { display: flex; align-items: flex-start; gap: 8px; }
+.ent-pick-addr { flex: 1; min-width: 0; margin: 0; font-family: var(--mono); font-size: 12.5px; line-height: 1.45; color: var(--text); word-break: break-all; user-select: all; }
+.ent-pick-copy { flex: none; min-height: 28px; padding: 0 10px; }
+.ent-pick-rows { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 8px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ent-pick-rows div { display: flex; justify-content: space-between; gap: 14px; font-size: 12.5px; }
+.ent-pick-rows dt { color: var(--text-2); }
+.ent-pick-rows dd { margin: 0; color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.ent-pick .note { margin: 0; }
+.ent-pick-acts { display: flex; gap: 8px; }
+.ent-pick-acts button { min-height: 40px; padding: 0 14px; }
+.ent-pick-acts button:first-child { flex: 1; justify-content: center; }
+.ent-pick-acts button.quiet { padding: 0 14px; }
+
+/* On a phone: a bottom sheet that slides up, with 44px buttons. */
+.ent-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; box-sizing: border-box;
+  padding: 8px 16px calc(18px + env(safe-area-inset-bottom, 0px)); border-radius: 22px 22px 0 0;
+  background: var(--panel); border-top: 1px solid var(--line-strong); box-shadow: 0 -18px 40px rgba(0, 0, 0, 0.35);
+  display: flex; flex-direction: column; gap: 10px;
+  transform: translateY(104%); visibility: hidden;
+  transition: transform 300ms var(--ent-move), visibility 0s linear 300ms;
+}
+.ent-sheet.open { transform: none; visibility: visible; transition: transform 360ms var(--ent-enter), visibility 0s; }
+.ent-sheet-grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 0 auto 4px; }
+.ent-sheet-head { display: flex; align-items: flex-start; gap: 10px; }
+.ent-sheet-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ent-sheet-short { margin: 0; font-family: var(--mono); font-size: 16px; color: var(--text); }
+.ent-sheet .ent-pick-addr { font-size: 11px; color: var(--text-2); }
+.ent-sheet-hop { flex: none; padding: 3px 9px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.ent-sheet-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.ent-sheet-stats div { padding: 8px 12px; border-radius: 12px; background: var(--panel-2); }
+.ent-sheet-stats dt { font-size: 11px; color: var(--text-2); }
+.ent-sheet-stats dd { margin: 2px 0 0; font-family: var(--mono); font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ent-sheet-acts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) auto; gap: 8px; }
+.ent-sheet-acts button { min-height: 44px; justify-content: center; border-radius: 12px; padding: 0 10px; border-color: var(--line-strong); white-space: nowrap; }
+.ent-sheet-acts button.strong { background: var(--text); border-color: var(--text); color: var(--ground); }
+.ent-sheet-acts button.strong:hover:not(:disabled) { background: var(--text); border-color: var(--text); color: var(--ground); }
+.ent-sheet-msg { margin: 0; min-height: 16px; font-size: 12px; color: var(--text-2); }
+.ent-sheet:focus { outline: none; }
+.ent-sheet:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+/* At the narrowest widths the three buttons share two rows, labels whole. */
+@media (max-width: 360px) {
+  .ent-sheet-acts { grid-template-columns: 1fr 1fr; }
+  .ent-sheet-acts button:last-child { grid-column: 1 / -1; }
+}
 
 /* The chosen group's card and other complaints. */
 .ent-card, .ent-other { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -75,4 +186,17 @@
   .ent-label { text-align: left; font-size: 12px; background: none; }
   .ent-count { display: inline; }
   .ent-node.on { background: var(--panel-2); }
+  /* The maps: the controls stack, each 44px tall, and the maps go compact. */
+  .ent-maps-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .ent-seg { display: grid; }
+  .ent-seg button, .ent-switch { min-height: 44px; }
+  .ent-switch { align-self: flex-start; }
+  .ent-mapwrap .stage { height: min(520px, 68vh); }
+}
+
+/* Reduced motion: every state at once, nothing slides or fades. */
+@media (prefers-reduced-motion: reduce) {
+  .ent-seg-pill, .ent-seg button, .ent-switch, .ent-switch-track, .ent-switch-knob, .ent-sheet, .ent-sheet.open { transition: none; }
+  .ent-mapwrap, .ent-pick { animation: none; }
+  .ent-mapwrap, .ent-mapwrap.off { transition: none; }
 }

@@ -83,6 +83,19 @@
   --r-pill: 999px;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --fast: 120ms;
+  /* Motion, one set for both skins. Enter: something arriving settles in;
+     move: something already there goes somewhere else; pop: a node lands
+     with a small overshoot. A list staggers --stagger per item, at most 8
+     steps. Under prefers-reduced-motion everything shows its final state. */
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-move: cubic-bezier(0.45, 0, 0.2, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-hover: var(--fast);
+  --dur-tab: 240ms;
+  --dur-pop: 450ms;
+  --dur-enter: 600ms;
+  --dur-route: 1400ms;
+  --stagger: 60ms;
 }
 
 /* The sign-in scene (.gate) is always this skin. */
@@ -112,7 +125,12 @@ html[data-theme="dark"], .gate {
 }
 
 * { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; }
+/* The page grows with what it holds: a body fixed at the window's height
+   ends part-way down a scrolled page, and anything measured against it (axe
+   reading the colour behind a sticky sidebar's text) sees it cut off. */
+html { height: 100%; margin: 0; }
+body { min-height: 100%; margin: 0; }
+#root { min-height: 100vh; }
 body {
   background: var(--paper);
   color: var(--ink);
@@ -312,44 +330,86 @@ details.more summary:hover { color: var(--ink); }
 .seg button:hover:not(.on) { background: var(--panel-2); color: var(--ink); }
 
 /* Layered flow diagram */
-.flow { position: relative; padding: 4px 0 0; overflow: hidden; }
+.flow {
+  position: relative; padding: 4px 0 0; overflow: hidden;
+  /* The motion system's curves: arriving, moving, popping into place. */
+  --m-enter: var(--ease-enter);
+  --m-move: var(--ease-move);
+  --m-pop: var(--ease-pop);
+}
 .flow svg { display: block; cursor: grab; }
 .flow.dragging svg { cursor: grabbing; }
-.flow-controls { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 4px; }
-.flow-controls button { width: 30px; min-width: 30px; height: 26px; padding: 0; font-size: 12px; color: var(--muted); border-radius: var(--r); justify-content: center; background: var(--overlay); border: 1px solid var(--rule); }
-.flow-controls button:last-child { width: auto; padding: 0 9px; }
+.flow-stage { position: relative; }
+.flow-stage:focus-visible { outline-offset: -2px; }
+.flow-controls { position: absolute; right: 12px; top: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.flow-controls button { min-width: 30px; height: 26px; padding: 0 9px; font-size: 12px; color: var(--muted); border-radius: var(--r); justify-content: center; background: var(--overlay); border: 1px solid var(--rule); }
 .flow-controls button:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
+.flow-controls button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: var(--panel-2); }
+.flow-controls .ico { flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.flow.compact .flow-controls button { min-width: 44px; height: 44px; padding: 0 10px; }
 .flow-hint { position: absolute; left: 12px; top: 12px; border-radius: var(--r); padding: 5px 9px; font-size: 11px; color: var(--faint); background: var(--overlay); border: 1px solid var(--rule); pointer-events: none; }
+/* "Show only flags": what the map now shows, in words. */
+.flow-chip {
+  position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 8px;
+  height: 28px; padding: 0 12px; border-radius: var(--r-pill); font-size: 12px; color: var(--ink);
+  background: var(--overlay); border: 1px dashed var(--risk); white-space: nowrap; pointer-events: none;
+}
+/* Too narrow to sit beside the controls: along the bottom instead. */
+.flow.compact .flow-chip, .flow.narrow .flow-chip, .flow.narrow .flow-hint { top: auto; bottom: 12px; }
 .flow .flow-col { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; fill: var(--faint); }
+.flow .flow-lg { transition: opacity 240ms var(--m-enter); }
 .flow .flow-link { fill: none; stroke: var(--ink); opacity: 0.16; transition: opacity var(--fast) var(--ease); cursor: default; }
-.flow .flow-link.flagged { stroke: var(--text-2); opacity: 0.55; stroke-dasharray: 5 4; }
+/* A pattern fired on a transfer off the route: a possible flag, not a confirmed one. */
+.flow .flow-link.flagged { stroke: var(--risk); opacity: 0.55; stroke-dasharray: 5 4; }
 .flow .flow-link.on-path { stroke: var(--go); opacity: 1; }
 .flow .flow-hit { fill: none; stroke: transparent; stroke-width: 9; cursor: default; }
 .flow .flow-hit:hover + .flow-link, .flow g:hover > .flow-link { opacity: 0.9; }
 /* Money on the move. One light travels the traced path hop by hop (the
-   comet, positioned per frame in FlowView); a hovered line gets the same
-   light sweeping it end to end. Both are a bright core over a soft glow. */
+   comet, positioned per frame in FlowView); a hovered or selected address's
+   lines get the same light sweeping them end to end. Both are a bright core
+   over a soft glow. "Pause motion" removes both. */
 .flow .flow-comet, .flow .flow-sweep { fill: none; stroke-linecap: round; pointer-events: none; }
 .flow .glow { stroke-width: 9; opacity: 0.45; filter: blur(3px); }
 .flow .core { stroke-width: 2.6; }
 .flow .flow-comet.on-path.glow, .flow .flow-sweep.on-path.glow { stroke: var(--go); }
 .flow .flow-comet.on-path.core, .flow .flow-sweep.on-path.core { stroke: color-mix(in srgb, var(--go) 45%, white); }
-.flow .flow-sweep.flagged.glow { stroke: var(--text-2); }
-.flow .flow-sweep.flagged.core { stroke: var(--text); }
+.flow .flow-sweep.flagged.glow { stroke: var(--risk); }
+.flow .flow-sweep.flagged.core { stroke: var(--risk); }
 .flow .flow-sweep.glow:not(.on-path):not(.flagged) { stroke: var(--ink); opacity: 0.3; }
 .flow .flow-sweep.core:not(.on-path):not(.flagged) { stroke: var(--ink); }
 .flow .flow-sweep { stroke-dasharray: 0.3 2; animation: sweep 1.3s cubic-bezier(0.45, 0, 0.35, 1) infinite; }
+/* A selection held without a hover: a dozen lines at most, no glow, slow. */
+.flow .flow-sweep.held { animation-duration: 3.2s; }
 @keyframes sweep { from { stroke-dashoffset: 0.3; } to { stroke-dashoffset: -1.7; } }
-.flow .flow-node { cursor: copy; transition: opacity var(--fast) var(--ease); }
+.flow .flow-node { cursor: copy; transition: opacity 240ms var(--m-enter); }
 .flow .flow-node .halo { fill: none; stroke: currentColor; opacity: 0.35; }
 .flow .flow-node.role-exchange .halo { stroke: var(--green); }
 .flow .flow-node.role-risk .halo { stroke: var(--red); }
 .flow .flow-node.role-gambling .halo { stroke-dasharray: 2 2; }
-/* An inference or a fired pattern: a faded dot with a dashed edge. */
-.flow .flow-node.role-inferred circle[vector-effect] { fill-opacity: 0.45; stroke: var(--go-soft); stroke-dasharray: 2 1.5; }
-.flow .flow-node.role-flagged circle[vector-effect] { fill-opacity: 0.45; stroke: var(--text-2); stroke-dasharray: 2 1.5; }
-.flow .flow-node.on-path circle:not(.halo) { stroke: var(--go); stroke-width: 1.5; }
+/* An inference or a possible flag: a faded dot with a dashed edge. A
+   confirmed risk wallet is the solid red dot with a halo. */
+.flow .flow-node.role-inferred circle.dot { fill-opacity: 0.45; stroke: var(--go-soft); stroke-dasharray: 2 1.5; }
+.flow .flow-node.role-flagged circle.dot { fill-opacity: 0.45; stroke: var(--risk); stroke-dasharray: 2 1.5; }
+.flow .flow-node.on-path circle:not(.halo):not(.sel-ring) { stroke: var(--go); stroke-width: 1.5; }
+/* The selected address: an ink ring outside everything else it wears. */
+.flow .flow-node .sel-ring { fill: none; stroke: var(--ink); stroke-width: 1.4; opacity: 0.9; }
 .flow .flow-cap { font-family: var(--sans); font-size: 11px; font-weight: 500; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+/* The entrance: a column at a time. Hidden until its column arrives; dots
+   pop, captions and headings fade, lines draw on (pathLength 1, or a mask
+   for a dashed line). Reduced motion never sets these classes. */
+.flow .pre { visibility: hidden; }
+.flow .flow-pop { transform-box: fill-box; transform-origin: center; }
+.flow .flow-pop.in { animation: flow-pop 450ms var(--m-pop) both; }
+.flow .flow-cap.in, .flow .flow-col.in { animation: flow-fade 300ms var(--m-enter) both; }
+.flow .flow-link.drawing { stroke-dasharray: 1 1; animation: flow-draw 500ms var(--m-move) both; }
+.flow .flow-draw-mask { fill: none; stroke: white; stroke-width: 40; stroke-dasharray: 1 1; animation: flow-draw 500ms var(--m-move) both; }
+@keyframes flow-pop { from { transform: scale(0.001); opacity: 0; } 40% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
+@keyframes flow-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes flow-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .flow .flow-sweep, .flow .flow-comet { display: none; }
+  .flow .flow-pop.in, .flow .flow-cap.in, .flow .flow-col.in, .flow .flow-link.drawing, .flow .flow-draw-mask { animation: none; }
+}
 .flow-tip {
   position: absolute; z-index: 2; pointer-events: none; width: 290px;
   background: var(--panel); border: 1px solid var(--rule-strong); border-radius: var(--r); box-shadow: var(--shadow);
@@ -498,21 +558,24 @@ details:not([open]) .feed .row { animation: none; }
 .jump-panel .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jump-panel .addr { font-family: var(--mono); font-size: 10px; color: var(--faint); flex-shrink: 0; border: none; cursor: default; }
 
-/* Tooltip is injected by react-force-graph; only its class can be styled. */
-.graph-tooltip {
+/* The tooltip is injected by react-force-graph (float-tooltip), inside the
+   map, with its own runtime stylesheet: only its class can be styled, and the
+   !important lines beat that stylesheet. */
+.graph-view .float-tooltip-kap {
   background: var(--panel) !important; border: 1px solid var(--rule-strong); border-radius: var(--r);
   padding: 0 !important; font-family: var(--sans) !important; color: var(--ink) !important;
   max-width: 300px; box-shadow: var(--shadow);
 }
-.graph-tooltip .gt { padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
-.graph-tooltip .gt-head { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
-.graph-tooltip .gt-addr { font-family: var(--mono); font-size: 11px; color: var(--muted); word-break: break-all; margin-bottom: 4px; line-height: 1.4; }
-.graph-tooltip .r { display: flex; justify-content: space-between; gap: 14px; font-size: 11.5px; }
-.graph-tooltip .r .k { color: var(--faint); }
-.graph-tooltip .r .v { color: var(--ink); font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
-.graph-tooltip .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
-.graph-tooltip .tags span { font-size: 10px; padding: 1px 6px; border-radius: var(--r-pill); border: 1px dashed var(--line-strong); color: var(--text-2); }
-.graph-tooltip .gt-foot { margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--rule); font-size: 10px; color: var(--faint); }
+.graph-view .float-tooltip-kap .gt { padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
+.graph-view .float-tooltip-kap .gt-head { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+.graph-view .float-tooltip-kap .gt-addr { font-family: var(--mono); font-size: 11px; color: var(--muted); word-break: break-all; margin-bottom: 4px; line-height: 1.4; }
+.graph-view .float-tooltip-kap .r { display: flex; justify-content: space-between; gap: 14px; font-size: 11.5px; }
+.graph-view .float-tooltip-kap .r .k { color: var(--faint); }
+.graph-view .float-tooltip-kap .r .v { color: var(--ink); font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.graph-view .float-tooltip-kap .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+/* A fired pattern is a possible flag: red, dashed, never solid like a confirmed hit. */
+.graph-view .float-tooltip-kap .tags span { font-size: 10px; padding: 1px 6px; border-radius: var(--r-pill); border: 1px dashed var(--risk); color: var(--risk); }
+.graph-view .float-tooltip-kap .gt-foot { margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--rule); font-size: 10px; color: var(--faint); }
 
 /* =========================================================================
    HOME
@@ -767,7 +830,7 @@ details:not([open]) .feed .row { animation: none; }
 }
 
 /* The citizen's space: empty for now. */
-.citizen { min-height: 100%; display: flex; flex-direction: column; background: var(--paper); }
+.citizen { min-height: 100vh; display: flex; flex-direction: column; background: var(--paper); }
 .citizen-top { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--rule); }
 .citizen-actions { display: inline-flex; align-items: center; gap: 6px; }
 .citizen-body { flex: 1; display: grid; place-items: center; padding: 24px 16px; }

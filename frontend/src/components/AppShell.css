@@ -2,7 +2,7 @@
    header with breadcrumbs and search, and the page. Below 720 px the sidebar
    gives way to a tab bar fixed at the foot of the screen. Colours are the
    Glass tokens only (styles.css). */
-.shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100%; }
+.shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
 
 .skip-link { position: absolute; left: 12px; top: -48px; z-index: 50; padding: 8px 14px; border-radius: var(--r-pill); background: var(--panel); color: var(--text); border: 1px solid var(--line-strong); }
 .skip-link:focus { top: 12px; }
@@ -37,6 +37,61 @@
 }
 .shell-link:hover { color: var(--text); background: var(--panel-2); }
 .shell-link[aria-current] { color: var(--text); background: var(--panel-2); border-color: var(--line); }
+
+/* The pill behind the page you are on (AppShell.jsx useNavPill): the
+   current link's own fill moves onto it, with a 3px bar at its left edge so
+   the mark is a shape as well as a shade. It glides between pages. */
+/* The nav is its own stacking layer and the pill sits at its bottom, so it
+   slides under the links and the group headings alike. */
+.shell-nav { position: relative; isolation: isolate; z-index: 0; }
+/* Everything in the nav on a layer above the pill, said with a positive
+   z-index: axe orders a negative one above static text and then cannot
+   measure the links. */
+.shell-nav > :not(.shell-pill) { position: relative; z-index: 1; }
+.shell-nav .shell-link { position: relative; }
+.shell-nav.has-pill .shell-link[aria-current] { background: transparent; border-color: transparent; }
+.shell-pill {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 0; pointer-events: none;
+  border-radius: var(--r); background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line);
+}
+.shell-pill::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--text); }
+.shell-pill.glide {
+  transition: transform var(--dur-tab, 240ms) var(--ease-enter, cubic-bezier(0.22, 1, 0.36, 1)),
+    height var(--dur-tab, 240ms) var(--ease-enter, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* The opening, once per visit to the console: the sidebar slides in, a
+   sheen passes down it, its pages slide in 60 ms apart (at most 8 steps),
+   then the pill and the chain status fade up. */
+.shell-side.intro { animation: shell-side-in 900ms var(--ease-enter, cubic-bezier(0.22, 1, 0.36, 1)) 50ms both; }
+.shell-side.intro .shell-nav .shell-link {
+  animation: shell-slide var(--dur-enter, 600ms) var(--ease-enter, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  animation-delay: calc(300ms + var(--i, 0) * var(--stagger, 60ms));
+}
+.shell-side.intro .shell-pill { animation: shell-fade 400ms ease-out 500ms both; }
+.shell-side.intro .shell-status { animation: shell-fade var(--dur-enter, 600ms) ease-out 1200ms both; }
+/* Under the links and headings (the aside isolates its own stack), so the
+   light passes behind the text instead of over it. */
+.shell-side { isolation: isolate; }
+/* Every part of the sidebar on its own layer above the sheen: axe (and some
+   engines) order a positioned z-index -1 layer above static content. */
+.shell-side > :not(.shell-sheen) { position: relative; z-index: 1; }
+.shell-sheen { position: absolute; inset: 0; z-index: -1; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.shell-sheen::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 40%; opacity: 0;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: shell-sheen 1600ms var(--ease-move, cubic-bezier(0.45, 0, 0.2, 1)) 700ms both;
+}
+html[data-theme="dark"] .shell-sheen::after { background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.07), transparent); }
+@keyframes shell-side-in { 0% { opacity: 0; transform: translateX(-110%); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes shell-slide { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+@keyframes shell-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shell-sheen { 0% { opacity: 0; transform: translateY(-100%); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(260%); } }
+@media (prefers-reduced-motion: reduce) {
+  .shell-side.intro, .shell-side.intro .shell-nav .shell-link, .shell-side.intro .shell-pill, .shell-side.intro .shell-status { animation: none; }
+  .shell-pill.glide { transition: none; }
+  .shell-sheen { display: none; }
+}
 
 .shell-status { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: var(--r); background: var(--panel-2); font-size: 12px; }
 .shell-status > span { display: inline-flex; align-items: center; gap: 8px; }
@@ -83,6 +138,9 @@
   .shell { display: block; padding-bottom: 96px; }
   .shell-side { position: static; height: auto; margin: 0; padding: 14px 16px 0; overflow: visible; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .shell-side > :not(.shell-brand) { display: none; }
+  /* The sidebar is only the name here: it never slides, so nothing hides
+     the tab bar or the search while the page opens. */
+  .shell-side.intro { animation: none; }
   .shell-brand { padding: 0; }
   .shell-head { padding: 10px 16px 0; flex-wrap: nowrap; }
   .shell-crumbs, .shell-head .grow { display: none; }

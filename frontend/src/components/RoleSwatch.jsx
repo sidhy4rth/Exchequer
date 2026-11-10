@@ -1,8 +1,8 @@
-// A map key's swatch, drawn the way both maps draw that role. Colour alone no
-// longer tells every role apart (amber and purple are retired), so the key
-// carries the same marks as the map: an inference or a fired pattern is a
-// faded dot with a dashed ring, a gambling platform's wallet a dot with a
-// dashed halo. The hop map draws these in styles.css, the bubble graph on
+// A map key's swatch, drawn the way both maps draw that role. Colour alone
+// never tells roles apart, so the key carries the same marks as the map: an
+// inference or a possible flag (a fired pattern, in the risk red) is a faded
+// dot with a dashed ring, where a confirmed risk hit is solid; a gambling
+// platform's wallet is a dot with a dashed halo. The hop map draws these in styles.css, the bubble graph on
 // its canvas with FADED and DASH.
 
 export const FADED = 0.45

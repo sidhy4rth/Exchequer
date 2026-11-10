@@ -1,8 +1,8 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import Home from './Home'
 import { stubFetch } from '../test/setup'
 import { CONSOLE_FIELD, OFFICER_SIGN_IN } from '../../e2e/canary.lines.js'
@@ -460,5 +460,194 @@ describe('a site the owner has closed to officers', () => {
     expect(canarySource.split('getByLabel(CONSOLE_FIELD)')).toHaveLength(2)
     // /health keeps "access": "open" when no code is set; closed to officers is closed too.
     expect(canarySource).toMatch(/EXPECT_DEMO_CODE && health.console !== 'officers'/)
+  })
+})
+
+describe('motion', () => {
+  // Read from disk: vitest hands a stylesheet imported with ?raw back empty.
+  const sheet = './Home.css'
+  const motionCss = readFileSync(new URL(sheet, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const reduceMotion = (query) => ({ matches: query === '(prefers-reduced-motion: reduce)', addEventListener: () => {}, removeEventListener: () => {} })
+  const root = () => document.querySelector('.home.console')
+  /** The rules outside @keyframes and outside the reduced-motion block, as [selector, body]. */
+  function rules() {
+    const flat = motionCss.replace(/@keyframes[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '')
+      .replace(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\}\s*\}/, '')
+      .replace(/@media [^{]*\{([\s\S]*?\})\s*\}/g, '$1')
+    return [...flat.matchAll(/([^{}]+)\{([^}]*)\}/g)].map(([, sel, body]) => [sel.trim(), body])
+  }
+  const animated = () => rules().filter(([sel, body]) => /animation(-name)?:/.test(body) && !/animation: none/.test(body))
+    .flatMap(([sel]) => sel.split(',').map((s) => s.trim()))
+    .filter((s) => s.startsWith('.console-home ') && !s.startsWith('.console-home.'))
+  afterEach(() => { try { localStorage.clear() } catch { /* none */ } })
+
+  it('keeps every word on the page: the hint typed in is a hidden copy of the field\'s own placeholder', async () => {
+    const user = userEvent.setup()
+    renderHome()
+    await loaded()
+    const field = screen.getByLabelText(CONSOLE_FIELD)
+    expect(field).toHaveAttribute('placeholder', "Victim's payment hash, or the wallet they paid")
+    const typed = field.parentElement.querySelector('.hero-typed')
+    expect(typed).toHaveAttribute('aria-hidden', 'true')
+    expect(typed.textContent).toBe(field.getAttribute('placeholder'))
+    // One letter per step, each in its turn.
+    const letters = [...typed.children]
+    expect(letters).toHaveLength(field.getAttribute('placeholder').length)
+    expect(letters.map((l) => l.style.getPropertyValue('--i'))).toEqual(letters.map((_, i) => String(i)))
+    // It never takes the click or the key: the field still types.
+    expect(motionCss).toMatch(/\.hero-typed \{[^}]*pointer-events: none/)
+    expect(motionCss).toMatch(/input:not\(:placeholder-shown\) \+ \.hero-typed \{[^}]*visibility: hidden/)
+    await user.type(field, WALLET)
+    expect(field).toHaveValue(WALLET)
+  })
+
+  it('brings the sections in one after another, 60 ms apart and never more than 8 steps', async () => {
+    renderHome()
+    await loaded()
+    const steps = [...document.querySelectorAll('.console-rise')].map((el) => Number(el.style.getPropertyValue('--rise')))
+    expect(steps).toEqual([0, 1, 2, 3, 4, 5, 6, 7])
+    expect(screen.getByRole('region', { name: 'Start a trace' })).toHaveClass('console-rise')
+    expect(screen.getByRole('region', { name: 'Recent cases' })).toHaveClass('console-rise')
+    expect(motionCss).toMatch(/animation-delay: calc\(var\(--rise, 0\) \* 60ms\)/)
+    expect(motionCss).toMatch(/var\(--ease-enter, cubic-bezier\(0\.22, 1, 0\.36, 1\)\)/)
+  })
+
+  it('grows each exchange bar from its start, at the width /chains gives', async () => {
+    renderHome()
+    const bars = [...(await loaded()).querySelectorAll('.bar i')]
+    expect(bars.map((b) => b.style.width)).toEqual(['100%', `${(67 / 975) * 100}%`])
+    expect(bars.map((b) => b.style.getPropertyValue('--i'))).toEqual(['0', '1'])
+    expect(motionCss).toMatch(/@keyframes console-grow \{ from \{ transform: scaleX\(0\); \} \}/)
+  })
+
+  it('shows the radar only on an empty watchlist, hidden from screen readers', async () => {
+    renderHome()
+    const card = within(await screen.findByRole('region', { name: 'Watchlist' }))
+    await card.findByText(/Nothing watched yet/)
+    expect(document.querySelector('.watch-radar')).toHaveAttribute('aria-hidden', 'true')
+    cleanup()
+    const watched = { watch_id: 'w1', address: WALLET, chain: 'ethereum', asset: 'ETH', note: '' }
+    renderHome({ watches: { count: 1, watches: [watched] } })
+    expect(await screen.findByText('1 wallet watched.')).toBeInTheDocument()
+    expect(document.querySelector('.watch-radar')).toBeNull()
+  })
+
+  it('draws everything at its final state when reduced motion is asked for, with no switch to show', async () => {
+    vi.stubGlobal('matchMedia', reduceMotion)
+    renderHome()
+    await loaded()
+    expect(root()).toHaveClass('still')
+    expect(screen.queryByRole('button', { name: 'Pause motion' })).not.toBeInTheDocument()
+    // Every word is still there.
+    expect(screen.getByRole('heading', { level: 1, name: 'Follow a payment to the exchange that can freeze it' })).toBeInTheDocument()
+    expect(screen.getByLabelText(CONSOLE_FIELD)).toBeInTheDocument()
+    expect(await screen.findByText(/Nothing watched yet/)).toBeInTheDocument()
+  })
+
+  it('leaves no empty row above the headline under reduced motion while a chain is not ready', async () => {
+    vi.stubGlobal('matchMedia', reduceMotion)
+    renderHome({ chains: { ...health, chains: { ...health.chains, tron: { ...health.chains.tron, ready: false } } } })
+    await loaded()
+    expect(document.querySelector('.hero-top')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Follow a payment to the exchange that can freeze it' })).toBeInTheDocument()
+  })
+
+  it('types the hint in once, then hands over to the field\'s own placeholder', async () => {
+    let narrow = false
+    const listeners = new Set()
+    vi.stubGlobal('matchMedia', (query) => ({
+      get matches() { return query === '(max-width: 720px)' && narrow },
+      addEventListener: (_, fn) => listeners.add(fn),
+      removeEventListener: (_, fn) => listeners.delete(fn),
+    }))
+    renderHome()
+    await loaded()
+    const field = screen.getByLabelText(/payment hash or wallet/i)
+    const box = field.closest('.hero-input')
+    expect(box).toHaveClass('typing')
+    expect(document.querySelector('.hero-typed')).not.toBeNull()
+    // The last letter's caret finishes blinking: the overlay goes and the
+    // real placeholder (measurable, read by assistive tech) shows.
+    // jsdom has no AnimationEvent, so React listens for the prefixed name there.
+    const last = box.querySelector('.hero-typed span:last-child')
+    act(() => {
+      for (const type of ['animationend', 'webkitAnimationEnd']) {
+        const ended = new Event(type, { bubbles: true })
+        Object.defineProperty(ended, 'animationName', { value: 'console-blink' })
+        if (last.isConnected) last.dispatchEvent(ended)
+      }
+    })
+    expect(box).not.toHaveClass('typing')
+    expect(document.querySelector('.hero-typed')).toBeNull()
+    expect(field).toHaveAttribute('placeholder')
+    // Crossing the phone width later swaps the placeholder text, never retypes.
+    narrow = true
+    act(() => { for (const fn of [...listeners]) fn() })
+    expect(screen.getByLabelText(CONSOLE_FIELD)).toHaveAttribute('placeholder', CONSOLE_FIELD)
+    expect(document.querySelector('.hero-typed')).toBeNull()
+    expect(motionCss).toMatch(/\.hero-input\.typing input::placeholder \{ color: transparent; \}/)
+  })
+
+  it('rests the edge light and the glow on a phone', () => {
+    const phone = /@media \(max-width: 720px\) \{([\s\S]*?)\}\s*\}/.exec(motionCss)?.[1] ?? ''
+    expect(phone).toMatch(/\.console-home \.console-ambient i,\s*\.console-home \.hero-card::before \{ animation: none;/)
+  })
+
+  it('turns every animation it starts off under reduced motion, in CSS and under .still', () => {
+    const list = animated()
+    expect(list.length).toBeGreaterThan(8)
+    const reduced = /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\}\s*\}/.exec(motionCss)?.[1] ?? ''
+    expect(reduced).toMatch(/animation: none !important/)
+    const still = rules().find(([sel]) => sel.startsWith('.console-home.still'))
+    expect(still?.[1]).toMatch(/animation: none !important/)
+    for (const sel of list) {
+      expect(reduced.split('{')[0].split(',').map((s) => s.trim())).toContain(sel)
+      expect(still[0].split(',').map((s) => s.trim())).toContain(sel.replace('.console-home ', '.console-home.still '))
+    }
+  })
+
+  it('styles every entrance at its end, so taking the animation away leaves the page whole', () => {
+    // Only a @keyframes "from" hides or shrinks anything that enters.
+    const entrances = rules().filter(([sel]) => /console-rise|showroom|hero-typed|wallet-bars|recent-cases/.test(sel))
+    for (const [, body] of entrances) {
+      expect(body).not.toMatch(/opacity: 0\b/)
+      expect(body).not.toMatch(/scaleX\(0\)/)
+      expect(body).not.toMatch(/animation[^;]*\b(forwards|both)\b/)
+    }
+  })
+
+  it('keeps every loop slow (3 s or more), and stops each one with Pause motion', async () => {
+    const user = userEvent.setup()
+    const loops = rules().filter(([, body]) => /infinite/.test(body))
+    expect(loops.length).toBeGreaterThanOrEqual(5)
+    for (const [sel, body] of loops) {
+      const seconds = Number(/(\d+(?:\.\d+)?)(m?s) [^;]*infinite/.exec(body)?.[1]) / (/\d(ms) [^;]*infinite/.test(body) ? 1000 : 1)
+      expect(seconds, sel).toBeGreaterThanOrEqual(3)
+      const paused = rules().find(([s]) => s.startsWith('.console-home.paused'))
+      expect(paused[0].split(',').map((s) => s.trim())).toContain(sel.replace('.console-home ', '.console-home.paused '))
+    }
+    renderHome()
+    await loaded()
+    const pause = screen.getByRole('button', { name: 'Pause motion' })
+    expect(pause).toHaveAttribute('aria-pressed', 'false')
+    expect(root()).not.toHaveClass('paused')
+    await user.click(pause)
+    expect(pause).toHaveAttribute('aria-pressed', 'true')
+    expect(root()).toHaveClass('paused')
+    // Remembered in this browser, so the next visit opens still.
+    cleanup()
+    renderHome()
+    await loaded()
+    expect(screen.getByRole('button', { name: 'Pause motion' })).toHaveAttribute('aria-pressed', 'true')
+    expect(root()).toHaveClass('paused')
+    await user.click(screen.getByRole('button', { name: 'Pause motion' }))
+    expect(root()).not.toHaveClass('paused')
+  })
+
+  it('moves in neutral grey only: no new green, and the ready dot is not green', () => {
+    expect(motionCss).not.toMatch(/--go\b|--green|--exchange/)
+    expect(motionCss).toMatch(/\.console-home \.hero-status i \{[^}]*background: var\(--text-2\)/)
+    // The glow sits behind everything and takes no click.
+    expect(motionCss).toMatch(/\.console-ambient \{[^}]*z-index: -1[^}]*pointer-events: none/)
   })
 })

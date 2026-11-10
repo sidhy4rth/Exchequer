@@ -1,5 +1,7 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import AppShell, { ADMIN_GROUP, GROUPS, useCrumb } from './AppShell'
@@ -344,5 +346,148 @@ describe('signed in as an officer', () => {
     expect(menu.getAllByRole('link').map((a) => a.textContent)).toEqual(['Bulk intake', 'Requests', 'Complaints', 'Verify a report', 'Admin'])
     expect(menu.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(menu.queryByRole('button', { name: /switch to/i })).toBeNull()
+  })
+})
+
+describe('the sidebar in motion', () => {
+  const order = GROUPS.flatMap(([, items]) => items).map((i) => i.to)
+  /** Lays the sidebar out as a browser would: each link 40 px tall, 44 px apart. */
+  function laidOut() {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function height() {
+      return this.classList?.contains('shell-link') ? 40 : 0
+    })
+    // Measured from the nav's box (getBoundingClientRect), as a browser lays
+    // it out: the nav starts 100 px down the page. offsetTop is left lying
+    // (0, as Gecko reports it while each <li> is mid-slide) so a pill placed
+    // from it would sit on the wrong page.
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(() => 0)
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function box() {
+      const top = this.classList?.contains('shell-link') ? 100 + order.indexOf(this.getAttribute('href')) * 44
+        : this.classList?.contains('shell-nav') ? 100 : 0
+      return { top, bottom: top + 40, left: 0, right: 0, width: 0, height: 40, x: 0, y: top, toJSON() {} }
+    })
+  }
+  /** The screen asks for reduced motion (or not). */
+  function stillness(still) {
+    vi.stubGlobal('matchMedia', (query) => ({
+      matches: still && query.includes('prefers-reduced-motion'), media: query,
+      addEventListener() {}, removeEventListener() {},
+    }))
+  }
+  const pill = () => document.querySelector('.shell-nav .shell-pill')
+
+  it('opens with the sidebar sliding in, a sheen and its pages staggered 60 ms apart, at most 8 steps', () => {
+    signedInAs({ id: 3, name: 'Asha Rao', email: 'a@cell.in', role: ['ad', 'min'].join(''), unit: { id: 1, name: 'CEN' }, active: true, must_change_password: false })
+    at('/')
+    const side = screen.getByRole('complementary', { name: 'Sidebar' })
+    expect(side).toHaveClass('intro')
+    expect(side.querySelector('.shell-sheen')).toHaveAttribute('aria-hidden', 'true')
+    const steps = [...side.querySelectorAll('.shell-nav li')].map((li) => li.style.getPropertyValue('--i'))
+    expect(steps).toEqual(['0', '1', '2', '3', '4', '5', '6', '7', '8'])
+  })
+
+  it('plays the opening once: its classes come off and a new page does not replay it', async () => {
+    vi.useFakeTimers()
+    try {
+      laidOut()
+      at('/')
+      const side = screen.getByRole('complementary', { name: 'Sidebar' })
+      expect(side).toHaveClass('intro')
+      act(() => { vi.advanceTimersByTime(3000) })
+      expect(side).not.toHaveClass('intro')
+      expect(side.querySelector('.shell-sheen')).toBeNull()
+      act(() => { within(side).getByRole('link', { name: 'Cases' }).click() })
+      expect(side).not.toHaveClass('intro')
+      expect(side.querySelector('.shell-nav li').style.getPropertyValue('--i')).toBe('')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('sits a pill behind the page you are on, and glides it to the next page', async () => {
+    const user = userEvent.setup()
+    laidOut()
+    at('/cases')
+    expect(pill()).toHaveAttribute('aria-hidden', 'true')
+    expect(pill()).toHaveAttribute('data-on', '/cases')
+    expect(pill().style.transform).toBe('translateY(88px)')
+    expect(pill().style.height).toBe('40px')
+    expect(pill()).not.toHaveClass('glide') // placed, not flown in from the top
+    expect(screen.getByRole('navigation', { name: 'Main' })).toHaveClass('has-pill')
+    await user.click(sidebar().getByRole('link', { name: 'Watchlist' }))
+    expect(pill()).toHaveAttribute('data-on', '/watchlist')
+    expect(pill().style.transform).toBe(`translateY(${order.indexOf('/watchlist') * 44}px)`)
+    expect(pill()).toHaveClass('glide')
+  })
+
+  it('sits behind the section a case is inside, too', () => {
+    laidOut()
+    at('/case/3f2504e0-4f89-41d3-9a0c-0305e82c3301')
+    expect(pill()).toHaveAttribute('data-on', '/cases')
+  })
+
+  it('leaves the current link its own fill when there is nothing laid out to measure (a phone)', () => {
+    at('/cases')
+    expect(pill()).toBeNull()
+    expect(screen.getByRole('navigation', { name: 'Main' })).not.toHaveClass('has-pill')
+    expect(sidebar().getByRole('link', { name: 'Cases' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('stays still under reduced motion: no slide, no sheen, no stagger, and the pill jumps', async () => {
+    const user = userEvent.setup()
+    stillness(true)
+    laidOut()
+    at('/cases')
+    const side = screen.getByRole('complementary', { name: 'Sidebar' })
+    expect(side).not.toHaveClass('intro')
+    expect(side.querySelector('.shell-sheen')).toBeNull()
+    expect([...side.querySelectorAll('.shell-nav li')].every((li) => li.getAttribute('style') === null)).toBe(true)
+    expect(pill()).toHaveAttribute('data-on', '/cases')
+    await user.click(sidebar().getByRole('link', { name: 'Watchlist' }))
+    expect(pill()).toHaveAttribute('data-on', '/watchlist')
+    expect(pill()).not.toHaveClass('glide')
+  })
+})
+
+describe('the motion tokens', () => {
+  const css = readFileSync(resolve(__dirname, '../styles.css'), 'utf8')
+  const shellCss = readFileSync(resolve(__dirname, 'AppShell.css'), 'utf8')
+  const root = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')))
+
+  it.each([
+    ['--ease-enter', 'cubic-bezier(0.22, 1, 0.36, 1)'],
+    ['--ease-move', 'cubic-bezier(0.45, 0, 0.2, 1)'],
+    ['--ease-pop', 'cubic-bezier(0.34, 1.56, 0.64, 1)'],
+    ['--dur-hover', 'var(--fast)'],
+    ['--dur-tab', '240ms'],
+    ['--dur-pop', '450ms'],
+    ['--dur-enter', '600ms'],
+    ['--dur-route', '1400ms'],
+    ['--stagger', '60ms'],
+  ])('defines %s as %s on the root, for both skins', (name, value) => {
+    expect(root).toContain(`${name}: ${value};`)
+  })
+
+  it('turns the opening, the sheen and the glide off under reduced motion, and the slide off on a phone', () => {
+    const still = /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/.exec(shellCss)[1]
+    expect(still).toMatch(/\.shell-side\.intro[^{]*\{ animation: none; \}/)
+    expect(still).toMatch(/\.shell-pill\.glide \{ transition: none; \}/)
+    expect(still).toMatch(/\.shell-sheen \{ display: none; \}/)
+    const phone = /@media \(max-width: 720px\) \{([\s\S]*)\n\}/.exec(shellCss)[1]
+    expect(phone).toMatch(/\.shell-side\.intro \{ animation: none; \}/)
+  })
+
+  it('slides the links, not their <li>s, and keeps the pill under the group headings', () => {
+    // A transformed <li> would become the link's offsetParent in some engines.
+    expect(shellCss).toMatch(/\.shell-side\.intro \.shell-nav \.shell-link \{\s*animation: shell-slide/)
+    expect(shellCss).not.toMatch(/\.shell-side\.intro \.shell-nav li \{/)
+    expect(shellCss).toMatch(/\.shell-nav \{[^}]*isolation: isolate/)
+    expect(shellCss).toMatch(/\.shell-pill \{[^}]*z-index: 0/)
+    expect(shellCss).toMatch(/\.shell-nav > :not\(\.shell-pill\) \{ position: relative; z-index: 1; \}/)
+  })
+
+  it('marks the current page with a bar as well as a shade, and loops nothing', () => {
+    expect(shellCss).toMatch(/\.shell-pill::before \{[^}]*width: 3px/)
+    expect(shellCss).not.toMatch(/infinite/)
   })
 })

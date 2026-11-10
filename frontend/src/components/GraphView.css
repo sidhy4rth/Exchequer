@@ -1,0 +1,43 @@
+/* The bubble map's overlays beyond the shared ones in styles.css (.graph-top,
+   .graph-controls, .legend, .jump-panel): the lead column (hint and the
+   Show-only-flags chip), the motion controls, and the phone layout. */
+
+/* The top row's left column: the hint, and under it the flags chip. It stays
+   even when empty so the controls keep to the right. */
+.graph-lead { flex: 0 1 260px; min-width: 0; max-width: 260px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.graph-lead .graph-hint { flex: none; max-width: 100%; }
+
+/* Counts from the trace itself: possible flags (dashed) and confirmed hits. */
+.graph-flags-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  border-radius: var(--r-pill); padding: 5px 10px; font-size: 11px; line-height: 1.35;
+  color: var(--text); background: var(--overlay); border: 1px dashed var(--risk);
+}
+.graph-flags-chip .key-swatch + .key-swatch { margin-left: -2px; }
+
+.graph-controls button.wide { width: auto; padding: 0 9px; }
+.graph-controls button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: var(--panel-2); }
+
+/* Phone: every control a 44 px target; the key and jump list live on the page. */
+.graph-view.compact .graph-lead { flex-basis: auto; }
+.graph-view.compact .graph-controls { gap: 6px; }
+.graph-view.compact .graph-controls button { width: 44px; min-width: 44px; height: 44px; font-size: 13px; }
+.graph-view.compact .graph-controls button.wide { width: auto; padding: 0 12px; }
+.graph-view.compact .graph-flags-chip { border-radius: 14px; }
+
+/* Phone: the Jump-to list stays reachable, behind a 44 px toggle at the foot
+   of the stage; it opens upward over the map and scrolls within it. */
+.graph-jump-compact {
+  position: absolute; left: 12px; right: 12px; bottom: 12px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; pointer-events: none;
+}
+.graph-jump-compact > * { pointer-events: auto; }
+.graph-jump-toggle {
+  min-height: 44px; padding: 0 14px; border-radius: var(--r-pill); font-size: 13px;
+  color: var(--ink); background: var(--overlay); border: 1px solid var(--rule);
+}
+.graph-jump-toggle[aria-expanded="true"] { border-color: var(--ink); }
+.jump-panel.compact {
+  position: static; max-height: min(260px, 50vh); min-width: 0; max-width: 100%; width: 100%;
+}
+.jump-panel.compact button { min-height: 44px; font-size: 13px; }

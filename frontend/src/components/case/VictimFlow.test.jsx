@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import VictimFlow from './VictimFlow'
@@ -365,5 +366,201 @@ describe('the instant exchanger card with two services', () => {
     const first = { address: 'TSmall', exchange: 'Side​Shift', category: 'instant_exchanger' }
     two({ exchange: 'Binance', graph, matches: [{ address: demo.exchange_address, exchange: 'Binance' }, first, { address: FF, exchange: 'FixedFloat', category: 'instant_exchanger' }] })
     expect(within(card('At an instant exchanger')).getByRole('button', { name: 'Draft letter to SideShift' })).toBeInTheDocument()
+  })
+})
+
+// The figure in motion: it opens with its columns growing, its ribbons drawn
+// in two stages, a few slow lights, and its figures counting up; with reduced
+// motion it is drawn final at once. Every figure is the real one in the page
+// from the first render: the count is drawn over it, aria-hidden.
+describe('the Flow figure in motion', () => {
+  const still = () => vi.stubGlobal('matchMedia', (query) => ({ matches: /reduce/.test(query), addEventListener: () => {}, removeEventListener: () => {} }))
+  const frames = () => {
+    const queue = []
+    vi.stubGlobal('requestAnimationFrame', (cb) => queue.push(cb))
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+    return (ms) => { const now = performance.now() + ms; for (const cb of queue.splice(0)) cb(now) }
+  }
+
+  it('shows every final figure at once, while the count is drawn over it', () => {
+    const { container } = draw()
+    const exchange = card('At an exchange')
+    expect(exchange).toHaveTextContent('up to 959.58 USDT')
+    expect(exchange.querySelector('.vf-count')).toHaveAttribute('data-counting')
+    expect(screen.getByRole('heading', { level: 2, name: '6.4% can be acted on' })).toBeInTheDocument()
+    expect(screen.getByText(/reached a place someone can act on/).closest('p')).toHaveTextContent(/^6\.4% reached a place someone can act on, up to 9\.7%/)
+    // The running number is a mark with no text of its own, hidden from screen readers.
+    for (const run of container.querySelectorAll('.vf-run')) {
+      expect(run).toHaveAttribute('aria-hidden', 'true')
+      expect(run.textContent).toBe('')
+    }
+  })
+
+  it('counts each figure up once, then leaves the figure alone', () => {
+    const tick = frames()
+    draw()
+    const box = card('At an exchange').querySelector('.vf-count')
+    expect(box.lastChild.dataset.n).toBe('0.00')
+    tick(450 + 550) // the card's delay, then half its count
+    const mid = Number(box.lastChild.dataset.n)
+    expect(mid).toBeGreaterThan(0)
+    expect(mid).toBeLessThan(959.58)
+    tick(60_000)
+    expect(document.querySelector('[data-counting]')).toBeNull()
+    expect(box.lastChild.dataset.n).toBeUndefined()
+    expect(box).toHaveTextContent('959.58')
+  })
+
+  it('draws the ribbons in two stages, left then right, every one of them', () => {
+    const { container } = draw()
+    const first = [...container.querySelectorAll('g.vf-stage1 path.vf-ribbon')]
+    const second = [...container.querySelectorAll('g.vf-stage2 path.vf-ribbon')]
+    expect(first.length).toBeGreaterThan(0)
+    expect(first).toHaveLength(second.length)
+    expect(first.length + second.length).toBe(container.querySelectorAll('path.vf-ribbon').length)
+    for (const p of first) expect(p.getAttribute('d')).toMatch(/^M12 /)
+    for (const p of second) expect(p.getAttribute('d')).not.toMatch(/^M12 /)
+    // The columns grow 60 ms apart, from the reported wallet to where it ended.
+    const delays = [...container.querySelectorAll('rect.vf-bar')].map((r) => parseInt(r.style.getPropertyValue('--vf-d'), 10))
+    expect(delays[0]).toBe(100)
+    expect(delays).toEqual([...delays].sort((a, b) => a - b))
+  })
+
+  it('sends a few slow lights along the ribbons, green only towards the exchange', () => {
+    const { container } = draw()
+    const lights = [...container.querySelectorAll('.vf-lights .vf-light')]
+    expect(lights.length).toBeGreaterThan(0)
+    expect(lights.length).toBeLessThanOrEqual(5)
+    expect(container.querySelector('.vf-lights')).toHaveAttribute('aria-hidden', 'true')
+    expect(lights.filter((l) => l.matches('.go'))).toHaveLength(3)
+    expect(lights.filter((l) => !l.matches('.go')).every((l) => l.matches('.grey'))).toBe(true)
+  })
+
+  it('has a Pause motion switch that stops the loops and says when it is on', async () => {
+    const user = userEvent.setup()
+    const { container } = draw()
+    const [pause] = screen.getAllByRole('button', { name: 'Pause motion' })
+    expect(pause).toHaveAttribute('aria-pressed', 'false')
+    await user.click(pause)
+    for (const b of screen.getAllByRole('button', { name: 'Pause motion' })) expect(b).toHaveAttribute('aria-pressed', 'true')
+    expect(container.querySelector('.vflow')).toHaveClass('vf-paused')
+    await user.click(pause)
+    expect(container.querySelector('.vflow')).not.toHaveClass('vf-paused')
+  })
+
+  it('slides the chosen rule\'s pill to the rule picked', async () => {
+    const user = userEvent.setup()
+    const { container } = draw({ tracing_methods: { figures: { fifo: 600, prorata: 635, libr: 0 } } })
+    const pill = container.querySelector('.vf-rule-pill')
+    expect(pill).toHaveAttribute('aria-hidden', 'true')
+    expect(pill.style.getPropertyValue('--vf-at')).toBe('0')
+    await user.click(screen.getByRole('radio', { name: 'LIBR' }))
+    expect(pill.style.getPropertyValue('--vf-at')).toBe('2')
+  })
+
+  it('with reduced motion, draws the final picture at once: no count, no lights, nothing to pause', () => {
+    still()
+    const { container } = draw()
+    expect(container.querySelector('.vflow')).not.toHaveClass('vf-motion')
+    expect(container.querySelector('[data-counting]')).toBeNull()
+    expect(container.querySelector('.vf-lights')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Pause motion' })).not.toBeInTheDocument()
+    expect(card('At an exchange')).toHaveTextContent('up to 959.58 USDT')
+    expect(screen.getByRole('heading', { level: 2, name: '6.4% can be acted on' })).toBeInTheDocument()
+    expect(container.querySelectorAll('path.vf-ribbon').length).toBeGreaterThan(0)
+  })
+
+  it('glows only where money reached an exchange', () => {
+    made({ nodes: [[S, 'seed', 10], [X, 'beyond_limit', 10]], links: [[S, X, 10]], buckets: [{ kind: 'beyond_limit', amount: 10, addresses: [X] }] })
+    expect(document.querySelector('.vf-hero')).not.toHaveClass('vf-glow')
+    cleanup()
+    const { container } = draw()
+    expect(container.querySelector('.vf-hero')).toHaveClass('vf-glow')
+  })
+
+  it('plays the entrance once: after it, a panel shown again is drawn final at once', () => {
+    vi.useFakeTimers()
+    try {
+      const { container } = draw()
+      const fig = container.querySelector('.vflow')
+      expect(fig).toHaveClass('vf-motion', 'vf-intro')
+      act(() => { vi.advanceTimersByTime(4599) })
+      expect(fig).toHaveClass('vf-intro')
+      act(() => { vi.advanceTimersByTime(1) })
+      expect(fig).not.toHaveClass('vf-intro')
+      // The loops (the lights, the glow) and Pause stay.
+      expect(fig).toHaveClass('vf-motion')
+      expect(container.querySelectorAll('.vf-lights .vf-light').length).toBeGreaterThan(0)
+      expect(screen.getAllByRole('button', { name: 'Pause motion' }).length).toBeGreaterThan(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('has no entrance at all with reduced motion', () => {
+    still()
+    const { container } = draw()
+    expect(container.querySelector('.vflow')).not.toHaveClass('vf-intro')
+  })
+
+  it('offers the phone a Pause only when something there loops (the glow): its lights live in the chart', () => {
+    made({ nodes: [[S, 'seed', 10], [X, 'beyond_limit', 10]], links: [[S, X, 10]], buckets: [{ kind: 'beyond_limit', amount: 10, addresses: [X] }] })
+    expect(document.querySelector('.vf-pause-phone')).toBeNull()
+    cleanup()
+    const { container } = draw()
+    expect(container.querySelector('.vf-pause-phone')).toBeInTheDocument()
+    expect(container.querySelector('.vf-pause-chart')).toBeInTheDocument()
+  })
+
+  it('does not glow for an instant exchanger whose every wallet is only inferred', () => {
+    const nodes = demo.graph.nodes.map((n) => (n.address === demo.exchange_address ? { ...n, exchange: null, inferred_exchange: 'ChangeNOW' } : n))
+    const { container } = draw({ victim_flow: instantFlow, graph: { ...demo.graph, nodes }, exchange: 'ChangeNOW', attribution_inferred: true })
+    expect(card('At an instant exchanger')).toHaveClass('inferred')
+    expect(container.querySelector('.vf-hero')).not.toHaveClass('vf-glow')
+    expect(container.querySelector('.vf-pause-phone')).toBeNull()
+    cleanup()
+    const labelled = draw({ victim_flow: instantFlow })
+    expect(labelled.container.querySelector('.vf-hero')).toHaveClass('vf-glow')
+  })
+})
+
+// The motion lives in the stylesheet: every animation only under .vf-motion
+// (which reduced motion never sets), the loops slow, and reduced motion
+// stopping all of it again as a backstop.
+describe('the Flow figure\'s stylesheet', () => {
+  const css = readFileSync(`${process.cwd()}/src/components/case/VictimFlow.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const rules = [...css.replace(/@keyframes[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '').replace(/@media \(prefers-reduced-motion: reduce\)\s*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '')
+    .matchAll(/([^{}]+)\{([^}]*)\}/g)].map(([, sel, body]) => [sel.trim(), body])
+
+  it('animates only under .vf-motion', () => {
+    const moving = rules.filter(([, body]) => /(^|;|\s)(animation|transition)\s*:/.test(body))
+    expect(moving.length).toBeGreaterThan(5)
+    for (const [sel] of moving) for (const s of sel.split(',')) expect(s.trim()).toMatch(/^\.vf-motion\b/)
+  })
+
+  it('plays its one-off entrance only under .vf-intro; the loops and the pill stay under .vf-motion', () => {
+    const anim = rules.filter(([, body]) => /(^|;|\s)animation\s*:/.test(body))
+    const once = anim.filter(([, body]) => !/infinite/.test(body))
+    const loops = anim.filter(([, body]) => /infinite/.test(body))
+    expect(once.length).toBeGreaterThan(5)
+    for (const [sel] of once) for (const s of sel.split(',')) expect(s.trim()).toMatch(/^\.vf-motion\.vf-intro /)
+    for (const [sel] of loops) for (const s of sel.split(',')) expect(s.trim()).not.toMatch(/\.vf-intro/)
+  })
+
+  it('loops nothing faster than 3 seconds', () => {
+    const loops = rules.flatMap(([, body]) => [...body.matchAll(/animation:\s*([^;]+)/g)].map((m) => m[1])).filter((a) => /infinite/.test(a))
+    expect(loops.length).toBeGreaterThan(0)
+    for (const a of loops) expect(parseFloat(/([\d.]+)s\b/.exec(a)[1])).toBeGreaterThanOrEqual(3)
+  })
+
+  it('stops every animation under reduced motion', () => {
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.vflow \*, \.vflow \*::after \{ animation: none !important; transition: none !important; \}/)
+  })
+
+  it('keeps the chosen rule neutral: green is for exchanges and the route', () => {
+    // The focus ring is the site's own (styles.css :focus-visible), green everywhere.
+    const on = rules.filter(([sel]) => /\.vf-rule/.test(sel)).flatMap(([, body]) => body.split(';')).filter((d) => !/^\s*outline/.test(d))
+    expect(on.length).toBeGreaterThan(5)
+    expect(on.join(';')).not.toMatch(/--go/)
   })
 })
