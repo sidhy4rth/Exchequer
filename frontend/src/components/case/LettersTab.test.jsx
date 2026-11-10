@@ -1,0 +1,293 @@
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { describe, expect, it, vi } from 'vitest'
+import LettersTab from './LettersTab'
+
+// The Letters tab: a switch over the letters the backend lists (in its
+// order), the chosen draft on a paper sheet with its blanks marked, what was
+// checked and what is left to fill, and PDF, Copy text and Mark as sent.
+const B = '[____________________]'
+const LETTER = (who) => [
+  `From      : ${B} (name, rank, unit, official e-mail and phone)`,
+  'Date      : 10 November 2026',
+  `To        : ${who}`,
+  '   about 635.000000 USDT of everything the reported address sent',
+  '         received 635.000000 USDT in 2 transfer(s), 2024-12-19 14:36 IST (09:06 UTC)',
+  '   This request is not about the wallet TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf itself.',
+  `4. In exercise of the powers under ${B}`,
+  '',
+].join('\n')
+const TETHER = `To        : Tether Operations Limited\nReference : ${B} (FIR / NCRP acknowledgement number)\n`
+// The freeze-letter backend lists the urgent letters first; any to= it adds must work.
+const LETTERS = [
+  { to: 'exchange-freeze', title: 'Urgent freeze request to Bin​ance' },
+  { to: 'exchange', title: 'Request to Binance' },
+  { to: 'tether', title: 'Request to Tether' },
+  { to: 'bank', title: 'Request to State Bank' },
+]
+const CASE = {
+  case_id: 'c1', address: 'TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts', chain: 'tron', asset: 'USDT', direction: 'outgoing',
+  exchange: 'Binance', exchange_address: 'TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf', exchange_label: 'Binance-Hot 7',
+  estimates: { conservative: 635 }, intake: { mode: 'address', payments: [] },
+}
+
+function api(routes) {
+  const calls = []
+  vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+    const method = init.method || 'GET'
+    const [path, query = ''] = String(url).replace(/^\/api/, '').split('?')
+    let body = init.body
+    try { body = JSON.parse(body) } catch { /* none */ }
+    calls.push({ method, path, query, body })
+    const hit = routes[`${method} ${path}${query && routes[`${method} ${path}?${query}`] ? `?${query}` : ''}`]
+    if (!hit) return new Response(JSON.stringify({ detail: 'not stubbed' }), { status: 404 })
+    const { status = 200, body: out } = typeof hit === 'function' ? hit(body) : hit
+    return new Response(typeof out === 'string' ? out : JSON.stringify(out), { status })
+  }))
+  return calls
+}
+
+const STORED = {
+  'GET /trace/c1/letters': { body: { case_id: 'c1', letters: LETTERS } },
+  'GET /trace/c1/letter?to=exchange-freeze': { body: LETTER('Binance — urgent') },
+  'GET /trace/c1/letter?to=exchange': { body: LETTER('Binance') },
+  'GET /trace/c1/letter?to=tether': { body: TETHER },
+  'GET /trace/c1/letter?to=bank': { body: 'To        : State Bank\n' },
+  'GET /trace/c1/requests': { body: { count: 0, requests: [] } },
+  'GET /watches': { body: { count: 0, watches: [] } },
+}
+
+const open = (result = CASE, recorded = null) => render(<MemoryRouter><LettersTab result={result} recorded={recorded} /></MemoryRouter>)
+const sheet = () => screen.getByRole('article', { name: /^Draft: / })
+// What a button says back sits beside the buttons, in the side column.
+const side = () => screen.getByRole('complementary', { name: 'Letter checks' })
+
+describe('the Letters tab of a stored case', () => {
+  it('offers each letter the backend lists, in its order and named in plain text, and opens the first', async () => {
+    api(STORED)
+    open()
+    const group = await screen.findByRole('group', { name: 'Letter to' })
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Urgent freeze request to Binance', 'Request to Binance', 'Request to Tether', 'Request to State Bank',
+    ])
+    expect(within(group).getByRole('button', { name: 'Urgent freeze request to Binance' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByText(/Binance — urgent/)).toBeInTheDocument()
+    expect(sheet()).toHaveAccessibleName('Draft: Urgent freeze request to Binance')
+  })
+
+  it('switches the sheet to the letter chosen, any to= included', async () => {
+    const user = userEvent.setup()
+    const calls = api(STORED)
+    open()
+    await screen.findByText(/Binance — urgent/)
+    await user.click(screen.getByRole('button', { name: 'Request to Tether' }))
+    expect(await screen.findByText(/Tether Operations Limited/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Request to Tether' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Request to State Bank' }))
+    expect(await screen.findByText('To: State Bank', { selector: '.ln' })).toBeInTheDocument()
+    expect(calls.filter((c) => c.path === '/trace/c1/letter').map((c) => c.query)).toEqual(['to=exchange-freeze', 'to=tether', 'to=bank'])
+  })
+
+  it('marks each blank in red with a label saying what to fill, and counts them', async () => {
+    api(STORED)
+    open()
+    await screen.findByText(/Binance — urgent/)
+    const marks = sheet().querySelectorAll('mark.letter-blank')
+    expect(marks).toHaveLength(2)
+    expect(marks[0]).toHaveTextContent('Blank 1 of 2, for you to fill: From: name, rank, unit, official e-mail and phone')
+    expect(marks[1]).toHaveTextContent('Blank 2 of 2, for you to fill: The legal provision')
+    const fill = screen.getByRole('region', { name: 'For you to fill · 2' })
+    expect(within(fill).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['From: name, rank, unit, official e-mail and phone', 'The legal provision'])
+  })
+
+  it('ticks only what the letter and case make true', async () => {
+    const user = userEvent.setup()
+    api(STORED)
+    open()
+    await screen.findByText(/Binance — urgent/)
+    const checked = screen.getByRole('region', { name: 'Checked for you' })
+    expect(within(checked).getAllByRole('listitem').map((li) => li.firstChild.textContent)).toEqual([
+      "Asks about the deposits, not the wallet's owner", 'States 635 USDT', 'Dated in IST',
+    ])
+    await user.click(screen.getByRole('button', { name: 'Request to Tether' }))
+    await screen.findByText(/Tether Operations Limited/)
+    expect(screen.queryByRole('region', { name: 'Checked for you' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'For you to fill · 1' })).toBeInTheDocument()
+  })
+
+  it('copies the letter as the backend wrote it', async () => {
+    const user = userEvent.setup()
+    api(STORED)
+    const writeText = vi.fn(async () => {})
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    open()
+    await screen.findByText(/Binance — urgent/)
+    // The status line is in the page before anything is said, so a screen
+    // reader announces what it later says.
+    expect(within(side()).getByRole('status')).toHaveTextContent('')
+    await user.click(screen.getByRole('button', { name: 'Copy text' }))
+    expect(writeText).toHaveBeenCalledWith(LETTER('Binance — urgent'))
+    await waitFor(() => expect(within(side()).getByRole('status')).toHaveTextContent('Copied the letter.'))
+  })
+
+  it('when the browser will not copy, hands over the letter as written, selected in a box', async () => {
+    const user = userEvent.setup()
+    api(STORED)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn(async () => { throw new Error('denied') }) }, configurable: true })
+    open()
+    await screen.findByText(/Binance — urgent/)
+    await user.click(screen.getByRole('button', { name: 'Copy text' }))
+    await waitFor(() => expect(within(side()).getByRole('alert')).toHaveTextContent(/would not copy/))
+    const box = within(side()).getByRole('textbox', { name: /letter's text/ })
+    // The server's own text: no hidden labels, indents kept.
+    expect(box.value).toBe(LETTER('Binance — urgent'))
+    expect(box).toHaveAttribute('readonly')
+    expect(box).toHaveFocus()
+    expect([box.selectionStart, box.selectionEnd]).toEqual([0, box.value.length])
+  })
+
+  it('keeps the screen-reader labels of the blanks out of a copy made by selecting the sheet', async () => {
+    api(STORED)
+    open()
+    await screen.findByText(/Binance — urgent/)
+    // Only the label carries the class that stops it being selected.
+    for (const mark of sheet().querySelectorAll('mark.letter-blank')) {
+      expect(mark.querySelector('.visually-hidden')).toHaveClass('no-copy')
+    }
+  })
+
+  it('prints the sheet alone for a PDF', async () => {
+    const user = userEvent.setup()
+    api(STORED)
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {
+      expect(document.documentElement).toHaveClass('print-letter')
+    })
+    open()
+    await screen.findByText(/Binance — urgent/)
+    await user.click(screen.getByRole('button', { name: /^PDF/ }))
+    expect(print).toHaveBeenCalledTimes(1)
+    window.dispatchEvent(new Event('afterprint'))
+    expect(document.documentElement).not.toHaveClass('print-letter')
+  })
+
+  it('marks a letter as sent through the requests log, under its own kind, and the log shows it', async () => {
+    const user = userEvent.setup()
+    let items = []
+    const calls = api({
+      ...STORED,
+      'GET /trace/c1/requests': () => ({ body: { count: items.length, requests: items } }),
+      'POST /requests': (body) => {
+        items = [{ request_id: 'r1', ...body, history: [], reference: '', notes: '' }]
+        return { status: 201, body: items[0] }
+      },
+    })
+    open()
+    await screen.findByText(/Binance — urgent/)
+    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({
+      case_id: 'c1', recipient: 'Binance', kind: 'exchange-freeze', address: CASE.exchange_address, asset: 'USDT', status: 'sent',
+    })
+    await waitFor(() => expect(within(side()).getByRole('status')).toHaveTextContent('Logged as sent to Binance.'))
+    expect(await screen.findByText(/Freeze requests · 1/)).toBeInTheDocument()
+    // The button says so and stays where the keyboard left it, doing nothing more.
+    const done = screen.getByRole('button', { name: 'Marked as sent' })
+    expect(done).toHaveAttribute('aria-disabled', 'true')
+    expect(done).not.toBeDisabled()
+    expect(done).toHaveFocus()
+    await user.click(done)
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1)
+    // A letter the log does not know is logged as "other", to the name in its title.
+    await user.click(screen.getByRole('button', { name: 'Request to State Bank' }))
+    await screen.findByText('To: State Bank', { selector: '.ln' })
+    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
+    expect(calls.filter((c) => c.method === 'POST')[1].body).toMatchObject({ recipient: 'State Bank', kind: 'other', address: '' })
+  })
+
+  it('reads a letter already logged as sent from the freeze log, and logs it no second time', async () => {
+    const user = userEvent.setup()
+    let items = [{ request_id: 'r1', case_id: 'c1', recipient: 'Binance', kind: 'exchange-freeze', status: 'sent', history: [], reference: '', notes: '' }]
+    const calls = api({
+      ...STORED,
+      'GET /trace/c1/requests': () => ({ body: { count: items.length, requests: items } }),
+      'DELETE /requests/r1': () => { items = []; return { body: { deleted: 'r1' } } },
+    })
+    open()
+    await screen.findByText(/Binance — urgent/)
+    const done = await screen.findByRole('button', { name: 'Marked as sent' })
+    await user.click(done)
+    expect(calls.some((c) => c.method === 'POST' || c.method === 'PATCH')).toBe(false)
+    // The information letter to the same exchange is a different letter.
+    await user.click(screen.getByRole('button', { name: 'Request to Binance' }))
+    await screen.findByText('To: Binance', { selector: '.ln' })
+    expect(screen.getByRole('button', { name: 'Mark as sent' })).not.toHaveAttribute('aria-disabled', 'true')
+    // Removed from the log, it can be marked again.
+    await user.click(screen.getByRole('button', { name: 'Urgent freeze request to Binance' }))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(await screen.findByRole('button', { name: 'Mark as sent' })).not.toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('moves a drafted request in the log on to sent, rather than logging a second one', async () => {
+    const user = userEvent.setup()
+    let items = [{ request_id: 'r1', case_id: 'c1', recipient: 'Binance', kind: 'exchange-freeze', status: 'drafted', history: [], reference: '', notes: '' }]
+    const calls = api({
+      ...STORED,
+      'GET /trace/c1/requests': () => ({ body: { count: items.length, requests: items } }),
+      'PATCH /requests/r1': (body) => { items = [{ ...items[0], ...body }]; return { body: items[0] } },
+    })
+    open()
+    await screen.findByText(/Binance — urgent/)
+    await screen.findByText(/Freeze requests · 1/)
+    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
+    expect(calls.filter((c) => c.method === 'PATCH').map((c) => c.body)).toEqual([{ status: 'sent' }])
+    expect(calls.some((c) => c.method === 'POST')).toBe(false)
+    expect(await screen.findByRole('button', { name: 'Marked as sent' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('says so when the case supports no letter, and keeps the freeze log and watches', async () => {
+    api({ ...STORED, 'GET /trace/c1/letters': { body: { case_id: 'c1', letters: [] } } })
+    open()
+    expect(await screen.findByText(/supports no request letter/)).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Letter to' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Freeze requests · 0/)).toBeInTheDocument()
+    expect(screen.getByText('Watch for movement')).toBeInTheDocument()
+  })
+
+  it('says why when a letter cannot be drafted', async () => {
+    api({ ...STORED, 'GET /trace/c1/letter?to=exchange-freeze': { status: 400, body: { detail: 'This case reached no exchange.' } } })
+    open()
+    await waitFor(() => expect(within(side()).getByRole('alert')).toHaveTextContent('The letter could not be drafted: This case reached no exchange.'))
+  })
+})
+
+describe('the Letters tab of a recorded example', () => {
+  const RECORDED = { ...CASE, case_id: null }
+
+  it('shows the letter drafted from the recording, and asks for a stored case to mark it sent', async () => {
+    const user = userEvent.setup()
+    const calls = api({
+      'GET /demos/recorded/11/letters': { body: { case_id: null, recorded_demo: 11, letters: LETTERS.slice(1, 3) } },
+      'GET /demos/recorded/11/letter?to=exchange': { body: LETTER('Binance') },
+    })
+    open(RECORDED, 11)
+    expect(await screen.findByText('To: Binance', { selector: '.ln' })).toBeInTheDocument()
+    expect(screen.getByText(/need a stored case/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
+    // Beside the button pressed, not a letter's height below it.
+    const prompt = within(side()).getByRole('status')
+    await waitFor(() => expect(prompt).toHaveTextContent(/stored case/))
+    expect(within(prompt).getByRole('link', { name: 'Open a stored case' })).toHaveAttribute('href', '/cases')
+    expect(calls.some((c) => c.method === 'POST')).toBe(false)
+    expect(calls.some((c) => c.path.startsWith('/trace/'))).toBe(false)
+  })
+})
+
+describe('the Letters tab of a trace that was not saved', () => {
+  it('drafts nothing and says why', async () => {
+    const calls = api({})
+    open({ ...CASE, case_id: null })
+    expect(screen.getByText(/This trace was not saved/)).toBeInTheDocument()
+    await waitFor(() => expect(calls).toEqual([]))
+    expect(screen.queryByRole('group', { name: 'Letter to' })).not.toBeInTheDocument()
+  })
+})

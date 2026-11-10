@@ -100,6 +100,12 @@ describe.each(['dark', 'light'])('the %s theme', (theme) => {
     expect(ratio(fore, back)).toBeGreaterThanOrEqual(min)
   })
 
+  it("keeps a draft letter's sheet paper-white, its text and its red blanks at 4.5:1", () => {
+    expect(value(theme, '--sheet')).toBe(value('light', '--panel'))
+    for (const fg of ['--sheet-text', '--sheet-text-2']) expect(ratio(colour(fg), colour('--sheet'))).toBeGreaterThanOrEqual(4.5)
+    expect(ratio(colour('--sheet-blank-text'), over(colour('--sheet-blank'), colour('--sheet')))).toBeGreaterThanOrEqual(4.5)
+  })
+
   it('shows selected text on every surface, and keeps it readable', () => {
     expect(css).toMatch(/\n::selection \{ background: var\(--select\); \}/)
     for (const base of BASES) {

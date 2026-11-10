@@ -13,7 +13,7 @@ export const STATUS = {
   closed: { label: 'Closed', pill: '' },
 }
 
-export default function RequestsPanel({ result }) {
+export default function RequestsPanel({ result, onChange }) {
   const [items, setItems] = useState([])
   const [letters, setLetters] = useState([])
   const [other, setOther] = useState('')
@@ -30,7 +30,7 @@ export default function RequestsPanel({ result }) {
 
   async function run(fn) {
     setError(null)
-    try { await fn(); await load() } catch (e) { setError(e.message) }
+    try { await fn(); await load(); onChange?.() } catch (e) { setError(e.message) }
   }
   const log = (recipient, kind) => run(() => logRequest({
     case_id: caseId, recipient, kind,

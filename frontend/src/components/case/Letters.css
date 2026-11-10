@@ -1,0 +1,58 @@
+/* The Letters tab (LettersTab.jsx): the draft on a paper sheet, in both
+   themes (the --sheet tokens, styles.css), beside what was checked and what
+   is left to fill. Red marks only the blanks: the officer's to fill. */
+.letters { display: flex; flex-direction: column; gap: 16px; container-type: inline-size; }
+/* As the pack has it: the sheet on the left; the letter switch heads the
+   side column. Narrow, the switch comes first, above the sheet. */
+.lt-body { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "sheet switch" "sheet side"; gap: 14px 24px; align-items: start; }
+@container (max-width: 880px) { .lt-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "switch" "sheet" "side"; } }
+.lt-switch { grid-area: switch; display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); }
+.lt-switch button { flex: 1 1 140px; min-height: 40px; border: 0; border-radius: var(--r); background: transparent; color: var(--text-2); font-size: 13px; }
+.lt-switch button[aria-pressed="true"] { background: var(--panel-2); color: var(--text); font-weight: 500; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.letter-sheet {
+  grid-area: sheet; min-width: 0; padding: clamp(20px, 4vw, 48px); border-radius: var(--r-panel);
+  background: var(--sheet); color: var(--sheet-text); border: 1px solid var(--sheet-line); box-shadow: var(--shadow);
+}
+/* One <p> per paragraph of the draft (letterChecks lines()), its indent
+   kept and an item's number hanging: a long line wraps under its own start. */
+.letter-text { font-family: var(--serif); font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.letter-text .ln { min-height: 1.65em; margin: 0; }
+.lt-wait { margin: 0; font-size: 13px; color: var(--sheet-text-2); }
+/* The blank's spoken label stays out of a copy made by selecting the sheet. */
+.letter-blank .no-copy { -webkit-user-select: none; user-select: none; }
+.letter-blank { padding: 0 3px; border-radius: 3px; background: var(--sheet-blank); color: var(--sheet-blank-text); font-weight: 500; }
+
+.lt-side { grid-area: side; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.lt-card { display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); }
+.lt-card.risk { background: var(--risk-tint); border-color: var(--risk-tint); }
+.lt-card h2 { margin: 0; font-size: 15px; font-weight: 400; color: var(--text); }
+.lt-ticks, .lt-fill { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.lt-ticks { gap: 14px; }
+.lt-ticks li { display: grid; grid-template-columns: 20px 1fr; column-gap: 12px; row-gap: 2px; font-size: 13px; }
+.lt-ticks li > span:first-child, .lt-ticks small { grid-column: 2; }
+.lt-ticks small { font-size: 11.5px; color: var(--text-2); }
+.lt-tick { grid-column: 1; grid-row: 1 / span 2; display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; background: var(--go); color: var(--ground); }
+.lt-fill { gap: 6px; font-size: 12.5px; color: var(--text); }
+.lt-fill li { position: relative; padding-left: 14px; }
+.lt-fill li::before { content: '·'; position: absolute; left: 2px; color: var(--risk); }
+.lt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lt-actions button { min-height: 44px; padding: 0 20px; gap: 8px; border-color: var(--line-strong); background: transparent; color: var(--text); font-size: 13px; font-weight: 500; }
+.lt-actions .lt-solid { background: var(--text); border-color: var(--text); color: var(--ground); }
+.lt-actions .lt-solid:hover:not(:disabled) { background: var(--text-2); border-color: var(--text-2); }
+.lt-actions .lt-go { border-color: var(--go); background: var(--go-tint); color: var(--go-soft); }
+.lt-actions .lt-go:hover:not(:disabled) { background: var(--go-tint); border-color: var(--go-soft); }
+.lt-actions button:disabled { opacity: 1; color: var(--text-3); background: transparent; border-color: var(--line-strong); }
+/* Marked as sent: done, not unavailable; it keeps its focus ring. */
+.lt-actions .lt-go[aria-disabled="true"], .lt-actions .lt-go[aria-disabled="true"]:hover { cursor: default; background: transparent; border-color: var(--line-strong); color: var(--text-2); }
+.lt-news p:not(:empty) + p:not(:empty) { margin-top: 6px; }
+.lt-said { margin: 0; font-size: 13px; color: var(--text-2); }
+.lt-said a { display: inline-flex; align-items: center; min-height: 24px; color: var(--text); text-decoration: underline; }
+.lt-manual { box-sizing: border-box; width: 100%; min-height: 160px; padding: 10px 12px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--text); font-family: var(--mono); font-size: 12px; line-height: 1.5; resize: vertical; }
+@media (max-width: 720px) { .letter-text { font-size: 13px; } }
+
+/* PDF: the print dialog gets the sheet alone (printSheet() sets html.print-letter). */
+@media print {
+  .print-letter body *:not(:has(.letter-sheet)):not(.letter-sheet):not(.letter-sheet *) { display: none !important; }
+  .print-letter body *:has(.letter-sheet) { display: block !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; }
+  .print-letter .letter-sheet { padding: 0; border: 0; box-shadow: none; }
+}

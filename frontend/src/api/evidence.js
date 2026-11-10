@@ -26,6 +26,18 @@ export async function fetchLetter(caseId, to) {
   return response.text()
 }
 
+/** A recorded example's letters (routes/demos.py): listed and drafted from
+ * the recording as a case's are, though none can be logged as sent. */
+export async function fetchRecordedLetters(demo) {
+  return jsonOrThrow(await apiFetch(`${BASE}/demos/recorded/${encodeURIComponent(demo)}/letters`))
+}
+
+export async function fetchRecordedLetter(demo, to) {
+  const response = await apiFetch(`${BASE}/demos/recorded/${encodeURIComponent(demo)}/letter?to=${encodeURIComponent(to)}`)
+  if (!response.ok) throw await toError(response)
+  return response.text()
+}
+
 /**
  * Check a report's content hash and signature (public; nothing stored): a
  * text report as a string, or an Exchequer PDF as its bytes, whose attached

@@ -3,15 +3,14 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { fetchCase, fetchRecordedDemo, fetchRelatedCases, runTrace, stopTraceJob, traceJobRemembered } from '../api'
 import GraphView from '../components/GraphView'
 import FlowView from '../components/FlowView'
-import ExportButton, { DraftLetters } from '../components/ExportButton'
+import ExportButton from '../components/ExportButton'
 import Present from '../components/Present'
-import WatchPanel from '../components/WatchPanel'
-import RequestsPanel from '../components/RequestsPanel'
 import { useCrumb } from '../components/AppShell'
 import CaseTabs from '../components/case/CaseTabs'
 import Tracing from '../components/case/Tracing'
 import EvidenceTab from '../components/case/EvidenceTab'
 import TimelineTab from '../components/case/TimelineTab'
+import LettersTab from '../components/case/LettersTab'
 import { middle, mmss, num, txUrl } from '../components/case/format'
 import { useCaseTab } from './caseTab'
 import './TraceView.css'
@@ -741,18 +740,7 @@ export default function TraceView() {
                 </details>
               )}
             </>,
-            letters: <>
-              {result.case_id && <DraftLetters caseId={result.case_id} />}
-              {result.case_id && <RequestsPanel result={result} />}
-              {result.case_id && <WatchPanel result={result} />}
-              {!result.case_id && (
-                <p className="card note case-note">
-                  Letters, freeze requests and watches need a stored case. {recorded
-                    ? 'This is a recorded example: Trace live runs it again now and stores it as a case.'
-                    : 'This trace was not saved, so it has none.'}
-                </p>
-              )}
-            </>,
+            letters: <LettersTab result={result} recorded={recorded ? demoNo : null} />,
             entities: <>
               {inferred.length > 0 && (
                 <details className="card sec" open={Boolean(result.attribution_inferred)}>

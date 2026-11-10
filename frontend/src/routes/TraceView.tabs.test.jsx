@@ -150,6 +150,19 @@ describe('the case header', () => {
   })
 })
 
+describe('the letters of a recorded example', () => {
+  it('are drafted from the recording, while the freeze log and watches wait for a stored case', async () => {
+    await openDemo11({ tab: 'letters', routes: {
+      '/demos/recorded/11/letters': { body: { case_id: null, recorded_demo: 11, letters: [{ to: 'exchange', title: 'Request to Binance' }, { to: 'tether', title: 'Request to Tether' }] } },
+      '/demos/recorded/11/letter': { body: 'To        : Binance\n' },
+    } })
+    expect(await within(panel()).findByRole('button', { name: 'Request to Binance' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(panel()).getByRole('article', { name: 'Draft: Request to Binance' })).toBeInTheDocument()
+    expect(within(panel()).getByText(/need a stored case/)).toBeVisible()
+    expect(within(panel()).queryByText(/Freeze requests ·/)).not.toBeInTheDocument()
+  })
+})
+
 describe('the letters, freeze requests and watches of a stored case', () => {
   const routes = {
     '/trace/c1/letters': { body: { letters: [{ to: 'exchange', title: 'Request to Binance' }] } },

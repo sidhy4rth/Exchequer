@@ -135,6 +135,21 @@ async function timelineReachable(page) {
 
 const H1 = (name) => ['heading', { level: 1, name }]
 const CASE_TAB = (name) => ['tab', { name, selected: true }]
+const FILL = ['region', { name: /^For you to fill · \d+$/ }] // shows once the letter is drafted
+
+/** What Mark as sent says shows beside the button, in view, not a letter's
+ * height below it. */
+async function saidBesideButton(page) {
+  const [button, said] = await Promise.all([
+    page.getByRole('button', { name: 'Mark as sent' }).boundingBox(),
+    page.getByRole('link', { name: 'Open a stored case' }).boundingBox(),
+  ])
+  const gap = said.y - (button.y + button.height)
+  if (gap < 0 || gap > 160) throw new Error(`the prompt sits ${Math.round(gap)} px below Mark as sent`)
+  const height = page.viewportSize().height
+  const top = await page.getByRole('link', { name: 'Open a stored case' }).evaluate((e) => e.getBoundingClientRect().top)
+  if (top < 0 || top > height) throw new Error(`the prompt is out of view (top ${Math.round(top)} px)`)
+}
 
 // On a phone the open sign-in card is drawn from tiles, and the "Preview"
 // paragraph sits over a seam between two of them. On Linux (CI) the card's
@@ -181,7 +196,13 @@ export const PAGES = [
   { name: 'recorded case 11, Entities', path: '/demo/11?tab=entities', as: 'investigator', ready: CASE_TAB('Entities'), unmeasured: { phone: 1 } },
   { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   { name: 'recorded case 11, Evidence, rechecked', path: '/demo/11?tab=evidence', as: 'investigator', stub: { url: '**/trace/demo-11/recheck', body: RECHECK }, ready: ['button', { name: 'Re-read from a second provider' }], unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
-  { name: 'recorded case 11, Letters', path: '/demo/11?tab=letters', as: 'investigator', ready: CASE_TAB('Letters'), unmeasured: { phone: 1 } },
+  // The Letters tab drafts a recording's letters as a case's: the first one
+  // listed opens on its sheet; a press switches it; Mark as sent asks, beside
+  // the button, for a stored case, since a recording logs nothing. A line of
+  // the letter sits at the foot of the screen at rest.
+  { name: 'recorded case 11, Letters', path: '/demo/11?tab=letters', as: 'investigator', ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
+  { name: 'recorded case 11, Letters, to Tether', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Request to Tether' }], ready: ['article', { name: 'Draft: Request to Tether' }], unmeasured: { desktop: 1, phone: 1 } },
+  { name: 'recorded case 11, Letters, marked as sent', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Mark as sent' }], ready: ['link', { name: 'Open a stored case' }], unmeasured: { desktop: 1, phone: 1 }, layout: saidBesideButton },
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },
   { name: 'batch', path: '/batch/a11y-example', as: 'investigator', stub: { url: '**/batches/a11y-example', body: BATCH }, ready: ['heading', { level: 1, name: BATCH.name }], unmeasured: { phone: 1 } },
