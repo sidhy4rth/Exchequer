@@ -316,7 +316,7 @@ export const PAGES = [
   // The card a case without a victim flow keeps (an older server's): the
   // recording answered with its flow taken out. The backend builds one on
   // read, so the entry above opens the drawn flow.
-  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: ({ victim_flow: _, ...body }) => body }, ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
+  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: ({ victim_flow: _, ...body }) => body }, ready: CASE_TAB('Flow'), unmeasured: { desktop: 10, phone: 9 } },  // +2: the hop map's Pause motion and Replay sit over its drawing, like Fit
   // The Flow tab drawn from the case's victim flow, whatever the backend: the
   // recording answered with the flow backend/app/victim_flow.py builds for it
   // (src/test/victim-flow-11.json).

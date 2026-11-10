@@ -552,7 +552,7 @@ describe('motion', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Follow a payment to the exchange that can freeze it' })).toBeInTheDocument()
   })
 
-  it('types the hint in once: crossing the phone width swaps it in place, already written', async () => {
+  it('types the hint in once, then hands over to the field\'s own placeholder', async () => {
     let narrow = false
     const listeners = new Set()
     vi.stubGlobal('matchMedia', (query) => ({
@@ -562,16 +562,30 @@ describe('motion', () => {
     }))
     renderHome()
     await loaded()
-    const typed = document.querySelector('.hero-typed')
-    expect(typed).not.toHaveClass('typed')
+    const field = screen.getByLabelText(/payment hash or wallet/i)
+    const box = field.closest('.hero-input')
+    expect(box).toHaveClass('typing')
+    expect(document.querySelector('.hero-typed')).not.toBeNull()
+    // The last letter's caret finishes blinking: the overlay goes and the
+    // real placeholder (measurable, read by assistive tech) shows.
+    // jsdom has no AnimationEvent, so React listens for the prefixed name there.
+    const last = box.querySelector('.hero-typed span:last-child')
+    act(() => {
+      for (const type of ['animationend', 'webkitAnimationEnd']) {
+        const ended = new Event(type, { bubbles: true })
+        Object.defineProperty(ended, 'animationName', { value: 'console-blink' })
+        if (last.isConnected) last.dispatchEvent(ended)
+      }
+    })
+    expect(box).not.toHaveClass('typing')
+    expect(document.querySelector('.hero-typed')).toBeNull()
+    expect(field).toHaveAttribute('placeholder')
+    // Crossing the phone width later swaps the placeholder text, never retypes.
     narrow = true
     act(() => { for (const fn of [...listeners]) fn() })
     expect(screen.getByLabelText(CONSOLE_FIELD)).toHaveAttribute('placeholder', CONSOLE_FIELD)
-    const after = document.querySelector('.hero-typed')
-    expect(after).toBe(typed)
-    expect(after).toHaveClass('typed')
-    expect(after.textContent).toBe(CONSOLE_FIELD)
-    expect(motionCss).toMatch(/\.hero-typed\.typed span,\s*\.console-home \.hero-typed\.typed span:last-child \{ animation: none; \}/)
+    expect(document.querySelector('.hero-typed')).toBeNull()
+    expect(motionCss).toMatch(/\.hero-input\.typing input::placeholder \{ color: transparent; \}/)
   })
 
   it('rests the edge light and the glow on a phone', () => {

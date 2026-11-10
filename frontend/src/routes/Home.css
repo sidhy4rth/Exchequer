@@ -47,7 +47,7 @@
    click (the field under it does). */
 .hero-input { position: relative; flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; }
 .hero-input input { width: 100%; }
-.hero-input input::placeholder { color: transparent; }
+.hero-input.typing input::placeholder { color: transparent; }
 .hero-typed {
   position: absolute; inset: 0; display: flex; align-items: center; overflow: hidden;
   font-family: var(--sans); font-size: 13.5px; color: var(--faint); white-space: pre; pointer-events: none;
@@ -65,9 +65,6 @@
 }
 @keyframes console-type { from { opacity: 0; } }
 @keyframes console-caret { from { box-shadow: 1.5px 0 0 currentColor; } to { box-shadow: none; } }
-/* A hint swapped in later (the field crossing the phone width) is not typed again. */
-.console-home .hero-typed.typed span,
-.console-home .hero-typed.typed span:last-child { animation: none; }
 @keyframes console-blink { 0% { box-shadow: 1.5px 0 0 currentColor; } 50%, 100% { box-shadow: none; } }
 /* High contrast draws its own colours: the field's placeholder is shown as is. */
 @media (forced-colors: active) {
@@ -78,7 +75,7 @@
 /* ---- The hero's edge: a slow light goes round it ---- */
 /* The ring sits under the card's own content: the card isolates its stack,
    so the light never covers the text inside it. */
-.console-home .hero-card { position: relative; isolation: isolate; }
+.console-home .hero-card { position: relative; z-index: 0; isolation: isolate; }
 .console-home .hero-card::before {
   content: ''; position: absolute; inset: -1px; padding: 1px; border-radius: inherit; pointer-events: none; z-index: -1;
   background: conic-gradient(from var(--sweep),
@@ -127,19 +124,26 @@
 
 /* ---- A very slow glow behind the page ---- */
 .console-ambient { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+/* The page itself on a layer above the glow, stated outright: axe orders a
+   positioned z-index -1 layer above static content and then cannot measure
+   the text over it. */
+.console-home > :not(.console-ambient) { position: relative; z-index: 1; }
 .console-ambient i {
   position: absolute; top: -160px; right: -120px; width: 760px; height: 560px; max-width: 120%;
   background: radial-gradient(closest-side, var(--console-glow), transparent);
 }
 /* The glow stays inside the Console and behind everything on it: without a
    positioned, isolated parent it spread over the whole page, sidebar included. */
-.console-home { position: relative; isolation: isolate; --console-glow: rgba(255, 255, 255, 0.7); }
+.console-home { position: relative; z-index: 0; isolation: isolate; --console-glow: rgba(255, 255, 255, 0.7); }
 html[data-theme="dark"] .console-home { --console-glow: rgba(255, 255, 255, 0.045); }
 .console-home .console-ambient i { animation: console-drift 18s ease-in-out infinite; }
 @keyframes console-drift { 50% { transform: translate(-30px, 18px); } }
 
 /* ---- On a phone a switch is a 44 px target ---- */
 @media (max-width: 720px) {
+  /* The glow is still on a phone anyway and would reach up under the top
+     bar there: it is left out. */
+  .console-ambient { display: none; }
   .motion-toggle { min-height: 44px; padding: 0 14px; }
   /* The edge light and the glow cost a phone a repaint and a re-blur of the
      glass every frame, and hardly show at this size: both rest here. */

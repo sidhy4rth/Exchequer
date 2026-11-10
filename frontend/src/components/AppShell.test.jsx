@@ -482,7 +482,8 @@ describe('the motion tokens', () => {
     expect(shellCss).toMatch(/\.shell-side\.intro \.shell-nav \.shell-link \{\s*animation: shell-slide/)
     expect(shellCss).not.toMatch(/\.shell-side\.intro \.shell-nav li \{/)
     expect(shellCss).toMatch(/\.shell-nav \{[^}]*isolation: isolate/)
-    expect(shellCss).toMatch(/\.shell-pill \{[^}]*z-index: -1/)
+    expect(shellCss).toMatch(/\.shell-pill \{[^}]*z-index: 0/)
+    expect(shellCss).toMatch(/\.shell-nav > :not\(\.shell-pill\) \{ position: relative; z-index: 1; \}/)
   })
 
   it('marks the current page with a bar as well as a shade, and loops nothing', () => {

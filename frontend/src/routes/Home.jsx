@@ -45,9 +45,9 @@ function savedPause() {
 /** The field's hint, typed in once a character at a time, over an empty
  * field only. Drawn for the eye alone: the field keeps its label and its
  * placeholder, and nothing here takes a click or a key. */
-function TypedHint({ text, done }) {
+function TypedHint({ text }) {
   return (
-    <span className={`hero-typed${done ? ' typed' : ''}`} aria-hidden="true">
+    <span className="hero-typed" aria-hidden="true">
       {[...text].map((ch, i) => <span key={i} style={{ '--i': i }}>{ch}</span>)}
     </span>
   )
@@ -79,7 +79,7 @@ function read(text) {
  * would run and waits for a click; a payment hash fills the new trace form,
  * which still needs the wallet the victim paid. Paste a Tron wallet with an
  * Ethereum choice and the choice moves to Tron. */
-function QuickTrace({ health }) {
+function QuickTrace({ health, still }) {
   const navigate = useNavigate()
   const [text, setText] = useState('')
   const [picked, setPicked] = useState(null)
@@ -91,6 +91,11 @@ function QuickTrace({ health }) {
   const firstHint = useRef(hint)
   const hintMoved = useRef(false)
   if (hint !== firstHint.current) hintMoved.current = true
+  // Once the hint has typed itself in, the field's own placeholder takes
+  // over, so what rests on screen is a plain placeholder every reader and
+  // checker can measure. Still (reduced motion or paused) starts there.
+  const [typedOver, setTypedOver] = useState(false)
+  const typing = !still && !typedOver && !hintMoved.current
   const options = choices(health)
   const chosen = options.find((o) => o.value === picked) ?? options.find((o) => o.chain === health?.default_chain) ?? options[0]
 
@@ -118,11 +123,12 @@ function QuickTrace({ health }) {
       <div className="hero-field">
         <svg aria-hidden="true" width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" /></svg>
         <label htmlFor="console-find" className="visually-hidden">Payment hash or wallet</label>
-        <span className="hero-input">
+        <span className={`hero-input${typing ? ' typing' : ''}`}
+          onAnimationEnd={(e) => { if (e.animationName === 'console-blink') setTypedOver(true) }}>
           <input id="console-find" value={text} onChange={(e) => change(e.target.value)} spellCheck={false} autoComplete="off"
             placeholder={hint}
             aria-invalid={missed || undefined} aria-describedby={missed ? 'console-find-missed' : undefined} />
-          <TypedHint text={hint} done={hintMoved.current} />
+          {typing && <TypedHint text={hint} />}
         </span>
       </div>
       <label htmlFor="console-chain" className="visually-hidden">Chain and asset</label>
@@ -318,7 +324,7 @@ export default function Home() {
         </div>
         {locked ? <Showroom officers={lock === 'officer'} onUnlock={() => setUnlocked(true)} /> : (
           <section className="card glass hero-card console-rise" style={rise(2)} aria-label="Start a trace">
-            <QuickTrace health={health} />
+            <QuickTrace health={health} still={reduced || paused} />
             <TryRecorded />
           </section>
         )}

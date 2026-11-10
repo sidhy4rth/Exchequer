@@ -256,7 +256,9 @@ function useNavPill(nav, place) {
       setPill((was) => {
         if (!next) return null
         if (was && was.top === next.top && was.height === next.height && was.to === next.to) return was
-        return { ...next, glide: Boolean(was) }
+        // It glides only to another page's link; a re-measure of the same
+        // link (fonts landing, the opening ending) settles it in place.
+        return { ...next, glide: Boolean(was) && was.to !== next.to }
       })
     }
     measure()
@@ -315,6 +317,9 @@ export default function AppShell() {
   const health = useChains(pathname)
   const still = useMedia(STILL)
   const intro = useIntro(still)
+  // The sheen leaves the page the moment its one pass ends, not when the
+  // rest of the opening does: nothing lingers over the sidebar's text.
+  const [sheenDone, setSheenDone] = useState(false)
   const nav = useRef(null)
   const pill = useNavPill(nav, `${pathname} ${out.admin} ${intro}`)
   const [named, setNamed] = useState(null)
@@ -334,7 +339,7 @@ export default function AppShell() {
     <div className="shell">
       <a className="skip-link" href="#main">Skip to the page</a>
       <aside className={`shell-side${intro ? ' intro' : ''}`} aria-label="Sidebar">
-        {intro && <span className="shell-sheen" aria-hidden="true" />}
+        {intro && !sheenDone && <span className="shell-sheen" aria-hidden="true" onAnimationEnd={() => setSheenDone(true)} />}
         <div className="shell-brand">
           <Mark size={20} />
           <span>

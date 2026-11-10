@@ -125,7 +125,12 @@ html[data-theme="dark"], .gate {
 }
 
 * { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; }
+/* The page grows with what it holds: a body fixed at the window's height
+   ends part-way down a scrolled page, and anything measured against it (axe
+   reading the colour behind a sticky sidebar's text) sees it cut off. */
+html { height: 100%; margin: 0; }
+body { min-height: 100%; margin: 0; }
+#root { min-height: 100vh; }
 body {
   background: var(--paper);
   color: var(--ink);
@@ -825,7 +830,7 @@ details:not([open]) .feed .row { animation: none; }
 }
 
 /* The citizen's space: empty for now. */
-.citizen { min-height: 100%; display: flex; flex-direction: column; background: var(--paper); }
+.citizen { min-height: 100vh; display: flex; flex-direction: column; background: var(--paper); }
 .citizen-top { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--rule); }
 .citizen-actions { display: inline-flex; align-items: center; gap: 6px; }
 .citizen-body { flex: 1; display: grid; place-items: center; padding: 24px 16px; }
