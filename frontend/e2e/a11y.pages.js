@@ -194,11 +194,13 @@ export const PAGES = [
   // consulted. It opens on Flow, and each tab has a URL of its own. On a
   // phone a line of the finding sits at the foot of the screen at rest.
   { name: 'recorded case 11', path: '/demo/11', as: 'investigator', ready: ['heading', { level: 2 }], unmeasured: { desktop: 8, phone: 9 } },
-  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
+  // The card a case without a victim flow keeps (an older server's): the
+  // recording answered with its flow taken out. The backend builds one on
+  // read, so the entry above opens the drawn flow.
+  { name: 'recorded case 11, Flow', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: ({ victim_flow: _, ...body }) => body }, ready: CASE_TAB('Flow'), unmeasured: { desktop: 8, phone: 9 } },
   // The Flow tab drawn from the case's victim flow, whatever the backend: the
   // recording answered with the flow backend/app/victim_flow.py builds for it
-  // (src/test/victim-flow-11.json). The entry above checks the card a case
-  // without one keeps.
+  // (src/test/victim-flow-11.json).
   { name: 'recorded case 11, Flow drawn', path: '/demo/11?tab=flow', as: 'investigator', stub: { url: '**/demos/recorded/11', extend: (body) => ({ ...body, victim_flow: FLOW_11 }) }, ready: ['heading', { level: 2, name: /^Where the victim's share went$|can be acted on$/ }], unmeasured: { phone: 1 } },
   { name: 'recorded case 11, Timeline', path: '/demo/11?tab=timeline', as: 'investigator', ready: CASE_TAB('Timeline'), unmeasured: { desktop: 11, phone: 21 }, layout: timelineReachable },
   // The lane chart opens on its first 14 days; the whole trace is a press away.
@@ -213,11 +215,12 @@ export const PAGES = [
   { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   { name: 'recorded case 11, Evidence, rechecked', path: '/demo/11?tab=evidence', as: 'investigator', stub: { url: '**/trace/demo-11/recheck', body: RECHECK }, ready: ['button', { name: 'Re-read from a second provider' }], unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   // The Letters tab drafts a recording's letters as a case's: the first one
-  // listed opens on its sheet; a press switches it; Mark as sent asks, beside
-  // the button, for a stored case, since a recording logs nothing. A line of
-  // the letter sits at the foot of the screen at rest.
+  // listed (the urgent freeze letter) opens on its sheet; a press switches
+  // it; Mark as sent asks, beside the button, for a stored case, since a
+  // recording logs nothing. A line of the letter sits at the foot of the
+  // screen at rest.
   { name: 'recorded case 11, Letters', path: '/demo/11?tab=letters', as: 'investigator', ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
-  { name: 'recorded case 11, Letters, to Tether', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Request to Tether' }], ready: ['article', { name: 'Draft: Request to Tether' }], unmeasured: { desktop: 1, phone: 1 } },
+  { name: 'recorded case 11, Letters, to Tether', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Request to Tether', exact: true }], ready: ['article', { name: 'Draft: Request to Tether', exact: true }], unmeasured: { desktop: 1, phone: 1 } },
   { name: 'recorded case 11, Letters, marked as sent', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Mark as sent' }], ready: ['link', { name: 'Open a stored case' }], unmeasured: { desktop: 1, phone: 1 }, layout: saidBesideButton },
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },

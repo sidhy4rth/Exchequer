@@ -228,6 +228,12 @@ def safe_int(value: Any, base: int = 10, default: int = 0) -> int:
         return default
 
 
+def _page_info(result: list[Any], offset: int) -> tuple[bool, int | None]:
+    """Whether a newest-first page came back full, and its oldest record's time."""
+    stamps = [safe_int(raw.get("timeStamp")) for raw in result if isinstance(raw, dict)]
+    return len(result) >= offset, min((t for t in stamps if t > 0), default=None)
+
+
 def _since_block(raw: dict[str, Any]) -> int | None:
     """A record's block for a watch's forward read, None when it is garbled."""
     block = safe_int(raw.get("blockNumber"), default=-1)
@@ -517,6 +523,8 @@ class EtherscanClient:
         # The page holds both directions, so the count of transfers an address
         # *sent* says nothing about whether older history went unread.
         self._newest_page: dict[str, tuple[bool, int | None]] = {}
+        # The same for the contract-moved list read beside it (internal_page_info).
+        self._newest_internal: dict[str, tuple[bool, int | None]] = {}
         # address -> whether its latest read (newest page or forward read)
         # filled its page, so records past it went unread (history_capped).
         self._last_full: dict[str, bool] = {}
@@ -757,10 +765,8 @@ class EtherscanClient:
             result = []
 
         if sort == "desc":
-            stamps = [safe_int(raw.get("timeStamp")) for raw in result if isinstance(raw, dict)]
-            self._newest_page[normalize_address(address)] = (
-                len(result) >= offset, min((t for t in stamps if t > 0), default=None),
-            )
+            self._newest_page[normalize_address(address)] = _page_info(result, offset)
+            self._newest_internal.pop(normalize_address(address), None)
         self._last_full[normalize_address(address)] = len(result) >= offset
 
         txs = [tx for tx in (parse(raw) for raw in result) if tx is not None]
@@ -775,6 +781,9 @@ class EtherscanClient:
             if isinstance(internal_raw, list):
                 parse_internal = self._parser(internal=True)
                 txs += [tx for tx in (parse_internal(raw) for raw in internal_raw) if tx is not None]
+            if sort == "desc":
+                self._newest_internal[normalize_address(address)] = _page_info(
+                    internal_raw if isinstance(internal_raw, list) else [], offset)
             # Each source was capped at `offset` by its own request. The union
             # is deliberately NOT capped again: measured on a busy demo wallet,
             # trimming the merged list to the newest `offset` let a burst of
@@ -799,6 +808,12 @@ class EtherscanClient:
         A full page means older history exists that was not read, however few
         of the records on it were transfers the address sent."""
         return self._newest_page.get(normalize_address(address))
+
+    def internal_page_info(self, address: str) -> tuple[bool, int | None] | None:
+        """newest_page_info for the contract-moved list (txlistinternal) that
+        read took beside it; None if it took none. Each list is cut at its own
+        page, so one can stop short of where the other reaches."""
+        return self._newest_internal.get(normalize_address(address))
 
     def get_incoming_between(
         self, address: str, start_block: int, end_block: int, start_ts: int, end_ts: int,

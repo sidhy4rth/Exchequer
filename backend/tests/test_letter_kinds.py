@@ -226,4 +226,6 @@ def test_the_tether_letter_does_not_claim_a_channel_either():
 
 
 def test_the_letters_offered_are_unchanged():
-    assert available(labelled()) == [{"to": "exchange", "title": "Request to Binance"}]
+    # The urgent freeze letter is offered first; the information letter as before.
+    assert available(labelled()) == [{"to": "exchange-freeze", "title": "Urgent freeze request to Binance"},
+                                     {"to": "exchange", "title": "Request to Binance"}]

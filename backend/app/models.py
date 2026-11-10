@@ -60,6 +60,10 @@ class Case(Base):
     # not parse when its migration filled them: the list then reads its result.
     direction: Mapped[str | None] = mapped_column(String(16), nullable=True)
     summary_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The last second-provider recheck of its cited transfers (routes/recheck.py),
+    # NULL until one runs. Never loaded with the case and read on its own
+    # (recheck_for): the result above never changes, and a cached case stays right.
+    recheck_json: Mapped[str | None] = mapped_column(Text, nullable=True, deferred=True)
 
     # -- convenience -------------------------------------------------------
     @property
@@ -684,6 +688,32 @@ def list_summaries(limit: int = 50, owner_hash: str | None = None,
         return value if isinstance(value, dict) else {}
     return [(owner, summary_row(case_id, address, created_at, summary, lambda cid=case_id: parsed(cid)))
             for case_id, address, created_at, owner, summary in rows]
+
+
+def save_recheck(case_id: str, recheck: dict[str, Any]) -> bool:
+    """Keep a case's latest recheck in place of the one before; False if no such case.
+    Its size counts in the case's size_bytes, so the store's byte caps see it."""
+    text, table = json.dumps(recheck), Case.__table__
+    with Session(_engine) as session:
+        stmt = table.update().where(table.c.id == case_id).values(
+            recheck_json=text,
+            size_bytes=table.c.size_bytes + len(text) - func.coalesce(func.length(table.c.recheck_json), 0))
+        found = session.execute(stmt).rowcount
+        session.commit()
+    return bool(found)
+
+
+def recheck_for(case_id: str) -> tuple[bool, dict[str, Any] | None]:
+    """(whether the case exists, its latest recheck or None), without reading its result."""
+    with Session(_engine) as session:
+        row = session.execute(select(Case.id, Case.recheck_json).where(Case.id == case_id)).first()
+    if row is None:
+        return False, None
+    try:
+        kept = json.loads(row[1]) if row[1] else None
+    except ValueError:
+        kept = None
+    return True, kept if isinstance(kept, dict) else None
 
 
 def session() -> Session:

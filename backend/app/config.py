@@ -799,6 +799,14 @@ WATCHES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR", 20)
 REQUEST_WRITES_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_REQUEST_WRITES_PER_HOUR", 120)
 # Watches the whole site may create per hour (0 = no ceiling); see TRACES_PER_HOUR_TOTAL.
 WATCHES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR_TOTAL", 60)
+# Second-provider rechecks (POST /trace/{id}/recheck) one client, and the
+# whole site, may run per hour (0 = no limit). Each rereads up to 40 transfers
+# from TronScan or the public Ethereum nodes.
+RECHECKS_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_RECHECKS_PER_HOUR", 6)
+RECHECKS_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_RECHECKS_PER_HOUR_TOTAL", 30)
+# Rechecks running at once, site-wide (one per connection): each holds a
+# server thread for up to a minute and shares TronScan's pacer with live traces.
+RECHECKS_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_RECHECKS", 2)
 # Active watches one connection may hold, whatever owner keys it uses (owner
 # keys are free; two keys' worth by default). Raise it for a day when a whole
 # venue shares one address.

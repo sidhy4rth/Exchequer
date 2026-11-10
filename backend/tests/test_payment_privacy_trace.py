@@ -278,7 +278,10 @@ ROUTES = [
 def test_no_route_gives_a_stranger_the_payments_block_time_or_hash(traced, headers):
     client, name, _ = traced
     scenario = SCENARIOS[name]
-    for route in ROUTES:
+    # Every letter the case offers, the urgent freeze letters among them.
+    offered = [letter["to"] for letter in client.get(f"/trace/{name}-case/letters", headers=headers).json()["letters"]]
+    assert "exchange-freeze" in offered and ("tether-freeze" in offered) == (name == "tron")
+    for route in ROUTES + [f"/trace/{{id}}/letter?to={to}" for to in offered]:
         response = client.get(route.format(id=f"{name}-case"), headers=headers)
         assert response.status_code == 200, (route, response.text[:200])
         assert leaks(response.text, scenario) == [], route

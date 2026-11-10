@@ -19,6 +19,8 @@ Three outcomes, because the difference matters to anyone relying on this:
 
 Unchecked is never reported as confirmed. Exit code 0 means every transfer was
 confirmed, 1 that at least one is a mismatch, 2 that none is but some went unchecked.
+The checks live in app/second_provider.py, which POST /trace/{id}/recheck runs
+over the transfers a case's route to the exchange cites.
 
 What this establishes: two independent providers agree on these transactions. It
 does not establish who controls any address. Follow-on traces after a swap are not
@@ -43,8 +45,6 @@ import json
 import sys
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -54,171 +54,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import config  # noqa: E402
 from app.report import build_report  # noqa: E402
-
-ETHEREUM_NODES = ("https://cloudflare-eth.com", "https://eth.drpc.org")
-TRONSCAN = "https://apilist.tronscanapi.com/api/transaction-info"
-TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"  # Transfer(address,address,uint256)
-SECONDS_BETWEEN_READS = 0.3
-# Amounts in a report are rounded when stored; one part in a million of a coin is
-# well inside that and far below anything a reader would call a different amount.
-AMOUNT_TOLERANCE = Decimal("0.000001")
-
-CONFIRMED, MISMATCH, UNCHECKED = "confirmed", "mismatch", "unchecked"
-NATIVE_DECIMALS = {"tron": 6}  # every other chain traced here counts its coin in 18 decimals
-
-
-@dataclass(frozen=True)
-class Check:
-    hash: str
-    outcome: str
-    detail: str = ""
-
-
-@dataclass(frozen=True)
-class Asset:
-    """What a transfer moved: config.Token covers tokens, not a chain's own coin."""
-    address: str | None  # None for the chain's own coin
-    decimals: int
-
-    @property
-    def native(self) -> bool:
-        return self.address is None
-
-
-def _asset(chain_key: str, symbol: str | None) -> Asset | None:
-    chain = config.CHAINS[chain_key]
-    if symbol == chain.native_symbol:
-        return Asset(None, NATIVE_DECIMALS.get(chain_key, 18))
-    token = chain.find_token(symbol or "")
-    return Asset(token.address, token.decimals) if token else None
-
-
-def _same_address(a: str | None, b: str | None) -> bool:
-    if not a or not b:
-        return False
-    return a.lower() == b.lower() if a.startswith("0x") else a == b
-
-
-def _same_amount(amount: Decimal, stored: Any) -> bool:
-    return abs(amount - Decimal(str(stored))) <= AMOUNT_TOLERANCE
-
-
-def _names(transfer: dict[str, Any], sender: str | None, recipient: str | None, amount: Decimal) -> str | None:
-    """Why this reading disagrees with the report, or None if it does not."""
-    if not _same_address(sender, transfer.get("from")):
-        return f"sender is {sender}, the report says {transfer.get('from')}"
-    if not _same_address(recipient, transfer.get("to")):
-        return f"recipient is {recipient}, the report says {transfer.get('to')}"
-    if not _same_amount(amount, transfer.get("value_native", 0)):
-        return f"amount is {amount}, the report says {transfer.get('value_native')}"
-    return None
-
-
-def check_ethereum(transfer: dict[str, Any], answer: dict[str, Any], token: Asset) -> Check:
-    tx, receipt = answer.get("transaction"), answer.get("receipt")
-    digest = transfer.get("hash")
-    if not tx:
-        return Check(digest, MISMATCH, "the second provider does not have this transaction")
-    if transfer.get("internal"):
-        return Check(digest, UNCHECKED, "the transaction exists, but it was moved by a contract call")
-    if not receipt:
-        # Without the receipt, success cannot be shown: a reverted transfer
-        # carries the same from, to and value as one that went through.
-        return Check(digest, UNCHECKED, "the second provider returned no receipt, so success cannot be confirmed")
-    if receipt.get("status") == "0x0":
-        return Check(digest, MISMATCH, "the transaction failed on chain")
-    if receipt.get("status") != "0x1":
-        return Check(digest, UNCHECKED, "the receipt does not say whether the transaction succeeded")
-    if token.native:
-        problem = _names(transfer, tx.get("from"), tx.get("to"), Decimal(int(tx.get("value", "0x0"), 16)) / 10**token.decimals)
-        return Check(digest, MISMATCH, problem) if problem else Check(digest, CONFIRMED)
-    closest = "no matching Transfer event in the transaction"
-    for log in receipt.get("logs") or []:
-        topics = log.get("topics") or []
-        if len(topics) != 3 or topics[0] != TRANSFER_TOPIC or not _same_address(log.get("address"), token.address):
-            continue
-        problem = _names(transfer, "0x" + topics[1][-40:], "0x" + topics[2][-40:],
-                         Decimal(int(log.get("data") or "0x0", 16)) / 10**token.decimals)
-        if problem is None:
-            return Check(digest, CONFIRMED)
-        closest = problem
-    return Check(digest, MISMATCH, closest)
-
-
-def check_tron(transfer: dict[str, Any], answer: dict[str, Any], token: Asset) -> Check:
-    digest = transfer.get("hash")
-    if not answer or answer.get("hash") != digest:
-        return Check(digest, MISMATCH, "the second provider does not have this transaction")
-    if answer.get("contractRet") != "SUCCESS":
-        return Check(digest, MISMATCH, f"the transaction did not succeed: {answer.get('contractRet')}")
-    if transfer.get("internal"):
-        return Check(digest, UNCHECKED, "the transaction exists, but it was moved by a contract call")
-    if token.native:
-        return Check(digest, UNCHECKED, "native TRX is not read by this script yet")
-    closest = "no matching token transfer in the transaction"
-    for item in answer.get("trc20TransferInfo") or []:
-        if item.get("contract_address") != token.address:
-            continue
-        problem = _names(transfer, item.get("from_address"), item.get("to_address"),
-                         Decimal(item.get("amount_str") or "0") / 10**int(item.get("decimals", token.decimals)))
-        if problem is None:
-            return Check(digest, CONFIRMED)
-        closest = problem
-    return Check(digest, MISMATCH, closest)
-
-
-CHECKERS: dict[str, Callable[[dict[str, Any], dict[str, Any], Asset], Check]] = {
-    "ethereum": check_ethereum, "tron": check_tron,
-}
-
-
-# -- reading ---------------------------------------------------------------------
-def _ethereum_rpc(http: httpx.Client, method: str, digest: str) -> dict[str, Any] | None:
-    """The first node with an answer: one without old history returns null for a real transaction.
-
-    None only when every node gave a clean null. A JSON-RPC error (how public
-    nodes answer when they rate-limit, with HTTP 200) is a failed node, not
-    "no such transaction": if any node failed and none answered, this raises,
-    and the transfer is unchecked rather than a mismatch."""
-    failures: list[str] = []
-    for node in ETHEREUM_NODES:
-        try:
-            response = http.post(node, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": [digest]})
-            response.raise_for_status()
-            body = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
-            failures.append(f"{node}: {type(exc).__name__}")
-            continue
-        if not isinstance(body, dict) or "error" in body or "result" not in body:
-            error = body.get("error") if isinstance(body, dict) else None
-            failures.append(f"{node}: {error.get('message') if isinstance(error, dict) else 'no result'}")
-            continue
-        if body["result"] is not None and not isinstance(body["result"], dict):
-            failures.append(f"{node}: the result is not a transaction or a receipt")
-            continue
-        if body["result"]:
-            return body["result"]
-    if failures:
-        raise httpx.HTTPError(f"{method}: no clean answer ({'; '.join(failures)})")
-    return None
-
-
-def read_live(http: httpx.Client, chain_key: str, digest: str, token: Asset) -> dict[str, Any]:
-    if chain_key == "tron":
-        response = http.get(TRONSCAN, params={"hash": digest})
-        response.raise_for_status()
-        body = response.json()
-        # {} is TronScan's "no such transaction"; a refusal can come as HTTP 200
-        # with an error and no transaction, which is a failed read, not an answer.
-        if not isinstance(body, dict):
-            raise ValueError("TronScan's answer is not an object")
-        error = body.get("Error") or body.get("error")
-        if error and not body.get("hash"):
-            raise httpx.HTTPError(f"TronScan refused: {str(error)[:60]}")
-        return body
-    answer = {"transaction": _ethereum_rpc(http, "eth_getTransactionByHash", digest)}
-    answer["receipt"] = _ethereum_rpc(http, "eth_getTransactionReceipt", digest) if answer["transaction"] else None
-    return answer
+# The checks themselves live in the app, which POST /trace/{id}/recheck runs too.
+from app.second_provider import (CONFIRMED, ETHEREUM_NODES, MISMATCH, SECONDS_BETWEEN_READS,  # noqa: E402,F401
+                                 UNCHECKED, Asset, Check, check_transfers, read_live)
 
 
 def _chain_key(report: dict[str, Any]) -> str | None:
@@ -228,26 +66,9 @@ def _chain_key(report: dict[str, Any]) -> str | None:
 
 def verify(report: dict[str, Any], read: Callable[[str, str, Asset], dict[str, Any]]) -> list[Check]:
     """One Check per transfer in the report's Appendix B. `read` gets (chain key, hash, token)."""
+    case = report.get("case") or {}
     transfers = (report.get("appendix") or {}).get("transactions") or []
-    chain_key = _chain_key(report)
-    token = _asset(chain_key, (report.get("case") or {}).get("asset")) if chain_key else None
-    checks = []
-    for transfer in transfers:
-        digest = transfer.get("hash")
-        if chain_key not in CHECKERS:
-            checks.append(Check(digest, UNCHECKED, f"this script does not cover {(report.get('case') or {}).get('chain')}"))
-        elif token is None:
-            checks.append(Check(digest, UNCHECKED, f"unknown asset {(report.get('case') or {}).get('asset')}"))
-        else:
-            try:
-                checks.append(CHECKERS[chain_key](transfer, read(chain_key, digest, token), token))
-            except (httpx.HTTPError, ValueError, KeyError) as exc:
-                checks.append(Check(digest, UNCHECKED, f"the second provider could not be read: {str(exc)[:80]}"))
-            except (TypeError, AttributeError):
-                # An answer whose parts are not the shape a provider gives (a log
-                # that is not an object, say) is a failed read, not a disagreement.
-                checks.append(Check(digest, UNCHECKED, "the second provider's answer is not in the shape expected"))
-    return checks
+    return check_transfers(_chain_key(report), case.get("asset"), transfers, read, case.get("chain"))
 
 
 def appendix_note(report: dict[str, Any]) -> str | None:

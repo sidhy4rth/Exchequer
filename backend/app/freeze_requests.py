@@ -31,7 +31,9 @@ from . import models
 
 STATUSES = ("drafted", "sent", "acknowledged", "frozen", "declined", "closed")
 OPEN_STATUSES = ("drafted", "sent", "acknowledged")
-KINDS = ("exchange", "tether", "other")
+# The first two are the urgent freeze letters (request_letters.LETTERS): each
+# letter the tool drafts can be logged as sent under its own name.
+KINDS = ("exchange", "tether", "other", "exchange-freeze", "tether-freeze")
 FOLLOW_UP_DAYS = 7
 # Bounds on what anyone can store here. Owner keys are free, so the per-owner
 # cap alone would not bound the table: MAX_TOTAL does. A real request moves

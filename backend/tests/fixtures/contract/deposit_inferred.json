@@ -540,6 +540,7 @@
        "depth": 0,
        "exchange": null,
        "excluded_by_time": 23,
+       "expanded": true,
        "flags": [],
        "id": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
        "inferred_exchange": null,
@@ -563,6 +564,7 @@
        "depth": 1,
        "exchange": null,
        "excluded_by_time": 0,
+       "expanded": false,
        "flags": [],
        "id": "0xc6aafd1238694e165bf82ce50a5bff879e822177",
        "inferred_exchange": null,
@@ -625,6 +627,115 @@
      "depth limit of 1 hops reached"
     ],
     "value_received_native": null,
+    "victim_flow": {
+     "buckets": [
+      {
+       "action": "draft_letter",
+       "addresses": [],
+       "amount": 0.0,
+       "kind": "exchange",
+       "share": 0.0
+      },
+      {
+       "action": "ask_issuer",
+       "addresses": [],
+       "amount": 0.0,
+       "kind": "held",
+       "share": 0.0
+      },
+      {
+       "action": "watch",
+       "addresses": [],
+       "amount": 0.0,
+       "kind": "left",
+       "share": 0.0
+      },
+      {
+       "action": null,
+       "addresses": [],
+       "amount": 0.0,
+       "kind": "risk",
+       "share": 0.0
+      },
+      {
+       "action": "trace_deeper",
+       "addresses": [
+        "0xc6aafd1238694e165bf82ce50a5bff879e822177"
+       ],
+       "amount": 5215.0,
+       "kind": "beyond_limit",
+       "share": 1.0
+      },
+      {
+       "action": null,
+       "addresses": [],
+       "amount": 0.0,
+       "kind": "not_followed",
+       "share": 0.0
+      },
+      {
+       "action": null,
+       "addresses": [],
+       "amount": 0.0,
+       "kind": "other",
+       "share": 0.0
+      }
+     ],
+     "lead": {
+      "path": [],
+      "reached": null
+     },
+     "links": [
+      {
+       "gross": 5215.0,
+       "source": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
+       "style": "solid",
+       "target": "0xc6aafd1238694e165bf82ce50a5bff879e822177",
+       "victim": 5215.0
+      }
+     ],
+     "method": "prorata",
+     "nodes": [
+      {
+       "address": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
+       "basis": "seed_outflow",
+       "left": 0.0,
+       "role": "seed",
+       "share": 1.0,
+       "victim_in": 5215.0
+      },
+      {
+       "address": "0xc6aafd1238694e165bf82ce50a5bff879e822177",
+       "basis": null,
+       "left": 0.0,
+       "role": "beyond_limit",
+       "share": null,
+       "victim_in": 5215.0
+      }
+     ],
+     "notes": [
+      "A display of where the victim's share may have gone. Letters state the conservative estimate, not these figures."
+     ],
+     "passed_through": [],
+     "status": "estimated",
+     "stops": [
+      {
+       "addresses": [
+        "0xc6aafd1238694e165bf82ce50a5bff879e822177"
+       ],
+       "amount": 5215.0,
+       "inferred": false,
+       "kind": "hop_limit",
+       "note": "The trace stopped at 1 hop."
+      }
+     ],
+     "totals": {
+      "accounted": 5215.0,
+      "basis": "seed_outflow",
+      "denominator": 5215.0
+     },
+     "version": 2
+    },
     "warnings": []
    },
    "swap": {
@@ -1161,6 +1272,7 @@
     "depth": 0,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [
      "peel_chain"
     ],
@@ -1186,6 +1298,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
     "inferred_exchange": null,
@@ -1209,6 +1322,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 60,
+    "expanded": true,
     "flags": [],
     "id": "0xa54dc4425190570cb5c841adf445bbecf3b249f5",
     "inferred_exchange": null,
@@ -1232,6 +1346,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 2,
+    "expanded": true,
     "flags": [],
     "id": "0x9f8bc6164a2deb9de0f72bb2a59a053da54b574e",
     "inferred_exchange": null,
@@ -1255,6 +1370,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 8,
+    "expanded": true,
     "flags": [
      "peel_chain"
     ],
@@ -1280,6 +1396,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 176,
+    "expanded": true,
     "flags": [],
     "id": "0x0d92795d84767102ef77b3d2c68482c77a962d19",
     "inferred_exchange": null,
@@ -1303,6 +1420,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0xe8fef39da2d518e54406ae53f476681b3255346e",
     "inferred_exchange": null,
@@ -1326,6 +1444,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 4,
+    "expanded": true,
     "flags": [],
     "id": "0x0fe5f319cd88910b2b6526c5b73875850eb94da6",
     "inferred_exchange": null,
@@ -1349,6 +1468,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 5,
+    "expanded": true,
     "flags": [],
     "id": "0x1f90a4f8564ede20080bd251bfdb090dd570dec4",
     "inferred_exchange": null,
@@ -1372,6 +1492,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0x978aaa06110b060279b75292f681a5ffb19da8ff",
     "inferred_exchange": null,
@@ -1395,6 +1516,7 @@
     "depth": 1,
     "exchange": null,
     "excluded_by_time": 5,
+    "expanded": true,
     "flags": [],
     "id": "0x64144d08dd276bf75b9582bc12e3be9dc2958351",
     "inferred_exchange": null,
@@ -1418,6 +1540,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 34,
+    "expanded": true,
     "flags": [],
     "id": "0x2ce910fbba65b454bbaf6a18c952a70f3bcd8299",
     "inferred_exchange": null,
@@ -1441,6 +1564,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 17,
+    "expanded": true,
     "flags": [],
     "id": "0x97053adf9c90c08e179942a597cbc6eda8b28870",
     "inferred_exchange": null,
@@ -1464,6 +1588,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 12,
+    "expanded": true,
     "flags": [],
     "id": "0xa79f7f7c92979d1139b66913fac2603295ec7866",
     "inferred_exchange": "Binance",
@@ -1487,6 +1612,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 25,
+    "expanded": true,
     "flags": [],
     "id": "0x0a48c56449428b4320648ef64d4508a1e6f14ee5",
     "inferred_exchange": null,
@@ -1510,6 +1636,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 156,
+    "expanded": true,
     "flags": [],
     "id": "0xc69c42cac383f86f37e4820e34791c0216999c6f",
     "inferred_exchange": null,
@@ -1533,6 +1660,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 96,
+    "expanded": true,
     "flags": [],
     "id": "0x2996cb3a3157dd5917e0c5d8dfc036742db53c5e",
     "inferred_exchange": null,
@@ -1556,6 +1684,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 3,
+    "expanded": true,
     "flags": [],
     "id": "0x3ac431b628c079ede4a915021878aef3d86fa181",
     "inferred_exchange": "Binance",
@@ -1579,6 +1708,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 7,
+    "expanded": true,
     "flags": [],
     "id": "0x0bee92446f1f24d900b658268f058def4032c688",
     "inferred_exchange": null,
@@ -1602,6 +1732,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 67,
+    "expanded": true,
     "flags": [],
     "id": "0x2345804130f13a04c95b3838f31564992aa1885d",
     "inferred_exchange": null,
@@ -1625,6 +1756,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     "inferred_exchange": null,
@@ -1648,6 +1780,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 67,
+    "expanded": true,
     "flags": [],
     "id": "0x62425cd6bdcb6bfe51558ea465b063486b70dc9f",
     "inferred_exchange": null,
@@ -1671,6 +1804,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [
      "peel_chain"
     ],
@@ -1696,6 +1830,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 41,
+    "expanded": true,
     "flags": [],
     "id": "0x2a408ecb7a317fbe9fa6619f1097e421a31c8450",
     "inferred_exchange": null,
@@ -1719,6 +1854,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 21,
+    "expanded": true,
     "flags": [],
     "id": "0x220fa086ff67349f081d6481b35dace07d85291f",
     "inferred_exchange": null,
@@ -1742,6 +1878,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 2,
+    "expanded": true,
     "flags": [],
     "id": "0xa91dd01f919b57d92faf6c9c9ddc0461cf8f9a31",
     "inferred_exchange": null,
@@ -1765,6 +1902,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 6,
+    "expanded": true,
     "flags": [],
     "id": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
     "inferred_exchange": null,
@@ -1788,6 +1926,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 18,
+    "expanded": true,
     "flags": [],
     "id": "0x57239e7eef76e556e8e5d21d9f1a9e1f59e967a0",
     "inferred_exchange": null,
@@ -1811,6 +1950,7 @@
     "depth": 2,
     "exchange": null,
     "excluded_by_time": 33,
+    "expanded": true,
     "flags": [],
     "id": "0xba7dd16ec300eb8a17bb919ad4e7f5cdca9c2e05",
     "inferred_exchange": null,
@@ -1834,6 +1974,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
     "inferred_exchange": null,
@@ -1857,6 +1998,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
     "inferred_exchange": null,
@@ -1880,6 +2022,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0xa1abfa21f80ecf401bd41365adbb6fef6fefdf09",
     "inferred_exchange": null,
@@ -1903,6 +2046,7 @@
     "depth": 3,
     "exchange": "Binance",
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x28c6c06298d514db089934071355e5743bf21d60",
     "inferred_exchange": null,
@@ -1926,6 +2070,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771",
     "inferred_exchange": null,
@@ -1949,6 +2094,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x58872ee5b0757d030430d894b7a1199d637b42f4",
     "inferred_exchange": null,
@@ -1972,6 +2118,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x0058517bb2e09a9679bd1627f2056670fbbbde2a",
     "inferred_exchange": null,
@@ -1995,6 +2142,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x6112e3ab1ab99ba6c37125ac27ec51b5e950b58a",
     "inferred_exchange": null,
@@ -2018,6 +2166,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [
      "peel_chain"
     ],
@@ -2043,6 +2192,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [
      "frozen"
     ],
@@ -2068,6 +2218,7 @@
     "depth": 3,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "0x8feab81d36e7576107d5de0758c1b839be31b4f6",
     "inferred_exchange": null,
@@ -2252,6 +2403,8 @@
    "category": "frozen",
    "depth": 3,
    "entity": "Tether (USDT freeze)",
+   "event_tx": "0xf678198e4cdb85680daba0bb940645ee230c1544ed09c2615fcd311c6b164e71",
+   "frozen_on": "2021-08-05",
    "is_terminal": false,
    "label": "USDT frozen by Tether on 2021-08-05",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xf678198e4cdb85680daba0bb940645ee230c1544ed09c2615fcd311c6b164e71",
@@ -3325,5 +3478,758 @@
   "depth limit of 3 hops reached"
  ],
  "value_received_native": 214.008829,
+ "victim_flow": {
+  "buckets": [
+   {
+    "action": "draft_letter",
+    "addresses": [
+     "0xa79f7f7c92979d1139b66913fac2603295ec7866",
+     "0x3ac431b628c079ede4a915021878aef3d86fa181"
+    ],
+    "amount": 1.227466723,
+    "kind": "exchange",
+    "share": 0.03438
+   },
+   {
+    "action": "ask_issuer",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "held",
+    "share": 0.0
+   },
+   {
+    "action": "watch",
+    "addresses": [
+     "0xc69c42cac383f86f37e4820e34791c0216999c6f",
+     "0x0bee92446f1f24d900b658268f058def4032c688",
+     "0x2345804130f13a04c95b3838f31564992aa1885d",
+     "0x97053adf9c90c08e179942a597cbc6eda8b28870",
+     "0x0a48c56449428b4320648ef64d4508a1e6f14ee5"
+    ],
+    "amount": 0.372951152,
+    "kind": "left",
+    "share": 0.010446
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "risk",
+    "share": 0.0
+   },
+   {
+    "action": "trace_deeper",
+    "addresses": [
+     "0xa1abfa21f80ecf401bd41365adbb6fef6fefdf09",
+     "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
+     "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+     "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771",
+     "0x58872ee5b0757d030430d894b7a1199d637b42f4",
+     "0x0058517bb2e09a9679bd1627f2056670fbbbde2a",
+     "0x6112e3ab1ab99ba6c37125ac27ec51b5e950b58a"
+    ],
+    "amount": 6.471320711,
+    "kind": "beyond_limit",
+    "share": 0.181255
+   },
+   {
+    "action": null,
+    "addresses": [
+     "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573"
+    ],
+    "amount": 26.203701636,
+    "kind": "not_followed",
+    "share": 0.73394
+   },
+   {
+    "action": null,
+    "addresses": [
+     "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+     "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573"
+    ],
+    "amount": 1.427340779,
+    "kind": "other",
+    "share": 0.039978
+   }
+  ],
+  "lead": {
+   "path": [
+    "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "0xa79f7f7c92979d1139b66913fac2603295ec7866"
+   ],
+   "reached": 1.089655672
+  },
+  "links": [
+   {
+    "gross": 35.702781,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "victim": 35.702781
+   },
+   {
+    "gross": 30.99983,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0xa54dc4425190570cb5c841adf445bbecf3b249f5",
+    "victim": 0.0
+   },
+   {
+    "gross": 5.0,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0x9f8bc6164a2deb9de0f72bb2a59a053da54b574e",
+    "victim": 0.0
+   },
+   {
+    "gross": 3.767714,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0x02dbdc12d127826fa1cbe887b59755a322b8c125",
+    "victim": 0.0
+   },
+   {
+    "gross": 3.54,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0x0d92795d84767102ef77b3d2c68482c77a962d19",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.399665,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0xe8fef39da2d518e54406ae53f476681b3255346e",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.200209,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0x0fe5f319cd88910b2b6526c5b73875850eb94da6",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.09,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0x1f90a4f8564ede20080bd251bfdb090dd570dec4",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.060118,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0x978aaa06110b060279b75292f681a5ffb19da8ff",
+    "victim": 0.0
+   },
+   {
+    "gross": 1.974673,
+    "source": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "style": "solid",
+    "target": "0x64144d08dd276bf75b9582bc12e3be9dc2958351",
+    "victim": 0.0
+   },
+   {
+    "gross": 1.37,
+    "source": "0x64144d08dd276bf75b9582bc12e3be9dc2958351",
+    "style": "dashed",
+    "target": "0xba7dd16ec300eb8a17bb919ad4e7f5cdca9c2e05",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.060052,
+    "source": "0x978aaa06110b060279b75292f681a5ffb19da8ff",
+    "style": "dashed",
+    "target": "0x57239e7eef76e556e8e5d21d9f1a9e1f59e967a0",
+    "victim": 0.0
+   },
+   {
+    "gross": 3.287,
+    "source": "0x57239e7eef76e556e8e5d21d9f1a9e1f59e967a0",
+    "style": "dashed",
+    "target": "0x8feab81d36e7576107d5de0758c1b839be31b4f6",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.1,
+    "source": "0x1f90a4f8564ede20080bd251bfdb090dd570dec4",
+    "style": "dashed",
+    "target": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.098943,
+    "source": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
+    "style": "dashed",
+    "target": "0x881d40237659c251811cec9c364ef91dc08d300c",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.20019,
+    "source": "0x0fe5f319cd88910b2b6526c5b73875850eb94da6",
+    "style": "dashed",
+    "target": "0xa91dd01f919b57d92faf6c9c9ddc0461cf8f9a31",
+    "victim": 0.0
+   },
+   {
+    "gross": 2.399556,
+    "source": "0xe8fef39da2d518e54406ae53f476681b3255346e",
+    "style": "dashed",
+    "target": "0x220fa086ff67349f081d6481b35dace07d85291f",
+    "victim": 0.0
+   },
+   {
+    "gross": 3.53997,
+    "source": "0x0d92795d84767102ef77b3d2c68482c77a962d19",
+    "style": "dashed",
+    "target": "0x2a408ecb7a317fbe9fa6619f1097e421a31c8450",
+    "victim": 0.0
+   },
+   {
+    "gross": 3.767713,
+    "source": "0x02dbdc12d127826fa1cbe887b59755a322b8c125",
+    "style": "dashed",
+    "target": "0xaa2773924d292eab3fac4bb9db3ded56c4555555",
+    "victim": 0.0
+   },
+   {
+    "gross": 3.76771,
+    "source": "0xaa2773924d292eab3fac4bb9db3ded56c4555555",
+    "style": "dashed",
+    "target": "0x6248f79e17a46d85bc6779e0dc7944b3741b9c28",
+    "victim": 0.0
+   },
+   {
+    "gross": 5.013455,
+    "source": "0x9f8bc6164a2deb9de0f72bb2a59a053da54b574e",
+    "style": "dashed",
+    "target": "0x62425cd6bdcb6bfe51558ea465b063486b70dc9f",
+    "victim": 0.0
+   },
+   {
+    "gross": 31.0,
+    "source": "0xa54dc4425190570cb5c841adf445bbecf3b249f5",
+    "style": "dashed",
+    "target": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+    "victim": 0.0
+   },
+   {
+    "gross": 640.7,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "faded",
+    "target": "0x2ce910fbba65b454bbaf6a18c952a70f3bcd8299",
+    "victim": 3.262213023
+   },
+   {
+    "gross": 500.020967,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "faded",
+    "target": "0x97053adf9c90c08e179942a597cbc6eda8b28870",
+    "victim": 2.54592619
+   },
+   {
+    "gross": 214.008829,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "dashed",
+    "target": "0xa79f7f7c92979d1139b66913fac2603295ec7866",
+    "victim": 1.089655672
+   },
+   {
+    "gross": 185.008526,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "faded",
+    "target": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "victim": 0.941996602
+   },
+   {
+    "gross": 129.789905,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "faded",
+    "target": "0x0a48c56449428b4320648ef64d4508a1e6f14ee5",
+    "victim": 0.660843325
+   },
+   {
+    "gross": 94.05,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "faded",
+    "target": "0xc69c42cac383f86f37e4820e34791c0216999c6f",
+    "victim": 0.478868636
+   },
+   {
+    "gross": 51.647137,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "faded",
+    "target": "0x2996cb3a3157dd5917e0c5d8dfc036742db53c5e",
+    "victim": 0.26296857
+   },
+   {
+    "gross": 27.066148,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "dashed",
+    "target": "0x3ac431b628c079ede4a915021878aef3d86fa181",
+    "victim": 0.137811051
+   },
+   {
+    "gross": 14.871642,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "faded",
+    "target": "0x0bee92446f1f24d900b658268f058def4032c688",
+    "victim": 0.07572103
+   },
+   {
+    "gross": 8.46,
+    "source": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "style": "faded",
+    "target": "0x2345804130f13a04c95b3838f31564992aa1885d",
+    "victim": 0.043075265
+   },
+   {
+    "gross": 1.427432,
+    "source": "0x2345804130f13a04c95b3838f31564992aa1885d",
+    "style": "dashed",
+    "target": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "victim": 0.007267968
+   },
+   {
+    "gross": 0.02,
+    "source": "0x2345804130f13a04c95b3838f31564992aa1885d",
+    "style": "dashed",
+    "target": "0x6112e3ab1ab99ba6c37125ac27ec51b5e950b58a",
+    "victim": 0.000101833
+   },
+   {
+    "gross": 197.254233,
+    "source": "0x2996cb3a3157dd5917e0c5d8dfc036742db53c5e",
+    "style": "dashed",
+    "target": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "victim": 0.26296857
+   },
+   {
+    "gross": 42.24723,
+    "source": "0xc69c42cac383f86f37e4820e34791c0216999c6f",
+    "style": "dashed",
+    "target": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "victim": 0.215107638
+   },
+   {
+    "gross": 0.413539,
+    "source": "0xc69c42cac383f86f37e4820e34791c0216999c6f",
+    "style": "dashed",
+    "target": "0x58872ee5b0757d030430d894b7a1199d637b42f4",
+    "victim": 0.002105591
+   },
+   {
+    "gross": 0.025739,
+    "source": "0xc69c42cac383f86f37e4820e34791c0216999c6f",
+    "style": "dashed",
+    "target": "0x0058517bb2e09a9679bd1627f2056670fbbbde2a",
+    "victim": 0.000131054
+   },
+   {
+    "gross": 129.789888,
+    "source": "0x0a48c56449428b4320648ef64d4508a1e6f14ee5",
+    "style": "dashed",
+    "target": "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771",
+    "victim": 0.660843238
+   },
+   {
+    "gross": 500.020924,
+    "source": "0x97053adf9c90c08e179942a597cbc6eda8b28870",
+    "style": "dashed",
+    "target": "0xa1abfa21f80ecf401bd41365adbb6fef6fefdf09",
+    "victim": 2.545925972
+   },
+   {
+    "gross": 335.32,
+    "source": "0x2ce910fbba65b454bbaf6a18c952a70f3bcd8299",
+    "style": "dashed",
+    "target": "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
+    "victim": 1.707328345
+   },
+   {
+    "gross": 305.38,
+    "source": "0x2ce910fbba65b454bbaf6a18c952a70f3bcd8299",
+    "style": "dashed",
+    "target": "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+    "victim": 1.554884678
+   }
+  ],
+  "method": "prorata",
+  "nodes": [
+   {
+    "address": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+    "basis": "seed_outflow",
+    "left": 0.0,
+    "role": "seed",
+    "share": 0.397869,
+    "victim_in": 35.702781
+   },
+   {
+    "address": "0x64144d08dd276bf75b9582bc12e3be9dc2958351",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0xba7dd16ec300eb8a17bb919ad4e7f5cdca9c2e05",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x978aaa06110b060279b75292f681a5ffb19da8ff",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x57239e7eef76e556e8e5d21d9f1a9e1f59e967a0",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x8feab81d36e7576107d5de0758c1b839be31b4f6",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x1f90a4f8564ede20080bd251bfdb090dd570dec4",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x35cf7c174375653e9f28d388aada53e6c34d58f7",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x881d40237659c251811cec9c364ef91dc08d300c",
+    "basis": null,
+    "left": 0.0,
+    "role": "other",
+    "share": null,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x0fe5f319cd88910b2b6526c5b73875850eb94da6",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0xa91dd01f919b57d92faf6c9c9ddc0461cf8f9a31",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0xe8fef39da2d518e54406ae53f476681b3255346e",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x220fa086ff67349f081d6481b35dace07d85291f",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x0d92795d84767102ef77b3d2c68482c77a962d19",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x2a408ecb7a317fbe9fa6619f1097e421a31c8450",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x02dbdc12d127826fa1cbe887b59755a322b8c125",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0xaa2773924d292eab3fac4bb9db3ded56c4555555",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x6248f79e17a46d85bc6779e0dc7944b3741b9c28",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x9f8bc6164a2deb9de0f72bb2a59a053da54b574e",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0x62425cd6bdcb6bfe51558ea465b063486b70dc9f",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0xa54dc4425190570cb5c841adf445bbecf3b249f5",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.0,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+    "basis": null,
+    "left": 0.0,
+    "role": "not_followed",
+    "share": null,
+    "victim_in": 0.0
+   },
+   {
+    "address": "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573",
+    "basis": "prorata",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.005092,
+    "victim_in": 35.702781
+   },
+   {
+    "address": "0x2345804130f13a04c95b3838f31564992aa1885d",
+    "basis": "traced_only",
+    "left": 0.035705464,
+    "role": "wallet",
+    "share": 0.005092,
+    "victim_in": 0.043075265
+   },
+   {
+    "address": "0x6112e3ab1ab99ba6c37125ac27ec51b5e950b58a",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 0.000101833
+   },
+   {
+    "address": "0x0bee92446f1f24d900b658268f058def4032c688",
+    "basis": "traced_only",
+    "left": 0.07572103,
+    "role": "wallet",
+    "share": 0.005092,
+    "victim_in": 0.07572103
+   },
+   {
+    "address": "0x3ac431b628c079ede4a915021878aef3d86fa181",
+    "basis": null,
+    "left": 0.0,
+    "role": "exchange",
+    "share": null,
+    "victim_in": 0.137811051
+   },
+   {
+    "address": "0x2996cb3a3157dd5917e0c5d8dfc036742db53c5e",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.001333,
+    "victim_in": 0.26296857
+   },
+   {
+    "address": "0xc69c42cac383f86f37e4820e34791c0216999c6f",
+    "basis": "traced_only",
+    "left": 0.261524352,
+    "role": "wallet",
+    "share": 0.005092,
+    "victim_in": 0.478868636
+   },
+   {
+    "address": "0x0058517bb2e09a9679bd1627f2056670fbbbde2a",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 0.000131054
+   },
+   {
+    "address": "0x58872ee5b0757d030430d894b7a1199d637b42f4",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 0.002105591
+   },
+   {
+    "address": "0x0a48c56449428b4320648ef64d4508a1e6f14ee5",
+    "basis": "traced_only",
+    "left": 8.7e-08,
+    "role": "wallet",
+    "share": 0.005092,
+    "victim_in": 0.660843325
+   },
+   {
+    "address": "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 0.660843238
+   },
+   {
+    "address": "0x97053adf9c90c08e179942a597cbc6eda8b28870",
+    "basis": "traced_only",
+    "left": 2.19e-07,
+    "role": "wallet",
+    "share": 0.005092,
+    "victim_in": 2.54592619
+   },
+   {
+    "address": "0xa1abfa21f80ecf401bd41365adbb6fef6fefdf09",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 2.545925972
+   },
+   {
+    "address": "0x2ce910fbba65b454bbaf6a18c952a70f3bcd8299",
+    "basis": "traced_only",
+    "left": 0.0,
+    "role": "wallet",
+    "share": 0.005092,
+    "victim_in": 3.262213023
+   },
+   {
+    "address": "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 1.554884678
+   },
+   {
+    "address": "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
+    "basis": null,
+    "left": 0.0,
+    "role": "beyond_limit",
+    "share": null,
+    "victim_in": 1.707328345
+   },
+   {
+    "address": "0xa79f7f7c92979d1139b66913fac2603295ec7866",
+    "basis": null,
+    "left": 0.0,
+    "role": "exchange",
+    "share": null,
+    "victim_in": 1.089655672
+   }
+  ],
+  "notes": [
+   "A display of where the victim's share may have gone. Letters state the conservative estimate, not these figures.",
+   "Off the lead route a wallet's share counts only the money the trace followed into it, so those figures are upper bounds and drawn dashed.",
+   "Some money came back to a wallet earlier on the route. It is counted once, under other.",
+   "Money came back to the reported wallet, so the starting figure is less than it sent. Its transfer on the route to the exchange keeps its value, as pro-rata's does, and its other transfers share the rest."
+  ],
+  "passed_through": [],
+  "status": "estimated",
+  "stops": [
+   {
+    "addresses": [
+     "0xa1abfa21f80ecf401bd41365adbb6fef6fefdf09",
+     "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f",
+     "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+     "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771",
+     "0x58872ee5b0757d030430d894b7a1199d637b42f4",
+     "0x0058517bb2e09a9679bd1627f2056670fbbbde2a",
+     "0x6112e3ab1ab99ba6c37125ac27ec51b5e950b58a"
+    ],
+    "amount": 6.471320711,
+    "inferred": false,
+    "kind": "hop_limit",
+    "note": "The trace stopped at 3 hops."
+   },
+   {
+    "addresses": [
+     "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573"
+    ],
+    "amount": 26.203701636,
+    "inferred": false,
+    "kind": "fanout_limit",
+    "note": "Only the 10 largest destinations were followed at 0xa9ac…4573."
+   },
+   {
+    "addresses": [
+     "0xa79f7f7c92979d1139b66913fac2603295ec7866",
+     "0x3ac431b628c079ede4a915021878aef3d86fa181"
+    ],
+    "amount": 1.227466723,
+    "inferred": true,
+    "kind": "exchange",
+    "note": "Reached probable exchange deposit addresses, inferred and not confirmed: a letter asking the exchange to confirm them is the next step."
+   },
+   {
+    "addresses": [
+     "0x0bee92446f1f24d900b658268f058def4032c688"
+    ],
+    "amount": 0.07572103,
+    "inferred": false,
+    "kind": "no_outflow",
+    "note": "Nothing was seen leaving after the money arrived, so it may still be there."
+   }
+  ],
+  "totals": {
+   "accounted": 35.702781001,
+   "basis": "seed_outflow",
+   "denominator": 35.702781
+  },
+  "version": 2
+ },
  "warnings": []
 }

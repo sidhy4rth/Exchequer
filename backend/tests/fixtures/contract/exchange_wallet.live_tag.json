@@ -149,6 +149,7 @@
     "depth": 0,
     "exchange": null,
     "excluded_by_time": 0,
+    "expanded": true,
     "flags": [],
     "id": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
     "inferred_exchange": null,
@@ -172,6 +173,7 @@
     "depth": 1,
     "exchange": "Flipster",
     "excluded_by_time": 0,
+    "expanded": false,
     "flags": [],
     "id": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
     "inferred_exchange": null,
@@ -426,5 +428,117 @@
  "truncated": false,
  "truncation_reasons": [],
  "value_received_native": 3712.5211,
+ "victim_flow": {
+  "buckets": [
+   {
+    "action": "draft_letter",
+    "addresses": [
+     "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8"
+    ],
+    "amount": 3712.5211,
+    "kind": "exchange",
+    "share": 1.0
+   },
+   {
+    "action": "ask_issuer",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "held",
+    "share": 0.0
+   },
+   {
+    "action": "watch",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "left",
+    "share": 0.0
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "risk",
+    "share": 0.0
+   },
+   {
+    "action": "trace_deeper",
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "beyond_limit",
+    "share": 0.0
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "not_followed",
+    "share": 0.0
+   },
+   {
+    "action": null,
+    "addresses": [],
+    "amount": 0.0,
+    "kind": "other",
+    "share": 0.0
+   }
+  ],
+  "lead": {
+   "path": [
+    "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+    "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8"
+   ],
+   "reached": 3712.5211
+  },
+  "links": [
+   {
+    "gross": 3712.5211,
+    "source": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+    "style": "solid",
+    "target": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "victim": 3712.5211
+   }
+  ],
+  "method": "prorata",
+  "nodes": [
+   {
+    "address": "TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja",
+    "basis": "seed_outflow",
+    "left": 0.0,
+    "role": "seed",
+    "share": 1.0,
+    "victim_in": 3712.5211
+   },
+   {
+    "address": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+    "basis": null,
+    "left": 0.0,
+    "role": "exchange",
+    "share": null,
+    "victim_in": 3712.5211
+   }
+  ],
+  "notes": [
+   "A display of where the victim's share may have gone. Letters state the conservative estimate, not these figures."
+  ],
+  "passed_through": [],
+  "status": "estimated",
+  "stops": [
+   {
+    "addresses": [
+     "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8"
+    ],
+    "amount": 3712.5211,
+    "inferred": false,
+    "kind": "exchange",
+    "note": "Reached an exchange: tracing ends here, and a letter to the exchange is the next step."
+   }
+  ],
+  "totals": {
+   "accounted": 3712.5211,
+   "basis": "seed_outflow",
+   "denominator": 3712.5211
+  },
+  "version": 2
+ },
  "warnings": []
 }

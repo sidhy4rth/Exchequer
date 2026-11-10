@@ -233,6 +233,8 @@ traces = SlidingWindowLimiter(config.TRACES_PER_HOUR_PER_CLIENT, 3600)
 watches = SlidingWindowLimiter(config.WATCHES_PER_HOUR_PER_CLIENT, 3600)
 # Every freeze-request create or update is a database write (routes/requests.py).
 request_writes = SlidingWindowLimiter(config.REQUEST_WRITES_PER_HOUR_PER_CLIENT, 3600)
+# A recheck rereads a case's cited transfers from a second provider (routes/recheck.py).
+rechecks = SlidingWindowLimiter(config.RECHECKS_PER_HOUR_PER_CLIENT, 3600)
 
 # Ceilings over every client, under one key. The per-client limits above trust
 # the address the proxy headers report, which a client may be able to set;
@@ -240,6 +242,7 @@ request_writes = SlidingWindowLimiter(config.REQUEST_WRITES_PER_HOUR_PER_CLIENT,
 TOTAL = "all"
 traces_total = SlidingWindowLimiter(config.TRACES_PER_HOUR_TOTAL, 3600)
 watches_total = SlidingWindowLimiter(config.WATCHES_PER_HOUR_TOTAL, 3600)
+rechecks_total = SlidingWindowLimiter(config.RECHECKS_PER_HOUR_TOTAL, 3600)
 
 
 def charge(per_client: SlidingWindowLimiter, total: SlidingWindowLimiter, client: str,
