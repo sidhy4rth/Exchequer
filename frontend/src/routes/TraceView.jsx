@@ -376,8 +376,11 @@ export default function TraceView() {
 
   useEffect(() => {
     const onKey = (e) => {
+      // A bare P only: Ctrl+P and Cmd+P print the page (the Letters tab
+      // says to print a letter), and nothing typed into a field counts.
       if (e.key !== 'p' && e.key !== 'P') return
-      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      if (e.target && (e.target.isContentEditable || /input|textarea|select/i.test(e.target.tagName))) return
       if (result && !presenting) { e.preventDefault(); setPresenting(true) }
     }
     window.addEventListener('keydown', onKey)
@@ -433,8 +436,8 @@ export default function TraceView() {
       <div className="head">
         <span className="micro">Money flow · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
         <span className="seg">
-          <button className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
-          <button className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
+          <button className={view === 'flow' ? 'on' : ''} aria-pressed={view === 'flow'} onClick={() => setView('flow')}>By hop</button>
+          <button className={view === 'bubbles' ? 'on' : ''} aria-pressed={view === 'bubbles'} onClick={() => setView('bubbles')}>Bubbles</button>
         </span>
       </div>
       {view === 'flow'
@@ -671,7 +674,7 @@ export default function TraceView() {
                 <div className="card graph-card" key={`${f.address}-${f.asset}`}>
                   <div className="head">
                     <span className="micro">
-                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${plain(f.result.exchange_label)} · ${f.result.confidence?.toFixed(2)}` : 'no exchange reached'}
+                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${plain(f.result.exchange_label)}${f.result.confidence == null ? '' : ` · ${bandOf(f.result.confidence)} confidence`}` : 'no exchange reached'}
                     </span>
                     <span className="note">from <Address value={f.address} head={8} tail={6} /> · swap tx <Address value={f.swap?.tx} head={8} tail={6} /></span>
                   </div>

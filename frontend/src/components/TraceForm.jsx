@@ -9,15 +9,16 @@ import CaseRefField, { refOk, tidyRef, useSignedIn } from './CaseRefField'
 import './TraceForm.css'
 
 // The ten verified traces in DEMO.md, one click each. Addresses and hooks
-// are copied from that file; the numbers there were measured cold on
-// 15 September 2026. The console offers three of them as recorded cases.
+// are copied from that file; where a hook gives a band or hops, it is the
+// recording's (backend/data/recorded_demos.json, a test pins the two). The
+// console offers three of them as recorded cases.
 export const DEMOS = [
   { n: '01', address: '0x7c3e9bab6715e4040f013e865b193b0209642e36', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
     title: 'No cash-out found', hook: 'Three hops, no exchange, no pattern. The score reads "not applicable", not 0 — finding nothing is a result.' },
   { n: '02', address: '0xbc1ada2e98dd0087cf4cc0c8bd0e6276c82fadc9', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
     title: 'The pattern that stopped firing', hook: 'An amount split fired here on 15 Sep and not on 23 Sep — same rule, the chain moved. Why no pattern is ever scored.' },
   { n: '03', address: '0x536c4921d1aafde6a5cda882fb5ca046f3601c65', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
-    title: 'An attribution that keeps moving', hook: 'Changed six times on live data, each for a stated reason. Two days ago a weak OKX lead (≈ 1.65 of 951 ETH); now the wallet paid a Binance deposit address directly — 1 hop, 0.875.' },
+    title: 'An attribution that keeps moving', hook: 'Changed six times on live data, each for a stated reason. The current recording reaches a probable Binance deposit address, inferred, in 2 hops — low confidence.' },
   { n: '04', address: '0x536c4921d1aafde6a5cda882fb5ca046f3601c65', chain: 'ethereum', asset: 'ETH', depth: 1, direction: 'incoming',
     title: 'Who paid the offender', hook: 'The same wallet asked the other question: ten addresses funded it, none an exchange — ten candidate complaints.' },
   { n: '05', address: '0x60d02e0956e2f3795167c15ba61ab452c85c2533', chain: 'ethereum', asset: 'ETH', depth: 1, direction: 'incoming',
@@ -33,7 +34,7 @@ export const DEMOS = [
   { n: '10', address: '0x000000000532b45f47779fce440748893b257865', chain: 'ethereum', asset: 'ETH', depth: 3, direction: 'outgoing',
     title: 'Three complaints, one operation', hook: 'Shares 60 and 46 intermediaries with two other stored phishing wallets — and all three reach the same known phishing wallet.' },
   { n: '11', address: 'TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
-    title: 'Frozen by Tether', hook: 'A Tron wallet whose USDT Tether froze on 11 Sep 2026 — as it did the next wallet — splits 45,968 USDT onward; it reaches Binance-Hot 7 at 0.80.' },
+    title: 'Frozen by Tether', hook: 'A Tron wallet whose USDT Tether froze on 11 Sep 2026 — as it did the next wallet. About 635 USDT reach Binance-Hot 7 in 2 hops, mixed into 45,968: low confidence.' },
   { n: '12', address: 'TB2KXtbmFJa8PaCPbRXrJrHkZSPU22eqja', chain: 'tron', asset: 'USDT', depth: 2, direction: 'outgoing',
     title: 'An exchange the file does not know', hook: 'Flipster is not among the 41 labelled Tron wallets; TronScan’s own tag, read live, names it with high confidence.' },
 ]

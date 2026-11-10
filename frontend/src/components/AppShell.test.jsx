@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -206,6 +206,58 @@ describe('the header search', () => {
     expect(box).toHaveAccessibleDescription(alert.textContent)
     await user.type(box, 'x')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('takes the not-recognised note away on another page, on Escape and when focus leaves', async () => {
+    const user = userEvent.setup()
+    const box = await search('abc')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    await user.click(sidebar().getByRole('link', { name: 'Cases' }))
+    expect(screen.getByTestId('landed')).toHaveTextContent(/^\/cases$/)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(box).not.toHaveAttribute('aria-invalid')
+
+    await user.type(box, 'abc{Enter}')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    await user.clear(box)
+    await user.type(box, 'abc{Enter}')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    await user.tab()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('the page title', () => {
+  it('names the page, and a case by what is open inside it', async () => {
+    const user = userEvent.setup()
+    const first = document.title
+    at('/cases')
+    expect(document.title).toBe('Cases · Exchequer')
+    await user.click(sidebar().getByRole('link', { name: 'Watchlist' }))
+    expect(document.title).toBe('Watchlist · Exchequer')
+    await user.click(sidebar().getByRole('link', { name: 'Console' }))
+    expect(document.title).toBe('Console · Exchequer')
+    cleanup()
+    expect(document.title).toBe(first)
+    at('/demo/11')
+    expect(document.title).toBe('Verified example 11 · Cases · Exchequer')
+  })
+
+  it('uses the address a case page names once it knows it', () => {
+    function Named() {
+      useCrumb('TUVNGw2z3G…Krve5i3ts')
+      return null
+    }
+    stubFetch({ '/chains': { body: chains } })
+    render(
+      <MemoryRouter initialEntries={['/case/3f2504e0-4f89-41d3-9a0c-0305e82c3301']}>
+        <Routes><Route element={<AppShell />}><Route path="*" element={<Named />} /></Route></Routes>
+      </MemoryRouter>,
+    )
+    expect(document.title).toBe('TUVNGw2z3G…Krve5i3ts · Cases · Exchequer')
   })
 })
 

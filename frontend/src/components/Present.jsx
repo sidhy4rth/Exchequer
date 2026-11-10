@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import FlowView from './FlowView'
 import GraphView from './GraphView'
 import ExportButton, { DraftLetters } from './ExportButton'
@@ -28,6 +28,26 @@ export default function Present({ result, related = [], unit, onClose }) {
   const [view, setView] = useState('flow') // 'flow' | 'bubbles', as in the console
   const reverse = result.direction === 'incoming'
   const total = 4
+
+  // A modal over the whole page: while it is open everything else is inert,
+  // so Tab cannot reach the shell hidden behind it, and the keyboard starts
+  // on its way out and goes back where it was on close.
+  const root = useRef(null)
+  const exit = useRef(null)
+  useEffect(() => {
+    const back = document.activeElement
+    const made = []
+    for (let n = root.current; n?.parentElement && n !== document.body; n = n.parentElement) {
+      for (const other of n.parentElement.children) {
+        if (other !== n && !other.hasAttribute('inert')) { other.setAttribute('inert', ''); made.push(other) }
+      }
+    }
+    exit.current?.focus()
+    return () => {
+      for (const other of made) other.removeAttribute('inert')
+      if (back?.isConnected) back.focus()
+    }
+  }, [])
 
   const step = useCallback((d) => setScreen((s) => Math.max(0, Math.min(total - 1, s + d))), [])
   useEffect(() => {
@@ -91,7 +111,7 @@ export default function Present({ result, related = [], unit, onClose }) {
             <p className="pr-lede">
               The {unit} was swapped for {result.followed_attribution.asset}, and the {result.followed_attribution.asset} reached{' '}
               <span className="mono">{plain(result.followed_attribution.exchange_label) ?? short(result.followed_attribution.exchange_address)}</span>{' '}
-              {result.followed_attribution.hop_count} hop{result.followed_attribution.hop_count === 1 ? '' : 's'} after the swap — confidence {result.followed_attribution.confidence?.toFixed(2)} within that trace.
+              {result.followed_attribution.hop_count} hop{result.followed_attribution.hop_count === 1 ? '' : 's'} after the swap{result.followed_attribution.confidence == null ? '' : `, ${bandOf(result.followed_attribution.confidence)} confidence within that trace`}.
             </p>
             <div className="pr-cite">
               <span className="micro">{result.followed_attribution.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
@@ -137,8 +157,8 @@ export default function Present({ result, related = [], unit, onClose }) {
         <span className="pr-rowright">
           <span className="micro">{view === 'flow' ? (reverse ? 'money flows into the reported wallet, right' : 'the traced funds in green, left to right') : 'bubble area = value moved · arrows the way the money went'}</span>
           <span className="seg">
-            <button type="button" className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
-            <button type="button" className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
+            <button type="button" className={view === 'flow' ? 'on' : ''} aria-pressed={view === 'flow'} onClick={() => setView('flow')}>By hop</button>
+            <button type="button" className={view === 'bubbles' ? 'on' : ''} aria-pressed={view === 'bubbles'} onClick={() => setView('bubbles')}>Bubbles</button>
           </span>
         </span>
       </div>
@@ -201,10 +221,10 @@ export default function Present({ result, related = [], unit, onClose }) {
   ]
 
   return (
-    <div className="present" role="dialog" aria-label="Present the case">
+    <div ref={root} className="present" role="dialog" aria-modal="true" aria-label="Present the case">
       <div className="pr-top">
         <span className="pr-chrome"><span className="micro ink">Exchequer</span><span className="micro">{result.case_id ? `Case ${short(result.case_id)}` : result.recorded_demo ? `Verified example ${String(result.recorded_demo).padStart(2, '0')}` : 'Case'}</span><span className="micro">{short(result.address)}</span></span>
-        <span className="pr-chrome"><span className="micro amber">Restricted</span><span className="micro">{screen + 1} / {total}</span><button type="button" className="quiet" onClick={onClose} title="Back to the console (Esc)">Esc · console</button></span>
+        <span className="pr-chrome"><span className="micro amber">Restricted</span><span className="micro">{screen + 1} / {total}</span><button ref={exit} type="button" className="quiet" onClick={onClose} title="Back to the console (Esc)">Esc · console</button></span>
       </div>
       {screens[screen]}
       <div className="pr-dots" aria-hidden="true">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { addWatch, fetchWatches, removeWatch } from '../api'
 import { plain } from '../text'
 import CaseRefField, { refOk, tidyRef, useSignedIn } from './CaseRefField'
@@ -55,7 +56,7 @@ export default function WatchPanel({ result, extra = null }) {
     <details className="card sec" open>
       <summary><span className="micro">Watch for movement</span><span className="note">alerts when funds leave</span></summary>
       <div className="body watch-panel">
-        {watcher === null && <p className="note">Could not reach the watch service; press Check now on the home page before relying on a watch.</p>}
+        {watcher === null && <p className="note">Could not reach the watch service; press Check now on the <Link to="/watchlist">Watchlist</Link> page before relying on a watch.</p>}
         {watcher?.enabled === false && <p className="note">Automatic checks are off on this site: a watch is checked only when someone presses Check now in the watchlist.</p>}
         {candidates.map((c) => {
           const w = watching(c.address)
@@ -80,7 +81,7 @@ export default function WatchPanel({ result, extra = null }) {
         {error && <p className="error-line">{error}</p>}
         <p className="note">
           {watcher?.enabled === true ? `Checked automatically about every ${Math.round((watcher.interval_seconds ?? 600) / 60)} min. ` : ''}
-          Alerts appear on the home page, in this browser only. An alert into an exchange wallet is the moment to send the freeze request.
+          Alerts appear on the <Link to="/watchlist">Watchlist</Link> page, in this browser only. An alert into an exchange wallet is the moment to send the freeze request.
         </p>
       </div>
     </details>

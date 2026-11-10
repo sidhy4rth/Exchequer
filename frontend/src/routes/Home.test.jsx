@@ -298,6 +298,33 @@ describe('the coverage tables', () => {
   })
 })
 
+describe('the mixers note under the coverage tables', () => {
+  const card = () => within(screen.getByRole('group', { name: 'Coverage' }))
+  it('never says the count is zero beside a count that is not', async () => {
+    const tagged = { ...health, chains: { ...health.chains, ethereum: { ...health.chains.ethereum, risk_labels: { ...health.chains.ethereum.risk_labels, mixer: 40 } } } }
+    renderHome({ chains: tagged })
+    await loaded()
+    expect(card().getByRole('table', { name: 'Risk screening per chain', hidden: true })).toHaveTextContent('40')
+    expect(card().queryByText(/count is zero|have none/)).not.toBeInTheDocument()
+    expect(card().getByText(/Mixers here are explorer-tagged/)).toBeInTheDocument()
+  })
+
+  it('never claims every counted mixer stops a trace (only a pinned pool or entry point does)', async () => {
+    const tagged = { ...health, chains: { ...health.chains, ethereum: { ...health.chains.ethereum, risk_labels: { ...health.chains.ethereum.risk_labels, mixer: 40 } } } }
+    renderHome({ chains: tagged })
+    await loaded()
+    expect(card().queryByText(/A trace stops at a mixer\./)).not.toBeInTheDocument()
+    expect(card().getByText(/A trace stops at a mixer's pool or entry point\./)).toBeInTheDocument()
+  })
+
+  it('says why there are none only when every chain has none', async () => {
+    renderHome()
+    await loaded()
+    expect(card().getByText(/these chains have none/)).toBeInTheDocument()
+    expect(card().queryByText(/explorer-tagged; /)).not.toBeInTheDocument()
+  })
+})
+
 describe('the watchlist card', () => {
   it('says how many wallets this browser watches, and opens the watchlist', async () => {
     const watched = (n) => ({ watch_id: `w${n}`, address: WALLET, chain: 'ethereum', asset: 'ETH', note: '' })

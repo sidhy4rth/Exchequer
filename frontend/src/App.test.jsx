@@ -63,7 +63,7 @@ describe('the demo doors', () => {
     const side = within(await screen.findByRole('complementary', { name: 'Sidebar' }))
     expect(side.getByText('Demo mode · Investigator')).toBeInTheDocument()
     await user.click(side.getByRole('button', { name: /switch to citizen view/i }))
-    expect(await screen.findByText(/This page is still to be built/)).toBeInTheDocument()
+    expect(await screen.findByText(/The citizen site is still being built/)).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/\bSIH\b|smart india|hackathon/i)
     expect(screen.getByRole('note', { name: 'Preview' })).toHaveTextContent(/no accounts yet · viewing as Citizen/)
   })
@@ -92,7 +92,7 @@ describe('the demo doors', () => {
     sessionStorage.setItem('exchequer-demo-session', 'citizen')
     at('/')
     // The citizen page renders; the console's field never does.
-    expect(await screen.findByText(/This page is still to be built/)).toBeInTheDocument()
+    expect(await screen.findByText(/The citizen site is still being built/)).toBeInTheDocument()
     expect(screen.queryByLabelText(CONSOLE_FIELD)).not.toBeInTheDocument()
   })
 })

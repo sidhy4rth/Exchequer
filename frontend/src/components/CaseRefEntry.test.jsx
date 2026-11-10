@@ -111,7 +111,7 @@ describe('a watch added by an officer', () => {
   it('takes a case reference when the case holds none, and sends it', async () => {
     const user = userEvent.setup()
     const calls = serve({ 'GET /watches': { body: { watches: [] } }, 'POST /watches': { status: 201, body: {} } })
-    render(<WatchPanel result={result} />)
+    render(<MemoryRouter><WatchPanel result={result} /></MemoryRouter>)
     const field = await screen.findByLabelText('Case reference')
     const watch = screen.getByRole('button', { name: 'Watch' })
     expect(watch).toBeDisabled()
@@ -122,7 +122,7 @@ describe('a watch added by an officer', () => {
 
   it("needs none of its own on an officer's case kept under one", async () => {
     serve({ 'GET /watches': { body: { watches: [] } } })
-    render(<WatchPanel result={{ ...result, intake: { case_ref: REF } }} />)
+    render(<MemoryRouter><WatchPanel result={{ ...result, intake: { case_ref: REF } }} /></MemoryRouter>)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Watch' })).toBeEnabled())
     expect(screen.queryByLabelText('Case reference')).not.toBeInTheDocument()
   })
