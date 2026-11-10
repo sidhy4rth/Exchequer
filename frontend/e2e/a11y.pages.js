@@ -387,7 +387,9 @@ export const NOT_CHECKED = {
  * could not measure them. */
 async function graphPanelsApart(page) {
   const clashes = await page.locator('.ent-maps .stage').evaluate((stage) => {
-    const panels = ['.graph-hint', '.graph-stats', '.graph-controls'].map((s) => [s, stage.querySelector(s).getBoundingClientRect()])
+    // A compact (phone) bubble map draws no hint, so only the panels shown are compared.
+    const panels = ['.graph-hint', '.graph-stats', '.graph-controls'].map((s) => [s, stage.querySelector(s)])
+      .filter(([, el]) => el).map(([s, el]) => [s, el.getBoundingClientRect()])
     return panels.flatMap(([a, ra], i) => panels.slice(i + 1)
       .filter(([, rb]) => ra.left < rb.right && rb.left < ra.right && ra.top < rb.bottom && rb.top < ra.bottom)
       .map(([b]) => `${a} covers ${b}`))

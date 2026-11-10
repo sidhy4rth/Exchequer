@@ -14,7 +14,10 @@ const demo = recordings.find((r) => r.demo === 11).result
 // Both maps are stood in for, so the tests read the props the tab hands
 // each one: the maps themselves are tested in their own files.
 const seen = vi.hoisted(() => ({ graph: [], flow: [] }))
-vi.mock('../GraphView', () => ({ default: (props) => { seen.graph.push(props); return <div data-testid="bubble-map" /> } }))
+vi.mock('../GraphView', async (actual) => ({
+  PALETTES: (await actual()).PALETTES,
+  default: (props) => { seen.graph.push(props); return <div data-testid="bubble-map" /> },
+}))
 vi.mock('../FlowView', () => ({ default: (props) => { seen.flow.push(props); return <div data-testid="hop-map" /> } }))
 const lastGraph = () => seen.graph.at(-1)
 const lastFlow = () => seen.flow.at(-1)
@@ -161,8 +164,15 @@ describe('every wallet', () => {
     expect(screen.getByRole('radiogroup', { name: 'Map view' })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Bubble map' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('radio', { name: 'Hop map' })).toHaveAttribute('aria-checked', 'false')
-    expect(screen.getByTestId('bubble-map').closest('.ent-mapwrap')).not.toHaveAttribute('hidden')
-    expect(screen.getByTestId('hop-map').closest('.ent-mapwrap')).toHaveAttribute('hidden')
+    // The hop map is set aside, not collapsed (display: none would shrink
+    // it to nothing and lose its zoom): faded under the bubble map, inert.
+    const bubble = screen.getByTestId('bubble-map').closest('.ent-mapwrap')
+    const hop = screen.getByTestId('hop-map').closest('.ent-mapwrap')
+    expect(bubble).not.toHaveClass('off')
+    expect(bubble).not.toHaveAttribute('inert')
+    expect(hop).toHaveClass('off')
+    expect(hop).toHaveAttribute('inert')
+    expect(hop).not.toHaveAttribute('hidden')
     expect(lastGraph()).toMatchObject({ data: demo.graph, tracePath: demo.trace_path, unit: 'USDT', active: true, selected: null, flagsOnly: false, compact: false })
     expect(lastFlow()).toMatchObject({ data: demo.graph, tracePath: demo.trace_path, unit: 'USDT', direction: demo.direction, active: false, selected: null, flagsOnly: false, compact: false })
   })
@@ -173,8 +183,10 @@ describe('every wallet', () => {
     expect(screen.getByRole('radio', { name: 'Hop map' })).toHaveAttribute('aria-checked', 'true')
     expect(lastGraph().active).toBe(false)
     expect(lastFlow().active).toBe(true)
-    expect(screen.getByTestId('bubble-map').closest('.ent-mapwrap')).toHaveAttribute('hidden')
-    expect(screen.getByTestId('hop-map').closest('.ent-mapwrap')).not.toHaveAttribute('hidden')
+    expect(screen.getByTestId('bubble-map').closest('.ent-mapwrap')).toHaveClass('off')
+    expect(screen.getByTestId('bubble-map').closest('.ent-mapwrap')).toHaveAttribute('inert')
+    expect(screen.getByTestId('hop-map').closest('.ent-mapwrap')).not.toHaveClass('off')
+    expect(screen.getByTestId('hop-map').closest('.ent-mapwrap')).not.toHaveAttribute('inert')
     expect(screen.getByRole('radiogroup', { name: 'Map view' })).toHaveClass('hop')
     // Only the chosen radio takes Tab; the arrows move and choose.
     expect(screen.getByRole('radio', { name: 'Bubble map' })).toHaveAttribute('tabindex', '-1')
@@ -314,6 +326,37 @@ describe('every wallet on a phone', () => {
     expect(key.querySelector('.role-risk .dot')).not.toHaveAttribute('stroke-dasharray')
   })
 
+  it('draws the key\'s swatches in the bubble map\'s own colours, a service and a traced address apart', async () => {
+    await everyWallet({ phone: true })
+    const key = screen.getByRole('group', { name: 'Bubble map key' })
+    const fill = (role) => key.querySelector(`.role-${role} .dot`).getAttribute('fill')
+    // The page starts dark in the tests (no data-theme set).
+    expect(fill('service')).toBe('#4a4a4a')
+    expect(fill('node')).toBe('#5e5e5e')
+    expect(fill('service')).not.toBe(fill('node'))
+    act(() => { window.dispatchEvent(new CustomEvent('themechange', { detail: 'light' })) })
+    expect(fill('service')).toBe('#b3b3b3')
+    expect(fill('node')).toBe('#8e8e8e')
+    act(() => { window.dispatchEvent(new CustomEvent('themechange', { detail: 'dark' })) })
+  })
+
+  it('moves focus to the sheet as it opens, and keeps the page clear of it until it closes', async () => {
+    const user = await everyWallet({ phone: true })
+    const root = document.documentElement
+    expect(root.style.scrollPaddingBottom).toBe('')
+    pick(SPLIT)
+    const sheet = screen.getByRole('region', { name: 'Selected wallet' })
+    expect(sheet).toHaveFocus()
+    expect(screen.getByText(/Its details are in the panel at the foot of the screen\./)).toBeInTheDocument()
+    // Room for the sheet: focus scrolls clear of it, and the page's end can too.
+    expect(root.style.scrollPaddingBottom).toMatch(/^\d+px$/)
+    expect(document.querySelector('.ent-sheet-room')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(lastGraph().selected).toBeNull()
+    expect(root.style.scrollPaddingBottom).toBe('')
+    expect(document.querySelector('.ent-sheet-room')).not.toBeInTheDocument()
+  })
+
   it('leaves the key to the bubble map itself on a desk', async () => {
     await everyWallet()
     expect(screen.queryByRole('group', { name: 'Bubble map key' })).not.toBeInTheDocument()
@@ -357,6 +400,10 @@ describe('motion on the maps', () => {
     expect(css).toMatch(/--ent-tab: var\(--dur-tab, 240ms\)/)
     expect(css).toMatch(/\.ent-sheet\.open \{[^}]*transition: transform 360ms var\(--ent-enter\)/)
     expect(css).toMatch(/\.ent-mapwrap \{ animation: ent-fade var\(--ent-tab\)/)
+    // A cross-fade: the map going out fades over the tab duration, then hides;
+    // it is never display: none, so it keeps its width and zoom.
+    expect(css).toMatch(/\.ent-mapwrap\.off \{[^}]*opacity: 0;[^}]*transition: opacity var\(--ent-tab\) var\(--ent-enter\), visibility 0s linear var\(--ent-tab\)/)
+    expect(css).not.toMatch(/\.ent-mapwrap\[hidden\]/)
   })
 
   it('renders every final state at once under reduced motion', () => {
@@ -365,6 +412,7 @@ describe('motion on the maps', () => {
       expect(reduced).toMatch(new RegExp(`${moving.replace(/\./g, '\\.')}[^{]*\\{ transition: none; \\}`))
     }
     expect(reduced).toMatch(/\.ent-mapwrap, \.ent-pick \{ animation: none; \}/)
+    expect(reduced).toMatch(/\.ent-mapwrap, \.ent-mapwrap\.off \{ transition: none; \}/)
   })
 })
 

@@ -1,12 +1,13 @@
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { fetchRelatedCases } from '../../api'
-import GraphView from '../GraphView'
+import GraphView, { PALETTES } from '../GraphView'
 import FlowView from '../FlowView'
 import RoleSwatch from '../RoleSwatch'
 import { PATTERN_VALIDATION, validationLine } from '../confidence'
 import { flagCounts, roleOf } from '../mapRoles'
 import { usePhone } from '../../phone'
+import { currentTheme } from '../../theme'
 import { plain } from '../../text'
 import { entityGroups, groupLayout } from './entityGroups'
 import { Address, PATTERN_NAME, RISK_NAME, middle, num, when } from './format'
@@ -202,6 +203,18 @@ const ROLE_TONE = {
   gambling: 'var(--text-2)', service: 'var(--text-2)', node: 'var(--text-2)',
 }
 
+/** The skin the page is in, kept current as it flips (as GraphView does), so
+ * a swatch can take the very colour the bubble map paints that role in. */
+function useTheme() {
+  const [theme, setTheme] = useState(currentTheme)
+  useEffect(() => {
+    const onChange = (e) => setTheme(e.detail === 'light' ? 'light' : 'dark')
+    window.addEventListener('themechange', onChange)
+    return () => window.removeEventListener('themechange', onChange)
+  }, [])
+  return theme
+}
+
 /** The bubble map's key, in its words, for the phone where the map is compact. */
 const BUBBLE_KEY = [
   ['seed', 'Reported address'],
@@ -262,8 +275,36 @@ function MapSwitch({ view, onChange, refs }) {
 /** The selected wallet: its role, full address, hop and amounts, the same on
  * both maps. Beside the maps on a wide screen, never over them; a sheet that
  * slides up from the bottom on a phone. */
-function SelectedWallet({ node, result, unit, view, onShowOther, onClear, phone, open }) {
+function SelectedWallet({ node, result, unit, view, onShowOther, onClear, phone, open, onRoom }) {
   const [copied, setCopied] = useState(false)
+  const theme = useTheme()
+  const sheetRef = useRef(null)
+  // The sheet takes focus as it opens, so a screen reader or a keyboard
+  // lands on it rather than at the far end of the page.
+  useEffect(() => {
+    if (phone && open) sheetRef.current?.focus({ preventScroll: true })
+  }, [phone, open])
+  // While the sheet is up, the page keeps room for it: a control the
+  // keyboard reaches scrolls clear of it, and the page's end can too.
+  useEffect(() => {
+    const el = sheetRef.current
+    if (!phone || !open || !el) return undefined
+    const root = document.documentElement
+    const before = root.style.scrollPaddingBottom
+    const fit = () => {
+      const room = el.offsetHeight + 16
+      root.style.scrollPaddingBottom = `${room}px`
+      onRoom?.(room)
+    }
+    fit()
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit)
+    observer?.observe(el)
+    return () => {
+      observer?.disconnect()
+      root.style.scrollPaddingBottom = before
+      onRoom?.(0)
+    }
+  }, [phone, open, onRoom])
   useEffect(() => {
     if (!copied) return undefined
     const timer = setTimeout(() => setCopied(false), 1600)
@@ -293,7 +334,7 @@ function SelectedWallet({ node, result, unit, view, onShowOther, onClear, phone,
   )
   const head = (
     <div className="ent-pick-role">
-      <RoleSwatch role={role} color={ROLE_TONE[role]} />
+      <RoleSwatch role={role} color={PALETTES[theme][role]} />
       <span style={{ color: ROLE_TONE[role] }}>{name}</span>
     </div>
   )
@@ -301,7 +342,7 @@ function SelectedWallet({ node, result, unit, view, onShowOther, onClear, phone,
     // On the page's body, so no panel's transform or blur can pin the
     // sheet inside it instead of to the foot of the screen.
     return createPortal(
-      <section className={`ent-sheet${open ? ' open' : ''}`} aria-label="Selected wallet" aria-hidden={!open} onKeyDown={onKeyDown}>
+      <section ref={sheetRef} tabIndex={-1} className={`ent-sheet${open ? ' open' : ''}`} aria-label="Selected wallet" aria-hidden={!open} onKeyDown={onKeyDown}>
         <div className="ent-sheet-grab" aria-hidden="true" />
         <div className="ent-sheet-head">
           <div className="ent-sheet-main">
@@ -352,8 +393,9 @@ function SelectedWallet({ node, result, unit, view, onShowOther, onClear, phone,
 /** Every wallet, on two maps that share one selection: the bubble map (the
  * graph) and the hop map (the flow by hop). Both stay mounted, so each keeps
  * its zoom while the other is shown; only the shown one is active. */
-function WalletMaps({ result, unit }) {
+function WalletMaps({ result, unit, onRoom }) {
   const phone = usePhone()
+  const theme = useTheme()
   const [view, setView] = useState('bubble')
   const [selectedId, setSelectedId] = useState(null)
   const [flagsOnly, setFlagsOnly] = useState(false)
@@ -393,18 +435,20 @@ function WalletMaps({ result, unit }) {
       </div>
       <div className="ent-maps-body">
         <div className="ent-maps-stage">
-          <div className="ent-mapwrap bubble" role="group" aria-label="Bubble map" hidden={view !== 'bubble'}>
+          {/* The map not shown is set aside, not collapsed: it keeps its width
+              (so its zoom and layout hold) and fades out under the one shown. */}
+          <div className={`ent-mapwrap bubble${view === 'bubble' ? '' : ' off'}`} role="group" aria-label="Bubble map" inert={view !== 'bubble'}>
             <div className="stage"><GraphView {...shared} active={view === 'bubble'} /></div>
             {/* A compact bubble map leaves its key to the page; the hop map keeps its own. */}
             {phone && (
               <div className="flow-legend ent-bubble-key" aria-label="Bubble map key" role="group">
                 {BUBBLE_KEY.map(([role, name]) => (
-                  <span key={role}><RoleSwatch role={role} color={ROLE_TONE[role]} />{name}</span>
+                  <span key={role}><RoleSwatch role={role} color={PALETTES[theme][role]} />{name}</span>
                 ))}
               </div>
             )}
           </div>
-          <div className="ent-mapwrap hop" role="group" aria-label="Hop map" hidden={view !== 'hop'}>
+          <div className={`ent-mapwrap hop${view === 'hop' ? '' : ' off'}`} role="group" aria-label="Hop map" inert={view !== 'hop'}>
             <FlowView {...shared} direction={result.direction} active={view === 'hop'} />
           </div>
         </div>
@@ -416,8 +460,10 @@ function WalletMaps({ result, unit }) {
           </div>
         )}
       </div>
-      {phone && <SelectedWallet phone open={Boolean(node)} node={node ?? last.current} result={result} unit={unit} view={view} onShowOther={showOther} onClear={clear} />}
-      <p className="visually-hidden" aria-live="polite">{node ? `Selected ${middle(node.address ?? node.id, 6, 4)} on both maps.` : ''}</p>
+      {phone && <SelectedWallet phone open={Boolean(node)} node={node ?? last.current} result={result} unit={unit} view={view} onShowOther={showOther} onClear={clear} onRoom={onRoom} />}
+      <p className="visually-hidden" aria-live="polite">{node
+        ? `Selected ${middle(node.address ?? node.id, 6, 4)} on both maps.${phone ? ' Its details are in the panel at the foot of the screen.' : ''}`
+        : ''}</p>
     </div>
   )
 }
@@ -430,6 +476,8 @@ function EntitiesTab({ result, unit, correlation }) {
   const { groups, links } = useMemo(() => entityGroups(result), [result])
   const at = useMemo(() => groupLayout(groups, { reverse }), [groups, reverse])
   const [view, setView] = useState('grouped')
+  // Room at the page's end for a phone's open wallet sheet.
+  const [room, setRoom] = useState(0)
   const [chosen, setChosen] = useState(() => (groups.find((g) => g.key === 'split') ?? groups.find((g) => g.key === 'exchange') ?? groups[0])?.key)
   const group = groups.find((g) => g.key === chosen)
   const inferred = result.inferred_deposits ?? []
@@ -451,7 +499,7 @@ function EntitiesTab({ result, unit, correlation }) {
           </div>
           {view === 'grouped'
             ? <GroupMap groups={groups} links={links} at={at} chosen={chosen} onChoose={setChosen} labelledBy={headId} />
-            : <WalletMaps result={result} unit={unit} />}
+            : <WalletMaps result={result} unit={unit} onRoom={setRoom} />}
         </section>
         <div className="ent-side">
           {group && <GroupCard key={group.key} group={group} groups={groups} links={links} result={result} unit={unit} />}
@@ -580,6 +628,7 @@ function EntitiesTab({ result, unit, correlation }) {
           </div>
         </details>
       )}
+      {view === 'every' && room > 0 && <div className="ent-sheet-room" aria-hidden="true" style={{ height: room }} />}
     </>
   )
 }
