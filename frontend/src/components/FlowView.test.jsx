@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import FlowView, { COLUMN_STEP_MS } from './FlowView'
+import { flagCounts } from './mapRoles'
 
 // jsdom has no ResizeObserver; the hop map only uses it to track its width.
 beforeAll(() => {
@@ -250,7 +251,9 @@ describe('selecting an address on the hop map', () => {
     expect(linkOf(container, MID, SIDE).querySelector('.flow-sweep')).not.toBeNull()
     expect(nodeOf(container, PLAIN).style.opacity).toBe('0.18')
     expect(nodeOf(container, DEPOSIT).style.opacity).toBe('1')
-    expect(screen.getByText(`Selected ${MID.slice(0, 6)}…${MID.slice(-4)}`)).toBeInTheDocument()
+    // The caller announces a selection it owns; the map stays quiet, so a
+    // screen reader hears it once.
+    expect(screen.queryByText(/^Selected /)).toBeNull()
 
     fireEvent.click(nodeOf(container, MID))
     expect(onSelect).toHaveBeenLastCalledWith(null)
@@ -385,5 +388,187 @@ describe('the hop map on a phone (compact)', () => {
     // The controls keep their names for a screen reader, without the words on screen.
     expect(screen.getByRole('button', { name: 'Pause motion' })).toHaveTextContent('')
     expect(screen.getByRole('button', { name: 'Replay the entrance' })).toBeInTheDocument()
+  })
+})
+
+// ---- Review fixes ---------------------------------------------------------
+
+const scaleOf = (container) => Number(/scale\(([-\d.]+)\)/.exec(container.querySelector('.flow svg g[transform]').getAttribute('transform'))[1])
+
+describe('the hop map hidden and shown again', () => {
+  it('keeps its zoom when the page hides it (width 0) and shows it again', () => {
+    let resize = null
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(cb) { resize = cb }
+      observe() {} disconnect() {} unobserve() {}
+    })
+    const { container } = render(<FlowView data={mixed} tracePath={route} unit="ETH" />)
+    act(() => { resize([{ contentRect: { width: 900 } }]) })
+    fireEvent.click(screen.getByTitle('Zoom in'))
+    const zoomed = scaleOf(container)
+    act(() => { resize([{ contentRect: { width: 0 } }]) })
+    expect(scaleOf(container)).toBe(zoomed)
+    act(() => { resize([{ contentRect: { width: 900 } }]) })
+    expect(scaleOf(container)).toBe(zoomed)
+  })
+})
+
+const addr = (prefix, i) => '0x' + prefix + String(i).padStart(3, '0').repeat(13).slice(0, 39)
+
+describe('possible-flag captions in a dense column', () => {
+  // A seed, a tall hop of 40 rows whose rows 10-13 all fired a pattern, and
+  // one more hop so that column sits in the middle.
+  const rows = Array.from({ length: 40 }, (_, i) => addr('1', i))
+  const end = addr('2', 0)
+  const dense = (middle) => ({
+    nodes: [
+      { id: SEED, address: SEED, is_seed: true, depth: 0 },
+      ...rows.map((id, i) => ({ id, address: id, depth: 1, total_in_native: 40 - i, ...(i >= 10 && i < 14 ? { flags: ['amount_split'] } : {}) })),
+      ...(middle ? [{ id: end, address: end, depth: 2, total_in_native: 1 }] : []),
+    ],
+    edges: [
+      ...rows.map((id, i) => ({ source: SEED, target: id, value_native: 40 - i })),
+      ...(middle ? [{ source: rows[0], target: end, value_native: 1 }] : []),
+    ],
+  })
+  const capsOf = (container) => rows.slice(10, 14)
+    .map((id) => nodeOf(container, id).querySelector('.flow-cap'))
+
+  it('alternate sides of their dots on a phone, so no two print over each other', () => {
+    const { container } = render(<FlowView data={dense(true)} tracePath={[]} unit="ETH" compact flagsOnly />)
+    const caps = capsOf(container)
+    caps.forEach((c) => expect(c).not.toBeNull())
+    const anchors = caps.map((c) => c.getAttribute('text-anchor'))
+    expect(anchors).toEqual(['start', 'end', 'start', 'end'])
+    // Same side: at least a line of text apart.
+    const size = parseFloat(caps[0].style.fontSize)
+    const ys = caps.map((c) => Number(c.getAttribute('y')))
+    expect(ys[2] - ys[0]).toBeGreaterThanOrEqual(size)
+    expect(ys[3] - ys[1]).toBeGreaterThanOrEqual(size)
+    expect(caps[0]).toHaveTextContent(short4(rows[10]))
+  })
+
+  it('fold into one counted caption where only one side is free (the last hop)', () => {
+    const { container } = render(<FlowView data={dense(false)} tracePath={[]} unit="ETH" flagsOnly />)
+    const caps = capsOf(container).filter(Boolean)
+    expect(caps.length).toBeLessThan(4)
+    // Every flag is still counted, and what is printed sits a line apart.
+    const counts = caps.map((c) => Number(/×(\d+)$/.exec(c.textContent)?.[1] ?? 1))
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(4)
+    expect(caps[0]).toHaveTextContent(/^possible flags ×\d$/)
+    const size = parseFloat(caps[0].style.fontSize)
+    const ys = caps.map((c) => Number(c.getAttribute('y')))
+    ys.slice(1).forEach((y, i) => expect(y - ys[i]).toBeGreaterThanOrEqual(size))
+    caps.forEach((c) => expect(c.getAttribute('text-anchor')).toBe('end'))
+  })
+})
+
+describe('"Show only flags" agrees with the page count', () => {
+  const G = '0x' + '9'.repeat(40)
+  const EXF = '0x' + '8'.repeat(40)
+  const wider = {
+    nodes: [
+      ...mixed.nodes,
+      { id: G, address: G, depth: 2, risk_category: 'gambling', risk_entity: 'Stake.com', total_in_native: 5 },
+      { id: EXF, address: EXF, depth: 2, exchange: 'OKX', label: 'OKX 3', flags: ['amount_split'], total_in_native: 4 },
+    ],
+    edges: [
+      ...mixed.edges,
+      { source: PLAIN, target: G, value_native: 5 },
+      { source: PLAIN, target: EXF, value_native: 4 },
+    ],
+  }
+
+  it('fades a gambling platform and a flagged exchange, and states the same counts as the page', () => {
+    const { container } = render(<FlowView data={wider} tracePath={route} unit="ETH" flagsOnly />)
+    expect(nodeOf(container, G).style.opacity).toBe('0.12')
+    expect(nodeOf(container, EXF).style.opacity).toBe('0.12')
+    const { possible, confirmed } = flagCounts(wider)
+    expect(screen.getByText(`Showing ${possible} possible flag${possible === 1 ? '' : 's'} · ${confirmed} confirmed`)).toBeInTheDocument()
+  })
+
+  it('keeps the selected address and its ring plain to see', () => {
+    const { container } = render(<FlowView data={wider} tracePath={route} unit="ETH" flagsOnly selected={DEPOSIT} onSelect={() => {}} />)
+    expect(nodeOf(container, DEPOSIT).style.opacity).toBe('1')
+    expect(nodeOf(container, DEPOSIT).querySelector('.sel-ring')).not.toBeNull()
+    expect(linkOf(container, MID, DEPOSIT).style.opacity).toBe('')
+    expect(nodeOf(container, PLAIN).style.opacity).not.toBe('1')
+  })
+})
+
+describe('a held selection on the hop map', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  const fan = Array.from({ length: 20 }, (_, i) => addr('3', i))
+  const hub = {
+    nodes: [
+      { id: SEED, address: SEED, is_seed: true, depth: 0 },
+      ...fan.map((id, i) => ({ id, address: id, depth: 1, total_in_native: 20 - i })),
+    ],
+    edges: fan.map((id, i) => ({ source: SEED, target: id, value_native: 20 - i })),
+  }
+
+  it('sweeps at most a dozen of its busiest transfers, slowly and without the glow; a hover sweeps in full', () => {
+    const { container } = render(<FlowView data={hub} tracePath={[]} unit="ETH" selected={SEED} onSelect={() => {}} />)
+    settle()
+    const held = container.querySelectorAll('.flow-sweep')
+    expect(held).toHaveLength(12)
+    expect(container.querySelectorAll('.flow-sweep.held')).toHaveLength(12)
+    expect(container.querySelector('.flow-sweep.glow')).toBeNull()
+    // The busiest first.
+    expect(linkOf(container, SEED, fan[0]).querySelector('.flow-sweep')).not.toBeNull()
+    expect(linkOf(container, SEED, fan[19]).querySelector('.flow-sweep')).toBeNull()
+    fireEvent.mouseEnter(nodeOf(container, SEED))
+    expect(container.querySelectorAll('.flow-sweep.core')).toHaveLength(20)
+    expect(container.querySelector('.flow-sweep.held')).toBeNull()
+  })
+
+  it('has a slow cycle of at least 3 s in the stylesheet', () => {
+    const sheet = '../styles.css'
+    const css = readFileSync(new URL(sheet, import.meta.url), 'utf8')
+    const ms = /\.flow \.flow-sweep\.held \{[^}]*animation-duration: ([\d.]+)s/.exec(css)
+    expect(Number(ms[1])).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('selecting from the keyboard on the hop map', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('steps through the addresses with ] and [, column by column', () => {
+    const { container } = render(<FlowView data={mixed} tracePath={route} unit="ETH" />)
+    settle()
+    const stage = container.querySelector('.flow-stage')
+    expect(stage.getAttribute('aria-label')).toMatch(/square brackets/)
+    fireEvent.keyDown(stage, { key: ']' })
+    expect(nodeOf(container, SEED)).toHaveClass('selected')
+    fireEvent.keyDown(stage, { key: ']' })
+    expect(container.querySelectorAll('.flow-node.selected')).toHaveLength(1)
+    const second = container.querySelector('.flow-node.selected').getAttribute('data-address')
+    expect([MID, PLAIN]).toContain(second)
+    fireEvent.keyDown(stage, { key: '[' })
+    expect(nodeOf(container, SEED)).toHaveClass('selected')
+    fireEvent.keyDown(stage, { key: '[' }) // wraps to the last
+    expect(container.querySelector('.flow-node.selected').getAttribute('data-address')).not.toBe(SEED)
+    fireEvent.keyDown(stage, { key: 'Escape' })
+    expect(container.querySelector('.flow-node.selected')).toBeNull()
+  })
+
+  it('steps only through the kept addresses while only flags show, telling the caller', () => {
+    const onSelect = vi.fn()
+    const view = (selected) => <FlowView data={mixed} tracePath={route} unit="ETH" flagsOnly selected={selected} onSelect={onSelect} />
+    const { container, rerender } = render(view(null))
+    settle()
+    const stage = container.querySelector('.flow-stage')
+    const seen = []
+    let current = null
+    for (let i = 0; i < 4; i += 1) {
+      fireEvent.keyDown(stage, { key: ']' })
+      current = onSelect.mock.lastCall[0]
+      seen.push(current)
+      rerender(view(current))
+    }
+    expect(new Set(seen)).toEqual(new Set([SEED, MID, SIDE, MIXER]))
   })
 })

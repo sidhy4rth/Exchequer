@@ -233,6 +233,10 @@ const FLAGS_LINK_ALPHA = 0.08
 // A phone tap selects the nearest dot within this many screen pixels: rows
 // sit close there, so a big hit circle would pick a neighbour.
 const TAP_REACH = 22
+// A held selection sweeps at most this many of its transfers.
+const HELD_SWEEPS = 12
+// Captions in one column closer than this many lines collide.
+const CAPTION_GAP_LINES = 1.2
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
 
@@ -270,9 +274,15 @@ export default function FlowView({
   useEffect(() => {
     const el = box.current
     if (!el) return undefined
-    const ro = new ResizeObserver(([entry]) => setWidth(Math.max(320, entry.contentRect.width)))
+    // A page that hides the map (display: none) collapses it to nothing; keep
+    // the last real width, so the layout, the fit and the officer's zoom and
+    // pan survive the map being hidden and shown again.
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width
+      if (w > 0) setWidth(Math.max(320, w))
+    })
     ro.observe(el)
-    setWidth(Math.max(320, el.clientWidth))
+    if (el.clientWidth > 0) setWidth(Math.max(320, el.clientWidth))
     return () => ro.disconnect()
   }, [])
 
@@ -387,9 +397,10 @@ export default function FlowView({
   const selectedId = (controlled ? selected : ownSelected) || null
   const selectedPlace = selectedId ? placed.get(selectedId) ?? null : null
   const select = (id) => {
+    // A caller that owns the selection announces it (once, for both maps).
+    if (controlled) { onSelect(id); return }
     setSaid(id ? `Selected ${short(id)}` : 'Selection cleared')
-    if (controlled) onSelect(id)
-    else setOwnSelected(id)
+    setOwnSelected(id)
   }
 
   // Hovering an address lights its own transfers; everything else recedes.
@@ -408,6 +419,19 @@ export default function FlowView({
     }
     return new Set([focus.item.a.node.id, focus.item.b.node.id])
   }, [focus, links])
+  // A selection held without a hover lights its busiest transfers only (the
+  // route first), slowly and without the blurred glow: it can stay on for
+  // minutes, so it must not repaint dozens of lines.
+  const held = useMemo(() => {
+    if (hover || !selectedPlace) return null
+    const id = selectedPlace.node.id
+    return new Set(
+      links
+        .filter((l) => l.a.node.id === id || l.b.node.id === id)
+        .sort((p, q) => Number(q.onPath) - Number(p.onPath) || (q.edge.value_native || 0) - (p.edge.value_native || 0))
+        .slice(0, HELD_SWEEPS),
+    )
+  }, [hover, selectedPlace, links])
 
   // "Show only flags": what stays, and the counts the chip states.
   const flags = useMemo(() => {
@@ -421,6 +445,60 @@ export default function FlowView({
     })
     return { keep, possible, confirmed }
   }, [data])
+
+  // Where each caption goes. By default beside the dot in the first and last
+  // columns and everywhere on a phone, above it in the middle columns. Where
+  // captions in a column would print over each other (rows closer than a
+  // line of text), the next one moves to the other side of its dot; where
+  // neither side is free, a run of possible-flag captions folds into one,
+  // with a count, on its first row (each address is still a tap or a hover away).
+  const captions = useMemo(() => {
+    const out = new Map()
+    const byColumn = new Map()
+    placed.forEach((p) => {
+      let text = p.caption
+      let flag = false
+      if (!text && flagsOnly && p.role === 'flagged') {
+        text = compact ? short4(p.node.id) : `possible flag · ${short4(p.node.id)}`
+        flag = true
+      }
+      if (!text) return
+      if (!byColumn.has(p.column)) byColumn.set(p.column, [])
+      byColumn.get(p.column).push({ p, text, flag })
+    })
+    const gap = CAPTION_GAP_LINES * 11 * textCounter // in world units
+    byColumn.forEach((list, column) => {
+      const first = column === 0; const last = column === maxColumn
+      const sides = first ? ['start'] : last ? ['end'] : ['start', 'end']
+      const preferred = first || (compact && !last) ? 'start' : last ? 'end' : 'above'
+      // The y of the lowest caption so far on each side of the dots. One
+      // above a dot is centred on it, so it takes both sides.
+      const lastY = { start: -Infinity, end: -Infinity }
+      let head = null // the open run of folded possible flags
+      list.sort((a, b) => a.p.y - b.p.y).forEach((c) => {
+        const { p } = c
+        const aboveY = p.y - (p.r + 5) * counter
+        const clearOf = (side) => (side === 'above'
+          ? aboveY - Math.max(lastY.start, lastY.end) >= gap
+          : p.y - lastY[side] >= gap)
+        let side = [preferred, ...sides].find(clearOf) ?? null
+        if (!side && c.flag && head) {
+          head.count += 1
+          return
+        }
+        side ??= preferred
+        if (side === 'above') { lastY.start = aboveY; lastY.end = aboveY } else lastY[side] = p.y
+        const entry = { ...c, side, count: 1 }
+        out.set(p.node.id, entry)
+        head = c.flag ? entry : null
+      })
+    })
+    out.forEach((c) => {
+      if (c.count > 1) c.text = `possible flags ×${c.count}`
+    })
+    return out
+  }, [placed, flagsOnly, compact, maxColumn, counter, textCounter])
+
   const flagsSeen = useRef(flagsOnly)
   useEffect(() => {
     if (flagsSeen.current === flagsOnly) return
@@ -517,10 +595,35 @@ export default function FlowView({
     if (wasDrag()) return
     pick(p.node.id)
   }
+  // Keyboard selection: ] and [ step through the shown addresses, column by
+  // column, top to bottom (only the kept ones while only flags show), and
+  // bring the one selected into view.
+  const order = useMemo(
+    () => [...placed.values()]
+      .filter((p) => !flagsOnly || flags.keep.has(p.node.id))
+      .sort((a, b) => a.column - b.column || a.y - b.y),
+    [placed, flagsOnly, flags],
+  )
+  const step = (by) => {
+    const shown = order.filter((p) => p.column <= stage)
+    if (!shown.length) return
+    const at = shown.indexOf(selectedPlace)
+    const next = at < 0 ? (by > 0 ? 0 : shown.length - 1) : (at + by + shown.length) % shown.length
+    const p = shown[next]
+    select(p.node.id)
+    setView((v) => {
+      const sx = p.x * v.k + v.tx; const sy = p.y * v.k + v.ty
+      const margin = 40
+      if (sx >= margin && sx <= width - margin && sy >= reserve && sy <= stageHeight - margin) return v
+      return { ...v, tx: width / 2 - p.x * v.k, ty: (reserve + stageHeight) / 2 - p.y * v.k }
+    })
+  }
   const onKey = (e) => {
     if (e.target !== e.currentTarget) return
     const pan = (dx, dy) => setView((v) => ({ ...v, tx: v.tx + dx, ty: v.ty + dy }))
     switch (e.key) {
+      case ']': step(1); break
+      case '[': step(-1); break
       case '+': case '=': zoomBy(1.4); break
       case '-': case '_': zoomBy(1 / 1.4); break
       case '0': setView(fit); break
@@ -545,7 +648,7 @@ export default function FlowView({
     <div className={`flow${drag.current?.moved ? ' dragging' : ''}${compact ? ' compact' : narrow ? ' narrow' : ''}`} ref={box}>
       <div
         className="flow-stage" tabIndex={0} role="group" onKeyDown={onKey}
-        aria-label={`Hop map. Drag to pan, scroll to zoom. ${compact ? 'Tap' : 'Click'} an address to select it and copy it. Keys: plus and minus zoom, arrows pan, 0 fits the whole trace, Escape clears the selection.`}
+        aria-label={`Hop map. Drag to pan, scroll to zoom. ${compact ? 'Tap' : 'Click'} an address to select it and copy it. Keys: plus and minus zoom, arrows pan, 0 fits the whole trace, right and left square brackets select the next and previous address, Escape clears the selection.`}
       >
       <svg
         ref={svg}
@@ -580,15 +683,18 @@ export default function FlowView({
           // Otherwise the traced funds run on their own (the comet below,
           // driven per frame).
           const swept = moving && focus && (
-            focus.kind === 'link' ? focus.item === l
-              : (focus.item.node.id === l.a.node.id || focus.item.node.id === l.b.node.id)
+            held ? held.has(l)
+              : focus.kind === 'link' ? focus.item === l
+                : (focus.item.node.id === l.a.node.id || focus.item.node.id === l.b.node.id)
           )
           const tone = l.onPath ? ' on-path' : l.flagged ? ' flagged' : ''
           const key = `${l.edge.source}>${l.edge.target}`
           const shown = l.column <= stage
           const drawing = shown && revealing
           const masked = drawing && l.flagged && !l.onPath
-          const kept = flags.keep.has(l.a.node.id) && flags.keep.has(l.b.node.id)
+          // The selected address's own transfers stay readable as well.
+          const kept = (flags.keep.has(l.a.node.id) && flags.keep.has(l.b.node.id))
+            || (selectedId != null && (l.a.node.id === selectedId || l.b.node.id === selectedId))
           const enter = hoverOn ? (e) => setHover({ kind: 'link', item: l, ...place(e) }) : undefined
           const move = hoverOn ? (e) => setHover((h) => (h ? { ...h, ...place(e) } : h)) : undefined
           const leave = hoverOn ? () => setHover(null) : undefined
@@ -621,12 +727,14 @@ export default function FlowView({
                   />
                 </>
               )}
-              {swept && (
+              {swept && (held ? (
+                <path d={d} pathLength="1" className={`flow-sweep core held${tone}`} vectorEffect="non-scaling-stroke" />
+              ) : (
                 <>
                   <path d={d} pathLength="1" className={`flow-sweep glow${tone}`} vectorEffect="non-scaling-stroke" />
                   <path d={d} pathLength="1" className={`flow-sweep core${tone}`} vectorEffect="non-scaling-stroke" />
                 </>
-              )}
+              ))}
               {/* A wide invisible stroke so a thin line is easy to hover. */}
               <path d={d} className="flow-hit" vectorEffect="non-scaling-stroke" onMouseEnter={enter} onMouseMove={move} onMouseLeave={leave} />
             </g>
@@ -637,25 +745,23 @@ export default function FlowView({
           const id = p.node.id
           const enter = entering(p.column)
           const delay = enter === ' in' ? { animationDelay: `${delays.get(id) ?? 0}ms` } : undefined
-          const kept = flags.keep.has(id)
+          const isSelected = selectedPlace === p
+          // The selected address stays plain to see, whatever the filter.
+          const kept = flags.keep.has(id) || isSelected
           const colour = p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]
           const halo = p.role === 'exchange' || p.role === 'risk' || p.role === 'gambling' || Boolean(p.node.risk_category)
-          const isSelected = selectedPlace === p
           // Outside the halo or the green path ring when there is one.
           const ringGap = halo || p.onPath ? 9 : 5
-          // While only flags show, every possible flag carries its address.
-          let caption = p.caption
-          if (!caption && flagsOnly && p.role === 'flagged') caption = compact ? short4(id) : `possible flag · ${short4(id)}`
-          // Captions sit beside the dot in the first and last columns, and
-          // everywhere on a phone, where rows are too close for one above.
-          const first = p.column === 0; const last = p.column === maxColumn
-          const side = first || last || compact
-          const fromStart = first || (compact && !last)
-          const capX = fromStart ? p.x + (p.r + 6) * counter : last ? p.x - (p.r + 6) * counter : p.x
-          const capY = side ? p.y : p.y - (p.r + 5) * counter
+          // While only flags show, every possible flag carries its address
+          // (placed clear of its neighbours: see captions above).
+          const cap = captions.get(id)
+          const caption = cap?.text ?? null
+          const side = cap?.side ?? 'above'
+          const capX = side === 'start' ? p.x + (p.r + 6) * counter : side === 'end' ? p.x - (p.r + 6) * counter : p.x
+          const capY = side === 'above' ? p.y - (p.r + 5) * counter : p.y
           // Phone: the reported wallet's long caption would run into hop 1, so
           // it takes two short lines.
-          const cut = compact && first && caption ? caption.indexOf(' · ') : -1
+          const cut = compact && p.column === 0 && caption ? caption.indexOf(' · ') : -1
           return (
             <g
               key={id} data-address={id}
@@ -678,8 +784,8 @@ export default function FlowView({
                   style={{ fontSize: 11 * textCounter, ...delay }}
                   x={capX}
                   y={capY}
-                  textAnchor={fromStart ? 'start' : last ? 'end' : 'middle'}
-                  dominantBaseline={side ? 'middle' : 'auto'}
+                  textAnchor={side === 'above' ? 'middle' : side}
+                  dominantBaseline={side === 'above' ? 'auto' : 'middle'}
                   fill={colour}
                 >
                   {cut > 0 ? (

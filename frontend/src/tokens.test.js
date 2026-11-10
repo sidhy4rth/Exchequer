@@ -183,7 +183,7 @@ describe('amber, purple and the old warm palette are retired', () => {
     expect(text).not.toMatch(/#(16191d|ececea|111316|07090c|f3f1ea)\b/i)
   })
 
-  it.each(['.pill.amber', '.flow .flow-link.flagged', '.graph-tooltip .tags span', '.why-list .confirm'])('%s is drawn dashed', (selector) => {
+  it.each(['.pill.amber', '.flow .flow-link.flagged', '.graph-view .float-tooltip-kap .tags span', '.why-list .confirm'])('%s is drawn dashed', (selector) => {
     const rule = new RegExp(`${literal(selector)} \\{([^}]*)\\}`).exec(css)?.[1]
     expect(rule).toMatch(/dashed|stroke-dasharray/)
   })
