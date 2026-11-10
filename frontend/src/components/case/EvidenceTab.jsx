@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchRecheck, runRecheck } from '../../api'
 import { useCaseFiles } from '../ExportButton'
@@ -146,7 +146,7 @@ function Check({ found, after }) {
 
 /** The case's Evidence tab (pack 2-glass-07): the route transfer by transfer,
  * the freeze records, what the trace read, the signed report, and its scope. */
-export default function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
+function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
   const [showAll, setShowAll] = useState(false)
   const rows = useMemo(() => chainRows(result), [result])
   const labels = useMemo(() => new Map(result.graph.nodes.filter((n) => n.label).map((n) => [n.id, plain(n.label)])), [result])
@@ -343,3 +343,6 @@ export default function EvidenceTab({ result, unit, depth, recorded, recheckId }
     </details>
   </>
 }
+
+// Skips a render while its props are the same (see TimelineTab).
+export default memo(EvidenceTab)

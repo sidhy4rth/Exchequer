@@ -12,17 +12,24 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 import networkx as nx
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
 
-from app import config, jobs, models
+from app import config, jobs, models, ownership, victim_flow
 from app.contracts import read_case, upgrade
+from app.contracts.case_v2 import on_read
+from app.main import app
 from app.pipeline import _all_transfers, _appendix, appendix_sha256
 from app.report import build_report, render_text_report
 from app.request_letters import _transfers_into
 from app.routes import cases
 from app.pipeline import TraceRequest
 from conftest import addr
+
+DATA = Path(__file__).resolve().parent.parent / "data"
 
 SEED, HOP, EXCH = addr("5eed"), addr("a1"), addr("e8c4")
 
@@ -142,3 +149,30 @@ def test_verify_case_says_what_a_capped_appendix_left_unchecked():
     assert appendix_note(report) == ("The report lists 3 of the trace's 10 transfers; the other 7 are not "
                                      "in Appendix B, so they were not checked.")
     assert appendix_note({"appendix": {"transactions": []}}) is None
+
+
+def test_a_dense_case_near_the_limit_reads_back_with_the_flow_it_was_shown(tmp_path, monkeypatch):
+    # The flow adds 15-20 % to a case, so a dense case that fitted before it
+    # did is still stored: measured without its flows, kept with them. A flow
+    # rebuilt on read from the trimmed appendix would differ from the one the
+    # officer saw (pipeline.run_trace builds it from every transfer).
+    monkeypatch.setattr(models, "_engine", create_engine(f"sqlite:///{tmp_path / 'c.db'}", future=True))
+    demo = next(d["result"] for d in json.loads((DATA / "recorded_demos.json").read_text()) if d["demo"] == 8)
+    rows = demo["transfers"]
+    live = victim_flow.build({**demo, "transfers": rows, "transfers_omitted": 0})
+    monkeypatch.setattr(config, "TRANSFERS_APPENDIX_MAX", len(rows) // 3)
+    payload = {**demo, **_appendix(rows, set(), set()), "victim_flow": live}
+    assert on_read({k: v for k, v in payload.items() if k != "victim_flow"})["victim_flow"] != live
+    # store_result adds the case id and time (about 90 bytes) before it measures.
+    bare = len(json.dumps({k: v for k, v in payload.items() if k != "victim_flow"}))
+    assert bare + 150 < len(json.dumps(payload))
+    monkeypatch.setattr(config, "MAX_CASE_BYTES", bare + 150)
+    key = "k" * 32
+    with TestClient(app) as client:
+        out = cases.store_result(payload, TraceRequest(address=SEED), owner=ownership.owner_hash(key))
+        assert out["case_id"] and out["victim_flow"] is live  # the officer sees it now
+        got = client.get(f"/trace/{out['case_id']}", headers={ownership.OWNER_HEADER: key}).json()
+    assert got["victim_flow"] == json.loads(json.dumps(live))
+    # Past the limit even without its flows, the case is still refused.
+    monkeypatch.setattr(config, "MAX_CASE_BYTES", bare - 1000)
+    assert cases.store_result(dict(payload), TraceRequest(address=SEED), owner=ownership.owner_hash(key))["case_id"] is None

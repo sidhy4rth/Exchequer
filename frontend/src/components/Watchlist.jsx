@@ -32,8 +32,11 @@ const ago = (iso) => {
   return `${Math.round(s / 86400)} d ago`
 }
 
+/** `onCount` hears how many wallets are watched: undefined until the first
+ * answer, null if the first ask failed (never 0 on a guess). */
 export default function Watchlist({ onCount } = {}) {
-  const [watches, setWatches] = useState([])
+  const [found, setWatches] = useState(undefined)
+  const watches = found ?? []
   const [alerts, setAlerts] = useState([])
   // undefined while loading, null if the watch service could not be reached:
   // no schedule is promised that has not been seen.
@@ -44,7 +47,8 @@ export default function Watchlist({ onCount } = {}) {
   const [showAll, setShowAll] = useState(false)
 
   const load = useCallback(() => {
-    fetchWatches().then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) }).catch(() => setWatcher(null))
+    fetchWatches().then((d) => { setWatches(d.watches ?? []); setWatcher(d.watcher ?? { enabled: d.running !== false }) })
+      .catch(() => { setWatcher(null); setWatches((w) => w ?? null) })
     fetchAlerts().then((d) => setAlerts(d.alerts ?? [])).catch(() => {})
   }, [])
   useEffect(() => {
@@ -52,7 +56,8 @@ export default function Watchlist({ onCount } = {}) {
     const t = setInterval(load, 60_000)
     return () => clearInterval(t)
   }, [load])
-  useEffect(() => { onCount?.(watches.length) }, [onCount, watches.length])
+  const known = found == null ? found : found.length
+  useEffect(() => { onCount?.(known) }, [onCount, known])
 
   if (watches.length === 0 && alerts.length === 0) return null
   const unread = alerts.filter((a) => !a.read).length

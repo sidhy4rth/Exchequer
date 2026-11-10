@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addressOf, blanks, checks, instantService, kindOf, lines, pieces, recipientOf } from './letterChecks'
+import { addressOf, assetOf, blanks, checks, exchangeOf, instantService, kindOf, lines, pieces, recipientOf } from './letterChecks'
 
 // What the Letters tab says about a draft (request_letters.py): the blanks
 // the officer must fill, named from the words beside each, and the checks
@@ -193,6 +193,25 @@ describe('who a letter goes to', () => {
     expect(recipientOf({ to: 'instant-freeze', title: 'Urgent freeze request to Change​NOW' }, result)).toBe('ChangeNOW')
   })
 
+  // The backend writes an exchange letter from the follow-on that reached
+  // the exchange when the trace itself reached none (request_letters._attribution).
+  it('names the exchange a follow-on reached, with its address, when the trace itself reached none', () => {
+    const viaSwap = { exchange: null, exchange_address: null, asset: 'ETH', follow_ons: [{ asset: 'DAI', result: { exchange: null } }, { asset: 'USDT', result: { exchange: 'Binance', exchange_address: '0xde9', asset: 'USDT' } }] }
+    expect(exchangeOf(viaSwap)).toEqual({ name: 'Binance', address: '0xde9', asset: 'USDT' })
+    expect(recipientOf({ to: 'exchange-freeze', title: 'Urgent freeze request to Binance' }, viaSwap)).toBe('Binance')
+    expect(exchangeOf({ exchange: 'Kraken', exchange_address: '0xk', asset: 'ETH', follow_ons: viaSwap.follow_ons })).toEqual({ name: 'Kraken', address: '0xk', asset: 'ETH' })
+    expect(exchangeOf({ asset: 'ETH', follow_ons: [] })).toEqual({ name: null, address: '', asset: 'ETH' })
+  })
+
+  // A freeze is logged in the unit the letter asks for: the follow-on's
+  // asset for its exchange, USDT for Tether, the trace's own otherwise.
+  it('logs each letter in the asset it asks about', () => {
+    const viaSwap = { asset: 'ETH', follow_ons: [{ asset: 'USDT', result: { exchange: 'Binance', exchange_address: '0xde9' } }] }
+    expect(['exchange-freeze', 'exchange', 'tether-freeze', 'tether', 'bank'].map((to) => assetOf(to, viaSwap)))
+      .toEqual(['USDT', 'USDT', 'USDT', 'USDT', 'ETH'])
+    expect(assetOf('exchange', { asset: 'TRX', follow_ons: [] })).toBe('TRX')
+  })
+
   it('logs a letter the requests API knows under its own kind, and any other as other', () => {
     expect(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'instant', 'instant-freeze', 'bank', 'exchange-x'].map(kindOf))
       .toEqual(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'instant', 'instant-freeze', 'other', 'other'])
@@ -206,6 +225,8 @@ describe('the wallet a letter is about', () => {
     expect(addressOf({ to: 'instant', address: 'TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf' }, result)).toBe('TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf')
     expect(addressOf({ to: 'tether' }, result)).toBe('')
     expect(addressOf({ to: 'instant-freeze' }, { exchange: 'ChangeNOW', exchange_address: 'TOwn' })).toBe('')
+    // An exchange a swap follow-on reached: its wallet, as exchangeOf names it.
+    expect(addressOf({ to: 'exchange' }, { follow_ons: [{ asset: 'USDT', result: { exchange: 'Binance', exchange_address: '0xde9' } }] })).toBe('0xde9')
   })
 })
 

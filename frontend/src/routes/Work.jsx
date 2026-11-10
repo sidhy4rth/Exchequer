@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { fetchAccess, fetchChains } from '../api'
 import BulkIntake from '../components/BulkIntake'
@@ -40,8 +40,43 @@ function NewTrace({ locked, onUnlock }) {
   return <TraceForm key={pay} health={health} payments={pay} startChain={params.get('chain')} startAsset={params.get('asset')} onUnlock={onUnlock} />
 }
 
-/** What an empty page says, on a quiet card where its list would be. */
-const Empty = ({ children }) => <div className="card glass quiet-card work-empty"><p className="note">{children}</p></div>
+/** What a monitor page says when it has no list to show: still loading,
+ * could not be reached, or (only once the backend said so) empty. */
+const LISTS = {
+  watchlist: {
+    List: Watchlist, loading: 'Loading the watchlist…',
+    down: 'The watchlist could not be reached right now, so this page cannot say what is watched.',
+    empty: 'Nothing watched yet. Open a case and choose Watch to be told when the money moves.',
+  },
+  requests: {
+    List: OpenRequests, loading: 'Loading open requests…',
+    down: 'Open requests could not be reached right now, so this page cannot say what is waiting.',
+    empty: 'No open requests. Letters you log from a case are tracked here.',
+  },
+}
+
+/** A monitor page's list. Its count is undefined until the list answers and
+ * null if it could not; Try again asks afresh (a new list) and keeps the
+ * keyboard on the box that holds both the list and the card saying what
+ * happens next, so it stays put whichever of the two the answer brings. */
+function Monitor({ list }) {
+  const { List, loading, down, empty } = LISTS[list]
+  const [count, setCount] = useState(undefined)
+  const [tries, setTries] = useState(0)
+  const box = useRef(null)
+  function retry() { box.current?.focus(); setTries((n) => n + 1) }
+  return (
+    <div ref={box} tabIndex={-1} className="work-list">
+      <List key={tries} onCount={setCount} />
+      {!(count > 0) && (
+        <div className="card glass quiet-card work-empty">
+          <p className="note" role="status">{count === undefined ? loading : count === null ? down : empty}</p>
+          {count === null && <button type="button" className="quiet" onClick={retry}>Try again</button>}
+        </div>
+      )}
+    </div>
+  )
+}
 
 /** A page that would spend the provider quota or keep running (a watch, a
  * batch), on a public site whose demo code this tab has not given. */
@@ -53,7 +88,6 @@ const Shut = ({ what, lock }) => (lock === 'officer' ? (
 
 export default function Work({ page }) {
   const [locked, unlock] = useLocked()
-  const [count, setCount] = useState(null)
   const { title, lede } = PAGES[page]
   return (
     <div className={`work console work-${page}`}>
@@ -62,18 +96,8 @@ export default function Work({ page }) {
         <h1>{title}</h1>
       </header>
       {page === 'new' && <NewTrace locked={locked} onUnlock={unlock} />}
-      {page === 'watchlist' && (locked ? <Shut what="Watching a wallet" lock={locked} /> : (
-        <>
-          <Watchlist onCount={setCount} />
-          {count === 0 && <Empty>Nothing watched yet. Open a case and choose Watch to be told when the money moves.</Empty>}
-        </>
-      ))}
-      {page === 'requests' && (
-        <>
-          <OpenRequests onCount={setCount} />
-          {count === 0 && <Empty>No open requests. Letters you log from a case are tracked here.</Empty>}
-        </>
-      )}
+      {page === 'watchlist' && (locked ? <Shut what="Watching a wallet" lock={locked} /> : <Monitor list="watchlist" />)}
+      {page === 'requests' && <Monitor list="requests" />}
       {page === 'batch' && (locked ? <Shut what="Bulk intake" lock={locked} /> : <BulkIntake defaultOpen />)}
     </div>
   )

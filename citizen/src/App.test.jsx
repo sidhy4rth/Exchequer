@@ -282,6 +282,22 @@ describe('find your payment', () => {
     expect(box).not.toHaveAttribute('aria-invalid')
   })
 
+  it('never calls a hash from another network wrong, nor says the payment can only be on these', async () => {
+    const user = userEvent.setup()
+    at('/report')
+    // A Solana signature: 88 base58 characters.
+    const solana = await check(user, `5Ur${'QkRmVxyz'.repeat(10)}abcde`)
+    expect(solana).not.toHaveTextContent(/does not look like a transaction hash/)
+    expect(solana).toHaveTextContent(/not the shape of a Tron or Ethereum-style hash/)
+    expect(solana).toHaveTextContent(/On Tron, Ethereum and the other networks this site checks, a hash has only/)
+    expect(solana).toHaveTextContent(/another network, such as Bitcoin or Solana, .*keep the hash as you copied it/)
+    expect(await check(user, HASH.slice(3))).toHaveTextContent(/another network, such as Bitcoin or Solana/)
+    // A Bitcoin txid has the same 64-character shape.
+    const bitcoin = await check(user, HASH)
+    expect(bitcoin).toHaveTextContent(/On the networks this site checks, it could be a payment on Tron/)
+    expect(bitcoin).toHaveTextContent(/A hash from another network, such as Bitcoin, can look the same\./)
+  })
+
   it('says it sends nothing, and that confirming the payment and searching by amount come later', async () => {
     const user = userEvent.setup()
     at('/report')

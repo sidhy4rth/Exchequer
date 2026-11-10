@@ -53,9 +53,15 @@ describe('the victim-flow Sankey', () => {
 
   it('says how much reached a place someone can act on, and what the widths are', () => {
     draw()
-    expect(screen.getByText(/reached a place someone can act on/).closest('p')).toHaveTextContent(/^9\.7% reached a place someone can act on/)
+    // 635 of the 959.58 at Binance is pro-rata's own; the 324.58 through
+    // TZ7L is an upper bound, so the share is said as one and never added in.
+    expect(screen.getByText(/reached a place someone can act on/).closest('p')).toHaveTextContent(/^6\.4% reached a place someone can act on, up to 9\.7% counting money through wallets whose shares are only upper bounds$/)
     expect(screen.getByText("widths are the victim's money, not the totals that passed through")).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: '9.7% can be acted on' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: '6.4% can be acted on' })).toBeInTheDocument()
+    expect(screen.getByText(/^up to 9\.7%/)).toHaveTextContent('up to 9.7% counting money through wallets whose shares are only upper bounds')
+    // Said by what the bound is, never by how it is drawn: a phone shows no
+    // chart, and a dashed link may be an inferred deposit, not a bound.
+    expect(screen.queryByText(/(acted|act) on.*dashed|^up to.*dashed/)).not.toBeInTheDocument()
     expect(screen.getByText(/that it reached Binance · not a probability/).closest('p')).toHaveTextContent(/^Low that it reached Binance · not a probability$/)
   })
 
@@ -101,7 +107,7 @@ describe('the bucket cards and what each lets an officer do', () => {
     const user = userEvent.setup()
     const { onLetters } = draw()
     const exchange = card('At an exchange')
-    expect(exchange).toHaveTextContent('959.58')
+    expect(exchange).toHaveTextContent('up to 959.58 USDT')
     expect(exchange).toHaveTextContent('Binance · Binance-Hot 7')
     expect(exchange).toHaveTextContent('TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf')
     expect(within(exchange).getByText('Low · exact label')).toBeInTheDocument()
@@ -169,7 +175,7 @@ function made({ nodes, links, buckets, ...rest }, result = {}) {
     status: 'estimated',
     nodes: nodes.map(([address, role, victim_in, left = 0]) => ({ address, role, victim_in, left, basis: role === 'seed' ? 'seed_outflow' : role === 'wallet' ? 'traced_only' : null })),
     links: links.map(([source, target, victim, style = 'solid']) => ({ source, target, victim, gross: victim, style })),
-    buckets: buckets.map((b) => ({ addresses: [], ...b, share: b.amount / total })),
+    buckets: buckets.map((b) => ({ addresses: [], share: b.amount / total, ...b })),
     totals: { denominator: total, basis: 'seed_outflow' }, lead: { path: [], reached: null }, passed_through: [], notes: [], stops: [], ...rest,
   }
   const on = { onLetters: vi.fn(), onWatch: vi.fn(), onDeeper: vi.fn() }
@@ -235,6 +241,35 @@ describe('a frozen wallet that still holds the money', () => {
   })
 })
 
+describe('a sanctioned wallet the money passed through', () => {
+  it('says a sanctions listing freezes nothing, and leaves it out of what can be acted on', () => {
+    made({
+      nodes: [[S, 'seed', 10], [F, 'wallet', 4, 4], [H, 'exchange', 6]],
+      links: [[S, H, 6], [S, F, 4]],
+      buckets: [{ kind: 'exchange', amount: 6, addresses: [H] }, { kind: 'left', amount: 4, addresses: [F] }],
+      passed_through: [{ address: F, category: 'sanctioned', victim_in: 4 }],
+    }, { graph: { nodes: [{ address: S }, { address: H, exchange: 'Binance' }, { address: F, risk_category: 'sanctioned' }], edges: [] } })
+    expect(card('Through a sanctioned wallet')).toHaveTextContent("A sanctions listing freezes nothing: the money can still move unless a token's issuer has frozen it.")
+    expect(screen.queryByRole('heading', { name: /^Held/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: '60% can be acted on' })).toBeInTheDocument()
+    expect(screen.queryByText(/^up to/)).not.toBeInTheDocument()
+  })
+})
+
+describe('an exchange bucket that came only through upper-bound shares', () => {
+  it('says nothing firm reached it, worked from the amounts and not the rounded share', () => {
+    // 2 of 300 is a share of 0.006667 once rounded: taking the exact 2/300
+    // from that left 3e-7, said as "under 0.1%" when nothing firm reached it.
+    made({
+      nodes: [[S, 'seed', 300], [F, 'wallet', 2], [H, 'exchange', 2], [X, 'beyond_limit', 298]],
+      links: [[S, F, 2], [F, H, 2, 'dashed'], [S, X, 298]],
+      buckets: [{ kind: 'exchange', amount: 2, share: 0.006667, bounded_amount: 2, addresses: [H] }, { kind: 'beyond_limit', amount: 298, addresses: [X] }],
+    }, { graph: { nodes: [{ address: S }, { address: H, exchange: 'Binance' }], edges: [] } })
+    expect(screen.getByRole('heading', { level: 2, name: '0% can be acted on' })).toBeInTheDocument()
+    expect(screen.getByText(/reached a place someone can act on/).closest('p')).toHaveTextContent(/^0% reached a place someone can act on, up to 0\.6% counting money through wallets whose shares are only upper bounds$/)
+  })
+})
+
 describe('money beyond the hop limit and money the trace did not open', () => {
   const split = (stops) => made({
     nodes: [[S, 'seed', 10], [X, 'beyond_limit', 10]],
@@ -287,10 +322,13 @@ describe('money at an instant exchanger', () => {
 
   it('counts as a place someone can act on, green in the drawing and the bar', () => {
     const { container } = instant()
-    expect(screen.getByRole('heading', { level: 2, name: '9.7% can be acted on' })).toBeInTheDocument()
+    // Demo 11's figures: part came through wallets whose shares are only upper bounds.
+    expect(screen.getByRole('heading', { level: 2, name: '6.4% can be acted on' })).toBeInTheDocument()
+    expect(screen.getByText(/^up to 9\.7%/)).toHaveTextContent('up to 9.7% counting money through wallets whose shares are only upper bounds')
     expect(screen.getByRole('img')).toHaveAccessibleName(expect.stringContaining('959.58 USDT reached an instant exchanger'))
     expect([...container.querySelectorAll('.vf-bar-all span')].map((c) => c.className)).toEqual(['go instant_exchanger', 'grey not_followed', 'grey beyond_limit', 'grey left'])
     expect(screen.getByText('At an instant exchanger · 959.58')).toHaveClass('go')
+    expect(card('At an instant exchanger')).toHaveTextContent('up to 959.58 USDT')
   })
 
   it('is dashed, and says so, when the wallet is an inferred order deposit address', () => {

@@ -270,6 +270,8 @@ export const PAGES = [
   { name: 'Bulk intake, signed in', path: '/batch', as: 'investigator', stub: SIGNED_IN, ready: ['textbox', { name: 'Case reference' }] },
   { name: 'Watchlist', path: '/watchlist', as: 'investigator', ready: H1('Watchlist') },
   { name: 'Requests', path: '/requests', as: 'investigator', ready: H1('Requests') },
+  // A list the backend did not answer says so, with Try again.
+  { name: 'Watchlist, not reached', path: '/watchlist', as: 'investigator', stub: { url: /\/watches$/, status: 503, body: { detail: 'asleep' } }, ready: ['button', { name: 'Try again' }] },
   // A recorded trace: the case view, read from the recording, no chain
   // consulted. It opens on Flow, and each tab has a URL of its own. On a
   // phone a line of the finding sits at the foot of the screen at rest.
@@ -306,6 +308,9 @@ export const PAGES = [
   // recording logs nothing. A line of the letter sits at the foot of the
   // screen at rest.
   { name: 'recorded case 11, Letters', path: '/demo/11?tab=letters', as: 'investigator', ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
+  // A draft that failed says why on its sheet, with Try again; on a phone
+  // the note under the short sheet sits at the foot of the screen at rest.
+  { name: 'recorded case 11, Letters, draft failed', path: '/demo/11?tab=letters', as: 'investigator', stub: { url: /\/demos\/recorded\/11\/letter\?to=/, status: 503, body: { detail: 'Service waking up' } }, ready: ['button', { name: 'Try again' }], unmeasured: { phone: 1 } },
   { name: 'recorded case 11, Letters, to Tether', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Request to Tether', exact: true }], ready: ['article', { name: 'Draft: Request to Tether', exact: true }], unmeasured: { desktop: 1, phone: 1 } },
   { name: 'recorded case 11, Letters, marked as sent', path: '/demo/11?tab=letters', as: 'investigator', click: ['button', { name: 'Mark as sent' }], ready: ['link', { name: 'Open a stored case' }], unmeasured: { desktop: 1, phone: 1 }, layout: saidBesideButton },
   // The drafter waits, told why the sign-off is not theirs; a second officer

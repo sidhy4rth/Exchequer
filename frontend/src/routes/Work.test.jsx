@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import Work from './Work'
 import { stubFetch } from '../test/setup'
@@ -24,12 +24,13 @@ function Landed() {
   return <p data-testid="landed">{pathname}</p>
 }
 
-function open(page, { path = '/', access = { demo_code_required: false }, extra = {} } = {}) {
+function open(page, { path = '/', access = { demo_code_required: false }, extra = {}, held } = {}) {
   const fetch = stubFetch({
     '/chains': { body: oneChain }, '/cases': { body: stored }, '/access': { body: access },
     '/watches': { body: { watches: [] } }, '/alerts': { body: { alerts: [] } }, '/requests': { body: { requests: [] } },
     '/batches': { body: { batches: [] } }, '/demos/recorded': { body: { demos: [] } }, ...extra,
   })
+  const release = held && hold(fetch, held)
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
@@ -38,7 +39,7 @@ function open(page, { path = '/', access = { demo_code_required: false }, extra 
       </Routes>
     </MemoryRouter>,
   )
-  return fetch
+  return release ?? fetch
 }
 
 describe('the monitor pages', () => {
@@ -174,5 +175,81 @@ describe('a site the owner has closed to officers', () => {
     open('batch', { access: { ...closed, officer: true } })
     expect(await screen.findByLabelText('Complaints CSV')).toBeVisible()
     expect(screen.queryByText(/needs a signed-in officer/)).not.toBeInTheDocument()
+  })
+})
+
+/** Hold back the answer to `path` until the returned function is called. */
+function hold(fetch, path) {
+  let release
+  const wait = new Promise((r) => { release = r })
+  const answer = fetch.getMockImplementation()
+  fetch.mockImplementation(async (url, init) => {
+    if (String(url).replace(/^\/api/, '').split('?')[0] === path) await wait
+    return answer(url, init)
+  })
+  return release
+}
+
+describe('a monitor page before and without its list', () => {
+  it.each([
+    ['watchlist', '/watches', /^Nothing watched yet/, 'Loading the watchlist…'],
+    ['requests', '/requests', /^No open requests/, 'Loading open requests…'],
+  ])('says %s is loading, never that it is empty, until the list answers', async (page, path, empty, loading) => {
+    const release = open(page, { held: path })
+    expect(await screen.findByRole('status')).toHaveTextContent(loading)
+    expect(screen.queryByText(empty)).not.toBeInTheDocument()
+    release()
+    expect(await screen.findByText(empty)).toBeInTheDocument()
+    expect(screen.queryByText(loading)).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['watchlist', '/watches', /^Nothing watched yet/, 'The watchlist could not be reached'],
+    ['requests', '/requests', /^No open requests/, 'Open requests could not be reached'],
+  ])('says %s could not be reached when it fails, and tries again on request', async (page, path, empty, down) => {
+    const user = userEvent.setup()
+    let calls = 0
+    open(page, { extra: { [path]: () => (++calls === 1 ? { status: 503, body: { detail: 'asleep' } } : { body: { watches: [], requests: [] } }) } })
+    expect(await screen.findByText(new RegExp(`^${down}`))).toBeInTheDocument()
+    expect(screen.queryByText(empty)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText(empty)).toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(`^${down}`))).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['watchlist', '/watches', { watches: [{ watch_id: 'w1', address: '0x' + 'cd'.repeat(20), chain: 'ethereum', asset: 'ETH' }] }, /^Watchlist · 1/],
+    ['requests', '/requests', { requests: [{ request_id: 'r1', case_id: 'c1', recipient: 'Binance', status: 'sent' }] }, /^Open requests · 1/],
+  ])('keeps the keyboard on %s when Try again brings the list back', async (page, path, body, head) => {
+    const user = userEvent.setup()
+    let calls = 0
+    open(page, { extra: { [path]: () => (++calls === 1 ? { status: 503, body: { detail: 'asleep' } } : { body }) } })
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+    const list = (await screen.findByText(head)).closest('section')
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(document.activeElement).not.toBe(document.body)
+    expect(document.activeElement).toContainElement(list)
+  })
+
+  it('starts each page afresh: an empty requests page says nothing of the watchlist', async () => {
+    const user = userEvent.setup()
+    const fetch = stubFetch({
+      '/access': { body: { demo_code_required: false } }, '/requests': { body: { requests: [] } },
+      '/watches': { body: { watches: [] } }, '/alerts': { body: { alerts: [] } },
+    })
+    hold(fetch, '/watches')
+    render(
+      <MemoryRouter initialEntries={['/requests']}>
+        <Routes>
+          <Route path="/requests" element={<><Link to="/watchlist">to the watchlist</Link><Work page="requests" /></>} />
+          <Route path="/watchlist" element={<><Link to="/requests">to requests</Link><Work page="watchlist" /></>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText(/^No open requests/)).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'to the watchlist' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Watchlist' })).toBeInTheDocument()
+    expect(screen.queryByText(/^Nothing watched yet/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^No open requests/)).not.toBeInTheDocument()
   })
 })

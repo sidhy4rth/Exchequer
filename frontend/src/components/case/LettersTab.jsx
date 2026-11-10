@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchCaseRequests, fetchLetter, fetchLetters, fetchRecordedLetter, fetchRecordedLetters, logRequest, signOffRequest, updateRequest } from '../../api'
 import { plain } from '../../text'
 import RequestsPanel from '../RequestsPanel'
 import WatchPanel from '../WatchPanel'
 import { ist } from './format'
-import { addressOf, blanks, checks, kindOf, lines, recipientOf } from './letterChecks'
+import { addressOf, assetOf, blanks, checks, kindOf, lines, recipientOf } from './letterChecks'
 import './Letters.css'
 
 const Tick = () => (
@@ -31,13 +31,15 @@ const FALLBACK = { 'exchange-freeze': 'exchange', 'instant-freeze': 'instant' } 
  * recorded example (`recorded` is its number) shows its drafts, but only a
  * stored case can log one as sent. A Flow card can ask for one letter
  * (`pick`, its `to`) or one more wallet to watch (`watch`). */
-export default function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
+function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   const caseId = result.case_id
   const source = caseId ? { list: () => fetchLetters(caseId), one: (to) => fetchLetter(caseId, to) }
     : recorded ? { list: () => fetchRecordedLetters(recorded), one: (to) => fetchRecordedLetter(recorded, to) } : null
   const [letters, setLetters] = useState(null)
   const [to, setTo] = useState(null)
   const [texts, setTexts] = useState({})
+  const [failed, setFailed] = useState({}) // to → why that letter could not be drafted
+  const [tries, setTries] = useState(0) // asks for a failed letter again
   const [listError, setListError] = useState(null)
   const [said, setSaid] = useState(null) // { tone: 'status' | 'alert' | 'prompt', text }
   const [requests, setRequests] = useState([]) // the case's freeze log, to tell what was already sent
@@ -46,6 +48,7 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
   const [drafts, setDrafts] = useState(0) // redrafts the letter after a sign-off changes what it says
   const [askReason, setAskReason] = useState(null) // why this caller cannot ask for a sign-off (not signed in)
   const box = useRef(null)
+  const sheetRef = useRef(null)
   const picked = useRef(null)
   const stateLine = useRef(null) // takes the keyboard when a sign-off button leaves the card
 
@@ -67,12 +70,18 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
   }, [caseId, recorded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!source || !to || texts[to] !== undefined) return undefined
+    if (!source || !to || texts[to] !== undefined || failed[to] !== undefined) return undefined
     let live = true
     source.one(to).then((text) => live && setTexts((t) => ({ ...t, [to]: text })))
-      .catch((e) => live && setSaid({ tone: 'alert', text: `The letter could not be drafted: ${e.message}` }))
+      .catch((e) => live && setFailed((f) => ({ ...f, [to]: e.message })))
     return () => { live = false }
-  }, [to, drafts]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [to, drafts, tries]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Draft `which` afresh after it failed; the keyboard waits on the sheet. */
+  function redraft(which) {
+    setFailed(({ [which]: _, ...rest }) => rest)
+    setTries((n) => n + 1)
+  }
 
   // The letter a Flow card asked for opens on the sheet and takes the keyboard.
   const listed = (wanted) => (letters?.some((l) => l.to === wanted) ? wanted : null)
@@ -100,7 +109,10 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
   // Said before anyone presses Ask: a letter no unit's officer could sign would wait for good.
   const cannotAsk = row ? row.ask_reason : askReason
 
-  function pick(next) { setTo(next); setSaid(null); setManual(false) }
+  function pick(next) {
+    if (next === to && failed[to] !== undefined) redraft(to)
+    setTo(next); setSaid(null); setManual(false)
+  }
   async function copy() {
     try {
       await navigator.clipboard.writeText(text)
@@ -121,17 +133,17 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
       await logRequest({
         case_id: caseId, recipient: recipientOf(letter, result), kind: kindOf(to),
         address: addressOf(letter, result),
-        asset: result.asset ?? '', status: next,
+        asset: assetOf(to, result), status: next,
       })
     }
     return true
   }
-  async function done(text, redraft = false) {
+  async function done(text, fresh = false) {
     await loadRequests()
     setLogged((n) => n + 1)
-    if (redraft) { setTexts(({ [to]: _, ...rest }) => rest); setDrafts((n) => n + 1) }
+    if (fresh) { setTexts(({ [to]: _, ...rest }) => rest); setDrafts((n) => n + 1) }
     setSaid({ tone: 'status', text })
-    if (redraft) stateLine.current?.focus() // the button pressed is gone: keep the keyboard's place
+    if (fresh) stateLine.current?.focus() // the button pressed is gone: keep the keyboard's place
   }
   async function markSent() {
     if (!caseId) { setSaid({ tone: 'prompt' }); return }
@@ -175,9 +187,14 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
               <button key={l.to} ref={l.to === ask ? picked : undefined} type="button" aria-pressed={l.to === to} onClick={() => pick(l.to)}>{plain(l.title)}</button>
             ))}
           </div>
-          <article className="letter-sheet" aria-labelledby="letter-title">
+          <article ref={sheetRef} tabIndex={-1} className="letter-sheet" aria-labelledby="letter-title">
             <h2 id="letter-title" className="visually-hidden">Draft: {plain(letter.title)}</h2>
-            {text === undefined ? <p className="lt-wait">Drafting the letter…</p> : (
+            {failed[to] !== undefined ? (
+              <div className="lt-wait lt-failed" role="alert">
+                <p>The letter could not be drafted: {failed[to]}</p>
+                <button type="button" onClick={() => { sheetRef.current?.focus(); redraft(to) }}>Try again</button>
+              </div>
+            ) : text === undefined ? <p className="lt-wait">Drafting the letter…</p> : (
               <div className="letter-text">
                 {lines(text).map((line, n) => (
                   <p className="ln" key={n} style={line.indent || line.hang ? { paddingLeft: `${(line.indent + line.hang) * 0.5}em`, textIndent: `${-line.hang * 0.5}em` } : undefined}>
@@ -264,3 +281,6 @@ export default function LettersTab({ result, recorded, pick: asked = null, watch
     </div>
   )
 }
+
+// Skips a render while its props are the same (see TimelineTab).
+export default memo(LettersTab)

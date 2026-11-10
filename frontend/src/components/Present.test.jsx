@@ -59,3 +59,27 @@ describe('Present mode, the handoff screen', () => {
     expect(exportMenu.querySelector('.visually-hidden')).toBeNull()
   })
 })
+
+describe('Present mode, after a swap and on the route screen', () => {
+  it('states the followed trace\'s confidence as the band word, with no decimal', () => {
+    const { container } = open({
+      exchange: null, exchange_address: null, exchange_label: null,
+      followed_attribution: { exchange: 'Binance', exchange_label: 'Binance-Hot 7', exchange_address: 'T'.padEnd(34, '9'), asset: 'TRX', hop_count: 2, confidence: 0.49, attribution_inferred: false },
+    })
+    const lede = container.querySelector('.pr-lede')
+    expect(lede).toHaveTextContent('2 hops after the swap, low confidence within that trace.')
+    expect(lede.textContent).not.toMatch(/\d\.\d/)
+  })
+
+  it('says which view of the route is showing, to a screen reader too', async () => {
+    const user = userEvent.setup()
+    open()
+    await user.keyboard('{ArrowRight}')
+    const hop = screen.getByRole('button', { name: 'By hop' })
+    const bubbles = screen.getByRole('button', { name: 'Bubbles' })
+    expect(hop).toHaveAttribute('aria-pressed', 'true')
+    expect(bubbles).toHaveAttribute('aria-pressed', 'false')
+    await user.click(bubbles)
+    expect(bubbles).toHaveAttribute('aria-pressed', 'true')
+  })
+})

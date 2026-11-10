@@ -102,10 +102,13 @@ function Status({ health }) {
 
 /** Wallet, transaction hash or case id → its page; anything else is said
  * to be not recognised, in place. */
-function Find({ health }) {
+function Find({ health, path }) {
   const navigate = useNavigate()
   const [text, setText] = useState('')
   const [missed, setMissed] = useState(false)
+  // The note sits over the top of the page, so it goes with the page, on
+  // Escape, and once focus leaves the box.
+  useEffect(() => setMissed(false), [path])
   function submit(event) {
     event.preventDefault()
     if (!text.trim()) return
@@ -121,6 +124,7 @@ function Find({ health }) {
         <label htmlFor="shell-find" className="visually-hidden">Wallet, transaction hash or case ID</label>
         <input id="shell-find" type="search" placeholder="Wallet, hash or case" value={text} spellCheck={false} autoComplete="off"
           onChange={(e) => { setText(e.target.value); setMissed(false) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setMissed(false) }} onBlur={() => setMissed(false)}
           aria-invalid={missed || undefined} aria-describedby={missed ? 'shell-find-missed' : undefined} />
       </form>
       {missed && <p id="shell-find-missed" className="shell-find-missed" role="alert">Not recognised: paste a wallet address, a transaction hash or a case ID.</p>}
@@ -213,18 +217,47 @@ function PhoneBar({ path, out }) {
   )
 }
 
+/** GET /chains for the shell's whole life. A miss (a restart, a 502 from
+ * the proxy) says the backend is unreachable, then asks again after 2, 4, 8…
+ * seconds (at most a minute apart), and at once when another page opens,
+ * until an answer replaces it. */
+function useChains(pathname) {
+  const [health, setHealth] = useState(null)
+  const [nudge, setNudge] = useState(0)
+  const down = health?.status === 'down'
+  useEffect(() => { if (down) setNudge((n) => n + 1) }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let live = true
+    let timer
+    const ask = (miss) => fetchChains().then((h) => live && setHealth(h)).catch(() => {
+      if (!live) return
+      setHealth({ status: 'down' })
+      timer = setTimeout(() => ask(miss + 1), Math.min(60_000, 2_000 * 2 ** miss))
+    })
+    ask(0)
+    return () => { live = false; clearTimeout(timer) }
+  }, [nudge])
+  return health
+}
+
 export default function AppShell() {
   // The router reads /cases/ as /cases; so do the sidebar and breadcrumbs.
   const pathname = useLocation().pathname.replace(/(.)\/+$/, '$1')
   const out = useWayOut(useDemoView('investigator'))
   const { officer } = out
-  const [health, setHealth] = useState(null)
-  useEffect(() => {
-    fetchChains().then(setHealth).catch(() => setHealth({ status: 'down' }))
-  }, [])
+  const health = useChains(pathname)
   const [named, setNamed] = useState(null)
   const crumbs = trail(pathname)
   if (named && crumbs.length > 1) crumbs[crumbs.length - 1] = { label: named, mono: true }
+  // Each page its own title, most specific first: "Cases · Exchequer",
+  // "0xabc…1234 · Cases · Exchequer". Leaving the console puts the site's back.
+  const title = crumbs.length ? [...crumbs.map((c) => c.label).reverse(), 'Exchequer'].join(' · ') : null
+  useEffect(() => {
+    if (!title) return undefined
+    const before = document.title
+    document.title = title
+    return () => { document.title = before }
+  }, [title])
 
   return (
     <div className="shell">
@@ -271,7 +304,7 @@ export default function AppShell() {
             </nav>
           )}
           <span className="grow" />
-          <Find health={health} />
+          <Find health={health} path={pathname} />
           <ThemeToggle />
         </header>
         <main id="main" className="shell-main" tabIndex={-1}>

@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom'
 import { fetchOpenRequests } from '../api'
 import { STATUS } from './RequestsPanel'
 
-// Home page: requests still waiting on someone, oldest silence first.
+// Requests still waiting on someone, oldest silence first. `onCount` hears
+// how many: undefined until /requests answers, null if it could not.
 export default function OpenRequests({ onCount } = {}) {
-  const [items, setItems] = useState([])
-  useEffect(() => { fetchOpenRequests().then((d) => setItems(d.requests ?? [])).catch(() => {}) }, [])
-  useEffect(() => { onCount?.(items.length) }, [onCount, items.length])
-  if (items.length === 0) return null
+  const [items, setItems] = useState(undefined)
+  useEffect(() => { fetchOpenRequests().then((d) => setItems(d.requests ?? [])).catch(() => setItems(null)) }, [])
+  const known = items == null ? items : items.length
+  useEffect(() => { onCount?.(known) }, [onCount, known])
+  if (!items?.length) return null
   const sorted = [...items].sort((a, b) => (b.days_waiting ?? -1) - (a.days_waiting ?? -1))
   const overdue = items.filter((r) => r.follow_up).length
   return (

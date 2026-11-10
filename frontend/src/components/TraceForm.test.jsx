@@ -2,7 +2,8 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import TraceForm, { parseHashes } from './TraceForm'
+import TraceForm, { DEMOS, parseHashes } from './TraceForm'
+import recordings from '../../../backend/data/recorded_demos.json'
 import { stubFetch } from '../test/setup'
 
 const health = {
@@ -337,5 +338,26 @@ describe('the new trace page form', () => {
 describe('parseHashes', () => {
   it('splits on lines, commas and spaces, and drops repeats', () => {
     expect(parseHashes(` a\nb, c  a \n`)).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('the verified examples\' hooks', () => {
+  // A hook is read before the recording opens, so it must say what the
+  // recording says: the band word, never a decimal, and the same hops.
+  const WORDS = { one: 1, two: 2, three: 3 }
+  it.each(DEMOS.map((d) => [d.n, d]))('%s matches its recording', (n, d) => {
+    expect(d.hook).not.toMatch(/\d\.\d/)
+    const { result } = recordings.find((r) => r.demo === Number(n))
+    const band = d.hook.match(/\b(high|moderate|low) confidence\b/)
+    if (band) expect(band[1]).toBe(result.confidence_detail.band)
+    const hops = d.hook.match(/\b(one|two|three|\d+) hops?\b/i)
+    if (hops && result.exchange && d.direction === 'outgoing') {
+      expect(WORDS[hops[1].toLowerCase()] ?? Number(hops[1])).toBe(result.hop_count)
+    }
+  })
+
+  it('give demos 03 and 11 the band their recordings now carry', () => {
+    expect(DEMOS.find((d) => d.n === '03').hook).toMatch(/low confidence/)
+    expect(DEMOS.find((d) => d.n === '11').hook).toMatch(/Binance-Hot 7.*low confidence/)
   })
 })

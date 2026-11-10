@@ -234,6 +234,14 @@ describe('recent cases', () => {
     expect(await screen.findByText(/No cases yet/)).toBeInTheDocument()
   })
 
+  it('says the cases are loading until /cases answers', async () => {
+    renderHome()
+    const card = within(screen.getByRole('region', { name: 'Recent cases' }))
+    expect(card.getByRole('status')).toHaveTextContent('Loading cases…')
+    expect(await card.findByText(/No cases yet/)).toBeInTheDocument()
+    expect(card.queryByText('Loading cases…')).not.toBeInTheDocument()
+  })
+
   it('says the cases cannot be reached, never that there are none, when /cases fails', async () => {
     renderHome({ extra: { '/cases': { status: 500, body: { detail: 'down' } } } })
     const card = within(await screen.findByRole('region', { name: 'Recent cases' }))
@@ -287,6 +295,33 @@ describe('the coverage tables', () => {
     await user.click(open)
     expect(table).toBeVisible()
     expect(screen.getByRole('table', { name: 'Risk screening per chain' })).toBeVisible()
+  })
+})
+
+describe('the mixers note under the coverage tables', () => {
+  const card = () => within(screen.getByRole('group', { name: 'Coverage' }))
+  it('never says the count is zero beside a count that is not', async () => {
+    const tagged = { ...health, chains: { ...health.chains, ethereum: { ...health.chains.ethereum, risk_labels: { ...health.chains.ethereum.risk_labels, mixer: 40 } } } }
+    renderHome({ chains: tagged })
+    await loaded()
+    expect(card().getByRole('table', { name: 'Risk screening per chain', hidden: true })).toHaveTextContent('40')
+    expect(card().queryByText(/count is zero|have none/)).not.toBeInTheDocument()
+    expect(card().getByText(/Mixers here are explorer-tagged/)).toBeInTheDocument()
+  })
+
+  it('never claims every counted mixer stops a trace (only a pinned pool or entry point does)', async () => {
+    const tagged = { ...health, chains: { ...health.chains, ethereum: { ...health.chains.ethereum, risk_labels: { ...health.chains.ethereum.risk_labels, mixer: 40 } } } }
+    renderHome({ chains: tagged })
+    await loaded()
+    expect(card().queryByText(/A trace stops at a mixer\./)).not.toBeInTheDocument()
+    expect(card().getByText(/A trace stops at a mixer's pool or entry point\./)).toBeInTheDocument()
+  })
+
+  it('says why there are none only when every chain has none', async () => {
+    renderHome()
+    await loaded()
+    expect(card().getByText(/these chains have none/)).toBeInTheDocument()
+    expect(card().queryByText(/explorer-tagged; /)).not.toBeInTheDocument()
   })
 })
 

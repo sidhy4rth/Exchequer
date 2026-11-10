@@ -232,3 +232,80 @@ describe('a live trace that finishes', () => {
     expect(calls).not.toContain('GET /trace/c9')
   })
 })
+
+describe('Present from the keyboard', () => {
+  const presenting = () => screen.queryByRole('dialog', { name: 'Present the case' })
+
+  it.each([['Ctrl', '{Control>}p{/Control}'], ['Cmd', '{Meta>}p{/Meta}'], ['Alt', '{Alt>}p{/Alt}']])(
+    'leaves %s+P to the browser, which prints the page', async (_, keys) => {
+      const user = userEvent.setup()
+      await openDemo11({ tab: 'letters' })
+      const event = vi.fn()
+      window.addEventListener('keydown', event)
+      await user.keyboard(keys)
+      window.removeEventListener('keydown', event)
+      expect(presenting()).not.toBeInTheDocument()
+      expect(event.mock.calls.find(([e]) => e.key === 'p')[0].defaultPrevented).toBe(false)
+    })
+
+  it('opens on a bare P, though not while typing in an editable area', async () => {
+    const user = userEvent.setup()
+    await openDemo11()
+    const editable = document.createElement('div')
+    editable.contentEditable = 'true'
+    // jsdom does not work this out from the attribute; a browser does.
+    Object.defineProperty(editable, 'isContentEditable', { value: true })
+    editable.tabIndex = 0
+    document.body.append(editable)
+    editable.focus()
+    await user.keyboard('p')
+    expect(presenting()).not.toBeInTheDocument()
+    editable.remove()
+    await user.keyboard('P')
+    expect(presenting()).toBeInTheDocument()
+  })
+
+  it('is a modal: the page behind it is inert, focus moves in, and returns on Escape', async () => {
+    const user = userEvent.setup()
+    await openDemo11()
+    const button = screen.getByRole('button', { name: 'Present' })
+    await user.click(button)
+    const dialog = presenting()
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toContainElement(document.activeElement)
+    const behind = screen.getByRole('heading', { level: 1 })
+    expect(behind.closest('[inert]')).not.toBeNull()
+    expect(dialog.closest('[inert]')).toBeNull()
+    await user.keyboard('{Escape}')
+    expect(presenting()).not.toBeInTheDocument()
+    expect(document.querySelector('[inert]')).toBeNull()
+    expect(button).toHaveFocus()
+  })
+})
+
+describe('the money-flow view buttons', () => {
+  it('say which view is showing, to a screen reader too', async () => {
+    const user = userEvent.setup()
+    await openDemo11()
+    const hop = within(panel()).getByRole('button', { name: 'By hop' })
+    const bubbles = within(panel()).getByRole('button', { name: 'Bubbles' })
+    expect(hop).toHaveAttribute('aria-pressed', 'true')
+    expect(bubbles).toHaveAttribute('aria-pressed', 'false')
+    await user.click(bubbles)
+    expect(hop).toHaveAttribute('aria-pressed', 'false')
+    expect(bubbles).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+describe('a trace continued after a swap', () => {
+  it('states its confidence as the band word, with no decimal', async () => {
+    const DEPOSIT = 'TXgo8gtf6bPQURfHftYWPRv1QPuLQaBBVU'
+    await openDemo11({
+      follow_ons: [{ address: DEPOSIT, asset: 'TRX', swap: { tx: 'ab'.repeat(32) },
+        result: { graph: demo.result.graph, trace_path: [], exchange: 'Binance', exchange_label: 'Binance-Hot 7', confidence: 0.49 } }],
+    })
+    const head = within(panel()).getByText(/^Continued in TRX after the swap/)
+    expect(head).toHaveTextContent(/reached Binance-Hot 7 · low confidence$/)
+    expect(head.textContent).not.toMatch(/\d\.\d/)
+  })
+})

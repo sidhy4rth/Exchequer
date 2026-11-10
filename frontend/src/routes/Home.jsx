@@ -137,6 +137,7 @@ function RecentCases() {
   return (
     <section className="card glass console-card" aria-labelledby="console-recent">
       <div className="console-card-head"><h2 id="console-recent">Recent cases</h2><Link to="/cases">All cases</Link></div>
+      {cases === undefined && <p className="note" role="status">Loading cases…</p>}
       {cases?.length === 0 && <p className="note">No cases yet. Cases you trace show here, in this browser only.</p>}
       {cases === null && <p className="note">Recent cases cannot be reached right now.</p>}
       {cases?.length > 0 && (
@@ -237,6 +238,9 @@ export default function Home() {
 
   const chains = health?.chains ? Object.values(health.chains) : []
   const allReady = chains.length > 1 && chains.every((c) => c.ready)
+  const mixerCount = (c) => coverage[c.key]?.risk?.counts_by_category?.mixer ?? c.risk_labels?.mixer ?? 0
+  // Explorer tags list mixers on some chains; the SDN list's are on Bitcoin.
+  const mixers = chains.some((c) => mixerCount(c) > 0)
   // A public site without the code: verified examples only, nothing that would
   // spend the provider quota or keep running.
   // A site closed to officers: the same, until an officer signs in.
@@ -295,14 +299,16 @@ export default function Home() {
                     <tr key={c.key}>
                       <td title={c.name}><ChainDot chain={c.key} />{SHORT_CHAIN[c.key] ?? c.name}</td>
                       <td className="num">{(coverage[c.key]?.risk?.counts_by_category?.sanctioned ?? c.risk_labels?.sanctioned ?? 0) + (coverage[c.key]?.risk?.counts_by_category?.seized ?? c.risk_labels?.seized ?? 0)}</td>
-                      <td className="num">{coverage[c.key]?.risk?.counts_by_category?.mixer ?? c.risk_labels?.mixer ?? 0}</td>
+                      <td className="num">{mixerCount(c)}</td>
                       <td className="num">{coverage[c.key]?.risk?.counts_by_category?.frozen ?? c.risk_labels?.frozen ?? 0}</td>
                       <td className="num">{coverage[c.key]?.risk?.counts_by_category?.stolen ?? c.risk_labels?.stolen ?? 0}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p className="note" style={{ padding: '8px 14px' }}>Every mixer on the current SDN list is a Bitcoin service, so the count is zero; the stop-at-a-mixer rule is built and tested.</p>
+              <p className="note" style={{ padding: '8px 14px' }}>{mixers
+                ? "Mixers here are explorer-tagged; the SDN list's own mixers are Bitcoin services. A trace stops at a mixer's pool or entry point."
+                : 'Every mixer on the current SDN list is a Bitcoin service, so these chains have none; the stop-at-a-mixer rule is built and tested.'}</p>
             </div>
             <div>
               <div className="head"><span className="micro">What a trace does</span></div>

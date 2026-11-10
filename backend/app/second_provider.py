@@ -160,8 +160,13 @@ def check_tron(transfer: dict[str, Any], answer: dict[str, Any], token: Asset) -
     for item in answer.get("trc20TransferInfo") or []:
         if item.get("contract_address") != token.address:
             continue
+        # The token's own decimals, never TronScan's: "decimals": 1000000000 is
+        # a few bytes, and 10**it would hold the web server for minutes.
+        decimals = item.get("decimals", token.decimals)
+        if type(decimals) is not int or decimals != token.decimals:
+            return Check(digest, UNCHECKED, "the second provider's answer is not in the shape expected")
         found = _differences(transfer, item.get("from_address"), item.get("to_address"),
-                             Decimal(item.get("amount_str") or "0") / 10**int(item.get("decimals", token.decimals)))
+                             Decimal(item.get("amount_str") or "0") / 10**token.decimals)
         if not found:
             return Check(digest, CONFIRMED)
         closest = _mismatch(digest, found)

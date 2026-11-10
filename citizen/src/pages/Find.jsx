@@ -30,28 +30,35 @@ const or = (items) => new Intl.ListFormat('en', { type: 'disjunction' }).format(
 const REASONS = {
   empty: 'Paste the hash in the box first.',
   address: 'This looks like a wallet address, not a payment. Open the payment itself and copy its hash.',
-  chars: 'A hash has only the digits 0 to 9 and the letters a to f, and this has other characters. Copy '
-    + 'just the long code, without the words or link around it. An order ID or a UPI reference is a '
-    + 'different number.',
-  length: ({ length }) => `This has ${length} characters, and a hash has 64 (not counting a 0x at the `
-    + 'start). Check that you copied all of it.',
+  chars: 'On Tron, Ethereum and the other networks this site checks, a hash has only the digits 0 to 9 and '
+    + 'the letters a to f, and this has other characters. Copy just the long code, without the words or '
+    + 'link around it. An order ID or a UPI reference is a different number.',
+  length: ({ length }) => `This has ${length} characters, and a hash on those networks has 64 (not `
+    + 'counting a 0x at the start). Check that you copied all of it.',
 }
+// The check knows only the networks the site traces; a real hash from any
+// other one can have another shape, and must not be called wrong.
+const ELSEWHERE = 'If the payment was on another network, such as Bitcoin or Solana, its hash can look different: '
+  + 'keep the hash as you copied it.'
 
 function Verdict(result) {
   if (result.reason === 'empty') return <p>{REASONS.empty}</p>
   if (!result.ok) {
     const reason = REASONS[result.reason]
     return (<>
-      <p className="verdict bad"><Icon name="cross" />This does not look like a transaction hash.</p>
+      <p className="verdict bad"><Icon name="cross" />{result.reason === 'address'
+        ? 'This does not look like a transaction hash.' : 'This is not the shape of a Tron or Ethereum-style hash.'}</p>
       <p>{typeof reason === 'function' ? reason(result) : reason}</p>
+      {result.reason !== 'address' && <p>{ELSEWHERE}</p>}
     </>)
   }
   return (<>
     <p className="verdict ok"><Icon name="check" />This has the shape of a transaction hash.</p>
     {result.extracted && <p>We found it inside the words or link you pasted:</p>}
     <code className="hash">{result.hash}</code>
-    <p>It could be a payment on {or(result.networks)}. The network your app showed beside the payment,
-      such as TRC20 (Tron), ERC20 (Ethereum) or BEP20 (BNB Smart Chain), says which.</p>
+    <p>On the networks this site checks, it could be a payment on {or(result.networks)}. A hash from another
+      network, such as Bitcoin, can look the same. The network your app showed beside the payment, such as
+      TRC20 (Tron), ERC20 (Ethereum) or BEP20 (BNB Smart Chain), says which.</p>
     <p>If you copied it from the payment's details, keep it with your evidence, and give it when you
       report on 1930 or at cybercrime.gov.in.</p>
     <p>A private key looks the same. If you copied this from a "private key" or "export" screen instead,

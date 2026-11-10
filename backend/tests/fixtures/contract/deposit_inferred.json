@@ -633,6 +633,7 @@
        "action": "draft_letter",
        "addresses": [],
        "amount": 0.0,
+       "bounded_amount": 0.0,
        "kind": "exchange",
        "share": 0.0
       },
@@ -640,6 +641,7 @@
        "action": "draft_letter",
        "addresses": [],
        "amount": 0.0,
+       "bounded_amount": 0.0,
        "kind": "instant_exchanger",
        "share": 0.0
       },
@@ -647,6 +649,7 @@
        "action": "ask_issuer",
        "addresses": [],
        "amount": 0.0,
+       "bounded_amount": 0.0,
        "kind": "held",
        "share": 0.0
       },
@@ -654,6 +657,7 @@
        "action": "watch",
        "addresses": [],
        "amount": 0.0,
+       "bounded_amount": 0.0,
        "kind": "left",
        "share": 0.0
       },
@@ -661,6 +665,7 @@
        "action": null,
        "addresses": [],
        "amount": 0.0,
+       "bounded_amount": 0.0,
        "kind": "risk",
        "share": 0.0
       },
@@ -670,6 +675,7 @@
         "0xc6aafd1238694e165bf82ce50a5bff879e822177"
        ],
        "amount": 5215.0,
+       "bounded_amount": 0.0,
        "kind": "beyond_limit",
        "share": 1.0
       },
@@ -677,6 +683,7 @@
        "action": null,
        "addresses": [],
        "amount": 0.0,
+       "bounded_amount": 0.0,
        "kind": "not_followed",
        "share": 0.0
       },
@@ -684,6 +691,7 @@
        "action": null,
        "addresses": [],
        "amount": 0.0,
+       "bounded_amount": 0.0,
        "kind": "other",
        "share": 0.0
       }
@@ -3494,6 +3502,7 @@
      "0x3ac431b628c079ede4a915021878aef3d86fa181"
     ],
     "amount": 1.227466723,
+    "bounded_amount": 0.0,
     "kind": "exchange",
     "share": 0.03438
    },
@@ -3501,6 +3510,7 @@
     "action": "draft_letter",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "instant_exchanger",
     "share": 0.0
    },
@@ -3508,6 +3518,7 @@
     "action": "ask_issuer",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "held",
     "share": 0.0
    },
@@ -3516,11 +3527,10 @@
     "addresses": [
      "0xc69c42cac383f86f37e4820e34791c0216999c6f",
      "0x0bee92446f1f24d900b658268f058def4032c688",
-     "0x2345804130f13a04c95b3838f31564992aa1885d",
-     "0x97053adf9c90c08e179942a597cbc6eda8b28870",
-     "0x0a48c56449428b4320648ef64d4508a1e6f14ee5"
+     "0x2345804130f13a04c95b3838f31564992aa1885d"
     ],
-    "amount": 0.372951152,
+    "amount": 0.372950847,
+    "bounded_amount": 0.0,
     "kind": "left",
     "share": 0.010446
    },
@@ -3528,6 +3538,7 @@
     "action": null,
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "risk",
     "share": 0.0
    },
@@ -3543,6 +3554,7 @@
      "0x6112e3ab1ab99ba6c37125ac27ec51b5e950b58a"
     ],
     "amount": 6.471320711,
+    "bounded_amount": 6.471320711,
     "kind": "beyond_limit",
     "share": 0.181255
    },
@@ -3552,6 +3564,7 @@
      "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573"
     ],
     "amount": 26.203701636,
+    "bounded_amount": 0.0,
     "kind": "not_followed",
     "share": 0.73394
    },
@@ -3562,6 +3575,7 @@
      "0xa9ac43f5b5e38155a288d1a01d2cbc4478e14573"
     ],
     "amount": 1.427340779,
+    "bounded_amount": 0.485344177,
     "kind": "other",
     "share": 0.039978
    }
@@ -4123,7 +4137,7 @@
    {
     "address": "0x0a48c56449428b4320648ef64d4508a1e6f14ee5",
     "basis": "traced_only",
-    "left": 8.7e-08,
+    "left": 0.0,
     "role": "wallet",
     "share": 0.005092,
     "victim_in": 0.660843325
@@ -4139,7 +4153,7 @@
    {
     "address": "0x97053adf9c90c08e179942a597cbc6eda8b28870",
     "basis": "traced_only",
-    "left": 2.19e-07,
+    "left": 0.0,
     "role": "wallet",
     "share": 0.005092,
     "victim_in": 2.54592619
@@ -4239,7 +4253,7 @@
    }
   ],
   "totals": {
-   "accounted": 35.702781001,
+   "accounted": 35.702780696,
    "basis": "seed_outflow",
    "denominator": 35.702781
   },

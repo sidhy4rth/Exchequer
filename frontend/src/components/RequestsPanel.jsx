@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { deleteRequest, fetchCaseRequests, fetchLetters, logRequest, updateRequest } from '../api'
 import { plain } from '../text'
-import { addressOf, kindOf, recipientOf } from './case/letterChecks'
+import { addressOf, assetOf, kindOf, recipientOf } from './case/letterChecks'
 
 // Where this case's freeze requests stand. The letter is drafted beside it,
 // on the Letters tab; this is the log of what was sent and what came back.
@@ -52,7 +52,7 @@ export default function RequestsPanel({ result, onChange }) {
     try { await fn(); await load(); onChange?.() } catch (e) { setError(e.message) }
   }
   const log = (recipient, kind, address = '') => run(() => logRequest({
-    case_id: caseId, recipient, kind, address, asset: result.asset ?? '',
+    case_id: caseId, recipient, kind, address, asset: assetOf(kind, result),
   }))
   // Each letter under the name and kind the Letters tab logs it with, so a row
   // from either place stands for the same letter.

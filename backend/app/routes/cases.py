@@ -216,6 +216,18 @@ def _make_room(rows: int, nbytes: int) -> tuple[int, int]:
     return gone, freed
 
 
+def _without_flows(payload: dict[str, Any]) -> dict[str, Any]:
+    """The case without its victim_flow, nor its follow-ons', to measure. Shares the rest."""
+    def bare(result: dict[str, Any]) -> dict[str, Any]:
+        return {k: v for k, v in result.items() if k != "victim_flow"}
+    out = bare(payload)
+    if isinstance(payload.get("follow_ons"), list):
+        out["follow_ons"] = [{**f, "result": bare(f["result"])}
+                             if isinstance(f, dict) and isinstance(f.get("result"), dict) else f
+                             for f in payload["follow_ons"]]
+    return out
+
+
 def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | None,
                  client: str | None = None, officer: tuple[int | None, int | None] = (None, None)) -> dict[str, Any]:
     """Give a finished trace its case id and, unless asked not to, store it.
@@ -248,11 +260,17 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
     # and the store as a whole is bounded in bytes as well as in cases.
     try:
         text = json.dumps(payload, default=str)
+        measured = len(text)
+        if config.MAX_CASE_BYTES and measured > config.MAX_CASE_BYTES:
+            # The victim flows add 15-20 %, so the limit is measured without
+            # them, but the case keeps them: a flow rebuilt on read from the
+            # trimmed appendix would differ from the one shown now.
+            measured = len(json.dumps(_without_flows(payload), default=str))
     except (TypeError, ValueError):
         text = None  # save_case reports it below
-    if text is not None and config.MAX_CASE_BYTES and len(text) > config.MAX_CASE_BYTES:
-        logger.warning("Case of %d bytes not stored (limit %d)", len(text), config.MAX_CASE_BYTES)
-        return _not_saved(payload, f"This result is too large to save ({len(text) / 1e6:.1f} MB; the limit "
+    if text is not None and config.MAX_CASE_BYTES and measured > config.MAX_CASE_BYTES:
+        logger.warning("Case of %d bytes not stored (limit %d)", measured, config.MAX_CASE_BYTES)
+        return _not_saved(payload, f"This result is too large to save ({measured / 1e6:.1f} MB; the limit "
                                    f"is {config.MAX_CASE_BYTES / 1e6:.1f} MB), so it is shown here but was not "
                                    "saved: export what you need from it now, or trace again with a smaller depth.")
     size = len(text) if text is not None else 0

@@ -64,6 +64,17 @@ const dayIST = (seconds) => new Date(seconds * 1000).toLocaleDateString('en-GB',
 
 const METHOD_NAME = { fifo: 'FIFO', prorata: 'pro-rata', libr: 'LIBR' }
 
+// The figure a letter states (request_letters._letter_amount): the smallest,
+// or when that is zero, the smallest that finds any and the rules that found none.
+function statedFigure(methods, names) {
+  const figures = methods.figures
+  if (methods.conservative > 1e-9) return { amount: methods.conservative, by: METHOD_NAME[methods.conservative_method] }
+  const some = names.filter((m) => figures[m] > 1e-9).sort((a, b) => figures[a] - figures[b])
+  if (!some.length) return null
+  const none = names.filter((m) => figures[m] <= 1e-9).map((m) => METHOD_NAME[m])
+  return { amount: figures[some[0]], by: METHOD_NAME[some[0]], none: `${none.join(' and ')} find${none.length === 1 ? 's' : ''} none` }
+}
+
 // R4: how much reached the exchange by each tracing rule, and the figure a
 // letter states. Shown only when the trace computed more than one method.
 function MethodRange({ methods, unit }) {
@@ -71,13 +82,16 @@ function MethodRange({ methods, unit }) {
   const names = ['fifo', 'prorata', 'libr'].filter((m) => figures[m] != null)
   if (names.length < 2 || !methods.range) return null
   const same = methods.range.low === methods.range.high
+  const stated = statedFigure(methods, names)
   return (
     <div className="method-range">
       {same
         ? <>All {names.length} tracing rules agree: <span className="num">{num(methods.range.low)} {unit}</span></>
         : <>By tracing rule: <span className="num">{num(methods.range.low)} to {num(methods.range.high)} {unit}</span></>}
       {' · '}{names.map((m) => `${METHOD_NAME[m]} ${num(figures[m])}`).join(' · ')}
-      {!same && <span className="note"> · a letter states the smallest, {num(methods.conservative)} {unit} ({METHOD_NAME[methods.conservative_method]})</span>}
+      {!same && stated && (
+        <span className="note"> · a letter states the smallest{stated.none ? ' that finds any' : ''}, {num(stated.amount)} {unit} ({stated.by}){stated.none ? `; ${stated.none}` : ''}</span>
+      )}
     </div>
   )
 }
@@ -283,16 +297,6 @@ export default function TraceView() {
       .sort((a, b) => a.hop - b.hop || b.value_native - a.value_native)
   }, [result])
 
-  // Reveal in sequence once the data lands: the order the traversal found it.
-  useEffect(() => {
-    timers.current.forEach(clearTimeout)
-    timers.current = []
-    if (!hops.length) return undefined
-    const step = hops.length > 60 ? 6 : 20
-    for (let i = 1; i <= hops.length; i += 1) timers.current.push(setTimeout(() => setRevealed(i), i * step))
-    return () => timers.current.forEach(clearTimeout)
-  }, [hops])
-
   const address = routeAddress ?? result?.address ?? ''
   useCrumb(result ? middle(plain(address)) : null)
   const reverse = (result?.direction ?? requestedDirection) === 'incoming'
@@ -352,13 +356,31 @@ export default function TraceView() {
     const picked = hops.filter((h) => h.onPath || h.toKind === 'red' || h.swap || h.flags?.length)
     return picked.length ? picked : hops.slice(0, 12)
   }, [hops])
+  // Reveal the rows worth reading first in sequence once the data lands, in
+  // at most 20 steps: each step re-renders the whole case, so a dense case
+  // revealed a row at a time kept the page busy for a minute. The last step
+  // reveals everything, so Show all has nothing left to wait for.
+  useEffect(() => {
+    timers.current.forEach(clearTimeout)
+    timers.current = []
+    if (!notable.length) return undefined
+    const steps = Math.min(notable.length, 20)
+    for (let k = 1; k <= steps; k += 1) {
+      const upTo = k === steps ? Infinity : Math.ceil((k * notable.length) / steps)
+      timers.current.push(setTimeout(() => setRevealed(upTo), k * 30))
+    }
+    return () => timers.current.forEach(clearTimeout)
+  }, [notable])
   const visible = showAll ? hops : notable
   const shown = visible.slice(0, revealed)
 
   useEffect(() => {
     const onKey = (e) => {
+      // A bare P only: Ctrl+P and Cmd+P print the page (the Letters tab
+      // says to print a letter), and nothing typed into a field counts.
       if (e.key !== 'p' && e.key !== 'P') return
-      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      if (e.target && (e.target.isContentEditable || /input|textarea|select/i.test(e.target.tagName))) return
       if (result && !presenting) { e.preventDefault(); setPresenting(true) }
     }
     window.addEventListener('keydown', onKey)
@@ -414,8 +436,8 @@ export default function TraceView() {
       <div className="head">
         <span className="micro">Money flow · {result.graph.nodes.length} addresses · {result.graph.edges.length} transfers</span>
         <span className="seg">
-          <button className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>By hop</button>
-          <button className={view === 'bubbles' ? 'on' : ''} onClick={() => setView('bubbles')}>Bubbles</button>
+          <button className={view === 'flow' ? 'on' : ''} aria-pressed={view === 'flow'} onClick={() => setView('flow')}>By hop</button>
+          <button className={view === 'bubbles' ? 'on' : ''} aria-pressed={view === 'bubbles'} onClick={() => setView('bubbles')}>Bubbles</button>
         </span>
       </div>
       {view === 'flow'
@@ -652,7 +674,7 @@ export default function TraceView() {
                 <div className="card graph-card" key={`${f.address}-${f.asset}`}>
                   <div className="head">
                     <span className="micro">
-                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${plain(f.result.exchange_label)} · ${f.result.confidence?.toFixed(2)}` : 'no exchange reached'}
+                      Continued in {f.asset} after the swap · {f.result.graph.nodes.length} addresses · {f.result.exchange ? `reached ${plain(f.result.exchange_label)}${f.result.confidence == null ? '' : ` · ${bandOf(f.result.confidence)} confidence`}` : 'no exchange reached'}
                     </span>
                     <span className="note">from <Address value={f.address} head={8} tail={6} /> · swap tx <Address value={f.swap?.tx} head={8} tail={6} /></span>
                   </div>
@@ -667,7 +689,7 @@ export default function TraceView() {
                 <div className="head">
                   <span className="micro">{showAll ? 'All transfers' : 'Transfers that matter'} · {visible.length}</span>
                   {hops.length > notable.length && (
-                    <button className="quiet" onClick={() => { setShowAll((v) => !v); setRevealed(hops.length) }}>
+                    <button className="quiet" onClick={() => { timers.current.forEach(clearTimeout); setShowAll((v) => !v); setRevealed(Infinity) }}>
                       {showAll ? 'Show fewer' : `Show all ${hops.length}`}
                     </button>
                   )}

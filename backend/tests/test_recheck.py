@@ -448,3 +448,26 @@ def test_no_read_outlasts_the_rechecks_clock(client, provider, monkeypatch):
     assert provider.requests and all(r.extensions["timeout"]["read"] <= 3 for r in provider.requests)
 
 
+
+
+@pytest.mark.parametrize("decimals", [10**9, 18, "6", None, -6])
+def test_a_token_decimals_the_case_does_not_use_is_an_error_and_is_never_raised_to_a_power(client, provider,
+                                                                                            decimals):
+    # TronScan's own "decimals" is never trusted: 10**1_000_000_000 alone would
+    # take minutes and hundreds of MB inside the web server.
+    first = recorded(12)["transfers"][0]["hash"]
+    answer = provider.tron[first]
+    provider.tron[first] = {**answer, "trc20TransferInfo": [{**answer["trc20TransferInfo"][0],
+                                                              "amount_str": "1", "decimals": decimals}]}
+    body = recheck(client).json()
+    changed = next(t for t in body["transfers"] if t["hash"] == first)
+    assert changed["status"] == "error" and "not in the shape expected" in changed["detail"]
+    assert sorted(statuses(body)) == ["error"] + ["matches"] * 4
+
+
+def test_a_transfer_without_decimals_uses_the_tokens_own(client, provider):
+    first = recorded(12)["transfers"][0]["hash"]
+    answer = provider.tron[first]
+    item = {k: v for k, v in answer["trc20TransferInfo"][0].items() if k != "decimals"}
+    provider.tron[first] = {**answer, "trc20TransferInfo": [item]}
+    assert statuses(recheck(client).json()) == ["matches"] * 5

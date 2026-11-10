@@ -795,6 +795,7 @@
      "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf"
     ],
     "amount": 26405.277104,
+    "bounded_amount": 0.0,
     "kind": "exchange",
     "share": 1.0
    },
@@ -802,6 +803,7 @@
     "action": "draft_letter",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "instant_exchanger",
     "share": 0.0
    },
@@ -809,6 +811,7 @@
     "action": "ask_issuer",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "held",
     "share": 0.0
    },
@@ -816,6 +819,7 @@
     "action": "watch",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "left",
     "share": 0.0
    },
@@ -823,6 +827,7 @@
     "action": null,
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "risk",
     "share": 0.0
    },
@@ -830,6 +835,7 @@
     "action": "trace_deeper",
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "beyond_limit",
     "share": 0.0
    },
@@ -837,6 +843,7 @@
     "action": null,
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "not_followed",
     "share": 0.0
    },
@@ -844,6 +851,7 @@
     "action": null,
     "addresses": [],
     "amount": 0.0,
+    "bounded_amount": 0.0,
     "kind": "other",
     "share": 0.0
    }

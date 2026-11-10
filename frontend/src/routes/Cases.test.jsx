@@ -152,6 +152,28 @@ describe('the cases page', () => {
     expect(fetch.mock.calls.length).toBe(asked)
   })
 
+  it('asks for every case a browser may keep, so an older one can still be found', async () => {
+    const user = userEvent.setup()
+    const many = Array.from({ length: 60 }, (_, i) => ({ ...STORED.cases[1], case_id: `c-${i}`, address: `0x${String(i).padStart(40, '0')}` }))
+    const fetch = open({ cases: { count: 60, cases: many } })
+    await table()
+    const asked = new URL(fetch.mock.calls.find(([url]) => String(url).includes('/cases?'))[0], 'http://x')
+    // The backend's own most: up to 200 cases per browser, plus the demos.
+    expect(Number(asked.searchParams.get('limit'))).toBe(500)
+    await user.type(screen.getByRole('searchbox', { name: 'Search cases' }), many[59].address)
+    expect(shown()).toEqual([many[59].address])
+  })
+
+  it('says a search covers only the newest cases when the list is cut short', async () => {
+    const user = userEvent.setup()
+    const full = Array.from({ length: 500 }, (_, i) => ({ ...STORED.cases[1], case_id: `c-${i}`, address: `0x${String(i).padStart(40, '0')}` }))
+    open({ cases: { count: 500, cases: full } })
+    await table()
+    expect(screen.getByText(/The newest 500 are listed/)).toBeInTheDocument()
+    await user.type(screen.getByRole('searchbox', { name: 'Search cases' }), 'nothing like it')
+    expect(screen.getByText('No case among the newest 500 matches.')).toBeInTheDocument()
+  })
+
   it('shows each case as a card on a phone', async () => {
     screenOf(390)
     open()
@@ -218,6 +240,13 @@ describe('the cases page', () => {
     open({ cases: { count: 0, cases: [] } })
     expect(await screen.findByText(/No cases yet/)).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Filter cases' })).not.toBeInTheDocument()
+  })
+
+  it('says the cases are loading until /cases answers', async () => {
+    open()
+    expect(screen.getByRole('status')).toHaveTextContent('Loading cases…')
+    await table()
+    expect(screen.queryByText('Loading cases…')).not.toBeInTheDocument()
   })
 
   it('says the cases cannot be reached, never that there are none, when /cases fails', async () => {

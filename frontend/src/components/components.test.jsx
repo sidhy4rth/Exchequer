@@ -608,7 +608,8 @@ describe('the watch panel when automatic checks are off (R30)', () => {
     const { container } = inRouter(<WatchPanel result={result} />)
     await screen.findByText(/Automatic checks are off on this site/)
     expect(container).not.toHaveTextContent(/every ten minutes|about every/)
-    expect(container).toHaveTextContent(/Alerts appear on the home page/)
+    expect(container).toHaveTextContent(/Alerts appear on the Watchlist page/)
+    expect(container).not.toHaveTextContent(/home page/)
   })
 
   it('gives the real interval when automatic checks are on', async () => {
@@ -622,5 +623,14 @@ describe('the watch panel when automatic checks are off (R30)', () => {
     const { container } = inRouter(<WatchPanel result={result} />)
     expect(await screen.findByText(/Could not reach the watch service/)).toBeInTheDocument()
     expect(container).not.toHaveTextContent(/every ten minutes|about every/)
+  })
+
+  it('sends the officer to the Watchlist page, where Check now and the alerts are', async () => {
+    api({ 'GET /watches': { status: 500, body: { detail: 'down' } } })
+    const { container } = inRouter(<WatchPanel result={result} />)
+    const note = (await screen.findByText(/Could not reach the watch service/)).closest('p')
+    expect(note).toHaveTextContent(/press Check now on the Watchlist page/)
+    expect(within(note).getByRole('link', { name: 'Watchlist' })).toHaveAttribute('href', '/watchlist')
+    expect(container).not.toHaveTextContent(/home page/)
   })
 })

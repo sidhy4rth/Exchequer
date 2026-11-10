@@ -85,6 +85,20 @@ describe('three tracing rules side by side (R4)', () => {
     expect(line).toHaveTextContent('a letter states the smallest')
   })
 
+  // The letters never state a zero (request_letters._letter_amount): they
+  // state the smallest rule that finds any, and the page must say the same.
+  it('names the figure the letters state when the smallest rule finds none', async () => {
+    await openWith({ figures: { fifo: 0, prorata: 635, libr: 10 }, range: { low: 0, high: 635 }, conservative: 0, conservative_method: 'fifo' })
+    const line = document.querySelector('.method-range')
+    expect(line).toHaveTextContent('a letter states the smallest that finds any, 10 USDT (LIBR); FIFO finds none')
+    expect(line).not.toHaveTextContent('the smallest, 0 USDT')
+  })
+
+  it('says the letter leaves the amount to the officer when no rule finds any', async () => {
+    await openWith({ figures: { fifo: 0, prorata: 0, libr: 0 }, range: { low: 0, high: 0 }, conservative: 0, conservative_method: 'fifo' })
+    expect(document.querySelector('.method-range')).not.toHaveTextContent('a letter states')
+  })
+
   it('says so when the rules agree', async () => {
     await openWith({ figures: { fifo: 5, prorata: 5, libr: 5 }, range: { low: 5, high: 5 }, conservative: 5, conservative_method: 'fifo' })
     expect(document.querySelector('.method-range')).toHaveTextContent('All 3 tracing rules agree')

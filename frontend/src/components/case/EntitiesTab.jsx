@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { memo, useEffect, useId, useMemo, useState } from 'react'
 import { fetchRelatedCases } from '../../api'
 import GraphView from '../GraphView'
 import FlowView from '../FlowView'
@@ -187,7 +187,7 @@ function OtherComplaints({ caseId, correlation, groups, own, chain }) {
 
 /** The Entities view: who the wallets are, by the role each plays, then the
  * hints, inferred deposits, swaps, related cases and funders of the case. */
-export default function EntitiesTab({ result, unit, correlation }) {
+function EntitiesTab({ result, unit, correlation }) {
   const headId = useId()
   const reverse = result.direction === 'incoming'
   const { groups, links } = useMemo(() => entityGroups(result), [result])
@@ -351,3 +351,6 @@ export default function EntitiesTab({ result, unit, correlation }) {
     </>
   )
 }
+
+// Skips a render while its props are the same (see TimelineTab).
+export default memo(EntitiesTab)

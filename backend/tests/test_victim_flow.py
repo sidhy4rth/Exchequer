@@ -84,7 +84,13 @@ def test_conservation(name):
     assert flow["status"] == "estimated", flow
     total = flow["totals"]["denominator"]
     assert total > 0
-    assert sum(b["amount"] for b in flow["buckets"]) == pytest.approx(total, abs=1e-6)
+    # Each stored amount is rounded to 6 places on its own, and a wallet's
+    # rounding gap is dropped, not shown as money left there: the buckets
+    # add up to the start within that rounding.
+    rounding = 1e-6 * (1 + len(flow["links"]))
+    assert sum(b["amount"] for b in flow["buckets"]) == pytest.approx(total, abs=rounding)
+    for b in flow["buckets"]:
+        assert 0 <= b["bounded_amount"] <= b["amount"] + 1e-9, b
     for lk in flow["links"]:
         assert 0 <= lk["victim"] <= lk["gross"] + 1e-9, lk
     sent = {}
@@ -98,11 +104,11 @@ def test_conservation(name):
 def test_lead_reached_is_the_prorata_estimate(name):
     result = CASES[name]
     prorata = result.get("prorata") or {}
-    if (result["direction"] != "outgoing" or prorata.get("status") != "estimated"
-            or (prorata.get("seed_cap") or {}).get("applied")):
-        pytest.skip("no uncapped pro-rata estimate to agree with")
+    if result["direction"] != "outgoing" or prorata.get("status") != "estimated":
+        pytest.skip("no pro-rata estimate to agree with")
     # Money that came back to the reported wallet (demos 3 and 6) does not
-    # shrink the route: its first link keeps its value, as pro-rata's does.
+    # shrink the route: its first link keeps its value, as pro-rata's does,
+    # or the cap when one is below it.
     assert build(result)["lead"]["reached"] == pytest.approx(prorata["estimated"], abs=1e-6)
 
 
@@ -153,8 +159,9 @@ def test_a_merge_adds_both_branches():
     flow = build(case([("S", "A", [(1, 60)]), ("S", "B", [(1, 40)]), ("A", "C", [(2, 60)]),
                        ("B", "C", [(2, 40)]), ("C", "E", [(3, 100)])], exchange="E", max_depth=4))
     assert node(flow, "C")["victim_in"] == 100
+    # Off the route every share is an upper bound, so all 100 are bound.
     assert bucket(flow, "exchange") == {"kind": "exchange", "amount": 100, "share": 1.0,
-                                        "addresses": ["E"], "action": "draft_letter"}
+                                        "addresses": ["E"], "action": "draft_letter", "bounded_amount": 100}
 
 
 def test_money_back_to_the_reported_wallet_is_counted_once():
@@ -165,7 +172,7 @@ def test_money_back_to_the_reported_wallet_is_counted_once():
     assert flow["totals"]["denominator"] == 120
     assert link(flow, "S", "A")["victim"] == 100 and link(flow, "S", "B")["victim"] == pytest.approx(20)
     assert bucket(flow, "other") == {"kind": "other", "amount": 30, "share": 0.25, "addresses": ["S"],
-                                     "action": None}
+                                     "action": None, "bounded_amount": 30}
     assert bucket(flow, "exchange")["amount"] == 70
     assert bucket(flow, "left")["addresses"] == ["B"]
     assert any("came back" in n for n in flow["notes"]) and any("keeps its value" in n for n in flow["notes"])
@@ -191,7 +198,7 @@ def test_money_arriving_after_the_last_send_stays_in_the_wallet():
     assert node(flow, "A")["share"] == 0.5 and node(flow, "A")["basis"] == "traced_only"
     assert bucket(flow, "exchange")["amount"] == 60
     assert bucket(flow, "left") == {"kind": "left", "amount": 40, "share": 0.4, "addresses": ["A"],
-                                    "action": "watch"}
+                                    "action": "watch", "bounded_amount": 0}
 
 
 def test_money_before_the_victim_arrived_is_not_in_the_window():
@@ -226,12 +233,12 @@ def test_a_cap_scales_the_split_and_money_kept_at_a_frozen_wallet_is_held():
     flow = build(case([("S", "A", [(1, 100)]), ("A", "E", [(2, 100)])], exchange="E", materiality=capped))
     assert flow["totals"] == {"denominator": 50.0, "basis": "reported_amount", "accounted": 50.0}
     assert link(flow, "S", "A")["victim"] == 50 and bucket(flow, "exchange")["amount"] == 50
-    assert any("only that part" in n for n in flow["notes"])
+    assert any("carries all of it" in n for n in flow["notes"])
     over = {"basis": "reported_amount", "denominator": 150.0}
     flow = build(case([("S", "A", [(1, 100)]), ("A", "E", [(2, 100)])], exchange="E", materiality=over,
                       frozen={"S"}))
     assert bucket(flow, "held") == {"kind": "held", "amount": 50, "share": 0.333333, "addresses": ["S"],
-                                    "action": "ask_issuer"}
+                                    "action": "ask_issuer", "bounded_amount": 0}
     assert bucket(flow, "exchange")["amount"] == 100
 
 
@@ -251,6 +258,57 @@ def test_reported_payments_that_cover_the_route_do_not_shrink_it():
     assert not any("came back" in n or "only that part" in n for n in flow["notes"])
 
 
+def test_a_cap_below_the_route_link_sends_all_of_it_along_the_route():
+    # The victim reported paying 50; S sent 100 on the route and 100 to B.
+    # Pro-rata starts the route at min(50, 100), so all 50 take it, as the
+    # case header and the letter say; none of it is left for B.
+    paid = {"basis": "reported_amount", "denominator": 50.0}
+    lead = {"status": "estimated", "estimated": 50.0, "hops": [{"address": "A", "received_in_window": 100.0}],
+            "seed_cap": {"amount": 50.0, "basis": "reported_amount", "applied": True}}
+    flow = build(case([("S", "A", [(1, 100)]), ("S", "B", [(1, 100)]), ("A", "E", [(2, 100)])], exchange="E",
+                      materiality=paid, prorata=lead))
+    assert flow["lead"]["reached"] == lead["estimated"] == bucket(flow, "exchange")["amount"]
+    assert link(flow, "S", "A")["victim"] == 50 and link(flow, "S", "B")["victim"] == 0
+    assert bucket(flow, "left")["amount"] == 0 and bucket(flow, "beyond_limit")["amount"] == 0
+    assert any("carries all of it" in n for n in flow["notes"]), flow["notes"]
+    assert not any("keeps its value" in n or "only that part" in n for n in flow["notes"])
+
+
+def test_the_part_of_a_bucket_that_is_an_upper_bound_is_said():
+    # Demo 11: 324.58 of the 959.58 at Binance came through TZ7L, whose share
+    # is an upper bound; the 635 along the route is pro-rata's own figure.
+    ex = bucket(build(BY_DEMO[11]), "exchange")
+    assert round(ex["bounded_amount"], 2) == 324.58
+    # A wallet off the route bounds what it passes on, all the way down.
+    flow = build(case([("S", "A", [(1, 60)]), ("S", "E", [(1, 40)]), ("A", "C", [(2, 60)]),
+                       ("C", "E", [(3, 60)])], exchange="E", max_depth=4))
+    assert bucket(flow, "exchange")["amount"] == 100 and bucket(flow, "exchange")["bounded_amount"] == 60
+
+
+def test_rounding_dust_is_not_money_left_or_held():
+    # Demo 7's stored amounts add up to 1e-6 ETH less than its start, at a
+    # sanctioned seed: that is rounding, not a wallet holding money.
+    flow = build(BY_DEMO[7])
+    assert bucket(flow, "held")["amount"] == 0 and bucket(flow, "held")["addresses"] == []
+    for n in (1, 3, 7):
+        dust = [x for x in build(BY_DEMO[n])["nodes"] if 0 < x["left"] < 1e-5]
+        assert dust == [], (n, dust)
+
+
+def test_money_at_a_sanctioned_wallet_is_left_there_not_held():
+    # A sanctions listing freezes nothing: the owner can still move native
+    # coin, so it is money left in a wallet, marked as passing a sanctioned one.
+    sanctioned = case([("S", "A", [(1, 100)]), ("A", "B", [(2, 60)])], max_depth=2)
+    next(n for n in sanctioned["graph"]["nodes"] if n["address"] == "A")["risk_category"] = "sanctioned"
+    flow = build(sanctioned)
+    assert bucket(flow, "held")["amount"] == 0
+    assert bucket(flow, "left")["amount"] == 40 and bucket(flow, "left")["addresses"] == ["A"]
+    assert flow["passed_through"] == [{"address": "A", "category": "sanctioned", "victim_in": 100.0}]
+    # Frozen by its issuer, it is held.
+    frozen = build(case([("S", "A", [(1, 100)]), ("A", "B", [(2, 60)])], frozen={"A"}, max_depth=2))
+    assert bucket(frozen, "held")["amount"] == 40 and bucket(frozen, "held")["addresses"] == ["A"]
+
+
 @pytest.mark.parametrize("exchange", ["E", None])
 def test_a_rounding_gap_at_the_reported_wallet_is_not_a_note(exchange):
     # Each stored amount is rounded on its own: 2.000001 against 2.000002 sent.
@@ -266,7 +324,7 @@ def test_unfollowed_money_and_the_depth_limit():
     assert bucket(flow, "not_followed")["amount"] == pytest.approx(20 + 80 * 30 / 80)
     assert bucket(flow, "not_followed")["addresses"] == ["A", "S"]
     assert bucket(flow, "beyond_limit") == {"kind": "beyond_limit", "amount": 50, "share": 0.5,
-                                            "addresses": ["B"], "action": "trace_deeper"}
+                                            "addresses": ["B"], "action": "trace_deeper", "bounded_amount": 50}
 
 
 def test_an_older_case_cut_by_the_safety_cap_did_not_keep_it_either():
@@ -284,7 +342,7 @@ def test_an_older_case_cut_by_the_safety_cap_did_not_keep_it_either():
 def test_a_reported_wallet_that_has_not_sent_the_money_on_keeps_it():
     flow = build(case([], materiality={"basis": "reported_amount", "denominator": 50.0}))
     assert bucket(flow, "left") == {"kind": "left", "amount": 50, "share": 1.0, "addresses": ["S"],
-                                    "action": "watch"}
+                                    "action": "watch", "bounded_amount": 0}
     assert not any("sent more" in n for n in flow["notes"])
     assert any("no transfer out of the reported wallet" in n for n in flow["notes"])
 

@@ -312,7 +312,8 @@ describe('the Letters tab of a stored case', () => {
   it('says why when a letter cannot be drafted', async () => {
     api({ ...STORED, 'GET /trace/c1/letter?to=exchange-freeze': { status: 400, body: { detail: 'This case reached no exchange.' } } })
     open()
-    await waitFor(() => expect(within(side()).getByRole('alert')).toHaveTextContent('The letter could not be drafted: This case reached no exchange.'))
+    await waitFor(() => expect(within(sheet()).getByRole('alert')).toHaveTextContent('The letter could not be drafted: This case reached no exchange.'))
+    expect(within(side()).getByRole('alert')).toBeEmptyDOMElement()
   })
 })
 
@@ -479,6 +480,18 @@ describe('the Letters tab of a recorded example', () => {
   })
 })
 
+describe('the Letters tab of a case that reached its exchange through a swap', () => {
+  it("logs the follow-on's exchange and address, not 'the exchange'", async () => {
+    const user = userEvent.setup()
+    const calls = api({ ...STORED, 'POST /requests': (body) => ({ status: 201, body: { request_id: 'r1', ...body, history: [] } }) })
+    open({ ...CASE, asset: 'ETH', exchange: null, exchange_address: null, follow_ons: [{ asset: 'USDT', result: { exchange: 'Binance', exchange_address: '0xde9' } }] })
+    await screen.findByText(/Binance — urgent/)
+    // The urgent letter is logged when its drafter asks for the second officer's sign-off.
+    await user.click(await within(await screen.findByRole('region', { name: 'Second officer' })).findByRole('button', { name: 'Ask for sign-off' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ recipient: 'Binance', address: '0xde9', asset: 'USDT' }))
+  })
+})
+
 describe('the Letters tab of a trace that was not saved', () => {
   it('drafts nothing and says why', async () => {
     const calls = api({})
@@ -486,5 +499,34 @@ describe('the Letters tab of a trace that was not saved', () => {
     expect(screen.getByText(/This trace was not saved/)).toBeInTheDocument()
     await waitFor(() => expect(calls).toEqual([]))
     expect(screen.queryByRole('group', { name: 'Letter to' })).not.toBeInTheDocument()
+  })
+})
+
+describe('a letter that fails to draft', () => {
+  const once = (fails) => {
+    let calls = 0
+    return () => (++calls <= fails ? { status: 503, body: { detail: 'Service waking up' } } : { body: LETTER('Binance — urgent') })
+  }
+
+  it('says so on the sheet and drafts it again on Try again', async () => {
+    const user = userEvent.setup()
+    api({ ...STORED, 'GET /trace/c1/letter?to=exchange-freeze': once(1) })
+    open()
+    const failed = await within(await screen.findByRole('article', { name: /^Draft: Urgent freeze/ })).findByText(/The letter could not be drafted/)
+    expect(failed).toHaveTextContent('Service waking up')
+    expect(screen.queryByText('Drafting the letter…')).not.toBeInTheDocument()
+    await user.click(within(sheet()).getByRole('button', { name: 'Try again' }))
+    expect(await within(sheet()).findByText(/Binance — urgent/)).toBeInTheDocument()
+    expect(within(side()).getByRole('button', { name: 'Copy text' })).toBeEnabled()
+    expect(sheet()).toHaveFocus()
+  })
+
+  it('drafts it again when its own letter button is pressed', async () => {
+    const user = userEvent.setup()
+    api({ ...STORED, 'GET /trace/c1/letter?to=exchange-freeze': once(1) })
+    open()
+    await within(await screen.findByRole('article', { name: /^Draft: Urgent freeze/ })).findByText(/The letter could not be drafted/)
+    await user.click(screen.getByRole('button', { name: /Urgent freeze request/, pressed: true }))
+    expect(await within(sheet()).findByText(/Binance — urgent/)).toBeInTheDocument()
   })
 })
