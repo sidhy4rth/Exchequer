@@ -28,6 +28,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from . import config
+from .case_refs import CaseRef
 from .chain_data import open_source
 from .etherscan_client import normalize_address
 from .input_rules import OneLine
@@ -44,6 +45,7 @@ class PaymentSearch(BaseModel):
     amount: Decimal = Field(..., gt=0, allow_inf_nan=False, max_digits=40)
     start: datetime = Field(..., alias="from", description="ISO 8601 with a zone, or Unix seconds")
     end: datetime = Field(..., alias="to")
+    case_ref: CaseRef = None  # required of a signed-in officer (case_refs.py)
 
     @model_validator(mode="after")
     def _window(self) -> PaymentSearch:

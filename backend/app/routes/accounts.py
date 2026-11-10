@@ -20,7 +20,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from .. import accounts, audit, config, rate_limit
 from ..models import Officer, Unit
@@ -211,6 +211,61 @@ def new_unit(body: NewUnit, admin: Admin) -> dict[str, Any]:
 @router.get("/admin/units")
 def list_units(admin: Admin) -> dict[str, Any]:
     return {"units": [{"id": u.id, "name": u.name} for u in accounts.units()]}
+
+
+class Cap(BaseModel):
+    """One kind of action's limit per officer: at least one, a day at least an hour."""
+    model_config = ConfigDict(extra="forbid")
+    per_hour: int = Field(ge=1, le=10_000)
+    per_day: int = Field(ge=1, le=100_000)
+
+    @model_validator(mode="after")
+    def _day_holds_an_hour(self) -> Cap:
+        if self.per_day < self.per_hour:
+            raise ValueError("A day's limit cannot be below an hour's.")
+        return self
+
+
+class UnitLimits(BaseModel):
+    """A unit's own limits; a kind left out or null takes the default."""
+    model_config = ConfigDict(extra="forbid")
+    trace: Cap | None = None
+    watch: Cap | None = None
+    recheck: Cap | None = None
+    check: Cap | None = None  # a watch's manual "Check now"
+
+
+def _limits(unit: Unit) -> dict[str, Any]:
+    own = accounts.unit_limits(unit.id)
+    defaults = {kind: dict(zip(("per_hour", "per_day"), config.OFFICER_LIMITS[kind], strict=True))
+                for kind in rate_limit.OFFICER_KINDS}
+    return {"unit": {"id": unit.id, "name": unit.name}, "defaults": defaults,
+            "limits": {kind: {**(own.get(kind) or defaults[kind]), "set_for_unit": kind in own}
+                       for kind in rate_limit.OFFICER_KINDS}}
+
+
+def _unit(unit_id: int) -> Unit:
+    found = next((u for u in accounts.units() if u.id == unit_id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="No such unit.")
+    return found
+
+
+@router.get("/admin/units/{unit_id}/limits")
+def unit_limits(unit_id: int, admin: Admin) -> dict[str, Any]:
+    """Each officer's hourly and daily limits in this unit, and the defaults."""
+    return _limits(_unit(unit_id))
+
+
+@router.put("/admin/units/{unit_id}/limits", dependencies=CSRF)
+def set_unit_limits(unit_id: int, body: UnitLimits, admin: Admin) -> dict[str, Any]:
+    """Set this unit's own per-officer limits; the per-connection and
+    site-wide limits still apply on top."""
+    _unit(unit_id)
+    own = body.model_dump(exclude_none=True)
+    unit = accounts.set_unit_limits(unit_id, own)
+    audit.record("admin.unit_limits", detail={"by": admin.id, "unit_id": unit_id, "set": sorted(own)})
+    return _limits(unit)
 
 
 class NewOfficer(BaseModel):

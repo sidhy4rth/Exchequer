@@ -295,3 +295,20 @@ def test_g5_signoff_1_goes_down_and_up_again_keeping_the_requests(engine):
     assert revision(engine) == head() and drift(engine) == []
     with engine.connect() as conn:
         assert conn.execute(text("SELECT status, unit_id, signed_off_at FROM freeze_requests")).all() == [("sent", None, None)]
+
+
+def test_g6_unit_limits_1_goes_down_and_up_again_keeping_the_units(engine):
+    """A unit's own per-officer limits (case_refs PR): one NULL-able column."""
+    from app import accounts
+    models.init_db()
+    unit = accounts.create_unit("Cyber Cell North")
+    accounts.set_unit_limits(unit.id, {"trace": {"per_hour": 3, "per_day": 9}})
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g5_signoff_1")
+    assert "limits_json" not in {c["name"] for c in inspect(engine).get_columns("units")}
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    assert [u.name for u in accounts.units()] == ["Cyber Cell North"]
+    assert accounts.unit_limits(unit.id) == {}

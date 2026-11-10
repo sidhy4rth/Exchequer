@@ -264,6 +264,8 @@ class Unit(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
+    # The unit's own per-officer limits, as JSON (accounts.unit_limits); NULL: the defaults.
+    limits_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class Officer(Base):

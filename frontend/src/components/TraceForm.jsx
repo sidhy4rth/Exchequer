@@ -5,6 +5,7 @@ import { fetchRecordedDemos, fetchTraceIntake } from '../api'
 // obvious typo gets immediate feedback instead of a round trip.
 import { ADDRESS_RE, HASH_RE } from '../find'
 import NoHashSearch from './NoHashSearch'
+import CaseRefField, { refOk, tidyRef, useSignedIn } from './CaseRefField'
 import './TraceForm.css'
 
 // The ten verified traces in DEMO.md, one click each. Addresses and hooks
@@ -106,6 +107,9 @@ export default function TraceForm({ health, payments = '', startChain = null, st
   const hashesRef = useRef(null)
   const [picked, setPicked] = useState(0)
   useEffect(() => { if (picked) hashesRef.current?.focus() }, [picked])
+  // A signed-in officer traces only under a case reference (case_refs.py).
+  const officer = useSignedIn()
+  const [caseRef, setCaseRef] = useState('')
 
   // Trace on the deployment's default chain once /health names it (or the
   // first chain that is on, when the default is off), or on the chain (and
@@ -158,8 +162,10 @@ export default function TraceForm({ health, payments = '', startChain = null, st
   const victim = hashes.length ? victimText.trim() : ''
   const victimIsReported = victim !== '' && (family === 'tron' ? victim === trimmed : victim.toLowerCase() === trimmed.toLowerCase())
   const badVictim = victim !== '' && (!(ADDRESS_RE[family] ?? ADDRESS_RE.evm).test(victim) || victimIsReported)
-  const blocked = badHashes.length > 0 || badAck || badVictim
   const searched = hashes.filter((h) => officerFound.includes(sameHash(h)))
+  const ref = officer && refOk(caseRef) ? tidyRef(caseRef) : ''
+  // officer is null until GET /auth/me answers: wait, rather than start without a reference.
+  const blocked = badHashes.length > 0 || badAck || badVictim || officer === null || (officer && !ref)
 
   // Switching chain resets the asset: BNB does not exist on Ethereum, so the
   // symbol cannot be carried across.
@@ -182,9 +188,10 @@ export default function TraceForm({ health, payments = '', startChain = null, st
     if (hashes.length) q.set('pay', hashes.join(','))
     if (searched.length) q.set('found', searched.join(','))
     // startedHere: the trace page runs it at once; a link opened from elsewhere asks first.
-    const state = { startedHere: true, ...(ack ? { ncrpAck: ack } : {}), ...(victim ? { victimAddress: victim } : {}) }
+    // An officer's case reference travels the same way.
+    const state = { startedHere: true, ...(ack ? { ncrpAck: ack } : {}), ...(victim ? { victimAddress: victim } : {}), ...(ref ? { caseRef: ref } : {}) }
     navigate(`/trace/${addr}?${q}`, { state })
-  }, [navigate, chain, asset, depth, direction, capped, hashes, searched, ack, victim])
+  }, [navigate, chain, asset, depth, direction, capped, hashes, searched, ack, victim, ref])
 
   /** A payment the search found, added to the hashes and marked as found by the officer. */
   function takeMatch(hash) {
@@ -253,6 +260,7 @@ export default function TraceForm({ health, payments = '', startChain = null, st
           />
           <span id="reported-wallet-hint" className="nt-hint">The reported wallet · 0x… on EVM chains, T… on Tron</span>
         </div>
+        {officer && <CaseRefField value={caseRef} onChange={setCaseRef} />}
 
         {payments && intake && !intake.payments && (
           <p className="note pay-note" role="status">

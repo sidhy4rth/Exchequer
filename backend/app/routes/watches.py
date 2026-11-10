@@ -19,7 +19,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from .. import api_budget, config, ownership, rate_limit, watchlist
+from .. import api_budget, audit, case_refs, config, models, ownership, rate_limit, watchlist
+from ..auth import CurrentUser
 from ..input_rules import OneLine
 
 router = APIRouter()
@@ -33,6 +34,9 @@ class WatchRequest(BaseModel):
     case_id: OneLine | None = Field(None, max_length=36)
     # 300 characters sealed (webhook_vault) still fit the 500-character column.
     webhook_url: OneLine | None = Field(None, max_length=300)
+    # Required of a signed-in officer, unless case_id is a case they may read
+    # that was traced under one (case_refs.py).
+    case_ref: case_refs.CaseRef = None
 
 
 class ReadRequest(BaseModel):
@@ -46,12 +50,22 @@ def _owner(http: Request) -> str:
     return owner
 
 
+def _case_ref(body: WatchRequest, user: Any) -> str | None:
+    """The watch's case reference: the one sent, else its case's own when this
+    officer reads that case in full."""
+    case = models.get_case(body.case_id) if body.case_id and not body.case_ref and not user.demo else None
+    return case_refs.required(user, body.case_ref or case_refs.known(case, user), "watch")
+
+
 @router.post("/watches", status_code=201)
-def add_watch(body: WatchRequest, http: Request) -> dict[str, Any]:
+def add_watch(body: WatchRequest, http: Request, user: CurrentUser) -> dict[str, Any]:
+    ref = _case_ref(body, user)
     owner = _owner(http)
     client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
-    refused = rate_limit.charge(rate_limit.watches, rate_limit.watches_total, client)
+    officer = case_refs.spender(user, "watch")
+    refused = rate_limit.charge(rate_limit.watches, rate_limit.watches_total, client, officer=officer)
     if refused is not None:
+        case_refs.refused(officer, refused)
         wait, who = refused
         detail = (f"This site has created {config.WATCHES_PER_HOUR_TOTAL} watches in the last hour."
                   if who == "site" else
@@ -63,6 +77,7 @@ def add_watch(body: WatchRequest, http: Request) -> dict[str, Any]:
                                        read_head=watchlist.chain_head, client=client)
     except watchlist.WatchError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    audit.record("watch.create", detail={"case_ref": case_refs.mask(ref)} if ref else None)
     return watchlist.watch_summary(watch)
 
 
@@ -134,7 +149,7 @@ def _cooled_down(watch: Any) -> None:
 
 
 @router.post("/watches/{watch_id}/check")
-def check_now(watch_id: str, http: Request) -> dict[str, Any]:
+def check_now(watch_id: str, http: Request, user: CurrentUser) -> dict[str, Any]:
     owner = _owner(http)
     watch = watchlist.get_owned_watch(owner, watch_id)
     if watch is None:
@@ -148,8 +163,11 @@ def check_now(watch_id: str, http: Request) -> dict[str, Any]:
         # above has just written the time the cooldown counts from.
         _cooled_down(watchlist.get_owned_watch(owner, watch_id) or watch)
         client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
-        refused = rate_limit.charge(checks_per_client, checks_total, client)
+        # A signed-in officer's own hourly and daily checks count too (case_refs.py).
+        officer = case_refs.spender(user, "check")
+        refused = rate_limit.charge(checks_per_client, checks_total, client, officer=officer)
         if refused is not None:
+            case_refs.refused(officer, refused)
             wait, who = refused
             raise _too_many("This site has made as many manual checks as it allows this minute. "
                             "Try again shortly." if who == "site" else

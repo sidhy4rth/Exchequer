@@ -51,7 +51,7 @@ from typing import Any
 from .evidence import sha256_hex
 from .models import Case
 
-PARTICULARS = ["intake.ncrp_ack", "intake.victim_address", "intake.payments[].from"]
+PARTICULARS = ["intake.ncrp_ack", "intake.victim_address", "intake.payments[].from", "intake.case_ref"]
 # What else leads back to the victim's wallet on a block explorer.
 PAYMENT_LINKS = ["intake.payments[].tx_hash", "intake.payments[].block", "intake.payments[].timestamp",
                  "statement.credits", "statement.window_start", "graph.nodes[].window_start",
@@ -229,8 +229,9 @@ def for_reader(result: dict[str, Any], stored_owner: str | None, caller: str | N
     payments = [{**p, "from": None, "tx_hash": None, "block": None, "timestamp": None}
                 for p in intake.get("payments") or [] if isinstance(p, dict)]
     hidden = {**intake, "ncrp_ack": None, "payments": payments}
-    if "victim_address" in intake:
-        hidden["victim_address"] = None
+    for field in ("victim_address", "case_ref"):
+        if field in intake:
+            hidden[field] = None
     seen = {**result, "intake": hidden, "redacted": PARTICULARS}
     if intake.get("mode") == "payment" and payments:
         seen.update(_payment_links_hidden(result, intake))

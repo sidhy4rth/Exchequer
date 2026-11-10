@@ -39,7 +39,8 @@
 .trace-card .fld::placeholder { font-family: var(--sans); color: var(--text-3); }
 .nt-secret { position: relative; display: flex; }
 .nt-secret .fld { padding-right: 76px; }
-.trace-card .fld.masked { -webkit-text-security: disc; }
+.fld.masked { -webkit-text-security: disc; }
+.bulk .case-ref { margin: 12px 0; max-width: 420px; }
 .nt-reveal { position: absolute; right: 8px; top: 50%; translate: 0 -50%; min-height: 32px; padding: 0 12px; font-size: 12px; font-weight: 400; color: var(--text-2); background: transparent; border-color: transparent; }
 .nt-reveal[aria-pressed="true"] { color: var(--text); border-color: var(--line-strong); }
 

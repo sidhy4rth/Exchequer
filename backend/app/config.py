@@ -807,6 +807,17 @@ WATCHES_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_WATCHES_PER_HOUR_TOTAL", 60)
 # from TronScan or the public Ethereum nodes.
 RECHECKS_PER_HOUR_PER_CLIENT: int = _int_env("EXCHEQUER_RECHECKS_PER_HOUR", 6)
 RECHECKS_PER_HOUR_TOTAL: int = _int_env("EXCHEQUER_RECHECKS_PER_HOUR_TOTAL", 30)
+# What one signed-in officer may start per hour and per 24 hours, whatever
+# connection they use (0 = no limit): live traces (batch rows and payment
+# searches count as traces), watches, rechecks and a watch's manual checks. An admin may set a unit's
+# own (PUT /admin/units/{id}/limits). Demo callers have the limits above only.
+OFFICER_LIMITS: dict[str, tuple[int, int]] = {
+    "trace": (_int_env("EXCHEQUER_OFFICER_TRACES_PER_HOUR", 20), _int_env("EXCHEQUER_OFFICER_TRACES_PER_DAY", 80)),
+    "watch": (_int_env("EXCHEQUER_OFFICER_WATCHES_PER_HOUR", 10), _int_env("EXCHEQUER_OFFICER_WATCHES_PER_DAY", 40)),
+    "recheck": (_int_env("EXCHEQUER_OFFICER_RECHECKS_PER_HOUR", 6),
+                _int_env("EXCHEQUER_OFFICER_RECHECKS_PER_DAY", 24)),
+    "check": (_int_env("EXCHEQUER_OFFICER_CHECKS_PER_HOUR", 30), _int_env("EXCHEQUER_OFFICER_CHECKS_PER_DAY", 120)),
+}
 # Rechecks running at once, site-wide (one per connection): each holds a
 # server thread for up to a minute and shares TronScan's pacer with live traces.
 RECHECKS_RUNNING: int = _int_env("EXCHEQUER_MAX_RUNNING_RECHECKS", 2)

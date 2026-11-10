@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
-from .. import api_budget, audit, log_safety, payment_search, pipeline
+from .. import api_budget, audit, case_refs, log_safety, payment_search, pipeline
 from ..api_budget import BudgetSpent, TraceStopped
 from ..auth import CurrentUser
 from ..chain_data import ProviderNotConfiguredError
@@ -48,6 +48,7 @@ def search_payments(body: payment_search.PaymentSearch, http: Request, user: Cur
     allowance and running slots (cases.admit), and an audit line. The chain,
     wallet, asset and amount are checked before it is admitted, so a typo
     costs nothing."""
+    ref = case_refs.required(user, body.case_ref, "payment search")
     chain, wallet = pipeline.check_request(
         pipeline.TraceRequest(address=body.wallet, chain=body.chain, asset=body.asset))
     asset = (body.asset.strip() or chain.native_symbol).upper()  # as check_request reads an empty one
@@ -56,7 +57,7 @@ def search_payments(body: payment_search.PaymentSearch, http: Request, user: Cur
     if units is None:
         raise HTTPException(status_code=400, detail=f"{asset} on {chain.name} has {decimals} decimal places; "
                                                     "the amount has more.")
-    slot = cases.admit(http)
+    slot = cases.admit(http, user)
     try:
         with api_budget.using(api_budget.TraceBudget.for_request(SEARCH_SECONDS, client=slot)) as budget:
             result = payment_search.search(chain, asset, wallet, units, int(body.start.timestamp()),
@@ -67,5 +68,6 @@ def search_payments(body: payment_search.PaymentSearch, http: Request, user: Cur
         cases.release(slot)
     # What kind of search, never whose: no wallet, amount or time.
     audit.record("payment.search", detail={"chain": chain.key, "asset": asset, "matches": len(result["matches"]),
-                                           "scanned": result["scanned"], "complete": result["complete"]})
+                                           "scanned": result["scanned"], "complete": result["complete"],
+                                           **({"case_ref": case_refs.mask(ref)} if ref else {})})
     return result

@@ -494,7 +494,8 @@ def traced(store, monkeypatch):
     """A payment case traced by the officer, signed in on their own browser."""
     monkeypatch.setattr(pipeline, "run_trace", lambda request: dict(PAYMENT_CASE))
     login(store, "officer@example.org", OFFICER_PW)
-    case_id = store.post("/trace", json={"address": SCAMMER}, headers=BROWSER).json()["case_id"]
+    case_id = store.post("/trace", json={"address": SCAMMER, "case_ref": "FIR 12/2026"},
+                         headers=BROWSER).json()["case_id"]
     store.cookies.clear()
     return case_id
 

@@ -58,6 +58,11 @@ export async function fetchChains() {
   return response.json()
 }
 
+/** The signed-in officer's account (GET /auth/me), or { demo: true }. */
+export async function fetchMe() {
+  return jsonOrThrow(await apiFetch(`${BASE}/auth/me`))
+}
+
 /** Up or not, and nothing else (the operator's detail is behind a token). */
 export async function fetchHealth() {
   const response = await apiFetch(`${BASE}/health`)
@@ -74,13 +79,14 @@ export async function fetchWatches() {
   return jsonOrThrow(await apiFetch(`${BASE}/watches`))
 }
 
-export async function addWatch({ address, chain, asset, note, caseId, webhookUrl }) {
+export async function addWatch({ address, chain, asset, note, caseId, webhookUrl, caseRef }) {
   return jsonOrThrow(await apiFetch(`${BASE}/watches`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       address, chain, asset, note: note ?? '', case_id: caseId ?? null,
       ...(webhookUrl ? { webhook_url: webhookUrl } : {}),
+      ...(caseRef ? { case_ref: caseRef } : {}), // a signed-in officer's (case_refs.py)
     }),
   }))
 }
@@ -112,9 +118,10 @@ export async function markAlertsRead(alertIds = null) {
 // ---------------------------------------------------------------------------
 // Bulk intake (backend/app/routes/batches.py)
 // ---------------------------------------------------------------------------
-export async function startBatch(name, rows) {
+export async function startBatch(name, rows, caseRef = null) {
   const response = await apiFetch(`${BASE}/batches`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rows }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, rows, ...(caseRef ? { case_ref: caseRef } : {}) }),
   })
   if (response.status === 400) {
     const body = await response.json().catch(() => ({}))

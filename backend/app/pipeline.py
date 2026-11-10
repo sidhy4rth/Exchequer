@@ -21,6 +21,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from . import config, log_safety, progress, victim_flow
+from .case_refs import CaseRef
 from .api_budget import PROVIDER_NAMES, BudgetSpent, Cancelled, TraceBudget, TraceStopped, current_budget
 from .chain_data import ProviderNotConfiguredError, UnknownAssetError, allowance_spent, open_source
 from .contracts import upgrade as upgrade_to_contract
@@ -151,6 +152,14 @@ class TraceRequest(BaseModel):
         description=(
             "The NCRP complaint acknowledgement number, recorded with the case "
             "as entered by the requester: 10 to 20 digits."
+        ),
+    )
+
+    case_ref: CaseRef = Field(
+        None, max_length=40,
+        description=(
+            "The case this trace is for (FIR, NCRP or GD number). Required of a "
+            "signed-in officer; dropped for a demo caller (case_refs.py)."
         ),
     )
 

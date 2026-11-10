@@ -18,7 +18,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from .. import api_budget, audit, case_privacy, config, models, ownership, pipeline, rate_limit
+from .. import api_budget, audit, case_privacy, case_refs, config, models, ownership, pipeline, rate_limit
 from ..auth import CurrentUser, is_page_load
 from ..contracts import on_read
 from ..pipeline import TraceRequest
@@ -134,10 +134,10 @@ def take_slot(client: str, timed: bool = True) -> str | None:
     return None
 
 
-def admit(http: Request) -> str:
+def admit(http: Request, user: Any = None) -> str:
     """Refuse a trace this client may not start now (take_slot's rules, then
-    its hourly limit). On success the caller holds a running slot and must
-    hand the returned token to `release()`.
+    its hourly limit, and a signed-in officer's own). On success the caller
+    holds a running slot and must hand the returned token to `release()`.
 
     The hourly allowance is charged last, once a slot is taken: a visitor
     turned away because the server is busy has started nothing."""
@@ -145,9 +145,11 @@ def admit(http: Request) -> str:
     refused_slot = take_slot(client)
     if refused_slot is not None:
         raise _refusal(refused_slot)
-    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client)
+    officer = case_refs.spender(user, "trace") if user is not None else None
+    refused = rate_limit.charge(rate_limit.traces, rate_limit.traces_total, client, officer=officer)
     if refused is not None:
         release(client)
+        case_refs.refused(officer, refused)
         wait, who = refused
         started = (f"This site has started {config.TRACES_PER_HOUR_TOTAL} traces" if who == "site"
                    else f"This connection has started {config.TRACES_PER_HOUR_PER_CLIENT} traces")
@@ -221,6 +223,9 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
     `officer` the signed-in officer's (id, unit id) that traced it."""
     case_id = models.new_case_id()
     created_at = models.utc_now_iso()
+    if request.case_ref:  # kept as payment_intake keeps the NCRP number
+        payload["intake"] = {**(payload.get("intake") or {"mode": "address", "payments": [], "ncrp_ack": None}),
+                             "case_ref": request.case_ref}
     payload["case_id"] = case_id
     payload["created_at"] = created_at
     if not request.save:
@@ -313,8 +318,9 @@ def store_result(payload: dict[str, Any], request: TraceRequest, owner: str | No
 def record_trace(payload: dict[str, Any], via: str | None = None) -> None:
     """Audit a finished trace (CLAUDE.md rule 5): what kind of trace, not whose.
 
-    No address and no NCRP number goes into the detail: until R24 the audit
-    trail is a log line, and logs are no place for a complaint's particulars.
+    No address and no NCRP number goes into the detail, and the case
+    reference only masked: until R24 the audit trail is a log line, and logs
+    are no place for a complaint's particulars.
     `via` names a path other than the API and jobs ("batch").
     """
     intake = payload.get("intake") or {}
@@ -328,6 +334,8 @@ def record_trace(payload: dict[str, Any], via: str | None = None) -> None:
         "saved": bool(payload.get("case_id")),
         "exchange_reached": bool(payload.get("exchange")),
     }
+    if intake.get("case_ref"):
+        detail["case_ref"] = case_refs.mask(intake["case_ref"])
     if via:
         detail["via"] = via
     audit.record("case.trace", case_id=payload.get("case_id"), detail=detail)
@@ -351,8 +359,9 @@ def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, 
     other people who paid it. The whole trace runs inside this request; the
     app itself uses POST /trace/jobs, which runs it in the background.
     """
+    request.case_ref = case_refs.required(user, request.case_ref)
     pipeline.check_request(request)
-    slot = admit(http)
+    slot = admit(http, user)
     try:
         # The admit() token: this connection's share of the day's provider allowance.
         with api_budget.using(api_budget.TraceBudget.for_request(request.time_budget_seconds, client=slot)):

@@ -24,6 +24,7 @@
 
 import FLOW_11 from '../src/test/victim-flow-11.json' with { type: 'json' }
 import FLOW_11_INSTANT from '../src/test/victim-flow-11-instant.json' with { type: 'json' }
+import RECORDINGS from '../../backend/data/recorded_demos.json' with { type: 'json' }
 
 const DOOR = ['button', { name: /click anywhere to enter/i }]
 
@@ -152,6 +153,15 @@ const ADMIN_STUB = [
   { url: '**/admin/officers', body: { officers: [ADMIN, OFFICER({ must_change_password: true }), OFFICER({ id: 3, name: 'Neha S', email: 'neha@example.in', role: 'supervisor', unit: UNITS[1], active: false })] } },
 ]
 
+// The same officer as a stub of GET /auth/me.
+const SIGNED_IN = { url: '**/auth/me', body: OFFICER() }
+
+// A stored case, answered by the check itself from recording 11 (the server
+// has none): its Letters tab holds the watch panel, which a recorded case lacks.
+const DEMO_11 = RECORDINGS.find((r) => r.demo === 11)
+const STORED_CASE = { url: '**/trace/a11y-case', body: { ...DEMO_11.result, case_id: 'a11y-case', created_at: DEMO_11.recorded_at } }
+const REF_FIELD = ['textbox', { name: 'Case reference' }]
+
 const H1 = (name) => ['heading', { level: 1, name }]
 
 // New trace's search for a payment by amount and time. The wallet typed in
@@ -232,6 +242,9 @@ export const PAGES = [
   { name: 'Console, locked (demo code)', path: '/', as: 'investigator', stub: { url: '**/access', body: { demo_code_required: true } }, ready: ['heading', { name: 'Verified examples' }], unmeasured: { desktop: 2, phone: 1 } },
   { name: 'More, on a phone', path: '/', as: 'investigator', size: 'phone', click: ['button', { name: 'More' }], ready: ['link', { name: 'Verify a report' }] },
   { name: 'New trace', path: '/trace/new', as: 'investigator', ready: H1('New trace'), unmeasured: { phone: 1 } },
+  // A signed-in officer is asked for the case reference (backend/app/case_refs.py).
+  // On Linux (CI) the form wraps taller and its "Load a verified example" select crosses the bottom of the screen at rest, where axe cannot sample it.
+  { name: 'New trace, signed in', path: '/trace/new', as: 'investigator', stub: SIGNED_IN, ready: ['textbox', { name: 'Case reference' }], unmeasured: { desktop: 1, phone: 1 } },
   // The victim's payments opened: the hashes, the victim's wallet and the
   // masked NCRP number (on a site that traces from payment hashes).
   { name: 'New trace, payments open', path: '/trace/new', as: 'investigator', stub: { url: '**/trace/intake', body: { payments: true } }, click: ['button', { name: /Victim's payments/ }], ready: ['textbox', { name: "The victim's payment hashes, one per line" }] },
@@ -245,6 +258,7 @@ export const PAGES = [
   { name: 'Cases', path: '/cases', as: 'investigator', stub: CASES_STUB(LINKED), ready: ['link', { name: CASES.cases[0].address }], unmeasured: { phone: 1 } },
   { name: 'Cases, one filter pressed', path: '/cases', as: 'investigator', stub: CASES_STUB({ ...LINKED, cluster_count: 0, clusters: [] }), click: ['button', { name: /^No exchange/ }], ready: ['button', { name: /^No exchange/, pressed: true }] },
   { name: 'Bulk intake', path: '/batch', as: 'investigator', ready: H1('Bulk intake') },
+  { name: 'Bulk intake, signed in', path: '/batch', as: 'investigator', stub: SIGNED_IN, ready: ['textbox', { name: 'Case reference' }] },
   { name: 'Watchlist', path: '/watchlist', as: 'investigator', ready: H1('Watchlist') },
   { name: 'Requests', path: '/requests', as: 'investigator', ready: H1('Requests') },
   // A recorded trace: the case view, read from the recording, no chain
@@ -274,6 +288,8 @@ export const PAGES = [
   { name: 'recorded case 11, Entities, a group\'s wallets', path: '/demo/11?tab=entities', as: 'investigator', click: ['button', { name: /^(Open|Hide) the 8 wallets$/ }], ready: ['button', { name: 'Hide the 8 wallets', expanded: true }], unmeasured: { phone: 1 } },
   { name: 'recorded case 11, Entities, every wallet', path: '/demo/11?tab=entities', as: 'investigator', click: ['button', { name: 'Every wallet' }], ready: ['img', { name: 'Money flow by hop' }], unmeasured: { desktop: 8, phone: 18 }, layout: graphPanelsApart },
   { name: 'recorded case 11, Evidence', path: '/demo/11?tab=evidence', as: 'investigator', ready: CASE_TAB('Evidence'), unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
+  // An officer rechecks a case kept under no reference only under one they give.
+  { name: 'recorded case 11, Evidence, signed in', path: '/demo/11?tab=evidence', as: 'investigator', stub: SIGNED_IN, ready: REF_FIELD, unmeasured: { phone: 1 }, tablet: true },
   { name: 'recorded case 11, Evidence, rechecked', path: '/demo/11?tab=evidence', as: 'investigator', stub: { url: '**/trace/demo-11/recheck', body: RECHECK }, ready: ['button', { name: 'Re-read from a second provider' }], unmeasured: { phone: 1 }, tablet: true, layout: amountsAligned },
   // The Letters tab drafts a recording's letters as a case's: the first one
   // listed (the urgent freeze letter) opens on its sheet; a press switches
@@ -291,6 +307,10 @@ export const PAGES = [
   { name: 'stored case, Letters, signed off', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS({ status: 'ready', signoff: { by: 'Second Officer', at: '2026-11-10T09:00:00+00:00' } }), ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },
+  // A link or Home search opened by an officer asks for the case reference on the card.
+  { name: 'trace link, signed in', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', stub: SIGNED_IN, ready: REF_FIELD },
+  // A watch on a case kept under no reference asks an officer for one.
+  { name: 'stored case, Letters, signed in', path: '/case/a11y-case?tab=letters', as: 'investigator', stub: [SIGNED_IN, STORED_CASE], ready: REF_FIELD, unmeasured: { desktop: 1, phone: 1 } },
   { name: 'batch', path: '/batch/a11y-example', as: 'investigator', stub: { url: '**/batches/a11y-example', body: BATCH }, ready: ['heading', { level: 1, name: BATCH.name }], unmeasured: { phone: 1 } },
   // An admin's page: units, and officers (one with a temporary password, one switched off).
   // The unmeasured text is the line the window's bottom edge cuts through

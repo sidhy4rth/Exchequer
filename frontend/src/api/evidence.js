@@ -120,6 +120,8 @@ export async function fetchRecheck(id) {
 }
 
 /** Reread the case's cited transfers now (gated and rate-limited like a trace). */
-export async function runRecheck(id) {
-  return recheckOrNull(await apiFetch(`${BASE}/trace/${encodeURIComponent(id)}/recheck`, { method: 'POST' }))
+export async function runRecheck(id, caseRef = null) {
+  // A signed-in officer's case reference, in the body only (case_refs.py).
+  const body = caseRef ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ case_ref: caseRef }) } : {}
+  return recheckOrNull(await apiFetch(`${BASE}/trace/${encodeURIComponent(id)}/recheck`, { method: 'POST', ...body }))
 }

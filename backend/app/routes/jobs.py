@@ -21,7 +21,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .. import api_budget, case_privacy, jobs, ownership, pipeline, progress
+from .. import api_budget, case_privacy, case_refs, jobs, ownership, pipeline, progress
 from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 from . import cases
@@ -69,8 +69,9 @@ def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | No
 
 @router.post("/trace/jobs", status_code=202)
 def start_job(request: TraceRequest, http: Request, user: CurrentUser) -> JSONResponse:
+    request.case_ref = case_refs.required(user, request.case_ref)
     pipeline.check_request(request)  # a typo is refused before it costs the allowance
-    slot = cases.admit(http)  # holds a running slot from here until _run releases it
+    slot = cases.admit(http, user)  # holds a running slot from here until _run releases it
     try:
         owner = user.owner_hash
         # The admit() token: this connection's share of the day's provider allowance.

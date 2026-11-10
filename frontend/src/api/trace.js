@@ -77,11 +77,14 @@ export async function fetchTraceIntake() {
  * are Dates, sent as UTC. Resolves with { matches: [{ tx_hash, timestamp,
  * amount, from, to, chain, asset, found_by }], more_matches, scanned, complete }.
  */
-export async function searchPayments({ chain, asset, wallet, amount, from, to }) {
+export async function searchPayments({ chain, asset, wallet, amount, from, to, caseRef }) {
   const response = await apiFetch(`${BASE}/payments/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chain, asset, wallet, amount: String(amount), from: from.toISOString(), to: to.toISOString() }),
+    body: JSON.stringify({
+      chain, asset, wallet, amount: String(amount), from: from.toISOString(), to: to.toISOString(),
+      ...(caseRef ? { case_ref: caseRef } : {}), // a signed-in officer's case reference
+    }),
   })
   if (!response.ok) {
     // The status says which refusal it was: the demo code, a rate limit, the provider.
@@ -232,17 +235,19 @@ function jobTrace({ address, maxDepth, chain, asset, direction, timeBudgetSecond
 }
 
 // What identifies the trace in this tab: everything but the complaint's
-// particulars (the NCRP number and the victim's own wallet), which go to the
+// particulars (the NCRP number, the victim's own wallet and an officer's case
+// reference), which go to the
 // server in the POST body only and are never kept in sessionStorage.
 function jobKey(params) {
   return JSON.stringify(jobTrace(params))
 }
 
 function jobBody(params) {
-  const { payments, ncrpAck, victimAddress } = params
+  const { payments, ncrpAck, victimAddress, caseRef } = params
   return JSON.stringify({
     ...jobTrace(params),
     ...(ncrpAck ? { ncrp_ack: ncrpAck } : {}),
+    ...(caseRef ? { case_ref: caseRef } : {}),
     // The victim's own wallet: the backend compares each payment's sender with it.
     ...(victimAddress && payments?.length ? { victim_address: victimAddress } : {}),
   })

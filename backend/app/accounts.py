@@ -20,6 +20,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import json
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -124,6 +125,26 @@ def units() -> list[Unit]:
         found = list(s.scalars(select(Unit).order_by(Unit.name)))
         s.expunge_all()
         return found
+
+
+def unit_limits(unit_id: int) -> dict[str, Any]:
+    """The unit's own per-officer limits, {kind: {"per_hour", "per_day"}};
+    {} when it has none (or no such unit), so the defaults apply."""
+    with _session() as s:
+        unit = s.get(Unit, unit_id)
+        return json.loads(unit.limits_json) if unit is not None and unit.limits_json else {}
+
+
+def set_unit_limits(unit_id: int, limits: dict[str, Any]) -> Unit:
+    """Replace the unit's own limits ({} goes back to the defaults)."""
+    with _session() as s:
+        unit = s.get(Unit, unit_id)
+        if unit is None:
+            raise LookupError("No such unit.")
+        unit.limits_json = json.dumps(limits, sort_keys=True) if limits else None
+        s.commit()
+        s.expunge(unit)
+        return unit
 
 
 def create_officer(email: str, name: str, unit_id: int, role: str,

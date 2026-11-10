@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { addWatch, fetchWatches, removeWatch } from '../api'
 import { plain } from '../text'
+import CaseRefField, { refOk, tidyRef, useSignedIn } from './CaseRefField'
 
 // "Tell me when it moves", on the case itself. Offers the reported wallet and,
 // when the trace inferred one, the probable deposit address -- never a
@@ -14,6 +15,10 @@ export default function WatchPanel({ result, extra = null }) {
   const [error, setError] = useState(null)
   const [hook, setHook] = useState('')
   const [showHook, setShowHook] = useState(false)
+  // A signed-in officer watches under the case's reference, or one they give (case_refs.py).
+  const asks = useSignedIn() === true && !result?.intake?.case_ref
+  const [caseRef, setCaseRef] = useState('')
+  const blocked = asks && !refOk(caseRef)
 
   // undefined while loading, null if the watch service could not be reached:
   // the panel must not promise a schedule it has not seen.
@@ -36,7 +41,7 @@ export default function WatchPanel({ result, extra = null }) {
   async function watch(c) {
     setBusy(c.address); setError(null)
     try {
-      await addWatch({ address: c.address, chain: result.chain, asset: result.asset, note: c.what, caseId: result.case_id, webhookUrl: hook.trim() || null })
+      await addWatch({ address: c.address, chain: result.chain, asset: result.asset, note: c.what, caseId: result.case_id, webhookUrl: hook.trim() || null, caseRef: asks ? tidyRef(caseRef) : null })
       setHook(''); setShowHook(false)
       await load()
     } catch (e) { setError(e.message) } finally { setBusy(null) }
@@ -62,10 +67,11 @@ export default function WatchPanel({ result, extra = null }) {
               </div>
               {w
                 ? <button className="quiet" disabled={busy !== null} onClick={() => unwatch(w)}>Stop</button>
-                : <button disabled={busy !== null} onClick={() => watch(c)}>{busy === c.address ? 'Adding…' : 'Watch'}</button>}
+                : <button disabled={busy !== null || blocked} onClick={() => watch(c)}>{busy === c.address ? 'Adding…' : 'Watch'}</button>}
             </div>
           )
         })}
+        {asks && <CaseRefField id="watch-case-ref" value={caseRef} onChange={setCaseRef} />}
         {showHook
           ? <label className="watch-hook">Also post alerts to a Slack, Discord or Google Chat webhook (optional)
               <input type="url" className="mono" placeholder="https://hooks.slack.com/services/…" value={hook} onChange={(e) => setHook(e.target.value)} />
