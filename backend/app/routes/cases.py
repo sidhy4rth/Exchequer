@@ -319,8 +319,8 @@ def record_trace(payload: dict[str, Any], via: str | None = None) -> None:
     """Audit a finished trace (CLAUDE.md rule 5): what kind of trace, not whose.
 
     No address and no NCRP number goes into the detail, and the case
-    reference only masked: until R24 the audit trail is a log line, and logs
-    are no place for a complaint's particulars.
+    reference only masked: the audit log is kept for good, and is no place
+    for a complaint's particulars.
     `via` names a path other than the API and jobs ("batch").
     """
     intake = payload.get("intake") or {}
@@ -339,6 +339,15 @@ def record_trace(payload: dict[str, Any], via: str | None = None) -> None:
     if via:
         detail["via"] = via
     audit.record("case.trace", case_id=payload.get("case_id"), detail=detail)
+
+
+def record_start(request: TraceRequest, via: str | None = None) -> None:
+    """Audit that a trace began: what kind, as record_trace says it, never whose."""
+    detail = {"chain": request.chain, "asset": request.asset, "direction": request.direction,
+              "mode": "payments" if request.payments else "address"}
+    if via:
+        detail["via"] = via
+    audit.record("case.trace_start", detail=detail)
 
 
 def record_trace_safely(payload: dict[str, Any]) -> None:
@@ -362,6 +371,7 @@ def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, 
     request.case_ref = case_refs.required(user, request.case_ref)
     pipeline.check_request(request)
     slot = admit(http, user)
+    record_start(request)
     try:
         # The admit() token: this connection's share of the day's provider allowance.
         with api_budget.using(api_budget.TraceBudget.for_request(request.time_budget_seconds, client=slot)):

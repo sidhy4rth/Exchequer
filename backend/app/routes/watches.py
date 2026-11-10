@@ -77,7 +77,10 @@ def add_watch(body: WatchRequest, http: Request, user: CurrentUser) -> dict[str,
                                        read_head=watchlist.chain_head, client=client)
     except watchlist.WatchError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    audit.record("watch.create", detail={"case_ref": case_refs.mask(ref)} if ref else None)
+    # Whether it posts to a webhook, never where.
+    audit.record("watch.create", case_id=watch.case_id,
+                 detail={"watch_id": watch.id, "chain": watch.chain, "webhook": bool(watch.webhook_url),
+                         **({"case_ref": case_refs.mask(ref)} if ref else {})})
     return watchlist.watch_summary(watch)
 
 
@@ -104,6 +107,7 @@ def get_watches(http: Request) -> dict[str, Any]:
 def delete_watch(watch_id: str, http: Request) -> dict[str, Any]:
     if not watchlist.remove_watch(_owner(http), watch_id):
         raise HTTPException(status_code=404, detail="No such watch.")
+    audit.record("watch.delete", detail={"watch_id": watch_id})
     return {"removed": watch_id}
 
 

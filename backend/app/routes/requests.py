@@ -115,8 +115,11 @@ def change_request(request_id: str, body: RequestChange, user: CurrentUser, http
         raise HTTPException(status_code=404, detail="No such request.")
     asked = updated.pop("moved") and updated["status"] == "awaiting_signoff"
     # Which fields changed, never what they say: notes can name people.
-    audit.record("request.signoff_ask" if asked else "request.update", case_id=updated["case_id"],
-                 detail={"request_id": request_id, "fields": sorted(changes)})
+    # The new status is a word from a fixed list ("sent"), so it is kept.
+    detail = {"request_id": request_id, "fields": sorted(changes)}
+    if "status" in changes:
+        detail["status"] = updated["status"]
+    audit.record("request.signoff_ask" if asked else "request.update", case_id=updated["case_id"], detail=detail)
     return updated
 
 

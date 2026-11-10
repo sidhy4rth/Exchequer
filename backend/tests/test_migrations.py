@@ -312,3 +312,19 @@ def test_g6_unit_limits_1_goes_down_and_up_again_keeping_the_units(engine):
     assert revision(engine) == head() and drift(engine) == []
     assert [u.name for u in accounts.units()] == ["Cyber Cell North"]
     assert accounts.unit_limits(unit.id) == {}
+
+
+def test_g5_audit_1_goes_down_and_up_again(engine):
+    """audit_events: R24's hash-chained log (app/audit.py)."""
+    from app import audit
+    models.init_db()
+    audit.record("case.report_export", case_id="c1", detail={"format": "pdf"})
+    settings = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g6_unit_limits_1")
+    assert not inspect(engine).has_table("audit_events")
+    models.init_db()
+    assert revision(engine) == head() and drift(engine) == []
+    audit.record("case.report_export", case_id="c1", detail={"format": "pdf"})
+    assert audit.verify() == {"ok": True, "rows": 1, "first_bad_seq": None}

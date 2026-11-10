@@ -34,11 +34,13 @@ def recorded(monkeypatch):
     return calls
 
 
-def test_a_trace_through_the_api_is_audited_once(monkeypatch, recorded):
+def test_a_trace_through_the_api_is_audited_once_as_it_starts_and_once_as_it_ends(monkeypatch, recorded):
     monkeypatch.setattr(pipeline, "run_trace", lambda request, **kw: finished())
     with TestClient(app) as client:
         body = client.post("/trace", json={"address": SCAMMER, "chain": "ethereum"}).json()
-    ((event, kw),) = recorded
+    (start, (event, kw)) = recorded
+    assert start == ("case.trace_start", {"detail": {"chain": "ethereum", "asset": None, "direction": "outgoing",
+                                                     "mode": "address"}})
     assert event == "case.trace" and kw["case_id"] == body["case_id"]
     assert kw["detail"] == {"chain": "ethereum", "asset": "ETH", "direction": "outgoing", "mode": "address",
                             "payments": 0, "saved": True, "exchange_reached": True}

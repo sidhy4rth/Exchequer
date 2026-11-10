@@ -314,6 +314,23 @@ class ProviderMeter(Base):
     updated_at: Mapped[str] = mapped_column(String(32))
 
 
+class AuditEvent(Base):
+    """One row of the hash-chained audit log (audit.py). Rows are only ever
+    added: row_hash covers the row and the one before it."""
+
+    __tablename__ = "audit_events"
+
+    seq: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)  # 1, 2, 3 ...
+    at: Mapped[str] = mapped_column(String(40))  # ISO-8601 UTC
+    actor: Mapped[str] = mapped_column(String(80))  # "demo:<owner hash>", "system"; an officer id after R23
+    unit_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    action: Mapped[str] = mapped_column(String(64))
+    case_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
+    detail: Mapped[str] = mapped_column(Text)  # canonical JSON
+    prev_hash: Mapped[str] = mapped_column(String(64))
+    row_hash: Mapped[str] = mapped_column(String(64))
+
+
 def _postgres_url(url: str) -> str:
     """Hosts hand out postgres:// URLs; SQLAlchemy wants the driver named."""
     for prefix in ("postgres://", "postgresql://"):

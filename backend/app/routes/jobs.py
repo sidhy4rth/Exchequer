@@ -21,7 +21,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .. import api_budget, case_privacy, case_refs, jobs, ownership, pipeline, progress
+from .. import api_budget, audit, case_privacy, case_refs, jobs, ownership, pipeline, progress
 from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 from . import cases
@@ -35,6 +35,12 @@ POLL_SECONDS = 0.3
 
 def _run(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | None = None,
          officer: tuple[int | None, int | None] = (None, None)) -> None:
+    with audit.acting_as(owner):  # this thread works for the browser that started it
+        _run_job(job, request, owner, slot, officer)
+
+
+def _run_job(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str | None,
+             officer: tuple[int | None, int | None]) -> None:
     token = progress.listen(lambda fields: jobs.store.report(job, fields))
     try:
         with api_budget.using(job.budget):
@@ -77,6 +83,7 @@ def start_job(request: TraceRequest, http: Request, user: CurrentUser) -> JSONRe
         # The admit() token: this connection's share of the day's provider allowance.
         job = jobs.store.create(owner=owner, budget=api_budget.TraceBudget.for_request(
             request.time_budget_seconds, client=slot))
+        cases.record_start(request)
         threading.Thread(target=_run, args=(job, request, owner, slot, (user.officer_id, user.unit_id)),
                          name=f"trace-job-{job.id[:8]}", daemon=True).start()
     except Exception:
