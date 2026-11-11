@@ -120,7 +120,7 @@ def health_detail(request: Request) -> dict[str, Any]:
         "max_depth": config.TRACE_MAX_DEPTH,
         "exchange_labels_loaded": len(get_matcher()),
         "risk_labels_loaded": len(get_risk_matcher()),
-        # The on-disk label store (most of the 10.9M labels): an image built to
+        # The on-disk label store (most of the ~32M labels): an image built to
         # carry it that runs without it screens far less than it claims.
         "label_store": label_store.status(),
         "chains": _chains(),

@@ -160,7 +160,7 @@ def test_a_temporary_disk_is_read_from_the_host(environ, temporary):
     assert config.temporary_disk(environ) is temporary
 
 
-# -- r1-scripts-12: whether the 10.9M-row label store is actually in use ---------
+# -- r1-scripts-12: whether the ~32M-row label store is actually in use ---------
 def test_health_detail_reports_the_label_store(client, monkeypatch, tmp_path):
     from app.label_store import get_label_store
     from scripts.build_label_store import build
