@@ -251,13 +251,16 @@ describe('recent cases', () => {
 })
 
 describe('exchange wallets on file', () => {
-  it('counts exchange wallets per chain from /chains, largest first, with deposit addresses apart', async () => {
+  it('counts exchange wallets per chain from /chains, largest first, with the flagged addresses under them', async () => {
     renderHome()
     const bars = await loaded()
     expect(within(bars).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ethereum975', 'Tron67'])
     const card = region('Exchange wallets on file')
     expect(card.getByText('1,042')).toBeInTheDocument()
-    expect(card.getByText('plus 24,063 Ethereum and 1 Tron deposit addresses')).toBeInTheDocument()
+    // 127 + 2,828 + 11 + 915 + 6,759: the risk lists of the chains that can trace.
+    expect(card.getByText('10,640')).toBeInTheDocument()
+    expect(card.getByText(/flagged addresses on file/)).toBeInTheDocument()
+    expect(card.queryByText(/deposit addresses/)).toBeNull()
   })
 
   it('shows only numbers that /chains gives, and never one total as exchange wallets', async () => {
@@ -267,6 +270,7 @@ describe('exchange wallets on file', () => {
     const sum = (f) => chains.reduce((s, c) => s + f(c), 0)
     const allowed = new Set([
       sum((c) => c.exchange_wallets), sum((c) => c.deposit_addresses),
+      sum((c) => (c.ready ? Object.values(c.risk_labels).reduce((a, b) => a + b, 0) : 0)),
       ...chains.flatMap((c) => [c.exchange_wallets, c.deposit_addresses, ...Object.values(c.risk_labels)]),
     ])
     // Text node by text node: textContent would run neighbouring cells together.
