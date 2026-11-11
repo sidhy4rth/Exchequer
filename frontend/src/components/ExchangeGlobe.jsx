@@ -710,7 +710,6 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
         {coverage && (
           <dl className="cover">
             {coverage.flagged > 0 && <div className="hero"><dt>Flagged addresses screened, live</dt><dd><CountUp to={coverage.flagged} compact /></dd></div>}
-            {coverage.poisoning > 0 && <div className="risk"><dt>Address-poisoning wallets, found on-chain</dt><dd><CountUp to={coverage.poisoning} compact /></dd></div>}
             <div><dt>Exchange wallets labelled</dt><dd><CountUp to={coverage.wallets} /></dd></div>
             <div><dt>Customer deposit addresses</dt><dd><CountUp to={coverage.deposits} /></dd></div>
             <div className="risk"><dt>Reported stolen or phishing</dt><dd><CountUp to={coverage.stolen} /></dd></div>
