@@ -9,7 +9,7 @@
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
 [![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer-6gnl.onrender.com)
-[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-32.0M-C0392B)](https://exchequer-6gnl.onrender.com/risk-labels?chain=tron)
+[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-34.9M-C0392B)](https://exchequer-6gnl.onrender.com/risk-labels?chain=tron)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -43,7 +43,7 @@
 
 <table>
 <tr>
-<td align="center"><h3>32.0M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
+<td align="center"><h3>34.9M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
 <td align="center"><h3>31.9M</h3>address-poisoning<br>wallets<br><sub>found by on-chain scans</sub></td>
 <td align="center"><h3>25,508</h3>exchange addresses<br><sub>incl. 24,025 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
