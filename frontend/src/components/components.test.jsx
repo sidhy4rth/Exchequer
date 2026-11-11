@@ -527,12 +527,12 @@ describe('the front door figures (R14)', () => {
       ethereum: { exchange_labels: 25038, exchange_wallets: 975, deposit_addresses: 24063, risk_labels: { sanctioned: 127, mixer: 0, frozen: 2828, stolen: 11 } },
       tron: { exchange_labels: 41, exchange_wallets: 40, deposit_addresses: 1, risk_labels: { sanctioned: 915, frozen: 6759 } },
     })
-    expect(figures).toEqual({ wallets: 1015, deposits: 24064, sanctioned: 1042, frozen: 9587, stolen: 11, mixer: 0, poisoning: 0, flagged: 10640, chains: ['ethereum', 'tron'] })
+    expect(figures).toEqual({ wallets: 1015, deposits: 24064, sanctioned: 1042, frozen: 9587, stolen: 11, mixer: 0, poisoning: 0, flagged: 10640, chains: ['ethereum', 'tron'], byChain: [{ key: 'tron', flagged: 7674 }, { key: 'ethereum', flagged: 2966 }] })
   })
 
   it('reads nothing when the backend has nothing', async () => {
     const { coverageFromChains } = await import('./ExchangeGlobe')
-    expect(coverageFromChains(undefined)).toEqual({ wallets: 0, deposits: 0, sanctioned: 0, frozen: 0, stolen: 0, mixer: 0, poisoning: 0, flagged: 0, chains: [] })
+    expect(coverageFromChains(undefined)).toEqual({ wallets: 0, deposits: 0, sanctioned: 0, frozen: 0, stolen: 0, mixer: 0, poisoning: 0, flagged: 0, chains: [], byChain: [] })
   })
 
   it('adds every flagged address, the label store included, into one headline figure', async () => {
@@ -540,6 +540,14 @@ describe('the front door figures (R14)', () => {
     const figures = coverageFromChains({ tron: { risk_labels: { sanctioned: 915, poisoning: 5910444, scam: 664 } }, ethereum: { risk_labels: { poisoning: 3951478, gambling: 19681 } } })
     expect(figures.flagged).toBe(9883182)
     expect(figures.poisoning).toBe(9861922)
+  })
+
+  it('splits the headline by chain, largest first, and the rows add up to it', async () => {
+    const { coverageFromChains, shortCount } = await import('./ExchangeGlobe')
+    const figures = coverageFromChains({ polygon: { risk_labels: { scam: 309000 } }, tron: { risk_labels: { sanctioned: 915, poisoning: 5910444 } }, bsc: { risk_labels: {} } })
+    expect(figures.byChain.map((c) => c.key)).toEqual(['tron', 'polygon'])
+    expect(figures.byChain.reduce((s, c) => s + c.flagged, 0)).toBe(figures.flagged)
+    expect([shortCount(18610000), shortCount(309000), shortCount(978)]).toEqual(['18.61M', '309K', '978'])
   })
 
   it('counts seizure orders with the government listings (r1-labels-data-12)', async () => {

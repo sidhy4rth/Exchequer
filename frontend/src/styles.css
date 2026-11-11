@@ -757,6 +757,16 @@ details:not([open]) .feed .row { animation: none; }
 .cover .hero dt { color: var(--ink); font-weight: 500; }
 .cover .risk dd { color: var(--text); }
 .globe-side .chains { margin: -6px 0 0; font-size: 11px; color: var(--faint); letter-spacing: 0.02em; }
+/* The flagged total split by chain (these rows add up to the headline), then two labelled groups in a 2-column grid. */
+.juris.chain-rows { margin-top: -16px; }
+.juris.chain-rows li { grid-template-columns: 78px 1fr 52px; cursor: default; padding-top: 4px; padding-bottom: 4px; }
+.juris.chain-rows .bar i { background: var(--red); opacity: 0.8; }
+.juris.chain-rows li:hover .bar i { background: var(--red); opacity: 1; }
+.cover-group { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: -8px; }
+.cover.grid { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; align-items: start; }
+.globe-side.right { gap: 22px; }
+.cover.grid dd, .cover.grid div:first-child dd { font-size: 20px; }
+.cover.grid dt { font-size: 11.5px; line-height: 1.3; }
 .globe-src { position: absolute; right: 28px; top: 76px; z-index: 3; font-size: 10.5px; color: var(--faint); }
 
 /* The door: the card assembles from the chequer's sixteen squares, flipping

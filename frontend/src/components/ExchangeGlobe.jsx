@@ -129,7 +129,19 @@ export function coverageFromChains(byKey) {
     // Every flagged address a trace is screened against, from every list and the label store.
     flagged: sum((c) => Object.values(c.risk_labels ?? {}).reduce((a, b) => a + (b ?? 0), 0)),
     chains: Object.keys(byKey ?? {}),
+    // The same total split by blockchain, largest first: these rows add up to the headline figure.
+    byChain: Object.entries(byKey ?? {})
+      .map(([key, c]) => ({ key, flagged: Object.values(c.risk_labels ?? {}).reduce((a, b) => a + (b ?? 0), 0) }))
+      .filter((c) => c.flagged > 0)
+      .sort((a, b) => b.flagged - a.flagged),
   }
+}
+
+/** 18,610,000 -> "18.61M", 309,000 -> "309K": two decimals on millions so the chain rows visibly sum to the headline. */
+export function shortCount(n) {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
+  if (n >= 1e4) return `${Math.round(n / 1e3)}K`
+  return n.toLocaleString('en-US')
 }
 
 export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'investigator' }) {
@@ -708,18 +720,41 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
           <p>{coverage === false ? 'Backend offline — numbers unavailable' : coverage ? `Live, across ${coverage.chains.length} blockchains` : 'Reading the label files…'}</p>
         </header>
         {coverage && (
-          <dl className="cover">
-            {coverage.flagged > 0 && <div className="hero"><dt>Flagged addresses screened, live</dt><dd><CountUp to={coverage.flagged} compact /></dd></div>}
-            {coverage.poisoning > 0 && <div className="risk"><dt>Address-poisoning wallets, found on-chain</dt><dd><CountUp to={coverage.poisoning} compact /></dd></div>}
-            <div><dt>Exchange wallets labelled</dt><dd><CountUp to={coverage.wallets} /></dd></div>
-            <div><dt>Customer deposit addresses</dt><dd><CountUp to={coverage.deposits} /></dd></div>
-            <div className="risk"><dt>Reported stolen or phishing</dt><dd><CountUp to={coverage.stolen} /></dd></div>
-            <div className="risk"><dt>Frozen by issuer</dt><dd><CountUp to={coverage.frozen} /></dd></div>
-            <div className="risk"><dt>Under government sanctions or seizure orders</dt><dd><CountUp to={coverage.sanctioned} /></dd></div>
-            <div className="risk"><dt>Mixer pools</dt><dd><CountUp to={coverage.mixer} /></dd></div>
-          </dl>
+          <>
+            {coverage.flagged > 0 && (
+              <dl className="cover">
+                <div className="hero"><dt>Flagged addresses screened, live</dt><dd><CountUp to={coverage.flagged} compact /></dd></div>
+              </dl>
+            )}
+            {coverage.byChain.length > 0 && (
+              <ol className="juris chain-rows" aria-label="Flagged addresses by blockchain">
+                {coverage.byChain.map((c) => (
+                  <li key={c.key}>
+                    <span className="name">{CHAIN_NAMES[c.key] ?? c.key}</span>
+                    <span className="bar"><i style={{ width: `${Math.max(2, (c.flagged / coverage.byChain[0].flagged) * 100)}%` }} /></span>
+                    <span className="n">{shortCount(c.flagged)}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <div className="cover-group">
+              <span className="micro">Including, from published lists</span>
+              <dl className="cover grid">
+                <div className="risk"><dt>Stolen or phishing</dt><dd><CountUp to={coverage.stolen} /></dd></div>
+                <div className="risk"><dt>Frozen by issuer</dt><dd><CountUp to={coverage.frozen} /></dd></div>
+                <div className="risk"><dt>Sanctions or seizures</dt><dd><CountUp to={coverage.sanctioned} /></dd></div>
+                <div className="risk"><dt>Mixer pools</dt><dd><CountUp to={coverage.mixer} /></dd></div>
+              </dl>
+            </div>
+            <div className="cover-group">
+              <span className="micro">Also labelled, not flagged</span>
+              <dl className="cover grid">
+                <div><dt>Exchange wallets</dt><dd><CountUp to={coverage.wallets} /></dd></div>
+                <div><dt>Deposit addresses</dt><dd><CountUp to={coverage.deposits} /></dd></div>
+              </dl>
+            </div>
+          </>
         )}
-        {coverage && <p className="chains">{coverage.chains.map((c) => CHAIN_NAMES[c] ?? c).join(' · ')}</p>}
       </aside>
 
       {/* After the side panels, so a popup near the rim sits over them. */}
