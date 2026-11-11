@@ -23,6 +23,9 @@ const TRY = ['11', '12', '07']
 const nameOf = (key, chain) => SHORT_CHAIN[key] ?? chain?.name ?? key
 const count = (n) => n.toLocaleString('en')
 const and = new Intl.ListFormat('en', { type: 'conjunction' })
+// A count in the millions reads as "11.0 million"; anything smaller in full.
+const millions = new Intl.NumberFormat('en', { notation: 'compact', compactDisplay: 'long', minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const big = (n) => (n >= 1e6 ? millions.format(n) : count(n))
 
 // The field's hint: the pack's sentence, or on a phone, where the field holds
 // about 38 characters, its label.
@@ -204,13 +207,15 @@ function RecentCases() {
   )
 }
 
-/** The exchanges' own wallets per chain (GET /chains), largest first. A
- * customer's deposit address is counted apart: it names one account. */
+/** The exchanges' own wallets per chain (GET /chains), largest first, and
+ * under them the flagged addresses every hop is screened against: the risk
+ * lists of the chains that can trace now, the same total the sidebar shows. */
 function ExchangeWallets({ health }) {
   const chains = Object.values(health?.chains ?? {}).filter((c) => typeof c.exchange_wallets === 'number')
     .sort((a, b) => b.exchange_wallets - a.exchange_wallets)
   const top = chains[0]?.exchange_wallets || 1
-  const deposits = chains.filter((c) => c.deposit_addresses > 0).map((c) => `${count(c.deposit_addresses)} ${nameOf(c.key, c)}`)
+  const flagged = Object.values(health?.chains ?? {}).filter((c) => c.ready)
+    .reduce((s, c) => s + Object.values(c.risk_labels ?? {}).reduce((a, b) => a + (b || 0), 0), 0)
   return (
     <section className="card glass console-card console-rise" style={rise(4)} aria-labelledby="console-wallets">
       <div className="console-card-head">
@@ -229,7 +234,12 @@ function ExchangeWallets({ health }) {
           ))}
         </ul>
       )}
-      {deposits.length > 0 && <p className="note">plus {and.format(deposits)} deposit addresses</p>}
+      {flagged > 0 && (
+        <p className="flagged-on-file">
+          <span className="flagged-figure" title={`${count(flagged)} flagged addresses`}><i aria-hidden="true" />{big(flagged)}</span>
+          <span className="note">flagged addresses on file · every hop of a trace is screened against them</span>
+        </p>
+      )}
     </section>
   )
 }

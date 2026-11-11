@@ -156,7 +156,8 @@ html[data-theme="dark"] .console-home { --console-glow: rgba(255, 255, 255, 0.04
 .console-home.paused .hero-card::before,
 .console-home.paused .watch-radar .radar-sweep,
 .console-home.paused .watch-radar .radar-ping,
-.console-home.paused .console-ambient i {
+.console-home.paused .console-ambient i,
+.console-home.paused .flagged-figure i {
   animation: none !important;
 }
 
@@ -174,7 +175,8 @@ html[data-theme="dark"] .console-home { --console-glow: rgba(255, 255, 255, 0.04
 .console-home.still .recent-cases > li:first-child > a,
 .console-home.still .watch-radar .radar-sweep,
 .console-home.still .watch-radar .radar-ping,
-.console-home.still .console-ambient i {
+.console-home.still .console-ambient i,
+.console-home.still .flagged-figure i {
   animation: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -189,8 +191,23 @@ html[data-theme="dark"] .console-home { --console-glow: rgba(255, 255, 255, 0.04
   .console-home .recent-cases > li:first-child > a,
   .console-home .watch-radar .radar-sweep,
   .console-home .watch-radar .radar-ping,
-  .console-home .console-ambient i {
+  .console-home .console-ambient i,
+  .console-home .flagged-figure i {
     animation: none !important;
   }
   .motion-toggle { display: none; }
 }
+
+/* ---- Flagged addresses on file: the screening list, under the exchanges ---- */
+.flagged-on-file {
+  margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.flagged-figure {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 28px; font-weight: 300; line-height: 1.1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--text);
+}
+/* Red for the risk lists, as on the maps: a confirmed listing is solid. */
+.flagged-figure i { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: var(--risk); box-shadow: 0 0 0 0 color-mix(in srgb, var(--risk) 45%, transparent); }
+.console-home .flagged-figure i { animation: flagged-ping 3.2s ease-out 1.6s infinite; }
+@keyframes flagged-ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--risk) 45%, transparent); } 70%, 100% { box-shadow: 0 0 0 9px transparent; } }
