@@ -16,6 +16,7 @@ way?", the answer is probably here.
 | [0007](0007-pro-rata-not-all-or-nothing.md) | Pro-rata estimates, not all-or-nothing taint | 2026-09-23 |
 | [0008](0008-never-guess-token-decimals.md) | Never guess a token's decimals | 2026-09-28 |
 | [0009](0009-a-ceiling-on-running-traces.md) | A ceiling on traces running at once | 2026-09-28 |
+| [0010](0010-how-the-team-shares-context.md) | The team shares context through the repository | 2026-11-12 |
 
 New decisions get the next number. A decision that is replaced is marked
 superseded rather than deleted, so the history of why stays readable.
