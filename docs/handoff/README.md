@@ -6,7 +6,9 @@ where a piece of work stands, since neither can see the other's conversations.
 
 **Claim rule.** Before starting a feature, check its "Current" line. If it says
 "nobody" (or there is no file yet), put your name there, assign yourself the
-GitHub issue, and commit and push that first. If it names someone else, do not
+GitHub issue, commit and push that first on the feature branch, and open a
+draft pull request so the claim shows up in `gh pr list` (a handoff file on a
+branch is invisible from `main` until then). If it names someone else, do not
 work on it; talk to that person.
 
 **Start of a session.** Pull `main`, check open pull requests and this folder,

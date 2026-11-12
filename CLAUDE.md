@@ -35,9 +35,11 @@ everything the other person needs lives in this repository.
   before writing code.
 - **Claim before you start.** If a feature is unclaimed, assign the issue to
   the human you work with and put their name in "Current" in its handoff file
-  (copy `docs/handoff/TEMPLATE.md`), then commit and push that first. If
-  someone else is "Current", do not work on it: tell the human you work with
-  and let them sort it out with that person.
+  (copy `docs/handoff/TEMPLATE.md`), then commit and push that first on the
+  feature branch and open a draft pull request (`gh pr create --draft`), so
+  the claim shows up in `gh pr list` for your teammate. If someone else is
+  "Current", do not work on it: tell the human you work with and let them
+  sort it out with that person.
 - **Session end.** Update `docs/handoff/<feature>.md`: done, decisions, next
   steps, open questions, files mid-change. Set "Current" to "nobody" if your
   human is stopping. Commit and push the branch. Never end a session without
