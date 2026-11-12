@@ -50,7 +50,8 @@ SIGN_IN_TO_ASK = ("An urgent freeze letter needs a signed-in drafter and a secon
                   "sign in to ask for a sign-off.")
 # The first two are the urgent freeze letters (request_letters.LETTERS): each
 # letter the tool drafts can be logged as sent under its own name.
-KINDS = ("exchange", "tether", "other", "exchange-freeze", "tether-freeze", "instant", "instant-freeze")
+KINDS = ("exchange", "tether", "other", "exchange-freeze", "tether-freeze", "instant", "instant-freeze",
+         "bank-info", "bank-freeze", "telecom")  # the last three: notice_letters.NOTICES
 FOLLOW_UP_DAYS = 7
 # Bounds on what anyone can store here. Owner keys are free, so the per-owner
 # cap alone would not bound the table: MAX_TOTAL does. A real request moves
