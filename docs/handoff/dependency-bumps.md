@@ -1,11 +1,11 @@
 # Handoff: dependency-bumps
 
 - **Feature**: clear the open Dependabot pull requests so dependencies stay current and CI stays green
-- **Issue**: #ISSUE
+- **Issue**: #95
 - **Branch**: `feat/dependency-bumps`
 - **Current**: Barenyam
 - **Last worked on**: Barenyam, 2026-11-12
-- **Status**: all 8 Dependabot PRs reviewed; nothing closed or merged yet
+- **Status**: #82's Python patch updates and their fix are on this branch; #1, #2, #3, #56 closed as stale
 
 ## Done
 
@@ -24,14 +24,16 @@
 
 ## Decisions
 
+- #82 is taken over on this branch: Dependabot raised psycopg to 3.3.7 in `backend/requirements.txt` only. This branch also regenerates `backend/requirements-dev.txt` with the repo's uv command (only psycopg and psycopg-binary changed) and copies the 3.3.7 hash blocks into `citizen/api/requirements.txt`. `tests/test_requirements_locked.py` and `citizen/api/tests/test_endpoints.py::test_the_dependencies_are_psycopg_alone_pinned_with_hashes` pass locally.
+
 - Merge lockfile PRs one at a time and wait for Dependabot's rebase and CI between them.
 - Fixes go in our own PRs, never as pushes to a Dependabot branch (Dependabot stops maintaining a branch someone else pushed to).
 
 ## Next
 
-1. #82 fix: `citizen/api/requirements.txt` still pins psycopg and psycopg-binary 3.3.6. Raise both to 3.3.7, copying their hash lines from #82's `backend/requirements.txt` (never by hand). `citizen/api/tests/test_endpoints.py::test_the_dependencies_are_psycopg_alone_pinned_with_hashes` checks every citizen hash appears in the backend lock; that is the one test failing in both red jobs of #82.
-2. After agreement: close #1, #2, #3, #56 with a one-line reason each.
-3. Then merge in order: #80, #81 (rebased), #82 with its fix, #61 last.
+1. Review and merge this branch's PR (it carries #82's updates plus the fix), then close #82 as superseded.
+2. Merge #80, then #81 once Dependabot has rebased it and CI is green.
+3. #61 last, on its own, after reading the SQLAlchemy 2.1 and FastAPI release notes.
 
 ## Open questions
 
