@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import AssetDeadlines from '../AssetDeadlines'
-import AssetsPanel, { deadline, holderOf, todayInIndia } from './AssetsPanel'
+import AssetsPanel, { deadline, holderOf, money, todayInIndia } from './AssetsPanel'
 
 // The asset register on the Letters tab (backend assets.py) and the home
 // page's court-deadline card. Rows come from the backend; the panel shows the
@@ -95,6 +95,13 @@ describe('deadline', () => {
     expect(deadline({ ...ROW, days_left: 34, deadline: '2026-12-16' })).toEqual({ tone: '', text: 'Court order due 16 Dec 2026 · 34 days' })
     expect(deadline({ ...ROW, order_ref: 'Order 3/2026' }).tone).toBe('green')
     expect(deadline({ ...ROW, status: 'sold' }).text).toBe('Sold')
+  })
+
+  it('writes rupees the Indian way, exactly as stored, and other assets as they are', () => {
+    expect(money('250000', 'INR')).toBe('₹2,50,000')
+    expect(money('12345678.50', 'inr')).toBe('₹1,23,45,678.50')
+    expect(money('999', 'INR')).toBe('₹999')
+    expect(money('635.000000', 'USDT')).toBe('635.000000 USDT')
   })
 
   it('maps a freeze letter to where its money is held, and dates in India', () => {

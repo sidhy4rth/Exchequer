@@ -29,6 +29,14 @@ export function holderOf(kind) {
   return 'exchange'
 }
 
+/** Rupees grouped the Indian way (₹2,50,000.50), exactly as stored; other assets as they are. */
+export function money(amount, asset) {
+  if (String(asset).toUpperCase() !== 'INR') return `${amount} ${plain(asset)}`
+  const [whole, paise] = String(amount).split('.')
+  const head = whole.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',')
+  return `₹${head ? `${head},` : ''}${whole.slice(-3)}${paise ? `.${paise}` : ''}`
+}
+
 /** India's date today, as the seizure date's default. */
 export const todayInIndia = (now = new Date()) => new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10)
 
@@ -91,7 +99,7 @@ export default function AssetsPanel({ result }) {
           return (
             <div className="request-row" key={a.asset_id}>
               <div className="top">
-                <span className="nm"><span className="mono">{a.amount}</span> {plain(a.asset)} <span className="note">· {HOLDERS[a.holder] ?? a.holder}</span></span>
+                <span className="nm"><span className="mono">{money(a.amount, a.asset)}</span> <span className="note">· {HOLDERS[a.holder] ?? a.holder}</span></span>
                 <span className={`pill ${d.tone}`}>{d.text}</span>
               </div>
               <dl className="as-facts">

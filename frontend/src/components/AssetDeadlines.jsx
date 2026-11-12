@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDueAssets } from '../api'
-import { deadline, HOLDERS } from './case/AssetsPanel'
-import { plain } from '../text'
+import { deadline, HOLDERS, money } from './case/AssetsPanel'
+import './AssetDeadlines.css'
 
 /** The home page's warning: frozen or seized funds whose court order on custody
  * is due within a week or overdue (backend GET /assets/due). Shows nothing when
@@ -18,9 +18,9 @@ export default function AssetDeadlines() {
         {due.map((a) => (
           <li key={a.asset_id}>
             <Link to={`/case/${a.case_id}?tab=letters`}>
-              <span className="recent-address"><span className="mono">{a.amount}</span> {plain(a.asset)}</span>
-              <span className="recent-meta">{HOLDERS[a.holder] ?? a.holder}</span>
-              <span className="pill red">{deadline(a).text}</span>
+              <span className="ad-amount mono">{money(a.amount, a.asset)}</span>
+              <span className="ad-where">{HOLDERS[a.holder] ?? a.holder}</span>
+              <span className="pill red ad-when">{deadline(a).text}</span>
             </Link>
           </li>
         ))}
