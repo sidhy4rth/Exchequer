@@ -136,3 +136,26 @@ export async function runRecheck(id, caseRef = null) {
   const body = caseRef ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ case_ref: caseRef }) } : {}
   return recheckOrNull(await apiFetch(`${BASE}/trace/${encodeURIComponent(id)}/recheck`, { method: 'POST', ...body }))
 }
+
+/** The asset register (backend assets.py): what was frozen or seized in a
+ * case, where it is held, its court deadline and its outcome. */
+export async function fetchCaseAssets(caseId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/assets`))
+}
+
+export async function addAsset(caseId, body) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/assets`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }))
+}
+
+export async function updateAsset(assetId, changes) {
+  return jsonOrThrow(await apiFetch(`${BASE}/assets/${encodeURIComponent(assetId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes),
+  }))
+}
+
+/** Held assets whose court deadline is within `days` days or past, soonest first. */
+export async function fetchDueAssets(days = 7) {
+  return jsonOrThrow(await apiFetch(`${BASE}/assets/due?days=${encodeURIComponent(days)}`))
+}

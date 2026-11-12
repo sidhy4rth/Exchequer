@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchAccess, fetchCases, fetchChains, fetchExchanges, fetchRecordedDemos, fetchRiskLabels, fetchWatches } from '../api'
+import AssetDeadlines from '../components/AssetDeadlines'
 import ChainDot from '../components/ChainDot'
 import Showroom from '../components/Showroom'
 import { DEMOS, SHORT_CHAIN } from '../components/TraceForm'
@@ -342,6 +343,7 @@ export default function Home() {
         <div className="console-grid">
           <RecentCases />
           <div className="console-side">
+            {!locked && <AssetDeadlines />}
             <ExchangeWallets health={health} />
             {!locked && <WatchCard />}
           </div>

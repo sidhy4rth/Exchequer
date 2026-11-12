@@ -1,0 +1,7 @@
+/* The asset register on the Letters tab (AssetsPanel.jsx); rows reuse the requests log's look. */
+.assets-panel .as-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 8px 0 4px; font-size: 13px; }
+.assets-panel .as-facts dt { color: var(--text-2); }
+.assets-panel .as-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.assets-panel .as-form { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; border-top: 1px solid var(--line); }
+.assets-panel .as-never { color: var(--risk-soft); }
+.assets-panel .as-save { border-color: var(--go); background: var(--go-tint); color: var(--go-soft); font-weight: 500; }
