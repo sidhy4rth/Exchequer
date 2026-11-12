@@ -73,6 +73,16 @@ def _period(details: dict[str, Any]) -> tuple[date, date]:
     return start, end
 
 
+def inr(value: float) -> str:
+    """Rupees the Indian way, as a bank reads them: 2,50,000.00 and 1,23,45,678.50."""
+    whole, paise = f"{value:.2f}".split(".")
+    head, groups = whole[:-3], [whole[-3:]]
+    while head:
+        groups.insert(0, head[-2:])
+        head = head[:-2]
+    return ",".join(groups) + "." + paise
+
+
 def _day(d: date) -> str:
     return d.strftime("%d %b %Y")
 
@@ -156,7 +166,7 @@ def _bank_freeze(details: dict[str, Any], approval: dict[str, Any] | None) -> st
             raise NoticeError("Enter the amount as a number of rupees.") from exc
         if not 0 < value < AMOUNT_MAX:  # also refuses nan and inf
             raise NoticeError("Enter an amount of rupees above zero and below one lakh crore.")
-        stated = [f"Amount    : up to INR {value:,.2f}"]
+        stated = [f"Amount    : up to INR {inr(value)}"]
     ask = f"Please place a debit freeze, now, on account {b['account']} (IFSC {b['ifsc']}) up to the amount below"
     lines = _freeze_header(f"The Nodal Officer, {b['bank']}", f"debit freeze on account {b['account']}", ask, approval)
     lines += [f"Account   : {b['account']}", f"IFSC      : {b['ifsc']}", *stated,

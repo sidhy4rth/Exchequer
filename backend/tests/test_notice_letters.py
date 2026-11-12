@@ -20,7 +20,7 @@ from sqlalchemy import create_engine, select
 
 from app import freeze_requests, models, ownership
 from app.main import app
-from app.notice_letters import (BANK_FREEZE, BANK_INFO, NOTICES, TELECOM, NoticeError, draft)
+from app.notice_letters import BANK_FREEZE, BANK_INFO, NOTICES, TELECOM, NoticeError, draft, inr
 from app.request_letters import AWAITING, BLANK, NOT_VALID
 
 from test_request_letters import case
@@ -97,11 +97,17 @@ def test_a_signed_off_bank_hold_says_who_approved_it():
 
 def test_the_hold_amount_is_the_officers_or_a_blank():
     assert f"Amount    : {BLANK}" in draft("case-1", case(), BANK_FREEZE, bank(order=ORDER))
-    assert "INR 250,000.00" in draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount=250000))
-    assert "INR 250,000.00" in draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount="2,50,000"))
+    assert "INR 2,50,000.00" in draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount=250000))
+    assert "INR 2,50,000.00" in draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount="2,50,000"))
     for bad in (-5, 0, True, "nan", "1e400", "about a lakh"):
         with pytest.raises(NoticeError):
             draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount=bad))
+
+
+@pytest.mark.parametrize("value, text", [(1, "1.00"), (999.5, "999.50"), (1000, "1,000.00"), (250000, "2,50,000.00"),
+                                         (12345678.5, "1,23,45,678.50")])
+def test_rupees_are_grouped_the_indian_way(value, text):
+    assert inr(value) == text
 
 
 # -- the telecom notice -----------------------------------------------------------------
