@@ -33,8 +33,9 @@ Everything the team needs to share lives in the repository:
   step in the "commit e-mails" CI job, fails any new commit whose author or
   committer is an AI assistant, or whose message carries a co-author,
   "generated with" or session trailer for one. A committed
-  `.claude/settings.json`, if adopted, stops Claude Code adding those lines in
-  the first place.
+  `.claude/settings.json` sets Claude Code's `attribution` to empty, so it
+  does not add those lines in the first place (it applies when Claude Code is
+  started from the repository root).
 
 ## Alternatives Considered
 

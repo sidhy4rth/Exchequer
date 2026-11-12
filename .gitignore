@@ -34,7 +34,9 @@ _archive/
 
 # Video-tool installs (Hyperframes / brag skill)
 .agents/
-.claude/
+.claude/*
+# ...except the team's shared Claude Code settings (attribution off, ADR-0010)
+!.claude/settings.json
 skills-lock.json
 
 # Local case-store backups, the demo-case keep list, import checkpoints
