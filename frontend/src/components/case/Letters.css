@@ -6,7 +6,9 @@
    side column. Narrow, the switch comes first, above the sheet. */
 .lt-body { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "sheet switch" "sheet side"; gap: 14px 24px; align-items: start; }
 @container (max-width: 880px) { .lt-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "switch" "sheet" "side"; } }
-.lt-switch { grid-area: switch; display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); }
+.lt-notices-only { align-self: flex-start; }
+.lt-switches { grid-area: switch; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.lt-switch { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: var(--r-panel); background: var(--panel); border: 1px solid var(--line); }
 .lt-switch button { flex: 1 1 140px; min-height: 40px; border: 0; border-radius: var(--r); background: transparent; color: var(--text-2); font-size: 13px; }
 .lt-switch button[aria-pressed="true"] { background: var(--panel-2); color: var(--text); font-weight: 500; box-shadow: inset 0 0 0 1px var(--line-strong); }
 .letter-sheet {

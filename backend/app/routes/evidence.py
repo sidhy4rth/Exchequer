@@ -12,7 +12,10 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
-from .. import audit, case_privacy, freeze_requests, models, ownership, rate_limit, report_cache, request_letters
+from pydantic import BaseModel
+
+from .. import (audit, case_privacy, freeze_requests, models, notice_letters, ownership, rate_limit, report_cache,
+               request_letters)
 from ..auth import CurrentUser
 from ..report_pdf import render_pdf
 
@@ -120,6 +123,43 @@ def list_letters(case_id: str, user: CurrentUser) -> dict[str, Any]:
     letters = request_letters.available(case.result)
     audit.record("case.letters_list", case_id=case_id)
     return {"case_id": case_id, "letters": letters}
+
+
+class NoticeDetails(BaseModel):
+    """What the officer types for a bank or telecom notice (notice_letters.py).
+    Sent in the body, never the URL: account and phone numbers are personal data."""
+
+    to: str
+    bank: str | None = None
+    account: str | None = None
+    ifsc: str | None = None
+    operator: str | None = None
+    phone: str | None = None
+    source: str | None = None
+    period_from: str | None = None
+    period_to: str | None = None
+    order: str | None = None
+    amount: float | str | None = None
+
+
+@router.post("/trace/{case_id}/notice")
+def draft_notice(case_id: str, body: NoticeDetails, user: CurrentUser) -> PlainTextResponse:
+    """A draft notice to a bank or a telecom operator, from the case and the officer's details.
+
+    A draft like the exchange letters: the legal provision is a marked blank, and
+    a bank hold needs the Magistrate's order and a second officer's sign-off. The
+    audit row and the file name say which notice was drafted, never the numbers in it.
+    """
+    case = _case_or_404(case_id, user)
+    details = body.model_dump(exclude={"to"})
+    try:
+        signed = freeze_requests.approval(case_id, body.to, user) if freeze_requests.needs_signoff(body.to) else None
+        text = notice_letters.draft(case_id, case.result, body.to, details, signed)
+    except notice_letters.NoticeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    audit.record("case.notice_draft", case_id=case_id, detail={"to": body.to})
+    return PlainTextResponse(text, headers={
+        **KEEP, "Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}-notice-{body.to}.txt"'})
 
 
 @router.get("/trace/{case_id}/letter")

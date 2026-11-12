@@ -26,6 +26,17 @@ export async function fetchLetter(caseId, to) {
   return response.text()
 }
 
+/** A draft notice to a bank or a telecom operator (backend notice_letters.py),
+ * from the case and the officer's details. The details go in the body, never
+ * the URL: account and phone numbers are personal data. */
+export async function draftNotice(caseId, to, details) {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/notice`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, ...details }),
+  })
+  if (!response.ok) throw await toError(response)
+  return response.text()
+}
+
 /** A recorded example's letters (routes/demos.py): listed and drafted from
  * the recording as a case's are, though none can be logged as sent. */
 export async function fetchRecordedLetters(demo) {
