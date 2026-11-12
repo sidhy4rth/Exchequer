@@ -26,6 +26,17 @@ export async function fetchLetter(caseId, to) {
   return response.text()
 }
 
+/** A draft notice to a bank or a telecom operator (backend notice_letters.py),
+ * from the case and the officer's details. The details go in the body, never
+ * the URL: account and phone numbers are personal data. */
+export async function draftNotice(caseId, to, details) {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/notice`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, ...details }),
+  })
+  if (!response.ok) throw await toError(response)
+  return response.text()
+}
+
 /** A recorded example's letters (routes/demos.py): listed and drafted from
  * the recording as a case's are, though none can be logged as sent. */
 export async function fetchRecordedLetters(demo) {
@@ -124,4 +135,27 @@ export async function runRecheck(id, caseRef = null) {
   // A signed-in officer's case reference, in the body only (case_refs.py).
   const body = caseRef ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ case_ref: caseRef }) } : {}
   return recheckOrNull(await apiFetch(`${BASE}/trace/${encodeURIComponent(id)}/recheck`, { method: 'POST', ...body }))
+}
+
+/** The asset register (backend assets.py): what was frozen or seized in a
+ * case, where it is held, its court deadline and its outcome. */
+export async function fetchCaseAssets(caseId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/assets`))
+}
+
+export async function addAsset(caseId, body) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/assets`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }))
+}
+
+export async function updateAsset(assetId, changes) {
+  return jsonOrThrow(await apiFetch(`${BASE}/assets/${encodeURIComponent(assetId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes),
+  }))
+}
+
+/** Held assets whose court deadline is within `days` days or past, soonest first. */
+export async function fetchDueAssets(days = 7) {
+  return jsonOrThrow(await apiFetch(`${BASE}/assets/due?days=${encodeURIComponent(days)}`))
 }

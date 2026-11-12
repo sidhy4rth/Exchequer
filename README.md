@@ -8,8 +8,8 @@
 ### Trace a reported crypto-fraud wallet to the exchange it was cashed out through — with every step a human can re-check by hand.
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
-[![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer-6gnl.onrender.com)
-[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-34.9M-C0392B)](https://exchequer-6gnl.onrender.com/risk-labels?chain=tron)
+[![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer.co.in)
+[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-34.9M-C0392B)](https://exchequer.co.in/risk-labels?chain=tron)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -23,7 +23,7 @@
 ![Tron](https://img.shields.io/badge/Tron-TRX_·_USDT-FF060A)
 ![SIH 2026](https://img.shields.io/badge/Smart_India_Hackathon_2026-SIH26183_·_MHA-FF9933)
 
-[**Live demo**](https://exchequer-6gnl.onrender.com) ·
+[**Live demo**](https://exchequer.co.in) ·
 [**Demo guide**](DEMO.md) ·
 [**Research & sources**](RESEARCH.md) ·
 [**Judge Q&A**](JUDGE_QA.md)
@@ -324,6 +324,7 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /trace/{case_id}/report?format=text` | The investigator's report (`format=json` for structured): summary, finding and basis, the path hop by hop with amounts, times and hashes, every pattern with its thresholds, every inference with its evidence, screening hits with their sources, limitations, and an appendix of every address and transaction hash |
 | `GET /trace/{case_id}/letters` | Which request letters the case supports: the urgent freeze letters first, then the information letters (to the exchange, to Tether) |
 | `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether; `to=exchange-freeze` or `to=tether-freeze` for the urgent "hold these funds now" letter) |
+| `POST /trace/{case_id}/notice` | A draft notice to a bank (`to=bank-info`; `to=bank-freeze` for an urgent debit freeze, which needs the Magistrate's order and a second officer's sign-off) or a telecom operator (`to=telecom`), from the case and the account or phone details in the request body, never the URL |
 | `GET /cases` | History of past traces |
 | `GET /cases/correlate` | Intermediaries shared by two or more of your stored cases (plus the demos) — the campaign view (`?case_id=` narrows it) |
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |

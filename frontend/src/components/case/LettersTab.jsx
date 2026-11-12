@@ -1,11 +1,13 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchCaseRequests, fetchLetter, fetchLetters, fetchRecordedLetter, fetchRecordedLetters, logRequest, signOffRequest, updateRequest } from '../../api'
+import { draftNotice, fetchCaseRequests, fetchLetter, fetchLetters, fetchRecordedLetter, fetchRecordedLetters, logRequest, signOffRequest, updateRequest } from '../../api'
 import { plain } from '../../text'
 import RequestsPanel from '../RequestsPanel'
 import WatchPanel from '../WatchPanel'
 import { ist } from './format'
 import { addressOf, assetOf, blanks, checks, kindOf, lines, recipientOf } from './letterChecks'
+import NoticeForm from './NoticeForm'
+import AssetsPanel from './AssetsPanel'
 import './Letters.css'
 
 const Tick = () => (
@@ -25,6 +27,13 @@ function printSheet() {
 }
 
 const FALLBACK = { 'exchange-freeze': 'exchange', 'instant-freeze': 'instant' } // a case that lists no freeze letter opens the information letter
+
+// Notices to a bank or a phone company (backend notice_letters.py), offered
+// on every stored case after the letters the backend lists. Their details are
+// the officer's to type (NoticeForm), so they are drafted only on request.
+const NOTICES = [{ to: 'bank-info', title: 'Bank', group: 'bank' }, { to: 'telecom', title: 'Phone company', group: 'telecom' }]
+const groupOf = (to) => (to === 'telecom' ? 'telecom' : to?.startsWith('bank-') ? 'bank' : null)
+const ANYONE = { bank: 'the bank', telecom: 'the phone company' }
 
 /** The case's Letters tab: the drafts the backend offers for it, one at a
  * time on a paper sheet, then the freeze-request log and the watches. A
@@ -47,6 +56,8 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   const [manual, setManual] = useState(false) // the clipboard refused: the text waits, selected, in a box
   const [drafts, setDrafts] = useState(0) // redrafts the letter after a sign-off changes what it says
   const [askReason, setAskReason] = useState(null) // why this caller cannot ask for a sign-off (not signed in)
+  const [details, setDetails] = useState({ bank: {}, telecom: {} }) // what the officer typed for each notice; never stored
+  const [requested, setRequested] = useState({}) // group → the officer pressed Draft since last changing its details
   const box = useRef(null)
   const sheetRef = useRef(null)
   const picked = useRef(null)
@@ -71,11 +82,32 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
 
   useEffect(() => {
     if (!source || !to || texts[to] !== undefined || failed[to] !== undefined) return undefined
+    const group = groupOf(to)
+    if (group && !requested[group]) return undefined // a notice waits for its details
     let live = true
-    source.one(to).then((text) => live && setTexts((t) => ({ ...t, [to]: text })))
+    const drafted = group ? draftNotice(caseId, to, details[group]) : source.one(to)
+    drafted.then((text) => live && setTexts((t) => ({ ...t, [to]: text })))
       .catch((e) => live && setFailed((f) => ({ ...f, [to]: e.message })))
     return () => { live = false }
-  }, [to, drafts, tries]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [to, drafts, tries, requested]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** The notices of `group` go stale: forget their drafts and failures. */
+  function forget(group) {
+    const stale = (k) => groupOf(k) === group
+    setTexts((t) => Object.fromEntries(Object.entries(t).filter(([k]) => !stale(k))))
+    setFailed((f) => Object.fromEntries(Object.entries(f).filter(([k]) => !stale(k))))
+  }
+  function typed(group, values) {
+    setDetails((d) => ({ ...d, [group]: values }))
+    if (requested[group]) { forget(group); setRequested((r) => ({ ...r, [group]: false })) }
+  }
+  function draftNow(group) {
+    forget(group)
+    setRequested((r) => ({ ...r, [group]: true }))
+    setDrafts((n) => n + 1)
+    setSaid(null)
+    sheetRef.current?.focus()
+  }
 
   /** Draft `which` afresh after it failed; the keyboard waits on the sheet. */
   function redraft(which) {
@@ -91,13 +123,18 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   }, [ask])
   useEffect(() => { picked.current?.focus() }, [letters, asked])
 
-  const letter = letters?.find((l) => l.to === to)
+  const group = groupOf(to)
+  const notices = caseId && letters ? NOTICES : [] // a recorded example is not a stored case: no notice can be drafted from it
+  const letter = letters?.find((l) => l.to === to) ?? (group && notices.length ? { ...NOTICES.find((n) => n.group === group), to } : undefined)
+  /** Who a letter or notice goes to, as the requests log names them. */
+  const recipientFor = (l) => (l.group ? plain(details[l.group][l.group === 'bank' ? 'bank' : 'operator'] ?? '').trim() || ANYONE[l.group]
+    : recipientOf(l, result))
   const text = texts[to]
   const names = text ? blanks(text) : []
   const ticks = text ? checks(text, result) : []
 
   // This letter's row in the freeze log: one still open, to the same recipient, of the same kind.
-  const rowOf = (rows) => letter && rows.find((r) => r.recipient === recipientOf(letter, result)
+  const rowOf = (rows) => letter && rows.find((r) => r.recipient === recipientFor(letter)
     && r.kind === kindOf(to) && r.status !== 'closed')
   // An urgent freeze letter is ready only once a second officer of the unit
   // signs it off (freeze_requests.py); until then it cannot be marked sent.
@@ -131,7 +168,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
     if (fresh && from.includes(fresh.status)) await updateRequest(fresh.request_id, { status: next })
     else if (!fresh) {
       await logRequest({
-        case_id: caseId, recipient: recipientOf(letter, result), kind: kindOf(to),
+        case_id: caseId, recipient: recipientFor(letter), kind: kindOf(to),
         address: addressOf(letter, result),
         asset: assetOf(to, result), status: next,
       })
@@ -154,7 +191,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
         setSaid({ tone: 'status', text: 'The officer who drafted this letter logs it as sent.' })
         return
       }
-      await done(`Logged as sent to ${recipientOf(letter, result)}.`)
+      await done(`Logged as sent to ${recipientFor(letter)}.`)
     } catch (e) {
       setSaid({ tone: 'alert', text: `It could not be logged: ${e.message}` })
     }
@@ -180,12 +217,28 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
     <div className="letters">
       {listError && <p className="error-line" role="alert">{listError}</p>}
       {letters?.length === 0 && <p className="card note case-note">This case supports no request letter: it reached no exchange and holds no USDT that Tether could act on.</p>}
+      {!letter && notices.length > 0 && (
+        <div className="lt-switch lt-notices-only" role="group" aria-label="Notice to">
+          {notices.map((n) => <button key={n.group} type="button" aria-pressed="false" onClick={() => pick(n.to)}>{n.title}</button>)}
+        </div>
+      )}
       {letter && (
         <div className="lt-body">
-          <div className="lt-switch" role="group" aria-label="Letter to">
-            {letters.map((l) => (
-              <button key={l.to} ref={l.to === ask ? picked : undefined} type="button" aria-pressed={l.to === to} onClick={() => pick(l.to)}>{plain(l.title)}</button>
-            ))}
+          <div className="lt-switches">
+            {letters.length > 0 && (
+              <div className="lt-switch" role="group" aria-label="Letter to">
+                {letters.map((l) => (
+                  <button key={l.to} ref={l.to === ask ? picked : undefined} type="button" aria-pressed={l.to === to} onClick={() => pick(l.to)}>{plain(l.title)}</button>
+                ))}
+              </div>
+            )}
+            {notices.length > 0 && (
+              <div className="lt-switch" role="group" aria-label="Notice to">
+                {notices.map((n) => (
+                  <button key={n.group} type="button" aria-pressed={n.group === group} onClick={() => pick(n.group === group ? to : n.to)}>{n.title}</button>
+                ))}
+              </div>
+            )}
           </div>
           <article ref={sheetRef} tabIndex={-1} className="letter-sheet" aria-labelledby="letter-title">
             <h2 id="letter-title" className="visually-hidden">Draft: {plain(letter.title)}</h2>
@@ -194,6 +247,8 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
                 <p>The letter could not be drafted: {failed[to]}</p>
                 <button type="button" onClick={() => { sheetRef.current?.focus(); redraft(to) }}>Try again</button>
               </div>
+            ) : group && !requested[group] ? (
+              <p className="lt-wait">Type the {group === 'bank' ? "account's" : "number's"} details beside this sheet, then press Draft the letter.</p>
             ) : text === undefined ? <p className="lt-wait">Drafting the letter…</p> : (
               <div className="letter-text">
                 {lines(text).map((line, n) => (
@@ -211,6 +266,13 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
           </article>
 
           <aside className="lt-side" aria-label="Letter checks">
+            {group && (
+              <NoticeForm to={to} values={details[group]} onChange={(v) => typed(group, v)}
+                onKind={(next) => { // a hold needs details an information notice does not: wait for Draft again
+                  if (next !== to) { forget(group); setRequested((r) => ({ ...r, [group]: false })) }
+                  setTo(next); setSaid(null); setManual(false)
+                }} onDraft={() => draftNow(group)} />
+            )}
             {ticks.length > 0 && (
               <section className="lt-card" aria-labelledby="lt-checked">
                 <h2 id="lt-checked">Checked for you</h2>
@@ -270,6 +332,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
 
       {caseId ? <>
         <RequestsPanel key={logged} result={result} onChange={() => loadRequests()?.catch(() => {})} />
+        <AssetsPanel key={requests.map((r) => r.status).join()} result={result} />
         <WatchPanel result={result} extra={watch} />
       </> : (
         <p className="card note case-note">

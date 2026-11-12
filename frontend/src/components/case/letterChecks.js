@@ -133,6 +133,7 @@ export function exchangeOf(result) {
 /** The asset a logged request is in: what reached the exchange, USDT for
  * Tether (its letters are about USDT alone), else the trace's own. */
 export function assetOf(to, result) {
+  if (isNotice(to)) return '' // a bank or telecom notice is about an account or a number, not a token
   if (to.startsWith('tether')) return 'USDT'
   if (to.startsWith('exchange')) return exchangeOf(result).asset
   return result.asset ?? ''
@@ -150,6 +151,7 @@ export function recipientOf(letter, result) {
  * exchange's wallet for an exchange letter (exchangeOf: a follow-on's when the
  * trace itself reached none), else none. */
 export function addressOf(letter, result) {
+  if (isNotice(letter.to)) return ''
   if (letter.to.startsWith('instant')) return letter.address ?? ''
   return letter.to.startsWith('exchange') ? exchangeOf(result).address : ''
 }
@@ -167,7 +169,11 @@ export function instantService(result) {
   return plain(own ? own.t.exchange : picks[0].m.exchange) || 'the swap service'
 }
 
-const KINDS = new Set(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'instant', 'instant-freeze']) // backend freeze_requests.KINDS
+const KINDS = new Set(['exchange', 'tether', 'exchange-freeze', 'tether-freeze', 'instant', 'instant-freeze',
+  'bank-info', 'bank-freeze', 'telecom']) // backend freeze_requests.KINDS
+
+/** A notice to a bank or telecom operator (backend notice_letters.NOTICES), not a letter about the chain. */
+export const isNotice = (to) => to === 'bank-info' || to === 'bank-freeze' || to === 'telecom'
 
 /** The requests log's kind for a letter: its own when the log knows it, else "other". */
 export const kindOf = (to) => (KINDS.has(to) ? to : 'other')

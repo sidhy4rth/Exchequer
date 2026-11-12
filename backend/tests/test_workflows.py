@@ -175,11 +175,16 @@ def test_a_push_canary_checks_the_pushed_commit_not_a_fixed_sleep():
 # -- commit e-mails (r1-secrets-history-4) ---------------------------------------------------
 def test_new_commits_must_carry_a_noreply_address():
     job = load(ROOT / ".github" / "workflows" / "test.yml")["jobs"]["emails"]
-    (checkout, check) = job["steps"]
+    (checkout, check, no_ai) = job["steps"]
     assert checkout["with"] == {"persist-credentials": False, "fetch-depth": 0}
     assert "check_commit_emails.sh" in check["run"] and "${{" not in check["run"]
     script = (ROOT / ".github" / "scripts" / "check_commit_emails.sh").read_text()
     assert "@users.noreply.github.com" in script and "%ae" in script and "%ce" in script
+    # ADR-0010: the same job refuses commits that credit an AI assistant.
+    assert "check_no_ai_attribution.sh" in no_ai["run"] and "${{" not in no_ai["run"]
+    assert no_ai["env"] == check["env"]
+    script = (ROOT / ".github" / "scripts" / "check_no_ai_attribution.sh").read_text()
+    assert "%an%n%ae%n%cn%n%ce" in script and "%B" in script and "origin/main" in script
 
 
 def test_render_deploys_each_merge_and_the_canary_can_see_it():
