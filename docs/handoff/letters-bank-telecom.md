@@ -18,7 +18,7 @@
   - `backend/app/notice_letters.py`: three notices, `bank-info`, `bank-freeze` (urgent) and `telecom`, built from the same header, freeze header and sign-off helpers as `request_letters.py`.
   - `POST /trace/{case_id}/notice` in `backend/app/routes/evidence.py`: the officer's details in the body; the file is named by case and notice; the audit row is `case.notice_draft` with `{"to": ...}` only.
   - `freeze_requests.KINDS` gains the three, so each can be logged as sent; `bank-freeze` needs a sign-off because it ends in `-freeze`.
-  - `backend/tests/test_notice_letters.py`: 26 tests. Full backend suite and ruff pass, except `test_signing.py::test_unwritable_key_path_falls_back_to_a_marked_temporary_key`, which fails on unchanged `main` too when run as root (a root process can write the "unwritable" path); CI does not run as root.
+  - `backend/tests/test_notice_letters.py`: 31 tests, including the whole two-officer flow (Asha logs a bank hold and asks for sign-off; she cannot sign it; Bina does; the draft then names her) and logging the information notices as sent. Full backend suite and ruff pass, except `test_signing.py::test_unwritable_key_path_falls_back_to_a_marked_temporary_key`, which fails on unchanged `main` too when run as root (a root process can write the "unwritable" path); CI does not run as root.
 
 ## Decisions
 
@@ -34,7 +34,11 @@
 2. Add `bank-info`, `bank-freeze`, `telecom` to `KINDS` in `frontend/src/components/case/letterChecks.js` (it mirrors `freeze_requests.KINDS`) so the requests log names them.
 3. When #97 is merged, mark feature 7's status in `docs/suite-features.md`.
 
+- Cross-check (2026-11-12): amounts accept "2,50,000"; True, nan, inf and words are refused; README lists the new route.
+
 ## Open questions
+
+- Any signed-in officer holding a case's id can draft its notices, as they can its exchange letters today (`case_privacy.py`: "holding it opens the case", so a recipient can follow a letter's reference back to the evidence). Should drafting letters and notices be limited to the case's own unit? A cross-cutting question for Sidhyarth (an ADR if we change it), not part of this feature.
 
 - Does feature 5's importer later fill these details automatically? If so, agree the shape with whoever takes feature 5.
 

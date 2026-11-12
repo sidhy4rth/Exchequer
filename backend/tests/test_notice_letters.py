@@ -98,8 +98,10 @@ def test_a_signed_off_bank_hold_says_who_approved_it():
 def test_the_hold_amount_is_the_officers_or_a_blank():
     assert f"Amount    : {BLANK}" in draft("case-1", case(), BANK_FREEZE, bank(order=ORDER))
     assert "INR 250,000.00" in draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount=250000))
-    with pytest.raises(NoticeError):
-        draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount=-5))
+    assert "INR 250,000.00" in draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount="2,50,000"))
+    for bad in (-5, 0, True, "nan", "1e400", "about a lakh"):
+        with pytest.raises(NoticeError):
+            draft("case-1", case(), BANK_FREEZE, bank(order=ORDER, amount=bad))
 
 
 # -- the telecom notice -----------------------------------------------------------------
@@ -187,3 +189,26 @@ def test_the_route_refuses_bad_details_and_an_unknown_case(client):
 def test_the_route_shows_a_bank_hold_as_awaiting_sign_off(client):
     r = client.post("/trace/case-1/notice", json={"to": BANK_FREEZE, **bank(order=ORDER)}, headers=OWNER)
     assert r.status_code == 200 and AWAITING in r.text
+
+
+# -- the whole flow, two officers of one unit (test_freeze_signoff's unit) ---------------
+from test_freeze_signoff import drafted, sign, signed_in, unit  # noqa: E402,F401 -- the fixture is used by name
+
+
+def test_a_bank_hold_becomes_ready_only_once_a_second_officer_signs_it_off(unit):  # noqa: F811 -- the imported fixture
+    asha, bina = signed_in("asha"), signed_in("bina")
+    notice = {"to": BANK_FREEZE, **bank(order=ORDER)}
+    rid = drafted(asha, kind=BANK_FREEZE)
+    assert AWAITING in asha.post("/trace/case-1/notice", json=notice).text
+    assert sign(asha, rid).status_code == 403  # never the drafter
+    assert sign(bina, rid).status_code == 200
+    text = asha.post("/trace/case-1/notice", json=notice).text
+    assert AWAITING not in text and "Approved by a second officer: Bina Iyer" in text
+
+
+@pytest.mark.parametrize("kind", [BANK_INFO, TELECOM])
+def test_an_information_notice_is_logged_and_sent_without_a_sign_off(unit, kind):  # noqa: F811 -- the imported fixture
+    asha = signed_in("asha")
+    rid = drafted(asha, kind=kind, ask=False)
+    assert asha.patch(f"/requests/{rid}", json={"status": "sent"}).json()["status"] == "sent"
+

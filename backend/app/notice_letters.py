@@ -148,12 +148,14 @@ def _bank_freeze(details: dict[str, Any], approval: dict[str, Any] | None) -> st
     if amount in (None, ""):
         stated = [f"Amount    : {BLANK} (officer to state)"]
     else:
-        try:
-            value = float(amount)
-        except (TypeError, ValueError) as exc:
+        if isinstance(amount, bool):
+            raise NoticeError("Enter the amount as a number of rupees.")
+        try:  # "2,50,000" and "250 000" are how officers write it
+            value = float(re.sub(r"[,\s]", "", str(amount)))
+        except ValueError as exc:
             raise NoticeError("Enter the amount as a number of rupees.") from exc
-        if not 0 < value < AMOUNT_MAX:
-            raise NoticeError("The amount must be more than zero.")
+        if not 0 < value < AMOUNT_MAX:  # also refuses nan and inf
+            raise NoticeError("Enter an amount of rupees above zero and below one lakh crore.")
         stated = [f"Amount    : up to INR {value:,.2f}"]
     ask = f"Please place a debit freeze, now, on account {b['account']} (IFSC {b['ifsc']}) up to the amount below"
     lines = _freeze_header(f"The Nodal Officer, {b['bank']}", f"debit freeze on account {b['account']}", ask, approval)
