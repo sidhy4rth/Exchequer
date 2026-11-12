@@ -41,7 +41,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-LIVE = os.environ.get("EXCHEQUER_URL") or "https://exchequer-6gnl.onrender.com"
+LIVE = os.environ.get("EXCHEQUER_URL") or "https://exchequer.co.in"
 EXPECTATIONS = Path(__file__).resolve().parent.parent / "data" / "demo_expectations.json"
 TOLERANCE = 0.05
 

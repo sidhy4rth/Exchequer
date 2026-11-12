@@ -8,8 +8,8 @@
 ### Trace a reported crypto-fraud wallet to the exchange it was cashed out through — with every step a human can re-check by hand.
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
-[![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer-6gnl.onrender.com)
-[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-32.0M-C0392B)](https://exchequer-6gnl.onrender.com/risk-labels?chain=tron)
+[![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer.co.in)
+[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-32.0M-C0392B)](https://exchequer.co.in/risk-labels?chain=tron)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -23,7 +23,7 @@
 ![Tron](https://img.shields.io/badge/Tron-TRX_·_USDT-FF060A)
 ![SIH 2026](https://img.shields.io/badge/Smart_India_Hackathon_2026-SIH26183_·_MHA-FF9933)
 
-[**Live demo**](https://exchequer-6gnl.onrender.com) ·
+[**Live demo**](https://exchequer.co.in) ·
 [**Demo guide**](DEMO.md) ·
 [**Research & sources**](RESEARCH.md) ·
 [**Judge Q&A**](JUDGE_QA.md)
