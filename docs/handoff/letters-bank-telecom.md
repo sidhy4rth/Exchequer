@@ -3,9 +3,9 @@
 - **Feature**: suite feature 7 (request and letter generator): draft notices to a bank and to a telecom operator, next to the exchange and Tether letters
 - **Issue**: #98
 - **Branch**: `feat/letters-bank-telecom`
-- **Current**: Barenyam (until #99 merges)
+- **Current**: nobody
 - **Last worked on**: Barenyam, 2026-11-12
-- **Status**: server side and the Letters tab form both done, tested end to end in a browser; waiting for review and merge (#99), which deploys it
+- **Status**: merged in #99 (12 Nov 2026) and deployed with it; the later parts below are open
 
 ## The nine features (see `docs/suite-features.md`)
 
@@ -30,7 +30,7 @@
 
 ## Next
 
-1. Sidhyarth reviews and merges #99; Render deploys each merge. Then open a stored case's Letters tab on the live site and draft one of each notice.
+1. Open a stored case's Letters tab on the live site and draft one of each notice.
 2. When #97 is merged, mark feature 7's status in `docs/suite-features.md`.
 3. Later parts of feature 7: foreign letters of request (BNSS s.112); saving notice details once feature 5's importer exists.
 
