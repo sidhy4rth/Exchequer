@@ -16,6 +16,7 @@ or a false attribution is the expensive failure. Correctness beats features.
 Reference documents:
 - Problem Register (34 problems, IDs like S1, M1, E5): ask your human for the link
 - Solutions Plan (36 solutions, IDs R1 to R36): ask your human for the link
+- The suite's nine features and where each stands: `docs/suite-features.md`
 - Case contract: `docs/contracts/case.md`
 - Decision log: `docs/adr/` (index in `docs/adr/README.md`)
 - Work in progress: `docs/handoff/` (one file per feature)
