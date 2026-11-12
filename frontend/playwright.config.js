@@ -12,7 +12,7 @@ export default defineConfig({
   retries: 1,
   reporter: [['list']],
   use: {
-    baseURL: process.env.EXCHEQUER_URL ?? 'https://exchequer-6gnl.onrender.com',
+    baseURL: process.env.EXCHEQUER_URL ?? 'https://exchequer.co.in',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
