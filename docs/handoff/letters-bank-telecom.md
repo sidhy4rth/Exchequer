@@ -3,9 +3,9 @@
 - **Feature**: suite feature 7 (request and letter generator): draft notices to a bank and to a telecom operator, next to the exchange and Tether letters
 - **Issue**: #98
 - **Branch**: `feat/letters-bank-telecom`
-- **Current**: Barenyam
+- **Current**: Barenyam (until #99 merges)
 - **Last worked on**: Barenyam, 2026-11-12
-- **Status**: PR A (server side) done and pushed; PR B (the form in the Letters tab) next
+- **Status**: server side and the Letters tab form both done, tested end to end in a browser; waiting for review and merge (#99), which deploys it
 
 ## The nine features (see `docs/suite-features.md`)
 
@@ -30,10 +30,18 @@
 
 ## Next
 
-1. PR B, the form: in `frontend/src/components/case/LettersTab.jsx`, add a "Bank or telecom notice" section with the fields for each notice (bank, account, IFSC, period, source; order and amount for the hold; operator and phone for telecom), POST to `/trace/{id}/notice` (add the call to the right file in `frontend/src/api/`, per CLAUDE.md rule 4), and show the draft like the other letters. Tests next to `LettersTab.test.jsx`.
-2. Add `bank-info`, `bank-freeze`, `telecom` to `KINDS` in `frontend/src/components/case/letterChecks.js` (it mirrors `freeze_requests.KINDS`) so the requests log names them.
-3. When #97 is merged, mark feature 7's status in `docs/suite-features.md`.
+1. Sidhyarth reviews and merges #99; Render deploys each merge. Then open a stored case's Letters tab on the live site and draft one of each notice.
+2. When #97 is merged, mark feature 7's status in `docs/suite-features.md`.
+3. Later parts of feature 7: foreign letters of request (BNSS s.112); saving notice details once feature 5's importer exists.
 
+- The form (`frontend/src/components/case/NoticeForm.jsx`, `.css`, `.test.jsx`), in the Letters tab:
+  - A second switch, "Notice to: Bank · Phone company", beside the letter switch, on stored cases only (a recorded example has no case to draft from). It is its own group so the letter switch still shows exactly the backend's letters.
+  - Bank: Information / Urgent hold; bank, account, IFSC, source, then the period (information) or the Magistrate's order and an optional amount (hold). Phone company: operator, number, source, period. Ticks when an IFSC, account or mobile number looks right.
+  - Nothing is drafted until the officer presses Draft the letter; changing a detail or the kind asks for a fresh draft. The draft, blanks, checks, sign-off and Mark as sent are the tab's own.
+  - `draftNotice` in `frontend/src/api/evidence.js` (POST, details in the body). `letterChecks.js`: the three kinds; a notice has no address or asset in the requests log; the recipient is the bank or operator the officer typed.
+  - Tests: 10 in `NoticeForm.test.jsx`; all 1,494 frontend tests and the build pass.
+- End-to-end in a real browser against the real server (demo 11 stored as a case): bank letter drafted and logged as sent; hold refused without an order, then drafted and held for sign-off; phone letter drafted; no number in any URL; no browser errors apart from the deliberate refusal.
+- Rupees in the hold are written the Indian way: INR 2,50,000.00.
 - Cross-check (2026-11-12): amounts accept "2,50,000"; True, nan, inf and words are refused; README lists the new route.
 
 ## Open questions
