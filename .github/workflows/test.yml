@@ -32,6 +32,12 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: bash .github/scripts/check_commit_emails.sh "$BASE" "$HEAD_SHA"
+      # No AI assistant as author, committer or co-author (ADR-0010).
+      - name: New commits credit no AI assistant
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash .github/scripts/check_no_ai_attribution.sh "$BASE" "$HEAD_SHA"
 
   backend:
     name: backend tests
