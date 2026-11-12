@@ -243,6 +243,39 @@ class FreezeRequest(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+class SeizedAsset(Base):
+    """One amount frozen or seized in a case, where it is held, and what came of
+    it (assets.py, suite feature 9). Never a key: names of who holds them only."""
+
+    __tablename__ = "seized_assets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    holder: Mapped[str] = mapped_column(String(16))  # custody | exchange | bank | issuer
+    asset: Mapped[str] = mapped_column(String(16))
+    amount: Mapped[str] = mapped_column(String(48))  # exact decimal text: a register must not round
+    chain: Mapped[str] = mapped_column(String(16), default="")
+    held_at: Mapped[str] = mapped_column(String(120), default="")
+    tx_hash: Mapped[str] = mapped_column(String(80), default="")
+    key_holders: Mapped[str] = mapped_column(String(200), default="")
+    request_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    seized_on: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD, India's date
+    order_ref: Mapped[str] = mapped_column(String(200), default="")
+    status: Mapped[str] = mapped_column(String(24))
+    outcome_ref: Mapped[str] = mapped_column(String(200), default="")
+    outcome_tx: Mapped[str] = mapped_column(String(80), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
+
+
 class Batch(Base):
     """A list of reported addresses traced one after another (batches.py)."""
 

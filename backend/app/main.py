@@ -50,6 +50,7 @@ from .exchange_matcher import get_matcher
 from .risk_matcher import FROZEN, MIXER, SANCTIONED, STOLEN, get_risk_matcher
 from .routes import (accounts, admin, audit_log, batches, casebook, cases, coverage, demos, evidence, jobs, payments,
                      recheck, requests, verify, watches)
+from .routes import assets as asset_register
 from .routes import complaints as complaint_queue
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
@@ -244,6 +245,7 @@ app.include_router(demos.router)
 app.include_router(verify.router)
 app.include_router(watches.router)
 app.include_router(requests.router)
+app.include_router(asset_register.router)
 app.include_router(batches.router)
 app.include_router(payments.router)
 app.include_router(admin.router)
