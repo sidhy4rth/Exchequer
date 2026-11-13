@@ -6,6 +6,7 @@ import CaseRefField, { refOk, tidyRef, useSignedIn } from '../CaseRefField'
 import { plain } from '../../text'
 import { ist, middle, mmss, num, txUrl } from './format'
 import ExhibitsPanel from './ExhibitsPanel'
+import IdentifiersPanel from './IdentifiersPanel'
 
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
@@ -343,6 +344,7 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
       </div>
     </details>
     <ExhibitsPanel result={result} />
+    <IdentifiersPanel result={result} />
   </>
 }
 
