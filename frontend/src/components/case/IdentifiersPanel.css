@@ -16,3 +16,8 @@
 .identifiers-panel .id-act button { justify-self: start; }
 .identifiers-panel .id-save { border-color: var(--go); background: var(--go-tint); color: var(--go-soft); font-weight: 500; }
 @media (max-width: 560px) { .identifiers-panel .id-form .fields { grid-template-columns: 1fr; } }
+.identifiers-panel .id-lookup { margin: 8px 0 4px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); }
+.identifiers-panel .id-age { margin-left: 8px; }
+.identifiers-panel .id-sources summary { cursor: pointer; font-size: 12px; color: var(--text-2); }
+.identifiers-panel .id-sources ul { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-2); }
+.identifiers-panel .id-sources li { overflow-wrap: anywhere; }

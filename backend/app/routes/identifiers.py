@@ -3,6 +3,7 @@
     GET   /trace/{case_id}/identifiers   the case's identifiers this browser or unit may read
     POST  /trace/{case_id}/identifiers   record one (409 when it is already recorded)
     PATCH /identifiers/{identifier_id}   change where it was seen or the notes, withdraw it, or add a note
+    POST  /identifiers/{identifier_id}/lookup   RDAP and DNS facts about a domain (config.OSINT_LOOKUPS)
 
 Writes are limited per connection, like the requests log, and audited by what
 happened -- the kind and the fields changed -- never by the value: a phone number
@@ -15,7 +16,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from .. import audit, identifiers
+from .. import audit, config, domain_lookup, identifiers
 from ..auth import CurrentUser
 from .requests import _allow_write, _owner
 
@@ -43,8 +44,12 @@ def _bad(exc: identifiers.IdentifierError) -> HTTPException:
 @router.get("/trace/{case_id}/identifiers")
 def list_identifiers(case_id: str, user: CurrentUser) -> dict[str, Any]:
     rows = identifiers.list_for(user, case_id)
+    latest = domain_lookup.latest_for([r["identifier_id"] for r in rows if r["kind"] == "domain"])
+    for r in rows:
+        r["lookup"] = latest.get(r["identifier_id"])
     audit.record("identifier.list", case_id=case_id)
-    return {"case_id": case_id, "count": len(rows), "identifiers": rows, "kinds": identifiers.KINDS}
+    return {"case_id": case_id, "count": len(rows), "identifiers": rows, "kinds": identifiers.KINDS,
+            "lookups_enabled": config.OSINT_LOOKUPS}
 
 
 @router.post("/trace/{case_id}/identifiers", status_code=201)
@@ -74,3 +79,22 @@ def change_identifier(identifier_id: str, body: IdentifierChange, user: CurrentU
         audit.record("identifier.update", case_id=updated["case_id"],
                      detail={"identifier_id": identifier_id, "changed": changed})
     return updated
+
+
+@router.post("/identifiers/{identifier_id}/lookup")
+def look_up_identifier(identifier_id: str, user: CurrentUser, http: Request) -> dict[str, Any]:
+    if not config.OSINT_LOOKUPS:
+        raise HTTPException(status_code=403, detail="Domain lookups are switched off on this deployment.")
+    _allow_write(http)
+    try:
+        found = domain_lookup.run_and_keep(identifier_id, user)
+    except identifiers.IdentifierError as exc:
+        raise _bad(exc) from exc
+    except domain_lookup.LookupError_ as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    if found is None:
+        raise HTTPException(status_code=404, detail="No identifier with that id that you can look up.")
+    audit.record("identifier.lookup", case_id=found["case_id"],
+                 detail={"identifier_id": identifier_id, "lookup_id": found["lookup_id"],
+                         "rdap": found["rdap"] is not None, "dns": bool(found["dns"])})
+    return found

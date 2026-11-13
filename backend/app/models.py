@@ -334,6 +334,24 @@ class CaseIdentifier(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+class DomainLookup(Base):
+    """RDAP and DNS facts fetched about a domain on a case's identifier register, with every
+    response kept by source, time and SHA-256 (domain_lookup.py, suite feature 4 slice 2)."""
+
+    __tablename__ = "domain_lookups"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identifier_id: Mapped[str] = mapped_column(String(36), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    owner_hash: Mapped[str] = mapped_column(String(64))
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    queried: Mapped[str] = mapped_column(String(256))
+    created_at: Mapped[str] = mapped_column(String(32))
+    by: Mapped[str] = mapped_column(String(64))
+    summary_json: Mapped[str] = mapped_column(Text, default="{}")
+    records_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
 class Batch(Base):
     """A list of reported addresses traced one after another (batches.py)."""
 
