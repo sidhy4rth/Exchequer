@@ -32,7 +32,7 @@ from typing import Any
 from urllib.parse import quote, urlsplit
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from . import identifiers, models
 from .display_text import one_line
@@ -41,26 +41,46 @@ from .evidence import sha256_hex
 BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json"
 DOH_URL = "https://cloudflare-dns.com/dns-query"
 DNS_TYPES = ("A", "AAAA", "NS")
-TIMEOUT_S = 8.0
+TIMEOUT_S = 8.0  # for one request
+DEADLINE_S = 30.0  # for a whole lookup: up to 8 requests, however slowly a server answers
 BODY_MAX = 512 * 1024  # an RDAP record is a few kB; more than this is not one
 BOOTSTRAP_TTL_S = 24 * 3600
 RDAP_TRIES = 4  # pay.shop.co.in -> shop.co.in -> co.in: the registry knows the registered name
 LOOKUPS_PER_IDENTIFIER = 50
 USER_AGENT = "Exchequer case tool (RDAP and DNS lookups for an investigation)"
 _transport: httpx.BaseTransport | None = None  # tests set an httpx.MockTransport
+_deadline = threading.local()  # .at: _clock() by which this thread's lookup must end
+_clock = time.monotonic  # tests set a clock that a slow server moves on
 
 
 class LookupError_(RuntimeError):
     """A lookup could not be made at all; the message says why, in words for the officer."""
 
 
+class TooSlow(LookupError_):
+    """The lookup ran past DEADLINE_S; what was fetched before it is kept."""
+
+
+def _left() -> float:
+    """Seconds left of this lookup's deadline (TIMEOUT_S outside a lookup); TooSlow when none are."""
+    at = getattr(_deadline, "at", None)
+    if at is None:
+        return TIMEOUT_S
+    left = at - _clock()
+    if left <= 0:
+        raise TooSlow(f"The lookup took longer than {DEADLINE_S:.0f} seconds, so it stopped.")
+    return min(TIMEOUT_S, left)
+
+
 def _get(url: str, params: dict[str, str] | None = None, accept: str = "application/json") -> tuple[int, bytes]:
-    """GET `url` and give back (status, body). Never follows a redirect. Replaced in tests."""
-    with httpx.Client(timeout=TIMEOUT_S, follow_redirects=False, headers={"User-Agent": USER_AGENT},
+    """GET `url` and give back (status, body). Never follows a redirect, and stops at the
+    lookup's deadline even while a slow server is still sending. Replaced in tests."""
+    with httpx.Client(timeout=_left(), follow_redirects=False, headers={"User-Agent": USER_AGENT},
                       transport=_transport) as client:
         with client.stream("GET", url, params=params, headers={"Accept": accept}) as response:
             body = b""
             for chunk in response.iter_bytes():
+                _left()
                 body += chunk
                 if len(body) > BODY_MAX:
                     raise LookupError_(f"{urlsplit(url).hostname} sent more than {BODY_MAX // 1024} kB.")
@@ -83,10 +103,18 @@ _bootstrap_lock = threading.Lock()
 
 
 def _parse_bootstrap(body: bytes) -> dict[str, str]:
-    services = json.loads(body).get("services") or []
+    """TLD -> https RDAP base. An answer not shaped like IANA's file raises ValueError."""
+    data = json.loads(body)
+    services = data.get("services") if isinstance(data, dict) else None
+    if not isinstance(services, list):
+        raise ValueError("not an RDAP bootstrap file")
     out: dict[str, str] = {}
-    for tlds, urls in services:
-        https = [u for u in urls if urlsplit(u).scheme == "https" and urlsplit(u).hostname]
+    for service in services:
+        if not (isinstance(service, list) and len(service) >= 2 and isinstance(service[0], list)
+                and isinstance(service[1], list)):
+            continue
+        tlds, urls = service[0], service[1]
+        https = [u for u in urls if isinstance(u, str) and urlsplit(u).scheme == "https" and urlsplit(u).hostname]
         if not https:
             continue
         base = https[0] if https[0].endswith("/") else https[0] + "/"
@@ -112,6 +140,10 @@ def rdap_base(tld: str, records: list[dict[str, Any]]) -> str | None:
 
 
 # -- reading an RDAP record ---------------------------------------------------------------------
+def _text(value: Any) -> str:
+    return value if isinstance(value, str) else ""
+
+
 def _vcard(entity: dict[str, Any], field: str) -> str:
     card = entity.get("vcardArray")
     if not (isinstance(card, list) and len(card) == 2 and isinstance(card[1], list)):
@@ -122,22 +154,29 @@ def _vcard(entity: dict[str, Any], field: str) -> str:
     return ""
 
 
+def _list(value: Any) -> list[Any]:
+    """A JSON field that should be a list; anything else reads as empty."""
+    return value if isinstance(value, list) else []
+
+
 def _entities(node: dict[str, Any]) -> list[dict[str, Any]]:
-    return [e for e in node.get("entities") or [] if isinstance(e, dict)]
+    return [e for e in _list(node.get("entities")) if isinstance(e, dict)]
 
 
 def parse_rdap(body: bytes) -> dict[str, Any]:
     """The facts an officer needs from an RDAP domain record. Registrant details are
     not read: they are usually redacted, and the registrar is who can name its customer."""
     data = json.loads(body)
+    if not isinstance(data, dict):
+        raise ValueError("not an RDAP record")
     events = {e.get("eventAction"): str(e.get("eventDate") or "")[:10]
-              for e in data.get("events") or [] if isinstance(e, dict)}
-    registrar = next((e for e in _entities(data) if "registrar" in (e.get("roles") or [])), {})
-    abuse = next((e for e in _entities(registrar) if "abuse" in (e.get("roles") or [])), {})
-    iana_id = next((str(i.get("identifier")) for i in registrar.get("publicIds") or []
+              for e in _list(data.get("events")) if isinstance(e, dict)}
+    registrar = next((e for e in _entities(data) if "registrar" in _list(e.get("roles"))), {})
+    abuse = next((e for e in _entities(registrar) if "abuse" in _list(e.get("roles"))), {})
+    iana_id = next((str(i.get("identifier")) for i in _list(registrar.get("publicIds"))
                     if isinstance(i, dict) and i.get("type") == "IANA Registrar ID"), "")
     return {
-        "name": one_line(data.get("ldhName") or "").lower(),
+        "name": one_line(_text(data.get("ldhName"))).lower(),
         "registrar": _vcard(registrar, "fn"),
         "registrar_iana_id": iana_id,
         "registered_on": events.get("registration", ""),
@@ -145,31 +184,45 @@ def parse_rdap(body: bytes) -> dict[str, Any]:
         "changed_on": events.get("last changed", ""),
         "abuse_email": _vcard(abuse, "email"),
         "abuse_phone": _vcard(abuse, "tel"),
-        "status": [one_line(s) for s in data.get("status") or [] if isinstance(s, str)],
-        "name_servers": sorted(one_line(n.get("ldhName") or "").lower().rstrip(".")
-                               for n in data.get("nameservers") or [] if isinstance(n, dict) and n.get("ldhName")),
+        "status": [one_line(s) for s in _list(data.get("status")) if isinstance(s, str)],
+        "name_servers": sorted(one_line(n["ldhName"]).lower().rstrip(".") for n in _list(data.get("nameservers"))
+                               if isinstance(n, dict) and isinstance(n.get("ldhName"), str) and n["ldhName"]),
     }
 
 
 def parse_dns(body: bytes, rtype: str) -> list[str]:
+    """The records of `rtype` in a DNS-over-HTTPS JSON answer. One not shaped like one raises ValueError."""
     code = {"A": 1, "AAAA": 28, "NS": 2}[rtype]
-    answers = json.loads(body).get("Answer") or []
-    return sorted({one_line(a.get("data") or "").rstrip(".").lower()
-                   for a in answers if isinstance(a, dict) and a.get("type") == code and a.get("data")})
+    data = json.loads(body)
+    if not isinstance(data, dict):
+        raise ValueError("not a DNS answer")
+    return sorted({one_line(a["data"]).rstrip(".").lower() for a in _list(data.get("Answer"))
+                   if isinstance(a, dict) and a.get("type") == code and isinstance(a.get("data"), str) and a["data"]})
 
 
 # -- one lookup ----------------------------------------------------------------------------------
 def look_up(name: str) -> dict[str, Any]:
     """RDAP and DNS facts about `name`, with every response kept. Raises LookupError_ only
-    when nothing could be asked; a registry that does not know the name is a result."""
+    when nothing could be asked; a registry that does not know the name is a result.
+    The whole lookup ends within DEADLINE_S; what was fetched by then is kept."""
     host = identifiers.domain(name)  # the same check that let it onto the register
+    _deadline.at = _clock() + DEADLINE_S
+    try:
+        return _look_up(host)
+    finally:
+        _deadline.at = None
+
+
+def _look_up(host: str) -> dict[str, Any]:
     records: list[dict[str, Any]] = []
     rdap: dict[str, Any] | None = None
     rdap_note = ""
     labels = host.split(".")
     try:
         base = rdap_base(labels[-1], records)
-    except (httpx.HTTPError, ValueError, TypeError) as exc:
+    except TooSlow:
+        raise
+    except (httpx.HTTPError, ValueError, TypeError, AttributeError) as exc:
         raise LookupError_(f"IANA's list of registries could not be read ({type(exc).__name__}); try again later.") from exc
     if base is None:
         rdap_note = f"The .{labels[-1]} registry offers no RDAP service, so no registration record was fetched."
@@ -179,6 +232,9 @@ def look_up(name: str) -> dict[str, Any]:
             url = base + "domain/" + quote(candidate, safe="")
             try:
                 status, body = _get(url, accept="application/rdap+json")
+            except TooSlow as exc:
+                rdap_note = str(exc)
+                break
             except (httpx.HTTPError, LookupError_) as exc:
                 rdap_note = f"The registry could not be reached ({type(exc).__name__})."
                 break
@@ -186,7 +242,7 @@ def look_up(name: str) -> dict[str, Any]:
             if status == 200:
                 try:
                     rdap = parse_rdap(body)
-                except (ValueError, AttributeError):
+                except (ValueError, TypeError, AttributeError):
                     rdap_note = "The registry's answer was not an RDAP record."
                 break
             if status != 404:
@@ -199,6 +255,9 @@ def look_up(name: str) -> dict[str, Any]:
     for rtype in DNS_TYPES:
         try:
             status, body = _get(DOH_URL, params={"name": host, "type": rtype}, accept="application/dns-json")
+        except TooSlow as exc:
+            dns_note = str(exc)
+            break
         except (httpx.HTTPError, LookupError_) as exc:
             dns_note = f"The DNS resolver could not be reached ({type(exc).__name__})."
             break
@@ -206,7 +265,7 @@ def look_up(name: str) -> dict[str, Any]:
         if status == 200:
             try:
                 dns[rtype] = parse_dns(body, rtype)
-            except ValueError:
+            except (ValueError, TypeError, AttributeError):
                 dns_note = "The DNS resolver's answer could not be read."
         else:
             dns_note = f"The DNS resolver answered {status}."
@@ -226,6 +285,13 @@ def _brief(r: models.DomainLookup) -> dict[str, Any]:
     }
 
 
+def _check_cap(s: Any, identifier_id: str) -> None:
+    done = s.scalar(select(func.count()).select_from(models.DomainLookup)
+                    .where(models.DomainLookup.identifier_id == identifier_id))
+    if done >= LOOKUPS_PER_IDENTIFIER:
+        raise identifiers.IdentifierError(f"This domain was already looked up {LOOKUPS_PER_IDENTIFIER} times.")
+
+
 def run_and_keep(identifier_id: str, viewer: Any) -> dict[str, Any] | None:
     """Look up an active domain identifier the viewer may read and keep the result; None when there is none."""
     with models.session() as s:
@@ -237,13 +303,15 @@ def run_and_keep(identifier_id: str, viewer: Any) -> dict[str, Any] | None:
             raise identifiers.IdentifierError("Only a website domain can be looked up.")
         if row.status != "active":
             raise identifiers.IdentifierError("This identifier was withdrawn; it is not looked up.")
-        done = s.scalars(select(models.DomainLookup.id).where(models.DomainLookup.identifier_id == identifier_id)).all()
-        if len(done) >= LOOKUPS_PER_IDENTIFIER:
-            raise identifiers.IdentifierError(f"This domain was already looked up {LOOKUPS_PER_IDENTIFIER} times.")
+        _check_cap(s, identifier_id)
         value, case_id, owner, unit = row.value, row.case_id, row.owner_hash, row.unit_id
     found = look_up(value)
     summary = {k: found[k] for k in ("rdap", "rdap_note", "dns", "dns_note")}
     with models.session() as s:
+        # Counted again just before keeping it, so clicks made while this lookup ran are counted too.
+        # Two lookups finishing in the same instant on two workers can still both pass: the cap
+        # bounds how often one domain is asked about; it is not an exact count.
+        _check_cap(s, identifier_id)
         r = models.DomainLookup(
             id=str(uuid.uuid4()), identifier_id=identifier_id, case_id=case_id, owner_hash=owner, unit_id=unit,
             queried=found["queried"], created_at=_now(), by=getattr(viewer, "id", None) or "unknown",

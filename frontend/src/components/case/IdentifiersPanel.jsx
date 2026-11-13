@@ -101,10 +101,11 @@ export default function IdentifiersPanel({ result }) {
   const [error, setError] = useState(null)
   const [act, setAct] = useState({}) // identifier_id → { mode: 'withdraw' | 'note', note }
   const [lookups, setLookups] = useState(false)
+  const [lookupsNote, setLookupsNote] = useState('') // why there is no lookup button (the demo caller)
   const [busy, setBusy] = useState(null) // identifier_id being looked up
 
   // A failed load says so: an empty list would read as "the victim reported nothing else".
-  const load = () => caseId && fetchCaseIdentifiers(caseId).then((d) => { setRows(d.identifiers ?? []); setLookups(Boolean(d.lookups_enabled)) })
+  const load = () => caseId && fetchCaseIdentifiers(caseId).then((d) => { setRows(d.identifiers ?? []); setLookups(Boolean(d.lookups_enabled)); setLookupsNote(d.lookups_note ?? '') })
     .catch(() => setError('The reported identifiers could not be loaded. Reload the page before relying on this list.'))
   useEffect(() => { load() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!caseId) return null
@@ -130,11 +131,13 @@ export default function IdentifiersPanel({ result }) {
     try { await run(() => lookUpIdentifier(row.identifier_id)) } finally { setBusy(null) }
   }
   const active = rows.filter((r) => r.status === 'active').length
+  const activeDomain = rows.some((r) => r.kind === 'domain' && r.status === 'active')
 
   return (
     <details className="card sec identifiers-panel" open={rows.length > 0 || Boolean(error)}>
       <summary><span className="micro">Reported identifiers · {active}</span><span className="note">sites, usernames, phones, UPI IDs</span></summary>
       <div className="body requests-panel">
+        {!lookups && lookupsNote && activeDomain && <p className="note">{lookupsNote}</p>}
         {rows.map((row) => {
           const a = pick(row.identifier_id)
           return (

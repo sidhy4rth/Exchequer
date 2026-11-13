@@ -142,6 +142,14 @@ describe('the reported identifiers panel', () => {
     expect(screen.getAllByRole('button', { name: 'Look up public records' })).toHaveLength(1)
   })
 
+  it('tells a caller who is not signed in why there is no lookup button', async () => {
+    const note = "Sign in as an officer to look up a domain's public records."
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [ROW], lookups_enabled: false, lookups_note: note } } })
+    open()
+    expect(await screen.findByText(note)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Look up/ })).not.toBeInTheDocument()
+  })
+
   it('looks a domain up and shows what the registry and DNS said, with their sources', async () => {
     let rows = [ROW]
     const calls = api({

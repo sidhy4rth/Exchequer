@@ -79,9 +79,17 @@ def test_a_telegram_username_must_be_one_telegram_allows(typed):
         identifiers.telegram(typed)
 
 
+def test_a_four_letter_telegram_username_is_allowed_and_the_message_says_so():
+    assert identifiers.telegram("@abcd") == "abcd"  # Telegram sells four-character names
+    with pytest.raises(IdentifierError, match="4 to 32 letters"):
+        identifiers.telegram("@abc")
+
+
 @pytest.mark.parametrize("typed, kept", [
     ("98765 43210", "+919876543210"), ("+91 98765-43210", "+919876543210"), ("09876543210", "+919876543210"),
     ("919876543210", "+919876543210"), ("0091 98765 43210", "+919876543210"), ("+44 20 7946 0958", "+442079460958"),
+    ("+44 020 7946 0958", "+442079460958"), ("0044 (0)20 7946 0958", "+442079460958"),  # the UK trunk 0, dropped
+    ("+39 06 6982 0000", "+390669820000"),  # Italy keeps its 0
 ])
 def test_a_phone_number_is_kept_with_its_country_code(typed, kept):
     assert identifiers.phone(typed) == kept
@@ -317,6 +325,16 @@ def test_the_audit_log_records_the_kind_never_the_value(client):
     ]
     assert logged[2][0] == "identifier.list"
     assert "9876543210" not in json.dumps(logged)
+
+
+def test_a_note_on_its_own_is_audited_without_its_words(client):
+    iid = client.post("/trace/case-1/identifiers", json={"kind": "phone", "value": "98765 43210"}, headers=H).json()["identifier_id"]
+    client.patch(f"/identifiers/{iid}", json={"note": "victim called back from it"}, headers=H)
+    client.patch(f"/identifiers/{iid}", json={"context": ""}, headers=H)  # nothing changes: nothing to audit
+    with models.session() as s:
+        rows = s.scalars(select(models.AuditEvent).where(models.AuditEvent.action == "identifier.update")).all()
+    assert [json.loads(r.detail) for r in rows] == [{"identifier_id": iid, "changed": [], "noted": True}]
+    assert "victim" not in rows[0].detail
 
 
 def test_g7_identifiers_1_goes_down_and_up_again_keeping_the_cases():
