@@ -31,7 +31,7 @@
 ## Next
 
 1. Done: slices 1-3 merged; lookups on in production, tested end to end on the live site on 2026-11-13 (two test entries for example.com on Sidhyarth's own cases, then withdrawn).
-2. Next for the team to choose Feature 4's first three slices are then done; what comes next (e.g. lookups in the case report, links shown on the Cases list) is for the team to choose.
+2. Feature 4's first three slices are done. What comes next (e.g. lookups in the case report, links shown on the Cases list) is for the team to choose.
 
 ## Open questions
 
