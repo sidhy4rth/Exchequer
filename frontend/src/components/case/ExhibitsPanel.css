@@ -1,0 +1,20 @@
+/* The exhibit register on the Evidence tab (ExhibitsPanel.jsx); rows reuse the requests log's look. */
+.exhibits-panel .ex-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 8px 0 4px; font-size: 13px; }
+.exhibits-panel .ex-facts dt { color: var(--text-2); }
+.exhibits-panel .ex-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.exhibits-panel .ex-check { align-self: flex-start; }
+.exhibits-panel .ex-file { display: inline-flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+.exhibits-panel .ex-file input { font-size: 12px; max-width: 100%; }
+.exhibits-panel .ex-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13px; }
+.exhibits-panel .ex-progress progress { flex: 1 1 160px; height: 8px; accent-color: var(--go); }
+.exhibits-panel .ex-form { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; border-top: 1px solid var(--line); }
+.exhibits-panel .ex-form .fields, .exhibits-panel .ex-act { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.exhibits-panel .ex-form .fields .wide { grid-column: 1 / -1; }
+.exhibits-panel .ex-form label, .exhibits-panel .ex-act label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); min-width: 0; }
+.exhibits-panel .ex-form select, .exhibits-panel .ex-form input:not([type="file"]), .exhibits-panel .ex-form textarea,
+.exhibits-panel .ex-act select, .exhibits-panel .ex-act input { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 5px 7px; border: 1px solid var(--rule-strong); border-radius: var(--r); background: var(--panel); color: var(--ink); min-width: 0; }
+.exhibits-panel .ex-form input.mono { font-family: var(--mono); }
+.exhibits-panel .ex-form textarea { resize: vertical; }
+.exhibits-panel .ex-act button { grid-column: 1 / -1; justify-self: start; }
+.exhibits-panel .ex-never { color: var(--risk-soft); }
+.exhibits-panel .ex-save { border-color: var(--go); background: var(--go-tint); color: var(--go-soft); font-weight: 500; }
