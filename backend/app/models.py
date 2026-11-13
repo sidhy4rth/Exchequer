@@ -276,6 +276,39 @@ class SeizedAsset(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+class Exhibit(Base):
+    """A file an outside forensic tool produced for a case, by its hashes, and its
+    chain of custody (exhibits.py, suite feature 3). The file itself is never stored."""
+
+    __tablename__ = "exhibits"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    kind: Mapped[str] = mapped_column(String(24))
+    label: Mapped[str] = mapped_column(String(200))
+    tool: Mapped[str] = mapped_column(String(120))
+    file_name: Mapped[str] = mapped_column(String(200), default="")
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    sha256: Mapped[str] = mapped_column(String(64), default="")
+    sha1: Mapped[str] = mapped_column(String(40), default="")
+    md5: Mapped[str] = mapped_column(String(32), default="")
+    made_by: Mapped[str] = mapped_column(String(120), default="")
+    made_on: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD, India's date
+    stored_at: Mapped[str] = mapped_column(String(200), default="")
+    holder: Mapped[str] = mapped_column(String(120), default="")
+    status: Mapped[str] = mapped_column(String(16))
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
+
+
 class Batch(Base):
     """A list of reported addresses traced one after another (batches.py)."""
 
