@@ -5,7 +5,7 @@
 - **Branch**: `feat/exhibit-register`
 - **Current**: Barenyam
 - **Last worked on**: Barenyam, 2026-11-13
-- **Status**: server and Evidence-tab panel built, tested end to end in a browser; committed locally, NOT pushed: the repo's ruleset "Only the owner pushes or merges" (added 12 Nov) refuses branch creation for Barenyam
+- **Status**: server and Evidence-tab panel built, tested end to end in a browser; pushed and in review (rebased on `main` after #91, suite re-run)
 
 ## The nine features (see `docs/suite-features.md`)
 
@@ -26,7 +26,7 @@
 
 ## Next
 
-1. Push `feat/exhibit-register` once Sidhyarth lets Barenyam push feature branches (narrow "Only the owner pushes or merges" to `main`), then open the PR.
+1. Sidhyarth reviews the PR; after the merge, confirm the Site canary run shows it live.
 2. Later: feed the exhibit list into the s.63 certificate the report generates (Part B states each file's hash).
 
 ## Open questions
