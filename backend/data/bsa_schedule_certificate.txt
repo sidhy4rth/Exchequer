@@ -1,0 +1,67 @@
+# THE SCHEDULE [See section 63(4)(c)] of the Bharatiya Sakshya Adhiniyam, 2023 (Act 47 of 2023).
+# Source: https://www.indiacode.nic.in/bitstream/123456789/20063/1/aa202347.pdf
+# Text as on: 6th October, 2025
+# Source PDF SHA-256: 993882ad0ae7ded6ae8087351edd61caeb6faa1a2d6c8fff8c269a9cf149b9ac
+# Written by scripts/fetch_bsa_schedule.py from pdftotext, checked against pypdf. Never edit by hand.
+THE SCHEDULE
+[See section 63(4)(c)]
+CERTIFICATE
+PART A
+(To be filled by the Party)
+I, _____________________ (Name), Son/daughter/spouse of ___________________
+residing/employed at __________________________ do hereby solemnly affirm and sincerely
+state and submit as follows:—
+I have produced electronic record/output of the digital record taken from the following
+device/digital record source (tick mark):—
+Computer / Storage Media □ DVR □ Mobile □ Flash Drive □
+CD/DVD □ Server □ Cloud □ Other □
+Other: ________________________________________
+Make & Model: _______________ Color: _______________
+Serial Number: _______________
+IMEI/UIN/UID/MAC/Cloud ID_____________________ (as applicable)
+and any other relevant information, if any, about the device/digital record____(specify).
+The digital device or the digital record source was under the lawful control for regularly
+creating, storing or processing information for the purposes of carrying out regular activities
+and during this period, the computer or the communication device was working properly and
+the relevant information was regularly fed into the computer during the ordinary course of
+business. If the computer/digital device at any point of time was not working properly or out
+of operation, then it has not affected the electronic/digital record or its accuracy. The digital
+device or the source of the digital record is:—
+Owned □ Maintained □ Managed □ Operated□
+by me (select as applicable).
+I state that the HASH value/s of the electronic/digital record/s is _________________,
+obtained through the following algorithm:—
+□ SHA1:
+□ SHA256:
+□ MD5:
+□ Other__________________ (Legally acceptable standard)
+(Hash report to be enclosed with the certificate)
+(Name and signature)
+Date (DD/MM/YYYY): _____
+Time (IST): ________hours (In 24 hours format)
+Place: ____________
+PART B
+(To be filled by the Expert)
+I, ____________________ (Name), Son/daughter/spouse of ____________________
+residing/employed at _________________________ do hereby solemnly affirm and
+sincerely state and submit as follows:—
+The produced electronic record/output of the digital record are obtained from the following
+device/digital record source (tick mark):—
+Computer / Storage Media □ DVR □ Mobile □ Flash Drive □
+CD/DVD □ Server □ Cloud □ Other □
+Other: ________________________________________
+Make & Model: _______________ Color: _______________
+Serial Number: _______________
+IMEI/UIN/UID/MAC/Cloud ID_____________________ (as applicable)
+and any other relevant information, if any, about the device/digital record_______(specify).
+I state that the HASH value/s of the electronic/digital record/s is _____________________,
+obtained through the following algorithm:—
+□ SHA1:
+□ SHA256:
+□ MD5:
+□ Other__________________ (Legally acceptable standard)
+(Hash report to be enclosed with the certificate)
+(Name, designation and signature)
+Date (DD/MM/YYYY): _____
+Time (IST): ________hours (In 24 hours format)
+Place: ____________
