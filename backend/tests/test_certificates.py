@@ -10,12 +10,13 @@ and encloses the hash report. It is a draft for signature, never more.
 from __future__ import annotations
 
 import io
+import json
 import re
 from datetime import date
 
 import pytest
 from pypdf import PdfReader
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 
 from app import certificates, exhibits, models, ownership
 from app.auth import User
@@ -185,3 +186,41 @@ def test_the_pdf_holds_the_wording_the_values_and_the_draft_mark():
                  "DRAFT", "HASHREPORT"):
         assert want in got
     assert reader.metadata.title.startswith("Draft certificate")
+
+
+# -- the route ---------------------------------------------------------------------------------------------
+H = {ownership.OWNER_HEADER: ALICE}
+
+
+@pytest.fixture
+def client():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    return TestClient(app)
+
+
+def test_the_route_sends_the_draft_as_a_pdf_and_audits_only_which_exhibits(client):
+    eid = client.post("/trace/case-1/exhibits", json={
+        "kind": "disk_image", "label": "Laptop SSD", "tool": "FTK Imager 4.7", "sha256": SHA256, "made_on": "2026-11-12",
+    }, headers=H).json()["exhibit_id"]
+    got = client.post("/trace/case-1/certificate", json={"exhibit_ids": [eid], **DEVICE}, headers=H)
+    assert got.status_code == 200 and got.content.startswith(b"%PDF")
+    assert got.headers["content-type"] == "application/pdf" and got.headers["cache-control"] == "no-store"
+    assert got.headers["content-disposition"] == 'attachment; filename="exchequer-case-1-s63-certificate-draft.pdf"'
+    with models.session() as s:
+        row = s.scalars(select(models.AuditEvent).where(models.AuditEvent.action == "exhibit.certificate_draft")).one()
+    assert json.loads(row.detail) == {"exhibit_ids": [eid]} and row.case_id == "case-1"
+    assert "Samsung" not in row.detail and "356789" not in row.detail  # what was typed is never kept
+
+
+def test_the_route_refuses_with_a_reason_and_never_sends_a_strangers_exhibit(client):
+    eid = client.post("/trace/case-1/exhibits", json={
+        "kind": "document", "label": "Bank statement", "tool": "Scanner", "md5": MD5, "made_on": "2026-11-12",
+    }, headers=H).json()["exhibit_id"]
+    assert client.post("/trace/case-1/certificate", json={"exhibit_ids": []}, headers=H).status_code == 400
+    bad = client.post("/trace/case-1/certificate", json={"exhibit_ids": [eid], "device": "Phone booth"}, headers=H)
+    assert bad.status_code == 400 and "kind of device" in bad.json()["detail"]
+    stranger = client.post("/trace/case-1/certificate", json={"exhibit_ids": [eid]}, headers={ownership.OWNER_HEADER: BOB})
+    assert stranger.status_code == 400 and "No exhibit" in stranger.json()["detail"]
+    assert client.post("/trace/case-1/certificate", json={"exhibit_ids": [eid]}).status_code == 400  # no owner key
