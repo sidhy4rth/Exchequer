@@ -259,6 +259,7 @@ def _update_once(exhibit_id: str, changes: dict[str, Any], viewer: Any) -> dict[
             s.refresh(r)
         out = summary(r)
         out["changed"] = changed
+        out["noted"] = bool(note) and not changed  # a note on its own: a history entry, so audited too
         return out
 
 

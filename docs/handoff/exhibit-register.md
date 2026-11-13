@@ -2,10 +2,10 @@
 
 - **Feature**: suite feature 3 (memory and disk tools), and the first piece of feature 6's evidence locker: a register of the files outside forensic tools produced, with their hashes and chain of custody
 - **Issue**: #102
-- **Branch**: `feat/exhibit-register`
-- **Current**: nobody
+- **Branch**: `feat/exhibit-register` (merged as #103); follow-up on `feat/exhibit-audit-notes`
+- **Current**: Barenyam
 - **Last worked on**: Barenyam, 2026-11-13
-- **Status**: merged (#103) and live since 13 Nov 2026
+- **Status**: merged (#103) and live since 13 Nov 2026; a follow-up audits a note on its own (in review)
 
 ## The nine features (see `docs/suite-features.md`)
 
@@ -18,6 +18,8 @@
 - End to end in Chromium against the real server: a 40 MB file hashed in the browser in 1.4 s, equal to `sha256sum`; the largest request sent was 355 bytes; the same file matched, a copy with one byte changed did not; a hand-over recorded with its reason. axe (WCAG 2.2 AA) clean in both themes at desktop and phone size.
 
 - Review fixes (13 Nov): CodeQL read the SHA-256 tests' random bytes as a biased random number, so the tests use fixed seeded bytes. Server: two writes to one exhibit at once retry and then answer 409 instead of a 500; a full history refuses a new entry instead of dropping its oldest (it had a 200-entry cap that would have lost "recorded"), now capped at 1,000; a note on its own is kept as a "noted" entry; the duplicate-file check looks only at exhibits the viewer may read, so another unit's label is never shown. Screen: "Add a note" on every exhibit, ended ones included; note entries shown as notes; a failed load says so and opens the panel.
+
+- Follow-up (13 Nov, from reviewing feature 4): a note added on its own made a history entry but no audit row, against rule 5. `PATCH /exhibits/{id}` now audits every new history entry; a lone note is `exhibit.update` with `"changed": [], "noted": true`, never its words.
 
 ## Decisions
 

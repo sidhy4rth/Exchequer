@@ -289,6 +289,16 @@ def test_the_audit_log_records_what_happened_never_the_text_or_the_hash(client):
     ]
 
 
+def test_a_note_on_its_own_is_audited_without_its_words(client):
+    eid = client.post("/trace/case-1/exhibits", json=image(), headers=H).json()["exhibit_id"]
+    client.patch(f"/exhibits/{eid}", json={"note": "seal checked, intact"}, headers=H)
+    client.patch(f"/exhibits/{eid}", json={"holder": "SI Iyer"}, headers=H)  # nothing changes: nothing to audit
+    with models.session() as s:
+        rows = s.scalars(select(models.AuditEvent).where(models.AuditEvent.action == "exhibit.update")).all()
+    assert [json.loads(r.detail) for r in rows] == [{"exhibit_id": eid, "changed": [], "noted": True}]
+    assert "seal" not in rows[0].detail
+
+
 def test_g7_exhibits_1_goes_down_and_up_again_keeping_the_cases():
     from alembic import command
     from alembic.config import Config
