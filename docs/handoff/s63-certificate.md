@@ -2,13 +2,14 @@
 
 - **Feature**: suite feature 6 (evidence locker): a draft of the certificate in the Bharatiya Sakshya Adhiniyam's Schedule (s.63(4)(c)) for a case's exhibits, filled from the exhibit register, for the officer and the expert to check and sign
 - **Issue**: #112
-- **Branch**: `feat/s63-certificate`
+- **Branch**: `feat/s63-certificate` (server, PR #113); `feat/s63-certificate-form` (screen, on top of it)
 - **Current**: Barenyam
 - **Last worked on**: Barenyam, 2026-11-13
-- **Status**: plan agreed; the Schedule's wording is copied (step 1); building the draft PDF
+- **Status**: built and tested end to end; server in #113, screen in its own PR on top of it; both wait for review
 
 ## Done
 
+- Checked in Chromium against a real server, both themes: the PDF downloads, its SHA-256 equals the test file's `sha256sum`, the right boxes are ticked, Part B is blank; axe (WCAG 2.2 AA) clean on the form; no browser errors.
 - Claimed: issue #112, this file, a draft PR.
 - Source found: the official text of the BSA, 2023 (Act 47 of 2023) on India Code, `https://www.indiacode.nic.in/bitstream/123456789/20063/1/aa202347.pdf`, "As on the 6th October, 2025". Section 63 is on pp. 30-31; THE SCHEDULE [See section 63(4)(c)], CERTIFICATE, Part A (to be filled by the Party) and Part B (to be filled by the Expert), on pp. 52-53.
 
@@ -23,8 +24,10 @@
 ## Next
 
 1. Done: `backend/scripts/fetch_bsa_schedule.py` wrote `backend/data/bsa_schedule_certificate.txt` (62 lines, text as on 6th October, 2025).
-2. `backend/app/certificates.py`: fill Part A and the hash report from the register, render the PDF; tests in `backend/tests/test_certificates.py`.
-3. Route `POST /trace/{case_id}/certificate`, then the form on the Evidence tab.
+2. Done: `backend/app/certificates.py` fills Part A and the hash report, leaves Part B as printed, renders the PDF (22 tests in `backend/tests/test_certificates.py`).
+3. Done: `POST /trace/{case_id}/certificate` (`routes/certificates.py`) and `CertificateForm.jsx` under the exhibits on the Evidence tab (5 tests).
+4. After review and merge: confirm on the live site; update `docs/suite-features.md` row 6 once #109 has merged (it edits the same row).
+5. Later: a certificate for Exchequer's own signed trace report (its SHA-256 and signature as the record).
 
 ## Open questions
 
