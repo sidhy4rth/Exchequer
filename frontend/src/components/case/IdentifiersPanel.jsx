@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { addIdentifier, fetchCaseIdentifiers, lookUpIdentifier, updateIdentifier } from '../../api'
 import { plain } from '../../text'
 import { middle } from './format'
@@ -35,6 +36,25 @@ export function shown(row) {
 }
 
 const EMPTY = { kind: 'domain', value: '', context: '', notes: '' }
+
+/** The other cases (of this browser or unit) where the same identifier was reported. */
+export function AlsoIn({ others }) {
+  if (!others?.length) return null
+  return (
+    <div className="id-also" role="note">
+      <span className="pill amber">Also in {others.length} other case{others.length === 1 ? '' : 's'}</span>
+      <ul>
+        {others.map((o) => (
+          <li key={o.identifier_id}>
+            <Link to={`/case/${encodeURIComponent(o.case_id)}?tab=evidence`} className="quiet-link mono">case {o.case_id.slice(0, 8)}</Link>
+            {' '}recorded {String(o.recorded_at).slice(0, 10)}{o.context ? ` · ${plain(o.context)}` : ''}
+          </li>
+        ))}
+      </ul>
+      <p className="note">The same identifier in two complaints is a lead that they reached the same people, not proof of it.</p>
+    </div>
+  )
+}
 
 /** Whole days from `from` to `to` (YYYY-MM-DD or ISO), or null. */
 export function daysBetween(from, to) {
@@ -130,6 +150,7 @@ export default function IdentifiersPanel({ result }) {
                 </dl>
               )}
               {row.notes && <p className="note">{plain(row.notes)}</p>}
+              {row.status === 'active' && <AlsoIn others={row.also_in} />}
               {row.lookup && <Lookup lookup={row.lookup} />}
               <div className="request-add">
                 {lookups && row.kind === 'domain' && row.status === 'active' && (
