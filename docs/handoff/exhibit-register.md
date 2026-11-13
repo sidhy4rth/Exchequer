@@ -5,7 +5,7 @@
 - **Branch**: `feat/exhibit-register`
 - **Current**: Barenyam
 - **Last worked on**: Barenyam, 2026-11-13
-- **Status**: claimed; plan written, no code yet
+- **Status**: server and Evidence-tab panel built, tested end to end in a browser; committed locally, NOT pushed: the repo's ruleset "Only the owner pushes or merges" (added 12 Nov) refuses branch creation for Barenyam
 
 ## The nine features (see `docs/suite-features.md`)
 
@@ -13,7 +13,9 @@
 
 ## Done
 
-- Nothing yet beyond the claim.
+- Server: `backend/app/exhibits.py`, `backend/app/routes/exhibits.py` (`GET/POST /trace/{case_id}/exhibits`, `PATCH /exhibits/{id}`, `POST /exhibits/{id}/check`), model `Exhibit`, migration `g7_exhibits_1` (after `g7_assets_1`), `assets.looks_like_secret` shared. 28 tests in `backend/tests/test_exhibits.py`; full suite and ruff pass (apart from the root-only signing test).
+- Screen: `frontend/src/components/case/ExhibitsPanel.jsx` (+ `.css`, `.test.jsx`) at the end of the Evidence tab (one import, one line in `EvidenceTab.jsx`); `sha256.js` (+ test), a chunked SHA-256 checked against node's at every padding boundary, about 57 MB/s. All 1,547 frontend tests and the build pass.
+- End to end in Chromium against the real server: a 40 MB file hashed in the browser in 1.4 s, equal to `sha256sum`; the largest request sent was 355 bytes; the same file matched, a copy with one byte changed did not; a hand-over recorded with its reason. axe (WCAG 2.2 AA) clean in both themes at desktop and phone size.
 
 ## Decisions
 
@@ -24,12 +26,12 @@
 
 ## Next
 
-1. Server: model, migration after `g7_assets_1`, `backend/app/exhibits.py`, routes, tests first.
-2. Screen: an "Exhibits" panel on the Evidence tab (one import, one line in `EvidenceTab.jsx`), with an add form, hand-over, and "Check a file".
+1. Push `feat/exhibit-register` once Sidhyarth lets Barenyam push feature branches (narrow "Only the owner pushes or merges" to `main`), then open the PR.
+2. Later: feed the exhibit list into the s.63 certificate the report generates (Part B states each file's hash).
 
 ## Open questions
 
-- none yet
+- Checking a 64 GB image in the browser takes about 20 minutes at 57 MB/s. Good enough for a court check; a faster WebAssembly hash would be its own dependency PR if officers need it.
 
 ## Files mid-change (do not touch)
 

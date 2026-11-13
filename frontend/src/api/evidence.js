@@ -159,3 +159,28 @@ export async function updateAsset(assetId, changes) {
 export async function fetchDueAssets(days = 7) {
   return jsonOrThrow(await apiFetch(`${BASE}/assets/due?days=${encodeURIComponent(days)}`))
 }
+
+/** The exhibit register (backend exhibits.py): files outside forensic tools
+ * produced for a case, by their hashes. The file itself is never sent. */
+export async function fetchCaseExhibits(caseId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/exhibits`))
+}
+
+export async function addExhibit(caseId, body) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/exhibits`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }))
+}
+
+export async function updateExhibit(exhibitId, changes) {
+  return jsonOrThrow(await apiFetch(`${BASE}/exhibits/${encodeURIComponent(exhibitId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes),
+  }))
+}
+
+/** Compare a file's SHA-256, computed in the browser, with the exhibit's record. */
+export async function checkExhibit(exhibitId, sha256) {
+  return jsonOrThrow(await apiFetch(`${BASE}/exhibits/${encodeURIComponent(exhibitId)}/check`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sha256 }),
+  }))
+}

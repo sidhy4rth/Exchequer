@@ -5,6 +5,7 @@ import { useCaseFiles } from '../ExportButton'
 import CaseRefField, { refOk, tidyRef, useSignedIn } from '../CaseRefField'
 import { plain } from '../../text'
 import { ist, middle, mmss, num, txUrl } from './format'
+import ExhibitsPanel from './ExhibitsPanel'
 
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
@@ -341,6 +342,7 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
         {result.warnings?.length > 0 && result.warnings.map((w) => <p className="note" key={w}>! {w}</p>)}
       </div>
     </details>
+    <ExhibitsPanel result={result} />
   </>
 }
 
