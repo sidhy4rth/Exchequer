@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import IdentifiersPanel, { Lookup, daysBetween, historyText, shown } from './IdentifiersPanel'
@@ -42,7 +43,7 @@ function api(routes) {
   return calls
 }
 
-const open = () => render(<IdentifiersPanel result={{ case_id: 'c1' }} />)
+const open = () => render(<MemoryRouter><IdentifiersPanel result={{ case_id: 'c1' }} /></MemoryRouter>)
 
 describe('the reported identifiers panel', () => {
   it('shows each identifier as kept, what was typed, and where it was seen', async () => {
@@ -171,5 +172,29 @@ describe('the reported identifiers panel', () => {
   it('counts days between two dates', () => {
     expect(daysBetween('2026-11-01', '2026-11-13T10:00:00Z')).toBe(12)
     expect(daysBetween('', '2026-11-13')).toBeNull()
+  })
+
+  it('links an identifier to the other cases that reported it, and says it is a lead', async () => {
+    const others = [
+      { case_id: 'c2aaaaaaaa-0000', identifier_id: 'x1', recorded_at: '2026-11-10T09:00:00Z', context: 'second complaint' },
+      { case_id: 'c3bbbbbbbb-0000', identifier_id: 'x2', recorded_at: '2026-11-11T09:00:00Z', context: '' },
+    ]
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [{ ...ROW, also_in: others }] } } })
+    open()
+    expect(await screen.findByText('Also in 2 other cases')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'case c2aaaaaa' })).toHaveAttribute('href', '/case/c2aaaaaaaa-0000?tab=evidence')
+    expect(screen.getByText(/second complaint/)).toBeInTheDocument()
+    expect(screen.getByText(/a lead that they reached the same people, not proof/)).toBeInTheDocument()
+  })
+
+  it('shows no link for an identifier no other case has, or one that was withdrawn', async () => {
+    const other = [{ case_id: 'c2', identifier_id: 'x1', recorded_at: '2026-11-10T09:00:00Z', context: '' }]
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [
+      { ...ROW, also_in: [] },
+      { ...ROW, identifier_id: 'i9', value: 'gone.in', entered: 'gone.in', status: 'withdrawn', also_in: other },
+    ] } } })
+    open()
+    await screen.findByText('gone.in')
+    expect(screen.queryByText(/Also in/)).not.toBeInTheDocument()
   })
 })

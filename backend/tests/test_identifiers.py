@@ -30,6 +30,7 @@ def store(tmp_path, monkeypatch):
     models.init_db()
     models.save_case("case-1", "0xseed", {"address": "0xseed"})
     models.save_case("case-2", "0xother", {"address": "0xother"})
+    models.save_case("case-3", "0xthird", {"address": "0xthird"})
 
 
 def viewer(key=ALICE, unit=None, officer=None):
@@ -198,6 +199,65 @@ def test_a_viewer_with_no_owner_key_and_no_unit_reads_nothing():
     assert identifiers.list_for(nobody, "case-1") == []
 
 
+# -- links across cases (slice 3) ---------------------------------------------------------------
+def links(who=None, case="case-1"):
+    who = who or viewer()
+    return identifiers.also_in(who, case, identifiers.list_for(who, case))
+
+
+def test_the_same_identifier_in_another_case_is_linked_however_it_was_typed():
+    here = add(kind="upi", value="Shop.Pay@okaxis")
+    there = add(kind="upi", value="shop.pay@OKAXIS", case="case-2", context="second complaint")
+    found = links()
+    assert found == {here["identifier_id"]: [{"case_id": "case-2", "identifier_id": there["identifier_id"],
+                                              "recorded_at": there["created_at"], "context": "second complaint"}]}
+
+
+def test_each_other_case_is_listed_once_in_the_order_it_was_recorded():
+    add(kind="telegram", value="@crypto_help")
+    add(kind="telegram", value="t.me/crypto_help", case="case-3")
+    add(kind="telegram", value="crypto_help", case="case-2")
+    assert [o["case_id"] for o in next(iter(links().values()))] == ["case-3", "case-2"]
+
+
+def test_different_identifiers_are_not_linked():
+    add(kind="domain", value="scam-shop.in")
+    add(kind="domain", value="other-shop.in", case="case-2")
+    add(kind="upi", value="pay@okaxis")
+    add(kind="telegram", value="pay_okaxis", case="case-2")
+    assert links() == {}
+
+
+def test_a_withdrawn_identifier_links_nothing_on_either_side():
+    here = add(kind="phone", value="98765 43210")
+    there = add(kind="phone", value="+919876543210", case="case-2")
+    identifiers.update(there["identifier_id"], {"status": "withdrawn", "note": "wrong number"}, viewer())
+    assert links() == {}
+    identifiers.update(here["identifier_id"], {"status": "withdrawn", "note": "wrong number"}, viewer())
+    assert links(case="case-2") == {}
+
+
+def test_another_browsers_cases_are_never_revealed_not_even_as_a_count():
+    add(kind="domain", value="scam-shop.in")
+    add(kind="domain", value="scam-shop.in", case="case-2", who=viewer(BOB))
+    assert links() == {}
+    assert links(viewer(BOB), "case-2") == {}
+
+
+def test_a_units_officers_see_each_others_links_but_not_another_units():
+    mine = add(kind="domain", value="scam-shop.in", who=viewer(ALICE, unit=7, officer=1))
+    colleague = add(kind="domain", value="scam-shop.in", case="case-2", who=viewer(BOB, unit=7, officer=2))
+    add(kind="domain", value="scam-shop.in", case="case-3", who=viewer("c" * 32, unit=9, officer=3))
+    found = links(viewer(ALICE, unit=7, officer=1))
+    assert [o["identifier_id"] for o in found[mine["identifier_id"]]] == [colleague["identifier_id"]]
+
+
+def test_a_case_alone_with_its_identifiers_links_nothing():
+    add(kind="domain", value="scam-shop.in")
+    add(kind="phone", value="98765 43210")
+    assert links() == {}
+
+
 # -- routes ---------------------------------------------------------------------------------------
 H = {ownership.OWNER_HEADER: ALICE}
 
@@ -215,6 +275,15 @@ def test_the_routes_add_list_and_withdraw(client):
     assert listed["count"] == 1 and set(listed["kinds"]) == {"domain", "telegram", "phone", "upi"}
     out = client.patch(f"/identifiers/{iid}", json={"status": "withdrawn", "note": "wrong handle"}, headers=H)
     assert out.status_code == 200 and out.json()["status"] == "withdrawn"
+
+
+def test_the_list_route_gives_each_identifier_the_other_cases_that_have_it(client):
+    client.post("/trace/case-1/identifiers", json={"kind": "upi", "value": "shop.pay@okaxis"}, headers=H)
+    there = client.post("/trace/case-2/identifiers", json={"kind": "upi", "value": "Shop.Pay@okaxis"}, headers=H).json()
+    row = client.get("/trace/case-1/identifiers", headers=H).json()["identifiers"][0]
+    assert [o["identifier_id"] for o in row["also_in"]] == [there["identifier_id"]]
+    stranger = client.get("/trace/case-2/identifiers", headers={ownership.OWNER_HEADER: BOB}).json()
+    assert stranger["identifiers"] == []
 
 
 def test_the_routes_refuse_bad_input_duplicates_and_strangers(client):

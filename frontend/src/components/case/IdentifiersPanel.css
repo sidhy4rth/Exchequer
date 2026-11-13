@@ -21,3 +21,6 @@
 .identifiers-panel .id-sources summary { cursor: pointer; font-size: 12px; color: var(--text-2); }
 .identifiers-panel .id-sources ul { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-2); }
 .identifiers-panel .id-sources li { overflow-wrap: anywhere; }
+.identifiers-panel .id-also { margin: 6px 0 4px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.identifiers-panel .id-also ul { margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-2); }
+.identifiers-panel .id-also li { overflow-wrap: anywhere; }

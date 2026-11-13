@@ -14,6 +14,12 @@ the telecom or the bank can say whose it is.
 
 Nothing is deleted. One entered by mistake is withdrawn, with a reason, and stays
 in the history. Free-text fields refuse private keys and seed phrases.
+
+Links across cases (slice 3, also_in): the same kind and normalised value, active,
+in another case. Only among identifiers the viewer may read -- their browser's and
+their unit's -- so another unit's cases are never revealed, not even as a count.
+Two complaints naming the same UPI ID or Telegram username is a lead that they
+reached the same people, not proof of it.
 """
 from __future__ import annotations
 
@@ -297,3 +303,27 @@ def list_for(viewer: Any, case_id: str) -> list[dict[str, Any]]:
             models.CaseIdentifier.case_id == case_id, _readable(viewer))
             .order_by(models.CaseIdentifier.created_at)).all()
         return [summary(r) for r in rows]
+
+
+def also_in(viewer: Any, case_id: str, rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """For each active row of `case_id`, the other cases the viewer may read that have the same
+    identifier, active: {identifier_id: [{case_id, identifier_id, recorded_at, context}, ...]}."""
+    wanted = {(r["kind"], r["value"]): r["identifier_id"] for r in rows if r["status"] == "active"}
+    if not wanted or (getattr(viewer, "owner_hash", None) is None and getattr(viewer, "unit_id", None) is None):
+        return {}
+    with models.session() as s:
+        others = s.scalars(select(models.CaseIdentifier).where(
+            models.CaseIdentifier.value.in_({v for _, v in wanted}),
+            models.CaseIdentifier.case_id != case_id,
+            models.CaseIdentifier.status == "active",
+            _readable(viewer)).order_by(models.CaseIdentifier.created_at)).all()
+        out: dict[str, list[dict[str, Any]]] = {}
+        seen: set[tuple[str, str]] = set()
+        for o in others:
+            mine = wanted.get((o.kind, o.value))
+            if mine is None or (mine, o.case_id) in seen:  # same value, other kind; or a case already listed
+                continue
+            seen.add((mine, o.case_id))
+            out.setdefault(mine, []).append({"case_id": o.case_id, "identifier_id": o.id,
+                                             "recorded_at": o.created_at, "context": o.context})
+        return out

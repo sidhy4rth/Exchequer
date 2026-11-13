@@ -1,6 +1,7 @@
 """The case identifier register (identifiers.py, suite feature 4): what the victim reported besides the wallet.
 
-    GET   /trace/{case_id}/identifiers   the case's identifiers this browser or unit may read
+    GET   /trace/{case_id}/identifiers   the case's identifiers this browser or unit may read, each with
+                                         the other cases (of this browser or unit) that have it too
     POST  /trace/{case_id}/identifiers   record one (409 when it is already recorded)
     PATCH /identifiers/{identifier_id}   change where it was seen or the notes, withdraw it, or add a note
     POST  /identifiers/{identifier_id}/lookup   RDAP and DNS facts about a domain (config.OSINT_LOOKUPS)
@@ -45,8 +46,10 @@ def _bad(exc: identifiers.IdentifierError) -> HTTPException:
 def list_identifiers(case_id: str, user: CurrentUser) -> dict[str, Any]:
     rows = identifiers.list_for(user, case_id)
     latest = domain_lookup.latest_for([r["identifier_id"] for r in rows if r["kind"] == "domain"])
+    links = identifiers.also_in(user, case_id, rows)
     for r in rows:
         r["lookup"] = latest.get(r["identifier_id"])
+        r["also_in"] = links.get(r["identifier_id"], [])
     audit.record("identifier.list", case_id=case_id)
     return {"case_id": case_id, "count": len(rows), "identifiers": rows, "kinds": identifiers.KINDS,
             "lookups_enabled": config.OSINT_LOOKUPS}
