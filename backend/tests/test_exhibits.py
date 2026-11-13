@@ -18,6 +18,7 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
+from sqlalchemy.orm.exc import StaleDataError
 
 from app import exhibits, models, ownership
 from app.auth import User
@@ -140,6 +141,63 @@ def test_the_hashes_and_the_file_never_change_and_nothing_is_deleted():
     assert not hasattr(exhibits, "delete")
 
 
+def test_a_note_alone_is_kept_in_the_history_even_after_the_end():
+    row = add()
+    exhibits.update(row["exhibit_id"], {"status": "released", "note": "returned on the court's order"}, viewer())
+    after = exhibits.update(row["exhibit_id"], {"note": "owner signed the receipt"}, viewer())
+    last = after["history"][-1]
+    assert (last["action"], last["note"]) == ("noted", "owner signed the receipt")
+    assert after["changed"] == []  # a note changes no field
+
+
+def test_an_empty_change_adds_nothing_to_the_history():
+    row = add()
+    after = exhibits.update(row["exhibit_id"], {"holder": row["holder"]}, viewer())
+    assert len(after["history"]) == 1
+
+
+def test_a_full_history_refuses_a_new_entry_and_never_drops_an_old_one(monkeypatch):
+    monkeypatch.setattr(exhibits, "HISTORY_MAX", 3)
+    row = add()
+    exhibits.check(row["exhibit_id"], SHA256, viewer())
+    exhibits.update(row["exhibit_id"], {"holder": "Insp. Rao", "note": "court"}, viewer())
+    with pytest.raises(ExhibitError, match="full"):
+        exhibits.check(row["exhibit_id"], SHA256, viewer())
+    with pytest.raises(ExhibitError, match="full"):
+        exhibits.update(row["exhibit_id"], {"note": "one more"}, viewer())
+    history = exhibits.list_for(viewer(), "case-1")[0]["history"]
+    assert [h["action"] for h in history] == ["recorded", "checked", "changed"]
+
+
+def test_two_writes_at_the_same_moment_both_land(monkeypatch):
+    row = add()
+    real, tries = exhibits._check_once, []
+
+    def clash_once(*args):
+        tries.append(1)
+        if len(tries) == 1:
+            raise StaleDataError("another check landed first")
+        return real(*args)
+
+    monkeypatch.setattr(exhibits, "_check_once", clash_once)
+    assert exhibits.check(row["exhibit_id"], SHA256, viewer())["result"] == "match"
+    assert len(tries) == 2
+
+
+def test_a_write_that_keeps_clashing_is_a_conflict_not_a_crash(monkeypatch):
+    row = add()
+
+    def clash(*args):
+        raise StaleDataError("always")
+
+    monkeypatch.setattr(exhibits, "_update_once", clash)
+    monkeypatch.setattr(exhibits, "_check_once", clash)
+    with pytest.raises(exhibits.ExhibitConflict):
+        exhibits.update(row["exhibit_id"], {"notes": "x"}, viewer())
+    with pytest.raises(exhibits.ExhibitConflict):
+        exhibits.check(row["exhibit_id"], SHA256, viewer())
+
+
 # -- checking a file against the record -------------------------------------------------------------
 def test_a_check_compares_a_files_hash_with_the_record_and_keeps_the_result():
     row = add()
@@ -166,6 +224,14 @@ def test_exhibits_belong_to_their_browser_and_their_unit():
     assert exhibits.list_for(viewer(BOB), "case-1") == []
     assert exhibits.update(mine["exhibit_id"], {"notes": "x"}, viewer(BOB)) is None
     assert exhibits.check(mine["exhibit_id"], SHA256, viewer(BOB)) is None
+
+
+def test_the_duplicate_check_never_reaches_into_another_units_exhibits():
+    theirs = add(who=viewer(ALICE, unit=7, officer=1))
+    mine = add(who=viewer(BOB))  # the same file: Bob cannot see unit 7's exhibit, so is not told about it
+    assert mine["exhibit_id"] != theirs["exhibit_id"]
+    with pytest.raises(ExhibitError, match=mine["exhibit_id"][:8]):
+        add(image(label="again"), who=viewer(BOB))
 
 
 # -- routes ---------------------------------------------------------------------------------------------
@@ -196,6 +262,18 @@ def test_the_routes_refuse_bad_input_duplicates_and_strangers(client):
     other = {ownership.OWNER_HEADER: BOB}
     assert client.patch(f"/exhibits/{eid}", json={"notes": "x"}, headers=other).status_code == 404
     assert client.post(f"/exhibits/{eid}/check", json={"sha256": SHA256}, headers=other).status_code == 404
+
+
+def test_the_routes_answer_a_clash_with_409(client, monkeypatch):
+    eid = client.post("/trace/case-1/exhibits", json=image(), headers=H).json()["exhibit_id"]
+
+    def clash(*args):
+        raise StaleDataError("always")
+
+    monkeypatch.setattr(exhibits, "_update_once", clash)
+    monkeypatch.setattr(exhibits, "_check_once", clash)
+    assert client.patch(f"/exhibits/{eid}", json={"notes": "x"}, headers=H).status_code == 409
+    assert client.post(f"/exhibits/{eid}/check", json={"sha256": SHA256}, headers=H).status_code == 409
 
 
 def test_the_audit_log_records_what_happened_never_the_text_or_the_hash(client):

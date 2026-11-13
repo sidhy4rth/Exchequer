@@ -54,6 +54,10 @@ def _bad(exc: exhibits.ExhibitError) -> HTTPException:
     return HTTPException(status_code=409 if isinstance(exc, exhibits.DuplicateExhibit) else 400, detail=str(exc))
 
 
+def _clash() -> HTTPException:
+    return HTTPException(status_code=409, detail="Someone changed this exhibit at the same moment. Reload and try again.")
+
+
 @router.get("/trace/{case_id}/exhibits")
 def list_exhibits(case_id: str, user: CurrentUser) -> dict[str, Any]:
     rows = exhibits.list_for(user, case_id)
@@ -79,6 +83,8 @@ def change_exhibit(exhibit_id: str, body: ExhibitChange, user: CurrentUser, http
         updated = exhibits.update(exhibit_id, body.model_dump(exclude_none=True), user)
     except exhibits.ExhibitError as exc:
         raise _bad(exc) from exc
+    except exhibits.ExhibitConflict as exc:
+        raise _clash() from exc
     if updated is None:
         raise HTTPException(status_code=404, detail="No exhibit with that id that you can change.")
     changed = updated.pop("changed")
@@ -94,6 +100,8 @@ def check_exhibit(exhibit_id: str, body: FileHash, user: CurrentUser, http: Requ
         checked = exhibits.check(exhibit_id, body.sha256, user)
     except exhibits.ExhibitError as exc:
         raise _bad(exc) from exc
+    except exhibits.ExhibitConflict as exc:
+        raise _clash() from exc
     if checked is None:
         raise HTTPException(status_code=404, detail="No exhibit with that id that you can check.")
     audit.record("exhibit.check", case_id=checked["exhibit"]["case_id"],

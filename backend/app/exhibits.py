@@ -26,6 +26,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm.exc import StaleDataError
 
 from . import models
 from .assets import NOT_A_KEY, looks_like_secret
@@ -52,7 +53,8 @@ TEXT = {"label": (200, "what the file is"), "tool": (120, "the tool and its vers
 CHANGEABLE = ("holder", "stored_at", "status", "notes", "note")
 NEEDS_REASON = ("holder", "stored_at", "status")
 SIZE_MAX = 10**15  # a petabyte: larger is a typo
-MAX_PER_OWNER, MAX_TOTAL, HISTORY_MAX = 1000, 100_000, 200
+MAX_PER_OWNER, MAX_TOTAL, HISTORY_MAX = 1000, 100_000, 1000
+WRITE_TRIES = 3  # two writes to one exhibit at once: the second re-reads and tries again
 
 
 class ExhibitError(ValueError):
@@ -61,6 +63,10 @@ class ExhibitError(ValueError):
 
 class DuplicateExhibit(ExhibitError):
     """The same file (by hash) is already an exhibit of this case."""
+
+
+class ExhibitConflict(RuntimeError):
+    """Another write to the same exhibit kept landing first; try again."""
 
 
 def _now() -> str:
@@ -157,8 +163,11 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any = None)
     with models.session() as s:
         if s.scalar(select(models.Case.id).where(models.Case.id == case_id)) is None:
             raise ExhibitError("No case with that id.")
+        # Only among exhibits the viewer may read: the refusal names the twin, and
+        # another unit's exhibit is not theirs to learn about.
         same = [getattr(models.Exhibit, key) == row[key] for key in HASHES if row[key]]
-        twin = s.scalars(select(models.Exhibit).where(models.Exhibit.case_id == case_id, or_(*same))).first()
+        twin = s.scalars(select(models.Exhibit).where(
+            models.Exhibit.case_id == case_id, or_(*same), _readable(viewer or _Owner(owner)))).first()
         if twin is not None:
             raise DuplicateExhibit(f"This file is already exhibit {twin.id[:8]} of this case ({twin.label}).")
         count = select(func.count()).select_from(models.Exhibit)
@@ -179,22 +188,47 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any = None)
         return summary(r)
 
 
+class _Owner:
+    """A viewer that is only a browser's owner key, for callers that pass no viewer."""
+
+    unit_id = None
+
+    def __init__(self, owner_hash: str) -> None:
+        self.owner_hash = owner_hash
+
+
 def _row(s: Any, exhibit_id: str, viewer: Any) -> models.Exhibit | None:
     return s.scalars(select(models.Exhibit).where(models.Exhibit.id == exhibit_id, _readable(viewer))).first()
 
 
 def _append(r: models.Exhibit, entry: dict[str, Any]) -> None:
+    """Add to the chain of custody. A full one refuses: dropping old entries would lose its first links."""
     history = json.loads(r.history_json or "[]")
+    if len(history) >= HISTORY_MAX:
+        raise ExhibitError(f"This exhibit's history is full ({HISTORY_MAX} entries); ask the deployment's operator.")
     history.append(entry)
-    r.history_json = json.dumps(history[-HISTORY_MAX:])
+    r.history_json = json.dumps(history)
     r.updated_at = entry["at"]
 
 
+def _retrying(write: Any, *args: Any) -> Any:
+    for _ in range(WRITE_TRIES):
+        try:
+            return write(*args)
+        except StaleDataError:
+            continue
+    raise ExhibitConflict(args[0])
+
+
 def update(exhibit_id: str, changes: dict[str, Any], viewer: Any) -> dict[str, Any] | None:
-    """Hand an exhibit over, move it, end it or add notes; None when the viewer has none by that id."""
+    """Hand an exhibit over, move it, end it, or add notes or a note; None when the viewer has none by that id."""
     unknown = set(changes) - set(CHANGEABLE)
     if unknown:
         raise ExhibitError(f"These cannot be changed: {', '.join(sorted(unknown))}.")
+    return _retrying(_update_once, exhibit_id, changes, viewer)
+
+
+def _update_once(exhibit_id: str, changes: dict[str, Any], viewer: Any) -> dict[str, Any] | None:
     with models.session() as s:
         r = _row(s, exhibit_id, viewer)
         if r is None:
@@ -213,8 +247,10 @@ def update(exhibit_id: str, changes: dict[str, Any], viewer: Any) -> dict[str, A
             raise ExhibitError("Say why: a hand-over, a move or an end is part of the chain of custody.")
         for key in changed:
             setattr(r, key, clean[key])
-        if changed:
-            entry = {"at": _now(), "by": _who(viewer), "action": "changed", "changed": changed}
+        if changed or note:  # a note on its own is kept too: it is how an ended exhibit is added to
+            entry = {"at": _now(), "by": _who(viewer), "action": "changed" if changed else "noted"}
+            if changed:
+                entry["changed"] = changed
             if note:
                 entry["note"] = note
             _append(r, entry)
@@ -230,6 +266,10 @@ def check(exhibit_id: str, sha256: str, viewer: Any) -> dict[str, Any] | None:
     value = _hash({"sha256": sha256}, "sha256")
     if not value:
         raise ExhibitError("Enter the SHA-256 as 64 hexadecimal characters.")
+    return _retrying(_check_once, exhibit_id, value, viewer)
+
+
+def _check_once(exhibit_id: str, value: str, viewer: Any) -> dict[str, Any] | None:
     with models.session() as s:
         r = _row(s, exhibit_id, viewer)
         if r is None:
