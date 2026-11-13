@@ -184,3 +184,14 @@ export async function checkExhibit(exhibitId, sha256) {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sha256 }),
   }))
 }
+
+/** A draft s.63(4) certificate (backend certificates.py) for some of a case's
+ * exhibits, as a PDF. The device particulars go in the body, never the URL, and
+ * the server keeps none of them. */
+export async function draftCertificate(caseId, body) {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/certificate`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
+  if (!response.ok) throw await toError(response)
+  return response.blob()
+}

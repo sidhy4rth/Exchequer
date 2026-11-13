@@ -4,6 +4,7 @@ import { plain } from '../../text'
 import { middle } from './format'
 import { hashFile } from './sha256'
 import { todayInIndia } from './AssetsPanel'
+import CertificateForm from './CertificateForm'
 import './ExhibitsPanel.css'
 
 // The exhibit register on the Evidence tab (backend exhibits.py, suite feature
@@ -204,6 +205,7 @@ export default function ExhibitsPanel({ result }) {
 
         <Progress busy={hasher.busy} cancel={hasher.cancel} />
         {said && <p className="lt-said" role="status">{said}</p>}
+        <CertificateForm caseId={caseId} exhibits={rows} />
         {!form && <div className="request-add"><button type="button" onClick={() => { setSaid(null); setForm({ ...EMPTY, made_on: todayInIndia() }) }}>Record a forensic file</button></div>}
 
         {form && (
