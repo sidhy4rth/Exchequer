@@ -309,6 +309,31 @@ class Exhibit(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+class CaseIdentifier(Base):
+    """Something the victim reported besides the wallet -- a scam domain, a Telegram
+    handle, a phone number, a UPI ID -- entered by hand (identifiers.py, suite feature 4)."""
+
+    __tablename__ = "case_identifiers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    value: Mapped[str] = mapped_column(String(256), index=True)  # normalised: what cases are matched on
+    entered: Mapped[str] = mapped_column(String(300))  # as the officer typed it
+    context: Mapped[str] = mapped_column(String(200), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
+
+
 class Batch(Base):
     """A list of reported addresses traced one after another (batches.py)."""
 
