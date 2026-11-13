@@ -129,13 +129,25 @@ def telegram(raw: str) -> str:
     text = re.sub(r"^(https?://)?(www\.)?(t\.me|telegram\.me)/", "", text, flags=re.I)
     text = text.removeprefix("@").split("?")[0].strip("/").lower()
     if not _TELEGRAM.match(text):
-        raise IdentifierError("Enter the Telegram username: 5 to 32 letters, digits or _, starting with a letter.")
+        raise IdentifierError("Enter the Telegram username: 4 to 32 letters, digits or _, starting with a letter.")
     return text
+
+
+# The two-digit country codes (ITU-T E.164; codes are prefix-free, so a number's first two
+# digits name one of these or none). Their numbers are dialled at home with a trunk 0 that
+# is dropped after the country code, so "+44 07700 …" is "+44 7700 …". Italy (39) keeps its
+# 0 in international form, so it is not here; a three-digit code's 0 is left as typed.
+_TRUNK_ZERO_CODES = frozenset({
+    "20", "27", "30", "31", "32", "33", "34", "36", "40", "41", "43", "44", "45", "46", "47", "48", "49",
+    "51", "52", "53", "54", "55", "56", "57", "58", "60", "61", "62", "63", "64", "65", "66",
+    "81", "82", "84", "86", "90", "92", "93", "94", "95", "98",
+})
 
 
 def phone(raw: str) -> str:
     """A phone number as +<country code><number>. A ten-digit number starting 6 to 9 is
-    taken as Indian (+91); any other number needs its country code."""
+    taken as Indian (+91); any other number needs its country code. A trunk 0 typed after a
+    two-digit country code is dropped, so the same number links across cases however typed."""
     text = raw.strip()
     if re.search(r"[^\d\s()+.-]", text):
         raise IdentifierError("Enter the phone number with digits only, and a + before the country code.")
@@ -152,6 +164,8 @@ def phone(raw: str) -> str:
             pass
         else:
             raise IdentifierError("Enter the phone number with its country code, e.g. +91 98xxx xxxxx or +44 …")
+    if plus and digits[:2] in _TRUNK_ZERO_CODES and digits[2:3] == "0":
+        digits = digits[:2] + digits[3:]
     if not 8 <= len(digits) <= 15 or digits.startswith("0"):
         raise IdentifierError("That is not a phone number: with its country code it has 8 to 15 digits.")
     if digits.startswith("91") and (len(digits) != 12 or digits[2] not in "6789"):
@@ -292,6 +306,7 @@ def _update_once(identifier_id: str, changes: dict[str, Any], viewer: Any) -> di
             s.refresh(r)
         out = summary(r)
         out["changed"] = changed
+        out["noted"] = bool(note) and not changed  # a note on its own: a history entry, so audited too
         return out
 
 
