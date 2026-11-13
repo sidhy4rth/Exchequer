@@ -147,7 +147,7 @@ def test_a_registry_error_or_an_unreachable_resolver_is_a_note_not_a_crash(monke
     def fake(url, params=None, accept="application/json"):
         if url == domain_lookup.BOOTSTRAP_URL:
             return 200, _bootstrap_body({"com": "https://rdap.verisign.com/com/v1/"})
-        if url.startswith("https://rdap.verisign.com"):
+        if urlsplit(url).hostname == "rdap.verisign.com":
             return 503, b"busy"
         raise httpx.ConnectError("down")
 
