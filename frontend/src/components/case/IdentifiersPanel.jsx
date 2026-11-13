@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { addIdentifier, fetchCaseIdentifiers, updateIdentifier } from '../../api'
+import { addIdentifier, fetchCaseIdentifiers, lookUpIdentifier, updateIdentifier } from '../../api'
 import { plain } from '../../text'
+import { middle } from './format'
 import './IdentifiersPanel.css'
 
 // What the victim reported besides the wallet (backend identifiers.py, suite
@@ -35,15 +36,55 @@ export function shown(row) {
 
 const EMPTY = { kind: 'domain', value: '', context: '', notes: '' }
 
+/** Whole days from `from` to `to` (YYYY-MM-DD or ISO), or null. */
+export function daysBetween(from, to) {
+  const a = Date.parse(String(from).slice(0, 10))
+  const b = Date.parse(String(to).slice(0, 10))
+  return Number.isNaN(a) || Number.isNaN(b) ? null : Math.round((b - a) / 86_400_000)
+}
+
+/** What a domain lookup found, with where each part came from. A lead, never an identity. */
+export function Lookup({ lookup }) {
+  const r = lookup.rdap
+  const age = r?.registered_on ? daysBetween(r.registered_on, lookup.created_at) : null
+  const hosts = [...(lookup.dns?.A ?? []), ...(lookup.dns?.AAAA ?? [])]
+  return (
+    <div className="id-lookup">
+      <span className="micro">Public records · looked up {String(lookup.created_at).slice(0, 10)}</span>
+      {r ? (
+        <dl className="id-facts">
+          {r.registered_on && <><dt>Registered</dt><dd>{r.registered_on}{age != null && age >= 0 && age <= 365 ? <span className={`pill ${age <= 30 ? 'red' : 'amber'} id-age`}>{age} day{age === 1 ? '' : 's'} old when looked up</span> : null}</dd></>}
+          {r.registrar && <><dt>Registrar</dt><dd>{plain(r.registrar)}{r.registrar_iana_id ? ` (IANA ${plain(r.registrar_iana_id)})` : ''}</dd></>}
+          {r.abuse_email && <><dt>Abuse contact</dt><dd>{plain(r.abuse_email)}{r.abuse_phone ? ` · ${plain(r.abuse_phone.replace(/^tel:/, ''))}` : ''}</dd></>}
+          {r.expires_on && <><dt>Expires</dt><dd>{r.expires_on}</dd></>}
+          {r.name_servers?.length > 0 && <><dt>Name servers</dt><dd className="mono">{r.name_servers.map(plain).join(', ')}</dd></>}
+        </dl>
+      ) : <p className="note">{plain(lookup.rdap_note) || 'No registration record was found.'}</p>}
+      {hosts.length > 0 && <dl className="id-facts"><dt>Points to</dt><dd className="mono">{hosts.map(plain).join(', ')}</dd></dl>}
+      {lookup.dns_note && <p className="note">{plain(lookup.dns_note)}</p>}
+      <details className="id-sources">
+        <summary>Where this came from ({lookup.sources?.length ?? 0} responses)</summary>
+        <ul>
+          {(lookup.sources ?? []).map((s, i) => (
+            <li key={i}><span className="mono">{plain(s.provider)}</span> · {s.source} · HTTP {s.status} · {String(s.fetched_at).slice(0, 19).replace('T', ' ')} UTC · SHA-256 <span className="mono" title={s.sha256}>{middle(s.sha256, 10, 8)}</span></li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  )
+}
+
 export default function IdentifiersPanel({ result }) {
   const caseId = result?.case_id
   const [rows, setRows] = useState([])
   const [form, setForm] = useState(null)
   const [error, setError] = useState(null)
   const [act, setAct] = useState({}) // identifier_id → { mode: 'withdraw' | 'note', note }
+  const [lookups, setLookups] = useState(false)
+  const [busy, setBusy] = useState(null) // identifier_id being looked up
 
   // A failed load says so: an empty list would read as "the victim reported nothing else".
-  const load = () => caseId && fetchCaseIdentifiers(caseId).then((d) => setRows(d.identifiers ?? []))
+  const load = () => caseId && fetchCaseIdentifiers(caseId).then((d) => { setRows(d.identifiers ?? []); setLookups(Boolean(d.lookups_enabled)) })
     .catch(() => setError('The reported identifiers could not be loaded. Reload the page before relying on this list.'))
   useEffect(() => { load() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!caseId) return null
@@ -63,6 +104,10 @@ export default function IdentifiersPanel({ result }) {
     const a = pick(row.identifier_id)
     const changes = a.mode === 'withdraw' ? { status: 'withdrawn', note: a.note ?? '' } : { note: a.note ?? '' }
     if (await run(() => updateIdentifier(row.identifier_id, changes))) setAct((all) => ({ ...all, [row.identifier_id]: {} }))
+  }
+  async function lookUp(row) {
+    setBusy(row.identifier_id)
+    try { await run(() => lookUpIdentifier(row.identifier_id)) } finally { setBusy(null) }
   }
   const active = rows.filter((r) => r.status === 'active').length
 
@@ -85,7 +130,13 @@ export default function IdentifiersPanel({ result }) {
                 </dl>
               )}
               {row.notes && <p className="note">{plain(row.notes)}</p>}
+              {row.lookup && <Lookup lookup={row.lookup} />}
               <div className="request-add">
+                {lookups && row.kind === 'domain' && row.status === 'active' && (
+                  <button type="button" disabled={busy === row.identifier_id} onClick={() => lookUp(row)}>
+                    {busy === row.identifier_id ? 'Looking up…' : row.lookup ? 'Look up again' : 'Look up public records'}
+                  </button>
+                )}
                 {row.status === 'active' && (
                   <button type="button" onClick={() => setAct1(row.identifier_id, { mode: a.mode === 'withdraw' ? null : 'withdraw' })}>Withdraw</button>
                 )}

@@ -17,3 +17,8 @@ export async function updateIdentifier(identifierId, changes) {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes),
   }))
 }
+
+/** RDAP and DNS facts about a domain on the register (off unless the server's flag is on). */
+export async function lookUpIdentifier(identifierId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/identifiers/${encodeURIComponent(identifierId)}/lookup`, { method: 'POST' }))
+}

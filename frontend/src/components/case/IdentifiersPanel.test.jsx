@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import IdentifiersPanel, { historyText, shown } from './IdentifiersPanel'
+import IdentifiersPanel, { Lookup, daysBetween, historyText, shown } from './IdentifiersPanel'
 
 // What the victim reported besides the wallet (backend identifiers.py): each
 // identifier as kept, where it was seen, withdrawn with a reason, never deleted.
@@ -9,6 +9,21 @@ const ROW = {
   identifier_id: 'i1', case_id: 'c1', kind: 'domain', value: 'scam-shop.in', entered: 'https://www.scam-shop.in/pay',
   context: 'link sent on WhatsApp', notes: '', status: 'active',
   history: [{ at: '2026-11-13T10:00:00Z', action: 'recorded' }],
+}
+
+// The example.com lookup as recorded in backend/tests/fixtures/osint/responses.json.
+const LOOKUP = {
+  lookup_id: 'l1', identifier_id: 'i1', case_id: 'c1', queried: 'example.com', created_at: '2026-11-13T10:00:00Z', by: 'demo',
+  rdap: {
+    name: 'example.com', registrar: 'RESERVED-Internet Assigned Numbers Authority', registrar_iana_id: '376',
+    registered_on: '1995-08-14', expires_on: '2027-08-13', changed_on: '2026-08-14', abuse_email: '', abuse_phone: '',
+    status: [], name_servers: ['elliott.ns.cloudflare.com', 'hera.ns.cloudflare.com'],
+  },
+  rdap_note: '', dns: { A: ['104.20.23.154', '172.66.147.243'], AAAA: [], NS: [] }, dns_note: '',
+  sources: [
+    { source: 'rdap', provider: 'rdap.verisign.com', request: 'https://rdap.verisign.com/com/v1/domain/example.com', status: 200, fetched_at: '2026-11-13T10:00:00Z', sha256: 'e38fb301b55d200d1ffdf18c631c905b8b747fbe8198bd5b8e74e0824896972a', bytes: 2440 },
+    { source: 'dns', provider: 'cloudflare-dns.com', request: 'https://cloudflare-dns.com/dns-query?name=example.com&type=A', status: 200, fetched_at: '2026-11-13T10:00:00Z', sha256: '9cc458718f83279bc77e5d394dff6863886bf15f602eb3baa05122504048cd93', bytes: 251 },
+  ],
 }
 
 function api(routes) {
@@ -111,5 +126,50 @@ describe('the reported identifiers panel', () => {
     expect(historyText({ action: 'recorded' })).toBe('recorded')
     expect(shown({ kind: 'telegram', value: 'crypto_help' })).toBe('@crypto_help')
     expect(shown({ kind: 'phone', value: '+919876543210' })).toBe('+919876543210')
+  })
+
+  it('offers a lookup only for an active domain, and only when the server has lookups on', async () => {
+    const phone = { ...ROW, identifier_id: 'i3', kind: 'phone', value: '+919876543210', entered: '+919876543210', context: '' }
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [ROW, phone], lookups_enabled: false } } })
+    const first = open()
+    await screen.findByText('scam-shop.in')
+    expect(screen.queryByRole('button', { name: /Look up/ })).not.toBeInTheDocument()
+    first.unmount()
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [ROW, phone], lookups_enabled: true } } })
+    open()
+    await screen.findByText('scam-shop.in')
+    expect(screen.getAllByRole('button', { name: 'Look up public records' })).toHaveLength(1)
+  })
+
+  it('looks a domain up and shows what the registry and DNS said, with their sources', async () => {
+    let rows = [ROW]
+    const calls = api({
+      'GET /trace/c1/identifiers': () => ({ body: { identifiers: rows, lookups_enabled: true } }),
+      'POST /identifiers/i1/lookup': () => { rows = [{ ...ROW, lookup: LOOKUP }]; return { body: LOOKUP } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Look up public records' }))
+    expect(await screen.findByText(/RESERVED-Internet Assigned Numbers Authority/)).toBeInTheDocument()
+    expect(screen.getByText('1995-08-14')).toBeInTheDocument()
+    expect(screen.getByText('104.20.23.154, 172.66.147.243')).toBeInTheDocument()
+    expect(screen.getByText(/Where this came from \(2 responses\)/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Look up again' })).toBeInTheDocument()
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1)
+  })
+
+  it('marks a young domain by its age when looked up, and says why a record is missing', () => {
+    const young = { ...LOOKUP, created_at: '2026-11-13T10:00:00Z', rdap: { ...LOOKUP.rdap, registered_on: '2026-11-01' } }
+    const { unmount } = render(<Lookup lookup={young} />)
+    expect(screen.getByText('12 days old when looked up')).toHaveClass('red')
+    unmount()
+    render(<Lookup lookup={{ ...LOOKUP, rdap: null, rdap_note: 'The .xyz registry offers no RDAP service.' }} />)
+    expect(screen.getByText(/offers no RDAP service/)).toBeInTheDocument()
+    expect(screen.queryByText(/old when looked up/)).not.toBeInTheDocument()
+  })
+
+  it('counts days between two dates', () => {
+    expect(daysBetween('2026-11-01', '2026-11-13T10:00:00Z')).toBe(12)
+    expect(daysBetween('', '2026-11-13')).toBeNull()
   })
 })
