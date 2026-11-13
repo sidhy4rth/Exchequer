@@ -104,13 +104,19 @@ def _today() -> date:
     return _now_ist().date()
 
 
+def looks_like_secret(text: str) -> bool:
+    """A private key, WIF or extended key, a 64-hex string, or twelve BIP39
+    words in a row: what no register field may hold (exhibits.py uses it too)."""
+    return any(p.search(text) for p in SECRET) or _seed_phrase(text)
+
+
 def _text(fields: dict[str, Any], key: str, what: str, required: bool = False) -> str:
     value = one_line(fields.get(key) or "").strip()
     if required and not value:
         raise AssetError(f"Enter {what}.")
     if len(value) > TEXT_LIMITS[key]:
         raise AssetError(f"{what[0].upper()}{what[1:]} is longer than {TEXT_LIMITS[key]} characters.")
-    if any(p.search(value) for p in SECRET) or _seed_phrase(value):
+    if looks_like_secret(value):
         raise AssetError(NOT_A_KEY)
     return value
 

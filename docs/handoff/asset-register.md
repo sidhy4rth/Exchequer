@@ -3,9 +3,9 @@
 - **Feature**: suite feature 9 (custody wallet tooling): a register of every amount frozen or seized in a case, where it is held, and its court deadline
 - **Issue**: #100
 - **Branch**: `feat/asset-register`
-- **Current**: Barenyam
+- **Current**: nobody
 - **Last worked on**: Barenyam, 2026-11-12
-- **Status**: server, Letters-tab panel and home-page deadline card done and tested end to end in a browser; waiting for review and merge (#101), which deploys it
+- **Status**: merged in #101 (12 Nov 2026) and live; part 2 below is open
 
 ## The nine features (see `docs/suite-features.md`)
 
@@ -29,7 +29,7 @@
 
 ## Next
 
-1. Sidhyarth reviews and merges #101; Render deploys it (the migration runs at start-up). Then record one asset on the live site.
+1. Record one asset on the live site and check the home card.
 2. Later: a "custody wallet" check that reads the custody address's balance on chain and flags a mismatch with the register (feature 9, part 2).
 
 ## Open questions
