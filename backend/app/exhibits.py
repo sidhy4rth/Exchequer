@@ -4,7 +4,8 @@ A phone extraction, a disk image, a memory capture, the tool's own report: the
 case relies on each, and a court asks two things of it -- is this the file that
 was made, and who has had it since. The register answers both without holding
 the file. The officer records the hash the tool printed (SHA-256, and SHA-1 or
-MD5 when the tool gives those; BSA s.63's Part B names all three); later, anyone
+MD5 when the tool gives those; the certificate in the BSA's Schedule (s.63(4))
+offers all three); later, anyone
 can check a file against the record by hashing it in their browser and sending
 only the hash (check()). A phone image of many gigabytes never leaves the
 officer's machine.

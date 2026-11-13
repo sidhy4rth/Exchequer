@@ -22,14 +22,14 @@
 ## Decisions
 
 - The file is never uploaded. The officer records the hash the tool printed; the browser can check a file against it by computing its SHA-256 locally, in chunks, so a phone or disk image of many GB never leaves the machine and never has to fit in memory.
-- SHA-256 is the main hash; SHA-1 and MD5 are kept when the tool gives them (BSA s.63 Part B names all three), and at least one is required.
+- SHA-256 is the main hash; SHA-1 and MD5 are kept when the tool gives them (the certificate in the BSA's Schedule under s.63(4) offers SHA1, SHA256, MD5 or another legally acceptable standard, in both Part A and Part B), and at least one is required.
 - Nothing is deleted. Hand-overs are history entries (who, to whom, when, why), never edits.
 - Free-text fields refuse private keys and seed phrases, reusing `assets.py`'s check.
 
 ## Next
 
 1. Sidhyarth reviews the PR; after the merge, confirm the Site canary run shows it live.
-2. Later: feed the exhibit list into the s.63 certificate the report generates (Part B states each file's hash).
+2. Later (feature 6): Exchequer does not yet draft the s.63(4) certificate at all. A draft of it, filled from the exhibit register (each file's hash and algorithm), for the officer and the expert to check and sign, is the natural next piece; take its wording from the Schedule's official text, never from memory.
 
 ## Open questions
 
