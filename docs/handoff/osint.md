@@ -5,7 +5,7 @@
 - **Branch**: `feat/osint` (slice 1, merged), `feat/osint-domain-lookup` (slice 2), `feat/osint-case-links` (slice 3)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-13
-- **Status**: Slice 1 merged (#105, live). Slice 2 (domain lookup) built on `feat/osint-domain-lookup`, behind `EXCHEQUER_OSINT_LOOKUPS`. Slice 3 (links across cases) built on `feat/osint-case-links`.
+- **Status**: Slices 1-3 merged (#105, #106, #107) and live. Domain lookups switched ON in production on 2026-11-13 (`EXCHEQUER_OSINT_LOOKUPS=1` in Render, and in `render.yaml`).
 
 ## Done
 
@@ -30,12 +30,12 @@
 
 ## Next
 
-1. Get the slice 2 PR reviewed and merged; then switch `EXCHEQUER_OSINT_LOOKUPS` on in Render once the team agrees.
-2. Get the slice 3 PR merged. Feature 4's first three slices are then done; what comes next (e.g. lookups in the case report, links shown on the Cases list) is for the team to choose.
+1. Done: slices 1-3 merged; lookups on in production, tested end to end on the live site on 2026-11-13 (two test entries for example.com on Sidhyarth's own cases, then withdrawn).
+2. Next for the team to choose Feature 4's first three slices are then done; what comes next (e.g. lookups in the case report, links shown on the Cases list) is for the team to choose.
 
 ## Open questions
 
-- When to switch lookups on in production (Render env var), and whether a lookup should go in the case report.
+- Whether a lookup should go in the case report (not yet: it is shown on the Evidence tab only).
 
 - How long are phone numbers and handles kept? (Team decides before any export.)
 

@@ -111,3 +111,10 @@ services:
       # The daily snapshot copies a SQLite file on the volume; there is none.
       - key: EXCHEQUER_BACKUPS
         value: "0"
+      # Domain lookups for a case's scam sites (domain_lookup.py, suite
+      # feature 4): the "Look up public records" button. The server then asks
+      # IANA's RDAP list, the registry it names, and Cloudflare's DNS -- with a
+      # validated domain name only, never a URL an officer typed. "0" hides the
+      # button and refuses lookups (config.OSINT_LOOKUPS).
+      - key: EXCHEQUER_OSINT_LOOKUPS
+        value: "1"
