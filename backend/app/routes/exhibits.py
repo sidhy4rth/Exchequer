@@ -87,9 +87,10 @@ def change_exhibit(exhibit_id: str, body: ExhibitChange, user: CurrentUser, http
         raise _clash() from exc
     if updated is None:
         raise HTTPException(status_code=404, detail="No exhibit with that id that you can change.")
-    changed = updated.pop("changed")
-    if changed:
-        audit.record("exhibit.update", case_id=updated["case_id"], detail={"exhibit_id": exhibit_id, "changed": changed})
+    changed, noted = updated.pop("changed"), updated.pop("noted")
+    if changed or noted:  # every new history entry is audited; a note's words never are
+        detail = {"exhibit_id": exhibit_id, "changed": changed, **({"noted": True} if noted else {})}
+        audit.record("exhibit.update", case_id=updated["case_id"], detail=detail)
     return updated
 
 
