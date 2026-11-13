@@ -3,9 +3,9 @@
 - **Feature**: suite feature 3 (memory and disk tools), and the first piece of feature 6's evidence locker: a register of the files outside forensic tools produced, with their hashes and chain of custody
 - **Issue**: #102
 - **Branch**: `feat/exhibit-register`
-- **Current**: nobody (Barenyam paused on 13 Nov; PR #103 awaits Sidhyarth's review)
+- **Current**: nobody
 - **Last worked on**: Barenyam, 2026-11-13
-- **Status**: server and Evidence-tab panel built, tested end to end in a browser; pushed and in review (rebased on `main` after #91, suite re-run)
+- **Status**: merged (#103) and live since 13 Nov 2026
 
 ## The nine features (see `docs/suite-features.md`)
 
@@ -28,7 +28,7 @@
 
 ## Next
 
-1. Sidhyarth reviews #103 and merges once CI is green; after the merge, confirm the Site canary run shows it live. Review changes: Barenyam picks them up next session (or whoever the team agrees).
+1. Done: merged as #103 and live (Site canary green on `main`). #103 was merged without an approving review; a review after the fact is welcome.
 2. Later (feature 6): Exchequer does not yet draft the s.63(4) certificate at all. A draft of it, filled from the exhibit register (each file's hash and algorithm), for the officer and the expert to check and sign, is the natural next piece; take its wording from the Schedule's official text, never from memory.
 
 ## Open questions

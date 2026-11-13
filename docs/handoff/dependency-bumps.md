@@ -4,8 +4,8 @@
 - **Issue**: #95
 - **Branch**: `feat/dependency-bumps`
 - **Current**: Barenyam
-- **Last worked on**: Barenyam, 2026-11-12
-- **Status**: #82's Python patch updates and their fix are on this branch; #1, #2, #3, #56 closed as stale
+- **Last worked on**: Barenyam, 2026-11-13
+- **Status**: #82's updates and their fix merged as #96. #80 tested on `main` at ad3768b and ready to merge; #81 waits for #80; #61 conflicts and must be regenerated
 
 ## Done
 
@@ -21,6 +21,11 @@
 | #81 | npm minor group: react/react-dom 19.3.1, @playwright/test 1.64.1 | green | Merge after #80, once Dependabot has rebased it and CI is green again |
 | #82 | Python patch group: psycopg 3.3.7, pydantic 2.14.2, alembic 1.20.1, ruff 0.17.3 | red | Needs the fix below |
 | #61 | Python minor group: SQLAlchemy 2.0 → 2.1, FastAPI 0.143 → 0.162, Starlette 1.7 → 1.10, reportlab 5.1, pytest 9.2 | green | Hold: biggest jumps; last, on its own, after reading release notes |
+
+- 13 Nov, checked against `main` at ad3768b (after features 3, 4, 7 and 9):
+  - #80 merges cleanly. With it, all 1,577 frontend tests and 230 citizen tests pass, and both builds pass, run locally. Ready to merge.
+  - #81 merges cleanly on its own, but its lockfiles conflict with #80's. After #80 merges, Dependabot must rebase #81 (never hand-merge a lockfile).
+  - #61 conflicts in `requirements.in` and `requirements-dev.in` with #96. Dependabot must recreate it, or we redo it in our own PR after reading the SQLAlchemy 2.1 and FastAPI release notes.
 
 ## Decisions
 
