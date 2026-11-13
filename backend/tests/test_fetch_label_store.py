@@ -168,3 +168,151 @@ def test_a_broken_gzip_leaves_no_partial_file(tmp_path):
     with pytest.raises((EOFError, gzip.BadGzipFile)):
         fetch.install(gz, hashlib.sha256(gz.read_bytes()).hexdigest(), out)
     assert not out.exists() and not out.with_suffix(".partial").exists()
+
+
+# -- a store past GitHub's 2 GiB asset limit arrives in parts --------------------
+def part_url(number: int) -> str:
+    return f"https://api.github.com/repos/o/r/releases/assets/{number}"
+
+
+def fake_parts_release(monkeypatch, parts: dict[str, bytes], order: list[str] | None = None) -> list[str]:
+    """A release whose assets are `parts` (name -> bytes), listed in `order`.
+
+    Returns the list the asset downloads are recorded in, as asset names.
+    """
+    names = order or list(parts)
+    urls = {name: part_url(10 + i) for i, name in enumerate(parts)}
+    by_url = {url: name for name, url in urls.items()}
+    fetched: list[str] = []
+
+    def fake_get(url, token, accept):
+        if url.endswith("/releases/tags/t"):
+            release = {"assets": [{"name": name, "url": urls[name]} for name in names]}
+            return contextlib.nullcontext(io.BytesIO(json.dumps(release).encode()))
+        fetched.append(by_url[url])
+        return contextlib.nullcontext(io.BytesIO(parts[by_url[url]]))
+
+    monkeypatch.setattr(fetch, "_get", fake_get)
+    return fetched
+
+
+def built_store_gz(tmp_path) -> bytes:
+    from scripts.build_label_store import build
+
+    src = tmp_path / "flagged.csv"
+    src.write_text("address,chain,category,entity_or_incident,sources,source_refs,date\n"
+                   f"0x{'5c' * 20},ethereum,phishing/scam,Drainer,Threat-intel report: Check Point,,\n")
+    built = tmp_path / "built.db"
+    build(src, built)
+    return gzip.compress(built.read_bytes())
+
+
+def split3(gz: bytes) -> dict[str, bytes]:
+    third = len(gz) // 3
+    return {fetch.ASSET + ".part-aa": gz[:third],
+            fetch.ASSET + ".part-ab": gz[third:2 * third],
+            fetch.ASSET + ".part-ac": gz[2 * third:]}
+
+
+def test_part_names_follow_split():
+    names = [fetch._part_name(i).removeprefix(fetch.PART_PREFIX) for i in (0, 1, 25, 26, 27, 675)]
+    assert names == ["aa", "ab", "az", "ba", "bb", "zz"]
+
+
+def test_a_store_in_parts_installs_the_same_database(monkeypatch, tmp_path, capsys):
+    configure(monkeypatch, tmp_path)
+    gz = built_store_gz(tmp_path)
+    monkeypatch.setenv("LABEL_STORE_SHA256", hashlib.sha256(gz).hexdigest())
+    monkeypatch.setenv("LABEL_STORE_REQUIRED", "1")
+
+    fake_release(monkeypatch, gz)
+    assert fetch.main() == 0
+    single = fetch.DEFAULT_OUT.read_bytes()
+    fetch.DEFAULT_OUT.unlink()
+    capsys.readouterr()
+
+    fetched = fake_parts_release(monkeypatch, split3(gz))
+    assert fetch.main() == 0
+    assert "1 rows" in capsys.readouterr().out
+    assert fetched == [fetch.ASSET + suffix for suffix in (".part-aa", ".part-ab", ".part-ac")]
+    assert fetch.DEFAULT_OUT.read_bytes() == single == gzip.decompress(gz)
+
+
+def test_parts_listed_out_of_order_are_joined_in_name_order(monkeypatch, tmp_path):
+    configure(monkeypatch, tmp_path)
+    gz = built_store_gz(tmp_path)
+    monkeypatch.setenv("LABEL_STORE_SHA256", hashlib.sha256(gz).hexdigest())
+    parts = split3(gz)
+    shuffled = [fetch.ASSET + ".part-ac", "notes.txt", fetch.ASSET + ".part-aa", fetch.ASSET + ".part-ab"]
+    fetched = fake_parts_release(monkeypatch, {**parts, "notes.txt": b"unrelated"}, order=shuffled)
+    assert fetch.main() == 0
+    assert fetched == sorted(parts)
+    assert fetch.DEFAULT_OUT.read_bytes() == gzip.decompress(gz)
+
+
+def test_the_single_asset_wins_over_parts(monkeypatch, tmp_path):
+    configure(monkeypatch, tmp_path)
+    gz = built_store_gz(tmp_path)
+    monkeypatch.setenv("LABEL_STORE_SHA256", hashlib.sha256(gz).hexdigest())
+    # The parts here are junk and gapped: with the whole file present they are not looked at.
+    fetched = fake_parts_release(monkeypatch, {fetch.ASSET + ".part-ab": b"junk", fetch.ASSET: gz})
+    assert fetch.main() == 0
+    assert fetched == [fetch.ASSET]
+
+
+def test_a_missing_middle_part_fails_and_installs_nothing(monkeypatch, tmp_path, capsys):
+    configure(monkeypatch, tmp_path)
+    gz = built_store_gz(tmp_path)
+    monkeypatch.setenv("LABEL_STORE_SHA256", hashlib.sha256(gz).hexdigest())
+    parts = split3(gz)
+    del parts[fetch.ASSET + ".part-ab"]
+    fetched = fake_parts_release(monkeypatch, parts)
+    assert fetch.main() == 1
+    err = capsys.readouterr().err
+    assert "part-ab" in err and "TOKEN-SECRET" not in err
+    assert fetched == []  # refused before any download
+    assert not fetch.DEFAULT_OUT.exists() and not fetch.DEFAULT_OUT.with_suffix(".partial").exists()
+
+
+def test_parts_that_do_not_start_at_aa_fail(monkeypatch, tmp_path, capsys):
+    configure(monkeypatch, tmp_path)
+    parts = split3(built_store_gz(tmp_path))
+    del parts[fetch.ASSET + ".part-aa"]
+    fake_parts_release(monkeypatch, parts)
+    assert fetch.main() == 1
+    assert "part-aa" in capsys.readouterr().err
+    assert not fetch.DEFAULT_OUT.exists()
+
+
+def test_a_wrong_checksum_over_the_joined_parts_leaves_nothing(monkeypatch, tmp_path, capsys):
+    configure(monkeypatch, tmp_path)  # LABEL_STORE_SHA256 is all zeros
+    fetched = fake_parts_release(monkeypatch, split3(built_store_gz(tmp_path)))
+    assert fetch.main() == 1
+    assert "checksum mismatch" in capsys.readouterr().err
+    assert len(fetched) == 3
+    assert not fetch.DEFAULT_OUT.exists() and not fetch.DEFAULT_OUT.with_suffix(".partial").exists()
+
+
+def test_a_release_with_neither_the_file_nor_parts_fails(monkeypatch, tmp_path, capsys):
+    configure(monkeypatch, tmp_path)
+    fetched = fake_parts_release(monkeypatch, {"notes.txt": b"unrelated"})
+    assert fetch.main() == 1
+    err = capsys.readouterr().err
+    assert f"has no {fetch.ASSET}" in err and "part" in err
+    assert fetched == [] and not fetch.DEFAULT_OUT.exists()
+
+
+def test_a_part_url_off_the_api_is_refused(monkeypatch, tmp_path, capsys):
+    configure(monkeypatch, tmp_path)
+    called = []
+
+    def fake_get(url, token, accept):
+        called.append(url)
+        release = {"assets": [{"name": fetch.ASSET + ".part-aa", "url": part_url(1)},
+                              {"name": fetch.ASSET + ".part-ab", "url": "https://evil.example/x"}]}
+        return contextlib.nullcontext(io.BytesIO(json.dumps(release).encode()))
+
+    monkeypatch.setattr(fetch, "_get", fake_get)
+    assert fetch.main() == 1
+    assert called == ["https://api.github.com/repos/o/r/releases/tags/t"]  # no part was fetched
+    assert "TOKEN-SECRET" not in capsys.readouterr().err

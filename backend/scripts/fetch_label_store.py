@@ -7,7 +7,7 @@ with a read-only token that arrives as a build secret (a Render "Secret File"
 named label_store_token), so the token never lands in a layer or in git.
 
     LABEL_STORE_REPO     owner/name of the private repository
-    LABEL_STORE_TAG      release tag holding label_store.db.gz
+    LABEL_STORE_TAG      release tag holding label_store.db.gz (or its parts, below)
     LABEL_STORE_SHA256   sha256 of label_store.db.gz; the build fails on a mismatch
     token                /run/secrets/label_store_token (or LABEL_STORE_TOKEN_FILE)
     LABEL_STORE_REQUIRED 1 (the image's default) makes a missing store fail the build
@@ -18,6 +18,13 @@ shipping without its labels unnoticed. Not required (CI's image job, a fork, a
 local build): prints why and exits 0, and the site screens against the label
 files only. Configured but the download or checksum fails, or the installed
 file does not open as a label store with rows in it: exits 1 either way.
+
+GitHub refuses a release asset of 2 GiB or more, so a larger gzip is uploaded
+in parts: label_store.db.gz.part-aa, .part-ab, ... as written by
+`split -b <size> label_store.db.gz label_store.db.gz.part-`. A release with no
+label_store.db.gz has its parts downloaded in name order and joined back into
+that one file; a release that has it is read as before, whatever else it
+holds. LABEL_STORE_SHA256 is always the sha256 of the whole gzip, never of a part.
 
     python -m scripts.fetch_label_store
 """
@@ -36,6 +43,7 @@ import urllib.request
 from pathlib import Path
 
 ASSET = "label_store.db.gz"
+PART_PREFIX = ASSET + ".part-"  # split's output: .part-aa, .part-ab, ...
 DEFAULT_OUT = Path(__file__).resolve().parent.parent / "data" / "label_store.db"
 API = "https://api.github.com"
 
@@ -90,6 +98,37 @@ def _get(url: str, token: str, accept: str) -> urllib.request.addinfourl:
     return _OPENER.open(_request(url, token, accept), timeout=120)
 
 
+def _part_name(index: int) -> str:
+    """The name `split` gives its `index`-th piece: aa, ab, ... az, ba, ... zz."""
+    return PART_PREFIX + chr(97 + index // 26) + chr(97 + index % 26)
+
+
+def _assets(release: dict, repo: str, tag: str) -> list[dict]:
+    """The release assets that make up the gzip, in the order to join them.
+
+    The whole file as one asset wins. Otherwise its parts, which must be the
+    run split writes, from aa with no gap: a part that was never uploaded
+    would otherwise only show up as a checksum that does not match.
+    """
+    assets = [a for a in release.get("assets", []) if isinstance(a, dict)]
+    chosen = [a for a in assets if a.get("name") == ASSET][:1]
+    if not chosen:
+        chosen = sorted((a for a in assets if str(a.get("name", "")).startswith(PART_PREFIX)),
+                        key=lambda a: a["name"])
+        if not chosen:
+            raise LookupError(f"release {tag} has no {ASSET} and no {PART_PREFIX}aa, -ab, ... parts")
+        if len(chosen) > 26 * 26:
+            raise LookupError(f"release {tag} has more {PART_PREFIX}* assets than split's two letters name")
+        for index, part in enumerate(chosen):
+            if part["name"] != _part_name(index):
+                raise LookupError(f"release {tag} has {part['name']} where {_part_name(index)} should be: "
+                                  "the parts must run aa, ab, ... with none missing")
+    for asset in chosen:
+        if not str(asset.get("url", "")).startswith(f"{API}/repos/{repo}/releases/assets/"):
+            raise LookupError(f"release {tag} lists {asset['name']} at an unexpected URL")
+    return chosen
+
+
 def main() -> int:
     repo = os.getenv("LABEL_STORE_REPO", "").strip()
     tag = os.getenv("LABEL_STORE_TAG", "").strip()
@@ -110,15 +149,15 @@ def main() -> int:
     try:
         with _get(f"{API}/repos/{repo}/releases/tags/{tag}", token, "application/vnd.github+json") as r:
             release = json.load(r)
-        asset = next((a for a in release.get("assets", []) if a.get("name") == ASSET), None)
-        if asset is None:
-            raise LookupError(f"release {tag} has no {ASSET}")
-        if not str(asset.get("url", "")).startswith(f"{API}/repos/{repo}/releases/assets/"):
-            raise LookupError(f"release {tag} lists {ASSET} at an unexpected URL")
+        assets = _assets(release, repo, tag)
         with tempfile.TemporaryDirectory() as tmpdir:
             gz = Path(tmpdir) / ASSET
-            with _get(asset["url"], token, "application/octet-stream") as r, open(gz, "wb") as fh:
-                shutil.copyfileobj(r, fh, 1 << 20)
+            # Parts are appended to the one file as they arrive, so the small
+            # build machine never holds the gzip twice.
+            with open(gz, "wb") as fh:
+                for asset in assets:
+                    with _get(asset["url"], token, "application/octet-stream") as r:
+                        shutil.copyfileobj(r, fh, 1 << 20)
             install(gz, sha, DEFAULT_OUT)
         rows = _rows(DEFAULT_OUT)
     except Exception as exc:  # noqa: BLE001 -- any failure must fail the build loudly
