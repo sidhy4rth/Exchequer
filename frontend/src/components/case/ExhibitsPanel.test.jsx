@@ -98,6 +98,38 @@ describe('the exhibit register panel', () => {
     expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ holder: 'Insp. Rao', note: 'for the s.63 certificate' })
   })
 
+  it('adds a note to an ended exhibit and shows it in the history', async () => {
+    const ended = { ...ROW, status: 'released', history: [...ROW.history, { at: '2026-11-13T05:00:00Z', action: 'changed', changed: ['status'], note: "court's order" }] }
+    const calls = api({
+      'GET /trace/c1/exhibits': { body: { exhibits: [ended] } },
+      'PATCH /exhibits/e1': (b) => ({ body: { ...ended, history: [...ended.history, { at: '2026-11-13T06:00:00Z', action: 'noted', note: b.note }] } }),
+    })
+    const user = userEvent.setup()
+    open()
+    expect(await screen.findByText(/status changed \(court's order\)/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hand over' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Add a note' }))
+    await user.type(screen.getByLabelText('Note'), 'owner signed the receipt')
+    await user.click(screen.getByRole('button', { name: 'Record the note' }))
+    await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true))
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ note: 'owner signed the receipt' })
+  })
+
+  it('shows a note entry as a note, never as "recorded"', async () => {
+    const noted = { ...ROW, history: [...ROW.history, { at: '2026-11-13T06:00:00Z', action: 'noted', note: 'seal intact' }] }
+    api({ 'GET /trace/c1/exhibits': { body: { exhibits: [noted] } } })
+    open()
+    expect(await screen.findByText(/note: seal intact/)).toBeInTheDocument()
+    expect(screen.getAllByText(/recorded$/)).toHaveLength(1)
+  })
+
+  it('says so when the exhibits cannot be loaded, instead of showing none', async () => {
+    api({ 'GET /trace/c1/exhibits': { status: 500, body: { detail: 'boom' } } })
+    open()
+    expect(await screen.findByRole('alert')).toHaveTextContent(/could not be loaded/)
+    expect(screen.getByRole('alert').closest('details')).toHaveAttribute('open') // not hidden in a shut panel
+  })
+
   it('says what the server refused', async () => {
     api({
       'GET /trace/c1/exhibits': { body: { exhibits: [] } },

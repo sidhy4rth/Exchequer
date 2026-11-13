@@ -33,6 +33,15 @@ export function size(bytes) {
 }
 
 /** The last check of a file against this exhibit, if any: { tone, text }. */
+// One chain-of-custody entry in words. An entry of a kind this screen does not know
+// shows its own name, never "recorded", so nothing is passed off as the first entry.
+export function historyText(h) {
+  if (h.action === 'checked') return `file checked: ${h.result}`
+  if (h.action === 'changed') return `${(h.changed ?? []).join(', ').replaceAll('_', ' ')} changed${h.note ? ` (${h.note})` : ''}`
+  if (h.action === 'noted') return `note: ${h.note}`
+  return h.action === 'recorded' ? 'recorded' : String(h.action)
+}
+
 export function lastCheck(e) {
   const c = [...(e.history ?? [])].reverse().find((h) => h.action === 'checked')
   if (!c) return null
@@ -77,10 +86,12 @@ export default function ExhibitsPanel({ result }) {
   const [form, setForm] = useState(null)
   const [error, setError] = useState(null)
   const [said, setSaid] = useState(null)
-  const [act, setAct] = useState({}) // exhibit_id → { mode: 'handover' | 'end', holder, status, note }
+  const [act, setAct] = useState({}) // exhibit_id → { mode: 'handover' | 'end' | 'note', holder, status, note }
   const hasher = useHasher()
 
-  const load = () => caseId && fetchCaseExhibits(caseId).then((d) => setRows(d.exhibits ?? [])).catch(() => {})
+  // A failed load says so: an empty register would read as "this case has no exhibits".
+  const load = () => caseId && fetchCaseExhibits(caseId).then((d) => setRows(d.exhibits ?? []))
+    .catch(() => setError('The exhibits could not be loaded. Reload the page before relying on this list.'))
   useEffect(() => { load() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!caseId) return null
 
@@ -122,12 +133,13 @@ export default function ExhibitsPanel({ result }) {
   const setAct1 = (id, values) => setAct((a) => ({ ...a, [id]: { ...a[id], ...values } }))
   async function apply(ex) {
     const a = pick(ex.exhibit_id)
-    const changes = a.mode === 'handover' ? { holder: a.holder ?? '', note: a.note ?? '' } : { status: a.status ?? 'released', note: a.note ?? '' }
+    const changes = a.mode === 'handover' ? { holder: a.holder ?? '', note: a.note ?? '' }
+      : a.mode === 'note' ? { note: a.note ?? '' } : { status: a.status ?? 'released', note: a.note ?? '' }
     if (await run(() => updateExhibit(ex.exhibit_id, changes))) setAct((all) => ({ ...all, [ex.exhibit_id]: {} }))
   }
 
   return (
-    <details className="card sec exhibits-panel" open={rows.length > 0}>
+    <details className="card sec exhibits-panel" open={rows.length > 0 || Boolean(error)}>
       <summary><span className="micro">Exhibits · {rows.length}</span><span className="note">forensic files, by their hashes</span></summary>
       <div className="body requests-panel">
         {rows.map((ex) => {
@@ -160,9 +172,12 @@ export default function ExhibitsPanel({ result }) {
                   <button type="button" onClick={() => setAct1(ex.exhibit_id, { mode: a.mode === 'end' ? null : 'end' })}>Release or destroy</button>
                 </div>
               )}
+              <div className="request-add">
+                <button type="button" onClick={() => setAct1(ex.exhibit_id, { mode: a.mode === 'note' ? null : 'note' })}>Add a note</button>
+              </div>
               {a.mode && (
                 <div className="fields ex-act">
-                  {a.mode === 'handover' ? (
+                  {a.mode === 'note' ? null : a.mode === 'handover' ? (
                     <label>To whom<input value={a.holder ?? ''} onChange={(e) => setAct1(ex.exhibit_id, { holder: e.target.value })} /></label>
                   ) : (
                     <label>What happened
@@ -171,16 +186,16 @@ export default function ExhibitsPanel({ result }) {
                       </select>
                     </label>
                   )}
-                  <label>Why<input value={a.note ?? ''} onChange={(e) => setAct1(ex.exhibit_id, { note: e.target.value })} placeholder={a.mode === 'handover' ? 'e.g. for the s.63 certificate' : "e.g. on the court's order"} /></label>
+                  <label>{a.mode === 'note' ? 'Note' : 'Why'}<input value={a.note ?? ''} onChange={(e) => setAct1(ex.exhibit_id, { note: e.target.value })}
+                    placeholder={a.mode === 'handover' ? 'e.g. for the s.63 certificate' : a.mode === 'note' ? 'e.g. seal checked, intact' : "e.g. on the court's order"} /></label>
                   <button type="button" disabled={!(a.note ?? '').trim() || (a.mode === 'handover' && !(a.holder ?? '').trim())} onClick={() => apply(ex)}>
-                    {a.mode === 'handover' ? 'Record the hand-over' : 'Record it'}
+                    {a.mode === 'handover' ? 'Record the hand-over' : a.mode === 'note' ? 'Record the note' : 'Record it'}
                   </button>
                 </div>
               )}
               <div className="history">
                 {ex.history.map((h, i) => (
-                  <span key={i}>{String(h.at).slice(0, 10)} {h.action === 'checked' ? `file checked: ${h.result}`
-                    : h.action === 'changed' ? `${h.changed.join(', ').replaceAll('_', ' ')} changed${h.note ? ` (${h.note})` : ''}` : 'recorded'}</span>
+                  <span key={i}>{String(h.at).slice(0, 10)} {historyText(h)}</span>
                 ))}
               </div>
             </div>

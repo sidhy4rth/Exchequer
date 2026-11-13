@@ -17,6 +17,8 @@
 - Screen: `frontend/src/components/case/ExhibitsPanel.jsx` (+ `.css`, `.test.jsx`) at the end of the Evidence tab (one import, one line in `EvidenceTab.jsx`); `sha256.js` (+ test), a chunked SHA-256 checked against node's at every padding boundary, about 57 MB/s. All 1,547 frontend tests and the build pass.
 - End to end in Chromium against the real server: a 40 MB file hashed in the browser in 1.4 s, equal to `sha256sum`; the largest request sent was 355 bytes; the same file matched, a copy with one byte changed did not; a hand-over recorded with its reason. axe (WCAG 2.2 AA) clean in both themes at desktop and phone size.
 
+- Review fixes (13 Nov): CodeQL read the SHA-256 tests' random bytes as a biased random number, so the tests use fixed seeded bytes. Server: two writes to one exhibit at once retry and then answer 409 instead of a 500; a full history refuses a new entry instead of dropping its oldest (it had a 200-entry cap that would have lost "recorded"), now capped at 1,000; a note on its own is kept as a "noted" entry; the duplicate-file check looks only at exhibits the viewer may read, so another unit's label is never shown. Screen: "Add a note" on every exhibit, ended ones included; note entries shown as notes; a failed load says so and opens the panel.
+
 ## Decisions
 
 - The file is never uploaded. The officer records the hash the tool printed; the browser can check a file against it by computing its SHA-256 locally, in chunks, so a phone or disk image of many GB never leaves the machine and never has to fit in memory.
