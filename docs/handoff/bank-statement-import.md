@@ -5,7 +5,7 @@
 - **Branch**: four stacked PRs: `feat/bank-statement-import` (the record), `feat/bank-statement-import-routes` (the routes), `feat/bank-statement-import-parse` (reading and matching in the browser), `feat/bank-statement-import-panel` (the panel on the Evidence tab)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: in progress, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default)
+- **Status**: first slice built in four stacked PRs, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default); awaiting review
 
 ## Done
 
@@ -13,6 +13,7 @@
 - The record (#146): table `statement_imports` (migration `g7_statements_1`, after `g7_domain_lookups_1`), `backend/app/statement_imports.py` (checks each saved row: date, debit or credit, amount, reference shape, an exchange name only when canonical and in the row's own text, free text refused when it looks like a key), flag `EXCHEQUER_STATEMENT_IMPORT`.
 - The routes: `GET /trace/{case_id}/statements` (the saved rows this browser or unit may read, and the canonical exchange names; `enabled: false` with the flag off) and `POST /trace/{case_id}/statements` (403 with the flag off). Audited as `statement.list` and `statement.save` with counts only.
 - Reading and matching in the browser: `frontend/src/components/case/statement.js`. Header names (`HEADERS`), the account lines above the header skipped, day-first dates (dd/mm/yyyy, dd-MMM-yyyy, ISO for exchanges), amounts with lakh grouping, Dr/Cr suffixes, brackets and signs; NEFT (16), RTGS (22) and UPI/IMPS (12-digit RRN, only in a UPI or IMPS narration) references; canonical exchange names; hashes of the trace; a timeline beside the payments and the arrivals at the attributed exchange address, in India's time.
+- The panel: `frontend/src/components/case/StatementPanel.jsx` on the Evidence tab, shown only when the server says the flag is on. Pick bank or exchange and the currency, choose a CSV, check the columns, add the rupee amounts the complaint reports, tick the rows to keep, save. Saved rows are listed with the case.
 
 ## Decisions
 
@@ -25,12 +26,13 @@
 
 ## Next
 
-1. Panel: `frontend/src/components/case/StatementPanel.jsx` on the Evidence tab.
+1. Try the panel with real (redacted) statements, then turn the flag on in production (render.yaml and Render's environment), and remove the flag once it has shipped.
+2. Withdrawing a saved import entered by mistake, with a reason kept in its history, like the identifier register.
+3. CDR and IPDR (the rest of feature 5) are not started.
 
 ## Open questions
 
 - Real statements from the banks officers see most (SBI, HDFC, ICICI, Axis) and from WazirX/CoinDCX would show which header names and narration shapes to add. Owner to obtain redacted samples.
-- Withdrawing a saved import entered by mistake is not built yet.
 
 ## Files mid-change (do not touch)
 
