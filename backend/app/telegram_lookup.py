@@ -4,7 +4,7 @@ For a Telegram username on a case's identifier register (identifiers.py), fetch 
 one public preview page https://t.me/<username> -- the page anyone sees without
 Telegram or a login -- and keep what that page itself shows: whether it shows an
 account at all, its display title, what kind of account the page says it is
-(channel, group, user or bot), the subscriber or member count as written, the
+(channel, group, bot, or "account" for a user's own), the subscriber or member count as written, the
 description, and a verified, scam or fake badge when the markup carries one.
 
 What this is not: no login, no API key, no Telegram API, no messages, no link on
@@ -148,7 +148,7 @@ def _kind(extras: list[str], action: str, context: str) -> str:
     if "preview group" in context or "join group" in action or "member" in words:
         return "group"
     if "send message" in action:
-        return "user"
+        return "account"  # a user's own account: the page offers to message it
     return ""
 
 

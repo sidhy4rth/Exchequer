@@ -63,9 +63,9 @@ def test_a_bot_page_keeps_its_users_line_but_not_its_own_username():
     assert (shown["type"], shown["count_text"], shown["title"]) == ("bot", "4 321 monthly users", "Sample Wallet Bot")
 
 
-def test_a_user_page_says_user_and_has_no_count():
+def test_a_user_page_says_account_and_has_no_count():
     shown = telegram_lookup.parse_page(page("user"))
-    assert (shown["type"], shown["count_text"], shown["description"]) == ("user", "", "")
+    assert (shown["type"], shown["count_text"], shown["description"]) == ("account", "", "")
 
 
 def test_missing_parts_are_empty_and_an_unstated_type_stays_unstated():
