@@ -1,0 +1,189 @@
+{
+ "_recorded": "Real answers from keyless public endpoints, recorded on 2026-11-15 for tests/test_tether_lifts.py. Each entry keeps the request that was sent and the response body as received. trongrid_removed_events was asked with min/max_block_timestamp one hour either side of the 12 Nov 2026 release, so it holds that one event.",
+ "ethereum_eth_call": {
+  "url": "https://ethereum-rpc.publicnode.com",
+  "request": [
+   {
+    "jsonrpc": "2.0",
+    "id": 0,
+    "method": "eth_call",
+    "params": [
+     {
+      "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "data": "0xe47d60600000000000000000000000000007f1253511e3e9312df8f180db96f0000000ad"
+     },
+     "latest"
+    ]
+   }
+  ],
+  "response": [
+   {
+    "jsonrpc": "2.0",
+    "id": 0,
+    "result": "0x0000000000000000000000000000000000000000000000000000000000000001"
+   }
+  ]
+ },
+ "tron_eth_call": {
+  "url": "https://tron-evm-rpc.publicnode.com",
+  "addresses": [
+   "T9yGhjmHZCqiujMZX1DjYgRVRN36VxgR7u",
+   "TDLcRL3ExZPiCsBQbDcfppdsGCULY4Zh3Q"
+  ],
+  "request": [
+   {
+    "jsonrpc": "2.0",
+    "id": 0,
+    "method": "eth_call",
+    "params": [
+     {
+      "to": "0xa614f803b6fd780986a42c78ec9c7f77e6ded13c",
+      "data": "0xe47d6060000000000000000000000000000316f968b63dd795c0e94b0edb4ecfda731657"
+     },
+     "latest"
+    ]
+   },
+   {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "eth_call",
+    "params": [
+     {
+      "to": "0xa614f803b6fd780986a42c78ec9c7f77e6ded13c",
+      "data": "0xe47d606000000000000000000000000024f4a94a0b17ad58b6fa3ff93fe6a087ffe6a455"
+     },
+     "latest"
+    ]
+   }
+  ],
+  "response": [
+   {
+    "jsonrpc": "2.0",
+    "id": 0,
+    "result": "0x0000000000000000000000000000000000000000000000000000000000000001"
+   },
+   {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
+   }
+  ]
+ },
+ "trongrid_triggerconstantcontract": {
+  "url": "https://api.trongrid.io/wallet/triggerconstantcontract",
+  "request": {
+   "owner_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+   "contract_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+   "visible": true,
+   "function_selector": "isBlackListed(address)",
+   "parameter": "00000000000000000000000024f4a94a0b17ad58b6fa3ff93fe6a087ffe6a455"
+  },
+  "response": {
+   "transaction": {
+    "raw_data": {
+     "ref_block_bytes": "cf66",
+     "ref_block_hash": "2236c8895a278df4",
+     "expiration": 1794681231000,
+     "contract": [
+      {
+       "parameter": {
+        "value": {
+         "owner_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+         "contract_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+         "data": "e47d606000000000000000000000000024f4a94a0b17ad58b6fa3ff93fe6a087ffe6a455"
+        },
+        "type_url": "type.googleapis.com/protocol.TriggerSmartContract"
+       },
+       "type": "TriggerSmartContract"
+      }
+     ],
+     "timestamp": 1794681173439
+    },
+    "ret": [
+     {}
+    ],
+    "raw_data_hex": "0a02cf6622082236c8895a278df44098add9da9d345a8e01081f1289010a31747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e54726967676572536d617274436f6e747261637412540a1541a614f803b6fd780986a42c78ec9c7f77e6ded13c121541a614f803b6fd780986a42c78ec9c7f77e6ded13c2224e47d606000000000000000000000000024f4a94a0b17ad58b6fa3ff93fe6a087ffe6a45570bfebd5da9d34",
+    "txID": "4515d4b3e49f987285ce075efc7e2c68ff3b230d066a919b2b15a1c0aa72cdbe",
+    "visible": true
+   },
+   "constant_result": [
+    "0000000000000000000000000000000000000000000000000000000000000000"
+   ],
+   "result": {
+    "result": true
+   },
+   "energy_used": 4658,
+   "energy_penalty": 3587
+  }
+ },
+ "trongrid_removed_events": {
+  "url": "https://api.trongrid.io/v1/contracts/TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t/events",
+  "params": {
+   "event_name": "RemovedBlackList",
+   "limit": 200,
+   "order_by": "block_timestamp,asc",
+   "min_block_timestamp": 1794510855000,
+   "max_block_timestamp": 1794518055000
+  },
+  "response": {
+   "data": [
+    {
+     "block_number": 87946868,
+     "block_timestamp": 1794514455000,
+     "caller_contract_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+     "contract_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+     "event_index": 1,
+     "event_name": "RemovedBlackList",
+     "result": {
+      "0": "0x24f4a94a0b17ad58b6fa3ff93fe6a087ffe6a455",
+      "_user": "0x24f4a94a0b17ad58b6fa3ff93fe6a087ffe6a455"
+     },
+     "result_type": {
+      "_user": "address"
+     },
+     "event": "RemovedBlackList(address indexed _user)",
+     "transaction_id": "094d2b9b4dd37bf621941524d2843557ea4b35a2dd6bca162bcf76cfe13b767c"
+    },
+    {
+     "block_number": 87947731,
+     "block_timestamp": 1794517044000,
+     "caller_contract_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+     "contract_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+     "event_index": 1,
+     "event_name": "RemovedBlackList",
+     "result": {
+      "0": "0xa94558521a6bbbfc8dfafbf31d387a872e2da66e",
+      "_user": "0xa94558521a6bbbfc8dfafbf31d387a872e2da66e"
+     },
+     "result_type": {
+      "_user": "address"
+     },
+     "event": "RemovedBlackList(address indexed _user)",
+     "transaction_id": "8eaaf69f669749f4c0adc0e6bffa8d1e472f5e8fd4d444f0a4212e3ff24f7c12"
+    }
+   ],
+   "success": true,
+   "meta": {
+    "at": 1794681176008,
+    "page_size": 2
+   }
+  }
+ },
+ "held_entries": {
+  "_from": "backend/data/frozen_labels_tron.json as last replayed (2026-09-23), before the lift re-check",
+  "labels": {
+   "T9yGhjmHZCqiujMZX1DjYgRVRN36VxgR7u": {
+    "category": "frozen",
+    "entity": "Tether (USDT freeze)",
+    "label": "USDT frozen by Tether on 2022-06-30",
+    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 465308f7ef340fd6d5f0d08ee3bac17175ddead82a4d905ef59863c1e7bb5b9e"
+   },
+   "TDLcRL3ExZPiCsBQbDcfppdsGCULY4Zh3Q": {
+    "category": "frozen",
+    "entity": "Tether (USDT freeze)",
+    "label": "USDT frozen by Tether on 2026-01-29",
+    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 5ceb1e1e72dfb8bf89510a94c8765f64a4dc608efd6f9ef3c7b454633c169b39"
+   }
+  }
+ }
+}

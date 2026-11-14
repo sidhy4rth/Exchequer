@@ -93,6 +93,59 @@ describe('the reported identifiers panel', () => {
     expect(screen.getByRole('form', { name: 'Add a reported identifier' })).toBeInTheDocument()
   })
 
+  it('keeps the keyboard on the panel: the new identifier takes focus once added, and a refusal leaves it on the button', async () => {
+    let rows = []
+    let refuse = true
+    api({
+      'GET /trace/c1/identifiers': () => ({ body: { identifiers: rows } }),
+      'POST /trace/c1/identifiers': (b) => {
+        if (refuse) return { status: 400, body: { detail: "Enter the website's domain name, not an IP address." } }
+        rows = [{ ...ROW, identifier_id: 'i2', value: 'other-shop.in', entered: 'other-shop.in', context: '' }]
+        return { status: 201, body: { ...rows[0], ...b } }
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add a reported identifier' }))
+    await user.type(screen.getByLabelText('Website domain'), 'other-shop.in')
+    const button = screen.getByRole('button', { name: 'Add to the case' })
+    button.focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+    expect(button).toHaveFocus()
+    refuse = false
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Add a reported identifier' })).toBeNull())
+    const added = (await screen.findByText('other-shop.in')).closest('.request-row')
+    await waitFor(() => expect(added).toHaveFocus()) // the form is gone: the new row takes its place
+  })
+
+  it('keeps the keyboard on the row once a withdrawal or a note is recorded', async () => {
+    let rows = [ROW]
+    api({
+      'GET /trace/c1/identifiers': () => ({ body: { identifiers: rows } }),
+      'PATCH /identifiers/i1': (b) => {
+        rows = [{ ...ROW, ...(b.status ? { status: b.status } : { notes: b.note }) }]
+        return { body: rows[0] }
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    const row = (await screen.findByText('scam-shop.in')).closest('.request-row')
+    await user.click(screen.getByRole('button', { name: 'Add a note' }))
+    await user.type(screen.getByLabelText('Note'), 'site down since 10 Nov')
+    screen.getByRole('button', { name: 'Record the note' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Record the note' })).toBeNull())
+    await waitFor(() => expect(row).toHaveFocus()) // the note's form is gone: its row takes its place
+    await user.click(screen.getByRole('button', { name: 'Withdraw' }))
+    await user.type(screen.getByLabelText('Why'), 'typed wrongly')
+    screen.getByRole('button', { name: 'Withdraw it' }).focus()
+    await user.keyboard('{Enter}')
+    await screen.findByText('Withdrawn')
+    await waitFor(() => expect(row).toHaveFocus()) // the Withdraw button is gone too
+  })
+
   it('withdraws only with a reason, and the row stays', async () => {
     let rows = [ROW]
     const calls = api({

@@ -86,6 +86,24 @@ def test_refile_removes_a_whitehat_or_bot_entry():
     assert refile({"category": STOLEN, "entity": "x", "label": "Uniswap V2: BOT", "source": "x"}) is None
 
 
+def _forget_label_files():
+    """Drop the cached exchange, router, token and casino matchers, so the next
+    never-flag check reads the label files under whatever DATA_DIR is then."""
+    from app import never_flag, risk_matcher
+    never_flag.clear_cache()
+    risk_matcher.clear_label_caches()
+
+
+@pytest.fixture
+def real_label_files():
+    """The never-flag check built from the repository's own label files, not from
+    whatever an earlier test left cached (a matcher built under a tmp DATA_DIR has
+    no exchanges in it)."""
+    _forget_label_files()
+    yield
+    _forget_label_files()
+
+
 @pytest.fixture
 def threat_files(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DATA_DIR", tmp_path)
@@ -109,7 +127,8 @@ def threat_files(tmp_path, monkeypatch):
     }}
     (tmp_path / "threat_labels.json").write_text(json.dumps(eth))
     (tmp_path / "threat_labels_bsc.json").write_text(json.dumps(bsc))
-    return tmp_path
+    yield tmp_path
+    _forget_label_files()  # matchers built from tmp_path must not outlive it
 
 
 def test_recategorise_is_offline_and_idempotent(threat_files):
@@ -217,7 +236,7 @@ def test_import_scam_lists_files_reports_as_scams_and_copies_only_used_accounts_
     assert used in bsc and dusted not in bsc  # a 1-wei balance is not use
 
 
-def test_a_scam_list_never_labels_an_exchange_router_or_token(monkeypatch, tmp_path, capsys):
+def test_a_scam_list_never_labels_an_exchange_router_or_token(real_label_files, monkeypatch, tmp_path, capsys):
     """r1-labels-data-1: the scam-list import skips infrastructure before it spends a call."""
     import contextlib
 
