@@ -8,11 +8,13 @@ Free text refuses private keys and seed phrases. Throwaway SQLite, no network.
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, false, inspect, select
+from sqlalchemy.exc import IntegrityError
 
 from app import assets, freeze_requests, models, ownership, tasks
 from app.auth import User
@@ -391,6 +393,48 @@ def test_a_suggestion_taken_up_while_the_list_was_being_read_is_not_added_twice(
         add(source=source)
     assert len(tasks.list_for(viewer(), "case-1")) == 1
 
+
+def test_a_suggestion_added_by_two_requests_at_the_same_moment_is_stored_once(monkeypatch):
+    """Both writes pass the check in their own session before either commits: the database refuses the second."""
+    rid = request(sent_at=days_ago(10))
+    source = f"request:{rid}:follow_up"
+    [seen] = tasks.suggestions(viewer(), "case-1")
+    add(source=source)
+    with monkeypatch.context() as m:
+        m.setattr(tasks, "_suggestion", lambda *_: seen)  # read before the first was stored
+        m.setattr(tasks, "_readable", lambda _viewer: false())  # and its row not yet committed when checked
+        with pytest.raises(TaskError, match="no longer applies"):
+            add(source=source)
+    with models.session() as s:
+        assert s.scalars(select(models.CaseTask.source).where(models.CaseTask.source == source)).all() == [source]
+
+
+def test_the_store_keeps_one_task_per_suggestion_and_any_number_typed_by_hand():
+    def row(source, case_id="case-1", status="open"):
+        return models.CaseTask(id=str(uuid.uuid4()), owner_hash="h", case_id=case_id, title="t", status=status,
+                               source=source, created_at="x", updated_at="x")
+    with models.session() as s:
+        s.add_all([row(""), row(""), row("asset:1:order"), row("asset:1:order", case_id="case-2")])
+        s.commit()
+    # Declined (dropped) or done, a suggestion's task still holds its place: it is not suggested again.
+    for status in ("open", "dropped", "done"):
+        with models.session() as s, pytest.raises(IntegrityError):
+            s.add(row("asset:1:order", status=status))
+            s.commit()
+
+
+def test_the_one_task_per_suggestion_index_is_partial_on_postgres_and_sqlite():
+    from sqlalchemy.dialects import postgresql, sqlite
+    from sqlalchemy.schema import CreateIndex
+
+    [index] = [i for i in models.CaseTask.__table__.indexes if i.name == "uq_case_tasks_case_source"]
+    assert index.unique and [c.name for c in index.columns] == ["case_id", "source"]
+    for dialect in (postgresql.dialect(), sqlite.dialect()):
+        sql = str(CreateIndex(index).compile(dialect=dialect))
+        assert sql.startswith("CREATE UNIQUE INDEX") and "WHERE source <> ''" in sql
+    with models._engine.connect() as conn:
+        [made] = [i for i in inspect(conn).get_indexes("case_tasks") if i["name"] == "uq_case_tasks_case_source"]
+    assert made["unique"] and made["column_names"] == ["case_id", "source"]
 
 def test_made_up_or_other_peoples_suggestions_are_refused():
     rid = request(sent_at=days_ago(10))

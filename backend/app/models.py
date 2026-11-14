@@ -376,6 +376,9 @@ class CaseTask(Base):
     row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
 
     __mapper_args__ = {"version_id_col": row_version}
+    # One task per suggestion, open or closed (migration g7_tasks_2); any number typed by hand.
+    __table_args__ = (Index("uq_case_tasks_case_source", "case_id", "source", unique=True,
+                            postgresql_where=text("source <> ''"), sqlite_where=text("source <> ''")),)
 
 
 class Batch(Base):

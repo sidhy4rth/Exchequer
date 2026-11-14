@@ -30,6 +30,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 
 from . import assets, freeze_requests, models
@@ -156,7 +157,15 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any = None)
             created_at=now, updated_at=now, history_json=json.dumps(history), **row,
         )
         s.add(r)
-        s.commit()
+        try:
+            s.commit()
+        except IntegrityError as exc:
+            # Another request took the same suggestion up between our check and this
+            # commit: the store's one-task-per-suggestion index (g7_tasks_2) refused it.
+            s.rollback()
+            if not source:
+                raise
+            raise TaskError(GONE) from exc
         s.refresh(r)
         return summary(r)
 
