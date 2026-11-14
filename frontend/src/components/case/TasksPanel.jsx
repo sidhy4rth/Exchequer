@@ -47,6 +47,11 @@ export default function TasksPanel({ result }) {
   // click would otherwise add the task twice.
   const adding = useRef(false)
   const [saving, setSaving] = useState(false)
+  // A task just added takes the keyboard's place: the form whose button was pressed is gone.
+  const [added, setAdded] = useState(null)
+  const addedRow = useRef(null)
+  const addButton = useRef(null)
+  useEffect(() => { if (added) (addedRow.current ?? addButton.current)?.focus() }, [added])
 
   const load = () => caseId && fetchCaseTasks(caseId).then((d) => {
     const tasks = d.tasks ?? []
@@ -84,7 +89,11 @@ export default function TasksPanel({ result }) {
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
   async function save(e) {
     e.preventDefault()
-    if (await once(() => addTask(caseId, form))) setForm(null)
+    let made
+    if (await once(async () => { made = await addTask(caseId, form) })) {
+      setForm(null)
+      setAdded({ id: made?.task_id })
+    }
   }
   async function decide(t) {
     const w = why[t.task_id]
@@ -101,7 +110,7 @@ export default function TasksPanel({ result }) {
     const title = plain(t.title)
     const hintId = `tk-due-hint-${t.task_id}`
     return (
-      <div className="request-row" key={t.task_id}>
+      <div className="request-row" key={t.task_id} {...(added && t.task_id === added.id ? { ref: addedRow, tabIndex: -1 } : {})}>
         <div className="top">
           <span className="nm">{title}</span>
           <span className={`pill ${d.tone}`}>{d.text}</span>
@@ -167,7 +176,7 @@ export default function TasksPanel({ result }) {
         {open.map(row)}
 
         <div className="request-add">
-          {!form && <button type="button" onClick={() => setForm(EMPTY)}>Add a task</button>}
+          {!form && <button type="button" ref={addButton} onClick={() => setForm(EMPTY)}>Add a task</button>}
         </div>
 
         {form && (
@@ -179,7 +188,8 @@ export default function TasksPanel({ result }) {
               <label className="wide">Notes<textarea rows={2} value={form.notes} onChange={set('notes')} /></label>
             </div>
             <div className="request-add">
-              <button type="submit" className="tk-save" disabled={saving || !form.title.trim()}>Add the task</button>
+              {/* Marked, not disabled, while it saves: it stays focusable, so the keyboard keeps its place. */}
+              <button type="submit" className="tk-save" disabled={!form.title.trim()} aria-disabled={saving || undefined}>Add the task</button>
               <button type="button" className="quiet" onClick={() => setForm(null)}>Cancel</button>
             </div>
           </form>
