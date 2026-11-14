@@ -3,7 +3,7 @@
 - **Feature**: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop
 - **Issue**: #189
 - **Branch**: `feat/privacy-protocol-category` (PR 1, contract), `feat/privacy-protocol-trace` (PR 2, stacked), `feat/privacy-protocol-ui` (PR 3, stacked)
-- **Current**: nobody (awaiting review, then the owner's yes before the flag is turned on)
+- **Current**: nobody (awaiting review; the owner approved on 14 Nov, as relayed by the lead, so the flag goes on after merge)
 - **Last worked on**: Sidhyarth, 2026-11-14
 - **Status**: built behind `EXCHEQUER_PRIVACY_CATEGORY` (off); all three PRs ready for review
 
@@ -34,8 +34,10 @@
 
 ## Next
 
-1. Owner: say yes or no to turning the flag on (and to moving Privacy Pools out of the mixers).
-2. If yes: set `EXCHEQUER_PRIVACY_CATEGORY=1` on Render; later retire the flag (delete the `config.PRIVACY_CATEGORY`
+1. After review and merge of all three PRs: turn the flag on. Add to `render.yaml` under `envVars`
+   `- key: EXCHEQUER_PRIVACY_CATEGORY` / `value: "1"` (as `EXCHEQUER_OSINT_LOOKUPS` is), or set the variable in the
+   Render dashboard (Environment), and redeploy; `/health` lists the flag as on.
+2. The owner approved the category and moving Privacy Pools to it on 14 Nov (relayed by the lead). Later retire the flag (delete the `config.PRIVACY_CATEGORY`
    branches in `risk_matcher._risk_matcher` and `pipeline.run_trace`), add the privacy file to `LISTS`, and move
    Privacy Pools out of `threat_labels.json`.
 
