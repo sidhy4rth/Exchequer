@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addIdentifier, fetchCaseIdentifiers, lookUpIdentifier, updateIdentifier } from '../../api'
 import { plain } from '../../text'
@@ -134,6 +134,10 @@ export default function IdentifiersPanel({ result }) {
   const [tgLookups, setTgLookups] = useState(false)
   const [lookupsNote, setLookupsNote] = useState('') // why there is no lookup button (the demo caller)
   const [busy, setBusy] = useState(null) // identifier_id being looked up
+  // What a lookup found takes the keyboard's place once it is shown.
+  const [looked, setLooked] = useState(null) // { id } of the identifier just looked up
+  const lookedRef = useRef(null)
+  useEffect(() => { if (looked) lookedRef.current?.focus() }, [looked])
 
   // A failed load says so: an empty list would read as "the victim reported nothing else".
   const load = () => caseId && fetchCaseIdentifiers(caseId).then((d) => { setRows(d.identifiers ?? []); setLookups(Boolean(d.lookups_enabled)); setTgLookups(Boolean(d.telegram_lookups_enabled)); setLookupsNote(d.lookups_note ?? '') })
@@ -158,8 +162,9 @@ export default function IdentifiersPanel({ result }) {
     if (await run(() => updateIdentifier(row.identifier_id, changes))) setAct((all) => ({ ...all, [row.identifier_id]: {} }))
   }
   async function lookUp(row) {
+    if (busy === row.identifier_id) return
     setBusy(row.identifier_id)
-    try { await run(() => lookUpIdentifier(row.identifier_id)) } finally { setBusy(null) }
+    try { if (await run(() => lookUpIdentifier(row.identifier_id))) setLooked({ id: row.identifier_id }) } finally { setBusy(null) }
   }
   const active = rows.filter((r) => r.status === 'active').length
   const activeDomain = rows.some((r) => r.kind === 'domain' && r.status === 'active')
@@ -185,10 +190,15 @@ export default function IdentifiersPanel({ result }) {
               )}
               {row.notes && <p className="note">{plain(row.notes)}</p>}
               {row.status === 'active' && <AlsoIn others={row.also_in} />}
-              {row.lookup && (row.kind === 'telegram' ? <TelegramPage lookup={row.lookup} /> : <Lookup lookup={row.lookup} />)}
+              {row.lookup && (
+                <div role="group" aria-label="What the lookup found" tabIndex={-1} ref={looked?.id === row.identifier_id ? lookedRef : undefined}>
+                  {row.kind === 'telegram' ? <TelegramPage lookup={row.lookup} /> : <Lookup lookup={row.lookup} />}
+                </div>
+              )}
               <div className="request-add">
                 {((lookups && row.kind === 'domain') || (tgLookups && row.kind === 'telegram')) && row.status === 'active' && (
-                  <button type="button" disabled={busy === row.identifier_id} onClick={() => lookUp(row)}>
+                  // Marked, not disabled, while it looks up: it stays focusable, so the keyboard keeps its place.
+                  <button type="button" aria-disabled={busy === row.identifier_id || undefined} onClick={() => lookUp(row)}>
                     {busy === row.identifier_id ? 'Looking up…' : row.lookup ? 'Look up again' : row.kind === 'telegram' ? 'Read the public t.me page' : 'Look up public records'}
                   </button>
                 )}
