@@ -13,6 +13,14 @@ shows what was done in the case and in what order.
 
 Free-text fields refuse private keys and seed phrases (assets.looks_like_secret),
 as the asset and exhibit registers do.
+
+Suggestions (suggestions()) are tasks the case's own records already call for:
+a request sent with no reply after a week, an urgent freeze letter waiting for
+its sign-off or approved and not sent, a freeze not yet in the asset register,
+and held funds with no court order on custody. They are worked out each time
+from those records, never stored, and name only what the records say. Taking
+one up adds a task carrying the suggestion's key (source); so does declining
+it, as a task dropped with the reason, so a suggestion never quietly returns.
 """
 from __future__ import annotations
 
@@ -24,7 +32,7 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm.exc import StaleDataError
 
-from . import models
+from . import assets, freeze_requests, models
 from .assets import NOT_A_KEY, looks_like_secret
 from .display_text import one_line
 
@@ -96,7 +104,8 @@ def summary(r: models.CaseTask) -> dict[str, Any]:
     days_left = (date.fromisoformat(r.due_on) - _today()).days if r.due_on else None
     return {
         "task_id": r.id, "case_id": r.case_id, "title": r.title, "assignee": r.assignee, "due_on": r.due_on,
-        "status": r.status, "notes": r.notes, "created_at": r.created_at, "updated_at": r.updated_at,
+        "status": r.status, "notes": r.notes, "source": r.source or "",
+        "created_at": r.created_at, "updated_at": r.updated_at,
         "days_left": days_left if r.status == "open" else None,
         "overdue": r.status == "open" and days_left is not None and days_left < 0,
         "history": json.loads(r.history_json or "[]"),
@@ -104,12 +113,20 @@ def summary(r: models.CaseTask) -> dict[str, Any]:
 
 
 def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any = None) -> dict[str, Any]:
+    """Add a task. With `source`, it is the suggestion by that key (its title and
+    due date come from the case's records, not the caller); with `note` as well,
+    the suggestion is declined: the task is added already dropped, with that reason."""
+    source = str(fields.get("source") or "").strip()
+    suggestion = _suggestion(viewer, case_id, source) if source else None
     row = {
-        "title": _text(fields, "title", required=True),
+        "title": suggestion["title"] if suggestion else _text(fields, "title", required=True),
         "assignee": _text(fields, "assignee"),
-        "due_on": _due_on(fields.get("due_on")),
+        "due_on": _due_on(fields.get("due_on")) or (suggestion["due_on"] if suggestion else ""),
         "notes": _text(fields, "notes"),
     }
+    note = _text(fields, "note") if fields.get("note") else ""
+    if note and not suggestion:
+        raise TaskError("Only a suggestion can be declined with a reason; add the task, then drop it.")
     with models.session() as s:
         if s.scalar(select(models.Case.id).where(models.Case.id == case_id)) is None:
             raise TaskError("No case with that id.")
@@ -119,11 +136,14 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any = None)
         if s.scalar(count) >= MAX_TOTAL:
             raise TaskError("The task list is full on this deployment; ask its operator.")
         now = _now()
+        history: list[dict[str, Any]] = [{"at": now, "by": _who(viewer), "action": "added",
+                                          **({"from": "suggestion"} if suggestion else {})}]
+        if note:
+            history.append({"at": now, "by": _who(viewer), "action": "dropped", "changed": ["status"], "note": note})
         r = models.CaseTask(
-            id=str(uuid.uuid4()), owner_hash=owner, case_id=case_id, status="open",
-            officer_id=getattr(viewer, "officer_id", None), unit_id=getattr(viewer, "unit_id", None),
-            created_at=now, updated_at=now,
-            history_json=json.dumps([{"at": now, "by": _who(viewer), "action": "added"}]), **row,
+            id=str(uuid.uuid4()), owner_hash=owner, case_id=case_id, status="dropped" if note else "open",
+            source=source, officer_id=getattr(viewer, "officer_id", None), unit_id=getattr(viewer, "unit_id", None),
+            created_at=now, updated_at=now, history_json=json.dumps(history), **row,
         )
         s.add(r)
         s.commit()
@@ -224,3 +244,72 @@ def due_for(viewer: Any, within_days: int = 7) -> list[dict[str, Any]]:
             models.CaseTask.due_on <= latest, _readable(viewer))
             .order_by(models.CaseTask.due_on, models.CaseTask.created_at).limit(100)).all()
         return [summary(r) for r in rows]
+
+
+# -- suggestions ---------------------------------------------------------------------------
+def _day(iso: str | None) -> str:
+    """'2026-11-03T10:00:00+00:00' or '2026-11-03' as '3 Nov 2026'."""
+    try:
+        d = date.fromisoformat(str(iso)[:10])
+    except ValueError:
+        return ""
+    return f"{d.day} {d:%b %Y}"
+
+
+def _from_requests(viewer: Any, case_id: str, registered: set[str]) -> list[dict[str, Any]]:
+    out = []
+    for q in freeze_requests.list_for(viewer.owner_hash, case_id, viewer=viewer):
+        rid, who = q["request_id"], one_line(q["recipient"] or "the recipient")
+        if q["status"] == "sent" and q["follow_up"]:
+            out.append({"source": f"request:{rid}:follow_up", "due_on": "",
+                        "title": f"Follow up with {who}: no reply in {q['days_waiting']} days",
+                        "why": f"Logged as sent on {_day(q['sent_at'])}; no reply has been recorded since."})
+        elif q["status"] == "awaiting_signoff":
+            out.append({"source": f"request:{rid}:signoff", "due_on": "",
+                        "title": f"Get a second officer's sign-off on the urgent freeze letter to {who}",
+                        "why": "An urgent freeze letter cannot be sent until a second officer of the unit approves it."})
+        elif q["status"] == "ready":
+            by = (q.get("signoff") or {}).get("by")
+            out.append({"source": f"request:{rid}:send", "due_on": "",
+                        "title": f"Send the approved freeze letter to {who}",
+                        "why": f"Signed off{f' by {one_line(by)}' if by else ''}; not yet logged as sent."})
+        elif q["status"] == "frozen" and rid not in registered:
+            out.append({"source": f"request:{rid}:register", "due_on": "",
+                        "title": f"Record the funds {who} froze in the asset register",
+                        "why": "The request is marked Frozen, and no row in the asset register points to it."})
+    return out
+
+
+def _from_assets(viewer: Any, case_id: str) -> tuple[list[dict[str, Any]], set[str]]:
+    """Held funds with no court order on custody yet, and the requests the register already covers."""
+    out, registered = [], set()
+    for a in assets.list_for(viewer, case_id):
+        if a["request_id"]:
+            registered.add(a["request_id"])
+        if a["status"] == "held" and not a["order_ref"]:
+            out.append({"source": f"asset:{a['asset_id']}:order", "due_on": a["deadline"],
+                        "title": f"Get the court's order on custody of {a['amount']} {one_line(a['asset'])}",
+                        "why": f"Seized on {_day(a['seized_on'])}; the asset register counts the order as due "
+                               f"{assets.DEADLINE_DAYS} days later, on {_day(a['deadline'])}."})
+    return out, registered
+
+
+def suggestions(viewer: Any, case_id: str) -> list[dict[str, Any]]:
+    """Tasks the case's records call for that no task (open or closed) has taken up yet."""
+    if getattr(viewer, "owner_hash", None) is None:
+        return []
+    held, registered = _from_assets(viewer, case_id)
+    found = _from_requests(viewer, case_id, registered) + held
+    with models.session() as s:
+        taken = set(s.scalars(select(models.CaseTask.source).where(
+            models.CaseTask.case_id == case_id, models.CaseTask.source != "", _readable(viewer))).all())
+    return [x for x in found if x["source"] not in taken]
+
+
+def _suggestion(viewer: Any, case_id: str, source: str) -> dict[str, Any]:
+    if viewer is None:
+        raise TaskError("A suggestion can only be taken up by the browser or unit that can see it.")
+    for x in suggestions(viewer, case_id):
+        if x["source"] == source:
+            return x
+    raise TaskError("That suggestion no longer applies to this case (it may already be a task). Reload the list.")

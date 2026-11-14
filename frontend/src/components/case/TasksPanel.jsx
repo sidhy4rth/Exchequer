@@ -7,6 +7,9 @@ import './TasksPanel.css'
 // be done in this case, who it is assigned to (a name), by when, and what came
 // of it. Done needs no reason; dropping a task or opening it again does.
 // Nothing is deleted: every change is in the task's history.
+// Suggestions are tasks the case's own records call for (a request with no
+// reply, funds with no court order): added in one click, or declined with a
+// reason, which is kept as a dropped task so the suggestion does not return.
 
 const day = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 const days = (n) => `${n} day${n === 1 ? '' : 's'}`
@@ -26,7 +29,8 @@ const ACTION = { added: 'added', changed: 'changed', done: 'done', dropped: 'dro
 
 /** One history entry as a short line: "14 Nov 2026 dropped: Bank answered on the portal". */
 export function historyLine(h) {
-  const what = h.action === 'changed' && h.changed ? `changed ${h.changed.join(', ').replaceAll('_on', ' date')}` : ACTION[h.action] ?? h.action
+  const what = h.action === 'changed' && h.changed ? `changed ${h.changed.join(', ').replaceAll('_on', ' date')}`
+    : h.action === 'added' && h.from === 'suggestion' ? 'added from a suggestion' : ACTION[h.action] ?? h.action
   return `${String(h.at).slice(0, 10)} ${what}${h.note ? `: ${h.note}` : ''}`
 }
 
@@ -35,6 +39,8 @@ const EMPTY = { title: '', assignee: '', due_on: '', notes: '' }
 export default function TasksPanel({ result }) {
   const caseId = result?.case_id
   const [rows, setRows] = useState([])
+  const [suggested, setSuggested] = useState([])
+  const [decline, setDecline] = useState({}) // suggestion source → reason being typed
   const [form, setForm] = useState(null) // the add form's values while it is open
   const [why, setWhy] = useState({}) // task_id → { status, note } while a reason is being typed
   const [error, setError] = useState(null)
@@ -46,9 +52,10 @@ export default function TasksPanel({ result }) {
   const load = () => caseId && fetchCaseTasks(caseId).then((d) => {
     const tasks = d.tasks ?? []
     setRows(tasks)
+    setSuggested(d.suggested ?? [])
     if (!arrived.current) {
       arrived.current = true
-      if (tasks.some((t) => t.status === 'open')) setExpanded(true)
+      if (tasks.some((t) => t.status === 'open') || d.suggested?.length) setExpanded(true)
     }
   }).catch(() => {})
   useEffect(() => { load() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -68,6 +75,12 @@ export default function TasksPanel({ result }) {
   async function decide(t) {
     const w = why[t.task_id]
     if (await change(t, { status: w.status, note: w.note.trim() })) setWhy((o) => ({ ...o, [t.task_id]: undefined }))
+  }
+
+  async function take(x, note) {
+    if (await run(() => addTask(caseId, note ? { source: x.source, note } : { source: x.source }))) {
+      setDecline((o) => ({ ...o, [x.source]: undefined }))
+    }
   }
 
   const open = rows.filter((t) => t.status === 'open')
@@ -133,10 +146,45 @@ export default function TasksPanel({ result }) {
     <details className="card sec tasks-panel" open={expanded} onToggle={(e) => setExpanded(e.currentTarget.open)}>
       <summary>
         <span className="micro">Tasks · {open.length} open</span>
-        <span className="note">{overdue ? `${overdue} overdue` : 'what is left to do in this case'}</span>
+        <span className="note">{[overdue && `${overdue} overdue`, suggested.length && `${suggested.length} suggested`].filter(Boolean).join(' · ') || 'what is left to do in this case'}</span>
       </summary>
       <div className="body requests-panel">
         {open.map(row)}
+
+        {suggested.length > 0 && (
+          <section className="tk-suggested" aria-label="Suggested from this case's records">
+            <p className="micro">Suggested from this case&apos;s records</p>
+            {suggested.map((x) => {
+              const reason = decline[x.source]
+              return (
+                <div className="request-row" key={x.source}>
+                  <div className="top">
+                    <span className="nm">{plain(x.title)}</span>
+                    {x.due_on && <span className="pill">Due {day(x.due_on)}</span>}
+                  </div>
+                  <p className="note">{plain(x.why)}</p>
+                  {reason === undefined ? (
+                    <div className="tk-actions">
+                      <button type="button" className="tk-done" onClick={() => take(x)}>Add as a task</button>
+                      <button type="button" className="quiet" onClick={() => setDecline((o) => ({ ...o, [x.source]: '' }))}>Not needed…</button>
+                    </div>
+                  ) : (
+                    <div className="fields">
+                      <label className="wide">Why is it not needed?
+                        <input autoFocus value={reason} maxLength={300}
+                          onChange={(e) => setDecline((o) => ({ ...o, [x.source]: e.target.value }))} />
+                      </label>
+                      <div className="tk-actions">
+                        <button type="button" disabled={!reason.trim()} onClick={() => take(x, reason.trim())}>Not needed</button>
+                        <button type="button" className="quiet" onClick={() => setDecline((o) => ({ ...o, [x.source]: undefined }))}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </section>
+        )}
 
         <div className="request-add">
           {!form && <button type="button" onClick={() => setForm(EMPTY)}>Add a task</button>}

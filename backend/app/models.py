@@ -368,6 +368,8 @@ class CaseTask(Base):
     due_on: Mapped[str] = mapped_column(String(10), default="")  # YYYY-MM-DD, India's date, or "" for none
     status: Mapped[str] = mapped_column(String(16))  # open | done | dropped
     notes: Mapped[str] = mapped_column(Text, default="")
+    # The suggestion it came from (tasks.suggestions), e.g. "asset:<id>:order"; "" when typed by hand.
+    source: Mapped[str] = mapped_column(String(80), default="", server_default="")
     created_at: Mapped[str] = mapped_column(String(32))
     updated_at: Mapped[str] = mapped_column(String(32))
     history_json: Mapped[str] = mapped_column(Text, default="[]")

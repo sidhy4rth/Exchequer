@@ -16,6 +16,11 @@ const TASK = {
 const DONE = { ...TASK, task_id: 't2', title: 'Get the court order', assignee: 'Insp. Rao', status: 'done', days_left: null,
   history: [...TASK.history, { at: '2026-11-15T05:00:00Z', by: 'demo', action: 'done', changed: ['status'] }] }
 
+const SUGGESTED = {
+  source: 'asset:a1:order', title: "Get the court's order on custody of 635.000000 USDT", due_on: '2026-12-16',
+  why: 'Seized on 1 Nov 2026; the asset register counts the order as due 45 days later, on 16 Dec 2026.',
+}
+
 function api(routes) {
   const calls = []
   vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
@@ -105,6 +110,44 @@ describe('the case task list', () => {
     expect(container.querySelector('.tasks-panel')).toHaveAttribute('open')
   })
 
+  it("shows what the case's records suggest, and opens for them", async () => {
+    api({ 'GET /trace/c1/tasks': { body: { tasks: [], suggested: [SUGGESTED] } } })
+    const { container } = open()
+    expect(await screen.findByText("Get the court's order on custody of 635.000000 USDT")).toBeInTheDocument()
+    expect(screen.getByText(/Seized on 1 Nov 2026/)).toBeInTheDocument()
+    expect(screen.getByText('Due 16 Dec 2026')).toBeInTheDocument()
+    expect(screen.getByText('1 suggested')).toBeInTheDocument()
+    expect(container.querySelector('.tasks-panel')).toHaveAttribute('open')
+  })
+
+  it('adds a suggestion as a task by its key alone: the server words it from the records', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [], suggested: [SUGGESTED] } },
+      'POST /trace/c1/tasks': { status: 201, body: { ...TASK, source: SUGGESTED.source } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add as a task' }))
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({ source: SUGGESTED.source })
+  })
+
+  it('asks why before declining a suggestion, and sends the reason', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [], suggested: [SUGGESTED] } },
+      'POST /trace/c1/tasks': { status: 201, body: { ...TASK, status: 'dropped' } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Not needed…' }))
+    const decline = screen.getByRole('button', { name: 'Not needed' })
+    expect(decline).toBeDisabled()
+    await user.type(screen.getByLabelText('Why is it not needed?'), 'Order made on 10 Nov')
+    await user.click(decline)
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({ source: SUGGESTED.source, note: 'Order made on 10 Nov' })
+  })
+
   it("shows the server's refusal", async () => {
     api({
       'GET /trace/c1/tasks': { body: { tasks: [] } },
@@ -142,6 +185,7 @@ describe('what a due date says', () => {
       .toBe('2026-11-14 changed assignee, due date')
     expect(historyLine({ at: '2026-11-15T05:00:00Z', action: 'reopened', changed: ['status'], note: 'Wrong account' }))
       .toBe('2026-11-15 opened again: Wrong account')
+    expect(historyLine({ at: '2026-11-14T05:00:00Z', action: 'added', from: 'suggestion' })).toBe('2026-11-14 added from a suggestion')
   })
 })
 

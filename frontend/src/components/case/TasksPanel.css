@@ -14,3 +14,7 @@
 .tasks-panel .tk-form label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
 .tasks-panel .tk-form input, .tasks-panel .tk-form textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 5px 7px; border: 1px solid var(--rule-strong); border-radius: var(--r); background: var(--panel); color: var(--ink); min-width: 0; }
 .tasks-panel .tk-form textarea { resize: vertical; }
+/* Suggestions from the case's records: set apart from the officer's own tasks by a rule and a label. */
+.tasks-panel .tk-suggested { margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.tasks-panel .tk-suggested > .micro { margin: 0 0 4px; }
+.tasks-panel .tk-suggested .note { margin: 4px 0; }
