@@ -33,7 +33,7 @@ from typing import Any
 
 import networkx as nx
 
-from . import config, label_rules
+from . import config, exchange_status, label_rules
 from .etherscan_client import is_valid_address, normalize_address
 from .graph_builder import OUTGOING
 
@@ -76,7 +76,7 @@ def firm_account(label: str | None, exchange: str | None = None) -> str | None:
 
     With `exchange`, only when the firm is not that exchange: a row still
     attributed to the firm itself is not yet another firm's account there."""
-    found = FIRM_ACCOUNT.match((label or "").strip())
+    found = FIRM_ACCOUNT.match(exchange_status.marked((label or "").strip(), None))  # without "(defunct)"
     if not found:
         return None
     firm = found["firm"].strip()
