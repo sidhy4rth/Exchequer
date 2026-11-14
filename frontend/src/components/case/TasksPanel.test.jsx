@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -67,6 +67,45 @@ describe('the case task list', () => {
     await user.click(save)
     await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
     expect(calls.find((c) => c.method === 'POST').body).toEqual({ title: 'Collect the phone extraction', assignee: 'SI Pal', due_on: '', notes: '' })
+  })
+
+  it("names each open task's fields after the task, so several rows are told apart", async () => {
+    const OTHER = { ...TASK, task_id: 't3', title: 'Get the court order', assignee: 'Insp. Rao', due_on: '2026-11-20' }
+    api({ 'GET /trace/c1/tasks': { body: { tasks: [TASK, OTHER] } } })
+    open()
+    expect(await screen.findByRole('textbox', { name: 'Assigned to: Send the notice to the bank' })).toHaveValue('SI Iyer')
+    expect(screen.getByRole('textbox', { name: 'Assigned to: Get the court order' })).toHaveValue('Insp. Rao')
+    expect(screen.getByLabelText('Due: Send the notice to the bank')).toHaveValue('2026-11-16')
+    expect(screen.getByLabelText('Due: Get the court order')).toHaveValue('2026-11-20')
+  })
+
+  it('keeps the due date when a half-typed one is left, and says so', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [TASK] } },
+      'PATCH /tasks/t1': (b) => ({ body: { ...TASK, ...b } }),
+    })
+    open()
+    const due = await screen.findByLabelText('Due: Send the notice to the bank')
+    // A browser reports a half-typed date as an empty value with badInput set.
+    Object.defineProperty(due, 'validity', { configurable: true, value: { badInput: true, valid: false } })
+    fireEvent.change(due, { target: { value: '' } })
+    fireEvent.blur(due)
+    expect(await screen.findByText(/Type the whole date/)).toBeInTheDocument()
+    expect(due).toHaveValue('2026-11-16')
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false)
+  })
+
+  it('clears the due date when it is emptied on purpose', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [TASK] } },
+      'PATCH /tasks/t1': (b) => ({ body: { ...TASK, ...b } }),
+    })
+    open()
+    const due = await screen.findByLabelText('Due: Send the notice to the bank')
+    fireEvent.change(due, { target: { value: '' } })
+    fireEvent.blur(due)
+    await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true))
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ due_on: '' })
   })
 
   it('marks a task done in one click', async () => {

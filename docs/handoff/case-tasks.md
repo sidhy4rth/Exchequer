@@ -31,6 +31,8 @@
 - A declined suggestion is a dropped task with the reason, so it never quietly returns and the decision is in the history; reopening it keeps the suggestion away too.
 - `source` came as its own migration (`g7_tasks_2`) rather than an edit to `g7_tasks_1`, which was already up for review in #122.
 - The panel opens on arrival when a task is open; after that only the officer folds it, so closing the last task does not snap it shut.
+- A task row's due date left half-typed (the browser reports it empty, with `badInput`) is not sent: the old date is put back and a hint says to type the whole date. An emptied field still clears the date.
+- Each open row's Assigned to and Due fields are named after the task (`aria-label` "Assigned to: <title>"), so a screen reader tells several rows apart.
 
 ## Next
 

@@ -18,3 +18,4 @@
 .tasks-panel .tk-suggested { margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--line); }
 .tasks-panel .tk-suggested > .micro { margin: 0 0 4px; }
 .tasks-panel .tk-suggested .note { margin: 4px 0; }
+.tasks-panel .tk-due-hint { grid-column: 1 / -1; margin: 0; }
