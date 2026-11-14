@@ -1,0 +1,12 @@
+/* The export scan on the Evidence tab (ExportScanPanel.jsx); tables reuse the Evidence tab's .ev-table. */
+.export-scan .body { display: flex; flex-direction: column; gap: 10px; }
+.export-scan .xs-file { display: inline-flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+.export-scan .xs-file input { font-size: 12px; max-width: 100%; }
+.export-scan .xs-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13px; }
+.export-scan .xs-progress progress { flex: 1 1 160px; height: 8px; accent-color: var(--go); }
+.export-scan .xs-summary { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.export-scan .xs-title { margin: 6px 0 0; font-size: 13px; font-weight: 600; }
+.export-scan .xs-seeds { padding: 8px 12px; border: 1px solid var(--risk-soft); border-radius: var(--r); }
+.export-scan .xs-seeds ul { margin: 6px 0; padding-left: 18px; font-size: 13px; }
+.export-scan .xs-table .xs-value { overflow-wrap: anywhere; font-size: 12px; }
+.export-scan .xs-table .xs-where { white-space: nowrap; }

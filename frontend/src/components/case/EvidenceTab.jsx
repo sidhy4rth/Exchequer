@@ -7,6 +7,7 @@ import { plain } from '../../text'
 import { ist, middle, mmss, num, txUrl } from './format'
 import ExhibitsPanel from './ExhibitsPanel'
 import IdentifiersPanel from './IdentifiersPanel'
+import ExportScanPanel from './ExportScanPanel'
 
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
@@ -345,6 +346,7 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
     </details>
     <ExhibitsPanel result={result} />
     <IdentifiersPanel result={result} />
+    <ExportScanPanel result={result} />
   </>
 }
 
