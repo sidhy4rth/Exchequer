@@ -24,7 +24,9 @@ Like request_letters.py, it drafts and does not decide:
   a marked blank. The legal provision is suggested in brackets, never asserted.
 * Notes for the officer come first, and are marked to be removed: the route the
   MHA's guidelines set (concurrence of the MHA's IS-II Division first, then the
-  Court, then the CBI's IPCC) and what goes with the draft.
+  Court, then the CBI's IPCC), what goes with the draft, and whether the MHA's
+  2019 list of treaty countries (Figure 3.6, data/mha_mlat_countries.txt) names
+  the requested country. The basis stays the officer's choice either way.
 
 Every draft says it is not valid until the Court issues it under its seal.
 """
@@ -43,6 +45,8 @@ from .request_letters import (BLANK, COMPANY_WALLET_KINDS, _amount_lines, _attri
                               _verify_lines)
 
 WORDING_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_letter_of_request.txt"
+# Figure 3.6 of the same guidelines: the countries with a treaty or agreement with India, as listed in 2019.
+COUNTRIES_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_mlat_countries.txt"
 SECTIONS = ("opening", "basis_treaty", "basis_reciprocity", "assurances", "limitation_of_use", "confidentiality",
             "closing")
 BASES = ("treaty", "reciprocity")
@@ -84,6 +88,49 @@ def wording_sha256() -> str:
     return hashlib.sha256(WORDING_FILE.read_bytes()).hexdigest()
 
 
+def countries_sha256() -> str:
+    """The country list's SHA-256, pinned in test_mlat_countries.py like the wording."""
+    return hashlib.sha256(COUNTRIES_FILE.read_bytes()).hexdigest()
+
+
+def _key(name: str) -> str:
+    return " ".join(name.split()).casefold()
+
+
+def treaty_countries() -> list[dict[str, str]]:
+    """Figure 3.6's rows: name, formal name (may be empty), instrument and year, status."""
+    rows = []
+    for line in COUNTRIES_FILE.read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.startswith("#"):
+            name, formal, instrument, status = (part.strip() for part in line.split("|"))
+            rows.append({"name": name, "formal": formal, "instrument": instrument, "status": status})
+    return rows
+
+
+def listed_country(country: str) -> dict[str, str] | None:
+    """The row whose name or formal name is exactly the officer's country (ignoring case and spacing);
+    no fuzzy match, so a spelling the MHA did not print is not guessed at."""
+    key = _key(country)
+    return next((r for r in treaty_countries() if key and key in (_key(r["name"]), _key(r["formal"]))), None)
+
+
+def _country_note(country: str) -> list[str]:
+    """Whether the MHA's 2019 list names the requested country: a note for the officer, never the letter,
+    and never a choice of basis."""
+    if not country:
+        return []
+    row = listed_country(country)
+    if row is None:
+        return _para(f"Treaty: {country} is not on the MHA's 2019 list (Figure 3.6) under that name; check the "
+                     "list for another spelling. If it is not there, reciprocity may be the route; confirm with "
+                     "the MHA (IS-II Division).", "  ")
+    status = ("; the list marks it signed but not yet in force, so confirm whether it is now in force and, if "
+              "it is, name it" if row["status"] != "listed" else "; confirm it is still in force and name it")
+    return _para(f"Treaty: the MHA's 2019 list (Figure 3.6) names {row['name']} among countries with a "
+                 f"treaty/agreement ({row['instrument']}){status}. The list may have changed since; the MHA's "
+                 "IS-II Division confirms.", "  ")
+
+
 def _details(raw: dict[str, Any]) -> dict[str, str]:
     """The officer's details, each on one line (so none can add a line, a forged heading, to the
     letter) and within its limit."""
@@ -113,7 +160,7 @@ def _heading(title: str) -> list[str]:
     return ["", title, "-" * len(title)]
 
 
-def _notes(exchange: str) -> list[str]:
+def _notes(exchange: str, country: str = "") -> list[str]:
     """For the officer, before the letter: the MHA's route and what goes with the draft."""
     src = "MHA guidelines of 4 December 2019 (F. No. 25016/52/2019-LC)"
     return [
@@ -133,6 +180,7 @@ def _notes(exchange: str) -> list[str]:
                "language the requested country requires, where it requires one. Figure 3.6 of the guidelines "
                "lists the countries with a treaty with India, their Central Authorities and their language "
                "requirements: check it, and the MHA's current list, for this country.", "  "),
+        *_country_note(country),
         *_para("The guidelines name CrPC s.166A as the power to issue the letter; its successor is BNSS s.112 "
                "(NCRB's BNSS-CrPC table). Confirm the provision with the Director of Prosecution.", "  "),
         *_para(f"Before this letter: a direct request to {exchange} is quicker where it answers one. Exchequer's "
@@ -225,7 +273,7 @@ def draft(case_id: str, result: dict[str, Any], raw: dict[str, Any],
         NOT_VALID,
         "Generated by Exchequer from a stored case. Nothing below has been sent.",
         "",
-        *_notes(exchange),
+        *_notes(exchange, d["country"]),
         "",
         "LETTER OF REQUEST (LETTER ROGATORY)",
         f"In the matter of {_or_blank(d['reference'], 'FIR / case number and police station')}",
