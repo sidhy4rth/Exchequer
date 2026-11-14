@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { plain } from '../../text'
 import './WithdrawImport.css'
 
@@ -30,7 +30,10 @@ export default function WithdrawImport({ name, onWithdraw }) {
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  if (!open) return <button type="button" className="wd-open" onClick={() => setOpen(true)}>Withdraw {name}…</button>
+  const opener = useRef(null)
+  const back = useRef(false) // Cancel puts the keyboard back on the button that opened the form
+  useEffect(() => { if (!open && back.current) { back.current = false; opener.current?.focus() } }, [open])
+  if (!open) return <button type="button" className="wd-open" ref={opener} onClick={() => setOpen(true)}>Withdraw {name}…</button>
   async function submit(e) {
     e.preventDefault()
     if (!reason.trim()) { setError('Say why it is withdrawn: the reason stays with the record.'); return }
@@ -40,10 +43,10 @@ export default function WithdrawImport({ name, onWithdraw }) {
   return (
     <form className="wd-form" onSubmit={submit}>
       <label>Why is it withdrawn? (kept with the record)
-        <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} required placeholder="e.g. saved against the wrong case" />
+        <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} required autoFocus placeholder="e.g. saved against the wrong case" />
       </label>
       <button type="submit" disabled={busy}>{busy ? 'Withdrawing…' : 'Withdraw'}</button>
-      <button type="button" onClick={() => { setOpen(false); setReason(''); setError(null) }} disabled={busy}>Cancel</button>
+      <button type="button" onClick={() => { back.current = true; setOpen(false); setReason(''); setError(null) }} disabled={busy}>Cancel</button>
       {error && <p className="note wd-error" role="alert">{error}</p>}
     </form>
   )

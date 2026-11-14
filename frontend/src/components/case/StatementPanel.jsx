@@ -50,15 +50,20 @@ export default function StatementPanel({ result }) {
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
   const [showWithdrawn, setShowWithdrawn] = useState(false)
-  const [done, setDone] = useState(null) // { count } once rows are saved
+  const [done, setDone] = useState(null) // { text } once rows are saved or withdrawn
+  const asked = useRef(0) // the latest listing asked for: an earlier answer arriving later is dropped
   const told = useRef(null)
-  // Saving clears the rows and the button pressed, so the status line takes the keyboard's place.
+  // Saving or withdrawing clears the rows or the form the keyboard was on, so the status line takes its place.
   useEffect(() => { if (done) told.current?.focus() }, [done])
 
   // The panel shows only once the server says the feature is on. A failed reload after
   // that says so: a short list would read as "nothing was saved".
-  const load = () => caseId && fetchCaseStatements(caseId, { withdrawn: showWithdrawn }).then(setInfo)
-    .catch(() => { if (info?.enabled) setError('Saved statement rows could not be loaded. Reload the page before relying on this list.') })
+  const load = () => {
+    if (!caseId) return undefined
+    const n = ++asked.current
+    return fetchCaseStatements(caseId, { withdrawn: showWithdrawn }).then((got) => { if (n === asked.current) setInfo(got) })
+      .catch(() => { if (n === asked.current && info?.enabled) setError('Saved statement rows could not be loaded. Reload the page before relying on this list.') })
+  }
   useEffect(() => { load() }, [caseId, showWithdrawn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsed = useMemo(() => (read?.records && columns ? statementRows(read.records, columns) : null), [read, columns])
@@ -101,20 +106,24 @@ export default function StatementPanel({ result }) {
       await saveStatementRows(caseId, { source, currency, title, rows: chosen.map(toSaved) })
       setRead(null); setColumns(null); setTitle('')
       await load()
-      setDone({ count: chosen.length })
+      setDone({ text: `Saved ${chosen.length} row${chosen.length === 1 ? '' : 's'} to the case, listed above.` })
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
   const saved = info?.imports ?? []
-  const withdraw = (id) => async (reason) => { await withdrawStatementImport(caseId, id, reason); await load() }
+  const withdraw = (id) => async (reason) => {
+    await withdrawStatementImport(caseId, id, reason)
+    await load()
+    setDone({ text: 'Rows withdrawn; they stay in the case record with the reason.' })
+  }
   return (
-    <details className="card sec statement-panel" open={saved.length > 0 || Boolean(error) || Boolean(read)}>
+    <details className="card sec statement-panel" open={saved.length > 0 || info.withdrawn_count > 0 || Boolean(error) || Boolean(read)}>
       <summary><span className="micro">Bank and exchange statements · {saved.filter((s) => !s.withdrawn).length}</span><span className="note">rows lined up with the trace</span></summary>
       <div className="body">
         {error && <p className="note st-error" role="alert">{error}</p>}
         <ShowWithdrawn count={info.withdrawn_count} shown={showWithdrawn} onChange={setShowWithdrawn} />
         {saved.map((item) => <Saved key={item.import_id} item={item} onWithdraw={info.can_withdraw ? withdraw(item.import_id) : null} />)}
-        {done && <p className="note" role="status" ref={told} tabIndex={-1}>Saved {done.count} row{done.count === 1 ? '' : 's'} to the case, listed above.</p>}
+        {done && <p className="note" role="status" ref={told} tabIndex={-1}>{done.text}</p>}
         <div className="st-pick">
           <label>Statement from
             <select value={source} onChange={(e) => chooseSource(e.target.value)}>

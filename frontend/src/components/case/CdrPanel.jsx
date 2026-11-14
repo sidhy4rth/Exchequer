@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { checkCdrNumbers, fetchCaseCdr, fetchCaseIdentifiers, saveCdrSummary, withdrawCdrImport } from '../../api'
 import { plain } from '../../text'
@@ -56,11 +56,18 @@ export default function CdrPanel({ result }) {
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('') // what was just done, for a screen reader
   const [showWithdrawn, setShowWithdrawn] = useState(false)
+  const asked = useRef(0) // the latest listing asked for: an earlier answer arriving later is dropped
+  const told = useRef(null)
 
-  const load = () => caseId && fetchCaseCdr(caseId, { withdrawn: showWithdrawn }).then((got) => {
-    setInfo(got)
-    if (got.enabled) fetchCaseIdentifiers(caseId).then((ids) => setPhones(casePhones(ids.identifiers))).catch(() => {})
-  }).catch(() => { if (info?.enabled) setError('Saved CDR summaries could not be loaded. Reload the page before relying on this list.') })
+  const load = () => {
+    if (!caseId) return undefined
+    const n = ++asked.current
+    return fetchCaseCdr(caseId, { withdrawn: showWithdrawn }).then((got) => {
+      if (n !== asked.current) return
+      setInfo(got)
+      if (got.enabled) fetchCaseIdentifiers(caseId).then((ids) => setPhones(casePhones(ids.identifiers))).catch(() => {})
+    }).catch(() => { if (n === asked.current && info?.enabled) setError('Saved CDR summaries could not be loaded. Reload the page before relying on this list.') })
+  }
   useEffect(() => { load() }, [caseId, showWithdrawn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsed = useMemo(() => (read?.records && columns ? cdrEvents(read.records, columns) : null), [read, columns])
@@ -112,13 +119,14 @@ export default function CdrPanel({ result }) {
     await withdrawCdrImport(caseId, id, reason)
     setDone('Summary withdrawn; it stays in the case record with the reason.')
     await load()
+    told.current?.focus() // the form the keyboard was on is gone
   }
   return (
-    <details className="card sec cdr-panel" open={saved.length > 0 || Boolean(error) || Boolean(read)}>
+    <details className="card sec cdr-panel" open={saved.length > 0 || info.withdrawn_count > 0 || Boolean(error) || Boolean(read)}>
       <summary><span className="micro">Call detail records · {saved.filter((s) => !s.withdrawn).length}</span><span className="note">contacts and handsets, read in this browser</span></summary>
       <div className="body">
         {error && <p className="note cdr-error" role="alert">{error}</p>}
-        <p className="note cdr-status" role="status">{done}</p>
+        <p className="note cdr-status" role="status" ref={told} tabIndex={-1}>{done}</p>
         <ShowWithdrawn count={info.withdrawn_count} shown={showWithdrawn} onChange={setShowWithdrawn} />
         {saved.map((item) => <Saved key={item.import_id} item={item} onWithdraw={info.can_withdraw ? withdraw(item.import_id) : null} />)}
         <label>CDR file (CSV; save an XLSX as CSV first)<input type="file" accept=".csv,text/csv" onChange={pickFile} /></label>

@@ -106,3 +106,79 @@ describe('withdrawing a saved CDR summary', () => {
     expect(screen.queryByText(/CDR \(test\)/)).toBeNull()
   })
 })
+
+describe('withdrawing, by keyboard and screen reader', () => {
+  it('moves the keyboard to the reason, and back to the button on Cancel', async () => {
+    api(() => statements([STANDING]))
+    render(<StatementPanel result={{ case_id: 'c1' }} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Withdraw these rows…' }))
+    expect(document.activeElement).toBe(screen.getByLabelText(/Why is it withdrawn/))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Withdraw these rows…' }))
+  })
+
+  it('announces a statement withdrawal and keeps the panel open when it was the last standing import', async () => {
+    let withdrawn = false
+    api(() => (withdrawn ? statements([], { withdrawn_count: 1 }) : statements([STANDING])), {
+      '/trace/c1/statements/s1/withdraw': { body: { ...STANDING, withdrawn: GONE.withdrawn } },
+    })
+    const { container } = render(<StatementPanel result={{ case_id: 'c1' }} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Withdraw these rows…' }))
+    await userEvent.type(screen.getByLabelText(/Why is it withdrawn/), 'Saved against the wrong case')
+    withdrawn = true
+    await userEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
+    const told = await screen.findByText(/Rows withdrawn; they stay in the case record with the reason/)
+    expect(told.getAttribute('role')).toBe('status')
+    expect(document.activeElement).toBe(told) // the form the keyboard was on is gone
+    expect(container.querySelector('details.statement-panel').open).toBe(true)
+  })
+
+  it('keeps the CDR panel open, and the keyboard on its status line, once its last summary is withdrawn', async () => {
+    const SUMMARY = { import_id: 'x1', title: 'CDR (test)', row_count: 1, created_at: '2026-11-14T10:00:00Z', withdrawn: null,
+      rows: [{ kind: 'imei', value: '000000000000011', events: 3, first: '2026-03-01', last: '2026-03-03' }] }
+    const cdr = (imports, more = {}) => ({ enabled: true, imports, rows_max: 200, check_max: 50, withdrawn_count: 0, can_withdraw: true, ...more })
+    let withdrawn = false
+    api(() => (withdrawn ? cdr([], { withdrawn_count: 1 }) : cdr([SUMMARY])), {
+      '/trace/c1/cdr/x1/withdraw': { body: { ...SUMMARY, withdrawn: GONE.withdrawn } },
+    })
+    const { container } = render(<MemoryRouter><CdrPanel result={{ case_id: 'c1' }} /></MemoryRouter>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Withdraw this summary…' }))
+    await userEvent.type(screen.getByLabelText(/Why is it withdrawn/), 'Wrong CDR file')
+    withdrawn = true
+    await userEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
+    const told = await screen.findByText(/Summary withdrawn; it stays in the case record/)
+    expect(document.activeElement).toBe(told)
+    expect(container.querySelector('details.cdr-panel').open).toBe(true)
+  })
+
+  it('does not close the panel when "Show withdrawn" is unticked with no standing import', async () => {
+    api((path) => (path.includes('withdrawn=1') ? statements([GONE], { withdrawn_count: 1 }) : statements([], { withdrawn_count: 1 })))
+    const { container } = render(<StatementPanel result={{ case_id: 'c1' }} />)
+    const toggle = await screen.findByLabelText('Show withdrawn (1)')
+    await userEvent.click(toggle)
+    await screen.findByText(/Wrong case \(test\)/)
+    await userEvent.click(screen.getByLabelText('Show withdrawn (1)'))
+    await waitFor(() => expect(screen.queryByText(/Wrong case \(test\)/)).toBeNull())
+    expect(container.querySelector('details.statement-panel').open).toBe(true)
+  })
+
+  it('lists what the toggle last asked for, whichever answer comes back first', async () => {
+    const answers = []
+    vi.stubGlobal('fetch', vi.fn((url) => new Promise((resolve) => {
+      const path = String(url).replace(/^\/api/, '')
+      const body = path.includes('withdrawn=1') ? statements([STANDING, GONE], { withdrawn_count: 1 }) : statements([STANDING], { withdrawn_count: 1 })
+      answers.push(() => resolve(new Response(JSON.stringify(body))))
+    })))
+    render(<StatementPanel result={{ case_id: 'c1' }} />)
+    await waitFor(() => expect(answers).toHaveLength(1))
+    answers[0]()
+    await userEvent.click(await screen.findByLabelText('Show withdrawn (1)')) // asks with withdrawn=1
+    await userEvent.click(screen.getByLabelText('Show withdrawn (1)')) // and without, at once
+    await waitFor(() => expect(answers).toHaveLength(3))
+    answers[2]() // the later question is answered first
+    answers[1]()
+    await waitFor(() => expect(screen.getByLabelText('Show withdrawn (1)').checked).toBe(false))
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.queryByText(/Wrong case \(test\)/)).toBeNull()
+  })
+})
