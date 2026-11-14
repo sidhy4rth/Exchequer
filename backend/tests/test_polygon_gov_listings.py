@@ -22,6 +22,8 @@ from conftest import addr, make_graph
 # N.D. Okla. 23-CR-333-SEH, order entered April 24, 2025: "Mnemonic Polygon (POL) WalletAddress
 # 0x06884E8FB446352aFba58bce270c9365D5511d51" (USAO notice, Internet Archive copy of 20260328).
 POLYGON_WALLET = "0x06884e8fb446352afba58bce270c9365d5511d51"
+# The same order's "Trust Wallet Ethereum 0x91e7B9AFbB4CC454aDB210e3ade38c8BD2eC17Bf ... ETH".
+ETHEREUM_WALLET = "0x91e7b9afbb4cc454adb210e3ade38c8bd2ec17bf"
 # An ordinary account: the first test vector in EIP-55, in no label file.
 ORDINARY = "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed"
 SEED, HOP = addr("5eed"), addr("a1")
@@ -61,9 +63,17 @@ def test_an_ordinary_address_is_not_flagged(chain):
     assert matcher.annotate(make_graph([(SEED, ORDINARY, 5.0)], seed=SEED)) == []
 
 
-def test_the_wallet_is_on_no_never_flag_list():
-    assert never_flag.kind("polygon", POLYGON_WALLET) is None
-    assert never_flag.reason("polygon", POLYGON_WALLET) is None
+def test_the_same_orders_ethereum_wallet_is_flagged_as_seized_on_ethereum():
+    meta = get_risk_matcher("ethereum").lookup(ETHEREUM_WALLET)
+    assert meta is not None and meta["category"] == SEIZED
+    assert "Northern District of Oklahoma, case 23-CR-333-SEH" in meta["source"]
+    assert "web.archive.org/web/20260328205455/" in meta["source"]
+
+
+@pytest.mark.parametrize("chain,address", [("polygon", POLYGON_WALLET), ("ethereum", ETHEREUM_WALLET)])
+def test_the_wallets_are_on_no_never_flag_list(chain, address):
+    assert never_flag.kind(chain, address) is None
+    assert never_flag.reason(chain, address) is None
 
 
 def _tx(n, src, dst, value, when):

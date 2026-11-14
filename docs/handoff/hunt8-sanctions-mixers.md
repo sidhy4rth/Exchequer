@@ -18,7 +18,8 @@
   Internet Archive were re-read in their snapshot on 14 Nov and added (Ethereum 11, Tron 3); 20 orders in all.
 - Follow-up PR (`feat/polygon-gov-listings`, on `feat/us-forfeiture-more`): Polygon and Arbitrum get an
   `intl_sanctions_<chain>.json` of their own (`config.py`); the importer starts a configured file that is missing.
-  The Polygon wallet of N.D. Okla. 23-CR-333-SEH added from the 20260328 snapshot; 21 orders in all.
+  From N.D. Okla. 23-CR-333-SEH (20260328 snapshot): its Polygon (POL) wallet, and its "Trust Wallet Ethereum"
+  wallet `0x91e7b9af…17bf` on Ethereum; 22 orders in all.
 
 ## Decisions
 

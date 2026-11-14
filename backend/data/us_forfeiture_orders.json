@@ -6,7 +6,7 @@
     "verification_note": "A forfeiture order is a court measure against the property, not a sanctions designation and not a finding that anyone who later transacted with the address took part in anything. A holder is named only as the notice names it; an exchange account or bank custody address is the exchange or bank holding the property for that account.",
     "schema": "orders: [{address, chain, holder, court, case, caption, order_entered, notice_url, notice, checked}]",
     "counts": {
-      "orders": 21
+      "orders": 22
     }
   },
   "orders": [
@@ -204,6 +204,18 @@
     },
     {
       "address": "0x14f5108d44854b254feca519144743676765b928",
+      "chain": "ethereum",
+      "holder": "Aaron Thomas",
+      "court": "U.S. District Court for the Northern District of Oklahoma",
+      "case": "23-CR-333-SEH",
+      "caption": "U.S. v. Aaron Michael Thomas",
+      "order_entered": "April 24, 2025",
+      "notice_url": "https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20260328",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x91e7b9afbb4cc454adb210e3ade38c8bd2ec17bf",
       "chain": "ethereum",
       "holder": "Aaron Thomas",
       "court": "U.S. District Court for the Northern District of Oklahoma",

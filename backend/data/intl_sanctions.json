@@ -11,18 +11,18 @@
     "chain": "ethereum",
     "last_reviewed": "2026-09-22",
     "counts": {
-      "addresses": 34,
+      "addresses": 35,
       "by_authority": {
         "European Union": 1,
         "France": 1,
         "Japan": 9,
+        "United States": 16,
         "United Kingdom": 6,
-        "United States": 15,
         "Israel": 3
       },
       "by_category": {
         "sanctioned": 16,
-        "seized": 18
+        "seized": 19
       }
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
@@ -39,7 +39,7 @@
     "added": {
       "us_forfeiture": {
         "date": "2026-11-14",
-        "added": 15,
+        "added": 16,
         "added_addresses": [
           "0x11b3fcdb29bd188e47c9e8a436abe317b9d51639",
           "0x13a82e6a6c37a326c6932ecdf7c4466d7ff15a39",
@@ -47,6 +47,7 @@
           "0x1aeb972887f4a1c422d2c0b73cbf089abd2ec255",
           "0x1f790c5c827a8b6b120064dddf965b0554025994",
           "0x3cb6cfb2f065547716f6c8ec9d4bce5205b8a445",
+          "0x91e7b9afbb4cc454adb210e3ade38c8bd2ec17bf",
           "0xa00b7e1577b933731609e82fd9258fd4b30e23aa",
           "0xb34c4e4ac9d4f26e01016894c3ed7715f1c36a8a",
           "0xcadf3761430ca4e78994c7a3ea2944cd6e6eb66c",
@@ -225,6 +226,15 @@
       "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Russia (Sanctions) (EU Exit) Regulations 2019, entry RUS1421",
       "authorities": [
         "United Kingdom"
+      ]
+    },
+    "0x91e7b9afbb4cc454adb210e3ade38c8bd2ec17bf": {
+      "category": "seized",
+      "entity": "Aaron Thomas",
+      "label": "Aaron Thomas",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Northern District of Oklahoma, case 23-CR-333-SEH (U.S. v. Aaron Michael Thomas), entered April 24, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20260328, https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
       ]
     },
     "0xa00b7e1577b933731609e82fd9258fd4b30e23aa": {
