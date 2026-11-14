@@ -115,6 +115,20 @@ describe('the letter of request panel', () => {
     expect(screen.getByText('Name the requested country to log it.')).toBeInTheDocument()
     expect(calls.some((c) => c.path === '/requests')).toBe(false)
   })
+
+  it('keeps the keyboard on the panel: the draft takes focus, and a refusal leaves it on the button', async () => {
+    api({ 'POST /trace/c1-abcdef12/letter-of-request': { status: 400, body: { detail: 'Name the treaty or convention the request is made under.' } } })
+    const user = userEvent.setup()
+    render(<LetterOfRequestPanel result={CASE} offered />)
+    const button = screen.getByRole('button', { name: 'Draft the letter of request' })
+    button.focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+    expect(button).toHaveFocus() // not dropped to the page while the request ran
+    api({ 'POST /trace/c1-abcdef12/letter-of-request': { text: 'DRAFT one' } })
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.getByLabelText('The draft letter of request')).toHaveFocus())
+  })
 })
 
 describe('a letter of request in the requests log', () => {
