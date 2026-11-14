@@ -195,3 +195,14 @@ export async function draftCertificate(caseId, body) {
   if (!response.ok) throw await toError(response)
   return response.blob()
 }
+
+/** A draft s.63(4) certificate for Exchequer's own report of the case: the
+ * report file the officer will produce goes as base64 in the body, is checked
+ * as /verify checks it, and the certificate states its SHA-256. */
+export async function draftReportCertificate(caseId, body) {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/report-certificate`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
+  if (!response.ok) throw await toError(response)
+  return response.blob()
+}
