@@ -21,4 +21,4 @@ alembic==1.20.1
 psycopg[binary]==3.3.7
 cryptography==50.0.2
 reportlab==5.1.0
-pypdf==6.21.4
+pypdf==7.1.0
