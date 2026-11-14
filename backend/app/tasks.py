@@ -47,6 +47,9 @@ MAX_PER_OWNER, MAX_TOTAL, HISTORY_MAX = 2000, 200_000, 500
 WRITE_TRIES = 3  # two writes to one task at once: the second re-reads and tries again
 
 
+GONE = "That suggestion no longer applies to this case (it may already be a task). Reload the list."
+
+
 class TaskError(ValueError):
     """What was given is missing, malformed or not allowed; the message says which."""
 
@@ -127,9 +130,16 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any = None)
     note = _text(fields, "note") if fields.get("note") else ""
     if note and not suggestion:
         raise TaskError("Only a suggestion can be declined with a reason; add the task, then drop it.")
+    if suggestion and fields.get("note") and not note:
+        # A reason of spaces only must not turn a decline into taking the suggestion up.
+        raise TaskError("Say why the suggestion is not needed.")
     with models.session() as s:
         if s.scalar(select(models.Case.id).where(models.Case.id == case_id)) is None:
             raise TaskError("No case with that id.")
+        if suggestion and s.scalar(select(models.CaseTask.id).where(
+                models.CaseTask.case_id == case_id, models.CaseTask.source == source, _readable(viewer))) is not None:
+            # Read again in this write's session: two clicks at once both found the suggestion untaken.
+            raise TaskError(GONE)
         count = select(func.count()).select_from(models.CaseTask)
         if s.scalar(count.where(models.CaseTask.owner_hash == owner)) >= MAX_PER_OWNER:
             raise TaskError(f"This browser already has {MAX_PER_OWNER} tasks on record.")
@@ -312,4 +322,4 @@ def _suggestion(viewer: Any, case_id: str, source: str) -> dict[str, Any]:
     for x in suggestions(viewer, case_id):
         if x["source"] == source:
             return x
-    raise TaskError("That suggestion no longer applies to this case (it may already be a task). Reload the list.")
+    raise TaskError(GONE)

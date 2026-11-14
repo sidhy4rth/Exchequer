@@ -148,6 +148,25 @@ describe('the case task list', () => {
     expect(calls.find((c) => c.method === 'POST').body).toEqual({ source: SUGGESTED.source, note: 'Order made on 10 Nov' })
   })
 
+  it('takes up a suggestion once however fast its button is pressed', async () => {
+    const posts = []
+    let finish
+    vi.stubGlobal('fetch', vi.fn((url, init = {}) => {
+      if ((init.method || 'GET') === 'POST') {
+        posts.push(init.body)
+        return new Promise((resolve) => { finish = () => resolve(new Response(JSON.stringify(TASK), { status: 201 })) })
+      }
+      return Promise.resolve(new Response(JSON.stringify({ tasks: [], suggested: [SUGGESTED] })))
+    }))
+    const user = userEvent.setup()
+    open()
+    await user.dblClick(await screen.findByRole('button', { name: 'Add as a task' }))
+    expect(posts).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Add as a task' })).toBeDisabled()
+    finish()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add as a task' })).toBeEnabled())
+  })
+
   it('adds a task once however fast its button is pressed', async () => {
     const posts = []
     let finish

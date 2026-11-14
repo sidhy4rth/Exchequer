@@ -88,7 +88,7 @@ export default function TasksPanel({ result }) {
   }
 
   async function take(x, note) {
-    if (await run(() => addTask(caseId, note ? { source: x.source, note } : { source: x.source }))) {
+    if (await once(() => addTask(caseId, note ? { source: x.source, note } : { source: x.source }))) {
       setDecline((o) => ({ ...o, [x.source]: undefined }))
     }
   }
@@ -175,7 +175,7 @@ export default function TasksPanel({ result }) {
                   <p className="note">{plain(x.why)}</p>
                   {reason === undefined ? (
                     <div className="tk-actions">
-                      <button type="button" className="tk-done" onClick={() => take(x)}>Add as a task</button>
+                      <button type="button" className="tk-done" disabled={saving} onClick={() => take(x)}>Add as a task</button>
                       <button type="button" className="quiet" onClick={() => setDecline((o) => ({ ...o, [x.source]: '' }))}>Not needed…</button>
                     </div>
                   ) : (
@@ -185,7 +185,7 @@ export default function TasksPanel({ result }) {
                           onChange={(e) => setDecline((o) => ({ ...o, [x.source]: e.target.value }))} />
                       </label>
                       <div className="tk-actions">
-                        <button type="button" disabled={!reason.trim()} onClick={() => take(x, reason.trim())}>Not needed</button>
+                        <button type="button" disabled={saving || !reason.trim()} onClick={() => take(x, reason.trim())}>Not needed</button>
                         <button type="button" className="quiet" onClick={() => setDecline((o) => ({ ...o, [x.source]: undefined }))}>Cancel</button>
                       </div>
                     </div>

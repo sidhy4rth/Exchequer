@@ -373,6 +373,25 @@ def test_declining_a_suggestion_needs_a_reason_and_is_kept_as_a_dropped_task():
         add(note="no source")
 
 
+def test_a_blank_reason_does_not_quietly_take_up_a_suggestion_it_meant_to_decline():
+    rid = request(sent_at=days_ago(10))
+    with pytest.raises(TaskError, match="Say why"):
+        add(source=f"request:{rid}:follow_up", note="   ")
+    assert kinds(tasks.suggestions(viewer(), "case-1")) == ["follow_up"]
+
+
+def test_a_suggestion_taken_up_while_the_list_was_being_read_is_not_added_twice(monkeypatch):
+    """Two clicks at once both read the suggestion before either is stored; the second must not add it again."""
+    rid = request(sent_at=days_ago(10))
+    source = f"request:{rid}:follow_up"
+    [seen] = tasks.suggestions(viewer(), "case-1")
+    add(source=source)
+    monkeypatch.setattr(tasks, "_suggestion", lambda *_: seen)  # the second request read it before the first stored
+    with pytest.raises(TaskError, match="no longer applies"):
+        add(source=source)
+    assert len(tasks.list_for(viewer(), "case-1")) == 1
+
+
 def test_made_up_or_other_peoples_suggestions_are_refused():
     rid = request(sent_at=days_ago(10))
     with pytest.raises(TaskError, match="no longer applies"):
