@@ -8,10 +8,10 @@
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
     "schema": "labels maps a Base58 address to {exchange, label, type}",
     "counts": {
-      "labels": 133,
+      "labels": 134,
       "exchanges": 25,
       "by_exchange": {
-        "Binance": 24,
+        "Binance": 25,
         "Bitfinex": 1,
         "Bitget": 1,
         "Bithumb": 1,
@@ -118,7 +118,7 @@
           "kind": "hot and cold wallet address (the post does not say which is which)",
           "statement": "Binance's blog post 'Our Commitment To Transparency' (10 Nov 2022) shares 'details of our hot and cold wallet addresses', snapshot 10/11/2022 00:00 UTC, and says it is not a complete set. Read from the Internet Archive copy: the live page answers automated clients with a bot check, which was not bypassed.",
           "tron_addresses_listed": 8,
-          "added": 1,
+          "added": 2,
           "corroborated": {
             "TAzsQ9Gx8eqFNFSKbeXrbi45CuVPHzA8wr": "Binance-Hot 5",
             "TJDENsfBJs4RFETt1X1W8wMDc8M5XnJhCe": "Binance-Hot 6",
@@ -127,9 +127,7 @@
             "TWd4WrZ9wn84f5x1hZhL4DHvk738ns5jwb": "Binance-Cold 2",
             "TYASr5UV6HEcXatwdFQfmLVUqQQQMUxHLS": "Binance-Hot 3"
           },
-          "left_out": {
-            "TMuA6YqfCeX8EhbfYEg5y7S4DqzSJireY9": "used in test_tron_tag_proof.py, which may rely on it being unlabelled"
-          }
+          "left_out": {}
         },
         "por:kucoin:2022-11": {
           "exchange": "KuCoin",
@@ -269,6 +267,12 @@
       "exchange": "Binance",
       "label": "Binance-Hot 9",
       "type": "hot_wallet"
+    },
+    "TMuA6YqfCeX8EhbfYEg5y7S4DqzSJireY9": {
+      "exchange": "Binance",
+      "label": "Binance: Reserves Wallet (2022-11)",
+      "type": "exchange_wallet",
+      "source": "por:binance:2022-11"
     },
     "TV6MuMXfmLbBqPZvBHdwFsDnQeVfnmiuSi": {
       "exchange": "Binance",

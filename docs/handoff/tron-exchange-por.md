@@ -19,6 +19,10 @@
   balance stand on that evidence, and a reproducible random sample (`--sample`, default 150) is checked on chain.
   One failed sample stops the source.
 - `seed_tron_labels.py` now keeps `por:` rows and the `proof_of_reserves` section when it rewrites the file.
+- 15 Nov: merged main (India labels, #135) by re-running the importer on main's file from the same four downloaded
+  files (SHA-256s unchanged), never by hand. `tests/test_tron_tags.py` and `tests/test_tron_tag_proof.py` now use
+  `TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf` (unlabelled, from `test_tron_cache.py`) as their unlabelled wallet, so the
+  importer added `TMuA6YqfCeX8EhbfYEg5y7S4DqzSJireY9` (Binance, Nov 2022 blog): 52 PoR rows, 134 Tron labels.
 
 ## Decisions
 
@@ -40,9 +44,7 @@
    `queryReserveWalletDetailList` API is unused by the page and refuses guessed parameters); Gate and MEXC answer
    automated clients with a bot check (not bypassed). A person can download each list in a browser and add a
    `SOURCES` entry plus a parser.
-3. `TMuA6YqfCeX8EhbfYEg5y7S4DqzSJireY9` (Binance, Nov 2022 blog) is left out because `tests/test_tron_tags.py` and
-   `tests/test_tron_tag_proof.py` use it as an unlabelled wallet. Swap that fixture, then re-run the importer.
-4. EVM addresses in the same Bybit and HTX files: issue #215.
+3. EVM addresses in the same Bybit and HTX files: issue #215.
 
 ## Open questions
 
