@@ -8,6 +8,8 @@ rate limit, which is the opposite of what these tests are for.
 from __future__ import annotations
 
 import sys
+import threading
+import time
 from pathlib import Path
 
 import networkx as nx
@@ -190,3 +192,37 @@ def _fresh_report_cache():
     report_cache.reset()
     yield
     report_cache.reset()
+
+
+# Threads a request starts and leaves running after its response: a batch and
+# its heartbeat (app/batches.py), a background trace (app/routes/jobs.py).
+BACKGROUND_RUNNERS = ("batch-", "heartbeat-", "trace-job-")
+RUNNER_STOP_SECONDS = 10.0
+
+
+@pytest.fixture(autouse=True)
+def _wait_for_background_runners(monkeypatch):
+    """Wait, at teardown, for every batch or trace thread the test started.
+
+    They read models._engine when they run, not when they start. One still
+    going when the next test swaps in its own throwaway store writes into
+    that store while it is being migrated. Taking monkeypatch makes this
+    teardown run before the test's patches are undone, so the threads end
+    against the test's own engine and stubs. A thread that does not stop in
+    time fails the test rather than being left behind.
+    """
+    before = set(threading.enumerate())
+    yield
+
+    def running():
+        return [t for t in threading.enumerate()
+                if t not in before and t.name.startswith(BACKGROUND_RUNNERS) and t.is_alive()]
+
+    deadline = time.monotonic() + RUNNER_STOP_SECONDS
+    # A batch thread starts its heartbeat thread itself: look again after each join.
+    while (left := running()) and time.monotonic() < deadline:
+        for thread in left:
+            thread.join(max(0.0, deadline - time.monotonic()))
+    if left := running():
+        pytest.fail(f"background threads still running {RUNNER_STOP_SECONDS:.0f} s after the test: "
+                    f"{sorted(t.name for t in left)}")
