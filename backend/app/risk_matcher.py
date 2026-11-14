@@ -44,6 +44,13 @@ The categories, with very different investigative meaning:
   gambling    A casino or betting platform's wallet: an attribution, like an
               exchange, not a designation.
 
+  privacy     A privacy protocol's contract (Railgun, Aztec, Hinkal, Privacy
+              Pools), from data/privacy_protocols*.json and only with the flag
+              EXCHEQUER_PRIVACY_CATEGORY. Not a risk list and not in
+              CATEGORIES: no enforcement action names these protocols, so a
+              match is a note beside the risk hits, never one of them, and
+              never a stop. Funds passing through lose their visible link.
+
   poisoning   From the on-disk label store (app/label_store.py), with
   scam        the evidence behind each row: an address-poisoning lookalike
   laundering  (on-chain detection), a wallet a report or court record ties to
@@ -126,6 +133,10 @@ SCAM = "scam"
 LAUNDERING = "laundering"
 # Read live during a Tron trace, never from a label file, so not in CATEGORIES.
 REPORTED = "reported"
+# A privacy protocol's contract: a note, not a risk hit (module docstring), so
+# not in CATEGORIES: a risk file that says "privacy" is skipped like any typo,
+# and only a privacy file (read with the flag on) is read for it.
+PRIVACY = "privacy"
 CATEGORIES = (SANCTIONED, SEIZED, MIXER, FROZEN, STOLEN, GAMBLING, POISONING, SCAM, LAUNDERING)
 # Categories a government list gives: an address several such lists name keeps every source.
 GOVERNMENT = frozenset({SANCTIONED, SEIZED})
@@ -366,6 +377,15 @@ class RiskMatch:
                 f"source's attribution, not a finding that any counterparty "
                 f"took part in it."
             )
+        if self.category == PRIVACY:
+            return (
+                f"Privacy protocol: {self.address} is {named}, per {self.source}. "
+                f"{placement}. A privacy protocol: funds passing through lose their "
+                f"visible link, so what leaves it is not shown on chain to be the "
+                f"same money. The trace did not stop here. This is not an "
+                f"accusation: no sanctions list or enforcement action names this "
+                f"protocol, and using it is not a finding against anyone."
+            )
         if not self.is_terminal:
             return (
                 f"Mixer tag: {self.address} is tagged {named}, per {self.source}. "
@@ -390,8 +410,13 @@ class RiskMatcher:
         labels: dict[str, dict[str, str]] | None = None,
         chain: str | None = None,
         store: LabelStore | None = None,
+        privacy: dict[str, dict[str, str]] | None = None,
     ) -> None:
         self._labels: dict[str, dict[str, str]] = labels or {}
+        # Privacy-protocol contracts no risk label names (from_file): a note,
+        # never a risk hit. Empty unless the flag is on.
+        self._privacy: dict[str, dict[str, str]] = {
+            a: m for a, m in (privacy or {}).items() if a not in self._labels}
         self.chain = chain or config.DEFAULT_CHAIN.key
         # The on-disk store is consulted only for addresses no file names, so
         # a curated or government label always outranks a scan result.
@@ -405,6 +430,8 @@ class RiskMatcher:
         chain: str | None = None,
         extra_paths: tuple[Path | None, ...] = (),
         store: LabelStore | None = None,
+        privacy_path: Path | None = None,
+        privacy_over: frozenset[str] = frozenset(),
     ) -> "RiskMatcher":
         """Load one chain's risk labels.
 
@@ -417,14 +444,24 @@ class RiskMatcher:
         A missing file is not an error. Risk labels are an overlay on the
         trace: without them a trace still runs and still attributes an
         exchange, it just cannot warn about what the funds passed through.
+
+        `privacy_path` is the chain's privacy-protocol file (only with the
+        flag on). Its entry outranks a mixer tag on the same address from a
+        file named in `privacy_over` (the explorer-tag threat file: Privacy
+        Pools is tagged a mixer there), and nothing else: a government
+        listing, an issuer's freeze or a theft tag on it stands, and then the
+        privacy entry is not used.
         """
         if path is None:
             logger.warning("No risk label path given; risk screening disabled")
+        privacy = _read_labels(privacy_path, required=False, categories=(PRIVACY,)) if privacy_path else {}
         labels: dict[str, dict[str, str]] = {}
         for index, source_path in enumerate((path, *extra_paths)):
             if source_path is None:
                 continue
             for address, meta in _read_labels(source_path, required=index == 0).items():
+                if address in privacy and meta["category"] == MIXER and source_path.name in privacy_over:
+                    continue  # the explorer's mixer tag on a privacy protocol: the privacy file says what it is
                 held = labels.setdefault(address, meta)
                 if held is not meta and meta["category"] == MIXER and held["category"] != MIXER:
                     # Stopping at a mixer is a correctness rule, not a matter of
@@ -438,7 +475,7 @@ class RiskMatcher:
                     and meta["source"] not in held["source"]
                 ):
                     held["source"] = f"{held['source']}; also {meta['source']}"
-        return cls(labels, chain=chain, store=store)
+        return cls(labels, chain=chain, store=store, privacy=privacy)
 
     # -- lookup ------------------------------------------------------------
     def __len__(self) -> int:
@@ -470,6 +507,8 @@ class RiskMatcher:
         meta = self._labels.get(address)
         if meta is not None and _lapsed(meta, date.today()):
             meta = None  # its order ended after this process loaded the file
+        if meta is None and address in self._privacy:
+            return None  # a file names it a privacy protocol, which outranks the store as any file does
         if meta is None and self.store is not None:
             meta = self.store.lookup(self.chain, address)
             if meta is not None and meta["category"] not in CATEGORIES:
@@ -485,6 +524,15 @@ class RiskMatcher:
 
     def is_flagged(self, address: str) -> bool:
         return self.lookup(address) is not None
+
+    def privacy_lookup(self, address: str) -> dict[str, str] | None:
+        """The privacy-protocol entry for `address`, if a privacy file names it
+        and no risk label does; None otherwise, and always with the flag off."""
+        return self._privacy.get(normalize_address(address))
+
+    def is_labelled(self, address: str) -> bool:
+        """A risk list or a privacy file names it: not an unlabelled wallet."""
+        return self.is_flagged(address) or self.privacy_lookup(address) is not None
 
     def is_terminal(self, address: str) -> bool:
         """True if a trace must stop expanding at `address`.
@@ -549,6 +597,32 @@ class RiskMatcher:
         matches.sort(key=lambda m: (m.depth, -m.value_received_native))
         return matches
 
+    def annotate_privacy(self, graph: nx.DiGraph, direction: str = OUTGOING) -> list[RiskMatch]:
+        """The privacy-protocol contracts in `graph`, as notes; [] with the flag off.
+
+        Kept apart from annotate(): a match here is never a risk hit, so it
+        sets no risk_category, flag or stop on the node, only privacy_entity
+        for the maps, and goes in its own list.
+        """
+        matches: list[RiskMatch] = []
+        if not self._privacy:
+            return matches
+        for node, data in graph.nodes(data=True):
+            meta = self.privacy_lookup(node)
+            if meta is None:
+                continue
+            edges = (graph.in_edges(node, data=True) if direction == OUTGOING
+                     else graph.out_edges(node, data=True))
+            data["privacy_entity"] = meta["entity"]
+            matches.append(RiskMatch(
+                address=node, category=PRIVACY, entity=meta["entity"], label=meta["label"],
+                source=meta["source"], depth=data.get("depth", 0),
+                value_received_native=sum(edge.get("value_native", 0.0) for _, _, edge in edges),
+                origin=meta.get("origin"),
+            ))
+        matches.sort(key=lambda m: (m.depth, -m.value_received_native))
+        return matches
+
 
 def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
     """Risk matcher for one chain. Cached so each label file is read once."""
@@ -560,12 +634,16 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
 @lru_cache(maxsize=None)
 def _risk_matcher(key: str) -> RiskMatcher:
     chain = config.get_chain(key)
+    threat = chain.threat_labels_path
     return RiskMatcher.from_file(
         chain.risk_labels_path,
         chain=chain.key,
-        extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, chain.threat_labels_path,
+        extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, threat,
                      chain.gambling_labels_path),
         store=get_label_store(),
+        # Read only with the flag on: off, nothing here changes (#189).
+        privacy_path=chain.privacy_protocols_path if config.PRIVACY_CATEGORY else None,
+        privacy_over=frozenset({threat.name}) if threat else frozenset(),
     )
 
 
@@ -813,8 +891,10 @@ def _lapsed(meta: dict[str, str], today: date) -> bool:
     return bool(until) and until < today.isoformat()
 
 
-def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
+def _read_labels(path: Path, required: bool,
+                 categories: tuple[str, ...] = CATEGORIES) -> dict[str, dict[str, str]]:
     """Validated {address: record} from one label file; {} if it is unusable.
+    `categories` are the ones the file may give (a privacy file: PRIVACY only).
 
     One bad entry is logged and skipped, never raised: the lifespan loads every
     chain's files, so an exception here would stop the site from starting.
@@ -845,7 +925,7 @@ def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
     today, lapsed = date.today(), 0
     for address, value in entries.items():
         try:
-            record = _read_entry(address, value, default_source)
+            record = _read_entry(address, value, default_source, categories)
         except (TypeError, ValueError, AttributeError) as exc:
             logger.warning("Risk entry for %r is malformed (%s); skipped", address, exc)
             continue
@@ -862,7 +942,8 @@ def _read_labels(path: Path, required: bool) -> dict[str, dict[str, str]]:
     return labels
 
 
-def _read_entry(address: Any, value: Any, default_source: str) -> dict[str, str] | None:
+def _read_entry(address: Any, value: Any, default_source: str,
+                categories: tuple[str, ...] = CATEGORIES) -> dict[str, str] | None:
     """One validated record, or None (logged) if the entry must be skipped."""
     if not isinstance(address, str) or address.startswith("_"):  # metadata keys
         return None
@@ -874,7 +955,7 @@ def _read_entry(address: Any, value: Any, default_source: str) -> dict[str, str]
         return None
 
     category = _text(value.get("category")).lower()
-    if category not in CATEGORIES:
+    if category not in categories:
         # An unrecognised category must not silently become a warning
         # of the wrong kind. Dropping it is the safe failure.
         logger.warning(
