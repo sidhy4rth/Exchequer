@@ -29,7 +29,7 @@
 
 1. Try the panel with real (redacted) statements, then turn the flag on in production (render.yaml and Render's environment), and remove the flag once it has shipped.
 2. Withdrawing a saved import entered by mistake, with a reason kept in its history, like the identifier register.
-3. CDR: in progress (#167), branch `feat/cdr-import` stacked on #153. IPDR is not started.
+3. CDR: in progress (#167), branch `feat/cdr-import` stacked on #153. Saving a summary (`POST /trace/{case_id}/cdr`) needs a signed-in officer, like saving statement rows; listing and the number check do not. It shares the statement imports' caps. IPDR is not started.
 
 ## Open questions
 
