@@ -4,6 +4,9 @@
     POST  /trace/{case_id}/custody   record one (409 when the case already records it)
     PATCH /custody/{wallet_id}       notes, and the asset-register rows moved into it
 
+Recording or changing a wallet needs a signed-in officer (403 otherwise): a
+stranger holding a case's link must not fill the table or rewrite its notes.
+
 Behind config.CUSTODY_WALLETS (off by default): switched off, the list says so
 and every write is refused. No route ever takes a key: the fields that could
 hold one refuse it. Writes are limited per connection, like the requests log,
@@ -22,6 +25,7 @@ from .requests import _allow_write, _owner
 
 router = APIRouter()
 SWITCHED_OFF = "Custody wallet records are switched off on this deployment."
+SIGN_IN = "Sign in as an officer to record or change a custody wallet."
 
 
 class Signer(BaseModel):
@@ -53,6 +57,11 @@ def switched_on() -> None:
         raise HTTPException(status_code=403, detail=SWITCHED_OFF)
 
 
+def signed_in(user: CurrentUser) -> None:
+    if user.demo:
+        raise HTTPException(status_code=403, detail=SIGN_IN)
+
+
 def bad(exc: custody.CustodyError) -> HTTPException:
     return HTTPException(status_code=409 if isinstance(exc, custody.DuplicateWallet) else 400, detail=str(exc))
 
@@ -74,6 +83,7 @@ def list_wallets(case_id: str, user: CurrentUser) -> dict[str, Any]:
 @router.post("/trace/{case_id}/custody", status_code=201)
 def add_wallet(case_id: str, body: NewWallet, user: CurrentUser, http: Request) -> dict[str, Any]:
     switched_on()
+    signed_in(user)
     _allow_write(http)
     try:
         made = custody.create(_owner(user), case_id, body.model_dump(), user)
@@ -88,6 +98,7 @@ def add_wallet(case_id: str, body: NewWallet, user: CurrentUser, http: Request) 
 @router.patch("/custody/{wallet_id}")
 def change_wallet(wallet_id: str, body: WalletChange, user: CurrentUser, http: Request) -> dict[str, Any]:
     switched_on()
+    signed_in(user)
     _allow_write(http)
     try:
         updated = custody.update(wallet_id, body.model_dump(exclude_none=True), user)

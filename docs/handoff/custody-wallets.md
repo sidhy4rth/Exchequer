@@ -21,6 +21,7 @@
 - The chain, address, scheme, threshold and signers never change after the record is made; only notes and the linked asset-register rows do. A change of signers is a new record (see open questions).
 - Linked asset-register rows must be in the same case, readable by the viewer, held in custody, and not recorded as held at another address (a blank `held_at` is allowed).
 - One wallet per case per address; the same unit wallet may be recorded in several cases.
+- Recording or changing a wallet needs a signed-in officer (403 for the demo caller), like every step of the signing log: a stranger holding a case's link must not fill the table (security review, 14 Nov). Reading is unchanged.
 
 ## Next
 
