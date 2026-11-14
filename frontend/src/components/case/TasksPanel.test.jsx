@@ -187,6 +187,39 @@ describe('the case task list', () => {
     expect(calls.find((c) => c.method === 'POST').body).toEqual({ source: SUGGESTED.source, note: 'Order made on 10 Nov' })
   })
 
+  it('keeps the keyboard on the panel after a suggestion is taken up or declined', async () => {
+    let tasks = []
+    let suggested = [SUGGESTED]
+    api({
+      'GET /trace/c1/tasks': () => ({ body: { tasks, suggested } }),
+      'POST /trace/c1/tasks': (b) => {
+        tasks = [{ ...TASK, task_id: 't9', title: SUGGESTED.title, ...(b.note ? { status: 'dropped', days_left: null } : {}) }]
+        suggested = []
+        return { status: 201, body: tasks[0] }
+      },
+    })
+    const user = userEvent.setup()
+    const first = open()
+    const take = await screen.findByRole('button', { name: 'Add as a task' })
+    take.focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Add as a task' })).toBeNull())
+    await waitFor(() => expect(screen.getByText(SUGGESTED.title).closest('.request-row')).toHaveFocus()) // the new task's row
+    first.unmount()
+
+    tasks = []
+    suggested = [SUGGESTED]
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Not needed…' }))
+    await user.type(screen.getByLabelText('Why is it not needed?'), 'Order made on 10 Nov')
+    screen.getByRole('button', { name: 'Not needed' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Not needed' })).toBeNull())
+    const said = await screen.findByRole('status')
+    expect(said).toHaveTextContent('Marked not needed')
+    await waitFor(() => expect(said).toHaveFocus()) // the suggestion is gone; its task is folded away with the dropped ones
+  })
+
   it('takes up a suggestion once however fast its button is pressed', async () => {
     const posts = []
     let finish
@@ -201,9 +234,10 @@ describe('the case task list', () => {
     open()
     await user.dblClick(await screen.findByRole('button', { name: 'Add as a task' }))
     expect(posts).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Add as a task' })).toBeDisabled()
+    // Marked rather than disabled while it saves, so it keeps the keyboard's focus; a second press is ignored.
+    expect(screen.getByRole('button', { name: 'Add as a task' })).toHaveAttribute('aria-disabled', 'true')
     finish()
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Add as a task' })).toBeEnabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add as a task' })).not.toHaveAttribute('aria-disabled'))
   })
 
   it('adds a task once however fast its button is pressed', async () => {

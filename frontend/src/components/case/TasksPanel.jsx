@@ -58,6 +58,10 @@ export default function TasksPanel({ result }) {
   const addedRow = useRef(null)
   const addButton = useRef(null)
   useEffect(() => { if (added) (addedRow.current ?? addButton.current)?.focus() }, [added])
+  // A declined suggestion goes; its task is folded away with the dropped ones, so a status line says so.
+  const [said, setSaid] = useState(null)
+  const told = useRef(null)
+  useEffect(() => { if (said) told.current?.focus() }, [said])
 
   const load = () => caseId && fetchCaseTasks(caseId).then((d) => {
     const tasks = d.tasks ?? []
@@ -108,8 +112,11 @@ export default function TasksPanel({ result }) {
   }
 
   async function take(x, note) {
-    if (await once(() => addTask(caseId, note ? { source: x.source, note } : { source: x.source }))) {
+    let made
+    if (await once(async () => { made = await addTask(caseId, note ? { source: x.source, note } : { source: x.source }) })) {
       setDecline((o) => ({ ...o, [x.source]: undefined }))
+      if (note) setSaid({ text: `Marked not needed: ${plain(x.title)}. It is kept with the done and dropped tasks.` })
+      else setAdded({ id: made?.task_id })
     }
   }
 
@@ -202,7 +209,7 @@ export default function TasksPanel({ result }) {
                   <p className="note">{plain(x.why)}</p>
                   {reason === undefined ? (
                     <div className="tk-actions">
-                      <button type="button" className="tk-done" disabled={saving} onClick={() => take(x)}>Add as a task</button>
+                      <button type="button" className="tk-done" aria-disabled={saving || undefined} onClick={() => take(x)}>Add as a task</button>
                       <button type="button" className="quiet" onClick={() => setDecline((o) => ({ ...o, [x.source]: '' }))}>Not needed…</button>
                     </div>
                   ) : (
@@ -212,7 +219,7 @@ export default function TasksPanel({ result }) {
                           onChange={(e) => setDecline((o) => ({ ...o, [x.source]: e.target.value }))} />
                       </label>
                       <div className="tk-actions">
-                        <button type="button" disabled={saving || !reason.trim()} onClick={() => take(x, reason.trim())}>Not needed</button>
+                        <button type="button" disabled={!reason.trim()} aria-disabled={saving || undefined} onClick={() => take(x, reason.trim())}>Not needed</button>
                         <button type="button" className="quiet" onClick={() => setDecline((o) => ({ ...o, [x.source]: undefined }))}>Cancel</button>
                       </div>
                     </div>
@@ -222,6 +229,7 @@ export default function TasksPanel({ result }) {
             })}
           </section>
         )}
+        {said && <p className="note" role="status" ref={told} tabIndex={-1}>{said.text}</p>}
 
         <div className="request-add">
           {!form && <button type="button" ref={addButton} onClick={() => setForm(EMPTY)}>Add a task</button>}
