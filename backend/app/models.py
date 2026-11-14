@@ -239,6 +239,9 @@ class FreezeRequest(Base):
     signed_off_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     signed_off_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     signed_off_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # A bank hold's details as put up for sign-off: their SHA-256 only, never
+    # the account number (notice_letters.fingerprint). A sign-off covers these.
+    details_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     __mapper_args__ = {"version_id_col": row_version}
 

@@ -20,7 +20,7 @@ from sqlalchemy import create_engine, select
 
 from app import freeze_requests, models, ownership
 from app.main import app
-from app.notice_letters import BANK_FREEZE, BANK_INFO, NOTICES, TELECOM, NoticeError, draft, inr
+from app.notice_letters import BANK_FREEZE, BANK_INFO, NOTICES, TELECOM, NoticeError, draft, fingerprint, inr
 from app.request_letters import AWAITING, BLANK, NOT_VALID
 
 from test_request_letters import case
@@ -33,6 +33,14 @@ ORDER = "Order 17/2026 dated 11 Nov 2026, JMFC Court, Bengaluru"
 def bank(**over):
     details = {"bank": "State Bank of India", "account": ACCOUNT, "ifsc": IFSC, "source": SOURCE,
                "period_from": "2026-10-01", "period_to": "2026-11-10"}
+    details.update(over)
+    return details
+
+
+def hold(**over):
+    """A bank hold's details, as the officer types them (the period is not part of a hold)."""
+    details = {"bank": "State Bank of India", "account": ACCOUNT, "ifsc": IFSC, "source": SOURCE, "order": ORDER,
+               "amount": "2,50,000"}
     details.update(over)
     return details
 
@@ -204,10 +212,10 @@ from test_freeze_signoff import drafted, sign, signed_in, unit  # noqa: E402,F40
 def test_a_bank_hold_becomes_ready_only_once_a_second_officer_signs_it_off(unit):  # noqa: F811 -- the imported fixture
     asha, bina = signed_in("asha"), signed_in("bina")
     notice = {"to": BANK_FREEZE, **bank(order=ORDER)}
-    rid = drafted(asha, kind=BANK_FREEZE)
+    rid = drafted(asha, kind=BANK_FREEZE, details=bank(order=ORDER))
     assert AWAITING in asha.post("/trace/case-1/notice", json=notice).text
-    assert sign(asha, rid).status_code == 403  # never the drafter
-    assert sign(bina, rid).status_code == 200
+    assert sign(asha, rid, bank(order=ORDER)).status_code == 403  # never the drafter
+    assert sign(bina, rid, bank(order=ORDER)).status_code == 200
     text = asha.post("/trace/case-1/notice", json=notice).text
     assert AWAITING not in text and "Approved by a second officer: Bina Iyer" in text
 
@@ -218,3 +226,113 @@ def test_an_information_notice_is_logged_and_sent_without_a_sign_off(unit, kind)
     rid = drafted(asha, kind=kind, ask=False)
     assert asha.patch(f"/requests/{rid}", json={"status": "sent"}).json()["status"] == "sent"
 
+
+
+# -- a sign-off covers the exact details the second officer approved (#132) -------------
+OTHER_ACCOUNT, OTHER_ORDER = "998877665544", "Order 18/2026 dated 12 Nov 2026, JMFC Court, Bengaluru"
+
+
+def notice_for(client, details):
+    r = client.post("/trace/case-1/notice", json={"to": BANK_FREEZE, **details})
+    assert r.status_code == 200, r.text
+    return r.text
+
+
+@pytest.mark.parametrize("changed", [{"account": OTHER_ACCOUNT}, {"ifsc": "HDFC0000001"}, {"amount": "9,00,000"},
+                                     {"amount": ""}, {"order": OTHER_ORDER}, {"bank": "HDFC Bank"},
+                                     {"source": "WazirX reply dated 12 Nov 2026"}])
+def test_a_sign_off_on_one_set_of_details_does_not_approve_a_hold_with_others(unit, changed):  # noqa: F811
+    asha, bina = signed_in("asha"), signed_in("bina")
+    rid = drafted(asha, kind=BANK_FREEZE, details=hold())
+    assert sign(bina, rid, hold()).status_code == 200
+    assert "Approved by a second officer: Bina Iyer" in notice_for(asha, hold())
+    other = notice_for(asha, hold(**changed))  # the bug: this used to print the approval too
+    assert AWAITING in other and "Approved by" not in other
+
+
+def test_the_approved_details_still_print_the_approval_however_they_are_typed(unit):  # noqa: F811
+    asha, bina = signed_in("asha"), signed_in("bina")
+    rid = drafted(asha, kind=BANK_FREEZE, details=hold(ifsc=" sbin0001234 ", account="1234 5678 9012"))
+    assert sign(bina, rid, hold(amount="250000")).status_code == 200
+    for typed in (hold(), hold(amount=250000), hold(amount="2,50,000.00"), hold(amount="250 000"),
+                  hold(ifsc="sbin0001234", account=" 123456789012")):
+        assert "Approved by a second officer: Bina Iyer" in notice_for(asha, typed)
+
+
+def test_the_fingerprint_is_of_the_letter_s_details_after_its_own_normalisation():
+    one = fingerprint("case-1", BANK_FREEZE, hold())
+    assert len(one) == 64 and int(one, 16) >= 0
+    for same in (hold(ifsc=" sbin0001234 "), hold(account="1234 5678 9012"),
+                 hold(amount=250000), hold(amount=250000.0), hold(amount="250000.00"), hold(period_from="2026-10-01")):
+        assert fingerprint("case-1", BANK_FREEZE, same) == one
+    for other in (hold(account=OTHER_ACCOUNT), hold(amount="2,50,001"), hold(amount=None), hold(order=OTHER_ORDER)):
+        assert fingerprint("case-1", BANK_FREEZE, other) != one
+    assert fingerprint("case-2", BANK_FREEZE, hold()) != one  # bound to the case too
+    assert fingerprint("case-1", BANK_INFO, bank()) is None  # only the hold waits for a sign-off
+    with pytest.raises(NoticeError):
+        fingerprint("case-1", BANK_FREEZE, hold(order=""))
+
+
+def test_the_hold_prints_the_fingerprint_its_sign_off_covers():
+    text = draft("case-1", case(), BANK_FREEZE, hold())
+    assert f"Details fingerprint: {fingerprint('case-1', BANK_FREEZE, hold())[:16]}" in text
+
+
+def test_a_hold_is_put_up_for_sign_off_only_with_its_details(unit):  # noqa: F811
+    asha = signed_in("asha")
+    rid = drafted(asha, kind=BANK_FREEZE, ask=False)
+    for change in ({"status": "awaiting_signoff"}, {"status": "awaiting_signoff", "details": hold(order="")},
+                   {"status": "awaiting_signoff", "details": hold(account="12ab")}):
+        assert asha.patch(f"/requests/{rid}", json=change).status_code == 400
+    made = asha.post("/requests", json={"case_id": "case-1", "recipient": "SBI", "kind": BANK_FREEZE,
+                                        "status": "awaiting_signoff"})
+    assert made.status_code == 400
+    made = asha.post("/requests", json={"case_id": "case-1", "recipient": "SBI", "kind": BANK_FREEZE,
+                                        "status": "awaiting_signoff", "details": hold()})
+    assert made.status_code == 201 and made.json()["fingerprint"] == fingerprint("case-1", BANK_FREEZE, hold())[:16]
+
+
+def test_the_second_officer_signs_off_only_the_details_put_up(unit):  # noqa: F811
+    asha, bina = signed_in("asha"), signed_in("bina")
+    rid = drafted(asha, kind=BANK_FREEZE, details=hold())
+    [seen] = bina.get("/trace/case-1/requests").json()["requests"]
+    assert seen["fingerprint"] == fingerprint("case-1", BANK_FREEZE, hold())[:16]  # what the card shows
+    assert sign(bina, rid).status_code == 400  # no details: nothing to compare
+    refused = sign(bina, rid, hold(account=OTHER_ACCOUNT))
+    assert refused.status_code == 409 and "not the ones" in refused.json()["detail"]
+    assert bina.get("/trace/case-1/requests").json()["requests"][0]["status"] == "awaiting_signoff"
+    assert sign(bina, rid, hold()).status_code == 200
+
+
+def test_changed_details_need_a_fresh_sign_off(unit):  # noqa: F811
+    asha, bina = signed_in("asha"), signed_in("bina")
+    first = drafted(asha, kind=BANK_FREEZE, details=hold())
+    sign(bina, first, hold())
+    # Signed, a request cannot be put up again with other details ...
+    again = asha.patch(f"/requests/{first}", json={"status": "awaiting_signoff", "details": hold(order=OTHER_ORDER)})
+    assert again.status_code == 400
+    # ... so the officer closes it and asks afresh: only the new details are approved then.
+    assert asha.patch(f"/requests/{first}", json={"status": "closed"}).status_code == 200
+    second = drafted(asha, kind=BANK_FREEZE, details=hold(order=OTHER_ORDER))
+    assert AWAITING in notice_for(asha, hold(order=OTHER_ORDER))
+    sign(bina, second, hold(order=OTHER_ORDER))
+    assert "Approved by a second officer" in notice_for(asha, hold(order=OTHER_ORDER))
+    assert AWAITING in notice_for(asha, hold())  # its request is closed
+
+
+def test_a_bound_sign_off_keeps_the_account_number_out_of_the_audit_log_and_the_store(unit, caplog):  # noqa: F811
+    caplog.set_level(logging.DEBUG)
+    asha, bina = signed_in("asha"), signed_in("bina")
+    rid = drafted(asha, kind=BANK_FREEZE, details=hold())
+    sign(bina, rid, hold(account=OTHER_ACCOUNT))  # refused
+    sign(bina, rid, hold())
+    notice_for(asha, hold())
+    prefix = fingerprint("case-1", BANK_FREEZE, hold())[:16]
+    with models.session() as s:
+        audit_rows = [(r.action, r.detail or "") for r in s.scalars(select(models.AuditEvent))]
+        stored = s.get(models.FreezeRequest, rid)
+        row = " ".join(str(getattr(stored, c.key)) for c in models.FreezeRequest.__table__.columns)
+    signed = [json.loads(d) for a, d in audit_rows if a in ("request.signoff_ask", "request.signoff")]
+    assert [d.get("fingerprint") for d in signed] == [prefix, prefix]
+    for secret in (ACCOUNT, OTHER_ACCOUNT, IFSC, ORDER, SOURCE, "2,50,000"):
+        assert all(secret not in d for _, d in audit_rows) and secret not in row and secret not in caplog.text

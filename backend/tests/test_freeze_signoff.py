@@ -70,18 +70,22 @@ def signed_in(who):
     return client
 
 
-def drafted(client, kind="exchange-freeze", ask=True):
+def drafted(client, kind="exchange-freeze", ask=True, details=None):
+    """`details`: what a bank hold is put up for sign-off with (notice_letters.fingerprint)."""
     made = client.post("/requests", json={"case_id": "case-1", "recipient": "Binance", "kind": kind})
     assert made.status_code == 201 and made.json()["status"] == "drafted"
     rid = made.json()["request_id"]
     if ask:
-        asked = client.patch(f"/requests/{rid}", json={"status": "awaiting_signoff"})
+        change = {"status": "awaiting_signoff", **({"details": details} if details is not None else {})}
+        asked = client.patch(f"/requests/{rid}", json=change)
         assert asked.status_code == 200 and asked.json()["status"] == "awaiting_signoff"
     return rid
 
 
-def sign(client, rid):
-    return client.post(f"/requests/{rid}/signoff", headers=CSRF)
+def sign(client, rid, details=None):
+    """`details`: what the second officer of a bank hold sees, and so approves."""
+    body = {"details": details} if details is not None else None
+    return client.post(f"/requests/{rid}/signoff", headers=CSRF, json=body)
 
 
 # -- the state machine -------------------------------------------------------------

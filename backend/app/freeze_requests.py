@@ -25,6 +25,14 @@ there is. It goes drafted -> awaiting_signoff -> ready, and only a second
 signed-in officer or supervisor of the unit that drafted it makes it ready
 (sign_off): never the drafter, an admin or a demo caller. Until then it
 cannot be logged as sent.
+
+A bank hold's letter is built from details the officer types (the account,
+IFSC, amount, Magistrate's order), not from the case alone. So it is put up
+for sign-off with those details, kept only as their fingerprint
+(notice_letters.fingerprint); the second officer signs off by sending the
+details on their screen, which must give the same fingerprint; and a letter
+counts as approved only when its own details do (approval). Any other
+detail needs a fresh sign-off.
 """
 from __future__ import annotations
 
@@ -36,7 +44,7 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm.exc import StaleDataError
 
-from . import models
+from . import models, notice_letters
 
 STATUSES = ("drafted", "awaiting_signoff", "ready", "sent", "acknowledged", "frozen", "declined", "closed")
 OPEN_STATUSES = ("drafted", "awaiting_signoff", "ready", "sent", "acknowledged")
@@ -48,6 +56,12 @@ NO_UNIT = ("This letter was drafted without signing in, so no unit's officer can
            "Sign in and draft it again.")
 SIGN_IN_TO_ASK = ("An urgent freeze letter needs a signed-in drafter and a second officer of the same unit: "
                   "sign in to ask for a sign-off.")
+NEEDS_DETAILS = ("A bank hold is signed off for its exact details: draft the letter with them, "
+                 "then ask for the sign-off.")
+SIGN_WITH_DETAILS = "Type the hold's details beside the letter: the sign-off approves exactly those."
+NOT_THESE = ("These details are not the ones put up for sign-off: check the account, IFSC, amount, order, bank "
+             "and source against the drafter's letter.")
+ASK_AGAIN = "This hold was put up for sign-off without its details: the drafter must ask again."
 # The first two are the urgent freeze letters (request_letters.LETTERS): each
 # letter the tool drafts can be logged as sent under its own name.
 KINDS = ("exchange", "tether", "other", "exchange-freeze", "tether-freeze", "instant", "instant-freeze",
@@ -82,6 +96,21 @@ class SignoffRefused(RequestError):
 
 def needs_signoff(kind: str) -> bool:
     return kind.endswith("-freeze")
+
+
+def bound(kind: str) -> bool:
+    """Whether a sign-off on `kind` covers typed details (a bank hold's), not just the case."""
+    return kind == notice_letters.BANK_FREEZE
+
+
+def _fingerprint(case_id: str, kind: str, details: dict[str, Any] | None) -> str:
+    """The fingerprint a `kind` request is put up for sign-off with; RequestError says what is wrong."""
+    if not details:
+        raise RequestError(NEEDS_DETAILS)
+    try:
+        return notice_letters.fingerprint(case_id, kind, details)
+    except notice_letters.NoticeError as exc:
+        raise RequestError(str(exc)) from exc
 
 
 def _check_status(kind: str, status: str, signed: bool) -> None:
@@ -142,6 +171,8 @@ def summary(r: models.FreezeRequest, viewer: Any = None) -> dict[str, Any]:
         "history": json.loads(r.history_json or "[]"),
         "needs_signoff": needs_signoff(r.kind),
         "signoff": {"by": r.signed_off_name, "at": r.signed_off_at} if r.signed_off_at else None,
+        # The start of what a bank hold was put up with: the letter prints it too.
+        "fingerprint": r.details_fingerprint[:16] if r.details_fingerprint else None,
         **_viewed(r, viewer),
     }
 
@@ -157,7 +188,8 @@ def _viewed(r: models.FreezeRequest, viewer: Any) -> dict[str, Any]:
 
 
 def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "",
-           asset: str = "", status: str = "drafted", viewer: Any = None) -> dict[str, Any]:
+           asset: str = "", status: str = "drafted", viewer: Any = None,
+           details: dict[str, Any] | None = None) -> dict[str, Any]:
     # The cheap checks first, and the case looked up by id alone: its stored
     # result can be megabytes, read from a metered database, and a rejected
     # request must not cost that.
@@ -171,6 +203,7 @@ def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "
     _check_status(kind, status, signed=False)
     if status == "awaiting_signoff" and (no := ask_reason(viewer)):
         raise RequestError(no)
+    fingerprint = _fingerprint(case_id, kind, details) if status == "awaiting_signoff" and bound(kind) else None
     with models.session() as s:
         if s.scalar(select(models.Case.id).where(models.Case.id == case_id)) is None:
             raise RequestError("No case with that id.")
@@ -181,6 +214,7 @@ def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "
         sent_at=now if status == "sent" else None, created_at=now, updated_at=now,
         history_json=json.dumps([{"at": now, "status": status}]),
         officer_id=getattr(viewer, "officer_id", None), unit_id=getattr(viewer, "unit_id", None),
+        details_fingerprint=fingerprint,
     )
     with models.session() as s:
         count = select(func.count()).select_from(models.FreezeRequest)
@@ -229,6 +263,11 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
                 r.status = status
                 if status == "sent" and not r.sent_at:
                     r.sent_at = now
+            if bound(r.kind) and status == "awaiting_signoff" and r.signed_off_at is None:
+                # Asked again while waiting, with other details: those are what is put up now.
+                r.details_fingerprint = _fingerprint(r.case_id, r.kind, changes.get("details"))
+            elif status == "drafted":
+                r.details_fingerprint = None
         if "reference" in changes and changes["reference"] is not None:
             r.reference = str(changes["reference"])[:120]
         if "notes" in changes and changes["notes"] is not None:
@@ -259,9 +298,11 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
         return {**summary(r, viewer), "moved": moved}
 
 
-def sign_off(request_id: str, user: Any) -> dict[str, Any] | None:
+def sign_off(request_id: str, user: Any, details: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """A second officer approves an urgent freeze letter: awaiting_signoff ->
-    ready. None if there is no such request; SignoffRefused says why not."""
+    ready. For a bank hold, `details` are the ones on their screen, and must be
+    the ones it was put up with. None if there is no such request;
+    SignoffRefused says why not."""
     for _ in range(WRITE_TRIES):
         try:
             with models.session() as s:
@@ -270,6 +311,8 @@ def sign_off(request_id: str, user: Any) -> dict[str, Any] | None:
                     return None
                 if (no := refusal(r, user)) is not None:
                     raise SignoffRefused(*no)
+                if bound(r.kind):
+                    _check_details(r, details)
                 now = _now()
                 r.status, r.updated_at, r.signed_off_at = "ready", now, now
                 r.signed_off_by, r.signed_off_name = user.officer_id, s.get(models.Officer, user.officer_id).name
@@ -282,13 +325,33 @@ def sign_off(request_id: str, user: Any) -> dict[str, Any] | None:
     raise RequestConflict(request_id)
 
 
-def approval(case_id: str, kind: str, user: Any) -> dict[str, Any] | None:
-    """The sign-off on the caller's (or their unit's) open `kind` request for the case, if any."""
+def _check_details(r: models.FreezeRequest, details: dict[str, Any] | None) -> None:
+    """Whether the details a second officer approves are the ones `r` was put up with."""
+    if not details:
+        raise SignoffRefused(400, SIGN_WITH_DETAILS)
+    try:
+        theirs = notice_letters.fingerprint(r.case_id, r.kind, details)
+    except notice_letters.NoticeError as exc:
+        raise SignoffRefused(400, str(exc)) from exc
+    if r.details_fingerprint is None:
+        raise SignoffRefused(409, ASK_AGAIN)
+    if theirs != r.details_fingerprint:
+        raise SignoffRefused(409, NOT_THESE)
+
+
+def approval(case_id: str, kind: str, user: Any, fingerprint: str | None = None) -> dict[str, Any] | None:
+    """The sign-off on the caller's (or their unit's) open `kind` request for
+    the case, if any. A bank hold's counts only for the details it was given
+    (`fingerprint`, notice_letters.fingerprint of the letter's details)."""
+    if bound(kind) and not fingerprint:
+        return None
     with models.session() as s:
         stmt = select(models.FreezeRequest).where(
             models.FreezeRequest.case_id == case_id, models.FreezeRequest.kind == kind,
             models.FreezeRequest.signed_off_at.is_not(None), models.FreezeRequest.status != "closed",
             _readable(user)).order_by(models.FreezeRequest.signed_off_at.desc())
+        if bound(kind):
+            stmt = stmt.where(models.FreezeRequest.details_fingerprint == fingerprint)
         r = s.scalars(stmt).first()
         return {"by": r.signed_off_name, "at": r.signed_off_at} if r else None
 
