@@ -239,6 +239,25 @@ def _checked(body: bytes) -> dict[str, Any]:
         return {"status": "not_a_report", "detail": "It is not a text report or an Exchequer PDF."}
 
 
+def _not_as_issued(body: bytes, pdf: bool) -> str:
+    """Why `body` differs from the bytes Exchequer issued, though its signed content still verifies; "" if it does not.
+
+    /verify forgives a byte-order mark, Windows line endings and bytes around a PDF, so that an officer
+    can still check a report that was copied about. A certificate states the hash of the exact file,
+    so here only the file exactly as downloaded will do."""
+    if pdf:
+        if not body.startswith(b"%PDF-"):
+            return "there are bytes before the start of the PDF."
+        if body.count(b"%%EOF") != 1 or body.rsplit(b"%%EOF", 1)[1].strip():
+            return "the PDF has data added after its end, or a second revision."
+        return ""
+    if body.startswith(b"\xef\xbb\xbf"):
+        return "the text was saved again with a byte-order mark."
+    if b"\r" in body:
+        return "the text was saved again with Windows line endings."
+    return ""
+
+
 def decode_report(report_b64: str) -> bytes:
     try:
         return base64.b64decode(report_b64, validate=True)
@@ -260,6 +279,10 @@ def draft_report(case_id: str, body: bytes, file_name: str, details: dict[str, A
     if result.get("status") not in GENUINE:
         raise CertificateError("This file is not a genuine, unchanged Exchequer report: "
                                f"{result.get('detail') or result.get('status')} Choose the file exactly as it was downloaded.")
+    altered = _not_as_issued(body, bool(result.get("pdf")))
+    if altered:
+        raise CertificateError(f"This report's signed content is genuine, but the file is not exactly as Exchequer issued it: "
+                               f"{altered} Choose the file exactly as it was downloaded.")
     reported = (result.get("finding") or {}).get("case_id")
     if reported != case_id:
         raise CertificateError(f"This is the report of case {reported}, not of this case; open that case to draft its certificate.")

@@ -86,11 +86,11 @@ export default function CertificateForm({ caseId, exhibits }) {
         <div className="cert-row">
           <label className="cert-check">
             <input type="radio" name="cert-mode" checked={form.mode === 'exhibits'} disabled={!files.length}
-              onChange={() => setForm((f) => ({ ...f, mode: 'exhibits' }))} />
+              onChange={() => setForm((f) => ({ ...f, mode: 'exhibits', file: null }))} />
             Forensic files from the register
           </label>
           <label className="cert-check">
-            <input type="radio" name="cert-mode" checked={form.mode === 'report'} onChange={() => setForm((f) => ({ ...f, mode: 'report' }))} />
+            <input type="radio" name="cert-mode" checked={form.mode === 'report'} onChange={() => setForm((f) => ({ ...f, mode: 'report', file: null }))} />
             Exchequer&apos;s report of this case
           </label>
         </div>

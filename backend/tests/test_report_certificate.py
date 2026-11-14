@@ -128,3 +128,31 @@ def test_the_route_refuses_a_changed_report_bad_base64_and_an_unknown_case():
     bad = client.post("/trace/case-1/report-certificate", headers=H, json={"report_b64": "%%%", "file_name": "x.txt"})
     assert bad.status_code == 400 and "base64" in bad.json()["detail"]
     assert post(text_report(), case="nope").status_code == 404
+
+
+@pytest.mark.parametrize("resave, why", [
+    (lambda b: b"\xef\xbb\xbf" + b, "byte-order mark"),
+    (lambda b: b.replace(b"\n", b"\r\n"), "Windows line endings"),
+])
+def test_a_text_report_saved_again_is_refused_though_its_signature_still_verifies(resave, why):
+    # /verify forgives these; a certificate states the hash of the exact file, so here they are refused.
+    with pytest.raises(CertificateError, match=why):
+        draft(resave(text_report()))
+
+
+@pytest.mark.parametrize("resave, why", [
+    (lambda b: b + b"junk after the end", "added after its end"),
+    (lambda b: b"  " + b, "before the start"),
+])
+def test_a_pdf_report_with_bytes_added_is_refused(resave, why):
+    with pytest.raises(CertificateError, match=why):
+        draft(resave(pdf_report()), "exchequer-case-1.pdf")
+
+
+def test_a_report_body_larger_than_the_usual_limit_reaches_the_route():
+    # Reports reach about 200 KB, a third more as base64: the 256 KB limit for other routes must not refuse them.
+    big = post(text_report() + b"x" * 300_000)
+    assert big.status_code == 400 and "not a genuine" in big.json()["detail"]
+    over = client.post("/trace/case-1/report-certificate", headers={**H, "content-type": "application/json"},
+                       content=b"x" * 2_700_001)
+    assert over.status_code == 413

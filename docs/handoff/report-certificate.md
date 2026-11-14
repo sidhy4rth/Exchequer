@@ -14,12 +14,12 @@
 - 12 tests in `backend/tests/test_report_certificate.py`, with real signed reports: genuine text and PDF, a changed character, a line added after signing, not a report, too large, another case's report, the route and its audit row.
 
 - The form: `CertificateForm.jsx` asks what the certificate covers (forensic files from the register, or Exchequer's report of this case). For the report the officer picks the file; it shows even when the case has no exhibits. 2 new tests; the old "shows nothing with no exhibits" test now checks the report option instead.
-- Checked in Chromium against a real server, both themes: a downloaded PDF report certified with its exact `sha256sum`; a copy with one word changed and another case's report refused with the reason; axe clean; no browser errors.
+- Checked in Chromium against a real server, both themes: a certificate drafted for a downloaded PDF report, stating its exact `sha256sum`; a copy with one word changed and another case's report refused with the reason; axe clean; no browser errors.
 
 ## Decisions
 
 - The officer gives the file: `report_cache.py` keeps renders in memory only, so after a restart the same case renders with new bytes, and a hash of "today's" report could differ from the file in the case folder.
-- Only a genuine report is certified. A PDF must also pass the page comparison. Anything else is refused with the verifier's own reason.
+- A certificate is drafted only for a genuine report, exactly as downloaded. A PDF must also pass the page comparison. Anything else is refused with the verifier's own reason.
 - The audit row keeps the first 16 hex characters of the hash (`report_sha256_16`): `audit._clean` blanks any string of 20 or more token characters as a possible secret.
 - Part A is filled only with what the officer typed and the hash. The signature facts go in the hash report, not into the sworn statement.
 
