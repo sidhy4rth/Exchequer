@@ -219,6 +219,31 @@ describe('the reported identifiers panel', () => {
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1)
   })
 
+  it("keeps the keyboard on the panel: what the t.me page showed takes focus, and a refusal leaves it on the button", async () => {
+    let rows = [TG_ROW]
+    let refuse = true
+    api({
+      'GET /trace/c1/identifiers': () => ({ body: { identifiers: rows, lookups_enabled: true, telegram_lookups_enabled: true } }),
+      'POST /identifiers/i4/lookup': () => {
+        if (refuse) return { status: 503, body: { detail: 't.me could not be reached. Try again later.' } }
+        rows = [{ ...TG_ROW, lookup: TG_LOOKUP }]
+        return { body: TG_LOOKUP }
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    const button = await screen.findByRole('button', { name: 'Read the public t.me page' })
+    button.focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+    expect(button).toHaveFocus() // not dropped to the page while the request ran
+    refuse = false
+    await user.keyboard('{Enter}')
+    const found = await screen.findByRole('group', { name: 'What the lookup found' })
+    expect(found).toHaveTextContent('Sample Recovery Desk')
+    await waitFor(() => expect(found).toHaveFocus())
+  })
+
   it('says when the page showed no account, and when it does not say what the account is', () => {
     const { unmount } = render(<TelegramPage lookup={{ ...TG_LOOKUP, page: { exists: false, title: '', type: '', count_text: '', description: '', badges: [] }, page_note: 't.me showed no public channel, group, user or bot under this username.' }} />)
     expect(screen.getByText(/showed no public channel/)).toBeInTheDocument()
