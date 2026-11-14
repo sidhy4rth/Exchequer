@@ -6,8 +6,13 @@ import { BASE, apiFetch, jsonOrThrow } from './client'
 const path = (caseId, rest = '') => `${BASE}/trace/${encodeURIComponent(caseId)}/cdr${rest}`
 const post = (body) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
-export async function fetchCaseCdr(caseId) {
-  return jsonOrThrow(await apiFetch(path(caseId)))
+// withdrawn: true lists the withdrawn summaries too, with who withdrew them and why.
+export async function fetchCaseCdr(caseId, { withdrawn = false } = {}) {
+  return jsonOrThrow(await apiFetch(path(caseId, withdrawn ? '?withdrawn=1' : '')))
+}
+
+export async function withdrawCdrImport(caseId, importId, reason) {
+  return jsonOrThrow(await apiFetch(path(caseId, `/${encodeURIComponent(importId)}/withdraw`), post({ reason })))
 }
 
 export async function checkCdrNumbers(caseId, numbers) {

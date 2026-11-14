@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchCaseStatements, saveStatementRows } from '../../api'
+import { fetchCaseStatements, saveStatementRows, withdrawStatementImport } from '../../api'
 import { plain } from '../../text'
 import {
   FIELDS, casePayments, matchRows, parseAmount, readStatement, statementRows, timeline, toSaved, WINDOW_DAYS,
 } from './statement'
+import WithdrawImport, { ShowWithdrawn, Withdrawn } from './WithdrawImport'
 import './StatementPanel.css'
 
 // A bank statement, or a transaction statement an exchange sent, read against the
@@ -19,9 +20,9 @@ export const REASON_NAMES = {
   amount_date: 'Amount and date match a payment', utr: 'Bank reference', exchange: 'Names an exchange', tx_hash: 'Hash in the trace',
 }
 
-function Saved({ item }) {
+function Saved({ item, onWithdraw }) {
   return (
-    <details className="st-saved">
+    <details className={`st-saved${item.withdrawn ? ' withdrawn-import' : ''}`}>
       <summary>{plain(item.title) || item.source_label} · {item.row_count} row{item.row_count === 1 ? '' : 's'} · {item.currency} · saved {String(item.created_at).slice(0, 10)}</summary>
       <ul>
         {item.rows.map((r, i) => (
@@ -29,6 +30,8 @@ function Saved({ item }) {
             {r.exchange ? ` · ${plain(r.exchange)}` : ''} · {r.reasons.map((x) => REASON_NAMES[x] ?? x).join(', ')}{r.narration ? <span className="note"> · {plain(r.narration)}</span> : null}</li>
         ))}
       </ul>
+      <Withdrawn item={item} />
+      {onWithdraw && !item.withdrawn && <WithdrawImport name="these rows" onWithdraw={onWithdraw} />}
     </details>
   )
 }
@@ -46,12 +49,13 @@ export default function StatementPanel({ result }) {
   const [ticked, setTicked] = useState({})
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showWithdrawn, setShowWithdrawn] = useState(false)
 
   // The panel shows only once the server says the feature is on. A failed reload after
   // that says so: a short list would read as "nothing was saved".
-  const load = () => caseId && fetchCaseStatements(caseId).then(setInfo)
+  const load = () => caseId && fetchCaseStatements(caseId, { withdrawn: showWithdrawn }).then(setInfo)
     .catch(() => { if (info?.enabled) setError('Saved statement rows could not be loaded. Reload the page before relying on this list.') })
-  useEffect(() => { load() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [caseId, showWithdrawn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsed = useMemo(() => (read?.records && columns ? statementRows(read.records, columns) : null), [read, columns])
   const payments = useMemo(() => [...casePayments(result), ...reported], [result, reported])
@@ -95,12 +99,14 @@ export default function StatementPanel({ result }) {
   }
 
   const saved = info?.imports ?? []
+  const withdraw = (id) => async (reason) => { await withdrawStatementImport(caseId, id, reason); await load() }
   return (
     <details className="card sec statement-panel" open={saved.length > 0 || Boolean(error) || Boolean(read)}>
-      <summary><span className="micro">Bank and exchange statements · {saved.length}</span><span className="note">rows lined up with the trace</span></summary>
+      <summary><span className="micro">Bank and exchange statements · {saved.filter((s) => !s.withdrawn).length}</span><span className="note">rows lined up with the trace</span></summary>
       <div className="body">
         {error && <p className="note st-error" role="alert">{error}</p>}
-        {saved.map((item) => <Saved key={item.import_id} item={item} />)}
+        <ShowWithdrawn count={info.withdrawn_count} shown={showWithdrawn} onChange={setShowWithdrawn} />
+        {saved.map((item) => <Saved key={item.import_id} item={item} onWithdraw={info.can_withdraw ? withdraw(item.import_id) : null} />)}
         <div className="st-pick">
           <label>Statement from
             <select value={source} onChange={(e) => chooseSource(e.target.value)}>

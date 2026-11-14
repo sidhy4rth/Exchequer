@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { checkCdrNumbers, fetchCaseCdr, fetchCaseIdentifiers, saveCdrSummary } from '../../api'
+import { checkCdrNumbers, fetchCaseCdr, fetchCaseIdentifiers, saveCdrSummary, withdrawCdrImport } from '../../api'
 import { plain } from '../../text'
 import { CDR_FIELDS, analyse, casePhones, cdrEvents, contactRow, imeiRow, readCdr, subjectRow, topContacts } from './cdr'
+import WithdrawImport, { ShowWithdrawn, Withdrawn } from './WithdrawImport'
 import './CdrPanel.css'
 
 // A call detail record read against the case (suite feature 5; backend cdr_imports.py,
@@ -19,15 +20,17 @@ const TOP = 20
 const mmss = (s) => `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
-function Saved({ item }) {
+function Saved({ item, onWithdraw }) {
   return (
-    <details className="cdr-saved">
+    <details className={`cdr-saved${item.withdrawn ? ' withdrawn-import' : ''}`}>
       <summary>{plain(item.title) || 'CDR summary'} · {plural(item.row_count, 'row')} · saved {String(item.created_at).slice(0, 10)}</summary>
       <ul>
         {item.rows.map((r, i) => (
           <li key={i}>{KIND_NAMES[r.kind] ?? r.kind} <span className="mono">{plain(r.value)}</span> · {r.kind === 'imei' ? plural(r.events, 'event') : `${plural(r.calls, 'call')}, ${r.sms} SMS, ${mmss(r.seconds)}`} · {r.first} to {r.last}{r.reasons?.length ? ` · ${r.reasons.join(', ')}` : ''}</li>
         ))}
       </ul>
+      <Withdrawn item={item} />
+      {onWithdraw && !item.withdrawn && <WithdrawImport name="this summary" onWithdraw={onWithdraw} />}
     </details>
   )
 }
@@ -52,12 +55,13 @@ export default function CdrPanel({ result }) {
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('') // what was just done, for a screen reader
+  const [showWithdrawn, setShowWithdrawn] = useState(false)
 
-  const load = () => caseId && fetchCaseCdr(caseId).then((got) => {
+  const load = () => caseId && fetchCaseCdr(caseId, { withdrawn: showWithdrawn }).then((got) => {
     setInfo(got)
     if (got.enabled) fetchCaseIdentifiers(caseId).then((ids) => setPhones(casePhones(ids.identifiers))).catch(() => {})
   }).catch(() => { if (info?.enabled) setError('Saved CDR summaries could not be loaded. Reload the page before relying on this list.') })
-  useEffect(() => { load() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [caseId, showWithdrawn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsed = useMemo(() => (read?.records && columns ? cdrEvents(read.records, columns) : null), [read, columns])
   const found = useMemo(() => (parsed?.events.length ? analyse(parsed.events) : null), [parsed])
@@ -104,13 +108,19 @@ export default function CdrPanel({ result }) {
   const tick = (set, key) => (e) => set((t) => ({ ...t, [key]: e.target.checked }))
 
   const saved = info.imports ?? []
+  const withdraw = (id) => async (reason) => {
+    await withdrawCdrImport(caseId, id, reason)
+    setDone('Summary withdrawn; it stays in the case record with the reason.')
+    await load()
+  }
   return (
     <details className="card sec cdr-panel" open={saved.length > 0 || Boolean(error) || Boolean(read)}>
-      <summary><span className="micro">Call detail records · {saved.length}</span><span className="note">contacts and handsets, read in this browser</span></summary>
+      <summary><span className="micro">Call detail records · {saved.filter((s) => !s.withdrawn).length}</span><span className="note">contacts and handsets, read in this browser</span></summary>
       <div className="body">
         {error && <p className="note cdr-error" role="alert">{error}</p>}
         <p className="note cdr-status" role="status">{done}</p>
-        {saved.map((item) => <Saved key={item.import_id} item={item} />)}
+        <ShowWithdrawn count={info.withdrawn_count} shown={showWithdrawn} onChange={setShowWithdrawn} />
+        {saved.map((item) => <Saved key={item.import_id} item={item} onWithdraw={info.can_withdraw ? withdraw(item.import_id) : null} />)}
         <label>CDR file (CSV; save an XLSX as CSV first)<input type="file" accept=".csv,text/csv" onChange={pickFile} /></label>
         <p className="note">The file is read in this browser. Nothing is sent until you check the numbers you choose or save the summary, and the CDR&apos;s rows never are.</p>
         {read?.error && <p className="note cdr-error" role="alert">{plain(read.name)}: {read.error}</p>}
