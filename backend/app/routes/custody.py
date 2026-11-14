@@ -6,6 +6,10 @@
     POST  /custody/{wallet_id}/movements              propose a deposit or a release (custody_log.py)
     POST  /custody/movements/{movement_id}/{step}     approve, broadcast, confirm or cancel it
 
+Recording or changing a wallet, and every movement step, needs a signed-in
+officer (403 otherwise): a stranger holding a case's link must not fill the
+table or rewrite its records. custody_log.py checks the same for movements.
+
 Behind config.CUSTODY_WALLETS (off by default): switched off, the list says so
 and every write is refused. No route ever takes a key: the fields that could
 hold one refuse it. Writes are limited per connection, like the requests log,
@@ -24,6 +28,7 @@ from .requests import _allow_write, _owner
 
 router = APIRouter()
 SWITCHED_OFF = "Custody wallet records are switched off on this deployment."
+SIGN_IN = "Sign in as an officer to record or change a custody wallet or its signing log."
 
 
 class Signer(BaseModel):
@@ -70,6 +75,11 @@ def switched_on() -> None:
         raise HTTPException(status_code=403, detail=SWITCHED_OFF)
 
 
+def signed_in(user: CurrentUser) -> None:
+    if user.demo:
+        raise HTTPException(status_code=403, detail=SIGN_IN)
+
+
 def bad(exc: custody.CustodyError) -> HTTPException:
     return HTTPException(status_code=409 if isinstance(exc, custody.DuplicateWallet) else 400, detail=str(exc))
 
@@ -94,6 +104,7 @@ def list_wallets(case_id: str, user: CurrentUser) -> dict[str, Any]:
 @router.post("/trace/{case_id}/custody", status_code=201)
 def add_wallet(case_id: str, body: NewWallet, user: CurrentUser, http: Request) -> dict[str, Any]:
     switched_on()
+    signed_in(user)
     _allow_write(http)
     try:
         made = custody.create(_owner(user), case_id, body.model_dump(), user)
@@ -108,6 +119,7 @@ def add_wallet(case_id: str, body: NewWallet, user: CurrentUser, http: Request) 
 @router.patch("/custody/{wallet_id}")
 def change_wallet(wallet_id: str, body: WalletChange, user: CurrentUser, http: Request) -> dict[str, Any]:
     switched_on()
+    signed_in(user)
     _allow_write(http)
     try:
         updated = custody.update(wallet_id, body.model_dump(exclude_none=True), user)
@@ -126,6 +138,7 @@ def change_wallet(wallet_id: str, body: WalletChange, user: CurrentUser, http: R
 @router.post("/custody/{wallet_id}/movements", status_code=201)
 def propose_movement(wallet_id: str, body: NewMovement, user: CurrentUser, http: Request) -> dict[str, Any]:
     switched_on()
+    signed_in(user)
     _allow_write(http)
     try:
         made = custody_log.propose(wallet_id, body.model_dump(), user)
@@ -141,6 +154,7 @@ def propose_movement(wallet_id: str, body: NewMovement, user: CurrentUser, http:
 @router.post("/custody/movements/{movement_id}/{step}")
 def movement_step(movement_id: str, step: str, body: Step, user: CurrentUser, http: Request) -> dict[str, Any]:
     switched_on()
+    signed_in(user)
     if step not in custody_log.STEPS:
         raise HTTPException(status_code=404, detail="No such step.")
     _allow_write(http)
