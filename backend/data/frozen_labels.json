@@ -6,10 +6,10 @@
   "chain": "ethereum",
   "last_reviewed": "2026-09-23",
   "counts": {
-   "frozen": 2710,
+   "frozen": 2630,
    "freeze_events": 3133,
    "release_events": 347,
-   "excluded": 53
+   "excluded": 133
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_tether_freezes",
   "schema": "labels maps an address to {category, entity, label, source}",
@@ -225,9 +225,329 @@
    "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": {
     "why": "token contract",
     "label": "USDT frozen by Tether on 2025-03-17"
+   },
+   "0x0000000000004946c0e9f43f4dee607b0ef1fa1c": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-01-11"
+   },
+   "0x00e679ba63b509182c349f5614f0a07cdd0ce0c5": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2024-12-19"
+   },
+   "0x0128e4fccf5ef86b030b28f0a8a029a3c5397a94": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-09-30"
+   },
+   "0x016913ead5672f01de2043874e5c1cac5df608de": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-05-06"
+   },
+   "0x09101f948aafd081a31d88a04c8e34812079a8f0": {
+    "why": "NFT collection contract",
+    "label": "USDT frozen by Tether on 2025-03-17"
+   },
+   "0x096e0a00d6d18f68f6e3e88e3101bdd030252230": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-12-11"
+   },
+   "0x0cb7d2677277b18f080fc2ad97f5fa9f3d7a3232": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2025-10-08"
+   },
+   "0x11c1197798d3b1cab6970577361172c00e4c5f36": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2026-06-17"
+   },
+   "0x1321f1f1aa541a56c31682c57b80ecfccd9bb288": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2022-03-17"
+   },
+   "0x2cedfa2a7f5e1102830b81759b95353c08973386": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2020-09-30"
+   },
+   "0x321df98447b5a2518c30e55a40fc1450c57d3533": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2023-01-06"
+   },
+   "0x3365cff5e0970fbb2cf744796901002d9987c0dc": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2020-09-08"
+   },
+   "0x3383c5a8969dc413bfddc9656eb80a1408e4ba20": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-10-26"
+   },
+   "0x3ac4a91b718b9845d4519936ea4db8fb2a6ec115": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-09-11"
+   },
+   "0x3f42cc9bd1347ea72aaad9f897c98a3546de1df9": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2023-09-01"
+   },
+   "0x4166ab48ed12a060628905ab672e4a24d20310d9": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2021-01-29"
+   },
+   "0x43d70985e2336eef64342a9393af7dfc2aa7744a": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2024-09-18"
+   },
+   "0x44ea04886b5b67f0f861a37254e43beee2f3b049": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2026-07-13"
+   },
+   "0x45f24baeef268bb6d63aee5129015d69702bcdfa": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-09-11"
+   },
+   "0x4688a8b1f292fdab17e9a90c8bc379dc1dbd8713": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-03-17"
+   },
+   "0x4b4d2e899658fb59b1d518b68fe836b100ee8958": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-01-29"
+   },
+   "0x4e220a522a7473319534968e5935f54755c1ed29": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2021-01-29"
+   },
+   "0x4e31f4ee7ee7dd58cca2be6b4934469e61a634d6": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-01-11"
+   },
+   "0x50b6071561f068963bcfe2b341126cd6accafafb": {
+    "why": "DEX pool",
+    "label": "USDT frozen by Tether on 2020-10-26"
+   },
+   "0x523eeafdac23fa2cb0c3873cda4818cdc80e28e8": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-10-26"
+   },
+   "0x652d7f9edaaa8891be2de74ea568d70af823d89e": {
+    "why": "DEX pool",
+    "label": "USDT frozen by Tether on 2025-03-14"
+   },
+   "0x657b83a0336561c8f64389a6f5ade675c04b0c3b": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-06-07"
+   },
+   "0x69692d3345010a207b759a7d1af6fc7f38b35c5e": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-12-11"
+   },
+   "0x6d82a3743261e0ac77116f4cf153338bec3c69c6": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2023-12-19"
+   },
+   "0x6e204350fd0ad93706d4ab09fd4b47502652b607": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2024-12-19"
+   },
+   "0x6f446b03a63cc68aad86395bc2d8a38f358d3d69": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2020-10-26"
+   },
+   "0x6fa0952355607dfb2d399138b7fe10eb90f245e4": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-03-17"
+   },
+   "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-03-17"
+   },
+   "0x7b879d453d5471f3d05f85547ddd32202139f078": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2024-03-15"
+   },
+   "0x7b99fea8f296fd21b4fc75aac8ae602c247fb7af": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2021-10-21"
+   },
+   "0x7bec98609cb6378d6f995e8f8097ee78376fbec9": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2023-07-06"
+   },
+   "0x86772b1409b61c639eaac9ba0acfbb6e238e5f83": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-03-17"
+   },
+   "0x873e288d432d1e8dd93defa63406fd9a80580491": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2023-12-19"
+   },
+   "0x8765b1a0eb57ca49be7eacd35b24a574d0203656": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2023-07-06"
+   },
+   "0x87f7a1b09a00a512c1825ee8a6649f8f23f5fa3d": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2023-04-21"
+   },
+   "0x8d59bca8183d6a75a1db4a5803c763fbbe08c6ab": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2025-03-17"
+   },
+   "0x8e8bd01b5a9eb272cc3892a2e40e64a716aa2a40": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2025-03-17"
+   },
+   "0x905b63fff465b9ffbf41dea908ceb12478ec7601": {
+    "why": "mixer pool",
+    "label": "USDT frozen by Tether on 2023-12-09"
+   },
+   "0x958713b08536ba87165002b167e3911787f083be": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2025-05-29"
+   },
+   "0x95dc80adc97724275312ce37079e7395295263dd": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2025-11-08"
+   },
+   "0x981d30f446121d571dd914a117e3d32038b27755": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2024-09-18"
+   },
+   "0x98eaba2684b49bbde9842cd48f3bae8caa31dac4": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2020-09-11"
+   },
+   "0xa13edd1a27ab4fb8982c033acb082cdb5f98b79b": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2026-05-01"
+   },
+   "0xa38450b7503f33c803b43539485df45377758e17": {
+    "why": "NFT collection contract",
+    "label": "USDT frozen by Tether on 2023-02-20"
+   },
+   "0xa4f5d39c95d40de4b31fba6b3c45d0f3c2d7f914": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2022-03-17"
+   },
+   "0xa74476443119a942de498590fe1f2454d7d4ac0d": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-07-27"
+   },
+   "0xa7ed29b253d8b4e3109ce07c80fc570f81b63696": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-01-29"
+   },
+   "0xaaca86b876ca011844b5798eca7a67591a9743c8": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-10-21"
+   },
+   "0xaba8cac6866b83ae4eec97dd07ed254282f6ad8a": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-09-11"
+   },
+   "0xabc7896f534a358dc38d8524f62d67c96f46b366": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2023-09-01"
+   },
+   "0xb1f66997a5760428d3a87d68b90bfe0ae64121cc": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-10-26"
+   },
+   "0xb2a55570ae16cb8b04432790ada44d6008e1111a": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2022-10-06"
+   },
+   "0xb3282c5caefb26c24e462e828ea977d8dfe9effb": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2020-09-30"
+   },
+   "0xb5a73cbee0af2f98fdf8ba515aa8fabdf307a47c": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2026-02-17"
+   },
+   "0xb60fbba496bed5dfc3be19b90a892351b07abb2b": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2020-12-11"
+   },
+   "0xb8c50b608f20ab84344a8cd10e71bbb658c658b2": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2022-04-11"
+   },
+   "0xbee02b40e4016f5b46c76b450ac78f6706ffe9ed": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2025-10-08"
+   },
+   "0xc3771d47e2ab5a519e2917e61e23078d0c05ed7f": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-10-26"
+   },
+   "0xc4245d85f2f5f1d15ba0ecd2382f381718a3aa20": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2026-03-16"
+   },
+   "0xc5e6ceda11904b7c21591df5fea2b5f8d1687fea": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2025-03-17"
+   },
+   "0xc9ce70a381910d0a90b30d408cc9c7705ee882de": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-10-26"
+   },
+   "0xccdf467e545577f0f3631796dfdc88df5ccaadfa": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2023-02-20"
+   },
+   "0xd155fa55c40d010335aa152891aa687e2f3090bd": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2024-06-05"
+   },
+   "0xd16fca52f955187eb7afb9503c6876f094cbdbfa": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2021-01-11"
+   },
+   "0xda3145d0a373712e036106fc1fa34b1014807e68": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-09-30"
+   },
+   "0xdfdb7f72c1f195c5951a234e8db9806eb0635346": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-10-21"
+   },
+   "0xeafc14e2af750ff52c13349f13fa3a1bf9061497": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2025-10-19"
+   },
+   "0xeb2bde819a63db62c9f323b88a41e8892037dafe": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2024-09-18"
+   },
+   "0xec565af969ac889387a73844c2ab07ad17e2793a": {
+    "why": "DEX pool",
+    "label": "USDT frozen by Tether on 2023-02-20"
+   },
+   "0xefc1c73a3d8728dc4cf2a18ac5705fe93e5914ac": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2022-10-06"
+   },
+   "0xf0f0fcda832415b935802c6dad0a6da2c7eaed8f": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2024-06-13"
+   },
+   "0xf275d07c3db7e14711290aa4c63cdce17db7bfa9": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2020-09-30"
+   },
+   "0xf6ec8d867a227ff5f84761407da1f85826c17797": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-06-07"
+   },
+   "0xf9e80a5f300944bfedf2816cbe72b1981c6c5ee2": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2021-08-05"
+   },
+   "0xfb896f4ffecfb73f58f023487f26929c40160012": {
+    "why": "multi-user contract",
+    "label": "USDT frozen by Tether on 2021-10-21"
    }
   },
-  "excluded_note": "Frozen by Tether but left out: token contracts, DEX routers and burn addresses are on every user's path, not anyone's wallet (app/never_flag.py)."
+  "excluded_note": "Frozen by Tether but left out: token contracts, DEX routers, burn addresses and the shared contracts in data/never_frozen.json (DEX pools, mixer contracts, token sales) are on many users' paths, not one party's wallet (app/never_flag.py)."
  },
  "labels": {
   "0x0000000000000000880620000000203571704007": {
@@ -235,12 +555,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2020-09-30",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x2bad00af1c9c5306d7bab880931f5f51c631a286a39e9b5c7245fbd8ff5af072"
-  },
-  "0x0000000000004946c0e9f43f4dee607b0ef1fa1c": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-01-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x8c29c982782b4ea2a2c69329e3e4e2afe8bdcdaef9554fe09dc04429d530d323"
   },
   "0x000000000cd2ea93ac6de3054ad27667ed965a81": {
    "category": "frozen",
@@ -338,12 +652,6 @@
    "label": "USDT frozen by Tether on 2022-03-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x7edd37db75241364fa4916617f472031b073193cfafd7e8817133da8847f9364"
   },
-  "0x00e679ba63b509182c349f5614f0a07cdd0ce0c5": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-12-19",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x235e91ecc64641031e3a703b5760da21234d30ff586e829bd6c8f766ba04fff5"
-  },
   "0x010da518c1aa53517ef87062dddccf018949b6dd": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -355,18 +663,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-03-19",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x3617d737e37dcb52efd3faf8fe2bc0866c7557ae0db09955bf7ba0ce81c5dedb"
-  },
-  "0x0128e4fccf5ef86b030b28f0a8a029a3c5397a94": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-30",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x317a06c1691f0649ff54d99b0b5183c4fcdf70abeb3d93ba37a9093324225009"
-  },
-  "0x016913ead5672f01de2043874e5c1cac5df608de": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-05-06",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x4306ca74f91a3eed57ce2e7bfa0469f4c4b76fda3057f6a12b75b7f46dcd3072"
   },
   "0x016a2046689fc94eec7d23545693bc7b81dbabd1": {
    "category": "frozen",
@@ -860,12 +1156,6 @@
    "label": "USDT frozen by Tether on 2023-03-14",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xe927ecdfa01f6efcdafcb29926fbcb9b1d2254dd0d292c7edbe5e71b55f94a89"
   },
-  "0x09101f948aafd081a31d88a04c8e34812079a8f0": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x42ac6980daa7322c016f2e0e9daf0e9d0f061814de373c6ded9cf790e3d9e858"
-  },
   "0x091acf01a0f2d07a22e3969266be77714477bd8b": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -913,12 +1203,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-05-11",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xb0851967e67b1c1fafb388c06b443b2af4ccc8c4d11a47115b716663c12f1a16"
-  },
-  "0x096e0a00d6d18f68f6e3e88e3101bdd030252230": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-12-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x1d2c41f7fa538b1f51db04147de5cbd68c90fa27104354f151780f84430ea62b"
   },
   "0x0984737eab3e03774af54fc4f6fd9c3d5a2acd86": {
    "category": "frozen",
@@ -1135,12 +1419,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-11-24",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9eaa71c2c482e477a08adb922a9fd318f8fd252bd2c323659de543948abefea7"
-  },
-  "0x0cb7d2677277b18f080fc2ad97f5fa9f3d7a3232": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-10-08",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x8352757306be731853a534753426b63dc33d6ebc3c54f4770a054295aeb76c00"
   },
   "0x0cd83b38c4e407dfa24d7dc15ecf835c5932c0c2": {
    "category": "frozen",
@@ -1418,12 +1696,6 @@
    "label": "USDT frozen by Tether on 2024-05-14",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xce1dc788539155c9b1e6df054219ec39948be1d67364eb455618e4a40f4014df"
   },
-  "0x11c1197798d3b1cab6970577361172c00e4c5f36": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-06-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x63d0b08c854c859a58434b03d4e525430683a8680ecb4ebbb4c761151125f44d"
-  },
   "0x11dcd88bb86860b7962c73737b3d0595445570de": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -1513,12 +1785,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2021-03-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x504bd49883be977e203104637d3d1540fb7c583c410c8ff5625b4cb4ddb29188"
-  },
-  "0x1321f1f1aa541a56c31682c57b80ecfccd9bb288": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2022-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x8365fcf42ebec34d5bda221583968a1a6fd3841ce663683072eede1f5d33dc68"
   },
   "0x1328b436875f7ebf7eb9886ca25d94d54545d85c": {
    "category": "frozen",
@@ -3134,12 +3400,6 @@
    "label": "USDT frozen by Tether on 2025-01-06",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x1388a149d352ec861d4ff5c565abfd7024b61c9d459963d6c587ed52bfb3b4b6"
   },
-  "0x2cedfa2a7f5e1102830b81759b95353c08973386": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-30",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x04470123a91330ddd7ccd4c6dd3514143df19808e48534dbed4ddba58afdde72"
-  },
   "0x2d43b14ed6c61389fd0b398b73c6782231dff73a": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -3386,12 +3646,6 @@
    "label": "USDT frozen by Tether on 2026-09-22",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xf6b9504987690edd641b39aaf1c43720863c71a6ddcff3f9e1b17ccedf842c18"
   },
-  "0x321df98447b5a2518c30e55a40fc1450c57d3533": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-01-06",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x09318d9dc9c46abb27b2129b18a7aa5ad09a7e9b3cc9ce0456d444811c93d422"
-  },
   "0x32487a63c67af6c823eb92b63131388014b08ec3": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -3469,18 +3723,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-07-09",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x019bd2cbd47def4231792caf80c5b70d00e88a6220342472a602d68fe1337299"
-  },
-  "0x3365cff5e0970fbb2cf744796901002d9987c0dc": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-08",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x5bd1bf648cd8b066cad8807e3e23ff0dd5ec62c2799ceccf486a097544469c4d"
-  },
-  "0x3383c5a8969dc413bfddc9656eb80a1408e4ba20": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-10-26",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x00caf5921207523d72c08776e526985084bd0385fe917a7bb6e7359da496c165"
   },
   "0x33b09d87b0e601eea026a2d6d2689a719096aefa": {
    "category": "frozen",
@@ -3914,12 +4156,6 @@
    "label": "USDT frozen by Tether on 2025-03-11",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xb04521c276298708d519441efb8a609d0025e5400b7bdd5560858b7f1ea5c4cb"
   },
-  "0x3ac4a91b718b9845d4519936ea4db8fb2a6ec115": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x89c599f27d3ed04b4522a0585c89bf51d43050b3c4ada64dda1d1692ab8a51eb"
-  },
   "0x3ac53c9acceb59d37ea663ff7f57004d00f7c0f5": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -4244,12 +4480,6 @@
    "label": "USDT frozen by Tether on 2022-06-30",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x52984e9735f1e5664d53fa6845858442819620ee85997f573a98e4b3f6656d15"
   },
-  "0x3f42cc9bd1347ea72aaad9f897c98a3546de1df9": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-09-01",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x5790067dee10cbeb470f3e65b47a86320d3a173a5fc31172d7d7d99c3a755965"
-  },
   "0x3f6ccccd077d842af5b815e8cc9001f54069e5e1": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -4357,12 +4587,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-02-20",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xd9412723bb0dd9507b69487f078e2f78c5a44fff699d0828f126398f1e0e0a2c"
-  },
-  "0x4166ab48ed12a060628905ab672e4a24d20310d9": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-01-29",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x8ffdaff347c0caa27b951aebafea06cbdfbacdc54b111233aa813ce9d0442442"
   },
   "0x4179f50cd49b77ea254128ca602b88279cf2c12c": {
    "category": "frozen",
@@ -4514,12 +4738,6 @@
    "label": "USDT frozen by Tether on 2026-01-19",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x4c31e9f3c31dfd030249710eff9dd4c452ced4f0c2b5ddc68e1a3b706382f214"
   },
-  "0x43d70985e2336eef64342a9393af7dfc2aa7744a": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-09-18",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x2c305257a703196b48067f6a7e85466412de166a90ef90db93187083e880fa0b"
-  },
   "0x43fa21d92141ba9db43052492e0deee5aa5f0a93": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -4567,12 +4785,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-03-05",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x8b3a201ddeb7fc9dc31db7607a8f3f00a59274eb76b4524e801e77e5f42c243a"
-  },
-  "0x44ea04886b5b67f0f861a37254e43beee2f3b049": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-07-13",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x3cc2235fbd0a75c5885fbc02cf8c5cded9520d1487ae1b59ebb74d2a7103d121"
   },
   "0x450195a34602fa0f8f1eaa82646abead93641953": {
    "category": "frozen",
@@ -4628,12 +4840,6 @@
    "label": "USDT frozen by Tether on 2026-04-10",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x311efb47212b3f4feff718be8e9c3f9ff4d9e266cd672503ab25641d87dcf8cc"
   },
-  "0x45f24baeef268bb6d63aee5129015d69702bcdfa": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9c65d635501154f041969305036c52a24d74e7e3a29cecb8241cc325c3f7c6d3"
-  },
   "0x45ff736c9ba7d2b52d6fc25e91d4f390e61f44a3": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -4675,12 +4881,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-06-02",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xb5819cc17d5301b46aedac97e45bef4e3d4f18cf24cdd6de7272d4b0fd9bee1d"
-  },
-  "0x4688a8b1f292fdab17e9a90c8bc379dc1dbd8713": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xd3daf7b285248d361be5a70a4286017c3c8ea1cdc69c23a9a76dc39c01aa41d5"
   },
   "0x469e5dbfcf619f5f02631d643de99cbe8635d480": {
    "category": "frozen",
@@ -4970,12 +5170,6 @@
    "label": "USDT frozen by Tether on 2024-02-06",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x63a33db9115d06ce9a3a22ad429a156c525bd3b5d3a56f8806683410d78f3187"
   },
-  "0x4b4d2e899658fb59b1d518b68fe836b100ee8958": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-01-29",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xf637cd1ebe9f16c193b635c57af3b2b1bff5efe18557e23d5e2b2158323656c6"
-  },
   "0x4b6d1ce5887f5dbfbf91797917c1d19f912eaed2": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -5107,18 +5301,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-09-20",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x205c028f4defdc476cd1beff8f874244e22426a26608dbc0b7afd58e6954cfa8"
-  },
-  "0x4e220a522a7473319534968e5935f54755c1ed29": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-01-29",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x2d80c54cb71ad3c7da123e8ed2d18bc36ccd23e67c811de7dbc880e6c980f983"
-  },
-  "0x4e31f4ee7ee7dd58cca2be6b4934469e61a634d6": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-01-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x77db6d48985a1f836873af5fea732b5131d3f876e33b348947c85356999a45d2"
   },
   "0x4e31fb0b3f55d5b12cb307222373ae2dc186b346": {
    "category": "frozen",
@@ -5270,12 +5452,6 @@
    "label": "USDT frozen by Tether on 2025-01-16",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x3ce795877a474f46a3bfa8eba345a2cf9d5487a5a21825b8ea8b3e68100a12d9"
   },
-  "0x50b6071561f068963bcfe2b341126cd6accafafb": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-10-26",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x783856a3da6ce4b2df87eb388cde0f354d00396393680cc6c33d9f7d54e171e2"
-  },
   "0x510230cf57a20d427446412b48eadf8d17cea81f": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -5383,12 +5559,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-06-01",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x0498a131d08d4f93a1a706eb38572a3ad3c09e9b6a6de12e8d124be339dcfe26"
-  },
-  "0x523eeafdac23fa2cb0c3873cda4818cdc80e28e8": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-10-26",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x8ea613625e2da67df9c6064fa935fda42dbf5dc54c21855bb845b916eb297f52"
   },
   "0x5247136e1fe6a86b9cddce7c97dbe6c930e67aeb": {
    "category": "frozen",
@@ -6590,12 +6760,6 @@
    "label": "USDT frozen by Tether on 2022-08-18",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xdb1b532af4191f675feada4eea7c0a6962aecc86ef11945e4de05144a69deed1"
   },
-  "0x652d7f9edaaa8891be2de74ea568d70af823d89e": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-03-14",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xe836f434eb945ffec4cee8043926aa0e66db33610c76d9cfccc4683583995fd3"
-  },
   "0x655113606aafe1549dccfed4e120da22b6cdda24": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -6613,12 +6777,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2021-03-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x6cbff13f972d69ef4c8e0f3c56394b7c3f319c5331bb2a05f7c7a21e50f3e376"
-  },
-  "0x657b83a0336561c8f64389a6f5ade675c04b0c3b": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-06-07",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x2957facb719e8892900340c663f1e07ecc2b01b460a1a7f77e321b6edc3fb739"
   },
   "0x658682b2e34ded80d22bd7ca15b44ed8356c9b35": {
    "category": "frozen",
@@ -6878,12 +7036,6 @@
    "label": "USDT frozen by Tether on 2022-06-30",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x48c57fad8e28b18e33883839dc73a9819e7733bbb794f5e27292734795bc1883"
   },
-  "0x69692d3345010a207b759a7d1af6fc7f38b35c5e": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-12-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x27ab9f64be24ff3ec67e00fa39e6d2fb129db035ca73e08a4979c667085bf7ed"
-  },
   "0x6973422799389e8013fb1938bb6da0f898820211": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -7118,12 +7270,6 @@
    "label": "USDT frozen by Tether on 2023-12-04",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9dfe7de3fc6a1eb208ec8d3af4bbf88ad54328a590a26eaa719f6d30cf6d4405"
   },
-  "0x6d82a3743261e0ac77116f4cf153338bec3c69c6": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-12-19",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xaa912340116363c288e326fae81029cb096a1225bd4db81709a56232d682fadc"
-  },
   "0x6d876eac54f4fc6d3523b83ded578c67cc704ecb": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -7177,12 +7323,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-01-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x5e05408cc3bd50dd2d520c12d5f9df6956a405f8cc411cea017bac01d5038bcd"
-  },
-  "0x6e204350fd0ad93706d4ab09fd4b47502652b607": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-12-19",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x70f854c29f99d6a073fea796d12d400d1cfaf2043deb9d0c272f630b3ca1e785"
   },
   "0x6e2c604a1d0256a79340037d8f948e566714db5f": {
    "category": "frozen",
@@ -7280,12 +7420,6 @@
    "label": "USDT frozen by Tether on 2025-03-07",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x2026f7ca49043f8ae54cb081057a7ce3f0c72dab61fc74610d66a8f3fe2e906e"
   },
-  "0x6f446b03a63cc68aad86395bc2d8a38f358d3d69": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-10-26",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x0a45b7081c812340abd8ca26f58837960bbdbf9e1eac643dbe9587a60a4cff68"
-  },
   "0x6f4617a2b686e722fa7550caec775148c20b8626": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -7304,23 +7438,11 @@
    "label": "USDT frozen by Tether on 2024-06-10",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9ecf1eb68dc962caf78046e9253bff3c42dbfd1a60ae67c53dec6c01d9e96ec4"
   },
-  "0x6fa0952355607dfb2d399138b7fe10eb90f245e4": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xd058e2e9ae88bc0dc4e7b9414e859fc6061de46997a468f367570e410332e47f"
-  },
   "0x6fac4d18c912343bf86fa7049364dd4e424ab9c0": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-08-24",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xa7a291ea13b1830feb990b6ad39db97bc2628317c4684e809b266b7ab80c99e7"
-  },
-  "0x6fe56c0bcdd471359019fcbc48863d6c3e9d4f41": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x264f2723a8d802a29c3800dbb5a2f4461935aa0d19de9f176d023d13305ad361"
   },
   "0x6ff05ab2f2e47a9ca5d4d8ffc8b3e163e6a74876": {
    "category": "frozen",
@@ -8000,12 +8122,6 @@
    "label": "USDT frozen by Tether on 2025-05-11",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xac86cade51b845753470322251d5a867e92a25bd99a9eaeb4c5cf3d1f0ed64a3"
   },
-  "0x7b879d453d5471f3d05f85547ddd32202139f078": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-03-15",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x7725bcf126c31f221c88d26a543d4e5dd4ff7b80e1e9f8b8c1545342df06d7c2"
-  },
   "0x7b8c3644bff1a2407d369b7218aec08de96414e0": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -8018,12 +8134,6 @@
    "label": "USDT frozen by Tether on 2025-08-19",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9a9ba4902c39c68d3a41736302b99e66dae485c9062e552dbd7f7048830eb6fc"
   },
-  "0x7b99fea8f296fd21b4fc75aac8ae602c247fb7af": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-10-21",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x6ea774ae84f2a01a89328640c516d5d01a2f29c72f1151993feb7c0f17f2e147"
-  },
   "0x7bbeeef8fb84c443e1e3d3db44c8eb3506afc438": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -8035,12 +8145,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2021-03-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xc156e7612fb9de27bc9ad410e961886af8c81a26782f39d3acf75785b20cd2c8"
-  },
-  "0x7bec98609cb6378d6f995e8f8097ee78376fbec9": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-07-06",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xe6e43bc0c4a968a1a6bd8d4617fc5ab1d281970f93ef277bac2e5fb923096202"
   },
   "0x7bf7f0131e183c859fa8128eb6abecb5d35af51d": {
    "category": "frozen",
@@ -8594,12 +8698,6 @@
    "label": "USDT frozen by Tether on 2024-06-06",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xd496c80b29033bb54c499042825f8e4c4e4888502b2e77c89cbb19243b206971"
   },
-  "0x86772b1409b61c639eaac9ba0acfbb6e238e5f83": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x55ead2a592ab2f0f7dc08b45f49950974280c8915d2b83f035841e8543553a60"
-  },
   "0x8679b074480c47d6e4b4c4bb24e5970e1a0d0cfc": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -8642,23 +8740,11 @@
    "label": "USDT frozen by Tether on 2022-08-26",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x57a8627a40677cd7cdfe91476f603b78e827c101eaa6de339ec2e9c205c98271"
   },
-  "0x873e288d432d1e8dd93defa63406fd9a80580491": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-12-19",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xf5d26defe305da8453695494d5ceed18cc350753574443781a776c642109d074"
-  },
   "0x874071288290361738ea12cd1389f4bcb4875ef3": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-04-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9fac89ab225a31230f59c11cb80d907ca4e7a6c37b1362403857b24ced1f0c36"
-  },
-  "0x8765b1a0eb57ca49be7eacd35b24a574d0203656": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-07-06",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x36b4b1183873f3439ab99875a5790f7710dfa5dc6b06f72d47e7dc9f196fac0f"
   },
   "0x8766fe4aa2208afd9a5b050acfcdbb4ad4d3d8ee": {
    "category": "frozen",
@@ -8701,12 +8787,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-01-07",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x914b6cdd326ef22bb77de807a2df1c48f43b52fb8be8b4eb719cfaf8f6beda37"
-  },
-  "0x87f7a1b09a00a512c1825ee8a6649f8f23f5fa3d": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-04-21",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x7670071c90bdbca7b73c7103365b9d843fb8223cd416fc7c7846861e628d882a"
   },
   "0x87f99c2cdc177a503993f209605206e0b8986977": {
    "category": "frozen",
@@ -9062,12 +9142,6 @@
    "label": "USDT frozen by Tether on 2024-07-09",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x2e205d7114d10ac166af1fe585130c42a247ef76d240fb72f542384d8e6b39ae"
   },
-  "0x8d59bca8183d6a75a1db4a5803c763fbbe08c6ab": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9bc1015ded46fcfbc8539a443b83daf469910d365422980b6362209005166f94"
-  },
   "0x8d79c73daae8630c88de372ba8f57592fa987607": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -9133,12 +9207,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-07-10",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xdf977726ac3cc29e2b6d86c4c2206bb697fceb16a004a93ac01d5fce7efe8cc3"
-  },
-  "0x8e8bd01b5a9eb272cc3892a2e40e64a716aa2a40": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x305e4358c6373c607fc29cb0c00b483d6f579fc0a45dfd7bfb60618204b4f381"
   },
   "0x8e950923b1fabd7da91f31996887ad9570b17c3f": {
    "category": "frozen",
@@ -9271,12 +9339,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-03-30",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9700e658cb907a60536450c61141770f86be95afd040c73b547757ccae467358"
-  },
-  "0x905b63fff465b9ffbf41dea908ceb12478ec7601": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-12-09",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x5b4c60abaf4807eba903877835a301d08d8e51f6fd89f1c69657659f90e18f70"
   },
   "0x905d51d0742259211af757dda2dfda5378b17a98": {
    "category": "frozen",
@@ -9578,12 +9640,6 @@
    "label": "USDT frozen by Tether on 2021-03-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x1a2ee266f32e20c00c13d66b8401e2e0705fd5b4bab8223e6af7e88550c592bd"
   },
-  "0x958713b08536ba87165002b167e3911787f083be": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-05-29",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x01b7e27f19ac862a07fa1843346c3ba49c80a4f502e8d71441a3b00e524ac39b"
-  },
   "0x95a7cd7e2ad346f46eb59371a23f12eae90e5653": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -9601,12 +9657,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-10-25",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xa80b1a3d7cd04da9bffd90dde264863a1ee5066cb6baa50ea518041594c85705"
-  },
-  "0x95dc80adc97724275312ce37079e7395295263dd": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-11-08",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x1a58b06442a9cb838dd26b45228f9e9744083888445d93cf6eb1c8038b7cb7e3"
   },
   "0x95f5cec195b5781e09b9bae0731c7d4704bffe4d": {
    "category": "frozen",
@@ -9758,12 +9808,6 @@
    "label": "USDT frozen by Tether on 2022-06-30",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x8c7605a2b38790edfe6103e960fd7e13bd8345d59317b1cb7d783d15d808cac9"
   },
-  "0x981d30f446121d571dd914a117e3d32038b27755": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-09-18",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x61dd3f610d931bb96ace31e3fd0d053703e878339ec897ead22962e0ceb1409f"
-  },
   "0x983598fb25c991131c5e639f6a066ec9554049b4": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -9823,12 +9867,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-09-04",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x66b06ebff44db8f4e20436d3a873c46c196acc55f8db0fe5ddb0dfcef7474879"
-  },
-  "0x98eaba2684b49bbde9842cd48f3bae8caa31dac4": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xea4e10e577d8b3c749ec2004f84a4b8f849e6155df651347d73661dbf259f216"
   },
   "0x98f11df3f5275e205731787e8556bc4925715f0f": {
    "category": "frozen",
@@ -10430,12 +10468,6 @@
    "label": "USDT frozen by Tether on 2025-09-10",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x6b742f4a694f6d3fefbfa9a259f79229236d2028b3055a6fb00c29f4022b31e1"
   },
-  "0xa13edd1a27ab4fb8982c033acb082cdb5f98b79b": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-05-01",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xbd1de15edcd63de94a32de408129af95d01c904e541690d1b72c188f68e96aa3"
-  },
   "0xa14d5da3c6bf2d9304fe6d4bc6942395b4de048b": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -10580,12 +10612,6 @@
    "label": "USDT frozen by Tether on 2024-06-07",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xd92a65dd15f1cccaa5be3c5d1c5bcbd8213e762a0500c3d3dd7b65fa00f8b340"
   },
-  "0xa38450b7503f33c803b43539485df45377758e17": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-02-20",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xc2367cffcd39d7b63e25f8a6c0653fc796559c7a623ae4c2ddee1a259e8013cd"
-  },
   "0xa3cda223bb11e3c2dff7a6574e5dbfa472c92878": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -10681,12 +10707,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-07-07",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x258a4652e83f9b7bfbe2bc46cd43fc47ffb4d2ca5f17cc5e7b36ce13f9c63a54"
-  },
-  "0xa4f5d39c95d40de4b31fba6b3c45d0f3c2d7f914": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2022-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x54b55804174db7bc80b0d43fef26c4aac895e03157d0edd2447b136f54c70cb7"
   },
   "0xa4ffea100809dcc3ab896c706b8a33f35573e999": {
    "category": "frozen",
@@ -10844,12 +10864,6 @@
    "label": "USDT frozen by Tether on 2022-03-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xaf182bee671c6cb76797dccb3236170e783bd627c53c7e92822476f54f0def85"
   },
-  "0xa74476443119a942de498590fe1f2454d7d4ac0d": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-07-27",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x89f99b28d0c57981ba3aeb7581c01e8cf16bf039f75ce02d1c538cbb0a562290"
-  },
   "0xa75752362f3798801f1a1132310b7d3bdcda7450": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -10909,12 +10923,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2023-12-09",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xe6b52383d6bfb782da90ccb27dd92c7c57f8fdabc32a911c9cede0a4dec61353"
-  },
-  "0xa7ed29b253d8b4e3109ce07c80fc570f81b63696": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-01-29",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x92fabf832320b18723f9c34bdd3759b9f1c0eac6a08bc0dcaaa31e8cc0d544e8"
   },
   "0xa7ff152dfb81be34126b37b9bff0f376f08554ab": {
    "category": "frozen",
@@ -11072,12 +11080,6 @@
    "label": "USDT frozen by Tether on 2020-08-10",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x7a67f1fcf106877b35c4708eae24e57c712073baa39e605fa9cfa297f5b8463d"
   },
-  "0xaaca86b876ca011844b5798eca7a67591a9743c8": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-10-21",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xb5576ff4e911fa444bf6fee8954e317e01de54570ca461f873b819b62e353b21"
-  },
   "0xaad31691c0a725bf847da5a5236e813132933f3c": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -11132,23 +11134,11 @@
    "label": "USDT frozen by Tether on 2025-10-07",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xac8be276ec056ed46461715283d7857a3428ae4a0a3b60d2f352c52e728295ca"
   },
-  "0xaba8cac6866b83ae4eec97dd07ed254282f6ad8a": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x0fa804510c0f803d80b4906e821bebc427afb60c617ddb69a07139ea05c4328c"
-  },
   "0xabad52d5be8b3c6eb9835073730fa85b35715dc3": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-02-25",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x5afe23f6995a8fc480d575511e6e14e4b35676e119240b10f41e22c63e932cb2"
-  },
-  "0xabc7896f534a358dc38d8524f62d67c96f46b366": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-09-01",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xf3dde23f73f98078b0496fb3651932e7902b9d06569a19fc0cd6e1684210f412"
   },
   "0xabcf6a9c759133f9013542b8dc9d3c8aa4533167": {
    "category": "frozen",
@@ -11510,12 +11500,6 @@
    "label": "USDT frozen by Tether on 2026-02-05",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x79c746e96f9da1d1f85083db53c94021cc88200214fbccbc04d64b38ac9696eb"
   },
-  "0xb1f66997a5760428d3a87d68b90bfe0ae64121cc": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-10-26",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xcca89e11cb04e3c4b5aa82de90f9fcec2dc2ef465768eff2bb1102c4c0bb6a88"
-  },
   "0xb21c9273b3970bfbfb8b27359122fb3a079b0ce7": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -11564,12 +11548,6 @@
    "label": "USDT frozen by Tether on 2022-10-06",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x6bf7c0eb5d12664f327fe8e88d22ba08a07450d4fbcc39c4492fa33dfb343c17"
   },
-  "0xb2a55570ae16cb8b04432790ada44d6008e1111a": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2022-10-06",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x81875042b15fb8d06c78b4427fa571363686a43f19bb0190068a9879af3b5c8d"
-  },
   "0xb2e1342b7a2e9669fa1e8ff775e5765e5cd0964a": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -11611,12 +11589,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2021-03-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x39c0aef56c4f35d29db3f2d6c86e30468cceb0d6912ccf1a04340fe966617fd2"
-  },
-  "0xb3282c5caefb26c24e462e828ea977d8dfe9effb": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-30",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xf9be73921e1574e75f4ebb80a303d993db2cd408f2392c955b8f91f48cad674c"
   },
   "0xb338962b92cd818d6aef0a32a9ecd01212a71f33": {
    "category": "frozen",
@@ -11774,12 +11746,6 @@
    "label": "USDT frozen by Tether on 2026-08-24",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x8a0080b167ab9389f75d606868c96acd31f3fed98dc7e810cf32a5ba19d3a46e"
   },
-  "0xb5a73cbee0af2f98fdf8ba515aa8fabdf307a47c": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-02-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xac2871ea4a10f514e3f2acd92cf559698a9f60ac6d1277325cfb5188e18cb590"
-  },
   "0xb5baed90ee210f1610e747c5239b9d310b6b9a85": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -11797,12 +11763,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-03-01",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x4bb494cf5982c7a1c9732995fb0b7e218b5fecea7045c6aab769e380a159c700"
-  },
-  "0xb60fbba496bed5dfc3be19b90a892351b07abb2b": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-12-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xbfb9be565c39e9a6966179100c8545ff378c84f4f7526b9bc8adc27fd639b94e"
   },
   "0xb637f84b66876ebf609c2a4208905f9ddac9d075": {
    "category": "frozen",
@@ -11977,12 +11937,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2023-03-24",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xa543b38bdc309f7f0ce072ffa7cda7454194a9feb2872296ea02301bcf4bf63c"
-  },
-  "0xb8c50b608f20ab84344a8cd10e71bbb658c658b2": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2022-04-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x0d8f46356564de44a98377611d156afaedbe972a1d947716864f815426785e96"
   },
   "0xb8dad58a14528b8355412dafae10f4ee56483d48": {
    "category": "frozen",
@@ -12350,12 +12304,6 @@
    "label": "USDT frozen by Tether on 2024-07-16",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x4675fe6e41e13d3818a35133dfa8411ab1cb7f209ea487c4bcc16db7fa306f58"
   },
-  "0xbee02b40e4016f5b46c76b450ac78f6706ffe9ed": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-10-08",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x9701fa1760ec8b5c6918ee6e32f9ebd55800508b6c4d06925962450b9c836b64"
-  },
   "0xbeef863bc81abeace8689751009f069be09ac3f0": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -12686,12 +12634,6 @@
    "label": "USDT frozen by Tether on 2024-04-05",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x4daf0cd4bf970d3fead4dc80d7b8c21cc05e311e591bdc8954fbe1bc9e2c0fcb"
   },
-  "0xc3771d47e2ab5a519e2917e61e23078d0c05ed7f": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-10-26",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xf56917842f21dde2df09ef1de0974e3d3028bb0e9c52cae8aee0c4e4e51ebdf9"
-  },
   "0xc38ebd839bffc0b7da5c43126b3632e58cf8a69f": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -12721,12 +12663,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-10-17",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xadacfb28b5bf5fb05db3e25d91f29cee507cbe1796808f1769048e8439cf21a3"
-  },
-  "0xc4245d85f2f5f1d15ba0ecd2382f381718a3aa20": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-03-16",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xe91382feab4752e351562f38f72eca3b9255149bbb19b50dba8533367559b3d6"
   },
   "0xc455f7fd3e0e12afd51fba5c106909934d8a0e4a": {
    "category": "frozen",
@@ -12853,12 +12789,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-12-21",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x871e3d049fa46da3951b16b2474b9a9b99fee6106e23cbb6b1a7442c57d89a3e"
-  },
-  "0xc5e6ceda11904b7c21591df5fea2b5f8d1687fea": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-03-17",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x515939e18c716dbbf342ff41f7617bd4476bf180b7094f61bffa39a84ed6ee12"
   },
   "0xc66e7c1ec81f71b4e2c5032f0a33d0f167fec1c6": {
    "category": "frozen",
@@ -13088,12 +13018,6 @@
    "label": "USDT frozen by Tether on 2026-01-01",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x962deaeea96ff6e5b2e5d2fc9644e5be43bb92d917f42864eef4fcacf56014bb"
   },
-  "0xc9ce70a381910d0a90b30d408cc9c7705ee882de": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-10-26",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xb29e4972b4268d81d5e36a8fbb29975ee619e98837fcd3d876fe07f700f13901"
-  },
   "0xc9eb0d935fa0bae81f2905462cfbd51177eb2009": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -13310,12 +13234,6 @@
    "label": "USDT frozen by Tether on 2024-10-28",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x09e293ad93f7e89e55bc8b509d6ed52ef7f155abb0728f3b814d3ed37c58cdd0"
   },
-  "0xccdf467e545577f0f3631796dfdc88df5ccaadfa": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-02-20",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xb2f6dca9aad3e274dfafd268a432755ea2891b25444e18aed9d24bf5fcd184b9"
-  },
   "0xcceac446f80b29da9d955297f7758cf7cbf95441": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -13531,18 +13449,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2020-10-26",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xbf936118c714d99ce9f1736743131c9005cb8196db00392fcff0538568808014"
-  },
-  "0xd155fa55c40d010335aa152891aa687e2f3090bd": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-06-05",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xd7fb7134281d708c2ce7b5d821525336fde762e5c73a260f7c6f32b0f6a3ffe8"
-  },
-  "0xd16fca52f955187eb7afb9503c6876f094cbdbfa": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-01-11",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x61bedaf1cd900cabe7ae6877a37f3dd37696a2cbec997253eaa5c8c843a1f5b3"
   },
   "0xd1c7ec83e2176d1002b797a6ef692dd02c584c1c": {
    "category": "frozen",
@@ -14066,12 +13972,6 @@
    "label": "USDT frozen by Tether on 2025-02-28",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x2fa9883d6466b50436fdd8f12a4c39ea07a273aef0351c6ff2f621d387212616"
   },
-  "0xda3145d0a373712e036106fc1fa34b1014807e68": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-30",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xdab346088fd487581c0a0e08e51a22b5930670f0940f637b2c5e04d54b673d1e"
-  },
   "0xda3240dec8afac34c6dd7c84fb64603676142c57": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -14401,12 +14301,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2022-01-20",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xb2754333e5f7a1b01414e32f93fdc2a71b835ad92bae6891fd00d71ac6b256f3"
-  },
-  "0xdfdb7f72c1f195c5951a234e8db9806eb0635346": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-10-21",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xe1f7a7e3c5f4e705c5221fe80e754aea9dee2d41f6da6b8a9976265a20aabc06"
   },
   "0xe01df2813742b890d5d7e10e2304ba54f586f93f": {
    "category": "frozen",
@@ -15068,12 +14962,6 @@
    "label": "USDT frozen by Tether on 2023-02-27",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x110d82f3d281ce39c7f2a7eb745a986bda22fce92d1ec8715be575cd05a1ff87"
   },
-  "0xeafc14e2af750ff52c13349f13fa3a1bf9061497": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-10-19",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xa116571c7e28fcd15094af722d02ad7a473860b58422dff0f44c3caba46d2ca8"
-  },
   "0xeb056c8874695798352ce74976f788b9846cd045": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -15091,12 +14979,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-03-03",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x3c56c26ae949f5237409fdad9a644847a1458ea9a6388ffa2ce3be7e48de45cc"
-  },
-  "0xeb2bde819a63db62c9f323b88a41e8892037dafe": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-09-18",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x44d2b987f7d61da562e2b726b337453bf0b96e41658a8a4ffcf8a45ab0c60fcc"
   },
   "0xeb31973e0febf3e3d7058234a5ebbae1ab4b8c23": {
    "category": "frozen",
@@ -15175,12 +15057,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-05-22",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xb29c2536601bda3f731b7d8b18fd314ea4854b19d2adfc8c317bb9e63e38dbee"
-  },
-  "0xec565af969ac889387a73844c2ab07ad17e2793a": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2023-02-20",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x10be2136dfc4be114f83fdad36e3fa5464b9202f23290d2d1df49d63e109eff1"
   },
   "0xec70bd334d2177c014ae7aafead527412dbab5f8": {
    "category": "frozen",
@@ -15338,12 +15214,6 @@
    "label": "USDT frozen by Tether on 2026-08-24",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xc36da09d7d331e91bfd1b249c474ae960c1a3d7d6f19e07527fafb1833f64438"
   },
-  "0xefc1c73a3d8728dc4cf2a18ac5705fe93e5914ac": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2022-10-06",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x68de6ec7b21b6eaefef6344b2648417ede88f2c8eb1fc82dcdea8e2e5d9abbd8"
-  },
   "0xefe301d259f525ca1ba74a7977b80d5b060b3cca": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -15403,12 +15273,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-07-25",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x3f53072ae07232a9ef92cb00cf6e7de9206e4e032ccd105d8cd624419038d0e9"
-  },
-  "0xf0f0fcda832415b935802c6dad0a6da2c7eaed8f": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-06-13",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x5eae55f018271f569f43d903f311e196ac266e86eba64aa95ce97072ef49aff4"
   },
   "0xf0fac9dce5f2dc3c9112bdd0f824ee2663596c30": {
    "category": "frozen",
@@ -15553,12 +15417,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-07-01",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xe9fe72035cc2d275650eb716f7f288a7dad1ee4b55040732339d41a4f130e65e"
-  },
-  "0xf275d07c3db7e14711290aa4c63cdce17db7bfa9": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2020-09-30",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x78345397f8e8bedc13d8e1eba8a019f3da47ebf96ff7754e63fde1b7eeff7537"
   },
   "0xf2862493b48a7b64fe8981dd4954169c905fb7c4": {
    "category": "frozen",
@@ -15896,12 +15754,6 @@
    "label": "USDT frozen by Tether on 2025-02-21",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x116704be30e68ee289c651442b88b36a0fc08c4e28f46a577c3804ca88e98aa9"
   },
-  "0xf6ec8d867a227ff5f84761407da1f85826c17797": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-06-07",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xa6c171d4c7f763605405e6bdd9784be172e473a194676bc296cf3c9bc550d76b"
-  },
   "0xf6f1f8b897cb468881a2558586be4bac4272361f": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -16064,12 +15916,6 @@
    "label": "USDT frozen by Tether on 2024-07-09",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x0569b21effe07d552c06766867ad5ff36068a776c422af4ef9ac12e30b3b1c73"
   },
-  "0xf9e80a5f300944bfedf2816cbe72b1981c6c5ee2": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-08-05",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x1769452cd6460fbab71edf9b8ec12cc1e8a2709a123b6d67b8f57dab3fbf5383"
-  },
   "0xf9ec43544a768209fef5748566835552c9d39002": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -16195,12 +16041,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-03-20",
    "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0x1b52dc9e8cdd5f9fd871009c2b1b21c4039ec9313a08880f11a51fffa09880ce"
-  },
-  "0xfb896f4ffecfb73f58f023487f26929c40160012": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2021-10-21",
-   "source": "Tether USDT contract on Ethereum, AddedBlackList event, tx 0xa53001a1c87e236f869e6ab49a9d0f120051a140d5b038ed430a5188a7420383"
   },
   "0xfb922feade6ae98bf7b21bf2fd13e8655d5b2101": {
    "category": "frozen",
