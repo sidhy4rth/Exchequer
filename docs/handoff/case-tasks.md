@@ -21,6 +21,7 @@
 - A past due date is allowed (a task can be entered late) and shows as overdue; dates before 2009 or more than 10 years ahead are refused as typos.
 - The list shows open tasks first, soonest due first, undated last; then closed ones, latest first.
 - Two writes to one task at once: the second re-reads and tries again (row version), as the exhibit register does.
+- Adding or changing a task is in `access.GUARDED`, as `POST /requests` is (security review, 14 Nov): with a demo code set it needs the code, and with `EXCHEQUER_CONSOLE=officers` a signed-in officer. Reading the list and `/tasks/due` need neither.
 
 ## Next
 
