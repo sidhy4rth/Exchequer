@@ -24,6 +24,9 @@ This module drafts it and decides nothing:
 """
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
 import io
 import re
 from datetime import datetime
@@ -37,7 +40,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import Flowable, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from xml.sax.saxutils import escape
 
-from . import exhibits
+from . import config, exhibits
 from .assets import NOT_A_KEY, looks_like_secret
 from .display_text import one_line
 from .report_pdf import INK, MUTED, PANEL, RULE, _register_fonts, _styles
@@ -51,6 +54,8 @@ TEXT = {"device_other": (120, "the other kind of device"), "make_model": (120, "
         "color": (40, "the colour"), "serial": (80, "the serial number"),
         "device_id": (120, "the IMEI, UIN, UID, MAC or cloud ID"), "other_info": (300, "the other information")}
 EXHIBITS_MAX = 20
+REPORT_MAX = 2_000_000  # as /verify: the largest real reports are ~200 KB
+GENUINE = ("genuine", "genuine_earlier_key")
 BLANK = re.compile(r"_{3,}")
 TITLES = ("THE SCHEDULE", "[See section 63(4)(c)]", "CERTIFICATE", "PART A", "(To be filled by the Party)",
           "PART B", "(To be filled by the Expert)")
@@ -201,16 +206,82 @@ def _part_b(lines: list[str]) -> list[tuple[str, list]]:
     return [("title" if t in TITLES else "sig" if t.startswith("(Name") else "left", _boxes(t, set())) for t in lines]
 
 
-def draft(case_id: str, exhibit_ids: list[str], details: dict[str, Any], viewer: Any) -> dict[str, Any]:
-    """The certificate for `exhibit_ids` of `case_id`, ready to print as text or PDF."""
-    d = _details(details)
-    records = _records(case_id, list(exhibit_ids), viewer)
+def _assemble(case_id: str, d: dict[str, Any], records: list[dict[str, Any]], rows: list[list[tuple[str, str]]],
+              source: str, note: str) -> dict[str, Any]:
     meta, lines = schedule()
     split = lines.index("PART B")
     return {
         "case_id": case_id, "made_at": datetime.now(tz=exhibits.IST).strftime("%d/%m/%Y %H:%M"), "meta": meta,
-        "lines": _part_a(lines[:split], d, records) + _part_b(lines[split:]), "records": records,
+        "lines": _part_a(lines[:split], d, records) + _part_b(lines[split:]), "records": records, "rows": rows,
+        "source": source, "note": note,
     }
+
+
+def draft(case_id: str, exhibit_ids: list[str], details: dict[str, Any], viewer: Any) -> dict[str, Any]:
+    """The certificate for `exhibit_ids` of `case_id`, ready to print as text or PDF."""
+    d = _details(details)
+    records = _records(case_id, list(exhibit_ids), viewer)
+    return _assemble(case_id, d, records, [_report_rows(r) for r in records], "from its exhibit register",
+                     "From the case's exhibit register; each file was hashed where it is kept and never uploaded.")
+
+
+# -- Exchequer's own report as the record -----------------------------------------------------------------
+def _checked(body: bytes) -> dict[str, Any]:
+    """What /verify says of `body`: a PDF by its attached report and its pages, else the text report."""
+    from .pdf_verify import is_pdf, verify_pdf  # PdfBusy, when every reader is busy, reaches the route
+    from .signing import verify_report
+
+    if is_pdf(body):
+        return verify_pdf(body)
+    try:
+        return verify_report(body.decode("utf-8"))
+    except UnicodeDecodeError:
+        return {"status": "not_a_report", "detail": "It is not a text report or an Exchequer PDF."}
+
+
+def decode_report(report_b64: str) -> bytes:
+    try:
+        return base64.b64decode(report_b64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise CertificateError("The report file did not arrive as base64; choose the file again.") from exc
+
+
+def draft_report(case_id: str, body: bytes, file_name: str, details: dict[str, Any], viewer: Any) -> dict[str, Any]:
+    """The certificate for Exchequer's own report of `case_id`: the file the officer will produce.
+
+    The server cannot rebuild a downloaded report's exact bytes later (rendered
+    reports are kept in memory only), so the file itself is checked, as /verify
+    checks it, and its SHA-256 is the one the certificate states."""
+    d = _details(details)
+    if len(body) > REPORT_MAX:
+        raise CertificateError("That file is larger than any Exchequer report.")
+    name = one_line(file_name or "").strip()[:200] or "not given"
+    result = _checked(body)
+    if result.get("status") not in GENUINE:
+        raise CertificateError("This file is not a genuine, unchanged Exchequer report: "
+                               f"{result.get('detail') or result.get('status')} Choose the file exactly as it was downloaded.")
+    reported = (result.get("finding") or {}).get("case_id")
+    if reported != case_id:
+        raise CertificateError(f"This is the report of case {reported}, not of this case; open that case to draft its certificate.")
+    sha = hashlib.sha256(body).hexdigest()
+    pdf = result.get("pdf")
+    key = result.get("key_fingerprint_sha256") or "not given"
+    checked = ("Genuine: its signature verifies and its content hash matches"
+               + ("; its pages match the signed report" if pdf else "")
+               + (", signed with an earlier Exchequer key" if result["status"] == "genuine_earlier_key" else "") + ".")
+    rows = [("File", f"{name} · {len(body):,} bytes"),
+            ("What it is", f"Exchequer's report of case {case_id} ({'PDF with its signed text report attached' if pdf else 'signed text report'})"),
+            ("SHA-256", sha), ("SHA-1", "not stated"), ("MD5", "not stated"),
+            ("Checked", f"{checked} Checked by Exchequer on drafting this certificate."),
+            ("Signing key", f"Ed25519, SHA-256 fingerprint {key} ({'in' if result.get('official') else 'not in'} the list of official Exchequer keys)"),
+            ("Content hash", result.get("content_sha256") or "not given"),
+            ("Issued by", result.get("issued_by") or "not stated in the report"),
+            ("Check again", f"Upload the same file at {(config.PUBLIC_URL or 'the issuing server').rstrip('/')}/verify, "
+                            "which recomputes the hash and the signature and keeps nothing.")]
+    record = {"sha256": sha, "sha1": "", "md5": ""}
+    return _assemble(case_id, d, [record], [rows], "from the report file the officer will produce",
+                     "The report file itself was checked: a genuine, unchanged Exchequer report of this case. "
+                     "The SHA-256 is of exactly that file; produce that file with this certificate.")
 
 
 # -- the hash report ---------------------------------------------------------------------------------------
@@ -240,7 +311,7 @@ def _report_rows(r: dict[str, Any]) -> list[tuple[str, str]]:
 def _intro(dr: dict[str, Any]) -> list[str]:
     return [
         "DRAFT FOR SIGNATURE: not valid until the person producing the record signs Part A and the expert signs Part B.",
-        f"Prepared by Exchequer on {dr['made_at']} (IST) for case {dr['case_id']}, from its exhibit register. "
+        f"Prepared by Exchequer on {dr['made_at']} (IST) for case {dr['case_id']}, {dr['source']}. "
         "Values in bold were filled in by Exchequer or typed by the officer: check each one before signing.",
         f"Wording: THE SCHEDULE of the Bharatiya Sakshya Adhiniyam, 2023, from India Code, text as on {dr['meta'].get('text_as_on', '?')}.",
     ]
@@ -252,9 +323,9 @@ def as_text(dr: dict[str, Any]) -> str:
 
     body = ["".join(seg(s) for s in segments) for _, segments in dr["lines"]]
     report = ["HASH REPORT (enclosed with the certificate)"]
-    for n, r in enumerate(dr["records"], 1):
+    for n, rows in enumerate(dr["rows"], 1):
         report.append(f"Record {n}")
-        report += [f"  {k}: {v}" if k else f"    {v}" for k, v in _report_rows(r)]
+        report += [f"  {k}: {v}" if k else f"    {v}" for k, v in rows]
     return "\n".join(_intro(dr) + [""] + body + [""] + report)
 
 
@@ -335,13 +406,14 @@ def render_pdf(dr: dict[str, Any]) -> bytes:
             story.append(PageBreak())
         story.append(_FormLine(align, segments))
     story += [PageBreak(), Paragraph("HASH REPORT", st["h2"]),
-              Paragraph("Enclosed with the certificate, as Part A and Part B ask. From the case's exhibit register; "
-                        "each file was hashed where it is kept and never uploaded.", st["small"]), Spacer(1, 4 * mm)]
-    for n, r in enumerate(dr["records"], 1):
+              Paragraph(escape("Enclosed with the certificate, as Part A and Part B ask. " + dr["note"]), st["small"]),
+              Spacer(1, 4 * mm)]
+    mono = ("Exhibit", "SHA-256", "SHA-1", "MD5", "Content hash")
+    for n, report_rows in enumerate(dr["rows"], 1):
         rows = [[Paragraph(f"<b>Record {n}</b>", st["base"]), ""]]
         rows += [[Paragraph(escape(k), st["small"]),
-                  Paragraph(escape(v), st["cellmono" if k in ("Exhibit", "SHA-256", "SHA-1", "MD5") else "cell"])]
-                 for k, v in _report_rows(r)]
+                  Paragraph(escape(v), st["cellmono" if k in mono else "cell"])]
+                 for k, v in report_rows]
         table = Table(rows, colWidths=[26 * mm, 148 * mm])
         table.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, 0), 0.6, RULE), ("VALIGN", (0, 0), (-1, -1), "TOP"),
                                    ("LEFTPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]))
