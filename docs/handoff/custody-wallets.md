@@ -20,7 +20,7 @@
 - A custody wallet needs a threshold of at least 2 and no more than its signers: one person alone must never move seized money.
 - Signers are names, roles and units only, compared ignoring case and spacing, so the same person cannot be two of n. A seed split across a signer's fields is caught too.
 - The chain, address, scheme, threshold and signers never change after the record is made; only notes and the linked asset-register rows do. A change of signers is a new record (see open questions).
-- Linked asset-register rows must be in the same case, readable by the viewer, and held in custody.
+- Linked asset-register rows must be in the same case, readable by the viewer, held in custody, and not recorded as held at another address (a blank `held_at` is allowed).
 - One wallet per case per address; the same unit wallet may be recorded in several cases.
 - Signing log: proposed -> approved (threshold distinct signers) -> broadcast (tx hash) -> confirmed, or cancelled with a reason from any step before confirmed. A release needs the court's order reference when proposed and must be approved before broadcast; a deposit goes to the wallet itself and may be broadcast without approvals (sending into a multisig needs no signatures).
 - Every signing-log write needs a signed-in officer (not the demo identity); each approval records the signer (a listed name), the time and which officer entered it. One officer may enter several signers' approvals (the signing happens on the signers' own devices); see open questions.
