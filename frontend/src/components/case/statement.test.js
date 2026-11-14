@@ -152,6 +152,21 @@ describe('matching', () => {
     const u = matchRows([row({ narration: 'NEFT/SBINN26071000001/TEST', reference: '000123' })])[0]
     expect(toSaved(u)).toMatchObject({ reference: 'SBINN26071000001', reasons: ['utr'] })
   })
+
+  it('keeps the exchange name in a long narration it shortens, so the server can find it', () => {
+    // A narration past the server's 300 characters, naming the exchange only near its end.
+    const long = `UPI/607200000001/${'TEST PADDING '.repeat(30)}/COINDCX TEST`
+    const m = matchRows([row({ narration: long })], { names: NAMES })[0]
+    expect(m.exchange).toBe('CoinDCX')
+    const saved = toSaved(m)
+    expect(saved.narration.length).toBeLessThanOrEqual(300)
+    expect(namesIn(saved.narration, NAMES)).toEqual(['CoinDCX'])
+    expect(saved.narration.startsWith('UPI/607200000001/TEST PADDING')).toBe(true)
+    expect(saved.narration).toContain(' … ')
+    // A short narration, or one naming no exchange, is saved as it is, or cut at 300.
+    expect(toSaved(matchRows([row({ narration: 'UPI/607200000001/COINDCX TEST' })], { names: NAMES })[0]).narration).toBe('UPI/607200000001/COINDCX TEST')
+    expect(toSaved(matchRows([row({ narration: `UPI/607200000001/${'X'.repeat(400)}` })])[0]).narration).toHaveLength(300)
+  })
 })
 
 describe('the timeline', () => {
