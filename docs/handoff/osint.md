@@ -5,7 +5,7 @@
 - **Branch**: `feat/osint` (slice 1, merged), `feat/osint-domain-lookup` (slice 2), `feat/osint-case-links` (slice 3); `fix/osint-review` (fixes from Barenyam's review, #111); `feat/osint-telegram` (slice 4, Telegram public-page lookup, #161)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: Slices 1-3 merged (#105, #106, #107) and live. Domain lookups switched ON in production on 2026-11-13 (`EXCHEQUER_OSINT_LOOKUPS=1` in Render, and in `render.yaml`). Review fixes from #111 merged (#115). Slice 4, a Telegram username's public t.me page (#161), in review as three stacked PRs (#162, then the route, then the screen), off behind `EXCHEQUER_TELEGRAM_LOOKUPS`.
+- **Status**: Slices 1-3 merged (#105, #106, #107) and live. Domain lookups switched ON in production on 2026-11-13 (`EXCHEQUER_OSINT_LOOKUPS=1` in Render, and in `render.yaml`). Review fixes from #111 merged (#115). Slice 4, a Telegram username's public t.me page (#161), in review as three stacked PRs (#162, #169, #170), off behind `EXCHEQUER_TELEGRAM_LOOKUPS`.
 
 ## Done
 
