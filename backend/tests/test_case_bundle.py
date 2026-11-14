@@ -8,11 +8,14 @@ case), behind EXCHEQUER_CASE_BUNDLE. Throwaway SQLite.
 """
 from __future__ import annotations
 
+import asyncio
+import codecs
 import csv
 import hashlib
 import io
 import json
 import re
+import tempfile
 import zipfile
 
 import pytest
@@ -81,12 +84,12 @@ def test_the_bundle_holds_the_report_each_register_its_history_and_the_audit_tra
     exhibits.update(made["exhibit_id"], {"holder": "Inspector Rao", "note": "handed over for analysis"}, viewer())
     zf = bundle(client)
     assert zf.namelist() == FILES == case_bundle.names()
-    rows = list(csv.DictReader(io.StringIO(zf.read("exhibits.csv").decode())))
+    rows = list(csv.DictReader(io.StringIO(zf.read("exhibits.csv").decode("utf-8-sig"))))
     assert [(r["exhibit_id"], r["holder"], r["sha256"]) for r in rows] == [(made["exhibit_id"], "Inspector Rao", "9f" * 32)]
-    custody = list(csv.DictReader(io.StringIO(zf.read("exhibits-custody.csv").decode())))
+    custody = list(csv.DictReader(io.StringIO(zf.read("exhibits-custody.csv").decode("utf-8-sig"))))
     assert [c["action"] for c in custody] == ["recorded", "changed"]
     assert json.loads(custody[1]["details"]) == {"changed": ["holder"], "note": "handed over for analysis"}
-    assert zf.read("assets.csv").decode().startswith("asset_id,case_id,")  # empty, but there
+    assert zf.read("assets.csv").decode("utf-8-sig").startswith("asset_id,case_id,")  # empty, but there
 
 
 def test_the_report_files_are_the_report_downloads_bytes_and_the_text_verifies(client):
@@ -129,7 +132,7 @@ def test_a_public_demo_case_bundles_for_anyone_with_only_their_own_rows_and_no_a
     an_exhibit("demo-case", viewer(BOB))
     zf = bundle(client, "demo-case")  # Alice: the exhibit is Bob's
     assert "audit-trail.csv" not in zf.namelist()
-    assert zf.read("exhibits.csv").decode().count("\n") == 1  # the header only
+    assert zf.read("exhibits.csv").decode("utf-8-sig").count("\n") == 1  # the header only
     assert "audit-trail.csv: only the browser or unit" in zf.read("MANIFEST.txt").decode()
 
 
@@ -158,7 +161,7 @@ def test_a_cell_that_would_run_as_a_spreadsheet_formula_is_quoted(client):
     who = viewer()
     exhibits.create(who.owner_hash, "case-1", {"kind": "document", "label": "=HYPERLINK(1)", "tool": "Notes 1",
                                               "md5": "5d" * 16, "made_on": "2026-11-01"}, who)
-    row = next(csv.DictReader(io.StringIO(bundle(client).read("exhibits.csv").decode())))
+    row = next(csv.DictReader(io.StringIO(bundle(client).read("exhibits.csv").decode("utf-8-sig"))))
     assert row["label"] == "'=HYPERLINK(1)"
 
 
@@ -170,7 +173,7 @@ def test_the_audit_trail_holds_every_event_past_the_thousand_the_audit_page_show
     from app import audit
     for _ in range(1005):
         audit.record("case.view", case_id="case-1")
-    rows = list(csv.DictReader(io.StringIO(bundle(client).read("audit-trail.csv").decode())))
+    rows = list(csv.DictReader(io.StringIO(bundle(client).read("audit-trail.csv").decode("utf-8-sig"))))
     assert len(rows) >= 1005 and [int(r["seq"]) for r in rows] == sorted(int(r["seq"]) for r in rows)
 
 
@@ -180,5 +183,55 @@ def test_an_audit_trail_past_its_row_limit_says_so_in_the_manifest(client, monke
     for _ in range(5):
         audit.record("case.view", case_id="case-1")
     zf = bundle(client)
-    assert len(list(csv.DictReader(io.StringIO(zf.read("audit-trail.csv").decode())))) == 3
+    assert len(list(csv.DictReader(io.StringIO(zf.read("audit-trail.csv").decode("utf-8-sig"))))) == 3
     assert "audit-trail.csv holds the first 3 events" in zf.read("MANIFEST.txt").decode()
+
+
+def test_every_csv_starts_with_a_utf8_byte_order_mark_so_excel_reads_it_as_utf8(client):
+    an_exhibit()
+    zf = bundle(client)
+    for name in zf.namelist():
+        starts = zf.read(name).startswith(codecs.BOM_UTF8)
+        assert starts is name.endswith(".csv"), name  # the report and MANIFEST.txt stay as they are
+    entries, _ = manifest_entries(zf)
+    for name, size, digest in entries:  # the hash and size are of the file as it is, mark and all
+        assert int(size) == len(zf.read(name)) and digest == hashlib.sha256(zf.read(name)).hexdigest()
+
+
+def test_the_manifest_says_a_cell_starting_like_a_formula_gets_a_leading_apostrophe(client):
+    body = bundle(client).read("MANIFEST.txt").decode()
+    assert "leading apostrophe" in body and "+91" in body
+
+
+class _Gone(OSError):
+    """The client went away."""
+
+
+def test_the_spooled_file_is_closed_when_the_client_goes_before_the_first_byte():
+    from app.routes import case_bundle as route
+
+    spool = tempfile.SpooledTemporaryFile(max_size=16)
+    spool.write(b"x" * 64)
+    spool.seek(0)
+    response = route.bundle_response(spool, {"Content-Disposition": 'attachment; filename="b.zip"'})
+
+    async def receive():
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        raise _Gone
+
+    scope = {"type": "http", "asgi": {"version": "3.0", "spec_version": "2.4"}, "method": "GET", "path": "/"}
+    with pytest.raises(Exception):  # noqa: B017 -- Starlette may wrap the OSError; what matters is the file
+        asyncio.run(response(scope, receive, send))
+    assert spool.closed
+
+
+def test_the_spooled_file_is_closed_after_a_full_download(client, monkeypatch):
+    from app.routes import case_bundle as route
+
+    made = []
+    real = route.bundle_response
+    monkeypatch.setattr(route, "bundle_response", lambda spool, headers: made.append(spool) or real(spool, headers))
+    assert len(bundle(client).namelist()) == len(FILES)
+    assert made and made[0].closed

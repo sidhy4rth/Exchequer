@@ -28,6 +28,11 @@
   (disk past 8 MB) and streamed in 64 KB chunks. Files in the order of `PARTS`, MANIFEST.txt last.
 - The s.63(4) certificate drafts are left out (drafts the officer completes); MANIFEST.txt says so.
 - The manifest is not signed; it says so and points at /verify for the report.
+- Each CSV starts with a UTF-8 byte order mark, so Excel reads it as UTF-8. The formula guard stays: a cell
+  starting with `=`, `+`, `-` or `@` gets a leading apostrophe, so a +91 phone number reads `'+91`;
+  MANIFEST.txt says both (security review, 14 Nov).
+- The spooled file is closed by the response itself, however it ends: sent in full, or the client gone
+  before the first byte or part way (tested).
 
 ## Next
 
