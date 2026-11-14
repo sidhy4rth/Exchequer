@@ -2,10 +2,10 @@
 
 - **Feature**: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop
 - **Issue**: #189
-- **Branch**: `feat/privacy-protocol-category` (PR 1, contract), `feat/privacy-protocol-trace` (PR 2, stacked), `feat/privacy-protocol-ui` (PR 3, stacked)
+- **Branch**: `feat/privacy-protocol-category` (PR 1, contract), `feat/privacy-protocol-trace` (PR 2, stacked), `feat/privacy-protocol-ui` (PR 3, stacked), `feat/privacy-in-report` (PR 4, stacked: the report)
 - **Current**: nobody (awaiting review; the owner approved on 14 Nov, as relayed by the lead, so the flag goes on after merge)
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: built behind `EXCHEQUER_PRIVACY_CATEGORY` (off); all three PRs ready for review
+- **Status**: built behind `EXCHEQUER_PRIVACY_CATEGORY` (off); all four PRs ready for review
 
 ## Done
 
@@ -18,6 +18,12 @@
   `privacy_matches`/`privacy_notes` only with the flag on.
 - PR 3 (UI): `components/case/PrivacyNotes.jsx` (grey, dotted, not the red alert) under the risk alert; a `privacy`
   role on both maps (grey, dotted halo; key entry only when one is on the map) and on the Entities card.
+- PR 4 (report): with the flag on and at least one match, the signed text report has a section
+  "PRIVACY PROTOCOLS ON THE PATH (A NOTE, NOT AN ACCUSATION)" after the screening: the screen's lede, then each
+  match's own sentence (address, protocol, hop, source), the main trace's and each follow-on's. The JSON report
+  gains `privacy_protocols` under the same rule. PDF page 1 shows a grey block drawn from that signed section
+  (so /verify still redraws page 1 exactly); Part 2 is the signed text. Flag off, or no match: report bytes
+  unchanged (tested, recorded demos included). Report format stays v2.3: the section is optional.
 
 ## Decisions
 
@@ -32,6 +38,11 @@
 - Not added to `risk_matcher.LISTS` (list freshness, provenance): that would change every case's output with the flag
   off. Add it when the flag is retired.
 
+- Letters (`request_letters.py`) never mention privacy protocols, by choice: they are requests to a third party,
+  kept to the facts the request needs. A test pins that each letter is identical with and without the matches.
+  There is no letter-of-request module on this stack (#126/#127 are elsewhere) and no generated officer-notes
+  section to add it to.
+
 ## Next
 
 1. After review and merge of all three PRs: turn the flag on. Add to `render.yaml` under `envVars`
@@ -43,7 +54,8 @@
 
 ## Open questions
 
-- Should the report and the letters mention privacy notes? Not done: they read `risk_notes` only. (owner)
+- Report: done in PR 4. Letters: deliberately not (see Decisions); revisit only if the owner wants it.
+- `RiskMatch.describe` prints "..unchanged.." (a source ending in a full stop, then ". "): cosmetic, from PR 2.
 - The hunt's Solana and Base Hinkal rows are not filed: Exchequer traces neither chain.
 
 ## Files mid-change (do not touch)
