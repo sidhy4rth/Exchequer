@@ -23,8 +23,9 @@
 - Linked asset-register rows must be in the same case, readable by the viewer, held in custody, and not recorded as held at another address (a blank `held_at` is allowed).
 - One wallet per case per address; the same unit wallet may be recorded in several cases.
 - Signing log: proposed -> approved (threshold distinct signers) -> broadcast (tx hash) -> confirmed, or cancelled with a reason from any step before confirmed. A release needs the court's order reference when proposed and must be approved before broadcast; a deposit goes to the wallet itself and may be broadcast without approvals (sending into a multisig needs no signatures).
-- Every signing-log write needs a signed-in officer (not the demo identity); each approval records the signer (a listed name), the time and which officer entered it. One officer may enter several signers' approvals (the signing happens on the signers' own devices); see open questions.
+- Every signing-log write needs a signed-in officer (not the demo identity); each approval records the signer (a listed name), the time and which officer entered it. One officer account enters at most one approval per movement, so each signer records their own, signed in to their own account (4c4899a; the signing itself happens on the signers' own devices).
 - One transaction hash is recorded once per wallet. Audit detail is ids, step, status and approval count; never names, references or reasons.
+- Recording or changing a wallet needs a signed-in officer (403 for the demo caller), like every step of the signing log: a stranger holding a case's link must not fill the table (security review, 14 Nov). Reading is unchanged.
 
 ## Next
 
