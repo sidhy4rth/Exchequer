@@ -74,6 +74,16 @@ describe('the statement panel', () => {
     }])
   })
 
+  it("says plainly when more rows are ticked than the server keeps at once, and does not send them", async () => {
+    const calls = api({ 'GET /trace/c1/statements': { body: { ...ON.body, rows_max: 1 } } })
+    render(<StatementPanel result={{ case_id: 'c1', intake: { mode: 'address', payments: [] } }} />)
+    await userEvent.upload(await screen.findByLabelText('CSV file'), file())
+    await screen.findByRole('list', { name: 'Rows worth a look' })
+    expect(screen.getByRole('alert').textContent).toContain('Tick at most 1 row')
+    expect(screen.getByRole('button', { name: /Save 2 ticked rows/ }).disabled).toBe(true)
+    expect(calls.filter((c) => c.method === 'POST')).toEqual([])
+  })
+
   it('lists the rows already saved to the case', async () => {
     api({ 'GET /trace/c1/statements': { body: { ...ON.body, imports: [{
       import_id: 's1', title: 'Victim statement (test)', source_label: 'Bank statement', currency: 'INR', row_count: 1,

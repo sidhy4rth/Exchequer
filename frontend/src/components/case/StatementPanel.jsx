@@ -82,6 +82,9 @@ export default function StatementPanel({ result }) {
   }
   const isTicked = (m) => ticked[m.row.line] ?? true
   const chosen = matches.filter(isTicked)
+  // The server's own limit (rows_max), so the two never disagree.
+  const most = info?.rows_max ?? Infinity
+  const tooMany = chosen.length > most
   async function save() {
     setBusy(true); setError(null)
     try {
@@ -156,9 +159,10 @@ export default function StatementPanel({ result }) {
               </ol>
             )}
             <p className="note">A row is a lead for a notice to the bank or the exchange, not a finding: only they can say whose account it is.</p>
+            {tooMany && <p className="note st-error" role="alert">Tick at most {most} row{most === 1 ? '' : 's'} at a time: the server keeps the matches, not the statement. Untick {chosen.length - most}, or save in parts.</p>}
             <div className="st-save">
               <label>Name for these rows<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="e.g. victim's statement, March" /></label>
-              <button type="button" disabled={busy || chosen.length === 0} onClick={save}>{busy ? 'Saving…' : `Save ${chosen.length} ticked row${chosen.length === 1 ? '' : 's'} to the case`}</button>
+              <button type="button" disabled={busy || chosen.length === 0 || tooMany} onClick={save}>{busy ? 'Saving…' : `Save ${chosen.length} ticked row${chosen.length === 1 ? '' : 's'} to the case`}</button>
             </div>
           </>
         )}
