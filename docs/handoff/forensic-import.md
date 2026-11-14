@@ -9,7 +9,7 @@
 
 ## Done
 
-- Slice 1, in four stacked PRs:
+- Slice 1, in four stacked PRs (#147, #154, #155, #156):
   1. Server: the flag `EXCHEQUER_EXPORT_SCAN` (off by default) and `routes/export_scan.py`:
      `GET /trace/{case_id}/export-scan` (404 while the flag is off, which hides the panel) and
      `POST /trace/{case_id}/export-scan`, which records in the audit trail that a scan ran and
@@ -19,7 +19,9 @@
      English wordlist `bip39English.js` (bitcoin/bips at a pinned commit, SHA-256 pinned by a test).
   3. The scanner `exportScan.js`: reads the file in 1 MB pieces, yields between them, and
      keeps only line numbers and counts for seed-phrase runs.
-  4. The panel `ExportScanPanel.jsx` on the case's Evidence tab.
+  4. The panel `ExportScanPanel.jsx` on the case's Evidence tab: a summary, possible seed phrases
+     ("12 BIP-39 words at line 40, hidden" and a note to secure the device), and tables of
+     addresses and hashes with a "Trace" / "Trace from this payment" link (`find.js::findTarget`).
 
 ## Decisions
 
