@@ -74,3 +74,25 @@ def test_no_privacy_protocol_is_labelled_a_mixer():
         labels = json.loads(config.get_chain(chain).threat_labels_path.read_text())["labels"]
         named = {e["entity"] for e in labels.values() if e["category"] == MIXER}
         assert not named & {"Railgun", "Aztec", "Hinkal"}, chain
+
+
+# The eight Tornado Cash pools the 14 Nov frozen-list review found with no mixer label (#148):
+# a stablecoin freeze on a pool is not terminal, so without the mixer label a trace walked on.
+REVIEW_POOLS = [
+    ("ethereum", "0x178169b423a011fff22b9e3f3abea13414ddd0f1"),  # 0.1 WBTC
+    ("ethereum", "0x610b717796ad172b316836ac95a2ffad065ceab4"),  # 1 WBTC
+    ("ethereum", "0x03893a7c7463ae47d46bc7f091665f1893656003"),  # 50,000 cDAI 2
+    ("ethereum", "0xd21be7248e0197ee08e0c20d4a96debdac3d20af"),  # 5,000,000 cDAI
+    ("arbitrum", "0x84443cfd09a48af6ef360c6976c5392ac5023a1f"),  # 0.1 ETH
+    ("arbitrum", "0xd47438c816c9e7f2e2888e060936a499af9582b3"),  # 1 ETH
+    ("arbitrum", "0x330bdfade01ee9bf63c209ee33102dd334618e0a"),  # 10 ETH
+    ("arbitrum", "0x1e34a77868e19a6647b1f2f47b51ed72dede95dd"),  # 100 ETH
+]
+
+
+@pytest.mark.parametrize("chain,address", REVIEW_POOLS)
+def test_a_tornado_pool_a_stablecoin_issuer_froze_is_still_a_mixer_and_a_stop(chain, address):
+    matcher = get_risk_matcher(chain)
+    meta = matcher.lookup(address)
+    assert meta["category"] == MIXER and meta["entity"] == "Tornado Cash"
+    assert matcher.is_terminal(address)

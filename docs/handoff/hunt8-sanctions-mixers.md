@@ -13,7 +13,7 @@
   Tron wallets in force added through `import_intl_sanctions --recheck il_mod_crypto --add` (each re-checked on the
   NBCTF site's own records); U.S. court forfeiture orders as a new importer source (`data/us_forfeiture_orders.json`,
   `--forfeiture`), 6 wallets whose notice was re-read on 14 Nov.
-- PR 2 (mixers): 32 mixer pools and entry points into the threat files; Polygon and Arbitrum get a threat file.
+- PR 2 (mixers): 36 mixer pools and entry points into the threat files (32 from hunt 8, plus 4 Ethereum Tornado pools the 14 Nov frozen-list review found unlabelled; its 4 Arbitrum pools are among the 32); Polygon and Arbitrum get a threat file.
 
 ## Decisions
 
