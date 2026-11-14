@@ -10,7 +10,8 @@
   "schema": "labels maps a lowercase address to {exchange, label, type}",
   "supplemented_from": "8 further labels imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a newer published scrape of the same explorer label pages, and verified on chain the same way, by backend/scripts/import_eth_labels.py.",
   "ported_from_ethereum": "146 Ethereum-labelled exchange accounts added 2026-09-23 by backend/scripts/port_evm_labels.py: each has no contract code on BNB Smart Chain and has sent a transaction there (nonce > 0), read through NodeReal.",
-  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json."
+  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json.",
+  "india_exchanges": "1 Indian exchange wallet added on 2026-11-14 from data/india_exchanges.json, which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
  },
  "labels": {
   "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
@@ -916,6 +917,11 @@
   "0xfb8131c260749c7835a08ccbdb64728de432858e": {
    "exchange": "BitMEX",
    "label": "BitMEX 2",
+   "type": "exchange_wallet"
+  },
+  "0xceae7673553c90d0a3cd1a494da35ede63910cbf": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ATOM wallet",
    "type": "exchange_wallet"
   }
  }

@@ -66,7 +66,8 @@
         "0xfdeda15e2922c5ed41fc1fdf36da2fb2623666b3": "HitBTC: Deposit Funder"
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
-    }
+    },
+    "india_exchanges": "20 Indian exchange wallets added on 2026-11-14 from data/india_exchanges.json, which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
   },
   "labels": {
     "0x05f51aab068caa6ab7eeb672f88c180f67f17ec7": {
@@ -125168,16 +125169,115 @@
       "exchange": "eToro",
       "label": "eToro: Binance Deposit 1",
       "type": "exchange_wallet"
+    },
+    "0x3698cc7f524bade1a05e02910538f436a3e94384": {
+      "exchange": "CoinDCX",
+      "label": "CoinDCX 3",
+      "type": "exchange_wallet"
+    },
+    "0x4cd3aa96836c133c9b9f27dafa7baf744d57404d": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: 1INCH wallet",
+      "type": "exchange_wallet"
+    },
+    "0xc44f21a9c9920dec62861d6d51dfa7d6ff60eacb": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: AXS wallet",
+      "type": "exchange_wallet"
+    },
+    "0xe627b3e5591a713e3c23af6fc4eba2f313fdf489": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ENJ wallet",
+      "type": "exchange_wallet"
+    },
+    "0x252d1375ca8f8a4ca59f1e7635f8fd7c4a78031e": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH wallet",
+      "type": "exchange_wallet"
+    },
+    "0xceae7673553c90d0a3cd1a494da35ede63910cbf": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x3506a6ccc61d4d2046b79969020a5af79010b4a6": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x250b05e1e0dd20a876e369a16441e714e3d9f436": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: MANA wallet",
+      "type": "exchange_wallet"
+    },
+    "0x7d3f7a3842f18873c769a42f92f51f091954211c": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: MATIC wallet",
+      "type": "exchange_wallet"
+    },
+    "0x83d470c6071d9e50969757d801a54e4cbe6a6d60": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: NKN wallet",
+      "type": "exchange_wallet"
+    },
+    "0xe6b936b7640afa9242d1a714e50ee823e1be140f": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: NKN wallet",
+      "type": "exchange_wallet"
+    },
+    "0x4346910075e50a442931d698d41ebe6965a584b1": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: OMG wallet",
+      "type": "exchange_wallet"
+    },
+    "0x17a678c673fbb5b2f3294ef35e18c0ef8cc3e64f": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: SHIB wallet",
+      "type": "exchange_wallet"
+    },
+    "0xc0eb873cd81d47d290ff7b6ad49280f6fd9cfb2b": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: SUSHI wallet",
+      "type": "exchange_wallet"
+    },
+    "0xd0808da05cc71a9f308d330bc9c5c81bbc26fc59": {
+      "exchange": "CoinSwitch",
+      "label": "Coinswitch",
+      "type": "exchange_wallet"
+    },
+    "0x0e293a9e57d22f6ec575b376e3e3bd8e642fd5fc": {
+      "exchange": "WazirX",
+      "label": "WazirX 1",
+      "type": "exchange_wallet"
+    },
+    "0x1b9509aeb1fbb605868d21caf2eeb6ac8351264d": {
+      "exchange": "WazirX",
+      "label": "WazirX 4",
+      "type": "exchange_wallet"
+    },
+    "0x305dcaea67a9d4152e54e68060c89db05fd67a7b": {
+      "exchange": "WazirX",
+      "label": "WazirX 5",
+      "type": "contract_wallet"
+    },
+    "0x196eeecf1a247ed7cadfb39a3125a321f8642aad": {
+      "exchange": "WazirX",
+      "label": "WazirX 7",
+      "type": "exchange_wallet"
+    },
+    "0x618ffd1cdabee36ce5992a857cc7463f21272bd7": {
+      "exchange": "WazirX",
+      "label": "WazirX: Withdrawals",
+      "type": "exchange_wallet"
     }
   },
   "_unverified_pending": {
     "_note": "Indian exchanges (WazirX, CoinDCX, ZebPay) are directly relevant to the MHA problem statement, but their hot-wallet addresses could not be sourced to a confidence level appropriate for an attribution tool. Do NOT guess them -- a wrong address produces a false attribution against a named company. Look each one up on etherscan.io/accounts/label/, confirm the label, and move the entry into 'labels' above. See README section 'Adding exchange labels'.",
     "pending": [
-      "WazirX",
-      "CoinDCX",
       "ZebPay",
       "Bitbns",
       "Giottus"
-    ]
+    ],
+    "update_2026_11_14": "WazirX, CoinDCX and CoinSwitch wallets named by a public source are now in 'labels' (see data/india_exchanges.json). No public, bot-check-free source naming ZebPay, Bitbns or Giottus wallets was found; Mudrex, Unocoin and BuyUcoin neither."
   }
 }

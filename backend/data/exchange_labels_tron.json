@@ -61,7 +61,8 @@
         "TTR9YAXwFCfLKboX8e9eg5fY8eDMrSgE6V": "Poloniex Deposit"
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
-    }
+    },
+    "india_exchanges": "1 Indian exchange wallet added on 2026-11-14 from data/india_exchanges.json, which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why. It is not in 'counts' above, which counts the TronScan-tag seed."
   },
   "labels": {
     "TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm": {
@@ -402,6 +403,11 @@
     "TWBPGLwQw2EbqYLLw1DJnTDt2ZQ9yJW1JJ": {
       "exchange": "WhiteBIT",
       "label": "WhiteBIT",
+      "type": "exchange_wallet"
+    },
+    "TMBRRvkXUFVM4UdFCEjHrqas7z3eaZzG4F": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet",
       "type": "exchange_wallet"
     }
   }
