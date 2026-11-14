@@ -3,9 +3,9 @@
 - **Feature**: clear the open Dependabot pull requests so dependencies stay current and CI stays green
 - **Issue**: #95
 - **Branch**: `feat/dependency-bumps`
-- **Current**: Barenyam
-- **Last worked on**: Barenyam, 2026-11-13
-- **Status**: #82's updates and their fix merged as #96. #80 tested on `main` at ad3768b and ready to merge; #81 waits for #80; #61 conflicts and must be regenerated
+- **Current**: Barenyam (Sidhyarth's session continued this, 14 Nov)
+- **Last worked on**: Sidhyarth, 2026-11-14
+- **Status**: #82's updates and their fix merged as #96. #80 retested on `main` at 39b3292, ready to merge; #81 waits for #80; #61 redone as our own PR on `feat/python-minor-bumps`
 
 ## Done
 
@@ -27,6 +27,11 @@
   - #81 merges cleanly on its own, but its lockfiles conflict with #80's. After #80 merges, Dependabot must rebase #81 (never hand-merge a lockfile).
   - #61 conflicts in `requirements.in` and `requirements-dev.in` with #96. Dependabot must recreate it, or we redo it in our own PR after reading the SQLAlchemy 2.1 and FastAPI release notes.
 
+- 14 Nov (Sidhyarth's session), against `main` at 39b3292:
+  - #80: its CI ran on 5da13fa (55 commits behind), so we asked Dependabot to rebase it. Merged locally into 39b3292: 1,592 frontend tests and 230 citizen page tests pass, 65 citizen API tests pass, both builds pass. Ready to merge once the rebased CI is green.
+  - #81: unchanged; waits for #80 and Dependabot's rebase.
+  - #61: redone on `feat/python-minor-bumps` (supersedes #61): FastAPI 0.162.0, Starlette 1.10.0, SQLAlchemy 2.1.6, reportlab 5.1.0, pytest 9.2.0 in `requirements.in` / `requirements-dev.in`, both locks recompiled with the uv command in `requirements.in`. Same versions as #61; greenlet leaves the lock because SQLAlchemy 2.1 no longer requires it (we use no asyncio). `citizen/api/requirements.txt` pins none of these. Backend 3,245 passed / 6 skipped, ruff clean, `alembic upgrade head` and `alembic check` clean on a fresh SQLite file, citizen API 65 passed. Release notes read; nothing in them touches our code (details in the PR).
+
 ## Decisions
 
 - #82 is taken over on this branch: Dependabot raised psycopg to 3.3.7 in `backend/requirements.txt` only. This branch also regenerates `backend/requirements-dev.txt` with the repo's uv command (only psycopg and psycopg-binary changed) and copies the 3.3.7 hash blocks into `citizen/api/requirements.txt`. `tests/test_requirements_locked.py` and `citizen/api/tests/test_endpoints.py::test_the_dependencies_are_psycopg_alone_pinned_with_hashes` pass locally.
@@ -36,9 +41,10 @@
 
 ## Next
 
-1. Review and merge this branch's PR (it carries #82's updates plus the fix), then close #82 as superseded.
-2. Merge #80, then #81 once Dependabot has rebased it and CI is green.
-3. #61 last, on its own, after reading the SQLAlchemy 2.1 and FastAPI release notes.
+1. Merge #80 once Dependabot's rebase is green.
+2. Wait for Dependabot to rebase #81, then merge it when CI is green.
+3. Review and merge the `feat/python-minor-bumps` PR, then close #61 as superseded.
+4. FastAPI's TestClient now warns that it wants `httpx2` instead of `httpx` (Starlette deprecation). Not urgent; a later bump can add `httpx2` to `requirements-dev.in` once it is out of the deprecation window.
 
 ## Open questions
 
