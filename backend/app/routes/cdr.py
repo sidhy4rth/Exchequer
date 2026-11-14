@@ -1,7 +1,8 @@
 """Call detail records read against a case (cdr_imports.py, suite feature 5).
 
     GET  /trace/{case_id}/cdr         the CDR summaries this browser or unit may read
-    POST /trace/{case_id}/cdr         keep the summary the officer confirmed (numbers and counts, never the CDR)
+    POST /trace/{case_id}/cdr         keep the summary the officer confirmed (numbers and counts, never the CDR);
+                                      signed-in officers only, like saving statement rows
     POST /trace/{case_id}/cdr/check   the numbers the officer chose: on this case's phone identifiers,
                                       and on the other cases they may read (identifiers.also_in)
 
@@ -23,6 +24,7 @@ from .requests import _allow_write, _owner
 
 router = APIRouter()
 OFF = "CDR import is switched off on this deployment."
+SIGN_IN_TO_SAVE = "Sign in as an officer to save a CDR summary to a case."
 
 
 class CdrSummary(BaseModel):
@@ -48,6 +50,8 @@ def list_cdr(case_id: str, user: CurrentUser) -> dict[str, Any]:
 def save_cdr(case_id: str, body: CdrSummary, user: CurrentUser, http: Request) -> dict[str, Any]:
     if not config.CDR_IMPORT:
         raise HTTPException(status_code=403, detail=OFF)
+    if user.demo:
+        raise HTTPException(status_code=403, detail=SIGN_IN_TO_SAVE)
     _allow_write(http)
     try:
         made = cdr_imports.create(_owner(user), case_id, body.model_dump(), user)
