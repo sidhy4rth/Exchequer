@@ -2,7 +2,9 @@
 
     GET  /trace/{case_id}/statements   the imports this browser or unit may read, and the
                                        canonical exchange names a narration is matched against
-    POST /trace/{case_id}/statements   keep the rows the officer confirmed (never the whole statement)
+    POST /trace/{case_id}/statements   keep the rows the officer confirmed (never the whole statement);
+                                       signed-in officers only, so a stranger holding a case's link
+                                       cannot fill the table
 
 Behind the flag EXCHEQUER_STATEMENT_IMPORT: off, the list says so and saving is refused.
 Audited by counts only -- rows kept and why -- never an account number, a reference
@@ -21,6 +23,7 @@ from .requests import _allow_write, _owner
 
 router = APIRouter()
 OFF = "Statement import is switched off on this deployment."
+SIGN_IN_TO_SAVE = "Sign in as an officer to save statement rows to a case."
 
 
 class StatementRows(BaseModel):
@@ -45,6 +48,8 @@ def list_statements(case_id: str, user: CurrentUser) -> dict[str, Any]:
 def save_statement_rows(case_id: str, body: StatementRows, user: CurrentUser, http: Request) -> dict[str, Any]:
     if not config.STATEMENT_IMPORT:
         raise HTTPException(status_code=403, detail=OFF)
+    if user.demo:
+        raise HTTPException(status_code=403, detail=SIGN_IN_TO_SAVE)
     _allow_write(http)
     try:
         made = statement_imports.create(_owner(user), case_id, body.model_dump(), user)

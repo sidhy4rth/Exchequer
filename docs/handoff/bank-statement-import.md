@@ -11,7 +11,7 @@
 
 - Claimed: issue #144, this file, draft PR #146.
 - The record (#146): table `statement_imports` (migration `g7_statements_1`, after `g7_domain_lookups_1`), `backend/app/statement_imports.py` (checks each saved row: date, debit or credit, amount, reference shape, an exchange name only when canonical and in the row's own text, free text refused when it looks like a key), flag `EXCHEQUER_STATEMENT_IMPORT`.
-- The routes: `GET /trace/{case_id}/statements` (the saved rows this browser or unit may read, and the canonical exchange names; `enabled: false` with the flag off) and `POST /trace/{case_id}/statements` (403 with the flag off). Audited as `statement.list` and `statement.save` with counts only.
+- The routes: `GET /trace/{case_id}/statements` (the saved rows this browser or unit may read, and the canonical exchange names; `enabled: false` with the flag off) and `POST /trace/{case_id}/statements` (403 with the flag off, and 403 for a caller who has not signed in as an officer: security review, 14 Nov). Audited as `statement.list` and `statement.save` with counts only.
 
 ## Decisions
 
