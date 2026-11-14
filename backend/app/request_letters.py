@@ -42,6 +42,7 @@ from . import config, never_flag, provenance
 from .case_privacy import WITHHELD
 from .contracts.case_v2 import expanded_nodes
 from .display_text import one_line, short
+from .exchange_matcher import firm_account
 from .label_rules import INSTANT_EXCHANGER
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
                      _amount, _paid_at, _when, _when_iso, also_reached, also_reached_line, attribution_kind)
@@ -437,6 +438,10 @@ def _claim(kind: str, trace: dict[str, Any], exchange: str) -> str:
     source = f"(label: {label}; {_label_source(trace)})."
     if kind == LABELLED_DEPOSIT:
         return f"which is publicly labelled as a deposit address of {exchange}\n   {source}"
+    firm = firm_account(label, exchange)
+    if firm:
+        return (f"which is publicly labelled as a deposit address of {firm}'s account at {exchange}\n   {source} "
+                f"We understand the account is {firm}'s, not one of {exchange}'s own wallets.")
     return (f"which is publicly labelled as a wallet {exchange} operates itself\n   {source} "
             "We understand it does not belong to any one customer.")
 

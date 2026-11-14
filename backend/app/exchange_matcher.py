@@ -61,6 +61,28 @@ def is_deposit_label(label: str | None) -> bool:
     return bool(DEPOSIT_LABEL.search(label or ""))
 
 
+# Another firm's account at an exchange, in the explorer's words: "Wintermute:
+# Binance Deposit", "AltCoinTrader: Binance Deposit 1", "Deribit: Coinbase Prime
+# Custody". The exchange that holds it is the one with the records, so the label
+# files attribute it there (scripts/clean_exchange_labels.py) and a letter names
+# the firm as the account holder. Not "Coinbase: Batch Deposit 1" or
+# "CoinList: WBTC Merchant Deposit Address": the exchange's own.
+FIRM_ACCOUNT = re.compile(r"^(?P<firm>[^:]+):\s*(?!Batch\b)(?P<at>\S[^:]*?)\s+(?:Deposit(?:\s+\d+)?|Prime Custody)$",
+                          re.IGNORECASE)
+
+
+def firm_account(label: str | None, exchange: str | None = None) -> str | None:
+    """The firm whose account at `exchange` the label names, or None.
+
+    With `exchange`, only when the firm is not that exchange: a row still
+    attributed to the firm itself is not yet another firm's account there."""
+    found = FIRM_ACCOUNT.match((label or "").strip())
+    if not found:
+        return None
+    firm = found["firm"].strip()
+    return None if exchange is not None and firm.casefold() == exchange.strip().casefold() else firm
+
+
 @dataclass(frozen=True)
 class ExchangeMatch:
     """One address in the trace that belongs to a known exchange."""

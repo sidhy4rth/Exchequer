@@ -66,6 +66,29 @@
         "0xfdeda15e2922c5ed41fc1fdf36da2fb2623666b3": "HitBTC: Deposit Funder"
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
+    },
+    "review_2026_11_15": {
+      "date": "2026-11-15",
+      "rule": "scripts/clean_exchange_labels.py: token contracts and infrastructure removed; another firm's account attributed to the exchange that holds it",
+      "removed": {
+        "0x8b99f3660622e21f2910ecca7fbe51d654a1517d": "Binance Charity: a charity's donation wallet, not an exchange's",
+        "0xc365c3315cf926351ccaf13fa7d19c8c4058c8e1": "Binance Pool: a mining pool's payout wallet, not where a customer's funds are credited",
+        "0xee62cbab44113b3d72cdc94980953c0b1a4f4d47": "Binance: AE Token Swap: a token-migration wallet, not where a customer's funds are credited",
+        "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503": "Binance-Peg Tokens: the reserve behind Binance's peg tokens, not where a customer's funds are credited",
+        "0x9d6d492bd500da5b33cf95a5d610a73360fcaaa0": "Huobi Mining Pool: a mining pool's payout wallet, not where a customer's funds are credited",
+        "0x471d113059324321749e097705197a2b44a070fc": "Kanga Exchange 2: a token contract (app/never_flag.tokens), not a wallet"
+      },
+      "attributed_to_custodian": {
+        "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7": "AltCoinTrader: Binance Deposit 1: AltCoinTrader's account at Binance, was attributed to AltCoinTrader",
+        "0x2cf4e5b4fa8afa15f8dc7b5ada853e42776f3455": "AltCoinTrader: Celsius Deposit 1: AltCoinTrader's account at Celsius Network, was attributed to AltCoinTrader",
+        "0xb0afffd6f6ad77f61927803ade6dbd47f1a1c356": "BTSE: Cobo Deposit: BTSE's account at Cobo, was attributed to BTSE",
+        "0xfcb7edb966d320c7f3ae1f751a8c86f30fa5ad37": "Bitcoin Suisse: Binance Deposit 1: Bitcoin Suisse's account at Binance, was attributed to Bitcoin Suisse",
+        "0x6ba7fe01eec4c6a4308c8e2b35970e0488ce9a86": "ChangeNOW: HTX Deposit: ChangeNOW's account at Huobi / HTX, was attributed to ChangeNOW",
+        "0x50a3f3b8855c2da88e56c7b0ef6e0e4a79f853f9": "Delta Exchange: Binance Deposit 1: Delta Exchange's account at Binance, was attributed to Delta Exchange",
+        "0x9fae72d291949ed6fa8b74881328fdc123c645d3": "Deribit: Celsius Network Deposit: Deribit's account at Celsius Network, was attributed to Deribit",
+        "0xb61a16bda6d61d9b8ad493bf05962c5b98d1712f": "Deribit: Coinbase Prime Custody: Deribit's account at Coinbase, was attributed to Deribit",
+        "0x2953452df5d7285b9a3a8a1e876a4bacb09a976e": "eToro: Binance Deposit 1: eToro's account at Binance, was attributed to eToro"
+      }
     }
   },
   "labels": {
@@ -155,12 +178,12 @@
       "type": "exchange_wallet"
     },
     "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7": {
-      "exchange": "AltCoinTrader",
+      "exchange": "Binance",
       "label": "AltCoinTrader: Binance Deposit 1",
       "type": "exchange_wallet"
     },
     "0x2cf4e5b4fa8afa15f8dc7b5ada853e42776f3455": {
-      "exchange": "AltCoinTrader",
+      "exchange": "Celsius Network",
       "label": "AltCoinTrader: Celsius Deposit 1",
       "type": "exchange_wallet"
     },
@@ -225,7 +248,7 @@
       "type": "exchange_wallet"
     },
     "0xb0afffd6f6ad77f61927803ade6dbd47f1a1c356": {
-      "exchange": "BTSE",
+      "exchange": "Cobo",
       "label": "BTSE: Cobo Deposit",
       "type": "exchange_wallet"
     },
@@ -467,11 +490,6 @@
     "0x001866ae5b3de6caa5a51543fd9fb64f524f5478": {
       "exchange": "Binance",
       "label": "Binance 9",
-      "type": "exchange_wallet"
-    },
-    "0x8b99f3660622e21f2910ecca7fbe51d654a1517d": {
-      "exchange": "Binance",
-      "label": "Binance Charity",
       "type": "exchange_wallet"
     },
     "0x000f9f5f6db6d63bb64bb55d58272a1ce660fd90": {
@@ -25434,24 +25452,9 @@
       "label": "Binance JEX",
       "type": "exchange_wallet"
     },
-    "0xc365c3315cf926351ccaf13fa7d19c8c4058c8e1": {
-      "exchange": "Binance",
-      "label": "Binance Pool",
-      "type": "exchange_wallet"
-    },
     "0x61189da79177950a7272c88c6058b96d4bcd6be2": {
       "exchange": "Binance",
       "label": "Binance US",
-      "type": "exchange_wallet"
-    },
-    "0xee62cbab44113b3d72cdc94980953c0b1a4f4d47": {
-      "exchange": "Binance",
-      "label": "Binance: AE Token Swap",
-      "type": "exchange_wallet"
-    },
-    "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503": {
-      "exchange": "Binance",
-      "label": "Binance: Binance-Peg Tokens",
       "type": "exchange_wallet"
     },
     "0x0b95993a39a363d99280ac950f5e4536ab5c5566": {
@@ -25630,7 +25633,7 @@
       "type": "exchange_wallet"
     },
     "0xfcb7edb966d320c7f3ae1f751a8c86f30fa5ad37": {
-      "exchange": "Bitcoin Suisse",
+      "exchange": "Binance",
       "label": "Bitcoin Suisse: Binance Deposit 1",
       "type": "exchange_wallet"
     },
@@ -121520,7 +121523,7 @@
       "type": "exchange_wallet"
     },
     "0x6ba7fe01eec4c6a4308c8e2b35970e0488ce9a86": {
-      "exchange": "ChangeNOW",
+      "exchange": "Huobi / HTX",
       "label": "ChangeNOW: HTX Deposit",
       "type": "exchange_wallet"
     },
@@ -122830,7 +122833,7 @@
       "type": "exchange_wallet"
     },
     "0x50a3f3b8855c2da88e56c7b0ef6e0e4a79f853f9": {
-      "exchange": "Delta Exchange",
+      "exchange": "Binance",
       "label": "Delta Exchange: Binance Deposit 1",
       "type": "exchange_wallet"
     },
@@ -122895,12 +122898,12 @@
       "type": "exchange_wallet"
     },
     "0x9fae72d291949ed6fa8b74881328fdc123c645d3": {
-      "exchange": "Deribit",
+      "exchange": "Celsius Network",
       "label": "Deribit: Celsius Network Deposit",
       "type": "exchange_wallet"
     },
     "0xb61a16bda6d61d9b8ad493bf05962c5b98d1712f": {
-      "exchange": "Deribit",
+      "exchange": "Coinbase",
       "label": "Deribit: Coinbase Prime Custody",
       "type": "exchange_wallet"
     },
@@ -123474,11 +123477,6 @@
       "label": "Huobi 9",
       "type": "exchange_wallet"
     },
-    "0x9d6d492bd500da5b33cf95a5d610a73360fcaaa0": {
-      "exchange": "Huobi / HTX",
-      "label": "Huobi Mining Pool",
-      "type": "exchange_wallet"
-    },
     "0xe0d513cf39b52a09aefcef25e91dda3a2636329a": {
       "exchange": "Huobi / HTX",
       "label": "Huobi: Deposit",
@@ -123697,11 +123695,6 @@
     "0x42d17b7f3532ec2f7c4e4e5e239baa476846e2cd": {
       "exchange": "Kanga",
       "label": "Kanga Exchange 1",
-      "type": "exchange_wallet"
-    },
-    "0x471d113059324321749e097705197a2b44a070fc": {
-      "exchange": "Kanga",
-      "label": "Kanga Exchange 2",
       "type": "exchange_wallet"
     },
     "0x0c01089aedc45ab0f43467cceca6b4d3e4170bea": {
@@ -125165,16 +125158,15 @@
       "type": "hot_wallet"
     },
     "0x2953452df5d7285b9a3a8a1e876a4bacb09a976e": {
-      "exchange": "eToro",
+      "exchange": "Binance",
       "label": "eToro: Binance Deposit 1",
       "type": "exchange_wallet"
     }
   },
   "_unverified_pending": {
-    "_note": "Indian exchanges (WazirX, CoinDCX, ZebPay) are directly relevant to the MHA problem statement, but their hot-wallet addresses could not be sourced to a confidence level appropriate for an attribution tool. Do NOT guess them -- a wrong address produces a false attribution against a named company. Look each one up on etherscan.io/accounts/label/, confirm the label, and move the entry into 'labels' above. See README section 'Adding exchange labels'.",
+    "_note": "Indian exchanges (WazirX, ZebPay, Bitbns, Giottus) are directly relevant to the MHA problem statement, but their hot-wallet addresses could not be sourced to a confidence level appropriate for an attribution tool. Do NOT guess them -- a wrong address produces a false attribution against a named company. Look each one up on etherscan.io/accounts/label/, confirm the label, and move the entry into 'labels' above. See README section 'Adding exchange labels'. CoinDCX left this list on 15 Nov 2026: its Ethereum wallets are in 'labels' above (29, from Etherscan's tags; scripts/import_eth_labels.py), and its BSC, Polygon and Arbitrum ones in those chains' files; it has no Tron labels yet.",
     "pending": [
       "WazirX",
-      "CoinDCX",
       "ZebPay",
       "Bitbns",
       "Giottus"

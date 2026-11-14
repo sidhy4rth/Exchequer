@@ -1,7 +1,8 @@
 """Reading TronScan's public address tags during a Tron trace.
 
 Tron is where the evidence says Indian scam money moves, yet a fixed label file
-can only ever hold the wallets someone thought to import -- 41 of them. TronScan
+can only ever hold the wallets someone thought to import -- 68 of them at the
+4 Nov 2026 review (data/exchange_labels_tron.json). TronScan
 publishes a tag for far more addresses than that, and the tag is the explorer's
 own attribution, the same provenance the Tron label file already relies on. So
 a Tron trace can ask TronScan, for each wallet it reaches that no file names,
