@@ -885,3 +885,5 @@ OSINT_LOOKUPS: bool = flag("EXCHEQUER_OSINT_LOOKUPS",
                            "Feature 4, OSINT slice 2: live RDAP and DNS lookups of a case's scam domains")
 CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
                          "Feature 6: one zip of a case's report, registers and audit trail, with a manifest")
+STORE_EXCHANGE_ROWS: bool = flag("EXCHEQUER_STORE_EXCHANGE_ROWS",
+                                 "#222: name the exchange from label-store exchange rows (its own PoR list; ADR-0011)")

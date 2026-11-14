@@ -102,6 +102,9 @@ class ExchangeMatch:
     # INSTANT_EXCHANGER for a swap service's wallet (or a deposit address that
     # sweeps into one); None for an ordinary exchange.
     category: str | None = None
+    # What the attribution stands on, for a label-store exchange row only
+    # (ADR-0011): {kind, source}. None for a label file, inference or live tag.
+    basis: dict[str, str] | None = None
 
     @property
     def inferred(self) -> bool:
@@ -121,6 +124,8 @@ class ExchangeMatch:
             out["evidence"] = self.evidence
         if self.category is not None:
             out["category"] = self.category
+        if self.basis is not None:
+            out["attribution_basis"] = dict(self.basis)
         return out
 
 
@@ -162,7 +167,8 @@ class ExchangeMatcher:
     ) -> None:
         self._labels: dict[str, dict[str, str]] = labels or {}
         self.chain = chain or config.DEFAULT_CHAIN.key
-        # The label store's instant-exchanger rows, for addresses no file names.
+        # The label store's instant-exchanger rows (and, behind a flag, its
+        # exchange rows: ADR-0011), for addresses no file names.
         self.store = store
         if instant:  # a label file's record keeps its name and type; the seed says what kind of service it is
             self._labels = {**self._labels, **{
@@ -240,7 +246,10 @@ class ExchangeMatcher:
         key = normalize_address(address)
         found = self._labels.get(key)
         if found is None and self.store is not None:
-            found = self.store.instant_exchanger(self.chain, key)
+            if config.STORE_EXCHANGE_ROWS:
+                found = self.store.exchange_row(self.chain, key)  # the exchange's own list
+            if found is None:
+                found = self.store.instant_exchanger(self.chain, key)
         return found
 
     def entries(self) -> list[tuple[str, dict[str, str]]]:
@@ -295,6 +304,7 @@ class ExchangeMatcher:
                     depth=data.get("depth", 0),
                     value_received_native=value_in,
                     category=meta.get("category"),
+                    basis=meta.get("basis"),
                 )
             )
 
