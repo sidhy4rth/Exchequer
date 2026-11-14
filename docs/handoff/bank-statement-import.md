@@ -1,11 +1,11 @@
 # Handoff: bank and exchange statement import (suite feature 5)
 
-- **Feature**: suite feature 5, first slice. An officer reads a bank statement CSV, or a transaction CSV an exchange provided, against a case: the rows that match the victim's payments, the UPI/IMPS/NEFT/RTGS references in narrations, the narrations that name a known exchange, on a timeline beside the trace's own on-chain times. The officer may save the rows they confirm (never the whole statement) to the case.
+- **Feature**: suite feature 5, first and second slices. An officer reads a bank statement CSV, or a transaction CSV an exchange provided, against a case: the rows that match the victim's payments, the UPI/IMPS/NEFT/RTGS references in narrations, the narrations that name a known exchange, on a timeline beside the trace's own on-chain times. The officer may save the rows they confirm (never the whole statement) to the case. Second slice: a call detail record (CDR) read the same way, its top contacts, handsets and the numbers on this or the officer's other cases; a summary saved, never the CDR.
 - **Issue**: #144 (statements); #167 (call detail records, the second slice)
-- **Branch**: four stacked PRs: `feat/bank-statement-import` (#146, the record), `feat/bank-statement-import-routes` (#151, the routes), `feat/bank-statement-import-parse` (#152, reading and matching in the browser), `feat/bank-statement-import-panel` (#153, the panel on the Evidence tab)
+- **Branch**: four stacked PRs: `feat/bank-statement-import` (#146, the record), `feat/bank-statement-import-routes` (#151, the routes), `feat/bank-statement-import-parse` (#152, reading and matching in the browser), `feat/bank-statement-import-panel` (#153, the panel on the Evidence tab). CDR, stacked on #153: `feat/cdr-import` (#168, the record and routes), `feat/cdr-import-parse` (reading in the browser), `feat/cdr-import-panel` (the panel)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: first slice built in four stacked PRs, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default); awaiting review. Second slice (CDR, #167) in progress on `feat/cdr-import`
+- **Status**: first slice built in four stacked PRs, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default); awaiting review. Second slice (call detail records, #167) built in three stacked PRs behind its own flag `EXCHEQUER_CDR_IMPORT` (off); awaiting review
 
 ## Done
 
@@ -14,6 +14,8 @@
 - The routes: `GET /trace/{case_id}/statements` (the saved rows this browser or unit may read, and the canonical exchange names; `enabled: false` with the flag off) and `POST /trace/{case_id}/statements` (403 with the flag off). Audited as `statement.list` and `statement.save` with counts only.
 - Reading and matching in the browser: `frontend/src/components/case/statement.js`. Header names (`HEADERS`), the account lines above the header skipped, day-first dates (dd/mm/yyyy, dd-MMM-yyyy, ISO for exchanges), amounts with lakh grouping, Dr/Cr suffixes, brackets and signs; NEFT (16), RTGS (22) and UPI/IMPS (12-digit RRN, only in a UPI or IMPS narration) references; canonical exchange names; hashes of the trace; a timeline beside the payments and the arrivals at the attributed exchange address, in India's time.
 - The panel: `frontend/src/components/case/StatementPanel.jsx` on the Evidence tab, shown only when the server says the flag is on. Pick bank or exchange and the currency, choose a CSV, check the columns, add the rupee amounts the complaint reports, tick the rows to keep, save. Saved rows are listed with the case.
+
+- CDR (#167): `backend/app/cdr_imports.py` and `routes/cdr.py`: `GET`/`POST /trace/{case_id}/cdr` (the saved summaries; save one) and `POST /trace/{case_id}/cdr/check` (the numbers the officer ticks, in the body: on this case's phone identifiers, and on the other cases they may read, via `identifiers.also_in`). Audited as `cdr.list`, `cdr.save`, `cdr.check` with counts only. `frontend/src/components/case/cdr.js` reads the CDR (header names in `CDR_HEADERS`, Indian numbers in the register's `+91` form, call types MO/MT/SMS-MO/SMS-MT, durations as seconds or h:mm:ss) and analyses it: the CDR's own number, top contacts by count and by call time with first and last contact, IMEIs and IMSIs with how often they changed, the most used first cells. `CdrPanel.jsx` on the Evidence tab.
 
 ## Decisions
 
@@ -24,13 +26,24 @@
 - No real sample statements exist yet; every test row is synthetic and says so.
 - An amount matches when it agrees to the places the statement prints (at least two) and its date is within 2 days (`WINDOW_DAYS`) of the payment's date in India. Direction is not required: a refund of the same amount is also worth a look.
 
+- CDR summaries share the `statement_imports` table (source `cdr`, currency empty): the same kind of record, what the officer confirmed from a file read in the browser, so no migration. Statement listings filter to bank and exchange.
+- CDR has its own flag, `EXCHEQUER_CDR_IMPORT`, so statements can go live before CDR is tried on a real one.
+- What is saved: the CDR's own number, the contacts the officer ticks and the handsets they tick, with counts and first/last day; never a row of the CDR, a time, a cell or a duration per call. A `case_identifier` or `other_case` reason is checked by the server against the identifier register, never taken on trust.
+- Numbers are normalised as `identifiers.phone` does (an Indian mobile however printed is `+91` and 10 digits), so a CDR's number and a recorded identifier compare as the same string. Short codes, landlines and SMS senders are kept as printed and cannot be checked.
+- The CDR's own number is the one on the most rows (A or B party); the other party of a row is whichever is not it. A call type's MO/MT gives the direction; without one, A party = the subject means outgoing.
+- A number is a lead, never a person: the panel says subscriber details come from the operator under a lawful request.
+- Test numbers: India sets aside no mobile range for fiction, so the tests use a visibly patterned run (+91 90000 0000x); the foreign one is in Ofcom's drama range (+44 7700 900xxx); IMEIs start with zeros; IMSIs use the test network code 001 01.
+
 ## Next
 
 1. Try the panel with real (redacted) statements, then turn the flag on in production (render.yaml and Render's environment), and remove the flag once it has shipped.
 2. Withdrawing a saved import entered by mistake, with a reason kept in its history, like the identifier register.
-3. CDR: in progress (#167), branch `feat/cdr-import` stacked on #153. IPDR is not started.
+3. CDR: try it on real (redacted) CDRs from Airtel, Jio, Vi and BSNL to add their header names and call-type spellings to `CDR_HEADERS` and `eventType`, then turn `EXCHEQUER_CDR_IMPORT` on. Reading an XLSX directly (today: save as CSV) would need a dependency, in its own PR.
+4. IPDR is not started.
 
 ## Open questions
+
+- Real CDR samples (redacted) from the operators officers see most. Owner to obtain.
 
 - Real statements from the banks officers see most (SBI, HDFC, ICICI, Axis) and from WazirX/CoinDCX would show which header names and narration shapes to add. Owner to obtain redacted samples.
 
