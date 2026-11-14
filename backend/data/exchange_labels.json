@@ -67,7 +67,7 @@
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
     },
-    "india_exchanges": "102 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
+    "india_exchanges": "131 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
   },
   "labels": {
     "0x05f51aab068caa6ab7eeb672f88c180f67f17ec7": {
@@ -125676,6 +125676,151 @@
       "type": "exchange_wallet"
     },
     "0xf28a96107cf2db70bf184c665a99782072aa13be": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xca9e8764e5e7d7782b879c54c733990c29c071e0": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: POL wallet",
+      "type": "exchange_wallet"
+    },
+    "0xcb3e07d189bc29304af7e17f72e2b006093575a5": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x732bf8c3f8c447a67ca3c5e5c8d712f69aa23ab9": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x5e0d9d1080ac5e1608250c8ccbc2de815ff7f414": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xe4811ceba2a6ff54090816d436f49bad730769ea": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xc66afecd8d71f43c76954829d21adf09c9b6364c": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x98faa71a747f1b8eeb148b56c6e268cc5d28db52": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xe02f8f68ee49f51dcb4920ce9001369f392b8b0b": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xffd6c727f3d096858486d25afc7eb52d7c3dd85d": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x52482ca6886a323aa2329df153b61549fcf86fa3": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xf4b784bab64d80b91fb55f02c33febb7297003b7": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x5bc3a80792a0913cc389125ba9c667ec24ad74a5": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x5058f9cecfae85f1f4c381ad8193173c8645287c": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xa787c5db688fab5f0f3ab9299fc833b44a2db075": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xf7f7d0b0c11e3ffd588bb3e41c90e00dfd71f776": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x632c694ac09cf94bcc09135b853b133bb3971717": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xe0db01af1826813848dd0e01a0c6641347df1bf3": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x41d6a5d50eb2cfd5d6aaaf0343ab6a3aef16a767": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xbfff8e4ff794be8c3b8b63e84ceea9dfeac26804": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x301c099e0000c89eabaffdcf36a571439337af42": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0xeb7a5e0e30757763bea88fbbed7339f54f2eb991": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x4b203763f3a97f9ae628c730bbafdb73731e73a5": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x977803d8b99f5ad37d16cbee8964e1c63ebf29ef": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x0e10b1732ae0f41cdaa64d84fee91a4a63aeed79": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x95da8e395398a77c188a8d19167feca3a6639221": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x0c3c2eda12bdf02d038faf0cf87e74ddbf0d3373": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x733333e4d439eb0a94c85b37ee1a0189bca5d538": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x6d61f35c0bc2e5c297a39f978d2f7aac857b4519": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
+      "type": "exchange_wallet"
+    },
+    "0x1e59a732b0a7cf05ff35cf83f8c02b5caf66b692": {
       "exchange": "CoinSwitch",
       "label": "CoinSwitch: ETH/ERC20 wallet",
       "type": "exchange_wallet"
