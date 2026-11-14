@@ -3,16 +3,17 @@
 - **Feature**: suite feature 9 (custody wallet tooling): records of the unit's multisig custody wallets, a signing log for every movement in and out, and the officer's written procedure. The server never holds a key.
 - **Issue**: #128
 - **Branch**: `feat/custody-wallets` (then stacked `feat/custody-signing-log`, `feat/custody-screen`, `feat/custody-procedure`)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: parts 1-3 (#129, #139, screen) ready for review; part 4 (procedure doc) next
+- **Status**: all four parts open for review (#129, #139, #140, and the procedure doc); behind `EXCHEQUER_CUSTODY_WALLETS`, off
 
 ## Done
 
 - Claimed: issue #128, this file, draft PR #129.
 - Part 1 (#129): `backend/app/custody.py`, `backend/app/routes/custody.py` (`GET/POST /trace/{case_id}/custody`, `PATCH /custody/{wallet_id}`), model `CustodyWallet`, migration `g7_custody_1` (one table, `custody_wallets`), flag `EXCHEQUER_CUSTODY_WALLETS`. 40 tests in `backend/tests/test_custody.py`, including the migration going down and up.
 - Part 2 (branch `feat/custody-signing-log`): `backend/app/custody_log.py`, routes `POST /custody/{wallet_id}/movements` and `POST /custody/movements/{movement_id}/{approve|broadcast|confirm|cancel}`, movements listed under each wallet in `GET /trace/{case_id}/custody`, model `CustodyMovement`, migration `g7_custody_2`. 29 tests in `backend/tests/test_custody_log.py` (#139).
-- Part 3 (branch `feat/custody-screen`): `frontend/src/components/case/CustodyPanel.jsx` (+ `.css`, `.test.jsx`, 6 tests) on the Letters tab under the asset register (one import, one line in `LettersTab.jsx`); `frontend/src/api/custody.js` (one re-export line in `api.js`). The panel renders nothing unless the server says `enabled: true`.
+- Part 3 (branch `feat/custody-screen`): `frontend/src/components/case/CustodyPanel.jsx` (+ `.css`, `.test.jsx`, 6 tests) on the Letters tab under the asset register (one import, one line in `LettersTab.jsx`); `frontend/src/api/custody.js` (one re-export line in `api.js`). The panel renders nothing unless the server says `enabled: true` (#140).
+- Part 4 (branch `feat/custody-procedure`): `docs/custody-procedure.md`, the officer's checklist (two-person rule, hardware wallets held by named officers, test with a small amount, never photograph or type a seed, record every step, the court order before any release); suite-features row 9.
 
 ## Decisions
 
@@ -30,11 +31,13 @@
 
 ## Next
 
-1. Part 4: `docs/custody-procedure.md` and suite-features row 9.
+1. Review and merge in order: #129, #139, #140, then the procedure PR.
+2. Click through the panel in a browser against a server with `EXCHEQUER_CUSTODY_WALLETS=1` and a signed-in officer.
+3. Turn the flag on (and later delete it) once the owner is happy; the procedure doc should be read by the unit before it is.
 
 ## Open questions
 
-- Migration `g7_custody_1` revises `g7_domain_lookups_1` (main's head on 14 Nov). If #122 (`g7_tasks_1`) or #126 merge first with their own migrations, re-point its `down_revision` before merging.
+- Migration `g7_custody_1` revises `g7_domain_lookups_1` (main's head on 14 Nov). If #122 (`g7_tasks_1`) or #124 (`g7_tasks_2`) merge first, re-point its `down_revision` before merging.
 - Signer rotation (replacing an owner of the same Safe) is not modelled: today it means a new record. Sidhyarth to decide whether that is enough.
 - Should the officer entering an approval have to be a different officer from the one who proposed it (a server-side two-person rule on the record itself)? Today any signed-in officer of the unit can enter any step.
 
