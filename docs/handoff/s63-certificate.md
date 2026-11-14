@@ -3,9 +3,9 @@
 - **Feature**: suite feature 6 (evidence locker): a draft of the certificate in the Bharatiya Sakshya Adhiniyam's Schedule (s.63(4)(c)) for a case's exhibits, filled from the exhibit register, for the officer and the expert to check and sign
 - **Issue**: #112
 - **Branch**: `feat/s63-certificate` (server, PR #113); `feat/s63-certificate-form` (screen, on top of it)
-- **Current**: Barenyam
-- **Last worked on**: Barenyam, 2026-11-13
-- **Status**: built and tested end to end; server in #113, screen in its own PR on top of it; both wait for review
+- **Current**: nobody
+- **Last worked on**: Barenyam, 2026-11-14
+- **Status**: merged (#113, #114) and live since 13 Nov 2026; issue #112 closed
 
 ## Done
 
@@ -32,6 +32,7 @@
 ## Open questions
 
 - Does India Code's network access stay allowed for this environment? The script needs it, the tests do not.
+- Nobody has yet compared `backend/data/bsa_schedule_certificate.txt` with the official PDF's pages 52-53 by eye (Sidhyarth's review of #113 could not open India Code). Barenyam made a side-by-side page for it; whoever checks says so in #113. (Barenyam or Sidhyarth)
 
 ## Files mid-change (do not touch)
 
