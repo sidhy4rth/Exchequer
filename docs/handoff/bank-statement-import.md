@@ -1,11 +1,11 @@
 # Handoff: bank and exchange statement import (suite feature 5)
 
 - **Feature**: suite feature 5, first slice. An officer reads a bank statement CSV, or a transaction CSV an exchange provided, against a case: the rows that match the victim's payments, the UPI/IMPS/NEFT/RTGS references in narrations, the narrations that name a known exchange, on a timeline beside the trace's own on-chain times. The officer may save the rows they confirm (never the whole statement) to the case.
-- **Issue**: #144
+- **Issue**: #144 (statements); #167 (call detail records, the second slice)
 - **Branch**: four stacked PRs: `feat/bank-statement-import` (#146, the record), `feat/bank-statement-import-routes` (#151, the routes), `feat/bank-statement-import-parse` (#152, reading and matching in the browser), `feat/bank-statement-import-panel` (#153, the panel on the Evidence tab)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: first slice built in four stacked PRs, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default); awaiting review
+- **Status**: first slice built in four stacked PRs, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default); awaiting review. Second slice (CDR, #167) in progress on `feat/cdr-import`
 
 ## Done
 
@@ -28,7 +28,7 @@
 
 1. Try the panel with real (redacted) statements, then turn the flag on in production (render.yaml and Render's environment), and remove the flag once it has shipped.
 2. Withdrawing a saved import entered by mistake, with a reason kept in its history, like the identifier register.
-3. CDR and IPDR (the rest of feature 5) are not started.
+3. CDR: in progress (#167), branch `feat/cdr-import` stacked on #153. IPDR is not started.
 
 ## Open questions
 
