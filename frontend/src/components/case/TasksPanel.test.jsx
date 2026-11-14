@@ -222,9 +222,38 @@ describe('the case task list', () => {
     await user.type(screen.getByLabelText('What has to be done'), 'Collect the phone extraction')
     await user.dblClick(screen.getByRole('button', { name: 'Add the task' }))
     expect(posts).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Add the task' })).toBeDisabled()
+    // Marked rather than disabled while it saves, so it keeps the keyboard's focus; a second press is ignored.
+    expect(screen.getByRole('button', { name: 'Add the task' })).toHaveAttribute('aria-disabled', 'true')
     finish()
     await waitFor(() => expect(screen.queryByRole('form', { name: 'Add a task' })).toBeNull())
+  })
+
+  it('keeps the keyboard on the panel: the new task takes focus, and a refusal leaves it on the button', async () => {
+    let tasks = []
+    let refuse = true
+    api({
+      'GET /trace/c1/tasks': () => ({ body: { tasks } }),
+      'POST /trace/c1/tasks': (b) => {
+        if (refuse) return { status: 400, body: { detail: 'This looks like a private key or seed phrase.' } }
+        tasks = [{ ...TASK, task_id: 't9', ...b }]
+        return { status: 201, body: tasks[0] }
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add a task' }))
+    await user.type(screen.getByLabelText('What has to be done'), 'Collect the phone extraction')
+    const button = screen.getByRole('button', { name: 'Add the task' })
+    button.focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+    expect(button).toHaveFocus() // not dropped to the page while the request ran
+    refuse = false
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Add a task' })).toBeNull())
+    const added = screen.getByText('Collect the phone extraction').closest('.request-row')
+    await waitFor(() => expect(added).toHaveFocus()) // the form is gone: the new task takes its place
+    expect(document.activeElement).not.toBe(document.body)
   })
 
   it("shows the server's refusal", async () => {
