@@ -5,19 +5,21 @@
 - **Branch**: `feat/custody-wallets` (then stacked `feat/custody-signing-log`, `feat/custody-screen`, `feat/custody-procedure`)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: part 1 (#129) and part 2 (signing log) ready for review; part 3 (screen) next
+- **Status**: parts 1-3 (#129, #139, screen) ready for review; part 4 (procedure doc) next
 
 ## Done
 
 - Claimed: issue #128, this file, draft PR #129.
 - Part 1 (#129): `backend/app/custody.py`, `backend/app/routes/custody.py` (`GET/POST /trace/{case_id}/custody`, `PATCH /custody/{wallet_id}`), model `CustodyWallet`, migration `g7_custody_1` (one table, `custody_wallets`), flag `EXCHEQUER_CUSTODY_WALLETS`. 40 tests in `backend/tests/test_custody.py`, including the migration going down and up.
-- Part 2 (branch `feat/custody-signing-log`): `backend/app/custody_log.py`, routes `POST /custody/{wallet_id}/movements` and `POST /custody/movements/{movement_id}/{approve|broadcast|confirm|cancel}`, movements listed under each wallet in `GET /trace/{case_id}/custody`, model `CustodyMovement`, migration `g7_custody_2`. 29 tests in `backend/tests/test_custody_log.py`.
+- Part 2 (branch `feat/custody-signing-log`): `backend/app/custody_log.py`, routes `POST /custody/{wallet_id}/movements` and `POST /custody/movements/{movement_id}/{approve|broadcast|confirm|cancel}`, movements listed under each wallet in `GET /trace/{case_id}/custody`, model `CustodyMovement`, migration `g7_custody_2`. 29 tests in `backend/tests/test_custody_log.py` (#139).
+- Part 3 (branch `feat/custody-screen`): `frontend/src/components/case/CustodyPanel.jsx` (+ `.css`, `.test.jsx`, 6 tests) on the Letters tab under the asset register (one import, one line in `LettersTab.jsx`); `frontend/src/api/custody.js` (one re-export line in `api.js`). The panel renders nothing unless the server says `enabled: true`.
 
 ## Decisions
 
 - Builds on the asset register (`assets.py`, #101): reuses its `looks_like_secret` check on every text field, its exact-decimal amounts and its transaction-hash check.
 - Behind `EXCHEQUER_CUSTODY_WALLETS` (config.py FLAGS), off by default. Switched off, `GET /trace/{case_id}/custody` answers `enabled: false` (the screen hides itself) and every write is 403.
 - A custody wallet needs a threshold of at least 2 and no more than its signers: one person alone must never move seized money.
+- The panel sits on the Letters tab under the asset register (where #101 put the register), not on the Evidence tab: the wallet holds the register's custody rows.
 - Signers are names, roles and units only, compared ignoring case and spacing, so the same person cannot be two of n. A seed split across a signer's fields is caught too.
 - The chain, address, scheme, threshold and signers never change after the record is made; only notes and the linked asset-register rows do. A change of signers is a new record (see open questions).
 - Linked asset-register rows must be in the same case, readable by the viewer, and held in custody.
@@ -28,8 +30,7 @@
 
 ## Next
 
-1. Part 3: the panel on the Letters tab under the asset register, `frontend/src/api/custody.js`.
-2. Part 4: `docs/custody-procedure.md` and suite-features row 9.
+1. Part 4: `docs/custody-procedure.md` and suite-features row 9.
 
 ## Open questions
 
