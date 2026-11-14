@@ -252,3 +252,27 @@ def test_g7_assets_1_goes_down_and_up_again_keeping_the_cases():
     models.init_db()
     assert "seized_assets" in set(inspect(models._engine).get_table_names())
     assert assets.list_for(viewer(), "case-1") == []
+
+
+# amount is String(48): Postgres refuses a longer value (a 500), so it is refused here first, with a reason.
+@pytest.mark.parametrize("amount", [
+    "1" + "0" * 48 + "." + "0",  # too many digits typed (more than AMOUNT_MAX, too: refused either way)
+    "0." + "0" * 60 + "1",  # small, but 63 characters once written out
+    "1e-60",  # short as typed, 62 characters written out
+    "1" * 10_000,  # a pasted wall of digits
+], ids=["many-digits", "long-written-out", "short-exponent", "wall-of-digits"])
+def test_an_amount_longer_than_its_column_is_refused_not_a_server_error(amount):
+    with pytest.raises(AssetError, match="48 characters"):
+        add(held(amount=amount))
+
+
+def test_an_amount_of_exactly_48_characters_is_kept():
+    amount = "1." + "0" * 45 + "1"
+    assert len(amount) == assets.AMOUNT_CHARS == 48
+    assert add(held(amount=amount))["amount"] == amount
+
+
+def test_the_route_answers_a_too_long_amount_with_a_400_that_says_why(client):
+    made = client.post("/trace/case-1/assets", json=held(amount="0." + "0" * 60 + "1"), headers=H)
+    assert made.status_code == 400
+    assert "48 characters" in made.json()["detail"]
