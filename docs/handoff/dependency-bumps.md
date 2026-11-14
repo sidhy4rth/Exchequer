@@ -34,6 +34,8 @@
 
 - 15 Nov (Sidhyarth's session, issue #199): pypdf 6.21.4 → 7.1.0 on `feat/pypdf-7`, stacked on `feat/python-minor-bumps` so the two lock changes never need merging by hand. Only pypdf changes in either lock. The 12 test files that read or write PDFs (verify, report PDF, report cache, both certificates, third-party text and others): 277 passed on 6.21.4 and 277 on 7.1.0; full backend suite 3,308 passed, 6 skipped. pypdf 7.1 deprecates positional arguments to `add_outline_item`, which one test helper in `test_verify_pdf.py` used; it now passes them by name (same call, works on 6 too). pypdf 7.0's random file identifiers do not change our PDFs: `report_pdf._attach` clones the reportlab file, which keeps its `/ID`.
 
+- 15 Nov (Sidhyarth's session, issue #200): `httpx2==2.16.0` added to `requirements-dev.in` on `feat/httpx2-testclient`, test-only. Starlette 1.10's `TestClient` imports httpx2 when it is installed and warns when it falls back to httpx; the site's own outbound calls stay on `httpx` (`requirements.in`), and the deployed image never installs httpx2. The dev lock gains httpx2, httpcore2 and truststore (and httpx2-jsfetch, marked for emscripten only, so never installed). Full backend suite 3,308 passed, 6 skipped, and the deprecation warning is gone.
+
 ## Decisions
 
 - #82 is taken over on this branch: Dependabot raised psycopg to 3.3.7 in `backend/requirements.txt` only. This branch also regenerates `backend/requirements-dev.txt` with the repo's uv command (only psycopg and psycopg-binary changed) and copies the 3.3.7 hash blocks into `citizen/api/requirements.txt`. `tests/test_requirements_locked.py` and `citizen/api/tests/test_endpoints.py::test_the_dependencies_are_psycopg_alone_pinned_with_hashes` pass locally.
@@ -47,7 +49,7 @@
 2. Done 14 Nov: #81 closed; the newer npm minor group #141 is merged.
 3. Review and merge the `feat/python-minor-bumps` PR, then close #61 as superseded.
 4. Then review and merge `feat/pypdf-7` (pypdf 7.1.0, #199), which is stacked on it.
-5. FastAPI's TestClient now warns that it wants `httpx2` instead of `httpx` (Starlette deprecation). Not urgent; a later bump can add `httpx2` to `requirements-dev.in` once it is out of the deprecation window.
+5. FastAPI's TestClient now warns that it wants `httpx2` instead of `httpx` (Starlette deprecation). Done on `feat/httpx2-testclient` (#200, stacked on `feat/pypdf-7`): `httpx2==2.16.0` in `requirements-dev.in` only; merge it after `feat/pypdf-7`.
 
 ## Open questions
 
