@@ -12,6 +12,7 @@
 - Claimed: issue #144, this file, draft PR #146.
 - The record (#146): table `statement_imports` (migration `g7_statements_1`, after `g7_domain_lookups_1`), `backend/app/statement_imports.py` (checks each saved row: date, debit or credit, amount, reference shape, an exchange name only when canonical and in the row's own text, free text refused when it looks like a key), flag `EXCHEQUER_STATEMENT_IMPORT`.
 - The routes: `GET /trace/{case_id}/statements` (the saved rows this browser or unit may read, and the canonical exchange names; `enabled: false` with the flag off) and `POST /trace/{case_id}/statements` (403 with the flag off). Audited as `statement.list` and `statement.save` with counts only.
+- Reading and matching in the browser: `frontend/src/components/case/statement.js`. Header names (`HEADERS`), the account lines above the header skipped, day-first dates (dd/mm/yyyy, dd-MMM-yyyy, ISO for exchanges), amounts with lakh grouping, Dr/Cr suffixes, brackets and signs; NEFT (16), RTGS (22) and UPI/IMPS (12-digit RRN, only in a UPI or IMPS narration) references; canonical exchange names; hashes of the trace; a timeline beside the payments and the arrivals at the attributed exchange address, in India's time.
 
 ## Decisions
 
@@ -20,11 +21,11 @@
 - An exchange is named only when a narration contains one of the repository's own canonical exchange names (the `exchange` field of the label files, as `ExchangeMatcher.exchanges` lists them), as a whole word. A few canonical names that are also ordinary words in Indian statements ("Liquid" as in a liquid fund) are not matched from narrations.
 - The audit log records counts only (rows saved, by reason), never an account number, a reference or a narration.
 - No real sample statements exist yet; every test row is synthetic and says so.
+- An amount matches when it agrees to the places the statement prints (at least two) and its date is within 2 days (`WINDOW_DAYS`) of the payment's date in India. Direction is not required: a refund of the same amount is also worth a look.
 
 ## Next
 
-1. Browser: `frontend/src/components/case/statement.js` (columns, Indian dates and amounts, UTR shapes, matching), with tests.
-2. Panel: `frontend/src/components/case/StatementPanel.jsx` on the Evidence tab.
+1. Panel: `frontend/src/components/case/StatementPanel.jsx` on the Evidence tab.
 
 ## Open questions
 
