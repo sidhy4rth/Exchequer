@@ -94,7 +94,7 @@ def test_only_the_officers_own_unit_or_browser_may_withdraw():
 
 def test_the_demo_caller_cannot_withdraw():
     demo = TestClient(app, headers=H)
-    iid = saved(demo)
+    iid = saved(signed_in("asha"))  # saving needs an officer too; this browser (ALICE) then signs out
     refused = withdraw(demo, iid)
     assert refused.status_code == 403 and "Sign in as an officer" in refused.json()["detail"]
     listed = demo.get("/trace/case-1/statements").json()
