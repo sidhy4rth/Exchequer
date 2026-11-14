@@ -32,7 +32,7 @@ from typing import Any
 from sqlalchemy import func, select
 
 from . import identifiers, models
-from .statement_imports import MAX_PER_OWNER, MAX_TOTAL, StatementError, _readable, _text
+from .statement_imports import MAX_PER_OWNER, MAX_TOTAL, StatementError, _text, listing, withdrawal
 
 SOURCE = "cdr"
 KINDS = {"subject": "The CDR's own number", "number": "A number it was in touch with", "imei": "A handset (IMEI)"}
@@ -132,7 +132,8 @@ def clean_row(raw: Any, index: int) -> dict[str, Any]:
 
 def summary(r: models.StatementImport) -> dict[str, Any]:
     return {"import_id": r.id, "case_id": r.case_id, "title": r.title, "row_count": r.row_count,
-            "rows": json.loads(r.rows_json or "[]"), "created_at": r.created_at, "created_by": r.created_by}
+            "rows": json.loads(r.rows_json or "[]"), "created_at": r.created_at, "created_by": r.created_by,
+            "withdrawn": withdrawal(r)}
 
 
 def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any) -> dict[str, Any]:
@@ -173,14 +174,9 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any) -> dic
         return summary(r)
 
 
-def list_for(viewer: Any, case_id: str) -> list[dict[str, Any]]:
-    if getattr(viewer, "owner_hash", None) is None and getattr(viewer, "unit_id", None) is None:
-        return []
-    with models.session() as s:
-        rows = s.scalars(select(models.StatementImport).where(
-            models.StatementImport.case_id == case_id, models.StatementImport.source == SOURCE, _readable(viewer))
-            .order_by(models.StatementImport.created_at)).all()
-        return [summary(r) for r in rows]
+def list_for(viewer: Any, case_id: str, withdrawn: bool = False) -> list[dict[str, Any]]:
+    """The CDR summaries the viewer may read; withdrawn ones only when asked for."""
+    return listing(viewer, case_id, (SOURCE,), summary, withdrawn)
 
 
 def check(viewer: Any, case_id: str, raw: Any) -> list[dict[str, Any]]:

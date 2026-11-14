@@ -370,6 +370,13 @@ class StatementImport(Base):
     rows_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[str] = mapped_column(String(32))
     created_by: Mapped[str] = mapped_column(String(64))
+    # Withdrawn when entered by mistake: never deleted, hidden from listings unless asked for.
+    withdrawn_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    withdrawn_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    withdrawn_reason: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
 
 
 class Batch(Base):

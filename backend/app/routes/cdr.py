@@ -4,6 +4,8 @@
     POST /trace/{case_id}/cdr         keep the summary the officer confirmed (numbers and counts, never the CDR)
     POST /trace/{case_id}/cdr/check   the numbers the officer chose: on this case's phone identifiers,
                                       and on the other cases they may read (identifiers.also_in)
+    POST /trace/{case_id}/cdr/{import_id}/withdraw   withdraw a summary entered by mistake, with a reason
+                                      (signed-in officers only; GET ?withdrawn=1 lists them too)
 
 Behind the flag EXCHEQUER_CDR_IMPORT: off, the list says so and the rest is refused.
 Numbers go in a POST body, never a URL. Audited by counts only, never a number,
@@ -17,9 +19,10 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from .. import audit, cdr_imports, config
+from .. import audit, cdr_imports, config, statement_imports
 from ..auth import CurrentUser
 from .requests import _allow_write, _owner
+from .statements import Withdrawal, listed, withdrawn
 
 router = APIRouter()
 OFF = "CDR import is switched off on this deployment."
@@ -35,13 +38,13 @@ class CdrCheck(BaseModel):
 
 
 @router.get("/trace/{case_id}/cdr")
-def list_cdr(case_id: str, user: CurrentUser) -> dict[str, Any]:
+def list_cdr(case_id: str, user: CurrentUser, withdrawn: bool = False) -> dict[str, Any]:
     if not config.CDR_IMPORT:
         return {"case_id": case_id, "enabled": False, "imports": []}
-    found = cdr_imports.list_for(user, case_id)
-    audit.record("cdr.list", case_id=case_id)
+    found = cdr_imports.list_for(user, case_id, withdrawn=withdrawn)
     return {"case_id": case_id, "enabled": True, "count": len(found), "imports": found,
-            "rows_max": cdr_imports.ROWS_MAX, "check_max": cdr_imports.CHECK_MAX}
+            "rows_max": cdr_imports.ROWS_MAX, "check_max": cdr_imports.CHECK_MAX,
+            **listed(user, "cdr.list", case_id, withdrawn, (cdr_imports.SOURCE,))}
 
 
 @router.post("/trace/{case_id}/cdr", status_code=201)
@@ -70,3 +73,12 @@ def check_numbers(case_id: str, body: CdrCheck, user: CurrentUser) -> dict[str, 
         "numbers": len(found), "on_this_case": sum(f["on_this_case"] for f in found),
         "on_other_cases": sum(bool(f["also_in"]) for f in found)})
     return {"case_id": case_id, "results": found}
+
+
+@router.post("/trace/{case_id}/cdr/{import_id}/withdraw")
+def withdraw_cdr(case_id: str, import_id: str, body: Withdrawal, user: CurrentUser, http: Request) -> dict[str, Any]:
+    if not config.CDR_IMPORT:
+        raise HTTPException(status_code=403, detail=OFF)
+    return withdrawn(lambda: statement_imports.withdraw(user, case_id, import_id, body.reason, sources=(cdr_imports.SOURCE,),
+                                                        summarise=cdr_imports.summary),
+                     user, http, "cdr.withdraw", case_id, import_id)

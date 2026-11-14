@@ -2,7 +2,7 @@
 
 - **Feature**: suite feature 5, first and second slices. An officer reads a bank statement CSV, or a transaction CSV an exchange provided, against a case: the rows that match the victim's payments, the UPI/IMPS/NEFT/RTGS references in narrations, the narrations that name a known exchange, on a timeline beside the trace's own on-chain times. The officer may save the rows they confirm (never the whole statement) to the case. Second slice: a call detail record (CDR) read the same way, its top contacts, handsets and the numbers on this or the officer's other cases; a summary saved, never the CDR.
 - **Issue**: #144 (statements); #167 (call detail records, the second slice)
-- **Branch**: four stacked PRs: `feat/bank-statement-import` (#146, the record), `feat/bank-statement-import-routes` (#151, the routes), `feat/bank-statement-import-parse` (#152, reading and matching in the browser), `feat/bank-statement-import-panel` (#153, the panel on the Evidence tab). CDR, stacked on #153: `feat/cdr-import` (#168, the record and routes), `feat/cdr-import-parse` (#172, reading in the browser), `feat/cdr-import-panel` (#173, the panel)
+- **Branch**: four stacked PRs: `feat/bank-statement-import` (#146, the record), `feat/bank-statement-import-routes` (#151, the routes), `feat/bank-statement-import-parse` (#152, reading and matching in the browser), `feat/bank-statement-import-panel` (#153, the panel on the Evidence tab). CDR, stacked on #153: `feat/cdr-import` (#168, the record and routes), `feat/cdr-import-parse` (#172, reading in the browser), `feat/cdr-import-panel` (#173, the panel). Withdrawing a saved import, stacked on #173: `feat/statement-import-withdraw`
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
 - **Status**: first slice built in four stacked PRs, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default); awaiting review. Second slice (call detail records, #167) built in three stacked PRs behind its own flag `EXCHEQUER_CDR_IMPORT` (off); awaiting review
@@ -17,6 +17,8 @@
 
 - CDR (#167): `backend/app/cdr_imports.py` and `routes/cdr.py`: `GET`/`POST /trace/{case_id}/cdr` (the saved summaries; save one) and `POST /trace/{case_id}/cdr/check` (the numbers the officer ticks, in the body: on this case's phone identifiers, and on the other cases they may read, via `identifiers.also_in`). Audited as `cdr.list`, `cdr.save`, `cdr.check` with counts only. `frontend/src/components/case/cdr.js` reads the CDR (header names in `CDR_HEADERS`, Indian numbers in the register's `+91` form, call types MO/MT/SMS-MO/SMS-MT, durations as seconds or h:mm:ss) and analyses it: the CDR's own number, top contacts by count and by call time with first and last contact, IMEIs and IMSIs with how often they changed, the most used first cells. `CdrPanel.jsx` on the Evidence tab.
 
+- Withdrawal (`feat/statement-import-withdraw`): a signed-in officer withdraws a saved statement or CDR import entered by mistake. Migration `g7_statements_2` (after `g7_statements_1`) adds `withdrawn_at`, `withdrawn_by`, `withdrawn_reason` and `row_version` to `statement_imports`. `statement_imports.withdraw` (shared by both); routes `POST /trace/{case_id}/statements/{import_id}/withdraw` and `POST /trace/{case_id}/cdr/{import_id}/withdraw` with `{"reason": ...}`; `GET ...?withdrawn=1` lists withdrawn imports too, and every listing carries `withdrawn_count` and `can_withdraw`. Audited as `statement.withdraw` / `cdr.withdraw` with the import id only; a listing with withdrawn imports shown is audited with `{"withdrawn": true}`. Panels: `WithdrawImport.jsx` (the button, the reason, the "Show withdrawn (n)" toggle, the struck-through entry with who, when and why).
+
 ## Decisions
 
 - The statement is read in the browser. Nothing leaves it until the officer saves the rows they confirmed; the server never sees the rest of the statement.
@@ -26,6 +28,8 @@
 - No real sample statements exist yet; every test row is synthetic and says so.
 - An amount matches when it agrees to the places the statement prints (at least two) and its date is within 2 days (`WINDOW_DAYS`) of the payment's date in India. Direction is not required: a refund of the same amount is also worth a look.
 
+- Withdrawal never deletes: the rows stay in the case record with who withdrew them (the officer's id), when and the reason (one line, up to 300 characters, refused when it looks like a key). Withdrawn imports are left out of listings unless `?withdrawn=1`. Only a signed-in officer may withdraw (the demo caller gets 403), and only an import they may read (their browser's or their unit's, as for viewing; anything else is 404). A second withdrawal is 409 and keeps the first reason; a write that keeps meeting another (row version) is 409 after 3 tries. The statements route withdraws only bank and exchange imports, the CDR route only CDR summaries. Nothing reads saved imports for matching today (the browser matches the file it reads; CDR checks read the identifier register), so a withdrawn import cannot feed a match.
+- The reason is not in the audit log (it is free text); the import's id is.
 - CDR summaries share the `statement_imports` table (source `cdr`, currency empty): the same kind of record, what the officer confirmed from a file read in the browser, so no migration. Statement listings filter to bank and exchange.
 - CDR has its own flag, `EXCHEQUER_CDR_IMPORT`, so statements can go live before CDR is tried on a real one.
 - What is saved: the CDR's own number, the contacts the officer ticks and the handsets they tick, with counts and first/last day; never a row of the CDR, a time, a cell or a duration per call. A `case_identifier` or `other_case` reason is checked by the server against the identifier register, never taken on trust.
@@ -38,7 +42,7 @@
 ## Next
 
 1. Try the panel with real (redacted) statements, then turn the flag on in production (render.yaml and Render's environment), and remove the flag once it has shipped.
-2. Withdrawing a saved import entered by mistake, with a reason kept in its history, like the identifier register.
+2. Migration heads: `g7_statements_2` revises `g7_statements_1`. If another migration (for example #122 `g7_tasks_1`, #124 `g7_tasks_2`) merges to main first, re-point `g7_statements_1`'s or this one's `down_revision` so there is one head.
 3. CDR: try it on real (redacted) CDRs from Airtel, Jio, Vi and BSNL to add their header names and call-type spellings to `CDR_HEADERS` and `eventType`, then turn `EXCHEQUER_CDR_IMPORT` on. Reading an XLSX directly (today: save as CSV) would need a dependency, in its own PR.
 4. IPDR is not started.
 

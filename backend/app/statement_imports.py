@@ -19,6 +19,11 @@ the bank can say whose account a credit came from.
 
 Account numbers, references and narrations stay in the case record. The audit
 log gets counts only (routes/statements.py).
+
+Nothing is deleted. An import entered by mistake -- a statement or a CDR summary
+(cdr_imports.py) -- is withdrawn by a signed-in officer who may read it, with who,
+when and a reason; listings leave it out unless the officer asks to see withdrawn
+imports, which are then shown with the reason.
 """
 from __future__ import annotations
 
@@ -27,9 +32,10 @@ import re
 import uuid
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Callable, Iterable
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm.exc import StaleDataError
 
 from . import config, models
 from .assets import NOT_A_KEY, looks_like_secret
@@ -42,7 +48,8 @@ DIRECTIONS = ("debit", "credit")
 # its narration names a known exchange; tx_hash: it names a transfer of the trace.
 REASONS = ("amount_date", "utr", "exchange", "tx_hash")
 ROWS_MAX, MAX_PER_OWNER, MAX_TOTAL = 200, 1000, 100_000
-TEXT = {"title": 120, "narration": 300, "counterparty": 120}
+TEXT = {"title": 120, "narration": 300, "counterparty": 120, "reason": 300}
+WRITE_TRIES = 3
 
 # Canonical names that are also ordinary words in an Indian statement ("HDFC
 # LIQUID FUND", a "Gemini" shop): a narration containing one says nothing about
@@ -58,6 +65,14 @@ _REFERENCE = re.compile(r"[A-Za-z0-9][A-Za-z0-9/._-]{0,39}")
 
 class StatementError(ValueError):
     """What was sent is missing, malformed or not allowed; the message says which."""
+
+
+class AlreadyWithdrawn(StatementError):
+    """The import was withdrawn before: a second withdrawal changes nothing."""
+
+
+class ImportConflict(Exception):
+    """Someone changed the import at the same moment, on every try."""
 
 
 def exchange_names() -> list[str]:
@@ -156,10 +171,17 @@ def _readable(user: Any) -> Any:
     return own if unit is None else or_(own, models.StatementImport.unit_id == unit)
 
 
+def withdrawal(r: models.StatementImport) -> dict[str, Any] | None:
+    """Who withdrew the import, when and why; None while it stands."""
+    if r.withdrawn_at is None:
+        return None
+    return {"at": r.withdrawn_at, "by": r.withdrawn_by, "reason": r.withdrawn_reason}
+
+
 def summary(r: models.StatementImport) -> dict[str, Any]:
     return {"import_id": r.id, "case_id": r.case_id, "source": r.source, "source_label": SOURCES.get(r.source, r.source),
             "currency": r.currency, "title": r.title, "row_count": r.row_count, "rows": json.loads(r.rows_json or "[]"),
-            "created_at": r.created_at, "created_by": r.created_by}
+            "created_at": r.created_at, "created_by": r.created_by, "withdrawn": withdrawal(r)}
 
 
 def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any) -> dict[str, Any]:
@@ -198,14 +220,71 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any) -> dic
         return summary(r)
 
 
-def list_for(viewer: Any, case_id: str) -> list[dict[str, Any]]:
-    if getattr(viewer, "owner_hash", None) is None and getattr(viewer, "unit_id", None) is None:
+def _nobody(viewer: Any) -> bool:
+    return getattr(viewer, "owner_hash", None) is None and getattr(viewer, "unit_id", None) is None
+
+
+def _of(viewer: Any, case_id: str, sources: Iterable[str]) -> list[Any]:
+    return [models.StatementImport.case_id == case_id, models.StatementImport.source.in_(tuple(sources)), _readable(viewer)]
+
+
+def list_for(viewer: Any, case_id: str, withdrawn: bool = False) -> list[dict[str, Any]]:
+    """The imports the viewer may read; withdrawn ones only when asked for."""
+    return listing(viewer, case_id, SOURCES, summary, withdrawn)  # a CDR's summary (cdr_imports.py) is listed there
+
+
+def listing(viewer: Any, case_id: str, sources: Iterable[str], summarise: Callable[[Any], dict[str, Any]],
+            withdrawn: bool = False) -> list[dict[str, Any]]:
+    if _nobody(viewer):
         return []
+    where = _of(viewer, case_id, sources)
+    if not withdrawn:
+        where.append(models.StatementImport.withdrawn_at.is_(None))
     with models.session() as s:
-        rows = s.scalars(select(models.StatementImport).where(
-            models.StatementImport.case_id == case_id, models.StatementImport.source.in_(SOURCES), _readable(viewer))
-            .order_by(models.StatementImport.created_at)).all()  # a CDR's summary (cdr_imports.py) is listed there
-        return [summary(r) for r in rows]
+        rows = s.scalars(select(models.StatementImport).where(*where).order_by(models.StatementImport.created_at)).all()
+        return [summarise(r) for r in rows]
+
+
+def withdrawn_count(viewer: Any, case_id: str, sources: Iterable[str] = SOURCES) -> int:
+    """How many of the imports the viewer may read are withdrawn: what a "show withdrawn" toggle counts."""
+    if _nobody(viewer):
+        return 0
+    with models.session() as s:
+        return s.scalar(select(func.count()).select_from(models.StatementImport).where(
+            *_of(viewer, case_id, sources), models.StatementImport.withdrawn_at.is_not(None))) or 0
+
+
+def withdraw(viewer: Any, case_id: str, import_id: str, reason: Any, *, sources: Iterable[str] = SOURCES,
+             summarise: Callable[[Any], dict[str, Any]] = summary) -> dict[str, Any] | None:
+    """Withdraw an import entered by mistake, keeping who, when and why; None when the viewer
+    may read no import by that id on this case. Signed-in officers only: the route refuses the demo caller."""
+    text = _text(reason, "reason", "The withdrawal")
+    if not text:
+        raise StatementError("Say why it is withdrawn: the reason stays with the record.")
+    if _nobody(viewer):
+        return None
+    for _ in range(WRITE_TRIES):
+        try:
+            return _withdraw_once(viewer, case_id, import_id, text, tuple(sources), summarise)
+        except StaleDataError:
+            continue
+    raise ImportConflict(import_id)
+
+
+def _withdraw_once(viewer: Any, case_id: str, import_id: str, reason: str, sources: tuple[str, ...],
+                   summarise: Callable[[Any], dict[str, Any]]) -> dict[str, Any] | None:
+    with models.session() as s:
+        r = s.scalars(select(models.StatementImport).where(
+            models.StatementImport.id == import_id, *_of(viewer, case_id, sources))).first()
+        if r is None:
+            return None
+        if r.withdrawn_at is not None:
+            raise AlreadyWithdrawn(f"This import was already withdrawn on {r.withdrawn_at[:10]}.")
+        r.withdrawn_at, r.withdrawn_by = models.utc_now_iso(), getattr(viewer, "id", None) or "unknown"
+        r.withdrawn_reason = reason
+        s.commit()
+        s.refresh(r)
+        return summarise(r)
 
 
 def reason_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
