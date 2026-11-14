@@ -48,7 +48,9 @@ describe('Indian dates and amounts', () => {
   it.each([
     ['12/03/2026', '2026-03-12', ''], ['12-03-2026', '2026-03-12', ''], ['12.03.26', '2026-03-12', ''],
     ['12-Mar-2026', '2026-03-12', ''], ['12 MAR 2026', '2026-03-12', ''], ['05-Sept-2026', '2026-09-05', ''],
-    ['2026-03-12 14:05:09', '2026-03-12', '14:05'], ['12/03/2026 02:05 PM', '2026-03-12', '14:05'], ['2026-03-12T09:01:00Z', '2026-03-12', '09:01'],
+    ['2026-03-12 14:05:09', '2026-03-12', '14:05'], ['12/03/2026 02:05 PM', '2026-03-12', '14:05'], ['2026-03-12T09:01:00Z', '2026-03-12', '14:31'],
+    ['2026-03-12T20:00:00Z', '2026-03-13', '01:30'], ['2026-03-12 22:00 UTC', '2026-03-13', '03:30'],
+    ['2026-03-12T09:01:00+05:30', '2026-03-12', '09:01'], ['2026-03-12T09:01-04:00', '2026-03-12', '18:31'],
   ])('reads %s day first', (text, date, time) => {
     expect(parseDate(text)).toEqual({ date, time })
   })
@@ -76,6 +78,11 @@ describe('Indian dates and amounts', () => {
     const one = statementRows([{ line: 2, cells: ['12/03/2026', 'TEST', '1,000', 'Dr'] }, { line: 3, cells: ['12/03/2026', 'TEST', '-20', ''] },
       { line: 4, cells: ['12/03/2026', 'TEST', '30', ''] }], { ...cols, debit: -1, credit: -1, amount: 2, drcr: 3 })
     expect(one.rows.map((r) => [r.direction, r.amount])).toEqual([['debit', 1000], ['debit', 20], ['credit', 30]])
+    // An exchange's Type column: "Deposit" is money in though it starts with a "d"; an unknown type keeps the sign.
+    const typed = statementRows([{ line: 2, cells: ['12/03/2026', 'TEST', '30', 'Deposit'] }, { line: 3, cells: ['12/03/2026', 'TEST', '40', 'Withdrawal'] },
+      { line: 4, cells: ['12/03/2026', 'TEST', '-50', 'Transfer'] }, { line: 5, cells: ['12/03/2026', 'TEST', '60', 'Dividend'] }],
+    { ...cols, debit: -1, credit: -1, amount: 2, drcr: 3 })
+    expect(typed.rows.map((r) => [r.direction, r.amount])).toEqual([['credit', 30], ['debit', 40], ['debit', 50], ['credit', 60]])
     const bad = statementRows([{ line: 9, cells: ['Opening balance', '', '', ''] }, { line: 10, cells: ['12/03/2026', 'x', '', ''] }], cols)
     expect(bad).toEqual({ rows: [], skipped: [{ line: 9, why: 'no date it can read' }, { line: 10, why: 'no amount it can read' }] })
   })

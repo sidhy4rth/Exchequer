@@ -125,7 +125,8 @@ def clean_row(raw: Any, index: int, names: list[str]) -> dict[str, Any]:
     if raw.get("direction") not in DIRECTIONS:
         raise StatementError(f"{where}: say whether it is a debit or a credit.")
     reasons = raw.get("reasons")
-    if not isinstance(reasons, list) or not reasons or not set(reasons) <= set(REASONS) or len(set(reasons)) != len(reasons):
+    if (not isinstance(reasons, list) or not reasons or not all(isinstance(r, str) for r in reasons)
+            or not set(reasons) <= set(REASONS) or len(set(reasons)) != len(reasons)):
         raise StatementError(f"{where}: say why it is kept: {', '.join(REASONS)}.")
     row = {
         "date": day, "time": at, "direction": raw["direction"], "amount": _amount(raw.get("amount"), where),
@@ -173,7 +174,8 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any) -> dic
         raise StatementError("Choose at least one row to keep.")
     if len(raw_rows) > ROWS_MAX:
         raise StatementError(f"Keep at most {ROWS_MAX} rows at a time: the matches, not the statement.")
-    names = exchange_names() if any("exchange" in (r.get("reasons") or []) for r in raw_rows if isinstance(r, dict)) else []
+    names = exchange_names() if any(isinstance(r, dict) and isinstance(r.get("reasons"), list)
+                                    and "exchange" in r["reasons"] for r in raw_rows) else []
     rows = [clean_row(r, i, names) for i, r in enumerate(raw_rows)]
     title = _text(fields.get("title"), "title", "The statement")
     with models.session() as s:
