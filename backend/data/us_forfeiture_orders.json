@@ -2,11 +2,11 @@
   "_meta": {
     "description": "Wallets a U.S. district court ordered forfeited to the United States, read from the Department of Justice official forfeiture notifications. Read by backend/scripts/import_intl_sanctions.py, which files each one under its chain in intl_sanctions*.json as seized.",
     "provenance": "Found by the 11 Nov 2026 sanctions hunt in the USAO official notifications on forfeiture.gov (the current file and Internet Archive copies of earlier ones). Each entry was re-read in that notice on 14 Nov 2026: the address appears inside a notice that the court \"entered an Order condemning and forfeiting\" the property; court, case, caption and order date are copied from that notice.",
-    "rule": "Only a notice of an entered order of forfeiture counts; a complaint or an administrative seizure notice has no outcome yet. Chain is the one the notice names (ETH, AAVE (Ethereum), TRX/USDT on Tron); a 0x wallet the notice puts on another chain is left out. Each 0x address was checked to hold no contract code (keyless RPC, 14 Nov 2026).",
+    "rule": "Only a notice of an entered order of forfeiture counts; a complaint or an administrative seizure notice has no outcome yet. Chain is the one the notice names (ETH, AAVE (Ethereum), TRX/USDT on Tron, Polygon (POL)); a 0x wallet the notice puts on another chain is left out. Each 0x address was checked to hold no contract code on its chain (keyless RPC, 14 Nov 2026).",
     "verification_note": "A forfeiture order is a court measure against the property, not a sanctions designation and not a finding that anyone who later transacted with the address took part in anything. A holder is named only as the notice names it; an exchange account or bank custody address is the exchange or bank holding the property for that account.",
     "schema": "orders: [{address, chain, holder, court, case, caption, order_entered, notice_url, notice, checked}]",
     "counts": {
-      "orders": 6
+      "orders": 22
     }
   },
   "orders": [
@@ -80,6 +80,198 @@
       "order_entered": "September 19, 2022",
       "notice_url": "https://web.archive.org/web/20221116155704/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
       "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20221116",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x11b3fcdb29bd188e47c9e8a436abe317b9d51639",
+      "chain": "ethereum",
+      "holder": "Oluwole Adegboruwa",
+      "court": "U.S. District Court for the District of Utah",
+      "case": "2:19-CR-00260-JNP-CMR",
+      "caption": "U.S. v. Oluwole Adgboruwa, et. al.",
+      "order_entered": "October 25, 2024",
+      "notice_url": "https://web.archive.org/web/20241127175823/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20241127",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x1f790c5c827a8b6b120064dddf965b0554025994",
+      "chain": "ethereum",
+      "holder": "Oluwole Adegboruwa",
+      "court": "U.S. District Court for the District of Utah",
+      "case": "2:19-CR-00260-JNP-CMR",
+      "caption": "U.S. v. Oluwole Adgboruwa, et. al.",
+      "order_entered": "October 25, 2024",
+      "notice_url": "https://web.archive.org/web/20241127175823/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20241127",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xb34c4e4ac9d4f26e01016894c3ed7715f1c36a8a",
+      "chain": "ethereum",
+      "holder": "Oluwole Adegboruwa",
+      "court": "U.S. District Court for the District of Utah",
+      "case": "2:19-CR-00260-JNP-CMR",
+      "caption": "U.S. v. Oluwole Adgboruwa, et. al.",
+      "order_entered": "October 25, 2024",
+      "notice_url": "https://web.archive.org/web/20241127175823/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20241127",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xfcdfd022558db3f4c46ec8b707c586b7dca2db5b",
+      "chain": "ethereum",
+      "holder": "Oluwole Adegboruwa",
+      "court": "U.S. District Court for the District of Utah",
+      "case": "2:19-CR-00260-JNP-CMR",
+      "caption": "U.S. v. Oluwole Adgboruwa, et. al.",
+      "order_entered": "October 25, 2024",
+      "notice_url": "https://web.archive.org/web/20241127175823/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20241127",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x13a82e6a6c37a326c6932ecdf7c4466d7ff15a39",
+      "chain": "ethereum",
+      "holder": "Sygnum Bank AG, held in the name of Sergei Potapenko",
+      "court": "U.S. District Court for the Western District of Washington",
+      "case": "CR22-0185-RSL",
+      "caption": "U.S. v. SERGEI POTAPENKO and IVAN TUROGIN",
+      "order_entered": "March 20, 2025",
+      "notice_url": "https://web.archive.org/web/20250902234531/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20250902",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x3cb6cfb2f065547716f6c8ec9d4bce5205b8a445",
+      "chain": "ethereum",
+      "holder": "Sygnum Bank AG, held in the name of Polybius Foundation",
+      "court": "U.S. District Court for the Western District of Washington",
+      "case": "CR22-0185-RSL",
+      "caption": "U.S. v. SERGEI POTAPENKO and IVAN TUROGIN",
+      "order_entered": "March 20, 2025",
+      "notice_url": "https://web.archive.org/web/20250902234531/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20250902",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xe7602edd3c75299a70078504e1adb529312843b4",
+      "chain": "ethereum",
+      "holder": "Sygnum Bank AG, held in the name of Burfa Media OU",
+      "court": "U.S. District Court for the Western District of Washington",
+      "case": "CR22-0185-RSL",
+      "caption": "U.S. v. SERGEI POTAPENKO and IVAN TUROGIN",
+      "order_entered": "March 20, 2025",
+      "notice_url": "https://web.archive.org/web/20250902234531/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20250902",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xe1acacb024e2553e21fbf20d94ca45f7113c4154",
+      "chain": "ethereum",
+      "holder": "James V. Barlow (defendant)",
+      "court": "U.S. District Court for the Southern District of Ohio",
+      "case": "2:21-CR-089",
+      "caption": "U.S. v. JAMES V. BARLOW",
+      "order_entered": "December 12, 2022",
+      "notice_url": "https://web.archive.org/web/20240523012212/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20240523",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xfe7fe5931b71df73ce363833fde43635bd0d95c0",
+      "chain": "ethereum",
+      "holder": "James V. Barlow (defendant)",
+      "court": "U.S. District Court for the Southern District of Ohio",
+      "case": "2:21-CR-089",
+      "caption": "U.S. v. JAMES V. BARLOW",
+      "order_entered": "December 12, 2022",
+      "notice_url": "https://web.archive.org/web/20240523012212/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20240523",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x06884e8fb446352afba58bce270c9365d5511d51",
+      "chain": "polygon",
+      "holder": "Aaron Thomas",
+      "court": "U.S. District Court for the Northern District of Oklahoma",
+      "case": "23-CR-333-SEH",
+      "caption": "U.S. v. Aaron Michael Thomas",
+      "order_entered": "April 24, 2025",
+      "notice_url": "https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20260328",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x14f5108d44854b254feca519144743676765b928",
+      "chain": "ethereum",
+      "holder": "Aaron Thomas",
+      "court": "U.S. District Court for the Northern District of Oklahoma",
+      "case": "23-CR-333-SEH",
+      "caption": "U.S. v. Aaron Michael Thomas",
+      "order_entered": "April 24, 2025",
+      "notice_url": "https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20260328",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x91e7b9afbb4cc454adb210e3ade38c8bd2ec17bf",
+      "chain": "ethereum",
+      "holder": "Aaron Thomas",
+      "court": "U.S. District Court for the Northern District of Oklahoma",
+      "case": "23-CR-333-SEH",
+      "caption": "U.S. v. Aaron Michael Thomas",
+      "order_entered": "April 24, 2025",
+      "notice_url": "https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20260328",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xf8e7392cb4ff992a75f54588b36c24cf373855fd",
+      "chain": "ethereum",
+      "holder": "Verdzekov Residence (seed phrase found there)",
+      "court": "U.S. District Court for the Central District of California",
+      "case": "2:25-CR-00123-AB",
+      "caption": "U.S. v. Sylas Nyuydzene Verdzekov",
+      "order_entered": "August 26, 2025",
+      "notice_url": "https://web.archive.org/web/20251227114232/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20251227",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "TH925vHUhhWPDdD67CQ3VKcqGvTDCxcgou",
+      "chain": "tron",
+      "holder": "Verdzekov Residence (seed phrase found there)",
+      "court": "U.S. District Court for the Central District of California",
+      "case": "2:25-CR-00123-AB",
+      "caption": "U.S. v. Sylas Nyuydzene Verdzekov",
+      "order_entered": "August 26, 2025",
+      "notice_url": "https://web.archive.org/web/20251227114232/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20251227",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "TNNKdC1boJnJoLeTfkjUFxkLLdrvXhfmrk",
+      "chain": "tron",
+      "holder": "Sergei Makinin",
+      "court": "U.S. District Court for the District of Puerto Rico",
+      "case": "22-470 (PAD)",
+      "caption": "U.S. v. SERGEI MAKININ (1)",
+      "order_entered": "July 03, 2024",
+      "notice_url": "https://web.archive.org/web/20240802062238/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20240802",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "TYQz1HAHoSSCDzKreZAPYadq5Yb1htiYPx",
+      "chain": "tron",
+      "holder": "Sergei Makinin",
+      "court": "U.S. District Court for the District of Puerto Rico",
+      "case": "22-470 (PAD)",
+      "caption": "U.S. v. SERGEI MAKININ (1)",
+      "order_entered": "July 03, 2024",
+      "notice_url": "https://web.archive.org/web/20240802062238/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20240802",
       "checked": "2026-11-14"
     }
   ]

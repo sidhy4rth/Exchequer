@@ -1,0 +1,46 @@
+{
+  "_meta": {
+    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S., and wallets U.S. courts have ordered forfeited. A match means the funds touched a wallet a government has frozen, seized or forfeited.",
+    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. U.S. forfeiture orders: DOJ official notifications (forfeiture.gov), as held in data/us_forfeiture_orders.json. Built by backend/scripts/import_intl_sanctions.py.",
+    "verification_note": "Each entry is copied from a government publication and names every authority that lists it. It establishes that the government froze or seized the address as of the review date; it does NOT establish that a counterparty who received funds from it is culpable, nor that the measure has force in Indian law. Only measures still in force are included, and a dated one stops matching after its valid_until.",
+    "chain": "polygon",
+    "last_reviewed": "2026-11-14",
+    "started": {
+      "date": "2026-11-14",
+      "note": "Started by an offline add. Only listings that name this chain are filed here; Ethereum's government listings are carried to this chain in risk_labels_polygon.json."
+    },
+    "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
+    "schema": "labels maps an address to {category, entity, label, source, authorities}, plus valid_until (the last day it is in force) when every listing behind it has an end date; category is seized when only seizure orders name it, sanctioned otherwise",
+    "added": {
+      "us_forfeiture": {
+        "date": "2026-11-14",
+        "added": 1,
+        "added_addresses": [
+          "0x06884e8fb446352afba58bce270c9365d5511d51"
+        ],
+        "listing_added_to": [],
+        "note": "Added offline from this source when this file was started."
+      }
+    },
+    "counts": {
+      "addresses": 1,
+      "by_authority": {
+        "United States": 1
+      },
+      "by_category": {
+        "seized": 1
+      }
+    }
+  },
+  "labels": {
+    "0x06884e8fb446352afba58bce270c9365d5511d51": {
+      "category": "seized",
+      "entity": "Aaron Thomas",
+      "label": "Aaron Thomas",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Northern District of Oklahoma, case 23-CR-333-SEH (U.S. v. Aaron Michael Thomas), entered April 24, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20260328, https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    }
+  }
+}

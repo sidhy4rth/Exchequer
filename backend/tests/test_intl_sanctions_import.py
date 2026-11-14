@@ -344,6 +344,25 @@ def test_a_us_forfeiture_order_is_filed_as_seized_under_the_chain_it_names(scrat
     assert meta["last_reviewed"] == "2026-09-22"  # the other lists were not re-read
 
 
+def test_a_forfeiture_order_on_polygon_starts_the_polygon_file_and_goes_nowhere_else(scratch):
+    path, read = scratch
+    _forfeiture_file(path, (FORFEITED_ETH, "polygon", "Someone"))
+    assert not (path / "intl_sanctions_polygon.json").exists()
+    added = intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+
+    assert added == {"polygon": [FORFEITED_ETH]}
+    polygon = read("intl_sanctions_polygon.json")
+    assert polygon["labels"][FORFEITED_ETH]["category"] == SEIZED
+    assert polygon["_meta"]["chain"] == "polygon" and polygon["_meta"]["last_reviewed"] == TODAY.isoformat()
+    assert polygon["_meta"]["counts"]["addresses"] == 1
+    assert read("intl_sanctions_arbitrum.json")["labels"] == {}  # started, empty: no order names Arbitrum
+    assert all(read(n)["labels"] == {} for n in ("intl_sanctions.json", "intl_sanctions_bsc.json"))
+    # Adding it again changes nothing, and a held file's last_reviewed is never moved by an add.
+    before = read("intl_sanctions_polygon.json")
+    assert intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", date(2026, 12, 1)) == {}
+    assert read("intl_sanctions_polygon.json") == before
+
+
 def test_no_forfeiture_file_adds_nothing(scratch):
     assert intl.read_us_forfeiture() == []
 
@@ -413,7 +432,8 @@ def test_every_shipped_forfeiture_order_is_held_as_seized_and_cites_its_notice()
     assert orders
     for order in orders:
         address, chain = order["address"], order["chain"]
-        assert chain == ("tron" if is_tron_address(address) else "ethereum")
+        # A 0x order is filed on the chain its notice names: Ethereum, or Polygon (N.D. Okla. "Polygon (POL)").
+        assert chain == "tron" if is_tron_address(address) else chain in ("ethereum", "polygon")
         assert chain == "tron" or address == address.lower()
         assert order["notice_url"].endswith("forfeiture.gov/pdf/USAO/OfficialNotification.pdf")
         entry = json.loads(config.get_chain(chain).intl_sanctions_path.read_text())["labels"][address]
