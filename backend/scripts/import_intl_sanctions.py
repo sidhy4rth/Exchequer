@@ -470,10 +470,13 @@ def add_listings(rows: list[tuple[str, str | None, dict]], tag: str, today: date
         if not (added[chain_key] or updated[chain_key]):
             continue
         meta = document.setdefault("_meta", {})
+        # A later run from the same source adds to the record, never replaces it.
+        before = meta.get("added", {}).get(tag, {})
+        new_addresses = sorted({*before.get("added_addresses", []), *added[chain_key]})
         meta.setdefault("added", {})[tag] = {
             "date": today.isoformat(), **({"version": version} if version else {}),
-            "added": len(added[chain_key]), "added_addresses": sorted(added[chain_key]),
-            "listing_added_to": sorted(updated[chain_key]),
+            "added": len(new_addresses), "added_addresses": new_addresses,
+            "listing_added_to": sorted({*before.get("listing_added_to", []), *updated[chain_key]}),
             "note": ("Added offline from this source without re-reading the other lists, so "
                      "last_reviewed is unchanged."),
         }

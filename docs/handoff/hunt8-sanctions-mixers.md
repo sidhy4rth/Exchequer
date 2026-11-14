@@ -12,7 +12,7 @@
 - PR #149 (sanctions): OFAC re-import from the SDN list published 11/13/2026 (+3 Ethereum, +18 Tron); 93 Israeli NBCTF
   Tron wallets in force added through `import_intl_sanctions --recheck il_mod_crypto --add` (each re-checked on the
   NBCTF site's own records); U.S. court forfeiture orders as a new importer source (`data/us_forfeiture_orders.json`,
-  `--forfeiture`), 5 wallets whose notice was re-read on 14 Nov.
+  `--forfeiture`), 6 wallets whose notice was re-read on 14 Nov.
 - PR 2 (mixers): 32 mixer pools and entry points into the threat files; Polygon and Arbitrum get a threat file.
 
 ## Decisions
@@ -24,7 +24,7 @@
 
 ## Next
 
-1. 17 U.S. forfeiture wallets from hunt 8 wait for their notice to be re-read: their only copy is on the Internet
+1. 16 U.S. forfeiture wallets from hunt 8 wait for their notice to be re-read: their only copy is on the Internet
    Archive, which answered HTTP 429 all of 14 Nov. List and URLs: PR #149 description. To add one, re-read its
    notice, add an entry to `backend/data/us_forfeiture_orders.json`, run
    `cd backend && .venv/bin/python -m scripts.import_intl_sanctions --forfeiture`.

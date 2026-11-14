@@ -11,18 +11,18 @@
     "chain": "ethereum",
     "last_reviewed": "2026-09-22",
     "counts": {
-      "addresses": 22,
+      "addresses": 23,
       "by_authority": {
         "European Union": 1,
         "France": 1,
         "Japan": 9,
         "United Kingdom": 6,
-        "Israel": 3,
-        "United States": 3
+        "United States": 4,
+        "Israel": 3
       },
       "by_category": {
         "sanctioned": 16,
-        "seized": 6
+        "seized": 7
       }
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
@@ -39,9 +39,10 @@
     "added": {
       "us_forfeiture": {
         "date": "2026-11-14",
-        "added": 3,
+        "added": 4,
         "added_addresses": [
           "0x1aeb972887f4a1c422d2c0b73cbf089abd2ec255",
+          "0xa00b7e1577b933731609e82fd9258fd4b30e23aa",
           "0xcadf3761430ca4e78994c7a3ea2944cd6e6eb66c",
           "0xffbdf366c7d2a2a9d1897a219bb76832d826cf94"
         ],
@@ -168,6 +169,15 @@
       "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Russia (Sanctions) (EU Exit) Regulations 2019, entry RUS1421",
       "authorities": [
         "United Kingdom"
+      ]
+    },
+    "0xa00b7e1577b933731609e82fd9258fd4b30e23aa": {
+      "category": "seized",
+      "entity": "Ishan Wahi (defendant)",
+      "label": "Ishan Wahi (defendant)",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of New York, case 22 CR. 392 (LAP) (U.S. v. Ishan Wahi), entered February 07, 2023; USAO official notification on forfeiture.gov, Internet Archive copy of 20230528, https://web.archive.org/web/20230528172814/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
       ]
     },
     "0xa0e1c89ef1a489c9c7de96311ed5ce5d32c20e4b": {

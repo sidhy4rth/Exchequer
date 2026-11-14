@@ -419,3 +419,13 @@ def test_every_shipped_forfeiture_order_is_held_as_seized_and_cites_its_notice()
         entry = json.loads(config.get_chain(chain).intl_sanctions_path.read_text())["labels"][address]
         assert "United States" in entry["authorities"] and order["notice_url"] in entry["source"]
         assert entry["category"] == (SEIZED if set(entry["authorities"]) <= intl.SEIZURE_AUTHORITIES else SANCTIONED)
+
+
+def test_a_second_offline_add_from_a_source_extends_its_record(scratch):
+    path, read = scratch
+    _forfeiture_file(path, (FORFEITED_TRON, "tron", "Khlari Sirotkin"))
+    intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+    _forfeiture_file(path, (FORFEITED_TRON, "tron", "Khlari Sirotkin"), (TRON_ADDR, "tron", "Someone"))
+    intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+    record = read("intl_sanctions_tron.json")["_meta"]["added"]["us_forfeiture"]
+    assert record["added_addresses"] == sorted([FORFEITED_TRON, TRON_ADDR]) and record["added"] == 2

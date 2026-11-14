@@ -6,7 +6,7 @@
     "verification_note": "A forfeiture order is a court measure against the property, not a sanctions designation and not a finding that anyone who later transacted with the address took part in anything. A holder is named only as the notice names it; an exchange account or bank custody address is the exchange or bank holding the property for that account.",
     "schema": "orders: [{address, chain, holder, court, case, caption, order_entered, notice_url, notice, checked}]",
     "counts": {
-      "orders": 5
+      "orders": 6
     }
   },
   "orders": [
@@ -20,6 +20,18 @@
       "order_entered": "July 15, 2026",
       "notice_url": "https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
       "notice": "USAO official notification on forfeiture.gov, posted 14 Nov 2026",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xa00b7e1577b933731609e82fd9258fd4b30e23aa",
+      "chain": "ethereum",
+      "holder": "Ishan Wahi (defendant)",
+      "court": "U.S. District Court for the Southern District of New York",
+      "case": "22 CR. 392 (LAP)",
+      "caption": "U.S. v. Ishan Wahi",
+      "order_entered": "February 07, 2023",
+      "notice_url": "https://web.archive.org/web/20230528172814/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20230528",
       "checked": "2026-11-14"
     },
     {
