@@ -122,6 +122,9 @@ class SecurityHeadersMiddleware:
 # event loop, so a 2 MB body on any route stalled every visitor.
 DEFAULT_MAX_BODY = 256_000
 LARGE_BODY_ROUTES = {"/verify": 2_100_000}
+# Routes with a case ID in the path, by their last segment. A report certificate carries the
+# report (up to 2 MB, certificates.REPORT_MAX) as base64 in JSON: a third larger, plus the form.
+LARGE_BODY_SUFFIXES = {"/report-certificate": 2_700_000}
 
 
 class BodySizeLimitMiddleware:
@@ -141,7 +144,9 @@ class BodySizeLimitMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        limit = self.large.get(scope.get("path", "").rstrip("/") or "/", self.default_max)
+        path = scope.get("path", "").rstrip("/") or "/"
+        limit = self.large.get(path) or next(
+            (n for suffix, n in LARGE_BODY_SUFFIXES.items() if path.endswith(suffix)), self.default_max)
         for name, value in scope.get("headers", []):
             if name == b"content-length":
                 try:
