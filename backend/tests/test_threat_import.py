@@ -284,3 +284,22 @@ def test_the_plain_rpc_client_names_itself(monkeypatch):
     monkeypatch.setattr(threat.urllib.request, "urlopen", fake_urlopen)
     assert threat.PlainRpc("https://rpc.example")._rpc("eth_blockNumber", []) == "0x1"
     assert sent["agent"] and not sent["agent"].startswith("Python-urllib")
+
+
+def test_the_tag_run_keeps_a_hand_filed_entry_that_only_cites_the_tag_dataset(tmp_path, monkeypatch):
+    """A mixer entry added by hand (#148) may cite dawsbot/eth-labels among its sources; the
+    explorer-tag run owns only the entries it wrote itself, so a re-run must not remove it."""
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    mine, hand = "0x" + "a" * 40, "0x" + "b" * 40
+    tagged = {"category": MIXER, "entity": "Tornado Cash", "label": "Tornado.Cash: 1 ETH",
+              "source": f"Etherscan address tag, via {threat.DATASET_REPO} @ {threat.DATASET_COMMIT[:10]}"}
+    filed = {"category": MIXER, "entity": "Tornado Cash", "label": "Tornado Cash Nova: L1 Omnibridge Helper",
+             "source": "Tornado Cash docs; Explorer tag via dawsbot/eth-labels @d9b21ae (label tornado-cash)"}
+    (tmp_path / "threat_labels.json").write_text(json.dumps({"_meta": {}, "labels": {mine: tagged, hand: filed}}))
+    (tmp_path / "risk_labels.json").write_text(json.dumps({"_meta": {}, "labels": {}}))
+    monkeypatch.setattr(threat, "candidates_by_chain", lambda: {"ethereum": {mine: tagged}, "bsc": {}})
+    monkeypatch.setattr(threat, "verify_ethereum", lambda ordered: (dict(ordered), [], []))
+    monkeypatch.setattr("sys.argv", ["import_threat_labels", "--chain", "ethereum"])
+    assert threat.main() == 0
+    held = json.loads((tmp_path / "threat_labels.json").read_text())["labels"]
+    assert set(held) == {mine, hand} and held[hand] == filed

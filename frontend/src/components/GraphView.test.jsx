@@ -474,3 +474,28 @@ describe('the bubble graph in motion', () => {
     expect(ids()).toHaveLength(data.nodes.length)
   })
 })
+
+// A privacy protocol's contract (flag EXCHEQUER_PRIVACY_CATEGORY, #189): a
+// note, never a risk hit, so grey with a dotted ring, never the risk red.
+describe('a privacy protocol on the bubble graph', () => {
+  afterEach(() => vi.useRealTimers())
+  const PRIV = addr('7')
+  const withPrivacy = { ...data, nodes: [...data.nodes, { id: PRIV, address: PRIV, depth: 2, privacy_entity: 'Railgun', risk_category: null, flags: [], total_in_native: 4 }] }
+
+  it('is grey and dotted, labelled as a note, with its key entry only when one is on the map', () => {
+    vi.useFakeTimers()
+    const { container, unmount } = render(<GraphView data={withPrivacy} tracePath={route} />)
+    act(() => vi.runAllTimers())
+    expect(container.querySelector('.legend')).toHaveTextContent('Privacy protocol (a note, not an accusation)')
+    const drawn = recorder()
+    graph.props.nodeCanvasObject({ ...withPrivacy.nodes.at(-1), x: 0, y: 0 }, drawn.ctx, 1)
+    const p = PALETTES.dark
+    expect(drawn.fills.some((f) => f.colour === p.risk)).toBe(false)
+    expect(drawn.strokes.find((s) => s.colour === p.privacy).dash.length).toBeGreaterThan(0)
+    expect(graph.props.nodeLabel(withPrivacy.nodes.at(-1))).toContain('Privacy protocol · a note, not an accusation')
+    unmount()
+
+    render(<GraphView data={data} tracePath={route} />)
+    expect(document.querySelector('.legend')).not.toHaveTextContent('Privacy protocol')
+  })
+})
