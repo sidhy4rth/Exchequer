@@ -25,7 +25,8 @@ const BEFORE = ['drafted', 'awaiting_signoff']
 /** The statuses a row may move to (freeze_requests.py): an urgent letter
  * goes on only once a second officer signs it off, which only they can do. */
 export function choices(r) {
-  const all = Object.keys(STATUS)
+  // A kind with its own statuses (freeze_requests.statuses_for): a letter of request abroad is never "frozen".
+  const all = Object.keys(STATUS).filter((k) => !r.statuses || r.statuses.includes(k))
   if (!r.needs_signoff) return all.filter((k) => k !== 'awaiting_signoff' && k !== 'ready')
   return r.signoff ? all.filter((k) => !BEFORE.includes(k)) : [...BEFORE, 'closed']
 }
