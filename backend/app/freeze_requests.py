@@ -13,7 +13,7 @@ Statuses, in the order they usually happen:
   drafted       the letter is written, not yet sent
   awaiting_signoff  an urgent freeze letter waits for a second officer
   ready         a second officer of the drafter's unit approved it
-  sent          sent; waiting for a reply (flagged after FOLLOW_UP_DAYS)
+  sent          sent; waiting for a reply (flagged after follow_up_days(kind))
   acknowledged  the recipient replied and is looking at it
   frozen        funds frozen (amount_frozen says how much)
   declined      the recipient will not act
@@ -54,6 +54,10 @@ KINDS = ("exchange", "tether", "other", "exchange-freeze", "tether-freeze", "ins
          "bank-info", "bank-freeze", "telecom",  # these three: notice_letters.NOTICES
          "letter-rogatory")  # letters_of_request.py: a letter of request abroad, to the requested country
 FOLLOW_UP_DAYS = 7
+# A letter of request goes through the MHA and the requested country's Central
+# Authority and takes months, so a week's silence is normal for it. 30 days is
+# an internal reminder interval the team chose, not a legal or MHA deadline.
+FOLLOW_UP_DAYS_BY_KIND = {"letter-rogatory": 30}
 # Bounds on what anyone can store here. Owner keys are free, so the per-owner
 # cap alone would not bound the table: MAX_TOTAL does. A real request moves
 # through six statuses at most; HISTORY_MAX keeps a toggled one from growing.
@@ -122,6 +126,11 @@ def ask_reason(viewer: Any) -> str | None:
     return SIGN_IN_TO_ASK if getattr(viewer, "unit_id", None) is None else None
 
 
+def follow_up_days(kind: str) -> int:
+    """Days a sent request of `kind` waits for a reply before it is flagged for follow-up."""
+    return FOLLOW_UP_DAYS_BY_KIND.get(kind, FOLLOW_UP_DAYS)
+
+
 def _now() -> str:
     return models.utc_now_iso()
 
@@ -139,7 +148,7 @@ def summary(r: models.FreezeRequest, viewer: Any = None) -> dict[str, Any]:
         "amount_frozen": r.amount_frozen, "asset": r.asset, "notes": r.notes,
         "created_at": r.created_at, "updated_at": r.updated_at,
         "days_waiting": waiting,
-        "follow_up": waiting is not None and waiting >= FOLLOW_UP_DAYS,
+        "follow_up": waiting is not None and waiting >= follow_up_days(r.kind),
         "history": json.loads(r.history_json or "[]"),
         "needs_signoff": needs_signoff(r.kind),
         "signoff": {"by": r.signed_off_name, "at": r.signed_off_at} if r.signed_off_at else None,

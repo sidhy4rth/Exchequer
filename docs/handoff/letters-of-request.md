@@ -2,7 +2,7 @@
 
 - **Feature**: suite feature 7 (request and letter generator): draft a letter of request to a foreign country (BNSS s.112) from a case, in the MHA's prescribed format
 - **Issue**: #125
-- **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, #130, on top of #127); `feat/letters-of-request-log` (logged in the requests log, #136, on top of #130)
+- **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, #130, on top of #127); `feat/letters-of-request-log` (logged in the requests log, #136, on top of #130); `feat/letters-of-request-followup` (a longer follow-up wait for letters of request, on top of #136)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
 - **Status**: built and tested; server #126, screen #127, treaty-country note #130, requests-log kind #136, stacked in that order; all wait for review
@@ -37,6 +37,10 @@
 - **Requests log (#136).**
   - `freeze_requests.KINDS` gains `letter-rogatory` (15 characters: fits the 16-character kind column, so no migration); `letters_of_request.REQUEST_KIND` names it. No sign-off (not a `-freeze` kind).
   - The panel, after a draft, has "Log it in the requests log": recipient = the requested country, status drafted; the requests log above remounts and shows it with a "Letter of request" pill. The existing requests screen could only log the letters it suggests or "other", hence the button.
+- **Follow-up wait (on top of #136).**
+  - A sent request is flagged for follow-up after 7 days (`FOLLOW_UP_DAYS`), and #124 turns that flag into a "Follow up" task. A letter of request goes through the MHA and a foreign Central Authority and takes months, so 7 days was noise.
+  - `freeze_requests.follow_up_days(kind)`: 30 days for `letter-rogatory` (`FOLLOW_UP_DAYS_BY_KIND`), 7 for every other kind. 30 days is an internal reminder interval the team chose, not a legal or MHA deadline.
+  - Only the `follow_up` flag in `summary` changed, so the change stays clear of `feat/signoff-binding` (#133). The screens and #124 read the flag the server sends; neither has a 7-day number of its own.
 
 ## Decisions
 
@@ -51,7 +55,7 @@
 1. Barenyam (or anyone but Sidhyarth) checks `backend/data/mha_letter_of_request.txt` by eye against pages [20] to [24] of the guidelines PDF, and says so in the PR.
 2. Barenyam checks `backend/data/mha_mlat_countries.txt` by eye against pages [25] to [28] the same way (#130).
 3. Later: the MHA's current treaty list beside the 2019 one; Figure 3.6's Central Authorities and language requirements are not transcribed.
-4. Owner decision: a letter of request logged as sent is flagged for follow-up after 7 days like any request (`FOLLOW_UP_DAYS`), and case-tasks suggestions (#124) would turn that into a "Follow up" task. Letters of request take months; a longer wait for this kind would be a change to `freeze_requests.summary`, left out while `feat/signoff-binding` changes that file.
+4. If the team wants a different reminder for letters of request, change `FOLLOW_UP_DAYS_BY_KIND` in `freeze_requests.py` (see "Follow-up wait" above).
 
 ## Open questions
 
