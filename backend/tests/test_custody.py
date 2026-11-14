@@ -263,3 +263,20 @@ def test_g7_custody_1_goes_down_and_up_again_keeping_the_cases():
     assert models.get_case("case-1") is not None
     models.init_db()
     assert "custody_wallets" in set(inspect(models._engine).get_table_names())
+
+
+def test_an_asset_recorded_as_held_at_another_address_is_not_linked_to_this_wallet():
+    elsewhere = assets.create(viewer().owner_hash, "case-1", {
+        "holder": "custody", "asset": "USDT", "amount": "10", "chain": "tron", "held_at": "TA6SbszfFYC7NYt48viCM9LMD5F5E1Gbi8",
+        "tx_hash": TX, "seized_on": "2026-11-01"}, viewer())["asset_id"]
+    with pytest.raises(CustodyError, match="held at another address"):
+        add(wallet(asset_ids=[elsewhere]))
+    row = add()
+    with pytest.raises(CustodyError, match="held at another address"):
+        custody.update(row["wallet_id"], {"asset_ids": [elsewhere]}, viewer())
+    unnamed = assets.create(viewer().owner_hash, "case-1", {
+        "holder": "custody", "asset": "USDT", "amount": "5", "tx_hash": TX, "seized_on": "2026-11-01"}, viewer())["asset_id"]
+    same = assets.create(viewer().owner_hash, "case-1", {
+        "holder": "custody", "asset": "USDT", "amount": "6", "held_at": CUSTODY.lower(), "tx_hash": TX,
+        "seized_on": "2026-11-01"}, viewer())["asset_id"]
+    assert custody.update(row["wallet_id"], {"asset_ids": [unnamed, same]}, viewer())["asset_ids"] == [unnamed, same]

@@ -153,8 +153,9 @@ def _readable(user: Any, table: Any = None) -> Any:
     return own if getattr(user, "unit_id", None) is None else or_(own, table.unit_id == user.unit_id)
 
 
-def _asset_ids(s: Any, raw: Any, case_id: str, viewer: Any) -> list[str]:
-    """Asset-register rows of this case the viewer may read, held in custody."""
+def _asset_ids(s: Any, raw: Any, case_id: str, viewer: Any, address: str) -> list[str]:
+    """Asset-register rows of this case the viewer may read, held in custody, and not recorded as held
+    at an address other than this wallet's (`held_at` is free text there, so a blank one is allowed)."""
     if raw in (None, ""):
         return []
     if not isinstance(raw, list) or len(raw) > LINKS_MAX:
@@ -162,14 +163,18 @@ def _asset_ids(s: Any, raw: Any, case_id: str, viewer: Any) -> list[str]:
     ids = list(dict.fromkeys(str(i).strip()[:36] for i in raw if str(i).strip()))
     if not ids:
         return []
-    found = dict(s.execute(select(models.SeizedAsset.id, models.SeizedAsset.holder).where(
-        models.SeizedAsset.id.in_(ids), models.SeizedAsset.case_id == case_id,
-        _readable(viewer, models.SeizedAsset))).all())
+    found = {i: (holder, held_at) for i, holder, held_at in s.execute(
+        select(models.SeizedAsset.id, models.SeizedAsset.holder, models.SeizedAsset.held_at).where(
+            models.SeizedAsset.id.in_(ids), models.SeizedAsset.case_id == case_id,
+            _readable(viewer, models.SeizedAsset))).all()}
     for asset_id in ids:
         if asset_id not in found:
             raise CustodyError("A linked asset is not in this case's asset register.")
-        if found[asset_id] != "custody":
+        holder, held_at = found[asset_id]
+        if holder != "custody":
             raise CustodyError("Only an asset held in the custody wallet can be linked to it.")
+        if (held_at or "").strip() and held_at.strip().lower() != address.lower():
+            raise CustodyError("A linked asset is recorded as held at another address, not this wallet's.")
     return ids
 
 
@@ -218,7 +223,7 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any = None)
             raise CustodyError(f"This browser already has {MAX_PER_OWNER} custody wallets on record.")
         if s.scalar(count) >= MAX_TOTAL:
             raise CustodyError("The custody records are full on this deployment; ask its operator.")
-        links = _asset_ids(s, fields.get("asset_ids"), case_id, viewer)
+        links = _asset_ids(s, fields.get("asset_ids"), case_id, viewer, row["address"])
         now = _now()
         r = models.CustodyWallet(
             id=str(uuid.uuid4()), owner_hash=owner, case_id=case_id, officer_id=getattr(viewer, "officer_id", None),
@@ -268,7 +273,7 @@ def _update_once(wallet_id: str, changes: dict[str, Any], viewer: Any) -> dict[s
         if "notes" in changes:
             clean["notes"] = _text(changes, "notes")
         if "asset_ids" in changes:
-            clean["asset_ids_json"] = json.dumps(_asset_ids(s, changes["asset_ids"], r.case_id, viewer))
+            clean["asset_ids_json"] = json.dumps(_asset_ids(s, changes["asset_ids"], r.case_id, viewer, r.address))
         columns = [k for k, v in clean.items() if getattr(r, k) != v]
         for key in columns:
             setattr(r, key, clean[key])
