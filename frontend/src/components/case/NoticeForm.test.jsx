@@ -159,6 +159,19 @@ describe('bank and phone company notices in the Letters tab', () => {
     expect(calls.every((c) => !c.url.includes('9012'))).toBe(true)
   })
 
+  it('logs a signed-off hold as sent with the details on the screen, so a changed one is refused', async () => {
+    const calls = api({
+      'GET /trace/c1/requests': { body: { count: 1, requests: [{ ...HOLD_ROW, status: 'ready', mine: true, signoff: { by: 'Bina Iyer', at: '2026-11-10T09:00:00+00:00' } }] } },
+      'PATCH /requests/r1': (b) => ({ body: { ...HOLD_ROW, ...b, mine: true } }),
+    })
+    const user = userEvent.setup()
+    open()
+    await draftHold(user)
+    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')).toBeTruthy())
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ status: 'sent', details: HOLD })
+  })
+
   it('changing a detail after drafting asks for a fresh draft', async () => {
     api()
     const user = userEvent.setup()

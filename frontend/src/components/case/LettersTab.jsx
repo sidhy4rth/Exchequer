@@ -189,7 +189,8 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
     if (sent) return
     if (held) { setSaid({ tone: 'status', text: 'A second officer must sign this letter off before it can be marked as sent.' }); return }
     try {
-      if (!(await moveTo('sent', ['drafted', 'ready']))) {
+      // A bank hold goes out only with the details it was signed off for (freeze_requests.py).
+      if (!(await moveTo('sent', ['drafted', 'ready'], hold))) {
         setSaid({ tone: 'status', text: 'The officer who drafted this letter logs it as sent.' })
         return
       }
