@@ -36,8 +36,8 @@ from pathlib import Path
 from typing import Any
 
 from .display_text import one_line
-from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, _amount, _paid_at, _when, _when_iso,
-                     attribution_kind)
+from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, LABELLED_DEPOSIT, _amount, _paid_at, _when,
+                     _when_iso, attribution_kind)
 from .request_letters import (BLANK, COMPANY_WALLET_KINDS, _amount_lines, _attribution, _claim, _cleaned,
                               _company_listed, _left_out, _letter_amount, _path_lines, _today, _transfers_into,
                               _verify_lines)
@@ -171,21 +171,55 @@ def _earlier(requests: list[dict[str, Any]], exchange: str) -> list[str]:
     return lines
 
 
+def _destination(kind: str, exchange: str) -> str:
+    """Where the money went, claiming no more than the case holds about the address (report.attribution_kind)."""
+    if kind == LABELLED_DEPOSIT:
+        return f"an address publicly labelled as a deposit address of {exchange}"
+    if kind == INFERRED_DEPOSIT:
+        return f"an address believed to be a deposit address issued by {exchange}, which only {exchange} can confirm"
+    if kind == EXPLORER_TAG:
+        return f"an address a block explorer tags as {exchange}'s, which this office has not confirmed"
+    return f"a wallet publicly labelled as one {exchange} operates itself"
+
+
+def _use(kind: str, exchange: str) -> str:
+    """Statement of Facts (c): why the exchange's records matter, worded for what the case holds."""
+    if kind == EXPLORER_TAG:
+        held = (f"If {exchange} controls the address that received the traced funds, its records are expected to "
+                "show the customer account or accounts the transfers listed above were credited to")
+    elif kind == INFERRED_DEPOSIT:
+        held = (f"If {exchange} issued the address that received the traced funds, its records are expected to "
+                "show the account it was issued to")
+    elif kind == LABELLED_DEPOSIT:
+        held = (f"The traced funds were deposited to an address publicly labelled as a deposit address of "
+                f"{exchange}; its records are expected to show the account it was issued to")
+    else:
+        held = (f"The traced funds were sent to a wallet publicly labelled as one {exchange} operates itself; its "
+                "records are expected to show the customer account or accounts the transfers listed above were "
+                "credited to")
+    return (f"(c) How the account was used in the offence: {held}, and where the proceeds went next. Only "
+            f"{exchange} can name its customer.")
+
+
 def _records(kind: str, exchange: str, address: str, office: str, since: str) -> list[str]:
     """Assistance (a): the records to be produced, worded for what the case holds about the address."""
     by = f"{exchange}{f' ({office})' if office else ''}"
     if kind == EXPLORER_TAG:
-        return _para(f"(a) a statement from {by} confirming whether it controls the address {address} and, if it "
-                     "does, production of certified copies of the records in (b) for the account or accounts "
-                     "connected with the transfers in the Statement of Facts;")
-    subject = (f"the customer account or accounts behind the transfers into {address} listed in the Statement "
-               "of Facts, and no other (the address is a wallet the exchange operates itself)"
-               if kind == EXCHANGE_WALLET else
-               f"the account or accounts associated with the address {address}"
-               + (f", if that address was issued by {exchange}" if kind == INFERRED_DEPOSIT else ""))
+        # The tag is a third party's word: the records are asked for only if the exchange controls the address.
+        ask = (f"(a) a statement from {by} confirming whether it controls the address {address} and, if it does, "
+               "production of certified copies of the following records relating to the customer account or "
+               f"accounts behind the transfers into it listed in the Statement of Facts, and no other, for the "
+               f"period from {since} to the date of production:")
+    else:
+        subject = (f"the customer account or accounts behind the transfers into {address} listed in the Statement "
+                   "of Facts, and no other (the address is a wallet the exchange operates itself)"
+                   if kind == EXCHANGE_WALLET else
+                   f"the account or accounts associated with the address {address}"
+                   + (f", if that address was issued by {exchange}" if kind == INFERRED_DEPOSIT else ""))
+        ask = (f"(a) production by {by} of certified copies of the following records relating to {subject}, "
+               f"for the period from {since} to the date of production:")
     return [
-        *_para(f"(a) production by {by} of certified copies of the following records relating to {subject}, "
-               f"for the period from {since} to the date of production:"),
+        *_para(ask),
         "       (i)   the account holder's identity and KYC documents;",
         "       (ii)  the account statement, and every deposit and withdrawal with its transaction hash;",
         "       (iii) linked bank accounts, cards and payment identifiers used for deposits or withdrawals;",
@@ -249,8 +283,8 @@ def draft(case_id: str, result: dict[str, Any], raw: dict[str, Any],
 
     lines += _heading("Nature of Request")
     lines += _para(f"This request relates to an investigation into cyber-enabled financial fraud, in which the "
-                   f"proceeds were moved as cryptocurrency ({asset} on {result.get('chain_name')}) to an account "
-                   f"at {exchange}. The authority conducting the investigation is "
+                   f"proceeds were moved as cryptocurrency ({asset} on {result.get('chain_name')}) to "
+                   f"{_destination(kind, exchange)}. The authority conducting the investigation is "
                    f"{_or_blank(d['agency'], 'the police station or agency, and its address')}.")
     lines += _para(f"Judicial proceedings: {_or_blank(d['proceedings'], 'whether proceedings have been or are to be instituted, and before which Court')}.")
 
@@ -285,9 +319,7 @@ def draft(case_id: str, result: dict[str, Any], raw: dict[str, Any],
         for t in listed:
             lines += [f"     {t.get('value_native', 0):,.6f} {asset}, {_when(t.get('timestamp'))}", f"       tx {t.get('hash')}"]
         lines += _left_out(others) if listed else [f"     {BLANK} (officer to add)"]
-    lines += ["", *_para(f"(c) How the account was used in the offence: the traced funds were deposited to the "
-                         f"account at {exchange} that this request concerns, which is why its records are "
-                         f"expected to identify who received the proceeds and where they went next.")]
+    lines += ["", *_para(_use(kind, exchange))]
     lines += _earlier(requests or [], exchange)
     lines += _para(f"Every address and transaction above is listed in the attached Exchequer report for case "
                    f"{case_id}, traced {_when_iso(result.get('created_at'))}"
