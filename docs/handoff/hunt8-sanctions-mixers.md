@@ -3,9 +3,9 @@
 - **Feature**: screen traces against the government-listed addresses and mixer pools the 11 Nov hunt found, which the 14 Nov label release could not carry
 - **Issue**: #148
 - **Branch**: `feat/hunt8-sanctions-mixers` (PR 1, sanctions), `feat/hunt8-mixers` (PR 2, stacked)
-- **Current**: Sidhyarth
+- **Current**: nobody (awaiting review)
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: PR 1 (#149, sanctions) and PR 2 (mixers, stacked on it) ready for review
+- **Status**: PR 1 (#149, sanctions) and PR 2 (#166, mixers, stacked on #149) ready for review
 
 ## Done
 
@@ -13,7 +13,7 @@
   Tron wallets in force added through `import_intl_sanctions --recheck il_mod_crypto --add` (each re-checked on the
   NBCTF site's own records); U.S. court forfeiture orders as a new importer source (`data/us_forfeiture_orders.json`,
   `--forfeiture`), 6 wallets whose notice was re-read on 14 Nov.
-- PR 2 (mixers): 36 mixer pools and entry points into the threat files (32 from hunt 8, plus 4 Ethereum Tornado pools the 14 Nov frozen-list review found unlabelled; its 4 Arbitrum pools are among the 32); Polygon and Arbitrum get a threat file.
+- PR #166 (mixers): 36 mixer pools and entry points into the threat files (32 from hunt 8, plus 4 Ethereum Tornado pools the 14 Nov frozen-list review found unlabelled; its 4 Arbitrum pools are among the 32); Polygon and Arbitrum get a threat file.
 
 ## Decisions
 
