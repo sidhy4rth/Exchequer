@@ -30,7 +30,12 @@
   kept in the results, rendered, stored, sent or logged. Same rule as `assets.py::_seed_phrase`:
   twelve or more list words in a row, digits between them ignored, any other word breaks the run.
 - No BIP-39 checksum test: a run with a valid checksum would need a valid mnemonic in the tests.
-- 64 hex without 0x is reported as "Tron transaction, or any SHA-256": file hashes look the same.
+- A 64-hex value is reported as what it may be, never as a transaction hash: a Tron or EVM
+  transaction hash, a file's SHA-256 and a raw private key all have that shape.
+- Markup is read through in a seed run (pre-review fix): a tag's or entity's name (`<br>`,
+  `</td>`, `&nbsp;`) neither counts nor ends a run, so an HTML notes export still shows its
+  phrase. A tag ends at `>` or the end of its line. UTF-16 without a byte-order mark is
+  recognised by its NUL in every other byte instead of being called binary.
 - An EVM address cannot say its chain; the trace link opens the trace form on Ethereum, which
   the officer can change (the console search box's `findTarget` rule).
 - No "add as case identifier": `identifiers.py` has no wallet kind. Adding one is feature 4's call.

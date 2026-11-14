@@ -15,9 +15,11 @@ const CHAIN = {
   evm: 'EVM: Ethereum, BNB Chain, Polygon or Arbitrum (the address alone does not say which)',
   tron: 'Tron',
 }
+// 64 hex is only a shape: a transaction hash, a file's SHA-256 and a raw
+// private key all look like it, so the panel says what each may be.
 const HASH = {
-  hex0x: '0x and 64 hex: an EVM transaction hash (or a Tron one written with 0x)',
-  hex: '64 hex: a Tron transaction hash, or any SHA-256 (a file hash looks the same)',
+  hex0x: '0x and 64 hex: may be an EVM transaction hash (or a Tron one written with 0x), a private key or another hash',
+  hex: "64 hex: may be a Tron transaction hash, a file's SHA-256 or a private key",
 }
 const FIRST_ROWS = 50
 
@@ -36,6 +38,7 @@ function Found({ title, rows, what, action }) {
     <h3 className="xs-title">{title} · {rows.length}</h3>
     <div className="ev-scroll" role="region" aria-label={title} tabIndex={0}>
       <table className="ev-table xs-table">
+        <caption className="visually-hidden">{title}</caption>
         <thead><tr><th scope="col">Value</th><th scope="col">What it is</th><th scope="col">Where</th><th scope="col"><span className="visually-hidden">Action</span></th></tr></thead>
         <tbody>
           {(all ? rows : rows.slice(0, FIRST_ROWS)).map((f) => (
@@ -49,7 +52,7 @@ function Found({ title, rows, what, action }) {
         </tbody>
       </table>
     </div>
-    {rows.length > FIRST_ROWS && <button type="button" className="quiet" onClick={() => setAll((v) => !v)}>{all ? 'Show fewer' : `Show all ${rows.length}`}</button>}
+    {rows.length > FIRST_ROWS && <button type="button" className="quiet" aria-expanded={all} onClick={() => setAll((v) => !v)}>{all ? 'Show fewer' : `Show all ${rows.length}`}</button>}
   </>
 }
 
@@ -114,15 +117,15 @@ export default function ExportScanPanel({ result }) {
         {found && <>
           <p className="xs-summary" role="status">
             {found.name}: {plural(found.lines, 'line')} read ({size(found.bytes)}) · {plural(found.addresses.length, 'address', 'addresses')} ·{' '}
-            {plural(found.hashes.length, 'transaction hash', 'transaction hashes')} · {plural(found.seeds.length, 'seed-phrase run')}
+            {plural(found.hashes.length, '64-hex value (may be a transaction hash)', '64-hex values (may be transaction hashes)')} · {plural(found.seeds.length, 'seed-phrase run')}
           </p>
           {found.binary && <p className="note">This file looks binary rather than text, so little in it can be read. Export the items as CSV, XML or text from the forensic tool and scan that.</p>}
-          {found.dropped > 0 && <p className="note">{plural(found.dropped, 'more value')} found past the first 5,000 are counted but not listed.</p>}
+          {found.dropped > 0 && <p className="note">{plural(found.dropped, 'more find')} past the first 5,000 distinct values are not listed or counted above.</p>}
           {unrecorded && <p className="note">The scan could not be recorded in the audit trail: {unrecorded}</p>}
           {found.seeds.length > 0 && (
             <div className="xs-seeds">
               <h3 className="xs-title">Possible seed phrases · {found.seeds.length}</h3>
-              <ul>{found.seeds.map((s) => <li key={`${s.line}-${s.endLine}`}>{seedLine(s)}</li>)}</ul>
+              <ul>{found.seeds.map((s, i) => <li key={i}>{seedLine(s)}</li>)}</ul>
               <p className="note">
                 A run of BIP-39 words may be a wallet's seed phrase, and whoever holds the words controls the wallet.
                 Exchequer has not shown, kept or sent them. Secure the device and this export as your procedure for seized wallets requires.
@@ -131,7 +134,7 @@ export default function ExportScanPanel({ result }) {
           )}
           <Found title="Addresses" rows={found.addresses} what={(f) => CHAIN[f.kind]}
             action={(f) => <Link to={findTarget(f.value)}>Trace<span className="visually-hidden"> {f.value}</span></Link>} />
-          <Found title="Transaction hashes" rows={found.hashes} what={(f) => HASH[f.kind]}
+          <Found title="64-hex values" rows={found.hashes} what={(f) => HASH[f.kind]}
             action={(f) => <Link to={findTarget(f.value)}>Trace from this payment<span className="visually-hidden"> {f.value}</span></Link>} />
           {!found.addresses.length && !found.hashes.length && !found.seeds.length && <p className="note">Nothing of these kinds was found in this file.</p>}
         </>}

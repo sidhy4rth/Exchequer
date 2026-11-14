@@ -77,6 +77,27 @@ describe('ExportScanPanel', () => {
     expect(await screen.findByText('Nothing of these kinds was found in this file.')).toBeInTheDocument()
   })
 
+  it('calls a 64-hex value what it may be, not a transaction hash, and names its tables', async () => {
+    api(ON)
+    show()
+    await userEvent.upload(await screen.findByLabelText('Export file'), new File([`pay ${TRON}\nsha256 ${TX_TRON}\n`], 'n.txt'))
+    expect(await screen.findByText(/1 64-hex value \(may be a transaction hash\)/)).toBeInTheDocument()
+    expect(screen.queryByText(/transaction hashes?\b(?! \()/)).toBeNull()
+    expect(screen.getByRole('table', { name: 'Addresses' })).toBeInTheDocument()
+    const hashes = screen.getByRole('table', { name: '64-hex values' })
+    expect(hashes.textContent).toMatch(/may be a Tron transaction hash, a file's SHA-256 or a private key/)
+  })
+
+  it('lists two seed runs on the same line once each, without a React key clash', async () => {
+    api(ON)
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    show()
+    await userEvent.upload(await screen.findByLabelText('Export file'), new File([`${SEED} qq ${SEED}\n`], 's.txt'))
+    expect(await screen.findAllByText('12 BIP-39 words at line 1, hidden')).toHaveLength(2)
+    expect(errors.mock.calls.flat().join(' ')).not.toMatch(/same key/)
+    errors.mockRestore()
+  })
+
   it('says a seed run spanning lines by its first and last line', () => {
     expect(seedLine({ line: 2, endLine: 13, words: 12 })).toBe('12 BIP-39 words at lines 2 to 13, hidden')
   })
