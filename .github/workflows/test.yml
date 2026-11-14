@@ -1,13 +1,25 @@
-# Runs on every push and pull request: the backend test suite on a machine
-# with no .env and no API key -- the suite never touches the network -- and the
-# frontend's component tests plus a production build (the citizen site's too).
-# Matches what the Dockerfile builds, so a green run here means the image will
-# build too.
+# Runs on every pull request and every push to main: the backend test suite
+# on a machine with no .env and no API key -- the suite never touches the
+# network -- and the frontend's component tests plus a production build (the
+# citizen site's too). Matches what the Dockerfile builds, so a green run here
+# means the image will build too.
 name: tests
 
+# A push to a branch with a pull request used to run everything twice (once
+# for the push, once for the pull request). The pull request run is the one
+# main's required checks read, so pushes run only on main, where they check
+# each merge. Open a draft pull request to get a branch tested.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# A newer push to a pull request cancels its older, now pointless run. Main is
+# never cancelled or queued behind another merge: each of its runs gets a group
+# of its own (the commit), so every merge is tested.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.sha || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # The jobs only read the repository; the token gets nothing more.
 permissions:
