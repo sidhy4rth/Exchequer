@@ -28,7 +28,7 @@ import json
 import threading
 import time
 import uuid
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import quote, urlsplit
 
 import httpx
@@ -289,24 +289,31 @@ def _check_cap(s: Any, identifier_id: str) -> None:
     done = s.scalar(select(func.count()).select_from(models.DomainLookup)
                     .where(models.DomainLookup.identifier_id == identifier_id))
     if done >= LOOKUPS_PER_IDENTIFIER:
-        raise identifiers.IdentifierError(f"This domain was already looked up {LOOKUPS_PER_IDENTIFIER} times.")
+        raise identifiers.IdentifierError(f"This identifier was already looked up {LOOKUPS_PER_IDENTIFIER} times.")
 
 
-def run_and_keep(identifier_id: str, viewer: Any) -> dict[str, Any] | None:
-    """Look up an active domain identifier the viewer may read and keep the result; None when there is none."""
+WHAT = {"domain": "a website domain", "telegram": "a Telegram username"}
+
+
+def run_and_keep(identifier_id: str, viewer: Any,
+                 lookers: dict[str, Callable[[str], dict[str, Any]]] | None = None) -> dict[str, Any] | None:
+    """Look up an active identifier the viewer may read and keep the result; None when there is none.
+    `lookers` says which kinds may be looked up and how (default: a domain, by look_up); a Telegram
+    username's page (telegram_lookup.look_up) is kept in the same table, by the same rules."""
+    lookers = lookers or {"domain": look_up}
     with models.session() as s:
         row = s.scalars(select(models.CaseIdentifier).where(
             models.CaseIdentifier.id == identifier_id, identifiers._readable(viewer))).first()
         if row is None:
             return None
-        if row.kind != "domain":
-            raise identifiers.IdentifierError("Only a website domain can be looked up.")
+        if row.kind not in lookers:
+            raise identifiers.IdentifierError(f"Only {' or '.join(WHAT[k] for k in lookers)} can be looked up.")
         if row.status != "active":
             raise identifiers.IdentifierError("This identifier was withdrawn; it is not looked up.")
         _check_cap(s, identifier_id)
-        value, case_id, owner, unit = row.value, row.case_id, row.owner_hash, row.unit_id
-    found = look_up(value)
-    summary = {k: found[k] for k in ("rdap", "rdap_note", "dns", "dns_note")}
+        kind, value, case_id, owner, unit = row.kind, row.value, row.case_id, row.owner_hash, row.unit_id
+    found = lookers[kind](value)
+    summary = {k: v for k, v in found.items() if k not in ("queried", "records")}
     with models.session() as s:
         # Counted again just before keeping it, so clicks made while this lookup ran are counted too.
         # Two lookups finishing in the same instant on two workers can still both pass: the cap
