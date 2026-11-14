@@ -89,7 +89,11 @@ def transport(deadline: float, clock: Clock, backend: httpcore.NetworkBackend | 
     """httpx's own transport (certificates checked, HTTP/1.1, no retries, no proxy), its
     connections made through a backend that caps every wait at the time left before `deadline`."""
     made = httpx.HTTPTransport()
-    made._pool = httpcore.ConnectionPool(  # httpx 0.28 takes no network backend, so its pool is swapped
+    # httpx 0.28 takes no network backend, so its private `_pool` is swapped: this depends on the httpx and
+    # httpcore versions pinned in requirements*.txt, and stops here (and in its test) if that attribute goes.
+    if not isinstance(getattr(made, "_pool", None), httpcore.ConnectionPool):
+        raise RuntimeError("httpx.HTTPTransport no longer has the _pool http_deadline swaps; see its comment.")
+    made._pool = httpcore.ConnectionPool(
         ssl_context=httpx.create_ssl_context(), retries=0,
         network_backend=_Backend(backend or httpcore.SyncBackend(), deadline, clock))
     return made
