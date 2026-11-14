@@ -8,8 +8,8 @@
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
     "schema": "labels maps a Base58 address to {exchange, label, type}",
     "counts": {
-      "labels": 119,
-      "exchanges": 23,
+      "labels": 133,
+      "exchanges": 25,
       "by_exchange": {
         "Binance": 24,
         "Bitfinex": 1,
@@ -18,6 +18,7 @@
         "Bitpanda": 1,
         "Bybit": 41,
         "CoinSpot": 1,
+        "CoinSwitch": 10,
         "Coinone": 1,
         "FixedFloat": 1,
         "Flipster": 1,
@@ -33,6 +34,7 @@
         "Poloniex": 2,
         "UEEx": 1,
         "Upbit": 1,
+        "WazirX": 4,
         "WhiteBIT": 1
       }
     },
@@ -62,6 +64,7 @@
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
     },
+    "india_exchanges": "14 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why. They are not in 'counts' above, which counts the TronScan-tag seed.",
     "proof_of_reserves": {
       "sources": {
         "por:bybit:2026-10": {
@@ -542,6 +545,56 @@
       "label": "CoinSpot Exchange Wallet",
       "type": "exchange_wallet"
     },
+    "TMBRRvkXUFVM4UdFCEjHrqas7z3eaZzG4F": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet",
+      "type": "exchange_wallet"
+    },
+    "TV6djaCCeTYsWz3MrLoHXna9p3CrxmhGZN": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 10",
+      "type": "exchange_wallet"
+    },
+    "TUqoeRTLR31m97fZpYNeVQWJEdC27xbpZa": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 2",
+      "type": "exchange_wallet"
+    },
+    "TFBR1e9WdDP1tUvJJNDqFny5dcFJmc8KwZ": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 3",
+      "type": "exchange_wallet"
+    },
+    "TQnBFaoqyk4uitH2LehQPcfdf3ijnDhkgh": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 4",
+      "type": "exchange_wallet"
+    },
+    "TQW16AFvc3vEZex6Kp8Mutbm6MYAoyKzTK": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 5",
+      "type": "exchange_wallet"
+    },
+    "TKRB2ZhZN2Jy62yP1L5pFiMwD3QA5no3iu": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 6",
+      "type": "exchange_wallet"
+    },
+    "TVyGj8PerpKWVmKNr5JQjSfciqaKqb3Auv": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 7",
+      "type": "exchange_wallet"
+    },
+    "TTa3PQ2rsSTeRfvvtnj2xkTyMzDKMJFwFR": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 8",
+      "type": "exchange_wallet"
+    },
+    "TCngm7T5A1UHwZwzKvysE9SAid4ctyCHeT": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 9",
+      "type": "exchange_wallet"
+    },
     "TDoyjmPJHzRFmYfCRLRsPhKjLETwd9fKr9": {
       "exchange": "Coinone",
       "label": "Coinone",
@@ -792,6 +845,26 @@
       "exchange": "Upbit",
       "label": "Upbit Exchange Hot Wallet",
       "type": "hot_wallet"
+    },
+    "TXe3EibZP9jFogwyqLPd3APdwxZbiQBUqi": {
+      "exchange": "WazirX",
+      "label": "WazirX Wallet 1",
+      "type": "exchange_wallet"
+    },
+    "TQxZR37snGdYm6kxxrnsrjDPGYSecstiSY": {
+      "exchange": "WazirX",
+      "label": "WazirX Wallet 2",
+      "type": "exchange_wallet"
+    },
+    "TAviysJgApDQUteUryi6nNkQWuZZo3HRMx": {
+      "exchange": "WazirX",
+      "label": "WazirX Wallet 3",
+      "type": "exchange_wallet"
+    },
+    "TPQqrAEnrWKTefTpgCNzXAGmJuvBqUrk1P": {
+      "exchange": "WazirX",
+      "label": "WazirX Wallet 4",
+      "type": "exchange_wallet"
     },
     "TWBPGLwQw2EbqYLLw1DJnTDt2ZQ9yJW1JJ": {
       "exchange": "WhiteBIT",

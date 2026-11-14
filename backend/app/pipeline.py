@@ -866,7 +866,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                 if live.warnings:
                     # A label file's entry always outranks the explorer's warning.
                     risk_matcher = RiskMatcher({**live.risk_labels(REPORTED), **risk_matcher._labels},
-                                               chain=chain.key, store=risk_matcher.store)
+                                               chain=chain.key, store=risk_matcher.store,
+                                               privacy=risk_matcher._privacy)
             progress.report(stage="screening", addresses=result.graph.number_of_nodes())
             # Swaps. Reads one receipt per router-bound transfer (capped) so
             # the response can say what asset the money became.
@@ -894,7 +895,7 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                     native_symbol=chain.native_symbol,
                     # Dust is measured in the traced asset; a wallet the risk
                     # lists name (a poisoning lookalike) is not unlabelled.
-                    asset=asset_symbol, is_flagged=risk_matcher.is_flagged,
+                    asset=asset_symbol, is_flagged=risk_matcher.is_labelled,
                 )
             # Every provider response the trace was computed from, hashed on
             # arrival. Taken while the client is still open, after the last
@@ -1080,6 +1081,8 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
     # Sanctions / mixer screening. Runs after exchange annotation so a node
     # that is somehow on both lists keeps both sets of tags.
     risk_matches = risk_matcher.annotate(graph, direction)
+    # Privacy protocols (flag EXCHEQUER_PRIVACY_CATEGORY): notes, never risk hits.
+    privacy_matches = risk_matcher.annotate_privacy(graph, direction)
     findings = detect_patterns(
         graph, PatternConfig(native_symbol=asset_symbol), matcher.is_exchange
     )
@@ -1295,6 +1298,12 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
         "risk_matches": [m.to_dict() for m in risk_matches],
         "risk_flags": sorted({m.category for m in risk_matches}),
         "risk_notes": [m.describe(asset_symbol) for m in risk_matches],
+        # Privacy-protocol contracts the funds passed through: informational,
+        # never in risk_matches, risk_flags or any total. Only with the flag
+        # on, so with it off the result is exactly as before (#189).
+        **({"privacy_matches": [m.to_dict() for m in privacy_matches],
+            "privacy_notes": [m.describe(asset_symbol) for m in privacy_matches]}
+           if config.PRIVACY_CATEGORY else {}),
         # The label-store build this trace screened against (None: it had
         # none), so a later report names the build that made, or missed, a flag.
         "label_store": risk_matcher.store_entry(),

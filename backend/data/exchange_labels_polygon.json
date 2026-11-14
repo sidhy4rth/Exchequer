@@ -21,7 +21,8 @@
     "FTX": 4,
     "Hotbit": 5
    }
-  }
+  },
+  "india_exchanges": "6 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
  },
  "labels": {
   "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
@@ -702,6 +703,36 @@
   "0xfb8131c260749c7835a08ccbdb64728de432858e": {
    "exchange": "BitMEX",
    "label": "BitMEX 2 (defunct)",
+   "type": "exchange_wallet"
+  },
+  "0x5fed0d9be6fd42e086e0d4f1bf6cecd19635dead": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 34",
+   "type": "exchange_wallet"
+  },
+  "0x4928b328d4261120a493dfdb32b6d4cc57d58850": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 46",
+   "type": "exchange_wallet"
+  },
+  "0xdf263bd241b694b1fbe30ee954757ddded7d95e6": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 47",
+   "type": "exchange_wallet"
+  },
+  "0x8c7efd5b04331efc618e8006f19019a3dc88973e": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX 8",
+   "type": "exchange_wallet"
+  },
+  "0x628d6380a28b8d9ae7516597fa625934185bfed4": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: POL wallet",
+   "type": "exchange_wallet"
+  },
+  "0xcb41bd871461585f8c3f746125601ec350e7e567": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: POL wallet",
    "type": "exchange_wallet"
   }
  }

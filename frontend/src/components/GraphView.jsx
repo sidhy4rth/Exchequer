@@ -4,7 +4,7 @@ import ForceGraph2D from 'react-force-graph-2d'
 import { plain } from '../text'
 import { useMedia } from '../phone'
 import { forceCollide } from 'd3-force-3d'
-import RoleSwatch, { DASH, FADED, FADED_ROLES } from './RoleSwatch'
+import RoleSwatch, { DASH, DOT, FADED, FADED_ROLES } from './RoleSwatch'
 import { isConfirmedRisk } from './mapRoles'
 import './GraphView.css'
 
@@ -28,7 +28,7 @@ import './GraphView.css'
 // with the tool's own inferences.
 export const PALETTES = {
   light: {
-    seed: '#0a0a0a', risk: '#bd2329', exchange: '#196e44', inferred: '#145a37', gambling: '#3d3d3d',
+    seed: '#0a0a0a', risk: '#bd2329', exchange: '#196e44', inferred: '#145a37', gambling: '#3d3d3d', privacy: '#3d3d3d',
     service: '#b3b3b3', flagged: '#bd2329', node: '#8e8e8e',
     link: 'rgba(10,10,10,0.16)', linkPath: '#196e44', linkFlagged: 'rgba(189,35,41,0.5)', linkFaded: 'rgba(10,10,10,0.05)',
     text: '#0a0a0a', dim: '#3d3d3d', background: '#ffffff',
@@ -37,7 +37,7 @@ export const PALETTES = {
     labelBox: 'rgba(255,255,255,0.88)',
   },
   dark: {
-    seed: '#ededed', risk: '#ff8a80', exchange: '#3dd68c', inferred: '#8eebc0', gambling: '#bdbdbd',
+    seed: '#ededed', risk: '#ff8a80', exchange: '#3dd68c', inferred: '#8eebc0', gambling: '#bdbdbd', privacy: '#bdbdbd',
     service: '#4a4a4a', flagged: '#ff8a80', node: '#5e5e5e',
     link: 'rgba(237,237,237,0.13)', linkPath: '#3dd68c', linkFlagged: 'rgba(255,138,128,0.45)', linkFaded: 'rgba(237,237,237,0.05)',
     text: '#ededed', dim: '#bdbdbd', background: '#141414',
@@ -58,7 +58,7 @@ const MAX_RADIUS = 22
 // exchanges: a sanctioned wallet that moved dust is still the most important
 // bubble on the canvas, and sizing it by value alone buries it.
 const FLOOR_RADIUS = 8
-const ANSWER_ROLES = new Set(['seed', 'exchange', 'inferred', 'risk', 'gambling'])
+const ANSWER_ROLES = new Set(['seed', 'exchange', 'inferred', 'risk', 'gambling', 'privacy'])
 
 // How far a non-highlighted element fades when something is highlighted.
 const DIMMED_ALPHA = 0.12
@@ -99,6 +99,7 @@ const ROLE_NAME = {
   seed: 'Reported address',
   risk: 'Sanctioned / seized / mixer / frozen / stolen / scam / poisoning',
   gambling: 'Gambling platform wallet',
+  privacy: 'Privacy protocol · a note, not an accusation',
   exchange: 'Labelled exchange wallet',
   inferred: 'Probable deposit address (inferred)',
   service: 'Service contract or router, not expanded',
@@ -161,6 +162,9 @@ function roleOf(node) {
   // hit -- so it gets its own mark, a dashed halo, instead of sanctions red.
   if (node.risk_category === 'gambling') return 'gambling'
   if (node.risk_category) return 'risk'
+  // A privacy protocol's contract (flag EXCHEQUER_PRIVACY_CATEGORY): a note,
+  // never a risk hit, so grey with a dotted ring, never red.
+  if (node.privacy_entity) return 'privacy'
   if (node.exchange && !node.inferred_exchange) return 'exchange'
   if (node.inferred_exchange) return 'inferred'
   if (node.is_router || node.is_service_contract) return 'service'
@@ -207,6 +211,7 @@ function nodeTooltip(node, unit) {
     ['Excluded by time rule', node.excluded_by_time ? `${node.excluded_by_time} earlier transfers` : null],
     ['Listed as', node.risk_entity],
     ['Category', node.risk_category ? RISK_NAME[node.risk_category] ?? node.risk_category : null],
+    ['Privacy protocol', node.privacy_entity],
     ['Depth', `${node.depth} hop${node.depth === 1 ? '' : 's'} from seed`],
     ['Received', `${num(node.total_in_native)}${suffix}`],
     ['Sent', `${num(node.total_out_native)}${suffix}`],
@@ -775,7 +780,7 @@ export default function GraphView({
   // Risk leads for the same reason it owns red -- an outside designation
   // outranks the tool's own matches -- then shallowest, then largest.
   const landmarks = useMemo(() => {
-    const rank = { risk: 0, gambling: 1, exchange: 2, inferred: 3 }
+    const rank = { risk: 0, gambling: 1, privacy: 1, exchange: 2, inferred: 3 }
     return graphData.nodes
       .filter((n) => rank[roleOf(n)] !== undefined)
       .sort((a, b) =>
@@ -857,7 +862,7 @@ export default function GraphView({
       ctx.fillStyle = COLORS.haloRisk
       ctx.fill()
     }
-    if (role === 'gambling') {
+    if (role === 'gambling' || role === 'privacy') {
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 4.5, 0, 2 * Math.PI)
       ctx.fillStyle = COLORS.haloGambling
@@ -884,6 +889,15 @@ export default function GraphView({
       ctx.setLineDash(DASH.map((d) => d / globalScale))
       ctx.beginPath()
       ctx.arc(node.x, node.y, radius + 1.8, 0, 2 * Math.PI)
+      ctx.stroke()
+      ctx.setLineDash([])
+    } else if (role === 'privacy') {
+      // A privacy protocol: a dotted ring, its own mark beside the gambling dash.
+      ctx.strokeStyle = COLORS.privacy
+      ctx.lineWidth = 1.4 / globalScale
+      ctx.setLineDash(DOT.map((d) => d / globalScale))
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, radius + 2.2, 0, 2 * Math.PI)
       ctx.stroke()
       ctx.setLineDash([])
     } else if (role === 'exchange' || role === 'seed') {
@@ -942,6 +956,7 @@ export default function GraphView({
     }
 
     const text = (role === 'risk' || role === 'gambling') && node.risk_entity ? plain(node.risk_entity)
+      : role === 'privacy' ? plain(node.privacy_entity)
       : role === 'exchange' && node.label ? plain(node.label)
       : role === 'inferred' ? `${node.inferred_exchange}? ${short(node.address)}`
       : short(node.address)
@@ -1003,6 +1018,7 @@ export default function GraphView({
         <span className="name">
           {role === 'risk' || role === 'gambling'
             ? plain(node.risk_entity) ?? RISK_NAME[node.risk_category] ?? 'Listed'
+            : role === 'privacy' ? `${plain(node.privacy_entity)} (privacy protocol)`
             : role === 'inferred' ? `${node.inferred_exchange} deposit (inferred)`
             : plain(node.label ?? node.exchange)}
         </span>
@@ -1205,6 +1221,12 @@ export default function GraphView({
               <RoleSwatch role="gambling" color={COLORS.gambling} />
               Gambling platform wallet
             </div>
+            {graphData.nodes.some((n) => n.privacy_entity) && (
+              <div className="item">
+                <RoleSwatch role="privacy" color={COLORS.privacy} />
+                Privacy protocol (a note, not an accusation)
+              </div>
+            )}
             <div className="item">
               <RoleSwatch role="exchange" color={COLORS.exchange} />
               Labelled exchange wallet

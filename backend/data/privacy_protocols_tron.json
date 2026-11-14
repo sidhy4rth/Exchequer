@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "description": "Privacy-protocol contracts on Tron (Railgun, Aztec, Hinkal, Privacy Pools). Not a risk list: with the flag EXCHEQUER_PRIVACY_CATEGORY on, a trace that passes through one shows a note and walks on; it is never a risk hit and never a stop.",
+    "provenance": "Contracts the 11 Nov 2026 mixer hunt (#148) found in each protocol's own deployment list (Railgun-Community/shared-models network-config.ts, Hinkal's Smart Contract Addresses page, Privacy Pools' Deployments page, L2BEAT's discovery for Aztec Connect) or in explorer tags (dawsbot/eth-labels @d9b21ae), each checked on chain for contract code (keyless eth_getCode; TronGrid getcontract on Tron) on 11 Nov and re-checked 14 Nov 2026 with the same result. Filed apart from the threat files because no enforcement action names these protocols a mixer.",
+    "verification_note": "Each entry is a contract a privacy protocol's own deployment list or an explorer tag names as its shielded pool or entry point, with code on this chain. It says the funds passed through a privacy protocol, so their visible link ends there; it is NOT an accusation against the protocol, its users or anyone who dealt with them.",
+    "category_note": "'privacy' marks a privacy protocol's contract: a note beside the risk screening, never a risk hit, never a stop.",
+    "chain": "tron",
+    "last_reviewed": "2026-11-14",
+    "counts": {
+      "privacy": 1
+    },
+    "regenerate_with": "Added by hand from the 11 Nov 2026 mixer hunt (#189); check each address's contract code on chain before adding another.",
+    "schema": "labels maps an address to {category, entity, label, source}"
+  },
+  "labels": {
+    "TDybyktjKwcuLdcuroUJABT7pQE5WDYeqa": {
+      "category": "privacy",
+      "entity": "Hinkal",
+      "label": "Hinkal: main Hinkal contract, the shielded pool (privacy protocol with compliance screening)",
+      "source": "Hinkal docs: Smart Contract Addresses page <https://hinkal-team.gitbook.io/hinkal/security-and-compliance/smart-contract-addresses>. Checked on chain 2026-11-11 (TronGrid, keyless): TronGrid getcontract: bytecode 18193 bytes, contract name 'Hinkal'; re-checked 2026-11-14, unchanged."
+    }
+  }
+}
