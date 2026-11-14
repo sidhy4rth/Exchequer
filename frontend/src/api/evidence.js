@@ -206,3 +206,23 @@ export async function draftReportCertificate(caseId, body) {
   if (!response.ok) throw await toError(response)
   return response.blob()
 }
+
+// ---------------------------------------------------------------------------
+// The case bundle (backend case_bundle.py, behind EXCHEQUER_CASE_BUNDLE): one
+// zip of the signed report, the registers and the audit trail, with a manifest.
+// A server without it answers 404: null, and the page shows no button.
+// ---------------------------------------------------------------------------
+export async function fetchBundleFiles() {
+  const response = await apiFetch(`${BASE}/case-bundle`)
+  if (response.status === 404) {
+    await response.text().catch(() => {}) // read to the end: a body left unread keeps the request open
+    return null
+  }
+  return jsonOrThrow(response)
+}
+
+export async function fetchBundle(caseId) {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/bundle`)
+  if (!response.ok) throw await toError(response)
+  return response.blob()
+}
