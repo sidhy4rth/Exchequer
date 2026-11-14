@@ -9,20 +9,28 @@ on the court's order, whose reference it records. Each movement goes:
             The same signer never counts twice, and the proposer counts only if
             the wallet's scheme lets the proposer sign (proposer_may_sign).
   broadcast with the transaction hash, once it is sent. A release must be
-            approved first; a deposit into a multisig needs no signatures.
+            approved first; a deposit into a multisig needs no signatures. One
+            transaction is one live movement of a wallet (the store's unique
+            index; a cancelled movement's hash may be recorded again).
   confirmed once the transaction is final on chain -- or cancelled, with a reason.
+            A release is confirmed only while the wallet's confirmed releases of
+            that asset stay within its confirmed deposits of it.
 
 Each step is entered by a signed-in officer, and each approval records which
-officer entered it and when. The signatures themselves happen on the signers'
+officer entered it and when: one officer account enters one approval per
+movement, so each signer records their own. The signatures themselves happen on the signers'
 hardware wallets: the server never sees a key, a seed phrase or signature data.
 """
 from __future__ import annotations
 
 import json
 import uuid
+from decimal import Decimal, InvalidOperation, localcontext
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.attributes import flag_modified
 
 from . import config, models
 from .assets import NOT_A_KEY, TX_RE, AssetError, _amount, looks_like_secret
@@ -37,6 +45,7 @@ TEXT = {"asset": (16, "the asset (for example USDT)"), "proposed_by": (120, "who
 MAX_PER_WALLET = 2000
 AMOUNT_CHARS = 48  # models.CustodyMovement.amount is String(48)
 SIGN_IN = "Sign in first: the signing log records which officer entered each step."
+TX_TAKEN = "That transaction is already recorded for {} of this wallet."
 
 
 def _text(fields: dict[str, Any], key: str, required: bool = False) -> str:
@@ -96,6 +105,7 @@ def propose(wallet_id: str, fields: dict[str, Any], viewer: Any) -> dict[str, An
         count = select(func.count()).select_from(models.CustodyMovement)
         if s.scalar(count.where(models.CustodyMovement.wallet_id == w.id)) >= MAX_PER_WALLET:
             raise CustodyError(f"This wallet already has {MAX_PER_WALLET} movements on record.")
+        warnings = _out_vs_in(s, w.id, "", row["asset"], amount, confirming=False)[1] if kind == "release" else []
         now = models.utc_now_iso()
         m = models.CustodyMovement(
             id=str(uuid.uuid4()), wallet_id=w.id, case_id=w.case_id, status="proposed", approvals_json="[]",
@@ -104,7 +114,7 @@ def propose(wallet_id: str, fields: dict[str, Any], viewer: Any) -> dict[str, An
         s.add(m)
         s.commit()
         s.refresh(m)
-        return summary(m, w.threshold)
+        return {**summary(m, w.threshold), "warnings": warnings}
 
 
 def _can_be_approved(w: models.CustodyWallet, proposer: str) -> None:
@@ -146,7 +156,9 @@ def _step_once(movement_id: str, name: str, fields: dict[str, Any], viewer: Any)
             raise CustodyError(f"This movement is {m.status}: it cannot be {_past(name)} now.")
         now = models.utc_now_iso()
         entry: dict[str, Any] = {"at": now, "by": _who(viewer)}
+        warnings: list[str] = []
         if name == "approve":
+            _one_approval_per_officer(m, viewer)
             signer = _approver(w, m, _text(fields, "signer", required=True))
             approvals = json.loads(m.approvals_json or "[]")
             approvals.append({"signer": signer, "at": now, "recorded_by": _who(viewer)})
@@ -160,19 +172,39 @@ def _step_once(movement_id: str, name: str, fields: dict[str, Any], viewer: Any)
             m.tx_hash = _tx_hash(s, w, m, fields.get("tx_hash"))
             m.status = "broadcast"
         elif name == "confirm":
+            if m.kind == "release":
+                refusal, warnings = _out_vs_in(s, w.id, m.id, m.asset, m.amount, confirming=True)
+                if refusal:
+                    raise CustodyError(refusal)
+                flag_modified(w, "notes")  # writes the wallet's row_version: a second confirm racing this one
+                # read the old version, fails as stale, and is retried against the releases this one confirmed
             m.status = "confirmed"
         else:
             entry["reason"] = _text(fields, "reason", required=True)
             m.status = "cancelled"
         entry["status"] = m.status
         append_history(m, entry)
-        s.commit()
+        try:
+            s.commit()
+        except IntegrityError as exc:  # another broadcast of this hash committed first
+            if name != "broadcast":
+                raise
+            s.rollback()
+            twin = _twin(s, w, m, m.tx_hash)
+            raise CustodyError(TX_TAKEN.format(f"movement {twin}" if twin else "another movement")) from exc
         s.refresh(m)
-        return summary(m, w.threshold)
+        return {**summary(m, w.threshold), "warnings": warnings}
 
 
 def _past(name: str) -> str:
     return {"approve": "approved", "broadcast": "broadcast", "confirm": "confirmed", "cancel": "cancelled"}[name]
+
+
+def _one_approval_per_officer(m: models.CustodyMovement, viewer: Any) -> None:
+    """Each signer enters their own approval: one officer account records at most one per movement."""
+    if any(a.get("recorded_by") == _who(viewer) for a in json.loads(m.approvals_json or "[]")):
+        raise CustodyError("You have already entered an approval for this movement. Each signer enters their own "
+                           "approval, signed in to their own officer account.")
 
 
 def _approver(w: models.CustodyWallet, m: models.CustodyMovement, given: str) -> str:
@@ -193,12 +225,77 @@ def _tx_hash(s: Any, w: models.CustodyWallet, m: models.CustodyMovement, raw: An
     if not TX_RE.match(value):
         raise CustodyError("Enter the transaction hash as 64 hexadecimal characters.")
     value = value.lower()
+    twin = _twin(s, w, m, value)
+    if twin is not None:
+        raise CustodyError(TX_TAKEN.format(f"movement {twin}"))
+    return value
+
+
+def _twin(s: Any, w: models.CustodyWallet, m: models.CustodyMovement, tx_hash: str) -> str | None:
+    """The short id of another live (not cancelled) movement of the wallet that records this transaction."""
     twin = s.scalar(select(models.CustodyMovement.id).where(
         models.CustodyMovement.wallet_id == w.id, models.CustodyMovement.id != m.id,
-        models.CustodyMovement.tx_hash == value))
-    if twin is not None:
-        raise CustodyError(f"That transaction is already recorded for movement {twin[:8]} of this wallet.")
-    return value
+        models.CustodyMovement.tx_hash == tx_hash, models.CustodyMovement.status != "cancelled"))
+    return twin[:8] if twin else None
+
+
+def _asset_key(asset: str) -> str:
+    """How two assets are compared: case and spacing do not make a new asset; any other spelling does."""
+    return "".join(asset.split()).casefold()
+
+
+def _exact(amount: str) -> Decimal | None:
+    try:
+        value = Decimal(amount)
+    except (InvalidOperation, TypeError):
+        return None
+    return value if value.is_finite() else None
+
+
+def _out_vs_in(s: Any, wallet_id: str, movement_id: str, asset: str, amount: str,
+               confirming: bool) -> tuple[str | None, list[str]]:
+    """Whether a release of `amount` takes more of `asset` out of the wallet than came in: (refusal, warnings).
+
+    Compared only where every amount is an exact decimal and the asset is spelled the same way (case and
+    spacing aside). Confirming, the wallet's confirmed releases of the asset plus this one must stay within
+    its confirmed deposits of it, or it is refused. Proposing, every release not cancelled counts, and going
+    over is only a warning: the deposit may not be confirmed yet. What cannot be compared is a warning."""
+    rows = s.scalars(select(models.CustodyMovement).where(
+        models.CustodyMovement.wallet_id == wallet_id, models.CustodyMovement.id != movement_id,
+        models.CustodyMovement.status != "cancelled")).all()
+    key, unreadable, other_assets = _asset_key(asset), False, set()
+    with localcontext() as ctx:
+        ctx.prec = 4 * AMOUNT_CHARS  # every amount is at most AMOUNT_CHARS characters: sums stay exact
+        out, came_in = _exact(amount), Decimal(0)
+        unreadable = out is None
+        for r in rows:
+            if (r.kind == "deposit" or confirming) and r.status != "confirmed":
+                continue
+            if _asset_key(r.asset) != key:
+                if r.kind == "deposit":
+                    other_assets.add(r.asset)
+                continue
+            value = _exact(r.amount)
+            if value is None:
+                unreadable = True
+            elif r.kind == "deposit":
+                came_in += value
+            elif out is not None:
+                out += value
+        if unreadable:
+            return None, [f"Some amounts of {asset} on this wallet are not plain numbers, so this release could not "
+                          "be compared with what was deposited: check it against the deposits by hand."]
+        if came_in == 0 and other_assets:
+            return None, [f"No confirmed deposit is recorded as {asset} (they are recorded as "
+                          f"{', '.join(sorted(other_assets))}), so this release could not be compared with what was "
+                          "deposited: check it against the deposits by hand."]
+        if out <= came_in:
+            return None, []
+        over = (f"Releases of {asset} from this wallet{' with this one' if not confirming else ''} would take out "
+                f"{out:f}, more {asset} than its confirmed deposits of it ({came_in:f}).")
+    if confirming:
+        return over + " Record and confirm the deposit first, or correct the amount.", []
+    return None, [over + " It can be confirmed only once confirmed deposits cover it."]
 
 
 def by_wallet(viewer: Any, case_id: str) -> dict[str, list[dict[str, Any]]]:

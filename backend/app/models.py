@@ -305,6 +305,9 @@ class CustodyWallet(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+CUSTODY_TX_LIVE = "tx_hash != '' AND status != 'cancelled'"  # migrations g7_custody_2 states it too
+
+
 class CustodyMovement(Base):
     """One deposit into or release out of a custody wallet, and each signer's
     approval as an officer recorded it (custody_log.py). Never a signature."""
@@ -328,6 +331,10 @@ class CustodyMovement(Base):
     history_json: Mapped[str] = mapped_column(Text, default="[]")
     row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
 
+    # One transaction is one live movement of a wallet: the store refuses a second, so two broadcasts
+    # racing with one hash cannot both land. A cancelled movement's hash may be recorded again.
+    __table_args__ = (Index("uq_custody_movements_wallet_tx", "wallet_id", "tx_hash", unique=True,
+                            sqlite_where=text(CUSTODY_TX_LIVE), postgresql_where=text(CUSTODY_TX_LIVE)),)
     __mapper_args__ = {"version_id_col": row_version}
 
 
