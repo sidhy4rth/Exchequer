@@ -164,3 +164,21 @@ def test_a_cell_that_would_run_as_a_spreadsheet_formula_is_quoted(client):
 
 def test_the_probe_lists_the_files_when_on(client):
     assert client.get("/case-bundle", headers=HEAD).json()["files"] == FILES
+
+
+def test_the_audit_trail_holds_every_event_past_the_thousand_the_audit_page_shows(client):
+    from app import audit
+    for _ in range(1005):
+        audit.record("case.view", case_id="case-1")
+    rows = list(csv.DictReader(io.StringIO(bundle(client).read("audit-trail.csv").decode())))
+    assert len(rows) >= 1005 and [int(r["seq"]) for r in rows] == sorted(int(r["seq"]) for r in rows)
+
+
+def test_an_audit_trail_past_its_row_limit_says_so_in_the_manifest(client, monkeypatch):
+    from app import audit
+    monkeypatch.setattr(case_bundle, "AUDIT_ROWS_MAX", 3)
+    for _ in range(5):
+        audit.record("case.view", case_id="case-1")
+    zf = bundle(client)
+    assert len(list(csv.DictReader(io.StringIO(zf.read("audit-trail.csv").decode())))) == 3
+    assert "audit-trail.csv holds the first 3 events" in zf.read("MANIFEST.txt").decode()

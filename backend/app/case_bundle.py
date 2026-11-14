@@ -37,6 +37,9 @@ from .signing import get_signer
 MAX_BYTES = 64 * 1024 * 1024  # all files together, before compression
 SPOOL_BYTES = 8 * 1024 * 1024
 CHUNK = 64 * 1024
+# The audit trail in full, not the first 1000 events GET /audit shows; past this many
+# (far more than a case gathers) MANIFEST.txt says the file holds only the first ones.
+AUDIT_ROWS_MAX = 20_000
 IST = timezone(timedelta(hours=5, minutes=30), "IST")
 CERTIFICATES_LEFT_OUT = ("s.63(4) certificate drafts", "drafts the officer completes; draft them from the "
                          "Evidence tab")
@@ -58,6 +61,7 @@ class Request:
     owner: bool                      # the browser or unit that traced it (what /audit asks)
     pdf: Callable[[Case], bytes]     # the report download's own PDF, rate limits and all
     rows: dict[str, list[dict[str, Any]]] = field(default_factory=dict)  # each register, read once
+    notes: list[str] = field(default_factory=list)  # what MANIFEST.txt must say about a file, e.g. cut short
 
 
 @dataclass(frozen=True)
@@ -126,7 +130,11 @@ def _audit(r: Request, left: int) -> bytes | None:
         return None
     user, case = r.user, r.stored  # as GET /audit reads it
     unit = user.unit_id if user.unit_id is not None and case.unit_id == user.unit_id else None
-    events = audit.events_for(case.id, r.viewer, officer_id=user.officer_id, unit_id=unit)
+    events = audit.events_for(case.id, r.viewer, limit=AUDIT_ROWS_MAX + 1, officer_id=user.officer_id, unit_id=unit)
+    if len(events) > AUDIT_ROWS_MAX:
+        events = events[:AUDIT_ROWS_MAX]
+        r.notes.append(f"audit-trail.csv holds the first {AUDIT_ROWS_MAX} events of the case's audit log, oldest "
+                       "first; the later ones are not in this bundle.")
     cols = ["seq", "at", "actor", "unit_id", "action", "case_id", "detail", "prev_hash", "row_hash"]
     return _csv(cols, ([e.get(c) for c in cols] for e in events), left)
 
@@ -189,6 +197,8 @@ def _manifest(r: Request, made: list[tuple[Part, int, str]], withheld: list[Part
     for n, (part, size, digest) in enumerate(made, 1):
         lines += [f"{n}. {part.name}", f"   Size: {size} bytes", f"   SHA-256: {digest}",
                   f"   What it is: {part.about}", f"   Where it came from: {part.source}", ""]
+    if r.notes:
+        lines += ["Notes:"] + [f"- {n}" for n in r.notes] + [""]
     lines += ["Left out:"]
     lines += [f"- {p.name}: {p.withheld}" for p in withheld]
     lines += [f"- {CERTIFICATES_LEFT_OUT[0]}: {CERTIFICATES_LEFT_OUT[1]}", ""]
