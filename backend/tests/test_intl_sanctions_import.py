@@ -321,7 +321,8 @@ def scratch(tmp_path, monkeypatch):
 def _forfeiture_file(path, *orders):
     (path / intl.FORFEITURE_FILE).write_text(json.dumps({"_meta": {}, "orders": [
         {"address": address, "chain": chain, "holder": holder, "court": "District Of Utah",
-         "case": "2:19-CR-00260", "caption": "U.S. v. Someone",
+         "case": "2:19-CR-00260", "caption": "U.S. v. Someone", "order_entered": "May 14, 2026",
+         "notice": "USAO official notification on forfeiture.gov, posted 14 Nov 2026",
          "notice_url": "https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf"}
         for address, chain, holder in orders]}))
 
@@ -403,3 +404,18 @@ def test_recheck_without_add_never_adds(scratch):
     copy.write_text("\n".join(json.dumps(e) for e in entities))
     assert intl.recheck("il_mod_crypto", copy, "artifact-v3", TODAY) == 0
     assert read("intl_sanctions_tron.json")["labels"] == {}
+
+
+def test_every_shipped_forfeiture_order_is_held_as_seized_and_cites_its_notice():
+    """data/us_forfeiture_orders.json and the intl files agree; no 0x entry is checksummed or on a stray chain."""
+    from app.etherscan_client import is_tron_address
+    orders = json.loads((config.DATA_DIR / intl.FORFEITURE_FILE).read_text())["orders"]
+    assert orders
+    for order in orders:
+        address, chain = order["address"], order["chain"]
+        assert chain == ("tron" if is_tron_address(address) else "ethereum")
+        assert chain == "tron" or address == address.lower()
+        assert order["notice_url"].endswith("forfeiture.gov/pdf/USAO/OfficialNotification.pdf")
+        entry = json.loads(config.get_chain(chain).intl_sanctions_path.read_text())["labels"][address]
+        assert "United States" in entry["authorities"] and order["notice_url"] in entry["source"]
+        assert entry["category"] == (SEIZED if set(entry["authorities"]) <= intl.SEIZURE_AUTHORITIES else SANCTIONED)

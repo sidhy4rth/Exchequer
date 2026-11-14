@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S. A match means the funds touched a wallet a government has frozen or seized.",
-    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. Built by backend/scripts/import_intl_sanctions.py.",
+    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S., and wallets U.S. courts have ordered forfeited. A match means the funds touched a wallet a government has frozen, seized or forfeited.",
+    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. U.S. forfeiture orders: DOJ official notifications (forfeiture.gov), as held in data/us_forfeiture_orders.json. Built by backend/scripts/import_intl_sanctions.py.",
     "opensanctions_versions": {
       "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
       "jp_mof_sanctions": "https://data.opensanctions.org/artifacts/jp_mof_sanctions/20260922183801-kpe/entities.ftm.json",
@@ -11,17 +11,18 @@
     "chain": "ethereum",
     "last_reviewed": "2026-09-22",
     "counts": {
-      "addresses": 19,
+      "addresses": 22,
       "by_authority": {
         "European Union": 1,
         "France": 1,
         "Japan": 9,
         "United Kingdom": 6,
-        "Israel": 3
+        "Israel": 3,
+        "United States": 3
       },
       "by_category": {
         "sanctioned": 16,
-        "seized": 3
+        "seized": 6
       }
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
@@ -33,6 +34,19 @@
         "removed": 0,
         "removed_addresses": [],
         "note": "Israel listings re-screened offline against this version; every listing whose measures had all ended was removed. Other authorities' listings were not re-read, so last_reviewed is unchanged."
+      }
+    },
+    "added": {
+      "us_forfeiture": {
+        "date": "2026-11-14",
+        "added": 3,
+        "added_addresses": [
+          "0x1aeb972887f4a1c422d2c0b73cbf089abd2ec255",
+          "0xcadf3761430ca4e78994c7a3ea2944cd6e6eb66c",
+          "0xffbdf366c7d2a2a9d1897a219bb76832d826cf94"
+        ],
+        "listing_added_to": [],
+        "note": "Added offline from this source without re-reading the other lists, so last_reviewed is unchanged."
       }
     }
   },
@@ -72,6 +86,15 @@
       "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Counter-Terrorism (Sanctions) (EU Exit) Regulations 2019, entry CTD0004",
       "authorities": [
         "United Kingdom"
+      ]
+    },
+    "0x1aeb972887f4a1c422d2c0b73cbf089abd2ec255": {
+      "category": "seized",
+      "entity": "Solomon Aluko (defendant)",
+      "label": "Solomon Aluko (defendant)",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of New York, case 25 CR. 110 (PKC) (U.S. v. Solomon Aluko, a/k/a \"D1 Really Rich\"), entered July 15, 2026; USAO official notification on forfeiture.gov, posted 14 Nov 2026, https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
       ]
     },
     "0x21b8d56bda776bbe68655a16895afd96f5534fed": {
@@ -175,6 +198,15 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "0xcadf3761430ca4e78994c7a3ea2944cd6e6eb66c": {
+      "category": "seized",
+      "entity": "Binance account UID 610048950",
+      "label": "Binance account UID 610048950",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of Florida, case 25-CR-60304-SMITH (U.S. v. Maryna Petushkova and Oleskii Petushkov), entered May 14, 2026; USAO official notification on forfeiture.gov, posted 14 Nov 2026, https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
     "0xd599ac04a1c786972b81e0fef6fb0c3e7b52f8a7": {
       "category": "sanctioned",
       "entity": "Byex Exchange Company Limited",
@@ -210,6 +242,15 @@
       "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
       "authorities": [
         "Japan"
+      ]
+    },
+    "0xffbdf366c7d2a2a9d1897a219bb76832d826cf94": {
+      "category": "seized",
+      "entity": "Ebrahem Adeeb",
+      "label": "Ebrahem Adeeb",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the District of New Jersey, case 2:22-CR-00697 (U.S. v. Ebrahem Adeeb), entered October 18, 2022; USAO official notification on forfeiture.gov, Internet Archive copy of 20230621, https://web.archive.org/web/20230621022102/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
       ]
     }
   }

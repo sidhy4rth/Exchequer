@@ -498,8 +498,12 @@ by the US and the UK, and named in an Israeli seizure order" is a stronger findi
   measures still in force count — a wallet named only in lifted Israeli seizure orders is left out, and an order
   with an end date stops matching after its last day, whether or not the list has been refreshed. A seizure order
   is one government's measure against a wallet, not a designation, so a wallet only Israel's orders name is
-  reported as `seized`. Israel's orders in force alone name 488 Tron wallets, almost all USDT. Canada, Australia,
+  reported as `seized`. Israel's orders in force alone name 581 Tron wallets, almost all USDT. Canada, Australia,
   Switzerland and the UN publish no crypto addresses; all 95 official lists OpenSanctions carries were checked.
+- **U.S. court forfeiture orders** — wallets a U.S. district court ordered forfeited, read by hand from the
+  Justice Department's official notifications on forfeiture.gov and kept with the notice in
+  `backend/data/us_forfeiture_orders.json`. Only an entered order counts, not a complaint or a seizure notice;
+  each is reported as `seized`, with the court, the case and the holder as the notice names them.
   `scripts/import_intl_sanctions.py`
 
 **Tether's freeze list** is read from the chain itself. Tether can blacklist an address on its USDT contract — after
@@ -817,7 +821,7 @@ staying silent on ordinary activity, because a false accusation is the expensive
 | `test_tron_tags.py` | Only a tag naming a known exchange attributes; treasuries, bridges and scam tags never do; a labelled wallet is never asked about; the last hop is swept; lookups are capped; no key means no lookups; a failed lookup leaves the trace intact; the report says what TronScan named |
 | `test_follow_swaps.py` | A swap into a stablecoin is traced to the exchange from the moment of the swap; transfers before it are excluded; the original trace keeps its asset and score; a time budget covers the follow-on too; a swap into an untraced token is not followed; the switch turns it off; the report prints it |
 | `test_tether_freezes.py` | The replay: a release unfreezes, a re-freeze after a release counts, order within a block follows the log index, Tron addresses convert for the contract call |
-| `test_intl_sanctions_import.py` | The chain named before a free-text address decides where it is filed; a token name alone picks no EVM chain; a wallet named only in lifted seizure orders is left out |
+| `test_intl_sanctions_import.py` | The chain named before a free-text address decides where it is filed; a token name alone picks no EVM chain; a wallet named only in lifted seizure orders is left out; a U.S. forfeiture order is filed as seized under the chain its notice names; an offline re-check adds a new order in force but never a lifted one |
 | `test_ofac_import.py` | Chain assignment from OFAC's own idType; a Bitcoin address is skipped rather than misfiled |
 | `test_graph_builder.py` | All six traversal brakes, both directions, fetch failures, depth stability, the time budget |
 | `test_deposit_inference.py` | The sweep shape fires; one deposit, a wallet that also spends, dust, the seed and unexpanded wallets stay silent |

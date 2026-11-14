@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S. A match means the funds touched a wallet a government has frozen or seized.",
-    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. Built by backend/scripts/import_intl_sanctions.py.",
+    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S., and wallets U.S. courts have ordered forfeited. A match means the funds touched a wallet a government has frozen, seized or forfeited.",
+    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. U.S. forfeiture orders: DOJ official notifications (forfeiture.gov), as held in data/us_forfeiture_orders.json. Built by backend/scripts/import_intl_sanctions.py.",
     "opensanctions_versions": {
       "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
       "jp_mof_sanctions": "https://data.opensanctions.org/artifacts/jp_mof_sanctions/20260922183801-kpe/entities.ftm.json",
@@ -11,15 +11,16 @@
     "chain": "tron",
     "last_reviewed": "2026-09-22",
     "counts": {
-      "addresses": 630,
+      "addresses": 632,
       "by_authority": {
         "Israel": 581,
         "European Union": 3,
         "France": 1,
-        "United Kingdom": 46
+        "United Kingdom": 46,
+        "United States": 2
       },
       "by_category": {
-        "seized": 581,
+        "seized": 583,
         "sanctioned": 49
       }
     },
@@ -133,6 +134,16 @@
           "TYuHA4pWz3tpDdf7SrbmCagBequ9YVGhch",
           "TYuXYK4WYZAacmaQ1G6n7LoAsysMsw1zhT",
           "TZ18KNPsJ1euhzeMydUvmvjVj4s871Jdhx"
+        ],
+        "listing_added_to": [],
+        "note": "Added offline from this source without re-reading the other lists, so last_reviewed is unchanged."
+      },
+      "us_forfeiture": {
+        "date": "2026-11-14",
+        "added": 2,
+        "added_addresses": [
+          "THGG7WB11MHjJP1gr8ZjYPAzb5EpmEmyhN",
+          "TQMwh1NFfb8XXtP52fDiGsiVsc77iFMyRv"
         ],
         "listing_added_to": [],
         "note": "Added offline from this source without re-reading the other lists, so last_reviewed is unchanged."
@@ -2153,6 +2164,15 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "THGG7WB11MHjJP1gr8ZjYPAzb5EpmEmyhN": {
+      "category": "seized",
+      "entity": "Binance account UID 610048950",
+      "label": "Binance account UID 610048950",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of Florida, case 25-CR-60304-SMITH (U.S. v. Maryna Petushkova and Oleskii Petushkov), entered May 14, 2026; USAO official notification on forfeiture.gov, posted 14 Nov 2026, https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
     "THH9JJNbLDN7qs1CyTxJQEjhC9y5FnZUhU": {
       "category": "sanctioned",
       "entity": "XINBI COMPANY LIMITED",
@@ -4005,6 +4025,15 @@
         "Israel"
       ],
       "valid_until": "2026-12-09"
+    },
+    "TQMwh1NFfb8XXtP52fDiGsiVsc77iFMyRv": {
+      "category": "seized",
+      "entity": "Khlari Sirotkin",
+      "label": "Khlari Sirotkin",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of Ohio, case 1:19-CR-00136 (U.S. v. Khlari Sirotkin et al.), entered September 19, 2022; USAO official notification on forfeiture.gov, Internet Archive copy of 20221116, https://web.archive.org/web/20221116155704/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
     },
     "TQNXeB7ZASyy9taFh4449DJLnJfcTyRUtR": {
       "category": "seized",

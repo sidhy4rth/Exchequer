@@ -13,7 +13,8 @@ The categories, with very different investigative meaning:
               designated entity rather than an anonymous wallet.
 
   seized      A government seizure or forfeiture order names the wallet
-              (Israel's NBCTF orders): one government's measure against it,
+              (Israel's NBCTF orders, U.S. court forfeiture orders): one
+              government's measure against it,
               often time-limited, not a sanctions designation. A dated order
               carries valid_until and is not matched after that day.
 

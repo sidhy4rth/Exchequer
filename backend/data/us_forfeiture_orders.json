@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "description": "Wallets a U.S. district court ordered forfeited to the United States, read from the Department of Justice official forfeiture notifications. Read by backend/scripts/import_intl_sanctions.py, which files each one under its chain in intl_sanctions*.json as seized.",
+    "provenance": "Found by the 11 Nov 2026 sanctions hunt in the USAO official notifications on forfeiture.gov (the current file and Internet Archive copies of earlier ones). Each entry was re-read in that notice on 14 Nov 2026: the address appears inside a notice that the court \"entered an Order condemning and forfeiting\" the property; court, case, caption and order date are copied from that notice.",
+    "rule": "Only a notice of an entered order of forfeiture counts; a complaint or an administrative seizure notice has no outcome yet. Chain is the one the notice names (ETH, AAVE (Ethereum), TRX/USDT on Tron); a 0x wallet the notice puts on another chain is left out. Each 0x address was checked to hold no contract code (keyless RPC, 14 Nov 2026).",
+    "verification_note": "A forfeiture order is a court measure against the property, not a sanctions designation and not a finding that anyone who later transacted with the address took part in anything. A holder is named only as the notice names it; an exchange account or bank custody address is the exchange or bank holding the property for that account.",
+    "schema": "orders: [{address, chain, holder, court, case, caption, order_entered, notice_url, notice, checked}]",
+    "counts": {
+      "orders": 5
+    }
+  },
+  "orders": [
+    {
+      "address": "0x1aeb972887f4a1c422d2c0b73cbf089abd2ec255",
+      "chain": "ethereum",
+      "holder": "Solomon Aluko (defendant)",
+      "court": "U.S. District Court for the Southern District of New York",
+      "case": "25 CR. 110 (PKC)",
+      "caption": "U.S. v. Solomon Aluko, a/k/a \"D1 Really Rich\"",
+      "order_entered": "July 15, 2026",
+      "notice_url": "https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, posted 14 Nov 2026",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xcadf3761430ca4e78994c7a3ea2944cd6e6eb66c",
+      "chain": "ethereum",
+      "holder": "Binance account UID 610048950",
+      "court": "U.S. District Court for the Southern District of Florida",
+      "case": "25-CR-60304-SMITH",
+      "caption": "U.S. v. Maryna Petushkova and Oleskii Petushkov",
+      "order_entered": "May 14, 2026",
+      "notice_url": "https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, posted 14 Nov 2026",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0xffbdf366c7d2a2a9d1897a219bb76832d826cf94",
+      "chain": "ethereum",
+      "holder": "Ebrahem Adeeb",
+      "court": "U.S. District Court for the District of New Jersey",
+      "case": "2:22-CR-00697",
+      "caption": "U.S. v. Ebrahem Adeeb",
+      "order_entered": "October 18, 2022",
+      "notice_url": "https://web.archive.org/web/20230621022102/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20230621",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "THGG7WB11MHjJP1gr8ZjYPAzb5EpmEmyhN",
+      "chain": "tron",
+      "holder": "Binance account UID 610048950",
+      "court": "U.S. District Court for the Southern District of Florida",
+      "case": "25-CR-60304-SMITH",
+      "caption": "U.S. v. Maryna Petushkova and Oleskii Petushkov",
+      "order_entered": "May 14, 2026",
+      "notice_url": "https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, posted 14 Nov 2026",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "TQMwh1NFfb8XXtP52fDiGsiVsc77iFMyRv",
+      "chain": "tron",
+      "holder": "Khlari Sirotkin",
+      "court": "U.S. District Court for the Southern District of Ohio",
+      "case": "1:19-CR-00136",
+      "caption": "U.S. v. Khlari Sirotkin et al.",
+      "order_entered": "September 19, 2022",
+      "notice_url": "https://web.archive.org/web/20221116155704/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20221116",
+      "checked": "2026-11-14"
+    }
+  ]
+}

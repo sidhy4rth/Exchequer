@@ -292,7 +292,8 @@ def read_us_forfeiture() -> list[tuple[str, str | None, dict]]:
             "entity": order["holder"],
             "authority": US_FORFEITURE,
             "source": (f"U.S. court order of forfeiture, {order['court']}, case {order['case']} "
-                       f"({order['caption']}), DOJ official notification {order['notice_url']}"),
+                       f"({order['caption']}), entered {order['order_entered']}; {order['notice']}, "
+                       f"{order['notice_url']}"),
             "valid_until": None,
         }))
     return out
@@ -478,6 +479,7 @@ def add_listings(rows: list[tuple[str, str | None, dict]], tag: str, today: date
         }
         meta["counts"] = _counts(document["labels"])
         meta["schema"] = SCHEMA
+        meta["description"], meta["provenance"] = DESCRIPTION, PROVENANCE
         print(f"  {chain_key:<9} {tag}: {len(added[chain_key])} added, "
               f"{len(updated[chain_key])} held entries gained this listing")
         if not dry_run:
@@ -488,6 +490,14 @@ def add_listings(rows: list[tuple[str, str | None, dict]], tag: str, today: date
     return {key: addresses for key, addresses in added.items() if addresses}
 
 
+DESCRIPTION = ("Crypto addresses on sanctions and seizure lists published by governments other than "
+               "the U.S., and wallets U.S. courts have ordered forfeited. A match means the funds "
+               "touched a wallet a government has frozen, seized or forfeited.")
+PROVENANCE = (f"UK: {UK_URL}. EU: {EU_URL}. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via "
+              "OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions "
+              "data is licensed CC BY-NC 4.0. U.S. forfeiture orders: DOJ official notifications "
+              f"(forfeiture.gov), as held in data/{FORFEITURE_FILE}. "
+              "Built by backend/scripts/import_intl_sanctions.py.")
 SCHEMA = ("labels maps an address to {category, entity, label, source, authorities}, plus valid_until "
           "(the last day it is in force) when every listing behind it has an end date; category is "
           "seized when only seizure orders name it, sanctioned otherwise")
@@ -630,20 +640,8 @@ def main() -> int:
             continue
         document = {
             "_meta": {
-                "description": (
-                    "Crypto addresses on sanctions and seizure lists published by "
-                    "governments other than the U.S., and wallets U.S. courts have "
-                    "ordered forfeited. A match means the funds touched a wallet a "
-                    "government has frozen, seized or forfeited."
-                ),
-                "provenance": (
-                    f"UK: {UK_URL}. EU: {EU_URL}. Israel (NBCTF), Japan (MOF) and "
-                    "France (DG Tresor) via OpenSanctions, which extracts them from "
-                    "each publisher's own documents; OpenSanctions data is licensed "
-                    "CC BY-NC 4.0. U.S. forfeiture orders: DOJ official notifications "
-                    f"(forfeiture.gov), as held in data/{FORFEITURE_FILE}. "
-                    "Built by backend/scripts/import_intl_sanctions.py."
-                ),
+                "description": DESCRIPTION,
+                "provenance": PROVENANCE,
                 "opensanctions_versions": versions,
                 "verification_note": (
                     "Each entry is copied from a government publication and names "
