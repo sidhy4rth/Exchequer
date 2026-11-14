@@ -60,6 +60,7 @@ TEXT_LIMITS = {"asset": 16, "chain": 16, "held_at": 120, "key_holders": 200, "or
 HASH_FIELDS = ("tx_hash", "outcome_tx")
 TX_RE = re.compile(r"^(?:0x)?[0-9a-fA-F]{64}$")
 AMOUNT_MAX = Decimal("1e15")
+AMOUNT_CHARS = 48  # models.SeizedAsset.amount is String(48): a longer one is refused, never truncated
 MAX_PER_OWNER, MAX_TOTAL, HISTORY_MAX = 500, 50_000, 100
 
 # The BIP39 English wordlist (data/bip39_english.txt, 2048 words, SHA-256
@@ -131,15 +132,23 @@ def _hash(fields: dict[str, Any], key: str) -> str:
 def _amount(raw: Any) -> str:
     if isinstance(raw, bool):
         raise AssetError("Enter the amount as a number.")
+    too_long = AssetError(f"The amount is longer than the register keeps: at most {AMOUNT_CHARS} characters "
+                          "written out in full (digits and the decimal point).")
+    typed = re.sub(r"[,\s]", "", str(raw if raw is not None else ""))
+    if len(typed) > AMOUNT_CHARS:
+        raise too_long
     try:
-        value = Decimal(re.sub(r"[,\s]", "", str(raw if raw is not None else "")))
+        value = Decimal(typed)
     except InvalidOperation as exc:
         raise AssetError("Enter the amount as a number.") from exc
     if not value.is_finite():
         raise AssetError("Enter the amount as a number.")
     if not 0 < value < AMOUNT_MAX:
         raise AssetError("The amount must be more than zero.")
-    return format(value, "f")
+    text = format(value, "f")
+    if len(text) > AMOUNT_CHARS:  # "1e-60" is short as typed and 62 characters written out
+        raise too_long
+    return text
 
 
 def _seized_on(raw: Any) -> str:
