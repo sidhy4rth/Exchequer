@@ -221,6 +221,18 @@ export function matchRows(rows, { payments = [], currency = 'INR', names = [], h
 }
 
 const REFERENCE = /^[A-Za-z0-9][A-Za-z0-9/._-]{0,39}$/
+const GAP = ' … '
+
+/** `text` cut to `limit` characters, the server's. When the exchange `name` the match found falls
+ * past the cut, the start is kept, then " … ", then the words from the name on: the server names an
+ * exchange only when the saved text still contains it. */
+export function clip(text, limit, name) {
+  if (text.length <= limit || !name || namesIn(text.slice(0, limit), [name]).length) return text.slice(0, limit)
+  const at = new RegExp(`(?<![A-Za-z0-9])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'i').exec(text)?.index
+  if (at == null) return text.slice(0, limit)
+  const tail = text.slice(at, at + Math.min(name.length + 40, limit - GAP.length))
+  return text.slice(0, limit - GAP.length - tail.length).trimEnd() + GAP + tail
+}
 
 /** A match as the server keeps it. A transaction hash goes in the reference, never in the narration,
  * where the server would take 64 hex characters for a private key. */
@@ -230,8 +242,8 @@ export function toSaved(m) {
   const reference = m.hash || (m.reasons.includes('utr') ? (findUtrs(shaped).length ? shaped : m.utrs[0].value) : shaped)
   return {
     date: row.date, time: row.time, direction: row.direction, amount: row.places > 8 ? row.amount.toFixed(8) : row.text,
-    reference, narration: row.narration.replace(HASH, '[hash]').slice(0, 300),
-    counterparty: row.counterparty.replace(HASH, '[hash]').slice(0, 120), reasons: m.reasons, exchange: m.exchange,
+    reference, narration: clip(row.narration.replace(HASH, '[hash]'), 300, m.exchange),
+    counterparty: clip(row.counterparty.replace(HASH, '[hash]'), 120, m.exchange), reasons: m.reasons, exchange: m.exchange,
   }
 }
 
