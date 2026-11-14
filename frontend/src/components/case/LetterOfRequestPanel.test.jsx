@@ -101,6 +101,8 @@ describe('the letter of request panel', () => {
     await waitFor(() => expect(onLogged).toHaveBeenCalledTimes(1))
     expect(calls.at(-1)).toEqual({ method: 'POST', path: '/requests', body: { case_id: 'c1-abcdef12', recipient: 'Seychelles', kind: REQUEST_KIND, asset: 'USDT' } })
     expect(screen.getByText(/Logged as drafted, to Seychelles/)).toBeInTheDocument()
+    // The button just pressed is disabled, so a screen reader hears the outcome from the status line.
+    expect(screen.getByRole('status')).toHaveTextContent(/Logged as drafted, to Seychelles/)
     expect(screen.getByRole('button', { name: 'Log it in the requests log' })).toBeDisabled() // once
   })
 

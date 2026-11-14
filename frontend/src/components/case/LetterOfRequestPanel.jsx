@@ -119,7 +119,7 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
               <button type="button" className="quiet" onClick={() => navigator.clipboard?.writeText(text)}>Copy</button>
               <button type="button" onClick={logIt} disabled={!country || logged === country}>Log it in the requests log</button>
             </div>
-            <p className="note">
+            <p className="note" role="status">
               {logged && logged === country
                 ? `Logged as drafted, to ${plain(logged)}, in the requests log above: move it on there as it goes to the MHA, the Court and abroad.`
                 : country ? `Logs it as a letter of request to ${plain(country)}, drafted.` : 'Name the requested country to log it.'}
