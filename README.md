@@ -327,6 +327,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /trace/{case_id}/custody` | The multisig wallets the case's seized crypto is held in that this browser or unit may read: chain, address, scheme, threshold and signers (behind `EXCHEQUER_CUSTODY_WALLETS`; while it is off the list says so) |
 | `POST /trace/{case_id}/custody` | Records a custody wallet and the asset-register rows moved into it (409 if the case already records it); no field takes a key, and writes are refused while the flag is off |
 | `PATCH /custody/{wallet_id}` | Changes a custody wallet's notes or the asset-register rows moved into it |
+| `POST /custody/{wallet_id}/movements` | Proposes a deposit into the custody wallet or a release out of it (a release names the court's order and a destination address on the wallet's chain) |
+| `POST /custody/movements/{movement_id}/{step}` | Moves it on: `approve` (it is approved once the wallet's threshold of distinct signers have), `broadcast` with the transaction hash, `confirm`, or `cancel` with a reason; the signatures themselves happen on the signers' hardware wallets, and the server never sees a key |
 | `POST /trace/{case_id}/notice` | A draft notice to a bank (`to=bank-info`; `to=bank-freeze` for an urgent debit freeze, which needs the Magistrate's order and a second officer's sign-off) or a telecom operator (`to=telecom`), from the case and the account or phone details in the request body, never the URL |
 | `GET /cases` | History of past traces |
 | `GET /cases/correlate` | Intermediaries shared by two or more of your stored cases (plus the demos) — the campaign view (`?case_id=` narrows it) |
