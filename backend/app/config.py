@@ -885,3 +885,5 @@ OSINT_LOOKUPS: bool = flag("EXCHEQUER_OSINT_LOOKUPS",
                            "Feature 4, OSINT slice 2: live RDAP and DNS lookups of a case's scam domains")
 STATEMENT_IMPORT: bool = flag("EXCHEQUER_STATEMENT_IMPORT",
                               "Feature 5: read a bank or exchange statement CSV against a case; save confirmed rows")
+CDR_IMPORT: bool = flag("EXCHEQUER_CDR_IMPORT",
+                        "Feature 5: read a call detail record CSV against a case; save a confirmed summary")

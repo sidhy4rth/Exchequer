@@ -203,8 +203,8 @@ def list_for(viewer: Any, case_id: str) -> list[dict[str, Any]]:
         return []
     with models.session() as s:
         rows = s.scalars(select(models.StatementImport).where(
-            models.StatementImport.case_id == case_id, _readable(viewer))
-            .order_by(models.StatementImport.created_at)).all()
+            models.StatementImport.case_id == case_id, models.StatementImport.source.in_(SOURCES), _readable(viewer))
+            .order_by(models.StatementImport.created_at)).all()  # a CDR's summary (cdr_imports.py) is listed there
         return [summary(r) for r in rows]
 
 

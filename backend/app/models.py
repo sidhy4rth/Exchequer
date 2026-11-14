@@ -363,7 +363,7 @@ class StatementImport(Base):
     case_id: Mapped[str] = mapped_column(String(36), index=True)
     officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    source: Mapped[str] = mapped_column(String(16))  # bank | exchange
+    source: Mapped[str] = mapped_column(String(16))  # bank | exchange | cdr (cdr_imports.py)
     currency: Mapped[str] = mapped_column(String(12))
     title: Mapped[str] = mapped_column(String(120), default="")
     row_count: Mapped[int] = mapped_column(Integer)
