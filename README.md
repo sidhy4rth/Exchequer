@@ -44,7 +44,7 @@
 <table>
 <tr>
 <td align="center"><h3>68.4M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
-<td align="center"><h3>31.9M</h3>address-poisoning<br>wallets<br><sub>found by on-chain scans</sub></td>
+<td align="center"><h3>68.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists</sub></td>
 <td align="center"><h3>25,508</h3>exchange addresses<br><sub>incl. 24,025 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
