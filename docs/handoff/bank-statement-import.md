@@ -2,7 +2,7 @@
 
 - **Feature**: suite feature 5, first slice. An officer reads a bank statement CSV, or a transaction CSV an exchange provided, against a case: the rows that match the victim's payments, the UPI/IMPS/NEFT/RTGS references in narrations, the narrations that name a known exchange, on a timeline beside the trace's own on-chain times. The officer may save the rows they confirm (never the whole statement) to the case.
 - **Issue**: #144
-- **Branch**: four stacked PRs: `feat/bank-statement-import` (the record), `feat/bank-statement-import-routes` (the routes), `feat/bank-statement-import-parse` (reading and matching in the browser), `feat/bank-statement-import-panel` (the panel on the Evidence tab)
+- **Branch**: four stacked PRs: `feat/bank-statement-import` (#146, the record), `feat/bank-statement-import-routes` (#151, the routes), `feat/bank-statement-import-parse` (#152, reading and matching in the browser), `feat/bank-statement-import-panel` (#153, the panel on the Evidence tab)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
 - **Status**: first slice built in four stacked PRs, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default); awaiting review
