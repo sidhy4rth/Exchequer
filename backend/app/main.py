@@ -55,6 +55,7 @@ from .routes import certificates as certificate_drafts
 from .routes import complaints as complaint_queue
 from .routes import exhibits as exhibit_register
 from .routes import identifiers as identifier_register
+from .routes import sop_summary as sop_summary_route
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -258,6 +259,7 @@ app.include_router(admin.router)
 app.include_router(accounts.router)
 app.include_router(audit_log.router)
 app.include_router(complaint_queue.router)
+app.include_router(sop_summary_route.router)
 
 
 # ---------------------------------------------------------------------------
