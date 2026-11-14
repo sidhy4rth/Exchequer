@@ -276,6 +276,35 @@ class SeizedAsset(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+class CustodyWallet(Base):
+    """A multisig wallet the unit holds seized crypto in, and who can sign for it
+    (custody.py, suite feature 9). Never a key: signers by name, role and unit only."""
+
+    __tablename__ = "custody_wallets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    chain: Mapped[str] = mapped_column(String(16))
+    address: Mapped[str] = mapped_column(String(64))
+    scheme: Mapped[str] = mapped_column(String(120))
+    threshold: Mapped[int] = mapped_column(Integer)
+    signers_json: Mapped[str] = mapped_column(Text)  # [{"name", "role", "unit"}]
+    proposer_may_sign: Mapped[bool] = mapped_column(Boolean, default=False)
+    set_up_by: Mapped[str] = mapped_column(String(120))
+    set_up_on: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD, India's date
+    asset_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
+
+
 class Exhibit(Base):
     """A file an outside forensic tool produced for a case, by its hashes, and its
     chain of custody (exhibits.py, suite feature 3). The file itself is never stored."""
