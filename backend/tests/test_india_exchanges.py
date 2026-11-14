@@ -32,7 +32,12 @@ ROWS = DOC["rows"]
 KEYS = {"address", "chain", "exchange", "label", "type", "kind", "source", "source_date", "retrieved_on"}
 INDIAN = {"WazirX", "CoinDCX", "CoinSwitch", "ZebPay", "Mudrex", "Giottus", "Bitbns", "Unocoin", "BuyUcoin"}
 SOURCE = re.compile(r"https://(etherscan\.io|polygonscan\.com)/address/0x[0-9a-f]{40}$"
-                    r"|https://coinswitch\.co/building-blocks/[a-z0-9-]+/$")
+                    r"|https://coinswitch\.co/building-blocks/[a-z0-9-]+/$"
+                    r"|https://web\.archive\.org/web/\d{14}/https://x\.wazirx\.com/api/v2/wazirx-wallet-addresses\?limit=30&page=1$")
+# CoinSwitch's proof-of-reserves posts that list its major wallets, first to fifth edition.
+COINSWITCH_LISTS = {f"https://coinswitch.co/building-blocks/{slug}/" for slug in (
+    "our-wallet-addresses-proof-of-reserves-and-more", "our-proof-of-reserves", "coinswitch-third-edition-proof-of-reserves",
+    "proof-of-reserves-fourth-edition", "coinswitch-publishes-fifth-edition-of-proof-of-reserves")}
 DAY = re.compile(r"\d{4}-\d{2}-\d{2}$")
 OTHER_LISTS = ("risk_labels_path", "intl_sanctions_path", "frozen_labels_path", "threat_labels_path",
                "gambling_labels_path", "router_labels_path")
@@ -115,6 +120,22 @@ def test_what_was_left_out_is_labelled_nowhere():
             continue  # a chain Exchequer does not trace, or one the source did not name
         for address in entry["addresses"]:
             assert get_matcher(chain.key).lookup(address) is None, (address, entry["why"])
+
+
+def test_an_exchange_s_own_list_is_cited_only_for_that_exchange():
+    # A CoinSwitch post names CoinSwitch's wallets; WazirX's proof-of-reserves data names WazirX's.
+    for row in ROWS:
+        if row["source"].startswith("https://coinswitch.co/"):
+            assert row["exchange"] == "CoinSwitch" and row["source"] in COINSWITCH_LISTS, row
+        if row["source"].startswith("https://web.archive.org/"):
+            assert row["exchange"] == "WazirX" and "proof-of-reserves" in row["kind"], row
+
+
+def test_wazirx_s_bsc_wallets_are_labelled_on_bsc_and_not_on_ethereum():
+    # WazirX's own proof-of-reserves data lists them as BSC wallets; their Ethereum pages show no transactions.
+    for address in ("0xcdef28fe85ab08a6632c97fd90534666c1ae96a3", "0x0389776e4d48384160cd5acde2f61ab9359e757e"):
+        assert get_matcher("bsc").lookup(address)["exchange"] == "WazirX"
+        assert get_matcher("ethereum").lookup(address) is None
 
 
 def test_the_wazirx_multisig_attacked_in_july_2024_is_not_labelled():

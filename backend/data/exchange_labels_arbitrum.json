@@ -11,7 +11,8 @@
    "brianleect": 1
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.port_evm_labels",
-  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json."
+  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json.",
+  "india_exchanges": "4 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
  },
  "labels": {
   "0x0363bfc09b48616190d15ddee5987ae2d05da6f4": {
@@ -533,6 +534,26 @@
    "exchange": "MEXC",
    "label": "MEXC 9",
    "type": "exchange_wallet"
+  },
+  "0x46d950798cecf8cfc52f07a19c310987311c454f": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ARBITRUM/ARB wallet",
+   "type": "exchange_wallet"
+  },
+  "0x628d6380a28b8d9ae7516597fa625934185bfed4": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ARBITRUM/RDNT wallet",
+   "type": "exchange_wallet"
+  },
+  "0x012eed0ee2b9d098e6383630584d02e0958d481a": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ARBITRUM wallet",
+   "type": "exchange_wallet"
+  },
+  "0x32a4eadbf619d6996eb70b9c0bf79f61441fe9ad": {
+   "exchange": "WazirX",
+   "label": "WazirX: ARB wallet 1",
+   "type": "contract_wallet"
   }
  }
 }

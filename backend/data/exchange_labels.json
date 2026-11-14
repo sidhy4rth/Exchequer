@@ -67,7 +67,7 @@
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
     },
-    "india_exchanges": "20 Indian exchange wallets added on 2026-11-14 from data/india_exchanges.json, which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
+    "india_exchanges": "40 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
   },
   "labels": {
     "0x05f51aab068caa6ab7eeb672f88c180f67f17ec7": {
@@ -125268,6 +125268,106 @@
     "0x618ffd1cdabee36ce5992a857cc7463f21272bd7": {
       "exchange": "WazirX",
       "label": "WazirX: Withdrawals",
+      "type": "exchange_wallet"
+    },
+    "0xcb410a193ffb725e0e554f778606020a4b76fc62": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ALICE wallet",
+      "type": "exchange_wallet"
+    },
+    "0x593cc966131416b8b2ef3108210747a03d4d9db9": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: AUDIO wallet",
+      "type": "exchange_wallet"
+    },
+    "0x758e2c2d1a362e2b3e613545e48285b03581ef43": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: AXS wallet",
+      "type": "exchange_wallet"
+    },
+    "0x08d1c7c76f239067b207217c3d3573b7679b4644": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: CRV wallet",
+      "type": "exchange_wallet"
+    },
+    "0x354cd7f12afe186c689786587be9d4e9d8afe4ed": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: FET wallet",
+      "type": "exchange_wallet"
+    },
+    "0x95a46dab6068cb345c89e00c394f83c5b0179cfb": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: FET wallet",
+      "type": "exchange_wallet"
+    },
+    "0x38f6d1448aff7bd8f78af10bf862d2a27cb8a0d4": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: FTM wallet",
+      "type": "exchange_wallet"
+    },
+    "0x918e7ba328c7a0e43b64bd27b8d602025a4ef0a1": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: FTM wallet",
+      "type": "exchange_wallet"
+    },
+    "0xf390edfdbb799eb68d8939c4e983d5ac63eb9c8d": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: KNC wallet",
+      "type": "exchange_wallet"
+    },
+    "0x32920ba45b564b1969553473ee19b135c60a46c5": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: POL wallet",
+      "type": "exchange_wallet"
+    },
+    "0x581b089dc36ceac3242cb2e440774b6e7b5da293": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: POWR wallet",
+      "type": "exchange_wallet"
+    },
+    "0xfe57a652e5370400a3aaddabd0207f0fc558110b": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: REQ wallet",
+      "type": "exchange_wallet"
+    },
+    "0x1fa65b030d33d5d93e5405ebd5f1604fa8e19bd5": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: SAND wallet",
+      "type": "exchange_wallet"
+    },
+    "0xf2e7bc45694d02d7a8ecced47066100be6e557ad": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: SHIB wallet",
+      "type": "exchange_wallet"
+    },
+    "0x97a9abaa5453ff6cdf7cf4067814f3dad439f96f": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: STORJ wallet",
+      "type": "exchange_wallet"
+    },
+    "0x7b97ed4defc6ad46dd39c36194b2e4f8f0d10dcf": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: SUSHI wallet",
+      "type": "exchange_wallet"
+    },
+    "0xfb2ffb292ad77d91eac636303805836fd1c78884": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: UMA wallet",
+      "type": "exchange_wallet"
+    },
+    "0xb391ec17c6516e5cfe00b7893d474f32851ccd44": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: YFI wallet",
+      "type": "exchange_wallet"
+    },
+    "0x4f999e90984da582c822347a46575e124c341c5d": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ZRX wallet",
+      "type": "exchange_wallet"
+    },
+    "0x633fac2b6d44e97fba5898f629dc87196609b967": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch: ETH/ERC20 wallet",
       "type": "exchange_wallet"
     }
   },
