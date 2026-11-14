@@ -18,7 +18,7 @@ paths). Redirects are never followed; the answer must arrive within DEADLINE_S a
 be at most BODY_MAX. The response is kept with where it came from, when, its HTTP
 status and the SHA-256 of its body as received (domain_lookup._record), so a shown
 fact can be checked against the bytes it came from. Tests replace _get or set
-_transport; their pages (tests/fixtures/osint/telegram/) are synthetic.
+_transport or _network; their pages (tests/fixtures/osint/telegram/) are synthetic.
 """
 from __future__ import annotations
 
@@ -27,9 +27,10 @@ import time
 from html.parser import HTMLParser
 from typing import Any
 
+import httpcore
 import httpx
 
-from . import identifiers
+from . import http_deadline, identifiers
 from .display_text import one_line
 from .domain_lookup import LookupError_, _record
 
@@ -40,6 +41,7 @@ BODY_MAX = 256 * 1024  # a t.me preview page is about 11 kB
 USER_AGENT = "Exchequer case tool (reads a Telegram username's public t.me page for an investigation)"
 TITLE_MAX, COUNT_MAX, DESCRIPTION_MAX = 128, 160, 1000
 _transport: httpx.BaseTransport | None = None  # tests set an httpx.MockTransport
+_network: httpcore.NetworkBackend | None = None  # or a fake network whose slow reads move _clock
 _clock = time.monotonic  # tests set a clock that a slow server moves on
 
 # Telegram's username rules: 5 to 32 of a-z, 0-9 and _, starting with a letter, not ending with _.
@@ -66,20 +68,25 @@ def username(raw: str) -> str:
 
 def _get(url: str) -> tuple[int, bytes]:
     """GET `url` and give back (status, body). Never follows a redirect, sends no cookie,
-    refuses more than BODY_MAX and stops at DEADLINE_S even while bytes still arrive."""
-    started = _clock()
-    with httpx.Client(timeout=TIMEOUT_S, follow_redirects=False, transport=_transport,
-                      headers={"User-Agent": USER_AGENT, "Accept": "text/html", "Accept-Language": "en"}) as client:
-        with client.stream("GET", url) as response:
-            body = b""
-            for chunk in response.iter_bytes():
-                if _clock() - started > DEADLINE_S:
-                    raise LookupError_(f"t.me took longer than {DEADLINE_S:.0f} seconds, so the lookup stopped.")
-                body += chunk
-                if len(body) > BODY_MAX:
-                    raise LookupError_(f"t.me sent more than {BODY_MAX // 1024} kB, which is not a preview page; "
-                                       "nothing was kept.")
-            return response.status_code, body
+    refuses more than BODY_MAX and stops at DEADLINE_S even while bytes still arrive: the
+    connect and every read wait at most the time left (http_deadline), not TIMEOUT_S each."""
+    deadline = _clock() + DEADLINE_S
+    transport = _transport if _transport is not None else http_deadline.transport(deadline, _clock, _network)
+    try:
+        with httpx.Client(timeout=TIMEOUT_S, follow_redirects=False, transport=transport,
+                          headers={"User-Agent": USER_AGENT, "Accept": "text/html", "Accept-Language": "en"}) as client:
+            with client.stream("GET", url) as response:
+                body = b""
+                for chunk in response.iter_bytes():
+                    if _clock() > deadline:
+                        raise http_deadline.DeadlinePassed()
+                    body += chunk
+                    if len(body) > BODY_MAX:
+                        raise LookupError_(f"t.me sent more than {BODY_MAX // 1024} kB, which is not a preview page; "
+                                           "nothing was kept.")
+                return response.status_code, body
+    except http_deadline.DeadlinePassed as exc:
+        raise LookupError_(f"t.me took longer than {DEADLINE_S:.0f} seconds, so the lookup stopped.") from exc
 
 
 # -- reading the page --------------------------------------------------------------------------------
