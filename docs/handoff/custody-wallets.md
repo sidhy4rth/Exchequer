@@ -19,7 +19,7 @@
 - A custody wallet needs a threshold of at least 2 and no more than its signers: one person alone must never move seized money.
 - Signers are names, roles and units only, compared ignoring case and spacing, so the same person cannot be two of n. A seed split across a signer's fields is caught too.
 - The chain, address, scheme, threshold and signers never change after the record is made; only notes and the linked asset-register rows do. A change of signers is a new record (see open questions).
-- Linked asset-register rows must be in the same case, readable by the viewer, and held in custody.
+- Linked asset-register rows must be in the same case, readable by the viewer, held in custody, and not recorded as held at another address (a blank `held_at` is allowed).
 - One wallet per case per address; the same unit wallet may be recorded in several cases.
 
 ## Next
