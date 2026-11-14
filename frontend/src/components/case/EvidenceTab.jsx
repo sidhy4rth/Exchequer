@@ -296,7 +296,7 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
             </button>
             <button type="button" className="ev-file" onClick={() => files.report('text')} disabled={files.busy !== null}>Text<span className="visually-hidden"> of the signed report</span></button>
             <button type="button" className="ev-file" onClick={() => files.graph('graphml')} disabled={files.busy !== null}>Graph file<span className="visually-hidden"> (GraphML)</span></button>
-            <CaseBundleButton caseId={result.case_id} />
+            <CaseBundleButton caseId={result.case_id} redacted={result.redacted} />
           </div>
         ) : (
           <p className="note">{recorded

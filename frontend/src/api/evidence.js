@@ -223,6 +223,10 @@ export async function fetchBundleFiles() {
 
 export async function fetchBundle(caseId) {
   const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/bundle`)
-  if (!response.ok) throw await toError(response)
+  if (!response.ok) {
+    const error = await toError(response)
+    error.status = response.status // 403: this browser may not bundle the case, so the button stops offering it
+    throw error
+  }
   return response.blob()
 }

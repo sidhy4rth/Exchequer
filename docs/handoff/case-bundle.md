@@ -12,6 +12,9 @@
 - Server (#187): `backend/app/case_bundle.py` builds the zip, `backend/app/routes/case_bundle.py` serves
   `GET /trace/{id}/bundle` and the probe `GET /case-bundle`, tests in `backend/tests/test_case_bundle.py`.
 - Button (stacked PR on `feat/case-bundle-screen`): "Case bundle" beside the report files on the Evidence tab.
+  It is not shown where the case as served already names what it withheld (`redacted`, case_privacy.py), which
+  happens only for a browser that did not trace it; after any 403 it is disabled and says why. Nothing new
+  is asked of the server to decide this (security review, 14 Nov).
 
 ## Decisions
 
