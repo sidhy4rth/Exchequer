@@ -155,3 +155,9 @@ def test_g7_statements_1_goes_down_and_up_again_keeping_the_cases():
     assert models.get_case("case-1") is not None
     models.init_db()
     assert "statement_imports" in set(inspect(models._engine).get_table_names())
+
+
+@pytest.mark.parametrize("reasons", [[["utr"]], [{"utr": 1}], 5, "utr", None])
+def test_reasons_of_the_wrong_shape_are_refused_not_a_server_error(reasons):
+    with pytest.raises(StatementError, match="Row 2: say why it is kept"):
+        save([UTR_ROW, {**UTR_ROW, "reasons": reasons}])
