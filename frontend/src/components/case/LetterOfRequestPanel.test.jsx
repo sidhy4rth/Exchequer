@@ -62,6 +62,17 @@ describe('the letter of request panel', () => {
     expect(screen.getByLabelText('Treaty or convention')).toBeInTheDocument()
   })
 
+  it("holds each field to the server's limit, so a long one is never refused without saying which", () => {
+    render(<LetterOfRequestPanel result={CASE} offered />)
+    // backend letters_of_request.FIELDS
+    const limits = { 'Requested country': 80, Court: 200, 'Presiding officer': 120, 'FIR / case number': 120,
+      'Investigating agency': 200, 'Offences and maximum penalties': 1500, Limitation: 500, 'What happened': 4000,
+      "Exchange's registered office": 300, Urgency: 300, 'Liaison officer': 500 }
+    for (const [label, max] of Object.entries(limits)) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('maxLength', String(max))
+    }
+  })
+
   it("shows the server's refusal, and a changed detail clears an old draft", async () => {
     api({ 'POST /trace/c1-abcdef12/letter-of-request': { status: 400, body: { detail: 'Name the treaty or convention the request is made under.' } } })
     const user = userEvent.setup()
