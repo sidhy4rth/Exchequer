@@ -102,10 +102,13 @@ export async function updateRequest(requestId, changes) {
 }
 
 /** A second signed-in officer of the drafter's unit approves an urgent freeze
- * letter. The header shows the server the app sent it, not a cross-site form. */
-export async function signOffRequest(requestId) {
+ * letter. The header shows the server the app sent it, not a cross-site form.
+ * A bank hold is approved for its `details` (the ones on this screen) only. */
+export async function signOffRequest(requestId, details) {
   return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}/signoff`, {
-    method: 'POST', headers: { 'X-Exchequer-Request': '1' },
+    method: 'POST',
+    headers: { 'X-Exchequer-Request': '1', ...(details ? { 'Content-Type': 'application/json' } : {}) },
+    ...(details ? { body: JSON.stringify({ details }) } : {}),
   }))
 }
 

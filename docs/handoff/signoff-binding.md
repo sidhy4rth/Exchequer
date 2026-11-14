@@ -3,21 +3,29 @@
 - **Feature**: suite feature 7 follow-up to #99: a second officer's sign-off on an urgent bank hold covers only the exact details they approved
 - **Issue**: #132
 - **Branch**: `feat/signoff-binding`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: claimed; tests and fix in progress
+- **Status**: done in #133, waiting for review
 
 ## Done
 
-- Confirmed the gap: `freeze_requests.approval(case_id, kind, user)` finds any signed-off `bank-freeze` row for the case, and `POST /trace/{id}/notice` prints "Approved by a second officer" on a letter with whatever account, IFSC, amount and order the body carries.
+- Confirmed the gap: `freeze_requests.approval(case_id, kind, user)` found any signed-off `bank-freeze` row for the case, so `POST /trace/{id}/notice` printed "Approved by a second officer" on a letter with any account, IFSC, amount or order.
+- `notice_letters.fingerprint(case_id, to, details)`: SHA-256 over a canonical JSON of the case id, the notice and the hold's details as the letter prints them (`_hold`: account without spaces, IFSC upper-cased, amount as two-decimal rupees or none). `None` for the notices without a sign-off. The hold's draft prints its first 16 hex characters.
+- `freeze_requests`: a bank hold is put up for sign-off (`POST /requests` or `PATCH /requests/{id}` to `awaiting_signoff`) only with `details`; only the fingerprint is stored (`details_fingerprint`, migration `g7_signoff_binding_1`). The sign-off (`POST /requests/{id}/signoff`) must carry the details on the second officer's screen, and they must give the same fingerprint (409 if not). `approval()` counts a hold's sign-off only for a letter whose details give that fingerprint.
+- The audit rows `request.signoff_ask` and `request.signoff` carry the fingerprint's first 16 hex characters for a hold; never a detail.
+- Letters tab: Ask for sign-off and Sign off send the hold's typed details; the Second officer card shows the fingerprint the request covers.
+- Tests: `backend/tests/test_notice_letters.py` (reproduces the bug for each detail, normalisation, refusals, fresh sign-off, audit and store hold no account number); `frontend/src/components/case/NoticeForm.test.jsx` (two).
 
 ## Decisions
 
-- Bind with a fingerprint: SHA-256 over a canonical JSON of the case id, the notice kind and the details as the letter prints them (after its own normalisation), stored on the request when it is put up for sign-off.
+- A new column rather than reusing one: no existing column of `freeze_requests` means "what was approved" (`notes` and `reference` are the drafter's to edit).
+- The fingerprint covers what the letter prints, so typing differences the letter erases ("2,50,000" vs 250000, spaces in the account, lower-case IFSC) still match; any printed difference (bank name, source, order, amount) needs a fresh sign-off.
+- Plain SHA-256, not keyed: the deployment has no general server secret. The fingerprint covers free text (order, source) as well as the account number, which makes guessing an account from it impractical.
+- A hold signed off before this change has no fingerprint, so its letter reads "Awaiting" until the drafter closes the request and asks again.
 
 ## Next
 
-1. Tests first in `backend/tests/test_notice_letters.py`, then the fix.
+1. Review and merge #133. If #122 or #124 merges first, re-point `down_revision` of `backend/migrations/versions/g7_signoff_binding_1.py` to the new head.
 
 ## Open questions
 
@@ -25,4 +33,4 @@
 
 ## Files mid-change (do not touch)
 
-- `backend/app/notice_letters.py`, `backend/app/freeze_requests.py`, `backend/app/routes/evidence.py`, `backend/app/routes/requests.py`: the binding
+- none
