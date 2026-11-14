@@ -7,6 +7,7 @@ import { plain } from '../../text'
 import { ist, middle, mmss, num, txUrl } from './format'
 import ExhibitsPanel from './ExhibitsPanel'
 import IdentifiersPanel from './IdentifiersPanel'
+import TasksPanel from './TasksPanel'
 
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
@@ -343,6 +344,7 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
         {result.warnings?.length > 0 && result.warnings.map((w) => <p className="note" key={w}>! {w}</p>)}
       </div>
     </details>
+    <TasksPanel result={result} />
     <ExhibitsPanel result={result} />
     <IdentifiersPanel result={result} />
   </>
