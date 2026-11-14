@@ -9,7 +9,7 @@
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
 [![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer.co.in)
-[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-65.3M-C0392B)](https://exchequer.co.in/risk-labels?chain=tron)
+[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-68.4M-C0392B)](https://exchequer.co.in/risk-labels?chain=tron)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -43,8 +43,8 @@
 
 <table>
 <tr>
-<td align="center"><h3>65.3M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
-<td align="center"><h3>31.9M</h3>address-poisoning<br>wallets<br><sub>found by on-chain scans</sub></td>
+<td align="center"><h3>68.4M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
+<td align="center"><h3>68.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists</sub></td>
 <td align="center"><h3>25,508</h3>exchange addresses<br><sub>incl. 24,025 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
@@ -323,6 +323,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /trace/{case_id}` | Retrieve a stored case |
 | `GET /trace/{case_id}/report?format=text` | The investigator's report (`format=json` for structured): summary, finding and basis, the path hop by hop with amounts, times and hashes, every pattern with its thresholds, every inference with its evidence, screening hits with their sources, limitations, and an appendix of every address and transaction hash |
 | `GET /trace/{case_id}/letters` | Which request letters the case supports: the urgent freeze letters first, then the information letters (to the exchange, to Tether) |
+| `GET /trace/{case_id}/statements` | The bank and exchange statement rows kept with the case that this browser or unit may read, and the exchange names a narration is matched against (behind `EXCHEQUER_STATEMENT_IMPORT`; while it is off the list says so) |
+| `POST /trace/{case_id}/statements` | Keeps the statement rows the officer confirmed, each with why (amount and date, UTR, exchange name or transaction hash), never the whole statement; audited by counts only (403 while the flag is off) |
 | `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether; `to=exchange-freeze` or `to=tether-freeze` for the urgent "hold these funds now" letter) |
 | `POST /trace/{case_id}/notice` | A draft notice to a bank (`to=bank-info`; `to=bank-freeze` for an urgent debit freeze, which needs the Magistrate's order and a second officer's sign-off) or a telecom operator (`to=telecom`), from the case and the account or phone details in the request body, never the URL |
 | `GET /cases` | History of past traces |
