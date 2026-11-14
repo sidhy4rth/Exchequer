@@ -15,12 +15,14 @@ export const KINDS = {
   telegram: 'Telegram username',
   phone: 'Phone number',
   upi: 'UPI ID',
+  wallet: 'Wallet address',
 }
 const HINTS = {
   domain: 'e.g. scam-shop.in or the full link',
   telegram: 'e.g. @crypto_help or t.me/crypto_help',
   phone: 'e.g. +91 98xxx xxxxx',
   upi: 'e.g. shop.pay@okaxis',
+  wallet: 'e.g. 0x… (EVM) or T… (Tron)',
 }
 
 /** One history entry in words. An unknown kind of entry shows its own name. */

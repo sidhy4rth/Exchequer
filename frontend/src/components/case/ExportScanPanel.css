@@ -10,3 +10,4 @@
 .export-scan .xs-seeds ul { margin: 6px 0; padding-left: 18px; font-size: 13px; }
 .export-scan .xs-table .xs-value { overflow-wrap: anywhere; font-size: 12px; }
 .export-scan .xs-table .xs-where { white-space: nowrap; }
+.export-scan .xs-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }

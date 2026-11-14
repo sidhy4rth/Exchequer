@@ -55,6 +55,14 @@ describe('the reported identifiers panel', () => {
     expect(screen.getByText(/Reported identifiers · 1/)).toBeInTheDocument()
   })
 
+  it('names a wallet address from the export scan by its kind', async () => {
+    const wallet = { ...ROW, kind: 'wallet', value: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', entered: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', context: 'Found by the export scan' }
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [wallet] } } })
+    open()
+    expect(await screen.findByText('· Wallet address')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Look up/ })).toBeNull()
+  })
+
   it('does not repeat the value as typed when it was typed as kept', async () => {
     api({ 'GET /trace/c1/identifiers': { body: { identifiers: [{ ...ROW, entered: 'scam-shop.in', context: '' }] } } })
     open()

@@ -2,7 +2,7 @@
 
 - **Feature**: an officer scans a phone or computer export (CSV, TSV, XML, JSON, HTML, text) in the browser for wallet addresses, transaction hashes and seed phrases
 - **Issue**: #145
-- **Branch**: `feat/forensic-import` (stacked: `feat/forensic-import-checks`, `feat/forensic-import-scan`, `feat/forensic-import-panel`)
+- **Branch**: `feat/forensic-import` (stacked: `feat/forensic-import-checks`, `feat/forensic-import-scan`, `feat/forensic-import-panel`, `feat/forensic-import-identifiers`)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
 - **Status**: slice 1 (format-agnostic, in-browser scan) in review, behind `EXCHEQUER_EXPORT_SCAN`
@@ -22,6 +22,13 @@
   4. The panel `ExportScanPanel.jsx` on the case's Evidence tab: a summary, possible seed phrases
      ("12 BIP-39 words at line 40, hidden" and a note to secure the device), and tables of
      addresses and hashes with a "Trace" / "Trace from this payment" link (`find.js::findTarget`).
+  5. Pre-review fixes (14 Nov): markup read through in a seed run, UTF-16 without a byte-order
+     mark, 64-hex values named for what they may be, table captions and link names.
+- Add as case identifier (PR stacked on #156, branch `feat/forensic-import-identifiers`): a `wallet`
+  kind in `identifiers.py` (feature 4), checked by the trace form's address rules; each address row
+  in the panel has "Add as case identifier", which sends that one address (kind `wallet`, and the
+  fixed note "Found by the export scan") to `POST /trace/{case_id}/identifiers`. The identifiers
+  route audits the kind only. Already on the case shows as such (409).
 
 ## Decisions
 
@@ -38,19 +45,19 @@
   recognised by its NUL in every other byte instead of being called binary.
 - An EVM address cannot say its chain; the trace link opens the trace form on Ethereum, which
   the officer can change (the console search box's `findTarget` rule).
-- No "add as case identifier": `identifiers.py` has no wallet kind. Adding one is feature 4's call.
+- A found address is saved to the case only when the officer clicks "Add as case identifier" on
+  its row, and only that address is sent. Hashes are not offered: there is no hash kind.
 
 ## Next
 
 1. Vendor importers, once sample exports exist: Cellebrite UFDR (zip with `report.xml`),
    Magnet AXIOM (case.mfdb / CSV), MSAB XRY (XML), Oxygen, Autopsy. Each would map a hit to
    its artefact (chat, note, app) instead of a line number.
-2. Optionally: a wallet kind in the identifier register so a found address can be saved to the case.
-3. Turn `EXCHEQUER_EXPORT_SCAN` on in production once reviewed (render.yaml, a separate PR).
+2. Turn `EXCHEQUER_EXPORT_SCAN` on in production once reviewed (render.yaml, a separate PR).
 
 ## Open questions
 
-- Owner: should a found address be saved to the case (needs a wallet kind in identifiers, feature 4)?
+- none
 
 ## Files mid-change (do not touch)
 

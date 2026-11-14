@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchExportScan, recordExportScan } from '../../api'
+import { addWalletIdentifier, fetchExportScan, recordExportScan } from '../../api'
 import { findTarget } from '../../find'
 import { size } from './ExhibitsPanel'
 import { scanFile } from './exportScan'
@@ -53,6 +53,28 @@ function Found({ title, rows, what, action }) {
       </table>
     </div>
     {rows.length > FIRST_ROWS && <button type="button" className="quiet" aria-expanded={all} onClick={() => setAll((v) => !v)}>{all ? 'Show fewer' : `Show all ${rows.length}`}</button>}
+  </>
+}
+
+const ADDED = { added: 'Added to the case', duplicate: 'Already on the case' }
+
+/** Save one found address to the case's identifiers (identifiers.py, kind wallet): only
+ * this address is sent, when the officer clicks; the audit row holds its kind, not it. */
+function AddWallet({ caseId, value }) {
+  const [state, setState] = useState(null) // null, 'busy', 'added', 'duplicate', or an error message
+  if (ADDED[state]) return <span className="note" role="status">{ADDED[state]}</span>
+  async function add() {
+    setState('busy')
+    try {
+      const out = await addWalletIdentifier(caseId, value)
+      setState(out.duplicate ? 'duplicate' : 'added')
+    } catch (err) { setState(err.message || 'Could not add it.') }
+  }
+  return <>
+    <button type="button" className="quiet" disabled={state === 'busy'} onClick={add}>
+      Add as case identifier <span className="visually-hidden">{value}</span>
+    </button>
+    {state && state !== 'busy' && <span className="error-line" role="alert">{state}</span>}
   </>
 }
 
@@ -133,7 +155,10 @@ export default function ExportScanPanel({ result }) {
             </div>
           )}
           <Found title="Addresses" rows={found.addresses} what={(f) => CHAIN[f.kind]}
-            action={(f) => <Link to={findTarget(f.value)}>Trace <span className="visually-hidden">{f.value}</span></Link>} />
+            action={(f) => <span className="xs-actions">
+              <Link to={findTarget(f.value)}>Trace <span className="visually-hidden">{f.value}</span></Link>
+              <AddWallet key={`${found.name}-${f.value}`} caseId={caseId} value={f.value} />
+            </span>} />
           <Found title="64-hex values" rows={found.hashes} what={(f) => HASH[f.kind]}
             action={(f) => <Link to={findTarget(f.value)}>Trace from this payment <span className="visually-hidden">{f.value}</span></Link>} />
           {!found.addresses.length && !found.hashes.length && !found.seeds.length && <p className="note">Nothing of these kinds was found in this file.</p>}

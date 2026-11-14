@@ -101,6 +101,36 @@ describe('ExportScanPanel', () => {
     errors.mockRestore()
   })
 
+  it('adds the one address clicked to the case as a wallet identifier, and nothing else', async () => {
+    const calls = api({
+      ...ON,
+      'POST /trace/c1/identifiers': { status: 201, body: { identifier_id: 'i1', kind: 'wallet', value: TRON } },
+    })
+    show()
+    const text = `pay ${TRON}\nor ${EVM}\ntx ${TX_TRON}\n${SEED}\n`
+    await userEvent.upload(await screen.findByLabelText('Export file'), new File([text], 'chats.csv'))
+    const adds = await screen.findAllByRole('button', { name: /^Add as case identifier/ })
+    expect(adds).toHaveLength(2) // the addresses; a 64-hex value is no wallet
+    await userEvent.click(screen.getByRole('button', { name: `Add as case identifier ${TRON}` }))
+    expect(await screen.findByText('Added to the case')).toBeInTheDocument()
+
+    const posted = calls.filter((c) => c.method === 'POST' && c.path === '/trace/c1/identifiers')
+    expect(posted.map((c) => c.body)).toEqual([{ kind: 'wallet', value: TRON, context: 'Found by the export scan' }])
+    const everything = JSON.stringify(calls)
+    for (const value of [EVM, TX_TRON, 'abandon', 'chats.csv']) expect(everything).not.toContain(value)
+  })
+
+  it('says when the address is already on the case, and shows a refusal', async () => {
+    api({
+      ...ON,
+      'POST /trace/c1/identifiers': { status: 409, body: { detail: 'This wallet address is already recorded for this case.' } },
+    })
+    show()
+    await userEvent.upload(await screen.findByLabelText('Export file'), new File([`pay ${TRON}\n`], 'n.txt'))
+    await userEvent.click(await screen.findByRole('button', { name: `Add as case identifier ${TRON}` }))
+    expect(await screen.findByText('Already on the case')).toBeInTheDocument()
+  })
+
   it('says a seed run spanning lines by its first and last line', () => {
     expect(seedLine({ line: 2, endLine: 13, words: 12 })).toBe('12 BIP-39 words at lines 2 to 13, hidden')
   })
