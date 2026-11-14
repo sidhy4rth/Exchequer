@@ -1,0 +1,547 @@
+# Exchequer: a guide for investigating officers
+
+This guide is for the officer working a crypto-fraud case, not for developers.
+It is organised by what you are trying to do. For each task it says where the
+feature is in the app, the steps, what Exchequer records (and what it never
+records), and the limits you should know before you rely on it.
+
+Each section is marked:
+
+- **Live**: on the site today.
+- **Coming: behind a switch until reviewed**: built and in review. Once merged
+  it stays switched off until the team has tried it and turns it on.
+- **Coming: in review**: built and in review, with no switch. It appears on
+  the site once it is merged.
+
+Status is as of 14 November 2026. `docs/suite-features.md` tracks it for the
+team.
+
+## Rules that hold everywhere
+
+- **Never type, paste or photograph a seed phrase or private key** into any
+  field. Every free-text field refuses text shaped like one (twelve or more
+  seed words in a row, a raw key, an extended private key).
+- **An attribution names an exchange address, not a person.** Only the
+  exchange can say which customer owns it, and only on a lawful request.
+- **Every draft is a draft.** Letters, notices and certificates are filled with
+  what the case holds and what you typed. You check them, fill the marked
+  blanks, and sign them. Nothing Exchequer produces is "certified".
+- **Who sees your records.** Registers (exhibits, identifiers, frozen funds and
+  the rest) can be read by the browser that made them and by your unit.
+  Another unit's records are never shown to you, not even as a count.
+- **Mistakes are withdrawn, not deleted.** Registers keep every change in a
+  dated history: who, when, what changed and why.
+- **The audit trail records who did what, never what you typed.** It holds the
+  action, the case and which fields changed. It never holds a note, an account
+  number, a phone number, a handle, a reason or a seed phrase.
+- **A recorded example is not a case.** The verified examples on the New trace
+  page open without tracing. To draft letters or keep records, press **Trace
+  live**: it traces the address again and stores it as a case.
+
+## Contents
+
+1. [Trace the money](#1-trace-the-money)
+2. [Record evidence and keep its chain of custody](#2-record-evidence-and-keep-its-chain-of-custody)
+3. [Draft notices and letters](#3-draft-notices-and-letters)
+4. [Track tasks and deadlines](#4-track-tasks-and-deadlines)
+5. [Check an export from a seized phone or computer](#5-check-an-export-from-a-seized-phone-or-computer)
+6. [Import a bank statement or call records](#6-import-a-bank-statement-or-call-records)
+7. [Look up a domain or Telegram username](#7-look-up-a-domain-or-telegram-username)
+8. [Keep seized crypto in a multisig wallet](#8-keep-seized-crypto-in-a-multisig-wallet)
+9. [Download the case bundle](#9-download-the-case-bundle)
+
+---
+
+## 1. Trace the money
+
+**Live.**
+
+**Where:** **New trace** in the side menu. The case then opens with five tabs:
+Flow, Timeline, Entities, Evidence and Letters. **Cases** lists your stored
+cases; **Bulk intake** traces a CSV of complaints as one batch.
+
+**Steps**
+
+1. Paste the wallet the victim paid into (0x… on Ethereum-family chains,
+   T… on Tron) and choose the chain and asset.
+2. If the victim gave you payment hashes, open **Victim's payments** and paste
+   them, one per line. Where tracing from a payment hash is switched off, the
+   form says so and asks for the wallet instead.
+3. Add the NCRP acknowledgement number if you have it. It is never put in
+   links or logs.
+4. Choose how far to follow, and the direction: **where the money went**, or
+   **Trace who paid in** to find the addresses that funded it.
+5. Press **Start trace**. The Flow tab shows where the money went; the
+   Evidence tab lists the route transfer by transfer, each with its hash and a
+   link to the block explorer.
+6. On the Evidence tab, **Re-read from a second provider** checks the cited
+   transfers against another data source.
+7. Under **Signed report**, download the report as PDF or text, or the graph
+   file. Anyone can check a copy of the report on the **Verify a report** page.
+
+**What it records:** the case, every provider response it read (each hashed,
+listed in the report's evidence manifest), and the signed report.
+
+**Limits**
+
+- A match names the exchange address where the funds arrived, and how sure the
+  trace is (a labelled deposit address, an inferred one, a wallet the exchange
+  runs, or an explorer's tag). It does not name the account holder.
+- A trace stops at a mixer. It follows one asset, and one swap into USDT or
+  USDC at a known router; other swaps and bridges end the trail.
+- The walk follows the ten largest counterparties of each address, so money
+  split into many small parts can be missed. The Evidence tab's **Scope and
+  evidence** section says what was left out.
+- Screening is only as complete as its lists. An address on no list is not
+  thereby clean; a foreign sanctions listing is a lead, not a finding.
+
+The full list is in the README's Limitations section and in every report.
+
+---
+
+## 2. Record evidence and keep its chain of custody
+
+**Live.**
+
+**Where:** the case's **Evidence** tab, the **Exhibits** panel ("forensic
+files, by their hashes"), and under it **Draft the s.63(4) certificate**.
+
+**Steps: record a file**
+
+1. Press **Record a forensic file**. Choose the kind (phone extraction, disk
+   image, memory capture, tool report, video, document, other).
+2. Enter what it is, the tool and version, the date made, who made it, who
+   holds it and where it is kept.
+3. Enter the SHA-256 the tool printed (SHA-1 and MD5 too, if the tool gave
+   them), or use **Fill the SHA-256 from the file**: the browser computes the
+   hash on your computer. The file is never uploaded; only the hashes are sent.
+4. Press **Add to the exhibits**.
+
+**Steps: custody and checks**
+
+- **Hand over**: record to whom, when and why. Each hand-over is added to the
+  exhibit's history; nothing is overwritten.
+- **Check a file against this exhibit**: pick the file and the browser hashes
+  it and says whether it matches the recorded SHA-256. A large disk image
+  takes time (about 20 minutes for 64 GB).
+- **Release or destroy** ends the exhibit's custody, with a reason.
+  **Add a note** records something like "seal checked, intact".
+
+**Steps: the s.63(4) certificate**
+
+1. Press **Draft the s.63(4) certificate** and choose what it covers:
+   **Forensic files from the register**, or **Exchequer's report of this
+   case**.
+2. For files, tick the exhibits and describe the source device for Part A.
+   For the report, pick the report file you downloaded: it must be a genuine,
+   unchanged report of this case, checked the way the Verify page checks it.
+3. Press **Download the draft (PDF)**.
+
+The wording is the certificate in the Schedule of the Bharatiya Sakshya
+Adhiniyam, 2023 (s.63(4)(c)), copied by script from the official text on India
+Code. Part A is filled from the register and what you typed; **Part B is left
+blank for the expert**, who fills it from their own check. Names, date, time
+and place are written by hand when signing.
+
+**What it records:** each exhibit with its hashes and a dated history of every
+hand-over, check and note. The device details you type for a certificate go
+into the PDF and are kept nowhere.
+
+**Limits**
+
+- The register records the hash you give it. It proves a file is unchanged
+  since that hash was recorded, not that the extraction was done properly.
+- The certificate is a draft until it is signed. It is not valid on its own.
+
+---
+
+## 3. Draft notices and letters
+
+**Where:** the case's **Letters** tab. Freeze requests and the requests log
+need a stored case.
+
+### Letters to an exchange, Tether or an instant exchanger
+
+**Live.**
+
+**Steps**
+
+1. Open the Letters tab. Exchequer offers the letters the case supports:
+   urgent freeze letters first, then information requests, to the exchange,
+   to Tether (where USDT is involved), or to an instant exchanger.
+2. Read the draft. **Checked for you** lists what Exchequer checked against the
+   case; **For you to fill** lists every blank: who is writing, the FIR or
+   complaint reference, the victim's payments, the legal provision and the
+   exchange's law-enforcement channel. The provision is left blank with a
+   bracketed suggestion for you to confirm or replace.
+3. **PDF** prints the letter or saves it as a PDF; **Copy text** copies it.
+4. An **urgent freeze letter** needs a second officer: press **Ask for
+   sign-off**, and another signed-in officer or supervisor of your unit
+   presses **Sign off**. You cannot sign off your own letter. Until then it
+   cannot be marked as sent.
+5. After sending it by the exchange's own channel, press **Mark as sent**. It
+   then appears in **Freeze requests** below, and on the **Requests** page,
+   where you record what came back: acknowledged, frozen (with the amount),
+   declined or closed. A sent request with no reply is flagged for follow-up
+   after 7 days.
+
+**What the letter asks** depends on what the case holds about the address: the
+customer behind a labelled deposit address; whether an inferred address is the
+exchange's, then the customer; for a wallet the exchange runs itself, the
+accounts behind the listed transactions only; for an explorer's tag, only
+whether the address is theirs.
+
+### Notices to a bank or a phone company
+
+**Live.**
+
+**Steps**
+
+1. On the Letters tab, under **Notice to**, choose **Bank** or **Phone
+   company**.
+2. Bank: choose **Information** (who holds the account, its statement for a
+   period, what is linked to it, login records) or **Urgent hold**. Enter the
+   bank, account number, IFSC and where you got them. A hold needs the
+   Magistrate's order (number, date, court); the draft is refused without it.
+3. Phone company: the operator, the number, where you got it, and the period.
+4. Press **Draft the letter**. Changing a detail asks for a fresh draft. An
+   urgent hold needs a second officer's sign-off, as above.
+
+**What it records:** which notice was drafted, and the request once you log
+it. The account number, IFSC and phone number go into the letter and nowhere
+else: not the URL, not the audit trail, not the store.
+
+**Limits:** today a sign-off on a bank hold is tied to the case and the kind of
+letter, not to the account details. A fix that ties it to the exact details
+approved is in review (PR #133). Until it is merged, if any detail of a hold
+changes after sign-off, close that request and ask for a fresh sign-off.
+
+### A letter of request to a foreign country
+
+**Coming: in review** (PRs #126, #127, #130, #136, #158).
+
+When the exchange holding the money is abroad and will not answer a notice,
+its records can come only through a letter of request: a Criminal Court issues
+it on the investigating officer's application, and the Central Government
+transmits it.
+
+**Where:** the Letters tab, a **Letter of request abroad** card under the frozen
+and seized funds. It shows only when the case supports a letter to an exchange
+or instant exchanger.
+
+**Steps**
+
+1. Fill the form: the basis (a treaty or convention, or an assurance of
+   reciprocity; Exchequer never chooses it for you), the treaty if any, the
+   requested country, the Court and presiding officer, the FIR, your agency,
+   the offences, limitation, what happened, the exchange's registered office,
+   urgency and the liaison officer.
+2. Press **Draft the letter of request**, then read, download (.txt) or copy
+   it. Nothing you type is kept.
+3. **Log it in the requests log** to track it (drafted, sent, acknowledged,
+   declined, closed). A sent letter of request is flagged for follow-up after
+   30 days, an internal reminder the team chose, not a legal or MHA deadline.
+
+**What the draft holds:** the sections and order of the MHA's format
+(Guidelines, F. No. 25016/52/2019-LC, 4 December 2019, Figure 3.5), the MHA's
+fixed wording, and the facts of the case: the payments, each hop, the claim
+about the exchange address, and any request already sent to that exchange.
+Notes for you come first, marked to be removed: the MHA's route, the checklist
+of what goes with the draft, and whether the MHA's 2019 list of treaty
+countries names the country you typed.
+
+**Limits**
+
+- It is not a letter of request until the Court issues it under its seal.
+- The guidelines name CrPC s.166A as the power; its successor is BNSS s.112.
+  The draft says so and asks you to confirm the provision with the Director of
+  Prosecution.
+- No offence or treaty is suggested. The treaty list is the MHA's as of 4
+  December 2019 and may have changed: confirm with the MHA (IS-II Division).
+
+---
+
+## 4. Track tasks and deadlines
+
+### Court deadlines and follow-ups
+
+**Live.**
+
+- **Court deadlines** on the Console (home page) lists frozen or seized funds
+  whose court order on custody falls due this week (see section 8). The
+  deadline is 45 days from seizure, as the asset register explains (BNSS
+  s.497, as the Karnataka High Court has read it).
+- **Requests** (side menu) and each case's **Freeze requests** panel show
+  requests waiting for a reply and flag those sent 7 or more days ago.
+
+### A task list per case
+
+**Coming: in review** (PRs #122, #123, #124).
+
+**Where:** the Evidence tab, a **Tasks** panel first among the registers, and a
+**Tasks due** card on the Console under the court deadlines.
+
+**Steps**
+
+1. **Add a task**: a title, who it is assigned to (a name), an optional due
+   date and notes.
+2. **Mark done** takes one click. **Drop…** and **Open again…** ask why.
+3. **Suggested from this case's records**: Exchequer suggests tasks from what
+   the case already says: follow up a request with no reply, get a second
+   officer's sign-off, send an approved freeze letter, record funds an
+   exchange froze in the asset register, and get the court's order on custody
+   of held funds (due on the register's own deadline). **Add as a task** takes
+   it; **Not needed…** declines it with a reason, so it does not come back.
+
+**What it records:** each task with a dated history of every change. The audit
+trail records which fields changed and the new status, never the text.
+
+**Limits:** suggestions come only from the records you can read. A task nobody
+recorded will not be suggested.
+
+---
+
+## 5. Check an export from a seized phone or computer
+
+**Coming: behind a switch until reviewed** (PRs #147, #154, #155, #156, #164;
+switch `EXCHEQUER_EXPORT_SCAN`).
+
+**Where:** the Evidence tab, an **Export scan** panel ("addresses, hashes and
+seed phrases in a phone or computer export").
+
+**Steps**
+
+1. Export the extraction from your forensic tool as text (CSV, TSV, XML, JSON,
+   HTML or plain text). A binary file is detected and you are asked for a text
+   export instead.
+2. Pick the file. It is read on your computer, with progress and a **Stop**
+   button. Nothing in it is sent.
+3. Read the results:
+   - **Possible seed phrases**: shown as, for example, "12 BIP-39 words at line
+     40, hidden". The words are never shown or kept. Whoever holds them
+     controls the wallet: secure the device and follow your procedure for
+     seized wallets.
+   - **Addresses**: each with its chain family and line numbers, a **Trace**
+     link, and **Add as case identifier**.
+   - **Transaction hashes**: with **Trace from this payment**.
+
+**What it records:** only that a scan ran, with counts (lines, size, addresses,
+hashes, seed-phrase runs). Never a value, a word or the file name. An address
+you add as an identifier is recorded on the case; the audit trail holds its
+kind, not the address.
+
+**Limits**
+
+- An Ethereum-style address is the same on every EVM chain; the address alone
+  does not say which chain was used.
+- A 64-character hash without 0x may be a Tron transaction or any SHA-256 (a
+  file hash, for example).
+- Seed-phrase detection looks for twelve or more list words in a row. A phrase
+  split up or written differently may be missed.
+
+---
+
+## 6. Import a bank statement or call records
+
+**Coming: behind a switch until reviewed.** Statements: PRs #146, #151, #152,
+#153, switch `EXCHEQUER_STATEMENT_IMPORT`. Call detail records: PRs #168, #172,
+#173, switch `EXCHEQUER_CDR_IMPORT`. Withdrawing an import: PRs #183, #184.
+
+### Bank or exchange statement
+
+**Where:** the Evidence tab, **Bank and exchange statements** ("rows lined up
+with the trace").
+
+**Steps**
+
+1. Choose bank or exchange and the currency, then pick the statement as a CSV.
+   It is read in your browser.
+2. Check the columns Exchequer guessed (date, narration, reference, debit,
+   credit and so on), and add the rupee amounts the complaint reports.
+3. Exchequer shows the rows worth a look and why: same amount within 2 days of
+   a payment, a UTR or RRN, a narration naming a known exchange, or a hash that
+   appears in the trace. A timeline puts them beside the trace.
+4. Untick any row you do not want, and **Save**. Only the ticked rows are sent.
+
+### Call detail records
+
+**Where:** the Evidence tab, **Call detail records** ("contacts and handsets,
+read in this browser").
+
+**Steps**
+
+1. Pick the CDR as a CSV (save an XLSX as CSV first) and check the columns.
+2. Read the summary: the CDR's own number, top contacts by calls and SMS or by
+   call time, handsets (IMEI) and SIMs (IMSI) and how often they changed, and
+   the most used first cells. Numbers already on this case's phone identifiers
+   are marked.
+3. Tick numbers to check against your other cases: only the ticked numbers are
+   sent, and only cases you can already read are searched.
+4. Tick the contacts and handsets to keep and save the summary. The CDR's rows
+   are never sent.
+
+**Withdraw an import entered by mistake:** **Withdraw…** with a reason. It is
+kept, marked withdrawn with who, when and why, and hidden unless you choose
+**Show withdrawn**.
+
+**What it records:** only the rows or summary you ticked. The audit trail holds
+counts only: never an account number, reference, narration, phone number or
+IMEI.
+
+**Limits**
+
+- A matched row is a lead for a notice to the bank or exchange, not a finding.
+- A phone number is a lead, not a person: subscriber details come from the
+  operator under a lawful request.
+- No exchange rates are used: a payment matches a statement row only in the
+  same currency.
+
+---
+
+## 7. Look up a domain or Telegram username
+
+### Reported identifiers and domain lookups
+
+**Live.**
+
+**Where:** the Evidence tab, **Reported identifiers** ("sites, usernames,
+phones, UPI IDs").
+
+**Steps**
+
+1. **Add a reported identifier**: a scam site's domain, a Telegram username, a
+   phone number or a UPI ID the victim reported. It is kept as typed and in a
+   standard form, so the same one matches across cases.
+2. **Also in N other cases** shows where the same identifier was reported in
+   other cases you can read, with links to them.
+3. For a domain, **Look up public records** (signed-in officers only) shows the
+   registrar, when it was registered and its age when looked up, the abuse
+   contact, name servers, where it points, and every source with its SHA-256.
+4. **Withdraw** a wrong entry with a reason; **Add a note** at any time.
+
+**What it records:** each identifier with its history, and each lookup's raw
+responses as evidence (kept with the case, not shown). The audit trail holds
+the kind of identifier, never its value.
+
+**Limits**
+
+- Lookups read only public records: IANA's registry list, the registry it
+  names, and a public DNS resolver. Registrant details are not shown; they are
+  usually redacted, and only the registrar can name its customer.
+- A domain's age is its age when looked up, not before the case.
+
+### Telegram usernames
+
+**Coming: behind a switch until reviewed** (PRs #162, #169, #170; switch
+`EXCHEQUER_TELEGRAM_LOOKUPS`, which also needs domain lookups on).
+
+**Where:** on an active Telegram username in **Reported identifiers**, **Read
+the public t.me page** (signed-in officers only).
+
+**What it shows:** what the public t.me page showed when read: the title, any
+verified, scam or fake badge, what kind of account the page says it is
+(channel, group, bot or a user's own account, or "The page does not say"), the
+count line, the description, and the kept response with its time and SHA-256.
+
+**Limits**
+
+- It reads one public page anyone can see without logging in. No Telegram
+  login, API or messages are used, and no link on the page is followed.
+- A page is not an identity: anyone can name an account anything, and only
+  Telegram can say who runs it.
+- Usernames shorter than 5 characters have no t.me page and are refused.
+
+---
+
+## 8. Keep seized crypto in a multisig wallet
+
+### Frozen and seized funds
+
+**Live.**
+
+**Where:** the Letters tab, **Frozen and seized**, under the freeze requests.
+
+**Steps**
+
+1. **Record frozen or seized funds**, or add one in a click from a request
+   marked Frozen. Say where it is held (the unit's custody wallet, an exchange,
+   a bank, or frozen by the token's issuer), the asset and exact amount, the
+   seizure date, who holds the keys (names only), and for custody the
+   transaction into it.
+2. Record the court's order when it comes, and the outcome (released to the
+   victim, returned to its owner, confiscated or sold) with its transaction or
+   order.
+
+**What it records:** each amount as exact text (never rounded), with a dated
+history. Never a key or seed phrase.
+
+### Custody wallets and the signing log
+
+**Coming: behind a switch until reviewed** (PRs #129, #139, #140, #142; switch
+`EXCHEQUER_CUSTODY_WALLETS`).
+
+**Where:** the Letters tab, **Custody wallets**, directly under the frozen and
+seized funds. The step-by-step checklist is `docs/custody-procedure.md` (in
+PR #142).
+
+**Steps**
+
+1. **Record a custody wallet**: the chain, the multisig address, the scheme,
+   the threshold (m of n, at least 2), each signer by name, role and unit,
+   whether a proposer may also sign, who set it up and when. Link the asset
+   register rows moved into it.
+2. **Propose a deposit or release**. A release needs the destination and the
+   court order reference before anyone signs.
+3. Each signer approves on their own hardware wallet, then the approval is
+   recorded. Each signer counts once; the proposer counts only if the scheme
+   allows it.
+4. Once the threshold is reached, broadcast, record the transaction hash, and
+   mark it confirmed on chain. Or **Cancel** with a reason.
+
+**What it records:** the wallet, every movement and who approved it. Never a
+key, seed phrase or signature: signing happens on the hardware wallets, and
+every field refuses secret-shaped text. The audit trail holds ids, steps and
+counts, never names, order references or reasons.
+
+**Limits:** Exchequer keeps the record. It does not hold, sign or move funds,
+and it cannot see a device's screen: each signer checks the amount and
+destination on their own device. The procedure is a working checklist, not
+legal advice; follow the court's order and your unit's instructions.
+
+---
+
+## 9. Download the case bundle
+
+**Coming: behind a switch until reviewed** (PRs #187, #190; switch
+`EXCHEQUER_CASE_BUNDLE`).
+
+Until then, download the signed report from the Evidence tab (section 1).
+
+**Where:** the Evidence tab, **Case bundle**, beside the PDF, Text and Graph
+file buttons of the signed report.
+
+**What is in it:** one zip with the signed report (text and PDF, exactly as the
+report download gives them), the exhibits, frozen and seized funds, requests
+and identifiers registers, each with its history, the case's audit trail, and
+`MANIFEST.txt`. The manifest lists each file's size and SHA-256, who downloaded
+it and when, and how to check the report on the Verify page.
+
+**Who can download it:** the browser or unit that traced the case. Anyone else
+holding the link is refused.
+
+**Limits**
+
+- The hashes show the files are unchanged since download. They say nothing
+  about whether the records are right.
+- The manifest itself is not signed; the report is.
+- Certificate drafts are not included: they are drafts you complete.
+- Registers still in review (tasks, custody, statements, letters of request)
+  are added once they are merged.
+
+---
+
+## Not covered here
+
+Features not yet built or not described above: imports from government
+platforms (NCRP, CFCFRMS and others), IPDR, and an India exchange label set
+(in review, PR #135). See `docs/suite-features.md`.

@@ -21,6 +21,8 @@ Status is what exists in this repository as of 2026-11-14.
 | 8 | Government platforms | NCRP and 1930, CFCFRMS, Samanvaya, Sahyog, CCTNS | Link and import; we cannot write into them without an official integration | Partly there: NCRP numbers in complaints and case references (`complaints.py`, `case_refs.py`, `payment_intake.py`), and the citizen site's complaint intake. No imports from the other platforms |
 | 9 | Custody wallet tooling | Government-controlled multisig wallets for seized crypto | Build the procedure and the records; never hold keys on our servers | Live: the asset register (`assets.py`, #101) records what was frozen or seized, who holds the keys (names only) and the 45-day court deadline, with a warning on the home page. No multisig procedure yet |
 
+A plain-English guide for officers, by task, is in `docs/officer-guide.md`.
+
 Background for each feature (what police use today, the legal powers involved,
 and how an investigator moves through the suite) is in the team's report
 "Exchequer Investigation Suite: tools, workflow and law". Ask your human for
