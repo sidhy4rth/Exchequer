@@ -91,6 +91,10 @@ export default function ExhibitsPanel({ result }) {
   // Recording a file closes its form, and checking one disables the file box while it hashes:
   // the status line that says what came of it takes the keyboard's place.
   useEffect(() => { if (said) told.current?.focus() }, [said])
+  // A hand-over, a note or an end closes its form: the exhibit's row takes the keyboard's place.
+  const [placed, setPlaced] = useState(null) // { id } of the exhibit just changed
+  const placedRow = useRef(null)
+  useEffect(() => { if (placed) placedRow.current?.focus() }, [placed])
   const [act, setAct] = useState({}) // exhibit_id → { mode: 'handover' | 'end' | 'note', holder, status, note }
   const hasher = useHasher()
 
@@ -140,7 +144,10 @@ export default function ExhibitsPanel({ result }) {
     const a = pick(ex.exhibit_id)
     const changes = a.mode === 'handover' ? { holder: a.holder ?? '', note: a.note ?? '' }
       : a.mode === 'note' ? { note: a.note ?? '' } : { status: a.status ?? 'released', note: a.note ?? '' }
-    if (await run(() => updateExhibit(ex.exhibit_id, changes))) setAct((all) => ({ ...all, [ex.exhibit_id]: {} }))
+    if (await run(() => updateExhibit(ex.exhibit_id, changes))) {
+      setAct((all) => ({ ...all, [ex.exhibit_id]: {} }))
+      setPlaced({ id: ex.exhibit_id })
+    }
   }
 
   return (
@@ -151,7 +158,7 @@ export default function ExhibitsPanel({ result }) {
           const check = lastCheck(ex)
           const a = pick(ex.exhibit_id)
           return (
-            <div className="request-row" key={ex.exhibit_id}>
+            <div className="request-row" key={ex.exhibit_id} {...(placed?.id === ex.exhibit_id ? { ref: placedRow, tabIndex: -1 } : {})}>
               <div className="top">
                 <span className="nm">{plain(ex.label)} <span className="note">· {KINDS[ex.kind] ?? ex.kind}</span></span>
                 <span className={`pill ${ex.status === 'held' ? '' : 'amber'}`}>{ex.status === 'held' ? `Held by ${plain(ex.holder) || 'the unit'}` : ENDS[ex.status]}</span>

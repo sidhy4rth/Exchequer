@@ -120,6 +120,36 @@ describe('the exhibit register panel', () => {
     expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ holder: 'Insp. Rao', note: 'for the s.63 certificate' })
   })
 
+  it('keeps the keyboard on the exhibit once a hand-over, a note or its end is recorded', async () => {
+    let rows = [ROW]
+    api({
+      'GET /trace/c1/exhibits': () => ({ body: { exhibits: rows } }),
+      'PATCH /exhibits/e1': (b) => { rows = [{ ...ROW, ...b }]; return { body: rows[0] } },
+    })
+    const user = userEvent.setup()
+    open()
+    const row = (await screen.findByText(/Accused's phone, Samsung A54/)).closest('.request-row')
+    await user.click(screen.getByRole('button', { name: 'Hand over' }))
+    await user.type(screen.getByLabelText('To whom'), 'Insp. Rao')
+    await user.type(screen.getByLabelText('Why'), 'for the s.63 certificate')
+    screen.getByRole('button', { name: 'Record the hand-over' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Record the hand-over' })).toBeNull())
+    await waitFor(() => expect(row).toHaveFocus()) // the form is gone: its exhibit takes its place
+    await user.click(screen.getByRole('button', { name: 'Add a note' }))
+    await user.type(screen.getByLabelText('Note'), 'seal checked, intact')
+    screen.getByRole('button', { name: 'Record the note' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Record the note' })).toBeNull())
+    await waitFor(() => expect(row).toHaveFocus())
+    await user.click(screen.getByRole('button', { name: 'Release or destroy' }))
+    await user.type(screen.getByLabelText('Why'), "on the court's order")
+    screen.getByRole('button', { name: 'Record it' }).focus()
+    await user.keyboard('{Enter}')
+    await screen.findByText('Released')
+    await waitFor(() => expect(row).toHaveFocus()) // its Hand over and Release buttons are gone too
+  })
+
   it('adds a note to an ended exhibit and shows it in the history', async () => {
     const ended = { ...ROW, status: 'released', history: [...ROW.history, { at: '2026-11-13T05:00:00Z', action: 'changed', changed: ['status'], note: "court's order" }] }
     const calls = api({

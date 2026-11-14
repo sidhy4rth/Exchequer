@@ -98,11 +98,11 @@ export default function IdentifiersPanel({ result }) {
   const caseId = result?.case_id
   const [rows, setRows] = useState([])
   const [form, setForm] = useState(null)
-  // An identifier just added takes the keyboard's place: the form whose button was pressed is gone.
-  const [added, setAdded] = useState(null) // { id } of the identifier just added
-  const addedRow = useRef(null)
+  // The row an action just added or changed takes the keyboard's place: the form whose button was pressed is gone.
+  const [placed, setPlaced] = useState(null) // { id } of the identifier just added or changed
+  const placedRow = useRef(null)
   const addButton = useRef(null)
-  useEffect(() => { if (added) (addedRow.current ?? addButton.current)?.focus() }, [added])
+  useEffect(() => { if (placed) (placedRow.current ?? addButton.current)?.focus() }, [placed])
   const [error, setError] = useState(null)
   const [act, setAct] = useState({}) // identifier_id → { mode: 'withdraw' | 'note', note }
   const [lookups, setLookups] = useState(false)
@@ -125,7 +125,7 @@ export default function IdentifiersPanel({ result }) {
     let made
     if (await run(async () => { made = await addIdentifier(caseId, form) })) {
       setForm(null)
-      setAdded({ id: made?.identifier_id })
+      setPlaced({ id: made?.identifier_id })
     }
   }
   const pick = (id) => act[id] ?? {}
@@ -133,7 +133,10 @@ export default function IdentifiersPanel({ result }) {
   async function apply(row) {
     const a = pick(row.identifier_id)
     const changes = a.mode === 'withdraw' ? { status: 'withdrawn', note: a.note ?? '' } : { note: a.note ?? '' }
-    if (await run(() => updateIdentifier(row.identifier_id, changes))) setAct((all) => ({ ...all, [row.identifier_id]: {} }))
+    if (await run(() => updateIdentifier(row.identifier_id, changes))) {
+      setAct((all) => ({ ...all, [row.identifier_id]: {} }))
+      setPlaced({ id: row.identifier_id })
+    }
   }
   async function lookUp(row) {
     setBusy(row.identifier_id)
@@ -151,7 +154,7 @@ export default function IdentifiersPanel({ result }) {
           const a = pick(row.identifier_id)
           return (
             <div className={`request-row ${row.status === 'withdrawn' ? 'id-withdrawn' : ''}`} key={row.identifier_id}
-              {...(added && row.identifier_id === added.id ? { ref: addedRow, tabIndex: -1 } : {})}>
+              {...(placed && row.identifier_id === placed.id ? { ref: placedRow, tabIndex: -1 } : {})}>
               <div className="top">
                 <span className="nm"><span className="mono">{plain(shown(row))}</span> <span className="note">· {KINDS[row.kind] ?? row.kind}</span></span>
                 {row.status === 'withdrawn' && <span className="pill amber">Withdrawn</span>}
