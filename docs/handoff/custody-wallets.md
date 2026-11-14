@@ -27,8 +27,10 @@
 - One wallet per case per address; the same unit wallet may be recorded in several cases.
 - Signing log: proposed -> approved (threshold distinct signers) -> broadcast (tx hash) -> confirmed, or cancelled with a reason from any step before confirmed. A release needs the court's order reference when proposed and must be approved before broadcast; a deposit goes to the wallet itself and may be broadcast without approvals (sending into a multisig needs no signatures).
 - Who proposed a movement is chosen from the wallet's signers and stored by the name the wallet lists, so the rule that a proposer may not approve compares the same name. Where the scheme lets a proposer sign, the proposer must be a signer; where it does not, someone who is not a signer may propose (typed as "someone else"), and a signer may only if the other signers can still reach the threshold. A cancelled movement's card shows its reason.
-- Every signing-log write needs a signed-in officer (not the demo identity); each approval records the signer (a listed name), the time and which officer entered it. One officer may enter several signers' approvals (the signing happens on the signers' own devices); see open questions.
-- One transaction hash is recorded once per wallet. Audit detail is ids, step, status and approval count; never names, references or reasons.
+- Every signing-log write needs a signed-in officer (not the demo identity); each approval records the signer (a listed name), the time and which officer entered it. One officer account enters at most one approval per movement (pre-review fix, 14 Nov): each signer records their own, signed in to their own account.
+- One transaction hash is recorded once per live movement of a wallet, enforced by a partial unique index on (wallet_id, tx_hash) in `g7_custody_2` (movements not cancelled), so two racing broadcasts cannot both land; a cancelled movement's hash may be recorded again.
+- A release is confirmed only while the wallet's confirmed releases of that asset stay within its confirmed deposits of it (assets compared ignoring case and spacing; exact decimals). Where amounts or asset spellings cannot be compared, it warns and does not refuse. Proposing a release beyond the deposits records it with a warning, which the panel shows. Deposits recorded only in the asset register, not as signing-log deposits, do not count.
+- Audit detail is ids, step, status and approval count; never names, references or reasons.
 
 ## Next
 
@@ -40,7 +42,7 @@
 
 - Migration `g7_custody_1` revises `g7_domain_lookups_1` (main's head on 14 Nov). If #122 (`g7_tasks_1`) or #124 (`g7_tasks_2`) merge first, re-point its `down_revision` before merging.
 - Signer rotation (replacing an owner of the same Safe) is not modelled: today it means a new record. Sidhyarth to decide whether that is enough.
-- Should the officer entering an approval have to be a different officer from the one who proposed it (a server-side two-person rule on the record itself)? Today any signed-in officer of the unit can enter any step.
+- Should the officer entering an approval also have to be a different officer from the one who entered the proposal? Today one account may propose and enter one approval.
 
 ## Files mid-change (do not touch)
 
