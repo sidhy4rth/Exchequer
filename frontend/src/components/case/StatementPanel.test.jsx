@@ -74,6 +74,27 @@ describe('the statement panel', () => {
     }])
   })
 
+  it('keeps the keyboard on the panel: a refusal leaves it on the button, and once saved the status line takes it', async () => {
+    let refuse = true
+    api({
+      'GET /trace/c1/statements': ON,
+      'POST /trace/c1/statements': () => (refuse ? { status: 400, body: { detail: 'Name the statement.' } } : { status: 201, body: { import_id: 's1' } }),
+    })
+    const user = userEvent.setup()
+    render(<StatementPanel result={{ case_id: 'c1', intake: { mode: 'address', payments: [] } }} />)
+    await user.upload(await screen.findByLabelText('CSV file'), file())
+    const button = await screen.findByRole('button', { name: 'Save 2 ticked rows to the case' })
+    button.focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+    expect(button).toHaveFocus() // not dropped to the page while the request ran
+    refuse = false
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('list', { name: 'Rows worth a look' })).toBeNull())
+    await waitFor(() => expect(screen.getByRole('status')).toHaveFocus()) // the rows and the button are gone
+    expect(screen.getByRole('status')).toHaveTextContent('Saved 2 rows to the case')
+  })
+
   it("says plainly when more rows are ticked than the server keeps at once, and does not send them", async () => {
     const calls = api({ 'GET /trace/c1/statements': { body: { ...ON.body, rows_max: 1 } } })
     render(<StatementPanel result={{ case_id: 'c1', intake: { mode: 'address', payments: [] } }} />)
