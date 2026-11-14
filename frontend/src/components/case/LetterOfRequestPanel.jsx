@@ -50,6 +50,7 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
   const [busy, setBusy] = useState(false)
   const [logged, setLogged] = useState('')
   const drafted = useRef(null)
+  const told = useRef(null)
   // A new draft takes the keyboard's place, as the letter to the exchange does.
   useEffect(() => { if (text) drafted.current?.focus() }, [text])
 
@@ -69,6 +70,7 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
     try {
       await logRequest({ case_id: caseId, recipient: country, kind: REQUEST_KIND, asset: result.asset ?? '' })
       setLogged(country)
+      told.current?.focus() // the button pressed is now disabled: keep the keyboard's place
       onLogged?.()
     } catch (err) { setError(err.message) }
   }
@@ -124,7 +126,7 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
               <button type="button" className="quiet" onClick={() => navigator.clipboard?.writeText(text)}>Copy</button>
               <button type="button" onClick={logIt} disabled={!country || logged === country}>Log it in the requests log</button>
             </div>
-            <p className="note" role="status">
+            <p className="note" role="status" ref={told} tabIndex={-1}>
               {logged && logged === country
                 ? `Logged as drafted, to ${plain(logged)}, in the requests log above: move it on there as it goes to the MHA, the Court and abroad.`
                 : country ? `Logs it as a letter of request to ${plain(country)}, drafted.` : 'Name the requested country to log it.'}
