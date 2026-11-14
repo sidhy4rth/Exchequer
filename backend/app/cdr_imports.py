@@ -29,10 +29,10 @@ import uuid
 from datetime import date
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from . import identifiers, models
-from .statement_imports import MAX_PER_OWNER, MAX_TOTAL, StatementError, _text, listing, withdrawal
+from .statement_imports import StatementError, _text, listing, room_for, withdrawal
 
 SOURCE = "cdr"
 KINDS = {"subject": "The CDR's own number", "number": "A number it was in touch with", "imei": "A handset (IMEI)"}
@@ -157,11 +157,10 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any) -> dic
     with models.session() as s:
         if s.scalar(select(models.Case.id).where(models.Case.id == case_id)) is None:
             raise CdrError("No case with that id.")
-        count = select(func.count()).select_from(models.StatementImport)
-        if s.scalar(count.where(models.StatementImport.owner_hash == owner)) >= MAX_PER_OWNER:
-            raise CdrError(f"This browser already has {MAX_PER_OWNER} imports on record.")
-        if s.scalar(count) >= MAX_TOTAL:
-            raise CdrError("The import records are full on this deployment; ask its operator.")
+        try:
+            room_for(s, owner, case_id, viewer, "imports")  # the statements' caps: one table
+        except StatementError as exc:
+            raise CdrError(str(exc)) from exc
         r = models.StatementImport(
             id=str(uuid.uuid4()), owner_hash=owner, case_id=case_id,
             officer_id=getattr(viewer, "officer_id", None), unit_id=getattr(viewer, "unit_id", None),
