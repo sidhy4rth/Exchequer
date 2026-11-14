@@ -9,10 +9,11 @@ of files, never their contents.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import IO, Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from starlette.types import Receive, Scope, Send
 
 from .. import audit, case_bundle, case_privacy, config, models
 from ..auth import CurrentUser
@@ -24,6 +25,25 @@ router = APIRouter()
 def _on() -> None:
     if not config.CASE_BUNDLE:
         raise HTTPException(status_code=404, detail="Not Found")
+
+
+class _BundleResponse(StreamingResponse):
+    """Streams the spooled zip and closes it however the response ends: sent in full, or the client gone
+    before the first byte or part way (the generator's own finally runs only once it has started)."""
+
+    def __init__(self, spool: IO[bytes], headers: dict[str, str]) -> None:
+        super().__init__(case_bundle.stream(spool), media_type="application/zip", headers=headers)
+        self._spool = spool
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            self._spool.close()
+
+
+def bundle_response(spool: IO[bytes], headers: dict[str, str]) -> StreamingResponse:
+    return _BundleResponse(spool, headers)
 
 
 @router.get("/case-bundle")
@@ -51,6 +71,10 @@ def download_bundle(case_id: str, user: CurrentUser, http: Request) -> Streaming
         raise HTTPException(status_code=413, detail=(
             f"This case's bundle would be larger than {case_bundle.MAX_BYTES // (1024 * 1024)} MB. "
             "Download the report and each register on its own instead.")) from exc
-    audit.record("case.bundle_download", case_id=case_id, detail={"files": files})
-    return StreamingResponse(case_bundle.stream(spool), media_type="application/zip", headers={
+    try:
+        audit.record("case.bundle_download", case_id=case_id, detail={"files": files})
+    except BaseException:
+        spool.close()
+        raise
+    return bundle_response(spool, {
         **KEEP, "Content-Disposition": f'attachment; filename="exchequer-{case_id[:8]}-bundle.zip"'})

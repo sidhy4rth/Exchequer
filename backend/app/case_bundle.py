@@ -10,6 +10,8 @@ already read: each register is read with its own list_for() as its own route
 reads it for this caller, and the audit trail goes in only for whom /audit shows
 it. The s.63(4) certificate drafts stay out: they are drafts the officer fills in.
 
+Each CSV starts with a UTF-8 byte order mark (Excel), and a cell starting like a
+formula gets a leading apostrophe (graph_export._cell); MANIFEST.txt says both.
 Files go in the order of PARTS, then MANIFEST.txt. The zip is written to a
 spooled temporary file (on disk past SPOOL_BYTES), one file in memory at a time,
 and refused past MAX_BYTES, so a large case cannot exhaust the server's memory.
@@ -100,7 +102,9 @@ def _csv(header: list[str], rows: Iterator[list[Any]], left: int) -> bytes:
         writer.writerow([_cell(json.dumps(v, sort_keys=True) if isinstance(v, (dict, list)) else v) for v in row])
         if out.tell() > left:  # characters: never more than bytes, so this stops no later than the cap
             raise TooLarge(out.tell())
-    return _cap(out.getvalue().encode("utf-8"), left)
+    # With a byte order mark, Excel opens the file as UTF-8 (names in Devanagari, the rupee sign), not as
+    # the local code page; other spreadsheets and csv readers that decode utf-8-sig skip it.
+    return _cap(out.getvalue().encode("utf-8-sig"), left)
 
 
 def _history(id_key: str, rows: list[dict[str, Any]]) -> Iterator[list[Any]]:
@@ -192,6 +196,9 @@ def _manifest(r: Request, made: list[tuple[Part, int, str]], withheld: list[Part
         "records is right, and this manifest is not signed. The report is: check report.txt or report.pdf",
         f"at {site or 'this server'}/verify. The registers and the audit trail are the case's records as",
         "this caller could read them on the case page at the time of download.", "",
+        "Each CSV file starts with a UTF-8 byte order mark, so Excel reads its characters right. A cell",
+        "that starts with =, +, - or @ is written with a leading apostrophe, so a spreadsheet shows it as",
+        "text and never runs it as a formula: a +91 phone number reads '+91 in the file.", "",
         "Files, in the order they are in the bundle:", "",
     ]
     for n, (part, size, digest) in enumerate(made, 1):
@@ -209,7 +216,7 @@ def build(r: Request, now: datetime | None = None) -> tuple[IO[bytes], int]:
     """(the zip, rewound, and how many files it holds). Raises TooLarge."""
     now = now or datetime.now(tz=timezone.utc)
     stamp = now.astimezone(IST).timetuple()[:6]
-    spool = tempfile.SpooledTemporaryFile(max_size=SPOOL_BYTES)  # noqa: SIM115 -- closed by stream()
+    spool = tempfile.SpooledTemporaryFile(max_size=SPOOL_BYTES)  # noqa: SIM115 -- closed by the route's response
     made: list[tuple[Part, int, str]] = []
     withheld: list[Part] = []
     left = MAX_BYTES
