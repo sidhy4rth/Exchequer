@@ -883,3 +883,6 @@ TAINT_EXPANSION: bool = flag("EXCHEQUER_TAINT_EXPANSION",
                              "Lane A, R5: follow every branch carrying a share of the funds, not the top ten")
 OSINT_LOOKUPS: bool = flag("EXCHEQUER_OSINT_LOOKUPS",
                            "Feature 4, OSINT slice 2: live RDAP and DNS lookups of a case's scam domains")
+EXPORT_SCAN: bool = flag("EXCHEQUER_EXPORT_SCAN",
+                         "Feature 2, slice 1: scan a phone or computer export in the browser for addresses, "
+                         "hashes and seed phrases")
