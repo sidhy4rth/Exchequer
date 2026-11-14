@@ -191,11 +191,15 @@ class LabelStore:
             # Only a mixer's own pool ends a trace, and only on the chain its
             # tag was read on. Anything else is left out: the walk goes on.
             return None
-        from .never_flag import blocks, kind  # never_flag imports this module
+        from .never_flag import blocks, freeze_refusal, kind  # never_flag imports this module
 
         if blocks(kind(chain, address), category):
             # An exchange, router, token contract or burn address: a scan or
             # list that names one is wrong, whatever it says (never_flag.py).
+            return None
+        if category == "frozen" and freeze_refusal(chain, address):
+            # A freeze on an exchange's own wallet or a shared contract (a DEX
+            # pool, a mixer's protocol contract): not a fact about one party.
             return None
         # A mixer row stops a trace only at a pool or router kept in the repo.
         terminal = {"terminal": raw in pinned_mixers(chain)} if category == "mixer" else {}

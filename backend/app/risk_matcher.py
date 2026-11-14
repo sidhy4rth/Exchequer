@@ -93,7 +93,7 @@ from typing import Any
 
 import networkx as nx
 
-from . import config
+from . import config, never_flag
 from .etherscan_client import is_tron_address, is_valid_address, normalize_address
 from .graph_builder import OUTGOING
 from .label_rules import DETECTION, UNVETTED
@@ -469,6 +469,11 @@ class RiskMatcher:
         meta = self._labels.get(address)
         if meta is not None and _lapsed(meta, date.today()):
             meta = None  # its order ended after this process loaded the file
+        if meta is not None and meta["category"] == FROZEN and never_flag.freeze_refusal(self.chain, address):
+            # A curated freeze file keeps what the issuer blocked, and issuers
+            # block token contracts, DEX pools and mixer contracts defensively.
+            # Shown, it reads "Frozen by Tether" on every trace through one.
+            meta = None
         if meta is None and self.store is not None:
             meta = self.store.lookup(self.chain, address)
             if meta is not None and meta["category"] not in CATEGORIES:
