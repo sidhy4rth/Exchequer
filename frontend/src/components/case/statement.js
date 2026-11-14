@@ -27,14 +27,15 @@ export const HEADERS = {
 export const FIELDS = Object.keys(HEADERS)
 const key = (h) => String(h ?? '').toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z]/g, '')
 
-/** Each field's column index, or -1: every column becomes one field at most. */
-export function guessColumns(headers) {
+/** Each field's column index, or -1: every column becomes one field at most. `table` is
+ * a field's header names, best first: a statement's by default (a CDR's in cdr.js). */
+export function guessColumns(headers, table = HEADERS) {
   const keys = headers.map(key)
   const taken = new Set()
   const out = {}
-  for (const field of FIELDS) {
+  for (const field of Object.keys(table)) {
     out[field] = -1
-    for (const name of HEADERS[field]) {
+    for (const name of table[field]) {
       const at = keys.findIndex((k, i) => k === name && !taken.has(i))
       if (at >= 0) { out[field] = at; taken.add(at); break }
     }
