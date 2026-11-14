@@ -32,7 +32,8 @@
     "Hotbit": 8,
     "Kryptono": 1
    }
-  }
+  },
+  "india_exchanges": "13 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
  },
  "labels": {
   "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
@@ -924,6 +925,71 @@
    "exchange": "BitMEX",
    "label": "BitMEX 2 (defunct)",
    "type": "exchange_wallet"
+  },
+  "0xceae7673553c90d0a3cd1a494da35ede63910cbf": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ATOM wallet",
+   "type": "exchange_wallet"
+  },
+  "0x4fdc7d8a2a14cab04608434ace9c12b39cba2392": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x628d6380a28b8d9ae7516597fa625934185bfed4": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0xf28a96107cf2db70bf184c665a99782072aa13be": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20/IOTX wallet",
+   "type": "exchange_wallet"
+  },
+  "0xaaaff093bbda998bfd1026689affe711f5eeaabc": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x58bac7a9b2b257e26a39e1ec564f1cf8d6810017": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x6aba1ff31df3b0ff6989e628d766c044a5301fc4": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x633fac2b6d44e97fba5898f629dc87196609b967": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x551568a9430b888f93d31fa6df4973c55a6c667d": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x2d196d7643ef097eb9e248387b96ca6afdd1eb2c": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB wallet",
+   "type": "exchange_wallet"
+  },
+  "0xcb41bd871461585f8c3f746125601ec350e7e567": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB wallet",
+   "type": "exchange_wallet"
+  },
+  "0xcdef28fe85ab08a6632c97fd90534666c1ae96a3": {
+   "exchange": "WazirX",
+   "label": "WazirX: BSC wallet 1",
+   "type": "contract_wallet"
+  },
+  "0x0389776e4d48384160cd5acde2f61ab9359e757e": {
+   "exchange": "WazirX",
+   "label": "WazirX: BSC wallet 2",
+   "type": "contract_wallet"
   }
  }
 }

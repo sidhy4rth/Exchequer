@@ -81,7 +81,7 @@ CANONICAL: dict[str, str] = {
     "bitget": "Bitget", "poloniex": "Poloniex", "kraken": "Kraken",
     "bitfinex": "Bitfinex", "coinbase": "Coinbase", "crypto": "Crypto.com",
     "cryptocom": "Crypto.com", "bitmart": "BitMart", "coindcx": "CoinDCX",
-    "wazirx": "WazirX", "zebpay": "ZebPay", "giottus": "Giottus",
+    "wazirx": "WazirX", "zebpay": "ZebPay", "giottus": "Giottus", "coinswitch": "CoinSwitch",
     "whitebit": "WhiteBIT", "bingx": "BingX", "lbank": "LBank", "hitbtc": "HitBTC",
     "upbit": "Upbit", "bithumb": "Bithumb", "coinex": "CoinEx", "xt": "XT.com",
     "phemex": "Phemex", "deepcoin": "Deepcoin", "bitstamp": "Bitstamp",
