@@ -105,6 +105,27 @@ describe('the case task list', () => {
     expect(container.querySelector('.tasks-panel')).toHaveAttribute('open')
   })
 
+  it('adds a task once however fast its button is pressed', async () => {
+    const posts = []
+    let finish
+    vi.stubGlobal('fetch', vi.fn((url, init = {}) => {
+      if ((init.method || 'GET') === 'POST') {
+        posts.push(init.body)
+        return new Promise((resolve) => { finish = () => resolve(new Response(JSON.stringify(TASK), { status: 201 })) })
+      }
+      return Promise.resolve(new Response(JSON.stringify({ tasks: [] })))
+    }))
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add a task' }))
+    await user.type(screen.getByLabelText('What has to be done'), 'Collect the phone extraction')
+    await user.dblClick(screen.getByRole('button', { name: 'Add the task' }))
+    expect(posts).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Add the task' })).toBeDisabled()
+    finish()
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Add a task' })).toBeNull())
+  })
+
   it("shows the server's refusal", async () => {
     api({
       'GET /trace/c1/tasks': { body: { tasks: [] } },
