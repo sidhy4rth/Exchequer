@@ -97,8 +97,13 @@ def summary(case_id: str, result: dict[str, Any], answer: Answer) -> str:
              "",
              NCRP_BLANK,
              ""]
-    reached = _reached(result)
-    if reached is None:
+    # An incoming trace's exchange is where money came from, not where it went (report.py).
+    incoming = result.get("direction", "outgoing") != "outgoing"
+    reached = None if incoming else _reached(result)
+    if incoming:
+        lines += ["1. Exchange (VASP) reached: none. This trace follows where the reported address's money came from,",
+                  "   not where it went, so it names no exchange the money reached. See the case report.", ""]
+    elif reached is None:
         lines += ["1. Exchange (VASP) reached: none. This trace reached no exchange address, so there is",
                   "   nothing here for SOP 9.4. See the case report for where the money went.", ""]
     else:

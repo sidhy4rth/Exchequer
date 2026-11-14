@@ -55,6 +55,16 @@ def test_a_case_that_reached_no_exchange_says_so_and_names_none():
     assert "Exchange (VASP) reached: none" in text and "Exchange address" not in text
 
 
+def test_an_incoming_trace_never_says_the_money_reached_the_exchange_it_came_from():
+    # An incoming trace follows where the reported address's money came from
+    # (report.py: "Part of the money came from"): its exchange sent money.
+    case = fixture("exchange_wallet")
+    case["direction"] = "incoming"
+    text = sop_summary.summary("c", case, "unknown")
+    assert "Exchange (VASP) reached: none" in text and "where the reported address's money came from" in text
+    assert "Estimated to have reached the exchange" not in text and "Transfers into the exchange address" not in text
+
+
 @pytest.mark.parametrize("answer, quoted, not_quoted", [
     ("yes", ["SOP 9.4(ii)"], ["SOP 9.4(iv)"]),
     ("no", ["SOP 9.4(iv)", "Sahyog Portal", "Section 106(1) of BNSS"], ["SOP 9.4(ii)"]),
