@@ -16,5 +16,6 @@
 .custody-panel .mono { font-family: var(--mono); }
 .custody-panel .cu-form textarea { resize: vertical; }
 .custody-panel .cu-never { color: var(--risk-soft); }
+.custody-panel .cu-warn { color: var(--risk-soft); overflow-wrap: anywhere; }
 .custody-panel .cu-save { border-color: var(--go); background: var(--go-tint); color: var(--go-soft); font-weight: 500; }
 @media (max-width: 560px) { .custody-panel .cu-form .fields { grid-template-columns: 1fr; } }
