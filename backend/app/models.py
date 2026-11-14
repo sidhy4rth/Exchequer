@@ -305,6 +305,32 @@ class CustodyWallet(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+class CustodyMovement(Base):
+    """One deposit into or release out of a custody wallet, and each signer's
+    approval as an officer recorded it (custody_log.py). Never a signature."""
+
+    __tablename__ = "custody_movements"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    wallet_id: Mapped[str] = mapped_column(String(36), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    kind: Mapped[str] = mapped_column(String(16))  # deposit | release
+    asset: Mapped[str] = mapped_column(String(16))
+    amount: Mapped[str] = mapped_column(String(48))  # exact decimal text
+    destination: Mapped[str] = mapped_column(String(64))
+    order_ref: Mapped[str] = mapped_column(String(200), default="")
+    proposed_by: Mapped[str] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(16))  # proposed | approved | broadcast | confirmed | cancelled
+    approvals_json: Mapped[str] = mapped_column(Text, default="[]")  # [{"signer", "at", "recorded_by"}]
+    tx_hash: Mapped[str] = mapped_column(String(80), default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
+
+
 class Exhibit(Base):
     """A file an outside forensic tool produced for a case, by its hashes, and its
     chain of custody (exhibits.py, suite feature 3). The file itself is never stored."""
