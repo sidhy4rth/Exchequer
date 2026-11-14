@@ -259,6 +259,60 @@ const STORED_LETTERS = (row) => [
 // A caller who is not signed in is told why before pressing anything.
 const NOT_SIGNED_IN = { count: 0, requests: [], ask_reason: 'An urgent freeze letter needs a signed-in drafter and a second officer of the same unit: sign in to ask for a sign-off.' }
 
+// The registers a stored case keeps (exhibits.py, identifiers.py, assets.py),
+// which a recorded case has none of, so each panel would stay shut (or not be
+// drawn at all). Answered here with rows shaped as the backend sends them:
+// placeholder values, no real file, phone or wallet. The domain's lookup is
+// the example.com one recorded in backend/tests/fixtures/osint/responses.json.
+// Only the panels on main: flagged features still in open pull requests
+// (task list, letter of request, statement and CDR imports, export scan,
+// custody wallets, Telegram lookup) add their pages here once they merge.
+const HELD = { at: '2026-11-12T10:00:00Z', action: 'recorded' }
+const EXHIBITS = [
+  { exhibit_id: 'a11y-e1', case_id: STORED, kind: 'phone_extraction', label: "Accused's phone (example)", tool: 'Example tool 1.0', file_name: 'phone.ufdr', size_bytes: 64_000_000_000, sha256: '5a'.repeat(32), sha1: '5b'.repeat(20), md5: '5c'.repeat(16), made_by: 'SI Example', made_on: '2026-11-12', stored_at: 'Evidence room, shelf 3', holder: 'SI Example', status: 'held', notes: '', history: [HELD, { at: '2026-11-13T09:00:00Z', action: 'checked', result: 'match' }] },
+  { exhibit_id: 'a11y-e2', case_id: STORED, kind: 'tool_report', label: 'Tool report (example)', tool: 'Example tool 1.0', file_name: '', size_bytes: null, sha256: '', sha1: '', md5: '', made_by: '', made_on: '2026-11-12', stored_at: '', holder: '', status: 'released', notes: '', history: [HELD, { at: '2026-11-13T09:00:00Z', action: 'changed', changed: ['status'], note: "on the court's order" }] },
+]
+const LOOKUP = {
+  lookup_id: 'a11y-l1', identifier_id: 'a11y-i1', case_id: STORED, queried: 'example.com', created_at: '2026-11-13T10:00:00Z', by: 'demo',
+  rdap: { name: 'example.com', registrar: 'RESERVED-Internet Assigned Numbers Authority', registrar_iana_id: '376', registered_on: '1995-08-14', expires_on: '2027-08-13', changed_on: '2026-08-14', abuse_email: '', abuse_phone: '', status: [], name_servers: ['elliott.ns.cloudflare.com', 'hera.ns.cloudflare.com'] },
+  rdap_note: '', dns: { A: ['104.20.23.154', '172.66.147.243'], AAAA: [], NS: [] }, dns_note: '',
+  sources: [
+    { source: 'rdap', provider: 'rdap.verisign.com', status: 200, fetched_at: '2026-11-13T10:00:00Z', sha256: 'e38fb301b55d200d1ffdf18c631c905b8b747fbe8198bd5b8e74e0824896972a', bytes: 2440 },
+    { source: 'dns', provider: 'cloudflare-dns.com', status: 200, fetched_at: '2026-11-13T10:00:00Z', sha256: '9cc458718f83279bc77e5d394dff6863886bf15f602eb3baa05122504048cd93', bytes: 251 },
+  ],
+}
+const IDENTIFIERS = {
+  lookups_enabled: true,
+  identifiers: [
+    { identifier_id: 'a11y-i1', case_id: STORED, kind: 'domain', value: 'example.com', entered: 'https://www.example.com/pay', context: 'link sent on WhatsApp', notes: '', status: 'active', history: [HELD], lookup: LOOKUP, also_in: [{ case_id: 'a11y-other-case', identifier_id: 'a11y-x1', recorded_at: '2026-11-10T09:00:00Z', context: 'second complaint' }] },
+    { identifier_id: 'a11y-i2', case_id: STORED, kind: 'telegram', value: 'example_help', entered: '@example_help', context: '', notes: 'typed wrongly', status: 'withdrawn', history: [HELD, { at: '2026-11-13T09:00:00Z', action: 'changed', changed: ['status'], note: 'typed wrongly' }] },
+  ],
+}
+const ASSETS = [
+  { asset_id: 'a11y-a1', case_id: STORED, holder: 'exchange', asset: 'USDT', amount: '635.000000', chain: 'tron', held_at: 'Binance', tx_hash: '', key_holders: '', request_id: null, seized_on: '2026-11-01', order_ref: '', status: 'held', outcome_ref: '', outcome_tx: '', notes: '', deadline: '2026-12-16', days_left: 2, due: true, history: [{ at: '2026-11-01T05:00:00Z', status: 'held' }] },
+  { asset_id: 'a11y-a2', case_id: STORED, holder: 'custody', asset: 'USDT', amount: '120.000000', chain: 'tron', held_at: `T${'9'.repeat(33)}`, tx_hash: 'ab'.repeat(32), key_holders: '2 of 3: three named officers', request_id: null, seized_on: '2026-10-01', order_ref: 'Order of the example court', status: 'released_to_victim', outcome_ref: '', outcome_tx: 'cd'.repeat(32), notes: '', deadline: '2026-11-15', days_left: 1, due: false, history: [{ at: '2026-10-01T05:00:00Z', status: 'held' }, { at: '2026-11-10T05:00:00Z', changed: ['status', 'outcome_tx'] }] },
+]
+const STORED_EVIDENCE = [
+  STORED_LETTERS(null)[0],
+  { url: `**/trace/${STORED}/exhibits`, body: { exhibits: EXHIBITS } },
+  { url: `**/trace/${STORED}/identifiers`, body: IDENTIFIERS },
+]
+// The urgent letter frozen at Binance, so the asset register offers to add it.
+const STORED_ASSETS = [
+  ...STORED_LETTERS({ status: 'frozen', amount_frozen: 635, asset: 'USDT' }),
+  { url: `**/trace/${STORED}/assets`, body: { assets: ASSETS } },
+]
+/** Every panel on the open tab opened, whatever it opened on (and the
+ * disclosures inside them); the case header's menus stay shut. */
+const openPanels = (page) => page.locator('.case-tabs [role="tabpanel"]:not([hidden]) details').evaluateAll((all) => all.forEach((d) => { d.open = true }))
+/** The stubbed rows reached the page: a panel left empty would pass unchecked. */
+const shows = (...texts) => async (page) => {
+  for (const text of texts) {
+    if (!(await page.getByText(text, { exact: true }).first().isVisible())) throw new Error(`"${text}" is not on the page: its panel did not load or open`)
+  }
+}
+const press = (page, ...names) => names.reduce((done, name) => done.then(() => page.getByRole('button', { name, exact: true }).first().click()), Promise.resolve())
+
 export const PAGES = [
   { name: 'investigator sign-in', path: '/signin/investigator', ready: DOOR },
   // The open card: an officer's e-mail and password, and the demo below.
@@ -357,6 +411,25 @@ export const PAGES = [
   { name: 'stored case, Letters, awaiting sign-off', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS({ status: 'awaiting_signoff', signoff_reason: 'You drafted this letter: a second officer of your unit must sign it off.' }), ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
   { name: 'stored case, Letters, a second officer may sign off', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS({ status: 'awaiting_signoff', mine: false, can_sign_off: true }), ready: ['button', { name: 'Sign off' }], unmeasured: { desktop: 1, phone: 1 } },
   { name: 'stored case, Letters, signed off', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS({ status: 'ready', signoff: { by: 'Second Officer', at: '2026-11-10T09:00:00+00:00' } }), ready: FILL, unmeasured: { desktop: 1, phone: 1 } },
+  // A stored case's Evidence tab with its registers kept: exhibits (one held,
+  // one released), reported identifiers (a domain looked up and also in
+  // another case, a withdrawn username), every panel opened; then the
+  // s.63(4) certificate's form for the exhibits and for the report, and the
+  // add forms and a row's actions. A button that gives way to its form is
+  // pressed in `before`: `click` measures that what it pressed stayed put.
+  { name: 'stored case, Evidence, registers', path: `/case/${STORED}?tab=evidence`, as: 'investigator', stub: STORED_EVIDENCE, before: openPanels, ready: ['button', { name: 'Look up again' }], layout: shows('Exhibits · 2', 'Reported identifiers · 1', 'File checked 2026-11-13: matches', 'Where this came from (2 responses)'), tablet: true },
+  { name: 'stored case, Evidence, certificate for exhibits', path: `/case/${STORED}?tab=evidence`, as: 'investigator', stub: STORED_EVIDENCE, before: (page) => press(page, 'Draft the s.63(4) certificate'), ready: ['form', { name: 'Draft the s.63(4) certificate' }], tablet: true },
+  { name: 'stored case, Evidence, certificate for the report', path: `/case/${STORED}?tab=evidence`, as: 'investigator', stub: STORED_EVIDENCE, before: (page) => press(page, 'Draft the s.63(4) certificate'), click: ['radio', { name: "Exchequer's report of this case" }], ready: ['radio', { name: "Exchequer's report of this case", checked: true }], tablet: true },
+  { name: 'stored case, Evidence, adding to the registers', path: `/case/${STORED}?tab=evidence`, as: 'investigator', stub: STORED_EVIDENCE, before: (page) => press(page, 'Hand over', 'Withdraw', 'Record a forensic file', 'Add a reported identifier'), ready: ['form', { name: 'Add a reported identifier' }], tablet: true },
+  // The Letters tab's asset register: funds held at an exchange (a deadline
+  // near) and funds released, the frozen letter's one-press add, then the add
+  // form with a held row's outcome being chosen.
+  { name: 'stored case, Letters, asset register', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_ASSETS, before: openPanels, ready: ['button', { name: /^Add the 635 USDT Binance froze$/ }], layout: shows('Frozen and seized · 2', 'Order of the example court') },
+  { name: 'stored case, Letters, recording frozen funds', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_ASSETS, before: async (page) => { await page.getByLabel('Outcome').first().selectOption('released_to_victim'); await press(page, 'Record frozen or seized funds') }, ready: ['form', { name: 'Record frozen or seized funds' }] },
+  // The notices to a bank (an urgent hold, which asks for the most) and to a
+  // phone company: the officer's details beside the sheet, drafted on request.
+  { name: 'stored case, Letters, bank hold notice', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS(null), before: (page) => press(page, 'Bank'), click: ['button', { name: 'Urgent hold' }], ready: ['button', { name: 'Urgent hold', pressed: true }] },
+  { name: 'stored case, Letters, phone company notice', path: `/case/${STORED}?tab=letters`, as: 'investigator', stub: STORED_LETTERS(null), click: ['button', { name: 'Phone company', exact: true }], ready: ['form', { name: 'Phone company details' }] },
   // Opened from a link, a trace asks before it runs.
   { name: 'trace link', path: '/trace/0x7c3e9bab6715e4040f013e865b193b0209642e36?chain=ethereum&asset=ETH&depth=3&direction=outgoing', as: 'investigator', ready: ['button', { name: 'Run this trace' }] },
   // A link or Home search opened by an officer asks for the case reference on the card.
