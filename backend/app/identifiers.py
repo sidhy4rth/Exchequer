@@ -62,9 +62,11 @@ WRITE_TRIES = 3
 # Names that are never a scam site's own domain: local, private or reserved.
 _RESERVED_TLDS = {"localhost", "local", "internal", "intranet", "lan", "home", "corp", "test", "example",
                   "invalid", "onion", "arpa", "localdomain"}
-_LABEL = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)$")
-_TELEGRAM = re.compile(r"^[a-z][a-z0-9_]{3,31}$")
-_UPI = re.compile(r"^[a-z0-9][a-z0-9._-]{1,255}@[a-z][a-z0-9]{1,63}$")
+# Always used with fullmatch: "$" in a pattern also matches before a trailing newline, so a
+# "^...$" pattern with match() would let "abcde\n" through as a username.
+_LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)")
+_TELEGRAM = re.compile(r"[a-z][a-z0-9_]{3,31}")
+_UPI = re.compile(r"[a-z0-9][a-z0-9._-]{1,255}@[a-z][a-z0-9]{1,63}")
 
 
 class IdentifierError(ValueError):
@@ -116,8 +118,8 @@ def domain(raw: str) -> str:
     text = re.split(r"[/?#\\]", text, maxsplit=1)[0]  # a path, query or fragment
     if "@" in text:
         raise IdentifierError("Enter the website's domain alone, without a user name or password in it.")
-    if text.startswith("[") or re.search(r":\d*$", text):
-        text = re.sub(r":\d*$", "", text)  # a port
+    if text.startswith("[") or re.search(r":\d*\Z", text):
+        text = re.sub(r":\d*\Z", "", text)  # a port
     text = text.strip(".").removeprefix("www.")
     if _is_ip(text.strip("[]")):
         raise IdentifierError("Enter the website's domain name, not an IP address.")
@@ -126,7 +128,7 @@ def domain(raw: str) -> str:
     except UnicodeError as exc:
         raise IdentifierError("That is not a domain name a website can have.") from exc
     labels = text.split(".")
-    if len(text) > 253 or len(labels) < 2 or not all(_LABEL.match(label) for label in labels):
+    if len(text) > 253 or len(labels) < 2 or not all(_LABEL.fullmatch(label) for label in labels):
         raise IdentifierError("Enter a website domain such as scam-shop.in.")
     if labels[-1] in _RESERVED_TLDS or not re.fullmatch(r"[a-z]{2,63}|xn--[a-z0-9-]{1,59}", labels[-1]):
         raise IdentifierError("That domain cannot be a public website: check its ending (.in, .com …).")
@@ -138,7 +140,7 @@ def telegram(raw: str) -> str:
     text = raw.strip()
     text = re.sub(r"^(https?://)?(www\.)?(t\.me|telegram\.me)/", "", text, flags=re.I)
     text = text.removeprefix("@").split("?")[0].strip("/").lower()
-    if not _TELEGRAM.match(text):
+    if not _TELEGRAM.fullmatch(text):
         raise IdentifierError("Enter the Telegram username: 4 to 32 letters, digits or _, starting with a letter.")
     return text
 
@@ -186,7 +188,7 @@ def phone(raw: str) -> str:
 def upi(raw: str) -> str:
     """A UPI ID (VPA), lower case: 'Shop.Pay@okaxis'."""
     text = raw.strip().lower()
-    if not _UPI.match(text):
+    if not _UPI.fullmatch(text):
         raise IdentifierError("Enter the UPI ID as name@bank, e.g. shop.pay@okaxis.")
     return text
 

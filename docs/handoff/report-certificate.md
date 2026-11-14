@@ -5,7 +5,7 @@
 - **Branch**: `feat/report-certificate`
 - **Current**: Barenyam
 - **Last worked on**: Barenyam, 2026-11-14
-- **Status**: built and tested end to end; in review
+- **Status**: merged in #119 (14 Nov 2026), issue #118 closed; the live-site check below is open
 
 ## Done
 
@@ -25,7 +25,7 @@
 
 ## Next
 
-1. Sidhyarth reviews the PR; after the merge, confirm on the live site with a report downloaded there (its ISSUED BY line then names exchequer.co.in).
+1. Sidhyarth reviews the PR; after the merge, confirm on the live site with a report downloaded there (its ISSUED BY line then names exchequer.co.in). Review and merge done (#119, 14 Nov); the live-site check is still to do.
 
 ## Open questions
 
