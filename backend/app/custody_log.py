@@ -35,6 +35,7 @@ TEXT = {"asset": (16, "the asset (for example USDT)"), "proposed_by": (120, "who
         "order_ref": (200, "the court's order"), "reason": (300, "why it is cancelled"),
         "signer": (120, "which signer approved")}
 MAX_PER_WALLET = 2000
+AMOUNT_CHARS = 48  # models.CustodyMovement.amount is String(48)
 SIGN_IN = "Sign in first: the signing log records which officer entered each step."
 
 
@@ -80,6 +81,8 @@ def propose(wallet_id: str, fields: dict[str, Any], viewer: Any) -> dict[str, An
         amount = _amount(fields.get("amount"))
     except AssetError as exc:
         raise CustodyError(str(exc)) from exc
+    if len(amount) > AMOUNT_CHARS:
+        raise CustodyError(f"The amount has more digits than the log keeps ({AMOUNT_CHARS} characters).")
     row = {"kind": kind, "asset": _text(fields, "asset", required=True), "amount": amount,
            "proposed_by": _text(fields, "proposed_by", required=True), "order_ref": _text(fields, "order_ref")}
     if kind == "release" and not row["order_ref"]:
@@ -89,6 +92,7 @@ def propose(wallet_id: str, fields: dict[str, Any], viewer: Any) -> dict[str, An
         if w is None:
             return None
         row["destination"] = w.address if kind == "deposit" else _destination(w, fields.get("destination"))
+        _can_be_approved(w, row["proposed_by"])
         count = select(func.count()).select_from(models.CustodyMovement)
         if s.scalar(count.where(models.CustodyMovement.wallet_id == w.id)) >= MAX_PER_WALLET:
             raise CustodyError(f"This wallet already has {MAX_PER_WALLET} movements on record.")
@@ -101,6 +105,15 @@ def propose(wallet_id: str, fields: dict[str, Any], viewer: Any) -> dict[str, An
         s.commit()
         s.refresh(m)
         return summary(m, w.threshold)
+
+
+def _can_be_approved(w: models.CustodyWallet, proposer: str) -> None:
+    """A proposer who is a signer and may not sign leaves n - 1 signers: refuse a movement they could never approve."""
+    signers = [same_person(s["name"]) for s in json.loads(w.signers_json or "[]")]
+    if not w.proposer_may_sign and same_person(proposer) in signers and len(signers) - 1 < w.threshold:
+        raise CustodyError(f"{proposer} is a signer, and this wallet's scheme does not let a proposer sign: the "
+                           f"other {len(signers) - 1} signers could never reach its threshold of {w.threshold}. "
+                           "Someone who is not a signer proposes it.")
 
 
 def _destination(w: models.CustodyWallet, raw: Any) -> str:

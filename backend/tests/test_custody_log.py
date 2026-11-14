@@ -301,3 +301,18 @@ def test_g7_custody_2_goes_down_and_up_again_keeping_the_wallets():
     assert len(custody.list_for(viewer(), "case-1")) == 1
     models.init_db()
     assert "custody_movements" in set(inspect(models._engine).get_table_names())
+
+
+def test_an_amount_too_long_for_its_column_is_refused_not_a_server_error():
+    # amount is String(48): Postgres refuses a longer value, so it must be refused here first.
+    with pytest.raises(CustodyError, match="digits"):
+        release(wallet(), amount="0." + "0" * 60 + "1")
+    assert release(wallet(address=OUT), destination=CUSTODY, amount="1." + "0" * 40)["amount"]
+
+
+def test_a_proposer_who_is_a_signer_cannot_leave_too_few_signers_to_approve():
+    two_of_two = wallet(signers=SIGNERS[:2])
+    with pytest.raises(CustodyError, match="never reach"):
+        release(two_of_two, proposed_by="insp.  rao")
+    assert release(two_of_two, proposed_by="SI Pal")["status"] == "proposed"  # not a signer: both may approve
+    assert release(wallet(address=OUT), destination=CUSTODY, proposed_by="Insp. Rao")["status"] == "proposed"  # 2 of 3
