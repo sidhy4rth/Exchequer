@@ -48,6 +48,10 @@ export default function TasksPanel({ result }) {
   // so closing the last task never snaps the panel shut under their cursor.
   const [expanded, setExpanded] = useState(false)
   const arrived = useRef(false)
+  // A write that adds something (a task, a reason) runs once at a time: a double
+  // click would otherwise add the task twice.
+  const adding = useRef(false)
+  const [saving, setSaving] = useState(false)
 
   const load = () => caseId && fetchCaseTasks(caseId).then((d) => {
     const tasks = d.tasks ?? []
@@ -66,15 +70,21 @@ export default function TasksPanel({ result }) {
     setError(null)
     try { await fn(); await load(); return true } catch (e) { setError(e.message); return false }
   }
+  async function once(fn) {
+    if (adding.current) return false
+    adding.current = true
+    setSaving(true)
+    try { return await run(fn) } finally { adding.current = false; setSaving(false) }
+  }
   const change = (t, changes) => run(() => updateTask(t.task_id, changes))
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
   async function save(e) {
     e.preventDefault()
-    if (await run(() => addTask(caseId, form))) setForm(null)
+    if (await once(() => addTask(caseId, form))) setForm(null)
   }
   async function decide(t) {
     const w = why[t.task_id]
-    if (await change(t, { status: w.status, note: w.note.trim() })) setWhy((o) => ({ ...o, [t.task_id]: undefined }))
+    if (await once(() => updateTask(t.task_id, { status: w.status, note: w.note.trim() }))) setWhy((o) => ({ ...o, [t.task_id]: undefined }))
   }
 
   async function take(x, note) {
@@ -130,7 +140,7 @@ export default function TasksPanel({ result }) {
                 onChange={(e) => setWhy((o) => ({ ...o, [t.task_id]: { ...w, note: e.target.value } }))} />
             </label>
             <div className="tk-actions">
-              <button type="button" disabled={!w.note.trim()} onClick={() => decide(t)}>{w.status === 'dropped' ? 'Drop the task' : 'Open it again'}</button>
+              <button type="button" disabled={saving || !w.note.trim()} onClick={() => decide(t)}>{w.status === 'dropped' ? 'Drop the task' : 'Open it again'}</button>
               <button type="button" className="quiet" onClick={() => setWhy((o) => ({ ...o, [t.task_id]: undefined }))}>Cancel</button>
             </div>
           </div>
@@ -199,7 +209,7 @@ export default function TasksPanel({ result }) {
               <label className="wide">Notes<textarea rows={2} value={form.notes} onChange={set('notes')} /></label>
             </div>
             <div className="request-add">
-              <button type="submit" className="tk-save" disabled={!form.title.trim()}>Add the task</button>
+              <button type="submit" className="tk-save" disabled={saving || !form.title.trim()}>Add the task</button>
               <button type="button" className="quiet" onClick={() => setForm(null)}>Cancel</button>
             </div>
           </form>
