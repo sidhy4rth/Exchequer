@@ -11,6 +11,7 @@
 
 - Claimed: issue #144, this file, draft PR #146.
 - The record (#146): table `statement_imports` (migration `g7_statements_1`, after `g7_domain_lookups_1`), `backend/app/statement_imports.py` (checks each saved row: date, debit or credit, amount, reference shape, an exchange name only when canonical and in the row's own text, free text refused when it looks like a key), flag `EXCHEQUER_STATEMENT_IMPORT`.
+- The routes: `GET /trace/{case_id}/statements` (the saved rows this browser or unit may read, and the canonical exchange names; `enabled: false` with the flag off) and `POST /trace/{case_id}/statements` (403 with the flag off). Audited as `statement.list` and `statement.save` with counts only.
 
 ## Decisions
 
@@ -22,9 +23,8 @@
 
 ## Next
 
-1. Routes: `backend/app/routes/statements.py` (GET and POST `/trace/{case_id}/statements`).
-2. Browser: `frontend/src/components/case/statement.js` (columns, Indian dates and amounts, UTR shapes, matching), with tests.
-3. Panel: `frontend/src/components/case/StatementPanel.jsx` on the Evidence tab.
+1. Browser: `frontend/src/components/case/statement.js` (columns, Indian dates and amounts, UTR shapes, matching), with tests.
+2. Panel: `frontend/src/components/case/StatementPanel.jsx` on the Evidence tab.
 
 ## Open questions
 
