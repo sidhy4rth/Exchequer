@@ -5,14 +5,17 @@ import { describe, expect, it, vi } from 'vitest'
 import CdrPanel from './CdrPanel'
 
 // A CDR read in the browser against the case (backend cdr_imports.py). Every number is
-// synthetic: India sets aside no mobile range for fiction, so these are a visibly
-// patterned run, 90000 0000x, made up for the test; the IMEI is made up and starts with zeros.
+// synthetic, and none can be a real Indian mobile: India's mobiles start 6 to 9 and India sets
+// aside no range for fiction, while the panel, like the identifier register, reads a 10-digit
+// number as an Indian mobile only when it starts 6 to 9, on purpose. So the numbers are in
+// Ofcom's range for drama (+44 7700 900000 to 900999), set aside so that no subscriber holds
+// one. The IMEI is made up and starts with zeros.
 const IMEI = '000000000000011'
 const CSV = [
   'A Party,B Party,Date,Time,Duration,Call Type,IMEI',
-  `9000000001,9000000002,01/03/2026,10:15,120,MO,${IMEI}`,
-  `9000000001,09000000002,02/03/2026,11:00,90,MT,${IMEI}`,
-  `9000000001,9000000003,03/03/2026,12:00,30,MO,${IMEI}`,
+  `+447700900001,+447700900002,01/03/2026,10:15,120,MO,${IMEI}`,
+  `+447700900001,+44 (0)7700 900002,02/03/2026,11:00,90,MT,${IMEI}`,
+  `+447700900001,0044 7700 900003,03/03/2026,12:00,30,MO,${IMEI}`,
 ].join('\n')
 
 function api(routes) {
@@ -32,7 +35,7 @@ function api(routes) {
 }
 
 const ON = { body: { enabled: true, imports: [], rows_max: 200, check_max: 50 } }
-const IDS = { body: { identifiers: [{ kind: 'phone', value: '+919000000003', status: 'active' }] } }
+const IDS = { body: { identifiers: [{ kind: 'phone', value: '+447700900003', status: 'active' }] } }
 const show = (result = { case_id: 'c1' }) => render(<MemoryRouter><CdrPanel result={result} /></MemoryRouter>)
 const file = () => new File([CSV], 'cdr.csv', { type: 'text/csv' })
 
@@ -57,26 +60,26 @@ describe('the CDR panel', () => {
 
     const table = await screen.findByRole('table', { name: 'Top contacts' })
     const [first, second] = within(table).getAllByRole('row').slice(1)
-    expect(first.textContent).toContain('+919000000002') // two calls: the top contact
+    expect(first.textContent).toContain('+447700900002') // two calls: the top contact
     expect(second.textContent).toContain('This case') // the case's own phone identifier
     expect(first.textContent).not.toContain('This case') // silent on a number the case does not have
     expect(screen.getByText(/changed 0 times/)).toBeTruthy()
     expect(calls.filter((c) => c.method === 'POST')).toEqual([]) // nothing sent on reading
 
-    await userEvent.click(screen.getByLabelText('Check +919000000002'))
+    await userEvent.click(screen.getByLabelText('Check +447700900002'))
     await userEvent.click(screen.getByRole('button', { name: /Check 1 chosen number/ }))
     await waitFor(() => expect(first.textContent).toContain('case c2-0000-'))
-    expect(calls.find((c) => c.path === '/trace/c1/cdr/check').body).toEqual({ numbers: ['+919000000002'] })
+    expect(calls.find((c) => c.path === '/trace/c1/cdr/check').body).toEqual({ numbers: ['+447700900002'] })
 
-    await userEvent.click(screen.getByLabelText('Keep +919000000002'))
-    await userEvent.click(screen.getByLabelText('Keep +919000000003'))
+    await userEvent.click(screen.getByLabelText('Keep +447700900002'))
+    await userEvent.click(screen.getByLabelText('Keep +447700900003'))
     await userEvent.click(screen.getByRole('button', { name: /Save the summary/ }))
     await waitFor(() => expect(calls.some((c) => c.path === '/trace/c1/cdr' && c.method === 'POST')).toBe(true))
     const sent = calls.find((c) => c.path === '/trace/c1/cdr' && c.method === 'POST').body
     expect(sent.rows).toEqual([
-      { kind: 'subject', value: '+919000000001', calls: 3, sms: 0, seconds: 240, first: '2026-03-01', last: '2026-03-03', reasons: [] },
-      { kind: 'number', value: '+919000000002', calls: 2, sms: 0, seconds: 210, first: '2026-03-01', last: '2026-03-02', reasons: ['top_contact', 'other_case'] },
-      { kind: 'number', value: '+919000000003', calls: 1, sms: 0, seconds: 30, first: '2026-03-03', last: '2026-03-03', reasons: ['top_contact', 'case_identifier'] },
+      { kind: 'subject', value: '+447700900001', calls: 3, sms: 0, seconds: 240, first: '2026-03-01', last: '2026-03-03', reasons: [] },
+      { kind: 'number', value: '+447700900002', calls: 2, sms: 0, seconds: 210, first: '2026-03-01', last: '2026-03-02', reasons: ['top_contact', 'other_case'] },
+      { kind: 'number', value: '+447700900003', calls: 1, sms: 0, seconds: 30, first: '2026-03-03', last: '2026-03-03', reasons: ['top_contact', 'case_identifier'] },
     ])
     expect(JSON.stringify(sent)).not.toContain(IMEI) // a handset not ticked is not sent
   })
