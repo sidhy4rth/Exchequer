@@ -1,7 +1,9 @@
 """A task list per case (tasks.py): what still has to be done in it.
 
-    GET   /trace/{case_id}/tasks   the case's tasks this browser or unit may read
-    POST  /trace/{case_id}/tasks   add one
+    GET   /trace/{case_id}/tasks   the case's tasks this browser or unit may read, and the
+                                   tasks its records suggest (tasks.suggestions)
+    POST  /trace/{case_id}/tasks   add one; with "source", take up a suggestion, and with
+                                   "note" as well, decline it for that reason
     PATCH /tasks/{task_id}         change it, close it (done or dropped), open it again, or add a note
     GET   /tasks/due               open tasks due within ?days= (default 7) or overdue
 
@@ -23,10 +25,12 @@ router = APIRouter()
 
 
 class NewTask(BaseModel):
-    title: str = Field(..., max_length=200)
+    title: str = Field("", max_length=200)
     assignee: str = Field("", max_length=120)
     due_on: str = Field("", max_length=10)
     notes: str = Field("", max_length=2000)
+    source: str = Field("", max_length=80)
+    note: str = Field("", max_length=300)
 
 
 class TaskChange(BaseModel):
@@ -41,8 +45,10 @@ class TaskChange(BaseModel):
 @router.get("/trace/{case_id}/tasks")
 def list_tasks(case_id: str, user: CurrentUser) -> dict[str, Any]:
     rows = tasks.list_for(user, case_id)
+    suggested = tasks.suggestions(user, case_id)
     audit.record("task.list", case_id=case_id)
-    return {"case_id": case_id, "count": len(rows), "open": sum(t["status"] == "open" for t in rows), "tasks": rows}
+    return {"case_id": case_id, "count": len(rows), "open": sum(t["status"] == "open" for t in rows), "tasks": rows,
+            "suggested": suggested}
 
 
 @router.post("/trace/{case_id}/tasks", status_code=201)
@@ -52,7 +58,12 @@ def add_task(case_id: str, body: NewTask, user: CurrentUser, http: Request) -> d
         made = tasks.create(_owner(user), case_id, body.model_dump(), user)
     except tasks.TaskError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    audit.record("task.add", case_id=case_id, detail={"task_id": made["task_id"]})
+    detail: dict[str, Any] = {"task_id": made["task_id"]}
+    if made["source"]:  # which rule suggested it, and whether it was declined; never the reason's words
+        detail["suggestion"] = made["source"].rsplit(":", 1)[-1]
+        if made["status"] == "dropped":
+            detail["declined"] = True
+    audit.record("task.add", case_id=case_id, detail=detail)
     return made
 
 
