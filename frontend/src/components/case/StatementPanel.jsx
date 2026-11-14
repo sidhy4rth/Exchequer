@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchCaseStatements, saveStatementRows, withdrawStatementImport } from '../../api'
 import { plain } from '../../text'
 import {
@@ -50,6 +50,10 @@ export default function StatementPanel({ result }) {
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
   const [showWithdrawn, setShowWithdrawn] = useState(false)
+  const [done, setDone] = useState(null) // { count } once rows are saved
+  const told = useRef(null)
+  // Saving clears the rows and the button pressed, so the status line takes the keyboard's place.
+  useEffect(() => { if (done) told.current?.focus() }, [done])
 
   // The panel shows only once the server says the feature is on. A failed reload after
   // that says so: a short list would read as "nothing was saved".
@@ -73,6 +77,7 @@ export default function StatementPanel({ result }) {
     setRead({ name: file.name, ...out })
     setColumns(out.columns ?? null)
     setTicked({})
+    setDone(null)
   }
   const chooseSource = (value) => {
     setSource(value)
@@ -90,11 +95,13 @@ export default function StatementPanel({ result }) {
   const most = info?.rows_max ?? Infinity
   const tooMany = chosen.length > most
   async function save() {
+    if (busy) return
     setBusy(true); setError(null)
     try {
       await saveStatementRows(caseId, { source, currency, title, rows: chosen.map(toSaved) })
       setRead(null); setColumns(null); setTitle('')
       await load()
+      setDone({ count: chosen.length })
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
@@ -107,6 +114,7 @@ export default function StatementPanel({ result }) {
         {error && <p className="note st-error" role="alert">{error}</p>}
         <ShowWithdrawn count={info.withdrawn_count} shown={showWithdrawn} onChange={setShowWithdrawn} />
         {saved.map((item) => <Saved key={item.import_id} item={item} onWithdraw={info.can_withdraw ? withdraw(item.import_id) : null} />)}
+        {done && <p className="note" role="status" ref={told} tabIndex={-1}>Saved {done.count} row{done.count === 1 ? '' : 's'} to the case, listed above.</p>}
         <div className="st-pick">
           <label>Statement from
             <select value={source} onChange={(e) => chooseSource(e.target.value)}>
@@ -168,7 +176,8 @@ export default function StatementPanel({ result }) {
             {tooMany && <p className="note st-error" role="alert">Tick at most {most} row{most === 1 ? '' : 's'} at a time: the server keeps the matches, not the statement. Untick {chosen.length - most}, or save in parts.</p>}
             <div className="st-save">
               <label>Name for these rows<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="e.g. victim's statement, March" /></label>
-              <button type="button" disabled={busy || chosen.length === 0 || tooMany} onClick={save}>{busy ? 'Saving…' : `Save ${chosen.length} ticked row${chosen.length === 1 ? '' : 's'} to the case`}</button>
+              {/* Marked, not disabled, while it saves: it stays focusable, so the keyboard keeps its place. */}
+              <button type="button" disabled={chosen.length === 0 || tooMany} aria-disabled={busy || undefined} onClick={save}>{busy ? 'Saving…' : `Save ${chosen.length} ticked row${chosen.length === 1 ? '' : 's'} to the case`}</button>
             </div>
           </>
         )}
