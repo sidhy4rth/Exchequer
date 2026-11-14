@@ -38,6 +38,7 @@ export default function TasksPanel({ result }) {
   const [form, setForm] = useState(null) // the add form's values while it is open
   const [why, setWhy] = useState({}) // task_id → { status, note } while a reason is being typed
   const [error, setError] = useState(null)
+  const [halfDate, setHalfDate] = useState(null) // the task whose due date was left half-typed
   // Open on arrival when something is open; after that only the officer folds it,
   // so closing the last task never snaps the panel shut under their cursor.
   const [expanded, setExpanded] = useState(false)
@@ -70,6 +71,16 @@ export default function TasksPanel({ result }) {
     try { return await run(fn) } finally { adding.current = false; setSaving(false) }
   }
   const change = (t, changes) => run(() => updateTask(t.task_id, changes))
+  /** A half-typed date reads as empty: keep the task's date rather than clear it, and say why. */
+  function leaveDate(t, input) {
+    if (input.validity?.badInput) {
+      input.value = t.due_on
+      setHalfDate(t.task_id)
+      return
+    }
+    setHalfDate(null)
+    if (input.value !== t.due_on) change(t, { due_on: input.value })
+  }
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
   async function save(e) {
     e.preventDefault()
@@ -87,10 +98,12 @@ export default function TasksPanel({ result }) {
   const row = (t) => {
     const d = dueText(t)
     const w = why[t.task_id]
+    const title = plain(t.title)
+    const hintId = `tk-due-hint-${t.task_id}`
     return (
       <div className="request-row" key={t.task_id}>
         <div className="top">
-          <span className="nm">{plain(t.title)}</span>
+          <span className="nm">{title}</span>
           <span className={`pill ${d.tone}`}>{d.text}</span>
         </div>
         <dl className="tk-facts">
@@ -101,14 +114,19 @@ export default function TasksPanel({ result }) {
         </dl>
         {t.status === 'open' && !w && (
           <div className="fields">
+            {/* Named after the task: several open rows would otherwise all read "Assigned to" and "Due". */}
             <label>Assigned to
-              <input defaultValue={t.assignee} placeholder="a name"
+              <input defaultValue={t.assignee} placeholder="a name" aria-label={`Assigned to: ${title}`}
                 onBlur={(e) => e.target.value !== t.assignee && change(t, { assignee: e.target.value })} />
             </label>
             <label>Due
-              <input type="date" defaultValue={t.due_on}
-                onBlur={(e) => e.target.value !== t.due_on && change(t, { due_on: e.target.value })} />
+              <input type="date" defaultValue={t.due_on} aria-label={`Due: ${title}`}
+                aria-describedby={halfDate === t.task_id ? hintId : undefined}
+                onBlur={(e) => leaveDate(t, e.target)} />
             </label>
+            {halfDate === t.task_id && (
+              <p className="note tk-due-hint" id={hintId} role="status">Type the whole date (day, month and year), or clear it. The due date was kept.</p>
+            )}
             <div className="tk-actions">
               <button type="button" className="tk-done" onClick={() => change(t, { status: 'done' })}>Mark done</button>
               <button type="button" className="quiet" onClick={() => setWhy((o) => ({ ...o, [t.task_id]: { status: 'dropped', note: '' } }))}>Drop…</button>

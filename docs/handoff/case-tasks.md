@@ -26,6 +26,8 @@
 - The panel sits on the Evidence tab, not a sixth tab: `CaseTabs.test.jsx` and `caseTab.test.jsx` pin five tabs, and feature 6's exhibit register and certificate already live there.
 - API calls in their own `api/tasks.js`, not `api/evidence.js`, which Barenyam's #119 also changes.
 - The panel opens on arrival when a task is open; after that only the officer folds it, so closing the last task does not snap it shut.
+- A task row's due date left half-typed (the browser reports it empty, with `badInput`) is not sent: the old date is put back and a hint says to type the whole date. An emptied field still clears the date.
+- Each open row's Assigned to and Due fields are named after the task (`aria-label` "Assigned to: <title>"), so a screen reader tells several rows apart.
 
 ## Next
 
