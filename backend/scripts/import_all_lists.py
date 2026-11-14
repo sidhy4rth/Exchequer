@@ -52,7 +52,7 @@ import re
 import subprocess
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -86,6 +86,9 @@ class Family:
     files: tuple[Path, ...]
     needs: tuple[str, ...] = ()  # config settings it cannot run without
     args: tuple[str, ...] = ()
+    # Run instead when a `needs` setting is missing: a narrower pass that needs no key.
+    # It still counts as a skip for has_problem, and never renews the list's date.
+    keyless_args: tuple[str, ...] | None = None
 
 
 def families() -> tuple[Family, ...]:
@@ -98,7 +101,7 @@ def families() -> tuple[Family, ...]:
                needs=("ETHERSCAN_API_KEY",)),
         Family("Tether USDT freezes", "import_tether_freezes",
                tuple(chains[c].frozen_labels_path for c in ("ethereum", "tron")),
-               needs=("ETHERSCAN_API_KEY",)),
+               needs=("ETHERSCAN_API_KEY",), keyless_args=("--recheck-lifts",)),
         # Last: it carries over what the Ethereum files above now hold.
         Family("Sanctions carried to Polygon and Arbitrum", "port_evm_labels",
                tuple(chains[c].risk_labels_path for c in ("polygon", "arbitrum")),
@@ -133,6 +136,8 @@ class Outcome:
     held: dict[Path, bytes | None] = field(default_factory=dict)
     # A skipped family's files: when each was last reviewed (None: no date, or no file).
     reviewed: tuple[str | None, ...] = ()
+    # Set when only the family's keyless pass ran (Family.keyless_args): why.
+    keyless: str = ""
 
     def restore(self) -> None:
         for path, raw in self.held.items():
@@ -240,13 +245,16 @@ def run_module(family: Family) -> int:
 
 def run_family(family: Family, run: Callable[[Family], int] = run_module) -> Outcome:
     missing = [name for name in family.needs if not getattr(config, name, None)]
-    if missing:
+    if missing and family.keyless_args is None:
         return Outcome(family, "skipped", f"{', '.join(missing)} is not set",
                        reviewed=tuple(_reviewed(path) for path in family.files))
 
     held = {path: path.read_bytes() if path.exists() else None for path in family.files}
     outcome = Outcome(family, "ok", held=held)
-    code = run(family)
+    if missing:
+        outcome.keyless = f"{', '.join(missing)} is not set, so only `{' '.join(family.keyless_args)}` ran"
+        outcome.reviewed = tuple(_reviewed(path) for path in family.files)
+    code = run(replace(family, args=family.keyless_args) if missing else family)
     if code != 0:
         outcome.restore()
         outcome.status, outcome.detail = "failed", f"the importer exited with code {code}"
@@ -298,7 +306,9 @@ def reason_to_open(outcomes: list[Outcome], today: date) -> str | None:
     checked = [change for o in outcomes if o.status == "ok" for change in o.changes.values()]
     if any(change.real for change in checked):
         return CHANGED
-    if any(_is_old(change.held_reviewed, today) for change in checked):
+    # A keyless pass did not re-read its source, so it cannot renew the list's date.
+    if any(_is_old(change.held_reviewed, today) for o in outcomes if o.status == "ok" and not o.keyless
+           for change in o.changes.values()):
         return DATES
     return None
 
@@ -327,7 +337,7 @@ def has_problem(outcomes: list[Outcome], strict: bool = False, today: date | Non
     for outcome in outcomes:
         if outcome.status in ("failed", "refused"):
             return True
-        if outcome.status == "skipped" and (
+        if (outcome.status == "skipped" or outcome.keyless) and (
                 strict or (today is not None and any(_over_age(r, today) for r in outcome.reviewed))):
             return True
     return False
@@ -345,6 +355,8 @@ def announce(outcomes: list[Outcome], summary: str) -> None:
     for outcome in outcomes:
         if outcome.status == "skipped":
             print(f"::warning title=List skipped::{_annotation(f'{outcome.family.name}: {outcome.detail}')}")
+        elif outcome.keyless and outcome.status == "ok":
+            print(f"::warning title=List only re-checked::{_annotation(f'{outcome.family.name}: {outcome.keyless}')}")
         elif outcome.status in ("failed", "refused"):
             print(f"::error title=List not refreshed::{_annotation(f'{outcome.family.name}: {outcome.detail}')}")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
@@ -403,6 +415,9 @@ def render_summary(outcomes: list[Outcome], reason: str | None) -> str:
             lines += _addresses(f"New in `{path.name}` with BSC not checked (filed on Ethereum only)",
                                 c.notes.get("bsc_not_checked", []))
     for outcome in outcomes:
+        if outcome.status == "ok" and outcome.keyless:
+            lines.append(f"- **{outcome.family.name}: re-checked only.** {outcome.keyless}; "
+                         "an address it removed is listed above, and no new one was looked for.")
         if outcome.status != "ok":
             kept = "not run" if outcome.status == "skipped" else "the list already held was kept"
             lines.append(f"- **{outcome.family.name}: {outcome.status}.** {outcome.detail}; {kept}.")
