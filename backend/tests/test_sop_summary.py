@@ -135,3 +135,10 @@ def test_the_route_refuses_another_answer_free_text_and_an_unknown_case(client, 
     assert client.post("/trace/case-1/sop-summary", json={"on_cfcfrms": "maybe"}, headers=OWNER).status_code == 422
     assert client.post("/trace/case-1/sop-summary", json={"ncrp": NCRP}, headers=OWNER).status_code == 422
     assert client.post("/trace/nope/sop-summary", json={}, headers=OWNER).status_code == 404
+
+
+def test_the_case_page_fills_the_same_ncrp_blank_the_server_writes():
+    # CryptoSummary.jsx replaces this exact line with the number the officer
+    # types; if the two drifted, a typed number would silently be left out.
+    page = Path(__file__).resolve().parents[2] / "frontend" / "src" / "components" / "case" / "CryptoSummary.jsx"
+    assert f"export const NCRP_BLANK = '{sop_summary.NCRP_BLANK}'" in page.read_text()
