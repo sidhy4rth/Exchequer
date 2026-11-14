@@ -53,6 +53,7 @@ export default function CustodyPanel({ result }) {
   const [moves, setMoves] = useState({}) // wallet_id → proposal form values
   const [input, setInput] = useState({}) // movement_id → { signer, tx_hash, reason }
   const [error, setError] = useState(null)
+  const [warnings, setWarnings] = useState([]) // what the server recorded with a warning (custody_log._out_vs_in)
   const [focusOn, setFocusOn] = useState(null) // the wallet or movement to take the keyboard once it renders
   const rows = useRef({}) // wallet_id / movement_id → its element
 
@@ -70,7 +71,8 @@ export default function CustodyPanel({ result }) {
   /** fn's answer once the panel has reloaded, or null when the server refused (the refusal is shown). */
   async function run(fn) {
     setError(null)
-    try { const out = await fn(); await load(); return out ?? {} } catch (e) { setError(e.message); return null }
+    setWarnings([])
+    try { const out = await fn(); setWarnings(out?.warnings ?? []); await load(); return out ?? {} } catch (e) { setError(e.message); return null }
   }
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
   const setMove = (wid, key) => (e) => setMoves((m) => ({ ...m, [wid]: { ...m[wid], [key]: e.target.value } }))
@@ -216,7 +218,8 @@ export default function CustodyPanel({ result }) {
           </form>
         )}
         {error && <p className="error-line" role="alert">{error}</p>}
-        <p className="note">Every step is entered by a signed-in officer. A release needs the court&apos;s order and the wallet&apos;s threshold of distinct signers. Kept with this browser&apos;s and unit&apos;s records.</p>
+        {warnings.map((w) => <p key={w} className="note cu-warn" role="status">{plain(w)}</p>)}
+        <p className="note">Every step is entered by a signed-in officer, and each signer records their own approval, signed in to their own account. A release needs the court&apos;s order and the wallet&apos;s threshold of distinct signers. Kept with this browser&apos;s and unit&apos;s records.</p>
       </div>
     </details>
   )

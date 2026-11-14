@@ -184,6 +184,35 @@ describe('the custody wallets panel', () => {
     expect(calls.filter((c) => c.method === 'POST')[1].body.proposed_by).toBe('Constable Das')
   })
 
+  it('shows the warning the server gives with a step it recorded, until the next step', async () => {
+    const warning = 'Releases of USDT from this wallet with this one would take out 700, more USDT than its confirmed deposits of it (635). It can be confirmed only once confirmed deposits cover it.'
+    api({
+      ...NO_ASSETS,
+      'GET /trace/c1/custody': { body: { enabled: true, wallets: [WALLET], chains: { tron: 'Tron' } } },
+      'POST /custody/w1/movements': { status: 201, body: { movement_id: 'm2', warnings: [warning] } },
+      'POST /custody/movements/m1/cancel': { body: { movement_id: 'm1', warnings: [] } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Propose a deposit or release' }))
+    const form = screen.getByRole('form', { name: 'Propose a movement' })
+    await user.selectOptions(within(form).getByLabelText('Proposed by'), 'SI Iyer')
+    await user.type(within(form).getByLabelText('Asset'), 'USDT')
+    await user.type(within(form).getByLabelText('Amount'), '700')
+    await user.click(within(form).getByRole('button', { name: 'Propose' }))
+    expect(await screen.findByText(warning)).toBeInTheDocument()
+    const move = screen.getByLabelText('release of 635 USDT')
+    await user.type(within(move).getByLabelText('Why it is cancelled'), 'Entered twice')
+    await user.click(within(move).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByText(warning)).toBeNull())
+  })
+
+  it('tells officers that each signer records their own approval', async () => {
+    api({ ...NO_ASSETS, 'GET /trace/c1/custody': { body: { enabled: true, wallets: [WALLET], chains: { tron: 'Tron' } } } })
+    open()
+    expect(await screen.findByText(/each signer records their own approval/i)).toBeInTheDocument()
+  })
+
   it('parses signer lines, dropping blank ones and keeping commas inside a unit', () => {
     expect(parseSigners('A, B, Cyber Cell, North\n\n  \nC')).toEqual([
       { name: 'A', role: 'B', unit: 'Cyber Cell, North' }, { name: 'C', role: '', unit: '' }])

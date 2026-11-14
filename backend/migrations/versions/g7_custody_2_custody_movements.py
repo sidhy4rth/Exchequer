@@ -3,7 +3,9 @@
 Each deposit into or release out of a custody wallet: who proposed it, the
 amount and asset, the destination, the court's order for a release, each
 signer's approval as an officer recorded it, and the transaction hash once
-broadcast. A new table, nothing else touched.
+broadcast. A unique index keeps one transaction to one live movement of a
+wallet (a cancelled movement's hash may be recorded again). A new table,
+nothing else touched.
 
 Revision ID: g7_custody_2
 Revises: g7_custody_1
@@ -20,6 +22,8 @@ revision: str = "g7_custody_2"
 down_revision: Union[str, Sequence[str], None] = "g7_custody_1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
+
+LIVE = "tx_hash != '' AND status != 'cancelled'"  # the movements whose hash counts (models.CUSTODY_TX_LIVE)
 
 
 def upgrade() -> None:
@@ -46,9 +50,12 @@ def upgrade() -> None:
     )
     op.create_index("ix_custody_movements_wallet_id", "custody_movements", ["wallet_id"])
     op.create_index("ix_custody_movements_case_id", "custody_movements", ["case_id"])
+    op.create_index("uq_custody_movements_wallet_tx", "custody_movements", ["wallet_id", "tx_hash"], unique=True,
+                    sqlite_where=sa.text(LIVE), postgresql_where=sa.text(LIVE))
 
 
 def downgrade() -> None:
+    op.drop_index("uq_custody_movements_wallet_tx", table_name="custody_movements")
     op.drop_index("ix_custody_movements_case_id", table_name="custody_movements")
     op.drop_index("ix_custody_movements_wallet_id", table_name="custody_movements")
     op.drop_table("custody_movements")
