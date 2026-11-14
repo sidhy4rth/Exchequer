@@ -4,7 +4,7 @@ For a Telegram username on a case's register: the one public page https://t.me/<
 and only what that page shows, kept with its time and SHA-256.
 
 No test touches the network (CLAUDE.md rule 8): _get is replaced, or httpx runs on a
-MockTransport. The pages in tests/fixtures/osint/telegram/ are SYNTHETIC: hand-written
+MockTransport or on a fake network (tests/test_http_deadline.py). The pages in tests/fixtures/osint/telegram/ are SYNTHETIC: hand-written
 with t.me's class names, and made-up names, numbers and descriptions.
 """
 from __future__ import annotations
@@ -18,6 +18,7 @@ import pytest
 from app import telegram_lookup
 from app.domain_lookup import LookupError_
 from app.identifiers import IdentifierError
+from tests.test_http_deadline import RESPONSE, SlowNetwork
 
 PAGES = Path(__file__).parent / "fixtures" / "osint" / "telegram"
 
@@ -194,3 +195,27 @@ def test_a_slow_page_stops_at_the_deadline(monkeypatch):
     _transport(monkeypatch, lambda r: httpx.Response(200, content=chunks()))
     with pytest.raises(LookupError_, match="longer than 15 seconds"):
         telegram_lookup.look_up("sample_signals")
+
+
+def test_a_server_sending_just_inside_each_read_timeout_cannot_hold_the_lookup(monkeypatch):
+    """Each piece comes after 7 s, inside the 8 s read timeout: the reads are cut at 15 s in all,
+    not checked only once a slow read has returned (which let a lookup run to about 23 s)."""
+    now = [0.0]
+    monkeypatch.setattr(telegram_lookup, "_clock", lambda: now[0])
+    net = SlowNetwork(now, [RESPONSE] + [b"<"] * 10, gap_s=7.0)
+    monkeypatch.setattr(telegram_lookup, "_network", net)
+    with pytest.raises(LookupError_, match="longer than 15 seconds"):
+        telegram_lookup.look_up("sample_signals")
+    assert now[0] <= telegram_lookup.DEADLINE_S + 1e-9
+    assert all(t is not None and t <= telegram_lookup.TIMEOUT_S for _, t in net.waits)
+
+
+def test_a_page_through_the_capped_transport_is_read_as_usual(monkeypatch):
+    now = [0.0]
+    monkeypatch.setattr(telegram_lookup, "_clock", lambda: now[0])
+    body = page("channel")
+    head = f"HTTP/1.1 200 OK\r\nContent-Length: {len(body)}\r\n\r\n".encode()
+    monkeypatch.setattr(telegram_lookup, "_network", SlowNetwork(now, [head, body], gap_s=0.5))
+    found = telegram_lookup.look_up("sample_signals")
+    assert found["page"]["title"] == "Sample Signals & Tips"
+    assert found["records"][0]["sha256"] == hashlib.sha256(body).hexdigest()
