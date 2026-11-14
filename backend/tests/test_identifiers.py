@@ -79,6 +79,25 @@ def test_a_telegram_username_must_be_one_telegram_allows(typed):
         identifiers.telegram(typed)
 
 
+@pytest.mark.parametrize("kind, typed", [
+    # "$" also matches before a final newline; each of these left one at the end of the check.
+    ("telegram", "abcde\n?x"), ("telegram", "t.me/abcde\n/"), ("telegram", "@abcde\r?x"),
+    ("telegram", "abcde\n\n?x"), ("telegram", "abcde\t?x"), ("telegram", "abcde x?y"),
+    ("domain", "scam\n.in"), ("domain", "pay.scam\n.in/x"), ("domain", "scam.in\n/x"), ("domain", "scam.in:\n/x"),
+    ("upi", "shop\n.pay@okaxis"), ("upi", "shop.pay@ok axis"),
+])
+def test_a_trailing_newline_or_other_junk_never_passes_the_check(kind, typed):
+    with pytest.raises(IdentifierError):
+        identifiers.NORMALISE[kind](typed)
+
+
+def test_valid_identifiers_still_pass_the_full_match():
+    assert identifiers.telegram("abcde?x") == "abcde"
+    assert identifiers.telegram("@" + "a" * 32) == "a" * 32
+    assert identifiers.domain("pay.scam-shop.in:443") == "pay.scam-shop.in"
+    assert identifiers.upi("shop.pay@okaxis") == "shop.pay@okaxis"
+
+
 def test_a_four_letter_telegram_username_is_allowed_and_the_message_says_so():
     assert identifiers.telegram("@abcd") == "abcd"  # Telegram sells four-character names
     with pytest.raises(IdentifierError, match="4 to 32 letters"):

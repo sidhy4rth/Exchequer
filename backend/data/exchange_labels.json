@@ -67,6 +67,50 @@
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
     },
+    "review_2026_11_15": {
+      "date": "2026-11-15",
+      "rule": "scripts/clean_exchange_labels.py: token contracts and infrastructure removed; another firm's account attributed to the exchange that holds it",
+      "removed": {
+        "0x8b99f3660622e21f2910ecca7fbe51d654a1517d": "Binance Charity: a charity's donation wallet, not an exchange's",
+        "0xc365c3315cf926351ccaf13fa7d19c8c4058c8e1": "Binance Pool: a mining pool's payout wallet, not where a customer's funds are credited",
+        "0xee62cbab44113b3d72cdc94980953c0b1a4f4d47": "Binance: AE Token Swap: a token-migration wallet, not where a customer's funds are credited",
+        "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503": "Binance-Peg Tokens: the reserve behind Binance's peg tokens, not where a customer's funds are credited",
+        "0x9d6d492bd500da5b33cf95a5d610a73360fcaaa0": "Huobi Mining Pool: a mining pool's payout wallet, not where a customer's funds are credited",
+        "0x471d113059324321749e097705197a2b44a070fc": "Kanga Exchange 2: a token contract (app/never_flag.tokens), not a wallet"
+      },
+      "attributed_to_custodian": {
+        "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7": "AltCoinTrader: Binance Deposit 1: AltCoinTrader's account at Binance, was attributed to AltCoinTrader",
+        "0x2cf4e5b4fa8afa15f8dc7b5ada853e42776f3455": "AltCoinTrader: Celsius Deposit 1: AltCoinTrader's account at Celsius Network, was attributed to AltCoinTrader",
+        "0xb0afffd6f6ad77f61927803ade6dbd47f1a1c356": "BTSE: Cobo Deposit: BTSE's account at Cobo, was attributed to BTSE",
+        "0xfcb7edb966d320c7f3ae1f751a8c86f30fa5ad37": "Bitcoin Suisse: Binance Deposit 1: Bitcoin Suisse's account at Binance, was attributed to Bitcoin Suisse",
+        "0x6ba7fe01eec4c6a4308c8e2b35970e0488ce9a86": "ChangeNOW: HTX Deposit: ChangeNOW's account at Huobi / HTX, was attributed to ChangeNOW",
+        "0x50a3f3b8855c2da88e56c7b0ef6e0e4a79f853f9": "Delta Exchange: Binance Deposit 1: Delta Exchange's account at Binance, was attributed to Delta Exchange",
+        "0x9fae72d291949ed6fa8b74881328fdc123c645d3": "Deribit: Celsius Network Deposit: Deribit's account at Celsius Network, was attributed to Deribit",
+        "0xb61a16bda6d61d9b8ad493bf05962c5b98d1712f": "Deribit: Coinbase Prime Custody: Deribit's account at Coinbase, was attributed to Deribit",
+        "0x2953452df5d7285b9a3a8a1e876a4bacb09a976e": "eToro: Binance Deposit 1: eToro's account at Binance, was attributed to eToro"
+      }
+    },
+    "exchange_status": {
+      "source": "data/exchange_status.json, applied by scripts/mark_exchange_status.py",
+      "labels": {
+        "Allbit": 2,
+        "AscendEX": 3,
+        "Bgogo": 2,
+        "BitMEX": 2,
+        "BitMart": 3,
+        "Bittrex": 3,
+        "Celsius Network": 2,
+        "Cobinhood": 2,
+        "CoinEx": 14,
+        "Coinbene": 1,
+        "FTX": 13,
+        "Hotbit": 10,
+        "Kryptono": 3,
+        "Liquid": 4,
+        "TopBTC": 1,
+        "Yunbi": 3
+      }
+    },
     "india_exchanges": "131 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
   },
   "labels": {
@@ -82,12 +126,12 @@
     },
     "0xdc1882f350b42ac9a23508996254b1915c78b204": {
       "exchange": "Allbit",
-      "label": "Allbit 1",
+      "label": "Allbit 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0xff6b1cdfd2d3e37977d7938aa06b6d89d6675e27": {
       "exchange": "Allbit",
-      "label": "Allbit 2",
+      "label": "Allbit 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0x6dfc34609a05bc22319fa4cce1d1e2929548c0d7": {
@@ -156,13 +200,13 @@
       "type": "exchange_wallet"
     },
     "0x0da044b16bb53ab6d6691e25b1ec7ad380fa5fa7": {
-      "exchange": "AltCoinTrader",
+      "exchange": "Binance",
       "label": "AltCoinTrader: Binance Deposit 1",
       "type": "exchange_wallet"
     },
     "0x2cf4e5b4fa8afa15f8dc7b5ada853e42776f3455": {
-      "exchange": "AltCoinTrader",
-      "label": "AltCoinTrader: Celsius Deposit 1",
+      "exchange": "Celsius Network",
+      "label": "AltCoinTrader: Celsius Deposit 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0x87b7ba194ed714a871c91f6b9ba8dc8182ed3a5d": {
@@ -177,17 +221,17 @@
     },
     "0x03bdf69b1322d623836afbd27679a1c0afa067e9": {
       "exchange": "AscendEX",
-      "label": "AscendEX 1",
+      "label": "AscendEX 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0x4b1a99467a284cc690e3237bc69105956816f762": {
       "exchange": "AscendEX",
-      "label": "AscendEX 2",
+      "label": "AscendEX 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0x986a2fca9eda0e06fbf7839b89bfc006ee2a23dd": {
       "exchange": "AscendEX",
-      "label": "AscendEX 3",
+      "label": "AscendEX 3 (defunct)",
       "type": "exchange_wallet"
     },
     "0x92dbd8e0a46edd62aa42d1f7902d0e496bddc15a": {
@@ -226,7 +270,7 @@
       "type": "exchange_wallet"
     },
     "0xb0afffd6f6ad77f61927803ade6dbd47f1a1c356": {
-      "exchange": "BTSE",
+      "exchange": "Cobo",
       "label": "BTSE: Cobo Deposit",
       "type": "exchange_wallet"
     },
@@ -237,12 +281,12 @@
     },
     "0x7a10ec7d68a048bdae36a70e93532d31423170fa": {
       "exchange": "Bgogo",
-      "label": "Bgogo 1",
+      "label": "Bgogo 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0xce1bf8e51f8b39e51c6184e059786d1c0eaf360f": {
       "exchange": "Bgogo",
-      "label": "Bgogo 2",
+      "label": "Bgogo 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0xa30d8157911ef23c46c0eb71889efe6a648a41f7": {
@@ -468,11 +512,6 @@
     "0x001866ae5b3de6caa5a51543fd9fb64f524f5478": {
       "exchange": "Binance",
       "label": "Binance 9",
-      "type": "exchange_wallet"
-    },
-    "0x8b99f3660622e21f2910ecca7fbe51d654a1517d": {
-      "exchange": "Binance",
-      "label": "Binance Charity",
       "type": "exchange_wallet"
     },
     "0x000f9f5f6db6d63bb64bb55d58272a1ce660fd90": {
@@ -25435,24 +25474,9 @@
       "label": "Binance JEX",
       "type": "exchange_wallet"
     },
-    "0xc365c3315cf926351ccaf13fa7d19c8c4058c8e1": {
-      "exchange": "Binance",
-      "label": "Binance Pool",
-      "type": "exchange_wallet"
-    },
     "0x61189da79177950a7272c88c6058b96d4bcd6be2": {
       "exchange": "Binance",
       "label": "Binance US",
-      "type": "exchange_wallet"
-    },
-    "0xee62cbab44113b3d72cdc94980953c0b1a4f4d47": {
-      "exchange": "Binance",
-      "label": "Binance: AE Token Swap",
-      "type": "exchange_wallet"
-    },
-    "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503": {
-      "exchange": "Binance",
-      "label": "Binance: Binance-Peg Tokens",
       "type": "exchange_wallet"
     },
     "0x0b95993a39a363d99280ac950f5e4536ab5c5566": {
@@ -25502,27 +25526,27 @@
     },
     "0xeea81c4416d71cef071224611359f6f99a4c4294": {
       "exchange": "BitMEX",
-      "label": "BitMEX 1",
+      "label": "BitMEX 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0xfb8131c260749c7835a08ccbdb64728de432858e": {
       "exchange": "BitMEX",
-      "label": "BitMEX 2",
+      "label": "BitMEX 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0xe79eef9b9388a4ff70ed7ec5bccd5b928ebb8bd1": {
       "exchange": "BitMart",
-      "label": "BitMart",
+      "label": "BitMart (winding down)",
       "type": "exchange_wallet"
     },
     "0x68b22215ff74e3606bd5e6c1de8c2d68180c85f7": {
       "exchange": "BitMart",
-      "label": "BitMart 2",
+      "label": "BitMart 2 (winding down)",
       "type": "exchange_wallet"
     },
     "0x3ab28ecedea6cdb6feed398e93ae8c7b316b1182": {
       "exchange": "BitMart",
-      "label": "BitMart 3",
+      "label": "BitMart 3 (winding down)",
       "type": "exchange_wallet"
     },
     "0xf2a14015eaa3f9cc987f2c3b62fc93eee41aa5d0": {
@@ -25631,7 +25655,7 @@
       "type": "exchange_wallet"
     },
     "0xfcb7edb966d320c7f3ae1f751a8c86f30fa5ad37": {
-      "exchange": "Bitcoin Suisse",
+      "exchange": "Binance",
       "label": "Bitcoin Suisse: Binance Deposit 1",
       "type": "exchange_wallet"
     },
@@ -121312,17 +121336,17 @@
     },
     "0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98": {
       "exchange": "Bittrex",
-      "label": "Bittrex",
+      "label": "Bittrex (defunct)",
       "type": "exchange_wallet"
     },
     "0xe94b04a0fed112f3664e45adb2b8915693dd5ff3": {
       "exchange": "Bittrex",
-      "label": "Bittrex 2",
+      "label": "Bittrex 2 (defunct)",
       "type": "contract_wallet"
     },
     "0x66f820a414680b5bcda5eeca5dea238543f42054": {
       "exchange": "Bittrex",
-      "label": "Bittrex 3",
+      "label": "Bittrex 3 (defunct)",
       "type": "exchange_wallet"
     },
     "0x04a6b67fac93e507d2642f129f5cb8ad474f9823": {
@@ -121521,7 +121545,7 @@
       "type": "exchange_wallet"
     },
     "0x6ba7fe01eec4c6a4308c8e2b35970e0488ce9a86": {
-      "exchange": "ChangeNOW",
+      "exchange": "Huobi / HTX",
       "label": "ChangeNOW: HTX Deposit",
       "type": "exchange_wallet"
     },
@@ -121537,12 +121561,12 @@
     },
     "0x8958618332df62af93053cb9c535e26462c959b0": {
       "exchange": "Cobinhood",
-      "label": "Cobinhood 1",
+      "label": "Cobinhood 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0xb726da4fbdc3e4dbda97bb20998cf899b0e727e0": {
       "exchange": "Cobinhood",
-      "label": "Cobinhood 2",
+      "label": "Cobinhood 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0x06051836ac6c5112b890f8b6ec78e33d1afeae7c": {
@@ -121692,72 +121716,72 @@
     },
     "0xcf7105fde573695d62666aefa4e1691bf3ab50d5": {
       "exchange": "CoinEx",
-      "label": "CoinEx 1",
+      "label": "CoinEx 1 (winding down)",
       "type": "exchange_wallet"
     },
     "0x601a63c50448477310fedb826ed0295499baf623": {
       "exchange": "CoinEx",
-      "label": "CoinEx 10",
+      "label": "CoinEx 10 (winding down)",
       "type": "exchange_wallet"
     },
     "0xd782e53a49d564f5fce4ba99555dd25d16d02a75": {
       "exchange": "CoinEx",
-      "label": "CoinEx 11",
+      "label": "CoinEx 11 (winding down)",
       "type": "exchange_wallet"
     },
     "0x90f86774e792e91cf81b2ff9f341efca649343a6": {
       "exchange": "CoinEx",
-      "label": "CoinEx 12",
+      "label": "CoinEx 12 (winding down)",
       "type": "exchange_wallet"
     },
     "0x53eb3ea47643e87e8f25dd997a37b3b5260e7336": {
       "exchange": "CoinEx",
-      "label": "CoinEx 13",
+      "label": "CoinEx 13 (winding down)",
       "type": "exchange_wallet"
     },
     "0x8da2931006453e0285682314af5bcd2377deaeb1": {
       "exchange": "CoinEx",
-      "label": "CoinEx 14",
+      "label": "CoinEx 14 (winding down)",
       "type": "exchange_wallet"
     },
     "0xb85bd2a1d76586bb8f81494bfa061dfbf803b4db": {
       "exchange": "CoinEx",
-      "label": "CoinEx 16",
+      "label": "CoinEx 16 (winding down)",
       "type": "exchange_wallet"
     },
     "0x89f2ab029dcd11bd5a00ed6a77ccbe46315212e8": {
       "exchange": "CoinEx",
-      "label": "CoinEx 2",
+      "label": "CoinEx 2 (winding down)",
       "type": "exchange_wallet"
     },
     "0x187e3534f461d7c59a7d6899a983a5305b48f93f": {
       "exchange": "CoinEx",
-      "label": "CoinEx 3",
+      "label": "CoinEx 3 (winding down)",
       "type": "exchange_wallet"
     },
     "0xda07f1603a1c514b2f4362f3eae7224a9cdefaf9": {
       "exchange": "CoinEx",
-      "label": "CoinEx 4",
+      "label": "CoinEx 4 (winding down)",
       "type": "exchange_wallet"
     },
     "0x3339afcb8e237aa8aaf3e1040473173830efd09c": {
       "exchange": "CoinEx",
-      "label": "CoinEx 8",
+      "label": "CoinEx 8 (winding down)",
       "type": "exchange_wallet"
     },
     "0xafedf06777839d59eed3163cc3e0a5057b514399": {
       "exchange": "CoinEx",
-      "label": "CoinEx: Cold",
+      "label": "CoinEx: Cold (winding down)",
       "type": "cold_wallet"
     },
     "0xb9ee1e551f538a464e8f8c41e9904498505b49b0": {
       "exchange": "CoinEx",
-      "label": "Coinex",
+      "label": "Coinex (winding down)",
       "type": "exchange_wallet"
     },
     "0x33ddd548fe3a082d753e5fe721a26e1ab43e3598": {
       "exchange": "CoinEx",
-      "label": "Coinex 2",
+      "label": "Coinex 2 (winding down)",
       "type": "exchange_wallet"
     },
     "0x0363bfc09b48616190d15ddee5987ae2d05da6f4": {
@@ -122487,7 +122511,7 @@
     },
     "0x33683b94334eebc9bd3ea85ddbda4a86fb461405": {
       "exchange": "Coinbene",
-      "label": "Coinbene: Cold Wallet",
+      "label": "Coinbene: Cold Wallet (defunct)",
       "type": "cold_wallet"
     },
     "0x9c19b0497997fe9e75862688a295168070456951": {
@@ -122831,7 +122855,7 @@
       "type": "exchange_wallet"
     },
     "0x50a3f3b8855c2da88e56c7b0ef6e0e4a79f853f9": {
-      "exchange": "Delta Exchange",
+      "exchange": "Binance",
       "label": "Delta Exchange: Binance Deposit 1",
       "type": "exchange_wallet"
     },
@@ -122896,12 +122920,12 @@
       "type": "exchange_wallet"
     },
     "0x9fae72d291949ed6fa8b74881328fdc123c645d3": {
-      "exchange": "Deribit",
-      "label": "Deribit: Celsius Network Deposit",
+      "exchange": "Celsius Network",
+      "label": "Deribit: Celsius Network Deposit (defunct)",
       "type": "exchange_wallet"
     },
     "0xb61a16bda6d61d9b8ad493bf05962c5b98d1712f": {
-      "exchange": "Deribit",
+      "exchange": "Coinbase",
       "label": "Deribit: Coinbase Prime Custody",
       "type": "exchange_wallet"
     },
@@ -122937,67 +122961,67 @@
     },
     "0x2faf487a4414fe77e2327f0bf4ae2a264a776ad2": {
       "exchange": "FTX",
-      "label": "FTX 1",
+      "label": "FTX 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0x3701f04e25b57e549a2a348c18e2d925c2805602": {
       "exchange": "FTX",
-      "label": "FTX 12",
+      "label": "FTX 12 (defunct)",
       "type": "exchange_wallet"
     },
     "0xc098b2a3aa256d2140208c3de6543aaef5cd3a94": {
       "exchange": "FTX",
-      "label": "FTX 2",
+      "label": "FTX 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0xd8019a114e86ad41d71a3eeb6620b19dd166a969": {
       "exchange": "FTX",
-      "label": "FTX 3",
+      "label": "FTX 3 (defunct)",
       "type": "exchange_wallet"
     },
     "0x41772edd47d9ddf9ef848cdb34fe76143908c7ad": {
       "exchange": "FTX",
-      "label": "FTX 4",
+      "label": "FTX 4 (defunct)",
       "type": "exchange_wallet"
     },
     "0x279f8940ca2a44c35ca3edf7d28945254d0f0ae6": {
       "exchange": "FTX",
-      "label": "FTX 5",
+      "label": "FTX 5 (defunct)",
       "type": "exchange_wallet"
     },
     "0x9ade1c17d25246c405604344f89e8f23f8c1c632": {
       "exchange": "FTX",
-      "label": "FTX 6",
+      "label": "FTX 6 (defunct)",
       "type": "exchange_wallet"
     },
     "0x7abe0ce388281d2acf297cb089caef3819b13448": {
       "exchange": "FTX",
-      "label": "FTX 9",
+      "label": "FTX 9 (defunct)",
       "type": "exchange_wallet"
     },
     "0x77f33da6046a03ebb0e6d33a26cb49bd738774ff": {
       "exchange": "FTX",
-      "label": "FTX: Banruptcy Dust Collector",
+      "label": "FTX: Banruptcy Dust Collector (defunct)",
       "type": "exchange_wallet"
     },
     "0x97f991971a37d4ca58064e6a98fc563f03a71e5c": {
       "exchange": "FTX",
-      "label": "FTX: Cold 1",
+      "label": "FTX: Cold 1 (defunct)",
       "type": "cold_wallet"
     },
     "0x93c3cf42439dc4cce8fa5f3da078facc9fbb4c15": {
       "exchange": "FTX",
-      "label": "FTX: Cold 2",
+      "label": "FTX: Cold 2 (defunct)",
       "type": "cold_wallet"
     },
     "0x02412e9a81a98829716588f80458c8bf593cadc0": {
       "exchange": "FTX",
-      "label": "FTX: Deposit",
+      "label": "FTX: Deposit (defunct)",
       "type": "exchange_wallet"
     },
     "0xa98f8fda8cc449e99183229bb906cefb246a7ef3": {
       "exchange": "FTX",
-      "label": "FTX: Whitehat",
+      "label": "FTX: Whitehat (defunct)",
       "type": "exchange_wallet"
     },
     "0xffd0ecee885fcd2ebce0fec9add69bf1ed03194b": {
@@ -123232,52 +123256,52 @@
     },
     "0x274f3c32c90517975e29dfc209a23f315c1e5fc7": {
       "exchange": "Hotbit",
-      "label": "Hotbit 1",
+      "label": "Hotbit 1 (defunct)",
       "type": "hot_wallet"
     },
     "0xb18fbfe3d34fdc227eb4508cde437412b6233121": {
       "exchange": "Hotbit",
-      "label": "Hotbit 10",
+      "label": "Hotbit 10 (defunct)",
       "type": "hot_wallet"
     },
     "0x768f2a7ccdfde9ebdfd5cea8b635dd590cb3a3f1": {
       "exchange": "Hotbit",
-      "label": "Hotbit 11",
+      "label": "Hotbit 11 (defunct)",
       "type": "hot_wallet"
     },
     "0xa986266b60390e1d313ecd3b2311a9af74c57400": {
       "exchange": "Hotbit",
-      "label": "Hotbit 12",
+      "label": "Hotbit 12 (defunct)",
       "type": "hot_wallet"
     },
     "0x4a41d76b0524a3989998380c033f12bfeb5f7201": {
       "exchange": "Hotbit",
-      "label": "Hotbit 13",
+      "label": "Hotbit 13 (defunct)",
       "type": "hot_wallet"
     },
     "0xc7029e939075f48fa2d5953381660c7d01570171": {
       "exchange": "Hotbit",
-      "label": "Hotbit 14",
+      "label": "Hotbit 14 (defunct)",
       "type": "hot_wallet"
     },
     "0x39aa02d6b499a76a70fab5f164e8be587c366141": {
       "exchange": "Hotbit",
-      "label": "Hotbit 15",
+      "label": "Hotbit 15 (defunct)",
       "type": "hot_wallet"
     },
     "0xb34ed85bc0b9da2fa3c5e5d2f4b24f8ee96ce4e9": {
       "exchange": "Hotbit",
-      "label": "Hotbit 2",
+      "label": "Hotbit 2 (defunct)",
       "type": "hot_wallet"
     },
     "0x8533a0bd9310eb63e7cc8e1116c18a3d67b1976a": {
       "exchange": "Hotbit",
-      "label": "Hotbit 8",
+      "label": "Hotbit 8 (defunct)",
       "type": "hot_wallet"
     },
     "0x562680a4dc50ed2f14d75bf31f494cfe0b8d10a1": {
       "exchange": "Hotbit",
-      "label": "Hotbit 9",
+      "label": "Hotbit 9 (defunct)",
       "type": "hot_wallet"
     },
     "0xdc76cd25977e0a5ae17155770273ad58648900d3": {
@@ -123473,11 +123497,6 @@
     "0x1062a747393198f70f71ec65a582423dba7e5ab3": {
       "exchange": "Huobi / HTX",
       "label": "Huobi 9",
-      "type": "exchange_wallet"
-    },
-    "0x9d6d492bd500da5b33cf95a5d610a73360fcaaa0": {
-      "exchange": "Huobi / HTX",
-      "label": "Huobi Mining Pool",
       "type": "exchange_wallet"
     },
     "0xe0d513cf39b52a09aefcef25e91dda3a2636329a": {
@@ -123698,11 +123717,6 @@
     "0x42d17b7f3532ec2f7c4e4e5e239baa476846e2cd": {
       "exchange": "Kanga",
       "label": "Kanga Exchange 1",
-      "type": "exchange_wallet"
-    },
-    "0x471d113059324321749e097705197a2b44a070fc": {
-      "exchange": "Kanga",
-      "label": "Kanga Exchange 2",
       "type": "exchange_wallet"
     },
     "0x0c01089aedc45ab0f43467cceca6b4d3e4170bea": {
@@ -124142,17 +124156,17 @@
     },
     "0xe8a0e282e6a3e8023465accd47fae39dd5db010b": {
       "exchange": "Kryptono",
-      "label": "Kryptono 1",
+      "label": "Kryptono 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0x629a7144235259336ea2694167f3c8b856edd7dc": {
       "exchange": "Kryptono",
-      "label": "Kryptono 2",
+      "label": "Kryptono 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0x30b71d015f60e2f959743038ce0aaec9b4c1ea44": {
       "exchange": "Kryptono",
-      "label": "Kryptono 3",
+      "label": "Kryptono 3 (defunct)",
       "type": "exchange_wallet"
     },
     "0x2b5634c42055806a59e9107ed44d43c426e58258": {
@@ -124282,22 +124296,22 @@
     },
     "0xedbb72e6b3cf66a792bff7faac5ea769fe810517": {
       "exchange": "Liquid",
-      "label": "Liquid 1",
+      "label": "Liquid 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0xdf4b6fb700c428476bd3c02e6fa83e110741145b": {
       "exchange": "Liquid",
-      "label": "Liquid 2",
+      "label": "Liquid 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0xdb2cad4f306b47c9b35541988c7656f1bb092e15": {
       "exchange": "Liquid",
-      "label": "Liquid 3",
+      "label": "Liquid 3 (defunct)",
       "type": "exchange_wallet"
     },
     "0x9cc2dce817093ceea82bb67a4cf43131fa354c06": {
       "exchange": "Liquid",
-      "label": "Liquid 4",
+      "label": "Liquid 4 (defunct)",
       "type": "exchange_wallet"
     },
     "0xaf1931c20ee0c11bea17a41bfbbad299b2763bc0": {
@@ -125042,7 +125056,7 @@
     },
     "0xb2cc3cdd53fc9a1aeaf3a68edeba2736238ddc5d": {
       "exchange": "TopBTC",
-      "label": "TopBTC",
+      "label": "TopBTC (defunct)",
       "type": "exchange_wallet"
     },
     "0x390de26d772d2e2005c6d1d24afc902bae37a4bb": {
@@ -125132,17 +125146,17 @@
     },
     "0xd94c9ff168dc6aebf9b6cc86deff54f3fb0afc33": {
       "exchange": "Yunbi",
-      "label": "Yunbi 1",
+      "label": "Yunbi 1 (defunct)",
       "type": "exchange_wallet"
     },
     "0x42da8a05cb7ed9a43572b5ba1b8f82a0a6e263dc": {
       "exchange": "Yunbi",
-      "label": "Yunbi 2",
+      "label": "Yunbi 2 (defunct)",
       "type": "exchange_wallet"
     },
     "0x700f6912e5753e91ea3fae877a2374a2db1245d7": {
       "exchange": "Yunbi",
-      "label": "Yunbi 3",
+      "label": "Yunbi 3 (defunct)",
       "type": "exchange_wallet"
     },
     "0x111cff45948819988857bbf1966a0399e0d1141e": {
@@ -125166,7 +125180,7 @@
       "type": "hot_wallet"
     },
     "0x2953452df5d7285b9a3a8a1e876a4bacb09a976e": {
-      "exchange": "eToro",
+      "exchange": "Binance",
       "label": "eToro: Binance Deposit 1",
       "type": "exchange_wallet"
     },
@@ -125827,7 +125841,7 @@
     }
   },
   "_unverified_pending": {
-    "_note": "Indian exchanges (WazirX, CoinDCX, ZebPay) are directly relevant to the MHA problem statement, but their hot-wallet addresses could not be sourced to a confidence level appropriate for an attribution tool. Do NOT guess them -- a wrong address produces a false attribution against a named company. Look each one up on etherscan.io/accounts/label/, confirm the label, and move the entry into 'labels' above. See README section 'Adding exchange labels'.",
+    "_note": "Indian exchanges (WazirX, ZebPay, Bitbns, Giottus) are directly relevant to the MHA problem statement, but their hot-wallet addresses could not be sourced to a confidence level appropriate for an attribution tool. Do NOT guess them -- a wrong address produces a false attribution against a named company. Look each one up on etherscan.io/accounts/label/, confirm the label, and move the entry into 'labels' above. See README section 'Adding exchange labels'. CoinDCX left this list on 15 Nov 2026: its Ethereum wallets are in 'labels' above (29, from Etherscan's tags; scripts/import_eth_labels.py), and its BSC, Polygon and Arbitrum ones in those chains' files; it has no Tron labels yet.",
     "pending": [
       "ZebPay",
       "Bitbns",

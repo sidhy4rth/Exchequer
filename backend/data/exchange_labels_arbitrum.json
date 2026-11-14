@@ -12,6 +12,15 @@
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.port_evm_labels",
   "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json.",
+  "exchange_status": {
+   "source": "data/exchange_status.json, applied by scripts/mark_exchange_status.py",
+   "labels": {
+    "AscendEX": 1,
+    "BitMEX": 1,
+    "FTX": 2,
+    "Hotbit": 7
+   }
+  },
   "india_exchanges": "4 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why."
  },
  "labels": {
@@ -62,7 +71,7 @@
   },
   "0x274f3c32c90517975e29dfc209a23f315c1e5fc7": {
    "exchange": "Hotbit",
-   "label": "Hotbit 1",
+   "label": "Hotbit 1 (defunct)",
    "type": "hot_wallet"
   },
   "0x2864de013415b6c2c7a96333183b20f0f9cc7532": {
@@ -87,7 +96,7 @@
   },
   "0x3701f04e25b57e549a2a348c18e2d925c2805602": {
    "exchange": "FTX",
-   "label": "FTX 12",
+   "label": "FTX 12 (defunct)",
    "type": "exchange_wallet"
   },
   "0x3727cfcbd85390bb11b3ff421878123adb866be8": {
@@ -147,12 +156,12 @@
   },
   "0x4a41d76b0524a3989998380c033f12bfeb5f7201": {
    "exchange": "Hotbit",
-   "label": "Hotbit 13",
+   "label": "Hotbit 13 (defunct)",
    "type": "hot_wallet"
   },
   "0x4b1a99467a284cc690e3237bc69105956816f762": {
    "exchange": "AscendEX",
-   "label": "AscendEX 2",
+   "label": "AscendEX 2 (defunct)",
    "type": "exchange_wallet"
   },
   "0x4d24eececb86041f47bca41265319e9f06ae2fcb": {
@@ -172,7 +181,7 @@
   },
   "0x562680a4dc50ed2f14d75bf31f494cfe0b8d10a1": {
    "exchange": "Hotbit",
-   "label": "Hotbit 9",
+   "label": "Hotbit 9 (defunct)",
    "type": "hot_wallet"
   },
   "0x563537412ad5d49faa7fa442b9193b8238d98c3c": {
@@ -227,7 +236,7 @@
   },
   "0x768f2a7ccdfde9ebdfd5cea8b635dd590cb3a3f1": {
    "exchange": "Hotbit",
-   "label": "Hotbit 11",
+   "label": "Hotbit 11 (defunct)",
    "type": "hot_wallet"
   },
   "0x77134cbc06cb00b66f4c7e623d5fdbf6777635ec": {
@@ -262,7 +271,7 @@
   },
   "0x8533a0bd9310eb63e7cc8e1116c18a3d67b1976a": {
    "exchange": "Hotbit",
-   "label": "Hotbit 8",
+   "label": "Hotbit 8 (defunct)",
    "type": "hot_wallet"
   },
   "0x8550e644d74536f1df38b17d5f69aa1bfe28ae86": {
@@ -317,7 +326,7 @@
   },
   "0x9ade1c17d25246c405604344f89e8f23f8c1c632": {
    "exchange": "FTX",
-   "label": "FTX 6",
+   "label": "FTX 6 (defunct)",
    "type": "exchange_wallet"
   },
   "0x9b0c45d46d386cedd98873168c36efd0dcba8d46": {
@@ -342,7 +351,7 @@
   },
   "0xa986266b60390e1d313ecd3b2311a9af74c57400": {
    "exchange": "Hotbit",
-   "label": "Hotbit 12",
+   "label": "Hotbit 12 (defunct)",
    "type": "hot_wallet"
   },
   "0xa9bd318a4ca1747e6068d100e18711b529386e29": {
@@ -412,7 +421,7 @@
   },
   "0xc7029e939075f48fa2d5953381660c7d01570171": {
    "exchange": "Hotbit",
-   "label": "Hotbit 14",
+   "label": "Hotbit 14 (defunct)",
    "type": "hot_wallet"
   },
   "0xc882b111a75c0c657fc507c04fbfcd2cc984f071": {
@@ -527,7 +536,7 @@
   },
   "0xfb8131c260749c7835a08ccbdb64728de432858e": {
    "exchange": "BitMEX",
-   "label": "BitMEX 2",
+   "label": "BitMEX 2 (defunct)",
    "type": "exchange_wallet"
   },
   "0xffb3118124cdaebd9095fa9a479895042018cac2": {
