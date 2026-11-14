@@ -67,6 +67,23 @@ def _fetch(net: SlowNetwork, deadline: float, timeout: float = 8.0) -> bytes:
             return b"".join(response.iter_bytes())
 
 
+def test_httpx_still_has_the_private_pool_that_transport_swaps():
+    """transport() replaces httpx.HTTPTransport._pool (private; httpx and httpcore are pinned). If an
+    upgrade renames it, this fails here rather than leaving lookups silently uncapped."""
+    assert isinstance(httpx.HTTPTransport()._pool, httpcore.ConnectionPool)
+    pool = http_deadline.transport(10.0, lambda: 0.0)._pool
+    assert isinstance(pool, httpcore.ConnectionPool)
+    assert isinstance(pool._network_backend, http_deadline._Backend)
+
+
+def test_transport_refuses_to_run_uncapped_if_the_pool_is_gone(monkeypatch):
+    class NoPool(httpx.BaseTransport):
+        pass
+    monkeypatch.setattr(http_deadline.httpx, "HTTPTransport", NoPool)
+    with pytest.raises(RuntimeError, match="_pool"):
+        http_deadline.transport(10.0, lambda: 0.0)
+
+
 def test_a_prompt_server_is_read_whole_and_waits_keep_their_own_timeout():
     net = SlowNetwork([0.0], [RESPONSE, b"0123456789"], gap_s=1.0)
     assert _fetch(net, deadline=15.0) == b"0123456789"
