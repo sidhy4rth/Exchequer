@@ -150,6 +150,29 @@ describe('ExportScanPanel', () => {
     expect(calls.filter((c) => c.method === 'GET' && c.path === '/trace/c1/identifiers')).toHaveLength(2)
   })
 
+  it("keeps the keyboard on the row: the added address's status takes focus, and a refusal leaves it on the button", async () => {
+    let refuse = true
+    api({
+      ...ON,
+      'POST /trace/c1/identifiers': { // read on each call: a refusal first, then the add
+        get status() { return refuse ? 400 : 201 },
+        get body() { return refuse ? { detail: 'Not a wallet address.' } : { identifier_id: 'i1', kind: 'wallet', value: TRON } },
+      },
+    })
+    const user = userEvent.setup()
+    show()
+    await user.upload(await screen.findByLabelText('Export file'), new File([`pay ${TRON}\n`], 'n.txt'))
+    const button = await screen.findByRole('button', { name: `Add as case identifier ${TRON}` })
+    button.focus()
+    await user.keyboard('{Enter}')
+    expect(await screen.findByText('Not a wallet address.')).toBeInTheDocument()
+    expect(button).toHaveFocus() // not dropped to the page while the request ran
+    refuse = false
+    await user.keyboard('{Enter}')
+    const added = await screen.findByText('Added to the case')
+    await waitFor(() => expect(added).toHaveFocus()) // the button pressed is gone: its row's status takes its place
+  })
+
   it('says when the address is already on the case, and shows a refusal', async () => {
     api({
       ...ON,

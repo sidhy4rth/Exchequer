@@ -63,8 +63,12 @@ const ADDED = { added: 'Added to the case', duplicate: 'Already on the case' }
  * this address is sent, when the officer clicks; the audit row holds its kind, not it. */
 function AddWallet({ caseId, value }) {
   const [state, setState] = useState(null) // null, 'busy', 'added', 'duplicate', or an error message
-  if (ADDED[state]) return <span className="note" role="status">{ADDED[state]}</span>
+  const told = useRef(null)
+  // The button pressed gives way to the row's status, which takes the keyboard's place.
+  useEffect(() => { if (ADDED[state]) told.current?.focus() }, [state])
+  if (ADDED[state]) return <span className="note" role="status" ref={told} tabIndex={-1}>{ADDED[state]}</span>
   async function add() {
+    if (state === 'busy') return
     setState('busy')
     try {
       const out = await addWalletIdentifier(caseId, value)
@@ -73,7 +77,8 @@ function AddWallet({ caseId, value }) {
     } catch (err) { setState(err.message || 'Could not add it.') }
   }
   return <>
-    <button type="button" className="quiet" disabled={state === 'busy'} onClick={add}>
+    {/* Marked, not disabled, while it adds: it stays focusable, so the keyboard keeps its place. */}
+    <button type="button" className="quiet" aria-disabled={state === 'busy' || undefined} onClick={add}>
       Add as case identifier <span className="visually-hidden">{value}</span>
     </button>
     {state && state !== 'busy' && <span className="error-line" role="alert">{state}</span>}
