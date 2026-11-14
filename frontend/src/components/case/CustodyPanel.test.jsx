@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import CustodyPanel, { canApprove, parseSigners } from './CustodyPanel'
+import CustodyPanel, { canApprove, parseSigners, proposers } from './CustodyPanel'
 
 // Custody wallets on the Letters tab (backend custody.py, custody_log.py): the
 // case's multisig wallets, their signers by name, and the signing log. Hidden
@@ -139,6 +139,49 @@ describe('the custody wallets panel', () => {
     const move = await screen.findByRole('group', { name: 'deposit of 635 USDT' })
     expect(within(move).getByText(/a deposit into the wallet needs no signatures/)).toBeInTheDocument()
     expect(within(move).queryByText(/nobody yet/)).not.toBeInTheDocument()
+  })
+
+  it('shows the reason a cancelled movement was given', async () => {
+    const cancelled = { ...MOVE, status: 'cancelled', history: [{ at: 't1', by: 'officer-1', status: 'proposed' }, { at: 't2', by: 'officer-1', reason: 'Order stayed on appeal', status: 'cancelled' }] }
+    api({ ...NO_ASSETS, 'GET /trace/c1/custody': { body: { enabled: true, wallets: [{ ...WALLET, movements: [cancelled] }], chains: { tron: 'Tron' } } } })
+    open()
+    const move = await screen.findByRole('group', { name: 'release of 635 USDT' })
+    expect(within(move).getByText('Cancelled: Order stayed on appeal')).toBeInTheDocument()
+  })
+
+  it('offers the proposer from the signers, and someone else only where the scheme keeps proposing apart from signing', () => {
+    expect(proposers(WALLET)).toEqual({ signers: ['Insp. Rao', 'SI Iyer', 'SI Pal'], other: true })
+    expect(proposers({ ...WALLET, proposer_may_sign: true })).toEqual({ signers: ['Insp. Rao', 'SI Iyer', 'SI Pal'], other: false })
+    // 3 of 3 where a proposer may not sign: a signer proposing would leave two, so only someone else may.
+    expect(proposers({ ...WALLET, threshold: 3 })).toEqual({ signers: [], other: true })
+  })
+
+  it('proposes with a signer chosen from the list, or the name typed for someone else', async () => {
+    const calls = api({
+      ...NO_ASSETS,
+      'GET /trace/c1/custody': { body: { enabled: true, wallets: [{ ...WALLET, movements: [] }], chains: { tron: 'Tron' } } },
+      'POST /custody/w1/movements': { status: 201, body: { movement_id: 'm2' } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Propose a deposit or release' }))
+    let form = screen.getByRole('form', { name: 'Propose a movement' })
+    expect(within(form).queryByLabelText("Proposer's name")).toBeNull()
+    await user.selectOptions(within(form).getByLabelText('Proposed by'), 'SI Iyer')
+    await user.type(within(form).getByLabelText('Asset'), 'USDT')
+    await user.type(within(form).getByLabelText('Amount'), '5')
+    await user.click(within(form).getByRole('button', { name: 'Propose' }))
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST').body).toMatchObject({ kind: 'deposit', proposed_by: 'SI Iyer', asset: 'USDT', amount: '5' })
+    expect(calls.find((c) => c.method === 'POST').body).not.toHaveProperty('proposer')
+
+    await user.click(await screen.findByRole('button', { name: 'Propose a deposit or release' }))
+    form = screen.getByRole('form', { name: 'Propose a movement' })
+    await user.selectOptions(within(form).getByLabelText('Proposed by'), 'Someone else, not a signer')
+    await user.type(within(form).getByLabelText("Proposer's name"), 'Constable Das')
+    await user.click(within(form).getByRole('button', { name: 'Propose' }))
+    await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(2))
+    expect(calls.filter((c) => c.method === 'POST')[1].body.proposed_by).toBe('Constable Das')
   })
 
   it('parses signer lines, dropping blank ones and keeping commas inside a unit', () => {

@@ -23,9 +23,10 @@
 - The panel sits on the Letters tab under the asset register (where #101 put the register), not on the Evidence tab: the wallet holds the register's custody rows.
 - Signers are names, roles and units only, compared ignoring case and spacing, so the same person cannot be two of n. A seed split across a signer's fields is caught too.
 - The chain, address, scheme, threshold and signers never change after the record is made; only notes and the linked asset-register rows do. A change of signers is a new record (see open questions).
-- Linked asset-register rows must be in the same case, readable by the viewer, and held in custody.
+- Linked asset-register rows must be in the same case, readable by the viewer, held in custody, and not recorded as held at another address (a blank `held_at` is allowed).
 - One wallet per case per address; the same unit wallet may be recorded in several cases.
 - Signing log: proposed -> approved (threshold distinct signers) -> broadcast (tx hash) -> confirmed, or cancelled with a reason from any step before confirmed. A release needs the court's order reference when proposed and must be approved before broadcast; a deposit goes to the wallet itself and may be broadcast without approvals (sending into a multisig needs no signatures).
+- Who proposed a movement is chosen from the wallet's signers and stored by the name the wallet lists, so the rule that a proposer may not approve compares the same name. Where the scheme lets a proposer sign, the proposer must be a signer; where it does not, someone who is not a signer may propose (typed as "someone else"), and a signer may only if the other signers can still reach the threshold. A cancelled movement's card shows its reason.
 - Every signing-log write needs a signed-in officer (not the demo identity); each approval records the signer (a listed name), the time and which officer entered it. One officer may enter several signers' approvals (the signing happens on the signers' own devices); see open questions.
 - One transaction hash is recorded once per wallet. Audit detail is ids, step, status and approval count; never names, references or reasons.
 

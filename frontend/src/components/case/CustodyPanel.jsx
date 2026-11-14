@@ -28,8 +28,22 @@ export function canApprove(w, m) {
     && (w.proposer_may_sign || !same(name, m.proposed_by)))
 }
 
+/** Who may be named as proposing a movement on `w`, the server's rule (custody_log._proposer):
+ * `signers`, by the names the wallet lists, and `other`, whether someone who is not a signer may.
+ * Where the scheme lets the proposer sign, the proposer is a signer. Where it does not, anyone else may
+ * propose, and a signer only if the others can still reach the threshold. */
+export function proposers(w) {
+  const names = w.signers.map((s) => s.name)
+  if (w.proposer_may_sign) return { signers: names, other: false }
+  return { signers: names.length - 1 >= w.threshold ? names : [], other: true }
+}
+const OTHER = '__someone_else__' // the "someone else" choice, sent as the typed name instead
+
+/** The reason a cancelled movement was given, from its history. */
+export const cancelReason = (m) => [...(m.history ?? [])].reverse().find((h) => h.status === 'cancelled')?.reason ?? ''
+
 const NEW_WALLET = { chain: 'tron', address: '', scheme: '', threshold: '2', signers: '', proposer_may_sign: false, set_up_by: '', notes: '', asset_ids: [] }
-const NEW_MOVE = { kind: 'deposit', asset: '', amount: '', destination: '', order_ref: '', proposed_by: '' }
+const NEW_MOVE = { kind: 'deposit', asset: '', amount: '', destination: '', order_ref: '', proposer: '', other: '' }
 
 export default function CustodyPanel({ result }) {
   const caseId = result?.case_id
@@ -70,7 +84,8 @@ export default function CustodyPanel({ result }) {
   }
   async function propose(e, wid) {
     e.preventDefault()
-    const made = await run(() => proposeMovement(wid, moves[wid]))
+    const { proposer, other, ...rest } = moves[wid]
+    const made = await run(() => proposeMovement(wid, { ...rest, proposed_by: proposer === OTHER ? other : proposer }))
     if (made) { setMoves((m) => ({ ...m, [wid]: undefined })); setFocusOn(made.movement_id) }
   }
   // Once a step is recorded its inputs are spent: a signer left chosen would be sent again.
@@ -113,6 +128,7 @@ export default function CustodyPanel({ result }) {
                       : `approved by ${m.approvals.length ? m.approvals.map((a) => plain(a.signer)).join(', ') : 'nobody yet'} (${m.approvals.length} of ${m.threshold})`}
                     {m.tx_hash ? <> · tx <span className="mono" title={m.tx_hash}>{middle(m.tx_hash)}</span></> : null}
                   </p>
+                  {m.status === 'cancelled' && cancelReason(m) && <p className="note">Cancelled: {plain(cancelReason(m))}</p>}
                   {!['confirmed', 'cancelled'].includes(m.status) && (
                     <div className="cu-steps">
                       {m.status === 'proposed' && signers.length > 0 && <>
@@ -143,7 +159,14 @@ export default function CustodyPanel({ result }) {
                       <option value="release">Release on the court&apos;s order</option>
                     </select>
                   </label>
-                  <label>Proposed by<input value={moves[w.wallet_id].proposed_by} onChange={setMove(w.wallet_id, 'proposed_by')} /></label>
+                  <label>Proposed by
+                    <select value={moves[w.wallet_id].proposer} onChange={setMove(w.wallet_id, 'proposer')}>
+                      <option value="">Choose…</option>
+                      {proposers(w).signers.map((name) => <option key={name} value={name}>{name}</option>)}
+                      {proposers(w).other && <option value={OTHER}>Someone else, not a signer</option>}
+                    </select>
+                  </label>
+                  {moves[w.wallet_id].proposer === OTHER && <label>Proposer&apos;s name<input value={moves[w.wallet_id].other} onChange={setMove(w.wallet_id, 'other')} /></label>}
                   <label>Asset<input value={moves[w.wallet_id].asset} onChange={setMove(w.wallet_id, 'asset')} placeholder="USDT" /></label>
                   <label>Amount<input value={moves[w.wallet_id].amount} onChange={setMove(w.wallet_id, 'amount')} inputMode="decimal" className="mono" /></label>
                   {moves[w.wallet_id].kind === 'release' && <>
