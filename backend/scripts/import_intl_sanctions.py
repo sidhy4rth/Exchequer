@@ -17,6 +17,15 @@ Sources, every one a government publication
        freezes -- read through OpenSanctions, which extracts the wallets from
        those publishers' own documents into structured data. OpenSanctions
        data is CC BY-NC 4.0: free for non-commercial use, with attribution.
+  US   Court orders of forfeiture published in the Department of Justice's
+       official notifications (forfeiture.gov). OFAC's list is the separate
+       risk_labels*.json (import_ofac_addresses.py); these are wallets a U.S.
+       court ordered forfeited. They sit in data/us_forfeiture_orders.json,
+       one entry per wallet with the notice it was read from, because the
+       notices are PDFs that change daily: each entry was read in the notice
+       by hand and is re-checked there before it is added. Only a notice that
+       a court "entered an Order condemning and forfeiting" counts -- a
+       complaint or an administrative seizure notice has no outcome yet.
 
 Only a *current* measure counts. An Israeli seizure order with an end date in
 the past has been lifted, and a wallet named only in lifted orders is left
@@ -25,16 +34,22 @@ An order that is in force but dated records `valid_until`, its last day, and
 the screen stops matching it after that day even if no refresh has run.
 
 A seizure order is not a sanctions designation: it is one government's
-temporary measure against a wallet. Israel's orders are therefore filed as
-`seized`, and only an address some list designates is `sanctioned` (an
-address on both keeps `sanctioned` and names both).
+temporary measure against a wallet. Israel's orders and U.S. forfeiture orders
+are therefore filed as `seized`, and only an address some list designates is
+`sanctioned` (an address on both keeps `sanctioned` and names both).
 
 Offline re-check
 ----------------
 `--recheck DATASET --from-file PATH` re-screens the held files' entries from
 one OpenSanctions dataset against a local copy of its entities.ftm.json, with
 no network: listings whose measures have all ended are removed, the rest are
-re-read from the copy. Nothing else in the files changes.
+re-read from the copy. Nothing else in the files changes. With `--add`, a
+wallet in force in the copy that no held file lists is added too, when its
+chain is known without a network call (a Tron address, or a 0x address whose
+source names the chain); the rest are counted and wait for a full run.
+
+`--forfeiture` adds data/us_forfeiture_orders.json to the held files, offline,
+the same way.
 
 Chain assignment
 ----------------
@@ -48,7 +63,8 @@ Exchequer does not trace are counted and skipped.
     cd backend && .venv/bin/python -m scripts.import_intl_sanctions
     cd backend && .venv/bin/python -m scripts.import_intl_sanctions --dry-run
     cd backend && .venv/bin/python -m scripts.import_intl_sanctions \
-        --recheck il_mod_crypto --from-file entities.ftm.json --version <artifact url>
+        --recheck il_mod_crypto --from-file entities.ftm.json --version <artifact url> [--add]
+    cd backend && .venv/bin/python -m scripts.import_intl_sanctions --forfeiture
 """
 from __future__ import annotations
 
@@ -85,8 +101,10 @@ OS_DATASETS = {
 }
 
 AUTHORITY = {"il_mod_crypto": "Israel", "jp_mof_sanctions": "Japan", "fr_tresor_gels_avoir": "France"}
-# Authorities whose listings here are seizure orders, not designations.
-SEIZURE_AUTHORITIES = frozenset({"Israel"})
+US_FORFEITURE = "United States"
+FORFEITURE_FILE = "us_forfeiture_orders.json"
+# Authorities whose listings here are seizure or forfeiture orders, not designations.
+SEIZURE_AUTHORITIES = frozenset({"Israel", US_FORFEITURE})
 
 EVM = re.compile(r"0x[0-9a-fA-F]{40}")
 TRON = re.compile(r"(?<![A-Za-z0-9])T[1-9A-HJ-NP-Za-km-z]{33}(?![A-Za-z0-9])")
@@ -263,6 +281,23 @@ def opensanctions_rows(dataset: str, text: str, today: date) -> list[tuple[str, 
     return out
 
 
+def read_us_forfeiture() -> list[tuple[str, str | None, dict]]:
+    """(address, chain, record) for every wallet in data/us_forfeiture_orders.json."""
+    path = config.DATA_DIR / FORFEITURE_FILE
+    if not path.exists():
+        return []
+    out = []
+    for order in json.loads(path.read_text(encoding="utf-8"))["orders"]:
+        out.append((order["address"], order["chain"], {
+            "entity": order["holder"],
+            "authority": US_FORFEITURE,
+            "source": (f"U.S. court order of forfeiture, {order['court']}, case {order['case']} "
+                       f"({order['caption']}), DOJ official notification {order['notice_url']}"),
+            "valid_until": None,
+        }))
+    return out
+
+
 def held_placements() -> dict[str, set[str]]:
     """address -> the EVM chains whose held intl file lists it now."""
     out: dict[str, set[str]] = defaultdict(set)
@@ -293,11 +328,19 @@ def _key(address: str) -> str:
     return address if TRON.fullmatch(address) else normalize_address(address)
 
 
-def recheck(dataset: str, entities_path: Path, version: str, today: date, dry_run: bool = False) -> int:
-    """Re-screen the held files' listings from `dataset` against a local copy of it. No network."""
+def recheck(dataset: str, entities_path: Path, version: str, today: date, dry_run: bool = False,
+            add: bool = False) -> int:
+    """Re-screen the held files' listings from `dataset` against a local copy of it. No network.
+
+    With `add`, wallets in force in the copy that no held file lists are added (add_listings).
+    """
     authority = AUTHORITY[dataset]
     fresh: dict[str, dict] = {}
-    for address, _hint, record in opensanctions_rows(dataset, entities_path.read_text(encoding="utf-8"), today):
+    rows = opensanctions_rows(dataset, entities_path.read_text(encoding="utf-8"), today)
+    held_before = {a for chain in config.CHAINS.values() if chain.intl_sanctions_path
+                   and chain.intl_sanctions_path.exists()
+                   for a in json.loads(chain.intl_sanctions_path.read_text(encoding="utf-8"))["labels"]}
+    for address, _hint, record in rows:
         held = fresh.setdefault(_key(address), {"entity": record["entity"], "sources": [], "ends": []})
         if record["source"] not in held["sources"]:
             held["sources"].append(record["source"])
@@ -351,9 +394,98 @@ def recheck(dataset: str, entities_path: Path, version: str, today: date, dry_ru
         if not dry_run:
             document["labels"] = dict(sorted(labels.items()))
             path.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if add:
+        new = [row for row in rows if _key(row[0]) not in held_before]
+        add_listings(new, dataset, today, dry_run, version)
     if dry_run:
         print("\nDry run -- nothing written.")
     return 0
+
+
+def add_listings(rows: list[tuple[str, str | None, dict]], tag: str, today: date,
+                 dry_run: bool = False, version: str = "") -> dict[str, list[str]]:
+    """Merge listings into the held files without a network call; chain key -> addresses added.
+
+    A Tron address goes to Tron; a 0x address to the chains its source names
+    (`hint`), or else to those a held file already places it on. One placed by
+    neither is counted and left for a full run, which checks where it is used.
+    An address already held keeps its entry and gains the new authority and
+    source; its category and end date are worked out again from all of them.
+    """
+    hints: dict[str, set[str]] = defaultdict(set)
+    merged: dict[str, dict] = {}
+    for address, hint, record in rows:
+        key = _key(address)
+        if hint:
+            hints[key].add(hint)
+        held = merged.setdefault(key, {"entity": record["entity"], "authorities": [], "sources": [], "ends": []})
+        if record["authority"] not in held["authorities"]:
+            held["authorities"].append(record["authority"])
+        if record["source"] not in held["sources"]:
+            held["sources"].append(record["source"])
+        held["ends"].append(record.get("valid_until"))
+
+    documents = {key: (chain.intl_sanctions_path, json.loads(chain.intl_sanctions_path.read_text(encoding="utf-8")))
+                 for key, chain in config.CHAINS.items()
+                 if chain.intl_sanctions_path is not None and chain.intl_sanctions_path.exists()}
+    placed = held_placements()
+    added: dict[str, list[str]] = defaultdict(list)
+    updated: dict[str, list[str]] = defaultdict(list)
+    unplaced: list[str] = []
+    for address, new in merged.items():
+        if TRON.fullmatch(address):
+            chains = {"tron"}
+        else:
+            chains = ((hints[address] - {"tron"}) or placed.get(address, set())) & (set(documents) - {"tron"})
+        if not chains:
+            unplaced.append(address)
+            continue
+        for chain_key in sorted(chains):
+            labels = documents[chain_key][1]["labels"]
+            entry = labels.get(address)
+            if entry is None:
+                until = entry_valid_until(new["ends"])
+                labels[address] = {
+                    "category": category_for(new["authorities"]), "entity": new["entity"], "label": new["entity"],
+                    "source": "; ".join(new["sources"]), "authorities": list(new["authorities"]),
+                    **({"valid_until": until} if until else {}),
+                }
+                added[chain_key].append(address)
+                continue
+            sources = [s for s in new["sources"] if s not in entry["source"]]
+            if not sources:
+                continue
+            entry["source"] = "; ".join([entry["source"], *sources])
+            entry["authorities"] += [a for a in new["authorities"] if a not in entry["authorities"]]
+            entry["category"] = category_for(entry["authorities"])
+            until = entry_valid_until([entry.get("valid_until"), *new["ends"]])
+            if until:
+                entry["valid_until"] = until
+            else:
+                entry.pop("valid_until", None)
+            updated[chain_key].append(address)
+
+    for chain_key, (path, document) in documents.items():
+        if not (added[chain_key] or updated[chain_key]):
+            continue
+        meta = document.setdefault("_meta", {})
+        meta.setdefault("added", {})[tag] = {
+            "date": today.isoformat(), **({"version": version} if version else {}),
+            "added": len(added[chain_key]), "added_addresses": sorted(added[chain_key]),
+            "listing_added_to": sorted(updated[chain_key]),
+            "note": ("Added offline from this source without re-reading the other lists, so "
+                     "last_reviewed is unchanged."),
+        }
+        meta["counts"] = _counts(document["labels"])
+        meta["schema"] = SCHEMA
+        print(f"  {chain_key:<9} {tag}: {len(added[chain_key])} added, "
+              f"{len(updated[chain_key])} held entries gained this listing")
+        if not dry_run:
+            document["labels"] = dict(sorted(document["labels"].items()))
+            path.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if unplaced:
+        print(f"  {tag}: {len(unplaced)} 0x addresses name no chain and are held nowhere; a full run places them")
+    return {key: addresses for key, addresses in added.items() if addresses}
 
 
 SCHEMA = ("labels maps an address to {category, entity, label, source, authorities}, plus valid_until "
@@ -376,13 +508,23 @@ def main() -> int:
                         help="re-screen the held files' entries from this dataset, offline")
     parser.add_argument("--from-file", type=Path, help="with --recheck: a local copy of its entities.ftm.json")
     parser.add_argument("--version", default="", help="with --recheck: the artifact URL the copy came from")
+    parser.add_argument("--add", action="store_true",
+                        help="with --recheck: also add wallets in force in the copy that no held file lists")
+    parser.add_argument("--forfeiture", action="store_true",
+                        help=f"add data/{FORFEITURE_FILE} to the held files, offline")
     parser.add_argument("--today", type=date.fromisoformat, help=argparse.SUPPRESS)
     args = parser.parse_args()
     today = args.today or datetime.now(timezone.utc).date()
     if args.recheck:
         if not args.from_file:
             parser.error("--recheck needs --from-file")
-        return recheck(args.recheck, args.from_file, args.version or str(args.from_file.name), today, args.dry_run)
+        return recheck(args.recheck, args.from_file, args.version or str(args.from_file.name), today, args.dry_run,
+                       add=args.add)
+    if args.forfeiture:
+        add_listings(read_us_forfeiture(), "us_forfeiture", today, args.dry_run)
+        if args.dry_run:
+            print("\nDry run -- nothing written.")
+        return 0
 
     listings: list[tuple[str, str | None, dict]] = []
     versions: dict[str, str] = {}
@@ -395,6 +537,9 @@ def main() -> int:
         versions[dataset] = url
         print(f"{dataset:<22} {len(rows):>5} addresses in force")
         listings += rows
+    rows = read_us_forfeiture()
+    print(f"{'US forfeiture orders':<22} {len(rows):>5} addresses")
+    listings += rows
 
     # One record per address: every authority that lists it, in one source line.
     merged: dict[str, dict] = {}
@@ -487,14 +632,17 @@ def main() -> int:
             "_meta": {
                 "description": (
                     "Crypto addresses on sanctions and seizure lists published by "
-                    "governments other than the U.S. A match means the funds touched "
-                    "a wallet a government has frozen or seized."
+                    "governments other than the U.S., and wallets U.S. courts have "
+                    "ordered forfeited. A match means the funds touched a wallet a "
+                    "government has frozen, seized or forfeited."
                 ),
                 "provenance": (
                     f"UK: {UK_URL}. EU: {EU_URL}. Israel (NBCTF), Japan (MOF) and "
                     "France (DG Tresor) via OpenSanctions, which extracts them from "
                     "each publisher's own documents; OpenSanctions data is licensed "
-                    "CC BY-NC 4.0. Built by backend/scripts/import_intl_sanctions.py."
+                    "CC BY-NC 4.0. U.S. forfeiture orders: DOJ official notifications "
+                    f"(forfeiture.gov), as held in data/{FORFEITURE_FILE}. "
+                    "Built by backend/scripts/import_intl_sanctions.py."
                 ),
                 "opensanctions_versions": versions,
                 "verification_note": (

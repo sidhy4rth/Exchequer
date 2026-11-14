@@ -3,7 +3,7 @@
     "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S. A match means the funds touched a wallet a government has frozen or seized.",
     "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. Built by backend/scripts/import_intl_sanctions.py.",
     "opensanctions_versions": {
-      "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261105060204-mpo/entities.ftm.json",
+      "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
       "jp_mof_sanctions": "https://data.opensanctions.org/artifacts/jp_mof_sanctions/20260922183801-kpe/entities.ftm.json",
       "fr_tresor_gels_avoir": "https://data.opensanctions.org/artifacts/fr_tresor_gels_avoir/20260922155801-lpp/entities.ftm.json"
     },
@@ -11,15 +11,15 @@
     "chain": "tron",
     "last_reviewed": "2026-09-22",
     "counts": {
-      "addresses": 537,
+      "addresses": 630,
       "by_authority": {
-        "Israel": 488,
+        "Israel": 581,
         "European Union": 3,
         "France": 1,
         "United Kingdom": 46
       },
       "by_category": {
-        "seized": 488,
+        "seized": 581,
         "sanctioned": 49
       }
     },
@@ -27,109 +27,115 @@
     "schema": "labels maps an address to {category, entity, label, source, authorities}, plus valid_until (the last day it is in force) when every listing behind it has an end date; category is seized when only seizure orders name it, sanctioned otherwise",
     "rechecked": {
       "il_mod_crypto": {
-        "date": "2026-11-06",
-        "version": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261105060204-mpo/entities.ftm.json",
-        "removed": 97,
-        "removed_addresses": [
-          "TAHg5ZFkxaJq5wE6pGpM8mY5Q1YEvz6W3G",
-          "TAR2KrCfTST5BQXs7D7N4HYHx6FBt4bzLh",
-          "TBfJfBYSpVPLDoFzvg3zCnc4Kvpb48cME5",
-          "TBjD6KyudEstysMxB83ctiqMjAqgdKqKYM",
-          "TBmG7JZScZWmL5tADBb41RUU5ffWxU9rkT",
-          "TC71Nb9mtcv4vPezL8KEKvUs3aKoYwiJZa",
-          "TC7VZ9F3v34byjjdLN9t9c3juzfBisPE4u",
-          "TCNnWUTsonN9UD568mNEcBJm6vmniuXJnN",
-          "TCxUxp3fve52ZYTTG48Y6ecskKsZAMw2Nd",
-          "TD7j5eNShnrSsGb3of8vpe1XXfUNrheeFh",
-          "TDSRXbcKaTNvSiqYUaP8m5cVUtU7rSbfy7",
-          "TDX3tFFdWFwhBP7Cf5gJRpADpUNxQsys6m",
-          "TETZBHSy22wSaufVE1GhNBiDdTYGBJ6aZk",
-          "TEYJaG5RcYQv2NAAob4cRLYG7gDmb3p3Au",
-          "TEqaZXk95Lubsc1WTksbdXK6bJr3jWabgr",
-          "TEtJTCuFEzY6jjVNzFtbWGMfrHzfE2aGKU",
-          "TFjXKz7qmPgr5F4tC6WuamLeMzDhX4yC55",
-          "TG7YAAmZ5ALicdhuxKoE3DqnuBPj2zgG1Q",
-          "TGBYT9Kfs7Za2yWf2TCka5kZq942tKPUAq",
-          "TGS7VL1sHwGnufrQA42GhqHntwcyfNfdt3",
-          "TGfH7imvH9h6yxusNNPkkwrDzKCg7kFDTf",
-          "TGhZ3tPL68rWdqfFivhksoRgEp6uwvG1N7",
-          "THB6eY4f85GUab3hdXHhNb53AX1vRzJ83s",
-          "THL7VtZrHia3fm4UqycAUC8JwodjSqBVxx",
-          "THNdB4SiwNGibexaigr4YYTZzFRXZGAAox",
-          "THPopY1MtT3Hsd7YRN8JHNpZDWUAqDQBYm",
-          "THZCWkEbURJcbDLDu6cdDCVma3cihGoHEo",
-          "THs7n6AhwHsPXbuCkQSMjG9Q965wfQBgbS",
-          "THuvw2pY2GSBmDewHKzahQum2yUWHJeJKh",
-          "TJAcz547H7FTGCQrgkbtHib5h8f5gR2kuc",
-          "TJKofAGPQ2mSmnPwugN79p1Ceu39KBZyHC",
-          "TJnYxvBHyoZT9GsGGaHzeQxvrGz743k1gq",
-          "TJqh7J9MnPMSG6cotxBYUsNdQ6eufk8W32",
-          "TK4c76dEE6whmEw3yu57YmkMPGD8qacagX",
-          "TKBmWXPYm4WPedvcBMEqNVEt7EbK3qWeXB",
-          "TLRUmf6FFjjzZ4UMxTSddzCVoMm816fSgF",
-          "TLmB5EYj3Uy1TBgipSSkNiTkp5HVe7qveS",
-          "TM1ao7KDV7FmDwoj342APGJJA5mM51vrp6",
-          "TM8PjCzv71EakELjVHoqsZY2aRHoPU8nr5",
-          "TMJRvUAwpdw67vNuQFH15q34zK3myPgFRy",
-          "TMKe9i1J46K3YDx5NjtyRTg1VDjbBhyfyJ",
-          "TMYPgVHM61QdY73ttgEKstbSR3vqoXEcZ9",
-          "TMiQRf2YQFkTPGEHrZmNTjYbWkbpF3cMC6",
-          "TMk7amDXHxL8jTN8LDJEeK1uZt4dzG7d4g",
-          "TN5fXzNhGW3vCUijECnXgiXhChqLJA4Da4",
-          "TPAcMFqkaVufH3wNso1Jdvm8HzUnK46PWM",
-          "TPCQLRv6Bepnd5oPhXtrs1iHpSLchuHAso",
-          "TPpX5uZ4wqLhBxEaUiaAjR9c1GscLTY5zJ",
-          "TPxCncCWLUtRm2ga6NMrPKfumKuQ3zoWXR",
-          "TQimtt6MmASiLDEsKsfDDaDq5CFRE2BY1F",
-          "TQnhh63amB9HMXj5DeueUVdCHxCReoF6nM",
-          "TRAvfmzQNsBAeGaDP9gr5qecGMDqWMo5zn",
-          "TRT7xntdpivdYAiZuxosieGWhHaWkptbaD",
-          "TRU6fdxpMMDdEykV1fPvcqtMNRLeyw6Ymt",
-          "TRWpS2JarmZShhQLTfHafnzkQdNKUh1ozK",
-          "TRjQM4W7YqJZmn41itcETFYQ1Gy4LddTSR",
-          "TRkrud54UMLhidM3SdwbEeneTyi42UEcUP",
-          "TRsAeY71dZvRPpxmbYRaFYmRfaKmk4Rvd3",
-          "TRxF2rUMnP9PTGmaJzz1oK6b5bSqoXkXP6",
-          "TSaLg1S1gC4fkwcBSKM36KNSikWjA1HE2q",
-          "TSimaHshdwmrHx5XYr4Rw5xsPjXitGNzQ4",
-          "TSjw2iZhN2LVvQneYEbZSNMbXNsbQfmQ24",
-          "TT7Fes7ErX3JvE71snmbo8PkE8R4NZpMYe",
-          "TT9z1K9NT3XmMmvC1CaH3U76GFYi3FS1Zt",
-          "TTGzaD2v3BSQwWHzn8L8mMdLfqL6ugjw49",
-          "TTH3XRSyi4dzBevbUysP6xesoxkU1tNS4T",
-          "TTLrrHEaKX3NRh6gDthYoJZudacBuLVZKF",
-          "TTk3ARJe7T3nygauKRwbQiy4MCNRNJhfEA",
-          "TTnsCooyH7udWbwbybr82BVWEudyHvKvHb",
-          "TU1TTeKBxtCVYNHrVrobBtvGAeJvuqyx6p",
-          "TU7N89rqSzYdTpj7tkq98zhmheT9tU1uzY",
-          "TUAnQreFFUpCvCb7ccdNuERmWhdePpVJUQ",
-          "TUWR8ZhFrCeNg6NX9TDkHspGAgZX56E8Dk",
-          "TUig7bV2axB8LvbMqEXauPAuhMFQnTLhZW",
-          "TUvkQfgQPGHucuyC9p3QeQUAxkqdKneEUo",
-          "TVCtcB4BM8n756v7BHB22kqnP6mHyq8VBN",
-          "TVNDC3AurrX48TaZZHFuJHVCXBCyYBdrYP",
-          "TVXy9j3MHePgN3ydyr3D8NojB5RLD3AcRs",
-          "TVbaPNrc2UbGrGBKwjRjjn6UENoTBnkB2d",
-          "TVwRTHfpXPrAKmU4LDYpLhLM5ENosQNDSy",
-          "TWaertrZdpRJSbLv2G638UL5HCK6sKcZYy",
-          "TWgHSaHWB8vXeniQSGWJAQs4HhA43gpQzq",
-          "TWxeby3JgFkdTYe9WUQJ9dsbVFofauGKiL",
-          "TX62VPUSw8eQ4DTRi3GExqALbWQGs1mfmB",
-          "TXPggkiHzYZofVqpzMDS19ePG6qmcnu3gq",
-          "TXQyMhsxZfcGqPdi1TAYWJ5bVkcVyR2ye9",
-          "TXRBsytHfJDoAKRdcedgLsoHudh1xJGUdC",
-          "TXRTT6K7djpRGvYqiMHZSc9HcCN9dCQqu7",
-          "TXVG2seoqhk4i1WpzG6t64YAW6SCUQfDhW",
-          "TXdNFmv2wngkc9WT4sT9HdFgVWbYyfX21L",
-          "TXgHXMa97Pq1D6xYVsboVtsHon5J7wwtmZ",
-          "TXs56ZWCpZ7yBBhDZ8J8tFqc9y31Ra9RHC",
-          "TYCXTfSGuFFQRdMy5WmFV6orXFKLo6gSqk",
-          "TYXGsCJG9c3cPQxEKDpu3p4nJbxn3LJ2K2",
-          "TYXqLb9ZyAeJeTFkt3Tx7kNyc3HufjvnMs",
-          "TYkfXFJan2UMdot1sp9Jyb2hBaSbkYeZgK",
-          "TZ1bLdAGQPH9cQkR372TGZJ99fjBi1juTQ"
-        ],
+        "date": "2026-11-14",
+        "version": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
+        "removed": 0,
+        "removed_addresses": [],
         "note": "Israel listings re-screened offline against this version; every listing whose measures had all ended was removed. Other authorities' listings were not re-read, so last_reviewed is unchanged."
+      }
+    },
+    "added": {
+      "il_mod_crypto": {
+        "date": "2026-11-14",
+        "version": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
+        "added": 93,
+        "added_addresses": [
+          "T9z9kZjWvpHcoPXtfcGKrpBHAZdTFho2AZ",
+          "TAgeWiMckLYfWTcJ3ysvZCVkzQzPFiLZSi",
+          "TAziD1gseQZjy2xN7EjcbLE9FnvqKrKtBU",
+          "TBQbqpGCBAX2Pf6iyzcFsshxFYzMbNHBwm",
+          "TBS4fkSVZ6NqQ8F5BRScgWGmKpAE2tetrJ",
+          "TBhZLD3naPTe6JHQhiZTY1Zjbf1TwLiGpD",
+          "TBpPMJ8JDS5r7A8cutrY9Fnu4FRwf6XPfc",
+          "TC1PHnEXWC8ji6ydb4CnCqyKhZrhdyAXfE",
+          "TCcdhNswk2gMi4D3tikEyRF22q78xHAfra",
+          "TChLSj45ows71stbNu4v82uLZ3Vx5isfzi",
+          "TD3iJZa72XDorPKXEQSRkkVf3iJRyfUm6L",
+          "TDMwR4YQXK7vcf6eZawCRREwy4zrUeMEeC",
+          "TE1J7fdDTtkbNPAU3Qcbu68D6TBvizcoEC",
+          "TF4UXL6vg9Pkmm4G9QqDx8XYjEVRZVxbYv",
+          "TFG5CfiCLYVQzJScYXd91xzr49njbyRaw1",
+          "TFPZgAMBUJJb4nWr1iUJBkCBHCBGEXfP4R",
+          "TFieH3GSNQ6f5Q6KRNraaaq6C1VobC9bka",
+          "TG35PjKSqwVVxb8a4R4WqXGpEaaSAZfwSY",
+          "TGMLnaU331MyEzywJZntuPZS9EUcPYBidC",
+          "TGXSKmUemJM6RTYbT58aSGBev8av4VXu4x",
+          "TGuWthQNLuF75VVCbw6aKhFHbG4tJ5srM9",
+          "THBbtkYekMN5MMXrvJ48PM3kdte7VikjHo",
+          "THD3sc53BrjzmaPL912bLjRgD4QzQF6xGt",
+          "THkT18UGo4obbvS2v9fhc3g8kPLnHsuQZP",
+          "TJ3xvNzC7h1VkRNig1v5vZYeM5TR3SwhhK",
+          "TJHYdjgVWArHcFF3QDtR7ygkXh2yENJ9Ef",
+          "TJdTWNG8YdADcXHZg9ea1hnruNdMN5i4p8",
+          "TK9ByVpQGMbMN9EeoSnu4DFh4HYKSxVr5E",
+          "TK9hdrM68gadaV4tqk9bqoub2FsyQ3YrHJ",
+          "TKXQxqLgznKvxtJGfer4ASSZjJ8bW6PpKv",
+          "TKZD2toq8FkMvMLkwagGk7QVjRRqtPGinU",
+          "TKt6ioYaiC92hzUoc9MmC8XZ2et5Uhz3pL",
+          "TLZrUJCgDcNKSjdWvfzLoqen4xEQbUVW9e",
+          "TLbCdStwpBihH4k5QQbvoBEWfZdnuWGVEb",
+          "TLgJDd9fTX6mCGNxqbtNugeDskdrZwkqWU",
+          "TM5CEDk1otW463dN5sdG33AepvDBYM4KLm",
+          "TM7VSpYsBACb1BnX9SrjP7DyGZEbdtzGpk",
+          "TMcm51DwBRsmUEzRhWrnydahA7JQqeHqhH",
+          "TMikmf35WW5A8gVCPm9zdX6MUzhZsktjGa",
+          "TMkB32xpGXC9YB59dLvzcxB5fMBERzy4xL",
+          "TMmna6u69aZbUxYeqLCLL7UfDHEaPfvkHp",
+          "TN5pr1zPRsET2SMa8QSzqzQdApfVzKLFxg",
+          "TNGDxtEKSPxRWg67HpC9UfziDismQTkXHm",
+          "TNHW1aLuLzGUGgcvHVf28uj4kUqioPzDJS",
+          "TNK6EFqmqLMrGG4TDVyXyW6hBAr1xq11FW",
+          "TP2J8Ceeukdbx19MbCAMp9zGC9qArprMyS",
+          "TP5cEKbcKknQsbcNwfyS7WLZgPJCrWg4wg",
+          "TP7AcAzfRGzG6pqWMJsyQ6aYdXMSAUbvXu",
+          "TPJFteqSekp3iQNRAcPbGbhwjhSn2KSCFu",
+          "TPKFo86STad1Eg1MhDeoyhf5g7wivLqonF",
+          "TPkrSMfHyyuhHBoYj4uoQRSMgUEFuPC7xk",
+          "TQE46vogeseLMK1NgJf54twPimNL5wdJr2",
+          "TQQeghVLiFYNByzumZPXCu5PwXxK1X3WHB",
+          "TQZAQuZZAG4rhLcKq2RFEetc3azrph1jts",
+          "TRJhoXAeDmiHc8NdPy5QdgrRku3U2XhynS",
+          "TRPLp526vaegMraoGz7q3vgPCVdWZvbtnj",
+          "TSAFKq5FwZZQZV7UkWzCvjRtP2LUUpDSpA",
+          "TSBqcb2QrLH7HBYQsTZV2xAJYEsVqWmi8A",
+          "TSUUTMFszagjmwSzzkPSuAjBP34jddVZDf",
+          "TScnfYfa47aUtkLqsKSUJDeyZBWcXPVKeJ",
+          "TSco9U652mN7ZfgCnsuihvPgXHb74mwhMV",
+          "TSqzWEMJBXSDFjUn6NnckZ1Dp559yGfMDG",
+          "TT2DCMYXhAa4RfrT7CyWf9u54rjWA7Tf2K",
+          "TT4FNjuwJfZN956V4nxKRkWZirG96gWGj2",
+          "TTLnxaQ4W4KJacnm3vcrugo3nbJv7gXGrv",
+          "TTXV4xn1gyCNNsevxrKjzeraSn6KCiZA8p",
+          "TTj4MGQTuYQTEpiJ7BmkjNMciDTStMK69a",
+          "TTxELSY2kHc9EGP2o4RnMxgLN8FEMWNyq6",
+          "TU1jyy2TZ67dh4N1XRhfdf2meQsDreCUiu",
+          "TU8preUjArgL7EajcDCTQzvVkXQ6DDjJiP",
+          "TUZu9BBf31zcRjJZvR1k1EsW7fomUjVZrB",
+          "TVDwJiVNKGounA8RHjgeVJ7kPS6enBoaVn",
+          "TVTj3NgqV485FaMp69PjsBwTSk3iwFRzeH",
+          "TVUWqJ3by3EigB1W86m7eh2tVvwkcBKXNA",
+          "TVj7naPy1zM6TtMrz5R3DPzqH3FHyLPbSV",
+          "TVjFPD3AyY24JYwTknatL7LxsT7WEGfWmq",
+          "TVnd3r7YQPAHXoDB7bDaQV1yViaAiwRyzC",
+          "TVs4c3ZB6U24Z5TJ22wjLSsEhKwoY9WYUF",
+          "TVxoL32Jt1327neFDMSDo6mEeUo6zNJ21R",
+          "TWBvzFf586marsZA37ASZZNBsuhJTbj1xd",
+          "TWMtzmziTmonxDdpqecr3eDMzKiy4HjmAC",
+          "TWV7BDzyy5DxKyK4QNjL1Now3wo5B6chMF",
+          "TWmvbZiJiHn6i5caQxCiZup65G1wkVGL3m",
+          "TWwz8RW5nG6uowTLGh715FtN5yPYXN8ToK",
+          "TX3HANU6BB6bd5DfCBfvieR1EhmiVf3VSj",
+          "TXKRJiuo7rVkpTN56ZMsbAnq12wR88nTJQ",
+          "TXm8XcvNEDNg44BGkhQzsqA1p8ka64vgXZ",
+          "TXuCx24QSw8ecjH3ZqVfindgdQiHxEbsHc",
+          "TY82R7ps9R5dVqDWGeoPYqyVv83Nrb3zDN",
+          "TYosnbyyRYiok5aJp5AtdD5XzHh23FshBj",
+          "TYuHA4pWz3tpDdf7SrbmCagBequ9YVGhch",
+          "TYuXYK4WYZAacmaQ1G6n7LoAsysMsw1zhT",
+          "TZ18KNPsJ1euhzeMydUvmvjVj4s871Jdhx"
+        ],
+        "listing_added_to": [],
+        "note": "Added offline from this source without re-reading the other lists, so last_reviewed is unchanged."
       }
     }
   },
@@ -149,6 +155,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "T9z9kZjWvpHcoPXtfcGKrpBHAZdTFho2AZ": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -304,6 +320,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TAgeWiMckLYfWTcJ3ysvZCVkzQzPFiLZSi": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TAiDDDrzwXJNcKBXGPRdzF96o8pb7T7MmT": {
       "category": "seized",
       "entity": "MOHAMMED A S ALQIBTI",
@@ -398,6 +424,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TAziD1gseQZjy2xN7EjcbLE9FnvqKrKtBU": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -501,6 +537,26 @@
         "United Kingdom"
       ]
     },
+    "TBQbqpGCBAX2Pf6iyzcFsshxFYzMbNHBwm": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TBS4fkSVZ6NqQ8F5BRScgWGmKpAE2tetrJ": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TBUMjzrcnHsLpmw3HAuLHBcKwGRaXLghM3": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -541,11 +597,31 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TBhZLD3naPTe6JHQhiZTY1Zjbf1TwLiGpD": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TBobna3TCi8KhmND5srYRNcQcjwmdsLszn": {
       "category": "seized",
       "entity": "MOHAMMED A S ALQIBTI",
       "label": "MOHAMMED A S ALQIBTI",
       "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TBpPMJ8JDS5r7A8cutrY9Fnu4FRwf6XPfc": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -610,6 +686,16 @@
         "Israel"
       ],
       "valid_until": "2027-12-11"
+    },
+    "TC1PHnEXWC8ji6ydb4CnCqyKhZrhdyAXfE": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TC3gpHm8myDWYcE14gwbzY76eJD8Y3otAS": {
       "category": "seized",
@@ -799,6 +885,26 @@
       ],
       "valid_until": "2028-04-05"
     },
+    "TCcdhNswk2gMi4D3tikEyRF22q78xHAfra": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TChLSj45ows71stbNu4v82uLZ3Vx5isfzi": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TCjamtzehCoPE8sNH5ncUPjKauzceoHZhK": {
       "category": "seized",
       "entity": "NBCTF order ASO 18/26",
@@ -949,6 +1055,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TD3iJZa72XDorPKXEQSRkkVf3iJRyfUm6L": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TDAegnxRRBVuRFJ1tkpmignshcu12nfoQF": {
       "category": "seized",
       "entity": "HAMMOUDA HAMADA",
@@ -1008,6 +1124,16 @@
         "Israel"
       ],
       "valid_until": "2028-04-20"
+    },
+    "TDMwR4YQXK7vcf6eZawCRREwy4zrUeMEeC": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TDQ4r4Fw1yqXWfFqFtwVFK3G367wZvhqag": {
       "category": "seized",
@@ -1106,6 +1232,16 @@
         "Israel"
       ],
       "valid_until": "2026-12-09"
+    },
+    "TE1J7fdDTtkbNPAU3Qcbu68D6TBvizcoEC": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TE1ujDVmVuZgdBBedVjUYSqYgQfxkxoCid": {
       "category": "seized",
@@ -1325,6 +1461,16 @@
       ],
       "valid_until": "2028-02-01"
     },
+    "TF4UXL6vg9Pkmm4G9QqDx8XYjEVRZVxbYv": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TF7LUSoZQyDFxTFzCL11saBHAqMAyPh8dK": {
       "category": "sanctioned",
       "entity": "XINBI COMPANY LIMITED",
@@ -1364,11 +1510,31 @@
       ],
       "valid_until": "2028-07-01"
     },
+    "TFG5CfiCLYVQzJScYXd91xzr49njbyRaw1": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TFN7JmAAqoLruN4v5p6mqBB7cDzXynogC8": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TFPZgAMBUJJb4nWr1iUJBkCBHCBGEXfP4R": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -1464,6 +1630,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TFieH3GSNQ6f5Q6KRNraaaq6C1VobC9bka": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TFmvU7aWd9ML9oMYyHd1tRyBRA5jZWA8aJ": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -1503,6 +1679,16 @@
         "Israel"
       ],
       "valid_until": "2026-12-09"
+    },
+    "TG35PjKSqwVVxb8a4R4WqXGpEaaSAZfwSY": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TG3uaqqDc1KRpSsKgsj9C7bNS66WvySbVj": {
       "category": "seized",
@@ -1602,6 +1788,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TGMLnaU331MyEzywJZntuPZS9EUcPYBidC": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TGMRPZ5ncwSVYQ7GqUoejN1GMe19F8dsgY": {
       "category": "seized",
       "entity": "MOHAMMED A S ALQIBTI, Nura Isah Musa",
@@ -1660,6 +1856,16 @@
         "Israel"
       ],
       "valid_until": "2026-12-09"
+    },
+    "TGXSKmUemJM6RTYbT58aSGBev8av4VXu4x": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TGbvpVjCXgnndy5AHk2C88FXYZ3TkM4qpB": {
       "category": "seized",
@@ -1768,6 +1974,16 @@
         "Israel"
       ],
       "valid_until": "2028-02-16"
+    },
+    "TGuWthQNLuF75VVCbw6aKhFHbG4tJ5srM9": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TGxvrUSFUCHfzbgyMrDGswEeS8zQPLoLhm": {
       "category": "seized",
@@ -1897,11 +2113,31 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "THBbtkYekMN5MMXrvJ48PM3kdte7VikjHo": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "THCVcSevbe2XmhfSfeDAHEE7UUoZTQAD9a": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "THD3sc53BrjzmaPL912bLjRgD4QzQF6xGt": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -2005,6 +2241,16 @@
         "United Kingdom"
       ]
     },
+    "THkT18UGo4obbvS2v9fhc3g8kPLnHsuQZP": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "THntLx9amh5AuAQjXVb3EETRULqFJiyX36": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -2040,6 +2286,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TJ3xvNzC7h1VkRNig1v5vZYeM5TR3SwhhK": {
+      "category": "seized",
+      "entity": "MOHAMMED A S ALQIBTI",
+      "label": "MOHAMMED A S ALQIBTI",
+      "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -2094,6 +2350,16 @@
         "Israel"
       ],
       "valid_until": "2028-02-16"
+    },
+    "TJHYdjgVWArHcFF3QDtR7ygkXh2yENJ9Ef": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TJSUmTC6Jfyim9wSmrUPNPxJxnJXsGpvCU": {
       "category": "seized",
@@ -2170,6 +2436,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TJdTWNG8YdADcXHZg9ea1hnruNdMN5i4p8": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -2314,6 +2590,26 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "TK9ByVpQGMbMN9EeoSnu4DFh4HYKSxVr5E": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TK9hdrM68gadaV4tqk9bqoub2FsyQ3YrHJ": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TKFmsWwzDk8vqnKx3BQ9DJxa4dQqbpPQg6": {
       "category": "seized",
       "entity": "Nura Isah Musa",
@@ -2428,6 +2724,26 @@
       "entity": "MOHAMMED A S ALQIBTI",
       "label": "MOHAMMED A S ALQIBTI",
       "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TKXQxqLgznKvxtJGfer4ASSZjJ8bW6PpKv": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TKZD2toq8FkMvMLkwagGk7QVjRRqtPGinU": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -2553,6 +2869,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TKt6ioYaiC92hzUoc9MmC8XZ2et5Uhz3pL": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TKvDoaDgRcFpLbHxnrERMSuYuPoEgYNZo6": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -2662,6 +2988,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TLZrUJCgDcNKSjdWvfzLoqen4xEQbUVW9e": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TLaQu2hjtQx8BZrqBaSoRfwk2m9uV5uKda": {
       "category": "seized",
       "entity": "MOHAMMED A S ALQIBTI",
@@ -2672,11 +3008,31 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TLbCdStwpBihH4k5QQbvoBEWfZdnuWGVEb": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TLe7MPmLAHw43sdApT7U4LGE8M98vcDaJM": {
       "category": "seized",
       "entity": "MOHAMMED A S ALQIBTI",
       "label": "MOHAMMED A S ALQIBTI",
       "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TLgJDd9fTX6mCGNxqbtNugeDskdrZwkqWU": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -2822,6 +3178,16 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "TM5CEDk1otW463dN5sdG33AepvDBYM4KLm": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TM5pvzwm9h1Dpu6hAiLn3vKqgG1dHkzLTZ": {
       "category": "seized",
       "entity": "NBCTF order FO 53/25",
@@ -2837,6 +3203,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TM7VSpYsBACb1BnX9SrjP7DyGZEbdtzGpk": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -2951,6 +3327,16 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "TMcm51DwBRsmUEzRhWrnydahA7JQqeHqhH": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TMdbTohWtuRoqEtGExSQq5uRNjLV9ijxFH": {
       "category": "seized",
       "entity": "MOHAMMED A S ALQIBTI, Nura Isah Musa",
@@ -2981,15 +3367,45 @@
       ],
       "valid_until": "2028-04-05"
     },
+    "TMikmf35WW5A8gVCPm9zdX6MUzhZsktjGa": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TMkB32xpGXC9YB59dLvzcxB5fMBERzy4xL": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TMmEYcSL4KhzJuYpRH16aLsG16YoFyYKUq": {
       "category": "seized",
-      "entity": "HAMMOUDA HAMADA, FOUDA ELSAYED HAMDI ELSAYED",
-      "label": "HAMMOUDA HAMADA, FOUDA ELSAYED HAMDI ELSAYED",
+      "entity": "FOUDA ELSAYED HAMDI ELSAYED, HAMMOUDA HAMADA",
+      "label": "FOUDA ELSAYED HAMDI ELSAYED, HAMMOUDA HAMADA",
       "source": "Israel NBCTF seizure or forfeiture order FO 29/23, FO 34/23 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
       "valid_until": "2026-12-09"
+    },
+    "TMmna6u69aZbUxYeqLCLL7UfDHEaPfvkHp": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TMoFRbRQVrxxJcri9Qtz8z944xLaYBaHqY": {
       "category": "seized",
@@ -3101,6 +3517,16 @@
       ],
       "valid_until": "2027-12-11"
     },
+    "TN5pr1zPRsET2SMa8QSzqzQdApfVzKLFxg": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TN8xwCHhM5zgrTHVeEBmLbwf7zVYTyRGhV": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -3136,6 +3562,36 @@
       "entity": "MOHAMMED A S ALQIBTI",
       "label": "MOHAMMED A S ALQIBTI",
       "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TNGDxtEKSPxRWg67HpC9UfziDismQTkXHm": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TNHW1aLuLzGUGgcvHVf28uj4kUqioPzDJS": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TNK6EFqmqLMrGG4TDVyXyW6hBAr1xq11FW": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -3240,6 +3696,36 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TP2J8Ceeukdbx19MbCAMp9zGC9qArprMyS": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TP5cEKbcKknQsbcNwfyS7WLZgPJCrWg4wg": {
+      "category": "seized",
+      "entity": "MOHAMMED A S ALQIBTI",
+      "label": "MOHAMMED A S ALQIBTI",
+      "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TP7AcAzfRGzG6pqWMJsyQ6aYdXMSAUbvXu": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TP834zaucGKtAVjJPc9QQQkz5ses87KEf8": {
       "category": "seized",
       "entity": "NBCTF order ASO 06/26",
@@ -3300,6 +3786,26 @@
       ],
       "valid_until": "2028-04-05"
     },
+    "TPJFteqSekp3iQNRAcPbGbhwjhSn2KSCFu": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TPKFo86STad1Eg1MhDeoyhf5g7wivLqonF": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TPQrYqxT2ss3BSq5VrAdX9FyrC11Sb4PH2": {
       "category": "seized",
       "entity": "NBCTF order ASO 18/26",
@@ -3325,6 +3831,16 @@
       "entity": "MOHAMMED A S ALQIBTI",
       "label": "MOHAMMED A S ALQIBTI",
       "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TPkrSMfHyyuhHBoYj4uoQRSMgUEFuPC7xk": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -3440,6 +3956,16 @@
       ],
       "valid_until": "2028-02-01"
     },
+    "TQE46vogeseLMK1NgJf54twPimNL5wdJr2": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TQGZKUt18yLEGPHJhYR6vFkvBVUqHaMTET": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -3490,6 +4016,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TQQeghVLiFYNByzumZPXCu5PwXxK1X3WHB": {
+      "category": "seized",
+      "entity": "MOHAMMED A S ALQIBTI",
+      "label": "MOHAMMED A S ALQIBTI",
+      "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TQTv6YzFYvLTzz5fHoJ9sRWpiU5zYZ8Q3v": {
       "category": "seized",
       "entity": "NBCTF order ASO 02/26",
@@ -3505,6 +4041,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TQZAQuZZAG4rhLcKq2RFEetc3azrph1jts": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -3628,6 +4174,16 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "TRJhoXAeDmiHc8NdPy5QdgrRku3U2XhynS": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TRKFqdP7rXb63dhZCCb36bnhvV5Ku7rwFE": {
       "category": "seized",
       "entity": "NBCTF order FO 49/25",
@@ -3647,6 +4203,16 @@
         "Israel"
       ],
       "valid_until": "2028-04-20"
+    },
+    "TRPLp526vaegMraoGz7q3vgPCVdWZvbtnj": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TRPUBmTwXoPXiNwB8LdmdBrqE2FJuz4vpw": {
       "category": "seized",
@@ -3857,6 +4423,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TSAFKq5FwZZQZV7UkWzCvjRtP2LUUpDSpA": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TSAgSfpH5TtdCXLZkSKtwtgFmY5gMR4Dgi": {
       "category": "seized",
       "entity": "NBCTF order FO 49/25",
@@ -3867,11 +4443,31 @@
       ],
       "valid_until": "2028-04-05"
     },
+    "TSBqcb2QrLH7HBYQsTZV2xAJYEsVqWmi8A": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TSTCBYe1Dagff3U2E87JcTREvxkmpufEBD": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TSUUTMFszagjmwSzzkPSuAjBP34jddVZDf": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -3892,6 +4488,26 @@
       "entity": "MOHAMMED A S ALQIBTI, Nura Isah Musa",
       "label": "MOHAMMED A S ALQIBTI, Nura Isah Musa",
       "source": "Israel NBCTF seizure or forfeiture order FO 01/25, FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TScnfYfa47aUtkLqsKSUJDeyZBWcXPVKeJ": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TSco9U652mN7ZfgCnsuihvPgXHb74mwhMV": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -3946,6 +4562,16 @@
       ],
       "valid_until": "2028-04-05"
     },
+    "TSqzWEMJBXSDFjUn6NnckZ1Dp559yGfMDG": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TStACMeyKFiV1p1QpYsDQF15cs1ezEw2dT": {
       "category": "seized",
       "entity": "FOUDA ELSAYED HAMDI ELSAYED",
@@ -3976,11 +4602,31 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TT2DCMYXhAa4RfrT7CyWf9u54rjWA7Tf2K": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TT2geYnQsusfsRAP3Ft5s6yF7L37n8wvpk": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TT4FNjuwJfZN956V4nxKRkWZirG96gWGj2": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -4045,6 +4691,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TTLnxaQ4W4KJacnm3vcrugo3nbJv7gXGrv": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TTMtE4Bqr9R1TjzsM7hbxjsT5S9kGrf5zs": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -4083,6 +4739,16 @@
       "authorities": [
         "United Kingdom"
       ]
+    },
+    "TTXV4xn1gyCNNsevxrKjzeraSn6KCiZA8p": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TTZ7y3H6dmzpPocQtJUhtt8NUWczGkqwwy": {
       "category": "seized",
@@ -4141,6 +4807,16 @@
         "Israel"
       ],
       "valid_until": "2026-12-09"
+    },
+    "TTj4MGQTuYQTEpiJ7BmkjNMciDTStMK69a": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TTjHn8qNVxazB3UroiekGRPuM2w2GwvNbn": {
       "category": "sanctioned",
@@ -4210,6 +4886,16 @@
       ],
       "valid_until": "2028-04-05"
     },
+    "TTxELSY2kHc9EGP2o4RnMxgLN8FEMWNyq6": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TTxuaC7zJ5QbBhnUL2KEkQbFc5UEipE1fd": {
       "category": "seized",
       "entity": "HAMMOUDA HAMADA",
@@ -4225,6 +4911,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TU1jyy2TZ67dh4N1XRhfdf2meQsDreCUiu": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -4275,6 +4971,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TU8preUjArgL7EajcDCTQzvVkXQ6DDjJiP": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -4345,6 +5051,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TUZu9BBf31zcRjJZvR1k1EsW7fomUjVZrB": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -4460,6 +5176,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TVDwJiVNKGounA8RHjgeVJ7kPS6enBoaVn": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TVKhaAQ7ADvS96SCBmsF11LGbhhXTgjFaa": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -4499,6 +5225,26 @@
         "Israel"
       ],
       "valid_until": "2028-04-20"
+    },
+    "TVTj3NgqV485FaMp69PjsBwTSk3iwFRzeH": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TVUWqJ3by3EigB1W86m7eh2tVvwkcBKXNA": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TVWfvLURTyojEPimot8DfRVha1py3WA7rS": {
       "category": "seized",
@@ -4570,6 +5316,36 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TVj7naPy1zM6TtMrz5R3DPzqH3FHyLPbSV": {
+      "category": "seized",
+      "entity": "MOHAMMED A S ALQIBTI",
+      "label": "MOHAMMED A S ALQIBTI",
+      "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TVjFPD3AyY24JYwTknatL7LxsT7WEGfWmq": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TVnd3r7YQPAHXoDB7bDaQV1yViaAiwRyzC": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TVoJZwG6SZrpk2Y11w2WW54HyvJmKTkeqG": {
       "category": "seized",
       "entity": "HAMMOUDA HAMADA",
@@ -4600,6 +5376,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TVs4c3ZB6U24Z5TJ22wjLSsEhKwoY9WYUF": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TVtGGnTMK3rGQUgRG6XRVebuK9HWiAbmoN": {
       "category": "seized",
       "entity": "NBCTF order ASO 01/26",
@@ -4615,6 +5401,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TVxoL32Jt1327neFDMSDo6mEeUo6zNJ21R": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -4679,6 +5475,16 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "TWBvzFf586marsZA37ASZZNBsuhJTbj1xd": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TWEjjATeWRCAoagHDEkBf2jD8q8NZjgzqD": {
       "category": "seized",
       "entity": "NBCTF order ASO 01/26",
@@ -4728,6 +5534,16 @@
         "United Kingdom"
       ]
     },
+    "TWMtzmziTmonxDdpqecr3eDMzKiy4HjmAC": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TWPma8xH48AEN93x2krdukV9e1j6sPsBeS": {
       "category": "sanctioned",
       "entity": "XINBI COMPANY LIMITED",
@@ -4766,6 +5582,16 @@
         "Israel"
       ],
       "valid_until": "2028-02-01"
+    },
+    "TWV7BDzyy5DxKyK4QNjL1Now3wo5B6chMF": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TWcUd7JMHBDVJjnVUQopZ8Kb7UMAVAJKyB": {
       "category": "seized",
@@ -4837,6 +5663,16 @@
       ],
       "valid_until": "2028-04-05"
     },
+    "TWmvbZiJiHn6i5caQxCiZup65G1wkVGL3m": {
+      "category": "seized",
+      "entity": "MOHAMMED A S ALQIBTI",
+      "label": "MOHAMMED A S ALQIBTI",
+      "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TWnv7Kdp6GfPtcvgz8HF7n8MLZ348b5ZVR": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -4866,6 +5702,16 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "TWwz8RW5nG6uowTLGh715FtN5yPYXN8ToK": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TWxQHk8kcebGL8hGETKr9XaLhogtPYwgDx": {
       "category": "seized",
       "entity": "NBCTF order ASO 18/26",
@@ -4891,6 +5737,16 @@
       "entity": "NBCTF order FO 43/25",
       "label": "NBCTF order FO 43/25",
       "source": "Israel NBCTF seizure or forfeiture order FO 43/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TX3HANU6BB6bd5DfCBfvieR1EhmiVf3VSj": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
@@ -4974,6 +5830,16 @@
         "United Kingdom"
       ]
     },
+    "TXKRJiuo7rVkpTN56ZMsbAnq12wR88nTJQ": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TXSqepaYvzvMxbtN1jbzfc9JkMwMwtP1w4": {
       "category": "seized",
       "entity": "NBCTF order ASO 18/26",
@@ -5052,6 +5918,16 @@
       ],
       "valid_until": "2028-04-29"
     },
+    "TXm8XcvNEDNg44BGkhQzsqA1p8ka64vgXZ": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TXmQwjEHUEU1jAtUQZeXJoYUCR2yZD8bXm": {
       "category": "seized",
       "entity": "FOUDA ELSAYED HAMDI ELSAYED",
@@ -5091,6 +5967,16 @@
         "Israel"
       ],
       "valid_until": "2028-07-01"
+    },
+    "TXuCx24QSw8ecjH3ZqVfindgdQiHxEbsHc": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TXxz35Uj3NvUXjJorJLogXZ1n18MG7ovEN": {
       "category": "seized",
@@ -5141,6 +6027,16 @@
         "Israel"
       ],
       "valid_until": "2026-12-09"
+    },
+    "TY82R7ps9R5dVqDWGeoPYqyVv83Nrb3zDN": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
     },
     "TY8Vgdt3TKhL7WTbjtRHjR8R3Uwg32EfBi": {
       "category": "seized",
@@ -5310,6 +6206,16 @@
         "United Kingdom"
       ]
     },
+    "TYosnbyyRYiok5aJp5AtdD5XzHh23FshBj": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TYq1JsJxCc7XZYWeFck3q3LWLxUmiLT87n": {
       "category": "seized",
       "entity": "NBCTF order FO 43/25",
@@ -5359,6 +6265,26 @@
       ],
       "valid_until": "2028-07-01"
     },
+    "TYuHA4pWz3tpDdf7SrbmCagBequ9YVGhch": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TYuXYK4WYZAacmaQ1G6n7LoAsysMsw1zhT": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
     "TYvjt4ZKfsipHjA52nzgjUjDBF622SLCih": {
       "category": "sanctioned",
       "entity": "XINBI COMPANY LIMITED",
@@ -5393,6 +6319,16 @@
       "entity": "MOHAMMED A S ALQIBTI",
       "label": "MOHAMMED A S ALQIBTI",
       "source": "Israel NBCTF seizure or forfeiture order FO 01/25 (via OpenSanctions)",
+      "authorities": [
+        "Israel"
+      ],
+      "valid_until": "2028-04-29"
+    },
+    "TZ18KNPsJ1euhzeMydUvmvjVj4s871Jdhx": {
+      "category": "seized",
+      "entity": "Nura Isah Musa",
+      "label": "Nura Isah Musa",
+      "source": "Israel NBCTF seizure or forfeiture order FO 19/25 (via OpenSanctions)",
       "authorities": [
         "Israel"
       ],
