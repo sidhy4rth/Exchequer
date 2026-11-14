@@ -2,10 +2,10 @@
 
 - **Feature**: suite feature 7 (request and letter generator): draft a letter of request to a foreign country (BNSS s.112) from a case, in the MHA's prescribed format
 - **Issue**: #125
-- **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, #130, on top of #127); `feat/letters-of-request-log` (logged in the requests log, #131, on top of #130)
+- **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, #130, on top of #127); `feat/letters-of-request-log` (logged in the requests log, #136, on top of #130)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: built and tested; server #126, screen #127, treaty-country note #130, requests-log kind #131, stacked in that order; all wait for review
+- **Status**: built and tested; server #126, screen #127, treaty-country note #130, requests-log kind #136, stacked in that order; all wait for review
 
 ## Done
 
@@ -34,7 +34,7 @@
 - **Treaty countries (#130).**
   - `backend/data/mha_mlat_countries.txt`: Figure 3.6 of the same guidelines, pages [25] to [28] (PDF pages 27 to 30), 42 rows, OCR'd and then read row by row from the page images; cross-checked against Figure 1.1 on page [4]. Three rows are marked signed but not yet in force (Cambodia, Maldives, Morocco). Pinned by SHA-256 in `backend/tests/test_mlat_countries.py`.
   - The officer's notes (never the letter) say whether the list names the country typed (exact name or formal name, case and spacing ignored, no fuzzy match), or that it is not on the list under that name and reciprocity may be the route; nothing when no country is given. The basis is never changed.
-- **Requests log (#131).**
+- **Requests log (#136).**
   - `freeze_requests.KINDS` gains `letter-rogatory` (15 characters: fits the 16-character kind column, so no migration); `letters_of_request.REQUEST_KIND` names it. No sign-off (not a `-freeze` kind).
   - The panel, after a draft, has "Log it in the requests log": recipient = the requested country, status drafted; the requests log above remounts and shows it with a "Letter of request" pill. The existing requests screen could only log the letters it suggests or "other", hence the button.
 
