@@ -37,8 +37,10 @@ router, dozens of token contracts. Those are on every user's path, not anyone's
 wallet, so a trace through one must not read "Frozen by Tether". After the
 sample check (which covers them, so the replay still matches the contract),
 every address app/never_flag.py names as a token contract, a DEX router or a
-burn address is moved to `_meta.excluded`. A frozen exchange wallet that is not
-a per-customer deposit address stops the import for review instead.
+burn address, or lists in data/never_frozen.json as a shared contract (a DEX
+pool, a mixer contract, a token sale), is moved to `_meta.excluded`. A frozen
+exchange wallet that is not a per-customer deposit address stops the import for
+review instead. `--screen-held` applies the same rules to the files already held.
 
     cd backend && .venv/bin/python -m scripts.import_tether_freezes
     cd backend && .venv/bin/python -m scripts.import_tether_freezes --dry-run
@@ -72,6 +74,9 @@ REMOVED = "0xd7e9ec6e6ecd65492dce6bf513cd6867560d49544421d0783ddf06e76c24470c"  
 IS_BLACKLISTED = "0xe47d6060"  # isBlackListed(address)
 TRONGRID = "https://api.trongrid.io"
 SAMPLE = 25
+EXCLUDED_NOTE = ("Frozen by Tether but left out: token contracts, DEX routers, burn addresses and the shared "
+                 "contracts in data/never_frozen.json (DEX pools, mixer contracts, token sales) are on many "
+                 "users' paths, not one party's wallet (app/never_flag.py).")
 
 
 # -- Ethereum -------------------------------------------------------------------
@@ -184,7 +189,7 @@ def replay(added: list, removed: list) -> dict[str, tuple]:
 def leave_out(chain_key: str, labels: dict[str, dict]) -> tuple[dict[str, dict], dict[str, dict], list[str]]:
     """(labels kept, excluded {address: why and label}, exchange wallets that need review)."""
     usdt = ETH_USDT if chain_key == "ethereum" else TRON_USDT
-    reasons = never_flag.screen(chain_key, labels)
+    reasons = {a: why for a in labels if (why := never_flag.freeze_refusal(chain_key, a))}
     if usdt in labels:
         reasons[usdt] = never_flag.TOKEN  # Tether blacklisted its own contract; not a wallet
     review = sorted(a for a, why in reasons.items() if why == never_flag.EXCHANGE)
@@ -224,8 +229,7 @@ def write(chain_key: str, frozen: dict[str, dict], counts: dict, dry_run: bool,
             "counts": {**counts, "excluded": len(excluded or {})},
             "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_tether_freezes",
             "schema": "labels maps an address to {category, entity, label, source}",
-            "excluded_note": ("Frozen by Tether but left out: token contracts, DEX routers and burn "
-                              "addresses are on every user's path, not anyone's wallet (app/never_flag.py)."),
+            "excluded_note": EXCLUDED_NOTE,
             "excluded": excluded or {},
         },
         "labels": dict(sorted(frozen.items())),
@@ -251,7 +255,7 @@ def _screened(chain_key: str, labels: dict[str, dict], counts: dict, dry_run: bo
         print(f"  {chain_key}: Tether froze exchange wallets that are not deposit addresses: {review}. "
               "Review them (add an 'allow' entry to data/never_flag_tokens.json if right); not writing.")
         return 1
-    print(f"  {chain_key}: {len(excluded)} left out (token contracts, routers, burn addresses)")
+    print(f"  {chain_key}: {len(excluded)} left out (token contracts, routers, burn addresses, shared contracts)")
     write(chain_key, kept, {**counts, "frozen": len(kept)}, dry_run, excluded)
     return 0
 
@@ -269,8 +273,7 @@ def screen_held(dry_run: bool) -> int:
             continue
         meta = document["_meta"]
         meta["excluded"] = {**(meta.get("excluded") or {}), **excluded}
-        meta["excluded_note"] = ("Frozen by Tether but left out: token contracts, DEX routers and burn "
-                                 "addresses are on every user's path, not anyone's wallet (app/never_flag.py).")
+        meta["excluded_note"] = EXCLUDED_NOTE
         meta["counts"] = {**(meta.get("counts") or {}), "frozen": len(kept), "excluded": len(meta["excluded"])}
         document["labels"] = dict(sorted(kept.items()))
         print(f"{chain_key}: {len(excluded)} moved to _meta.excluded; {len(kept)} kept")
