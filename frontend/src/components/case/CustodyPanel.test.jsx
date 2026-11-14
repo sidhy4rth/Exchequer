@@ -94,6 +94,53 @@ describe('the custody wallets panel', () => {
       { name: 'Insp. Rao', role: 'Inspector', unit: 'Cyber Cell' }, { name: 'SI Iyer', role: '', unit: '' }])
   })
 
+  it('clears the chosen signer once the approval is recorded, and gives the keyboard to the movement', async () => {
+    // Three of four, so a signer is still left to choose after this approval.
+    const wallet = { ...WALLET, threshold: 3, signer_count: 4, signers: [...SIGNERS, { name: 'SI Das', role: '', unit: '' }] }
+    let approvals = MOVE.approvals
+    const calls = api({
+      ...NO_ASSETS,
+      'GET /trace/c1/custody': () => ({ body: { enabled: true, wallets: [{ ...wallet, movements: [{ ...MOVE, threshold: 3, approvals }] }], chains: { tron: 'Tron' } } }),
+      'POST /custody/movements/m1/approve': (b) => {
+        approvals = [...approvals, { signer: b.signer, at: '2026-11-14T06:00:00Z', recorded_by: 'officer-2' }]
+        return { body: { ...MOVE, approvals } }
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.selectOptions(await screen.findByLabelText('Signer who approved'), 'SI Pal')
+    await user.click(screen.getByRole('button', { name: 'Record approval' }))
+    const move = screen.getByRole('group', { name: 'release of 635 USDT' })
+    await waitFor(() => expect(within(move).getByText(/approved by SI Iyer, SI Pal \(2 of 3\)/)).toBeInTheDocument())
+    expect(screen.getByLabelText('Signer who approved')).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'Record approval' })).toBeDisabled()
+    expect(move).toHaveFocus()
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1)
+  })
+
+  it('offers an asset-register row added after the panel loaded, when the form opens', async () => {
+    let assets = []
+    api({
+      'GET /trace/c1/assets': () => ({ body: { assets } }),
+      'GET /trace/c1/custody': { body: { enabled: true, wallets: [], chains: { tron: 'Tron' } } },
+    })
+    const user = userEvent.setup()
+    open()
+    const button = await screen.findByRole('button', { name: 'Record a custody wallet' })
+    assets = [{ asset_id: 'a1', case_id: 'c1', holder: 'custody', asset: 'USDT', amount: '635.000000' }]
+    await user.click(button)
+    expect(await screen.findByRole('checkbox', { name: /Holds 635.000000 USDT from the asset register/ })).toBeInTheDocument()
+  })
+
+  it('says a deposit needs no signatures rather than counting approvals it does not need', async () => {
+    const deposit = { ...MOVE, kind: 'deposit', destination: '', order_ref: '', approvals: [], status: 'confirmed', tx_hash: 'ab'.repeat(32) }
+    api({ ...NO_ASSETS, 'GET /trace/c1/custody': { body: { enabled: true, wallets: [{ ...WALLET, movements: [deposit] }], chains: { tron: 'Tron' } } } })
+    open()
+    const move = await screen.findByRole('group', { name: 'deposit of 635 USDT' })
+    expect(within(move).getByText(/a deposit into the wallet needs no signatures/)).toBeInTheDocument()
+    expect(within(move).queryByText(/nobody yet/)).not.toBeInTheDocument()
+  })
+
   it('parses signer lines, dropping blank ones and keeping commas inside a unit', () => {
     expect(parseSigners('A, B, Cyber Cell, North\n\n  \nC')).toEqual([
       { name: 'A', role: 'B', unit: 'Cyber Cell, North' }, { name: 'C', role: '', unit: '' }])

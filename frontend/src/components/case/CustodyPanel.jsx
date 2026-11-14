@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { addCustodyWallet, fetchCaseAssets, fetchCaseCustody, movementStep, proposeMovement } from '../../api'
 import { plain } from '../../text'
 import { middle } from './format'
@@ -39,18 +39,24 @@ export default function CustodyPanel({ result }) {
   const [moves, setMoves] = useState({}) // wallet_id → proposal form values
   const [input, setInput] = useState({}) // movement_id → { signer, tx_hash, reason }
   const [error, setError] = useState(null)
+  const [focusOn, setFocusOn] = useState(null) // the wallet or movement to take the keyboard once it renders
+  const rows = useRef({}) // wallet_id / movement_id → its element
 
   const load = () => caseId && fetchCaseCustody(caseId).then(setData).catch(() => {})
+  // Asked again each time the form opens: a row added to the register above since then is offered too.
+  const loadHeld = () => caseId && fetchCaseAssets(caseId).then((a) => setHeld((a.assets ?? []).filter((r) => r.holder === 'custody'))).catch(() => {})
+  useEffect(() => { load(); loadHeld() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A step's button, or the form just sent, leaves the page: the row it changed takes the keyboard instead of the body.
   useEffect(() => {
-    load()
-    if (caseId) fetchCaseAssets(caseId).then((a) => setHeld((a.assets ?? []).filter((r) => r.holder === 'custody'))).catch(() => {})
-  }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (focusOn && rows.current[focusOn]) { rows.current[focusOn].focus(); setFocusOn(null) }
+  }, [focusOn, data])
 
   if (!caseId || !data?.enabled) return null
 
+  /** fn's answer once the panel has reloaded, or null when the server refused (the refusal is shown). */
   async function run(fn) {
     setError(null)
-    try { await fn(); await load(); return true } catch (e) { setError(e.message); return false }
+    try { const out = await fn(); await load(); return out ?? {} } catch (e) { setError(e.message); return null }
   }
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
   const setMove = (wid, key) => (e) => setMoves((m) => ({ ...m, [wid]: { ...m[wid], [key]: e.target.value } }))
@@ -59,13 +65,19 @@ export default function CustodyPanel({ result }) {
   async function save(e) {
     e.preventDefault()
     const body = { ...form, signers: parseSigners(form.signers), set_up_on: form.set_up_on || todayInIndia() }
-    if (await run(() => addCustodyWallet(caseId, body))) setForm(null)
+    const made = await run(() => addCustodyWallet(caseId, body))
+    if (made) { setForm(null); setFocusOn(made.wallet_id) }
   }
   async function propose(e, wid) {
     e.preventDefault()
-    if (await run(() => proposeMovement(wid, moves[wid]))) setMoves((m) => ({ ...m, [wid]: undefined }))
+    const made = await run(() => proposeMovement(wid, moves[wid]))
+    if (made) { setMoves((m) => ({ ...m, [wid]: undefined })); setFocusOn(made.movement_id) }
   }
-  const step = (mid, name, body) => run(() => movementStep(mid, name, body))
+  // Once a step is recorded its inputs are spent: a signer left chosen would be sent again.
+  async function step(mid, name, body) {
+    if (await run(() => movementStep(mid, name, body))) { setInput((m) => ({ ...m, [mid]: undefined })); setFocusOn(mid) }
+  }
+  const keep = (id) => (el) => { rows.current[id] = el }
 
   return (
     <details className="card sec custody-panel" open={data.wallets.length > 0}>
@@ -75,7 +87,7 @@ export default function CustodyPanel({ result }) {
       </summary>
       <div className="body requests-panel">
         {data.wallets.map((w) => (
-          <div className="request-row" key={w.wallet_id}>
+          <div className="request-row" key={w.wallet_id} ref={keep(w.wallet_id)} tabIndex={-1} role="group" aria-label={`Custody wallet ${w.address}`}>
             <div className="top">
               <span className="nm"><span className="mono" title={w.address}>{middle(w.address)}</span> <span className="note">· {plain(w.chain_name)}</span></span>
               <span className="pill">{w.threshold} of {w.signer_count} signers</span>
@@ -90,14 +102,15 @@ export default function CustodyPanel({ result }) {
               const v = input[m.movement_id] ?? {}
               const signers = canApprove(w, m)
               return (
-                <div className="cu-move" key={m.movement_id} aria-label={`${m.kind} of ${m.amount} ${m.asset}`}>
+                <div className="cu-move" key={m.movement_id} ref={keep(m.movement_id)} tabIndex={-1} role="group" aria-label={`${m.kind} of ${m.amount} ${m.asset}`}>
                   <div className="top">
                     <span><b>{m.kind === 'release' ? 'Release' : 'Deposit'}</b> <span className="mono">{money(m.amount, m.asset)}</span>{m.kind === 'release' && <> to <span className="mono" title={m.destination}>{middle(m.destination)}</span></>}</span>
                     <span className={`pill ${TONE[m.status] ?? ''}`}>{STATUS[m.status] ?? m.status}</span>
                   </div>
                   <p className="note">
                     Proposed by {plain(m.proposed_by)}{m.order_ref ? ` · court's order ${plain(m.order_ref)}` : ''}
-                    {' · '}approved by {m.approvals.length ? m.approvals.map((a) => plain(a.signer)).join(', ') : 'nobody yet'} ({m.approvals.length} of {m.threshold})
+                    {' · '}{m.kind === 'deposit' && !m.approvals.length ? 'a deposit into the wallet needs no signatures'
+                      : `approved by ${m.approvals.length ? m.approvals.map((a) => plain(a.signer)).join(', ') : 'nobody yet'} (${m.approvals.length} of ${m.threshold})`}
                     {m.tx_hash ? <> · tx <span className="mono" title={m.tx_hash}>{middle(m.tx_hash)}</span></> : null}
                   </p>
                   {!['confirmed', 'cancelled'].includes(m.status) && (
@@ -149,7 +162,7 @@ export default function CustodyPanel({ result }) {
           </div>
         ))}
 
-        {!form && <div className="request-add"><button type="button" onClick={() => setForm({ ...NEW_WALLET, set_up_on: todayInIndia() })}>Record a custody wallet</button></div>}
+        {!form && <div className="request-add"><button type="button" onClick={() => { setForm({ ...NEW_WALLET, set_up_on: todayInIndia() }); loadHeld() }}>Record a custody wallet</button></div>}
         {form && (
           <form className="cu-form" aria-label="Record a custody wallet" onSubmit={save}>
             <div className="fields">
