@@ -7,7 +7,9 @@ import './LetterOfRequestPanel.css'
 // letters_of_request.py, suite feature 7): when an exchange abroad will not
 // answer a notice, a Court can ask that country for its records (BNSS s.112),
 // through the Ministry of Home Affairs. The draft follows the MHA's format;
-// what the officer leaves out is a marked blank. Nothing typed is kept: it
+// what the officer leaves out is a marked blank. Each field's max is the
+// server's limit (letters_of_request.FIELDS), so a long one is cut while typed
+// rather than refused without saying which field. Nothing typed is kept: it
 // goes to the server in a POST body and comes back as the draft.
 
 /** The exchange the case reached, directly or after a swap; null when none. */
@@ -19,17 +21,17 @@ export function reachedExchange(result) {
 export const BASES = { '': 'Not chosen yet', treaty: 'A treaty or convention', reciprocity: 'Assurance of reciprocity' }
 
 const FIELDS = [
-  { name: 'country', label: 'Requested country', hint: 'where the exchange and its records are' },
-  { name: 'court', label: 'Court', hint: 'the Court that will issue it, and its place' },
-  { name: 'presiding', label: 'Presiding officer', hint: 'name' },
-  { name: 'reference', label: 'FIR / case number', hint: 'and police station' },
-  { name: 'agency', label: 'Investigating agency', hint: 'police station or unit, and address', wide: true },
-  { name: 'offences', label: 'Offences and maximum penalties', hint: 'as in the FIR', wide: true, rows: 2 },
-  { name: 'limitation', label: 'Limitation', hint: 'not time-barred, citing the provision', wide: true },
-  { name: 'facts', label: 'What happened', hint: 'how the victim was approached, what was promised, when they paid', wide: true, rows: 3 },
-  { name: 'exchange_office', label: "Exchange's registered office", hint: 'if known', wide: true },
-  { name: 'period', label: 'Urgency', hint: 'e.g. within 60 days, and why', wide: true },
-  { name: 'liaison', label: 'Liaison officer', hint: 'name, address, phone, e-mail', wide: true },
+  { name: 'country', max: 80, label: 'Requested country', hint: 'where the exchange and its records are' },
+  { name: 'court', max: 200, label: 'Court', hint: 'the Court that will issue it, and its place' },
+  { name: 'presiding', max: 120, label: 'Presiding officer', hint: 'name' },
+  { name: 'reference', max: 120, label: 'FIR / case number', hint: 'and police station' },
+  { name: 'agency', max: 200, label: 'Investigating agency', hint: 'police station or unit, and address', wide: true },
+  { name: 'offences', max: 1500, label: 'Offences and maximum penalties', hint: 'as in the FIR', wide: true, rows: 2 },
+  { name: 'limitation', max: 500, label: 'Limitation', hint: 'not time-barred, citing the provision', wide: true },
+  { name: 'facts', max: 4000, label: 'What happened', hint: 'how the victim was approached, what was promised, when they paid', wide: true, rows: 3 },
+  { name: 'exchange_office', max: 300, label: "Exchange's registered office", hint: 'if known', wide: true },
+  { name: 'period', max: 300, label: 'Urgency', hint: 'e.g. within 60 days, and why', wide: true },
+  { name: 'liaison', max: 500, label: 'Liaison officer', hint: 'name, address, phone, e-mail', wide: true },
 ]
 
 /** `offered`: the server offers this case a letter to the exchange, so the case holds what a letter of
@@ -84,8 +86,8 @@ export default function LetterOfRequestPanel({ result, offered }) {
             {FIELDS.map((f) => (
               <label key={f.name} className={f.wide ? 'wide' : undefined}>{f.label}
                 {f.rows
-                  ? <textarea rows={f.rows} value={values[f.name] ?? ''} onChange={set(f.name)} placeholder={f.hint} />
-                  : <input value={values[f.name] ?? ''} onChange={set(f.name)} placeholder={f.hint} autoComplete="off" />}
+                  ? <textarea rows={f.rows} value={values[f.name] ?? ''} onChange={set(f.name)} maxLength={f.max} placeholder={f.hint} />
+                  : <input value={values[f.name] ?? ''} onChange={set(f.name)} maxLength={f.max} placeholder={f.hint} autoComplete="off" />}
               </label>
             ))}
           </div>
