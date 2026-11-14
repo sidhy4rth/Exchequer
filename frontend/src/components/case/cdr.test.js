@@ -40,11 +40,25 @@ describe('reading a CDR', () => {
     expect(readCdr('A Party,B Party,Date,Time,Duration\n').columns).toMatchObject({ a: 0, b: 1, date: 2, time: 3, duration: 4 })
     expect(readCdr('Name,Amount\nx,1\n').error).toMatch(/No header row/)
   })
+
+  it('reads a header that words a column its own way, and leaves a column it cannot place alone', () => {
+    const cols = readCdr('Target / A Party Number,Other Party Number,Call Start Date,Call Initiation Time,Call Duration (Secs),Type of Call,IMEI of A Party,IMSI of A Party,First Cell Global Id,Last Cell Global Id,First Cell Site Address,Circle\n').columns
+    expect(cols).toMatchObject({ a: 0, b: 1, date: 2, time: 3, duration: 4, type: 5, imei: 6, imsi: 7, firstCell: 8, lastCell: 9, location: 10 })
+    expect(Object.values(cols)).not.toContain(11) // a column it cannot place is not taken
+    expect(readCdr('Calling Circle,Called Circle,Date\n').error).toMatch(/No header row/) // a circle is not a number
+  })
 })
 
 describe('numbers', () => {
   it('makes every form of one number the same number', () => {
     for (const printed of ['+447700900002', '+44 7700 900002', '0044 7700 900002', '+44-7700-900002', '00 44 7700 900002']) {
+      expect(normaliseNumber(printed)).toEqual({ value: '+447700900002', kind: 'foreign', checkable: true })
+    }
+  })
+
+  it('reads a number as the identifier register does: a trunk 0 after the country code dropped, a bracketed +', () => {
+    // identifiers.phone drops the 0 after a two-digit code that uses one, so the case's identifier matches
+    for (const printed of ['+44 (0)7700 900002', '+44 0 7700 900002', '0044 07700 900002', '(+44) 7700-900002']) {
       expect(normaliseNumber(printed)).toEqual({ value: '+447700900002', kind: 'foreign', checkable: true })
     }
   })
@@ -108,6 +122,15 @@ describe('the analysis', () => {
     expect(a.handsetChanges).toBe(2) // IMEI1, then IMEI2, then IMEI1 again
     expect([a.imsis.length, a.simChanges]).toEqual([1, 0]) // one SIM throughout: silent
     expect(a.cells[0]).toEqual({ cell: 'TEST-CELL-1', location: 'Test Nagar', events: 3 })
+  })
+
+  it('takes one handset printed with or without its check digit or software version as one handset', () => {
+    const at = (d, imei) => ({ line: 1, date: d, time: '10:00', at: `${d} 10:00`, a: { value: 'x' }, b: { value: 'y' }, imei, sms: false, seconds: 1 })
+    const a = analyse([at('2026-03-01', '00000000000001'), at('2026-03-02', '000000000000011'), at('2026-03-03', '0000000000000101'),
+      at('2026-03-04', '000000000000029'), at('2026-03-05', '000000000000020')], 'x')
+    expect(a.imeis.map((u) => [u.value, u.events, u.first, u.last])).toEqual([
+      ['00000000000001', 3, '2026-03-01 10:00', '2026-03-03 10:00'], ['000000000000029', 2, '2026-03-04 10:00', '2026-03-05 10:00']])
+    expect(a.handsetChanges).toBe(1) // a check digit or a software version that differs is not a new handset
   })
 
   it("names the case's own phone identifiers, and stays silent on other numbers", () => {
