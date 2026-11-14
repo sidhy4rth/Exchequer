@@ -133,9 +133,9 @@ export default function ExportScanPanel({ result }) {
             </div>
           )}
           <Found title="Addresses" rows={found.addresses} what={(f) => CHAIN[f.kind]}
-            action={(f) => <Link to={findTarget(f.value)}>Trace<span className="visually-hidden"> {f.value}</span></Link>} />
+            action={(f) => <Link to={findTarget(f.value)}>Trace <span className="visually-hidden">{f.value}</span></Link>} />
           <Found title="64-hex values" rows={found.hashes} what={(f) => HASH[f.kind]}
-            action={(f) => <Link to={findTarget(f.value)}>Trace from this payment<span className="visually-hidden"> {f.value}</span></Link>} />
+            action={(f) => <Link to={findTarget(f.value)}>Trace from this payment <span className="visually-hidden">{f.value}</span></Link>} />
           {!found.addresses.length && !found.hashes.length && !found.seeds.length && <p className="note">Nothing of these kinds was found in this file.</p>}
         </>}
       </div>

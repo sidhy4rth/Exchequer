@@ -84,6 +84,9 @@ describe('ExportScanPanel', () => {
     expect(await screen.findByText(/1 64-hex value \(may be a transaction hash\)/)).toBeInTheDocument()
     expect(screen.queryByText(/transaction hashes?\b(?! \()/)).toBeNull()
     expect(screen.getByRole('table', { name: 'Addresses' })).toBeInTheDocument()
+    // each link's accessible name says which value it traces, with a space before it
+    expect(screen.getByRole('link', { name: `Trace ${TRON}` })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: `Trace from this payment ${TX_TRON}` })).toBeInTheDocument()
     const hashes = screen.getByRole('table', { name: '64-hex values' })
     expect(hashes.textContent).toMatch(/may be a Tron transaction hash, a file's SHA-256 or a private key/)
   })
