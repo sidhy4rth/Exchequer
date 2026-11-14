@@ -87,6 +87,10 @@ export default function ExhibitsPanel({ result }) {
   const [form, setForm] = useState(null)
   const [error, setError] = useState(null)
   const [said, setSaid] = useState(null)
+  const told = useRef(null)
+  // Recording a file closes its form, and checking one disables the file box while it hashes:
+  // the status line that says what came of it takes the keyboard's place.
+  useEffect(() => { if (said) told.current?.focus() }, [said])
   const [act, setAct] = useState({}) // exhibit_id → { mode: 'handover' | 'end' | 'note', holder, status, note }
   const hasher = useHasher()
 
@@ -204,7 +208,7 @@ export default function ExhibitsPanel({ result }) {
         })}
 
         <Progress busy={hasher.busy} cancel={hasher.cancel} />
-        {said && <p className="lt-said" role="status">{said}</p>}
+        {said && <p className="lt-said" role="status" ref={told} tabIndex={-1}>{said}</p>}
         <CertificateForm caseId={caseId} exhibits={rows} />
         {!form && <div className="request-add"><button type="button" onClick={() => { setSaid(null); setForm({ ...EMPTY, made_on: todayInIndia() }) }}>Record a forensic file</button></div>}
 

@@ -81,6 +81,28 @@ describe('the exhibit register panel', () => {
     expect(calls.filter((c) => c.path === '/exhibits/e1/check').map((c) => c.body.sha256)[0]).toBe(SHA)
   })
 
+  it('keeps the keyboard on the panel: the status line takes focus once a file is recorded or checked', async () => {
+    let rows = []
+    api({
+      'GET /trace/c1/exhibits': () => ({ body: { exhibits: rows } }),
+      'POST /trace/c1/exhibits': (b) => { rows = [ROW]; return { status: 201, body: { ...ROW, ...b } } },
+      'POST /exhibits/e1/check': () => ({ body: { result: 'match', exhibit: ROW } }),
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Record a forensic file' }))
+    await user.type(screen.getByLabelText('What it is'), 'Laptop SSD image')
+    await user.type(screen.getByLabelText('Tool and version'), 'FTK Imager 4.7')
+    screen.getByRole('button', { name: 'Add to the exhibits' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Record a forensic file' })).toBeNull())
+    await waitFor(() => expect(screen.getByText(/the file stayed on this computer/)).toHaveFocus()) // the form is gone
+
+    await user.upload(await screen.findByLabelText('Check a file against this exhibit'), file())
+    const said = await screen.findByText(/A54_full.ufdr matches exhibit/)
+    await waitFor(() => expect(said).toHaveFocus()) // the file box was disabled while it hashed
+  })
+
   it('records a hand-over only with who and why', async () => {
     const calls = api({
       'GET /trace/c1/exhibits': { body: { exhibits: [ROW] } },

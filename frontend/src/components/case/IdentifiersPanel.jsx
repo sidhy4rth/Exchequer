@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addIdentifier, fetchCaseIdentifiers, lookUpIdentifier, updateIdentifier } from '../../api'
 import { plain } from '../../text'
@@ -98,6 +98,11 @@ export default function IdentifiersPanel({ result }) {
   const caseId = result?.case_id
   const [rows, setRows] = useState([])
   const [form, setForm] = useState(null)
+  // An identifier just added takes the keyboard's place: the form whose button was pressed is gone.
+  const [added, setAdded] = useState(null) // { id } of the identifier just added
+  const addedRow = useRef(null)
+  const addButton = useRef(null)
+  useEffect(() => { if (added) (addedRow.current ?? addButton.current)?.focus() }, [added])
   const [error, setError] = useState(null)
   const [act, setAct] = useState({}) // identifier_id → { mode: 'withdraw' | 'note', note }
   const [lookups, setLookups] = useState(false)
@@ -117,7 +122,11 @@ export default function IdentifiersPanel({ result }) {
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
   async function save(e) {
     e.preventDefault()
-    if (await run(() => addIdentifier(caseId, form))) setForm(null)
+    let made
+    if (await run(async () => { made = await addIdentifier(caseId, form) })) {
+      setForm(null)
+      setAdded({ id: made?.identifier_id })
+    }
   }
   const pick = (id) => act[id] ?? {}
   const setAct1 = (id, values) => setAct((a) => ({ ...a, [id]: { ...a[id], ...values } }))
@@ -141,7 +150,8 @@ export default function IdentifiersPanel({ result }) {
         {rows.map((row) => {
           const a = pick(row.identifier_id)
           return (
-            <div className={`request-row ${row.status === 'withdrawn' ? 'id-withdrawn' : ''}`} key={row.identifier_id}>
+            <div className={`request-row ${row.status === 'withdrawn' ? 'id-withdrawn' : ''}`} key={row.identifier_id}
+              {...(added && row.identifier_id === added.id ? { ref: addedRow, tabIndex: -1 } : {})}>
               <div className="top">
                 <span className="nm"><span className="mono">{plain(shown(row))}</span> <span className="note">· {KINDS[row.kind] ?? row.kind}</span></span>
                 {row.status === 'withdrawn' && <span className="pill amber">Withdrawn</span>}
@@ -184,7 +194,7 @@ export default function IdentifiersPanel({ result }) {
           )
         })}
 
-        {!form && <div className="request-add"><button type="button" onClick={() => setForm({ ...EMPTY })}>Add a reported identifier</button></div>}
+        {!form && <div className="request-add"><button type="button" ref={addButton} onClick={() => setForm({ ...EMPTY })}>Add a reported identifier</button></div>}
         {form && (
           <form className="id-form" aria-label="Add a reported identifier" onSubmit={save}>
             <div className="fields">
