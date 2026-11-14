@@ -352,6 +352,30 @@ class DomainLookup(Base):
     records_json: Mapped[str] = mapped_column(Text, default="[]")
 
 
+class CaseTask(Base):
+    """One thing still to be done in a case, who it is assigned to (a name), by
+    when, and what came of it (tasks.py, suite feature 6). Never deleted."""
+
+    __tablename__ = "case_tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    assignee: Mapped[str] = mapped_column(String(120), default="")
+    due_on: Mapped[str] = mapped_column(String(10), default="")  # YYYY-MM-DD, India's date, or "" for none
+    status: Mapped[str] = mapped_column(String(16))  # open | done | dropped
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
+
+
 class Batch(Base):
     """A list of reported addresses traced one after another (batches.py)."""
 
