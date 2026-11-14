@@ -511,6 +511,9 @@ refuses to write on any disagreement. Tether's list also holds the zero address 
 where tokens are burned; those are not wallets and are left out, so a burn in a trace is never read as a freeze.
 So are the USDT contract itself, DEX routers and other token contracts it names (`app/never_flag.py`): a swap
 through a router is never read as a freeze either.
+A freeze can be lifted. `--recheck-lifts` asks `isBlackListed()` about every held freeze on two keyless public
+endpoints and moves the ones both say are released to `_meta.excluded`, with the release tx; the nightly refresh
+runs it when the full import's key is missing.
 A freeze says the issuer acted, not why — and a request to Tether can ask.
 BNB Smart Chain's USDT is a Binance-issued peg with no Tether blacklist. `scripts/import_tether_freezes.py`
 
