@@ -41,7 +41,14 @@ DIRECTIONS = ("debit", "credit")
 # on the case; utr: it carries a UPI/IMPS/NEFT/RTGS reference (UTR or RRN); exchange:
 # its narration names a known exchange; tx_hash: it names a transfer of the trace.
 REASONS = ("amount_date", "utr", "exchange", "tx_hash")
-ROWS_MAX, MAX_PER_OWNER, MAX_TOTAL = 200, 1000, 100_000
+# One import holds up to 200 rows of at most about 760 bytes each (ASCII), about
+# 150 KB. Counted in imports, like the other registers (assets.py, exhibits.py),
+# but far lower: an import is a hundred of their rows. Fifty per case is many
+# more statements and CDRs than one case gets; a unit's cap holds however many
+# browser keys its officers use; the total bounds the table at about 1.5 GB
+# even if every import were full (a real one of about 20 rows is some 15 KB).
+ROWS_MAX = 200
+MAX_PER_CASE, MAX_PER_UNIT, MAX_PER_OWNER, MAX_TOTAL = 50, 1000, 200, 10_000
 TEXT = {"title": 120, "narration": 300, "counterparty": 120}
 
 # Canonical names that are also ordinary words in an Indian statement ("HDFC
@@ -162,6 +169,21 @@ def summary(r: models.StatementImport) -> dict[str, Any]:
             "created_at": r.created_at, "created_by": r.created_by}
 
 
+def room_for(s: Any, owner: str, case_id: str, viewer: Any, what: str) -> None:
+    """Refuse a new import (a statement's or a CDR's: they share the table) once the
+    case, the unit, the browser or the deployment holds its cap."""
+    count = select(func.count()).select_from(models.StatementImport)
+    if s.scalar(count.where(models.StatementImport.case_id == case_id)) >= MAX_PER_CASE:
+        raise StatementError(f"This case already has {MAX_PER_CASE} imports on record.")
+    unit = getattr(viewer, "unit_id", None)
+    if unit is not None and s.scalar(count.where(models.StatementImport.unit_id == unit)) >= MAX_PER_UNIT:
+        raise StatementError(f"Your unit already has {MAX_PER_UNIT} imports on record; ask the operator.")
+    if s.scalar(count.where(models.StatementImport.owner_hash == owner)) >= MAX_PER_OWNER:
+        raise StatementError(f"This browser already has {MAX_PER_OWNER} {what} on record.")
+    if s.scalar(count) >= MAX_TOTAL:
+        raise StatementError("The import records are full on this deployment; ask its operator.")
+
+
 def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any) -> dict[str, Any]:
     source = fields.get("source")
     if source not in SOURCES:
@@ -181,11 +203,7 @@ def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any) -> dic
     with models.session() as s:
         if s.scalar(select(models.Case.id).where(models.Case.id == case_id)) is None:
             raise StatementError("No case with that id.")
-        count = select(func.count()).select_from(models.StatementImport)
-        if s.scalar(count.where(models.StatementImport.owner_hash == owner)) >= MAX_PER_OWNER:
-            raise StatementError(f"This browser already has {MAX_PER_OWNER} statement imports on record.")
-        if s.scalar(count) >= MAX_TOTAL:
-            raise StatementError("The statement records are full on this deployment; ask its operator.")
+        room_for(s, owner, case_id, viewer, "statement imports")
         r = models.StatementImport(
             id=str(uuid.uuid4()), owner_hash=owner, case_id=case_id,
             officer_id=getattr(viewer, "officer_id", None), unit_id=getattr(viewer, "unit_id", None),

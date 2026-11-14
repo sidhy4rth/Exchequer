@@ -161,3 +161,24 @@ def test_g7_statements_1_goes_down_and_up_again_keeping_the_cases():
 def test_reasons_of_the_wrong_shape_are_refused_not_a_server_error(reasons):
     with pytest.raises(StatementError, match="Row 2: say why it is kept"):
         save([UTR_ROW, {**UTR_ROW, "reasons": reasons}])
+
+
+def test_the_imports_are_capped_per_case_per_unit_and_in_all(monkeypatch):
+    """A caller can no longer fill the table: a case, a unit and the deployment each have a cap."""
+    assert (statement_imports.MAX_PER_CASE, statement_imports.MAX_PER_UNIT,
+            statement_imports.MAX_PER_OWNER, statement_imports.MAX_TOTAL) == (50, 1000, 200, 10_000)
+    monkeypatch.setattr(statement_imports, "MAX_PER_CASE", 2)
+    asha, ravi = viewer(ALICE, unit=7, officer=1), viewer(BOB, unit=7, officer=2)
+    save([UTR_ROW], who=asha)
+    save([UTR_ROW], who=ravi)
+    with pytest.raises(StatementError, match="This case already has 2 imports"):
+        save([UTR_ROW], who=viewer("c" * 32, unit=8, officer=3))
+    save([UTR_ROW], who=asha, case="case-2")  # another case has room
+    monkeypatch.setattr(statement_imports, "MAX_PER_CASE", 50)
+    monkeypatch.setattr(statement_imports, "MAX_PER_UNIT", 3)
+    with pytest.raises(StatementError, match="Your unit already has 3"):
+        save([UTR_ROW], who=viewer("d" * 32, unit=7, officer=4))  # a fresh browser key does not reset it
+    save([UTR_ROW], who=viewer("d" * 32, unit=8, officer=5))
+    monkeypatch.setattr(statement_imports, "MAX_TOTAL", 4)
+    with pytest.raises(StatementError, match="full on this deployment"):
+        save([UTR_ROW], who=viewer("e" * 32, unit=9, officer=6))

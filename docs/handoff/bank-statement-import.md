@@ -19,6 +19,7 @@
 - An exchange is named only when a narration contains one of the repository's own canonical exchange names (the `exchange` field of the label files, as `ExchangeMatcher.exchanges` lists them), as a whole word. A few canonical names that are also ordinary words in Indian statements ("Liquid" as in a liquid fund) are not matched from narrations.
 - The audit log records counts only (rows saved, by reason), never an account number, a reference or a narration.
 - No real sample statements exist yet; every test row is synthetic and says so.
+- Caps (security review, 14 Nov): at most 50 imports per case, 1,000 per unit, 200 per browser and 10,000 in all (statements and CDRs share the table). An import can be about 150 KB, so the old 100,000 total let one caller grow the table to about 15 GB.
 
 ## Next
 
