@@ -1,11 +1,11 @@
 # Handoff: osint
 
 - **Feature**: Suite feature 4. Record what the victim reported besides the wallet (scam domain, Telegram handle, phone number, UPI ID), look up public facts about a domain, and link the same identifier across cases.
-- **Issue**: #104
-- **Branch**: `feat/osint` (slice 1, merged), `feat/osint-domain-lookup` (slice 2), `feat/osint-case-links` (slice 3); `fix/osint-review` (fixes from Barenyam's review, #111)
+- **Issue**: #104; Telegram lookup #161
+- **Branch**: `feat/osint` (slice 1, merged), `feat/osint-domain-lookup` (slice 2), `feat/osint-case-links` (slice 3); `fix/osint-review` (fixes from Barenyam's review, #111); `feat/osint-telegram` (slice 4, Telegram public-page lookup, #161)
 - **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-13
-- **Status**: Slices 1-3 merged (#105, #106, #107) and live. Domain lookups switched ON in production on 2026-11-13 (`EXCHEQUER_OSINT_LOOKUPS=1` in Render, and in `render.yaml`). Review fixes from #111 in review.
+- **Last worked on**: Sidhyarth, 2026-11-14
+- **Status**: Slices 1-3 merged (#105, #106, #107) and live. Domain lookups switched ON in production on 2026-11-13 (`EXCHEQUER_OSINT_LOOKUPS=1` in Render, and in `render.yaml`). Review fixes from #111 merged (#115). Slice 4, a Telegram username's public t.me page (#161), in progress on `feat/osint-telegram`.
 
 ## Done
 
@@ -53,4 +53,4 @@
 
 ## Files mid-change (do not touch)
 
-- none
+- `backend/app/telegram_lookup.py`, `backend/app/domain_lookup.py`, `backend/app/routes/identifiers.py`, `frontend/src/components/case/IdentifiersPanel.jsx`: slice 4 (#161), on `feat/osint-telegram`
