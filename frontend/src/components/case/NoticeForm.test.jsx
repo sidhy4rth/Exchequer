@@ -111,6 +111,67 @@ describe('bank and phone company notices in the Letters tab', () => {
     expect(calls.filter((c) => c.path === '/trace/c1/notice').map((c) => c.body.to)).toEqual(['bank-info'])
   })
 
+  // A bank hold's sign-off covers the details it was put up with, and only those (backend freeze_requests.py).
+  const HOLD = { bank: 'State Bank of India', account: '1234 5678 9012', ifsc: 'SBIN0001234', source: 'Binance reply LE-2026-0042',
+    order: 'Order 17/2026, JMFC Court', amount: '2,50,000' }
+  const HOLD_ROW = { request_id: 'r1', case_id: 'c1', recipient: 'State Bank of India', kind: 'bank-freeze', history: [], reference: '',
+    notes: '', needs_signoff: true, signoff: null, fingerprint: '0123456789abcdef' }
+  async function draftHold(user) {
+    await user.click(within(await notices()).getByRole('button', { name: 'Bank' }))
+    await user.click(screen.getByRole('button', { name: 'Urgent hold' }))
+    await fillBank(user)
+    await user.type(screen.getByLabelText("Magistrate's order"), HOLD.order)
+    await user.type(screen.getByLabelText('Amount (₹)'), HOLD.amount)
+    await user.click(screen.getByRole('button', { name: 'Draft the letter' }))
+    await within(sheet()).findByText(/State Bank of India/)
+  }
+
+  it('puts an urgent hold up for sign-off with the details typed, and says which details it covers', async () => {
+    const rows = []
+    const calls = api({
+      'GET /trace/c1/requests': () => ({ body: { count: rows.length, requests: rows } }),
+      'POST /requests': (body) => {
+        rows.push({ ...HOLD_ROW, status: body.status, mine: true, can_sign_off: false })
+        return { status: 201, body: rows[0] }
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    await draftHold(user)
+    await user.click(screen.getByRole('button', { name: 'Ask for sign-off' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'POST' && c.path === '/requests')).toBeTruthy())
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/requests').body).toMatchObject({ kind: 'bank-freeze', status: 'awaiting_signoff', details: HOLD })
+    const card = screen.getByRole('region', { name: 'Second officer' })
+    await waitFor(() => expect(card).toHaveTextContent('Put up for the details with fingerprint 0123456789abcdef only.'))
+  })
+
+  it('a second officer signs off a hold for the details on their own screen', async () => {
+    const calls = api({
+      'GET /trace/c1/requests': { body: { count: 1, requests: [{ ...HOLD_ROW, status: 'awaiting_signoff', mine: false, can_sign_off: true }] } },
+      'POST /requests/r1/signoff': { body: { ...HOLD_ROW, status: 'ready', mine: false, signoff: { by: 'Bina Iyer', at: '2026-11-10T09:00:00+00:00' } } },
+    })
+    const user = userEvent.setup()
+    open()
+    await draftHold(user)
+    await user.click(screen.getByRole('button', { name: 'Sign off' }))
+    await waitFor(() => expect(calls.find((c) => c.path === '/requests/r1/signoff')).toBeTruthy())
+    expect(calls.find((c) => c.path === '/requests/r1/signoff').body).toEqual({ details: HOLD })
+    expect(calls.every((c) => !c.url.includes('9012'))).toBe(true)
+  })
+
+  it('logs a signed-off hold as sent with the details on the screen, so a changed one is refused', async () => {
+    const calls = api({
+      'GET /trace/c1/requests': { body: { count: 1, requests: [{ ...HOLD_ROW, status: 'ready', mine: true, signoff: { by: 'Bina Iyer', at: '2026-11-10T09:00:00+00:00' } }] } },
+      'PATCH /requests/r1': (b) => ({ body: { ...HOLD_ROW, ...b, mine: true } }),
+    })
+    const user = userEvent.setup()
+    open()
+    await draftHold(user)
+    await user.click(screen.getByRole('button', { name: 'Mark as sent' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')).toBeTruthy())
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ status: 'sent', details: HOLD })
+  })
+
   it('changing a detail after drafting asks for a fresh draft', async () => {
     api()
     const user = userEvent.setup()
