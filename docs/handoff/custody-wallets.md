@@ -32,7 +32,7 @@
 ## Next
 
 1. Review and merge in order: #129, #139, #140, then the procedure PR.
-2. Click through the panel in a browser against a server with `EXCHEQUER_CUSTODY_WALLETS=1` and a signed-in officer.
+2. Done 14 Nov: clicked through in Chrome against a local server with the flag on and two signed-in officers of one unit (wallet linked to a register row, deposit, release refused without the court's order, two approvals, broadcast, confirm, cancel; both themes, keyboard, axe on the panel). Four panel fixes went into `feat/custody-screen` (#140): stale signer after an approval, register rows added after load not offered, focus lost after a step, the deposit's approval count.
 3. Turn the flag on (and later delete it) once the owner is happy; the procedure doc should be read by the unit before it is.
 
 ## Open questions
