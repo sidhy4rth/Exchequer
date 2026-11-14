@@ -8,7 +8,12 @@
 // its words: the scanner counts list words in a row and keeps only that count
 // and the line it started on. The rule is assets.py::_seed_phrase's: twelve or
 // more list words in a row, numbers between them ignored (seed backups are
-// often numbered), any other word or value ending the run.
+// often numbered), any other word or value ending the run. Markup is read
+// through, as numbers are: a word inside an HTML or XML tag (<br>, </td>,
+// <p class="...">) or an entity (&nbsp;) neither counts nor ends a run, so a
+// phrase a notes app exported one word a line still reads as one run. A tag
+// ends at > or at the end of its line, so a stray < in plain text cannot hide
+// the rest of the file.
 
 import { addressFamily } from './addressCheck'
 import { BIP39 } from './bip39English'
@@ -19,6 +24,7 @@ const ALNUM = /[0-9A-Za-z]/
 const HEX = /^[0-9a-fA-F]+$/
 const DIGITS = /^[0-9]+$/
 const LETTERS = /^[A-Za-z]+$/
+const LETTER = /[A-Za-z]/
 // A run of letters and digits this long is no address or hash: it is dropped
 // rather than held, so one huge base64 blob cannot fill the memory.
 const LONGEST = 1 << 20
@@ -37,6 +43,9 @@ export class ExportScanner {
     this.seen = false // any text at all
     this.carry = ''
     this.glued = false // the next piece starts inside a value that was dropped
+    this.tag = false // inside <...>
+    this.lt = false // the last character read was <
+    this.tail = '' // the last two characters of the previous piece
     this.addresses = new Map()
     this.hashes = new Map()
     this.seeds = []
@@ -65,22 +74,34 @@ export class ExportScanner {
     let at = 0
     TOKEN.lastIndex = 0
     for (let m = TOKEN.exec(text); m; m = TOKEN.exec(text)) {
-      this.lines(text, at, m.index)
+      this.between(text, at, m.index)
       at = m.index + m[0].length
-      if (this.glued && m.index === 0) { this.glued = false; this.endRun(); continue }
+      if (this.glued && m.index === 0) { this.glued = false; this.lt = false; this.endRun(); continue }
       this.glued = false
-      this.token(m[0])
+      if (this.lt && LETTER.test(m[0][0])) this.tag = true
+      this.lt = false
+      const before = (this.tail + text.slice(Math.max(0, m.index - 2), m.index)).slice(-2)
+      const entity = text[at] === ';' && (before[1] === '&' || before === '&#')
+      this.token(m[0], this.tag || entity)
     }
     this.glued = false
-    this.lines(text, at, text.length)
+    this.between(text, at, text.length)
+    this.tail = (this.tail + text).slice(-2)
     this.endsWithBreak = text[text.length - 1] === '\n'
   }
 
-  lines(text, from, to) {
-    for (let i = from; i < to; i++) if (text.charCodeAt(i) === 10) this.line += 1
+  /** The characters between two values: line breaks counted, tags opened and closed. */
+  between(text, from, to) {
+    for (let i = from; i < to; i++) {
+      const c = text.charCodeAt(i)
+      if (c === 10) { this.line += 1; this.tag = false } else if (c === 62) this.tag = false
+      else if (this.lt && (c === 47 || c === 33 || c === 63)) this.tag = true // </ <! <?
+      this.lt = c === 60
+    }
   }
 
-  token(tok) {
+  /** `markup`: a tag's or entity's name, which neither counts as a word nor ends a run. */
+  token(tok, markup = false) {
     const n = tok.length
     if ((n === 42 || n === 34) && (tok.startsWith('0x') || tok[0] === 'T')) {
       const family = addressFamily(tok)
@@ -91,7 +112,7 @@ export class ExportScanner {
       this.keep(this.hashes, tok.toLowerCase(), tok.toLowerCase(), n === 66 ? 'hex0x' : 'hex')
       return
     }
-    if (DIGITS.test(tok)) return
+    if (markup || DIGITS.test(tok)) return
     if (LETTERS.test(tok) && this.words.has(tok.toLowerCase())) {
       if (this.run === 0) this.runLine = this.line
       this.run += 1
@@ -137,14 +158,21 @@ async function bytesOf(blob) {
 }
 
 /** How the file's text is encoded, from its first bytes: a byte-order mark
- * says so; without one it is read as UTF-8. `binary` when it holds many NUL
- * bytes and no mark, which no text export does. */
+ * says so. Without one, UTF-16 shows as a NUL in every other byte (the high
+ * byte of each Latin character: odd bytes for little-endian, even for
+ * big-endian); anything else is read as UTF-8. `binary` when it holds many
+ * NUL bytes in no such pattern, which no text export does. */
 export function encodingOf(head) {
   if (head[0] === 0xff && head[1] === 0xfe) return { encoding: 'utf-16le', binary: false }
   if (head[0] === 0xfe && head[1] === 0xff) return { encoding: 'utf-16be', binary: false }
-  let nul = 0
-  for (const b of head) if (b === 0) nul += 1
-  return { encoding: 'utf-8', binary: head.length > 0 && nul / head.length > 0.1 }
+  const nul = [0, 0] // at even, odd offsets
+  for (let i = 0; i < head.length; i++) if (head[i] === 0) nul[i % 2] += 1
+  const half = Math.floor(head.length / 2)
+  if (half >= 2) {
+    if (nul[1] > 0.3 * half && nul[0] < 0.05 * half) return { encoding: 'utf-16le', binary: false }
+    if (nul[0] > 0.3 * half && nul[1] < 0.05 * half) return { encoding: 'utf-16be', binary: false }
+  }
+  return { encoding: 'utf-8', binary: head.length > 0 && (nul[0] + nul[1]) / head.length > 0.1 }
 }
 
 const breathe = () => new Promise((resolve) => { setTimeout(resolve, 0) })

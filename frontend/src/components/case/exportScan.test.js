@@ -102,6 +102,25 @@ describe('seed-phrase-shaped runs', () => {
     expect(out.addresses).toEqual([])
   })
 
+  it('reads through HTML and XML markup: tags, line breaks and entities do not end a run', () => {
+    expect(scan(`<p>${SEED_SET.join('<br>')}</p>`).seeds).toEqual([{ line: 1, endLine: 1, words: 12 }])
+    expect(scan(`<tr>${SEED_SET.map((w) => `<td class="cell">${w}</td>`).join('')}</tr>`).seeds).toEqual([{ line: 1, endLine: 1, words: 12 }])
+    expect(scan(SEED_SET.join('&nbsp;')).seeds).toEqual([{ line: 1, endLine: 1, words: 12 }])
+    expect(scan(SEED_SET.join('&#x20;')).seeds).toEqual([{ line: 1, endLine: 1, words: 12 }])
+    // a tag cut between two pieces
+    const html = `<div>${SEED_SET.join('</div><div>')}</div>`
+    expect(scan(html.slice(0, 31), html.slice(31)).seeds).toEqual([{ line: 1, endLine: 1, words: 12 }])
+    expect(scan(html.slice(0, 19), html.slice(19)).seeds).toEqual([{ line: 1, endLine: 1, words: 12 }])
+  })
+
+  it('a stray < in plain text does not hide the rest of the file, and markup words are never counted', () => {
+    expect(scan(`if a<b qq\n${SEED}`).seeds).toEqual([{ line: 2, endLine: 2, words: 12 }])
+    // eleven list words inside tags plus one outside: not a run of twelve
+    expect(scan(`${SEED_SET.slice(0, 11).map((w) => `<x title="${w}">`).join('')} abandon`).seeds).toEqual([])
+    // an address in an attribute is still found
+    expect(scan(`<a href="https://tronscan.org/#/address/${TRON}">wallet</a>`).addresses.map((a) => a.value)).toEqual([TRON])
+  })
+
   it('a run of eleven is not reported, and any other word ends a run', () => {
     expect(scan(SEED_SET.slice(0, 11).join(' ')).seeds).toEqual([])
     expect(scan([...SEED_SET.slice(0, 6), 'the', ...SEED_SET.slice(6)].join(' ')).seeds).toEqual([])
@@ -142,6 +161,20 @@ describe('reading a file', () => {
     expect(out.binary).toBe(false)
     expect(encodingOf(new Uint8Array([1, 0, 0, 0, 2, 0, 0, 0])).binary).toBe(true)
     expect(encodingOf(new TextEncoder().encode('plain text')).binary).toBe(false)
+  })
+
+  it('reads UTF-16 without a byte-order mark instead of calling it binary', async () => {
+    const text = `to ${TRON}\n`
+    const le = new Uint8Array(text.length * 2)
+    const be = new Uint8Array(text.length * 2)
+    for (let i = 0; i < text.length; i++) { le[2 * i] = text.charCodeAt(i); be[2 * i + 1] = text.charCodeAt(i) }
+    for (const bytes of [le, be]) {
+      const out = await scanFile(new Blob([bytes]))
+      expect(out.binary).toBe(false)
+      expect(out.addresses.map((a) => a.value)).toEqual([TRON])
+    }
+    expect(encodingOf(le).encoding).toBe('utf-16le')
+    expect(encodingOf(be).encoding).toBe('utf-16be')
   })
 
   it('drops a single enormous value instead of holding it', () => {
