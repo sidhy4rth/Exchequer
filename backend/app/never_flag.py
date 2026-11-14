@@ -19,9 +19,10 @@ investigator, and the exchange the letter goes to. So the store never labels:
   deposit   an exchange deposit address (one customer's account)
   gambling  a casino wallet in gambling_labels*.json
 
-An exchange, deposit or casino wallet keeps an issuer's freeze -- a recorded
-act on that one wallet, not an accusation -- and nothing else; a system, token
-or router address keeps nothing. Enforced when the store is built
+A deposit or casino wallet keeps an issuer's freeze -- a recorded act on that
+one wallet, not an accusation -- and nothing else; a system, token or router
+address keeps nothing, and an exchange's own wallet keeps nothing either
+(freeze_refusal below). Enforced when the store is built
 (scripts/build_label_store.py) and again on every store lookup, so a store
 already released reads correctly too. The curated label files keep their own
 rules; at run time they also outrank the store, so a casino wallet named in a
@@ -31,6 +32,15 @@ The list importers and the nightly gate ask the same question per address
 with reason()/screen(): a token contract, DEX router, exchange wallet (not a
 per-customer deposit address) or burn address must never carry a sanctions,
 freeze or scam label there either.
+
+An issuer's freeze has one more rule, freeze_refusal(), applied at every
+lookup to the frozen_labels files and the store alike: no freeze is shown on
+a token contract, router, burn address or exchange's own wallet, nor on a
+shared contract listed in data/never_frozen.json (DEX pools, mixer pools and
+protocol contracts, token sales, staking pools: anything many unrelated people
+pay through). Tether's own list blocks such contracts defensively; on 14 Nov
+the curated files held 106 of them, so traces through a Uniswap pair read
+"Frozen by Tether".
 """
 from __future__ import annotations
 
@@ -50,6 +60,7 @@ SYSTEM, TOKEN, ROUTER, EXCHANGE = "burn/system address", "token contract", "DEX 
 DEPOSIT, GAMBLING = "exchange deposit address", "casino wallet"
 # From a list given to the store build: every label refused, or only poisoning.
 LISTED, NO_POISONING = "on a never-flag list", "on a never-poison list"
+NEVER_FROZEN_FILE = "never_frozen.json"  # shared contracts no freeze is shown on
 _STRICT = frozenset({SYSTEM, TOKEN, ROUTER, LISTED})
 # Precedence when one address is several kinds: the strictest wins.
 _RANK = {SYSTEM: 0, TOKEN: 1, ROUTER: 2, LISTED: 3, EXCHANGE: 4, DEPOSIT: 5, GAMBLING: 6, NO_POISONING: 7}
@@ -322,6 +333,44 @@ def screen(chain_key: str | None, addresses) -> dict[str, str]:
     return {a: why for a in addresses if (why := reason(chain_key, a))}
 
 
+@lru_cache(maxsize=None)
+def never_frozen(chain_key: str) -> dict[bytes, str]:
+    """This chain's shared contracts from data/never_frozen.json, raw bytes -> kind; empty if unreadable."""
+    chain_key = config.get_chain(chain_key).key
+    try:
+        document = json.loads((config.DATA_DIR / NEVER_FROZEN_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.error("%s unreadable; only the never-flag kinds refuse a freeze: %s", NEVER_FROZEN_FILE, exc)
+        return {}
+    rows = document.get(chain_key) if isinstance(document, dict) else None
+    if not isinstance(rows, dict):
+        return {}
+    found: dict[bytes, str] = {}
+    for address, entry in rows.items():
+        raw = _raw(chain_key, address, hex_as_tron=False) if isinstance(address, str) else None
+        if raw is None:
+            logger.warning("%s: %r is not a %s address; skipped", NEVER_FROZEN_FILE, address, chain_key)
+            continue
+        found[raw] = str(entry.get("kind") or "shared contract") if isinstance(entry, dict) else "shared contract"
+    return found
+
+
+def freeze_refusal(chain_key: str, address: str) -> str | None:
+    """Why an issuer's freeze on `address` must not be shown on this chain, or None.
+
+    A token contract, DEX router, burn address or exchange's own wallet
+    (reason()), or a shared contract in data/never_frozen.json. A deposit
+    address, casino wallet or ordinary wallet keeps its freeze: the issuer
+    acted on that one account.
+    """
+    chain_key = config.get_chain(chain_key).key
+    found = reason(chain_key, address)
+    if found:
+        return found
+    raw = _raw(chain_key, address)
+    return never_frozen(chain_key).get(raw) if raw is not None else None
+
+
 def clear_cache() -> None:
     _file.cache_clear()
     _token_list.cache_clear()
@@ -329,3 +378,4 @@ def clear_cache() -> None:
     evm_routers.cache_clear()
     routers.cache_clear()
     gambling.cache_clear()
+    never_frozen.cache_clear()
