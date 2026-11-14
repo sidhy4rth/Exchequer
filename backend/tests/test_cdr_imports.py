@@ -1,9 +1,13 @@
 """CDR summaries kept with a case (app/cdr_imports.py, routes/cdr.py): suite feature 5, behind EXCHEQUER_CDR_IMPORT.
 
-Every number here is synthetic. India sets aside no mobile range for fiction, so
-the Indian mobiles are a visibly patterned run, +91 90000 0000x, made up for the
-test; the foreign one is in Ofcom's range for drama (+44 7700 900000 to 900999).
-IMEIs are made up and start with a run of zeros. Throwaway SQLite, no network.
+Every number here is synthetic, and none can be a real Indian mobile. India's
+mobile numbers start with 6, 7, 8 or 9 and India sets aside no range for fiction,
+so a 10-digit number here starts with 5 (50000 0000x): no mobile series, and kept
+as printed. The register (identifiers.phone) takes a 10-digit number as an Indian
+mobile only when it starts 6 to 9, on purpose, so a number that must be on the
+register is in Ofcom's range for drama (+44 7700 900000 to 900999), set aside so
+that no subscriber holds it. IMEIs are made up and start with a run of zeros.
+Throwaway SQLite, no network.
 """
 from __future__ import annotations
 
@@ -19,9 +23,9 @@ from app.cdr_imports import CdrError
 from app.main import app
 from test_statement_imports import BOB, H, UTR_ROW, store, viewer  # noqa: F401 -- the fixture
 
-SUBJECT, CONTACT, OTHER = "+919000000001", "+919000000002", "+919000000003"
+SUBJECT, CONTACT, OTHER = "+447700900001", "+447700900002", "+447700900003"  # Ofcom drama range
 IMEI = "000000000000011"
-NUMBER_ROW = {"kind": "number", "value": "09000000002", "calls": 12, "sms": 3, "seconds": 1840,
+NUMBER_ROW = {"kind": "number", "value": "0044 7700 900002", "calls": 12, "sms": 3, "seconds": 1840,
               "first": "2026-03-01", "last": "2026-03-20", "reasons": ["top_contact"]}
 IMEI_ROW = {"kind": "imei", "value": IMEI, "events": 40, "first": "2026-03-01", "last": "2026-03-10"}
 
@@ -43,8 +47,10 @@ def phone_on(case, value, who=None):
 
 # -- numbers -----------------------------------------------------------------------------------
 @pytest.mark.parametrize(("printed", "kept"), [
-    ("9000000002", CONTACT), ("09000000002", CONTACT), ("919000000002", CONTACT), ("+91 90000 00002", CONTACT),
-    ("0091-90000-00002", CONTACT), ("+44 7700 900123", "+447700900123"),
+    ("+44 7700 900002", CONTACT), ("0044 7700 900002", CONTACT), ("+44 (0)7700 900002", CONTACT),
+    ("+44-7700-900002", CONTACT), ("+44 7700 900123", "+447700900123"),
+    # not an Indian mobile series (those start 6 to 9): kept as printed, never made a +91 number
+    ("5000000002", "5000000002"), ("05000000002", "05000000002"), ("915000000002", "915000000002"),
     ("121", "121"), ("01100000000", "01100000000"),  # a short code, a landline: kept as printed
     ("ax-testco", "AX-TESTCO"),  # an SMS sender
 ])
@@ -52,7 +58,7 @@ def test_a_number_is_kept_as_the_identifier_register_keeps_it(printed, kept):
     assert cdr_imports.number(printed) == kept
 
 
-@pytest.mark.parametrize("printed", ["", "12", "call me", "+91 9000", "1234567890123456"])
+@pytest.mark.parametrize("printed", ["", "12", "call me", "+91 9000", "+91 50000 00002", "1234567890123456"])
 def test_what_is_not_a_number_is_refused(printed):
     with pytest.raises(CdrError):
         cdr_imports.number(printed)
@@ -96,7 +102,7 @@ def test_handsets_and_the_subject_take_only_their_own_shapes():
 def test_a_case_identifier_claim_holds_only_for_the_cases_own_phone():
     with pytest.raises(CdrError, match="not a phone identifier of this case"):
         save([{**NUMBER_ROW, "reasons": ["case_identifier"]}])
-    phone_on("case-1", "+91 90000 00002")
+    phone_on("case-1", "+44 (0)7700 900002")
     assert save([{**NUMBER_ROW, "reasons": ["case_identifier"]}])["rows"][0]["reasons"] == ["case_identifier"]
     phone_on("case-2", OTHER)  # on another case only: not this case's
     with pytest.raises(CdrError, match="not a phone identifier"):
@@ -107,7 +113,7 @@ def test_the_check_finds_the_number_on_this_case_and_on_cases_the_viewer_may_rea
     phone_on("case-1", SUBJECT)
     phone_on("case-2", CONTACT)
     phone_on("case-2", OTHER, who=viewer(BOB))  # another browser's case: never revealed
-    found = cdr_imports.check(viewer(), "case-1", ["09000000001", "9000000002", "+91 90000 00003", "+447700900123"])
+    found = cdr_imports.check(viewer(), "case-1", ["0044 7700 900001", "+44 7700 900002", "+44-7700-900003", "+447700900123"])
     assert [(f["number"], f["on_this_case"], [o["case_id"] for o in f["also_in"]]) for f in found] == [
         (SUBJECT, True, []), (CONTACT, False, ["case-2"]), (OTHER, False, []), ("+447700900123", False, [])]
     assert save([{**NUMBER_ROW, "reasons": ["other_case"]}])["rows"][0]["reasons"] == ["other_case"]
@@ -115,6 +121,8 @@ def test_the_check_finds_the_number_on_this_case_and_on_cases_the_viewer_may_rea
         save([{**NUMBER_ROW, "value": OTHER, "reasons": ["other_case"]}])
     with pytest.raises(CdrError, match="Number 1"):
         cdr_imports.check(viewer(), "case-1", ["121"])
+    with pytest.raises(CdrError, match="Number 1"):  # not a mobile series: the register holds no such number
+        cdr_imports.check(viewer(), "case-1", ["5000000002"])
     with pytest.raises(CdrError, match="1 to"):
         cdr_imports.check(viewer(), "case-1", [CONTACT] * (cdr_imports.CHECK_MAX + 1))
 
@@ -140,7 +148,7 @@ def test_the_routes_save_list_and_check(client):
     assert listed["enabled"] and listed["count"] == 1 and listed["rows_max"] == cdr_imports.ROWS_MAX
     assert client.post("/trace/case-1/cdr", json={"rows": [{**NUMBER_ROW, "first": "x"}]}, headers=H).status_code == 400
     assert client.post("/trace/case-1/cdr", json={"rows": [NUMBER_ROW]}).status_code == 400  # no owner key
-    checked = client.post("/trace/case-1/cdr/check", json={"numbers": ["9000000002"]}, headers=H).json()
+    checked = client.post("/trace/case-1/cdr/check", json={"numbers": ["0044 7700 900002"]}, headers=H).json()
     assert checked["results"] == [{"number": CONTACT, "on_this_case": False, "also_in": []}]
     assert client.post("/trace/case-1/cdr/check", json={"numbers": ["121"]}, headers=H).status_code == 400
 
@@ -161,5 +169,5 @@ def test_the_audit_log_and_the_log_hold_counts_never_a_number(client, caplog):
         ("cdr.list", {}),
         ("cdr.check", {"numbers": 2, "on_this_case": 1, "on_other_cases": 0}),
     ]
-    for secret in ("9000000001", "9000000002", "9000000003", IMEI):
+    for secret in ("7700900001", "7700900002", "7700900003", IMEI):
         assert secret not in json.dumps(logged) and secret not in caplog.text

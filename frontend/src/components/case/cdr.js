@@ -28,20 +28,56 @@ export const CDR_HEADERS = {
     'btslocation', 'location', 'address'],
 }
 export const CDR_FIELDS = Object.keys(CDR_HEADERS)
-const guess = (headers) => guessColumns(headers, CDR_HEADERS)
+
+// Operators word their headers in many ways ("Target / A Party Number", "Call Start Date"). A field
+// no header names exactly takes the first free column whose header contains one of these words,
+// unless it also has a word that says it is something else: a circle or an operator is not a number,
+// an address is not a cell ID.
+const CDR_WORDS = {
+  a: ['aparty', 'target', 'calling', 'msisdn', 'originating'],
+  b: ['bparty', 'otherparty', 'called', 'dialled', 'dialed', 'terminating'],
+  date: ['date'], time: ['time'], duration: ['duration'], type: ['calltype', 'typeofcall', 'type'],
+  imei: ['imei'], imsi: ['imsi'],
+  firstCell: ['firstcell', 'firstcgi', 'startcell', 'firstbts'], lastCell: ['lastcell', 'lastcgi', 'endcell', 'lastbts'],
+  location: ['address', 'location'],
+}
+const NOT_A_NUMBER = /circle|operator|network|tsp|lrn|roam|imei|imsi|cell|cgi|name|address|location|type|date|time/
+const NOT_A_CELL = /address|location|lat|long|name/
+const NOT = { a: NOT_A_NUMBER, b: NOT_A_NUMBER, firstCell: NOT_A_CELL, lastCell: NOT_A_CELL }
+const headerKey = (h) => String(h ?? '').toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z]/g, '') // as statement.js
+
+function guess(headers) {
+  const out = guessColumns(headers, CDR_HEADERS)
+  const keys = headers.map(headerKey)
+  const taken = new Set(Object.values(out).filter((i) => i >= 0))
+  for (const field of CDR_FIELDS) {
+    if (out[field] >= 0) continue
+    const at = keys.findIndex((k, i) => !taken.has(i) && CDR_WORDS[field].some((w) => k.includes(w)) && !NOT[field]?.test(k))
+    if (at >= 0) { out[field] = at; taken.add(at) }
+  }
+  return out
+}
 const usable = (map) => map.date >= 0 && (map.a >= 0 || map.b >= 0)
 
 /** The CDR's header row and the records under it: an operator's export starts with lines about
- * the request; the header is the first of the first 30 records with a date and a number column. */
+ * the request; the header is the first of the first 30 records with a date and a number column,
+ * named exactly, else named in words (a line about the request is less likely to pass the first). */
 export function readCdr(text) {
   const { records } = readCells(text)
-  const at = records.slice(0, 30).findIndex((r) => usable(guess(r.cells)))
+  const head = records.slice(0, 30)
+  let at = head.findIndex((r) => usable(guessColumns(r.cells, CDR_HEADERS)))
+  if (at < 0) at = head.findIndex((r) => usable(guess(r.cells)))
   if (at < 0) return { error: 'No header row with a date and an A or B party column was found in the first 30 lines.' }
   const headers = records[at].cells.map((c) => c.trim())
   return { headers, records: records.slice(at + 1), columns: guess(headers) }
 }
 
 const MOBILE = /^[6-9]\d{9}$/
+// Country codes whose numbers are written with a trunk 0 after them (+44 (0)20 ...): the 0 is
+// dropped, as identifiers.phone drops it (its _TRUNK_ZERO_CODES), so the two agree on every number.
+const TRUNK_ZERO = new Set(['20', '27', '30', '31', '32', '33', '34', '36', '40', '41', '43', '44', '45', '46', '47', '48', '49',
+  '51', '52', '53', '54', '55', '56', '57', '58', '60', '61', '62', '63', '64', '65', '66',
+  '81', '82', '84', '86', '90', '92', '93', '94', '95', '98'])
 
 /**
  * A number as the identifier register keeps it (identifiers.phone): {value, kind, checkable} or null.
@@ -54,9 +90,10 @@ export function normaliseNumber(text) {
   const s = String(text ?? '').trim()
   if (/^[A-Za-z0-9]{2}-[A-Za-z0-9]{3,11}$/.test(s) && /[A-Za-z]/.test(s)) return { value: s.toUpperCase(), kind: 'sender', checkable: false }
   if (!s || /[^\d\s()+.-]/.test(s)) return null
-  const plus = s.startsWith('+') || s.startsWith('00')
+  const plus = /^\(?\+/.test(s) || s.startsWith('00') // "(+44) 7700 ..." too
   let d = s.replace(/\D/g, '')
   if (s.startsWith('00')) d = d.slice(2)
+  if (plus && TRUNK_ZERO.has(d.slice(0, 2)) && d[2] === '0') d = d.slice(0, 2) + d.slice(3)
   const mobile = (ten) => ({ value: `+91${ten}`, kind: 'mobile', checkable: true })
   if (plus) {
     if (d.startsWith('91')) return MOBILE.test(d.slice(2)) ? mobile(d.slice(2)) : { value: d, kind: 'other', checkable: false }
@@ -126,18 +163,20 @@ export function subjectOf(events) {
 }
 
 /** Each distinct value of `key` (an IMEI, an IMSI) with its events, first and last use, oldest first,
- * and how many times the value changed from one event to the next. */
-function uses(sorted, key) {
+ * and how many times the value changed from one event to the next. Two values are one when `same`
+ * makes them equal; the first printed is shown. */
+function uses(sorted, key, same = (v) => v) {
   const by = new Map()
   let changes = 0
   let before = ''
   for (const e of sorted) {
     const v = e[key]
     if (!v) continue
-    if (before && v !== before) changes += 1
-    before = v
-    const had = by.get(v)
-    if (had) { had.events += 1; had.last = e.at } else by.set(v, { value: v, events: 1, first: e.at, last: e.at })
+    const id = same(v)
+    if (before && id !== before) changes += 1
+    before = id
+    const had = by.get(id)
+    if (had) { had.events += 1; had.last = e.at } else by.set(id, { value: v, events: 1, first: e.at, last: e.at })
   }
   return { list: [...by.values()].sort((x, y) => x.first.localeCompare(y.first)), changes }
 }
@@ -170,7 +209,9 @@ export function analyse(events, subject = subjectOf(events)) {
     c.last = e.at
     contacts.set(other.value, c)
   }
-  const handsets = uses(sorted, 'imei')
+  // A handset is its IMEI's first 14 digits: the 15th is a check digit a CDR may leave off or print
+  // otherwise, and a 16-digit IMEISV ends in a software version, which changes with an update.
+  const handsets = uses(sorted, 'imei', (v) => v.slice(0, 14))
   const sims = uses(sorted, 'imsi')
   return {
     subject, totals,
