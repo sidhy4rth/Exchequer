@@ -28,6 +28,7 @@
 - The panel opens on arrival when a task is open; after that only the officer folds it, so closing the last task does not snap it shut.
 - A task row's due date left half-typed (the browser reports it empty, with `badInput`) is not sent: the old date is put back and a hint says to type the whole date. An emptied field still clears the date.
 - Each open row's Assigned to and Due fields are named after the task (`aria-label` "Assigned to: <title>"), so a screen reader tells several rows apart.
+- Adding or changing a task is in `access.GUARDED`, as `POST /requests` is (security review, 14 Nov): with a demo code set it needs the code, and with `EXCHEQUER_CONSOLE=officers` a signed-in officer. Reading the list and `/tasks/due` need neither.
 
 ## Next
 
