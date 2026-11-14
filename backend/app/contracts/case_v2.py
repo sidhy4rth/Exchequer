@@ -138,6 +138,21 @@ class Transfer(_Strict):
     log_index: int | None = None
 
 
+class PrivacyMatch(_Strict):
+    """A privacy protocol's contract the funds passed through (#189, flag
+    EXCHEQUER_PRIVACY_CATEGORY): a note, never a risk hit and never a stop."""
+
+    address: str
+    category: Literal["privacy"]
+    entity: str
+    label: str
+    source: str
+    depth: int
+    value_received_native: float
+    is_terminal: Literal[False]
+    origin: str | None = None
+
+
 class CaseV2(BaseModel):
     """A trace result under contract v2.
 
@@ -163,6 +178,11 @@ class CaseV2(BaseModel):
     # display, never the figure a letter states. A new trace stores one; on
     # read it is built when missing or older than victim_flow.VERSION.
     victim_flow: dict[str, Any] | None = None
+    # Privacy-protocol contracts the funds passed through, and one sentence
+    # each: only with the flag EXCHEQUER_PRIVACY_CATEGORY on, absent (None)
+    # otherwise and in every older case. Never in risk_matches or a total.
+    privacy_matches: list[PrivacyMatch] | None = None
+    privacy_notes: list[str] | None = None
 
 
 # ---------------------------------------------------------------------------

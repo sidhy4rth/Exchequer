@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useMedia } from '../phone'
 import { plain } from '../text'
 import RoleSwatch from './RoleSwatch'
+import './FlowView.css'
 
 // The money flow as a layered diagram: one column per hop, the reported
 // address at one end and whatever it reached at the other, every arrow
@@ -16,7 +17,8 @@ import RoleSwatch from './RoleSwatch'
 // with a halo for a confirmed hit (sanctions, mixer, frozen...), faded with a
 // dashed ring for a possible flag (a pattern fired; not confirmed). A gambling
 // platform's wallet is grey with a dashed halo (an attribution, not a
-// designation). The key draws them the same way (RoleSwatch). Dashed means
+// designation), a privacy protocol's contract grey with a dotted halo (a note,
+// not a risk hit). The key draws them the same way (RoleSwatch). Dashed means
 // unconfirmed, so the traced funds stay solid even where a pattern fired on them.
 //
 // In motion: the columns arrive one after another on first sight, the lines
@@ -28,6 +30,7 @@ const ROLE_NAME = {
   seed: 'Reported address',
   risk: 'Sanctioned / mixer / frozen (confirmed)',
   gambling: 'Gambling platform wallet',
+  privacy: 'Privacy protocol (not an accusation)',
   exchange: 'Labelled exchange wallet',
   inferred: 'Probable deposit address (inferred)',
   service: 'Service contract or router, not expanded',
@@ -35,15 +38,16 @@ const ROLE_NAME = {
   node: 'Traced address',
 }
 const ROLE_VAR = {
-  seed: 'var(--text)', risk: 'var(--risk)', gambling: 'var(--text-2)', exchange: 'var(--go)', inferred: 'var(--go-soft)',
+  seed: 'var(--text)', risk: 'var(--risk)', gambling: 'var(--text-2)', privacy: 'var(--text-2)', exchange: 'var(--go)', inferred: 'var(--go-soft)',
   service: 'var(--line-strong)', flagged: 'var(--risk)', node: 'var(--text-3)',
 }
-const RADIUS = { seed: 7, risk: 6.5, gambling: 6.5, exchange: 6.5, inferred: 6, service: 4, flagged: 4.5, node: 3.5 }
+const RADIUS = { seed: 7, risk: 6.5, gambling: 6.5, privacy: 6.5, exchange: 6.5, inferred: 6, service: 4, flagged: 4.5, node: 3.5 }
 
 function roleOf(node) {
   if (node.is_seed) return 'seed'
   if (node.risk_category === 'gambling') return 'gambling'
   if (node.risk_category) return 'risk'
+  if (node.privacy_entity) return 'privacy'
   if (node.exchange && !node.inferred_exchange) return 'exchange'
   if (node.inferred_exchange) return 'inferred'
   if (node.is_router || node.is_service_contract) return 'service'
@@ -68,6 +72,7 @@ function captionOf(node, role) {
   if (role === 'inferred') return `probable ${node.inferred_exchange} deposit`
   if (role === 'risk') return node.risk_entity ?? node.risk_label ?? RISK_WORD[node.risk_category] ?? 'flagged'
   if (role === 'gambling') return node.risk_entity ?? 'gambling platform'
+  if (role === 'privacy') return `${node.privacy_entity} · privacy protocol`
   if (role === 'service') return node.router ?? node.label ?? null
   return null
 }
@@ -749,7 +754,7 @@ export default function FlowView({
           // The selected address stays plain to see, whatever the filter.
           const kept = flags.keep.has(id) || isSelected
           const colour = p.node.risk_category === 'gambling' ? ROLE_VAR.gambling : p.node.risk_category ? ROLE_VAR.risk : ROLE_VAR[p.role]
-          const halo = p.role === 'exchange' || p.role === 'risk' || p.role === 'gambling' || Boolean(p.node.risk_category)
+          const halo = p.role === 'exchange' || p.role === 'risk' || p.role === 'gambling' || p.role === 'privacy' || Boolean(p.node.risk_category)
           // Outside the halo or the green path ring when there is one.
           const ringGap = halo || p.onPath ? 9 : 5
           // While only flags show, every possible flag carries its address
@@ -861,7 +866,7 @@ export default function FlowView({
       )}
 
       <div className="flow-legend">
-        {['seed', 'exchange', 'inferred', 'risk', 'gambling', 'flagged', 'service'].map((r) => (
+        {['seed', 'exchange', 'inferred', 'risk', 'gambling', ...(data.nodes.some((n) => n.privacy_entity) ? ['privacy'] : []), 'flagged', 'service'].map((r) => (
           <span key={r}><RoleSwatch role={r} color={ROLE_VAR[r]} />{ROLE_NAME[r].replace(' (inferred)', '').replace(', not expanded', '')}</span>
         ))}
         <span><i className="line" />the traced funds (attributed path)</span>
