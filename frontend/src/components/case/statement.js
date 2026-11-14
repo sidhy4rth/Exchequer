@@ -62,8 +62,8 @@ const pad = (n) => String(n).padStart(2, '0')
 export function parseDate(text) {
   const s = String(text ?? '').trim()
   let m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?\s*(Z|UTC|[+-]\d{2}:?\d{2})?$/i.exec(s)
-  let y, mo, d, hh = null, mm = null
-  if (m) [y, mo, d, hh, mm] = [+m[1], +m[2], +m[3], m[4], m[5]]
+  let y, mo, d, hh = null, mm = null, zone = null
+  if (m) [y, mo, d, hh, mm, zone] = [+m[1], +m[2], +m[3], m[4], m[5], m[6]]
   else {
     m = /^(\d{1,2})[/.\- ]([A-Za-z]{3,9}|\d{1,2})[/.\- ](\d{4}|\d{2})(?:[ ,T]+(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])?)?$/.exec(s)
     if (!m) return null
@@ -76,6 +76,13 @@ export function parseDate(text) {
   const day = new Date(Date.UTC(y, mo - 1, d))
   if (!mo || day.getUTCFullYear() !== y || day.getUTCMonth() !== mo - 1 || day.getUTCDate() !== d) return null
   if (hh != null && (+hh > 23 || +mm > 59)) return null
+  // A time with a zone (an exchange's export is often UTC) is moved to India's time, as the trace's times are.
+  if (hh != null && zone) {
+    const z = /^([+-])(\d{2}):?(\d{2})$/.exec(zone)
+    const offset = z ? (z[1] === '-' ? -1 : 1) * (+z[2] * 60 + +z[3]) : 0
+    const ist = new Date(Date.UTC(y, mo - 1, d, +hh, +mm) + (330 - offset) * 60_000).toISOString()
+    return { date: ist.slice(0, 10), time: ist.slice(11, 16) }
+  }
   return { date: `${y}-${pad(mo)}-${pad(d)}`, time: hh != null ? `${pad(+hh)}:${mm}` : '' }
 }
 
@@ -125,6 +132,8 @@ export function namesIn(text, names) {
   return (names ?? []).filter((n) => new RegExp(`(?<![A-Za-z0-9])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'i').test(s))
 }
 
+const OUT_SIDE = /^(d|dr|debit|debited|withdrawal|withdraw|sell|send|sent|out|outgoing)\b/
+const IN_SIDE = /^(c|cr|credit|credited|deposit|receive|received|in|incoming)\b/
 const cell = (r, i) => (i >= 0 ? String(r.cells[i] ?? '').trim() : '')
 
 /** Statement rows from its records and columns: {rows: [{line, date, time, direction, amount, places, text,
@@ -143,8 +152,10 @@ export function statementRows(records, columns) {
     else {
       const amount = parseAmount(cell(r, columns.amount))
       if (amount && amount.value !== 0) {
+        // A Dr/Cr or type column decides when it says which; otherwise the amount's sign does.
+        // Whole words only: "Deposit" starts with a "d" but is money in.
         const side = cell(r, columns.drcr).toLowerCase()
-        const out = /^(d|dr|debit|withdrawal|sell|send|out)/.test(side) || (!side && amount.value < 0)
+        const out = OUT_SIDE.test(side) || (!IN_SIDE.test(side) && amount.value < 0)
         money = { ...amount, direction: out ? 'debit' : 'credit' }
       }
     }
