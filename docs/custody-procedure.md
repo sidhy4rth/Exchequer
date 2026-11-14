@@ -17,6 +17,10 @@ instructions.
       and release. Exchequer records who set the wallet up, who proposed each
       movement and each signer's approval; write down anyone else present in
       your unit's own record.
+- [ ] **Each signer records their own approval,** signed in to Exchequer with
+      their own officer account. Exchequer accepts at most one approval per
+      officer account on each movement, so one officer cannot enter every
+      signer's approval; it records which account entered each one.
 - [ ] **Never photograph, type or copy a seed phrase.** Not into Exchequer, a
       phone, an email, a chat, a document or a cloud note. A seed phrase is
       written only on the recovery sheet that comes with the hardware wallet,
@@ -74,7 +78,11 @@ instructions.
       where the scheme keeps proposing apart from signing), the asset and the
       exact amount.
 - [ ] Once sent, record the **transaction hash**; once final on chain, mark it
-      **Confirmed on chain**.
+      **Confirmed on chain**. A release is confirmed only against confirmed
+      deposits: Exchequer refuses to confirm a release that would take more of
+      an asset out of the wallet than its confirmed deposits of that asset put
+      in. Record the asset the same way every time (for example always "USDT"):
+      amounts under different spellings are not compared, only warned about.
 - [ ] In the asset register, record the seized amount as held in the custody
       wallet with the same transaction, and link that row to the wallet.
 
@@ -87,8 +95,12 @@ instructions.
       (Exchequer refuses a release without one).
 - [ ] Each signer checks the destination and amount **on their own device's
       screen** against the court order before signing. Record each approval as
-      it is given: Exchequer counts each signer once and refuses a signer the
-      scheme does not allow.
+      it is given, each signer signed in to their own officer account:
+      Exchequer counts each signer once, refuses a signer the scheme does not
+      allow, and refuses a second approval entered from the same account.
+- [ ] If Exchequer warns that the release is larger than the confirmed
+      deposits, stop and check the amount against the court order and the
+      deposits before anyone signs.
 - [ ] When the threshold is reached, broadcast the transaction and record its
       hash; once final on chain, mark it **Confirmed on chain**.
 - [ ] In the asset register, record the outcome with the same transaction.
@@ -97,7 +109,9 @@ instructions.
 
 - [ ] A proposal that should not go ahead: **Cancel** it with the reason. A
       cancelled movement cannot be approved or broadcast again; propose a new
-      one.
+      one. A transaction hash is recorded against one live movement of a
+      wallet only; a cancelled movement's hash may be recorded again on the
+      new one.
 - [ ] A lost, damaged or compromised device, or a signer who leaves the unit:
       tell your supervisor at once. Move the funds to a new custody wallet
       with a fresh set of devices, using the steps above, and record the new
