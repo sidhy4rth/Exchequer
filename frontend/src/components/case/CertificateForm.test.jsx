@@ -75,8 +75,30 @@ describe('the draft s.63(4) certificate', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No exhibit e1')
   })
 
-  it('shows nothing when the case has no exhibits', () => {
-    const { container } = render(<CertificateForm caseId="case-1" exhibits={[]} />)
-    expect(container).toBeEmptyDOMElement()
+  it('with no exhibits, still offers the certificate for the case\'s own report', async () => {
+    const user = userEvent.setup()
+    render(<CertificateForm caseId="case-1" exhibits={[]} />)
+    await user.click(screen.getByRole('button', { name: 'Draft the s.63(4) certificate' }))
+    expect(screen.getByLabelText(/Forensic files from the register/)).toBeDisabled()
+    expect(screen.getByLabelText(/Exchequer's report of this case/)).toBeChecked()
+  })
+
+  it('sends the report file itself, as base64, and downloads the certificate for it', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:report-certificate')
+    URL.revokeObjectURL = vi.fn()
+    const calls = api(pdf)
+    const user = userEvent.setup()
+    render(<CertificateForm caseId="case-1" exhibits={ROWS} />)
+    await user.click(screen.getByRole('button', { name: 'Draft the s.63(4) certificate' }))
+    await user.click(screen.getByLabelText(/Exchequer's report of this case/))
+    expect(screen.getByRole('button', { name: 'Download the draft (PDF)' })).toBeDisabled()
+    await user.upload(screen.getByLabelText(/The report file you will produce/), new File(['SEALED REPORT'], 'exchequer-case-1.txt'))
+    await user.selectOptions(screen.getByLabelText('Kind of device'), 'Server')
+    await user.click(screen.getByRole('button', { name: 'Download the draft (PDF)' }))
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled())
+    expect(calls[0].url).toMatch(/\/trace\/case-1\/report-certificate$/)
+    expect(calls[0].body).toMatchObject({ file_name: 'exchequer-case-1.txt', device: 'Server', report_b64: btoa('SEALED REPORT') })
+    expect(calls[0].body.exhibit_ids).toBeUndefined()
+    expect(await screen.findByRole('status')).toHaveTextContent('exchequer-case-1.txt')
   })
 })
