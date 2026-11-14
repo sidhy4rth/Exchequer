@@ -5,7 +5,11 @@
 .cdr-panel .mono { font-family: var(--mono); overflow-wrap: anywhere; }
 .cdr-panel .cdr-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 10px; margin: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); }
 .cdr-panel .cdr-order { max-width: 260px; }
-.cdr-panel .cdr-contacts { display: block; overflow-x: auto; border-collapse: collapse; font-size: 12px; }
+/* The scroll is on a wrapper: a table set to display: block loses its table role in some screen readers. */
+.cdr-panel .cdr-scroll { overflow-x: auto; max-width: 100%; }
+.cdr-panel .cdr-scroll:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.cdr-panel .cdr-contacts { border-collapse: collapse; font-size: 12px; }
+.cdr-panel .cdr-status:empty { position: absolute; } /* kept for the screen reader, out of the layout */
 .cdr-panel .cdr-contacts th, .cdr-panel .cdr-contacts td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
 .cdr-panel .cdr-contacts th { font-weight: 500; color: var(--muted); }
 .cdr-panel .cdr-check, .cdr-panel .cdr-save { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: end; }

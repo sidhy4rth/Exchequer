@@ -69,6 +69,7 @@ describe('the CDR panel', () => {
     await userEvent.click(screen.getByLabelText('Check +447700900002'))
     await userEvent.click(screen.getByRole('button', { name: /Check 1 chosen number/ }))
     await waitFor(() => expect(first.textContent).toContain('case c2-0000-'))
+    expect(screen.getByRole('status').textContent).toMatch(/Checked 1 number: 1 on another case you can read/)
     expect(calls.find((c) => c.path === '/trace/c1/cdr/check').body).toEqual({ numbers: ['+447700900002'] })
 
     await userEvent.click(screen.getByLabelText('Keep +447700900002'))
@@ -82,6 +83,17 @@ describe('the CDR panel', () => {
       { kind: 'number', value: '+447700900003', calls: 1, sms: 0, seconds: 30, first: '2026-03-03', last: '2026-03-03', reasons: ['top_contact', 'case_identifier'] },
     ])
     expect(JSON.stringify(sent)).not.toContain(IMEI) // a handset not ticked is not sent
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/Summary saved/))
+  })
+
+  it('puts the wide contacts table in a named region a keyboard can scroll, and keeps it a table', async () => {
+    api({ 'GET /trace/c1/cdr': ON, 'GET /trace/c1/identifiers': { body: { identifiers: [] } } })
+    show()
+    await userEvent.upload(await screen.findByLabelText(/CDR file/), file())
+    const region = await screen.findByRole('region', { name: /Top contacts/ })
+    expect(region.getAttribute('tabindex')).toBe('0')
+    expect(within(region).getByRole('table', { name: 'Top contacts' }).classList.contains('cdr-contacts')).toBe(true)
+    expect(screen.getByRole('status').textContent).toBe('') // nothing announced until something is done
   })
 
   it('lists the summaries already saved to the case', async () => {

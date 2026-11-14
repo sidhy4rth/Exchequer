@@ -51,6 +51,7 @@ export default function CdrPanel({ result }) {
   const [checked, setChecked] = useState({}) // number -> {on_this_case, also_in}
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState('') // what was just done, for a screen reader
 
   const load = () => caseId && fetchCaseCdr(caseId).then((got) => {
     setInfo(got)
@@ -70,16 +71,18 @@ export default function CdrPanel({ result }) {
     const out = readCdr(await file.text())
     setRead({ name: file.name, ...out })
     setColumns(out.columns ?? null)
-    setKeep({}); setToCheck({}); setChecked({}); setError(null)
+    setKeep({}); setToCheck({}); setChecked({}); setError(null); setDone('')
   }
   const chosen = Object.keys(toCheck).filter((n) => toCheck[n])
   const most = info.check_max ?? Infinity
   async function check() {
-    setBusy(true); setError(null)
+    setBusy(true); setError(null); setDone('')
     try {
       const out = await checkCdrNumbers(caseId, chosen)
       setChecked((c) => ({ ...c, ...Object.fromEntries(chosen.map((n, i) => [n, out.results[i]])) }))
       setToCheck({})
+      const elsewhere = out.results.filter((r) => r.also_in.length).length
+      setDone(`Checked ${plural(chosen.length, 'number')}: ${elsewhere || 'none'} on another case you can read.`)
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
   const reasons = (n, base) => [...base, ...(phones.has(n) ? ['case_identifier'] : []), ...(checked[n]?.also_in.length ? ['other_case'] : [])]
@@ -90,10 +93,11 @@ export default function CdrPanel({ result }) {
   ] : []
   const rowsMax = info.rows_max ?? Infinity
   async function save() {
-    setBusy(true); setError(null)
+    setBusy(true); setError(null); setDone('')
     try {
       await saveCdrSummary(caseId, { title, rows })
       setRead(null); setColumns(null); setTitle('')
+      setDone('Summary saved to the case.')
       await load()
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
@@ -105,6 +109,7 @@ export default function CdrPanel({ result }) {
       <summary><span className="micro">Call detail records · {saved.length}</span><span className="note">contacts and handsets, read in this browser</span></summary>
       <div className="body">
         {error && <p className="note cdr-error" role="alert">{error}</p>}
+        <p className="note cdr-status" role="status">{done}</p>
         {saved.map((item) => <Saved key={item.import_id} item={item} />)}
         <label>CDR file (CSV; save an XLSX as CSV first)<input type="file" accept=".csv,text/csv" onChange={pickFile} /></label>
         <p className="note">The file is read in this browser. Nothing is sent until you check the numbers you choose or save the summary, and the CDR&apos;s rows never are.</p>
@@ -135,7 +140,7 @@ export default function CdrPanel({ result }) {
                 </select>
               </label>
             </div>
-            <table className="cdr-contacts" aria-label="Top contacts">
+            <div className="cdr-scroll" role="region" aria-label="Top contacts, scrolls sideways" tabIndex={0}><table className="cdr-contacts" aria-label="Top contacts">
               <thead><tr><th>Number</th><th>Calls</th><th>SMS</th><th>Out / in</th><th>Call time</th><th>First</th><th>Last</th><th>On cases</th><th>Check</th><th>Keep</th></tr></thead>
               <tbody>
                 {top.map((c) => (
@@ -148,7 +153,7 @@ export default function CdrPanel({ result }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
             <div className="cdr-check">
               <button type="button" disabled={busy || chosen.length === 0 || chosen.length > most} onClick={check}>Check {plural(chosen.length, 'chosen number')} against your other cases</button>
               <span className="note">Only the numbers you tick are sent, and only cases you can already read are searched.</span>
