@@ -883,3 +883,5 @@ TAINT_EXPANSION: bool = flag("EXCHEQUER_TAINT_EXPANSION",
                              "Lane A, R5: follow every branch carrying a share of the funds, not the top ten")
 OSINT_LOOKUPS: bool = flag("EXCHEQUER_OSINT_LOOKUPS",
                            "Feature 4, OSINT slice 2: live RDAP and DNS lookups of a case's scam domains")
+CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
+                         "Feature 6: one zip of a case's report, registers and audit trail, with a manifest")
