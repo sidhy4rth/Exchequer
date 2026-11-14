@@ -321,8 +321,8 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | Endpoint | Purpose |
 |---|---|
 | `GET /trace/{case_id}` | Retrieve a stored case |
-| `GET /trace/{case_id}/tasks` | The case's task list, as far as this browser or unit may read it: what is left to do, who it is assigned to (a name), by when, and each task's history; open tasks first, soonest due first |
-| `POST /trace/{case_id}/tasks` | Adds a task (title, assignee, due date, notes); text that looks like a private key or seed phrase is refused |
+| `GET /trace/{case_id}/tasks` | The case's task list, as far as this browser or unit may read it: what is left to do, who it is assigned to (a name), by when, and each task's history; open tasks first, soonest due first. Also `suggested`: tasks the case's own records call for (a request with no reply in 7 days, a freeze letter awaiting sign-off or not yet sent, a freeze not in the asset register, held funds with no court order), worked out on each read and never stored |
+| `POST /trace/{case_id}/tasks` | Adds a task (title, assignee, due date, notes); text that looks like a private key or seed phrase is refused. With `source`, takes up a suggestion (its own title and due date); with `note` as well, declines it, as a dropped task with that reason |
 | `PATCH /tasks/{task_id}` | Changes a task, closes it (done, or dropped with a reason), opens it again (with a reason) or adds a note; the audit log records which fields changed, never their text |
 | `GET /tasks/due?days=7` | Open tasks due within that many days (default 7, at most 90) or already overdue, among the tasks this browser or unit may read, most overdue first |
 | `GET /trace/{case_id}/report?format=text` | The investigator's report (`format=json` for structured): summary, finding and basis, the path hop by hop with amounts, times and hashes, every pattern with its thresholds, every inference with its evidence, screening hits with their sources, limitations, and an appendix of every address and transaction hash |
