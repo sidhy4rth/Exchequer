@@ -523,7 +523,10 @@ hand an investigator a confident-looking graph built on a false premise. Tornado
 2025 (*Van Loon v. Treasury*), and every mixer OFAC still lists is a Bitcoin service — so a sanctions-only screen
 would never stop at a mixer on these chains. The mixer category therefore comes from the explorer's own tags:
 only the pools and routers of Tornado Cash, Typhoon and Privacy Pools, never their governance, token or vesting
-contracts. The label store follows the same rule, and only on Ethereum, the chain its mixer tags were read on.
+contracts. Pools named in a mixer's own deployment list (Tornado Cash on BSC, Polygon and Arbitrum; Cyclone
+Protocol) are added by hand to the same files, each checked on chain, and Polygon and Arbitrum have a threat file
+of their own. Privacy protocols no enforcement action calls a mixer (Railgun, Aztec, Hinkal) are not labelled.
+The label store follows the same rule, and only on Ethereum, the chain its mixer tags were read on.
 A name in a list is not enough to cut a trail, so a store row stops a trace only at a pool or router kept in the
 repository (the threat file's mixer entries and `backend/data/mixer_pools.json`); any other store row named like
 a pool is shown as a mixer tag, and the trace goes on past it.
@@ -816,6 +819,7 @@ staying silent on ordinary activity, because a false accusation is the expensive
 | `test_scoring.py` | Each weighted component, band boundaries; patterns and truncation add caveats without moving the number |
 | `test_exchange_matcher.py` | Both label-file shapes, case-insensitive lookup, closest-match preference, degrading to "no attribution" |
 | `test_risk_matcher.py` | All four categories; a mixer ends a trace and keeps ending it whatever else lists it, a sanctioned, frozen or stolen-funds address does not; a government listing outranks an explorer tag; several governments are all named; unknown categories dropped |
+| `test_mixer_chains.py` | A mixer pool on BSC, Polygon or Arbitrum is flagged and stops the trace; an ordinary address is not flagged on any chain; a pool is read only on the chain it is filed under; no privacy protocol is labelled a mixer |
 | `test_threat_import.py` | Thief and phishing tags accepted; "hackerspace" charities, AVS operators and hack *victims* rejected; only mixer pools and routers count, never governance or token contracts |
 | `test_request_letters.py` | The exchange letter names the address and every hop with its hashes; the legal basis is left for the officer; no exchange means no exchange letter; an attribution after a swap is written from the follow-on; the Tether letter lists each freeze; an ETH trace touching no USDT offers none |
 | `test_tron_tags.py` | Only a tag naming a known exchange attributes; treasuries, bridges and scam tags never do; a labelled wallet is never asked about; the last hop is swept; lookups are capped; no key means no lookups; a failed lookup leaves the trace intact; the report says what TronScan named |

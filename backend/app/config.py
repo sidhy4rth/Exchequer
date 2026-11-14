@@ -292,6 +292,8 @@ CHAINS["polygon"] = Chain(
     labels_filename="exchange_labels_polygon.json",
     gambling_labels_filename="gambling_labels_polygon.json",
     risk_labels_filename="risk_labels_polygon.json",
+    # Mixer pools and entry points on this chain (data/threat_labels_polygon.json).
+    threat_labels_filename="threat_labels_polygon.json",
     tokens=(
         Token("USDT", "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", 6),
         Token("USDC", "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", 6),
@@ -307,6 +309,8 @@ CHAINS["arbitrum"] = Chain(
     labels_filename="exchange_labels_arbitrum.json",
     gambling_labels_filename="gambling_labels_arbitrum.json",
     risk_labels_filename="risk_labels_arbitrum.json",
+    # Mixer pools and entry points on this chain (data/threat_labels_arbitrum.json).
+    threat_labels_filename="threat_labels_arbitrum.json",
     tokens=(
         Token("USDT", "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", 6),
         Token("USDC", "0xaf88d065e77c8cc2239327c5edb3a432268e5831", 6),

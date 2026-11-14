@@ -9,7 +9,7 @@
     "counts": {
       "stolen": 409,
       "scam": 7981,
-      "mixer": 40
+      "mixer": 45
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_threat_labels && then cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists",
     "schema": "labels maps an address to {category, entity, label, source}",
@@ -26,9 +26,38 @@
         "0x967582debedf069111973313e29bc7c5f713b80a": "Uniswap V2: BOT"
       },
       "note": "Re-filed by import_threat_labels --recategorise: a scam or phishing list's report is 'scam', not 'stolen'; only a tag naming a theft's perpetrator stays 'stolen'; whitehat, rescue and bot tags are removed."
+    },
+    "mixers_added": {
+      "date": "2026-11-14",
+      "added": [
+        "0x09f03488291063a8f3c67d2aab7002419d11c113",
+        "0x3f615ba21bc6cc5d4a6d798c5950cc5c42937fbd",
+        "0xa38b6742cef9573f7f97c387278fa31482539c3d",
+        "0xca0840578f57fe71599d29375e16783424023357",
+        "0xd619c8da0a58b63be7fa69b4cc648916fe95fa1b"
+      ],
+      "note": "Mixer pools and entry points the 11 Nov 2026 mixer hunt found in each project's own deployment list (Tornado Cash classic UI networkConfig.js and docs, Cyclone Protocol docs) or in explorer tags (brianleect/etherscan-labels @923aba7), each checked on chain: contract code present and, for a pool, its denomination() (Cyclone: coinDenomination()/tokenDenomination()) matching its name. Re-checked for contract code 14 Nov 2026. Privacy protocols (Railgun, Aztec, Hinkal) were left out: no enforcement action names them a mixer."
     }
   },
   "labels": {
+    "0xd619c8da0a58b63be7fa69b4cc648916fe95fa1b": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 100 ETH anonymity pool \"Latte\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 8317 bytes (sha256 d6c68b0aae03); coinDenomination()=100000000000000000000 tokenDenomination()=0 (Cyclone-style pool interface)."
+    },
+    "0x09f03488291063a8f3c67d2aab7002419d11c113": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 100 TORN anonymity pool \"Cold Brew\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 8326 bytes (sha256 6e2601aec29d); coinDenomination()=200000000000000000 tokenDenomination()=100000000000000000000 (Cyclone-style pool interface)."
+    },
+    "0xa38b6742cef9573f7f97c387278fa31482539c3d": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 100000 USDT anonymity pool \"Expresso\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 8326 bytes (sha256 6e2601aec29d); coinDenomination()=200000000000000000 tokenDenomination()=100000000000 (Cyclone-style pool interface)."
+    },
     "0x6818809eefce719e480a7526d76bd3e561526b46": {
       "category": "mixer",
       "entity": "Privacy Pools",
@@ -214,6 +243,18 @@
       "entity": "Tornado Cash",
       "label": "Tornado.Cash: Router",
       "source": "Etherscan address tag, via dawsbot/eth-labels @ 14247ba8cf"
+    },
+    "0xca0840578f57fe71599d29375e16783424023357": {
+      "category": "mixer",
+      "entity": "Tornado Cash Nova",
+      "label": "Tornado Cash Nova: L1 Omnibridge Helper for deposits (Ethereum-side entry point)",
+      "source": "Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (etherscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/combined/combinedAllLabels.json>; Explorer tag via dawsbot/eth-labels @d9b21ae (label tornado-cash) <https://github.com/dawsbot/eth-labels/blob/d9b21aefeded56f7fce7208d6fa173d128526c1b/data/json/accounts.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 4350 bytes (sha256 0b278c3f79a6). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x3f615ba21bc6cc5d4a6d798c5950cc5c42937fbd": {
+      "category": "mixer",
+      "entity": "Tornado Cash Nova",
+      "label": "Tornado Cash Nova: L1 Omnibridge Helper for withdrawals (Ethereum-side entry point)",
+      "source": "Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (etherscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/etherscan/combined/combinedAllLabels.json>; Explorer tag via dawsbot/eth-labels @d9b21ae (label tornado-cash) <https://github.com/dawsbot/eth-labels/blob/d9b21aefeded56f7fce7208d6fa173d128526c1b/data/json/accounts.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 4950 bytes (sha256 82e63a95e82e). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
     },
     "0x9cdb933edab885bb767658b9ed5c3800bc1d761b": {
       "category": "mixer",
