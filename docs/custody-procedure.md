@@ -14,7 +14,9 @@ instructions.
 
 - [ ] **Two-person rule.** No step that touches seized funds is done by one
       officer alone. Two named officers are present for every setup, deposit
-      and release, and both are named in the record.
+      and release. Exchequer records who set the wallet up, who proposed each
+      movement and each signer's approval; write down anyone else present in
+      your unit's own record.
 - [ ] **Never photograph, type or copy a seed phrase.** Not into Exchequer, a
       phone, an email, a chat, a document or a cloud note. A seed phrase is
       written only on the recovery sheet that comes with the hardware wallet,
@@ -68,7 +70,9 @@ instructions.
       sends them to the custody wallet's address, checked on the receiving
       devices' screens.
 - [ ] In Exchequer: **Propose a deposit or release**, choose **Deposit into the
-      wallet**, enter who proposed it, the asset and the exact amount.
+      wallet**, choose who proposed it (one of the signers, or someone else
+      where the scheme keeps proposing apart from signing), the asset and the
+      exact amount.
 - [ ] Once sent, record the **transaction hash**; once final on chain, mark it
       **Confirmed on chain**.
 - [ ] In the asset register, record the seized amount as held in the custody
