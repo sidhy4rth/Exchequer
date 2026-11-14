@@ -71,6 +71,14 @@ describe('Indian dates and amounts', () => {
     expect(parseAmount(text)).toBeNull()
   })
 
+  it('refuses a long cell at once instead of backtracking over its spaces', () => {
+    // A crafted file's amount cell of spaces between two characters made the Dr/Cr and INR
+    // suffix checks take time quadratic in its length: 80,000 spaces held the tab for seconds.
+    const started = performance.now()
+    expect(parseAmount(`1${' '.repeat(200_000)}x`)).toBeNull()
+    expect(performance.now() - started).toBeLessThan(500)
+  })
+
   it('reads debit and credit columns, a Dr/Cr column, and a signed amount', () => {
     const cols = { date: 0, narration: 1, reference: -1, debit: 2, credit: 3, amount: -1, drcr: -1, balance: -1, counterparty: -1 }
     const two = statementRows([{ line: 2, cells: ['12/03/2026', 'TEST', '2,50,000.00', ''] }, { line: 3, cells: ['13/03/2026', 'TEST', '0.00', '500'] }], cols)
