@@ -2,14 +2,15 @@
 
 - **Feature**: suite feature 5, first slice. An officer reads a bank statement CSV, or a transaction CSV an exchange provided, against a case: the rows that match the victim's payments, the UPI/IMPS/NEFT/RTGS references in narrations, the narrations that name a known exchange, on a timeline beside the trace's own on-chain times. The officer may save the rows they confirm (never the whole statement) to the case.
 - **Issue**: #144
-- **Branch**: `feat/bank-statement-import` (server), then stacked `feat/bank-statement-import-parse` (reading and matching in the browser) and `feat/bank-statement-import-panel` (the panel on the Evidence tab)
+- **Branch**: four stacked PRs: `feat/bank-statement-import` (the record), `feat/bank-statement-import-routes` (the routes), `feat/bank-statement-import-parse` (reading and matching in the browser), `feat/bank-statement-import-panel` (the panel on the Evidence tab)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
 - **Status**: in progress, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default)
 
 ## Done
 
-- Claimed: issue #144, this file, draft PR.
+- Claimed: issue #144, this file, draft PR #146.
+- The record (#146): table `statement_imports` (migration `g7_statements_1`, after `g7_domain_lookups_1`), `backend/app/statement_imports.py` (checks each saved row: date, debit or credit, amount, reference shape, an exchange name only when canonical and in the row's own text, free text refused when it looks like a key), flag `EXCHEQUER_STATEMENT_IMPORT`.
 
 ## Decisions
 
@@ -21,7 +22,7 @@
 
 ## Next
 
-1. Server: `backend/app/statement_imports.py`, `backend/app/routes/statements.py`, table `statement_imports` (migration `g7_statements_1`).
+1. Routes: `backend/app/routes/statements.py` (GET and POST `/trace/{case_id}/statements`).
 2. Browser: `frontend/src/components/case/statement.js` (columns, Indian dates and amounts, UTR shapes, matching), with tests.
 3. Panel: `frontend/src/components/case/StatementPanel.jsx` on the Evidence tab.
 

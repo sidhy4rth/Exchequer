@@ -352,6 +352,26 @@ class DomainLookup(Base):
     records_json: Mapped[str] = mapped_column(Text, default="[]")
 
 
+class StatementImport(Base):
+    """Rows of a bank or exchange statement an officer confirmed against a case
+    (statement_imports.py, suite feature 5). Never the whole statement."""
+
+    __tablename__ = "statement_imports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    source: Mapped[str] = mapped_column(String(16))  # bank | exchange
+    currency: Mapped[str] = mapped_column(String(12))
+    title: Mapped[str] = mapped_column(String(120), default="")
+    row_count: Mapped[int] = mapped_column(Integer)
+    rows_json: Mapped[str] = mapped_column(Text, default="[]")
+    created_at: Mapped[str] = mapped_column(String(32))
+    created_by: Mapped[str] = mapped_column(String(64))
+
+
 class Batch(Base):
     """A list of reported addresses traced one after another (batches.py)."""
 
