@@ -15,13 +15,12 @@ import json
 import logging
 
 import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app import cdr_imports, config, identifiers, models, statement_imports
 from app.cdr_imports import CdrError
-from app.main import app
 from test_statement_imports import BOB, H, UTR_ROW, store, viewer  # noqa: F401 -- the fixture
+from test_statement_routes import client, demo  # noqa: F401 -- a signed-in officer, and a caller who has not signed in
 
 SUBJECT, CONTACT, OTHER = "+447700900001", "+447700900002", "+447700900003"  # Ofcom drama range
 IMEI = "000000000000011"
@@ -127,13 +126,30 @@ def test_the_check_finds_the_number_on_this_case_and_on_cases_the_viewer_may_rea
         cdr_imports.check(viewer(), "case-1", [CONTACT] * (cdr_imports.CHECK_MAX + 1))
 
 
+def test_cdr_summaries_share_the_statement_imports_caps(monkeypatch):
+    """One table, one set of caps: a case full of statements has no room for a CDR either."""
+    monkeypatch.setattr(statement_imports, "MAX_PER_CASE", 1)
+    asha = viewer(unit=7, officer=1)
+    statement_imports.create(asha.owner_hash, "case-1", {"source": "bank", "currency": "INR", "rows": [UTR_ROW]}, asha)
+    with pytest.raises(CdrError, match="This case already has 1 imports"):
+        save([NUMBER_ROW], who=asha)
+    monkeypatch.setattr(statement_imports, "MAX_PER_CASE", 50)
+    monkeypatch.setattr(statement_imports, "MAX_PER_UNIT", 1)
+    with pytest.raises(CdrError, match="Your unit already has 1"):
+        save([NUMBER_ROW], who=viewer(BOB, unit=7, officer=2), case="case-2")
+
+
 # -- the routes ------------------------------------------------------------------------------
-@pytest.fixture
-def client():
-    return TestClient(app)
+def test_a_caller_who_has_not_signed_in_cannot_save_a_summary_but_may_list_and_check(demo):  # noqa: F811 -- the fixture
+    refused = demo.post("/trace/case-1/cdr", json={"rows": [NUMBER_ROW]}, headers=H)
+    assert refused.status_code == 403 and "Sign in as an officer" in refused.json()["detail"]
+    with models.session() as s:
+        assert s.scalars(select(models.StatementImport)).all() == []
+    assert demo.get("/trace/case-1/cdr", headers=H).json()["imports"] == []
+    assert demo.post("/trace/case-1/cdr/check", json={"numbers": [CONTACT]}, headers=H).status_code == 200
 
 
-def test_with_the_flag_off_nothing_is_listed_saved_or_checked(client, monkeypatch):
+def test_with_the_flag_off_nothing_is_listed_saved_or_checked(client, monkeypatch):  # noqa: F811 -- the fixture
     monkeypatch.setattr(config, "CDR_IMPORT", False)
     assert client.get("/trace/case-1/cdr", headers=H).json() == {"case_id": "case-1", "enabled": False, "imports": []}
     assert client.post("/trace/case-1/cdr", json={"rows": [NUMBER_ROW]}, headers=H).status_code == 403
@@ -142,7 +158,7 @@ def test_with_the_flag_off_nothing_is_listed_saved_or_checked(client, monkeypatc
         assert s.scalars(select(models.StatementImport)).all() == []
 
 
-def test_the_routes_save_list_and_check(client):
+def test_the_routes_save_list_and_check(client):  # noqa: F811 -- the fixture
     assert client.post("/trace/case-1/cdr", json={"rows": [NUMBER_ROW]}, headers=H).status_code == 201
     listed = client.get("/trace/case-1/cdr", headers=H).json()
     assert listed["enabled"] and listed["count"] == 1 and listed["rows_max"] == cdr_imports.ROWS_MAX
@@ -153,7 +169,7 @@ def test_the_routes_save_list_and_check(client):
     assert client.post("/trace/case-1/cdr/check", json={"numbers": ["121"]}, headers=H).status_code == 400
 
 
-def test_the_audit_log_and_the_log_hold_counts_never_a_number(client, caplog):
+def test_the_audit_log_and_the_log_hold_counts_never_a_number(client, caplog):  # noqa: F811 -- the fixture
     caplog.set_level(logging.DEBUG)
     client.post("/trace/case-1/identifiers", json={"kind": "phone", "value": CONTACT}, headers=H)
     rows = [{**NUMBER_ROW, "reasons": ["top_contact", "case_identifier"]}, IMEI_ROW]
