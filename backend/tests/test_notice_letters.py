@@ -206,7 +206,7 @@ def test_the_route_shows_a_bank_hold_as_awaiting_sign_off(client):
 
 
 # -- the whole flow, two officers of one unit (test_freeze_signoff's unit) ---------------
-from test_freeze_signoff import drafted, sign, signed_in, unit  # noqa: E402,F401 -- the fixture is used by name
+from test_freeze_signoff import drafted, events, sign, signed_in, unit  # noqa: E402,F401 -- the fixtures are used by name
 
 
 def test_a_bank_hold_becomes_ready_only_once_a_second_officer_signs_it_off(unit):  # noqa: F811 -- the imported fixture
@@ -333,6 +333,49 @@ def test_a_bound_sign_off_keeps_the_account_number_out_of_the_audit_log_and_the_
         stored = s.get(models.FreezeRequest, rid)
         row = " ".join(str(getattr(stored, c.key)) for c in models.FreezeRequest.__table__.columns)
     signed = [json.loads(d) for a, d in audit_rows if a in ("request.signoff_ask", "request.signoff")]
-    assert [d.get("fingerprint") for d in signed] == [prefix, prefix]
+    assert [d["request_id"] for d in signed] == [rid, rid]  # the request id links the ask and the sign-off
+    assert not any("fingerprint" in d for d in signed)
+    # Not even the start of the fingerprint: it is unkeyed, over details anyone could guess and test.
+    assert all(prefix not in d for _, d in audit_rows)
+    assert stored.details_fingerprint == fingerprint("case-1", BANK_FREEZE, hold())  # kept on the row only
     for secret in (ACCOUNT, OTHER_ACCOUNT, IFSC, ORDER, SOURCE, "2,50,000"):
         assert all(secret not in d for _, d in audit_rows) and secret not in row and secret not in caplog.text
+
+
+# -- logged as sent only with the details signed off; a fresh ask is an ask -------------------
+@pytest.mark.parametrize("status", ["sent", "acknowledged", "frozen", "declined"])
+def test_a_hold_is_logged_as_sent_only_with_the_details_signed_off(unit, status):  # noqa: F811
+    asha, bina = signed_in("asha"), signed_in("bina")
+    rid = drafted(asha, kind=BANK_FREEZE, details=hold())
+    assert sign(bina, rid, hold()).status_code == 200
+    for details in (None, hold(account=OTHER_ACCOUNT), hold(order=OTHER_ORDER), hold(order="")):
+        change = {"status": status, **({"details": details} if details is not None else {})}
+        refused = asha.patch(f"/requests/{rid}", json=change)
+        assert refused.status_code == 400, (details, refused.text)
+        assert asha.get("/trace/case-1/requests").json()["requests"][0]["status"] == "ready"
+    done = asha.patch(f"/requests/{rid}", json={"status": status, "details": hold(amount=250000)})
+    assert done.status_code == 200 and done.json()["status"] == status
+
+
+def test_once_sent_a_hold_moves_on_without_its_details_and_can_always_be_closed(unit):  # noqa: F811
+    asha, bina = signed_in("asha"), signed_in("bina")
+    rid = drafted(asha, kind=BANK_FREEZE, details=hold())
+    sign(bina, rid, hold())
+    assert asha.patch(f"/requests/{rid}", json={"status": "sent", "details": hold()}).status_code == 200
+    assert asha.patch(f"/requests/{rid}", json={"status": "frozen"}).status_code == 200
+    other = drafted(asha, kind=BANK_FREEZE, details=hold(order=OTHER_ORDER))
+    sign(bina, other, hold(order=OTHER_ORDER))
+    assert asha.patch(f"/requests/{other}", json={"status": "closed"}).status_code == 200
+
+
+def test_putting_a_waiting_hold_up_again_with_new_details_is_audited_as_an_ask(unit, events):  # noqa: F811
+    asha, bina = signed_in("asha"), signed_in("bina")
+    rid = drafted(asha, kind=BANK_FREEZE, details=hold())
+    again = asha.patch(f"/requests/{rid}", json={"status": "awaiting_signoff", "details": hold(order=OTHER_ORDER)})
+    assert again.status_code == 200
+    asks = [e for e in events if e[0] == "request.signoff_ask"]
+    assert asks == [("request.signoff_ask", "case-1", {"request_id": rid, "fields": ["details", "status"],
+                                                        "status": "awaiting_signoff"})] * 2
+    assert not any(e[0] == "request.update" for e in events)
+    assert sign(bina, rid, hold()).status_code == 409  # the old details are no longer the ones put up
+    assert sign(bina, rid, hold(order=OTHER_ORDER)).status_code == 200

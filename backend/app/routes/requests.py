@@ -61,10 +61,10 @@ class RequestChange(BaseModel):
 
 
 def _asked(made: dict[str, Any]) -> dict[str, Any]:
-    """The audit detail of a sign-off asked or given: the request, and the start
-    of a bank hold's fingerprint (never its details: audit._clean would blank a
-    full one, and the account number must not be there at all)."""
-    return {"request_id": made["request_id"], **({"fingerprint": made["fingerprint"]} if made["fingerprint"] else {})}
+    """The audit detail of a sign-off asked or given: the request alone. Not a
+    bank hold's details, nor any of their fingerprint: it is an unkeyed hash of
+    details few enough to guess, so it stays on the request row only."""
+    return {"request_id": made["request_id"]}
 
 
 def _owner(user: User) -> str:
@@ -139,7 +139,8 @@ def change_request(request_id: str, body: RequestChange, user: CurrentUser, http
         raise _conflict() from exc
     if updated is None:
         raise HTTPException(status_code=404, detail="No such request.")
-    asked = updated.pop("moved") and updated["status"] == "awaiting_signoff"
+    # Moved to waiting, or a waiting bank hold put up again with new details.
+    asked = updated.pop("asked")
     # Which fields changed, never what they say: notes can name people.
     # The new status is a word from a fixed list ("sent"), so it is kept.
     detail = {"request_id": request_id, "fields": sorted(changes)}

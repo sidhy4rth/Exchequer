@@ -32,7 +32,8 @@ for sign-off with those details, kept only as their fingerprint
 (notice_letters.fingerprint); the second officer signs off by sending the
 details on their screen, which must give the same fingerprint; and a letter
 counts as approved only when its own details do (approval). Any other
-detail needs a fresh sign-off.
+detail needs a fresh sign-off. It is logged as sent the same way: with the
+details on the drafter's screen, which must be the ones signed off.
 """
 from __future__ import annotations
 
@@ -62,6 +63,12 @@ SIGN_WITH_DETAILS = "Type the hold's details beside the letter: the sign-off app
 NOT_THESE = ("These details are not the ones put up for sign-off: check the account, IFSC, amount, order, bank "
              "and source against the drafter's letter.")
 ASK_AGAIN = "This hold was put up for sign-off without its details: the drafter must ask again."
+SEND_WITH_DETAILS = ("A bank hold is logged as sent with the details it was signed off for: "
+                     "mark it sent on the Letters tab, beside its letter.")
+NOT_SIGNED = ("These details are not the ones signed off: the letter with them needs a fresh sign-off "
+              "before it is sent.")
+# Each says the letter went out: a signed-off bank hold reaches one only with its own details.
+SENT_STATUSES = ("sent", "acknowledged", "frozen", "declined")
 # The first two are the urgent freeze letters (request_letters.LETTERS): each
 # letter the tool drafts can be logged as sent under its own name.
 KINDS = ("exchange", "tether", "other", "exchange-freeze", "tether-freeze", "instant", "instant-freeze",
@@ -246,7 +253,7 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
             return None
         history = json.loads(r.history_json or "[]")
         now = _now()
-        moved = False
+        moved = asked = False
         status = changes.get("status")
         if status is not None:
             if status not in STATUSES:
@@ -255,6 +262,8 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
                 _check_status(r.kind, status, signed=r.signed_off_at is not None)
                 if status == "awaiting_signoff" and r.unit_id is None:
                     raise RequestError(NO_UNIT)  # no unit's officer could ever sign it
+                if bound(r.kind) and r.status == "ready" and status in SENT_STATUSES:
+                    _check_sending(r, changes.get("details"))
                 moved = True
                 entry: dict[str, Any] = {"at": now, "status": status}
                 if changes.get("note"):
@@ -266,8 +275,10 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
             if bound(r.kind) and status == "awaiting_signoff" and r.signed_off_at is None:
                 # Asked again while waiting, with other details: those are what is put up now.
                 r.details_fingerprint = _fingerprint(r.case_id, r.kind, changes.get("details"))
+                asked = True
             elif status == "drafted":
                 r.details_fingerprint = None
+            asked = asked or (moved and status == "awaiting_signoff")
         if "reference" in changes and changes["reference"] is not None:
             r.reference = str(changes["reference"])[:120]
         if "notes" in changes and changes["notes"] is not None:
@@ -295,7 +306,7 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
         r.updated_at = now
         s.commit()
         s.refresh(r)
-        return {**summary(r, viewer), "moved": moved}
+        return {**summary(r, viewer), "asked": asked}
 
 
 def sign_off(request_id: str, user: Any, details: dict[str, Any] | None = None) -> dict[str, Any] | None:
@@ -323,6 +334,14 @@ def sign_off(request_id: str, user: Any, details: dict[str, Any] | None = None) 
         except StaleDataError:
             continue
     raise RequestConflict(request_id)
+
+
+def _check_sending(r: models.FreezeRequest, details: dict[str, Any] | None) -> None:
+    """Whether the details a signed-off bank hold is logged as sent with are the ones signed off."""
+    if not details:
+        raise RequestError(SEND_WITH_DETAILS)
+    if r.details_fingerprint is None or _fingerprint(r.case_id, r.kind, details) != r.details_fingerprint:
+        raise RequestError(NOT_SIGNED)
 
 
 def _check_details(r: models.FreezeRequest, details: dict[str, Any] | None) -> None:

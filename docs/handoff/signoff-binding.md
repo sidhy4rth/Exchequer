@@ -12,9 +12,11 @@
 - Confirmed the gap: `freeze_requests.approval(case_id, kind, user)` found any signed-off `bank-freeze` row for the case, so `POST /trace/{id}/notice` printed "Approved by a second officer" on a letter with any account, IFSC, amount or order.
 - `notice_letters.fingerprint(case_id, to, details)`: SHA-256 over a canonical JSON of the case id, the notice and the hold's details as the letter prints them (`_hold`: account without spaces, IFSC upper-cased, amount as two-decimal rupees or none). `None` for the notices without a sign-off. The hold's draft prints its first 16 hex characters.
 - `freeze_requests`: a bank hold is put up for sign-off (`POST /requests` or `PATCH /requests/{id}` to `awaiting_signoff`) only with `details`; only the fingerprint is stored (`details_fingerprint`, migration `g7_signoff_binding_1`). The sign-off (`POST /requests/{id}/signoff`) must carry the details on the second officer's screen, and they must give the same fingerprint (409 if not). `approval()` counts a hold's sign-off only for a letter whose details give that fingerprint.
-- The audit rows `request.signoff_ask` and `request.signoff` carry the fingerprint's first 16 hex characters for a hold; never a detail.
+- The audit rows `request.signoff_ask` and `request.signoff` carry the request id only, no part of the fingerprint (pre-review: an unkeyed hash over guessable details does not belong in the audit log). The full fingerprint lives on the request row only.
+- A signed-off hold is logged as sent (or acknowledged, frozen, declined) only with `details` that give the signed-off fingerprint (400 otherwise); the Letters tab's Mark as sent sends them. From the requests log, which has no details, a hold cannot be marked sent. Closing never needs them.
+- Putting a waiting hold up again with new details is audited as `request.signoff_ask`, not `request.update`.
 - Letters tab: Ask for sign-off and Sign off send the hold's typed details; the Second officer card shows the fingerprint the request covers.
-- Tests: `backend/tests/test_notice_letters.py` (reproduces the bug for each detail, normalisation, refusals, fresh sign-off, audit and store hold no account number); `frontend/src/components/case/NoticeForm.test.jsx` (two).
+- Tests: `backend/tests/test_notice_letters.py` (reproduces the bug for each detail, normalisation, refusals, fresh sign-off, audit and store hold no account number); `frontend/src/components/case/NoticeForm.test.jsx` (three).
 
 ## Decisions
 
