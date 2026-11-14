@@ -2,7 +2,7 @@
 
 - **Feature**: suite feature 7 (request and letter generator): draft a letter of request to a foreign country (BNSS s.112) from a case, in the MHA's prescribed format
 - **Issue**: #125
-- **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, on top of it)
+- **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, on top of #127)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
 - **Status**: built and tested end to end; server in #126, screen in its own PR on top of it (`feat/letters-of-request-screen`); both wait for review
@@ -51,4 +51,4 @@
 
 ## Files mid-change (do not touch)
 
-- none yet
+- `backend/app/letters_of_request.py`, `backend/data/mha_mlat_countries.txt` (`feat/letters-of-request-countries`)
