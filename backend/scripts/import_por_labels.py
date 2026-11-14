@@ -25,7 +25,7 @@ The rule, per address and chain (gather() offline, then check() on chain):
   1. a well-formed 0x address the source lists on that network;
   2. not named by both exchanges' lists, not already another exchange's label
      on any chain, and not in this chain's router, risk, threat, frozen,
-     sanctions or gambling files, the instant-exchanger seed, a demo, a token
+     sanctions, gambling or privacy-protocol files, the instant-exchanger seed, a demo, a token
      list (app/never_flag.tokens) or the label store: each is a conflict,
      reported and left out, never overwritten;
   3. on chain, through a keyless public RPC: not a token contract (an ERC-20's
@@ -197,7 +197,7 @@ def listed(chain: str) -> dict[str, str]:
     c = config.CHAINS[chain]
     files = {"router": c.router_labels_path, "risk": c.risk_labels_path, "threat": c.threat_labels_path,
              "frozen": c.frozen_labels_path, "sanctions": c.intl_sanctions_path,
-             "gambling": getattr(c, "gambling_labels_path", None)}
+             "gambling": c.gambling_labels_path, "privacy protocol": c.privacy_protocols_path}
     out: dict[str, str] = {}
     for what, path in files.items():
         for address in _labels(path):
