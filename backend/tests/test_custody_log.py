@@ -284,6 +284,19 @@ def test_the_routes_propose_approve_broadcast_and_list(client):
     assert [mv["status"] for mv in listed["wallets"][0]["movements"]] == ["broadcast"]
 
 
+def test_a_caller_who_has_not_signed_in_is_refused_every_movement_with_403(client):
+    wid = made_wallet(client)
+    body = {"kind": "deposit", "asset": "USDT", "amount": "1", "proposed_by": "Insp. Rao"}
+    mid = client.post(f"/custody/{wid}/movements", json=body, headers=H).json()["movement_id"]
+    with TestClient(app, base_url="https://testserver") as demo:
+        proposed = demo.post(f"/custody/{wid}/movements", json=body, headers=H)
+        stepped = demo.post(f"/custody/movements/{mid}/cancel", json={"reason": "x"}, headers=H)
+    for refused in (proposed, stepped):
+        assert refused.status_code == 403 and "Sign in" in refused.json()["detail"]
+    with models.session() as s:
+        assert [m.status for m in s.scalars(select(models.CustodyMovement))] == ["proposed"]
+
+
 def test_the_routes_refuse_a_release_without_an_order_and_strangers(client):
     wid = made_wallet(client)
     body = {"kind": "release", "asset": "USDT", "amount": "635", "destination": OUT, "proposed_by": "Insp. Rao"}

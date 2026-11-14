@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm.exc import StaleDataError
 
-from app import assets, config, custody, models, ownership
+from app import accounts, assets, config, custody, models, ownership, rate_limit
 from app.auth import User
 from app.custody import CustodyError, DuplicateWallet
 from app.main import app
@@ -196,11 +196,40 @@ def test_a_write_that_keeps_clashing_is_a_conflict_not_a_crash(monkeypatch):
 
 # -- routes ---------------------------------------------------------------------------------------
 H = {ownership.OWNER_HEADER: ALICE}
+PW = "officer-password-long-2"
 
 
 @pytest.fixture
-def client():
+def demo():
+    """A caller who has not signed in: the demo identity."""
     return TestClient(app)
+
+
+@pytest.fixture
+def client(monkeypatch):
+    """A signed-in officer: recording or changing a custody wallet needs one."""
+    monkeypatch.setattr(accounts, "SCRYPT_N", 2**4)
+    for limiter in rate_limit.LOGIN_LIMITS:
+        limiter.reset()
+    unit = accounts.create_unit("Cyber Cell North")
+    accounts.create_officer("officer@example.org", "Om Officer", unit.id, "officer", password=PW)
+    c = TestClient(app, base_url="https://testserver")
+    signed = c.post("/auth/login", json={"email": "officer@example.org", "password": PW},
+                    headers={accounts.CSRF_HEADER: "1"})
+    assert signed.status_code == 200
+    return c
+
+
+def test_a_caller_who_has_not_signed_in_cannot_record_or_change_a_wallet(client, demo, switched_on):
+    refused = demo.post("/trace/case-1/custody", json=wallet(), headers=H)
+    assert refused.status_code == 403 and "Sign in as an officer" in refused.json()["detail"]
+    wid = client.post("/trace/case-1/custody", json=wallet(), headers=H).json()["wallet_id"]
+    # The same browser key, signed out: it still reads the wallet, but cannot change it.
+    assert demo.get("/trace/case-1/custody", headers=H).json()["count"] == 1
+    changed = demo.patch(f"/custody/{wid}", json={"notes": "x"}, headers=H)
+    assert changed.status_code == 403 and "Sign in as an officer" in changed.json()["detail"]
+    with models.session() as s:
+        assert s.scalars(select(models.CustodyWallet.notes)).all() == [""]
 
 
 @pytest.fixture
@@ -234,7 +263,13 @@ def test_the_routes_refuse_secrets_bad_thresholds_duplicates_and_strangers(clien
     assert client.post("/trace/case-1/custody", json=wallet()).status_code == 400  # no owner key
     wid = client.post("/trace/case-1/custody", json=wallet(), headers=H).json()["wallet_id"]
     assert client.post("/trace/case-1/custody", json=wallet(), headers=H).status_code == 409
-    assert client.patch(f"/custody/{wid}", json={"notes": "x"}, headers={ownership.OWNER_HEADER: BOB}).status_code == 404
+    # An officer of another unit, in another browser: not theirs to see or change.
+    accounts.create_officer("south@example.org", "Sam South", accounts.create_unit("Cyber Cell South").id, "officer",
+                            password=PW)
+    stranger = TestClient(app, base_url="https://testserver")
+    assert stranger.post("/auth/login", json={"email": "south@example.org", "password": PW},
+                         headers={accounts.CSRF_HEADER: "1"}).status_code == 200
+    assert stranger.patch(f"/custody/{wid}", json={"notes": "x"}, headers={ownership.OWNER_HEADER: BOB}).status_code == 404
 
 
 def test_the_audit_log_records_what_happened_never_the_names_or_notes(client, switched_on):
