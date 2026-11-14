@@ -63,6 +63,17 @@ describe('the letter of request panel', () => {
     expect(screen.getByLabelText('Treaty or convention')).toBeInTheDocument()
   })
 
+  it("holds each field to the server's limit, so a long one is never refused without saying which", () => {
+    render(<LetterOfRequestPanel result={CASE} offered />)
+    // backend letters_of_request.FIELDS
+    const limits = { 'Requested country': 80, Court: 200, 'Presiding officer': 120, 'FIR / case number': 120,
+      'Investigating agency': 200, 'Offences and maximum penalties': 1500, Limitation: 500, 'What happened': 4000,
+      "Exchange's registered office": 300, Urgency: 300, 'Liaison officer': 500 }
+    for (const [label, max] of Object.entries(limits)) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('maxLength', String(max))
+    }
+  })
+
   it("shows the server's refusal, and a changed detail clears an old draft", async () => {
     api({ 'POST /trace/c1-abcdef12/letter-of-request': { status: 400, body: { detail: 'Name the treaty or convention the request is made under.' } } })
     const user = userEvent.setup()
@@ -90,7 +101,25 @@ describe('the letter of request panel', () => {
     await waitFor(() => expect(onLogged).toHaveBeenCalledTimes(1))
     expect(calls.at(-1)).toEqual({ method: 'POST', path: '/requests', body: { case_id: 'c1-abcdef12', recipient: 'Seychelles', kind: REQUEST_KIND, asset: 'USDT' } })
     expect(screen.getByText(/Logged as drafted, to Seychelles/)).toBeInTheDocument()
+    // The button just pressed is disabled, so a screen reader hears the outcome from the status line.
+    expect(screen.getByRole('status')).toHaveTextContent(/Logged as drafted, to Seychelles/)
     expect(screen.getByRole('button', { name: 'Log it in the requests log' })).toBeDisabled() // once
+  })
+
+  it('keeps the keyboard on the status line once the letter is logged, as the pressed button is disabled', async () => {
+    api({
+      'POST /trace/c1-abcdef12/letter-of-request': { text: 'DRAFT one' },
+      'POST /requests': { status: 201, body: { request_id: 'r1', kind: 'letter-rogatory', status: 'drafted' } },
+    })
+    const user = userEvent.setup()
+    render(<LetterOfRequestPanel result={CASE} offered />)
+    await user.type(screen.getByLabelText('Requested country'), 'Seychelles')
+    await user.click(screen.getByRole('button', { name: 'Draft the letter of request' }))
+    const log = await screen.findByRole('button', { name: 'Log it in the requests log' })
+    log.focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/Logged as drafted/))
+    expect(screen.getByRole('status')).toHaveFocus() // not dropped to the page
   })
 
   it('needs the requested country before it can be logged', async () => {
@@ -101,6 +130,20 @@ describe('the letter of request panel', () => {
     expect(await screen.findByRole('button', { name: 'Log it in the requests log' })).toBeDisabled()
     expect(screen.getByText('Name the requested country to log it.')).toBeInTheDocument()
     expect(calls.some((c) => c.path === '/requests')).toBe(false)
+  })
+
+  it('keeps the keyboard on the panel: the draft takes focus, and a refusal leaves it on the button', async () => {
+    api({ 'POST /trace/c1-abcdef12/letter-of-request': { status: 400, body: { detail: 'Name the treaty or convention the request is made under.' } } })
+    const user = userEvent.setup()
+    render(<LetterOfRequestPanel result={CASE} offered />)
+    const button = screen.getByRole('button', { name: 'Draft the letter of request' })
+    button.focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+    expect(button).toHaveFocus() // not dropped to the page while the request ran
+    api({ 'POST /trace/c1-abcdef12/letter-of-request': { text: 'DRAFT one' } })
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.getByLabelText('The draft letter of request')).toHaveFocus())
   })
 })
 

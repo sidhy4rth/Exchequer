@@ -148,6 +148,27 @@ def test_what_is_asked_follows_what_the_case_holds_about_the_address():
     assert f"confirming whether it controls the address {tagged['exchange_address']}" in text
 
 
+def test_an_explorer_tag_asks_for_the_records_it_names_and_points_to_nothing_missing():
+    """The explorer-tag request used to ask for "the records in (b)", but (b) is the tracing paragraph."""
+    tagged = recorded(12)
+    text = flat(draft("demo-12", tagged, DETAILS))
+    assert "the records in (b)" not in text
+    assert "(i) the account holder's identity and KYC documents" in text
+    assert "if it does, production" in text and "listed in the Statement of Facts, and no other" in text
+
+
+@pytest.mark.parametrize("demo, unsaid", [
+    (3, "to an account at Binance"),      # a probable deposit address: only the exchange can confirm it
+    (12, "to an account at Flipster"),    # an explorer's tag this office has not confirmed
+    (11, "to an account at Binance"),     # a wallet the exchange runs itself is no one customer's account
+])
+def test_the_letter_claims_no_more_about_the_address_than_the_case_holds(demo, unsaid):
+    text = flat(draft(f"demo-{demo}", recorded(demo), DETAILS))
+    assert unsaid not in text
+    assert "the traced funds were deposited to the account at" not in text
+    assert "expected to identify who received" not in text  # only the exchange can name its customer
+
+
 def test_a_case_that_reached_no_exchange_has_no_letter_of_request():
     with pytest.raises(LetterOfRequestError, match="reached no exchange"):
         draft("case-1", case(exchange=None, exchange_address=None), DETAILS)
