@@ -39,6 +39,12 @@ export function shown(row) {
 
 const EMPTY = { kind: 'domain', value: '', context: '', notes: '' }
 
+// Another panel that adds to a case's list (the export scan's "Add as case
+// identifier") says so with this window event, as theme.js does for the skin,
+// and the panel for that case loads its list again: no reload needed.
+export const IDENTIFIERS_CHANGED = 'identifierschange'
+export const identifiersChanged = (caseId) => window.dispatchEvent(new CustomEvent(IDENTIFIERS_CHANGED, { detail: caseId }))
+
 /** The other cases (of this browser or unit) where the same identifier was reported. */
 export function AlsoIn({ others }) {
   if (!others?.length) return null
@@ -110,6 +116,12 @@ export default function IdentifiersPanel({ result }) {
   const load = () => caseId && fetchCaseIdentifiers(caseId).then((d) => { setRows(d.identifiers ?? []); setLookups(Boolean(d.lookups_enabled)); setLookupsNote(d.lookups_note ?? '') })
     .catch(() => setError('The reported identifiers could not be loaded. Reload the page before relying on this list.'))
   useEffect(() => { load() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!caseId) return undefined
+    const changed = (e) => { if (e.detail === caseId) load() }
+    window.addEventListener(IDENTIFIERS_CHANGED, changed)
+    return () => window.removeEventListener(IDENTIFIERS_CHANGED, changed)
+  }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!caseId) return null
 
   async function run(fn) {

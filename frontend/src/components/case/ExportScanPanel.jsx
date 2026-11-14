@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { addWalletIdentifier, fetchExportScan, recordExportScan } from '../../api'
 import { findTarget } from '../../find'
 import { size } from './ExhibitsPanel'
+import { identifiersChanged } from './IdentifiersPanel'
 import { scanFile } from './exportScan'
 import './ExportScanPanel.css'
 
@@ -68,6 +69,7 @@ function AddWallet({ caseId, value }) {
     try {
       const out = await addWalletIdentifier(caseId, value)
       setState(out.duplicate ? 'duplicate' : 'added')
+      identifiersChanged(caseId) // the case's identifiers panel shows it now
     } catch (err) { setState(err.message || 'Could not add it.') }
   }
   return <>

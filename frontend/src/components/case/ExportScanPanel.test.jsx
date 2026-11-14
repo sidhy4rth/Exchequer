@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ExportScanPanel, { seedLine } from './ExportScanPanel'
+import IdentifiersPanel from './IdentifiersPanel'
 
 // The export scan on the Evidence tab: hidden unless the server offers it, the
 // file read here, and only counts sent. Values from DEMO.md and the contract
@@ -118,6 +119,35 @@ describe('ExportScanPanel', () => {
     expect(posted.map((c) => c.body)).toEqual([{ kind: 'wallet', value: TRON, context: 'Found by the export scan' }])
     const everything = JSON.stringify(calls)
     for (const value of [EVM, TX_TRON, 'abandon', 'chats.csv']) expect(everything).not.toContain(value)
+  })
+
+  it("shows the added address in the case's identifiers panel without a reload", async () => {
+    const kept = []
+    const calls = api({
+      ...ON,
+      'POST /trace/c1/identifiers': { status: 201, body: { identifier_id: 'i1', kind: 'wallet', value: TRON } },
+    })
+    // The identifiers list as the server keeps it: empty until the add.
+    const served = fetch.getMockImplementation()
+    fetch.mockImplementation(async (url, init = {}) => {
+      if ((init.method || 'GET') === 'GET' && String(url).replace(/^\/api/, '').split('?')[0] === '/trace/c1/identifiers') {
+        calls.push({ method: 'GET', path: '/trace/c1/identifiers' })
+        return new Response(JSON.stringify({ identifiers: kept }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      const response = await served(url, init)
+      if (init.method === 'POST' && String(url).endsWith('/trace/c1/identifiers')) {
+        kept.push({ identifier_id: 'i1', case_id: 'c1', kind: 'wallet', value: TRON, entered: TRON, context: 'Found by the export scan', notes: '', status: 'active', history: [{ at: '2026-11-14T10:00:00Z', action: 'recorded' }] })
+      }
+      return response
+    })
+    render(<MemoryRouter><IdentifiersPanel result={{ case_id: 'c1' }} /><ExportScanPanel result={{ case_id: 'c1' }} /></MemoryRouter>)
+    expect(await screen.findByText(/Reported identifiers · 0/)).toBeInTheDocument()
+
+    await userEvent.upload(await screen.findByLabelText('Export file'), new File([`pay ${TRON}\n`], 'n.txt'))
+    await userEvent.click(await screen.findByRole('button', { name: `Add as case identifier ${TRON}` }))
+    expect(await screen.findByText(/Reported identifiers · 1/)).toBeInTheDocument()
+    expect(screen.getByText(TRON, { selector: '.identifiers-panel .mono' })).toBeInTheDocument()
+    expect(calls.filter((c) => c.method === 'GET' && c.path === '/trace/c1/identifiers')).toHaveLength(2)
   })
 
   it('says when the address is already on the case, and shows a refusal', async () => {
