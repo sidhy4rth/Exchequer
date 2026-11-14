@@ -79,4 +79,11 @@ describe('withNcrp', () => {
     expect(withNcrp(TEXT, '  ')).toBe(TEXT)
     expect(withNcrp(TEXT, ` ${NCRP} `)).toContain(`NCRP acknowledgement no.: ${NCRP}\n`)
   })
+
+  it('puts in exactly what was typed, even a $ pattern', () => {
+    // String.replace reads "$&", "$'" and "$`" in a replacement string as patterns.
+    for (const typed of ["2$&1", "2$'1", '2$`1', '2$$1']) {
+      expect(withNcrp(TEXT, typed)).toContain(`NCRP acknowledgement no.: ${typed}\n`)
+    }
+  })
 })

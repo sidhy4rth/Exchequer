@@ -15,7 +15,8 @@ const ANSWERS = [['yes', 'Yes'], ['no', 'No'], ['unknown', 'Not known']]
 /** The server's text with the NCRP line filled in, when the officer typed a number. */
 export function withNcrp(text, ncrp) {
   const typed = ncrp.trim()
-  return typed ? text.replace(NCRP_BLANK, `NCRP acknowledgement no.: ${typed}`) : text
+  // A function, so a "$&" or "$'" typed is put in as it is, not read as a replacement pattern.
+  return typed ? text.replace(NCRP_BLANK, () => `NCRP acknowledgement no.: ${typed}`) : text
 }
 
 export default function CryptoSummary({ result }) {
