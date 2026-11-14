@@ -9,7 +9,7 @@
 
 ## Done
 
-- Slice 1, in four stacked PRs (#147, #154, #155, #156):
+- Slice 1, in four stacked PRs (#147, #154, #155, #156), and #164 on top:
   1. Server: the flag `EXCHEQUER_EXPORT_SCAN` (off by default) and `routes/export_scan.py`:
      `GET /trace/{case_id}/export-scan` (404 while the flag is off, which hides the panel) and
      `POST /trace/{case_id}/export-scan`, which records in the audit trail that a scan ran and
@@ -24,7 +24,7 @@
      addresses and hashes with a "Trace" / "Trace from this payment" link (`find.js::findTarget`).
   5. Pre-review fixes (14 Nov): markup read through in a seed run, UTF-16 without a byte-order
      mark, 64-hex values named for what they may be, table captions and link names.
-- Add as case identifier (PR stacked on #156, branch `feat/forensic-import-identifiers`): a `wallet`
+- Add as case identifier (#164, stacked on #156, branch `feat/forensic-import-identifiers`): a `wallet`
   kind in `identifiers.py` (feature 4), checked by the trace form's address rules; each address row
   in the panel has "Add as case identifier", which sends that one address (kind `wallet`, and the
   fixed note "Found by the export scan") to `POST /trace/{case_id}/identifiers`. The identifiers

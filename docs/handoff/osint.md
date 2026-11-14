@@ -24,7 +24,7 @@
   7. The Telegram message says 4 to 32 characters, as the check allows.
   8. A trunk 0 typed after a two-digit country code is dropped (`+44 07700 …` is `+44 7700 …`), except Italy (+39), which keeps it. After a three-digit code it is left as typed. Rows recorded before this keep their old form.
   9. CodeQL's URL-substring alert in `test_domain_lookup.py` was fixed in #106 (f886bfe) and is closed.
-- Wallet kind (with feature 2, #145; branch `feat/forensic-import-identifiers`): `wallet` in `KINDS`,
+- Wallet kind (#164, with feature 2 #145; branch `feat/forensic-import-identifiers`): `wallet` in `KINDS`,
   normalised by `identifiers.wallet()` with the trace form's own checks from `etherscan_client.py`
   (`is_evm_address` + `evm_checksum_ok`, `is_tron_address`): EVM kept in lower case, Tron as typed.
   A mixed-case EVM address with a wrong EIP-55 checksum, a wrong length or a Tron checksum typo is
