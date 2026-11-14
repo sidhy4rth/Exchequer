@@ -59,6 +59,9 @@ FIELDS = {
 }
 NOT_VALID = "This is a DRAFT. It is not a letter of request until the Court issues it under its seal."
 SENT_STATUSES = ("sent", "acknowledged", "frozen", "declined", "closed")
+# The kind a letter of request is logged under in the requests log (freeze_requests.KINDS), recipient the
+# requested country. It fits the log's 16-character kind column, so no migration.
+REQUEST_KIND = "letter-rogatory"
 
 
 class LetterOfRequestError(ValueError):

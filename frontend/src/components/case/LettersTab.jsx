@@ -334,7 +334,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
       {caseId ? <>
         <RequestsPanel key={logged} result={result} onChange={() => loadRequests()?.catch(() => {})} />
         <AssetsPanel key={requests.map((r) => r.status).join()} result={result} />
-        <LetterOfRequestPanel result={result} offered={letters?.some((l) => l.to === 'exchange' || l.to === 'instant')} />
+        <LetterOfRequestPanel result={result} offered={letters?.some((l) => l.to === 'exchange' || l.to === 'instant')} onLogged={() => setLogged((n) => n + 1)} />
         <WatchPanel result={result} extra={watch} />
       </> : (
         <p className="card note case-note">

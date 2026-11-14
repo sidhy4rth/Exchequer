@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { draftLetterOfRequest } from '../../api'
+import { draftLetterOfRequest, logRequest } from '../../api'
 import { plain } from '../../text'
 import './LetterOfRequestPanel.css'
 
@@ -8,7 +8,12 @@ import './LetterOfRequestPanel.css'
 // answer a notice, a Court can ask that country for its records (BNSS s.112),
 // through the Ministry of Home Affairs. The draft follows the MHA's format;
 // what the officer leaves out is a marked blank. Nothing typed is kept: it
-// goes to the server in a POST body and comes back as the draft.
+// goes to the server in a POST body and comes back as the draft. Once drafted,
+// it can be logged in the case's requests log as its own kind, addressed to the
+// requested country, so its progress is tracked like any other letter.
+
+// backend letters_of_request.REQUEST_KIND (one of freeze_requests.KINDS)
+export const REQUEST_KIND = 'letter-rogatory'
 
 /** The exchange the case reached, directly or after a swap; null when none. */
 export function reachedExchange(result) {
@@ -33,14 +38,15 @@ const FIELDS = [
 ]
 
 /** `offered`: the server offers this case a letter to the exchange, so the case holds what a letter of
- * request rests on (an outgoing trace that reached it). */
-export default function LetterOfRequestPanel({ result, offered }) {
+ * request rests on (an outgoing trace that reached it). `onLogged`: called once it is in the requests log. */
+export default function LetterOfRequestPanel({ result, offered, onLogged }) {
   const caseId = result?.case_id
   const exchange = reachedExchange(result)
   const [values, setValues] = useState({ basis: '' })
   const [text, setText] = useState(null)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [logged, setLogged] = useState('')
 
   if (!caseId || !exchange || !offered) return null
 
@@ -50,6 +56,15 @@ export default function LetterOfRequestPanel({ result, offered }) {
     setError(null)
     setBusy(true)
     try { setText(await draftLetterOfRequest(caseId, values)) } catch (err) { setError(err.message) } finally { setBusy(false) }
+  }
+  const country = (values.country ?? '').trim()
+  async function logIt() {
+    setError(null)
+    try {
+      await logRequest({ case_id: caseId, recipient: country, kind: REQUEST_KIND, asset: result.asset ?? '' })
+      setLogged(country)
+      onLogged?.()
+    } catch (err) { setError(err.message) }
   }
   function download() {
     const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }))
@@ -100,7 +115,13 @@ export default function LetterOfRequestPanel({ result, offered }) {
             <div className="request-add">
               <button type="button" onClick={download}>Download (.txt)</button>
               <button type="button" className="quiet" onClick={() => navigator.clipboard?.writeText(text)}>Copy</button>
+              <button type="button" onClick={logIt} disabled={!country || logged === country}>Log it in the requests log</button>
             </div>
+            <p className="note">
+              {logged && logged === country
+                ? `Logged as drafted, to ${plain(logged)}, in the requests log above: move it on there as it goes to the MHA, the Court and abroad.`
+                : country ? `Logs it as a letter of request to ${plain(country)}, drafted.` : 'Name the requested country to log it.'}
+            </p>
             <pre className="lor-text" aria-label="The draft letter of request">{text}</pre>
           </div>
         )}

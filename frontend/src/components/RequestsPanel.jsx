@@ -67,7 +67,7 @@ export default function RequestsPanel({ result, onChange }) {
         {items.map((r) => (
           <div className="request-row" key={r.request_id}>
             <div className="top">
-              <span className="nm">{plain(r.recipient)}{freeze(r.kind) && <span className="pill red" style={{ marginLeft: 8 }}>Urgent freeze</span>}</span>
+              <span className="nm">{plain(r.recipient)}{freeze(r.kind) && <span className="pill red" style={{ marginLeft: 8 }}>Urgent freeze</span>}{r.kind === 'letter-rogatory' && <span className="pill" style={{ marginLeft: 8 }}>Letter of request</span>}</span>
               <span className={`pill ${STATUS[r.status]?.pill ?? ''}`}>{STATUS[r.status]?.label ?? r.status}</span>
             </div>
             {r.follow_up && <div className="follow-up">No reply for {r.days_waiting} days: follow up.</div>}

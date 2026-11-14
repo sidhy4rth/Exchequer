@@ -2,10 +2,10 @@
 
 - **Feature**: suite feature 7 (request and letter generator): draft a letter of request to a foreign country (BNSS s.112) from a case, in the MHA's prescribed format
 - **Issue**: #125
-- **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, on top of #127)
+- **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, #130, on top of #127); `feat/letters-of-request-log` (logged in the requests log, #131, on top of #130)
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: built and tested end to end; server in #126, screen in its own PR on top of it (`feat/letters-of-request-screen`); both wait for review
+- **Status**: built and tested; server #126, screen #127, treaty-country note #130, requests-log kind #131, stacked in that order; all wait for review
 
 ## Done
 
@@ -31,6 +31,13 @@
     - Figure 3.5: the format and contents.
   - **BNSS s.112 = CrPC s.166A.** NCRB's BNSS–CrPC table (https://www.ncrb.mha.gov.in/uploads/SankalanPortal/SectionTableBNSS.html).
 
+- **Treaty countries (#130).**
+  - `backend/data/mha_mlat_countries.txt`: Figure 3.6 of the same guidelines, pages [25] to [28] (PDF pages 27 to 30), 42 rows, OCR'd and then read row by row from the page images; cross-checked against Figure 1.1 on page [4]. Three rows are marked signed but not yet in force (Cambodia, Maldives, Morocco). Pinned by SHA-256 in `backend/tests/test_mlat_countries.py`.
+  - The officer's notes (never the letter) say whether the list names the country typed (exact name or formal name, case and spacing ignored, no fuzzy match), or that it is not on the list under that name and reciprocity may be the route; nothing when no country is given. The basis is never changed.
+- **Requests log (#131).**
+  - `freeze_requests.KINDS` gains `letter-rogatory` (15 characters: fits the 16-character kind column, so no migration); `letters_of_request.REQUEST_KIND` names it. No sign-off (not a `-freeze` kind).
+  - The panel, after a draft, has "Log it in the requests log": recipient = the requested country, status drafted; the requests log above remounts and shows it with a "Letter of request" pill. The existing requests screen could only log the letters it suggests or "other", hence the button.
+
 ## Decisions
 
 - The letter's wording is the MHA's wherever the MHA gives it: transcribed from the scanned guidelines, checked against the page images, kept as printed (including "I, ..., has been authorized" and "the Government (name of the Requested Country)"), and pinned by SHA-256 in the tests so any change is deliberate.
@@ -42,8 +49,9 @@
 ## Next
 
 1. Barenyam (or anyone but Sidhyarth) checks `backend/data/mha_letter_of_request.txt` by eye against pages [20] to [24] of the guidelines PDF, and says so in the PR.
-2. Later: Figure 3.6's list of MLAT countries (Central Authority, language), hand-checked, so the draft can say whether the country has a treaty with India; it is a 2019 list, so it needs the MHA's current one beside it.
-3. Later: log a letter of request in the requests log (sent to the MHA for concurrence, issued, transmitted).
+2. Barenyam checks `backend/data/mha_mlat_countries.txt` by eye against pages [25] to [28] the same way (#130).
+3. Later: the MHA's current treaty list beside the 2019 one; Figure 3.6's Central Authorities and language requirements are not transcribed.
+4. Owner decision: a letter of request logged as sent is flagged for follow-up after 7 days like any request (`FOLLOW_UP_DAYS`), and case-tasks suggestions (#124) would turn that into a "Follow up" task. Letters of request take months; a longer wait for this kind would be a change to `freeze_requests.summary`, left out while `feat/signoff-binding` changes that file.
 
 ## Open questions
 
@@ -51,4 +59,4 @@
 
 ## Files mid-change (do not touch)
 
-- `backend/app/letters_of_request.py`, `backend/data/mha_mlat_countries.txt` (`feat/letters-of-request-countries`)
+- none

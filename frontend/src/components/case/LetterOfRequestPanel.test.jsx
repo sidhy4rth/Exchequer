@@ -1,7 +1,8 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import LetterOfRequestPanel, { reachedExchange } from './LetterOfRequestPanel'
+import RequestsPanel from '../RequestsPanel'
+import LetterOfRequestPanel, { REQUEST_KIND, reachedExchange } from './LetterOfRequestPanel'
 
 // The letter of request on the Letters tab (backend letters_of_request.py): the
 // officer's details go to the server in a POST body, and the draft comes back
@@ -74,4 +75,46 @@ describe('the letter of request panel', () => {
     await user.type(screen.getByLabelText('Court'), 'C')
     await waitFor(() => expect(screen.queryByLabelText('The draft letter of request')).toBeNull())
   })
+
+  it('logs the drafted letter in the requests log as its own kind, to the requested country', async () => {
+    const calls = api({
+      'POST /trace/c1-abcdef12/letter-of-request': { text: 'DRAFT one' },
+      'POST /requests': { status: 201, body: { request_id: 'r1', kind: 'letter-rogatory', status: 'drafted' } },
+    })
+    const onLogged = vi.fn()
+    const user = userEvent.setup()
+    render(<LetterOfRequestPanel result={{ ...CASE, asset: 'USDT' }} offered onLogged={onLogged} />)
+    await user.type(screen.getByLabelText('Requested country'), ' Seychelles ')
+    await user.click(screen.getByRole('button', { name: 'Draft the letter of request' }))
+    await user.click(await screen.findByRole('button', { name: 'Log it in the requests log' }))
+    await waitFor(() => expect(onLogged).toHaveBeenCalledTimes(1))
+    expect(calls.at(-1)).toEqual({ method: 'POST', path: '/requests', body: { case_id: 'c1-abcdef12', recipient: 'Seychelles', kind: REQUEST_KIND, asset: 'USDT' } })
+    expect(screen.getByText(/Logged as drafted, to Seychelles/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log it in the requests log' })).toBeDisabled() // once
+  })
+
+  it('needs the requested country before it can be logged', async () => {
+    const calls = api({ 'POST /trace/c1-abcdef12/letter-of-request': { text: 'DRAFT one' } })
+    const user = userEvent.setup()
+    render(<LetterOfRequestPanel result={CASE} offered />)
+    await user.click(screen.getByRole('button', { name: 'Draft the letter of request' }))
+    expect(await screen.findByRole('button', { name: 'Log it in the requests log' })).toBeDisabled()
+    expect(screen.getByText('Name the requested country to log it.')).toBeInTheDocument()
+    expect(calls.some((c) => c.path === '/requests')).toBe(false)
+  })
 })
+
+describe('a letter of request in the requests log', () => {
+  it('shows as a letter of request, with the ordinary statuses and no sign-off', async () => {
+    api({
+      'GET /trace/c1-abcdef12/requests': { body: { count: 1, requests: [{ request_id: 'r1', case_id: 'c1-abcdef12', recipient: 'Seychelles', kind: REQUEST_KIND, status: 'sent', needs_signoff: false, signoff: null, history: [], reference: '', notes: '' }] } },
+      'GET /trace/c1-abcdef12/letters': { body: { letters: [] } },
+    })
+    render(<RequestsPanel result={CASE} />)
+    expect(await screen.findByText('Letter of request')).toBeInTheDocument()
+    expect(screen.getByText('Seychelles', { selector: '.nm' })).toBeInTheDocument()
+    const options = within(screen.getByLabelText('Status')).getAllByRole('option').map((o) => o.value)
+    expect(options).toEqual(['drafted', 'sent', 'acknowledged', 'frozen', 'declined', 'closed'])
+  })
+})
+
