@@ -19,6 +19,12 @@ Statuses, in the order they usually happen:
   declined      the recipient will not act
   closed        nothing more to do
 
+A letter of request abroad (kind "letter-rogatory", letters_of_request.py)
+takes only drafted, sent, acknowledged, declined and closed: it asks the
+requested country for help and freezes nothing itself, and it needs no urgent
+sign-off. It is logged once per case and country while it is open: logging it
+again (after a reload, say) returns the open row instead of a second one.
+
 An urgent freeze letter (any "-freeze" kind) asks for money to be held now,
 before a formal request, so a forged one is the cheapest fake police request
 there is. It goes drafted -> awaiting_signoff -> ready, and only a second
@@ -53,6 +59,10 @@ SIGN_IN_TO_ASK = ("An urgent freeze letter needs a signed-in drafter and a secon
 KINDS = ("exchange", "tether", "other", "exchange-freeze", "tether-freeze", "instant", "instant-freeze",
          "bank-info", "bank-freeze", "telecom",  # these three: notice_letters.NOTICES
          "letter-rogatory")  # letters_of_request.py: a letter of request abroad, to the requested country
+# A kind whose letter moves through fewer statuses than STATUSES (statuses_for).
+KIND_STATUSES = {"letter-rogatory": ("drafted", "sent", "acknowledged", "declined", "closed")}
+# Kinds logged once per case and recipient while a row of them is open (create returns that row).
+ONE_OPEN_PER_RECIPIENT = ("letter-rogatory",)
 FOLLOW_UP_DAYS = 7
 # Bounds on what anyone can store here. Owner keys are free, so the per-owner
 # cap alone would not bound the table: MAX_TOTAL does. A real request moves
@@ -85,8 +95,20 @@ def needs_signoff(kind: str) -> bool:
     return kind.endswith("-freeze")
 
 
+def statuses_for(kind: str) -> tuple[str, ...]:
+    """The statuses a request of `kind` may take (before the sign-off rules of _check_status)."""
+    return KIND_STATUSES.get(kind, STATUSES)
+
+
+def _same_recipient(a: str) -> str:
+    return " ".join(a.split()).casefold()
+
+
 def _check_status(kind: str, status: str, signed: bool) -> None:
     """Whether a request of `kind` may move to `status` (STATUSES checked first)."""
+    if status not in statuses_for(kind):
+        raise RequestError(f"A letter of request abroad is {', '.join(statuses_for(kind))}: it asks the requested "
+                           "country for help and freezes nothing itself.")
     if not needs_signoff(kind):
         if status in SIGNOFF_STATES:
             raise RequestError(NOT_URGENT)
@@ -142,6 +164,7 @@ def summary(r: models.FreezeRequest, viewer: Any = None) -> dict[str, Any]:
         "follow_up": waiting is not None and waiting >= FOLLOW_UP_DAYS,
         "history": json.loads(r.history_json or "[]"),
         "needs_signoff": needs_signoff(r.kind),
+        "statuses": list(statuses_for(r.kind)),
         "signoff": {"by": r.signed_off_name, "at": r.signed_off_at} if r.signed_off_at else None,
         **_viewed(r, viewer),
     }
@@ -175,6 +198,14 @@ def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "
     with models.session() as s:
         if s.scalar(select(models.Case.id).where(models.Case.id == case_id)) is None:
             raise RequestError("No case with that id.")
+        if kind in ONE_OPEN_PER_RECIPIENT:
+            open_rows = s.scalars(select(models.FreezeRequest).where(
+                models.FreezeRequest.owner_hash == owner, models.FreezeRequest.case_id == case_id,
+                models.FreezeRequest.kind == kind, models.FreezeRequest.status.in_(OPEN_STATUSES))
+                .order_by(models.FreezeRequest.created_at)).all()
+            for r in open_rows:
+                if _same_recipient(r.recipient) == _same_recipient(recipient):
+                    return {**summary(r, viewer), "already_logged": True}
     now = _now()
     r = models.FreezeRequest(
         id=str(uuid.uuid4()), owner_hash=owner, case_id=case_id, recipient=recipient, kind=kind,
@@ -192,7 +223,7 @@ def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "
         s.add(r)
         s.commit()
         s.refresh(r)
-        return summary(r, viewer)
+        return {**summary(r, viewer), "already_logged": False}
 
 
 def update(owner: str, request_id: str, changes: dict[str, Any], viewer: Any = None) -> dict[str, Any] | None:

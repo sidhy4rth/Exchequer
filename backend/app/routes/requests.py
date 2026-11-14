@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -88,13 +88,18 @@ def case_requests(case_id: str, user: CurrentUser) -> dict[str, Any]:
 
 
 @router.post("/requests", status_code=201)
-def new_request(body: NewRequest, user: CurrentUser, http: Request) -> dict[str, Any]:
+def new_request(body: NewRequest, user: CurrentUser, http: Request, response: Response) -> dict[str, Any]:
     _allow_write(http)
     try:
         made = freeze_requests.create(_owner(user), body.case_id, body.recipient, body.kind,
                                       body.address, body.asset, body.status, viewer=user)
     except freeze_requests.RequestError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if made["already_logged"]:  # a letter of request to that country is open already: that row, not a second
+        response.status_code = 200
+        audit.record("request.create_existing", case_id=body.case_id, detail={"kind": made["kind"],
+                                                                                 "status": made["status"]})
+        return made
     audit.record("request.create", case_id=body.case_id, detail={"kind": made["kind"], "status": made["status"]})
     if made["status"] == "awaiting_signoff":  # the ask, made while logging the letter
         audit.record("request.signoff_ask", case_id=body.case_id, detail={"request_id": made["request_id"]})

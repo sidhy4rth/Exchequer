@@ -106,6 +106,22 @@ describe('the letter of request panel', () => {
     expect(screen.getByRole('button', { name: 'Log it in the requests log' })).toBeDisabled() // once
   })
 
+  it('says so when the server already has this letter open in the log, after a reload', async () => {
+    api({
+      'POST /trace/c1-abcdef12/letter-of-request': { text: 'DRAFT one' },
+      'POST /requests': { status: 200, body: { request_id: 'r1', kind: 'letter-rogatory', status: 'sent', recipient: 'Seychelles', already_logged: true } },
+    })
+    const onLogged = vi.fn()
+    const user = userEvent.setup()
+    render(<LetterOfRequestPanel result={CASE} offered onLogged={onLogged} />)
+    await user.type(screen.getByLabelText('Requested country'), 'Seychelles')
+    await user.click(screen.getByRole('button', { name: 'Draft the letter of request' }))
+    await user.click(await screen.findByRole('button', { name: 'Log it in the requests log' }))
+    expect(await screen.findByRole('status')).toHaveTextContent(/Already in the requests log, to Seychelles, as Sent/)
+    expect(onLogged).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Log it in the requests log' })).toBeDisabled()
+  })
+
   it('needs the requested country before it can be logged', async () => {
     const calls = api({ 'POST /trace/c1-abcdef12/letter-of-request': { text: 'DRAFT one' } })
     const user = userEvent.setup()
@@ -118,16 +134,17 @@ describe('the letter of request panel', () => {
 })
 
 describe('a letter of request in the requests log', () => {
-  it('shows as a letter of request, with the ordinary statuses and no sign-off', async () => {
+  it('shows as a letter of request, with its own statuses (never frozen) and no sign-off', async () => {
+    const statuses = ['drafted', 'sent', 'acknowledged', 'declined', 'closed'] // freeze_requests.KIND_STATUSES
     api({
-      'GET /trace/c1-abcdef12/requests': { body: { count: 1, requests: [{ request_id: 'r1', case_id: 'c1-abcdef12', recipient: 'Seychelles', kind: REQUEST_KIND, status: 'sent', needs_signoff: false, signoff: null, history: [], reference: '', notes: '' }] } },
+      'GET /trace/c1-abcdef12/requests': { body: { count: 1, requests: [{ request_id: 'r1', case_id: 'c1-abcdef12', recipient: 'Seychelles', kind: REQUEST_KIND, status: 'sent', statuses, needs_signoff: false, signoff: null, history: [], reference: '', notes: '' }] } },
       'GET /trace/c1-abcdef12/letters': { body: { letters: [] } },
     })
     render(<RequestsPanel result={CASE} />)
     expect(await screen.findByText('Letter of request')).toBeInTheDocument()
     expect(screen.getByText('Seychelles', { selector: '.nm' })).toBeInTheDocument()
     const options = within(screen.getByLabelText('Status')).getAllByRole('option').map((o) => o.value)
-    expect(options).toEqual(['drafted', 'sent', 'acknowledged', 'frozen', 'declined', 'closed'])
+    expect(options).toEqual(statuses)
   })
 })
 

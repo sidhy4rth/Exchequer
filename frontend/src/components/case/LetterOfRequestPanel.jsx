@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { draftLetterOfRequest, logRequest } from '../../api'
 import { plain } from '../../text'
+import { STATUS } from '../RequestsPanel'
 import './LetterOfRequestPanel.css'
 
 // A letter of request to the country where the exchange is (backend
@@ -49,6 +50,7 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [logged, setLogged] = useState('')
+  const [already, setAlready] = useState(null) // the open row the server already had for this country, if any
 
   if (!caseId || !exchange || !offered) return null
 
@@ -63,7 +65,8 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
   async function logIt() {
     setError(null)
     try {
-      await logRequest({ case_id: caseId, recipient: country, kind: REQUEST_KIND, asset: result.asset ?? '' })
+      const row = await logRequest({ case_id: caseId, recipient: country, kind: REQUEST_KIND, asset: result.asset ?? '' })
+      setAlready(row?.already_logged ? row : null)
       setLogged(country)
       onLogged?.()
     } catch (err) { setError(err.message) }
@@ -120,7 +123,9 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
               <button type="button" onClick={logIt} disabled={!country || logged === country}>Log it in the requests log</button>
             </div>
             <p className="note" role="status">
-              {logged && logged === country
+              {logged && logged === country && already
+                ? `Already in the requests log, to ${plain(already.recipient ?? logged)}, as ${STATUS[already.status]?.label ?? already.status}: it was not logged twice. Move it on there.`
+                : logged && logged === country
                 ? `Logged as drafted, to ${plain(logged)}, in the requests log above: move it on there as it goes to the MHA, the Court and abroad.`
                 : country ? `Logs it as a letter of request to ${plain(country)}, drafted.` : 'Name the requested country to log it.'}
             </p>

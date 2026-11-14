@@ -37,6 +37,8 @@
 - **Requests log (#136).**
   - `freeze_requests.KINDS` gains `letter-rogatory` (15 characters: fits the 16-character kind column, so no migration); `letters_of_request.REQUEST_KIND` names it. No sign-off (not a `-freeze` kind).
   - The panel, after a draft, has "Log it in the requests log": recipient = the requested country, status drafted; the requests log above remounts and shows it with a "Letter of request" pill. The existing requests screen could only log the letters it suggests or "other", hence the button.
+  - Its statuses are drafted, sent, acknowledged, declined, closed (`freeze_requests.KIND_STATUSES`, `statuses_for`): never "frozen" (it asks the requested country for help and freezes nothing itself), never the sign-off states. Each row carries `statuses`; the requests panel offers only those.
+  - Logged once per case and country while open (drafted, sent, acknowledged), for the same browser: logging it again (after a reload) answers 200 with the open row and `already_logged: true`, audited as `request.create_existing`; the panel says it was not logged twice. Declined or closed, a new one may be logged. Not enforced by a database constraint, so two clicks landing at the same instant could still make two rows.
 
 ## Decisions
 
