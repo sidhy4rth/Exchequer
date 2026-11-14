@@ -7,8 +7,10 @@
     PATCH /tasks/{task_id}         change it, close it (done or dropped), open it again, or add a note
     GET   /tasks/due               open tasks due within ?days= (default 7) or overdue
 
-Writes are limited per connection, like the requests log, and audited by what
-changed, never by the text, which may name officers.
+Writes are limited per connection, like the requests log, need the demo code
+where one is set and a signed-in officer when the console is closed to officers
+(access.GUARDED, as POST /requests), and are audited by what changed, never by
+the text, which may name officers. Reading needs neither.
 """
 from __future__ import annotations
 
