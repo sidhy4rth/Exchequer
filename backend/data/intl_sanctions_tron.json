@@ -11,16 +11,16 @@
     "chain": "tron",
     "last_reviewed": "2026-09-22",
     "counts": {
-      "addresses": 632,
+      "addresses": 635,
       "by_authority": {
         "Israel": 581,
         "European Union": 3,
         "France": 1,
         "United Kingdom": 46,
-        "United States": 2
+        "United States": 5
       },
       "by_category": {
-        "seized": 583,
+        "seized": 586,
         "sanctioned": 49
       }
     },
@@ -140,10 +140,13 @@
       },
       "us_forfeiture": {
         "date": "2026-11-14",
-        "added": 2,
+        "added": 5,
         "added_addresses": [
+          "TH925vHUhhWPDdD67CQ3VKcqGvTDCxcgou",
           "THGG7WB11MHjJP1gr8ZjYPAzb5EpmEmyhN",
-          "TQMwh1NFfb8XXtP52fDiGsiVsc77iFMyRv"
+          "TNNKdC1boJnJoLeTfkjUFxkLLdrvXhfmrk",
+          "TQMwh1NFfb8XXtP52fDiGsiVsc77iFMyRv",
+          "TYQz1HAHoSSCDzKreZAPYadq5Yb1htiYPx"
         ],
         "listing_added_to": [],
         "note": "Added offline from this source without re-reading the other lists, so last_reviewed is unchanged."
@@ -2105,6 +2108,15 @@
       ],
       "valid_until": "2028-07-01"
     },
+    "TH925vHUhhWPDdD67CQ3VKcqGvTDCxcgou": {
+      "category": "seized",
+      "entity": "Verdzekov Residence (seed phrase found there)",
+      "label": "Verdzekov Residence (seed phrase found there)",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Central District of California, case 2:25-CR-00123-AB (U.S. v. Sylas Nyuydzene Verdzekov), entered August 26, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20251227, https://web.archive.org/web/20251227114232/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
     "TH96tFMn8KGiYSLiwcV3E2UiaJc8jmcbz3": {
       "category": "sanctioned",
       "entity": "Mustafa AYASH",
@@ -3616,6 +3628,15 @@
         "Israel"
       ],
       "valid_until": "2028-04-29"
+    },
+    "TNNKdC1boJnJoLeTfkjUFxkLLdrvXhfmrk": {
+      "category": "seized",
+      "entity": "Sergei Makinin",
+      "label": "Sergei Makinin",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the District of Puerto Rico, case 22-470 (PAD) (U.S. v. SERGEI MAKININ (1)), entered July 03, 2024; USAO official notification on forfeiture.gov, Internet Archive copy of 20240802, https://web.archive.org/web/20240802062238/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
     },
     "TNT8WTuCoPwuYzScrHwbv5Wzw9XBwu9u3q": {
       "category": "seized",
@@ -6136,6 +6157,15 @@
         "Israel"
       ],
       "valid_until": "2028-04-29"
+    },
+    "TYQz1HAHoSSCDzKreZAPYadq5Yb1htiYPx": {
+      "category": "seized",
+      "entity": "Sergei Makinin",
+      "label": "Sergei Makinin",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the District of Puerto Rico, case 22-470 (PAD) (U.S. v. SERGEI MAKININ (1)), entered July 03, 2024; USAO official notification on forfeiture.gov, Internet Archive copy of 20240802, https://web.archive.org/web/20240802062238/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
     },
     "TYSJNgQ8vSVnGp9oa8ZcbxPd21WyEPbzH5": {
       "category": "seized",
