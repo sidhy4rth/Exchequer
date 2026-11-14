@@ -187,6 +187,21 @@ def test_new_commits_must_carry_a_noreply_address():
     assert "%an%n%ae%n%cn%n%ce" in script and "%B" in script and "origin/main" in script
 
 
+
+def test_ci_runs_once_per_push_and_never_cancels_a_run_on_main():
+    """14 Nov: every push ran the suite twice (push + pull_request) and a
+    superseded run was never cancelled, so ~60 runs queued and a live fix
+    waited ~40 minutes. Pushes now run only on main; a newer push to a pull
+    request cancels its older run; each run on main has a group of its own,
+    so a merge is never cancelled or left pending behind another."""
+    workflow = load(ROOT / ".github" / "workflows" / "test.yml")
+    on = workflow[True]
+    assert on["push"] == {"branches": ["main"]} and "pull_request" in on
+    group = workflow["concurrency"]["group"]
+    assert "github.event.pull_request.number" in group
+    assert "github.ref == 'refs/heads/main' && github.sha" in group
+    assert workflow["concurrency"]["cancel-in-progress"] == "${{ github.ref != 'refs/heads/main' }}"
+
 def test_render_deploys_each_merge_and_the_canary_can_see_it():
     """r1-deps-supplychain-4: a Dependabot merge deployed before CI had finished.
     Branch protection on main now takes only pull requests whose CI checks
