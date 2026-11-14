@@ -5,13 +5,16 @@
 - **Branch**: `feat/report-certificate`
 - **Current**: Barenyam
 - **Last worked on**: Barenyam, 2026-11-14
-- **Status**: server built and tested; the form next
+- **Status**: built and tested end to end; in review
 
 ## Done
 
 - `certificates.draft_report()`: checks the given file as `/verify` does (`signing.verify_report`, `pdf_verify.verify_pdf`), requires "genuine" or "genuine_earlier_key" and this case's id, and drafts the same Schedule certificate with the SHA-256 of those bytes. `draft()` and `draft_report()` now share `_assemble()`.
 - `POST /trace/{case_id}/report-certificate` in `routes/certificates.py`: the file as base64 in JSON (no new dependency), `current_user`, the write limit, read access to the case (`routes/evidence._case_or_404`).
 - 12 tests in `backend/tests/test_report_certificate.py`, with real signed reports: genuine text and PDF, a changed character, a line added after signing, not a report, too large, another case's report, the route and its audit row.
+
+- The form: `CertificateForm.jsx` asks what the certificate covers (forensic files from the register, or Exchequer's report of this case). For the report the officer picks the file; it shows even when the case has no exhibits. 2 new tests; the old "shows nothing with no exhibits" test now checks the report option instead.
+- Checked in Chromium against a real server, both themes: a downloaded PDF report certified with its exact `sha256sum`; a copy with one word changed and another case's report refused with the reason; axe clean; no browser errors.
 
 ## Decisions
 
@@ -22,8 +25,7 @@
 
 ## Next
 
-1. `frontend/src/components/case/CertificateForm.jsx`: choose what the certificate covers (forensic files from the register, or Exchequer's report of this case); for the report, pick the file; `draftReportCertificate()` in `frontend/src/api/evidence.js`.
-2. Browser check end to end with a real downloaded report.
+1. Sidhyarth reviews the PR; after the merge, confirm on the live site with a report downloaded there (its ISSUED BY line then names exchequer.co.in).
 
 ## Open questions
 
