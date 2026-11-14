@@ -239,7 +239,7 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
     graph = result.get("graph", {})
     direction = result.get("direction", "outgoing")
 
-    return {
+    report = {
         "report_version": REPORT_VERSION,
         "generated_by": TOOL_NAME,
         # The code that rendered this report, and the code that ran the trace
@@ -375,6 +375,60 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
         "evidence": result.get("evidence"),
         "live_tags": result.get("live_tags"),
     }
+    # Only with the flag on and a match: otherwise the report, and the signed
+    # text drawn from it, is byte for byte what it was before (#189).
+    privacy = privacy_protocols(result)
+    if privacy:
+        report["privacy_protocols"] = privacy
+    return report
+
+
+# The privacy protocols on the path (#189): the screen's wording, a note.
+PRIVACY_TITLE = "PRIVACY PROTOCOLS ON THE PATH (A NOTE, NOT AN ACCUSATION)"
+PRIVACY_LEDE = (
+    "Funds passing through a privacy protocol lose their visible link, so what leaves it is not "
+    "shown on chain to be the same money. The trace did not stop there. No sanctions list or "
+    "enforcement action names these protocols. This is not an accusation: using one is not a "
+    "finding against anyone, and none of these is counted in the screening above or in the "
+    "confidence score."
+)
+
+
+def _hop_words(depth: Any) -> str:
+    if depth == 0:
+        return "the reported address itself"
+    return f"hop {depth}" if isinstance(depth, int) else "hop unknown"
+
+
+def _privacy_entries(trace: dict[str, Any]) -> list[dict[str, Any]]:
+    matches = trace.get("privacy_matches") or []
+    notes = trace.get("privacy_notes") or []
+    return [
+        {"address": m.get("address"), "entity": m.get("entity"), "depth": m.get("depth"),
+         "value_received_native": m.get("value_received_native"), "source": m.get("source"),
+         # The trace's own sentence, as the screen shows it; one from the match
+         # itself if the case holds fewer sentences than matches.
+         "note": notes[i] if i < len(notes) and notes[i] else
+         (f"Privacy protocol: {m.get('address')} is {m.get('entity')}, {_hop_words(m.get('depth'))}, "
+          f"per {m.get('source')}. The trace did not stop here. This is not an accusation.")}
+        for i, m in enumerate(matches) if isinstance(m, dict)
+    ]
+
+
+def privacy_protocols(result: dict[str, Any]) -> dict[str, Any] | None:
+    """The privacy protocols the funds passed through, on the trace and on each
+    follow-on; None with the flag EXCHEQUER_PRIVACY_CATEGORY off or none found."""
+    if not config.PRIVACY_CATEGORY:
+        return None
+    entries = _privacy_entries(result)
+    follow_ons = []
+    for f in result.get("follow_ons") or []:
+        found = _privacy_entries(f.get("result") or {})
+        if found:
+            follow_ons.append({"asset": f.get("asset"), "address": f.get("address"), "matches": found})
+    if not entries and not follow_ons:
+        return None
+    return {"matches": entries, "follow_ons": follow_ons}
 
 
 def _payment_intake(result: dict[str, Any]) -> dict[str, Any] | None:
@@ -1010,6 +1064,21 @@ def render_text_report(report: dict[str, Any]) -> str:
         add("section; an address absent from them is not thereby established")
         add("as legitimate.")
         add("")
+
+    # -- privacy protocols (flag on and found only, #189) -------------------------
+    privacy = report.get("privacy_protocols")
+    if privacy:
+        section(PRIVACY_TITLE)
+        para(PRIVACY_LEDE)
+        add("")
+        for entry in privacy.get("matches") or []:
+            para(entry["note"], bullet="* ")
+            add("")
+        for f in privacy.get("follow_ons") or []:
+            for entry in f.get("matches") or []:
+                para(f"In the follow-on trace of {f.get('asset')} from {f.get('address')}: {entry['note']}",
+                     bullet="* ")
+                add("")
 
     # -- lists -----------------------------------------------------------------
     section("LISTS SCREENED AGAINST")

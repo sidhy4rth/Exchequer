@@ -5,7 +5,7 @@ and what came of it, with every change kept in the row's history. A new table,
 nothing else touched.
 
 Revision ID: g7_tasks_1
-Revises: g7_domain_lookups_1
+Revises: g7_signoff_binding_1
 Create Date: 2026-11-14
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "g7_tasks_1"
-down_revision: Union[str, Sequence[str], None] = "g7_domain_lookups_1"
+down_revision: Union[str, Sequence[str], None] = "g7_signoff_binding_1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

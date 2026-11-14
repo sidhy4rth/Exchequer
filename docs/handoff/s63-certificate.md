@@ -26,13 +26,14 @@
 1. Done: `backend/scripts/fetch_bsa_schedule.py` wrote `backend/data/bsa_schedule_certificate.txt` (62 lines, text as on 6th October, 2025).
 2. Done: `backend/app/certificates.py` fills Part A and the hash report, leaves Part B as printed, renders the PDF (22 tests in `backend/tests/test_certificates.py`).
 3. Done: `POST /trace/{case_id}/certificate` (`routes/certificates.py`) and `CertificateForm.jsx` under the exhibits on the Evidence tab (5 tests).
-4. After review and merge: confirm on the live site; update `docs/suite-features.md` row 6 once #109 has merged (it edits the same row).
-5. Later: a certificate for Exchequer's own signed trace report (its SHA-256 and signature as the record).
+4. After review and merge: confirm on the live site (still to do); update `docs/suite-features.md` row 6 once #109 has merged (it edits the same row). Row 6 done in #117 (14 Nov).
+5. Later: a certificate for Exchequer's own signed trace report (its SHA-256 and signature as the record). Done: #119 (issue #118), merged 14 Nov; see `report-certificate.md`.
 
 ## Open questions
 
-- Does India Code's network access stay allowed for this environment? The script needs it, the tests do not.
+- Does India Code's network access stay allowed for this environment? The script needs it, the tests do not. On 15 Nov India Code answered a plain download of the PDF with an error page (an Akamai "error occurred while processing your request"), so the script could not run from Sidhyarth's machine that day; the Wayback Machine's copy below was used for the check instead.
 - Nobody has yet compared `backend/data/bsa_schedule_certificate.txt` with the official PDF's pages 52-53 by eye (Sidhyarth's review of #113 could not open India Code). Barenyam made a side-by-side page for it; whoever checks says so in #113. (Barenyam or Sidhyarth)
+  - Checked 15 Nov (Sidhyarth's session, #201): the Wayback Machine's capture of the same URL (9 Aug 2026, `web.archive.org/web/20260809044521id_/` + the URL) has SHA-256 `993882ad0ae7ded6ae8087351edd61caeb6faa1a2d6c8fff8c269a9cf149b9ac`, the hash recorded in the data file, so it is the same PDF byte for byte. Pages 52 and 53 were rendered as images and read line by line against lines 6-67 of the data file: every line matches in wording, order, tick boxes and punctuation (the long blanks were not counted underscore by underscore). With spaces removed, pypdf's text of the two pages equals the data file apart from the page number "53", which the script drops. A human look at the side-by-side page is still welcome but no longer blocking.
 
 ## Files mid-change (do not touch)
 

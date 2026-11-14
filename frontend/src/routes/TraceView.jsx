@@ -12,6 +12,7 @@ import EvidenceTab from '../components/case/EvidenceTab'
 import TimelineTab from '../components/case/TimelineTab'
 import LettersTab from '../components/case/LettersTab'
 import VictimFlow from '../components/case/VictimFlow'
+import PrivacyNotes from '../components/case/PrivacyNotes'
 import CaseRefField, { refOk, tidyRef, useSignedIn } from '../components/CaseRefField'
 import { useCaseTab } from './caseTab'
 import './TraceView.css'
@@ -553,6 +554,7 @@ export default function TraceView() {
           </div>
         )}
 
+        <PrivacyNotes result={result} unit={unit} />
         {result && (
           <section className="card finding-bar">
             {/* The answer */}

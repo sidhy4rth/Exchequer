@@ -38,7 +38,8 @@ from xml.sax.saxutils import escape
 
 from .display_text import one_line, short
 from .evidence import CONTENT_HASH_MARK, read_issuer
-from .report import (EXCHANGE_WALLET, EXPLORER_TAG, KIND_LINE, KIND_WORDING, _shown_label, signed_finding)
+from .report import (EXCHANGE_WALLET, EXPLORER_TAG, KIND_LINE, KIND_WORDING, PRIVACY_TITLE, _shown_label,
+                     signed_finding)
 from .scoring import CAP_WORDING
 from .signing import SIGNATURE_MARK
 
@@ -298,6 +299,9 @@ def _summary_facts(sealed_text: str) -> dict[str, Any] | None:
 
     screening = _section(sections, "SANCTIONS, MIXER, FREEZE AND STOLEN-FUNDS SCREENING")
     facts["matches"] = _items(screening, "* ")
+    # Absent unless the flag EXCHEQUER_PRIVACY_CATEGORY put it in the signed text (#189).
+    privacy = _section(sections, PRIVACY_TITLE)
+    facts["privacy"] = _items(privacy, "* ")
 
     listed = _section(sections, "LISTS SCREENED AGAINST")
     entries: list[dict[str, str]] = []
@@ -456,6 +460,23 @@ def _part_one(facts: dict[str, Any], st: dict[str, ParagraphStyle], digest: str,
             story.append(Paragraph(line, st["cell"]))
         if len(matches) > 8:
             story.append(_p(f"…and {len(matches) - 8} more, listed in Part 2.", st["small"]))
+
+    # -- privacy protocols: grey, a note, never with the screening's colours (#189) --
+    privacy = facts.get("privacy") or []
+    if privacy:
+        story.append(_p("PRIVACY PROTOCOLS ON THE PATH · A NOTE, NOT AN ACCUSATION", st["micro"]))
+        story.append(_p("Funds passing through lose their visible link. The trace did not stop there; "
+                        "this is not an accusation and counts toward nothing above.", st["small"]))
+        for note in privacy[:4]:
+            match = _MATCH.fullmatch(note)
+            if match is None:
+                story.append(_p(short(note, CELL_LABEL_MAX), st["small"]))
+                continue
+            story.append(Paragraph(
+                f"{escape(match.group('category'))} · <font name='PlexMono'>{escape(match.group('address'))}</font>"
+                f" · {escape(short(match.group('rest'), CELL_LABEL_MAX))}", st["small"]))
+        if len(privacy) > 4:
+            story.append(_p(f"…and {len(privacy) - 4} more, listed in Part 2.", st["small"]))
 
     # -- the lists and their dates ----------------------------------------------
     if facts["lists"]:
