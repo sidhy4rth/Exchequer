@@ -87,9 +87,14 @@ export function parseDate(text) {
   return { date: `${y}-${pad(mo)}-${pad(d)}`, time: hh != null ? `${pad(+hh)}:${mm}` : '' }
 }
 
+const AMOUNT_CHARS_MAX = 64
+
 /** An amount as printed: {value (signed, Dr negative), places, text (unsigned)} or null for a blank or bad cell. */
 export function parseAmount(text) {
-  let s = String(text ?? '').trim().replace(/^(₹|rs\.?|inr)\s*/i, '').replace(/\s*(inr)$/i, '')
+  let s = String(text ?? '').trim()
+  // No printed amount is this long; checked first, as the suffix checks below backtrack over a long run of spaces.
+  if (s.length > AMOUNT_CHARS_MAX) return null
+  s = s.replace(/^(₹|rs\.?|inr)\s*/i, '').replace(/\s*(inr)$/i, '')
   let sign = 1
   const side = /\s*\b(dr|cr)\.?$/i.exec(s)
   if (side) { sign = side[1].toLowerCase() === 'dr' ? -1 : 1; s = s.slice(0, side.index).trim() }
