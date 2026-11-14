@@ -22,7 +22,7 @@ const HASH = {
 const FIRST_ROWS = 50
 
 const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-IN')} ${n === 1 ? one : many}`
-const where = (f) => `${f.count > 1 ? 'lines' : 'line'} ${f.lines.join(', ')}${f.count > f.lines.length ? ` (${plural(f.count, 'time')} in all)` : ''}`
+const where = (f) => `${f.lines.length > 1 ? 'lines' : 'line'} ${f.lines.join(', ')}${f.count > f.lines.length ? ` (${plural(f.count, 'time')} in all)` : ''}`
 
 /** What a seed-phrase run is shown as: its size and place, never its words. */
 export function seedLine(s) {
