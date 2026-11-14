@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { draftLetterOfRequest, logRequest } from '../../api'
 import { plain } from '../../text'
 import { STATUS } from '../RequestsPanel'
@@ -51,12 +51,17 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
   const [busy, setBusy] = useState(false)
   const [logged, setLogged] = useState('')
   const [already, setAlready] = useState(null) // the open row the server already had for this country, if any
+  const drafted = useRef(null)
+  const told = useRef(null)
+  // A new draft takes the keyboard's place, as the letter to the exchange does.
+  useEffect(() => { if (text) drafted.current?.focus() }, [text])
 
   if (!caseId || !exchange || !offered) return null
 
   const set = (name) => (e) => { setValues((v) => ({ ...v, [name]: e.target.value })); setText(null) }
   async function draft(e) {
     e.preventDefault()
+    if (busy) return
     setError(null)
     setBusy(true)
     try { setText(await draftLetterOfRequest(caseId, values)) } catch (err) { setError(err.message) } finally { setBusy(false) }
@@ -68,6 +73,7 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
       const row = await logRequest({ case_id: caseId, recipient: country, kind: REQUEST_KIND, asset: result.asset ?? '' })
       setAlready(row?.already_logged ? row : null)
       setLogged(country)
+      told.current?.focus() // the button pressed is now disabled: keep the keyboard's place
       onLogged?.()
     } catch (err) { setError(err.message) }
   }
@@ -111,7 +117,8 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
           </div>
           <p className="note">What you type goes into the draft only. Nothing is saved.</p>
           <div className="request-add">
-            <button type="submit" className="lor-draft" disabled={busy}>{busy ? 'Drafting…' : 'Draft the letter of request'}</button>
+            {/* Marked, not disabled, while it drafts: it stays focusable, so the keyboard keeps its place. */}
+            <button type="submit" className="lor-draft" aria-disabled={busy || undefined}>{busy ? 'Drafting…' : 'Draft the letter of request'}</button>
           </div>
         </form>
         {error && <p className="error-line" role="alert">{error}</p>}
@@ -122,14 +129,14 @@ export default function LetterOfRequestPanel({ result, offered, onLogged }) {
               <button type="button" className="quiet" onClick={() => navigator.clipboard?.writeText(text)}>Copy</button>
               <button type="button" onClick={logIt} disabled={!country || logged === country}>Log it in the requests log</button>
             </div>
-            <p className="note" role="status">
+            <p className="note" role="status" ref={told} tabIndex={-1}>
               {logged && logged === country && already
                 ? `Already in the requests log, to ${plain(already.recipient ?? logged)}, as ${STATUS[already.status]?.label ?? already.status}: it was not logged twice. Move it on there.`
                 : logged && logged === country
                 ? `Logged as drafted, to ${plain(logged)}, in the requests log above: move it on there as it goes to the MHA, the Court and abroad.`
                 : country ? `Logs it as a letter of request to ${plain(country)}, drafted.` : 'Name the requested country to log it.'}
             </p>
-            <pre className="lor-text" aria-label="The draft letter of request">{text}</pre>
+            <pre className="lor-text" role="region" aria-label="The draft letter of request" ref={drafted} tabIndex={0}>{text}</pre>
           </div>
         )}
       </div>
