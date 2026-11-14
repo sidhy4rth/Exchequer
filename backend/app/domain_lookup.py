@@ -31,10 +31,11 @@ import uuid
 from typing import Any
 from urllib.parse import quote, urlsplit
 
+import httpcore
 import httpx
 from sqlalchemy import func, select
 
-from . import identifiers, models
+from . import http_deadline, identifiers, models
 from .display_text import one_line
 from .evidence import sha256_hex
 
@@ -49,6 +50,7 @@ RDAP_TRIES = 4  # pay.shop.co.in -> shop.co.in -> co.in: the registry knows the 
 LOOKUPS_PER_IDENTIFIER = 50
 USER_AGENT = "Exchequer case tool (RDAP and DNS lookups for an investigation)"
 _transport: httpx.BaseTransport | None = None  # tests set an httpx.MockTransport
+_network: httpcore.NetworkBackend | None = None  # or a fake network whose slow reads move _clock
 _deadline = threading.local()  # .at: _clock() by which this thread's lookup must end
 _clock = time.monotonic  # tests set a clock that a slow server moves on
 
@@ -74,17 +76,23 @@ def _left() -> float:
 
 def _get(url: str, params: dict[str, str] | None = None, accept: str = "application/json") -> tuple[int, bytes]:
     """GET `url` and give back (status, body). Never follows a redirect, and stops at the
-    lookup's deadline even while a slow server is still sending. Replaced in tests."""
-    with httpx.Client(timeout=_left(), follow_redirects=False, headers={"User-Agent": USER_AGENT},
-                      transport=_transport) as client:
-        with client.stream("GET", url, params=params, headers={"Accept": accept}) as response:
-            body = b""
-            for chunk in response.iter_bytes():
-                _left()
-                body += chunk
-                if len(body) > BODY_MAX:
-                    raise LookupError_(f"{urlsplit(url).hostname} sent more than {BODY_MAX // 1024} kB.")
-            return response.status_code, body
+    lookup's deadline even while a slow server is still sending: within a lookup, the connect
+    and every read wait at most the time left (http_deadline), not TIMEOUT_S each. Replaced in tests."""
+    at = getattr(_deadline, "at", None)
+    transport = _transport if _transport is not None or at is None else http_deadline.transport(at, _clock, _network)
+    try:
+        with httpx.Client(timeout=_left(), follow_redirects=False, headers={"User-Agent": USER_AGENT},
+                          transport=transport) as client:
+            with client.stream("GET", url, params=params, headers={"Accept": accept}) as response:
+                body = b""
+                for chunk in response.iter_bytes():
+                    _left()
+                    body += chunk
+                    if len(body) > BODY_MAX:
+                        raise LookupError_(f"{urlsplit(url).hostname} sent more than {BODY_MAX // 1024} kB.")
+                return response.status_code, body
+    except http_deadline.DeadlinePassed as exc:
+        raise TooSlow(f"The lookup took longer than {DEADLINE_S:.0f} seconds, so it stopped.") from exc
 
 
 def _now() -> str:
