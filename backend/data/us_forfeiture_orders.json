@@ -2,11 +2,11 @@
   "_meta": {
     "description": "Wallets a U.S. district court ordered forfeited to the United States, read from the Department of Justice official forfeiture notifications. Read by backend/scripts/import_intl_sanctions.py, which files each one under its chain in intl_sanctions*.json as seized.",
     "provenance": "Found by the 11 Nov 2026 sanctions hunt in the USAO official notifications on forfeiture.gov (the current file and Internet Archive copies of earlier ones). Each entry was re-read in that notice on 14 Nov 2026: the address appears inside a notice that the court \"entered an Order condemning and forfeiting\" the property; court, case, caption and order date are copied from that notice.",
-    "rule": "Only a notice of an entered order of forfeiture counts; a complaint or an administrative seizure notice has no outcome yet. Chain is the one the notice names (ETH, AAVE (Ethereum), TRX/USDT on Tron); a 0x wallet the notice puts on another chain is left out. Each 0x address was checked to hold no contract code (keyless RPC, 14 Nov 2026).",
+    "rule": "Only a notice of an entered order of forfeiture counts; a complaint or an administrative seizure notice has no outcome yet. Chain is the one the notice names (ETH, AAVE (Ethereum), TRX/USDT on Tron, Polygon (POL)); a 0x wallet the notice puts on another chain is left out. Each 0x address was checked to hold no contract code on its chain (keyless RPC, 14 Nov 2026).",
     "verification_note": "A forfeiture order is a court measure against the property, not a sanctions designation and not a finding that anyone who later transacted with the address took part in anything. A holder is named only as the notice names it; an exchange account or bank custody address is the exchange or bank holding the property for that account.",
     "schema": "orders: [{address, chain, holder, court, case, caption, order_entered, notice_url, notice, checked}]",
     "counts": {
-      "orders": 20
+      "orders": 21
     }
   },
   "orders": [
@@ -188,6 +188,18 @@
       "order_entered": "December 12, 2022",
       "notice_url": "https://web.archive.org/web/20240523012212/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
       "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20240523",
+      "checked": "2026-11-14"
+    },
+    {
+      "address": "0x06884e8fb446352afba58bce270c9365d5511d51",
+      "chain": "polygon",
+      "holder": "Aaron Thomas",
+      "court": "U.S. District Court for the Northern District of Oklahoma",
+      "case": "23-CR-333-SEH",
+      "caption": "U.S. v. Aaron Michael Thomas",
+      "order_entered": "April 24, 2025",
+      "notice_url": "https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "notice": "USAO official notification on forfeiture.gov, Internet Archive copy of 20260328",
       "checked": "2026-11-14"
     },
     {

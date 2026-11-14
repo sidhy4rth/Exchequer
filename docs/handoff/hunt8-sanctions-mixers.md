@@ -16,6 +16,9 @@
 - PR 2 (mixers): 32 mixer pools and entry points into the threat files; Polygon and Arbitrum get a threat file.
 - Follow-up PR (`feat/us-forfeiture-more`, on #149): 14 of the 16 U.S. forfeiture wallets that waited for the
   Internet Archive were re-read in their snapshot on 14 Nov and added (Ethereum 11, Tron 3); 20 orders in all.
+- Follow-up PR (`feat/polygon-gov-listings`, on `feat/us-forfeiture-more`): Polygon and Arbitrum get an
+  `intl_sanctions_<chain>.json` of their own (`config.py`); the importer starts a configured file that is missing.
+  The Polygon wallet of N.D. Okla. 23-CR-333-SEH added from the 20260328 snapshot; 21 orders in all.
 
 ## Decisions
 
@@ -28,8 +31,7 @@
 
 1. 2 U.S. forfeiture wallets from hunt 8 stay out because their notice names no chain for them (S.D. Ohio
    2:21-CR-089: `0x3f2cf991…cc1e`, a Celsius account address with no coin; `0x3f60c4cb…85dc`, named only with LINK
-   and CRO). The Polygon wallet in N.D. Okla. 23-CR-333-SEH waits for a Polygon file for government listings.
-   To add one later: re-read its notice, add an entry to `backend/data/us_forfeiture_orders.json`, run
+   and CRO). To add one later: re-read its notice, add an entry to `backend/data/us_forfeiture_orders.json`, run
    `cd backend && .venv/bin/python -m scripts.import_intl_sanctions --forfeiture`.
 2. Carry the 3 new Ethereum OFAC addresses to Polygon/Arbitrum: `scripts.port_evm_labels --sanctions-only` (needs
    the Etherscan key; not run here).

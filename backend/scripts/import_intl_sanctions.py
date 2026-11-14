@@ -426,9 +426,17 @@ def add_listings(rows: list[tuple[str, str | None, dict]], tag: str, today: date
             held["sources"].append(record["source"])
         held["ends"].append(record.get("valid_until"))
 
-    documents = {key: (chain.intl_sanctions_path, json.loads(chain.intl_sanctions_path.read_text(encoding="utf-8")))
-                 for key, chain in config.CHAINS.items()
-                 if chain.intl_sanctions_path is not None and chain.intl_sanctions_path.exists()}
+    documents: dict[str, tuple[Path, dict]] = {}
+    started: set[str] = set()  # chains given a file in config.py that has not been written yet
+    for key, chain in config.CHAINS.items():
+        path = chain.intl_sanctions_path
+        if path is None:
+            continue
+        if path.exists():
+            documents[key] = (path, json.loads(path.read_text(encoding="utf-8")))
+        else:
+            documents[key] = (path, _started_document(key, today))
+            started.add(key)
     placed = held_placements()
     added: dict[str, list[str]] = defaultdict(list)
     updated: dict[str, list[str]] = defaultdict(list)
@@ -467,7 +475,7 @@ def add_listings(rows: list[tuple[str, str | None, dict]], tag: str, today: date
             updated[chain_key].append(address)
 
     for chain_key, (path, document) in documents.items():
-        if not (added[chain_key] or updated[chain_key]):
+        if not (added[chain_key] or updated[chain_key] or chain_key in started):
             continue
         meta = document.setdefault("_meta", {})
         # A later run from the same source adds to the record, never replaces it.
@@ -477,7 +485,8 @@ def add_listings(rows: list[tuple[str, str | None, dict]], tag: str, today: date
             "date": today.isoformat(), **({"version": version} if version else {}),
             "added": len(new_addresses), "added_addresses": new_addresses,
             "listing_added_to": sorted({*before.get("listing_added_to", []), *updated[chain_key]}),
-            "note": ("Added offline from this source without re-reading the other lists, so "
+            "note": ("Added offline from this source when this file was started." if chain_key in started else
+                     "Added offline from this source without re-reading the other lists, so "
                      "last_reviewed is unchanged."),
         }
         meta["counts"] = _counts(document["labels"])
@@ -493,6 +502,24 @@ def add_listings(rows: list[tuple[str, str | None, dict]], tag: str, today: date
     return {key: addresses for key, addresses in added.items() if addresses}
 
 
+def _started_document(chain_key: str, today: date) -> dict:
+    """The first file for a chain config.py has just given one (Polygon, Arbitrum: #148).
+
+    Only a listing that names its chain is filed on these chains: UK, EU and OpenSanctions
+    entries are filed on Ethereum, BSC or Tron, and port_evm_labels carries Ethereum's to
+    risk_labels_<chain>.json. So the offline add that starts the file has read every source
+    that can file an address on it, and last_reviewed is that day."""
+    return {"_meta": {
+        "description": DESCRIPTION, "provenance": PROVENANCE, "verification_note": VERIFICATION_NOTE,
+        "chain": chain_key, "last_reviewed": today.isoformat(),
+        "started": {"date": today.isoformat(), "note": (
+            "Started by an offline add. Only listings that name this chain are filed here; Ethereum's "
+            "government listings are carried to this chain in risk_labels_" + chain_key + ".json.")},
+        "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
+        "schema": SCHEMA,
+    }, "labels": {}}
+
+
 DESCRIPTION = ("Crypto addresses on sanctions and seizure lists published by governments other than "
                "the U.S., and wallets U.S. courts have ordered forfeited. A match means the funds "
                "touched a wallet a government has frozen, seized or forfeited.")
@@ -501,6 +528,15 @@ PROVENANCE = (f"UK: {UK_URL}. EU: {EU_URL}. Israel (NBCTF), Japan (MOF) and Fran
               "data is licensed CC BY-NC 4.0. U.S. forfeiture orders: DOJ official notifications "
               f"(forfeiture.gov), as held in data/{FORFEITURE_FILE}. "
               "Built by backend/scripts/import_intl_sanctions.py.")
+VERIFICATION_NOTE = (
+    "Each entry is copied from a government publication and names "
+    "every authority that lists it. It establishes that the "
+    "government froze or seized the address as of the review date; "
+    "it does NOT establish that a counterparty who received funds "
+    "from it is culpable, nor that the measure has force in Indian "
+    "law. Only measures still in force are included, and a dated one "
+    "stops matching after its valid_until."
+)
 SCHEMA = ("labels maps an address to {category, entity, label, source, authorities}, plus valid_until "
           "(the last day it is in force) when every listing behind it has an end date; category is "
           "seized when only seizure orders name it, sanctioned otherwise")
@@ -646,15 +682,7 @@ def main() -> int:
                 "description": DESCRIPTION,
                 "provenance": PROVENANCE,
                 "opensanctions_versions": versions,
-                "verification_note": (
-                    "Each entry is copied from a government publication and names "
-                    "every authority that lists it. It establishes that the "
-                    "government froze or seized the address as of the review date; "
-                    "it does NOT establish that a counterparty who received funds "
-                    "from it is culpable, nor that the measure has force in Indian "
-                    "law. Only measures still in force are included, and a dated one "
-                    "stops matching after its valid_until."
-                ),
+                "verification_note": VERIFICATION_NOTE,
                 "chain": chain_key,
                 "last_reviewed": today.isoformat(),
                 "counts": _counts(labels),
