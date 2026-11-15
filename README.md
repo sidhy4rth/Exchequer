@@ -981,6 +981,9 @@ decimals. For a guided walk through the code, open the repository in VS Code wit
 [CodeTour](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour) extension and start
 *How a trace works, end to end* (`.tours/`): fifteen stops from the Trace button to the request letter.
 
+For investigating officers rather than developers, [`docs/officer-guide.md`](docs/officer-guide.md) walks through
+the suite by task, with what each feature records and its limits.
+
 ---
 
 ## Roadmap
