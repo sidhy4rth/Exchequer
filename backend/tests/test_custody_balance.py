@@ -305,13 +305,17 @@ def test_an_officer_runs_a_check_the_demo_caller_cannot_and_the_audit_holds_coun
     assert client.post("/trace/case-1/assets", json={
         "holder": "custody", "asset": "USDT", "amount": "635", "chain": "tron", "held_at": CUSTODY,
         "tx_hash": TX, "seized_on": "2026-11-01"}, headers=H).status_code == 201
-    refused = TestClient(app).post("/trace/case-1/custody-balance", headers=H)
+    demo = TestClient(app)
+    refused = demo.post("/trace/case-1/custody-balance", headers=H)
     assert refused.status_code == 403 and "Sign in as an officer" in refused.json()["detail"]
+    offered = demo.get("/trace/case-1/custody-balance", headers=H).json()  # so the panel offers no button
+    assert offered["can_check"] is False and offered["check_note"].startswith("Sign in as an officer")
     ran = client.post("/trace/case-1/custody-balance", headers=H)
     assert ran.status_code == 201 and ran.json()["results"][0]["status"] == "mismatch"
     assert client.post("/trace/no-such-case/custody-balance", headers=H).status_code == 404
     shown = client.get("/trace/case-1/custody-balance", headers=H).json()
     assert shown["enabled"] is True and shown["check"]["check_id"] == ran.json()["check_id"]
+    assert shown["can_check"] is True and shown["check_note"] == ""
     with models.session() as s:
         rows = s.scalars(select(models.AuditEvent).where(models.AuditEvent.action == "custody.balance.check")).all()
     assert [json.loads(r.detail) for r in rows] == [
