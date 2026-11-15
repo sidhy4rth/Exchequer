@@ -539,7 +539,7 @@ def test_the_pinned_list_holds_only_pools_and_every_file_mixer():
 
     from app import label_store as ls
 
-    for chain in ("ethereum", "bsc"):
+    for chain in ("ethereum", "bsc", "polygon", "arbitrum"):
         path = config.get_chain(chain).threat_labels_path
         filed = {encode_address(a) for a, v in json.loads(path.read_text())["labels"].items()
                  if not a.startswith("_") and v.get("category") == "mixer"}
@@ -553,7 +553,8 @@ def test_the_pinned_list_holds_only_pools_and_every_file_mixer():
         for address, name in pools.items():
             assert label_rules.mixer_service(name), name  # a pool or entry point, never governance
             assert never_flag.kind(chain, address) is None, address
-    assert ls.pinned_mixers("polygon") == frozenset()
+    # A chain with no curated mixer file pins nothing (Polygon and Arbitrum have one since #148).
+    assert ls.pinned_mixers("tron") == frozenset()
 
 
 def test_a_build_counts_the_mixer_tags_it_could_not_pin(tmp_path):

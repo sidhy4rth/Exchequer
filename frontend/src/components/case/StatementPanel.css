@@ -1,0 +1,23 @@
+/* A bank or exchange statement read against the case (StatementPanel.jsx). */
+.statement-panel .body { display: flex; flex-direction: column; gap: 10px; }
+.statement-panel label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); min-width: 0; }
+.statement-panel select, .statement-panel input:not([type="checkbox"]) { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 5px 7px; border: 1px solid var(--rule-strong); border-radius: var(--r); background: var(--panel); color: var(--ink); min-width: 0; }
+.statement-panel .mono { font-family: var(--mono); overflow-wrap: anywhere; }
+.statement-panel .st-pick, .statement-panel .st-entry, .statement-panel .st-save { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; align-items: end; }
+.statement-panel .st-pick .wide { grid-column: 1 / -1; }
+.statement-panel .st-entry { grid-template-columns: 1fr 1fr auto; }
+.statement-panel .st-save { grid-template-columns: 1fr auto; }
+.statement-panel .st-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 10px; margin: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); }
+.statement-panel .st-reported ul, .statement-panel .st-saved ul { margin: 4px 0; padding-left: 18px; font-size: 12px; color: var(--text-2); }
+.statement-panel .st-saved summary { cursor: pointer; font-size: 13px; }
+.statement-panel .st-saved li { overflow-wrap: anywhere; }
+.statement-panel .st-matches { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.statement-panel .st-matches li { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--r); font-size: 13px; overflow-wrap: anywhere; }
+.statement-panel .st-matches label { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
+.statement-panel .st-why { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.statement-panel .st-timeline { margin: 0; padding-left: 18px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+.statement-panel .st-timeline .chain { color: var(--text-2); }
+.statement-panel .st-error { color: var(--risk-soft); }
+@media (max-width: 560px) {
+  .statement-panel .st-pick, .statement-panel .st-entry, .statement-panel .st-save, .statement-panel .st-columns { grid-template-columns: 1fr; }
+}

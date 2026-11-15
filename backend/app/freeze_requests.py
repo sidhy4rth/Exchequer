@@ -13,11 +13,17 @@ Statuses, in the order they usually happen:
   drafted       the letter is written, not yet sent
   awaiting_signoff  an urgent freeze letter waits for a second officer
   ready         a second officer of the drafter's unit approved it
-  sent          sent; waiting for a reply (flagged after FOLLOW_UP_DAYS)
+  sent          sent; waiting for a reply (flagged after follow_up_days(kind))
   acknowledged  the recipient replied and is looking at it
   frozen        funds frozen (amount_frozen says how much)
   declined      the recipient will not act
   closed        nothing more to do
+
+A letter of request abroad (kind "letter-rogatory", letters_of_request.py)
+takes only drafted, sent, acknowledged, declined and closed: it asks the
+requested country for help and freezes nothing itself, and it needs no urgent
+sign-off. It is logged once per case and country while it is open: logging it
+again (after a reload, say) returns the open row instead of a second one.
 
 An urgent freeze letter (any "-freeze" kind) asks for money to be held now,
 before a formal request, so a forged one is the cheapest fake police request
@@ -25,6 +31,15 @@ there is. It goes drafted -> awaiting_signoff -> ready, and only a second
 signed-in officer or supervisor of the unit that drafted it makes it ready
 (sign_off): never the drafter, an admin or a demo caller. Until then it
 cannot be logged as sent.
+
+A bank hold's letter is built from details the officer types (the account,
+IFSC, amount, Magistrate's order), not from the case alone. So it is put up
+for sign-off with those details, kept only as their fingerprint
+(notice_letters.fingerprint); the second officer signs off by sending the
+details on their screen, which must give the same fingerprint; and a letter
+counts as approved only when its own details do (approval). Any other
+detail needs a fresh sign-off. It is logged as sent the same way: with the
+details on the drafter's screen, which must be the ones signed off.
 """
 from __future__ import annotations
 
@@ -36,7 +51,7 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm.exc import StaleDataError
 
-from . import models
+from . import models, notice_letters
 
 STATUSES = ("drafted", "awaiting_signoff", "ready", "sent", "acknowledged", "frozen", "declined", "closed")
 OPEN_STATUSES = ("drafted", "awaiting_signoff", "ready", "sent", "acknowledged")
@@ -48,11 +63,32 @@ NO_UNIT = ("This letter was drafted without signing in, so no unit's officer can
            "Sign in and draft it again.")
 SIGN_IN_TO_ASK = ("An urgent freeze letter needs a signed-in drafter and a second officer of the same unit: "
                   "sign in to ask for a sign-off.")
+NEEDS_DETAILS = ("A bank hold is signed off for its exact details: draft the letter with them, "
+                 "then ask for the sign-off.")
+SIGN_WITH_DETAILS = "Type the hold's details beside the letter: the sign-off approves exactly those."
+NOT_THESE = ("These details are not the ones put up for sign-off: check the account, IFSC, amount, order, bank "
+             "and source against the drafter's letter.")
+ASK_AGAIN = "This hold was put up for sign-off without its details: the drafter must ask again."
+SEND_WITH_DETAILS = ("A bank hold is logged as sent with the details it was signed off for: "
+                     "mark it sent on the Letters tab, beside its letter.")
+NOT_SIGNED = ("These details are not the ones signed off: the letter with them needs a fresh sign-off "
+              "before it is sent.")
+# Each says the letter went out: a signed-off bank hold reaches one only with its own details.
+SENT_STATUSES = ("sent", "acknowledged", "frozen", "declined")
 # The first two are the urgent freeze letters (request_letters.LETTERS): each
 # letter the tool drafts can be logged as sent under its own name.
 KINDS = ("exchange", "tether", "other", "exchange-freeze", "tether-freeze", "instant", "instant-freeze",
-         "bank-info", "bank-freeze", "telecom")  # the last three: notice_letters.NOTICES
+         "bank-info", "bank-freeze", "telecom",  # these three: notice_letters.NOTICES
+         "letter-rogatory")  # letters_of_request.py: a letter of request abroad, to the requested country
+# A kind whose letter moves through fewer statuses than STATUSES (statuses_for).
+KIND_STATUSES = {"letter-rogatory": ("drafted", "sent", "acknowledged", "declined", "closed")}
+# Kinds logged once per case and recipient while a row of them is open (create returns that row).
+ONE_OPEN_PER_RECIPIENT = ("letter-rogatory",)
 FOLLOW_UP_DAYS = 7
+# A letter of request goes through the MHA and the requested country's Central
+# Authority and takes months, so a week's silence is normal for it. 30 days is
+# an internal reminder interval the team chose, not a legal or MHA deadline.
+FOLLOW_UP_DAYS_BY_KIND = {"letter-rogatory": 30}
 # Bounds on what anyone can store here. Owner keys are free, so the per-owner
 # cap alone would not bound the table: MAX_TOTAL does. A real request moves
 # through six statuses at most; HISTORY_MAX keeps a toggled one from growing.
@@ -84,8 +120,35 @@ def needs_signoff(kind: str) -> bool:
     return kind.endswith("-freeze")
 
 
+def statuses_for(kind: str) -> tuple[str, ...]:
+    """The statuses a request of `kind` may take (before the sign-off rules of _check_status)."""
+    return KIND_STATUSES.get(kind, STATUSES)
+
+
+def _same_recipient(a: str) -> str:
+    return " ".join(a.split()).casefold()
+
+
+def bound(kind: str) -> bool:
+    """Whether a sign-off on `kind` covers typed details (a bank hold's), not just the case."""
+    return kind == notice_letters.BANK_FREEZE
+
+
+def _fingerprint(case_id: str, kind: str, details: dict[str, Any] | None) -> str:
+    """The fingerprint a `kind` request is put up for sign-off with; RequestError says what is wrong."""
+    if not details:
+        raise RequestError(NEEDS_DETAILS)
+    try:
+        return notice_letters.fingerprint(case_id, kind, details)
+    except notice_letters.NoticeError as exc:
+        raise RequestError(str(exc)) from exc
+
+
 def _check_status(kind: str, status: str, signed: bool) -> None:
     """Whether a request of `kind` may move to `status` (STATUSES checked first)."""
+    if status not in statuses_for(kind):
+        raise RequestError(f"A letter of request abroad is {', '.join(statuses_for(kind))}: it asks the requested "
+                           "country for help and freezes nothing itself.")
     if not needs_signoff(kind):
         if status in SIGNOFF_STATES:
             raise RequestError(NOT_URGENT)
@@ -121,6 +184,11 @@ def ask_reason(viewer: Any) -> str | None:
     return SIGN_IN_TO_ASK if getattr(viewer, "unit_id", None) is None else None
 
 
+def follow_up_days(kind: str) -> int:
+    """Days a sent request of `kind` waits for a reply before it is flagged for follow-up."""
+    return FOLLOW_UP_DAYS_BY_KIND.get(kind, FOLLOW_UP_DAYS)
+
+
 def _now() -> str:
     return models.utc_now_iso()
 
@@ -138,10 +206,13 @@ def summary(r: models.FreezeRequest, viewer: Any = None) -> dict[str, Any]:
         "amount_frozen": r.amount_frozen, "asset": r.asset, "notes": r.notes,
         "created_at": r.created_at, "updated_at": r.updated_at,
         "days_waiting": waiting,
-        "follow_up": waiting is not None and waiting >= FOLLOW_UP_DAYS,
+        "follow_up": waiting is not None and waiting >= follow_up_days(r.kind),
         "history": json.loads(r.history_json or "[]"),
         "needs_signoff": needs_signoff(r.kind),
+        "statuses": list(statuses_for(r.kind)),
         "signoff": {"by": r.signed_off_name, "at": r.signed_off_at} if r.signed_off_at else None,
+        # The start of what a bank hold was put up with: the letter prints it too.
+        "fingerprint": r.details_fingerprint[:16] if r.details_fingerprint else None,
         **_viewed(r, viewer),
     }
 
@@ -157,7 +228,8 @@ def _viewed(r: models.FreezeRequest, viewer: Any) -> dict[str, Any]:
 
 
 def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "",
-           asset: str = "", status: str = "drafted", viewer: Any = None) -> dict[str, Any]:
+           asset: str = "", status: str = "drafted", viewer: Any = None,
+           details: dict[str, Any] | None = None) -> dict[str, Any]:
     # The cheap checks first, and the case looked up by id alone: its stored
     # result can be megabytes, read from a metered database, and a rejected
     # request must not cost that.
@@ -171,9 +243,18 @@ def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "
     _check_status(kind, status, signed=False)
     if status == "awaiting_signoff" and (no := ask_reason(viewer)):
         raise RequestError(no)
+    fingerprint = _fingerprint(case_id, kind, details) if status == "awaiting_signoff" and bound(kind) else None
     with models.session() as s:
         if s.scalar(select(models.Case.id).where(models.Case.id == case_id)) is None:
             raise RequestError("No case with that id.")
+        if kind in ONE_OPEN_PER_RECIPIENT:
+            open_rows = s.scalars(select(models.FreezeRequest).where(
+                models.FreezeRequest.owner_hash == owner, models.FreezeRequest.case_id == case_id,
+                models.FreezeRequest.kind == kind, models.FreezeRequest.status.in_(OPEN_STATUSES))
+                .order_by(models.FreezeRequest.created_at)).all()
+            for r in open_rows:
+                if _same_recipient(r.recipient) == _same_recipient(recipient):
+                    return {**summary(r, viewer), "already_logged": True}
     now = _now()
     r = models.FreezeRequest(
         id=str(uuid.uuid4()), owner_hash=owner, case_id=case_id, recipient=recipient, kind=kind,
@@ -181,6 +262,7 @@ def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "
         sent_at=now if status == "sent" else None, created_at=now, updated_at=now,
         history_json=json.dumps([{"at": now, "status": status}]),
         officer_id=getattr(viewer, "officer_id", None), unit_id=getattr(viewer, "unit_id", None),
+        details_fingerprint=fingerprint,
     )
     with models.session() as s:
         count = select(func.count()).select_from(models.FreezeRequest)
@@ -191,7 +273,7 @@ def create(owner: str, case_id: str, recipient: str, kind: str, address: str = "
         s.add(r)
         s.commit()
         s.refresh(r)
-        return summary(r, viewer)
+        return {**summary(r, viewer), "already_logged": False}
 
 
 def update(owner: str, request_id: str, changes: dict[str, Any], viewer: Any = None) -> dict[str, Any] | None:
@@ -212,7 +294,7 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
             return None
         history = json.loads(r.history_json or "[]")
         now = _now()
-        moved = False
+        moved = asked = False
         status = changes.get("status")
         if status is not None:
             if status not in STATUSES:
@@ -221,6 +303,8 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
                 _check_status(r.kind, status, signed=r.signed_off_at is not None)
                 if status == "awaiting_signoff" and r.unit_id is None:
                     raise RequestError(NO_UNIT)  # no unit's officer could ever sign it
+                if bound(r.kind) and r.status == "ready" and status in SENT_STATUSES:
+                    _check_sending(r, changes.get("details"))
                 moved = True
                 entry: dict[str, Any] = {"at": now, "status": status}
                 if changes.get("note"):
@@ -229,6 +313,13 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
                 r.status = status
                 if status == "sent" and not r.sent_at:
                     r.sent_at = now
+            if bound(r.kind) and status == "awaiting_signoff" and r.signed_off_at is None:
+                # Asked again while waiting, with other details: those are what is put up now.
+                r.details_fingerprint = _fingerprint(r.case_id, r.kind, changes.get("details"))
+                asked = True
+            elif status == "drafted":
+                r.details_fingerprint = None
+            asked = asked or (moved and status == "awaiting_signoff")
         if "reference" in changes and changes["reference"] is not None:
             r.reference = str(changes["reference"])[:120]
         if "notes" in changes and changes["notes"] is not None:
@@ -256,12 +347,14 @@ def _update_once(owner: str, request_id: str, changes: dict[str, Any], viewer: A
         r.updated_at = now
         s.commit()
         s.refresh(r)
-        return {**summary(r, viewer), "moved": moved}
+        return {**summary(r, viewer), "asked": asked}
 
 
-def sign_off(request_id: str, user: Any) -> dict[str, Any] | None:
+def sign_off(request_id: str, user: Any, details: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """A second officer approves an urgent freeze letter: awaiting_signoff ->
-    ready. None if there is no such request; SignoffRefused says why not."""
+    ready. For a bank hold, `details` are the ones on their screen, and must be
+    the ones it was put up with. None if there is no such request;
+    SignoffRefused says why not."""
     for _ in range(WRITE_TRIES):
         try:
             with models.session() as s:
@@ -270,6 +363,8 @@ def sign_off(request_id: str, user: Any) -> dict[str, Any] | None:
                     return None
                 if (no := refusal(r, user)) is not None:
                     raise SignoffRefused(*no)
+                if bound(r.kind):
+                    _check_details(r, details)
                 now = _now()
                 r.status, r.updated_at, r.signed_off_at = "ready", now, now
                 r.signed_off_by, r.signed_off_name = user.officer_id, s.get(models.Officer, user.officer_id).name
@@ -282,13 +377,41 @@ def sign_off(request_id: str, user: Any) -> dict[str, Any] | None:
     raise RequestConflict(request_id)
 
 
-def approval(case_id: str, kind: str, user: Any) -> dict[str, Any] | None:
-    """The sign-off on the caller's (or their unit's) open `kind` request for the case, if any."""
+def _check_sending(r: models.FreezeRequest, details: dict[str, Any] | None) -> None:
+    """Whether the details a signed-off bank hold is logged as sent with are the ones signed off."""
+    if not details:
+        raise RequestError(SEND_WITH_DETAILS)
+    if r.details_fingerprint is None or _fingerprint(r.case_id, r.kind, details) != r.details_fingerprint:
+        raise RequestError(NOT_SIGNED)
+
+
+def _check_details(r: models.FreezeRequest, details: dict[str, Any] | None) -> None:
+    """Whether the details a second officer approves are the ones `r` was put up with."""
+    if not details:
+        raise SignoffRefused(400, SIGN_WITH_DETAILS)
+    try:
+        theirs = notice_letters.fingerprint(r.case_id, r.kind, details)
+    except notice_letters.NoticeError as exc:
+        raise SignoffRefused(400, str(exc)) from exc
+    if r.details_fingerprint is None:
+        raise SignoffRefused(409, ASK_AGAIN)
+    if theirs != r.details_fingerprint:
+        raise SignoffRefused(409, NOT_THESE)
+
+
+def approval(case_id: str, kind: str, user: Any, fingerprint: str | None = None) -> dict[str, Any] | None:
+    """The sign-off on the caller's (or their unit's) open `kind` request for
+    the case, if any. A bank hold's counts only for the details it was given
+    (`fingerprint`, notice_letters.fingerprint of the letter's details)."""
+    if bound(kind) and not fingerprint:
+        return None
     with models.session() as s:
         stmt = select(models.FreezeRequest).where(
             models.FreezeRequest.case_id == case_id, models.FreezeRequest.kind == kind,
             models.FreezeRequest.signed_off_at.is_not(None), models.FreezeRequest.status != "closed",
             _readable(user)).order_by(models.FreezeRequest.signed_off_at.desc())
+        if bound(kind):
+            stmt = stmt.where(models.FreezeRequest.details_fingerprint == fingerprint)
         r = s.scalars(stmt).first()
         return {"by": r.signed_off_name, "at": r.signed_off_at} if r else None
 

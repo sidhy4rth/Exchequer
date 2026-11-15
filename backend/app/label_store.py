@@ -47,6 +47,13 @@ TIERS = {
     5: "unvetted list (community reports or a machine-learning dataset), not checked",
 }
 
+# An address an exchange itself publishes as its own (ADR-0011). Kept in its own
+# optional table, never in `labels`: a reader older than that table would read a
+# `labels` row of this category as a risk flag on the exchange's wallet.
+EXCHANGE = "exchange"
+EXCHANGE_TABLE = "exchange_rows"
+POR_BASIS = "exchange's own published list (PoR)"
+
 # The mixer pools and routers a store row may end a trace at (see pinned_mixers).
 MIXER_POOLS_FILE = "mixer_pools.json"
 
@@ -171,6 +178,9 @@ class LabelStore:
         self._counts: dict[str, dict[str, int]] = {}
         for chain, category, n in self._db.execute("SELECT chain, category, n FROM counts"):
             self._counts.setdefault(chain, {})[category] = n
+        # Optional (ADR-0011): a store built without it has no exchange rows.
+        self.has_exchange_rows = self._db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (EXCHANGE_TABLE,)).fetchone() is not None
 
     def lookup(self, chain: str, address: str) -> dict[str, str] | None:
         chain_id = CHAIN_IDS.get(chain)
@@ -184,8 +194,8 @@ class LabelStore:
         if row is None:
             return None
         category, entity_id, label, peer, tx, date, source_id, tier = row
-        if category == label_rules.INSTANT_EXCHANGER:
-            return None  # a cash-out point, not a risk row: instant_exchanger() reads it
+        if category in (label_rules.INSTANT_EXCHANGER, EXCHANGE):
+            return None  # a cash-out point, not a risk row: instant_exchanger() or exchange_row() reads it
         if category == "mixer" and (chain not in label_rules.STORE_MIXER_CHAINS
                                     or not label_rules.mixer_service(self._texts.get(entity_id, ""))):
             # Only a mixer's own pool ends a trace, and only on the chain its
@@ -247,6 +257,36 @@ class LabelStore:
         return {"exchange": name, "label": label_rules.clean_text(label) or name, "type": "unknown",
                 "category": label_rules.INSTANT_EXCHANGER,
                 "source": f"{source}; evidence: {TIERS[tier]}" if tier in TIERS else source}
+
+    def exchange_row(self, chain: str, address: str) -> dict | None:
+        """The store's exchange row for `address` (ADR-0011), as an exchange label
+        reads ({exchange, label, type, basis}); None without one. `basis` says
+        what it stands on: the exchange's own published list, and which.
+
+        Never for a burn or system address, a token contract, a DEX router or a
+        casino wallet in a gambling file (app/never_flag.py): a list that names
+        one is wrong there, whoever published it. Not through never_flag.kind,
+        which asks the exchange matcher, which asks this."""
+        chain_id, raw = CHAIN_IDS.get(chain), encode_address(address)
+        if not self.has_exchange_rows or chain_id is None or raw is None:
+            return None
+        with self._lock:
+            row = self._db.execute(f"SELECT exchange, label, type, basis, source FROM {EXCHANGE_TABLE} "
+                                   "WHERE address=? AND chain=?", (raw, chain_id)).fetchone()
+        if row is None:
+            return None
+        from .never_flag import gambling, is_system, routers, tokens  # never_flag imports this module
+
+        if is_system(raw) or raw in tokens(chain) or raw in routers(chain) or raw in gambling(chain):
+            return None
+        exchange_id, label_id, type_id, basis_id, source_id = row  # each an id in texts
+        name = label_rules.clean_text(self._texts.get(exchange_id, ""))
+        if not name:
+            return None
+        return {"exchange": name, "label": label_rules.clean_text(self._texts.get(label_id, "")) or name,
+                "type": label_rules.clean_text(self._texts.get(type_id, "")) or "exchange_wallet",
+                "basis": {"kind": label_rules.clean_text(self._texts.get(basis_id, "")) or POR_BASIS,
+                          "source": label_rules.clean_text(self._texts.get(source_id, ""))}}
 
     def _tier(self, source_id: int, category: str, stored: int) -> int:
         key = (source_id, category, stored)

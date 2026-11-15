@@ -66,6 +66,27 @@ def test_a_request_with_no_reply_for_a_week_is_flagged(client):
     assert later["days_waiting"] >= 7 and later["follow_up"] is True
 
 
+def _sent_days_ago(kind: str, days: int) -> dict:
+    from datetime import datetime, timedelta, timezone
+    r = fr.create(ownership.owner_hash(ALICE), "case-1", "Someone", kind, status="sent")
+    when = (datetime.now(tz=timezone.utc) - timedelta(days=days, hours=1)).isoformat()
+    return fr.update(ownership.owner_hash(ALICE), r["request_id"], {"sent_at": when})
+
+
+def test_a_letter_of_request_waits_longer_before_it_is_flagged(client):
+    # It goes through the MHA and a foreign Central Authority: ten days of
+    # silence is normal for it, a month is worth a reminder.
+    early = _sent_days_ago("letter-rogatory", 10)
+    assert early["days_waiting"] == 10 and early["follow_up"] is False
+    late = _sent_days_ago("letter-rogatory", 31)
+    assert late["days_waiting"] == 31 and late["follow_up"] is True
+
+
+def test_other_requests_are_still_flagged_after_a_week(client):
+    r = _sent_days_ago("exchange", 8)
+    assert r["days_waiting"] == 8 and r["follow_up"] is True
+
+
 def test_two_status_changes_at_once_both_reach_the_history(client, monkeypatch):
     # Two tabs PATCH at the same moment: both read the row before either
     # writes. The later write used to replace the history the earlier added to.

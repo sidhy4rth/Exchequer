@@ -1,0 +1,39 @@
+# The MHA's prescribed wording for a Letter Rogatory (letter of request), used by app/letters_of_request.py.
+# Source: Ministry of Home Affairs, IS-II Division/Legal Cell-I, F. No. 25016/52/2019-LC, dated 04/12/2019,
+#   "Comprehensive Guidelines for investigation abroad and issue of Letters Rogatory (LRs)/Mutual Legal
+#   Assistance (MLA) Request and Service of Summons/Notices/Judicial documents in respect of Criminal Matters",
+#   Figure 3.5 "Format and contents of Letters Rogatory and Mutual Legal Assistance Request", pages [20] to [24].
+# Copy read: https://jkhighcourt.nic.in/upload/notices/guidelines.pdf (as circulated by the High Court of J&K;
+#   PDF SHA-256 a318fde9e80479b005cb3ee000feadfd7428fb07e2f6232600b8dab5d03ffbe2). MHA's own copy,
+#   https://www.mha.gov.in/sites/default/files/ISII_ComprehensiveGuidelines_17122019.pdf, refuses automated fetches.
+# The copy is a scan: these passages were read by OCR and corrected by hand against the page images, keeping the
+#   MHA's words, spelling and punctuation as printed. A second person checks them by eye before relying on them.
+# In braces: what the draft fills in. Lines starting "#" are not wording.
+
+## opening
+To: The Competent Authority of the {country} (Requested Country)
+{court} (Court of Jurisdiction)
+I, {presiding}, has been authorized to make this request for mutual legal assistance in criminal matters, respectfully request the assistance of the Government {country} in the criminal matter.
+
+## basis_treaty
+This request is made by the Government of the Republic of India for assistance in accordance with the provisions {treaty}.
+
+## basis_reciprocity
+This request is made by the Government of the Republic of India for assistance in accordance with the Assurance of Reciprocity in similar matters. Original Assurance of Reciprocity issued by Ministry of Home Affairs, Govt. of the Republic of India, who is Central Authority of India, is attached herewith.
+
+## assurances
+It is confirmed that this request:
+(a) Neither relates to the investigation, prosecution or punishment of a person for a criminal offence that is, or is by reason of the circumstances in which it is alleged to have been committed or was committed, an offence of a political character nor it is made for the purposes of investigating, prosecuting, punishing or otherwise causing prejudice to a person on account of that person's race, religion, sex, ethnic origin, nationality or political opinions;
+(b) Does not relate to the investigation, prosecution or punishment of a person for an offence in a case where the person has been convicted, acquitted or pardoned by a Competent Court or other Authority of the Republic of India or has undergone the punishment provided by the laws of the Republic of India, in respect of that offence or of another offence constituted by the same act or omission as that offence.
+(c) As per Indian Law, it is not necessary to give any notice to the accused either before issuing the LR or before examining him as a witness/ accused.
+(d) Cost: Generally, the cost of execution of letter of Request shall be borne by requesting State as per the provisions of the Mutual Legal Assistance Treaty. However, if there are significant costs involved like travel of witnesses/Cost of obtaining Expert Opinion etc., mention the readiness to meet the expenditure to be incurred.
+(e) Should the Judicial Authority of the Requested Country require the return of any information / evidence / thing obtained in pursuant to this request at the conclusion of the criminal proceeding, the same shall be returned to the Judicial Authority of the Requested Country.
+
+## limitation_of_use
+Unless otherwise agreed, the Investigation agency of India, who is conducting investigation in the present case, shall not, without the consent of the Requested Country, use or transfer information or evidence provided by the Requested Country for investigations or proceedings other than those stated in the request. However, in cases where the charge is altered, the material provided may be used in so far as the offence, as charged, is an offence in respect of which mutual assistance could be provided under the present Treaty.
+
+## confidentiality
+The details of this investigation are considered sensitive. Therefore, please treat this request, its contents, the fact that this request has been made and the results of its execution as confidential and do not disclose it and share it with any subjects, except all those who are dealing with this request for the purpose of its execution, without the consent of the Requesting Authority.
+
+## closing
+Please accept the assurance of our highest consideration.

@@ -5,8 +5,13 @@ import { useCaseFiles } from '../ExportButton'
 import CaseRefField, { refOk, tidyRef, useSignedIn } from '../CaseRefField'
 import { plain } from '../../text'
 import { ist, middle, mmss, num, txUrl } from './format'
+import CaseBundleButton from './CaseBundleButton'
 import ExhibitsPanel from './ExhibitsPanel'
 import IdentifiersPanel from './IdentifiersPanel'
+import TasksPanel from './TasksPanel'
+import StatementPanel from './StatementPanel'
+import CdrPanel from './CdrPanel'
+import ExportScanPanel from './ExportScanPanel'
 
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
@@ -295,6 +300,7 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
             </button>
             <button type="button" className="ev-file" onClick={() => files.report('text')} disabled={files.busy !== null}>Text<span className="visually-hidden"> of the signed report</span></button>
             <button type="button" className="ev-file" onClick={() => files.graph('graphml')} disabled={files.busy !== null}>Graph file<span className="visually-hidden"> (GraphML)</span></button>
+            <CaseBundleButton caseId={result.case_id} redacted={result.redacted} />
           </div>
         ) : (
           <p className="note">{recorded
@@ -343,8 +349,12 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
         {result.warnings?.length > 0 && result.warnings.map((w) => <p className="note" key={w}>! {w}</p>)}
       </div>
     </details>
+    <TasksPanel result={result} />
     <ExhibitsPanel result={result} />
     <IdentifiersPanel result={result} />
+    <StatementPanel result={result} />
+    <CdrPanel result={result} />
+    <ExportScanPanel result={result} />
   </>
 }
 

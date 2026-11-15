@@ -295,3 +295,157 @@ def test_an_unchecked_new_address_stops_the_intl_import(placement, tmp_path):
     code, files = placement(eth_down, lambda *_: True)
     assert code == 1
     assert files["intl_sanctions.json"]["labels"] == {}  # nothing written
+
+
+# -- adding listings offline: new Israeli orders, U.S. forfeiture orders (hunt 8) ---
+FORFEITED_TRON = "TQMwh1NFfb8XXtP52fDiGsiVsc77iFMyRv"
+FORFEITED_ETH = "0x" + "a" * 40
+
+
+@pytest.fixture
+def scratch(tmp_path, monkeypatch):
+    """Empty held files for Ethereum, BSC and Tron in a scratch data directory; no network."""
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    for name in ("intl_sanctions.json", "intl_sanctions_bsc.json", "intl_sanctions_tron.json"):
+        (tmp_path / name).write_text(json.dumps({"_meta": {"last_reviewed": "2026-09-22"}, "labels": {}}))
+
+    def no_network(url):
+        raise AssertionError(f"an offline add must not fetch {url}")
+    monkeypatch.setattr(intl, "fetch", no_network)
+
+    def read(name):
+        return json.loads((tmp_path / name).read_text())
+    return tmp_path, read
+
+
+def _forfeiture_file(path, *orders):
+    (path / intl.FORFEITURE_FILE).write_text(json.dumps({"_meta": {}, "orders": [
+        {"address": address, "chain": chain, "holder": holder, "court": "District Of Utah",
+         "case": "2:19-CR-00260", "caption": "U.S. v. Someone", "order_entered": "May 14, 2026",
+         "notice": "USAO official notification on forfeiture.gov, posted 14 Nov 2026",
+         "notice_url": "https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf"}
+        for address, chain, holder in orders]}))
+
+
+def test_a_us_forfeiture_order_is_filed_as_seized_under_the_chain_it_names(scratch):
+    path, read = scratch
+    _forfeiture_file(path, (FORFEITED_TRON, "tron", "Khlari Sirotkin"), (FORFEITED_ETH, "ethereum", "Someone"))
+    added = intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+
+    assert added == {"tron": [FORFEITED_TRON], "ethereum": [FORFEITED_ETH]}
+    entry = read("intl_sanctions_tron.json")["labels"][FORFEITED_TRON]
+    assert entry["category"] == SEIZED and entry["authorities"] == ["United States"]
+    assert entry["entity"] == "Khlari Sirotkin"
+    assert entry["source"].startswith("U.S. court order of forfeiture, District Of Utah, case 2:19-CR-00260")
+    assert "valid_until" not in entry  # a forfeiture order has no end date
+    assert read("intl_sanctions_bsc.json")["labels"] == {}  # never copied to a chain the notice does not name
+    meta = read("intl_sanctions_tron.json")["_meta"]
+    assert meta["added"]["us_forfeiture"]["added_addresses"] == [FORFEITED_TRON]
+    assert meta["last_reviewed"] == "2026-09-22"  # the other lists were not re-read
+
+
+def test_a_forfeiture_order_on_polygon_starts_the_polygon_file_and_goes_nowhere_else(scratch):
+    path, read = scratch
+    _forfeiture_file(path, (FORFEITED_ETH, "polygon", "Someone"))
+    assert not (path / "intl_sanctions_polygon.json").exists()
+    added = intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+
+    assert added == {"polygon": [FORFEITED_ETH]}
+    polygon = read("intl_sanctions_polygon.json")
+    assert polygon["labels"][FORFEITED_ETH]["category"] == SEIZED
+    assert polygon["_meta"]["chain"] == "polygon" and polygon["_meta"]["last_reviewed"] == TODAY.isoformat()
+    assert polygon["_meta"]["counts"]["addresses"] == 1
+    assert read("intl_sanctions_arbitrum.json")["labels"] == {}  # started, empty: no order names Arbitrum
+    assert all(read(n)["labels"] == {} for n in ("intl_sanctions.json", "intl_sanctions_bsc.json"))
+    # Adding it again changes nothing, and a held file's last_reviewed is never moved by an add.
+    before = read("intl_sanctions_polygon.json")
+    assert intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", date(2026, 12, 1)) == {}
+    assert read("intl_sanctions_polygon.json") == before
+
+
+def test_no_forfeiture_file_adds_nothing(scratch):
+    assert intl.read_us_forfeiture() == []
+
+
+def test_a_forfeiture_order_on_a_uk_listed_address_keeps_it_sanctioned_and_names_both(scratch):
+    path, read = scratch
+    uk = {"category": SANCTIONED, "entity": "X", "label": "X", "source": "UK Sanctions List, entry 1",
+          "authorities": ["United Kingdom"]}
+    (path / "intl_sanctions.json").write_text(json.dumps({"_meta": {}, "labels": {FORFEITED_ETH: uk}}))
+    _forfeiture_file(path, (FORFEITED_ETH, "ethereum", "Someone"))
+    intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+
+    entry = read("intl_sanctions.json")["labels"][FORFEITED_ETH]
+    assert entry["category"] == SANCTIONED
+    assert entry["authorities"] == ["United Kingdom", "United States"]
+    assert entry["source"].startswith("UK Sanctions List, entry 1; U.S. court order of forfeiture")
+    # Adding the same listing again changes nothing.
+    intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+    assert read("intl_sanctions.json")["labels"][FORFEITED_ETH] == entry
+
+
+def test_a_0x_listing_that_names_no_chain_and_is_held_nowhere_is_left_for_a_full_run(scratch, capsys):
+    _, read = scratch
+    record = {"entity": "X", "authority": "Israel", "source": "Israel order", "valid_until": "2027-01-01"}
+    assert intl.add_listings([(FORFEITED_ETH, None, record)], "il_mod_crypto", TODAY) == {}
+    assert all(read(n)["labels"] == {} for n in ("intl_sanctions.json", "intl_sanctions_bsc.json"))
+    assert "1 0x addresses name no chain" in capsys.readouterr().out
+
+
+def test_recheck_with_add_files_a_new_order_in_force_and_skips_a_lifted_one(scratch):
+    path, read = scratch
+    new_tron, lifted_tron = TRON_ADDR, LAPSED_TRON
+    entities = [
+        {"id": "w1", "schema": "CryptoWallet", "properties": {"publicKey": [new_tron]}},
+        {"id": "w2", "schema": "CryptoWallet", "properties": {"publicKey": [lifted_tron]}},
+        {"id": "s1", "schema": "Sanction", "properties": {"entity": ["w1"], "authorityId": ["FO 19/25"],
+                                                          "endDate": ["2028-04-29"]}},
+        {"id": "s2", "schema": "Sanction", "properties": {"entity": ["w2"], "authorityId": ["FO 06/24"],
+                                                          "endDate": ["2026-07-31"]}},
+    ]
+    copy = path / "copy.ftm.json"
+    copy.write_text("\n".join(json.dumps(e) for e in entities))
+
+    assert intl.recheck("il_mod_crypto", copy, "artifact-v3", TODAY, add=True) == 0
+    labels = read("intl_sanctions_tron.json")["labels"]
+    assert list(labels) == [new_tron]
+    assert labels[new_tron]["category"] == SEIZED and labels[new_tron]["valid_until"] == "2028-04-29"
+    assert read("intl_sanctions_tron.json")["_meta"]["added"]["il_mod_crypto"]["version"] == "artifact-v3"
+
+
+def test_recheck_without_add_never_adds(scratch):
+    path, read = scratch
+    entities = [
+        {"id": "w1", "schema": "CryptoWallet", "properties": {"publicKey": [TRON_ADDR]}},
+        {"id": "s1", "schema": "Sanction", "properties": {"entity": ["w1"], "authorityId": ["FO 19/25"]}},
+    ]
+    copy = path / "copy.ftm.json"
+    copy.write_text("\n".join(json.dumps(e) for e in entities))
+    assert intl.recheck("il_mod_crypto", copy, "artifact-v3", TODAY) == 0
+    assert read("intl_sanctions_tron.json")["labels"] == {}
+
+
+def test_every_shipped_forfeiture_order_is_held_as_seized_and_cites_its_notice():
+    """data/us_forfeiture_orders.json and the intl files agree; no 0x entry is checksummed or on a stray chain."""
+    from app.etherscan_client import is_tron_address
+    orders = json.loads((config.DATA_DIR / intl.FORFEITURE_FILE).read_text())["orders"]
+    assert orders
+    for order in orders:
+        address, chain = order["address"], order["chain"]
+        # A 0x order is filed on the chain its notice names: Ethereum, or Polygon (N.D. Okla. "Polygon (POL)").
+        assert chain == "tron" if is_tron_address(address) else chain in ("ethereum", "polygon")
+        assert chain == "tron" or address == address.lower()
+        assert order["notice_url"].endswith("forfeiture.gov/pdf/USAO/OfficialNotification.pdf")
+        entry = json.loads(config.get_chain(chain).intl_sanctions_path.read_text())["labels"][address]
+        assert "United States" in entry["authorities"] and order["notice_url"] in entry["source"]
+        assert entry["category"] == (SEIZED if set(entry["authorities"]) <= intl.SEIZURE_AUTHORITIES else SANCTIONED)
+
+
+def test_a_second_offline_add_from_a_source_extends_its_record(scratch):
+    path, read = scratch
+    _forfeiture_file(path, (FORFEITED_TRON, "tron", "Khlari Sirotkin"))
+    intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+    _forfeiture_file(path, (FORFEITED_TRON, "tron", "Khlari Sirotkin"), (TRON_ADDR, "tron", "Someone"))
+    intl.add_listings(intl.read_us_forfeiture(), "us_forfeiture", TODAY)
+    record = read("intl_sanctions_tron.json")["_meta"]["added"]["us_forfeiture"]
+    assert record["added_addresses"] == sorted([FORFEITED_TRON, TRON_ADDR]) and record["added"] == 2

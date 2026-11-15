@@ -1,8 +1,8 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import IdentifiersPanel, { Lookup, TelegramPage, daysBetween, historyText, shown } from './IdentifiersPanel'
+import IdentifiersPanel, { Lookup, TelegramPage, daysBetween, historyText, identifiersChanged, shown } from './IdentifiersPanel'
 
 // What the victim reported besides the wallet (backend identifiers.py): each
 // identifier as kept, where it was seen, withdrawn with a reason, never deleted.
@@ -53,6 +53,27 @@ describe('the reported identifiers panel', () => {
     expect(screen.getByText('https://www.scam-shop.in/pay')).toBeInTheDocument()
     expect(screen.getByText('link sent on WhatsApp')).toBeInTheDocument()
     expect(screen.getByText(/Reported identifiers · 1/)).toBeInTheDocument()
+  })
+
+  it("loads its list again when another panel adds to this case, and only this case", async () => {
+    const calls = api({ 'GET /trace/c1/identifiers': { body: { identifiers: [ROW] } } })
+    open()
+    expect(await screen.findByText('scam-shop.in')).toBeInTheDocument()
+    const loads = () => calls.filter((c) => c.method === 'GET' && c.path === '/trace/c1/identifiers').length
+    expect(loads()).toBe(1)
+    act(() => { identifiersChanged('c2') })
+    await act(() => new Promise((r) => { setTimeout(r, 0) }))
+    expect(loads()).toBe(1) // another case's add leaves this list alone
+    act(() => { identifiersChanged('c1') })
+    await waitFor(() => expect(loads()).toBe(2))
+  })
+
+  it('names a wallet address from the export scan by its kind', async () => {
+    const wallet = { ...ROW, kind: 'wallet', value: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', entered: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', context: 'Found by the export scan' }
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [wallet] } } })
+    open()
+    expect(await screen.findByText('· Wallet address')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Look up/ })).toBeNull()
   })
 
   it('does not repeat the value as typed when it was typed as kept', async () => {

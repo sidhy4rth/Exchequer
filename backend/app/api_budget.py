@@ -1098,9 +1098,10 @@ class TraceBudget:
         self.walk_deadline = self.started + self.walk_seconds
         self.hard_deadline = self.walk_deadline + self.grace_seconds
         self.stopped = False
-        # "time", "budget" or "cancel": what stopped the case first.
+        # "time", "budget", "cancel" or "client_disconnected": what stopped the case first.
         self.stopped_by: str | None = None
         self._cancel = threading.Event()
+        self._cancel_reason = "cancel"
         # Units (requests; compute units on NodeReal) per provider: the case's
         # ceilings, what it has spent and in how many network requests. One
         # case's fetch threads share it, so it is locked.
@@ -1112,8 +1113,12 @@ class TraceBudget:
         self._refused: set[tuple[str, bool]] = set()
         self._units_lock = threading.Lock()
 
-    def cancel(self) -> None:
-        """Stop the trace at its next provider request or backoff (DELETE /trace/jobs/{id})."""
+    def cancel(self, reason: str = "cancel") -> None:
+        """Stop the trace at its next provider request or backoff: "cancel" for
+        DELETE /trace/jobs/{id}, "client_disconnected" when POST /trace's client
+        hung up (EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT). `reason` is what
+        stopped_by records once the stop is seen."""
+        self._cancel_reason = reason  # before the event, so a check that sees it reads this
         self._cancel.set()
 
     @property
@@ -1194,7 +1199,7 @@ class TraceBudget:
     def check(self) -> None:
         """Raise Cancelled once a stop was asked for, DeadlineReached once the hard deadline has passed."""
         if self._cancel.is_set():
-            self._stop("cancel")
+            self._stop(self._cancel_reason)
             raise Cancelled()
         if self.remaining() <= 0:
             self._stop("time")
@@ -1210,7 +1215,7 @@ class TraceBudget:
             self._stop("time")
             raise DeadlineReached()
         if self._cancel.wait(seconds):  # a stop ends the wait at once
-            self._stop("cancel")
+            self._stop(self._cancel_reason)
             raise Cancelled()
 
 
