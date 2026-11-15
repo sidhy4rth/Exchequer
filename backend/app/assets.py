@@ -39,7 +39,7 @@ from typing import Any
 
 from sqlalchemy import func, or_, select
 
-from . import config, models
+from . import config, models, sop_reminders
 from .display_text import one_line
 
 IST = timezone(timedelta(hours=5, minutes=30), "IST")
@@ -176,7 +176,7 @@ def _who(user: Any) -> str:
 def summary(r: models.SeizedAsset) -> dict[str, Any]:
     deadline = date.fromisoformat(r.seized_on) + timedelta(days=DEADLINE_DAYS)
     due = r.status == "held" and not r.order_ref
-    return {
+    out = {
         "asset_id": r.id, "case_id": r.case_id, "holder": r.holder, "holder_label": HOLDERS.get(r.holder, r.holder),
         "asset": r.asset, "amount": r.amount, "chain": r.chain, "held_at": r.held_at, "tx_hash": r.tx_hash,
         "key_holders": r.key_holders, "request_id": r.request_id, "seized_on": r.seized_on,
@@ -185,6 +185,9 @@ def summary(r: models.SeizedAsset) -> dict[str, Any]:
         "deadline": deadline.isoformat(), "days_left": (deadline - _today()).days, "due": due,
         "history": json.loads(r.history_json or "[]"),
     }
+    if config.SOP_DEADLINES:  # reminders only: the 45-day deadline above is unchanged
+        out["sop_reminders"] = sop_reminders.for_asset(r.holder, r.status, r.seized_on)
+    return out
 
 
 def create(owner: str, case_id: str, fields: dict[str, Any], viewer: Any = None) -> dict[str, Any]:

@@ -910,3 +910,5 @@ PRIVACY_CATEGORY: bool = flag("EXCHEQUER_PRIVACY_CATEGORY",
                               "#189: privacy protocols shown as a note, never a stop or a risk hit; awaits the owner")
 CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
                          "Feature 6: one zip of a case's report, registers and audit trail, with a manifest")
+SOP_DEADLINES: bool = flag("EXCHEQUER_SOP_DEADLINES",
+                           "Feature 8: MHA CFCFRMS SOP time limits, quoted, as reminders on bank holds in the asset register")
