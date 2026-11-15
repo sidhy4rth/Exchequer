@@ -136,9 +136,10 @@ services:
         value: "1"
       # Stop a synchronous POST /trace whose client hung up, at its next
       # provider request, and store nothing (routes/cases.py, #227). Background
-      # jobs and batches are not touched. Likely helps browsers (HTTP/2) only;
-      # an HTTP/1.1 script's hang-up may not reach the server (docs/
-      # flag-rollout.md). "0" lets every trace run to the end
+      # jobs (POST /trace/jobs, which the web app uses for every trace) and
+      # batches are not touched, so it reaches only direct API callers, and
+      # only over HTTP/2 (HTTP/3 untested): an HTTP/1.1 client's hang-up does
+      # not reach the server (docs/flag-rollout.md). "0" lets every trace run to the end
       # (config.TRACE_CANCEL_ON_DISCONNECT).
       - key: EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT
         value: "1"
