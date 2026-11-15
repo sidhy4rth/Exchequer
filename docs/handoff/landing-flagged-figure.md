@@ -5,13 +5,13 @@
 - **Branch**: `fix/landing-flagged-figure`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR ready; frontend only
+- **Status**: PR ready; frontend and README
 
 ## Done
 
 - `frontend/src/components/ExchangeGlobe.jsx`: the hero reads "Flagged addresses screened, live, counted once per chain" and shows its figure to two decimals (69,452,797 -> "69.45M"), like the chain rows under it; one decimal rounded it up to "69.5M".
 - `frontend/src/components/ExchangeGlobe.test.jsx`: renders the hero from a mocked GET /chains and checks the wording, the headline and the chain rows.
-- README not changed here: #283 adds "counted once per chain" to its figures.
+- `README.md` (after #283, which added "counted once per chain"): the badge and the flagged figure say 69.45M, what GET /chains sums (the 69.4M store and the repository's lists); exchange addresses 26,157 -> 26,204 and the feature table's 26,136 -> 26,204, the live /chains sum after #277; the label-file table's Ethereum (25,332; 1,314 exchange wallets), BSC (227) and Tron (144) counts, from the files.
 
 ## Decisions
 
@@ -24,7 +24,7 @@
 
 ## Open questions
 
-- README says 69.4M (the store alone); the site says 69.45M (the store and the lists). Both true; whether the README should say 69.45M is the owner's call.
+- None. `docs/officer-guide.md` and `docs/suite-features.md` keep 69.4 million: they speak of the store alone.
 
 ## Files mid-change (do not touch)
 
