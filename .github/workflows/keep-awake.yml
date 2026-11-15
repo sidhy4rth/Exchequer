@@ -1,0 +1,37 @@
+name: Keep awake
+
+# Render's free instance sleeps after 15 minutes with no inbound request, and
+# the first visit after a sleep waits for the container to start. This job
+# asks for /health every 14 minutes so the instance never reaches 15 idle
+# minutes. It needs no secret and reads nothing from the repository.
+#
+# Off until the repository's owner sets the repository variable
+# KEEP_AWAKE=on (docs/operations.md, "Keeping the site awake"); a run started
+# by hand always runs. It does not check watches: that is watch-cron.yml,
+# which needs its own token.
+on:
+  schedule:
+    - cron: "*/14 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keep-awake
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    if: github.event_name == 'workflow_dispatch' || vars.KEEP_AWAKE == 'on'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    env:
+      EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer.co.in' }}
+    steps:
+      # A sleeping instance can take a minute to answer; one retry covers a
+      # waking proxy's 502/503.
+      - name: Ask for /health
+        run: |
+          curl -fsS --max-time 60 --retry 1 --retry-delay 15 --retry-all-errors \
+            -o /dev/null "$EXCHEQUER_URL/health"
+          echo "Awake."
