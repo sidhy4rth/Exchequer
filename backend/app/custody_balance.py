@@ -24,6 +24,7 @@ address: the result says when it was read. Nothing here moves money or holds a k
 from __future__ import annotations
 
 import json
+import uuid
 from decimal import Decimal
 from typing import Any, Callable
 
@@ -203,3 +204,36 @@ def read_all(viewer: Any, case_id: str, opener: Callable[..., Any] | None = None
 
 def counts(results: list[dict[str, Any]]) -> dict[str, int]:
     return {k: sum(1 for x in results if x.get("status") == k) for k in (MATCH, MISMATCH, UNCHECKED)}
+
+
+# -- each run is kept -------------------------------------------------------------------------------
+def run(viewer: Any, case_id: str, opener: Callable[..., Any] | None = None) -> dict[str, Any]:
+    """read_all, stored as one run with its evidence, and returned as summary() gives it."""
+    results = read_all(viewer, case_id, opener)
+    with models.session() as s:
+        r = models.CustodyBalanceCheck(
+            id=str(uuid.uuid4()), owner_hash=viewer.owner_hash or "", case_id=case_id,
+            officer_id=getattr(viewer, "officer_id", None), unit_id=getattr(viewer, "unit_id", None),
+            checked_at=models.utc_now_iso(), checked_by=getattr(viewer, "id", None) or "unknown",
+            results_json=json.dumps(results))
+        s.add(r)
+        s.commit()
+        s.refresh(r)
+        return summary(r)
+
+
+def summary(r: models.CustodyBalanceCheck) -> dict[str, Any]:
+    results = json.loads(r.results_json or "[]")
+    return {"check_id": r.id, "case_id": r.case_id, "checked_at": r.checked_at, "checked_by": r.checked_by,
+            "results": results, "counts": counts(results)}
+
+
+def latest(viewer: Any, case_id: str) -> dict[str, Any] | None:
+    """The newest run of this case the viewer may read, or None."""
+    if getattr(viewer, "owner_hash", None) is None and getattr(viewer, "unit_id", None) is None:
+        return None
+    with models.session() as s:
+        r = s.scalars(select(models.CustodyBalanceCheck).where(
+            models.CustodyBalanceCheck.case_id == case_id, _readable(viewer, models.CustodyBalanceCheck))
+            .order_by(models.CustodyBalanceCheck.checked_at.desc())).first()
+        return summary(r) if r is not None else None

@@ -5,10 +5,15 @@
     PATCH /custody/{wallet_id}       notes, and the asset-register rows moved into it
     POST  /custody/{wallet_id}/movements              propose a deposit or a release (custody_log.py)
     POST  /custody/movements/{movement_id}/{step}     approve, broadcast, confirm or cancel it
+    GET   /trace/{case_id}/custody-balance   the newest balance check of the case's custody addresses
+    POST  /trace/{case_id}/custody-balance   read them on chain now (custody_balance.py)
 
 Recording or changing a wallet, and every movement step, needs a signed-in
 officer (403 otherwise): a stranger holding a case's link must not fill the
 table or rewrite its records. custody_log.py checks the same for movements.
+
+The balance check is behind config.CUSTODY_BALANCE_CHECK (off by default) and
+spends provider allowance, so running one needs a signed-in officer too.
 
 Behind config.CUSTODY_WALLETS (off by default): switched off, the list says so
 and every write is refused. No route ever takes a key: the fields that could
@@ -22,7 +27,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from .. import audit, config, custody, custody_log
+from .. import audit, config, custody, custody_balance, custody_log
 from ..auth import CurrentUser
 from .requests import _allow_write, _owner
 
@@ -169,3 +174,27 @@ def movement_step(movement_id: str, step: str, body: Step, user: CurrentUser, ht
     audit.record(f"custody.movement.{step}", case_id=moved["case_id"], detail={
         "movement_id": movement_id, "status": moved["status"], "approvals": len(moved["approvals"])})
     return moved
+
+
+@router.get("/trace/{case_id}/custody-balance")
+def latest_balance_check(case_id: str, user: CurrentUser) -> dict[str, Any]:
+    if not config.CUSTODY_BALANCE_CHECK:
+        return {"case_id": case_id, "enabled": False, "check": None}
+    check = custody_balance.latest(user, case_id)
+    audit.record("custody.balance.view", case_id=case_id, detail={"check_id": check["check_id"] if check else None})
+    return {"case_id": case_id, "enabled": True, "check": check}
+
+
+@router.post("/trace/{case_id}/custody-balance", status_code=201)
+def run_balance_check(case_id: str, user: CurrentUser, http: Request) -> dict[str, Any]:
+    if not config.CUSTODY_BALANCE_CHECK:
+        raise HTTPException(status_code=403, detail="The custody balance check is switched off on this deployment.")
+    signed_in(user)
+    _owner(user)
+    _allow_write(http)
+    try:
+        check = custody_balance.run(user, case_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="No case with that id.") from exc
+    audit.record("custody.balance.check", case_id=case_id, detail={"check_id": check["check_id"], **check["counts"]})
+    return check
