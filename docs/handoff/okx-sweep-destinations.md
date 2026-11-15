@@ -17,6 +17,7 @@
 
 - Only wallets OKX's own PoR file lists (Non Staking) and the release's on-chain classification (`okx_por_ethereum_classified.csv`) classes `exchange_wallet` are labelled.
 
+- 16 Nov 2026: the sweep counts were revised in #328 (PR #329): 79 of the 821 counted rows were later dropped by the label-store build's internal-wallet filter, leaving 13 wallets with no deposit sweep; see `docs/handoff/okx-sweep-basis-internal-rows.md`.
 - No hot or cold role is claimed: the PoR file gives none, and `exchange_wallet` is already a sweep destination (directness 0.8).
 - Left out: `0x0003b5aa5e30e97fcc596bb5d0f3a75255e08d4e` (passes, but `test_por_labels.OKX_ETH_STORE_ROW` names it as a store-only row; no dropped row needs it), and 13 destinations the classification does not class `exchange_wallet`.
 
