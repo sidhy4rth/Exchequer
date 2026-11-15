@@ -24,6 +24,7 @@ from app import accounts, config, domain_lookup, identifiers, models, ownership,
 from app.auth import User
 from app.identifiers import IdentifierError
 from app.main import app
+from tests.test_http_deadline import RESPONSE, SlowNetwork
 
 FIXTURES = json.loads((Path(__file__).parent / "fixtures" / "osint" / "responses.json").read_text())
 ALICE, BOB = "a" * 32, "b" * 32
@@ -276,6 +277,20 @@ def test_a_slow_server_cannot_hold_a_lookup_past_its_deadline(monkeypatch):
     assert [r["source"] for r in found["records"]] == ["rdap-bootstrap"]
     assert getattr(domain_lookup._deadline, "at", None) is None  # the next lookup starts with a full 30 s
 
+
+
+def test_a_server_sending_just_inside_each_read_timeout_cannot_hold_a_lookup(monkeypatch):
+    """Each piece comes after 7 s, inside the 8 s read timeout: the reads are cut at 30 s in all,
+    not checked only once a slow read has returned (which let a lookup run up to 8 s over)."""
+    now = [1000.0]
+    monkeypatch.setattr(domain_lookup, "_clock", lambda: now[0])
+    net = SlowNetwork(now, [RESPONSE] + [b"{"] * 10, gap_s=7.0)
+    monkeypatch.setattr(domain_lookup, "_network", net)
+    with pytest.raises(domain_lookup.TooSlow, match="longer than 30 seconds"):
+        domain_lookup.look_up("example.com")  # the bootstrap list never finishes arriving
+    assert now[0] <= 1000.0 + domain_lookup.DEADLINE_S + 1e-9
+    assert all(t is not None and t <= domain_lookup.TIMEOUT_S for _, t in net.waits)
+    assert getattr(domain_lookup._deadline, "at", None) is None
 
 # -- routes ---------------------------------------------------------------------------------------
 H = {ownership.OWNER_HEADER: ALICE}

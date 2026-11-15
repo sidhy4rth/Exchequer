@@ -5,7 +5,9 @@
     POST  /trace/{case_id}/identifiers   record one (409 when it is already recorded)
     PATCH /identifiers/{identifier_id}   change where it was seen or the notes, withdraw it, or add a note
     POST  /identifiers/{identifier_id}/lookup   RDAP and DNS facts about a domain (config.OSINT_LOOKUPS),
-                                               signed-in officers only, never the demo caller
+                                               or what a Telegram username's public t.me page shows
+                                               (also config.TELEGRAM_LOOKUPS); signed-in officers only,
+                                               never the demo caller
 
 Writes are limited per connection, like the requests log, and audited by what
 happened -- the kind and the fields changed -- never by the value: a phone number
@@ -18,7 +20,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from .. import audit, config, domain_lookup, identifiers
+from .. import audit, config, domain_lookup, identifiers, telegram_lookup
 from ..auth import CurrentUser
 from .requests import _allow_write, _owner
 
@@ -40,6 +42,14 @@ class IdentifierChange(BaseModel):
     note: str | None = Field(None, max_length=300)
 
 
+def _lookers() -> dict[str, Any]:
+    """The kinds this deployment looks up, and how."""
+    on = {"domain": domain_lookup.look_up}
+    if config.TELEGRAM_LOOKUPS:
+        on["telegram"] = telegram_lookup.look_up
+    return on
+
+
 def _bad(exc: identifiers.IdentifierError) -> HTTPException:
     return HTTPException(status_code=409 if isinstance(exc, identifiers.DuplicateIdentifier) else 400, detail=str(exc))
 
@@ -47,7 +57,7 @@ def _bad(exc: identifiers.IdentifierError) -> HTTPException:
 @router.get("/trace/{case_id}/identifiers")
 def list_identifiers(case_id: str, user: CurrentUser) -> dict[str, Any]:
     rows = identifiers.list_for(user, case_id)
-    latest = domain_lookup.latest_for([r["identifier_id"] for r in rows if r["kind"] == "domain"])
+    latest = domain_lookup.latest_for([r["identifier_id"] for r in rows if r["kind"] in ("domain", "telegram")])
     links = identifiers.also_in(user, case_id, rows)
     for r in rows:
         r["lookup"] = latest.get(r["identifier_id"])
@@ -55,6 +65,7 @@ def list_identifiers(case_id: str, user: CurrentUser) -> dict[str, Any]:
     audit.record("identifier.list", case_id=case_id)
     return {"case_id": case_id, "count": len(rows), "identifiers": rows, "kinds": identifiers.KINDS,
             "lookups_enabled": config.OSINT_LOOKUPS and not user.demo,
+            "telegram_lookups_enabled": config.OSINT_LOOKUPS and config.TELEGRAM_LOOKUPS and not user.demo,
             "lookups_note": SIGN_IN_TO_LOOK_UP if config.OSINT_LOOKUPS and user.demo else ""}
 
 
@@ -95,14 +106,18 @@ def look_up_identifier(identifier_id: str, user: CurrentUser, http: Request) -> 
         raise HTTPException(status_code=403, detail=SIGN_IN_TO_LOOK_UP)
     _allow_write(http)
     try:
-        found = domain_lookup.run_and_keep(identifier_id, user)
+        found = domain_lookup.run_and_keep(identifier_id, user, _lookers())
     except identifiers.IdentifierError as exc:
         raise _bad(exc) from exc
     except domain_lookup.LookupError_ as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     if found is None:
         raise HTTPException(status_code=404, detail="No identifier with that id that you can look up.")
+    if found.get("kind") == "telegram":  # what was found, as yes/no: never the username or the page's words
+        facts = {"kind": "telegram", "page": found["page"] is not None,
+                 "shows_account": bool(found["page"] and found["page"]["exists"])}
+    else:
+        facts = {"rdap": found["rdap"] is not None, "dns": bool(found["dns"])}
     audit.record("identifier.lookup", case_id=found["case_id"],
-                 detail={"identifier_id": identifier_id, "lookup_id": found["lookup_id"],
-                         "rdap": found["rdap"] is not None, "dns": bool(found["dns"])})
+                 detail={"identifier_id": identifier_id, "lookup_id": found["lookup_id"], **facts})
     return found

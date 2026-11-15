@@ -31,8 +31,11 @@
 ## Next
 
 1. Open a stored case's Letters tab on the live site and draft one of each notice.
-2. When #97 is merged, mark feature 7's status in `docs/suite-features.md`.
+2. When #97 is merged, mark feature 7's status in `docs/suite-features.md`. Done: #97 merged 12 Nov and #109 (13 Nov) lists feature 7 with the bank and telecom notices.
 3. Later parts of feature 7: foreign letters of request (BNSS s.112); saving notice details once feature 5's importer exists.
+   - Foreign letters of request: done, by Sidhyarth (issue #125): server #126, panel #127, the MHA country list #130, logging one in the requests log #136, a 30-day follow-up #158; all merged with #126 on 2026-11-15.
+   - Saving notice details: still waits; feature 5's importer is on `main` behind `EXCHEQUER_STATEMENT_IMPORT` and `EXCHEQUER_CDR_IMPORT`, both off (#146 and the PRs merged with it, #168 for CDRs), and does not yet produce notice details (see the open question below).
+4. Follow-up found in review: a bank hold's second-officer sign-off was not bound to the exact details approved. Fixed: #133 (issue #132) binds it, merged on 2026-11-15.
 
 - The form (`frontend/src/components/case/NoticeForm.jsx`, `.css`, `.test.jsx`), in the Letters tab:
   - A second switch, "Notice to: Bank · Phone company", beside the letter switch, on stored cases only (a recorded example has no case to draft from). It is its own group so the letter switch still shows exactly the backend's letters.

@@ -27,6 +27,8 @@ GUARDED = [
     ("/payments/search", {"chain": "ethereum", "asset": "ETH", "wallet": ADDRESS, "amount": "1",
                           "from": 1_700_000_000, "to": 1_700_003_600}),
     ("/trace/some-case/recheck", None),
+    # A stored row per call, like /requests (routes/tasks.py).
+    ("/trace/some-case/tasks", {"title": "Ask the exchange for KYC"}),
 ]
 
 
@@ -112,6 +114,12 @@ def test_anonymous_post_watches_is_refused(client, code_set):
 @pytest.mark.parametrize("path, body", GUARDED)
 def test_every_guarded_route_refuses_a_caller_without_the_code(client, code_set, path, body):
     assert post(client, path, body).status_code == 403
+
+
+def test_changing_a_task_needs_the_code_like_adding_one(client, code_set):
+    """PATCH /tasks/{id} stores a history entry per call, so it is guarded as POST is."""
+    assert client.patch("/tasks/some-task", json={"note": "Called the exchange"}, headers=OWNER).status_code == 403
+    assert client.get("/trace/some-case/tasks", headers=OWNER).status_code != 403  # reading stays open
 
 
 def test_a_wrong_code_is_refused_and_says_so(client, code_set):

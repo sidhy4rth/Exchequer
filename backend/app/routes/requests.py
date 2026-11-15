@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -23,6 +23,22 @@ from .cases import app_page
 router = APIRouter()
 
 
+class HoldDetails(BaseModel):
+    """A bank hold's details as typed for its letter (notice_letters.py): only
+    their fingerprint is kept, so the sign-off covers exactly these."""
+
+    bank: str | None = Field(None, max_length=200)
+    account: str | None = Field(None, max_length=64)
+    ifsc: str | None = Field(None, max_length=32)
+    source: str | None = Field(None, max_length=400)
+    order: str | None = Field(None, max_length=400)
+    amount: float | str | None = None
+
+
+class SignoffBody(BaseModel):
+    details: HoldDetails | None = None
+
+
 class NewRequest(BaseModel):
     case_id: OneLine = Field(..., max_length=36)
     recipient: OneLine = Field(..., max_length=120)
@@ -30,6 +46,7 @@ class NewRequest(BaseModel):
     address: OneLine = Field("", max_length=64)
     asset: OneLine = Field("", max_length=16)
     status: OneLine = Field("drafted", max_length=16)
+    details: HoldDetails | None = None  # a bank hold put up for sign-off as it is logged
 
 
 class RequestChange(BaseModel):
@@ -40,6 +57,14 @@ class RequestChange(BaseModel):
     sent_at: OneLine | None = Field(None, max_length=32)
     # Finite only: a NaN or Infinity cannot be written back out as JSON.
     amount_frozen: float | None = Field(None, allow_inf_nan=False)
+    details: HoldDetails | None = None  # a bank hold put up for sign-off
+
+
+def _asked(made: dict[str, Any]) -> dict[str, Any]:
+    """The audit detail of a sign-off asked or given: the request alone. Not a
+    bank hold's details, nor any of their fingerprint: it is an unkeyed hash of
+    details few enough to guess, so it stays on the request row only."""
+    return {"request_id": made["request_id"]}
 
 
 def _owner(user: User) -> str:
@@ -88,16 +113,22 @@ def case_requests(case_id: str, user: CurrentUser) -> dict[str, Any]:
 
 
 @router.post("/requests", status_code=201)
-def new_request(body: NewRequest, user: CurrentUser, http: Request) -> dict[str, Any]:
+def new_request(body: NewRequest, user: CurrentUser, http: Request, response: Response) -> dict[str, Any]:
     _allow_write(http)
     try:
         made = freeze_requests.create(_owner(user), body.case_id, body.recipient, body.kind,
-                                      body.address, body.asset, body.status, viewer=user)
+                                      body.address, body.asset, body.status, viewer=user,
+                                      details=body.details.model_dump() if body.details else None)
     except freeze_requests.RequestError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if made["already_logged"]:  # a letter of request to that country is open already: that row, not a second
+        response.status_code = 200
+        audit.record("request.create_existing", case_id=body.case_id, detail={"kind": made["kind"],
+                                                                                 "status": made["status"]})
+        return made
     audit.record("request.create", case_id=body.case_id, detail={"kind": made["kind"], "status": made["status"]})
     if made["status"] == "awaiting_signoff":  # the ask, made while logging the letter
-        audit.record("request.signoff_ask", case_id=body.case_id, detail={"request_id": made["request_id"]})
+        audit.record("request.signoff_ask", case_id=body.case_id, detail=_asked(made))
     return made
 
 
@@ -113,12 +144,15 @@ def change_request(request_id: str, body: RequestChange, user: CurrentUser, http
         raise _conflict() from exc
     if updated is None:
         raise HTTPException(status_code=404, detail="No such request.")
-    asked = updated.pop("moved") and updated["status"] == "awaiting_signoff"
+    # Moved to waiting, or a waiting bank hold put up again with new details.
+    asked = updated.pop("asked")
     # Which fields changed, never what they say: notes can name people.
     # The new status is a word from a fixed list ("sent"), so it is kept.
     detail = {"request_id": request_id, "fields": sorted(changes)}
     if "status" in changes:
         detail["status"] = updated["status"]
+    if asked:
+        detail = {**_asked(updated), **detail}
     audit.record("request.signoff_ask" if asked else "request.update", case_id=updated["case_id"], detail=detail)
     return updated
 
@@ -142,12 +176,14 @@ def _csrf(http: Request) -> None:
 
 
 @router.post("/requests/{request_id}/signoff", dependencies=[Depends(_csrf)])
-def sign_off(request_id: str, user: CurrentUser, http: Request) -> dict[str, Any]:
+def sign_off(request_id: str, user: CurrentUser, http: Request, body: SignoffBody | None = None) -> dict[str, Any]:
     """A second signed-in officer or supervisor of the drafter's unit makes an
-    urgent freeze letter ready. Everyone else is told why they cannot."""
+    urgent freeze letter ready; a bank hold's, for the details in the body.
+    Everyone else is told why they cannot."""
     _allow_write(http)
+    details = body.details.model_dump() if body and body.details else None
     try:
-        signed = freeze_requests.sign_off(request_id, user)
+        signed = freeze_requests.sign_off(request_id, user, details)
     except freeze_requests.SignoffRefused as exc:
         audit.record("request.signoff_refused", detail={"request_id": request_id, "code": exc.code})
         raise HTTPException(status_code=exc.code, detail=str(exc)) from exc
@@ -155,5 +191,5 @@ def sign_off(request_id: str, user: CurrentUser, http: Request) -> dict[str, Any
         raise _conflict() from exc
     if signed is None:
         raise HTTPException(status_code=404, detail="No such request.")
-    audit.record("request.signoff", case_id=signed["case_id"], detail={"request_id": request_id})
+    audit.record("request.signoff", case_id=signed["case_id"], detail=_asked(signed))
     return signed

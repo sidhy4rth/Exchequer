@@ -1,9 +1,9 @@
 {
   "_meta": {
-    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S. A match means the funds touched a wallet a government has frozen or seized.",
-    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. Built by backend/scripts/import_intl_sanctions.py.",
+    "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S., and wallets U.S. courts have ordered forfeited. A match means the funds touched a wallet a government has frozen, seized or forfeited.",
+    "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. U.S. forfeiture orders: DOJ official notifications (forfeiture.gov), as held in data/us_forfeiture_orders.json. Built by backend/scripts/import_intl_sanctions.py.",
     "opensanctions_versions": {
-      "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261105060204-mpo/entities.ftm.json",
+      "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
       "jp_mof_sanctions": "https://data.opensanctions.org/artifacts/jp_mof_sanctions/20260922183801-kpe/entities.ftm.json",
       "fr_tresor_gels_avoir": "https://data.opensanctions.org/artifacts/fr_tresor_gels_avoir/20260922155801-lpp/entities.ftm.json"
     },
@@ -11,38 +11,55 @@
     "chain": "ethereum",
     "last_reviewed": "2026-09-22",
     "counts": {
-      "addresses": 19,
+      "addresses": 35,
       "by_authority": {
         "European Union": 1,
         "France": 1,
         "Japan": 9,
+        "United States": 16,
         "United Kingdom": 6,
         "Israel": 3
       },
       "by_category": {
         "sanctioned": 16,
-        "seized": 3
+        "seized": 19
       }
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_intl_sanctions",
     "schema": "labels maps an address to {category, entity, label, source, authorities}, plus valid_until (the last day it is in force) when every listing behind it has an end date; category is seized when only seizure orders name it, sanctioned otherwise",
     "rechecked": {
       "il_mod_crypto": {
-        "date": "2026-11-06",
-        "version": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261105060204-mpo/entities.ftm.json",
-        "removed": 9,
-        "removed_addresses": [
-          "0x11069987e8507d0669c870b578cc9f9b4017d127",
-          "0x7eab248c014d1043e54e96ac4f31ec7d9a97ffd3",
-          "0x99d29380a2e37c04e4fe75111b7d410674a6cab3",
-          "0xad92a818e26fc3dbce7a1972308a4a86f54dd683",
-          "0xc077bbfcf9b5b9eec0dd105e15b65ebc2a030600",
-          "0xc0d227bd0580bad9435ca0b884ebee7ff8da71c9",
-          "0xddd42d46a17b9a5b0c53c5ef2b79a6acb1b50333",
-          "0xe090669ee62e02f4437b89058a073dc7874aed8f",
-          "0xebfe7a29ea17acb5f6f437e659bd2d472deedc54"
-        ],
+        "date": "2026-11-14",
+        "version": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
+        "removed": 0,
+        "removed_addresses": [],
         "note": "Israel listings re-screened offline against this version; every listing whose measures had all ended was removed. Other authorities' listings were not re-read, so last_reviewed is unchanged."
+      }
+    },
+    "added": {
+      "us_forfeiture": {
+        "date": "2026-11-14",
+        "added": 16,
+        "added_addresses": [
+          "0x11b3fcdb29bd188e47c9e8a436abe317b9d51639",
+          "0x13a82e6a6c37a326c6932ecdf7c4466d7ff15a39",
+          "0x14f5108d44854b254feca519144743676765b928",
+          "0x1aeb972887f4a1c422d2c0b73cbf089abd2ec255",
+          "0x1f790c5c827a8b6b120064dddf965b0554025994",
+          "0x3cb6cfb2f065547716f6c8ec9d4bce5205b8a445",
+          "0x91e7b9afbb4cc454adb210e3ade38c8bd2ec17bf",
+          "0xa00b7e1577b933731609e82fd9258fd4b30e23aa",
+          "0xb34c4e4ac9d4f26e01016894c3ed7715f1c36a8a",
+          "0xcadf3761430ca4e78994c7a3ea2944cd6e6eb66c",
+          "0xe1acacb024e2553e21fbf20d94ca45f7113c4154",
+          "0xe7602edd3c75299a70078504e1adb529312843b4",
+          "0xf8e7392cb4ff992a75f54588b36c24cf373855fd",
+          "0xfcdfd022558db3f4c46ec8b707c586b7dca2db5b",
+          "0xfe7fe5931b71df73ce363833fde43635bd0d95c0",
+          "0xffbdf366c7d2a2a9d1897a219bb76832d826cf94"
+        ],
+        "listing_added_to": [],
+        "note": "Added offline from this source without re-reading the other lists, so last_reviewed is unchanged."
       }
     }
   },
@@ -75,6 +92,33 @@
         "Japan"
       ]
     },
+    "0x11b3fcdb29bd188e47c9e8a436abe317b9d51639": {
+      "category": "seized",
+      "entity": "Oluwole Adegboruwa",
+      "label": "Oluwole Adegboruwa",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the District of Utah, case 2:19-CR-00260-JNP-CMR (U.S. v. Oluwole Adgboruwa, et. al.), entered October 25, 2024; USAO official notification on forfeiture.gov, Internet Archive copy of 20241127, https://web.archive.org/web/20241127175823/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
+    "0x13a82e6a6c37a326c6932ecdf7c4466d7ff15a39": {
+      "category": "seized",
+      "entity": "Sygnum Bank AG, held in the name of Sergei Potapenko",
+      "label": "Sygnum Bank AG, held in the name of Sergei Potapenko",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Western District of Washington, case CR22-0185-RSL (U.S. v. SERGEI POTAPENKO and IVAN TUROGIN), entered March 20, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20250902, https://web.archive.org/web/20250902234531/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
+    "0x14f5108d44854b254feca519144743676765b928": {
+      "category": "seized",
+      "entity": "Aaron Thomas",
+      "label": "Aaron Thomas",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Northern District of Oklahoma, case 23-CR-333-SEH (U.S. v. Aaron Michael Thomas), entered April 24, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20260328, https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
     "0x175d44451403edf28469df03a9280c1197adb92c": {
       "category": "sanctioned",
       "entity": "Mustafa AYASH",
@@ -82,6 +126,24 @@
       "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Counter-Terrorism (Sanctions) (EU Exit) Regulations 2019, entry CTD0004",
       "authorities": [
         "United Kingdom"
+      ]
+    },
+    "0x1aeb972887f4a1c422d2c0b73cbf089abd2ec255": {
+      "category": "seized",
+      "entity": "Solomon Aluko (defendant)",
+      "label": "Solomon Aluko (defendant)",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of New York, case 25 CR. 110 (PKC) (U.S. v. Solomon Aluko, a/k/a \"D1 Really Rich\"), entered July 15, 2026; USAO official notification on forfeiture.gov, posted 14 Nov 2026, https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
+    "0x1f790c5c827a8b6b120064dddf965b0554025994": {
+      "category": "seized",
+      "entity": "Oluwole Adegboruwa",
+      "label": "Oluwole Adegboruwa",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the District of Utah, case 2:19-CR-00260-JNP-CMR (U.S. v. Oluwole Adgboruwa, et. al.), entered October 25, 2024; USAO official notification on forfeiture.gov, Internet Archive copy of 20241127, https://web.archive.org/web/20241127175823/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
       ]
     },
     "0x21b8d56bda776bbe68655a16895afd96f5534fed": {
@@ -100,6 +162,15 @@
       "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
       "authorities": [
         "Japan"
+      ]
+    },
+    "0x3cb6cfb2f065547716f6c8ec9d4bce5205b8a445": {
+      "category": "seized",
+      "entity": "Sygnum Bank AG, held in the name of Polybius Foundation",
+      "label": "Sygnum Bank AG, held in the name of Polybius Foundation",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Western District of Washington, case CR22-0185-RSL (U.S. v. SERGEI POTAPENKO and IVAN TUROGIN), entered March 20, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20250902, https://web.archive.org/web/20250902234531/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
       ]
     },
     "0x3cffd56b47b7b41c56258d9c7731abadc360e073": {
@@ -157,6 +228,24 @@
         "United Kingdom"
       ]
     },
+    "0x91e7b9afbb4cc454adb210e3ade38c8bd2ec17bf": {
+      "category": "seized",
+      "entity": "Aaron Thomas",
+      "label": "Aaron Thomas",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Northern District of Oklahoma, case 23-CR-333-SEH (U.S. v. Aaron Michael Thomas), entered April 24, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20260328, https://web.archive.org/web/20260328205455/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
+    "0xa00b7e1577b933731609e82fd9258fd4b30e23aa": {
+      "category": "seized",
+      "entity": "Ishan Wahi (defendant)",
+      "label": "Ishan Wahi (defendant)",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of New York, case 22 CR. 392 (LAP) (U.S. v. Ishan Wahi), entered February 07, 2023; USAO official notification on forfeiture.gov, Internet Archive copy of 20230528, https://web.archive.org/web/20230528172814/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
     "0xa0e1c89ef1a489c9c7de96311ed5ce5d32c20e4b": {
       "category": "sanctioned",
       "entity": "Lazarus Group",
@@ -175,6 +264,15 @@
         "United Kingdom"
       ]
     },
+    "0xb34c4e4ac9d4f26e01016894c3ed7715f1c36a8a": {
+      "category": "seized",
+      "entity": "Oluwole Adegboruwa",
+      "label": "Oluwole Adegboruwa",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the District of Utah, case 2:19-CR-00260-JNP-CMR (U.S. v. Oluwole Adgboruwa, et. al.), entered October 25, 2024; USAO official notification on forfeiture.gov, Internet Archive copy of 20241127, https://web.archive.org/web/20241127175823/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
     "0xc8fe1c81e927540fcc99ebb3c880a840082293da": {
       "category": "seized",
       "entity": "NBCTF order FO 19/23",
@@ -185,6 +283,15 @@
       ],
       "valid_until": "2026-12-09"
     },
+    "0xcadf3761430ca4e78994c7a3ea2944cd6e6eb66c": {
+      "category": "seized",
+      "entity": "Binance account UID 610048950",
+      "label": "Binance account UID 610048950",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of Florida, case 25-CR-60304-SMITH (U.S. v. Maryna Petushkova and Oleskii Petushkov), entered May 14, 2026; USAO official notification on forfeiture.gov, posted 14 Nov 2026, https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
     "0xd599ac04a1c786972b81e0fef6fb0c3e7b52f8a7": {
       "category": "sanctioned",
       "entity": "Byex Exchange Company Limited",
@@ -192,6 +299,15 @@
       "source": "UK Sanctions List (FCDO) as of 21-Sep-2026, The Global Human Rights Sanctions Regulations 2020, entry GHR0174",
       "authorities": [
         "United Kingdom"
+      ]
+    },
+    "0xe1acacb024e2553e21fbf20d94ca45f7113c4154": {
+      "category": "seized",
+      "entity": "James V. Barlow (defendant)",
+      "label": "James V. Barlow (defendant)",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of Ohio, case 2:21-CR-089 (U.S. v. JAMES V. BARLOW), entered December 12, 2022; USAO official notification on forfeiture.gov, Internet Archive copy of 20240523, https://web.archive.org/web/20240523012212/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
       ]
     },
     "0xe3740c1b2fcda407027e2c80906306604e5260e7": {
@@ -203,6 +319,15 @@
         "Israel"
       ],
       "valid_until": "2028-02-16"
+    },
+    "0xe7602edd3c75299a70078504e1adb529312843b4": {
+      "category": "seized",
+      "entity": "Sygnum Bank AG, held in the name of Burfa Media OU",
+      "label": "Sygnum Bank AG, held in the name of Burfa Media OU",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Western District of Washington, case CR22-0185-RSL (U.S. v. SERGEI POTAPENKO and IVAN TUROGIN), entered March 20, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20250902, https://web.archive.org/web/20250902234531/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
     },
     "0xe950dc316b836e4eefb8308bf32bf7c72a1358ff": {
       "category": "sanctioned",
@@ -220,6 +345,42 @@
       "source": "Japan Ministry of Finance sanctions list (via OpenSanctions)",
       "authorities": [
         "Japan"
+      ]
+    },
+    "0xf8e7392cb4ff992a75f54588b36c24cf373855fd": {
+      "category": "seized",
+      "entity": "Verdzekov Residence (seed phrase found there)",
+      "label": "Verdzekov Residence (seed phrase found there)",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Central District of California, case 2:25-CR-00123-AB (U.S. v. Sylas Nyuydzene Verdzekov), entered August 26, 2025; USAO official notification on forfeiture.gov, Internet Archive copy of 20251227, https://web.archive.org/web/20251227114232/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
+    "0xfcdfd022558db3f4c46ec8b707c586b7dca2db5b": {
+      "category": "seized",
+      "entity": "Oluwole Adegboruwa",
+      "label": "Oluwole Adegboruwa",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the District of Utah, case 2:19-CR-00260-JNP-CMR (U.S. v. Oluwole Adgboruwa, et. al.), entered October 25, 2024; USAO official notification on forfeiture.gov, Internet Archive copy of 20241127, https://web.archive.org/web/20241127175823/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
+    "0xfe7fe5931b71df73ce363833fde43635bd0d95c0": {
+      "category": "seized",
+      "entity": "James V. Barlow (defendant)",
+      "label": "James V. Barlow (defendant)",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the Southern District of Ohio, case 2:21-CR-089 (U.S. v. JAMES V. BARLOW), entered December 12, 2022; USAO official notification on forfeiture.gov, Internet Archive copy of 20240523, https://web.archive.org/web/20240523012212/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
+      ]
+    },
+    "0xffbdf366c7d2a2a9d1897a219bb76832d826cf94": {
+      "category": "seized",
+      "entity": "Ebrahem Adeeb",
+      "label": "Ebrahem Adeeb",
+      "source": "U.S. court order of forfeiture, U.S. District Court for the District of New Jersey, case 2:22-CR-00697 (U.S. v. Ebrahem Adeeb), entered October 18, 2022; USAO official notification on forfeiture.gov, Internet Archive copy of 20230621, https://web.archive.org/web/20230621022102/https://www.forfeiture.gov/pdf/USAO/OfficialNotification.pdf",
+      "authorities": [
+        "United States"
       ]
     }
   }

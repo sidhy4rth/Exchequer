@@ -9,7 +9,7 @@
     "counts": {
       "stolen": 31,
       "scam": 497,
-      "mixer": 14
+      "mixer": 23
     },
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_threat_labels && then cd backend && .venv/bin/python -m scripts.import_threat_labels --scam-lists",
     "schema": "labels maps an address to {category, entity, label, source}",
@@ -29,9 +29,78 @@
       "removed": 32,
       "errors_kept": 0,
       "rule": "nonce > 0 and no contract code (an EIP-7702 delegation is not one) on BSC (import_threat_labels.account_used_on_bsc)"
+    },
+    "mixers_added": {
+      "date": "2026-11-14",
+      "added": [
+        "0x0d5550d52428e7e3175bfc9550207e4ad3859b17",
+        "0x1e34a77868e19a6647b1f2f47b51ed72dede95dd",
+        "0x330bdfade01ee9bf63c209ee33102dd334618e0a",
+        "0x66b5e322dc31f8c7a33ffd23975163795f8d16c7",
+        "0x79459751f6882868d1299bfa412428488b434541",
+        "0x84443cfd09a48af6ef360c6976c5392ac5023a1f",
+        "0xbe19d541389c9d3e03efc08f3d5008e8c9cc42a5",
+        "0xd47438c816c9e7f2e2888e060936a499af9582b3",
+        "0xd90a6bf8439ef7214cf00da83e926068b6a507ec"
+      ],
+      "note": "Mixer pools and entry points the 11 Nov 2026 mixer hunt found in each project's own deployment list (Tornado Cash classic UI networkConfig.js and docs, Cyclone Protocol docs) or in explorer tags (brianleect/etherscan-labels @923aba7), each checked on chain: contract code present and, for a pool, its denomination() (Cyclone: coinDenomination()/tokenDenomination()) matching its name. Re-checked for contract code 14 Nov 2026. Privacy protocols (Railgun, Aztec, Hinkal) were left out: no enforcement action names them a mixer."
     }
   },
   "labels": {
+    "0xbe19d541389c9d3e03efc08f3d5008e8c9cc42a5": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 10,000 BUSD anonymity pool \"R2D2\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 7906 bytes (sha256 76830393a1ca); coinDenomination()=100000000000000000 tokenDenomination()=10000000000000000000000 (Cyclone-style pool interface)."
+    },
+    "0x66b5e322dc31f8c7a33ffd23975163795f8d16c7": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 100 BNB anonymity pool \"C3PO\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 7906 bytes (sha256 cba633f786f6); coinDenomination()=100000000000000000000 tokenDenomination()=0 (Cyclone-style pool interface)."
+    },
+    "0x79459751f6882868d1299bfa412428488b434541": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 25,000 IOTX anonymity pool \"BB8\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 7906 bytes (sha256 e1585ce34d39); coinDenomination()=100000000000000000 tokenDenomination()=25000000000000000000000 (Cyclone-style pool interface)."
+    },
+    "0xd90a6bf8439ef7214cf00da83e926068b6a507ec": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 3 CYC anonymity pool \"Jonny5\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 7941 bytes (sha256 9c11491d4be8); coinDenomination()=10000000000000000 tokenDenomination()=0 (Cyclone-style pool interface)."
+    },
+    "0x84443cfd09a48af6ef360c6976c5392ac5023a1f": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 0.1 BNB pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 d51ad1d30b44); denomination()=100000000000000000 = 0.1 BNB (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0xd47438c816c9e7f2e2888e060936a499af9582b3": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 1 BNB pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 8984fd2324b0); denomination()=1000000000000000000 = 1 BNB (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x330bdfade01ee9bf63c209ee33102dd334618e0a": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 10 BNB pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 25f0a6ae3c01); denomination()=10000000000000000000 = 10 BNB (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x1e34a77868e19a6647b1f2f47b51ed72dede95dd": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 100 BNB pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 e32fc6938d18); denomination()=100000000000000000000 = 100 BNB (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x0d5550d52428e7e3175bfc9550207e4ad3859b17": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: Proxy Light (deposit/withdraw entry point)",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 1270 bytes (sha256 bc4f2843f541). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
     "0xd9689b0ae0eeddbbb817b4c8bfabad5bb29dd0df": {
       "category": "mixer",
       "entity": "Typhoon Network",

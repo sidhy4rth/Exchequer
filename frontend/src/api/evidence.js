@@ -37,6 +37,22 @@ export async function draftNotice(caseId, to, details) {
   return response.text()
 }
 
+/** Whether this server offers the case's crypto summary for CFCFRMS
+ * (backend routes/sop_summary.py, flag EXCHEQUER_SOP_SUMMARY): 404 when off. */
+export async function fetchSopSummaryOffered() {
+  return jsonOrThrow(await apiFetch(`${BASE}/sop-summary`))
+}
+
+/** The case's crypto summary in the CFCFRMS SOP's 9.4 terms, as plain text.
+ * Only the officer's answer is sent; the NCRP number never is. */
+export async function fetchSopSummary(caseId, onCfcfrms) {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/sop-summary`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on_cfcfrms: onCfcfrms }),
+  })
+  if (!response.ok) throw await toError(response)
+  return response.text()
+}
+
 /** A recorded example's letters (routes/demos.py): listed and drafted from
  * the recording as a case's are, though none can be logged as sent. */
 export async function fetchRecordedLetters(demo) {
@@ -102,10 +118,13 @@ export async function updateRequest(requestId, changes) {
 }
 
 /** A second signed-in officer of the drafter's unit approves an urgent freeze
- * letter. The header shows the server the app sent it, not a cross-site form. */
-export async function signOffRequest(requestId) {
+ * letter. The header shows the server the app sent it, not a cross-site form.
+ * A bank hold is approved for its `details` (the ones on this screen) only. */
+export async function signOffRequest(requestId, details) {
   return jsonOrThrow(await apiFetch(`${BASE}/requests/${encodeURIComponent(requestId)}/signoff`, {
-    method: 'POST', headers: { 'X-Exchequer-Request': '1' },
+    method: 'POST',
+    headers: { 'X-Exchequer-Request': '1', ...(details ? { 'Content-Type': 'application/json' } : {}) },
+    ...(details ? { body: JSON.stringify({ details }) } : {}),
   }))
 }
 
@@ -204,5 +223,29 @@ export async function draftReportCertificate(caseId, body) {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   })
   if (!response.ok) throw await toError(response)
+  return response.blob()
+}
+
+// ---------------------------------------------------------------------------
+// The case bundle (backend case_bundle.py, behind EXCHEQUER_CASE_BUNDLE): one
+// zip of the signed report, the registers and the audit trail, with a manifest.
+// A server without it answers 404: null, and the page shows no button.
+// ---------------------------------------------------------------------------
+export async function fetchBundleFiles() {
+  const response = await apiFetch(`${BASE}/case-bundle`)
+  if (response.status === 404) {
+    await response.text().catch(() => {}) // read to the end: a body left unread keeps the request open
+    return null
+  }
+  return jsonOrThrow(response)
+}
+
+export async function fetchBundle(caseId) {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/bundle`)
+  if (!response.ok) {
+    const error = await toError(response)
+    error.status = response.status // 403: this browser may not bundle the case, so the button stops offering it
+    throw error
+  }
   return response.blob()
 }
