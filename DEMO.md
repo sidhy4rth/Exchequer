@@ -116,20 +116,20 @@ the running order, skip it and go 1 → 3.
 ```
 0x536c4921d1aafde6a5cda882fb5ca046f3601c65
 ```
-Ethereum · ETH · 3 hops · **~10 seconds**
+Ethereum · ETH · 3 hops · **~13 seconds**
 
 | | |
 |---|---|
-| Addresses traced | 38 |
-| Exchange | **Binance — probable deposit address (inferred)** `0x2f9379f0…538e4`, **1 hop** — 18 sweeps since October 2022, every one to Binance 14 |
-| Confidence | **High** (0.875 when this was written). The recording of 14 October shows **Low** (0.40) at a different Binance deposit address; on 9 November the live trace reached Coinbase at 0.46 and, an hour later, Kraken at 0.45. This demo moves, which is the point of it. The daily check only requires it to still reach an exchange. Say the band on screen, not this table's number. |
-| Pro-rata | **2.01 of 2.01 ETH** — everything that reached the deposit address came straight from the reported wallet |
-| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: OKX deposit at 0.39 · 27 Sep: **Binance deposit at 0.875** · 14 Oct: Binance deposit at 0.40 · 9 Nov: Coinbase at 0.46, then Kraken at 0.45 |
+| Addresses traced | 15 |
+| Exchange | **None** within 3 hops (live trace, 15 November 2026, about 18:15 IST) |
+| Confidence | Not applicable: nothing reached an exchange. The recording of 14 October shows **Low** (0.40) at a probable Binance deposit address; on 27 September it was **High** (0.875); on 9 November the live trace reached Coinbase at 0.46 and, an hour later, Kraken at 0.45. This demo moves, which is the point of it. Say what the screen shows, not this table. |
+| Pro-rata | none (no attribution to share out) |
+| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: OKX deposit at 0.39 · 27 Sep: **Binance deposit at 0.875** · 14 Oct: Binance deposit at 0.40 · 9 Nov: Coinbase at 0.46, then Kraken at 0.45 · 15 Nov: **none** |
 | Patterns | none |
-| Transfers excluded by the time rule | **450** |
+| Transfers excluded by the time rule | **97** |
 
 **Use this one to show honesty, not a clean result.** It has changed at
-least eight times, and every change has a reason the tool can state.
+least nine times, and every change has a reason the tool can state.
 
 On 4 September it reached Binance at 0.65. On 15 September, with the time
 rule in place, it reached nothing: that path ran through transfers made
@@ -150,11 +150,30 @@ hop, and pro-rata has nothing to take away: all of it came from the reported
 wallet. The score (0.875) and the amount now say the same thing: a strong,
 small lead, and the deposit address a request to Binance should name.
 
+On 15 November it reached nothing, and no rule changed. The reported wallet
+has become very busy: Blockscout's public transaction list shows roughly 700
+to 800 transactions a day in and out since 9 November (754 on 9 November, 685
+on 14 November). A trace reads each wallet's 200 newest records, and at
+18:13 IST on 15 November those 200 covered only 12:31 to 18:13 IST that day,
+so the transfers the 9 November traces followed to Coinbase and Kraken are now
+thousands of records back and are not read. In the window that is read, the
+ten largest recipients lead nowhere labelled within 3 hops: the largest,
+20.70 ETH at 13:56 IST (`0x941d0641ce08…`, block 26419199) to `0xedd7e709…`,
+went on to `0x858ad8c2…` and then `0xd01607c3…`, none of them labelled; another
+8.30 ETH (`0x0c0a020aa440…`, 15:56 IST) went via `0xa54dc442…` into the WETH
+contract, and 9.35 ETH (`0x6938800956f3…`, 13:42 IST) via `0xf2b8c657…` into a
+pooled contract (`0x8feab81d…`), whose payouts a trace does not follow. The
+result says it was truncated at the reported wallet's record limit, which is
+the honest reading: older transfers exist and were not read.
+
 Say this out loud: on live blockchain data an attribution can move, and a
 tool that reports where money went has to say what changed and how much of
 the money it is talking about. Saved cases never move — the report reproduces
-exactly what was seen when the case was traced. The daily demo check expects
-this trace to move and only fails if it stops reaching an exchange at all.
+exactly what was seen when the case was traced. With the wallet this busy, the
+200 records a trace reads now cover a few hours, so this demo can reach an
+exchange in one hour and none the next. The daily demo check expects it to
+move; its recorded expectation is now "none", so the check notes it when the
+trace reaches an exchange again rather than failing.
 
 ---
 
