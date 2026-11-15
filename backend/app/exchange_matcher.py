@@ -317,6 +317,9 @@ class ExchangeMatcher:
                 else graph.out_edges(node, data=True)
             )
             value_in = sum(edge.get("value_native", 0.0) for _, _, edge in edges)
+            if meta["type"] == DEPOSIT_WALLET and (meta.get("basis") or {}).get("deposit"):
+                matches.append(self._listed_deposit(node, data, meta, value_in))
+                continue
             data["exchange"] = meta["exchange"]
             data["label"] = meta["label"]
             data["wallet_type"] = meta["type"]
@@ -340,6 +343,30 @@ class ExchangeMatcher:
 
         matches.sort(key=lambda m: (m.depth, -m.value_received_native))
         return matches
+
+    def _listed_deposit(self, node: str, data: dict[str, Any], meta: dict[str, Any],
+                        value_in: float) -> ExchangeMatch:
+        """A label-store deposit row (ADR-0012): on the exchange's own list, and
+        seen sweeping into its labelled wallet. Read as deposit inference's
+        finding is, a probable deposit address whose customer only the exchange
+        can name, never the exchange's own wallet; its node is shaped as an
+        inferred one's."""
+        exchange = meta["exchange"]
+        deposit = dict(meta["basis"]["deposit"])
+        into = self._labels.get(normalize_address(deposit["sweeps_to"]))
+        deposit["sweeps_to_label"] = into["label"] if into and into["exchange"] == exchange else None
+        evidence = {"confirmation": f"A lawful request to {exchange} asking whether {node} is a deposit address "
+                                    "it issued, and to which customer, would confirm or refute this."}
+        data["inferred_exchange"] = exchange
+        data["exchange_category"] = meta.get("category")
+        data["inferred_evidence"] = evidence
+        data["is_exchange"] = True
+        data["is_terminal"] = True
+        return ExchangeMatch(address=node, exchange=exchange,
+                             label=f"probable {exchange} deposit address (listed by {exchange})",
+                             wallet_type=INFERRED_DEPOSIT, depth=data.get("depth", 0),
+                             value_received_native=value_in, evidence=evidence, category=meta.get("category"),
+                             basis={**meta["basis"], "deposit": deposit})
 
     @staticmethod
     def primary_match(matches: list[ExchangeMatch],
