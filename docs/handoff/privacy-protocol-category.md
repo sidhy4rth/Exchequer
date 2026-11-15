@@ -3,9 +3,9 @@
 - **Feature**: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop
 - **Issue**: #189
 - **Branch**: `feat/privacy-protocol-category` (PR 1, contract), `feat/privacy-protocol-trace` (PR 2, stacked), `feat/privacy-protocol-ui` (PR 3, stacked), `feat/privacy-in-report` (PR 4, stacked: the report)
-- **Current**: nobody (awaiting review; the owner approved on 14 Nov, as relayed by the lead, so the flag goes on after merge)
-- **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: built behind `EXCHEQUER_PRIVACY_CATEGORY` (off); all four PRs ready for review
+- **Current**: nobody (merged; switching the flag on waits for the owner's yes)
+- **Last worked on**: Sidhyarth, 2026-11-15
+- **Status**: all four PRs merged to `main` inside #149, behind `EXCHEQUER_PRIVACY_CATEGORY` (off in production). The switch-on (`render.yaml` entry, `docs/flag-rollout.md` section) is a draft PR awaiting the owner
 
 ## Done
 
@@ -45,9 +45,9 @@
 
 ## Next
 
-1. After review and merge of all three PRs: turn the flag on. Add to `render.yaml` under `envVars`
-   `- key: EXCHEQUER_PRIVACY_CATEGORY` / `value: "1"` (as `EXCHEQUER_OSINT_LOOKUPS` is), or set the variable in the
-   Render dashboard (Environment), and redeploy; `/health` lists the flag as on.
+1. When the owner says yes: set `EXCHEQUER_PRIVACY_CATEGORY=1` in the Render dashboard (Environment) and
+   redeploy, check `/health/detail` → `flags`, do the checks in `docs/flag-rollout.md`, then merge the draft PR
+   that adds the same key to `render.yaml` (as #108 did for `EXCHEQUER_OSINT_LOOKUPS`).
 2. The owner approved the category and moving Privacy Pools to it on 14 Nov (relayed by the lead). Later retire the flag (delete the `config.PRIVACY_CATEGORY`
    branches in `risk_matcher._risk_matcher` and `pipeline.run_trace`), add the privacy file to `LISTS`, and move
    Privacy Pools out of `threat_labels.json`.
