@@ -67,6 +67,54 @@ def test_the_import_check_fails_on_an_unread_label_and_says_what_to_run(tmp_path
     assert labels_file.read_bytes() == before  # --check writes nothing
 
 
+def _labels_in(tmp_path, monkeypatch):
+    """A copy of the Ethereum label file that the script reads and writes instead of the real one."""
+    copy_of = tmp_path / config.CHAINS["ethereum"].labels_filename
+    copy_of.write_bytes(config.CHAINS["ethereum"].labels_path.read_bytes())
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    assert config.CHAINS["ethereum"].labels_path == copy_of
+    return copy_of
+
+
+def test_a_run_without_flags_after_the_retype_changes_nothing(tmp_path, monkeypatch):
+    # The docs say to run it without flags after every label import. The 26 it
+    # retyped are contract_wallet now, so a fresh plan no longer lists them: the
+    # run must keep them in the note, not replace the note with an empty list.
+    labels_file = _labels_in(tmp_path, monkeypatch)
+    before = labels_file.read_bytes()
+    assert clc.main([]) == 0
+    assert json.loads(labels_file.read_bytes())["_meta"][clc.META_KEY]["retyped"] == NOTE["retyped"]
+    assert labels_file.read_bytes() == before
+
+
+def test_a_run_that_retypes_one_more_keeps_the_ones_before_it(tmp_path, monkeypatch):
+    labels_file = _labels_in(tmp_path, monkeypatch)
+    eoa = next(a for a, m in RECORDED.items() if m["type"] == "exchange_wallet" and ANSWERS[a] == "0x")
+    answers = tmp_path / "answers.json"
+    proxy = "0x363d3d373d3d3d363d73" + A + "5af43d82803e903d91602b57fd5bf3"
+    answers.write_text(json.dumps({**RECORDING, "code": {**ANSWERS, eoa: proxy}}))
+    monkeypatch.setattr(clc, "ANSWERS", answers)
+    assert clc.main([]) == 0
+    after = json.loads(labels_file.read_bytes())
+    assert set(after["_meta"][clc.META_KEY]["retyped"]) == set(NOTE["retyped"]) | {eoa}
+    assert after["labels"][eoa]["type"] == clc.CONTRACT_WALLET and after["labels"][eoa]["role"] == "exchange_wallet"
+
+
+def test_a_record_keeps_an_answer_the_node_did_not_give_this_time(tmp_path, monkeypatch):
+    # A batch that fails after its retries is left out of record(); its addresses
+    # must keep the answers read before, or every later run reports them unread.
+    _labels_in(tmp_path, monkeypatch)
+    answers = tmp_path / "answers.json"
+    answers.write_text(json.dumps(RECORDING))
+    monkeypatch.setattr(clc, "ANSWERS", answers)
+    dropped = sorted(ANSWERS)[:3]
+    monkeypatch.setattr(clc, "record", lambda asked: ({a: ANSWERS[a] for a in asked if a not in dropped},
+                                                      RECORDING["_meta"]["block"] + 1))
+    assert clc.main(["--record", "--dry-run"]) == 0
+    written = json.loads(answers.read_text())
+    assert written["code"] == ANSWERS and written["_meta"]["block"] == RECORDING["_meta"]["block"] + 1
+
+
 def test_no_keyed_wallet_label_holds_code_other_than_a_7702_delegation():
     bad = {}
     for address, meta in LABELS.items():
