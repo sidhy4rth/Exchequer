@@ -522,7 +522,7 @@ def _javascript(writer):
 def _bookmark(writer):
     from pypdf.generic import NameObject
 
-    writer.add_outline_item(ADDENDUM, 0)
+    writer.add_outline_item(title=ADDENDUM, page_number=0)
     writer._root_object[NameObject("/PageMode")] = NameObject("/UseOutlines")
 
 
