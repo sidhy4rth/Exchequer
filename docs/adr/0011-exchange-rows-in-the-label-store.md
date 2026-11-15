@@ -1,7 +1,7 @@
 # ADR-0011: Exchange rows in the label store live in their own table
 
 **Date**: 2026-11-15
-**Status**: accepted
+**Status**: accepted; amended by [ADR-0012](0012-deposit-rows-in-the-label-store.md) (a row may be a deposit address, if it states its basis)
 **Deciders**: Sidhyarth
 
 ## Context

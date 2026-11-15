@@ -18,6 +18,7 @@ way?", the answer is probably here.
 | [0009](0009-a-ceiling-on-running-traces.md) | A ceiling on traces running at once | 2026-09-28 |
 | [0010](0010-how-the-team-shares-context.md) | The team shares context through the repository | 2026-11-12 |
 | [0011](0011-exchange-rows-in-the-label-store.md) | Exchange rows in the label store live in their own table | 2026-11-15 |
+| [0012](0012-deposit-rows-in-the-label-store.md) | A store exchange row may be a deposit address, if it says why (amends 0011) | 2026-11-15 |
 
 New decisions get the next number. A decision that is replaced is marked
 superseded rather than deleted, so the history of why stays readable.
