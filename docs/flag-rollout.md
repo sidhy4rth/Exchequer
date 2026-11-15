@@ -1,7 +1,8 @@
 # Switching on the flagged features
 
 Five features are built behind `config.py` flags in pull requests that are
-still open (as of 2026-11-14). Each flag is off until its environment variable
+still open (as of 2026-11-15: #129, #146, #147 and #162 and the PRs stacked on
+them). The flags already on `main` are listed first, below. Each flag is off until its environment variable
 is `1` (`true`, `yes` and `on` also count; see `flag()` in `config.py`). This
 file says, for each one: what it turns on, which PRs must be merged first, how
 to switch it on and off, what to try on the live site before telling anyone,
@@ -10,6 +11,25 @@ and the decisions still open.
 Everything here comes from the PR descriptions, the handoff files on their
 branches and the flag definitions. Where something was not checked, it says so.
 Button names are taken from the PRs' tests and may differ slightly on screen.
+
+## Flags already on `main`
+
+Every flag in `config.py` `FLAGS` on `main` (2026-11-15). "Off in `render.yaml`"
+means the Blueprint does not set it; whether the dashboard sets it is not
+checked here, so read `/health/detail` → `flags` to be sure.
+
+| Flag | What it turns on | Merged in | Status |
+|---|---|---|---|
+| `EXCHEQUER_TX_INTAKE` | Lane A, R1: start a trace from the victim's payment transaction hash | #49 | Off in `render.yaml` |
+| `EXCHEQUER_TRACING_METHODS` | Lane A, R4: FIFO and LIBR beside pro-rata (one more read per hop) | #49 | Off in `render.yaml` |
+| `EXCHEQUER_TAINT_EXPANSION` | Lane A, R5: follow every branch carrying a share of the funds, not the top ten | #49 | Off in `render.yaml` |
+| `EXCHEQUER_OSINT_LOOKUPS` | Feature 4: live RDAP and DNS lookups of a case's scam domains, for signed-in officers | #106 | **On** in production since 13 Nov, and `"1"` in `render.yaml` (#108) |
+| `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | Off in `render.yaml`. Its handoff records the owner's approval on 14 Nov to switch it on after merge; not switched on yet as far as `main` shows |
+| `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
+| `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | Off in `render.yaml`; awaits the owner |
+
+The rest of this file is about the five flags still in open PRs. The steps
+below for switching on, checking and switching off apply to the flags above too.
 
 ## The same steps for every flag
 
@@ -21,13 +41,15 @@ Button names are taken from the PRs' tests and may differ slightly on screen.
    so new tables appear on the first deploy either way.
 2. Two things collide between stacks:
    - Every stack adds its flag on the line after `OSINT_LOOKUPS` in
-     `config.py`, and most add a re-export line to `frontend/src/api.js`.
-     Whichever stack merges second has a small text conflict there: keep both lines.
+     `config.py`, where `main` now also has `PRIVACY_CATEGORY`, `CASE_BUNDLE`
+     and `TRACE_CANCEL_ON_DISCONNECT`, and most add a re-export line to
+     `frontend/src/api.js`. Each stack has a small text conflict there: keep every line.
    - Custody (`g7_custody_1`) and statements (`g7_statements_1`) each add a
-     migration whose `down_revision` is `g7_domain_lookups_1`, as do the open
-     task PRs #122 (`g7_tasks_1`) and #124. Whichever merges second must point its
-     `down_revision` at the head left by the first, so that `alembic heads` shows
-     exactly one head. Never edit a migration that is already on `main`.
+     migration whose `down_revision` is `g7_domain_lookups_1`. The task
+     migrations merged first (#122), so the head on `main` is now `g7_tasks_2`.
+     Whichever of the two stacks merges first must point its `down_revision` at
+     `g7_tasks_2`, and the second at the head left by the first, so that
+     `alembic heads` shows exactly one head. Never edit a migration that is already on `main`.
 3. The stacks were branched before #160 and #165 merged, so merge `main` into
    each before its last review.
 
@@ -128,7 +150,7 @@ and `g7_custody_2` (see the migration note above). Have the unit read
   it means a new record. Is that enough?
 - Must the officer who enters an approval be someone other than the officer who
   entered the proposal? Today one account may propose and enter one approval.
-- The migration re-pointing above, if #122/#124 or the statements stack merge first.
+- The migration re-pointing above (the head on `main` is `g7_tasks_2` since #122 merged).
 
 ## `EXCHEQUER_STATEMENT_IMPORT`: bank and exchange statements (feature 5, first slice)
 

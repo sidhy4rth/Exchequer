@@ -3,9 +3,9 @@
 - **Feature**: one zip per case for handing over or producing in court: the signed report (text and PDF), the registers as CSV, the audit trail and a MANIFEST.txt of hashes (suite feature 6)
 - **Issue**: #186
 - **Branch**: `feat/case-bundle` (server), `feat/case-bundle-screen` (button, stacked)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: server and button done behind `EXCHEQUER_CASE_BUNDLE` (off); in review
+- **Status**: merged in #187 (with #190) on 2026-11-15, behind `EXCHEQUER_CASE_BUNDLE` (off)
 
 ## Done
 

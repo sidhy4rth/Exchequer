@@ -5,7 +5,7 @@
 - **Branch**: `feat/signoff-binding`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: done in #133, waiting for review
+- **Status**: merged in #133 on 2026-11-15
 
 ## Done
 

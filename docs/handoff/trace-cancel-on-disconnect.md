@@ -3,9 +3,9 @@
 - **Feature**: a synchronous POST /trace whose client hangs up stops at its next provider request instead of running to the end
 - **Issue**: #225
 - **Branch**: `feat/trace-cancel-on-disconnect`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: done behind `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` (off); in review
+- **Status**: merged in #227 (with #228) on 2026-11-15, behind `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` (off)
 
 ## Done
 

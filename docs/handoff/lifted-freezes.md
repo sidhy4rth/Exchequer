@@ -3,9 +3,9 @@
 - **Feature**: a Tether freeze that has been lifted stops reading "Frozen by Tether"
 - **Issue**: #202
 - **Branch**: `fix/lifted-freezes`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR open for review
+- **Status**: merged in #206 on 2026-11-15
 
 ## Done
 

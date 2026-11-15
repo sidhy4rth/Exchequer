@@ -3,9 +3,9 @@
 - **Feature**: screen traces against the government-listed addresses and mixer pools the 11 Nov hunt found, which the 14 Nov label release could not carry
 - **Issue**: #148
 - **Branch**: `feat/hunt8-sanctions-mixers` (PR 1, sanctions), `feat/hunt8-mixers` (PR 2, stacked)
-- **Current**: nobody (awaiting review)
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: PR 1 (#149, sanctions) and PR 2 (#166, mixers, stacked on #149) ready for review
+- **Status**: merged in #149 (with #166 and the PRs stacked on it) on 2026-11-15
 
 ## Done
 

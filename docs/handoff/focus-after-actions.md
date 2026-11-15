@@ -5,7 +5,7 @@
 - **Branch**: `fix/focus-after-actions`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: open for review
+- **Status**: merged in #181 on 2026-11-15
 
 ## Done
 

@@ -5,7 +5,7 @@
 - **Branch**: `feat/india-exchange-labels` (round 1); round 2 is stacked on it as `feat/india-exchange-labels-2`, `-3`, `-4`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: round 1 PR #135 and the three round 2 PRs ready for review
+- **Status**: merged in #135 (with round 2: #209, #210, #211) on 2026-11-15
 
 ## Done
 

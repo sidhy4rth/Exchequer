@@ -3,9 +3,9 @@
 - **Feature**: the backend suite no longer fails at random with alembic setup errors (`KeyError: 'script'`)
 - **Issue**: #159
 - **Branch**: `fix/report-cache-test-flake`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: fixed and tested; waits for review
+- **Status**: merged in #160 on 2026-11-14
 
 ## Done
 

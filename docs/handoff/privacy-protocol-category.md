@@ -3,9 +3,9 @@
 - **Feature**: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop
 - **Issue**: #189
 - **Branch**: `feat/privacy-protocol-category` (PR 1, contract), `feat/privacy-protocol-trace` (PR 2, stacked), `feat/privacy-protocol-ui` (PR 3, stacked), `feat/privacy-in-report` (PR 4, stacked: the report)
-- **Current**: nobody (awaiting review; the owner approved on 14 Nov, as relayed by the lead, so the flag goes on after merge)
+- **Current**: nobody (the owner approved on 14 Nov, as relayed by the lead, so the flag goes on after merge)
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: built behind `EXCHEQUER_PRIVACY_CATEGORY` (off); all four PRs ready for review
+- **Status**: merged with #149 (#194, #195, #196, #198) on 2026-11-15, behind `EXCHEQUER_PRIVACY_CATEGORY` (off in `render.yaml`)
 
 ## Done
 
