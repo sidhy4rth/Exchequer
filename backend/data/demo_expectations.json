@@ -33,9 +33,9 @@
   "max_depth": 3,
   "direction": "outgoing",
   "expect": {
-   "exchange": "Kraken",
+   "exchange": null,
    "followed_exchange": null,
-   "confidence": 0.4501
+   "confidence": null
   },
   "volatile": true
  },
