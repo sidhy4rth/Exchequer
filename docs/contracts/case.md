@@ -78,6 +78,17 @@ largest destinations, the default) or `min_share` (flag
 `EXCHEQUER_TAINT_EXPANSION`). An empty list means nothing above dust was left
 behind. A report that states where the money went should state this too.
 
+`prorata` (v1-style) is pro-rata's working (`backend/app/prorata.py`). When a
+wallet's window could not be read because a provider request failed, even
+after one more try, `prorata.status` is `unknown` and `prorata.read_failure`
+says what failed: `rate_limit`, `no_answer` (no response or server errors),
+`quota`, `stopped` (the case's own time or request limit), `bad_response`,
+`provider_error` or `error` (`provider_errors.failure_kind`). The amount earns
+no credit, as before ([ADR-0007](../adr/0007-pro-rata-not-all-or-nothing.md)),
+and the score's explanation, the limitations, the report and the letter
+drafts say so in words. Absent on every other case, estimated or not, and in
+older cases. Additive.
+
 What a trace cost and what stopped it (v1-style, read with `.get`, absent in
 older cases): `provider_units` is, per provider, `{requests, units, unit,
 case_limit}` for this trace's own network requests (follow-ons report theirs;

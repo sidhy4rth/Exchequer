@@ -47,6 +47,7 @@ from .label_rules import INSTANT_EXCHANGER
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
                      _amount, _paid_at, _when, _when_iso, also_reached, also_reached_line, attribution_kind,
                      basis_lines, store_basis)
+from .prorata import read_failure_words
 from .risk_matcher import _list_meta, is_tether_usdt_freeze
 
 EXCHANGE = "exchange"
@@ -219,6 +220,17 @@ def _amount_lines(asset: str, stated: dict[str, Any]) -> list[str]:
     return ["", *textwrap.wrap(text + caveat + ".", width=95, initial_indent="   ", subsequent_indent="   ",
                                break_long_words=False, break_on_hyphens=False),
             "   This is an estimate; your own records of the deposits are authoritative."]
+
+
+def _amount_unread(trace: dict[str, Any]) -> list[str]:
+    """The officer's note when the amount could not be estimated because a
+    read failed (prorata.read_failure): a later trace may give one."""
+    words = read_failure_words(trace.get("prorata"))
+    if not words:
+        return []
+    return ["", *textwrap.wrap(f"[Officer: the amount could not be estimated: {words}. Trace again later for an "
+                               "estimate, or state the amount from your own records.]", width=95,
+                               initial_indent="   ", subsequent_indent="   ", break_long_words=False)]
 
 
 def _none_by(stated: dict[str, Any]) -> str:
@@ -700,6 +712,8 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
     stated = _letter_amount(result, found)
     if stated is not None:
         lines += _amount_lines(asset, stated)
+    else:
+        lines += _amount_unread(trace)
     others = also_reached(trace)
     if others:
         # The trace names one exchange, but material funds also went elsewhere
@@ -1016,7 +1030,8 @@ def _instant_letter(case_id: str, result: dict[str, Any]) -> str:
               *textwrap.wrap(f"{what} {service} is an instant exchange service: each payment into it pays for an "
                              "exchange order, paid out in another asset to an address the customer gives.",
                              width=95, initial_indent="   ", subsequent_indent="   ", break_long_words=False),
-              *(_amount_lines(asset, stated) if stated else ["", f"   The amount: {BLANK} (officer to state)."]),
+              *(_amount_lines(asset, stated) if stated else ["", f"   The amount: {BLANK} (officer to state).",
+                                                             *_amount_unread(inst["trace"])]),
               "", f"3. The transfers into {address} in this trace (times in IST, with UTC):",
               *(line for t in every for line in (f"     {t.get('value_native', 0):,.6f} {asset}, "
                                                  f"{_when(t.get('timestamp'))}", f"       tx {t.get('hash')}")),
