@@ -910,5 +910,8 @@ PRIVACY_CATEGORY: bool = flag("EXCHEQUER_PRIVACY_CATEGORY",
                               "#189: privacy protocols shown as a note, never a stop or a risk hit; awaits the owner")
 CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
                          "Feature 6: one zip of a case's report, registers and audit trail, with a manifest")
+TRACE_CANCEL_ON_DISCONNECT: bool = flag(
+    "EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT",
+    "Trace engine: stop a POST /trace whose client hung up, at its next provider request; awaits the owner")
 STORE_EXCHANGE_ROWS: bool = flag("EXCHEQUER_STORE_EXCHANGE_ROWS",
                                  "#222: name the exchange from label-store exchange rows (its own PoR list; ADR-0011)")

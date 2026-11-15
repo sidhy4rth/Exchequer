@@ -8,22 +8,25 @@
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
     "schema": "labels maps a Base58 address to {exchange, label, type}",
     "counts": {
-      "labels": 68,
-      "exchanges": 23,
+      "labels": 134,
+      "exchanges": 25,
       "by_exchange": {
-        "Binance": 23,
+        "Binance": 25,
         "Bitfinex": 1,
         "Bitget": 1,
         "Bithumb": 1,
-        "Bybit": 2,
+        "Bitpanda": 1,
+        "Bybit": 41,
         "CoinSpot": 1,
+        "CoinSwitch": 10,
         "Coinone": 1,
         "FixedFloat": 1,
         "Flipster": 1,
         "Gate.io": 1,
         "Heleket": 1,
+        "Huobi / HTX": 17,
         "Kraken": 1,
-        "KuCoin": 3,
+        "KuCoin": 5,
         "MEXC": 2,
         "MaskEX": 12,
         "OKX": 1,
@@ -31,9 +34,8 @@
         "Poloniex": 2,
         "UEEx": 1,
         "Upbit": 1,
-        "WhiteBIT": 1,
-        "Bitpanda": 1,
-        "Huobi / HTX": 8
+        "WazirX": 4,
+        "WhiteBIT": 1
       }
     },
     "excluded_not_exchange": [
@@ -62,7 +64,93 @@
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
     },
-    "india_exchanges": "14 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why. They are not in 'counts' above, which counts the TronScan-tag seed."
+    "india_exchanges": "14 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why. They are not in 'counts' above, which counts the TronScan-tag seed.",
+    "proof_of_reserves": {
+      "sources": {
+        "por:bybit:2026-10": {
+          "exchange": "Bybit",
+          "url": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+          "archive_url": null,
+          "page": "https://www.bybit.com/app/user/proof-of-reserve",
+          "published": "2026-10-27",
+          "retrieved": "2026-11-14",
+          "sha256": "9dd0b4cf4c5bc547b1eb6e85b43c549df45f8174c2d7630f7c46f5c5ddb51c68",
+          "kind": "proof-of-reserves wallet address (Bybit does not mark hot or cold per address)",
+          "statement": "Bybit's monthly proof-of-reserves file (Coin,Height,Amount,Address) lists, per coin and chain, the wallet addresses Bybit announces as holding its reserves. Rows read: coins on the TRX and Tron chains. Published date is the file's Last-Modified header.",
+          "tron_addresses_listed": 41,
+          "added": 39,
+          "corroborated": {
+            "TTH75Z9rfRgzCLNDDYBaR2WjUvuSDRtSMg": "Bybit Cold",
+            "TU4vEruvZwLLkSfV9bNw12EJTPvNr7Pvaa": "Bybit"
+          },
+          "left_out": {}
+        },
+        "por:htx:2026-11": {
+          "exchange": "Huobi / HTX",
+          "url": "https://raw.githubusercontent.com/huobiapi/Tool-Node.js-VerifyAddress/0774c876e6df5400549005b3ec08de0fafdf97b9/snapshot/huobi_por.csv",
+          "archive_url": null,
+          "page": "https://github.com/huobiapi/Tool-Node.js-VerifyAddress",
+          "published": "2026-11-10",
+          "retrieved": "2026-11-14",
+          "sha256": "d34bc67a644159e9ddbd39add2b7a3cf6645a546858bb27162847d9575b162f0",
+          "kind": "proof-of-reserves address (HTX does not mark hot or cold per address)",
+          "statement": "HTX's proof-of-reserves snapshot in its official address-verification repository (commit 0774c876, 'upgrade merkle_proof_20261101'). The address section lists each address with the message HTX signed with its key ('huobi', 'htx'); a row without a signature is still listed by HTX as its address and is noted as unsigned.",
+          "tron_addresses_listed": 15,
+          "added": 9,
+          "corroborated": {
+            "TAuUCiH4JVNBZmDnEDZkXEUXDARdGpXTmX": "HTX-Cold 6",
+            "TDToUxX8sH4z6moQpK3ZLAN24eupu2ivA4": "HTX 6",
+            "TGn1uvntAVntT1pG8o7qoKkbViiYfeg6Gj": "HTX-Cold 4",
+            "TK86Qm97uM848dMk8G7xNbJB7zG1uW3h1n": "HTX 5",
+            "TRSXRWudzfzY4jH7AaMowdMNUXDkHisbcd": "HTX-Cold 3",
+            "TYh6mgoMNZTCsgpYHBz7gttEfrQmDMABub": "HTX Exchange"
+          },
+          "left_out": {}
+        },
+        "por:binance:2022-11": {
+          "exchange": "Binance",
+          "url": "https://www.binance.com/en/blog/community/our-commitment-to-transparency-2895840147147652626",
+          "archive_url": "https://web.archive.org/web/20221115192653/https://www.binance.com/en/blog/community/our-commitment-to-transparency-2895840147147652626",
+          "page": null,
+          "published": "2022-11-10",
+          "retrieved": "2026-11-14",
+          "sha256": "dc48d97bcf8679aa94638e4773504e8a280cff2988a54fb62de26df4a328b95a",
+          "kind": "hot and cold wallet address (the post does not say which is which)",
+          "statement": "Binance's blog post 'Our Commitment To Transparency' (10 Nov 2022) shares 'details of our hot and cold wallet addresses', snapshot 10/11/2022 00:00 UTC, and says it is not a complete set. Read from the Internet Archive copy: the live page answers automated clients with a bot check, which was not bypassed.",
+          "tron_addresses_listed": 8,
+          "added": 2,
+          "corroborated": {
+            "TAzsQ9Gx8eqFNFSKbeXrbi45CuVPHzA8wr": "Binance-Hot 5",
+            "TJDENsfBJs4RFETt1X1W8wMDc8M5XnJhCe": "Binance-Hot 6",
+            "TNXoiAJ3dct8Fjg4M9fkLFh9S2v9TXc32G": "Binance-Hot 4",
+            "TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm": "Binance 2",
+            "TWd4WrZ9wn84f5x1hZhL4DHvk738ns5jwb": "Binance-Cold 2",
+            "TYASr5UV6HEcXatwdFQfmLVUqQQQMUxHLS": "Binance-Hot 3"
+          },
+          "left_out": {}
+        },
+        "por:kucoin:2022-11": {
+          "exchange": "KuCoin",
+          "url": "https://www.kucoin.com/blog/9152-34",
+          "archive_url": null,
+          "page": null,
+          "published": "2022-11-11",
+          "retrieved": "2026-11-14",
+          "sha256": "e7513699ed84a8261fb606421a846a58ba3f08a59bb3fc4395bee7b6e806d39e",
+          "kind": "hot and cold wallet address (the post does not say which is which)",
+          "statement": "KuCoin's blog post 'Transparency and Trust' (11 Nov 2022) shares 'an overview of our hot and cold wallet addresses and their current holdings', snapshot 11/11/2022 07:00 UTC, and says it does not represent all holdings.",
+          "tron_addresses_listed": 4,
+          "added": 2,
+          "corroborated": {
+            "TRYL7PKCG4b4xRCM554Q5J6o8f1UjUmfnY": "Kucoin-Cold",
+            "TUpHuDkiCCmwaTZBHZvQdwWzGNm5t8J2b9": "Kucoin 4"
+          },
+          "left_out": {}
+        }
+      },
+      "description": "Rows whose 'source' starts with 'por:' come from the exchange's own published proof-of-reserves or wallet-address disclosure (sources below: URL, archive copy, publication and retrieval dates, SHA-256 of the file read). The exchange itself states it controls these addresses. Each was checked to be a valid Tron address, active on chain and not a contract (an account per TronGrid wallet/getaccount, or a received USDT-TRC20 transfer; keyless) on the retrieval date. A PoR list says nothing about hot or cold unless the source does, so these are typed exchange_wallet. Addresses already labelled from TronScan keep that row and are listed as corroborated; conflicts and anything on a frozen, sanctions, risk, gambling or demo list were left out, never overwritten.",
+      "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_por_tron_labels --file <source id>=<downloaded file> ..."
+    }
   },
   "labels": {
     "TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm": {
@@ -180,6 +268,18 @@
       "label": "Binance-Hot 9",
       "type": "hot_wallet"
     },
+    "TMuA6YqfCeX8EhbfYEg5y7S4DqzSJireY9": {
+      "exchange": "Binance",
+      "label": "Binance: Reserves Wallet (2022-11)",
+      "type": "exchange_wallet",
+      "source": "por:binance:2022-11"
+    },
+    "TV6MuMXfmLbBqPZvBHdwFsDnQeVfnmiuSi": {
+      "exchange": "Binance",
+      "label": "Binance: Reserves Wallet (2022-11)",
+      "type": "exchange_wallet",
+      "source": "por:binance:2022-11"
+    },
     "TXFBqBbqJommqZf7BV8NNYzePh97UmJodJ": {
       "exchange": "Bitfinex",
       "label": "Bitfinex",
@@ -210,9 +310,293 @@
       "label": "Bybit Cold",
       "type": "cold_wallet"
     },
+    "TAhUwQHXSpNMEuspLzrP8LakwKNQKNYTgh": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TAv8HvZLAyPC2PyLY61i1nvPKpJ2bDURxo": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TB1WQmj63bHV9Qmuhp39WABzutphMAetSc": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TB1cPNTPE2yKRbyd5C3hd9KMXgb8HqW1CM": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TBTPEbJwwTfNMNN6j9UpDkoPeBhdDJhg4R": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TDJ7XZph16aa3B9ey46R9CcbQuo1a3ZVAX": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TF1yVgYNJYx8AEtKLhjd2YbLJ33uyWu9Eo": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TFAxireFhrca32XpKaTwABbrNyxSrM6twe": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TFbrM6tiw4A3AhFQAyY7u6jYs7m2HFKavU": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TG8eS14GvQJ1Qi4iWoePavD8oBiSNVNqzi": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TG9n9mHxbYfwVjizac1WaEoQ8ELfExPBCp": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "THA31r2W758trZQfqdb6AwKcgxorFZ31gs": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "THB2HdtUZwaqxWB2vFy6Ryf599EqxxKdmv": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "THRKrcUPirR6GU6qvsKAv2M6PUBcwe6ruD": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TJ6Ajasg7SQMYJuFxVAwwcsCSDSdNVPjDE": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TJv1ARa4yPATHdETtahhz4h9R3Txspcufg": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TKFvdC4UC1vtCoHZgn8eviK34kormXaqJ7": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TKhXDEshLkYEYfaPzvKfEj8zCztSqDNUw2": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TLC5ZSmSMVVhXvZs5xeSSdxsj5tdz3KdpF": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TLXtfWVafCLPSUUfk2UHJWVs2SZtuxBS4F": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TMB53f4eYhEhTqkuzKRNDoDNu5Ma5DtMSc": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TMFuCWAvcEDwtW3evtXFAg8eQzoCWtzwnQ": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TP39VvzdkdkxvGhmEMtot4hN5R7czR6GVV": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TPiL8in2nHcgNwiWcyfC6XwCQv4BmWnfLp": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TPk6eu8rKWmdd1qAhyYFsmkUpbZjJbiNMW": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TPsMJ3BE9ixSQ7guFbVLZ4eou6SATBSqHH": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TQVxjVy2sYt4at45ezD7VG4H6nQZtsua5C": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TRdfD4J3ddSMV5nu5hFDvwzQA4MLS3XdiV": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TS9PDCB6vzLYDCPr5Nas2yzekdr7ot6dxn": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TSLXGsU6kgByy3oCdhMqpWHXq3FFFHUVAn": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TSTDgxSnutWG9NHjGa4H9v7sMkNdtKacPJ": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TSvwBJi2TbngwJfPmjSyfUYPFfGdJ7pJnR": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TT82s2U3xERKsmvgftM1ekzRqVP6NPo13y": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TTT5cF5aPZjF6FkPJqV4MmnuykMACjDvmb": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TUCS5ToZvL23Q6kKtWUhAGgMfJBwPUZgfu": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TVYkGPtjVK7hvVcfsuZ8QXRsAdR2axpSP5": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TXweE6vCK5G7oUFiYvwkgrcWTHTvi1vmyo": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TYgFxMvvu2VHFJnxQf8fh1qVAeMfXZJZ3K": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
+    "TZBxnLfD3TRr9tHJNN2geTYwC4CYzfvkS9": {
+      "exchange": "Bybit",
+      "label": "Bybit: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bybit:2026-10"
+    },
     "TBfJhtGydsNkGt3VVN1mwcXLec9RExMRav": {
       "exchange": "CoinSpot",
       "label": "CoinSpot Exchange Wallet",
+      "type": "exchange_wallet"
+    },
+    "TMBRRvkXUFVM4UdFCEjHrqas7z3eaZzG4F": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet",
+      "type": "exchange_wallet"
+    },
+    "TV6djaCCeTYsWz3MrLoHXna9p3CrxmhGZN": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 10",
+      "type": "exchange_wallet"
+    },
+    "TUqoeRTLR31m97fZpYNeVQWJEdC27xbpZa": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 2",
+      "type": "exchange_wallet"
+    },
+    "TFBR1e9WdDP1tUvJJNDqFny5dcFJmc8KwZ": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 3",
+      "type": "exchange_wallet"
+    },
+    "TQnBFaoqyk4uitH2LehQPcfdf3ijnDhkgh": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 4",
+      "type": "exchange_wallet"
+    },
+    "TQW16AFvc3vEZex6Kp8Mutbm6MYAoyKzTK": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 5",
+      "type": "exchange_wallet"
+    },
+    "TKRB2ZhZN2Jy62yP1L5pFiMwD3QA5no3iu": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 6",
+      "type": "exchange_wallet"
+    },
+    "TVyGj8PerpKWVmKNr5JQjSfciqaKqb3Auv": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 7",
+      "type": "exchange_wallet"
+    },
+    "TTa3PQ2rsSTeRfvvtnj2xkTyMzDKMJFwFR": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 8",
+      "type": "exchange_wallet"
+    },
+    "TCngm7T5A1UHwZwzKvysE9SAid4ctyCHeT": {
+      "exchange": "CoinSwitch",
+      "label": "CoinSwitch Wallet 9",
       "type": "exchange_wallet"
     },
     "TDoyjmPJHzRFmYfCRLRsPhKjLETwd9fKr9": {
@@ -280,6 +664,60 @@
       "label": "HTX-Cold 7",
       "type": "cold_wallet"
     },
+    "TB5s4duG2LqfnkF1VgX4fWdvtYcmf1WELk": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
+    "TBuzWQynfzershAsPfGjo4A9sXUfZf8wsq": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
+    "TCiRCBNFrL6bFKWL94yWQi5hNMGNp1Nu27": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
+    "TF2fmSbg5HAD34KPUH7WtWCxxvgXHohzYM": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
+    "THBF3NdL2qRJc19eDCrC5atW3Tdkcg4oMB": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
+    "THZovMcKoZaV9zzFTWteQYd2f3NEvnzxAM": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
+    "TWN6yGR6VzYmThSy2CmkpEASyvwV4VKRDs": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
+    "TYYu2LkRMmd6mH2gCHAQpP8KRSu7CyoHgV": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
+    "TZ1SsapyhKNWaVLca6P2qgVzkHTdk6nkXa": {
+      "exchange": "Huobi / HTX",
+      "label": "HTX: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:htx:2026-11"
+    },
     "TG2CMGxnTPgQ6V58kiKd7wbyN8ewtAmY76": {
       "exchange": "Kraken",
       "label": "Kraken: Hot Wallet",
@@ -289,6 +727,18 @@
       "exchange": "KuCoin",
       "label": "KuCoin 10",
       "type": "exchange_wallet"
+    },
+    "TEWzF5ZsaWMh6sTNDPrYaPJrK8TTMGfwCC": {
+      "exchange": "KuCoin",
+      "label": "KuCoin: Reserves Wallet (2022-11)",
+      "type": "exchange_wallet",
+      "source": "por:kucoin:2022-11"
+    },
+    "TQeNNo5zVarhdKm5EiJSekfNXg6H1tRN4n": {
+      "exchange": "KuCoin",
+      "label": "KuCoin: Reserves Wallet (2022-11)",
+      "type": "exchange_wallet",
+      "source": "por:kucoin:2022-11"
     },
     "TUpHuDkiCCmwaTZBHZvQdwWzGNm5t8J2b9": {
       "exchange": "KuCoin",
@@ -400,61 +850,6 @@
       "label": "Upbit Exchange Hot Wallet",
       "type": "hot_wallet"
     },
-    "TWBPGLwQw2EbqYLLw1DJnTDt2ZQ9yJW1JJ": {
-      "exchange": "WhiteBIT",
-      "label": "WhiteBIT",
-      "type": "exchange_wallet"
-    },
-    "TMBRRvkXUFVM4UdFCEjHrqas7z3eaZzG4F": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet",
-      "type": "exchange_wallet"
-    },
-    "TUqoeRTLR31m97fZpYNeVQWJEdC27xbpZa": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 2",
-      "type": "exchange_wallet"
-    },
-    "TFBR1e9WdDP1tUvJJNDqFny5dcFJmc8KwZ": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 3",
-      "type": "exchange_wallet"
-    },
-    "TQnBFaoqyk4uitH2LehQPcfdf3ijnDhkgh": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 4",
-      "type": "exchange_wallet"
-    },
-    "TQW16AFvc3vEZex6Kp8Mutbm6MYAoyKzTK": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 5",
-      "type": "exchange_wallet"
-    },
-    "TKRB2ZhZN2Jy62yP1L5pFiMwD3QA5no3iu": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 6",
-      "type": "exchange_wallet"
-    },
-    "TVyGj8PerpKWVmKNr5JQjSfciqaKqb3Auv": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 7",
-      "type": "exchange_wallet"
-    },
-    "TTa3PQ2rsSTeRfvvtnj2xkTyMzDKMJFwFR": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 8",
-      "type": "exchange_wallet"
-    },
-    "TCngm7T5A1UHwZwzKvysE9SAid4ctyCHeT": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 9",
-      "type": "exchange_wallet"
-    },
-    "TV6djaCCeTYsWz3MrLoHXna9p3CrxmhGZN": {
-      "exchange": "CoinSwitch",
-      "label": "CoinSwitch Wallet 10",
-      "type": "exchange_wallet"
-    },
     "TXe3EibZP9jFogwyqLPd3APdwxZbiQBUqi": {
       "exchange": "WazirX",
       "label": "WazirX Wallet 1",
@@ -473,6 +868,11 @@
     "TPQqrAEnrWKTefTpgCNzXAGmJuvBqUrk1P": {
       "exchange": "WazirX",
       "label": "WazirX Wallet 4",
+      "type": "exchange_wallet"
+    },
+    "TWBPGLwQw2EbqYLLw1DJnTDt2ZQ9yJW1JJ": {
+      "exchange": "WhiteBIT",
+      "label": "WhiteBIT",
       "type": "exchange_wallet"
     }
   }
