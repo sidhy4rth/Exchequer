@@ -127231,7 +127231,7 @@
     "0x6cc38b3f8cbf2b78996801d1b8d5fa441c33270d": {
       "exchange": "Unocoin",
       "label": "Unocoin: cold storage (PoR June 2023)",
-      "type": "exchange_wallet"
+      "type": "cold_wallet"
     }
   },
   "_unverified_pending": {
