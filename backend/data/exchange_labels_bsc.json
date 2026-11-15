@@ -71,6 +71,48 @@
    "added": {
     "Bybit": 31
    }
+  },
+  "por_bitget_2026_11_15": {
+   "rule": "scripts/import_bitget_por_labels.py: Bitget's own proof-of-reserves reserve-wallet list, per audit (a first-party source, as the por_2026_11_15 rows); each address cites the newest audit that lists it; the rules of scripts/import_por_labels.py: a conflict with any other file, a demo or the label store is left out, never overwritten; a token contract or an address with no activity on this chain is left out; contract code -> contract_wallet, with no role (Bitget gives none)",
+   "source": {
+    "url": "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail",
+    "request": "POST {\"auditId\": \"<audit id>\"}",
+    "page": "https://www.bitget.com/promotion/proof-of-reserves",
+    "archive": null,
+    "archive_note": "an answer to a POST has no Internet Archive copy; the answers cited are kept byte for byte in backend/tests/fixtures/bitget_por/"
+   },
+   "audits_cited": {
+    "Au2026111300": {
+     "snapshot_date": "2026-11-12",
+     "retrieved_utc": "2026-11-15T12:39:12Z",
+     "sha256": "849bafc3921c7fdfa1b6eb478189d26676123d74d31014a19bbfd5e6ceec1fa1",
+     "bytes": 10553
+    },
+    "Au2026102112": {
+     "snapshot_date": "2026-10-21",
+     "retrieved_utc": "2026-11-15T12:39:17Z",
+     "sha256": "57e0bfabd6c0abb4e585c4d30b1f12607489ae685119e8f061a281de2db16b5f",
+     "bytes": 10944
+    }
+   },
+   "audits_read": {
+    "Au2026111300": "849bafc3921c7fdfa1b6eb478189d26676123d74d31014a19bbfd5e6ceec1fa1",
+    "Au2026102112": "57e0bfabd6c0abb4e585c4d30b1f12607489ae685119e8f061a281de2db16b5f",
+    "Au2026092917": "e635cf2f7d3bee01dd03e37354bec39dd955adf7c5a11e0c72fb079036caa34e",
+    "Au2026091600": "d51ab633cf1415bf8309189d561067ef1393ed9201ee91209d36cb81f6512d3d",
+    "Au2026082022": "bff7f538c2787f11915e2d197f6ee228e02a2005e830f73f0a1abc89949b6e1d",
+    "Au2026072017": "1af807e19dab57aa7cfd3f4928a0f864ef48116fc84bc206bb7852834f4d48d6",
+    "Au2026061516": "572dbe923f48350b245abfbf67e22751d871e6fdff21f8dd36a005915451c132",
+    "Au2026052008": "77fd83c167971d2537baee7784cb3f159c01d7df428cd084c8fd1ebc271365a5",
+    "Au2026041710": "664055f9ddbdf56a651379177f55c52a1e977ba917554c8c50637c27c8aa7035",
+    "Au2026031714": "26782d4c11fac2dba3034e4215710698284e4b48c89a933d1be38ed95c7518ed",
+    "Au2026021014": "6a9e14327fb8ec5995c90ad3c4d2afbca79c0affcfdee5f0b022c13abd23bf3b",
+    "Au2026012107": "315b8f5333c890da820237d65f936e82564e9f858ae689d1f75e3cbf84a60c00"
+   },
+   "left_out": [],
+   "added": {
+    "Bitget": 4
+   }
   }
  },
  "labels": {
@@ -1343,6 +1385,50 @@
    "exchange": "CoinDCX",
    "label": "CoinDCX Wallet 1",
    "type": "exchange_wallet"
+  },
+  "0x092fe28430bade62c7c044b9c77d0aaa06241319": {
+   "exchange": "Bitget",
+   "label": "Bitget: Reserve Wallet 1",
+   "type": "contract_wallet",
+   "source_kind": "Bitget proof-of-reserves reserve wallet (its queryReserveWalletDetail answer for one audit; no hot or cold role given)",
+   "source": "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail",
+   "source_audit": "Au2026111300",
+   "source_sha256": "849bafc3921c7fdfa1b6eb478189d26676123d74d31014a19bbfd5e6ceec1fa1",
+   "source_date": "2026-11-12",
+   "retrieved": "2026-11-15"
+  },
+  "0x46852e1ff32739ddd2623bd06b27ca39f1143cc7": {
+   "exchange": "Bitget",
+   "label": "Bitget: Reserve Wallet 4",
+   "type": "contract_wallet",
+   "source_kind": "Bitget proof-of-reserves reserve wallet (its queryReserveWalletDetail answer for one audit; no hot or cold role given)",
+   "source": "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail",
+   "source_audit": "Au2026111300",
+   "source_sha256": "849bafc3921c7fdfa1b6eb478189d26676123d74d31014a19bbfd5e6ceec1fa1",
+   "source_date": "2026-11-12",
+   "retrieved": "2026-11-15"
+  },
+  "0x934186fd8352fa734eb0df82e8863e6449193294": {
+   "exchange": "Bitget",
+   "label": "Bitget: Reserve Wallet 9",
+   "type": "contract_wallet",
+   "source_kind": "Bitget proof-of-reserves reserve wallet (its queryReserveWalletDetail answer for one audit; no hot or cold role given)",
+   "source": "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail",
+   "source_audit": "Au2026102112",
+   "source_sha256": "57e0bfabd6c0abb4e585c4d30b1f12607489ae685119e8f061a281de2db16b5f",
+   "source_date": "2026-10-21",
+   "retrieved": "2026-11-15"
+  },
+  "0x95047fe21071e8038810975cfc9ee6da7dee33a4": {
+   "exchange": "Bitget",
+   "label": "Bitget: Reserve Wallet 10",
+   "type": "contract_wallet",
+   "source_kind": "Bitget proof-of-reserves reserve wallet (its queryReserveWalletDetail answer for one audit; no hot or cold role given)",
+   "source": "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail",
+   "source_audit": "Au2026111300",
+   "source_sha256": "849bafc3921c7fdfa1b6eb478189d26676123d74d31014a19bbfd5e6ceec1fa1",
+   "source_date": "2026-11-12",
+   "retrieved": "2026-11-15"
   }
  }
 }
