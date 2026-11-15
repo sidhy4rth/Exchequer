@@ -46,6 +46,11 @@ class Job:
     owner: str | None = None
     budget: Any = None
     case_id: str | None = None
+    # EXCHEQUER_JOB_STOP_UNWATCHED (routes/jobs.py): since when (monotonic) no
+    # page has watched it, None until its first progress stream has closed;
+    # and whether it was stopped for that, so it ends as a hang-up, not a Stop.
+    unwatched_since: float | None = None
+    abandoned: bool = False
 
     def snapshot(self, with_result: bool = False) -> dict[str, Any]:
         end = self.finished or time.time()
