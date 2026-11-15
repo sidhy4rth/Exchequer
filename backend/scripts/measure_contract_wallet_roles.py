@@ -63,18 +63,25 @@ SENDER_PAGES = 1    # the sender's newest 50 of each
 PAUSE = 0.35
 ROLE = "hot_wallet"
 META_KEY = "contract_wallet_roles_2026_11_15"
-# Rows another source owns exactly: measured, but the role is left to that source.
+# Measured, but the role is not set: a row another source owns exactly, or evidence too old to say
+# what the wallet is today.
 HELD = {
     "0x305dcaea67a9d4152e54e68060c89db05fd67a7b": (
         "its row comes from data/india_exchanges.json, which tests/test_india_exchanges.py holds to exactly "
         "exchange, label and type; giving it a role is a change to that seed, for the owner"),
+    "0x51ca21ed46a9df3cb6f34624cbd482d312996730": (
+        "every sweep read is from blocks 7.4M to 9.5M (2019-2020), so a hot role today would claim more "
+        "than the reading shows (owner's decision, #262)"),
 }
 
 
 def roleless(chain: str) -> dict[str, dict[str, Any]]:
-    labels = json.loads(config.CHAINS[chain].labels_path.read_text(encoding="utf-8"))["labels"]
-    return {a: m for a, m in labels.items()
-            if isinstance(m, dict) and m.get("type") == clc.CONTRACT_WALLET and not m.get("role")}
+    """The contract wallets to measure: those with no role, and those whose role an earlier
+    --apply set (listed in _meta), so a later --record measures them again."""
+    document = json.loads(config.CHAINS[chain].labels_path.read_text(encoding="utf-8"))
+    ours = document["_meta"].get(META_KEY, {}).get("given", {})
+    return {a: m for a, m in document["labels"].items()
+            if isinstance(m, dict) and m.get("type") == clc.CONTRACT_WALLET and (not m.get("role") or a in ours)}
 
 
 CACHE: Path | None = None  # --cache DIR keeps every answer, so a re-run asks nothing twice

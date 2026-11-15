@@ -38,10 +38,11 @@ def test_the_label_files_hold_exactly_the_roles_measured():
     assert mcr.check(EVIDENCE) == []
     given = {a for c in CHAINS for a in _given(c)}
     assert given == {"0xfa52274dd61e1643d2205169732f29114bc240b3", "0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43",
-                     "0x51ca21ed46a9df3cb6f34624cbd482d312996730", "0x6fc82a5fe25a5cdb58bc74600a40a69c065263f8"}
+                     "0x6fc82a5fe25a5cdb58bc74600a40a69c065263f8"}
     for chain in CHAINS:
         for address in _given(chain):
             assert _labels(chain)[address]["role"] == "hot_wallet"
+            assert address in mcr.roleless(chain)  # a later --record measures it again, not drops it
 
 
 # -- what a role changes in a trace --------------------------------------------------
