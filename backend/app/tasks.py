@@ -321,23 +321,33 @@ def _short(text: str, limit: int = 120) -> str:
 
 
 def _from_exhibits(viewer: Any, case_id: str) -> list[dict[str, Any]]:
-    """A held exhibit whose last hand-over (a change of holder in its history) has no
-    hash check after it. Only exhibits with a SHA-256: the register checks a file by that alone.
-    The key carries the hand-over's place in the history, so a later hand-over asks again."""
+    """A held exhibit whose last hand-over (a change of holder in its history) has no matching
+    hash check after it: none at all, or the last one did not match. Only exhibits with a SHA-256:
+    the register checks a file by that alone. The key carries the place in the history of the
+    hand-over (or of the failed check), so a later hand-over or a later failed check asks again."""
     out = []
     for x in exhibits.list_for(viewer, case_id):
         if x["status"] != "held" or not x["sha256"]:
             continue
         history = x["history"]
         handovers = [i for i, h in enumerate(history) if h.get("action") == "changed" and "holder" in h.get("changed", [])]
-        if not handovers or any(h.get("action") == "checked" for h in history[handovers[-1] + 1:]):
+        if not handovers:
+            continue
+        checks = [i for i in range(handovers[-1] + 1, len(history)) if history[i].get("action") == "checked"]
+        if checks and history[checks[-1]].get("result") == "match":
             continue
         at, holder = handovers[-1], one_line(x["holder"])
+        handed = f"Handed over{f' to {_short(holder)}' if holder else ''} on {_day(history[at].get('at'))}; "
+        if checks:
+            at = checks[-1]
+            since = (f"the last check of the file against its recorded SHA-256, on {_day(history[at].get('at'))}, "
+                     "did not match. ")
+        else:
+            since = "no check of the file against its recorded SHA-256 since. "
         out.append({"source": f"exhibit:{x['exhibit_id']}:{at}:check", "due_on": "",
                     "title": f"Check the file of exhibit {_short(x['label'])} against its recorded hash",
-                    "why": f"Handed over{f' to {_short(holder)}' if holder else ''} on {_day(history[at].get('at'))}; "
-                           "no check of the file against its recorded SHA-256 since. A match shows the file is "
-                           "unchanged since its hash was recorded; it does not show who had it."})
+                    "why": handed + since + "A match shows the file is unchanged since its hash was recorded; "
+                           "it does not show who had it."})
     return out
 
 
@@ -347,8 +357,9 @@ ALERT_WHAT = {"exchange": "funds sent to an exchange wallet", "risk": "funds sen
 
 def _from_watches(viewer: Any, case_id: str) -> list[dict[str, Any]]:
     """Unread alerts on this browser's watches of the case, one suggestion per watch, keyed by its
-    newest unread alert (a newer one asks again). Alerts below the dust floor do not count, as on
-    the watchlist, where they sort last."""
+    newest unread alert (a newer one asks again). Exchange and flagged-address alerts below the
+    dust floor do not count: the watchlist marks exactly those as dust (watchlist.is_dust_alert)
+    and sorts them last. A movement or "more" alert always counts, whatever its size."""
     out = []
     with models.session() as s:
         watches = s.scalars(select(models.Watch).where(
@@ -358,7 +369,7 @@ def _from_watches(viewer: Any, case_id: str) -> list[dict[str, Any]]:
             unread = [a for a in s.scalars(select(models.Alert).where(
                 models.Alert.watch_id == w.id, models.Alert.owner_hash == viewer.owner_hash,
                 models.Alert.read.is_(False)).order_by(models.Alert.created_at.desc(), models.Alert.id)).all()
-                if a.kind == "more" or not watchlist.is_dust(a.value, a.asset)]
+                if not watchlist.is_dust_alert(a)]
             if not unread:
                 continue
             newest, n = unread[0], len(unread)

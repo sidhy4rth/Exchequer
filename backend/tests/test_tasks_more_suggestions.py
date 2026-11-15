@@ -89,13 +89,33 @@ def test_an_exhibit_handed_over_with_no_check_since_is_suggested():
 
 def test_a_check_after_the_hand_over_ends_it_and_a_later_hand_over_asks_again():
     x = hand_over(exhibit())
-    exhibits.check(x["exhibit_id"], "d" * 64, viewer())  # a mismatch is still a check: the register shows it
+    exhibits.check(x["exhibit_id"], SHA, viewer())
     assert tasks.suggestions(viewer(), "case-1") == []
     exhibits.update(x["exhibit_id"], {"stored_at": "Locker 4", "note": "Moved"}, viewer())  # a move is not a hand-over
     assert tasks.suggestions(viewer(), "case-1") == []
     hand_over(x, to="SI Pal")
     [s] = tasks.suggestions(viewer(), "case-1")
     assert s["source"] == f"exhibit:{x['exhibit_id']}:4:check" and "SI Pal" in s["why"]
+
+
+def test_a_failed_check_after_the_hand_over_keeps_it_until_one_matches():
+    x = hand_over(exhibit())
+    exhibits.check(x["exhibit_id"], "d" * 64, viewer())  # history: created, handed over, checked (mismatch)
+    [s] = tasks.suggestions(viewer(), "case-1")
+    assert s["source"] == f"exhibit:{x['exhibit_id']}:2:check"
+    assert s["title"] == "Check the file of exhibit Victim's phone against its recorded hash"
+    assert s["why"].startswith("Handed over to Insp. Rao on ")
+    assert "the last check of the file against its recorded SHA-256, on " in s["why"]
+    assert "did not match." in s["why"] and "no check" not in s["why"]
+    who = viewer()
+    tasks.create(who.owner_hash, "case-1", {"source": s["source"], "note": "Asked the lab"}, who)  # declined
+    assert tasks.suggestions(viewer(), "case-1") == []
+    exhibits.check(x["exhibit_id"], "e" * 64, viewer())  # a later failed check asks again
+    assert [y["source"] for y in tasks.suggestions(viewer(), "case-1")] == [f"exhibit:{x['exhibit_id']}:3:check"]
+    exhibits.check(x["exhibit_id"], SHA, viewer())  # the last check matches: done
+    assert tasks.suggestions(viewer(), "case-1") == []
+    exhibits.check(x["exhibit_id"], "d" * 64, viewer())  # a match then a mismatch: the last one counts
+    assert rules(tasks.suggestions(viewer(), "case-1")) == ["check"]
 
 
 def test_a_check_before_the_hand_over_does_not_count():
@@ -131,11 +151,20 @@ def test_unread_alerts_on_the_cases_watch_are_one_suggestion_keyed_by_the_newest
 
 def test_alerts_marked_read_dust_or_on_other_watches_suggest_nothing():
     alert(watch(), read=True)
-    alert(watch(), value=0.01)  # below the dust floor, as the watchlist sorts it last
+    alert(watch(), value=0.01)  # an exchange alert below the dust floor: the watchlist marks it dust
+    alert(watch(), kind="risk", value=0.01)
     alert(watch(case_id="case-2"))
     alert(watch(case_id=None))
     alert(watch(active=False))
     assert tasks.suggestions(viewer(), "case-1") == []
+
+
+def test_a_small_movement_still_counts_as_the_watchlist_does_not_call_it_dust():
+    w = watch()
+    a = alert(w, kind="moved", value=0.01)
+    with models.session() as s:
+        assert watchlist.alert_summary(s.get(models.Alert, a))["dust"] is False  # as the watchlist shows it
+    assert [x["source"] for x in tasks.suggestions(viewer(), "case-1")] == [f"alert:{a}:unread"]
 
 
 def test_marking_read_on_the_watchlist_ends_it_and_a_new_alert_asks_again():
