@@ -106,9 +106,11 @@ def test_an_unregistered_exchange_letter_says_so_with_the_date_and_sources(on):
     for to in (EXCHANGE, EXCHANGE_FREEZE):
         text = draft("case-1", _at("Kraken", "Kraken 3"), to)
         flat = " ".join(text.split())
-        assert ("FIU-IND NOTE (about the exchange, not any customer): Kraken was not on FIU-IND's list of "
-                "registered VDA service providers as of 9 Mar 2026 (Lok Sabha USQ 5805, Annexure-I); on 28 Dec "
-                "2023 FIU-IND announced a show-cause notice to it under section 13 of the PMLA") in flat
+        assert ("FIU-IND NOTE (about the exchange, not any customer): Kraken, in date order: on 28 Dec 2023 "
+                "FIU-IND announced a show-cause notice to it under section 13 of the PMLA and that it had written "
+                "to MeitY to block its URLs (PIB release 1991372); as of 9 Mar 2026 Kraken was not on FIU-IND's "
+                "list of registered VDA service providers (Lok Sabha USQ 5805, Annexure-I). Exchequer last "
+                "checked the sources on 15 Nov 2026.") in flat
         assert LS_5805 in text and PIB_DEC_2023 in text  # each URL whole, on its line
         assert "Kraken — Law Enforcement / Compliance team" in text  # still addressed to the exchange
         assert "illegal" not in flat.lower()
@@ -116,8 +118,8 @@ def test_an_unregistered_exchange_letter_says_so_with_the_date_and_sources(on):
 
 def test_a_registered_exchange_shows_its_listing_and_its_penalty(on):
     flat = " ".join(draft("case-1", _at("Binance", "Binance 14"), EXCHANGE).split())
-    assert ("Binance, listed as Nest Services Limited (Earlier Binance International Limited), was on "
-            "FIU-IND's list of registered VDA service providers as of 9 Mar 2026") in flat
+    assert ("as of 9 Mar 2026 Binance, listed as Nest Services Limited (Earlier Binance International Limited), "
+            "was on FIU-IND's list of registered VDA service providers (Lok Sabha USQ 5805, Annexure-I)") in flat
     assert "on 19 Jun 2024 FIU-IND imposed a penalty of Rs 18,82,00,000" in flat
     assert "https://fiuindia.gov.in/pdfs/judgements/Binance_Order_10_2024.pdf" in flat
 
@@ -143,7 +145,9 @@ def test_an_unlisted_exchange_letter_and_report_say_nothing(on):
 def test_the_report_finding_carries_the_note_and_its_sources(on):
     text = render_text_report(_report("Kraken"))
     finding = text[text.index("\nFINDING\n"):text.index("CONFIDENCE")]
-    assert "FIU-IND          : Kraken was not on FIU-IND's list of registered VDA" in finding
+    assert "FIU-IND          : Kraken, in date order: on 28 Dec 2023 FIU-IND announced a" in finding
+    assert "as of 9 Mar 2026 Kraken was not on FIU-IND's list of registered VDA" in " ".join(finding.split())
+    assert "Exchequer last checked the sources on 15 Nov 2026." in " ".join(finding.split())
     assert f"FIU-IND source   : {LS_5805}" in finding and f"FIU-IND source   : {PIB_DEC_2023}" in finding
     assert "This is about the exchange, not any customer." in " ".join(finding.split())
     # The signed finding and the PDF still read: the note is its own field, after the others.

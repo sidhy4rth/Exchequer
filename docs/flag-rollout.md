@@ -434,11 +434,15 @@ freeze, and the instant-exchanger ones for ChangeNOW and FixedFloat) gain a
 sources, under the closure note if there is one. The note says whether the
 exchange was on FIU-IND's list of registered VDA service providers as of
 9 Mar 2026 (Lok Sabha USQ 5805, Annexure-I) and the notices, takedown
-directions and penalties FIU-IND announced, each dated, e.g. "Kraken was not on
-FIU-IND's list of registered VDA service providers as of 9 Mar 2026 (Lok Sabha
-USQ 5805, Annexure-I); on 28 Dec 2023 FIU-IND announced a show-cause notice to
-it under section 13 of the PMLA and that it had written to MeitY to block its
-URLs (PIB release 1991372)." Nothing else changes: not the attribution, the
+directions and penalties FIU-IND announced, each dated and in date order, each
+clause naming its source, then the day Exchequer last checked the sources
+(`_meta.checked_on`), e.g. "Kraken, in date order: on 28 Dec 2023 FIU-IND
+announced a show-cause notice to it under section 13 of the PMLA and that it
+had written to MeitY to block its URLs (PIB release 1991372); as of 9 Mar 2026
+Kraken was not on FIU-IND's list of registered VDA service providers (Lok Sabha
+USQ 5805, Annexure-I). Exchequer last checked the sources on 15 Nov 2026." When
+nothing is older than the 9 Mar 2026 list, the note starts with the list, as
+before ("OKX was not on FIU-IND's list ... as of 9 Mar 2026 ..."). Nothing else changes: not the attribution, the
 labels, the addressee, the letter offers or what a letter asks. An exchange
 with no entry gets no note. No migration; it contacts nothing outside Exchequer.
 
@@ -468,6 +472,31 @@ it (they were signed with it).
 `dep-dbsugv61egvs73eto9a0`) and in `render.yaml`. The registered list is
 frozen at 9 Mar 2026 and FIU-IND publishes none (USQ 5805(f)): re-check the file
 against the next Parliament answer or PIB release, and update `checked_on`.
+
+**Re-checking the sources** (at least every 180 days, and whenever a new
+Parliament answer, PIB release or FIU-IND order names a VDA service provider).
+Every note prints "Exchequer last checked the sources on <checked_on>", so that
+date must be true. `tests/test_fiu_ind_status.py::test_the_sources_were_checked_recently`
+fails, saying what to do, once `checked_on` is more than 180 days
+(`fiu_ind_status.STALE_AFTER_DAYS`) before the test's fixed `TODAY`. `TODAY`
+never moves by itself, so CI does not start failing on its own: move it forward
+when you re-check, or when you notice it is old.
+
+1. Open every source the file cites (the URLs in its entries and in
+   `_meta.register`) and check each entry's date, wording, source name and
+   amount against it. A fact the source no longer supports is removed, not
+   reworded.
+2. Look for newer sources: Lok Sabha and Rajya Sabha answers on VDA service
+   providers (sansad.in), PIB releases from the Ministry of Finance about
+   FIU-IND, and FIU-IND's orders page (fiuindia.gov.in). Add only facts a
+   source states, dated as `_meta.provenance` says, for exchanges the label
+   files name (`_meta.rule`). A newer registered list replaces `_meta.register`
+   (its date, source and URL) and every entry's `registered` and `listed_as`.
+3. Record what you read in `_meta.provenance`, set `_meta.checked_on` to the
+   day you finished, and update `TODAY` and the pinned dates in
+   `tests/test_fiu_ind_status.py` and `tests/test_fiu_ind_note_outputs.py`.
+4. Run the backend tests and open a PR that lists what changed per entry and
+   the sources read. With the flag on, the new wording is live once merged.
 
 ## `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`: stop a trace whose client hung up (#227)
 
