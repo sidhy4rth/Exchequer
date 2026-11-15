@@ -17,8 +17,9 @@ Each section is marked:
   the site once it is merged.
 
 Status is as of 15 November 2026. On that day the site ran the code merged up
-to the task list (#122); anything merged after it (the Tron proof-of-reserves
-labels, #221) reaches the site with the next deploy. `docs/suite-features.md`
+to #239 (build 47aadf5); anything merged after it reaches the site with the
+next deploy. A switch counts as on only where the site's settings
+(`render.yaml`) turn it on. `docs/suite-features.md`
 tracks status for the team.
 
 ## Rules that hold everywhere
@@ -131,8 +132,7 @@ The full list is in the README's Limitations section and in every report.
   U.S. court forfeiture orders (each re-read in its notice), and 36 more mixer
   pools and entry points. Polygon and Arbitrum now have their own lists.
 - **Tron exchange wallets from proof of reserves** (#221): 52 Tron wallets
-  that Binance, Bybit, HTX and KuCoin published as their own reserves. On main;
-  on the site after the next deploy.
+  that Binance, Bybit, HTX and KuCoin published as their own reserves.
 
 **Limits**
 
@@ -164,13 +164,13 @@ listing, freeze or theft tag on such a contract still stands as a risk hit.
 
 ### Bybit and OKX wallets; OKX's full list
 
-**Coming: in review** (PR #226): Bybit's wallets on Ethereum (125), BNB Smart
+**Live** (#226): Bybit's wallets on Ethereum (125), BNB Smart
 Chain (31), Polygon (13) and Arbitrum (24), and OKX's on Polygon (95) and
 Arbitrum (119), from each exchange's own proof-of-reserves file. Labels read
 "Bybit: Reserve Wallet N" or "OKX: Reserve Wallet N". An address another list
 already claims is left out, never overwritten.
 
-**Coming: behind a switch until reviewed** (PRs #223, #224; switch
+**Merged, switched off** (#223, with #224; switch
 `EXCHEQUER_STORE_EXCHANGE_ROWS`): OKX lists far more wallets (474,530 on Tron,
 17,046 on Ethereum) than the label files can carry, so they go into the label
 store. A match from the store says what it rests on (its attribution basis).
@@ -179,14 +179,12 @@ It also needs a new label store release before it does anything.
 ### Stopping a trace
 
 **Live:** a trace that runs in the background shows **Stop this trace** while
-it runs. Today, a trace already finishing when you press it may still be saved
-as a case.
+it runs. A stopped trace is never saved, even if its last reads come back
+after you stopped it (#228). Trace again if you still need it.
 
-**Coming: in review** (PRs #227, #228): a stopped trace is never saved, even
-if its last reads come back after you stopped it. Behind the switch
-`EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`, a trace whose page was closed also
-stops at its next request to a provider, and nothing is saved. Trace again if
-you still need it.
+**Merged, switched off** (#227; switch `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`):
+a trace whose page was closed also stops at its next request to a provider,
+and nothing is saved.
 
 ---
 
@@ -329,7 +327,7 @@ request, never the account number or any part of the fingerprint.
 
 ### A letter of request to a foreign country
 
-**Coming: in review** (PRs #126, #127, #130, #136, #158).
+**Live** (#126, with #127, #130, #136 and #158; it has no switch).
 
 When the exchange holding the money is abroad and will not answer a notice,
 its records can come only through a letter of request: a Criminal Court issues
@@ -419,8 +417,9 @@ recorded will not be suggested. Tasks are not yet in the case bundle
 
 ## 5. Check an export from a seized phone or computer
 
-**Coming: behind a switch until reviewed** (PRs #147, #154, #155, #156, #164;
-switch `EXCHEQUER_EXPORT_SCAN`).
+**Merged, switched off** (#147, with #154, #155, #156 and #164; switch
+`EXCHEQUER_EXPORT_SCAN`). Adding a wallet address by hand under **Reported
+identifiers** (section 7) has no switch and is live.
 
 **Where:** the Evidence tab, an **Export scan** panel ("addresses, hashes and
 seed phrases in a phone or computer export").
@@ -459,9 +458,10 @@ kind, not the address.
 
 ## 6. Import a bank statement or call records
 
-**Coming: behind a switch until reviewed.** Statements: PRs #146, #151, #152,
-#153, switch `EXCHEQUER_STATEMENT_IMPORT`. Call detail records: PRs #168, #172,
-#173, switch `EXCHEQUER_CDR_IMPORT`. Withdrawing an import: PRs #183, #184.
+**Merged, switched off** (#146 stack). Statements: #146, #151, #152, #153,
+switch `EXCHEQUER_STATEMENT_IMPORT`. Call detail records: #168, #172, #173,
+switch `EXCHEQUER_CDR_IMPORT`. Withdrawing an import: #183, #184, under the
+same two switches.
 
 ### Bank or exchange statement
 
@@ -526,7 +526,9 @@ phones, UPI IDs").
 **Steps**
 
 1. **Add a reported identifier**: a scam site's domain, a Telegram username, a
-   phone number or a UPI ID the victim reported. It is kept as typed and in a
+   phone number, a UPI ID or a wallet address the victim reported (0x… on
+   Ethereum-family chains, T… on Tron; the chain is not stored, since an
+   Ethereum-style address is the same on every EVM chain). It is kept as typed and in a
    standard form, so the same one matches across cases.
 2. **Also in N other cases** shows where the same identifier was reported in
    other cases you can read, with links to them.
@@ -593,12 +595,11 @@ history. Never a key or seed phrase.
 
 ### Custody wallets and the signing log
 
-**Coming: behind a switch until reviewed** (PRs #129, #139, #140, #142; switch
+**Merged, switched off** (#129, with #139, #140 and #142; switch
 `EXCHEQUER_CUSTODY_WALLETS`).
 
 **Where:** the Letters tab, **Custody wallets**, directly under the frozen and
-seized funds. The step-by-step checklist is `docs/custody-procedure.md` (in
-PR #142).
+seized funds. The step-by-step checklist is `docs/custody-procedure.md`.
 
 **Steps**
 
@@ -650,8 +651,8 @@ holding the link is refused.
   about whether the records are right.
 - The manifest itself is not signed; the report is.
 - Certificate drafts are not included: they are drafts you complete.
-- Not yet in it: the task list (merged after the bundle), and the registers
-  still in review (custody, statements, letters of request).
+- Not yet in it: the task list, custody wallets, statement and call record
+  imports, and letters of request (all merged after the bundle).
 
 ---
 
