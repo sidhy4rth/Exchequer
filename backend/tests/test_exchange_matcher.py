@@ -143,3 +143,28 @@ def test_a_forward_trace_still_reads_inbound_value(label_file):
 
     match = matcher.annotate(graph, direction=OUTGOING)[0]
     assert match.value_received_native == pytest.approx(9.0)
+
+
+# ---------------------------------------------------------------------------
+# Another firm's account: the label pattern stays fast on any input
+# ---------------------------------------------------------------------------
+def test_a_firm_account_label_is_still_read():
+    from app.exchange_matcher import firm_account
+    assert firm_account("Wintermute: Binance Deposit") == "Wintermute"
+    assert firm_account("AltCoinTrader: Binance Deposit 1") == "AltCoinTrader"
+    assert firm_account("Deribit: Coinbase Prime Custody") == "Deribit"
+    assert firm_account("Wintermute:  Binance   Deposit") == "Wintermute"
+    assert firm_account("Coinbase: Batch Deposit 1") is None
+    assert firm_account("Binance: Binance Deposit", "Binance") is None
+
+
+def test_a_long_run_of_spaces_cannot_stall_the_firm_account_pattern():
+    import time
+
+    from app.exchange_matcher import FIRM_ACCOUNT, firm_account
+    hostile = "a: b" + " " * 20_000 + "x"
+    started = time.perf_counter()
+    assert FIRM_ACCOUNT.match(hostile) is None
+    assert firm_account(hostile) is None
+    assert firm_account("a: b" + " " * 20_000 + "Deposit") is None  # longer than any label is not one
+    assert time.perf_counter() - started < 0.2

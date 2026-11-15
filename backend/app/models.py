@@ -401,7 +401,8 @@ class CaseIdentifier(Base):
 
 class DomainLookup(Base):
     """RDAP and DNS facts fetched about a domain on a case's identifier register, with every
-    response kept by source, time and SHA-256 (domain_lookup.py, suite feature 4 slice 2)."""
+    response kept by source, time and SHA-256 (domain_lookup.py, suite feature 4 slice 2).
+    A Telegram username's public t.me page is kept here too (telegram_lookup.py, slice 4)."""
 
     __tablename__ = "domain_lookups"
 

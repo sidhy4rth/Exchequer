@@ -84,8 +84,12 @@ def is_deposit_label(label: str | None) -> bool:
 # files attribute it there (scripts/clean_exchange_labels.py) and a letter names
 # the firm as the account holder. Not "Coinbase: Batch Deposit 1" or
 # "CoinList: WBTC Merchant Deposit Address": the exchange's own.
-FIRM_ACCOUNT = re.compile(r"^(?P<firm>[^:]+):\s*(?!Batch\b)(?P<at>\S[^:]*?)\s+(?:Deposit(?:\s+\d+)?|Prime Custody)$",
-                          re.IGNORECASE)
+# "(?<!\s)" lets the gap before "Deposit" start only where a run of spaces
+# starts, so a long run cannot make the match quadratic; and a label longer
+# than FIRM_LABEL_MAX (TronScan's tag cap, tron_tags.MAX_TAG_LENGTH) is no name.
+FIRM_ACCOUNT = re.compile(r"^(?P<firm>[^:]+):\s*(?!Batch\b)(?P<at>\S[^:]*?)(?<!\s)\s+"
+                          r"(?:Deposit(?:\s+\d+)?|Prime Custody)$", re.IGNORECASE)
+FIRM_LABEL_MAX = 200
 
 
 def firm_account(label: str | None, exchange: str | None = None) -> str | None:
@@ -93,7 +97,8 @@ def firm_account(label: str | None, exchange: str | None = None) -> str | None:
 
     With `exchange`, only when the firm is not that exchange: a row still
     attributed to the firm itself is not yet another firm's account there."""
-    found = FIRM_ACCOUNT.match(exchange_status.marked((label or "").strip(), None))  # without "(defunct)"
+    text = exchange_status.marked((label or "").strip(), None)  # without "(defunct)"
+    found = FIRM_ACCOUNT.match(text) if len(text) <= FIRM_LABEL_MAX else None
     if not found:
         return None
     firm = found["firm"].strip()

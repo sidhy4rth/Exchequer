@@ -33,7 +33,7 @@
     "Kryptono": 1
    }
   },
-  "india_exchanges": "13 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why.",
+  "india_exchanges": "14 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, a wallet list the exchange published itself, or one it says it published through Nansen Portfolio) and what was left out and why.",
   "por_2026_11_15": {
    "rule": "scripts/import_por_labels.py: each exchange's own proof-of-reserves wallet list (a first-party source, accepted by the owner 15 Nov 2026); a conflict with any other file, a demo or the label store is left out, never overwritten; a token contract or an address with no activity on this chain is left out",
    "sources": {
@@ -1338,6 +1338,11 @@
    "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
    "source_date": "2026-10-27",
    "retrieved": "2026-11-14"
+  },
+  "0xf379fcd9c996d85de025985ba9b1c9c96daa4a72": {
+   "exchange": "CoinDCX",
+   "label": "CoinDCX Wallet 1",
+   "type": "exchange_wallet"
   }
  }
 }

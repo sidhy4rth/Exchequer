@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { addAsset, fetchCaseAssets, fetchCaseRequests, updateAsset } from '../../api'
 import { plain } from '../../text'
 import { middle } from './format'
+import SopReminders from './SopReminders'
 import './AssetsPanel.css'
 
 // The asset register (backend assets.py, suite feature 9): every amount frozen
@@ -110,6 +111,7 @@ export default function AssetsPanel({ result }) {
                 {a.order_ref && <><dt>Court's order</dt><dd>{plain(a.order_ref)}</dd></>}
                 {a.status !== 'held' && <><dt>Outcome</dt><dd>{OUTCOMES[a.status]}{a.outcome_tx ? ` · tx ${middle(a.outcome_tx)}` : ''}{a.outcome_ref ? ` · ${plain(a.outcome_ref)}` : ''}</dd></>}
               </dl>
+              <SopReminders reminders={a.sop_reminders} />
               {a.status === 'held' && (
                 <div className="fields">
                   <label>Court&apos;s order on custody

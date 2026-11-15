@@ -190,6 +190,24 @@ describe('only an open payments panel is sent (5-6, 5-5, 5-3)', () => {
     expect(screen.getByRole('button', { name: /^start trace$/i })).toBeDisabled()
   })
 
+  it('an NCRP number of another shape gets a soft note and is still sent (SOP 6.1(d), 6.2(c))', async () => {
+    const user = userEvent.setup()
+    await withPayment(user)
+    const box = screen.getByLabelText(/NCRP acknowledgement/i)
+    await user.type(box, '5191125001234')
+    expect(screen.getByText(/NCRP acknowledgement numbers are usually 14 digits starting with 2 or 3/)).toHaveAttribute('role', 'status')
+    expect(screen.queryByText(/An NCRP acknowledgement number is 10 to 20 digits/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^start trace$/i }))
+    expect(screen.getByTestId('landed')).toHaveAttribute('data-ncrp', '5191125001234')
+  })
+
+  it('a 14-digit number starting with 2 or 3 gets no note', async () => {
+    const user = userEvent.setup()
+    await withPayment(user)
+    await user.type(screen.getByLabelText(/NCRP acknowledgement/i), '21911250012345')
+    expect(screen.queryByText(/usually 14 digits/)).not.toBeInTheDocument()
+  })
+
   it("the victim's wallet travels in the navigation state, never the URL", async () => {
     const user = userEvent.setup()
     await withPayment(user)

@@ -1,6 +1,13 @@
 {
  "_meta": {
   "block": 26416966,
+  "read_since": {
+   "0x6cc38b3f8cbf2b78996801d1b8d5fa441c33270d": {
+    "block": 26419385,
+    "recorded": "2026-11-15",
+    "why": "Unocoin's cold-storage wallet, added with the India round 3 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   }
+  },
   "recorded": "2026-11-15",
   "regenerate_with": "cd backend && python -m scripts.check_label_code --record",
   "rpc": "https://ethereum-rpc.publicnode.com",
@@ -622,6 +629,7 @@
   "0x6bd869be16359f9e26f0608a50497f6ef122ee3e": "0x",
   "0x6c37a68dbb44c3f437d15dc405c67bf5778b8637": "0x",
   "0x6c8dd0e9cc58c07429e065178d88444b60e60b80": "0x",
+  "0x6cc38b3f8cbf2b78996801d1b8d5fa441c33270d": "0x",
   "0x6cc5f688a315f3dc28a7781717a9a798a59fda7b": "0x",
   "0x6d0cf1f651f5ae585d24dcaa188d44e389e93d26": "0x",
   "0x6d37817d118f72f362cf01e64d9454bdd8e8e92f": "0x",

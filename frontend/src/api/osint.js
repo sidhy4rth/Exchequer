@@ -18,7 +18,7 @@ export async function updateIdentifier(identifierId, changes) {
   }))
 }
 
-/** RDAP and DNS facts about a domain on the register (off unless the server's flag is on). */
+/** RDAP and DNS facts about a domain, or what a Telegram username's public t.me page shows (off unless the server's flags are on). */
 export async function lookUpIdentifier(identifierId) {
   return jsonOrThrow(await apiFetch(`${BASE}/identifiers/${encodeURIComponent(identifierId)}/lookup`, { method: 'POST' }))
 }
