@@ -23,7 +23,9 @@ columns: sweeps_to (the wallet it swept to), sweep_tx (one such sweep's hash)
 and checked_on (YYYY-MM-DD, the day it was read). sweeps_to must be a wallet the
 chain's label file names as the same exchange's hot, cold or exchange wallet;
 a row whose sweeps_to is not one is left out, as is an exchange_wallet row that
-states a sweep. A CSV with any other type, or a deposit row without a
+states a sweep. An address the CSV repeats is one row (the later one), unless
+it is listed both as an own wallet and as a deposit: then every row of it is
+left out. A CSV with any other type, or a deposit row without a
 well-formed basis, is refused whole, and nothing is written.
 Every row left out is listed in <csv>.left_out.tsv. Rows of a source already in
 the store are replaced, so a re-run is repeatable. Run it on the release copy
@@ -62,6 +64,7 @@ REFUSED = (never_flag.SYSTEM, never_flag.TOKEN, never_flag.ROUTER, never_flag.LI
 EXCHANGE_WALLET = "exchange_wallet"
 ALLOWED_TYPES = (EXCHANGE_WALLET, DEPOSIT_WALLET)
 DEPOSIT_COLUMNS = ("sweeps_to", "sweep_tx", "checked_on")  # a deposit row's basis; optional for any other
+BOTH = "repeated: listed both as an own wallet and as a deposit address; which is it?"
 
 
 def deposit_basis(row: dict[str, str]) -> tuple[bytes, bytes, int] | None:
@@ -128,6 +131,8 @@ def add(store: Path, csv_path: Path, listed: Iterable[Path] = (), dry_run: bool 
         bad_types: Counter[str] = Counter()
         no_basis = 0
         rows: list[tuple] = []
+        at: dict[tuple[bytes, int], int] = {}  # (address, chain) -> its row in `rows`
+        both: set[tuple[bytes, int]] = set()  # listed as an own wallet and as a deposit: left out
         left_out: list[tuple[str, str, str]] = []
         corroborated = 0
         sources: dict[str, str] = {}
@@ -182,8 +187,22 @@ def add(store: Path, csv_path: Path, listed: Iterable[Path] = (), dry_run: bool 
                                                      f"the label file names as {row['exchange'].strip()}'s own"))
                     continue
                 sources.setdefault(row["source_id"], source_text(row))
-                rows.append((raw, CHAIN_IDS[chain], row["exchange"].strip(), row["label"].strip() or row["exchange"].strip(),
-                             wallet_type, row["source_id"], deposit))
+                key, new = (raw, CHAIN_IDS[chain]), (raw, CHAIN_IDS[chain], row["exchange"].strip(),
+                                                    row["label"].strip() or row["exchange"].strip(),
+                                                    wallet_type, row["source_id"], deposit)
+                if key in both or (key in at and rows[at[key]][4] != wallet_type):
+                    # Read oppositely (ADR-0012), so neither is held: which the store kept would hang on row order.
+                    left_out.append((chain, address, BOTH))
+                    if key not in both:
+                        both.add(key)
+                        left_out.append((chain, address, BOTH))  # the earlier row, too
+                    continue
+                if key in at:  # a repeat of the same kind (one row per coin): one row, the later one, as before
+                    rows[at[key]] = new
+                    continue
+                at[key] = len(rows)
+                rows.append(new)
+        rows = [r for r in rows if (r[0], r[1]) not in both]
         if bad_types or no_basis:
             found = ", ".join([f"type {t!r} ({n} rows)" for t, n in sorted(bad_types.items())]
                               + ([f"type {DEPOSIT_WALLET!r} without a well-formed basis ({no_basis} rows)"]

@@ -413,7 +413,8 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
 PRIVACY_TITLE = "PRIVACY PROTOCOLS ON THE PATH (A NOTE, NOT AN ACCUSATION)"
 PRIVACY_LEDE = (
     "Funds passing through a privacy protocol lose their visible link, so what leaves it is not "
-    "shown on chain to be the same money. The trace did not stop there. No sanctions list or "
+    "shown on chain to be the same money. Being a privacy protocol never stops the trace; each "
+    "note says whether the contract's payouts were followed. No sanctions list or "
     "enforcement action names these protocols. This is not an accusation: using one is not a "
     "finding against anyone, and none of these is counted in the screening above or in the "
     "confidence score."

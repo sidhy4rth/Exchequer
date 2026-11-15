@@ -213,3 +213,61 @@ def test_no_role_rests_on_a_wallet_that_was_not_measured(chain):
     for address, seen in EVIDENCE[chain].items():
         if seen["why"] == mcr.NOT_MEASURED_YET:
             assert seen["role"] is None and "role" not in _labels(chain)[address], address
+
+
+# -- --apply against an earlier --apply ---------------------------------------------
+
+KEPT, DROPPED, OTHERS = addr("4ee9"), addr("d409"), addr("0c5a")
+
+
+def _label_file(tmp_path, monkeypatch, given):
+    """A one-chain label file in tmp_path: two wallets an earlier --apply gave hot_wallet, and one whose
+    role another source set (as #248 set OKX's proxy, with its own role_basis)."""
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    wallet = {"exchange": "Bybit", "type": CONTRACT_WALLET}
+    document = {"_meta": {mcr.META_KEY: {"rule": "earlier", "given": given}},
+                "labels": {KEPT: {**wallet, "label": "kept", "role": "hot_wallet"},
+                           DROPPED: {**wallet, "label": "dropped", "role": "hot_wallet"},
+                           OTHERS: {**wallet, "label": "others", "role": "hot_wallet", "role_basis": "read by #248"}}}
+    path = config.CHAINS["ethereum"].labels_path
+    path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def _evidence(**roles):
+    return {"_meta": {"read": "2026-12-01"},
+            "ethereum": {a: {"label": name, "role": role, "why": f"{name} measured"}
+                         for name, (a, role) in roles.items()}}
+
+
+def test_apply_takes_back_a_role_it_gave_when_a_later_reading_says_roleless(tmp_path, monkeypatch):
+    path = _label_file(tmp_path, monkeypatch, {KEPT: "earlier", DROPPED: "earlier"})
+    evidence = _evidence(kept=(KEPT, "hot_wallet"), dropped=(DROPPED, None))
+    mcr.apply(evidence)
+    document = json.loads(path.read_text(encoding="utf-8"))
+    assert document["labels"][KEPT]["role"] == "hot_wallet"
+    assert "role" not in document["labels"][DROPPED]
+    assert document["labels"][OTHERS]["role"] == "hot_wallet"  # never this script's to take back
+    assert set(document["_meta"][mcr.META_KEY]["given"]) == {KEPT}
+    assert mcr.check(evidence) == []
+    assert DROPPED in mcr.roleless("ethereum")  # the next --record measures it again
+
+
+def test_apply_takes_back_its_roles_when_a_later_reading_gives_none_on_the_chain(tmp_path, monkeypatch):
+    path = _label_file(tmp_path, monkeypatch, {KEPT: "earlier", DROPPED: "earlier"})
+    mcr.apply(_evidence(kept=(KEPT, None), dropped=(DROPPED, None)))
+    document = json.loads(path.read_text(encoding="utf-8"))
+    assert "role" not in document["labels"][KEPT] and "role" not in document["labels"][DROPPED]
+    assert document["labels"][OTHERS]["role"] == "hot_wallet"
+    assert document["_meta"][mcr.META_KEY]["given"] == {}
+
+
+def test_a_wallet_this_script_measured_is_measured_again_whatever_its_label_says(tmp_path, monkeypatch):
+    """Even if a role this script gave were left behind (an --apply that never ran), the wallet the
+    evidence measured is read again and --check compares it, so a mismatch cannot hide."""
+    _label_file(tmp_path, monkeypatch, {})
+    evidence = _evidence(dropped=(DROPPED, None))
+    monkeypatch.setattr(mcr, "EVIDENCE", tmp_path / "evidence.json")
+    mcr.EVIDENCE.write_text(mcr.dump(evidence), encoding="utf-8")
+    assert DROPPED in mcr.roleless("ethereum") and OTHERS not in mcr.roleless("ethereum")
+    assert mcr.check(evidence) == [f"ethereum {DROPPED}: label role 'hot_wallet', measured None"]
