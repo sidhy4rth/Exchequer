@@ -1,0 +1,211 @@
+"""Custody balance check (app/custody_balance.py, routes/custody.py): suite feature 9, part 2.
+
+Each custody address of a case is read on chain through the provider client the
+trace engine uses (Etherscan, NodeReal, TronGrid) and compared with what the
+asset register records as held there. The clients here are the real ones, on an
+httpx.MockTransport: their request path, allowance and evidence log run as in
+production and nothing reaches the network. The balances below are test values.
+"""
+from __future__ import annotations
+
+import json
+from datetime import date
+
+import httpx
+import pytest
+from sqlalchemy import create_engine
+
+from app import assets, config, custody, custody_balance, models, ownership
+from app.auth import User
+from app.chain_data import ProviderNotConfiguredError
+from app.etherscan_client import EtherscanClient
+from app.nodereal_client import NoderealClient
+from app.tron_client import TronClient
+
+ALICE = "a" * 32
+TX = "ab" * 32
+CUSTODY = "TXgo8gtf6bPQURfHftYWPRv1QPuLQaBBVU"  # the custody address test_assets.py uses
+EVM = "0x" + "ab" * 20  # a well-formed test address, not anyone's wallet
+USDT_TRON = config.CHAINS["tron"].find_token("USDT").address
+USDT_ETH = config.CHAINS["ethereum"].find_token("USDT").address
+USDT_BSC = config.CHAINS["bsc"].find_token("USDT").address
+TODAY = date(2026, 11, 16)
+
+
+@pytest.fixture(autouse=True)
+def store(tmp_path, monkeypatch):
+    monkeypatch.setattr(models, "_engine", create_engine(f"sqlite:///{tmp_path / 'b.db'}", future=True))
+    monkeypatch.setattr(custody, "_today", lambda: TODAY)
+    monkeypatch.setattr(assets, "_today", lambda: TODAY)
+    models.init_db()
+    models.save_case("case-1", "0xseed", {"address": "0xseed"})
+
+
+def viewer(key=ALICE):
+    return User(id="officer-1", role="officer", unit=None, owner_hash=ownership.owner_hash(key), demo=False,
+                officer_id=1, unit_id=None)
+
+
+def held(amount="635", asset="USDT", chain="tron", held_at=CUSTODY, who=None, holder="custody"):
+    who = who or viewer()
+    return assets.create(who.owner_hash, "case-1", {
+        "holder": holder, "asset": asset, "amount": amount, "chain": chain, "held_at": held_at,
+        "tx_hash": TX if holder == "custody" else "", "seized_on": "2026-11-01"}, who)["asset_id"]
+
+
+def transport(answer):
+    """An httpx client whose every request is answered by `answer(request)` -> (status, json body)."""
+    seen = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        status, body = answer(request)
+        return httpx.Response(status, json=body)
+
+    return httpx.Client(transport=httpx.MockTransport(handle)), seen
+
+
+def tron(trc20=None, balance=None, data=True, status=200):
+    account = {"address": "41", "trc20": [{USDT_TRON: v} for v in ([trc20] if trc20 is not None else [])]}
+    if balance is not None:
+        account["balance"] = balance
+    client, seen = transport(lambda r: (status, {"data": [account] if data else [], "success": True, "meta": {}}))
+    return TronClient(api_key="", client=client, min_interval=0), seen
+
+
+def check(*clients, who=None):
+    by_chain = {}
+    for c in clients:
+        key = {TronClient: "tron", EtherscanClient: "ethereum", NoderealClient: "bsc"}[type(c[0])]
+        by_chain[key] = c[0]
+    return custody_balance.read_all(who or viewer(), "case-1", opener=lambda chain: by_chain[chain.key])
+
+
+# -- what is compared ------------------------------------------------------------------------------
+def test_a_tron_usdt_balance_equal_to_the_register_is_a_match_with_its_evidence():
+    held()
+    client, seen = tron(trc20="635000000")  # 6 decimals, from config
+    out = check((client, seen))
+    [r] = out
+    assert (r["status"], r["chain_amount"], r["register_amount"], r["difference"]) == ("match", "635", "635", "0")
+    assert r["reason"] == "The chain shows 635 USDT, as the register records."
+    assert str(seen[0].url).endswith(f"/v1/accounts/{CUSTODY}")
+    [ev] = r["evidence"]
+    assert ev["provider"] == "trongrid" and len(ev["sha256"]) == 64 and CUSTODY in ev["request"]
+    assert custody_balance.counts(out) == {"match": 1, "mismatch": 0, "unchecked": 0}
+
+
+def test_less_on_chain_than_the_register_is_a_mismatch_said_in_words():
+    held()
+    [r] = check(tron(trc20="600000000"))
+    assert r["status"] == "mismatch" and r["difference"] == "-35"
+    assert r["reason"].startswith("Mismatch: the chain shows 600 USDT, 35 USDT less than the 635 USDT")
+
+
+def test_more_on_chain_than_the_register_is_a_mismatch_too_and_says_why_it_might_be():
+    held()
+    [r] = check(tron(trc20="635000001"))
+    assert r["status"] == "mismatch" and r["difference"] == "0.000001"
+    assert "0.000001 USDT more than" in r["reason"] and "another case's money" in r["reason"]
+
+
+def test_rows_at_one_address_are_summed_and_a_linked_wallet_gives_the_address():
+    held(amount="600")
+    unnamed = held(amount="35", held_at="", chain="")
+    w = custody.create(viewer().owner_hash, "case-1", {
+        "chain": "tron", "address": CUSTODY, "scheme": "Tron multi-sign permission", "threshold": 2,
+        "signers": [{"name": "Insp. Rao"}, {"name": "SI Iyer"}], "set_up_by": "Insp. Rao",
+        "set_up_on": "2026-11-10", "asset_ids": [unnamed]}, viewer())
+    [r] = check(tron(trc20="635000000"))
+    assert (r["status"], r["register_amount"], len(r["asset_ids"]), r["wallet_id"]) == ("match", "635", 2, w["wallet_id"])
+
+
+def test_rows_no_longer_held_or_held_elsewhere_are_not_counted():
+    held()
+    gone = held(amount="100")
+    assets.update(gone, {"status": "released_to_victim", "outcome_tx": TX}, viewer())
+    held(amount="50", holder="exchange", held_at="An exchange")
+    [r] = check(tron(trc20="635000000"))
+    assert r["status"] == "match" and r["register_amount"] == "635"
+
+
+def test_native_trx_is_read_in_sun_and_an_account_without_a_balance_field_holds_none():
+    held(amount="12.5", asset="TRX")
+    assert check(tron(balance=12_500_000))[0]["status"] == "match"
+    [r] = check(tron())
+    assert (r["status"], r["chain_amount"]) == ("mismatch", "0")
+
+
+def test_ethereum_native_and_usdt_are_read_through_etherscan_with_the_configured_decimals():
+    held(amount="1.5", asset="ETH", chain="ethereum", held_at=EVM)
+    held(amount="20", asset="USDT", chain="ethereum", held_at=EVM)
+
+    def answer(request):
+        action = request.url.params["action"]
+        result = "1500000000000000000" if action == "balance" else "19000000"
+        return 200, {"status": "1", "message": "OK", "result": result}
+
+    http, seen = transport(answer)
+    client = EtherscanClient(api_key="test-key", chain_id=1, client=http, min_interval=0)
+    eth, usdt = check((client, seen))
+    assert (eth["asset"], eth["status"]) == ("ETH", "match")
+    assert (usdt["status"], usdt["chain_amount"]) == ("mismatch", "19")
+    token_read = next(r for r in seen if r.url.params["action"] == "tokenbalance")
+    assert token_read.url.params["contractaddress"] == USDT_ETH and token_read.url.params["tag"] == "latest"
+    assert all("test-key" not in e["request"] for e in eth["evidence"] + usdt["evidence"])
+
+
+def test_bsc_usdt_is_read_through_nodereal_at_a_fixed_block_without_the_key_in_the_evidence():
+    held(amount="7", asset="USDT", chain="bsc", held_at=EVM)
+    calls = []
+
+    def answer(request):
+        body = json.loads(request.content)
+        calls.append(body)
+        if body["method"] == "eth_blockNumber":
+            return 200, {"jsonrpc": "2.0", "id": 1, "result": hex(1000)}
+        return 200, {"jsonrpc": "2.0", "id": 1, "result": hex(7 * 10**18)}  # 18 decimals on BSC, from config
+
+    http, seen = transport(answer)
+    client = NoderealClient(api_key="node-key", client=http, min_interval=0)
+    [r] = check((client, seen))
+    assert (r["status"], r["chain_amount"], r["read_from"]) == ("match", "7", "block 968")
+    call = calls[-1]
+    assert call["method"] == "eth_call" and call["params"][0]["to"] == USDT_BSC
+    assert call["params"][0]["data"] == "0x70a08231" + EVM[2:].rjust(64, "0") and call["params"][1] == hex(968)
+    assert r["evidence"] and all("node-key" not in e["request"] for e in r["evidence"])
+
+
+# -- what cannot be told ------------------------------------------------------------------------
+def test_an_asset_not_read_on_that_chain_or_a_row_with_no_address_is_unchecked_and_reads_nothing():
+    held(asset="DAI")
+    held(amount="5", held_at="the unit's wallet", chain="tron")
+    client, seen = tron(trc20="0")
+    dai, nowhere = check((client, seen))
+    assert dai["status"] == "unchecked" and "DAI is not an asset Exchequer reads on Tron" in dai["reason"]
+    assert nowhere["status"] == "unchecked" and "names no custody address" in nowhere["reason"]
+    assert seen == []
+
+
+def test_a_provider_not_configured_failing_or_with_no_account_record_leaves_it_unchecked():
+    held()
+
+    def missing(chain):
+        raise ProviderNotConfiguredError("ETHERSCAN_API_KEY is not set")
+
+    [r] = custody_balance.read_all(viewer(), "case-1", opener=missing)
+    assert (r["status"], r["chain_amount"]) == ("unchecked", None) and "no data provider configured" in r["reason"]
+    [r] = check(tron(status=500))
+    assert r["status"] == "unchecked" and "TronGrid did not give a usable answer" in r["reason"]
+    [r] = check(tron(data=False))
+    assert r["status"] == "unchecked" and "no account record" in r["reason"]
+
+
+def test_one_run_reads_at_most_max_reads_pairs(monkeypatch):
+    monkeypatch.setattr(custody_balance, "MAX_READS", 1)
+    held()
+    held(amount="1", asset="TRX")
+    client, seen = tron(trc20="635000000", balance=1_000_000)
+    first, second = check((client, seen))
+    assert first["status"] == "match" and second["status"] == "unchecked" and "at most 1" in second["reason"]
+    assert len(seen) == 1

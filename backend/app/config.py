@@ -929,6 +929,8 @@ STORE_EXCHANGE_ROWS: bool = flag("EXCHEQUER_STORE_EXCHANGE_ROWS",
                                  "#222: name the exchange from label-store exchange rows (its own PoR list; ADR-0011)")
 CUSTODY_WALLETS: bool = flag("EXCHEQUER_CUSTODY_WALLETS",
                              "Feature 9: custody wallet records and signing log (never a key)")
+CUSTODY_BALANCE_CHECK: bool = flag("EXCHEQUER_CUSTODY_BALANCE_CHECK",
+                                   "Feature 9 part 2: read custody addresses' balances on chain against the asset register")
 STATEMENT_IMPORT: bool = flag("EXCHEQUER_STATEMENT_IMPORT",
                               "Feature 5: read a bank or exchange statement CSV against a case; save confirmed rows")
 CDR_IMPORT: bool = flag("EXCHEQUER_CDR_IMPORT",
