@@ -19,6 +19,11 @@ and every release goes through the same gates first.
    build until a line there says what it is.
 5. **`check_data.py`** on the candidate files: counts, validity, cross-list
    conflicts, demo impact and the merge plan.
+6. **Ethereum label code:** after any import that adds Ethereum exchange
+   labels, `cd backend && python -m scripts.check_label_code --check`. It fails
+   on a hot, cold or exchange wallet label whose code was never read; then run
+   it with `--record`, run it without flags, and commit the label file with
+   `tests/fixtures/label_code/ethereum.json`.
 
 ## Instant exchangers (category `instant_exchanger`, added 10 Nov 2026)
 

@@ -15,11 +15,19 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.types import Receive, Scope, Send
 
-from .. import audit, case_bundle, case_privacy, config, models
+from .. import audit, case_bundle, case_privacy, config, models, rate_limit
 from ..auth import CurrentUser
 from .evidence import KEEP, _pdf
 
 router = APIRouter()
+
+# A bundle reads every register of a case and zips it with the report, so each
+# build is charged, as a PDF render is (report_cache.pdf_renders): per client and
+# site-wide, an hour at a time. A refused (403/404) request is never charged.
+BUNDLES_PER_HOUR_PER_CLIENT = 20
+BUNDLES_PER_HOUR_TOTAL = 120
+bundles = rate_limit.SlidingWindowLimiter(BUNDLES_PER_HOUR_PER_CLIENT, 3600)
+bundles_total = rate_limit.SlidingWindowLimiter(BUNDLES_PER_HOUR_TOTAL, 3600)
 
 
 def _on() -> None:
@@ -62,6 +70,14 @@ def download_bundle(case_id: str, user: CurrentUser, http: Request) -> Streaming
     may, viewer = case_bundle.allowed(stored, user)
     if not may:
         raise HTTPException(status_code=403, detail="Only the browser or unit that traced this case can download its bundle.")
+    client = rate_limit.client_ip(http.headers, http.client.host if http.client else None)
+    refused = rate_limit.charge(bundles, bundles_total, client)
+    if refused is not None:
+        wait, who = refused
+        raise HTTPException(
+            status_code=429, headers={"Retry-After": str(int(wait))},
+            detail=("Too many case bundles prepared " + ("for you" if who == "client" else "on this server")
+                    + " in the last hour; try again later, or download the report and each register on its own."))
     asked = case_bundle.Request(
         case=case_privacy.case_for_reader(stored, viewer), stored=stored, user=user, viewer=viewer,
         owner=case_privacy.is_owner(stored.owner_hash, viewer), pdf=lambda case: _pdf(case, http))
