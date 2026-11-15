@@ -119,6 +119,16 @@ setting has drifted.
 The monitors read the site address from the repository variable `SITE_URL`
 (`gh variable set SITE_URL --body https://<service>.onrender.com`).
 
+`SITE_URL` and `EXCHEQUER_PUBLIC_URL` are different settings. `SITE_URL` is a
+GitHub repository variable: it tells the monitoring workflows which address to
+check, and the backend never reads it. `EXCHEQUER_PUBLIC_URL` is an environment
+variable on the Render service: it is the address the backend names as
+"Issued by" in signed reports, in `/signing-key`, and in the `/verify` links of
+letters and certificates (`config.PUBLIC_URL`). When it is unset the backend
+uses `RENDER_EXTERNAL_URL`, the onrender.com address. Changing it does not
+change the signing key, so reports signed under the old address still verify
+and keep naming that address.
+
 ### Railway (until October 2026)
 
 `railway up` uploads the working directory, not the last commit, so deploy
