@@ -3,9 +3,9 @@
 - **Feature**: 5 more of OKX's own Tron wallets labelled, the ones older OKX deposits swept into, so the Tron deposit-row join can accept them as `sweeps_to`
 - **Issue**: #307
 - **Branch**: `labels/okx-tron-demo-wallets`
-- **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: draft PR, waiting for the owner's decision
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #308 on 2026-11-15 (18:59 UTC, `c9f723bf`); live. The owner delegated the merge decision to the lead, who accepted the statement-only exception: the 5 appear only as statement senders in demo 9, and no demo was changed or re-recorded
 
 ## Done
 
@@ -19,12 +19,12 @@
 
 ## Next
 
-1. Owner: decide whether to merge (then mark the PR ready and request review).
-2. After merge: let the Tron deposit-row join accept the 5 new destinations (see the next-release notes kept with the label-store build, not in this repository).
+1. Done: merged in #308 (decision above).
+2. Next label-store release: let the Tron deposit-row join accept the 5 new destinations (steps in the release notes kept outside the repository; the release's own GitHub notes in `sidhy4rth/exchequer-labels` will say what it did).
 
 ## Open questions
 
-- Whether the owner accepts the statement-only exception to the "re-record before labelling" rule.
+- none. The statement-only exception to the "re-record before labelling" rule was accepted by the lead on the owner's behalf when #308 merged (Status above).
 
 ## Files mid-change (do not touch)
 

@@ -45,9 +45,9 @@
 <tr>
 <td align="center"><h3>70.94M</h3>flagged addresses<br>screened live<br><sub>on five chains, counted once per chain:<br>the 70.9M label store and<br>the lists in this repository</sub></td>
 <td align="center"><h3>70.8M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists, counted once per chain</sub></td>
-<td align="center"><h3>26,204</h3>exchange addresses<br><sub>counted once per chain; incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
+<td align="center"><h3>26,219</h3>exchange addresses<br><sub>counted once per chain; incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
-<td align="center"><h3>14,827</h3>addresses a stablecoin<br>issuer has frozen</td>
+<td align="center"><h3>14,840</h3>addresses a stablecoin<br>issuer has frozen</td>
 <td align="center"><h3>100,000+</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>5</h3>chains, 14 assets</td>
 <td align="center"><h3>3,500+</h3>tests, no network</td>
@@ -97,9 +97,9 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | | |
 |---|---|
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
-| **Names the exchange** | Exact match against 26,204 exchange addresses on five chains (counted once per chain), including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
+| **Names the exchange** | Exact match against 26,219 exchange addresses on five chains (counted once per chain), including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
-| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon; privacy protocols such as Privacy Pools are shown as a note, never a stop); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **69-million-address label store**: hack proceeds, scams, stablecoin freezes and 69.3M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
+| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon; privacy protocols such as Privacy Pools are shown as a note, never a stop); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **70.9-million-address label store** (counted once per chain): hack proceeds, scams, stablecoin freezes and address-poisoning wallets found by on-chain scans (70.8M address-poisoning wallets with the published lists), each cited with its source, a sample transaction and an evidence tier. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
 | **Follows the money through a swap** | A transfer into a known DEX router is read from its receipt; if it came back as USDT or USDC, that stablecoin is traced onward from the moment of the swap, as its own linked trace. |
@@ -693,7 +693,7 @@ and matching one chain's address against the other's labels would manufacture an
 | `exchange_labels_bsc.json` | **227 addresses / 58 exchanges** — explorer-labelled wallets (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat), Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`), Bybit's wallets from its own proof-of-reserves list (`scripts/import_por_labels.py`) and Indian exchange wallets (`data/india_exchanges.json`) |
 | `exchange_labels_polygon.json` | **250 addresses / 54 exchanges** — Ethereum-labelled accounts confirmed to have sent on Polygon, OKX's and Bybit's wallets from their own proof-of-reserves lists, and Indian exchange wallets |
 | `exchange_labels_arbitrum.json` | **251 addresses / 45 exchanges** — the same three sources, on Arbitrum |
-| `exchange_labels_tron.json` | **144 addresses / 26 exchanges** — TronScan's own address tags, exchanges' own proof-of-reserves lists (`scripts/import_por_tron_labels.py`) and Indian exchange wallets |
+| `exchange_labels_tron.json` | **159 addresses / 26 exchanges** — TronScan's own address tags, exchanges' own proof-of-reserves lists (`scripts/import_por_tron_labels.py`) and Indian exchange wallets |
 
 **A deposit address is the most useful label there is**: it names one customer account, which is exactly what a
 lawful request asks the exchange about. The 19,027 Bitget and 4,991 Binance addresses come from Etherscan's
@@ -722,7 +722,7 @@ The router mattered most: funds passing through a swap router have been *traded*
 Tron labels are read **from TronScan's own API** — the label comes from the explorer that assigns it — and
 each must have no contract bytecode and at least one received transfer.
 
-**Tron attribution beyond the file.** A fixed file can only hold the Tron wallets someone imported — 139. So a Tron
+**Tron attribution beyond the file.** A fixed file can only hold the Tron wallets someone imported — 159. So a Tron
 trace also asks TronScan, for each wallet it reaches that no file names, what the explorer tags it (up to 60 wallets
 per trace, the most valuable first, the last hop included). A tag that names a known exchange attributes the wallet —
 labelled *"(TronScan tag, read live)"* so a reader always knows the source — and the trace stops there as it would
