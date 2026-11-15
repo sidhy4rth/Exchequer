@@ -1,11 +1,11 @@
 # Handoff: landing-flagged-figure
 
 - **Feature**: the landing and citizen sign-in hero's flagged-address figure says what it counts and agrees with the chain rows under it
-- **Issue**: #285
-- **Branch**: `fix/landing-flagged-figure`
-- **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR ready; frontend and README
+- **Issue**: #285 (merged in #292); now #346
+- **Branch**: `feat/landing-overlap-metadata` (was `fix/landing-flagged-figure`)
+- **Current**: Sidhyarth
+- **Last worked on**: Sidhyarth, 2026-11-16
+- **Status**: #292 merged (`b287826b`); #346 in progress: the store records its overlap with the lists
 
 ## Done
 
