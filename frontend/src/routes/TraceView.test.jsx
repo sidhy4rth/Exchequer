@@ -148,6 +148,22 @@ describe('what the amount is, and when it was not measured', () => {
     expect(chip).toHaveTextContent('too many transfers')
   })
 
+  // #322: a read that failed at the provider says so beside the reason.
+  it('says when the amount check failed at the provider', async () => {
+    await openWithResult({ prorata: { status: 'unknown', reason: 'the window could not be read', read_failure: 'rate_limit' } })
+    expect(document.querySelector('.prorata-unknown')).toHaveTextContent('Pro-rata: not estimated — the window could not be read.')
+    const why = document.querySelector('.prorata-read-failure')
+    expect(why).toHaveTextContent('The amount check could not be done: the data provider did not answer (rate limit).')
+    expect(why).toHaveTextContent('Tracing again later should give a complete score.')
+  })
+
+  it('without a read failure the pro-rata line is as before', async () => {
+    await openWithResult({ prorata: { status: 'unknown', reason: 'TXgo received too many transfers in the window to read in full' } })
+    expect(document.querySelector('.prorata-unknown').textContent).toBe(
+      'Pro-rata: not estimated — TXgo received too many transfers in the window to read in full. The score gives the amount no credit.')
+    expect(document.querySelector('.prorata-read-failure')).toBeNull()
+  })
+
   it('renders the confidence caveats', async () => {
     await openWithResult({})
     const limits = [...document.querySelectorAll('.limitation')].map((p) => p.textContent)
