@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../api', () => ({
@@ -27,7 +27,8 @@ describe('the front door headline', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => context)
     render(<ExchangeGlobe open={false} onOpen={noop} />)
     const term = await screen.findByText('Flagged addresses screened, live, counted once per chain')
-    expect(term.nextElementSibling).toHaveTextContent(/^48\.56M$/)
+    // The figure appears once its effect has run (reduced motion: no count-up).
+    await waitFor(() => expect(term.nextElementSibling).toHaveTextContent(/^48\.56M$/))
     expect(screen.getByText('27.66M')).toBeInTheDocument()
     expect(screen.getByText('20.90M')).toBeInTheDocument()
   })
