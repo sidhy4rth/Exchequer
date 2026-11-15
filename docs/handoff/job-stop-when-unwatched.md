@@ -9,7 +9,7 @@
 
 ## Done
 
-- `config.py`: flag `EXCHEQUER_JOB_STOP_UNWATCHED` (FLAGS) and `JOB_UNWATCHED_GRACE_SECONDS = 30.0` (trace engine section).
+- `config.py`: flag `EXCHEQUER_JOB_STOP_UNWATCHED` (FLAGS) and `JOB_UNWATCHED_GRACE_SECONDS = 120.0` (trace engine section).
 - `jobs.py`: `Job.unwatched_since` (monotonic, None until the first stream closes) and `Job.abandoned`.
 - `routes/jobs.py`: when a job's last progress stream closes, `_unwatched` starts the clock and `_schedule` sets a timer on the event loop (`call_later`). `_stop_if_unwatched` does nothing if the job finished, was stopped, or has a stream open again; if a status poll moved the clock it sets a new timer for what is left; otherwise it sets `abandoned` and cancels the budget with `client_disconnected`. `GET /trace/jobs/{id}` moves the clock (only once it has started). `_run_job` ends an abandoned job, whatever the stop surfaced as, with `cases.record_abandoned` and 409 `cases.ABANDONED_DETAIL`; nothing stored. The other endings moved unchanged into `_job_error`.
 - Tests: `backend/tests/test_job_unwatched.py` (fake clock and fake timer; one test uses the real loop timer with a 0.2 s grace). `tests/test_jobs.py` unchanged and green.
@@ -21,6 +21,7 @@
 - The clock starts only after a first stream has connected and closed, so a client that never opens a stream (a script that only polls or waits) is never stopped. A status poll counts as watching, so the page's polling fallback keeps its job.
 - No refund of the hourly trace allowance, as for a Stop and a hung-up POST /trace: the trace was started and its provider calls spent, and a refund would let a client start and close traces to get round the limit.
 - Audited as `case.trace_abandoned` (the existing record, `stopped_by: client_disconnected`, `saved: false`), not `case.trace_stopped`, which stays the Stop button's.
+- Grace 120 s, not the 30 s first proposed (lead's decision, 15 Nov): a phone that sleeps or switches apps for about 30 s must not lose a trace, and 120 s still frees a closed tab's slot well before a ~4 minute trace (180 s walk + 60 s) ends. A phone away longer than 120 s still loses it (the page shows the 409 on waking, as after a Stop).
 - A cancel that lands after the job's post-trace check (it is already saving) does not undo the save: the result is whole.
 
 ## Next
@@ -29,7 +30,7 @@
 
 ## Open questions
 
-- A phone that sleeps with the tab open drops its stream and loses its trace after 30 s (the page shows the 409 on waking, as after a Stop). Owner: acceptable, or a longer grace?
+- none
 
 ## Files mid-change (do not touch)
 

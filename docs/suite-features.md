@@ -31,7 +31,7 @@ the link.
 How to switch on the features still behind flags, and check each on the live site first: `docs/flag-rollout.md`. Trace engine flags outside the nine features are listed there too, among
 them `EXCHEQUER_JOB_STOP_UNWATCHED` (#302, off; handoff
 `docs/handoff/job-stop-when-unwatched.md`): a background trace no page has
-watched for 30 s is stopped and saves nothing.
+watched for 120 s is stopped and saves nothing.
 
 When a feature is claimed, its handoff file in `docs/handoff/` names it by
 number, and this table's status column is updated in the same pull request.

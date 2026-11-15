@@ -29,7 +29,7 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | On: set in the Render dashboard on 15 Nov and in `render.yaml` since #232 (owner approved on 14 Nov) |
 | `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
 | `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | On: set in the Render dashboard on 15 Nov and in `render.yaml` (owner approved on 15 Nov, after the flag-off Render-logs check; checked flag-on the same night; section below) |
-| `EXCHEQUER_JOB_STOP_UNWATCHED` | #302: stop a background trace job no page has watched for 30 s after its last progress stream closed; nothing saved | #303 (in review) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_JOB_STOP_UNWATCHED` | #302: stop a background trace job no page has watched for 120 s after its last progress stream closed; nothing saved | #303 (in review) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the store release `labels-2026-11-16` carries exchange rows (OKX 474,529 Tron; OKX Ethereum 162 own wallets and 4,938 deposit rows that state their basis, ADR-0012; Bitget 10 Ethereum). A sample suggests most of the OKX Tron rows are customer deposit addresses that sweep to OKX, yet they are still typed as OKX's own wallets, so it stays off until they are rebuilt as deposit and own-wallet rows (ADR-0012). Switching it on is its own PR, which also re-records demo 9 (five of its addresses are OKX rows) |
 | `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
@@ -621,8 +621,10 @@ only `POST /trace`, and a job is meant to outlive the request that started it.
 (`GET /trace/jobs/{id}/events`) closes, a clock starts. A new stream (a reload
 re-attaches in about 2 s) keeps the job going, and a status poll
 (`GET /trace/jobs/{id}`, the page's fallback, every 1.5 s) starts the clock
-again. A job still unwatched after `JOB_UNWATCHED_GRACE_SECONDS` (30 s,
-`config.py` trace-engine section) is stopped the way a Stop stops it: at its
+again. A job still unwatched after `JOB_UNWATCHED_GRACE_SECONDS` (120 s,
+`config.py` trace-engine section; 120 rather than 30 so a phone that sleeps
+or switches apps for a while keeps its trace, while a closed tab still frees
+its slot well before a trace's ~4 minutes end) is stopped the way a Stop stops it: at its
 next provider request or backoff. It stores no case (even if its trace returns
 after the stop), frees its slot, ends as failed with 409 "The trace was stopped
 because the client disconnected; nothing was saved.", and is audited as
@@ -634,7 +636,7 @@ same record a hung-up `POST /trace` gets), not `case.trace_stopped`.
 - The hourly trace allowance is not given back, as for a Stop and a hung-up
   `POST /trace`: the trace was started and its provider calls spent, and a
   refund would let a client start and close traces to get round the limit.
-- A phone that sleeps with the tab open drops its stream; after 30 s its
+- A phone that sleeps with the tab open drops its stream; after 120 s its
   trace stops, and on waking the page shows the 409, as after a Stop.
 - Jobs live in one process's memory; the clock is a timer on its event loop.
 
@@ -642,9 +644,10 @@ same record a hung-up `POST /trace` gets), not `case.trace_stopped`.
 
 **Checks after switching it on** (the common steps above; one trace each).
 
-1. Start a trace in the app with a long time budget, wait until progress
-   shows, then close the tab. In Render → exchequer → Logs, within about 35 s
-   (30 s grace plus the next provider request) there should be
+1. Start a trace in the app on a wallet busy enough to run past 2 minutes
+   (a long time budget), wait until progress shows, then close the tab. In
+   Render → exchequer → Logs, within about 125 s (120 s grace plus the next
+   provider request) there should be
    `case.trace_abandoned`, and no `case.trace` for it afterwards. The case
    history shows no new case.
 2. Start another, reload the page within a few seconds. It should re-attach,

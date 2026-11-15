@@ -527,8 +527,10 @@ TRACE_SLOT_MINUTES_PER_HOUR: int = max(0, _int_env("EXCHEQUER_TRACE_SLOT_MINUTES
 # run with no page watching it (no progress stream open and no status poll)
 # once its last stream has closed, before it is stopped as a Stop stops it. A
 # reload re-attaches in about 2 s (EventSource retry) and the polling fallback
-# asks every 1.5 s, so this is many times either.
-JOB_UNWATCHED_GRACE_SECONDS: float = 30.0
+# asks every 1.5 s. 120 s, not 30, so a phone that sleeps or switches apps for
+# a while does not lose its trace (lead's decision, #303), while a closed tab
+# still frees its slot well before a trace's ~4 minutes (180 s walk + 60 s) end.
+JOB_UNWATCHED_GRACE_SECONDS: float = 120.0
 
 # The most individual transfers a case lists in its appendix (0 = all). Every
 # transfer on the route to the exchange, out of the reported address and into
