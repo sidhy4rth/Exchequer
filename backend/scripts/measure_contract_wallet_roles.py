@@ -85,6 +85,12 @@ def roleless(chain: str) -> dict[str, dict[str, Any]]:
 
 
 CACHE: Path | None = None  # --cache DIR keeps every answer, so a re-run asks nothing twice
+OFFLINE = False  # --offline: answer only from CACHE; a wallet with no cached answer is recorded as not measured yet
+NOT_MEASURED_YET = "not measured yet: no cached Blockscout answer when this file was recorded offline"
+
+
+class NotCached(Exception):
+    """--offline and the cache has no answer for this request (never a RuntimeError: see measure)."""
 
 
 def _get(base: str, path: str, params: dict[str, Any]) -> dict[str, Any]:
@@ -92,6 +98,8 @@ def _get(base: str, path: str, params: dict[str, Any]) -> dict[str, Any]:
     kept = CACHE / (keccak256(url.encode()).hex() + ".json") if CACHE else None
     if kept and kept.is_file():
         return json.loads(kept.read_text())
+    if OFFLINE:
+        raise NotCached(url)
     for attempt in range(5):
         time.sleep(PAUSE * (1 + 3 * attempt))
         try:
@@ -146,7 +154,13 @@ def measure(chain: str, address: str, row: dict[str, Any], all_labels: dict[str,
         return {"role": None, "why": f"not measured: no keyless indexer answered for {chain} (see BLOCKSCOUT)"}
     if code is not None and clc.classify(code)[0] == clc.FORWARDER:
         return {"role": None, "why": "not measured: a forwarder by its recorded code, never a sweep destination"}
-    base, exchange = BLOCKSCOUT[chain], row["exchange"]
+    try:
+        return _measured(chain, address, all_labels, BLOCKSCOUT[chain], row["exchange"])
+    except NotCached:
+        return {"role": None, "why": NOT_MEASURED_YET}
+
+
+def _measured(chain: str, address: str, all_labels: dict[str, dict], base: str, exchange: str) -> dict[str, Any]:
     inflow, _ = _flows(base, address, "to", WALLET_PAGES)
     blocks = [f["block"] for f in inflow if f["block"]]
     senders = sorted({f["party"] for f in inflow if f["party"] != address and not f["is_contract"]
@@ -269,8 +283,13 @@ def main() -> int:
     group.add_argument("--check", action="store_true")
     group.add_argument("--apply", action="store_true", help="write the evidence file's roles into the label files")
     parser.add_argument("--cache", type=Path, help="keep every Blockscout answer in this directory")
+    parser.add_argument("--offline", action="store_true",
+                        help="with --record and --cache: ask nothing; a wallet with no cached answer is not measured yet")
     args = parser.parse_args()
-    global CACHE
+    global CACHE, OFFLINE
+    if args.offline and not (args.record and args.cache):
+        parser.error("--offline needs --record and --cache")
+    OFFLINE = args.offline
     if args.cache:
         args.cache.mkdir(parents=True, exist_ok=True)
         CACHE = args.cache

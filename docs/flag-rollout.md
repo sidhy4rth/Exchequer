@@ -8,7 +8,8 @@ the crypto summary for CFCFRMS (#218) and the SOP reminders on bank holds
 is `1` (`true`, `yes` and `on` also count; see `flag()` in `config.py`). This
 file says, for each one: what it turns on, which PRs it came in, how
 to switch it on and off, what to try on the live site before telling anyone,
-and the decisions still open.
+and the decisions still open. One more, `EXCHEQUER_PRIVACY_CATEGORY`, is
+already merged and was switched on in production on 15 Nov (last section).
 
 Everything here comes from the PR descriptions, the handoff files and the flag definitions. Where something was not checked, it says so.
 Button names are taken from the PRs' tests and may differ slightly on screen.
@@ -25,10 +26,10 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_TRACING_METHODS` | Lane A, R4: FIFO and LIBR beside pro-rata (one more read per hop) | #49 | Off in `render.yaml` |
 | `EXCHEQUER_TAINT_EXPANSION` | Lane A, R5: follow every branch carrying a share of the funds, not the top ten | #49 | Off in `render.yaml` |
 | `EXCHEQUER_OSINT_LOOKUPS` | Feature 4: live RDAP and DNS lookups of a case's scam domains, for signed-in officers | #106 | **On** in production since 13 Nov, and `"1"` in `render.yaml` (#108) |
-| `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | Off in `render.yaml`. Its handoff records the owner's approval on 14 Nov to switch it on after merge; not switched on yet as far as `main` shows |
+| `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | On: set in the Render dashboard on 15 Nov and in `render.yaml` since #232 (owner approved on 14 Nov) |
 | `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
 | `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | Off in `render.yaml`; awaits the owner |
-| `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the deployed store (`labels-2026-11-14b`) has no exchange rows yet |
+| `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the store release `labels-2026-11-15` carries exchange rows (OKX 474,529 Tron and 202 Ethereum, Bitget 10 Ethereum). A 30-address sample suggests most of the OKX Tron rows are customer deposit addresses that sweep to OKX, so it stays off until ADR-0011 allows deposit rows that state their basis. Switching it on is its own PR, which also re-records demo 9 (five of its addresses are OKX rows) |
 | `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_CDR_IMPORT` | Feature 5: read a call detail record CSV against a case; save a summary the officer confirms | #168 (+#172, #173), merged with #146 | Off in `render.yaml`; see its section below |
@@ -36,8 +37,9 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_TELEGRAM_LOOKUPS` | Feature 4, OSINT slice 4: read a Telegram username's public t.me page (needs `EXCHEQUER_OSINT_LOOKUPS` too) | #162 (+#169, #170) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_SOP_SUMMARY` | Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms | #218 (+#219, #220) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_SOP_DEADLINES` | Feature 8: the MHA CFCFRMS SOP's time limits, quoted, as reminders on bank holds in the asset register | #230 | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_FREEZE_WORDING_V2` | Feature 7, #251: the bank-hold notice asks the bank to give effect to the Magistrate's order as it directs, not for a "debit freeze" | #252 | Off in `render.yaml`; awaits a lawyer; see its section below |
 
-That is all fifteen flags in `FLAGS` on `main`.
+That is all sixteen flags in `FLAGS` on `main`.
 
 The rest of this file is about the seven features named at the top. The steps
 below for switching on, checking and switching off apply to every flag above.
@@ -395,3 +397,81 @@ rows are unchanged.
 **Owner decisions still open** (handoff `docs/handoff/sop-deadlines.md`): whether
 to turn the flag on once the reviewer has checked the quotes against the PDF,
 and a re-check of each quote if a newer official copy of the SOP is found.
+
+## `EXCHEQUER_FREEZE_WORDING_V2`: bank-hold wording that rests on the order (feature 7)
+
+**What it turns on.** A different wording for the urgent bank-hold notice
+(`backend/app/notice_letters.py`). Off, the letter asks for "a debit freeze ...
+up to the amount below", exactly as before. On, it asks the bank to "give
+effect, now, to the attached order of the Magistrate ... as that order directs
+and for no more than the amount below", with a bracketed suggestion of s.107
+BNSS for the officer to confirm. Nothing else changes: the order is still
+required, the provision is still a blank, the sign-off and its fingerprint are
+the same. It contacts nothing outside Exchequer. No migration.
+
+**Merged.** #252 (not yet).
+
+**Try it on the live site** (one test officer, on the test case):
+
+1. Confirm in `/health/detail` that `EXCHEQUER_FREEZE_WORDING_V2` is on.
+2. On the test case's Letters tab, Notice to: Bank, Urgent hold. Without an
+   order it is refused; with a TEST order it drafts the new wording.
+3. With the flag off, the same details give the old wording.
+
+**Owner decisions still open.** Switch it on only after a lawyer has answered
+the questions in `docs/legal/freeze-wording-review.md`; the wording itself may
+change with their answer.
+
+## `EXCHEQUER_PRIVACY_CATEGORY`: privacy protocols as a note (#189)
+
+Unlike the flags above, this one is already merged: the whole stack (#194,
+#195, #196, #198) reached `main` inside #149. The owner approved the category
+on 14 Nov and said yes to switching it on; it was set to `1` in the Render
+dashboard on 15 Nov, and the PR that adds it to `render.yaml` follows.
+
+**What it changes on the live site.** Nothing is contacted that was not before:
+the server only reads `backend/data/privacy_protocols*.json` (27 contracts of
+Railgun, Aztec, Hinkal and Privacy Pools on Ethereum, BNB Chain, Polygon,
+Arbitrum and Tron, each with its source; handoff
+`docs/handoff/privacy-protocol-category.md`).
+
+- **Privacy Pools moves from a mixer stop to a privacy note.** With the flag off
+  its two Ethereum contracts are mixers from `threat_labels.json`: a risk hit,
+  and the trail stops there. With it on, that mixer tag gives way to the privacy
+  entry, the trace walks on, and the hit is gone from every risk count. Only the
+  mixer tag gives way: a sanctions listing, a freeze or a theft tag on a privacy
+  contract still stands, and then no note is shown for it.
+- **The 27 contracts show as a grey note**, never the red alert: a dotted
+  "privacy protocol on the route · a note, not an accusation" box under the risk
+  alert (`PrivacyNotes.jsx`), a grey dotted halo on both maps, and a `privacy`
+  role on the Entities card. It counts toward nothing.
+- **The signed report gains a section** "PRIVACY PROTOCOLS ON THE PATH (A NOTE,
+  NOT AN ACCUSATION)" after the screening, only when the case has a match (#198,
+  on `main`); the JSON report gains `privacy_protocols` under the same rule, and
+  PDF page 1 a grey block. With no match the report bytes are unchanged. Letters
+  never mention privacy protocols.
+
+**Switching it on.** The common steps above: set `EXCHEQUER_PRIVACY_CATEGORY` to
+`1` in the Render dashboard and redeploy, then merge the `render.yaml` PR.
+
+**Check it after switching on** (a test officer and the test case, as above):
+
+1. `/health/detail` → `flags`: `EXCHEQUER_PRIVACY_CATEGORY` is on.
+2. Open the recorded demos: they look exactly as before. No recorded demo passes
+   a privacy contract (handoff, PR 1), so a change there is a bug.
+3. As the test officer, trace the Privacy Pools ETH pool
+   `0xf241d57c6debae225c0f2e6ea1529373c9a9c9fb` (Ethereum; in
+   `privacy_protocols.json` and, as a mixer, in `threat_labels.json`). Before the
+   switch it is a mixer risk hit; after it, the grey note says "the reported
+   address itself", the red alert does not name it, and the trace carries on.
+   This was not run for this doc; it is a busy contract, so watch the provider
+   quota and stop if it runs long.
+4. Download the signed report: the privacy section is there, and `/verify`
+   still accepts the file.
+5. No new audit event: the note is part of the trace's own output.
+
+**Switching it off.** The common steps above. Off, a new trace treats Privacy
+Pools as a mixer stop again and carries no notes. A case traced while the flag
+was on keeps the notes stored in its result, and the case page still shows them
+(`PrivacyNotes.jsx` does not read the flag) until it is traced again; its report
+drops the privacy section, because `report.py` reads the flag when it writes one.

@@ -30,3 +30,6 @@
 ## Files mid-change (do not touch)
 
 - none
+
+## 15 Nov, later: landing on main
+#262 was merged into its base branch (`labels/contract-wallet-roles`) instead of `main`, so its three roles never reached `main`; and #258 then added 16 Bitget contract wallets (12 Ethereum, 4 BSC) that the evidence file did not list, which failed `test_every_measured_row_is_a_contract_wallet_and_every_roleless_one_was_measured` on `main`. This PR lands #262's content on `main` and re-records the evidence with the new `--record --offline --cache DIR`: answers come only from the 15 Nov cache, and a wallet with no cached answer is recorded as "not measured yet" with no role. Measure the 12 Ethereum Bitget wallets online later (`--record --cache DIR`, no `--offline`).

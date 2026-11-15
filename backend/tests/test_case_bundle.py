@@ -256,3 +256,18 @@ def test_the_site_wide_bundle_ceiling_holds_whatever_the_client(client, monkeypa
     bundle(client)
     refused = client.get("/trace/case-1/bundle", headers=HEAD)
     assert refused.status_code == 429 and "on this server" in refused.json()["detail"]
+
+
+def test_a_bundle_refused_because_its_pdf_was_refused_costs_nothing(client, monkeypatch):
+    # The PDF inside is the report download's own, limits and all: when it is refused
+    # (busy, or the PDF limit), no bundle was made, so none is charged.
+    from app import report_cache
+    from app.routes import case_bundle as bundle_routes
+    monkeypatch.setattr(bundle_routes.bundles, "limit", 1)
+    assert report_cache.render_slot.acquire(blocking=False)
+    try:
+        busy = client.get("/trace/case-1/bundle", headers=HEAD)
+    finally:
+        report_cache.render_slot.release()
+    assert busy.status_code == 429 and "bundles" not in busy.json()["detail"]
+    bundle(client)

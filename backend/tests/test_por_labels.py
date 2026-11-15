@@ -48,9 +48,12 @@ def _document(chain):
 def _por_rows(chain):
     """The rows this import wrote. A row with a `role_basis` cites the same PoR file but was
     typed by hand from on-chain reads (OKX's two Ethereum consolidation wallets): those rows
-    are checked in tests/test_okx_consolidation_labels.py."""
+    are checked in tests/test_okx_consolidation_labels.py. A row with a `source_audit` is Bitget's,
+    read from its PoR API's answer for one audit by scripts/import_bitget_por_labels.py: an answer to
+    a POST has no archive copy, so those rows are checked in tests/test_bitget_por_labels.py against
+    the answers kept in tests/fixtures/bitget_por/."""
     return {a: m for a, m in _document(chain)["labels"].items()
-            if isinstance(m, dict) and "source_kind" in m and "role_basis" not in m}
+            if isinstance(m, dict) and "source_kind" in m and "role_basis" not in m and "source_audit" not in m}
 
 
 # -- the shipped rows --------------------------------------------------------------

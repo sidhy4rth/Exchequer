@@ -194,3 +194,22 @@ def test_a_held_row_is_measured_but_given_no_role():
         seen = EVIDENCE[chain][address]
         assert seen["role"] is None and "role not set" in seen["why"]
         assert "role" not in _labels(chain)[address]
+
+
+def test_an_offline_record_asks_nothing_and_says_the_wallet_is_not_measured_yet(tmp_path, monkeypatch):
+    """A wallet added after the reading (as #258's Bitget rows were) is recorded from the cache alone."""
+    def no_network(*args, **kwargs):
+        raise AssertionError("an offline record made a network call")
+
+    monkeypatch.setattr(mcr.urllib.request, "urlopen", no_network)
+    monkeypatch.setattr(mcr, "CACHE", tmp_path)
+    monkeypatch.setattr(mcr, "OFFLINE", True)
+    seen = mcr.measure("ethereum", addr("b1"), {"exchange": "Bitget", "label": "Bitget: test"}, {}, None)
+    assert seen == {"role": None, "why": mcr.NOT_MEASURED_YET}
+
+
+@pytest.mark.parametrize("chain", CHAINS)
+def test_no_role_rests_on_a_wallet_that_was_not_measured(chain):
+    for address, seen in EVIDENCE[chain].items():
+        if seen["why"] == mcr.NOT_MEASURED_YET:
+            assert seen["role"] is None and "role" not in _labels(chain)[address], address
