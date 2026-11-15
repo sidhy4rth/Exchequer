@@ -27,6 +27,13 @@ request body (never the URL), names the file by case and notice, and records
 only which notice was drafted. A bank hold's second-officer sign-off is bound
 to its details by fingerprint() (a SHA-256, stored on the request instead of
 the details), so changing any of them needs a fresh sign-off.
+
+Courts differ on whether the police may hold money without a Magistrate's
+order (docs/legal/freeze-wording-review.md). Behind config.FREEZE_WORDING_V2
+(off), the bank hold's wording rests on the order alone: it asks the bank to
+give effect to the attached order as that order directs, up to the amount
+stated, and does not itself call the action a debit freeze or a lien. Off, the
+letter is unchanged.
 """
 from __future__ import annotations
 
@@ -37,6 +44,7 @@ import textwrap
 from datetime import date
 from typing import Any
 
+from . import config
 from .display_text import one_line, short
 from .request_letters import BLANK, SIGN_OFF, _attribution, _cleaned, _freeze_header, _header
 
@@ -156,6 +164,9 @@ def _hold(details: dict[str, Any]) -> dict[str, Any]:
     details and the amount (as two-decimal rupees, or None for a blank)."""
     order = _text(details, "order", "the Magistrate's order this hold rests on (number, date and court)",
                   TEXT_MAX, required=False)
+    if not order and config.FREEZE_WORDING_V2:
+        raise NoticeError("This notice asks the bank to act on a Magistrate's order: enter its number, date and "
+                          "court.")
     if not order:
         raise NoticeError("A bank hold attaches money, which needs a Magistrate's order: enter its number, "
                           "date and court.")
@@ -186,19 +197,35 @@ def fingerprint(case_id: str, to: str, details: dict[str, Any]) -> str | None:
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
+ORDER_TITLE = "DRAFT — URGENT request under a Magistrate's order, for the investigating officer to complete and sign."
+ORDER_PROVISION = ["   [e.g. Section 107 of the Bharatiya Nagarik Suraksha Sanhita, 2023, as the order states —",
+                   "   officer to confirm]"]
+
+
 def _bank_freeze(case_id: str, details: dict[str, Any], approval: dict[str, Any] | None) -> str:
-    h = _hold(details)
+    h, v2 = _hold(details), config.FREEZE_WORDING_V2
     stated = [f"Amount    : {BLANK} (officer to state)" if h["amount"] is None
               else f"Amount    : up to INR {inr(float(h['amount']))}"]
-    ask = f"Please place a debit freeze, now, on account {h['account']} (IFSC {h['ifsc']}) up to the amount below"
-    lines = _freeze_header(f"The Nodal Officer, {h['bank']}", f"debit freeze on account {h['account']}", ask, approval)
+    if v2:  # the order is the authority: the letter asks for what it directs, and names no action of its own
+        ask = (f"Please give effect, now, to the attached order of the Magistrate on account {h['account']} "
+               f"(IFSC {h['ifsc']}), as that order directs and for no more than the amount below")
+        subject = f"action on account {h['account']} under a Magistrate's order"
+    else:
+        ask = f"Please place a debit freeze, now, on account {h['account']} (IFSC {h['ifsc']}) up to the amount below"
+        subject = f"debit freeze on account {h['account']}"
+    lines = _freeze_header(f"The Nodal Officer, {h['bank']}", subject, ask, approval)
+    if v2:
+        lines[0] = ORDER_TITLE
+        under = next(i for i, line in enumerate(lines) if line.startswith(f"Under {BLANK}"))
+        lines[under + 1:under + 1] = ORDER_PROVISION
     # Beside the approval line: the sign-off covers these details only (freeze_requests.sign_off).
     lines.insert(3, f"Details fingerprint: {fingerprint(case_id, BANK_FREEZE, details)[:16]} "
                     "(a second officer's sign-off covers these exact details)")
     lines += [f"Account   : {h['account']}", f"IFSC      : {h['ifsc']}", *stated,
               *_wrap(f"Order     : {h['order']} (copy attached)", indent=""),
               *_wrap(f"Source    : {h['source']}", indent=""), "",
-              "Please confirm the hold and the balance held to the contact above.",
+              "Please confirm to the contact above what was done under the order and the balance it covers."
+              if v2 else "Please confirm the hold and the balance held to the contact above.",
               *SIGN_OFF]
     return "\n".join(lines) + "\n"
 

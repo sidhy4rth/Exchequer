@@ -37,8 +37,9 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_TELEGRAM_LOOKUPS` | Feature 4, OSINT slice 4: read a Telegram username's public t.me page (needs `EXCHEQUER_OSINT_LOOKUPS` too) | #162 (+#169, #170) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_SOP_SUMMARY` | Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms | #218 (+#219, #220) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_SOP_DEADLINES` | Feature 8: the MHA CFCFRMS SOP's time limits, quoted, as reminders on bank holds in the asset register | #230 | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_FREEZE_WORDING_V2` | Feature 7, #251: the bank-hold notice asks the bank to give effect to the Magistrate's order as it directs, not for a "debit freeze" | #252 | Off in `render.yaml`; awaits a lawyer; see its section below |
 
-That is all fifteen flags in `FLAGS` on `main`.
+That is all sixteen flags in `FLAGS` on `main`.
 
 The rest of this file is about the seven features named at the top. The steps
 below for switching on, checking and switching off apply to every flag above.
@@ -396,6 +397,30 @@ rows are unchanged.
 **Owner decisions still open** (handoff `docs/handoff/sop-deadlines.md`): whether
 to turn the flag on once the reviewer has checked the quotes against the PDF,
 and a re-check of each quote if a newer official copy of the SOP is found.
+
+## `EXCHEQUER_FREEZE_WORDING_V2`: bank-hold wording that rests on the order (feature 7)
+
+**What it turns on.** A different wording for the urgent bank-hold notice
+(`backend/app/notice_letters.py`). Off, the letter asks for "a debit freeze ...
+up to the amount below", exactly as before. On, it asks the bank to "give
+effect, now, to the attached order of the Magistrate ... as that order directs
+and for no more than the amount below", with a bracketed suggestion of s.107
+BNSS for the officer to confirm. Nothing else changes: the order is still
+required, the provision is still a blank, the sign-off and its fingerprint are
+the same. It contacts nothing outside Exchequer. No migration.
+
+**Merged.** #252 (not yet).
+
+**Try it on the live site** (one test officer, on the test case):
+
+1. Confirm in `/health/detail` that `EXCHEQUER_FREEZE_WORDING_V2` is on.
+2. On the test case's Letters tab, Notice to: Bank, Urgent hold. Without an
+   order it is refused; with a TEST order it drafts the new wording.
+3. With the flag off, the same details give the old wording.
+
+**Owner decisions still open.** Switch it on only after a lawyer has answered
+the questions in `docs/legal/freeze-wording-review.md`; the wording itself may
+change with their answer.
 
 ## `EXCHEQUER_PRIVACY_CATEGORY`: privacy protocols as a note (#189)
 
