@@ -927,3 +927,5 @@ EXPORT_SCAN: bool = flag("EXCHEQUER_EXPORT_SCAN",
 TELEGRAM_LOOKUPS: bool = flag("EXCHEQUER_TELEGRAM_LOOKUPS",
                               "Feature 4, OSINT slice 4: read a Telegram username's public t.me page "
                               "(needs EXCHEQUER_OSINT_LOOKUPS too)")
+SOP_SUMMARY: bool = flag("EXCHEQUER_SOP_SUMMARY",
+                         "Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms")

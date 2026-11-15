@@ -189,6 +189,18 @@ describe('a complaint', () => {
     expect(JSON.parse(screen.getByTestId('landed').dataset.prefill)).toEqual({ address: WALLET, ncrpAck: '' })
   })
 
+  it("shows the server's note on an NCRP number of an unusual shape, and none on a usual one", async () => {
+    const note = 'NCRP acknowledgement numbers are usually 14 digits starting with 2 or 3 — check the number.'
+    open('/complaints/EXQ-NEWER222', { '/complaints/EXQ-NEWER222': { body: { ...ONE, ncrp: 'AB12345678', ncrp_note: note } } })
+    expect(await screen.findByText(note)).toBeInTheDocument()
+  })
+
+  it('shows no NCRP note when the server gives none', async () => {
+    open('/complaints/EXQ-NEWER222')
+    expect(await screen.findByRole('heading', { level: 1, name: 'EXQ-NEWER222' })).toBeInTheDocument()
+    expect(screen.queryByText(/usually 14 digits/)).not.toBeInTheDocument()
+  })
+
   it('offers a trace only on a chain this site traces', async () => {
     const evm = '0x' + 'c'.repeat(40)
     const payments = [{ ...ONE.payments[0], network: 'Polygon', wallet: evm }, { ...ONE.payments[0], network: 'Ethereum (ERC20)', wallet: evm }]

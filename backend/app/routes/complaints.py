@@ -41,7 +41,7 @@ from sqlalchemy import func, or_, select, true
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import accounts, audit, config, models
+from .. import accounts, audit, config, models, ncrp
 from ..auth import CurrentUser, User
 from ..complaints import Complaint, ComplaintClaim, ComplaintLink, ComplaintMessage, ComplaintPayment
 from ..input_rules import NoNul, OneLine
@@ -174,7 +174,7 @@ def complaint(reference: Reference, http: Request, user: CurrentUser) -> dict[st
     audit.record("complaint.read", detail={"reference": row.reference})
     return {
         "reference": row.reference, "received_at": row.created_at, "updated_at": row.updated_at,
-        "status": row.status, "ncrp": row.ncrp, **_flags(row),
+        "status": row.status, "ncrp": row.ncrp, "ncrp_note": ncrp.shape_note(row.ncrp), **_flags(row),
         "details": {k: str(sent.get(k) or "") for k in DETAILS},
         "payments": [{"hash": p.tx_hash, "amount": p.amount, "token": p.token, "network": p.network,
                       "paid_at": p.paid_at, "wallet": p.wallet} for p in payments],

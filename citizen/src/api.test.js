@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { checkPayment, myCase, sendComplaint, sendMessage, signIn, signOut, waitText } from './api.js'
+import { NCRP_NOTE, checkPayment, myCase, ncrpNote, ncrpShape, sendComplaint, sendMessage, signIn, signOut, waitText } from './api.js'
 import { OFFLINE, fakeServer } from './test/server.js'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -58,4 +58,19 @@ describe('api', () => {
     expect(waitText(3600)).toBe('in about an hour')
     expect(waitText(undefined)).toBe('a little later')
   })
+})
+
+describe('ncrpNote (SOP for NCRP-CFCFRMS 6.1(d), 6.2(c))', () => {
+  it('says nothing for a 14-digit portal or 1930 number, typed with spaces or hyphens or not', () => {
+    for (const n of ['21234567890123', '31234567890123', '3123-4567-8901-23', '2123 4567 8901 23']) expect(ncrpNote(n)).toBe('')
+  })
+  it('notes 13 digits, a 5 at the start and other shapes, which the site still takes', () => {
+    for (const n of ['3123456789012', '51234567890123', 'AB12345678']) {
+      expect(ncrpNote(n)).toBe(NCRP_NOTE)
+      expect(ncrpShape(n)).not.toBe('')
+    }
+    expect(NCRP_NOTE).toContain('14 digits starting with 2 or 3')
+    expect(ncrpNote('51234567890123')).not.toContain('51234567890123')
+  })
+  it('says nothing when nothing is typed', () => expect(ncrpNote('')).toBe(''))
 })
