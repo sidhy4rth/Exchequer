@@ -329,6 +329,7 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 | `GET /trace/{case_id}/letters` | Which request letters the case supports: the urgent freeze letters first, then the information letters (to the exchange, to Tether) |
 | `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether; `to=exchange-freeze` or `to=tether-freeze` for the urgent "hold these funds now" letter) |
 | `POST /trace/{case_id}/notice` | A draft notice to a bank (`to=bank-info`; `to=bank-freeze` for an urgent debit freeze, which needs the Magistrate's order and a second officer's sign-off) or a telecom operator (`to=telecom`), from the case and the account or phone details in the request body, never the URL |
+| `POST /trace/{case_id}/letter-of-request` | A draft letter of request to a foreign country (BNSS s.112) in the MHA's prescribed format, from the case, its requests log and the officer's details in the request body; blanks for whatever the officer or the Court has not supplied |
 | `GET /cases` | History of past traces |
 | `GET /cases/correlate` | Intermediaries shared by two or more of your stored cases (plus the demos) — the campaign view (`?case_id=` narrows it) |
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |
