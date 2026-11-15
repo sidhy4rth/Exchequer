@@ -18,8 +18,8 @@ export default function PrivacyNotes({ result, unit }) {
       </div>
       <p className="lede">
         Funds passing through a privacy protocol lose their visible link, so what leaves it is not shown on chain to be
-        the same money. Being a privacy protocol never stops the trace; each note says whether the contract&apos;s payouts
-        were followed. No sanctions list or enforcement action names these protocols.
+        the same money. Being a privacy protocol never stops the trace, though the trace may not go past a contract that
+        pays out to, or is paid by, many addresses. No sanctions list or enforcement action names these protocols.
       </p>
       {matches.map((m, i) => (
         <div className="line" key={m.address}>

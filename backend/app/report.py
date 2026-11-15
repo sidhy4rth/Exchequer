@@ -410,14 +410,18 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
 
 
 # The privacy protocols on the path (#189): the screen's wording, a note.
+# The lede is drawn at render time for every stored case, so it claims nothing
+# about the notes' wording: a note stored before #279 never says whether a
+# pool's payouts were followed, even when graph_builder's service-contract
+# rule left them unfollowed.
 PRIVACY_TITLE = "PRIVACY PROTOCOLS ON THE PATH (A NOTE, NOT AN ACCUSATION)"
 PRIVACY_LEDE = (
     "Funds passing through a privacy protocol lose their visible link, so what leaves it is not "
-    "shown on chain to be the same money. Being a privacy protocol never stops the trace; each "
-    "note says whether the contract's payouts were followed. No sanctions list or "
-    "enforcement action names these protocols. This is not an accusation: using one is not a "
-    "finding against anyone, and none of these is counted in the screening above or in the "
-    "confidence score."
+    "shown on chain to be the same money. Being a privacy protocol never stops the trace, though "
+    "the trace may not go past a contract that pays out to, or is paid by, many addresses. No "
+    "sanctions list or enforcement action names these protocols. This is not an accusation: "
+    "using one is not a finding against anyone, and none of these is counted in the screening "
+    "above or in the confidence score."
 )
 
 
