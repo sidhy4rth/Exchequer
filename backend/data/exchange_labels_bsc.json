@@ -10,7 +10,68 @@
   "schema": "labels maps a lowercase address to {exchange, label, type}",
   "supplemented_from": "8 further labels imported from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9, a newer published scrape of the same explorer label pages, and verified on chain the same way, by backend/scripts/import_eth_labels.py.",
   "ported_from_ethereum": "146 Ethereum-labelled exchange accounts added 2026-09-23 by backend/scripts/port_evm_labels.py: each has no contract code on BNB Smart Chain and has sent a transaction there (nonce > 0), read through NodeReal.",
-  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json."
+  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json.",
+  "review_2026_11_15": {
+   "date": "2026-11-15",
+   "rule": "scripts/clean_exchange_labels.py: token contracts and infrastructure removed; another firm's account attributed to the exchange that holds it",
+   "removed": {
+    "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503": "Binance-Peg Tokens: the reserve behind Binance's peg tokens, not where a customer's funds are credited",
+    "0xc365c3315cf926351ccaf13fa7d19c8c4058c8e1": "Binance Pool: a mining pool's payout wallet, not where a customer's funds are credited",
+    "0xe9e7cea3dedca5984780bafc599bd69add087d56": "Binance: BUSD Stablecoin: a token contract (app/never_flag.tokens), not a wallet"
+   }
+  },
+  "exchange_status": {
+   "source": "data/exchange_status.json, applied by scripts/mark_exchange_status.py",
+   "labels": {
+    "AscendEX": 2,
+    "BitMEX": 2,
+    "BitMart": 3,
+    "Cobinhood": 1,
+    "CoinEx": 3,
+    "FTX": 4,
+    "Hotbit": 8,
+    "Kryptono": 1
+   }
+  },
+  "india_exchanges": "13 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why.",
+  "por_2026_11_15": {
+   "rule": "scripts/import_por_labels.py: each exchange's own proof-of-reserves wallet list (a first-party source, accepted by the owner 15 Nov 2026); a conflict with any other file, a demo or the label store is left out, never overwritten; a token contract or an address with no activity on this chain is left out",
+   "sources": {
+    "Bybit": {
+     "url": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+     "archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+     "page": "https://www.bybit.com/en/proof-of-reserve",
+     "source_date": "2026-10-27",
+     "retrieved": "2026-11-14",
+     "sha256": "9dd0b4cf4c5bc547b1eb6e85b43c549df45f8174c2d7630f7c46f5c5ddb51c68",
+     "snapshot_heights": {
+      "ethereum": 26282105,
+      "bsc": 130037645,
+      "polygon": 96250259,
+      "arbitrum": 518656879
+     },
+     "note": "October 2026 file (Last-Modified 27 Oct 2026); the November file was not yet published on 14 Nov. The archived copy is byte-identical (same SHA-256)."
+    },
+    "OKX": {
+     "url": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+     "archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+     "page": "https://www.okx.com/proof-of-reserves/download",
+     "page_archive": "https://web.archive.org/web/20261114212506/https://www.okx.com/en-us/proof-of-reserves/download",
+     "source_date": "2026-11-01",
+     "retrieved": "2026-11-14",
+     "sha256": "93095583a31e2c3f23a7c2061b8b6a00302a212704e96db2ae061446553367a6",
+     "snapshot_heights": {
+      "ethereum": "26313625-26313797",
+      "polygon": 96504628,
+      "arbitrum": 520033704
+     },
+     "note": "November 2026 file (okx_por_2026110100_V1.csv inside; Last-Modified 1 Nov 2026), the latest on the download page on 14 Nov. Each row carries OKX's signature of 'I am an OKX address'; the signatures were not verified here. OKX lists no BNB Smart Chain wallets. Rows typed other than 'Non Staking' (staking positions) are not read."
+    }
+   },
+   "added": {
+    "Bybit": 31
+   }
+  }
  },
  "labels": {
   "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
@@ -120,7 +181,7 @@
   },
   "0x274f3c32c90517975e29dfc209a23f315c1e5fc7": {
    "exchange": "Hotbit",
-   "label": "Hotbit 1",
+   "label": "Hotbit 1 (defunct)",
    "type": "hot_wallet"
   },
   "0x2864de013415b6c2c7a96333183b20f0f9cc7532": {
@@ -160,17 +221,17 @@
   },
   "0x2faf487a4414fe77e2327f0bf4ae2a264a776ad2": {
    "exchange": "FTX",
-   "label": "FTX 1",
+   "label": "FTX 1 (defunct)",
    "type": "exchange_wallet"
   },
   "0x328130164d0f2b9d7a52edc73b3632e713ff0ec6": {
    "exchange": "BitMart",
-   "label": "Bitmart: Wallet 2",
+   "label": "Bitmart: Wallet 2 (winding down)",
    "type": "exchange_wallet"
   },
   "0x3339afcb8e237aa8aaf3e1040473173830efd09c": {
    "exchange": "CoinEx",
-   "label": "CoinEx 8",
+   "label": "CoinEx 8 (winding down)",
    "type": "exchange_wallet"
   },
   "0x33a64dcdfa041befebc9161a3e0c6180cd94fa89": {
@@ -195,12 +256,12 @@
   },
   "0x39aa02d6b499a76a70fab5f164e8be587c366141": {
    "exchange": "Hotbit",
-   "label": "Hotbit",
+   "label": "Hotbit (defunct)",
    "type": "hot_wallet"
   },
   "0x3ab28ecedea6cdb6feed398e93ae8c7b316b1182": {
    "exchange": "BitMart",
-   "label": "BitMart 3",
+   "label": "BitMart 3 (winding down)",
    "type": "exchange_wallet"
   },
   "0x3c02290922a3618a4646e3bbca65853ea45fe7c6": {
@@ -240,7 +301,7 @@
   },
   "0x41772edd47d9ddf9ef848cdb34fe76143908c7ad": {
    "exchange": "FTX",
-   "label": "FTX 4",
+   "label": "FTX 4 (defunct)",
    "type": "exchange_wallet"
   },
   "0x44592b81c05b4c35efb8424eb9d62538b949ebbf": {
@@ -263,11 +324,6 @@
    "label": "BitVenus 6",
    "type": "exchange_wallet"
   },
-  "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503": {
-   "exchange": "Binance",
-   "label": "Binance: Binance-Peg Tokens",
-   "type": "exchange_wallet"
-  },
   "0x4982085c9e2f89f2ecb8131eca71afad896e89cb": {
    "exchange": "MEXC",
    "label": "mexc.com",
@@ -275,12 +331,12 @@
   },
   "0x4a41d76b0524a3989998380c033f12bfeb5f7201": {
    "exchange": "Hotbit",
-   "label": "Hotbit 13",
+   "label": "Hotbit 13 (defunct)",
    "type": "hot_wallet"
   },
   "0x4b1a99467a284cc690e3237bc69105956816f762": {
    "exchange": "AscendEX",
-   "label": "AscendEX 2",
+   "label": "AscendEX 2 (defunct)",
    "type": "exchange_wallet"
   },
   "0x4d24eececb86041f47bca41265319e9f06ae2fcb": {
@@ -320,7 +376,7 @@
   },
   "0x562680a4dc50ed2f14d75bf31f494cfe0b8d10a1": {
    "exchange": "Hotbit",
-   "label": "Hotbit 9",
+   "label": "Hotbit 9 (defunct)",
    "type": "hot_wallet"
   },
   "0x56de1961fda5454e6f8e6d0e3124ff648fd69400": {
@@ -415,7 +471,7 @@
   },
   "0x768f2a7ccdfde9ebdfd5cea8b635dd590cb3a3f1": {
    "exchange": "Hotbit",
-   "label": "Hotbit 11",
+   "label": "Hotbit 11 (defunct)",
    "type": "hot_wallet"
   },
   "0x77021d475e36b3ab1921a0e3a8380f069d3263de": {
@@ -485,12 +541,12 @@
   },
   "0x8958618332df62af93053cb9c535e26462c959b0": {
    "exchange": "Cobinhood",
-   "label": "Cobinhood 1",
+   "label": "Cobinhood 1 (defunct)",
    "type": "exchange_wallet"
   },
   "0x8c128dba2cb66399341aa877315be1054be75da8": {
    "exchange": "BitMart",
-   "label": "Bitmart: Wallet",
+   "label": "Bitmart: Wallet (winding down)",
    "type": "exchange_wallet"
   },
   "0x8c7efd5b04331efc618e8006f19019a3dc88973e": {
@@ -540,7 +596,7 @@
   },
   "0x986a2fca9eda0e06fbf7839b89bfc006ee2a23dd": {
    "exchange": "AscendEX",
-   "label": "AscendEX Hot Wallet",
+   "label": "AscendEX Hot Wallet (defunct)",
    "type": "hot_wallet"
   },
   "0x9a10da8ce77f26231860764a2caab36e70584c4b": {
@@ -550,7 +606,7 @@
   },
   "0x9ade1c17d25246c405604344f89e8f23f8c1c632": {
    "exchange": "FTX",
-   "label": "FTX 6",
+   "label": "FTX 6 (defunct)",
    "type": "exchange_wallet"
   },
   "0x9b0c45d46d386cedd98873168c36efd0dcba8d46": {
@@ -605,7 +661,7 @@
   },
   "0xa986266b60390e1d313ecd3b2311a9af74c57400": {
    "exchange": "Hotbit",
-   "label": "Hotbit 12",
+   "label": "Hotbit 12 (defunct)",
    "type": "hot_wallet"
   },
   "0xaa9133eec3ae5f9440c1a1e61e2d2cc571675527": {
@@ -635,7 +691,7 @@
   },
   "0xb18fbfe3d34fdc227eb4508cde437412b6233121": {
    "exchange": "Hotbit",
-   "label": "Hotbit 10",
+   "label": "Hotbit 10 (defunct)",
    "type": "hot_wallet"
   },
   "0xb23360ccdd9ed1b15d45e5d3824bb409c8d7c460": {
@@ -660,7 +716,7 @@
   },
   "0xb9ee1e551f538a464e8f8c41e9904498505b49b0": {
    "exchange": "CoinEx",
-   "label": "Coinex",
+   "label": "Coinex (winding down)",
    "type": "exchange_wallet"
   },
   "0xbac051bbf79c5321c0f825ea9bca71f992144029": {
@@ -700,7 +756,7 @@
   },
   "0xc098b2a3aa256d2140208c3de6543aaef5cd3a94": {
    "exchange": "FTX",
-   "label": "FTX 2",
+   "label": "FTX 2 (defunct)",
    "type": "exchange_wallet"
   },
   "0xc15dc0b4223b05588a257e48ed129fb59c6eb7e3": {
@@ -711,11 +767,6 @@
   "0xc21a1d213f64fedea3415737cce2be37eb59be81": {
    "exchange": "Fastex",
    "label": "Fastex 2",
-   "type": "exchange_wallet"
-  },
-  "0xc365c3315cf926351ccaf13fa7d19c8c4058c8e1": {
-   "exchange": "Binance",
-   "label": "Binance Pool",
    "type": "exchange_wallet"
   },
   "0xc3c8e0a39769e2308869f7461364ca48155d1d9e": {
@@ -735,7 +786,7 @@
   },
   "0xc7029e939075f48fa2d5953381660c7d01570171": {
    "exchange": "Hotbit",
-   "label": "Hotbit 2",
+   "label": "Hotbit 2 (defunct)",
    "type": "hot_wallet"
   },
   "0xc882b111a75c0c657fc507c04fbfcd2cc984f071": {
@@ -795,7 +846,7 @@
   },
   "0xda07f1603a1c514b2f4362f3eae7224a9cdefaf9": {
    "exchange": "CoinEx",
-   "label": "CoinEx 4",
+   "label": "CoinEx 4 (winding down)",
    "type": "exchange_wallet"
   },
   "0xdb6fdc30ab61c7cca742d4c13d1b035f3f82019a": {
@@ -845,12 +896,7 @@
   },
   "0xe8a0e282e6a3e8023465accd47fae39dd5db010b": {
    "exchange": "Kryptono",
-   "label": "Kryptono 1",
-   "type": "exchange_wallet"
-  },
-  "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
-   "exchange": "Binance",
-   "label": "Binance: BUSD Stablecoin",
+   "label": "Kryptono 1 (defunct)",
    "type": "exchange_wallet"
   },
   "0xeb2d2f1b8c558a40207669291fda468e50c8a0bb": {
@@ -860,7 +906,7 @@
   },
   "0xeea81c4416d71cef071224611359f6f99a4c4294": {
    "exchange": "BitMEX",
-   "label": "BitMEX 1",
+   "label": "BitMEX 1 (defunct)",
    "type": "exchange_wallet"
   },
   "0xef7a2610a7c9cfb2537d68916b6a87fea8acfec3": {
@@ -915,8 +961,383 @@
   },
   "0xfb8131c260749c7835a08ccbdb64728de432858e": {
    "exchange": "BitMEX",
-   "label": "BitMEX 2",
+   "label": "BitMEX 2 (defunct)",
    "type": "exchange_wallet"
+  },
+  "0xceae7673553c90d0a3cd1a494da35ede63910cbf": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ATOM wallet",
+   "type": "exchange_wallet"
+  },
+  "0x4fdc7d8a2a14cab04608434ace9c12b39cba2392": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x628d6380a28b8d9ae7516597fa625934185bfed4": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0xf28a96107cf2db70bf184c665a99782072aa13be": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20/IOTX wallet",
+   "type": "exchange_wallet"
+  },
+  "0xaaaff093bbda998bfd1026689affe711f5eeaabc": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x58bac7a9b2b257e26a39e1ec564f1cf8d6810017": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x6aba1ff31df3b0ff6989e628d766c044a5301fc4": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x633fac2b6d44e97fba5898f629dc87196609b967": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x551568a9430b888f93d31fa6df4973c55a6c667d": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB/BEP20 wallet",
+   "type": "exchange_wallet"
+  },
+  "0x2d196d7643ef097eb9e248387b96ca6afdd1eb2c": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB wallet",
+   "type": "exchange_wallet"
+  },
+  "0xcb41bd871461585f8c3f746125601ec350e7e567": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: BNB wallet",
+   "type": "exchange_wallet"
+  },
+  "0xcdef28fe85ab08a6632c97fd90534666c1ae96a3": {
+   "exchange": "WazirX",
+   "label": "WazirX: BSC wallet 1",
+   "type": "contract_wallet"
+  },
+  "0x0389776e4d48384160cd5acde2f61ab9359e757e": {
+   "exchange": "WazirX",
+   "label": "WazirX: BSC wallet 2",
+   "type": "contract_wallet"
+  },
+  "0x0051ef9259c7ec0644a80e866ab748a2f30841b3": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 1",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x07bdf2aa3fe611bde1d7d03d00bd57fda9f3b633": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 4",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x18e296053cbdf986196903e889b7dca7a73882f6": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 12",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x1c3944173abee256456b1498299fc501ad5bbd6f": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 13",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 14",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x318d2aae4c99c2e74f7b5949fa1c34df837789b8": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 21",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x388e52979ac487c6bdafcc84b251976cd162790b": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 29",
+   "type": "contract_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x588846213a30fd36244e0ae0ebb2374516da836c": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 49",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x869bcee3a0bad2211a65c63ec47dbd3d85a84d68": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 80",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x88a1493366d48225fc3cefbdae9ebb23e323ade3": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 82",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x93228d328c9c74c2bfe9f97638bbb5ef322f2bd5": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 90",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x933646d78ede6f1ef5cf4a0a03e3a819c8057922": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 91",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x9814ba501c7ad64bed5ac731d0a4f9a506e18f8a": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 92",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x9db812a1b55ac6fdbd1d52e628324e2fd2dbb560": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 95",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xa7a93fd0a276fc1c0197a5b5623ed117786eed06": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 100",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xbaed383ede0e5d9d72430661f3285daa77e9439f": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 110",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xbedf525201f58984182d2ad607a343ac8a2e54a2": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 112",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xc0e17ad342afabd36b3971f8305ff147006962ae": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 113",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xc19bb2709321bd6ad6d8396a885b7c151b8d48c5": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 114",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xc3121c4ca7402922e025e62e9bb4d5b244303878": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 117",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xc416535d86bff7b69039d0c901635316c16c7043": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 118",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xc851a293ed8b8888a2e4140744973dd23bbcbaf2": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 122",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xd07e6ab4b75b3da5a96b5e81064a65fc04f98814": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 125",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xd4d2e6ebca6c94dd28a0935ae468012fdda5d35a": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 126",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xd860962a96cd471bbe60a83c33e65011d40eb65f": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 128",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xeb9af6505bdfd2b64848a21ed02f8ccab9144f5d": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 131",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xeca33dc9e896072d4edc4a02183910376d4b5e76": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 132",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xee5b5b923ffce93a870b3104b7ca09c3db80047a": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 133",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xef3aeff9a5f61c6dda33069c58c1434006e13b20": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 134",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xf440139a62b2b939699c5b3e09f88e40464ab9bc": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 139",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xfe6290ac9c3c290308341d07464969b697d2a17b": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 143",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
   }
  }
 }

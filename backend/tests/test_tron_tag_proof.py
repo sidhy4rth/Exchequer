@@ -29,7 +29,7 @@ from app.tron_tags import LiveTronExchanges, clean_tag, exchange_for_tag, tag_fr
 
 SEED = "TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts"
 HOP = "TXgo8gtf6bPQURfHftYWPRv1QPuLQaBBVU"
-EXCH = "TMuA6YqfCeX8EhbfYEg5y7S4DqzSJireY9"
+EXCH = "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf"  # unlabelled (test_tron_cache.py); TMuA6... is now a Binance PoR row
 
 NOT_AN_EXCHANGE_WALLET = [
     "Binance (Fake)", "Binance_Fake", "Binance-Fraud", "Bybit_Drainer", "OKX (Impersonator)",

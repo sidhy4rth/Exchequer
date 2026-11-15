@@ -952,6 +952,10 @@ def graph_to_dict(graph: nx.DiGraph) -> dict[str, list[dict]]:
             "self_transfer_count": data.get("self_transfer_count", 0),
             "self_transfer_value_native": data.get("self_transfer_value_native", 0.0),
             "flags": sorted(data.get("flags", [])),
+            # A privacy protocol's contract (risk_matcher.annotate_privacy):
+            # a note, not a risk hit. Only on such a node, so a graph without
+            # one (always, with the flag off) is serialised as before.
+            **({"privacy_entity": data["privacy_entity"]} if data.get("privacy_entity") else {}),
         }
         for node, data in graph.nodes(data=True)
     ]

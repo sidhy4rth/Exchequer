@@ -1,0 +1,59 @@
+# Countries with which India has a Mutual Legal Assistance Treaty or Agreement in criminal matters, as listed by
+#   the MHA; used by app/letters_of_request.py for a note to the officer, never in the letter itself.
+# Source: Ministry of Home Affairs, IS-II Division/Legal Cell-I, F. No. 25016/52/2019-LC, dated 04/12/2019,
+#   "Comprehensive Guidelines for investigation abroad and issue of Letters Rogatory (LRs)/Mutual Legal
+#   Assistance (MLA) Request and Service of Summons/Notices/Judicial documents in respect of Criminal Matters",
+#   Figure 3.6 "List of countries having MLAT with India", pages [25] to [28] (PDF pages 27 to 30), 42 rows.
+#   Cross-checked against Figure 1.1 "List of countries having MLAT/Bilateral Agreements with India", page [4]
+#   (PDF page 6), which names the same 42 with the same years ("42 countries (November 2019)").
+# Copy read: https://jkhighcourt.nic.in/upload/notices/guidelines.pdf (as circulated by the High Court of J&K;
+#   PDF SHA-256 a318fde9e80479b005cb3ee000feadfd7428fb07e2f6232600b8dab5d03ffbe2).
+# The copy is a scan: the names were read by OCR and corrected by hand against the page images, as printed
+#   (including "Republic of Vietnam" and "Confederation of Switzerland").
+# As listed on 4 December 2019, the date of the guidelines; the list may have changed since; the officer confirms
+#   with MHA IS-II.
+# One row per line: name | formal name | instrument and year | status. A blank formal name means the figure gives
+#   none. Status "signed, not yet in force" is the figure's asterisk ("*The MLAT has been signed but yet to come in
+#   force."); "listed" is every other row. Lines starting "#" are not data.
+Australia | Commonwealth of Australia | MLAT 2011 | listed
+Azerbaijan | Republic of Azerbaijan | MLAT 2013 | listed
+Bahrain | Kingdom of Bahrain | Agreement 2005 | listed
+Bangladesh | People's Republic of Bangladesh | Agreement 2011 | listed
+Belarus | Republic of Belarus | MLAT 2006 | listed
+Bosnia & Herzegovina | Bosnia and Herzegovina | MLAT 2010 | listed
+Bulgaria | Republic of Bulgaria | MLAT 2008 | listed
+Cambodia | Kingdom of Cambodia | MLAT 2018 | signed, not yet in force
+Canada |  | MLAT 1998 | listed
+Egypt | Arab Republic of Egypt | Agreement 2009 | listed
+France | French Republic | Agreement 2005 | listed
+Hong Kong | Hong Kong Special Administrative Region of the People's Republic of China | Agreement 2009 | listed
+Iran | Islamic Republic of Iran | Agreement 2010 | listed
+Indonesia | Republic of Indonesia | MLAT 2011 | listed
+Israel | State of Israel | MLAT 2015 | listed
+Kazakhstan | Republic of Kazakhstan | MLAT 2000 | listed
+Kyrgyzstan | Kyrgyz Republic | MLAT 2014 | listed
+Kuwait | State of Kuwait | Agreement 2007 | listed
+Malaysia | Malaysia | MLAT 2012 | listed
+Maldives | Republic of Maldives | MLAT 2019 | signed, not yet in force
+Mauritius | Republic of Mauritius | Agreement 2006 | listed
+Mexico | United Mexican States | MLAT 2009 | listed
+Mongolia | Mongolia | MLAT 2004 | listed
+Morocco | Kingdom of Morocco | MLAT 2018 | signed, not yet in force
+Myanmar | Union of Myanmar | MLAT 2010 | listed
+Russia | Russian Federation | MLAT 2000 | listed
+Singapore | Republic of Singapore | Agreement 2005 | listed
+South Africa | Republic of South Africa | MLAT 2005 | listed
+South Korea | Republic of Korea | MLAT 2005 | listed
+Spain | Kingdom of Spain | Agreement 2007 | listed
+Sri Lanka | Democratic Socialist Republic of Sri Lanka | MLAT 2010 | listed
+Switzerland | Confederation of Switzerland | Exchange of Diplomatic Notes 1989 | listed
+Sultanate of Oman |  | Agreement 2015 | listed
+Tajikistan | Republic of Tajikistan | MLAT 2003 | listed
+Thailand | Kingdom of Thailand | MLAT 2004 | listed
+Turkey | Republic of Turkey | Agreement 1993 | listed
+Ukraine |  | MLAT 2003 | listed
+United Arab Emirates |  | Agreement 2000 | listed
+United Kingdom | United Kingdom of Great Britain and Northern Ireland | Agreement 1995 | listed
+United States of America |  | MLAT 2005 | listed
+Uzbekistan | Republic of Uzbekistan | MLAT 2001 | listed
+Vietnam | Republic of Vietnam | MLAT 2008 | listed

@@ -112,6 +112,20 @@ def has_inbound(client: httpx.Client, address: str, headers: dict) -> bool | Non
     return False
 
 
+def keep_previous(kept: dict[str, dict], previous: dict[str, dict], dropped: set[str]) -> int:
+    """Fold the file's earlier rows into `kept`; how many were kept.
+
+    A row from an exchange's own proof-of-reserves list (source "por:...",
+    scripts/import_por_tron_labels.py) is first-party and not this script's to
+    replace, so it always stays as it was."""
+    retained = 0
+    for address, meta in previous.items():
+        if str(meta.get("source", "")).startswith("por:") or (address not in kept and address not in dropped):
+            kept[address] = meta
+            retained += 1
+    return retained
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
@@ -179,14 +193,10 @@ def main() -> int:
     # check sometimes answers empty for the busiest accounts, and a transient
     # empty answer must not silently delete a cash-out attribution. Only a tag
     # now classed as not-an-exchange removes one.
-    retained = 0
     dropped = {line.split()[0] for line in not_exchange}
-    if TRON.labels_path.exists():
-        for address, meta in json.loads(TRON.labels_path.read_text()).get("labels", {}).items():
-            if address not in kept and address not in dropped:
-                kept[address] = meta
-                retained += 1
-    print(f"retained {retained} labels verified on an earlier run")
+    previous = json.loads(TRON.labels_path.read_text()) if TRON.labels_path.exists() else {}
+    retained = keep_previous(kept, previous.get("labels", {}), dropped)
+    print(f"retained {retained} labels verified on an earlier run or published by the exchange")
 
     by_exchange: dict[str, int] = {}
     for meta in kept.values():
@@ -245,6 +255,8 @@ def main() -> int:
             "excluded_not_exchange": not_exchange,
             "unrecognised_tags": unknown,
             "rejected_on_chain": rejected,
+            **({"proof_of_reserves": previous["_meta"]["proof_of_reserves"]}
+               if "proof_of_reserves" in previous.get("_meta", {}) else {}),
         },
         "labels": dict(sorted(kept.items(), key=lambda kv: (kv[1]["exchange"], kv[1]["label"]))),
     }
