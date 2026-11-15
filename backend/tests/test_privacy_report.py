@@ -25,7 +25,7 @@ from app import config, request_letters
 from app.main import app
 from app.models import Case
 from app.report import PRIVACY_TITLE, build_report, render_text_report
-from app.report_pdf import render_pdf
+from app.report_pdf import PRIVACY_LEDES, render_issued, render_pdf, render_summary
 from app.risk_matcher import clear_label_caches, get_risk_matcher
 from app.routes import demos
 from app.signing import verify_report
@@ -230,6 +230,47 @@ def test_a_new_note_still_says_the_payouts_were_not_followed(railgun_case):
     assert "The trace did not stop here" not in flat
     assert "Being a privacy protocol did not stop the trace here, but its payouts were not followed" in flat
     assert ENTRY in first
+
+
+# --- /verify: a PDF issued with an earlier page-1 lede still matches -------------
+
+def _verify(pdf):
+    return TestClient(app).post("/verify", content=pdf, headers={"Content-Type": "application/pdf"}).json()
+
+
+@pytest.mark.parametrize("lede", PRIVACY_LEDES[1:], ids=["279", "before-279"])
+def test_a_pdf_issued_with_an_earlier_privacy_lede_still_verifies(railgun_case, lede):
+    # Privacy notes were on in production from about 18:03 IST on 15 Nov with
+    # #189's lede, and from 21:24 IST with #279's; each PDF issued then must
+    # still read genuine once the lede changes again.
+    report = build_report(_case(railgun_case), generated_at=WHEN)
+    text = render_text_report(report)
+    pdf = render_issued(text, report["case"]["case_id"], privacy_lede=lede)
+    first = " ".join(PdfReader(io.BytesIO(pdf)).pages[0].extract_text().split())
+    assert lede in first and PRIVACY_LEDES[0] not in first
+    checked = _verify(pdf)
+    assert checked["status"] == "genuine" and checked["pdf"]["pages_match"] is True, checked["pdf"]["problems"]
+
+
+@pytest.mark.parametrize("lede", [
+    PRIVACY_LEDES[0].replace("this is not an accusation", "this is an accusation"),
+    PRIVACY_LEDES[2].replace("did not stop there", "stopped there"),
+    "Funds passing through lose their visible link.",
+], ids=["edited-current", "edited-earlier", "cut-short"])
+def test_a_pdf_whose_privacy_lede_is_altered_otherwise_reads_differs(railgun_case, lede):
+    report = build_report(_case(railgun_case), generated_at=WHEN)
+    text = render_text_report(report)
+    checked = _verify(render_issued(text, report["case"]["case_id"], privacy_lede=lede))
+    assert checked["status"] == "summary_differs"
+
+
+def test_a_case_without_privacy_notes_has_one_summary_form(railgun_case, flag):
+    flag(False)
+    report = build_report(_case(railgun_case), generated_at=WHEN)
+    assert len(render_summary(render_text_report(report))) == 2  # the summary and the short page
+    flag(True)
+    report = build_report(_case(railgun_case), generated_at=WHEN)
+    assert len(render_summary(render_text_report(report))) == 1 + len(PRIVACY_LEDES)
 
 
 # --- the letters: deliberately left out ----------------------------------------

@@ -34,6 +34,10 @@
   The text-report, PDF and screen ledes now say only that the trace may not go past a contract that pays out to,
   or is paid by, many addresses. Walking back, a service-contract note says its senders, not its payouts, were not
   followed (`RiskMatch.senders_followed`, not in `to_dict`).
+- /verify: page 1's privacy lede has changed twice (#279, then this fix), and /verify redraws page 1 to compare.
+  `report_pdf.PRIVACY_LEDES` keeps every lede, newest first; `render_summary` yields a page-1 form for each and
+  `pdf_verify._issued` redraws the whole file with the lede the uploaded page carries, so a PDF issued with #189's
+  or #279's lede still reads genuine. #279 alone broke PDFs issued before it (18:03-21:24 IST, 15 Nov); this fixes both.
 
 ## Decisions
 
