@@ -38,6 +38,9 @@
   `report_pdf.PRIVACY_LEDES` keeps every lede, newest first; `render_summary` yields a page-1 form for each and
   `pdf_verify._issued` redraws the whole file with the lede the uploaded page carries, so a PDF issued with #189's
   or #279's lede still reads genuine. #279 alone broke PDFs issued before it (18:03-21:24 IST, 15 Nov); this fixes both.
+- /verify, tightened: an earlier lede is accepted only for a report whose signed "Report generated" time is before
+  that lede was replaced (`report_pdf.LEDE_REPLACED_AT`: the replacing merge commit, #279 or #288, plus 30 minutes
+  for the deploy). So #189's lede on a report generated after #279 went live reads summary_differs, not genuine.
 
 ## Decisions
 

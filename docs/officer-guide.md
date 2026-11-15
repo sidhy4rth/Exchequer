@@ -16,9 +16,9 @@ Each section is marked:
 - **Coming: in review**: built and in review, with no switch. It appears on
   the site once it is merged.
 
-Status is as of 15 November 2026. That evening the site ran the code merged up
-to #274 (build 97f1bae); anything merged after it reaches the site with the
-next deploy. A switch counts as on only where the site's settings
+Status is as of 15 November 2026. Late that evening the site ran the code
+merged up to #296 (build e379cca); anything merged after it reaches the site
+with the next deploy. A switch counts as on only where the site's settings
 (`render.yaml`) turn it on. `docs/suite-features.md`
 tracks status for the team.
 
@@ -106,7 +106,8 @@ listed in the report's evidence manifest), and the signed report.
   "Privacy protocols on the route" below). It follows one asset, and one swap
   into USDT or USDC at a known router; other swaps and bridges end the trail.
 - A trace reads each wallet's 200 newest transfers. For a very busy wallet the
-  result can change from one hour to the next (verified example 3, below).
+  result can change from one hour to the next (the wallet example 3 used
+  until 15 November, below).
 - The walk follows the ten largest counterparties of each address, so money
   split into many small parts can be missed. The Evidence tab's **Scope and
   evidence** section says what was left out.
@@ -245,18 +246,38 @@ Bitget on Ethereum), but they name no exchange while the switch is off.
 it runs. A stopped trace is never saved, even if its last reads come back
 after you stopped it (#228). Trace again if you still need it.
 
-**Merged, switched off** (#227; switch `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`):
-a trace whose page was closed also stops at its next request to a provider,
-and nothing is saved.
+**Closing the page does not stop a trace.** A trace you start in the app runs
+in the background, and keeps running on the server if you close its tab or
+leave the page: it finishes and is saved as a case, as if you had stayed, and
+it counts toward the traces you may start in an hour. Reloading the page in
+the same tab while it runs picks the same trace up again rather than starting
+a second one. To stop a trace, press **Stop this trace**.
 
-### Verified example 3 now reaches no exchange
+The switch `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` (#227, on since
+15 November, #296) does not change this. It covers only a trace asked for
+directly over the API, by a program that waits for the whole answer in one
+request: if that program hangs up over HTTP/2, the trace stops and nothing is
+saved (tested on the live site on 15 November). A hang-up over HTTP/1.1 does
+not reach the server, so that trace runs to the end. The app never traces in
+one request.
 
-**Live** (#260). Traced live on 15 November, example 3 (`0x536c4921…`,
-Ethereum, ETH, 3 hops) reaches no exchange. No rule changed: the wallet now
-makes about 700 to 800 transactions a day, and the 200 newest no longer include
-the transfers earlier traces followed to Coinbase and Kraken. Opening the
-example still shows its recording of 14 October (Low, 0.40, at a probable
-Binance deposit address). Say what the screen shows, not what it showed before.
+### Verified example 3: a deposit address behind an intermediary
+
+**Live** (#286). Since 15 November, example 3 is a different wallet:
+`0x0067b43c…` (Ethereum, ETH, 3 hops), a wallet Etherscan labels as a
+reported phishing wallet. It reaches a **probable HitBTC deposit address
+(inferred)**, `0x4a126587…`, through one intermediary, at **0.67, moderate**,
+and pro-rata counts about 0.74 of the 1.0626 ETH that left the wallet on that
+path as the reported funds. Its recording is from the same day (15 November,
+21:14 IST). The wallet and the intermediary have been quiet since November
+2021, so a trace reads their whole history, and the answer is expected to stay
+the same. HitBTC still operated on
+15 November and the letters go to HitBTC itself.
+
+The wallet example 3 used before (`0x536c4921…`, still example 4) now makes
+about 700 to 800 transactions a day, so the 200 newest no longer reach the
+transfers earlier traces followed, and on 15 November it reached no exchange
+within 3 hops. No rule changed. `DEMO.md` keeps its history.
 
 ---
 
@@ -360,6 +381,23 @@ says the exchange "cannot answer this letter itself", gives the source, and
 says: "If no one does, do not send it." For an exchange that is closing, the
 note gives its closing date and asks you to send the letter before then and
 confirm the channel still answers.
+
+**The FIU-IND note** (live since 15 November, #291 and #295; switch
+`EXCHEQUER_FIU_IND_NOTE`): for 33 exchanges, the request and urgent freeze
+letters (and an instant exchanger's) carry a paragraph headed "FIU-IND NOTE
+(about the exchange, not any customer)" with a "Sources:" line, and the signed
+report's FINDING carries the same note. It says whether the exchange was on
+FIU-IND's list of registered VDA service providers as of 9 March 2026 (Lok
+Sabha USQ 5805, Annexure-I) and the notices, takedown directions and penalties
+FIU-IND announced, each with its date and source. It is a dated, sourced fact
+about the exchange, never about any customer or the account holder, and it
+draws no conclusion: it does not say the exchange is unregistered today or
+acting unlawfully. Nothing else changes: the letter is still addressed to the
+exchange and asks the same thing. An exchange with no entry gets no note.
+FIU-IND does not publish its register, so the 9 March 2026 list (given in
+Parliament) is the latest Exchequer has; open the sources before you rely on
+it. The note is in the signed text report and in these letters; the trace
+screens, the PDF report's first page and a letter of request do not carry it.
 
 ### Notices to a bank or a phone company
 

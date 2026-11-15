@@ -3,9 +3,9 @@
 - **Feature**: Feature 7 / feature 1 data: a dated, sourced FIU-IND note (registration as of 9 Mar 2026, enforcement actions, penalties) about the exchange a trace reached, on the report's FINDING and the exchange letters, behind `EXCHEQUER_FIU_IND_NOTE`
 - **Issue**: #290
 - **Branch**: `feat/fiu-ind-status-note` (slice 1, #291), `feat/fiu-ind-status-note-2` (slice 2, stacked on it)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: built behind `EXCHEQUER_FIU_IND_NOTE` (off); #291 and its stacked slice 2 ready, awaiting merge
+- **Status**: merged (#291, #295) and live: `EXCHEQUER_FIU_IND_NOTE` on since 22:46 IST on 15 Nov 2026 (Render deploy `dep-dbsugv61egvs73eto9a0`), recorded in `render.yaml` by #296
 
 ## Done
 
@@ -26,9 +26,10 @@
 
 ## Next
 
-1. Owner: decide whether to switch `EXCHEQUER_FIU_IND_NOTE` on (checks in `docs/flag-rollout.md`).
+1. Done 15 Nov: the owner switched `EXCHEQUER_FIU_IND_NOTE` on after a fact-check of all 33 entries. Steps 1 and 2 of the checks in `docs/flag-rollout.md` (`/health/detail`, a signed-in report's FINDING) had not been done by the end of 15 Nov.
 2. Re-check the file against any newer Parliament answer or PIB release; update `_meta.checked_on`.
 3. Optional: wallets for the 39 FIU-IND-named exchanges with none in the label files (Huione, BC.Game, Paxful, Changelly, LBank, Phemex, ...), sourced as usual; then add their entries.
+4. Done: a registered entry with no `listed_as` is skipped, so no note can read "listed as None" (`tests/test_fiu_ind_status.py`; all 8 registered entries have one).
 
 ## Open questions
 

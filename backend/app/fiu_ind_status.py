@@ -58,7 +58,11 @@ def _document() -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
     for name, entry in rows.items():
         facts = ([*entry.get("actions", []), *entry.get("penalties", [])]
                  if isinstance(entry, dict) and isinstance(entry.get("registered"), bool) else [None])
-        if isinstance(name, str) and name.strip() and all(_dated(f) for f in facts):
+        # A listed exchange is named as Annexure-I lists it; without that name
+        # the note would read "listed as None", so the entry is skipped.
+        named = facts == [None] or not entry["registered"] or (
+            isinstance(entry.get("listed_as"), str) and bool(entry["listed_as"].strip()))
+        if isinstance(name, str) and name.strip() and named and all(_dated(f) for f in facts):
             out[_key(name)] = {"name": name.strip(), **entry}
         else:
             logger.warning("%s: entry %r is not dated and sourced; skipped", STATUS_FILE, name)

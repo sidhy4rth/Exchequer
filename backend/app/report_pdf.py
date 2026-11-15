@@ -20,6 +20,7 @@ from __future__ import annotations
 import io
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -122,8 +123,9 @@ def _num(value: Any) -> str:
 
 
 # Page 1's privacy lede (#189), newest first. render_pdf prints the first; /verify
-# also redraws page 1 with each earlier one (render_summary, render_issued), so a
-# PDF issued before the wording changed still matches its signed text.
+# also redraws page 1 with each earlier one the report could have been issued
+# with (render_summary, render_issued; see issued_ledes), so a PDF issued before
+# the wording changed still matches its signed text.
 PRIVACY_LEDES = (
     # 15 Nov, after #279: claims nothing a stored note may not say.
     "Funds passing through lose their visible link. Being a privacy protocol never stops the trace "
@@ -137,6 +139,42 @@ PRIVACY_LEDES = (
     "Funds passing through lose their visible link. The trace did not stop there; this is not an "
     "accusation and counts toward nothing above.",
 )
+
+# When each lede in PRIVACY_LEDES stopped being issued (None: still is). Page 1
+# is drawn when a PDF is downloaded, never before the report's "Report generated"
+# time, so a report generated after a lede was replaced was never issued with it.
+# Each cut-off is the merge commit on main that replaced the lede plus 30 minutes:
+# Render deploys main within minutes of a merge, and the margin covers that.
+#   #279 lede: replaced by #288, 8eda5826c3c83ac054c40ca662bf0001854d5c00, 2026-11-15T21:52:44+05:30
+#   #189 lede: replaced by #279, 86fd1d4c943e5d897815eba7ab855449255af092, 2026-11-15T21:24:26+05:30
+_DEPLOY_MARGIN = timedelta(minutes=30)
+LEDE_REPLACED_AT = (
+    None,
+    datetime.fromisoformat("2026-11-15T21:52:44+05:30") + _DEPLOY_MARGIN,
+    datetime.fromisoformat("2026-11-15T21:24:26+05:30") + _DEPLOY_MARGIN,
+)
+_IST = timezone(timedelta(hours=5, minutes=30), "IST")
+_GENERATED = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}) IST \(")  # report._both_zones
+
+
+def _generated_at(facts: dict[str, Any] | None) -> datetime | None:
+    """The signed text's "Report generated" time (to the minute), or None if it does not read as one."""
+    found = _GENERATED.match((facts or {}).get("generated_at") or "")
+    return datetime.strptime(found[1], "%Y-%m-%d %H:%M").replace(tzinfo=_IST) if found else None
+
+
+def _ledes(facts: dict[str, Any] | None) -> tuple[str, ...]:
+    """PRIVACY_LEDES the report could have been issued with, newest first: the
+    newest always; an earlier one only if the report was generated before it
+    was replaced (never when its time cannot be read)."""
+    generated = _generated_at(facts)
+    return tuple(lede for lede, until in zip(PRIVACY_LEDES, LEDE_REPLACED_AT, strict=True)
+                 if until is None or (generated is not None and generated < until))
+
+
+def issued_ledes(sealed_text: str) -> tuple[str, ...]:
+    """The privacy ledes page 1 of `sealed_text`'s PDF could carry, newest first."""
+    return _ledes(summary_facts(sealed_text))
 
 
 def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
@@ -192,8 +230,8 @@ def render_summary(sealed_text: str) -> list[str]:
     """Page 1 (and any page the summary runs onto) as /verify draws it again:
     each page's text, read back as pdf_verify reads an uploaded PDF. Every
     form page 1 can take -- the summary (with a privacy section, once with
-    each of PRIVACY_LEDES, newest first, so a PDF issued with an earlier lede
-    still matches), or the short page printed when the summary could not be
+    lede the report could have been issued with, newest first, so a PDF issued
+    with an earlier lede still matches), or the short page printed when the summary could not be
     laid out -- in that order."""
     from pypdf import PdfReader
 
@@ -203,7 +241,7 @@ def render_summary(sealed_text: str) -> list[str]:
     facts = summary_facts(sealed_text)
     case_id = facts["case_id"] if facts else ""
     forms = []
-    for lede in PRIVACY_LEDES if facts and facts.get("privacy") else PRIVACY_LEDES[:1]:
+    for lede in _ledes(facts) if facts and facts.get("privacy") else PRIVACY_LEDES[:1]:
         try:
             forms.append(_build(summary_story(sealed_text, st, case_id, lede), case_id, digest, key))
         except LayoutError:
@@ -216,7 +254,8 @@ def render_summary(sealed_text: str) -> list[str]:
 _RULE = "-" * 78
 _HEADER = {"Reported address : ": "reported_address", "Chain            : ": "chain",
            "Asset followed   : ": "asset", "Direction        : ": "direction",
-           "Started from     : ": "started_from", "Traced at        : ": "traced_at"}
+           "Started from     : ": "started_from", "Traced at        : ": "traced_at",
+           "Report generated : ": "generated_at"}
 _CHAIN_ID = re.compile(r" \(chainid \d+\)$")
 _STEP = re.compile(r"  (\d+)\. (\S+)(?:  \[(.*)\])?")
 _SENT = re.compile(r"     sent (\S+) ")
