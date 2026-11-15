@@ -38,7 +38,7 @@ import textwrap
 from datetime import datetime, timezone
 from typing import Any
 
-from . import config, exchange_status, never_flag, provenance
+from . import config, exchange_status, fiu_ind_status, never_flag, provenance
 from .case_privacy import WITHHELD
 from .contracts.case_v2 import expanded_nodes
 from .display_text import one_line, short
@@ -366,6 +366,17 @@ def _status_lines(exchange: str) -> list[str]:
                                                             break_on_hyphens=False)] + [""]
 
 
+def _fiu_lines(exchange: str) -> list[str]:
+    """FIU-IND's published facts about the exchange, with their sources (fiu_ind_status.py); nothing with
+    the flag off or for an exchange the file does not name."""
+    found = fiu_ind_status.note(exchange)
+    if not found:
+        return []
+    said = [f"FIU-IND NOTE ({fiu_ind_status.ABOUT}): {found['text']}", "Sources: " + " ; ".join(found["sources"])]
+    return [line for text in said for line in textwrap.wrap(text, width=95, break_long_words=False,
+                                                            break_on_hyphens=False)] + [""]
+
+
 def available(result: dict[str, Any]) -> list[dict[str, str]]:
     """Which letters this case can support, for the interface to offer: the
     urgent freeze letters first, since they are sent first."""
@@ -628,7 +639,7 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
         EXPLORER_TAG: f"Request to confirm whether address {address} is controlled by {exchange} ({chain_name})",
     }
 
-    lines = _header(case_id, result, _to_exchange(exchange), subjects[kind]) + _status_lines(exchange)
+    lines = _header(case_id, result, _to_exchange(exchange), subjects[kind]) + _status_lines(exchange) + _fiu_lines(exchange)
     sender = (swap or {}).get("sender")
     moved = (f"{swap.get('asset_in')} moving from that address and, after a swap at\n"
              f"   {swap.get('router_label')} (tx {swap.get('tx')}),\n"
@@ -914,7 +925,7 @@ def _exchange_freeze(result: dict[str, Any], approval: dict[str, Any] | None = N
     stated = _letter_amount(result, found)
     pairs, count, note = _freeze_pairs(trace, address, kind, stated)
     lines = _freeze_header(_to_exchange(exchange), f"hold funds credited through {address}",
-                           FREEZE_ASK[kind].format(a=address), approval) + _status_lines(exchange)
+                           FREEZE_ASK[kind].format(a=address), approval) + _status_lines(exchange) + _fiu_lines(exchange)
     lines += [f"Chain     : {trace.get('chain_name') or result.get('chain_name')}", f"Token     : {asset}",
               f"Wallet    : {address}", *_freeze_amount(stated, asset), *_hash_lines(pairs, "it", count), *note,
               *SIGN_OFF]
@@ -976,7 +987,7 @@ def _instant_freeze(result: dict[str, Any], approval: dict[str, Any] | None = No
     inst, address, stated, pairs, count, note = _instant_parts(result)
     lines = _freeze_header(
         f"{inst['service']} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
-        f"hold the payout of orders paid into {address}", INSTANT_ASK.format(a=address), approval)
+        f"hold the payout of orders paid into {address}", INSTANT_ASK.format(a=address), approval) + _fiu_lines(inst["service"])
     lines += [f"Chain     : {inst['trace'].get('chain_name') or result.get('chain_name')}",
               f"Token     : {inst['asset']}", f"Wallet    : {address}", *_freeze_amount(stated, inst["asset"]),
               *_hash_lines(pairs, "it", count), *note, *SIGN_OFF]
@@ -995,7 +1006,7 @@ def _instant_letter(case_id: str, result: dict[str, Any]) -> str:
     lines = _header(
         case_id, result,
         f"{service} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
-        f"Request for the exchange orders paid into {address} ({inst['trace'].get('chain_name')})")
+        f"Request for the exchange orders paid into {address} ({inst['trace'].get('chain_name')})") + _fiu_lines(service)
     what = (f"which we have reason to believe is an order deposit address of {service}: every transfer out of it "
             f"went to {service}'s labelled wallet. This is an inference from public records, which only {service} "
             "can confirm." if guess else

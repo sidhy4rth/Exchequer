@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from . import config, provenance
+from . import config, fiu_ind_status, provenance
 from .case_privacy import WITHHELD, WITHHELD_PARAM
 from .display_text import one_line
 from .evidence import SEAL_MARKS, seal_text
@@ -970,6 +970,13 @@ def render_text_report(report: dict[str, Any]) -> str:
         if attribution.get("also_reached"):
             add("                   Material funds went to more than one exchange: confirm which to")
             add("                   write to; a separate request may be needed to each.")
+        fiu = fiu_ind_status.note(attribution["exchange"])
+        if fiu:  # FIU-IND's facts about the exchange (EXCHEQUER_FIU_IND_NOTE); never a hash or URL split
+            for text, first in ((f"{fiu['text']} This is {fiu_ind_status.ABOUT}.", "FIU-IND          : "),
+                                *((url, "FIU-IND source   : ") for url in fiu["sources"])):
+                for wrapped in textwrap.wrap(text, width=78, initial_indent=first, subsequent_indent=" " * 19,
+                                             break_long_words=False, break_on_hyphens=False):
+                    add(wrapped)
     elif direction == "outgoing":
         add("No known exchange wallet was reached within the traced depth.")
         add("This does not establish that the funds were not cashed out.")
