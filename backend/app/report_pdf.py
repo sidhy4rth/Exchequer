@@ -121,6 +121,24 @@ def _num(value: Any) -> str:
     return f"{v:,.6f}".rstrip("0").rstrip(".") if v else "0"
 
 
+# Page 1's privacy lede (#189), newest first. render_pdf prints the first; /verify
+# also redraws page 1 with each earlier one (render_summary, render_issued), so a
+# PDF issued before the wording changed still matches its signed text.
+PRIVACY_LEDES = (
+    # 15 Nov, after #279: claims nothing a stored note may not say.
+    "Funds passing through lose their visible link. Being a privacy protocol never stops the trace "
+    "(though it may not go past a contract that pays out to, or is paid by, many addresses); this is "
+    "not an accusation and counts toward nothing above.",
+    # #279 (15 Nov, from 21:24 IST).
+    "Funds passing through lose their visible link. Being a privacy protocol never stops the trace "
+    "(each note says whether the contract's payouts were followed); this is not an accusation and "
+    "counts toward nothing above.",
+    # #189 until #279.
+    "Funds passing through lose their visible link. The trace did not stop there; this is not an "
+    "accusation and counts toward nothing above.",
+)
+
+
 def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
     """The PDF for `sealed_text`. `report` is the same report; only its case id
     is read here: page 1 is drawn from the signed text alone."""
@@ -133,15 +151,17 @@ def render_pdf(report: dict[str, Any], sealed_text: str) -> bytes:
         return render_issued(sealed_text, case_id, laid_out=False)
 
 
-def render_issued(sealed_text: str, case_id: str, laid_out: bool = True) -> bytes:
+def render_issued(sealed_text: str, case_id: str, laid_out: bool = True,
+                  privacy_lede: str = PRIVACY_LEDES[0]) -> bytes:
     """The whole PDF render_pdf issues for `sealed_text`, attachment included:
     with the summary page (LayoutError if it cannot be laid out), or with the
     short page printed instead. /verify draws it again to compare an uploaded
-    PDF with it (pdf_verify)."""
+    PDF with it (pdf_verify), with the privacy lede the uploaded page carries."""
     _register_fonts()
     st = _styles()
     digest, key = _seal_facts(sealed_text)
-    first = summary_story(sealed_text, st, case_id) if laid_out else unplaced_story(case_id, st)
+    first = (summary_story(sealed_text, st, case_id, privacy_lede) if laid_out
+             else unplaced_story(case_id, st))
     pdf = _build(first + _part_two(sealed_text, st), case_id, digest, key)
     return _attach(pdf, _attachment_name(case_id), sealed_text.encode("utf-8"))
 
@@ -158,20 +178,23 @@ def unplaced_story(case_id: str, st: dict[str, ParagraphStyle], why: str = NOT_L
             _p(why, st["cell"])]
 
 
-def summary_story(sealed_text: str, st: dict[str, ParagraphStyle], case_id: str) -> list[Any]:
+def summary_story(sealed_text: str, st: dict[str, ParagraphStyle], case_id: str,
+                  privacy_lede: str = PRIVACY_LEDES[0]) -> list[Any]:
     """Page 1's flowables, from the signed text alone."""
     facts = summary_facts(sealed_text)
     if facts is None:
         return unplaced_story(case_id, st, NOT_READ)
     digest, key = _seal_facts(sealed_text)
-    return _part_one(facts, st, digest, key)
+    return _part_one(facts, st, digest, key, privacy_lede)
 
 
 def render_summary(sealed_text: str) -> list[str]:
     """Page 1 (and any page the summary runs onto) as /verify draws it again:
-    each page's text, read back as pdf_verify reads an uploaded PDF. Both
-    forms page 1 can take -- the summary, or the short page printed when the
-    summary could not be laid out -- in that order."""
+    each page's text, read back as pdf_verify reads an uploaded PDF. Every
+    form page 1 can take -- the summary (with a privacy section, once with
+    each of PRIVACY_LEDES, newest first, so a PDF issued with an earlier lede
+    still matches), or the short page printed when the summary could not be
+    laid out -- in that order."""
     from pypdf import PdfReader
 
     _register_fonts()
@@ -180,10 +203,11 @@ def render_summary(sealed_text: str) -> list[str]:
     facts = summary_facts(sealed_text)
     case_id = facts["case_id"] if facts else ""
     forms = []
-    try:
-        forms.append(_build(summary_story(sealed_text, st, case_id), case_id, digest, key))
-    except LayoutError:
-        pass
+    for lede in PRIVACY_LEDES if facts and facts.get("privacy") else PRIVACY_LEDES[:1]:
+        try:
+            forms.append(_build(summary_story(sealed_text, st, case_id, lede), case_id, digest, key))
+        except LayoutError:
+            pass
     forms.append(_build(unplaced_story(case_id, st), case_id, digest, key))
     return ["\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(pdf)).pages) for pdf in forms]
 
@@ -331,8 +355,10 @@ def _summary_facts(sealed_text: str) -> dict[str, Any] | None:
     return facts
 
 
-def _part_one(facts: dict[str, Any], st: dict[str, ParagraphStyle], digest: str, key: str | None) -> list[Any]:
-    """Page 1, from summary_facts() alone."""
+def _part_one(facts: dict[str, Any], st: dict[str, ParagraphStyle], digest: str, key: str | None,
+              privacy_lede: str = PRIVACY_LEDES[0]) -> list[Any]:
+    """Page 1, from summary_facts() alone, with `privacy_lede` (one of
+    PRIVACY_LEDES) above any privacy notes."""
     case_id = facts["case_id"]
     signed = facts["finding"]
 
@@ -465,9 +491,7 @@ def _part_one(facts: dict[str, Any], st: dict[str, ParagraphStyle], digest: str,
     privacy = facts.get("privacy") or []
     if privacy:
         story.append(_p("PRIVACY PROTOCOLS ON THE PATH · A NOTE, NOT AN ACCUSATION", st["micro"]))
-        story.append(_p("Funds passing through lose their visible link. Being a privacy protocol never "
-                        "stops the trace (each note says whether the contract's payouts were followed); "
-                        "this is not an accusation and counts toward nothing above.", st["small"]))
+        story.append(_p(privacy_lede, st["small"]))
         for note in privacy[:4]:
             match = _MATCH.fullmatch(note)
             if match is None:

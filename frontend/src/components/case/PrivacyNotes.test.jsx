@@ -29,6 +29,10 @@ describe('the privacy note on the case', () => {
     const { container } = render(<PrivacyNotes result={result} unit="ETH" />)
     expect(screen.getByText(/A privacy protocol on the route · a note, not an accusation/)).toBeInTheDocument()
     expect(screen.getByText(/lose their visible link/, { selector: '.lede' })).toBeInTheDocument()
+    // Drawn for every stored case, so it claims nothing a note stored before #279 may not say.
+    const lede = container.querySelector('.lede').textContent
+    expect(lede).toContain('may not go past a contract that pays out to, or is paid by, many addresses')
+    expect(lede).not.toContain('each note says')
     expect(screen.getByText(NOTE)).toBeInTheDocument()
     expect(container.querySelector('.privacy-notes').textContent).toContain('2 hops away, 9 ETH reached it')
     // Not the red risk alert: no role="alert".
