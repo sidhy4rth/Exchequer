@@ -379,7 +379,7 @@
         "OKX": 47
       }
     },
-    "fiu_named_exchanges": "103 wallets of exchanges FIU-IND acted against that had none here (BingX 45, Bitrue 2, CEX.IO 1, LBank 15, LCX 2, MoonPay 8, Paxful 3, Phemex 3, ProBit Global 3, WOO X 7, XT.com 14) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC; batch 1 #342, batch 2 #354), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
+    "fiu_named_exchanges": "108 wallets of exchanges FIU-IND acted against that had none here (Beldex 1, BingX 45, Bitrue 2, CEX.IO 1, Changelly 1, LBank 15, LCX 2, Mercuryo 1, MoonPay 8, Paxful 3, Phemex 3, ProBit Global 3, WOO X 7, XT.com 14, YouHodler 2) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC; batch 1 #342, batch 2 #354, batch 3 #358), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
   },
   "labels": {
     "0x05f51aab068caa6ab7eeb672f88c180f67f17ec7": {
@@ -128583,6 +128583,31 @@
     "0xf71afe21cd32959113fc47ae2ef886b43a9413d5": {
       "exchange": "ProBit Global",
       "label": "ProBit 2",
+      "type": "exchange_wallet"
+    },
+    "0x258b7b9a1ba92f47f5f4f5e733293477620a82cb": {
+      "exchange": "Beldex",
+      "label": "Beldex",
+      "type": "exchange_wallet"
+    },
+    "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093": {
+      "exchange": "YouHodler",
+      "label": "YouHodler",
+      "type": "exchange_wallet"
+    },
+    "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc": {
+      "exchange": "YouHodler",
+      "label": "YouHodler 1",
+      "type": "exchange_wallet"
+    },
+    "0x8c8d7c46219d9205f056f28fee5950ad564d7465": {
+      "exchange": "Mercuryo",
+      "label": "mercuryo",
+      "type": "exchange_wallet"
+    },
+    "0x96fc4553a00c117c5b0bed950dd625d1c16dc894": {
+      "exchange": "Changelly",
+      "label": "Changelly",
       "type": "exchange_wallet"
     }
   },
