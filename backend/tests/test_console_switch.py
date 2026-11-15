@@ -44,6 +44,9 @@ OFFICER_ONLY = [
     ("POST", "/complaints/EXQ-NOSUCH1/messages", {"body": "We have your complaint."}),
     ("POST", "/complaints/EXQ-NOSUCH1/link-case", {"case_id": "case-1"}),
     ("POST", "/complaints/EXQ-NOSUCH1/claim", None),
+    # A case's task list (routes/tasks.py): a stored row per write, like /requests.
+    ("POST", "/trace/some-case/tasks", {"title": "Ask the exchange for KYC"}),
+    ("PATCH", "/tasks/some-task", {"note": "Called the exchange"}),
 ]
 
 

@@ -1,0 +1,95 @@
+{
+  "_meta": {
+    "description": "Mixer pools and entry points on Polygon PoS that Exchequer screens a trace against. A trace stops at one: a mixer pays out from a commingled pool, so transfers leaving it have no established link to the deposit that arrived.",
+    "provenance": "Mixer pools and entry points the 11 Nov 2026 mixer hunt found in each project's own deployment list (Tornado Cash classic UI networkConfig.js and docs, Cyclone Protocol docs) or in explorer tags (brianleect/etherscan-labels @923aba7), each checked on chain: contract code present and, for a pool, its denomination() (Cyclone: coinDenomination()/tokenDenomination()) matching its name. Re-checked for contract code 14 Nov 2026. Privacy protocols (Railgun, Aztec, Hinkal) were left out: no enforcement action names them a mixer.",
+    "verification_note": "Each entry is a contract a mixer's own deployment list or an explorer tag names as its pool or entry point, with code on this chain. It says the funds passed through a mixer; it does NOT say any depositor or withdrawer took part in a crime. Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025, so a Tornado Cash entry is not a sanctions listing.",
+    "category_note": "'mixer' marks pools and entry points where deposits commingle; a trace stops there.",
+    "chain": "polygon",
+    "last_reviewed": "2026-11-14",
+    "counts": {
+      "mixer": 13
+    },
+    "regenerate_with": "Added by hand from the 11 Nov 2026 mixer hunt; check each address on the explorer before adding another (data/mixer_pools.json rule).",
+    "schema": "labels maps an address to {category, entity, label, source}"
+  },
+  "labels": {
+    "0x01c5ae9557bd0d4bd9a978f1d5d578fd000466ad": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 10 MATIC pool",
+      "source": "Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 2141 bytes (sha256 f493237b9d26); denomination()=10000000000000000000 = 10 MATIC (native coin pool, no token())."
+    },
+    "0x0d5550d52428e7e3175bfc9550207e4ad3859b17": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: Proxy Light (deposit/withdraw entry point)",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 1270 bytes (sha256 bc4f2843f541). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x1e34a77868e19a6647b1f2f47b51ed72dede95dd": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 100 MATIC pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 e32fc6938d18); denomination()=100000000000000000000 = 100 MATIC (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x517ceee661b57ed7d5b615bf700cb307d87a025b": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 2 QUICK anonymity pool \"Octagon\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 8350 bytes (sha256 656abe645c5c); coinDenomination()=2000000000000000000 tokenDenomination()=2000000000000000000 (Cyclone-style pool interface)."
+    },
+    "0x5194932ad0f889b1e31041b8006a58ff70a11f43": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 1,000 MATIC anonymity pool \"Pentagon\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 8350 bytes (sha256 656abe645c5c); coinDenomination()=1000000000000000000000 tokenDenomination()=0 (Cyclone-style pool interface)."
+    },
+    "0x7cfe74d60eae55a88f7d38b33169fec8840cc344": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 1,000 MATIC pool",
+      "source": "Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 2141 bytes (sha256 f493237b9d26); denomination()=1000000000000000000000 = 1000 MATIC (native coin pool, no token())."
+    },
+    "0x8e6e472e4a3f8b1951d2970f59b3944eff707e10": {
+      "category": "mixer",
+      "entity": "Cyclone Protocol",
+      "label": "Cyclone Protocol: 1,000 USDC anonymity pool \"Hexagon\"",
+      "source": "Cyclone Protocol docs: Deployment page <https://docs.cyclone.xyz/deployment>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 8350 bytes (sha256 656abe645c5c); coinDenomination()=2000000000000000000 tokenDenomination()=1000000000 (Cyclone-style pool interface)."
+    },
+    "0x92a6a8cec29eb26bf11158e9cd943530743ee498": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 1 MATIC pool",
+      "source": "Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 2141 bytes (sha256 f493237b9d26); denomination()=1000000000000000000 = 1 MATIC (native coin pool, no token())."
+    },
+    "0xa5c2254e4253490c54cef0a4347fddb8f75a4998": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 100,000 MATIC pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 d55e42f554be); denomination()=100000000000000000000000 = 100000 MATIC (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0xaf4c0b70b2ea9fb7487c7cbb37ada259579fe040": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 10,000 MATIC pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 45af53fe199d); denomination()=10000000000000000000000 = 10000 MATIC (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0xdf231d99ff8b6c6cbf4e9b9a945cbacef9339178": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 1,000 MATIC pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 6a42df50b640); denomination()=1000000000000000000000 = 1000 MATIC (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0xe6ff16572470f1c441f8fd81db3cc2b4cdcd0a93": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 0.1 MATIC pool",
+      "source": "Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 2141 bytes (sha256 f493237b9d26); denomination()=100000000000000000 = 0.1 MATIC (native coin pool, no token())."
+    },
+    "0xe8002c984be93cb283a7a69cb9c3e1e113088982": {
+      "category": "mixer",
+      "entity": "Typhoon Network",
+      "label": "Typhoon Network: 100 MATIC pool",
+      "source": "Explorer tag via brianleect/etherscan-labels @923aba7 (polygonscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/polygonscan/combined/combinedAllLabels.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 2141 bytes (sha256 f493237b9d26); denomination()=100000000000000000000 = 100 MATIC (native coin pool, no token())."
+    }
+  }
+}

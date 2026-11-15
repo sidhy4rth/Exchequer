@@ -6,16 +6,18 @@ are in evidence.py; the history list and correlation in casebook.py."""
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
 import threading
 import time
 from collections import deque
+from collections.abc import AsyncIterator
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from .. import api_budget, audit, case_privacy, case_refs, config, models, ownership, pipeline, rate_limit
@@ -377,25 +379,125 @@ def record_trace_safely(payload: dict[str, Any]) -> None:
         logger.exception("Could not audit case %s", payload.get("case_id"))
 
 
+# How often a request-bound trace looks whether its client is still there.
+HANGUP_POLL_SECONDS = 1.0
+CLIENT_DISCONNECTED = "client_disconnected"
+ABANDONED_DETAIL = "The trace was stopped because the client disconnected; nothing was saved."
+
+
+class HangupWatch:
+    """Whether POST /trace's client is still connected, while its trace runs
+    (EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT).
+
+    A client that gives up (a timeout, then a retry) used to leave its trace
+    running to the end, so every retry doubled the work on the server. The
+    watch polls the connection on the event loop; once it is gone it cancels
+    the attached budget, and the trace stops at its next provider request or
+    backoff, as a Stop does for a background job. Background jobs never get
+    one: they are meant to outlive the request that started them."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._budget: api_budget.TraceBudget | None = None
+        self.gone = False
+
+    def attach(self, budget: api_budget.TraceBudget) -> None:
+        with self._lock:
+            self._budget = budget
+            gone = self.gone
+        if gone:  # hung up before the trace started
+            budget.cancel(CLIENT_DISCONNECTED)
+
+    def detach(self) -> None:
+        with self._lock:
+            self._budget = None
+
+    def hung_up(self) -> None:
+        with self._lock:
+            self.gone = True
+            budget = self._budget
+        if budget is not None:
+            budget.cancel(CLIENT_DISCONNECTED)
+
+    async def watch(self, http: Request) -> None:
+        try:
+            while not await http.is_disconnected():
+                await asyncio.sleep(HANGUP_POLL_SECONDS)
+        except Exception:  # noqa: BLE001 -- a watch that fails leaves the trace as it was
+            logger.exception("Could not watch a trace's connection")
+            return
+        self.hung_up()
+
+
+async def hangup_watch(http: Request) -> AsyncIterator[HangupWatch | None]:
+    """A HangupWatch for this request while the flag is on, else None (no task at all)."""
+    if not config.TRACE_CANCEL_ON_DISCONNECT:
+        yield None
+        return
+    watch = HangupWatch()
+    task = asyncio.create_task(watch.watch(http))
+    try:
+        yield watch
+    finally:
+        task.cancel()
+
+
+Hangup = Annotated[HangupWatch | None, Depends(hangup_watch)]
+
+
+def record_abandoned(request: TraceRequest) -> None:
+    """Audit a trace stopped because its client left: what record_start says, and why it stopped."""
+    detail = {"chain": request.chain, "asset": request.asset, "direction": request.direction,
+              "mode": "payments" if request.payments else "address", "stopped_by": CLIENT_DISCONNECTED,
+              "saved": False}
+    try:
+        audit.record("case.trace_abandoned", detail=detail)
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not audit an abandoned trace")
+
+
 @router.post("/trace")
-def trace(request: TraceRequest, http: Request, user: CurrentUser) -> dict[str, Any]:
+def trace(request: TraceRequest, http: Request, user: CurrentUser, hangup: Hangup) -> dict[str, Any]:
     """Trace funds to or from a reported address.
 
     Outgoing answers "where did the victim's money go"; incoming answers "who
     sent money to this address", which on a scammer's wallet enumerates the
     other people who paid it. The whole trace runs inside this request; the
     app itself uses POST /trace/jobs, which runs it in the background.
+
+    With EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT on, a client that hangs up stops
+    the trace at its next provider request, and nothing of it is kept: no
+    case, saved or not, is made from a trace that was cut short that way.
     """
     request.case_ref = case_refs.required(user, request.case_ref)
     pipeline.check_request(request)
     slot = admit(http, user)
     record_start(request)
+    budget: api_budget.TraceBudget | None = None
     try:
         # The admit() token: this connection's share of the day's provider allowance.
-        with api_budget.using(api_budget.TraceBudget.for_request(request.time_budget_seconds, client=slot)):
+        budget = api_budget.TraceBudget.for_request(request.time_budget_seconds, client=slot)
+        if hangup is not None:
+            hangup.attach(budget)
+        with api_budget.using(budget):
             payload = pipeline.run_trace(request)
+    except Exception as exc:
+        if hangup is not None and budget is not None and budget.cancelled:
+            # Whatever the stop surfaced as (409, or a provider error at the
+            # reported address), it is a hang-up: said so, and nothing kept.
+            record_abandoned(request)
+            raise HTTPException(status_code=409, detail=ABANDONED_DETAIL) from exc
+        raise
     finally:
+        if hangup is not None:
+            hangup.detach()
         release(slot)
+    if hangup is not None and budget.cancelled:
+        # It returned, but after a hang-up: a read refused by the stop may have
+        # been skipped by a stage that went on without it (a block's date, a
+        # tag), so the result cannot be taken as whole and is never stored.
+        record_abandoned(request)
+        raise HTTPException(status_code=409, detail=ABANDONED_DETAIL)
     stored = store_result(payload, request, user.owner_hash, client=slot, officer=(user.officer_id, user.unit_id))
     record_trace_safely(stored)
     return stored

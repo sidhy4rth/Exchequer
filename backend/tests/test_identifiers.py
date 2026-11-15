@@ -22,6 +22,11 @@ from app.main import app
 
 ALICE, BOB = "a" * 32, "b" * 32
 SEED = "abandon ability able about above absent absorb abstract absurd abuse access accident"
+# Wallet addresses already in the repository: DEMO.md, and the EIP-55 vector for USDT's contract
+# in tests/test_address_checksum.py. None is invented.
+EVM = "0x7c3e9bab6715e4040f013e865b193b0209642e36"
+EVM_MIXED = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+TRON = "THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph"
 
 
 @pytest.fixture(autouse=True)
@@ -125,6 +130,31 @@ def test_a_upi_id_is_kept_in_lower_case_and_must_name_its_bank():
     for typed in ("shop.pay", "@okaxis", "shop pay@okaxis", "shop@1bank"):
         with pytest.raises(IdentifierError):
             identifiers.upi(typed)
+
+
+@pytest.mark.parametrize("typed, kept", [
+    (EVM, EVM),
+    (EVM_MIXED, EVM_MIXED.lower()),  # a correct EIP-55 checksum
+    (EVM.upper().replace("0X", "0x"), EVM),  # all upper case carries no checksum
+    (f"  {TRON} ", TRON),  # Tron is case-sensitive: kept as it is
+])
+def test_a_wallet_address_is_kept_by_the_trace_forms_rules(typed, kept):
+    assert identifiers.wallet(typed) == kept
+
+
+@pytest.mark.parametrize("typed, why", [
+    ("0xDaC17F958D2ee523a2206206994597C13D831ec7", "EIP-55"),  # one letter's case changed
+    (EVM[:-1], "Enter a wallet address"),  # 39 hex
+    (EVM + "a", "Enter a wallet address"),  # 41 hex
+    (EVM[2:], "Enter a wallet address"),  # no 0x
+    (TRON[:10] + ("d" if TRON[10] != "d" else "c") + TRON[11:], "Enter a wallet address"),  # Tron typo: checksum
+    (TRON[:-1], "Enter a wallet address"),
+    ("bc1qexample", "Enter a wallet address"),
+])
+def test_an_invalid_wallet_address_is_refused(typed, why):
+    with pytest.raises(IdentifierError, match=why):
+        add(kind="wallet", value=typed)
+    assert identifiers.list_for(viewer(), "case-1") == []
 
 
 # -- recording ----------------------------------------------------------------------------------
@@ -279,6 +309,16 @@ def test_a_units_officers_see_each_others_links_but_not_another_units():
     assert [o["identifier_id"] for o in found[mine["identifier_id"]]] == [colleague["identifier_id"]]
 
 
+def test_the_same_wallet_in_another_case_is_linked_whatever_case_it_was_typed_in():
+    here = add(kind="wallet", value=EVM_MIXED, context="found in an export")
+    there = add(kind="wallet", value=EVM_MIXED.lower(), case="case-2")
+    add(kind="wallet", value=TRON, case="case-3")
+    found = links()
+    assert [o["identifier_id"] for o in found[here["identifier_id"]]] == [there["identifier_id"]]
+    with pytest.raises(identifiers.DuplicateIdentifier):
+        add(kind="wallet", value=EVM_MIXED.upper().replace("0X", "0x"))
+
+
 def test_a_case_alone_with_its_identifiers_links_nothing():
     add(kind="domain", value="scam-shop.in")
     add(kind="phone", value="98765 43210")
@@ -299,7 +339,7 @@ def test_the_routes_add_list_and_withdraw(client):
     assert made.status_code == 201 and made.json()["value"] == "crypto_help"
     iid = made.json()["identifier_id"]
     listed = client.get("/trace/case-1/identifiers", headers=H).json()
-    assert listed["count"] == 1 and set(listed["kinds"]) == {"domain", "telegram", "phone", "upi"}
+    assert listed["count"] == 1 and set(listed["kinds"]) == {"domain", "telegram", "phone", "upi", "wallet"}
     out = client.patch(f"/identifiers/{iid}", json={"status": "withdrawn", "note": "wrong handle"}, headers=H)
     assert out.status_code == 200 and out.json()["status"] == "withdrawn"
 
@@ -344,6 +384,17 @@ def test_the_audit_log_records_the_kind_never_the_value(client):
     ]
     assert logged[2][0] == "identifier.list"
     assert "9876543210" not in json.dumps(logged)
+
+
+def test_a_wallet_is_added_by_the_route_and_audited_by_its_kind_only(client):
+    made = client.post("/trace/case-1/identifiers", json={"kind": "wallet", "value": TRON}, headers=H)
+    assert made.status_code == 201 and made.json()["kind_label"] == "Wallet address"
+    bad = client.post("/trace/case-1/identifiers", json={"kind": "wallet", "value": TRON[:-1]}, headers=H)
+    assert bad.status_code == 400
+    with models.session() as s:
+        rows = s.scalars(select(models.AuditEvent).where(models.AuditEvent.action == "identifier.add")).all()
+    assert [json.loads(r.detail) for r in rows] == [{"identifier_id": made.json()["identifier_id"], "kind": "wallet"}]
+    assert TRON not in json.dumps([r.detail for r in rows])
 
 
 def test_a_note_on_its_own_is_audited_without_its_words(client):
