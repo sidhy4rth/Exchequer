@@ -921,3 +921,6 @@ STATEMENT_IMPORT: bool = flag("EXCHEQUER_STATEMENT_IMPORT",
                               "Feature 5: read a bank or exchange statement CSV against a case; save confirmed rows")
 CDR_IMPORT: bool = flag("EXCHEQUER_CDR_IMPORT",
                         "Feature 5: read a call detail record CSV against a case; save a confirmed summary")
+EXPORT_SCAN: bool = flag("EXCHEQUER_EXPORT_SCAN",
+                         "Feature 2, slice 1: scan a phone or computer export in the browser for addresses, "
+                         "hashes and seed phrases")

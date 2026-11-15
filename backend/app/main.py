@@ -56,6 +56,7 @@ from .routes import certificates as certificate_drafts
 from .routes import complaints as complaint_queue
 from .routes import custody as custody_wallets
 from .routes import exhibits as exhibit_register
+from .routes import export_scan
 from .routes import identifiers as identifier_register
 from .routes import letters_of_request as letter_of_request
 from .routes import tasks as task_list
@@ -257,6 +258,7 @@ app.include_router(requests.router)
 app.include_router(asset_register.router)
 app.include_router(exhibit_register.router)
 app.include_router(custody_wallets.router)
+app.include_router(export_scan.router)
 app.include_router(identifier_register.router)
 app.include_router(statement_rows.router)
 app.include_router(cdr_summaries.router)

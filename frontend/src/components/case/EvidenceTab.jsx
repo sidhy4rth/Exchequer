@@ -11,6 +11,7 @@ import IdentifiersPanel from './IdentifiersPanel'
 import TasksPanel from './TasksPanel'
 import StatementPanel from './StatementPanel'
 import CdrPanel from './CdrPanel'
+import ExportScanPanel from './ExportScanPanel'
 
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
@@ -353,6 +354,7 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
     <IdentifiersPanel result={result} />
     <StatementPanel result={result} />
     <CdrPanel result={result} />
+    <ExportScanPanel result={result} />
   </>
 }
 
