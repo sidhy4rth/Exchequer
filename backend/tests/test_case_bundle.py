@@ -36,8 +36,8 @@ CASE = {
 }
 NOTE = "kept in locker four"
 FILES = ["report.txt", "report.pdf", "exhibits.csv", "exhibits-custody.csv", "assets.csv", "assets-history.csv",
-         "requests.csv", "requests-history.csv", "identifiers.csv", "identifiers-history.csv", "audit-trail.csv",
-         "MANIFEST.txt"]
+         "requests.csv", "requests-history.csv", "identifiers.csv", "identifiers-history.csv", "tasks.csv",
+         "tasks-history.csv", "audit-trail.csv", "MANIFEST.txt"]
 
 
 @pytest.fixture
