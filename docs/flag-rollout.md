@@ -1,15 +1,16 @@
 # Switching on the flagged features
 
-Five features are built behind `config.py` flags in pull requests that are
-still open (as of 2026-11-15: #129, #146, #147 and #162 and the PRs stacked on
-them). The flags already on `main` are listed first, below. Each flag is off until its environment variable
+Five features are built behind `config.py` flags. Four of them are now on
+`main`, switched off: custody wallets (#129), statements and call detail records
+(#146), and the export scan (#147), each with the PRs stacked on it. The fifth,
+Telegram lookups (#162, with #169 and #170), is still in open pull requests
+(as of 2026-11-15). Every flag on `main` is listed first, below. Each flag is off until its environment variable
 is `1` (`true`, `yes` and `on` also count; see `flag()` in `config.py`). This
 file says, for each one: what it turns on, which PRs must be merged first, how
 to switch it on and off, what to try on the live site before telling anyone,
 and the decisions still open.
 
-Everything here comes from the PR descriptions, the handoff files on their
-branches and the flag definitions. Where something was not checked, it says so.
+Everything here comes from the PR descriptions, the handoff files and the flag definitions. Where something was not checked, it says so.
 Button names are taken from the PRs' tests and may differ slightly on screen.
 
 ## Flags already on `main`
@@ -28,31 +29,34 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
 | `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | Off in `render.yaml`; awaits the owner |
 | `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the deployed store (`labels-2026-11-14b`) has no exchange rows yet |
+| `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_CDR_IMPORT` | Feature 5: read a call detail record CSV against a case; save a summary the officer confirms | #168 (+#172, #173), merged with #146 | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_EXPORT_SCAN` | Feature 2: scan a phone or computer export in the browser for addresses, hashes and seed phrases | #147 (+#154, #155, #156, #164) | Off in `render.yaml`; see its section below |
 
-The rest of this file is about the five flags still in open PRs. The steps
-below for switching on, checking and switching off apply to the flags above too.
+That is all twelve flags in `FLAGS` on `main`. `EXCHEQUER_TELEGRAM_LOOKUPS`
+is not among them: it arrives with #162.
+
+The rest of this file is about the five features named at the top: the four
+now on `main` behind their flags, and Telegram lookups, still in review. The
+steps below for switching on, checking and switching off apply to every flag above.
 
 ## The same steps for every flag
 
 ### Before: merge, then deploy
 
-1. Merge the flag's PRs in stack order (each section lists them). Render deploys
-   every push to `main`. A merged stack changes nothing a user sees while its
+1. Merge the flag's PRs in stack order (each section lists them; only the
+   Telegram stack is still open). Render deploys every push to `main`. A merged stack changes nothing a user sees while its
    flag is off, but any migration in it runs at start-up (`models.init_db()`),
    so new tables appear on the first deploy either way.
-2. Two things collide between stacks:
-   - Every stack adds its flag on the line after `OSINT_LOOKUPS` in
-     `config.py`, where `main` now also has `PRIVACY_CATEGORY`, `CASE_BUNDLE`,
-     `TRACE_CANCEL_ON_DISCONNECT` and `STORE_EXCHANGE_ROWS`, and most add a re-export line to
-     `frontend/src/api.js`. Each stack has a small text conflict there: keep every line.
-   - Custody (`g7_custody_1`) and statements (`g7_statements_1`) each add a
-     migration whose `down_revision` is `g7_domain_lookups_1`. The task
-     migrations merged first (#122), so the head on `main` is now `g7_tasks_2`.
-     Whichever of the two stacks merges first must point its `down_revision` at
-     `g7_tasks_2`, and the second at the head left by the first, so that
-     `alembic heads` shows exactly one head. Never edit a migration that is already on `main`.
-3. The stacks were branched before #160 and #165 merged, so merge `main` into
-   each before its last review.
+2. Merging the custody and statement stacks is done. Their migrations now run
+   in one line on `main`: `g7_tasks_2` → `g7_custody_1` → `g7_custody_2` →
+   `g7_statements_1` → `g7_statements_2`, so the head on `main` is
+   `g7_statements_2` and the `down_revision` re-points are done. #162 adds no
+   migration. Its branch adds a flag line to `config.py`, where a text
+   conflict with `main`'s newer flags is likely: keep every line. Never edit a
+   migration that is already on `main`.
+3. Merge `main` into the Telegram stack before its last review.
 
 ### Switching it on (as #108 did for `EXCHEQUER_OSINT_LOOKUPS`)
 
@@ -82,10 +86,10 @@ below for switching on, checking and switching off apply to the flags above too.
   the public demo case is left alone.
 - Use only synthetic data: the files each section names, which the PRs' own tests use.
   Never use a real statement, CDR, phone export, phone number or seized wallet.
-- Nothing in these registers can be deleted. A wallet record, a saved statement
-  row or a CDR summary stays on the test case for good. A movement can be
-  cancelled and an identifier withdrawn, each with a reason. Put "TEST" in notes
-  and titles.
+- Nothing in these registers can be deleted. A wallet record stays on the test
+  case for good. A movement can be cancelled, an identifier withdrawn, and a
+  saved statement or CDR import withdrawn (#183, #184), each with a reason; a
+  withdrawn one is kept and marked so. Put "TEST" in notes and titles.
 
 ### Watching it afterwards
 
@@ -119,7 +123,7 @@ proposed → approved by distinct signers → broadcast (with the transaction ha
 → confirmed, or cancelled with a reason. The server never receives, stores or
 generates a key, seed phrase or signature, and Exchequer moves no funds.
 
-**Merge first.** #129 → #139 → #140 → #142 (stacked). Migrations `g7_custody_1`
+**Merged.** #129, with #139, #140 and #142, on `main`. Migrations `g7_custody_1`
 and `g7_custody_2` (see the migration note above). Have the unit read
 `docs/custody-procedure.md` (#142) before the flag goes on. The handoff asks for this.
 
@@ -151,7 +155,6 @@ and `g7_custody_2` (see the migration note above). Have the unit read
   it means a new record. Is that enough?
 - Must the officer who enters an approval be someone other than the officer who
   entered the proposal? Today one account may propose and enter one approval.
-- The migration re-pointing above (the head on `main` is `g7_tasks_2` since #122 merged).
 
 ## `EXCHEQUER_STATEMENT_IMPORT`: bank and exchange statements (feature 5, first slice)
 
@@ -163,14 +166,13 @@ narrations that name a known exchange. They are shown on a timeline beside the
 trace. Only the rows the officer ticks are sent and saved, never the whole
 statement. The audit log holds counts only.
 
-**Merge first.** #146 → #151 → #152 → #153 (stacked). Migration
-`g7_statements_1` (see the migration note above).
+**Merged.** #146, with #151, #152, #153, and the withdrawal PRs #183 and #184, on
+`main`. Migrations `g7_statements_1` and `g7_statements_2` (see the migration note above).
 
 **Try it on the live site** (one test officer, on the test case):
 
 1. Make `statement.csv` from the five `CSV` lines in
-   `frontend/src/components/case/StatementPanel.test.jsx` (branch
-   `feat/bank-statement-import-panel`). It is synthetic: a test account number
+   `frontend/src/components/case/StatementPanel.test.jsx`. It is synthetic: a test account number
    and invented references.
 2. Evidence tab: the statement panel shows. Choose bank, INR, and the file.
 3. With the browser's Network tab open: reading the file sends nothing. Two
@@ -178,10 +180,12 @@ statement. The audit log holds counts only.
 4. Add "Rupees paid, from the complaint" 2,50,000 on 2026-03-12: the NEFT row
    now says amount and date match.
 5. Untick the CoinDCX row and save. The one POST carries only the ticked row.
-   Reload: the saved row is listed. It cannot be withdrawn yet (see below), so
-   saving one row is enough.
-6. Audit rows: `statement.list`, `statement.save`, with counts by reason and no
-   account number, reference or narration.
+   Reload: the saved row is listed.
+6. Withdraw the saved import with the reason "TEST". It drops out of the list,
+   and shows again, struck through, with "show withdrawn".
+7. Audit rows: `statement.list`, `statement.save`, `statement.withdraw`, with
+   counts by reason or the import's id, and no account number, reference,
+   narration or reason.
 
 **Owner decisions still open** (handoff `docs/handoff/bank-statement-import.md`, #153):
 
@@ -190,8 +194,6 @@ statement. The audit log holds counts only.
   would show which header names and narration shapes to add. Every test row so
   far is synthetic. The handoff's own next step is "try the panel with real
   (redacted) statements, then turn the flag on".
-- Withdrawing a saved row entered by mistake (with a reason, like the identifier
-  register) is not built yet. Should it be, before the flag goes on?
 
 ## `EXCHEQUER_CDR_IMPORT`: call detail records (feature 5, second slice)
 
@@ -203,17 +205,16 @@ on this case's phone identifiers. For numbers the officer ticks, it shows which
 of their other cases have them. Only a summary the officer ticks is saved: never
 a row of the CDR. A number is a lead, not a person.
 
-**Merge first.** The whole statements stack (#146, #151, #152, #153: #168 is
-stacked on #153 and saves into the same `statement_imports` table), then
-#168 → #172 → #173. No migration of its own. It has its own flag, so
-statements can go live first.
+**Merged.** #168, #172 and #173, with the statements stack in #146 (CDR
+summaries are kept in the same `statement_imports` table). No migration of its
+own. It has its own flag, so statements can go live first.
 
 **Try it on the live site** (one test officer, on the test case):
 
 1. In the identifiers panel, add the phone identifier `+44 7700 900003`. It is in
    Ofcom's range for drama, so no subscriber holds it.
 2. Make `cdr.csv` from the four `CSV` lines in
-   `frontend/src/components/case/CdrPanel.test.jsx` (branch `feat/cdr-import-panel`).
+   `frontend/src/components/case/CdrPanel.test.jsx`.
    Never use a 10-digit number starting 6 to 9 in a test file: any of them could
    be a real subscriber's.
 3. Evidence tab → CDR panel → choose the file. Reading sends nothing. The CDR's
@@ -225,7 +226,8 @@ statements can go live first.
    only.
 6. Audit rows: `cdr.list`, `cdr.check`, `cdr.save`, counts only. Search the
    Render log for `7700900`: it must not appear.
-7. Withdraw the test phone identifier with the reason "TEST".
+7. Withdraw the saved CDR summary and the test phone identifier, each with the
+   reason "TEST". The summary's withdrawal is audited as `cdr.withdraw`.
 
 **Owner decisions still open** (handoff, #173):
 
@@ -249,13 +251,13 @@ run is shown only as "N BIP-39 words at line L, hidden": the words are never
 kept, shown or sent. Each address gets a Trace link, which waits for a click.
 The server records only that a scan ran, with five counts.
 
-**Merge first.** #147 → #154 → #155 → #156 (stacked). #164 (stacked on #156) is
-optional: it adds "Add as case identifier" to each address row. No migration.
+**Merged.** #147, with #154, #155, #156 and #164, on `main`. #164 adds "Add as
+case identifier" to each address row. No migration.
 
 **Note on #164.** It adds a `wallet` kind to the identifier register. That kind
-is **not behind any flag**: once #164 merges, "Wallet address" can be typed by
-hand in the identifiers panel on the live site, even while `EXCHEQUER_EXPORT_SCAN`
-is off. Only the export scan's "Add as case identifier" button waits for the flag.
+is **not behind any flag**: since #164 merged, "Wallet address" can be typed by
+hand in the identifiers panel, even while `EXCHEQUER_EXPORT_SCAN` is off. Only
+the export scan's "Add as case identifier" button waits for the flag.
 
 **Try it on the live site** (one test officer, on the test case):
 
@@ -271,11 +273,11 @@ is off. Only the export scan's "Add as case identifier" button waits for the fla
 4. The Trace link opens the trace form filled in and waits. Do not run it unless
    you mean to.
 5. Pick a binary file (an image): it says to export it as text.
-6. With #164: "Add as case identifier" on one address. It appears in the
+6. "Add as case identifier" on one address. It appears in the
    identifiers panel without a reload, and a second click says "Already on the
    case". Withdraw it afterwards with the reason "TEST".
-7. Audit rows: `export_scan.open`, `export_scan.run` (the five counts), and with
-   #164 `identifier.add` with the kind only, no address.
+7. Audit rows: `export_scan.open`, `export_scan.run` (the five counts), and
+   `identifier.add` with the kind only, no address.
 
 **Owner decisions still open:**
 
@@ -283,8 +285,8 @@ is off. Only the export scan's "Add as case identifier" button waits for the fla
   and not stored: an EVM address is the same on Ethereum, BNB Chain, Polygon and
   Arbitrum, so two cases naming it are linked whichever chain each traced. Is that
   right, or should the officer record a chain?
-- Should the `wallet` kind go live with #164 before the export scan is switched
-  on (see the note above)?
+- The `wallet` kind went live with #164 before the export scan is switched on
+  (see the note above). Keep it that way, or put it behind the flag?
 - Vendor importers (Cellebrite UFDR, Magnet AXIOM, MSAB XRY, Oxygen, Autopsy)
   need sample exports. None exist yet. The handoff (`docs/handoff/forensic-import.md`)
   lists no other open question.

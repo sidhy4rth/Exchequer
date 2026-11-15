@@ -371,9 +371,33 @@ sends) and the demos.
 | `POST /trace/{case_id}/tasks` | Adds a task (title, assignee, due date, notes); text that looks like a private key or seed phrase is refused. With `source`, takes up a suggestion (its own title and due date); with `note` as well, declines it, as a dropped task with that reason |
 | `PATCH /tasks/{task_id}` | Changes a task, closes it (done, or dropped with a reason), opens it again (with a reason) or adds a note; the audit log records which fields changed, never their text |
 | `GET /tasks/due?days=7` | Open tasks due within that many days (default 7, at most 90) or already overdue, among the tasks this browser or unit may read, most overdue first |
+| `GET /trace/{case_id}/export-scan` | Whether this server offers the scan of a phone or computer export (behind `EXCHEQUER_EXPORT_SCAN`; 404 while it is off) |
+| `POST /trace/{case_id}/export-scan` | Records that the officer's browser scanned an export for addresses, transaction hashes and seed-phrase runs, by its counts only; the file and what was found stay in the browser |
 | `GET /case-bundle` | Whether the case bundle is on, and the files it holds; 404 while `EXCHEQUER_CASE_BUNDLE` is off |
 | `GET /trace/{case_id}/bundle` | One zip of the case's signed report, its registers as CSV and its audit trail, with a manifest of SHA-256 hashes; 404 while `EXCHEQUER_CASE_BUNDLE` is off |
 | `GET /audit?case_id=` | The case's audit trail, for the browser or unit that traced it |
+
+**Statements and call records** (behind `EXCHEQUER_STATEMENT_IMPORT` and `EXCHEQUER_CDR_IMPORT`, both off by default)
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /trace/{case_id}/statements` | The bank and exchange statement rows kept with the case that this browser or unit may read, and the exchange names a narration is matched against (behind `EXCHEQUER_STATEMENT_IMPORT`; while it is off the list says so) |
+| `POST /trace/{case_id}/statements` | Keeps the statement rows the officer confirmed, each with why (amount and date, UTR, exchange name or transaction hash), never the whole statement; signed-in officers only; audited by counts only (403 while the flag is off) |
+| `POST /trace/{case_id}/statements/{import_id}/withdraw` | Withdraws a saved statement import entered by mistake, with a reason; the import is kept, marked withdrawn with who, when and why, and `GET ...?withdrawn=1` lists withdrawn imports too; signed-in officers only; audited by the import's id, never the reason (403 while the flag is off) |
+| `GET /trace/{case_id}/cdr` | The call detail record summaries kept with the case that this browser or unit may read (behind `EXCHEQUER_CDR_IMPORT`; while it is off the list says so; `?withdrawn=1` lists withdrawn ones too) |
+| `POST /trace/{case_id}/cdr` | Keeps the CDR summary the officer confirmed (numbers and counts, never the CDR itself); signed-in officers only; audited by counts only (403 while the flag is off) |
+| `POST /trace/{case_id}/cdr/check` | For the numbers the officer chose (in the body, never the URL): whether each is one of this case's phone identifiers, and which other cases this browser or unit may read name it (403 while the flag is off) |
+| `POST /trace/{case_id}/cdr/{import_id}/withdraw` | Withdraws a saved CDR summary entered by mistake, with a reason; signed-in officers only (403 while the flag is off) |
+
+**Custody wallets** (behind `EXCHEQUER_CUSTODY_WALLETS`, off by default)
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /trace/{case_id}/custody` | The multisig wallets the case's seized crypto is held in that this browser or unit may read: chain, address, scheme, threshold and signers (behind `EXCHEQUER_CUSTODY_WALLETS`; while it is off the list says so) |
+| `POST /trace/{case_id}/custody` | Records a custody wallet and the asset-register rows moved into it (409 if the case already records it); signed-in officers only; no field takes a key, and writes are refused while the flag is off |
+| `PATCH /custody/{wallet_id}` | Changes a custody wallet's notes or the asset-register rows moved into it (signed-in officers only) |
+| `POST /custody/{wallet_id}/movements` | Proposes a deposit into the custody wallet or a release out of it (a release names the court's order and a destination address on the wallet's chain) |
+| `POST /custody/movements/{movement_id}/{step}` | Moves it on: `approve` (it is approved once the wallet's threshold of distinct signers have), `broadcast` with the transaction hash, `confirm`, or `cancel` with a reason; the signatures themselves happen on the signers' hardware wallets, and the server never sees a key |
 
 **Letters and requests**
 

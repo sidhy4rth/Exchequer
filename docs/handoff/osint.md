@@ -4,7 +4,7 @@
 - **Issue**: #104
 - **Branch**: `feat/osint` (slice 1, merged), `feat/osint-domain-lookup` (slice 2), `feat/osint-case-links` (slice 3); `fix/osint-review` (fixes from Barenyam's review, #111)
 - **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-13
+- **Last worked on**: Sidhyarth, 2026-11-14
 - **Status**: Slices 1-3 merged (#105, #106, #107) and live. Domain lookups switched ON in production on 2026-11-13 (`EXCHEQUER_OSINT_LOOKUPS=1` in Render, and in `render.yaml`). Review fixes from #111 merged in #115 (13 Nov). Slice 4 (a Telegram username's public t.me page, #162 with #169 and #170 stacked) in review.
 
 ## Done
@@ -24,13 +24,20 @@
   7. The Telegram message says 4 to 32 characters, as the check allows.
   8. A trunk 0 typed after a two-digit country code is dropped (`+44 07700 …` is `+44 7700 …`), except Italy (+39), which keeps it. After a three-digit code it is left as typed. Rows recorded before this keep their old form.
   9. CodeQL's URL-substring alert in `test_domain_lookup.py` was fixed in #106 (f886bfe) and is closed.
+- Wallet kind (#164, with feature 2 #145; branch `feat/forensic-import-identifiers`): `wallet` in `KINDS`,
+  normalised by `identifiers.wallet()` with the trace form's own checks from `etherscan_client.py`
+  (`is_evm_address` + `evm_checksum_ok`, `is_tron_address`): EVM kept in lower case, Tron as typed.
+  A mixed-case EVM address with a wrong EIP-55 checksum, a wrong length or a Tron checksum typo is
+  refused. Links across cases work for it unchanged (same kind + normalised value). No migration:
+  `kind` is a plain String(16) with no check constraint. The panel names it "Wallet address"; no
+  lookup is offered for it.
 
 ## Decisions
 
 - The slices follow the issue: (1) a per-case identifier register, (2) domain lookup over fixed RDAP and DNS endpoints, (3) links across cases.
 - Results go in their own tables, never inside a trace result, so `docs/contracts/case.md` is not touched.
 - Live lookups stay behind a flag (rule 6) until the whole slice is ready. Even with the flag on, only a signed-in officer can make one: each lookup makes the server ask outside services.
-- Four kinds only: domain, telegram, phone, upi. Each is kept as typed (`entered`) and normalised (`value`): host name in lower case without scheme/path/port/www; phone as +<country><number> (a bare 10-digit number starting 6-9 is taken as Indian); Telegram username without @ or t.me link, lower case; UPI ID lower case.
+- Four kinds at first (domain, telegram, phone, upi); a fifth, wallet, added for the export scan (feature 2). Each is kept as typed (`entered`) and normalised (`value`): host name in lower case without scheme/path/port/www; phone as +<country><number> (a bare 10-digit number starting 6-9 is taken as Indian); Telegram username without @ or t.me link, lower case; UPI ID lower case.
 - A domain refuses IP addresses, single-label and reserved names (localhost, .local, .internal, .test, .onion …), so slice 2 never looks up a private name.
 - Nothing is deleted: a mistake is withdrawn with a reason. Kind and value never change.
 - The audit log records the kind and fields changed, never the value (phone numbers and handles are personal data).

@@ -12,6 +12,14 @@ Telegram username without the @ or link) so the same identifier in two cases is
 the same string. An identifier is a lead, never an identity: only the registrar,
 the telecom or the bank can say whose it is.
 
+A wallet address is a kind too (added for the export scan, suite feature 2): one
+the officer found in a phone or computer export, or noted from the complaint
+beside the wallet the trace started from. It is held to the trace form's rules
+(etherscan_client.py): an EVM address, its EIP-55 checksum when typed in mixed
+case, kept in lower case; or a Tron address, Base58Check, kept as it is. The
+chain is not stored: an EVM address is the same on every EVM chain, so two
+cases naming it are linked whichever chain each was traced on.
+
 Nothing is deleted. One entered by mistake is withdrawn, with a reason, and stays
 in the history. Free-text fields refuse private keys and seed phrases.
 
@@ -35,12 +43,14 @@ from sqlalchemy.orm.exc import StaleDataError
 from . import models
 from .assets import NOT_A_KEY, looks_like_secret
 from .display_text import one_line
+from .etherscan_client import evm_checksum_ok, is_evm_address, is_tron_address
 
 KINDS = {
     "domain": "Website domain",
     "telegram": "Telegram username",
     "phone": "Phone number",
     "upi": "UPI ID",
+    "wallet": "Wallet address",
 }
 STATUSES = ("active", "withdrawn")
 TEXT = {"context": (200, "where it was seen"), "notes": (2000, "the notes"), "note": (300, "why")}
@@ -183,7 +193,22 @@ def upi(raw: str) -> str:
     return text
 
 
-NORMALISE = {"domain": domain, "telegram": telegram, "phone": phone, "upi": upi}
+def wallet(raw: str) -> str:
+    """A wallet address of a chain Exchequer traces, by the trace form's own checks: an EVM
+    address (EIP-55 checksum when mixed case) in lower case, or a Tron address as it is."""
+    text = raw.strip()
+    if is_evm_address(text):
+        if not evm_checksum_ok(text):
+            raise IdentifierError("This address mixes upper and lower case against its EIP-55 checksum, "
+                                  "which usually means a character was mistyped. Check it against the original.")
+        return text.lower()
+    if is_tron_address(text):
+        return text
+    raise IdentifierError("Enter a wallet address: 0x and 40 hex characters (Ethereum, BNB Chain, Polygon, "
+                          "Arbitrum), or a Tron address, T and 33 more, whose checksum matches.")
+
+
+NORMALISE = {"domain": domain, "telegram": telegram, "phone": phone, "upi": upi, "wallet": wallet}
 
 
 def normalise(kind: str, raw: Any) -> str:
