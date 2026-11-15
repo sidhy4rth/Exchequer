@@ -37,7 +37,7 @@ from typing import Any
 
 import networkx as nx
 
-from .exchange_matcher import INFERRED_DEPOSIT, ExchangeMatch
+from .exchange_matcher import INFERRED_DEPOSIT, ExchangeMatch, role_of
 from .graph_builder import OUTGOING
 from .pattern_detection import PatternFinding
 
@@ -498,11 +498,16 @@ def _match_directness(match: ExchangeMatch) -> ScoreComponent:
             f"{e.get('sweep_destination')} and nowhere else. Only "
             f"{match.exchange} can confirm this.",
         )
-    if match.wallet_type in ("hot_wallet", "cold_wallet"):
+    # A contract wallet recorded as a hot or cold wallet held in a contract
+    # (exchange_matcher.role_of) is that wallet; a deposit address, an
+    # unrecorded role or a contract wallet with none stays at 0.8.
+    role = role_of(match.wallet_type, match.role)
+    if role in ("hot_wallet", "cold_wallet"):
         raw = 1.0
+        held = " held in a contract" if role != match.wallet_type else ""
         explanation = (
             f"Exact match: {match.address} is a labelled {match.exchange} "
-            f"{match.wallet_type.replace('_', ' ')} ({match.label}) in the "
+            f"{role.replace('_', ' ')}{held} ({match.label}) in the "
             f"attribution database."
         )
     else:
