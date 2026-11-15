@@ -34,10 +34,14 @@ address could not both be kept; the build would silently drop one.
 - The table is added to a built store by `backend/scripts/add_store_exchange_rows.py`
   from a CSV of parsed rows. That script refuses a burn or system address, a
   token contract, a DEX router, a casino wallet in a gambling file and any
-  address on a never-flag list given to it; an address a curated exchange
-  label file already names is left to the file (the same exchange:
-  corroborated; another exchange: a conflict, listed). The lookup applies the
-  same never-flag refusals again at run time.
+  address on a never-flag list given to it; an address a source the matcher
+  reads first already names (the chain's label file, the instant-exchanger
+  seed, a store instant-exchanger row) is left to that source (the same name:
+  corroborated; another: a conflict, listed). Every row's type is
+  `exchange_wallet` (blank reads as it): the list names the exchange's own
+  wallets, never a customer's deposit address, so a CSV with any other type
+  is refused whole. The lookup applies the same never-flag refusals again at
+  run time.
 - The exchange matcher reads the rows behind the flag
   `EXCHEQUER_STORE_EXCHANGE_ROWS` (off by default), in this order: the
   curated JSON files (and the instant-exchanger seed), then a store exchange

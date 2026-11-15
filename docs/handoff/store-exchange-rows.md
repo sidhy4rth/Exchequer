@@ -17,6 +17,9 @@
   `matches[].attribution_basis`; `backend/scripts/add_store_exchange_rows.py` adds the table to a built store from a
   CSV (gates, `<csv>.left_out.tsv`, re-run replaces a source's rows, meta `exchange_rows`). Tests:
   `backend/tests/test_store_exchange_rows.py`.
+- The add script's conflict check reads every source the matcher reads first: the chain's label file, the
+  instant-exchanger seed and the store's instant-exchanger rows (`exchange_matcher.curated_sources`, shared with
+  the matcher). A CSV row of any type but `exchange_wallet` (blank reads as it) refuses the whole CSV.
 - OKX staged outside the repo: `~/exchequer-flagged/store/next-release/okx_por_tron.csv`, 474,529 rows from OKX's
   1 Nov 2026 file (SHA-256 93095583...367a6, 474,530 listed, all signed with a balance; 1 already in the label file
   as OKX). Trial ingest into an empty store: 3 s, +17.7 MB after VACUUM. Ingest steps in

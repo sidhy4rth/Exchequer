@@ -43,13 +43,26 @@ FIELDS = ["address", "chain", "category", "entity_or_incident", "sources", "sour
           "exchequer_supported_chain"]
 
 
-def write_por_csv(path, addresses):
+def write_por_csv(path, addresses, **over):
     with open(path, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=COLUMNS)
         w.writeheader()
         for a in addresses:
             w.writerow({"address": a, "chain": "tron", "exchange": "OKX", "label": "OKX: Reserves Wallet (2026-11)",
-                        "type": "exchange_wallet", **SOURCE})
+                        "type": "exchange_wallet", **SOURCE, **over})
+
+
+def empty_store(tmp_path, rows=()):
+    """A built store holding only `rows` (dicts of FIELDS)."""
+    src = tmp_path / "flagged.csv"
+    with open(src, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
+        w.writeheader()
+        for row in rows:
+            w.writerow({**dict.fromkeys(FIELDS, ""), **row})
+    out = tmp_path / "s.db"
+    build(src, out)
+    return out
 
 
 @pytest.fixture
@@ -204,3 +217,65 @@ def test_a_re_run_whose_rows_are_all_left_out_still_replaces_that_source(store_p
     meta = json.loads(db.execute("SELECT value FROM meta WHERE key='exchange_rows'").fetchone()[0])
     db.close()
     assert held == 0 and meta == {}
+
+
+def _left_out(por):
+    return (por.parent / (por.name + ".left_out.tsv")).read_text()
+
+
+def test_an_address_the_tron_label_file_names_for_another_exchange_is_a_conflict(tmp_path):
+    named = next((a, r) for a, r in ExchangeMatcher.from_file(config.get_chain("tron").labels_path,
+                                                              chain="tron").entries() if r["exchange"] != "OKX")
+    por = tmp_path / "p.csv"
+    write_por_csv(por, [named[0]])
+    assert add(empty_store(tmp_path), por)["added"] == 0
+    assert f"tron\t{named[0]}\tCONFLICT: a label file names it {named[1]['exchange']}" in _left_out(por)
+
+
+def test_an_address_the_instant_exchanger_seed_names_is_a_conflict_the_seed_keeps(tmp_path, monkeypatch):
+    # The matcher reads data/instant_exchangers.json beside the label files, and
+    # it wins over a store row: an address it names is not OKX's to take.
+    seed = tmp_path / "instant_exchangers.json"
+    seed.write_text(json.dumps({"rows": [{"address": OTHER, "chain": "tron", "service": "FixedFloat",
+                                          "source": "test seed", "checked_on": "2026-11-15"}]}))
+    monkeypatch.setattr(exchange_matcher, "instant_exchangers_path", lambda: seed)
+    por = tmp_path / "p.csv"
+    write_por_csv(por, [OTHER, OKX_A])
+    report = add(empty_store(tmp_path), por)
+    assert report["added"] == 1 and report["left_out_why"] == {"CONFLICT": 1}
+    assert f"tron\t{OTHER}\tCONFLICT: the instant-exchanger seed names it FixedFloat" in _left_out(por)
+
+
+def test_an_address_a_store_instant_exchanger_row_names_is_a_conflict_that_row_keeps(tmp_path, flag_on):
+    # The matcher reads a store exchange row before a store instant-exchanger
+    # row, so adding one here would silently take the address from it.
+    out = empty_store(tmp_path, [{"address": OTHER, "chain": "tron", "category": "instant exchanger",
+                                  "entity_or_incident": "SideShift",
+                                  "sources": "Explorer tag via dawsbot/eth-labels"}])
+    por = tmp_path / "p.csv"
+    write_por_csv(por, [OTHER, OKX_A])
+    assert add(out, por)["added"] == 1
+    assert f"tron\t{OTHER}\tCONFLICT: the store's instant-exchanger row names it SideShift" in _left_out(por)
+    found = ExchangeMatcher({}, chain="tron", store=LabelStore(out)).lookup(OTHER)
+    assert found["exchange"] == "SideShift" and found["category"] == "instant_exchanger"
+
+
+@pytest.mark.parametrize("wallet_type", ["deposit_wallet", "hot_wallet", "inferred_deposit", "router"])
+def test_a_csv_with_a_type_other_than_exchange_wallet_is_refused_and_nothing_is_written(tmp_path, wallet_type):
+    # An exchange's own published list names its own wallets: a deposit_wallet
+    # row would make a letter ask for one customer's KYC on an OKX reserve.
+    out = empty_store(tmp_path)
+    por = tmp_path / "p.csv"
+    write_por_csv(por, [OKX_A], type=wallet_type)
+    with pytest.raises(ValueError, match=f"type {wallet_type!r}.*only exchange_wallet"):
+        add(out, por)
+    assert LabelStore(out).has_exchange_rows is False
+    assert not (tmp_path / "p.csv.left_out.tsv").exists()
+
+
+def test_a_blank_type_is_an_exchange_wallet(tmp_path, flag_on):
+    out = empty_store(tmp_path)
+    por = tmp_path / "p.csv"
+    write_por_csv(por, [OKX_A], type="")
+    assert add(out, por)["added"] == 1
+    assert LabelStore(out).exchange_row("tron", OKX_A)["type"] == "exchange_wallet"

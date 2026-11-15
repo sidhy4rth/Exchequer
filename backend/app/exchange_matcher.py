@@ -385,12 +385,22 @@ def _router_matcher(key: str) -> ExchangeMatcher:
     return ExchangeMatcher.from_file(chain.router_labels_path, chain=chain.key)
 
 
+def instant_exchangers_path() -> Path:
+    return config.DATA_DIR / INSTANT_EXCHANGERS_FILE
+
+
+def curated_sources(chain_key: str) -> tuple[dict[str, dict[str, str]], dict[str, dict[str, str]]]:
+    """What the matcher reads before any store row, for one chain: its label
+    file's records and the instant-exchanger seed's rows. The store's exchange
+    rows are checked against exactly these (scripts/add_store_exchange_rows.py)."""
+    chain = config.get_chain(chain_key)
+    return (ExchangeMatcher.from_file(chain.labels_path, chain=chain.key)._labels,
+            read_instant_exchangers(instant_exchangers_path(), chain.key))
+
+
 @lru_cache(maxsize=None)
 def _matcher(key: str) -> ExchangeMatcher:
     from .label_store import get_label_store  # label_store reads never_flag, which reads this module
 
-    chain = config.get_chain(key)
-    matcher = ExchangeMatcher.from_file(chain.labels_path, chain=chain.key)
-    return ExchangeMatcher(matcher._labels, chain=chain.key,
-                           instant=read_instant_exchangers(config.DATA_DIR / INSTANT_EXCHANGERS_FILE, chain.key),
-                           store=get_label_store())
+    files, seed = curated_sources(key)
+    return ExchangeMatcher(files, chain=config.get_chain(key).key, instant=seed, store=get_label_store())
