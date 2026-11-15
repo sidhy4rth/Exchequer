@@ -10,7 +10,7 @@
 ## Done
 
 - `backend/data/exchange_labels.json`: `0x559432e18b281731c054cd703d4b49872be4ed53` ("OKX: Reserve Wallet 216", `hot_wallet`, an account) and `0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97` ("OKX: Reserve Wallet 215", `contract_wallet` with role `hot_wallet`, an ERC-1967 proxy). Both rows cite OKX's November 2026 PoR file exactly as the #226 rows do, and add `role_basis`: the on-chain reading the hot role stands on. `_meta.okx_consolidation_2026_11_15` gives the PoR file's lines for each, the conflict and chain checks, and the label-store overlap.
-- `backend/tests/fixtures/label_code/ethereum.json` re-recorded by `scripts.check_label_code --record`: two answers added, every earlier answer unchanged; the dry run has nothing to retype.
+- `backend/tests/fixtures/label_code/ethereum.json`: the two answers (read at block 26419391 by `scripts.check_label_code --record`, every other answer unchanged) are recorded under `_meta.read_since`, as #247 recorded Unocoin; the fixture's `block` stays 26416966, and a flag-less `scripts.check_label_code` run (#250) rewrote the `_meta` note.
 - Tests: `backend/tests/test_okx_consolidation_labels.py`. `test_por_labels._por_rows` now leaves out rows with a `role_basis` (they are checked in the new file).
 
 ## Decisions

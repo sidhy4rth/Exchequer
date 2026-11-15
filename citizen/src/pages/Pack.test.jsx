@@ -314,6 +314,28 @@ describe('sending the pack to the cyber cell queue', () => {
     expect(server).not.toHaveBeenCalled()
   })
 
+  it('notes an NCRP number of an unusual shape once the box is left, and still sends it', async () => {
+    const server = fakeServer({ 'POST /api/complaints': SENT })
+    const user = userEvent.setup()
+    at()
+    await fill(user, 'What happened, in your words', 'A mentor on Telegram showed me profits.')
+    await fill(user, 'NCRP acknowledgement number', '5123456789012', card())
+    await agree(user)
+    const box = card().getByLabelText('NCRP acknowledgement number')
+    expect(box).toHaveAccessibleDescription(/usually 14 digits starting with 2 or 3/)
+    await send(user)
+    await screen.findByRole('region', { name: /Write this code down/ })
+    expect(server.calls[0].body.ncrp).toBe('5123456789012')
+  })
+
+  it('gives no note for a 14-digit number starting with 2 or 3', async () => {
+    const user = userEvent.setup()
+    at()
+    await fill(user, 'NCRP acknowledgement number', '21234567890123', card())
+    await agree(user)
+    expect(card().queryByText(/usually 14 digits/)).toBeNull()
+  })
+
   it('sends only the text details, then shows the tracking code once with copy and print', async () => {
     const server = fakeServer({ 'POST /api/complaints': SENT })
     const user = userEvent.setup()

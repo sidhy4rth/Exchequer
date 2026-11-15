@@ -14,6 +14,7 @@
 - 6 EIP-7702 delegated accounts kept their type, listed in `_meta.code_check_2026_11_15.eip7702_delegated`.
 - 25 other contracts kept their type, listed in `_meta.code_check_2026_11_15.left_for_review`.
 - Guard tests in `tests/test_label_code.py`, offline on the recording.
+- #249 (`fix/check-label-code-default`): a run without flags kept none of the 26 retyped rows in the note (a fresh plan no longer lists them) and `--record` dropped answers the node did not give; both now merge into what is recorded, and a rerun on an unchanged file changes nothing.
 
 ## Decisions
 

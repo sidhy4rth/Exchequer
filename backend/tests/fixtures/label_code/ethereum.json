@@ -1,6 +1,23 @@
 {
  "_meta": {
-  "block": 26419391,
+  "block": 26416966,
+  "read_since": {
+   "0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97": {
+    "block": 26419391,
+    "recorded": "2026-11-15",
+    "why": "OKX's USDC consolidation proxy, added with the okx_consolidation_2026_11_15 rows (#248); read from the same keyless node with check_label_code.record (a full --record run whose other answers were unchanged), not a re-record of the rest"
+   },
+   "0x559432e18b281731c054cd703d4b49872be4ed53": {
+    "block": 26419391,
+    "recorded": "2026-11-15",
+    "why": "OKX's USDT consolidation wallet, added with the okx_consolidation_2026_11_15 rows (#248); read from the same keyless node with check_label_code.record (a full --record run whose other answers were unchanged), not a re-record of the rest"
+   },
+   "0x6cc38b3f8cbf2b78996801d1b8d5fa441c33270d": {
+    "block": 26419385,
+    "recorded": "2026-11-15",
+    "why": "Unocoin's cold-storage wallet, added with the India round 3 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   }
+  },
   "recorded": "2026-11-15",
   "regenerate_with": "cd backend && python -m scripts.check_label_code --record",
   "rpc": "https://ethereum-rpc.publicnode.com",
@@ -624,6 +641,7 @@
   "0x6bd869be16359f9e26f0608a50497f6ef122ee3e": "0x",
   "0x6c37a68dbb44c3f437d15dc405c67bf5778b8637": "0x",
   "0x6c8dd0e9cc58c07429e065178d88444b60e60b80": "0x",
+  "0x6cc38b3f8cbf2b78996801d1b8d5fa441c33270d": "0x",
   "0x6cc5f688a315f3dc28a7781717a9a798a59fda7b": "0x",
   "0x6d0cf1f651f5ae585d24dcaa188d44e389e93d26": "0x",
   "0x6d37817d118f72f362cf01e64d9454bdd8e8e92f": "0x",

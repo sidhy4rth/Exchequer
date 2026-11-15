@@ -8,8 +8,8 @@
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
     "schema": "labels maps a Base58 address to {exchange, label, type}",
     "counts": {
-      "labels": 134,
-      "exchanges": 25,
+      "labels": 139,
+      "exchanges": 26,
       "by_exchange": {
         "Binance": 25,
         "Bitfinex": 1,
@@ -17,6 +17,7 @@
         "Bithumb": 1,
         "Bitpanda": 1,
         "Bybit": 41,
+        "CoinDCX": 5,
         "CoinSpot": 1,
         "CoinSwitch": 10,
         "Coinone": 1,
@@ -64,7 +65,7 @@
       },
       "rule": "deposit_wallet only when the label says so ('X Dep: 0x..', 'X: Deposit Address'); an exchange's Deposit Funder or Eth2 Depositor, or another firm's account at it, is not one customer's deposit address"
     },
-    "india_exchanges": "14 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why. They are not in 'counts' above, which counts the TronScan-tag seed.",
+    "india_exchanges": "19 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, a wallet list the exchange published itself, or one it says it published through Nansen Portfolio) and what was left out and why. 'counts' above counts every label in this file, these included.",
     "proof_of_reserves": {
       "sources": {
         "por:bybit:2026-10": {
@@ -873,6 +874,31 @@
     "TWBPGLwQw2EbqYLLw1DJnTDt2ZQ9yJW1JJ": {
       "exchange": "WhiteBIT",
       "label": "WhiteBIT",
+      "type": "exchange_wallet"
+    },
+    "TU7BbAsb8t371eMijQeiGXsiLvY1vZbsFs": {
+      "exchange": "CoinDCX",
+      "label": "CoinDCX Wallet 1",
+      "type": "exchange_wallet"
+    },
+    "TLvAURZkwUJpRvfccNiCuXqktaaBbu8NVi": {
+      "exchange": "CoinDCX",
+      "label": "CoinDCX Wallet 2",
+      "type": "exchange_wallet"
+    },
+    "TGjpmhAFT6d7eBKvaFwPVN6H2pDKgLLZiw": {
+      "exchange": "CoinDCX",
+      "label": "CoinDCX Wallet 3",
+      "type": "exchange_wallet"
+    },
+    "THEAKkH9JuhF5oWTy9jSeumAYyHSFBepAw": {
+      "exchange": "CoinDCX",
+      "label": "CoinDCX Wallet 4",
+      "type": "exchange_wallet"
+    },
+    "TM5r1bNJ2TjZwfS757tPPtr84MwtEjL9qN": {
+      "exchange": "CoinDCX",
+      "label": "CoinDCX Wallet 5",
       "type": "exchange_wallet"
     }
   }

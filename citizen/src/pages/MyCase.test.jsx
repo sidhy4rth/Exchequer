@@ -44,6 +44,23 @@ afterEach(() => {
 })
 
 describe('sign in (C6)', () => {
+  it('notes an NCRP number of an unusual shape and still signs in with it', async () => {
+    const server = fakeServer({ 'GET /api/my-case': OUT, 'POST /api/session': [401, { error: WRONG }] })
+    const user = userEvent.setup()
+    at()
+    await signIn(user, '3123456789012')
+    expect(screen.getByLabelText('NCRP acknowledgement number')).toHaveAccessibleDescription(/usually 14 digits starting with 2 or 3/)
+    expect(server.calls.find((c) => c.path === '/api/session')?.body?.ncrp).toBe('3123456789012')
+  })
+
+  it('gives no note for a 14-digit number starting with 2 or 3', async () => {
+    fakeServer({ 'GET /api/my-case': OUT, 'POST /api/session': [401, { error: WRONG }] })
+    const user = userEvent.setup()
+    at()
+    await signIn(user)
+    expect(screen.queryByText(/usually 14 digits/)).toBeNull()
+  })
+
   it('asks for the NCRP number and the tracking code, and sends no SMS or e-mail', async () => {
     fakeServer({ 'GET /api/my-case': OUT })
     at()

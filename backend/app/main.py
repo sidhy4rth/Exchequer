@@ -62,6 +62,7 @@ from .routes import letters_of_request as letter_of_request
 from .routes import tasks as task_list
 from .routes import statements as statement_rows
 from .routes import cdr as cdr_summaries
+from .routes import sop_summary as sop_summary_route
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -272,6 +273,7 @@ app.include_router(admin.router)
 app.include_router(accounts.router)
 app.include_router(audit_log.router)
 app.include_router(complaint_queue.router)
+app.include_router(sop_summary_route.router)
 
 
 # ---------------------------------------------------------------------------
