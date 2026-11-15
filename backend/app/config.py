@@ -523,6 +523,12 @@ TRACE_RESERVED_SLOTS: int = max(0, _int_env("EXCHEQUER_RESERVED_TRACE_SLOTS", 1)
 # keeping every slot busy all day then takes many connections, not two. A
 # venue's shared Wi-Fi is one connection: raise it for a large event.
 TRACE_SLOT_MINUTES_PER_HOUR: int = max(0, _int_env("EXCHEQUER_TRACE_SLOT_MINUTES_PER_HOUR", 30))
+# With EXCHEQUER_JOB_STOP_UNWATCHED on: how long a background trace job may
+# run with no page watching it (no progress stream open and no status poll)
+# once its last stream has closed, before it is stopped as a Stop stops it. A
+# reload re-attaches in about 2 s (EventSource retry) and the polling fallback
+# asks every 1.5 s, so this is many times either.
+JOB_UNWATCHED_GRACE_SECONDS: float = 30.0
 
 # The most individual transfers a case lists in its appendix (0 = all). Every
 # transfer on the route to the exchange, out of the reported address and into
@@ -914,6 +920,9 @@ TRACE_CANCEL_ON_DISCONNECT: bool = flag(
     "EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT",
     "Trace engine: stop a POST /trace whose client hung up, at its next provider request; "
     "on in production since 15 Nov")
+JOB_STOP_UNWATCHED: bool = flag(
+    "EXCHEQUER_JOB_STOP_UNWATCHED",
+    "#302: stop a background trace job no page has watched for JOB_UNWATCHED_GRACE_SECONDS; nothing saved")
 STORE_EXCHANGE_ROWS: bool = flag("EXCHEQUER_STORE_EXCHANGE_ROWS",
                                  "#222: name the exchange from label-store exchange rows (its own PoR list; ADR-0011)")
 CUSTODY_WALLETS: bool = flag("EXCHEQUER_CUSTODY_WALLETS",

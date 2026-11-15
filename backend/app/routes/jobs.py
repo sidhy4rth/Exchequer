@@ -5,7 +5,9 @@
     GET  /trace/jobs/{id}/events     the same as server-sent events, live
 
 A job id works like a case id: whoever holds it can watch it. A job stopped
-with DELETE stores nothing, even if its trace returns after the stop. The finished
+with DELETE stores nothing, even if its trace returns after the stop. With
+EXCHEQUER_JOB_STOP_UNWATCHED on, neither does one no page has watched for
+config.JOB_UNWATCHED_GRACE_SECONDS after its last progress stream closed. The finished
 case is stored with the starting browser's owner key, as POST /trace does,
 and its complaint particulars go only to that browser (case_privacy.py).
 """
@@ -22,7 +24,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .. import api_budget, audit, case_privacy, case_refs, jobs, ownership, pipeline, progress
+from .. import api_budget, audit, case_privacy, case_refs, config, jobs, ownership, pipeline, progress
 from ..auth import CurrentUser
 from ..pipeline import TraceRequest
 from . import cases
@@ -65,19 +67,30 @@ def _run_job(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str 
                 "but will not appear in the case history.")
         cases.record_trace_safely(stored)
         jobs.store.finish(job, result=stored)
-    except HTTPException as exc:
-        jobs.store.finish(job, error={"status_code": exc.status_code, "detail": exc.detail})
-    except api_budget.Cancelled:
-        jobs.store.finish(job, error={"status_code": 409, "detail": "The trace was stopped by the person who started it."})
-    except api_budget.TraceStopped as exc:
-        jobs.store.finish(job, error={"status_code": 503, "detail": f"The trace stopped at its {exc.reason}."})
-    except Exception:  # noqa: BLE001 -- a job must always end, and say how
-        logger.exception("Trace job %s failed", job.id)
-        jobs.store.finish(job, error={"status_code": 500,
-                                      "detail": "The trace failed unexpectedly. Try again."})
+    except Exception as exc:  # noqa: BLE001 -- a job must always end, and say how
+        if job.abandoned:
+            # Stopped because no page watched it (EXCHEQUER_JOB_STOP_UNWATCHED):
+            # whatever the stop surfaced as, it ends as POST /trace's hang-up
+            # does, audited as abandoned, and nothing of it is kept.
+            cases.record_abandoned(request)
+            jobs.store.finish(job, error={"status_code": 409, "detail": cases.ABANDONED_DETAIL})
+        else:
+            jobs.store.finish(job, error=_job_error(job, exc))
     finally:
         progress.stop(token)
         cases.release(slot)
+
+
+def _job_error(job: jobs.Job, exc: Exception) -> dict[str, Any]:
+    """How a job that raised ends: the error its snapshot shows."""
+    if isinstance(exc, HTTPException):
+        return {"status_code": exc.status_code, "detail": exc.detail}
+    if isinstance(exc, api_budget.Cancelled):
+        return {"status_code": 409, "detail": "The trace was stopped by the person who started it."}
+    if isinstance(exc, api_budget.TraceStopped):
+        return {"status_code": 503, "detail": f"The trace stopped at its {exc.reason}."}
+    logger.error("Trace job %s failed", job.id, exc_info=exc)
+    return {"status_code": 500, "detail": "The trace failed unexpectedly. Try again."}
 
 
 @router.post("/trace/jobs", status_code=202)
@@ -129,6 +142,8 @@ def _job_or_404(job_id: str) -> jobs.Job:
 @router.get("/trace/jobs/{job_id}")
 def job_status(job_id: str, http: Request) -> dict[str, Any]:
     job = _job_or_404(job_id)
+    if job.unwatched_since is not None:
+        job.unwatched_since = _clock()  # a page polling is a page watching
     snapshot = job.snapshot(with_result=True)
     if snapshot.get("result"):
         caller = ownership.owner_hash_from_headers(http.headers)
@@ -167,6 +182,48 @@ def _close_stream(job_id: str, token: str) -> None:
             _streams.pop(job_id, None)
 
 
+# EXCHEQUER_JOB_STOP_UNWATCHED: a job whose page has gone (tab closed) used to
+# run to the end and save a case nobody saw; only a Stop (DELETE) ended it.
+# Once a job's last progress stream closes, a clock starts; a stream opening
+# or a status poll (the page's fallback asks every 1.5 s) resets it, and a job
+# still unwatched after config.JOB_UNWATCHED_GRACE_SECONDS is stopped as a Stop
+# stops it. A job whose client never opened a stream (a script that polls, or
+# one that only waits) never starts the clock, so it runs as before.
+_clock = time.monotonic
+
+
+def _schedule(delay: float, callback) -> None:
+    """Run `callback` on the event loop after `delay` seconds (tests replace this)."""
+    try:
+        asyncio.get_running_loop().call_later(delay, callback)
+    except RuntimeError:  # no loop (a stream closed outside one): the job runs on, as before
+        pass
+
+
+def _watched(job_id: str) -> bool:
+    now = time.monotonic()
+    return any(now - at < STREAM_MAX_SECONDS for at in _streams.get(job_id, {}).values())
+
+
+def _unwatched(job: jobs.Job) -> None:
+    """The job's last stream has just closed: start its clock."""
+    if not config.JOB_STOP_UNWATCHED or job.status != jobs.RUNNING or job.budget is None:
+        return
+    job.unwatched_since = _clock()
+    _schedule(config.JOB_UNWATCHED_GRACE_SECONDS, lambda: _stop_if_unwatched(job))
+
+
+def _stop_if_unwatched(job: jobs.Job) -> None:
+    if job.status != jobs.RUNNING or job.budget.cancelled or job.unwatched_since is None or _watched(job.id):
+        return  # finished, stopped, or watched again (its next close starts a new clock)
+    left = config.JOB_UNWATCHED_GRACE_SECONDS - (_clock() - job.unwatched_since)
+    if left > 0:  # a poll reset the clock
+        _schedule(left, lambda: _stop_if_unwatched(job))
+        return
+    job.abandoned = True  # before the cancel, so the job's thread ends it as abandoned
+    job.budget.cancel(cases.CLIENT_DISCONNECTED)
+
+
 @router.get("/trace/jobs/{job_id}/events")
 async def job_events(job_id: str, http: Request) -> StreamingResponse:
     job = _job_or_404(job_id)
@@ -199,6 +256,8 @@ async def job_events(job_id: str, http: Request) -> StreamingResponse:
                     yield "event: heartbeat\ndata: {}\n\n"
         finally:
             _close_stream(job_id, token)
+            if not _watched(job_id):
+                _unwatched(job)
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache",
