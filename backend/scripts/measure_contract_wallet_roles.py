@@ -52,9 +52,13 @@ from app.keccak import keccak256  # noqa: E402
 from scripts import check_label_code as clc  # noqa: E402
 
 EVIDENCE = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "contract_wallet_roles.json"
-# Ethereum only. On 15 Nov 2026 arbitrum.blockscout.com and polygon.blockscout.com answered
-# every API call with a browser challenge (403), and BSC has no Blockscout; a node's
-# eth_getLogs alone misses native payments, so "value nowhere else" could not be read.
+# Ethereum only. On 15 and 16 Nov 2026 arbitrum.blockscout.com and polygon.blockscout.com
+# answered every API call with a browser challenge (403), BSC has no Blockscout, and Routescan's
+# keyless API answers "chain not supported" for all three. The keyless public nodes cannot do
+# the method either: Arbitrum's refuses log reads without a token, and Polygon's and BSC's read
+# logs only of one named contract over at most 10,000 or 50,000 blocks, so a sender's outflows in
+# every token (and its native payments, which have no logs) cannot be read: "value nowhere
+# else" could not be checked.
 BLOCKSCOUT = {"ethereum": "https://eth.blockscout.com"}
 MIN_SWEEPERS = 10   # #248's proxy had 31 in its sample; a single customer's forwarder has one
 SAMPLE = 30         # senders read per wallet
