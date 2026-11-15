@@ -29,6 +29,8 @@ nothing and needs no API keys: the live site does the tracing.
     python backend/scripts/check_demos.py --record         # re-record after updating DEMO.md
     python backend/scripts/check_demos.py --base http://localhost:8000
     python backend/scripts/check_demos.py --state demo_state.json   # the Action
+    python backend/scripts/check_demos.py --only 3,6-8 --record     # re-record just those
+    python backend/scripts/check_demos.py --wait-on-429             # sit out the hourly trace limit
 """
 from __future__ import annotations
 
@@ -44,6 +46,11 @@ from pathlib import Path
 LIVE = os.environ.get("EXCHEQUER_URL") or "https://exchequer.co.in"
 EXPECTATIONS = Path(__file__).resolve().parent.parent / "data" / "demo_expectations.json"
 TOLERANCE = 0.05
+# --wait-on-429: the live site allows 30 traces an hour per connection
+# (config.TRACES_PER_HOUR_PER_CLIENT) and says how long to wait in Retry-After.
+WAIT_429_DEFAULT = 60.0    # seconds, when a 429 carries no Retry-After
+WAIT_429_CAP = 3600.0      # never more than the limit's one-hour window
+WAIT_429_TRIES = 3         # retries of one demo before giving up on it
 
 
 def trace(base: str, demo: dict) -> dict:
@@ -85,6 +92,50 @@ def trace_with_retry(base: str, demo: dict, wait: float = 15.0) -> dict:
         print(f"  demo {demo['demo']:>2}  retrying after: {exc}")
         time.sleep(wait)
         return trace(base, demo)
+
+
+def retry_after(exc: urllib.error.HTTPError) -> float:
+    """Seconds a 429 asks to wait: its Retry-After, else the default; capped."""
+    try:
+        wait = float((exc.headers or {}).get("retry-after"))
+    except (TypeError, ValueError):
+        wait = WAIT_429_DEFAULT
+    return min(max(wait, 0.0), WAIT_429_CAP)
+
+
+def trace_waiting_on_429(base: str, demo: dict, tries: int = WAIT_429_TRIES) -> dict:
+    """trace_with_retry, sitting out up to `tries` 429s on this demo.
+
+    Opt-in (--wait-on-429): a 429 is also the site's wrong-code lockout, and
+    each retry there sends the wrong code again, so the daily Action keeps
+    stopping at the first one.
+    """
+    for attempt in range(1, tries + 1):
+        try:
+            return trace_with_retry(base, demo)
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429:
+                raise
+            wait = retry_after(exc)
+            print(f"  demo {demo['demo']:>2}  rate-limited (429): waiting {wait:.0f}s, then retry "
+                  f"{attempt} of {tries} (if this repeats, the demo code may be locked out)")
+            time.sleep(wait)
+    return trace_with_retry(base, demo)
+
+
+def parse_only(text: str) -> set[int]:
+    """'3,6-8' -> {3, 6, 7, 8}."""
+    chosen: set[int] = set()
+    for part in text.split(","):
+        first, _, last = part.strip().partition("-")
+        try:
+            low, high = int(first), int(last or first)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"not a demo number or range: {part.strip()!r}") from None
+        if low > high:
+            raise argparse.ArgumentTypeError(f"range runs backwards: {part.strip()!r}")
+        chosen.update(range(low, high + 1))
+    return chosen
 
 
 def observed(result: dict) -> dict:
@@ -133,22 +184,36 @@ def main() -> int:
     parser.add_argument("--base", default=LIVE)
     parser.add_argument("--record", action="store_true", help="overwrite expectations with what is seen now")
     parser.add_argument("--state", type=Path, help="remember volatile misses between runs in this file")
+    parser.add_argument("--only", type=parse_only, metavar="3,6-8",
+                        help="run only these demo numbers; with --record, rewrite only their entries")
+    parser.add_argument("--wait-on-429", action="store_true",
+                        help=f"on a 429, wait (Retry-After, else {WAIT_429_DEFAULT:.0f}s; at most "
+                             f"{WAIT_429_CAP:.0f}s) and retry the demo up to {WAIT_429_TRIES} times")
     args = parser.parse_args()
 
     demos = json.loads(EXPECTATIONS.read_text())
+    numbers = {demo["demo"] for demo in demos}
+    if args.only is not None and args.only - numbers:
+        parser.error(f"--only: no demo {', '.join(map(str, sorted(args.only - numbers)))} "
+                     f"(demos are {min(numbers)} to {max(numbers)})")
+    chosen = [demo for demo in demos if args.only is None or demo["demo"] in args.only]
+    run = trace_waiting_on_429 if args.wait_on_429 else trace_with_retry
     state = load_state(args.state)
     missed_before = set(state.get("volatile_misses", []))
     missed_now: set[str] = set()
     failures = 0
-    for demo in demos:
+    for demo in chosen:
         started = time.monotonic()
         try:
-            seen = observed(trace_with_retry(args.base, demo))
+            seen = observed(run(args.base, demo))
         except urllib.error.HTTPError as exc:
             if exc.code in (401, 403, 429):
                 # The demo code is wrong, stale or locked out: every other demo
                 # would be refused too, and each try counts toward the lockout.
-                print(f"✗ demo {demo['demo']:>2}  refused ({exc.code}): the demo code is wrong or stale; check the DEMO_CODE secret matches "
+                why = "the demo code is wrong or stale"
+                if exc.code == 429:
+                    why = "rate-limited (30 traces an hour; --wait-on-429 sits it out) or " + why
+                print(f"✗ demo {demo['demo']:>2}  refused ({exc.code}): {why}; check the DEMO_CODE secret matches "
                       "the site's EXCHEQUER_DEMO_CODE; stopping so no more wrong codes are sent")
                 return 1
             print(f"✗ demo {demo['demo']:>2}  could not trace: {exc}")
@@ -186,8 +251,10 @@ def main() -> int:
         print(f"\nWrote {EXPECTATIONS.name}. Check it against DEMO.md before committing.")
         return 0
     if args.state is not None:
+        # A demo this run skipped (--only) keeps yesterday's miss.
+        missed_now |= {key for key in missed_before if all(str(d["demo"]) != key for d in chosen)}
         save_state(args.state, {"volatile_misses": sorted(missed_now)})
-    print(f"\n{len(demos) - failures} of {len(demos)} demos as documented.")
+    print(f"\n{len(chosen) - failures} of {len(chosen)} demos as documented.")
     if failures:
         print("Update DEMO.md for what changed, then re-record with --record.")
     return 1 if failures else 0
