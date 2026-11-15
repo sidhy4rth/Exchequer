@@ -65,6 +65,7 @@ def add(store: Path, csv_path: Path, listed: Iterable[Path] = (), dry_run: bool 
         left_out: list[tuple[str, str, str]] = []
         corroborated = 0
         sources: dict[str, str] = {}
+        reread: set[str] = set()  # every source the CSV holds rows of, added or not: each is replaced
         with open(csv_path, newline="", encoding="utf-8") as fh:
             reader = csv.DictReader(fh)
             missing = set(COLUMNS) - set(reader.fieldnames or ())
@@ -72,6 +73,8 @@ def add(store: Path, csv_path: Path, listed: Iterable[Path] = (), dry_run: bool 
                 raise ValueError(f"{csv_path}: missing columns {sorted(missing)}")
             for row in reader:
                 chain, address = row["chain"].strip(), row["address"].strip()
+                if row["source_id"].startswith("por:"):
+                    reread.add(row["source_id"])
                 raw = encode_address(address)
                 if chain not in CHAIN_IDS or raw is None or (chain == "tron") != (len(raw) == 21):
                     left_out.append((chain, address, "not a valid address of this chain"))
@@ -121,7 +124,7 @@ def add(store: Path, csv_path: Path, listed: Iterable[Path] = (), dry_run: bool 
         db.execute(f"CREATE TABLE IF NOT EXISTS {EXCHANGE_TABLE} (address BLOB NOT NULL, chain INTEGER NOT NULL, "
                    "exchange INTEGER NOT NULL, label INTEGER NOT NULL, type INTEGER NOT NULL, basis INTEGER NOT NULL, "
                    "source INTEGER NOT NULL, PRIMARY KEY (address, chain)) WITHOUT ROWID")
-        for source_id in sources:  # a re-run replaces that source's rows
+        for source_id in sorted(reread):  # a re-run replaces that source's rows, even when none is added now
             prefix = f"{source_id}: "
             db.execute(f"DELETE FROM {EXCHANGE_TABLE} WHERE source IN "
                        "(SELECT id FROM texts WHERE substr(text, 1, ?) = ?)", (len(prefix), prefix))

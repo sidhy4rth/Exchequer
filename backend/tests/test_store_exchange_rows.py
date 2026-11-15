@@ -191,3 +191,16 @@ def test_a_dry_run_writes_nothing(tmp_path):
     write_por_csv(por, [OKX_A])
     assert add(tmp_path / "s.db", por, dry_run=True)["added"] == 1
     assert LabelStore(tmp_path / "s.db").has_exchange_rows is False
+
+
+def test_a_re_run_whose_rows_are_all_left_out_still_replaces_that_source(store_path, tmp_path):
+    # The source's list now holds only an address no row may name: none of its
+    # earlier rows may stay behind, as if the new file still listed them.
+    por = tmp_path / "okx_third.csv"
+    write_por_csv(por, [USDT_TRON])
+    assert add(store_path, por)["added"] == 0
+    db = sqlite3.connect(store_path)
+    held = db.execute(f"SELECT COUNT(*) FROM {EXCHANGE_TABLE}").fetchone()[0]
+    meta = json.loads(db.execute("SELECT value FROM meta WHERE key='exchange_rows'").fetchone()[0])
+    db.close()
+    assert held == 0 and meta == {}
