@@ -135,3 +135,29 @@ def test_a_re_run_replaces_a_source_deposit_rows(tmp_path):
     assert held == 0 and rows == 1
     assert LabelStore(out).exchange_row("tron", OKX_B)["type"] == "exchange_wallet"
     assert LabelStore(out).exchange_row("tron", OKX_A) is None
+
+
+def test_an_address_listed_twice_as_a_deposit_is_held_once(tmp_path):
+    # A CSV with one row per coin repeats an address: the repeat is one row, never a failed run.
+    out, por = empty_store(tmp_path), tmp_path / "p.csv"
+    write_rows(por, [deposit(OKX_B), deposit(OKX_B)])
+    found = add(out, por)
+    assert (found["added"], found["deposit_rows"]) == (1, 1)
+    assert LabelStore(out).exchange_row("tron", OKX_B)["basis"]["deposit"]["sweeps_to"] == OKX_HOT_8
+
+
+@pytest.mark.parametrize("order", ["deposit_first", "own_first"])
+def test_an_address_listed_as_both_a_deposit_and_an_own_wallet_is_left_out(tmp_path, order):
+    # Which one the store held would depend on row order, and the two are read oppositely (ADR-0012):
+    # the exchange's own wallet, or one customer's deposit address.
+    out, por = empty_store(tmp_path), tmp_path / "p.csv"
+    both = [deposit(OKX_B), {"address": OKX_B}]
+    write_rows(por, both if order == "deposit_first" else both[::-1])
+    found = add(out, por)
+    assert (found["added"], found["deposit_rows"]) == (0, 0)
+    assert LabelStore(out).exchange_row("tron", OKX_B) is None
+    assert "listed both as an own wallet and as a deposit address" in _left_out(por)
+    db = sqlite3.connect(out)
+    held = db.execute(f"SELECT COUNT(*) FROM {DEPOSIT_TABLE}").fetchone()[0]
+    db.close()
+    assert held == 0
