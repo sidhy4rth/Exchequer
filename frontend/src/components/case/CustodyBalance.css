@@ -1,0 +1,10 @@
+/* Custody balance check on the Letters tab (CustodyBalance.jsx); rows reuse the requests log's look. */
+.custody-balance .cb-row { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); font-size: 13px; }
+.custody-balance .cb-row .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.custody-balance .cb-row.mismatch { border-color: var(--risk-soft); }
+.custody-balance .cb-row .note { margin: 4px 0; overflow-wrap: anywhere; }
+.custody-balance .cb-facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 4px 0; font-size: 12px; }
+.custody-balance .cb-facts dt { color: var(--text-2); }
+.custody-balance .cb-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.custody-balance .cb-evidence { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.custody-balance .mono { font-family: var(--mono); }
