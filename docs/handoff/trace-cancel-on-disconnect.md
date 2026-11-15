@@ -4,7 +4,7 @@
 - **Issue**: #225
 - **Branch**: `feat/trace-cancel-on-disconnect`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-15
+- **Last worked on**: Sidhyarth, 2026-11-15 (live-site findings added)
 - **Status**: merged in #227 (with #228) on 2026-11-15, behind `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` (off)
 
 ## Done
@@ -23,7 +23,11 @@
 
 ## Next
 
-1. Owner: decide whether to set `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT=1` on Render. Before relying on it, confirm on the live site that Render's proxy closes the upstream connection when the client goes away (start a trace with curl, kill curl, look for `case.trace_abandoned` in the audit log).
+1. Owner: run the Render-logs check in `docs/flag-rollout.md` (section `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`), once with `--http1.1` and once with `--http2`, before deciding whether to set `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT=1` on Render. Keep it off until then. With the flag off the audit log cannot show the outcome (`case.trace` is recorded either way); the uvicorn access line can.
+
+## Measured on the live site (15 Nov 2026, flag off)
+
+Details and numbers in `docs/flag-rollout.md`. On the progress stream `GET /trace/jobs/{id}/events` (3 open streams per job, a 4th gets 429 until a place frees), an HTTP/2 client's hang-up freed the place within about 0.1 s with no writes in between; an HTTP/1.1 client's hang-up freed it only just after the next progress write (2.3–5.9 s, 3 rounds). Neither Render nor Cloudflare documents this. Inference: the flag likely works for browsers (HTTP/2 or 3) and likely does nothing for HTTP/1.1 scripts such as `check_demos.py`, because `POST /trace` writes nothing until the trace ends. Not measured: the `POST /trace` phase before any byte is written.
 
 ## Open questions
 
