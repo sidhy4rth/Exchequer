@@ -13,9 +13,11 @@ a bank publishes at
 (PDF ModDate 11 Feb 2026, 52 pages, 2,587,996 bytes, SHA-256
 65400b47a16ae9986e7bb9b339b26db920435a3ce6c128e804492b6e4be3bd42, fetched
 15 Nov 2026). Every quote below was checked against that file's text; "…" marks
-words left out, and the PDF ligature glyphs (fi, fl) are written as plain
-letters. Other versions of the SOP exist (courts cite copies dated 02.01.2026
-and 10.04.2026); the officer should check the current one.
+words left out, and the PDF ligature glyphs (ff, fi, ffi, fl) are written as
+plain letters. Page numbers are the PDF pages as rendered: a plain text dump of
+this file puts some text a page early, because its layout layers overlap. Other
+versions of the SOP exist (courts cite copies dated 02.01.2026 and 10.04.2026);
+the officer should check the current one.
 
 Only bank holds get reminders. Annexure I (the hold notice under s.168 read with
 s.94 BNSS) is addressed to a bank, and section 10.1 covers grievances about an
@@ -55,7 +57,7 @@ BANK_HOLD = [
     {
         "id": "s10-1e-15-days",
         "section": "§10.1(e)",
-        "page": 23,
+        "page": 24,
         "quote": ("If the IO or Police Officer is not satisfied with the explanation submitted by the aggrieved "
                   "person, she shall submit her remarks on the Grievance Redressal Module within 15 calendar days "
                   "of raising the grievance by the bank"),
@@ -64,7 +66,7 @@ BANK_HOLD = [
     {
         "id": "s10-1f-2-days",
         "section": "§10.1(f)",
-        "page": 23,
+        "page": 24,
         "quote": ("As instructed by the District Grievance Officer, the IO or Police Officer shall take appropriate "
                   "action and update the portal within 2 calendar days. Banks and FIs should furnish the requested "
                   "information at the earliest and not later than 2 calendar days"),
@@ -73,7 +75,7 @@ BANK_HOLD = [
     {
         "id": "s10-1-extension",
         "section": "§10.1, closing paragraph",
-        "page": 23,
+        "page": 24,
         "quote": ("Before carrying out the discontinuation of the hold, intimation will be sent to the SHO at least "
                   "15 calendar days before the date of expiry of the 90 calendar days from the date of raising the "
                   "grievance. … they may ask for an extension for continuation for up to 90 additional calendar "
@@ -83,7 +85,7 @@ BANK_HOLD = [
     {
         "id": "s6-1k-1-week",
         "section": "§6.1(k)",
-        "page": 12,
+        "page": 13,
         "quote": ("If the amount is put on hold, the bank or FI will also update the account related KYC details "
                   "… of the beneficiary account holder within 1 week of reporting."),
         "context": "the bank's step, for the officer to check",

@@ -105,3 +105,18 @@ def test_the_list_route_carries_the_reminders_only_with_the_flag(monkeypatch):
 
 def test_the_flag_is_registered_and_off_by_default():
     assert config.FLAGS["EXCHEQUER_SOP_DEADLINES"]["on"] is False
+
+
+def test_each_reminder_cites_the_pdf_page_its_quote_is_printed_on():
+    # Checked against the rendered pages of the copy (SHA-256 65400b47…): §6.1(k)
+    # is printed on page 13 and §10.1(e), (f) and the closing paragraph on page 24.
+    # A plain text dump of this file puts them a page early, because its layout
+    # layers overlap the next page.
+    assert {r["id"]: r["page"] for r in sop_reminders.BANK_HOLD} == {
+        "annex1-90-days": 34, "s10-1e-15-days": 24, "s10-1f-2-days": 24, "s10-1-extension": 24, "s6-1k-1-week": 13,
+    }
+
+
+def test_the_90_day_date_counts_calendar_days_through_a_leap_day():
+    got = sop_reminders.for_asset("bank", "held", "2027-12-01")
+    assert got[0]["date"] == "2028-02-29"  # 30 + 31 + 29 days

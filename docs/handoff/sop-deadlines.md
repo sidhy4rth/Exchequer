@@ -12,13 +12,13 @@
 - `backend/app/sop_reminders.py`: five reminders for a bank row that is still held. Each one has the section, the PDF page, the quote, and the source URL and copy date. `for_asset()` returns none for exchange, issuer and custody rows, or once a hold has ended.
 - `backend/app/assets.py`: when the flag is on, `summary()` adds `sop_reminders`. When it is off, the rows are unchanged. The 45-day logic (`DEADLINE_DAYS`, `deadline`, `days_left`, `due`, `due_for`, the home-page card) is untouched.
 - `frontend/src/components/case/SopReminders.jsx` (+ `.css`, `.test.jsx`): a collapsed list under the row, mounted with one import and one line in `AssetsPanel.jsx`.
-- Tests: `backend/tests/test_sop_reminders.py` (9) and `SopReminders.test.jsx` (2). `test_assets.py` and `AssetsPanel.test.jsx` are unchanged.
+- Tests: `backend/tests/test_sop_reminders.py` (11) and `SopReminders.test.jsx` (2). `test_assets.py` and `AssetsPanel.test.jsx` are unchanged.
 
 ## The SOP copy
 
 - MHA, "Standard Operating Procedure (SOP) for NCRP-CFCFRMS, Custody, Restoration of money and Grievance Redressal": https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf
 - PDF ModDate 11 Feb 2026, 52 pages, SHA-256 `65400b47a16ae9986e7bb9b339b26db920435a3ce6c128e804492b6e4be3bd42`, fetched 15 Nov 2026. This is the copy the feature 8 research and the freeze legal brief read.
-- Each quote was checked against this copy's text, on the cited page.
+- Each quote was checked against this copy's text, on the cited page as rendered (pre-review: §6.1(k) is on page 13 and §10.1(e), (f) and the closing paragraph on page 24; a plain text dump puts them a page early).
 
 ## Decisions
 

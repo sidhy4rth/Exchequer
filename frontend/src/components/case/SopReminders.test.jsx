@@ -13,7 +13,7 @@ const NINETY = {
   source_url: URL, copy: 'copy dated 11 Feb 2026', reminder_only: true, note: NOTE,
 }
 const WEEK = {
-  ...NINETY, id: 's6-1k-1-week', section: '§6.1(k)', page: 12, date: null, date_label: null,
+  ...NINETY, id: 's6-1k-1-week', section: '§6.1(k)', page: 13, date: null, date_label: null,
   hint: 'Reminder, per MHA SOP for NCRP-CFCFRMS §6.1(k) (copy dated 11 Feb 2026): “… within 1 week of reporting.”',
 }
 
@@ -27,7 +27,7 @@ describe('SOP reminders on a bank hold', () => {
     expect(screen.getAllByText(/Day 90/)).toHaveLength(1) // only the dated one shows a date
     const links = screen.getAllByRole('link')
     expect(links.map((a) => a.getAttribute('href'))).toEqual([URL, URL])
-    expect(links[1]).toHaveTextContent('Source, PDF page 12')
+    expect(links[1]).toHaveTextContent('Source, PDF page 13')
   })
 
   it('shows nothing when the row carries no reminders (flag off, or not a bank hold)', () => {
