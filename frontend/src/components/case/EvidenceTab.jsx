@@ -9,6 +9,8 @@ import CaseBundleButton from './CaseBundleButton'
 import ExhibitsPanel from './ExhibitsPanel'
 import IdentifiersPanel from './IdentifiersPanel'
 import TasksPanel from './TasksPanel'
+import StatementPanel from './StatementPanel'
+import CdrPanel from './CdrPanel'
 
 /** Truncation reasons come back one sentence per address. Grouped by kind
  * they read as a summary rather than a wall. */
@@ -349,6 +351,8 @@ function EvidenceTab({ result, unit, depth, recorded, recheckId }) {
     <TasksPanel result={result} />
     <ExhibitsPanel result={result} />
     <IdentifiersPanel result={result} />
+    <StatementPanel result={result} />
+    <CdrPanel result={result} />
   </>
 }
 

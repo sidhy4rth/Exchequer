@@ -59,6 +59,8 @@ from .routes import exhibits as exhibit_register
 from .routes import identifiers as identifier_register
 from .routes import letters_of_request as letter_of_request
 from .routes import tasks as task_list
+from .routes import statements as statement_rows
+from .routes import cdr as cdr_summaries
 
 # Re-exported: scripts (scout.py) and the warm-up call the pipeline by these
 # names. The pipeline itself lives in app/pipeline.py.
@@ -256,6 +258,8 @@ app.include_router(asset_register.router)
 app.include_router(exhibit_register.router)
 app.include_router(custody_wallets.router)
 app.include_router(identifier_register.router)
+app.include_router(statement_rows.router)
+app.include_router(cdr_summaries.router)
 app.include_router(certificate_drafts.router)
 app.include_router(task_list.router)
 app.include_router(case_bundles.router)
