@@ -482,6 +482,23 @@ fails, saying what to do, once `checked_on` is more than 180 days
 never moves by itself, so CI does not start failing on its own: move it forward
 when you re-check, or when you notice it is old.
 
+The real date is checked by `backend/scripts/check_fiu_staleness.py`, which CI
+runs after the backend tests on every pull request (`test.yml`) and every
+Monday with no commit needed (`fiu-staleness.yml`, also runnable by hand from
+the Actions tab). Once `checked_on` is more than 180 days old it prints
+"WARNING: fiu_ind_status.json was last checked on ..., more than 180 days
+before ...: re-check every entry ... (docs/flag-rollout.md,
+EXCHEQUER_FIU_IND_NOTE), then update _meta.checked_on" and adds a warning
+annotation to the run ("FIU-IND sources due a re-check"); it says the same if
+the file is unusable. It always exits 0, so it never blocks a merge or turns a
+run red: look for the annotation on the weekly run. When it appears, follow the
+steps below.
+
+A `checked_on`, `_meta.register.as_of` or fact date that is not a real day
+(e.g. `2026-02-30`) is caught when the file is read: a bad `checked_on` or
+`as_of` makes the file unusable (no note at all, error logged), as a missing
+`checked_on` does, and a bad fact date skips that entry (warning logged).
+
 1. Open every source the file cites (the URLs in its entries and in
    `_meta.register`) and check each entry's date, wording, source name and
    amount against it. A fact the source no longer supports is removed, not

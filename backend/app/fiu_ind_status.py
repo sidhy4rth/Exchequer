@@ -10,7 +10,8 @@ note, only with EXCHEQUER_FIU_IND_NOTE on. It states the sources' facts and
 their dates, in date order, each with its source, and the day Exchequer last
 checked those sources (`_meta.checked_on`); it draws no conclusion from them.
 The sources are re-checked at least every STALE_AFTER_DAYS days
-(docs/flag-rollout.md, tests/test_fiu_ind_status.py).
+(docs/flag-rollout.md, tests/test_fiu_ind_status.py); scripts/check_fiu_staleness.py
+warns in CI, by the real date, once they are due.
 
 Looked up by the exchange's name, like exchange_status.py, so a case stored
 earlier is covered too. An exchange with no entry gets no note: nothing is
@@ -39,8 +40,20 @@ def _key(name: Any) -> str:
     return exchange_status.marked(name.strip(), None).casefold() if isinstance(name, str) else ""
 
 
+def _is_day(value: Any) -> bool:
+    """A real calendar day written YYYY-MM-DD: "2026-02-30" matches the pattern but is no day, and
+    would make note() raise while a letter is drafted, so it is caught here, when the file is read."""
+    if not (isinstance(value, str) and _ISO.fullmatch(value)):
+        return False
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _dated(fact: Any) -> bool:
-    return (isinstance(fact, dict) and isinstance(fact.get("date"), str) and bool(_ISO.fullmatch(fact["date"]))
+    return (isinstance(fact, dict) and _is_day(fact.get("date"))
             and str(fact.get("url", "")).startswith("https://") and bool(fact.get("text"))
             and bool(fact.get("source")))
 
@@ -52,10 +65,10 @@ def _document() -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
         document = json.loads((config.DATA_DIR / STATUS_FILE).read_text(encoding="utf-8"))
         register = {**document["_meta"]["register"], "checked_on": document["_meta"]["checked_on"]}
         rows = document["exchanges"]
-        if not (isinstance(rows, dict) and _ISO.fullmatch(register["as_of"])
+        if not (isinstance(rows, dict) and _is_day(register["as_of"])
                 and register["url"].startswith("https://") and register["source"]
-                and _ISO.fullmatch(register["checked_on"])):
-            raise ValueError("no register snapshot, no 'checked_on' or no 'exchanges' object")
+                and _is_day(register["checked_on"])):
+            raise ValueError("no register snapshot, no real 'checked_on' day or no 'exchanges' object")
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
         logger.error("%s unusable; no FIU-IND note is shown: %s", STATUS_FILE, exc)
         return {}, {}

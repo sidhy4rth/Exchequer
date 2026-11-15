@@ -70,6 +70,9 @@ jobs:
       - run: pip install --require-hashes -r requirements-dev.txt
       - run: ruff check app scripts tests migrations
       - run: python -m pytest -p no:warnings
+      # Warns (never fails) once the FIU-IND sources are more than 180 days
+      # old by the real date; fiu-staleness.yml runs it weekly too.
+      - run: python scripts/check_fiu_staleness.py
 
   # The suite migrates SQLite; the deployment may run on Postgres
   # (DATABASE_URL), so the same migrations run here against a real one.
