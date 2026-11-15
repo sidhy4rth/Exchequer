@@ -195,7 +195,8 @@
         "0x562680a4dc50ed2f14d75bf31f494cfe0b8d10a1": "EIP-7702 delegated account, delegate 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b; type hot_wallet kept (Hotbit 9 (defunct))",
         "0x59e0cda5922efba00a57794faf09bf6252d64126": "EIP-7702 delegated account, delegate 0x0000fb7702036ff9f76044a501ac1aa74cbab16b; type hot_wallet kept (Bitkub: Hot Wallet 3)",
         "0x68b22215ff74e3606bd5e6c1de8c2d68180c85f7": "EIP-7702 delegated account, delegate 0x47e747f5e8cb5819c966292dd969d989ae9dea5e; type exchange_wallet kept (BitMart 2 (winding down))",
-        "0x8696e84ab5e78983f2456bcb5c199eea9648c8c2": "EIP-7702 delegated account, delegate 0x17c11fddadac2b341f2455afe988fec4c3ba26e3; type cold_wallet kept (Coincheck Cold 2)"
+        "0x8696e84ab5e78983f2456bcb5c199eea9648c8c2": "EIP-7702 delegated account, delegate 0x17c11fddadac2b341f2455afe988fec4c3ba26e3; type cold_wallet kept (Coincheck Cold 2)",
+        "0xefda0cb780a8564903285ed25df3cc024f3b2982": "EIP-7702 delegated account, delegate 0xcc0c946eecf01a4bc76bc333ea74ceb04756f17b; type exchange_wallet kept (XT.com: Hot Wallet)"
       },
       "left_for_review": {
         "0x0bc7b31bf8ffac8213e496102167fe73fc30937a": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinmetro 6)",
@@ -375,7 +376,8 @@
       "added": {
         "OKX": 47
       }
-    }
+    },
+    "fiu_named_exchanges": "79 wallets of exchanges FIU-IND acted against that had none here (BingX 45, Bitrue 2, LBank 15, Phemex 3, XT.com 14) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
   },
   "labels": {
     "0x05f51aab068caa6ab7eeb672f88c180f67f17ec7": {
@@ -128065,6 +128067,401 @@
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
       "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 22 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 124,545"
+    },
+    "0x065ac3d33fec104fba9f2f4d674afaa7c4ebcf43": {
+      "exchange": "BingX",
+      "label": "BingX 27",
+      "type": "exchange_wallet"
+    },
+    "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921": {
+      "exchange": "BingX",
+      "label": "BingX 29",
+      "type": "exchange_wallet"
+    },
+    "0x2b9287402e077f866a067176217ee6ec0e24e4cc": {
+      "exchange": "BingX",
+      "label": "BingX 47",
+      "type": "exchange_wallet"
+    },
+    "0x2eecc9026534fd430ac83c5007b068476fc5dc1f": {
+      "exchange": "BingX",
+      "label": "BingX 44",
+      "type": "exchange_wallet"
+    },
+    "0x406c22b8740ae955b04fd11c2061e053807e2a69": {
+      "exchange": "BingX",
+      "label": "BingX 9",
+      "type": "exchange_wallet"
+    },
+    "0x434742703055bd20f42142d9d70b0735a5eb1b14": {
+      "exchange": "BingX",
+      "label": "BingX 48",
+      "type": "exchange_wallet"
+    },
+    "0x4597a8206978c5de22173432b2f0cb899eef9fa3": {
+      "exchange": "BingX",
+      "label": "BingX 10",
+      "type": "exchange_wallet"
+    },
+    "0x474ac5cb62d7acedc9990d4daafa0c39d9478fbb": {
+      "exchange": "BingX",
+      "label": "BingX 7",
+      "type": "exchange_wallet"
+    },
+    "0x47dd7b40346037d7ca47d45e40c66a2f351edb20": {
+      "exchange": "BingX",
+      "label": "BingX 43",
+      "type": "exchange_wallet"
+    },
+    "0x5286530c8a31dec3f523200832d10378239bea66": {
+      "exchange": "BingX",
+      "label": "BingX 37",
+      "type": "exchange_wallet"
+    },
+    "0x58900914802109a1c1010526eaf34399a75f2288": {
+      "exchange": "BingX",
+      "label": "BingX 17",
+      "type": "exchange_wallet"
+    },
+    "0x62a6557a60ee2920b55ca5f11b707844ffb61b11": {
+      "exchange": "BingX",
+      "label": "BingX 38",
+      "type": "exchange_wallet"
+    },
+    "0x62d96cf5bea5970689c651fc103bb5b80c5bcec1": {
+      "exchange": "BingX",
+      "label": "BingX 49",
+      "type": "exchange_wallet"
+    },
+    "0x66486b5534abf6403fef2b4d8aefa5425de28cf3": {
+      "exchange": "BingX",
+      "label": "BingX 52",
+      "type": "exchange_wallet"
+    },
+    "0x6bb65f31ee5567cc9a92ddd29b6d076cd674d4c6": {
+      "exchange": "BingX",
+      "label": "BingX 30",
+      "type": "exchange_wallet"
+    },
+    "0x6c69fa64ec451b1bc5b5fbaa56cf648a281634be": {
+      "exchange": "BingX",
+      "label": "BingX 15",
+      "type": "exchange_wallet"
+    },
+    "0x72348778639788e0226f9e91aeb83a07b496665d": {
+      "exchange": "BingX",
+      "label": "BingX 36",
+      "type": "exchange_wallet"
+    },
+    "0x74b0e133bee3384dfcfa60b31d85d8e2062de811": {
+      "exchange": "BingX",
+      "label": "BingX 40",
+      "type": "exchange_wallet"
+    },
+    "0x766182bfa8b8790d61c4d7e7912c1c3a6f42cef6": {
+      "exchange": "BingX",
+      "label": "BingX 3",
+      "type": "exchange_wallet"
+    },
+    "0x78751991f163081b432b3e84a9f1e9ec96c9c701": {
+      "exchange": "BingX",
+      "label": "BingX 32",
+      "type": "exchange_wallet"
+    },
+    "0x7b0d89a97c6749f30c0f527281700f170007947b": {
+      "exchange": "BingX",
+      "label": "BingX 54",
+      "type": "exchange_wallet"
+    },
+    "0x7c217eb128337c4b44ca9093ea9a9984b1803488": {
+      "exchange": "BingX",
+      "label": "BingX 24",
+      "type": "exchange_wallet"
+    },
+    "0x9bd8135e586161753bee9c3be2b6cdd25ebeb346": {
+      "exchange": "BingX",
+      "label": "BingX 33",
+      "type": "exchange_wallet"
+    },
+    "0xa0fca8fa8e9c6aa77305f94be0e03908d0a42900": {
+      "exchange": "BingX",
+      "label": "BingX 5",
+      "type": "exchange_wallet"
+    },
+    "0xa1ca8b54cb25fb0bd2090061e63e13016a6f2e11": {
+      "exchange": "BingX",
+      "label": "BingX 6",
+      "type": "exchange_wallet"
+    },
+    "0xa4512426342fb6bbb48d6c6a1a35efde929e7773": {
+      "exchange": "BingX",
+      "label": "BingX 51",
+      "type": "exchange_wallet"
+    },
+    "0xa60efe89e07cfcf83eb30f3b063834f0f8b30466": {
+      "exchange": "BingX",
+      "label": "BingX 42",
+      "type": "exchange_wallet"
+    },
+    "0xa88f86e5685fca7c5d6de0e4d944875b007137b5": {
+      "exchange": "BingX",
+      "label": "BingX 8",
+      "type": "exchange_wallet"
+    },
+    "0xaf1e33f8153f25e304dec5cb544b5b6ccc5520ed": {
+      "exchange": "BingX",
+      "label": "BingX 23",
+      "type": "exchange_wallet"
+    },
+    "0xb994d148aa9a45f4182bce93f53e9e07949b55e6": {
+      "exchange": "BingX",
+      "label": "BingX 45",
+      "type": "exchange_wallet"
+    },
+    "0xbb936d7cd3cdc6ac01088916d939ca5207cd84c2": {
+      "exchange": "BingX",
+      "label": "BingX 12",
+      "type": "exchange_wallet"
+    },
+    "0xbcea70b89fb6eabace33b8ba7a7f719e8782981c": {
+      "exchange": "BingX",
+      "label": "BingX 53",
+      "type": "exchange_wallet"
+    },
+    "0xc3dcd744db3f114f0edf03682b807b78a227bf74": {
+      "exchange": "BingX",
+      "label": "BingX 20",
+      "type": "exchange_wallet"
+    },
+    "0xc4334a9af50c80a12c484de643149f6159bdd110": {
+      "exchange": "BingX",
+      "label": "BingX 4",
+      "type": "exchange_wallet"
+    },
+    "0xc62559777bf2f5aeef9ad924519a463ede374d09": {
+      "exchange": "BingX",
+      "label": "BingX 50",
+      "type": "exchange_wallet"
+    },
+    "0xc65d821383c20421cc89f622478c39a9e3d1e0c6": {
+      "exchange": "BingX",
+      "label": "BingX 34",
+      "type": "exchange_wallet"
+    },
+    "0xcb95ca610c91629c835b129355999b7acdc4cc06": {
+      "exchange": "BingX",
+      "label": "BingX 28",
+      "type": "exchange_wallet"
+    },
+    "0xd38cf87f114f2a0582c329fb9df4f7044ce71330": {
+      "exchange": "BingX",
+      "label": "BingX 26",
+      "type": "exchange_wallet"
+    },
+    "0xda43c54ce5083885f561e05fd6220b7096be246c": {
+      "exchange": "BingX",
+      "label": "BingX 2",
+      "type": "exchange_wallet"
+    },
+    "0xe18bb692ae7d58982c62621a3d13743d23de852f": {
+      "exchange": "BingX",
+      "label": "BingX 35",
+      "type": "exchange_wallet"
+    },
+    "0xe4516477adacc6682cf18069475f676a5b5667f9": {
+      "exchange": "BingX",
+      "label": "BingX 14",
+      "type": "exchange_wallet"
+    },
+    "0xed5e461999b1fedd00797a818edd75c727ed948f": {
+      "exchange": "BingX",
+      "label": "BingX 13",
+      "type": "exchange_wallet"
+    },
+    "0xef317e433b0836f294866d43f67d6871b609b351": {
+      "exchange": "BingX",
+      "label": "BingX 39",
+      "type": "exchange_wallet"
+    },
+    "0xefa02443139f31e0336608e5a2f99d26784e4bfd": {
+      "exchange": "BingX",
+      "label": "BingX 11",
+      "type": "exchange_wallet"
+    },
+    "0xf28f8f8dd8cf0b5eeed05c51167de5390418efdd": {
+      "exchange": "BingX",
+      "label": "BingX 31",
+      "type": "exchange_wallet"
+    },
+    "0x6cc8dcbca746a6e4fdefb98e1d0df903b107fd21": {
+      "exchange": "Bitrue",
+      "label": "Bitrue",
+      "type": "exchange_wallet"
+    },
+    "0xd205a958527f083f1b222061b4d60d147fec5044": {
+      "exchange": "Bitrue",
+      "label": "Bitrue 2",
+      "type": "exchange_wallet"
+    },
+    "0x0e80abb31ace45ae26f9a2943acaab72e77de9be": {
+      "exchange": "LBank",
+      "label": "LBank 5",
+      "type": "exchange_wallet"
+    },
+    "0x11b1e83818028a8f44ef84613d5c058734b2d5cf": {
+      "exchange": "LBank",
+      "label": "LBank 3",
+      "type": "exchange_wallet"
+    },
+    "0x120051a72966950b8ce12eb5496b5d1eeec1541b": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 3",
+      "type": "exchange_wallet"
+    },
+    "0x22f83e4b9cb95cb99b88e8f4f15ea598c74c2788": {
+      "exchange": "LBank",
+      "label": "LBank 1",
+      "type": "exchange_wallet"
+    },
+    "0x43cbdc908a0860ae23fa06aa5b20dfee43c196a6": {
+      "exchange": "LBank",
+      "label": "LBank 2",
+      "type": "exchange_wallet"
+    },
+    "0x4ef08512caf43cba05fda863da662942b258b237": {
+      "exchange": "LBank",
+      "label": "LBank 20",
+      "type": "exchange_wallet"
+    },
+    "0x74922ba81e614520f5321d9229852f7d65541bc3": {
+      "exchange": "LBank",
+      "label": "LBank 21",
+      "type": "exchange_wallet"
+    },
+    "0x7ff77c761e5669d1696059a3b46cda0ae293aae3": {
+      "exchange": "LBank",
+      "label": "LBank 4",
+      "type": "exchange_wallet"
+    },
+    "0xa1b8a51aa3e5c4c98988b45eeabfc0baed08e660": {
+      "exchange": "LBank",
+      "label": "LBank 18",
+      "type": "exchange_wallet"
+    },
+    "0xa690621b1d2f8cc06de2de11e4cf69935f82655a": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 6",
+      "type": "exchange_wallet"
+    },
+    "0xb0e5ec2a0bb8b8f3a727787f90b959611e4062b7": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 9",
+      "type": "exchange_wallet"
+    },
+    "0xc06e0513a150a021104fdcdd20ce362fa593ba1f": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 2",
+      "type": "exchange_wallet"
+    },
+    "0xe0f0aa98b4a4d305ac4a04d830c96a158bda9cd8": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 8",
+      "type": "exchange_wallet"
+    },
+    "0xe5a8b35eaa3c14e0a6514f800825e1e6687bf23e": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 4",
+      "type": "exchange_wallet"
+    },
+    "0xfa9f7a1cbfbcb688729c522b4f0905ccf4d26d25": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 7",
+      "type": "exchange_wallet"
+    },
+    "0x35d2d03607b9155b42cf673102fe58251ac4f644": {
+      "exchange": "Phemex",
+      "label": "Phemex 3",
+      "type": "exchange_wallet"
+    },
+    "0x50be13b54f3eebbe415d20250598d81280e56772": {
+      "exchange": "Phemex",
+      "label": "Phemex",
+      "type": "exchange_wallet"
+    },
+    "0xf7d13c7dbec85ff86ee815f6dcbb3dedac78ca49": {
+      "exchange": "Phemex",
+      "label": "Phemex 2",
+      "type": "exchange_wallet"
+    },
+    "0x07888c3c5d25fa74ae04a9ead1fb1cf0e7743689": {
+      "exchange": "XT.com",
+      "label": "XT.com 4",
+      "type": "exchange_wallet"
+    },
+    "0x104703893f56243c0e56441a99eb3f32e1ed6ad2": {
+      "exchange": "XT.com",
+      "label": "XT.com 3",
+      "type": "exchange_wallet"
+    },
+    "0x3fcad6c6fb6bffbb3585f2a401fbc87a6719d28d": {
+      "exchange": "XT.com",
+      "label": "XT.com 12",
+      "type": "exchange_wallet"
+    },
+    "0x61459d345779b9d8ceaf2b1472a60805cb699aae": {
+      "exchange": "XT.com",
+      "label": "XT.com 18",
+      "type": "exchange_wallet"
+    },
+    "0x80309282231e9e01c74c4e0efed35b063e6c5d27": {
+      "exchange": "XT.com",
+      "label": "XT.com 9",
+      "type": "exchange_wallet"
+    },
+    "0x8c395e3fb26939438acd5ca4be7684752829e269": {
+      "exchange": "XT.com",
+      "label": "XT.com 10",
+      "type": "exchange_wallet"
+    },
+    "0x98a79dbf216daef423bab001e23795f606bf7c2e": {
+      "exchange": "XT.com",
+      "label": "XT.com 19",
+      "type": "exchange_wallet"
+    },
+    "0xb082e500faecb492e87f0176b38c2626a185ddd7": {
+      "exchange": "XT.com",
+      "label": "XT.com 13",
+      "type": "exchange_wallet"
+    },
+    "0xcab044b301d94875ac1502b73e54d63b0162c70f": {
+      "exchange": "XT.com",
+      "label": "XT.com 7",
+      "type": "exchange_wallet"
+    },
+    "0xde65ff89287c1a8da978d4c6b31edc3fc664f019": {
+      "exchange": "XT.com",
+      "label": "XT.com 15",
+      "type": "exchange_wallet"
+    },
+    "0xe0a616c3659be29567e08819772e6905307adf21": {
+      "exchange": "XT.com",
+      "label": "XT.com 2",
+      "type": "exchange_wallet"
+    },
+    "0xe5b8ff1ca1c3ef2ac704783d6473ee5a9be7e02d": {
+      "exchange": "XT.com",
+      "label": "XT.com 6",
+      "type": "exchange_wallet"
+    },
+    "0xea04c61512eb2ef00a7ac89fb812c66b7118b60d": {
+      "exchange": "XT.com",
+      "label": "XT.com 16",
+      "type": "exchange_wallet"
+    },
+    "0xefda0cb780a8564903285ed25df3cc024f3b2982": {
+      "exchange": "XT.com",
+      "label": "XT.com: Hot Wallet",
+      "type": "exchange_wallet"
     }
   },
   "_unverified_pending": {
