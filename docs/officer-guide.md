@@ -16,8 +16,8 @@ Each section is marked:
 - **Coming: in review**: built and in review, with no switch. It appears on
   the site once it is merged.
 
-Status is as of 15 November 2026. On that day the site ran the code merged up
-to #248 (build 87d5881); anything merged after it reaches the site with the
+Status is as of 15 November 2026. That evening the site ran the code merged up
+to #274 (build 97f1bae); anything merged after it reaches the site with the
 next deploy. A switch counts as on only where the site's settings
 (`render.yaml`) turn it on. `docs/suite-features.md`
 tracks status for the team.
@@ -87,6 +87,13 @@ cases; **Bulk intake** traces a CSV of complaints as one batch.
 7. Under **Signed report**, download the report as PDF or text, or the graph
    file. Anyone can check a copy of the report on the **Verify a report** page.
 
+**Who the report names as its issuer** (live, #240): a report downloaded now
+names https://exchequer.co.in under "Issued by", and letters and certificate
+drafts say to check the report at https://exchequer.co.in/verify. The signing
+key is the same as before (fingerprint beginning `f9427acc`). A report
+downloaded earlier names https://exchequer-6gnl.onrender.com and still checks
+as genuine on the Verify page (#239).
+
 **What it records:** the case, every provider response it read (each hashed,
 listed in the report's evidence manifest), and the signed report.
 
@@ -95,8 +102,11 @@ listed in the report's evidence manifest), and the signed report.
 - A match names the exchange address where the funds arrived, and how sure the
   trace is (a labelled deposit address, an inferred one, a wallet the exchange
   runs, or an explorer's tag). It does not name the account holder.
-- A trace stops at a mixer. It follows one asset, and one swap into USDT or
-  USDC at a known router; other swaps and bridges end the trail.
+- A trace stops at a mixer. A privacy protocol is not a mixer stop (see
+  "Privacy protocols on the route" below). It follows one asset, and one swap
+  into USDT or USDC at a known router; other swaps and bridges end the trail.
+- A trace reads each wallet's 200 newest transfers. For a very busy wallet the
+  result can change from one hour to the next (verified example 3, below).
 - The walk follows the ten largest counterparties of each address, so money
   split into many small parts can be missed. The Evidence tab's **Scope and
   evidence** section says what was left out.
@@ -137,9 +147,27 @@ The full list is in the README's Limitations section and in every report.
 - **Exchange labels on contracts** (#234, with #238): 26 Ethereum exchange
   labels that sit on a proxy or forwarder contract now read as a contract
   wallet. What a trace concludes does not change.
+- **The label store** (#261): release `labels-2026-11-15` screens **69,410,610
+  flagged addresses** (69.4 million, up 993,748 on the day before). Nearly all
+  the new rows are address-poisoning wallets from scans of Polygon, BNB Smart
+  Chain and Tron; 40 are issuer freezes.
+- **Bitget reserve wallets** (#258): 21 wallets Bitget lists on its own
+  proof-of-reserves page (12 on Ethereum, 4 on BNB Smart Chain, 5 on Tron).
+  Labels read "Bitget: Reserve Wallet N", or on Tron "Bitget: Reserves Wallet"
+  with the month of the list. Each cites the Bitget list it came from.
+- **Hot wallets held in a contract** (#268): three Ethereum contract wallets,
+  Kraken 5, Coinbase 10 and Gemini 2, now carry a hot-wallet role, measured on
+  chain from a sample of the addresses that pay into them (#254's rule).
+  An unlabelled address that sent two or more transfers to one of them and
+  nowhere else is now inferred as that exchange's deposit address, scored like
+  any other inference. A match on one of the three reads "hot wallet held in a
+  contract".
 
 **Limits**
 
+- Every other contract wallet has no role, so a deposit into it is not
+  inferred. The 12 Ethereum Bitget wallets were measured and none met the rule
+  (#270); on Arbitrum, Polygon and BNB Smart Chain none could be measured.
 - A proof-of-reserves list does not say whether a wallet is a hot wallet or a
   customer's deposit address. These rows are the exchange's own wallets, so
   the letter asks for the accounts behind the listed transactions only.
@@ -152,19 +180,31 @@ The full list is in the README's Limitations section and in every report.
 
 ### Privacy protocols on the route
 
-**Merged, switched off** (#149 stack; switch `EXCHEQUER_PRIVACY_CATEGORY`).
+**Live** (#232; switch `EXCHEQUER_PRIVACY_CATEGORY`, on since 15 November).
 
-When it is on, a trace that passes through Railgun, Aztec, Hinkal or Privacy
-Pools (27 contracts on 5 chains, each with its source) shows a grey note under
-the risk alert: "a note, not an accusation". The trace does not stop there and
-it is not counted as a risk hit. The maps mark the contract with a grey dotted
-ring, and the signed report adds a section "PRIVACY PROTOCOLS ON THE PATH (A
-NOTE, NOT AN ACCUSATION)". Letters never mention it. With the switch off,
-Privacy Pools stays a mixer and a trace stops there, as before.
+A trace that passes through Railgun, Aztec, Hinkal or Privacy Pools (27
+contracts on 5 chains, each with its source) shows a grey note under the risk
+alert: "a note, not an accusation". The trace is not stopped by it and it is not
+counted as a risk hit. The maps mark the contract with a grey dotted ring, and
+the signed report adds a section "PRIVACY PROTOCOLS ON THE PATH (A NOTE, NOT AN
+ACCUSATION)" when the case has such a contract. Letters never mention it.
 
-**Limits:** funds passing through a privacy protocol lose their visible link,
-so what leaves it is not shown on chain to be the same money. A government
-listing, freeze or theft tag on such a contract still stands as a risk hit.
+**Privacy Pools is no longer a mixer stop.** Before 15 November its two
+Ethereum contracts read as mixers and a trace stopped there. Now they get the
+note instead, and drop out of every risk count.
+
+**Limits**
+
+- Funds passing through a privacy protocol lose their visible link, so what
+  leaves it is not shown on chain to be the same money.
+- A pool that pays out to many addresses is treated like any such contract: it
+  is read, but its payouts are not followed, and the scope notes say so. A
+  shielded pool usually does, so the trail often goes no further there even
+  though the privacy note did not stop it. The note itself says "The trace did
+  not stop here"; a change in review (#279) makes it also say when the
+  payouts were not followed.
+- A government listing, freeze or theft tag on such a contract still stands as
+  a risk hit, and then no note is shown for it.
 
 ### Bybit and OKX wallets; OKX's full list
 
@@ -180,7 +220,8 @@ file; their role rests on on-chain reads, which each label records.
 `EXCHEQUER_STORE_EXCHANGE_ROWS`): OKX lists far more wallets (474,530 on Tron,
 17,046 on Ethereum) than the label files can carry, so they go into the label
 store. A match from the store says what it rests on (its attribution basis).
-It also needs a new label store release before it does anything.
+The 15 November store carries these rows (474,529 OKX on Tron, 202 OKX and 10
+Bitget on Ethereum), but they name no exchange while the switch is off.
 
 ### Stopping a trace
 
@@ -191,6 +232,15 @@ after you stopped it (#228). Trace again if you still need it.
 **Merged, switched off** (#227; switch `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`):
 a trace whose page was closed also stops at its next request to a provider,
 and nothing is saved.
+
+### Verified example 3 now reaches no exchange
+
+**Live** (#260). Traced live on 15 November, example 3 (`0x536c4921…`,
+Ethereum, ETH, 3 hops) reaches no exchange. No rule changed: the wallet now
+makes about 700 to 800 transactions a day, and the 200 newest no longer include
+the transfers earlier traces followed to Coinbase and Kraken. Opening the
+example still shows its recording of 14 October (Low, 0.40, at a probable
+Binance deposit address). Say what the screen shows, not what it showed before.
 
 ---
 
@@ -412,8 +462,8 @@ countries names the country you typed.
 trail records which fields changed and the new status, never the text.
 
 **Limits:** suggestions come only from the records you can read. A task nobody
-recorded will not be suggested. Tasks are not yet in the case bundle
-(section 9).
+recorded will not be suggested. Tasks go into the case bundle (#244), which is
+still switched off (section 9).
 
 ### SOP reminders on a bank hold
 
@@ -659,8 +709,7 @@ holding the link is refused.
   about whether the records are right.
 - The manifest itself is not signed; the report is.
 - Certificate drafts are not included: they are drafts you complete.
-- Not yet in it: the task list, custody wallets, statement and call record
-  imports, and letters of request (all merged after the bundle).
+- Not yet in it: letters of request.
 
 ---
 

@@ -5,12 +5,13 @@
 - **Branch**: `docs/officer-guide`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: merged in #192 on 2026-11-15
+- **Status**: merged in #192 on 2026-11-15; evening update on branch `docs/officer-guide-15nov`
 
 ## Done
 
 - `docs/officer-guide.md`: nine task sections (trace; evidence and custody; notices and letters, incl. a letter of request abroad; tasks and deadlines; export scan; statements and CDRs; domain and Telegram lookups; multisig custody; case bundle). Each says where it is, the steps, what is recorded and never recorded, and the limits.
 - 15 Nov update: tasks (#122 stack) now Live; case bundle (#187) and the privacy-protocol category (#149 stack) "Merged, switched off"; new subsections for the label changes on main (India round 2 #135, clean-up and closed exchanges #212/#213, lifted freezes #206, sanctions/mixers/forfeitures #149, Tron proof of reserves #221), sign-off binding (#133, old limit paragraph removed), stopping a trace (#227/#228); a section 10 for NCRP and CFCFRMS (#218 stack, #230); Bybit/OKX labels (#226) and store exchange rows (#223/#224) as Coming.
+- 15 Nov evening update (live build 97f1bae): privacy-protocol category now Live (#232; Privacy Pools no longer a mixer stop; payouts of a many-payout pool still not followed, #279 in review); report issuer https://exchequer.co.in (#240, older reports verify, #239); label store labels-2026-11-15, 69,410,610 (#261); Bitget reserve wallets (#258); hot-wallet roles on Kraken 5, Coinbase 10, Gemini 2 (#268, #270); verified example 3 reaches no exchange (#260); bundle now holds tasks (#244). README figures matched to live `/chains` (69.3M poisoning, 26,157 exchange addresses) and the Privacy Pools mixer wording.
 - One line each in `README.md` ("Why it is built this way") and `docs/suite-features.md` linking it.
 
 ## Decisions

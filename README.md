@@ -44,8 +44,8 @@
 <table>
 <tr>
 <td align="center"><h3>69.4M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
-<td align="center"><h3>68.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists</sub></td>
-<td align="center"><h3>26,136</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
+<td align="center"><h3>69.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists</sub></td>
+<td align="center"><h3>26,157</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>14,827</h3>addresses a stablecoin<br>issuer has frozen</td>
 <td align="center"><h3>100,000+</h3>hack, phishing and<br>scam wallets</td>
@@ -99,7 +99,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
 | **Names the exchange** | Exact match against 26,136 exchange addresses on five chains, including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
-| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **68-million-address label store**: hack proceeds, scams, stablecoin freezes and 68.3M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
+| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon; privacy protocols such as Privacy Pools are shown as a note, never a stop); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **69-million-address label store**: hack proceeds, scams, stablecoin freezes and 69.3M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
 | **Follows the money through a swap** | A transfer into a known DEX router is read from its receipt; if it came back as USDT or USDC, that stablecoin is traced onward from the moment of the swap, as its own linked trace. |
@@ -662,6 +662,8 @@ only the pools and routers of Tornado Cash, Typhoon and Privacy Pools, never the
 contracts. Pools named in a mixer's own deployment list (Tornado Cash on BSC, Polygon and Arbitrum; Cyclone
 Protocol) are added by hand to the same files, each checked on chain, and Polygon and Arbitrum have a threat file
 of their own. Privacy protocols no enforcement action calls a mixer (Railgun, Aztec, Hinkal) are not labelled.
+Since 15 November (`EXCHEQUER_PRIVACY_CATEGORY` on) these and Privacy Pools are a grey note instead: Privacy
+Pools' mixer tag gives way, so it no longer stops a trace or counts as a risk hit.
 The label store follows the same rule, and only on Ethereum, the chain its mixer tags were read on.
 A name in a list is not enough to cut a trail, so a store row stops a trace only at a pool or router kept in the
 repository (the threat file's mixer entries and `backend/data/mixer_pools.json`); any other store row named like
