@@ -13,10 +13,12 @@ import json
 import pytest
 
 from app import config, never_flag
-from app.exchange_matcher import CONTRACT_WALLET
+from app.deposit_inference import infer_deposit_addresses
+from app.exchange_matcher import CONTRACT_WALLET, ExchangeMatcher, role_of
+from app.scoring import _match_directness
 from scripts import measure_contract_wallet_roles as mcr
 
-from conftest import addr
+from conftest import addr, make_graph
 
 EVIDENCE = json.loads(mcr.EVIDENCE.read_text(encoding="utf-8"))
 CHAINS = [c for c in EVIDENCE if not c.startswith("_")]
@@ -28,6 +30,47 @@ def _labels(chain):
 
 def _given(chain):
     return {a: e for a, e in EVIDENCE[chain].items() if e["role"]}
+
+
+# -- the shipped rows against the evidence -------------------------------------------
+
+def test_the_label_files_hold_exactly_the_roles_measured():
+    assert mcr.check(EVIDENCE) == []
+    given = {a for c in CHAINS for a in _given(c)}
+    assert given == {"0xfa52274dd61e1643d2205169732f29114bc240b3", "0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43",
+                     "0x6fc82a5fe25a5cdb58bc74600a40a69c065263f8"}
+    for chain in CHAINS:
+        for address in _given(chain):
+            assert _labels(chain)[address]["role"] == "hot_wallet"
+            assert address in mcr.roleless(chain)  # a later --record measures it again, not drops it
+
+
+# -- what a role changes in a trace --------------------------------------------------
+
+SEED, DEPOSIT = addr("5eed"), addr("de90")
+
+
+def _sweeps_into(destination, count=3):
+    graph = make_graph([(SEED, DEPOSIT, 10.0), (DEPOSIT, destination, 10.0)], seed=SEED)
+    graph.nodes[DEPOSIT]["outflows_by_counterparty"] = {
+        destination: {"count": count, "total": 10.0 * count, "min": 10.0, "first": 1_700_000_000,
+                      "last": 1_700_100_000}}
+    return graph
+
+
+@pytest.mark.parametrize("chain", CHAINS)
+def test_a_deposit_sweeping_into_a_measured_hot_wallet_is_inferred_and_into_a_roleless_one_is_not(chain):
+    matcher = ExchangeMatcher.from_file(config.CHAINS[chain].labels_path, chain=chain)
+    for address, seen in EVIDENCE[chain].items():
+        found = infer_deposit_addresses(_sweeps_into(address), matcher)
+        if seen["role"]:
+            assert [m.address for m in found] == [DEPOSIT], address
+            assert infer_deposit_addresses(_sweeps_into(address, count=1), matcher) == []
+            (match,) = matcher.annotate(make_graph([(SEED, address, 1.0)], seed=SEED))
+            assert role_of(match.wallet_type, match.role) == "hot_wallet"
+            assert _match_directness(match).raw_value == 1.0
+        else:
+            assert found == [], address
 
 
 # -- the evidence file -------------------------------------------
