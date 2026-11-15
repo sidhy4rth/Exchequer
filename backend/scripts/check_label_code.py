@@ -13,18 +13,23 @@ whose addresses hold bytecode. Two kinds are fine as they are or nearly so:
     whose only code passes every payment on. There is no key behind them, so
     they are retyped contract_wallet, the type the label audit
     (scripts/audit_label_contracts.py) and the proof-of-reserves import (#226)
-    give exchange-operated contracts. contract_wallet is still the exchange's
-    own wallet everywhere a match is read (the letter kind, never_flag, the
-    case contract); scoring calls its role "not recorded", and deposit
-    inference does not treat a payment into one as a sweep.
+    give exchange-operated contracts. The row keeps the type it had as its
+    `role` (hot_wallet, cold_wallet or exchange_wallet), so nothing a trace
+    concludes changes: contract_wallet is still the exchange's own wallet
+    everywhere a match is read (the letter kind, never_flag, the case
+    contract), scoring gives it the directness of its role, and deposit
+    inference treats a sweep into it as before (exchange_matcher.role_of).
 
 Any other contract is left as it is and listed for review in _meta: what it is
 (a multisig, an invoice contract, a payout contract) needs a person to read it.
 
 The code is read keylessly from a public node and the answers are kept in
 tests/fixtures/label_code/ethereum.json, so the guard test
-(tests/test_label_code.py) checks the file offline:
+(tests/test_label_code.py) checks the recorded labels offline. A label added
+later has no recorded answer: the guard leaves it to this script, which a
+label import runs (docs/label-releases.md) and which fails until it is read:
 
+    cd backend && .venv/bin/python -m scripts.check_label_code --check    # offline: any label not yet read?
     cd backend && .venv/bin/python -m scripts.check_label_code --record   # asks the node
     cd backend && .venv/bin/python -m scripts.check_label_code --dry-run  # from the recording
     cd backend && .venv/bin/python -m scripts.check_label_code
@@ -138,9 +143,22 @@ def plan(labels: dict[str, dict[str, Any]], answers: dict[str, Any]) -> dict[str
     return out
 
 
+UNREAD_HELP = ("{n} Ethereum label(s) typed hot_wallet, cold_wallet or exchange_wallet have no recorded "
+               "eth_getCode answer. Run `cd backend && python -m scripts.check_label_code --record`, then "
+               "`python -m scripts.check_label_code`, and commit backend/tests/fixtures/label_code/ethereum.json "
+               "with the label file.")
+
+
+def unread(labels: dict[str, dict[str, Any]], answers: dict[str, Any]) -> dict[str, str]:
+    """Keyed-wallet labels with no recorded answer: address -> label."""
+    return plan(labels, answers)["unread"]
+
+
 def apply(document: dict[str, Any], decided: dict[str, dict[str, str]], recorded_at: str) -> None:
     for address in decided["retyped"]:
-        document["labels"][address]["type"] = CONTRACT_WALLET
+        row = document["labels"][address]
+        row["role"] = row["type"]  # what the exchange uses it as (exchange_matcher.role_of)
+        row["type"] = CONTRACT_WALLET
     document["_meta"][META_KEY] = {
         "date": "2026-11-15",
         "rule": "scripts/check_label_code.py: each label typed hot_wallet, cold_wallet or exchange_wallet "
@@ -196,6 +214,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--record", action="store_true", help="read the code from the public node first")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--check", action="store_true",
+                        help="offline, writes nothing: fail if a keyed-wallet label has no recorded answer")
     args = parser.parse_args(argv)
 
     path = config.CHAINS["ethereum"].labels_path
@@ -219,6 +239,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"recorded {len(answers)} of {len(asked)} at block {block}")
 
     recording = json.loads(ANSWERS.read_text(encoding="utf-8"))
+    if args.check:
+        missing = unread(labels, recording["code"])
+        for address, label in missing.items():
+            print(f"  not read  {address}  {label}")
+        if missing:
+            print(UNREAD_HELP.format(n=len(missing)), file=sys.stderr)
+            return 1
+        print(f"every Ethereum keyed-wallet label has a recorded answer ({len(recording['code'])} recorded)")
+        return 0
     decided = plan(labels, recording["code"])
     for kind, rows in decided.items():
         print(f"{kind:10} {len(rows)}")

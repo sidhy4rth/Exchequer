@@ -25960,6 +25960,7 @@
     "0xe80623a9d41f2f05780d9cd9cea0f797fd53062a": {
       "exchange": "Bitget",
       "label": "Bitget 1",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x461f6dcdd5be42d41fe71611154279d87c06b406": {
@@ -25980,21 +25981,25 @@
     "0x842ea89f73add9e4fe963ae7929fdc1e80acdb52": {
       "exchange": "Bitget",
       "label": "Bitget 13",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x5051e9860c1889eb1bfa394365364b3dd61787f1": {
       "exchange": "Bitget",
       "label": "Bitget 14",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x4dfc15890972ecea7a213bda2b478dabc382e7a1": {
       "exchange": "Bitget",
       "label": "Bitget 15",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x1a96e5da1315efcf9b75100f5757d5e8b76abb0c": {
       "exchange": "Bitget",
       "label": "Bitget 16",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0xbc942e2250ec7ab83bfc4516bca4e281dbfbb393": {
@@ -26005,6 +26010,7 @@
     "0x731309e453972598ea05d706c6ee6c3c21ab4d2a": {
       "exchange": "Bitget",
       "label": "Bitget 18",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x1d5ba5414f2983212e03bf7725add9eb4cdb00dc": {
@@ -26035,6 +26041,7 @@
     "0x59708733fbbf64378d9293ec56b977c011a08fd2": {
       "exchange": "Bitget",
       "label": "Bitget 23",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x97b9d2102a9a65a26e1ee82d59e42d1b73b68689": {
@@ -26070,6 +26077,7 @@
     "0x31a36512d4903635b7dd6828a934c3915a5809be": {
       "exchange": "Bitget",
       "label": "Bitget 9",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x000483c56fe99127fbd62da5d8b899a159116dc1": {
@@ -121210,11 +121218,13 @@
     "0xe6a421f24d330967a3af2f4cdb5c34067e7e4d75": {
       "exchange": "Bitget",
       "label": "Bitget: Hot Wallet 1",
+      "role": "hot_wallet",
       "type": "contract_wallet"
     },
     "0xe2b406ec9227143a8830229eeb3eb6e24b5c60be": {
       "exchange": "Bitget",
       "label": "Bitget: Hot Wallet 2",
+      "role": "hot_wallet",
       "type": "contract_wallet"
     },
     "0xf646d9b7d20babe204a89235774248ba18086dae": {
@@ -121415,6 +121425,7 @@
     "0x1522900b6dafac587d499a862861c0869be6e428": {
       "exchange": "Bitstamp",
       "label": "Bitstamp 2",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x9a9bed3eb03e386d66f8a29dc67dc29bbb1ccb72": {
@@ -121610,11 +121621,13 @@
     "0x367c42a6f261ec54ffbecf5f41c226be12a3dca0": {
       "exchange": "Bullish",
       "label": "Bullish 1",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x100ae042ef0ea159ecc3513e9a378ff21f3829ba": {
       "exchange": "Bullish",
       "label": "Bullish 2",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x6908c23476d3c8aa59994662e95b40414b396bf0": {
@@ -121885,6 +121898,7 @@
     "0xafedf06777839d59eed3163cc3e0a5057b514399": {
       "exchange": "CoinEx",
       "label": "CoinEx: Cold (winding down)",
+      "role": "cold_wallet",
       "type": "contract_wallet"
     },
     "0xb9ee1e551f538a464e8f8c41e9904498505b49b0": {
@@ -121910,6 +121924,7 @@
     "0xd6a062cae6123c158768a5c444ca0896cc60d6b1": {
       "exchange": "CoinJar",
       "label": "Coinjar 3",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0xd1669ac6044269b59fa12c5822439f609ca54f41": {
@@ -123115,16 +123130,19 @@
     "0x77f33da6046a03ebb0e6d33a26cb49bd738774ff": {
       "exchange": "FTX",
       "label": "FTX: Banruptcy Dust Collector (defunct)",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x97f991971a37d4ca58064e6a98fc563f03a71e5c": {
       "exchange": "FTX",
       "label": "FTX: Cold 1 (defunct)",
+      "role": "cold_wallet",
       "type": "contract_wallet"
     },
     "0x93c3cf42439dc4cce8fa5f3da078facc9fbb4c15": {
       "exchange": "FTX",
       "label": "FTX: Cold 2 (defunct)",
+      "role": "cold_wallet",
       "type": "contract_wallet"
     },
     "0x02412e9a81a98829716588f80458c8bf593cadc0": {
@@ -123135,6 +123153,7 @@
     "0xa98f8fda8cc449e99183229bb906cefb246a7ef3": {
       "exchange": "FTX",
       "label": "FTX: Whitehat (defunct)",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0xffd0ecee885fcd2ebce0fec9add69bf1ed03194b": {
@@ -123290,6 +123309,7 @@
     "0xafcd96e580138cfa2332c632e66308eacd45c5da": {
       "exchange": "Gemini",
       "label": "Gemini: Cold Wallet",
+      "role": "cold_wallet",
       "type": "contract_wallet"
     },
     "0x07ee55aa48bb72dcc6e9d78256648910de513eca": {
@@ -123865,6 +123885,7 @@
     "0xe5d7ccc5fc3b3216c4dff3a59442f1d83038468c": {
       "exchange": "Korbit",
       "label": "Korbit 6",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0xe83a48cae4d7120e8ba1c2e0409568ffba532e87": {
@@ -124400,6 +124421,7 @@
     "0xd91efec7e42f80156d1d9f660a69847188950747": {
       "exchange": "KuCoin",
       "label": "KuCoin: ERC-20 Batch Transfer",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0xe59cd29be3be4461d79c0881d238cbe87d64595a": {
@@ -124455,6 +124477,7 @@
     "0x0162cd2ba40e23378bf0fd41f919e1be075f025f": {
       "exchange": "MEXC",
       "label": "MEXC 14",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x4e3ae00e8323558fa5cac04b152238924aa31b60": {
@@ -124470,6 +124493,7 @@
     "0xf016e1d45ef23bdd414e7a2e4d46e1b34577b508": {
       "exchange": "MEXC",
       "label": "MEXC 27",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0x3cc936b795a188f0e246cbb2d74c5bd190aecf18": {
@@ -124480,6 +124504,7 @@
     "0xee136c0389733849dd710ac7104e92c6bf497574": {
       "exchange": "MEXC",
       "label": "MEXC 4",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0xdf90c9b995a3b10a5b8570a47101e6c6a29eb945": {
@@ -124995,6 +125020,7 @@
     "0xbfc39b6f805a9e40e77291aff27aee3c96915bdd": {
       "exchange": "Poloniex",
       "label": "Poloniex 5",
+      "role": "exchange_wallet",
       "type": "contract_wallet"
     },
     "0xdf21fa922215b1a56f5a6d6294e6e36c85a0acfb": {

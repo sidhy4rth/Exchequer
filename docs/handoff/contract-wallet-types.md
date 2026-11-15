@@ -19,7 +19,7 @@
 
 - EIP-7702: the account still has its own key, held by the exchange, so it stays a keyed wallet. The label schema has no note field, so the delegation is listed in `_meta`.
 - Proxy: code of 1 KB or less that uses DELEGATECALL (EIP-1167, Gnosis Safe proxy, EIP-1967, older delegatecall proxies). Forwarder: code of 1 KB or less with no functions whose fallback CALLs out. Anything else is "other" and needs a person to read it.
-- The guard fails on a new Ethereum keyed-wallet label with no recorded answer: run `--record`, then the script.
+- The guard checks the recorded labels; a new Ethereum keyed-wallet label is caught by `check_label_code --check` at import (#237).
 
 ## Next
 
@@ -28,7 +28,7 @@
 ## Open questions
 
 - 14 of the 25 review rows are multisig wallets by their verified source on Blockscout (11 BitGo `WalletSimple`, 3 Gnosis `MultiSigWallet`). Retype them `contract_wallet` too? (Sidhyarth)
-- `contract_wallet` is not a sweep destination in `deposit_inference.py` (written for deposit forwarders). If any retyped multisig proxy (Bitget Hot Wallet 1 and 2, for example) receives sweeps, a deposit address sweeping into it is no longer inferred. No demo touches these addresses. Should multisig custody count as a sweep destination? (Sidhyarth)
+- Answered by #237 (`fix/contract-wallet-inference`): each retyped row keeps its old type as `role`, and deposit inference and scoring read the role, so a deposit sweeping into Bitget Hot Wallet 1 or 2 is inferred as before.
 
 ## Files mid-change (do not touch)
 
