@@ -1,0 +1,1494 @@
+{
+ "_meta": {
+  "what": "Keyless TronGrid reads of candidate OKX Tron wallets, and how scripts/classify_okx_tron_wallets.py classes each.",
+  "read_on": "2026-11-15",
+  "reader": "scripts/classify_okx_tron_wallets.py read() (api.trongrid.io, no key)",
+  "okx_wallets": "Hot Wallet 8 (TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv) or any of the 474,529 Tron rows of OKX's PoR file as staged (okx_por_tron.csv, SHA-256 0bbdaf583697645d2f55bf000db2f98c5830ba534656b02d48627bb29ee5226c)",
+  "candidates": "42 PoR addresses that sent Hot Wallet 8 >= 100 real-USDT transfers or >= 5M USDT in the incoming pages the deposit-row job had read (2026-10-22 to 2026-11-15) were first looked at with one page each way. Read here: the 13 of them that paid addresses outside OKX or moved value both ways with Hot Wallet 8, 2 of them that only sweep (controls), and the 6 PoR addresses other than Hot Wallet 8 that PoR addresses sent to in the job's 200-address sample (okx_por_tron_sweep_sample200.json). A further random sample of 301 PoR addresses not seen sweeping in those pages sent real USDT only to Hot Wallet 8 and to 3 of those 6.",
+  "demo_addresses": [
+   "TCz47XgC9TjCeF4UzfB6qZbM9LTF9s1tG7",
+   "TJbHp48Shg4tTD5x6fKkU7PodggL5mjcJP",
+   "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R",
+   "TSaRZDiBPD8Rd5vrvX8a4zgunHczM9mj8S",
+   "TWGZbjofbTLY3UCjCV4yiLkRg89zLqwRgi"
+  ],
+  "controls": [
+   "TEqPzKzyB5HRjCBeFLPWC9aAaVB6xAp53Q",
+   "TVVNYQXRrqzVLtjuWmV4sFESbnsArZZrPX"
+  ]
+ },
+ "rules": {
+  "own_wallet": "an account (not a contract) that paid real USDT, or TRX, to >= 50 distinct addresses outside OKX in what was read, and moved value both ways with OKX wallets: it sent real USDT or TRX to one and received real USDT or TRX from one",
+  "deposit_like": "everything it sent in what was read (real USDT and TRX) went to OKX wallets: a one-way sweep, what a deposit address does",
+  "unclassified": "anything else, including a contract, an address that sent nothing read here, or one that paid fewer than 50 addresses outside OKX"
+ },
+ "addresses": {
+  "TAqkpXjGwu2s6o6hjxj4advFnUcCJCmLuZ": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 7500.973349,
+   "usdt_balance": 4828.37,
+   "create_time": 1752665481000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 59,
+    "distinct_non_okx": 58,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 21
+    },
+    "value_total": 760450.86,
+    "value_to_okx": 463832.09,
+    "newest": 1794766347000,
+    "oldest": 1794578895000,
+    "span_days": 2.17
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 95,
+    "distinct_non_okx": 93,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 216,
+     "TYSs5EioSErYY1ghaC5yFJv79aEDyYjXTD": 16
+    },
+    "value_total": 2217130.65,
+    "value_to_okx": 504771.63,
+    "newest": 1794761679000,
+    "oldest": 1794328626000,
+    "span_days": 5.01
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 29,
+    "distinct": 25,
+    "distinct_non_okx": 25,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794765627000,
+    "oldest": 1794532143000,
+    "span_days": 2.7
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 58 distinct addresses outside OKX in its newest 400 USDT transfers read (2.17 days); sent to 1 and received from 2 OKX wallet(s)"
+  },
+  "TB73ShfgSqVyakXyoMjNXN6Y7y6SBKWzWx": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 8963.972037,
+   "usdt_balance": 517482.911062,
+   "create_time": 1724254926000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 192,
+    "distinct_non_okx": 191,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 40
+    },
+    "value_total": 8511381.5,
+    "value_to_okx": 7690658.12,
+    "newest": 1794765951000,
+    "oldest": 1794411342000,
+    "span_days": 4.1
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 232,
+    "distinct_non_okx": 230,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 66,
+     "TVLpJxnG3hQ3FPDoDuiAC5RXULB7sF8usH": 1
+    },
+    "value_total": 14165409.28,
+    "value_to_okx": 8893358.42,
+    "newest": 1794765786000,
+    "oldest": 1794153681000,
+    "span_days": 7.08
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 132,
+    "distinct": 124,
+    "distinct_non_okx": 124,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794758613000,
+    "oldest": 1793914446000,
+    "span_days": 9.77
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 191 distinct addresses outside OKX in its newest 400 USDT transfers read (4.1 days); sent to 1 and received from 2 OKX wallet(s)"
+  },
+  "TB8h4xAuzeb6SRqwjZbW5jkS9Yyi4oHkJA": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 22815.614263,
+   "usdt_balance": 60948.263746,
+   "create_time": 1724989875000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 214,
+    "distinct_non_okx": 205,
+    "distinct_okx": 9,
+    "okx_counts": {
+     "TAWrqNhuekj3fLfvv55QzVxD65eWRXH2at": 1,
+     "TJYzrMSe8cFyRAx2p5vSpgA7HU96sMQfv7": 1,
+     "TKL3rxNE62WAZn5AGhHjwRMmMkorihSF4y": 1,
+     "TLFo9nEbc2UegwpMBBVvurKyJqjUJ5HbvZ": 1,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 31,
+     "TNV6DdqY96WWNpTobgpQHVFR43h1m7AmRv": 1,
+     "TNhKQDeT72nXPfk1mZFpSaHbN1N7KragtH": 2,
+     "TVXrX8kHeMf57u9CNpWJv7KwYxXiYYDkwx": 1,
+     "TVhHNfhvVZudMaD5GKEV3pdpKVrBmm7mK7": 2
+    },
+    "value_total": 23689967.5,
+    "value_to_okx": 13529165.3,
+    "newest": 1794766113000,
+    "oldest": 1794230031000,
+    "span_days": 6.2
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 134,
+    "distinct_non_okx": 132,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TAYmju2ZADQQxnnoJ7n5hGTgUBr896tDY7": 15,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 124
+    },
+    "value_total": 55064394.34,
+    "value_to_okx": 30658929.53,
+    "newest": 1794763986000,
+    "oldest": 1793634885000,
+    "span_days": 13.07
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 55,
+    "distinct": 49,
+    "distinct_non_okx": 49,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794764979000,
+    "oldest": 1794371493000,
+    "span_days": 4.55
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 205 distinct addresses outside OKX in its newest 400 USDT transfers read (6.2 days); sent to 9 and received from 2 OKX wallet(s)"
+  },
+  "TBNHZP2iAVyDhpTSZ8ee2Xjci1JExZTPE5": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 40451.337236,
+   "usdt_balance": 214326.001407,
+   "create_time": 1752664998000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 274,
+    "distinct_non_okx": 273,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 7
+    },
+    "value_total": 788521.46,
+    "value_to_okx": 436619.39,
+    "newest": 1794766038000,
+    "oldest": 1794696963000,
+    "span_days": 0.8
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 304,
+    "distinct_non_okx": 302,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TKXE4SBY6q4bzNAAwi8QEcon8unV85Rk7d": 1,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 32
+    },
+    "value_total": 2054994.6,
+    "value_to_okx": 304896.71,
+    "newest": 1794766056000,
+    "oldest": 1794614826000,
+    "span_days": 1.75
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 41,
+    "distinct": 41,
+    "distinct_non_okx": 41,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794757491000,
+    "oldest": 1794528561000,
+    "span_days": 2.65
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 273 distinct addresses outside OKX in its newest 400 USDT transfers read (0.8 days); sent to 1 and received from 2 OKX wallet(s)"
+  },
+  "TBZijVV1NXgQ5Nwbnbq9qYuZvmpwDm4Abn": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 304944.034886,
+   "usdt_balance": 3106213.383211,
+   "create_time": 1734516393000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 232,
+    "distinct_non_okx": 231,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 85
+    },
+    "value_total": 13771861.42,
+    "value_to_okx": 13558094.13,
+    "newest": 1794762759000,
+    "oldest": 1793136087000,
+    "span_days": 18.83
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 308,
+    "distinct_non_okx": 306,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 4,
+     "TURorbjDMWghZfGj1CN1rBZcpVDGzhHSvC": 1
+    },
+    "value_total": 2045934.73,
+    "value_to_okx": 557880.09,
+    "newest": 1794766026000,
+    "oldest": 1794490611000,
+    "span_days": 3.19
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 196,
+    "distinct": 187,
+    "distinct_non_okx": 187,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794762558000,
+    "oldest": 1793840817000,
+    "span_days": 10.67
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 231 distinct addresses outside OKX in its newest 400 USDT transfers read (18.83 days); sent to 1 and received from 2 OKX wallet(s)"
+  },
+  "TBwBJwj81yXc4DNKS19GJcpUUzfSWRbBzS": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 2938035.73779,
+   "usdt_balance": 1723707.221546,
+   "create_time": 1734515796000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 261,
+    "distinct_non_okx": 260,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 24
+    },
+    "value_total": 13548078.1,
+    "value_to_okx": 7160201.24,
+    "newest": 1794766206000,
+    "oldest": 1794589653000,
+    "span_days": 2.04
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 281,
+    "distinct_non_okx": 280,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 15
+    },
+    "value_total": 25516201.79,
+    "value_to_okx": 13001650.4,
+    "newest": 1794766026000,
+    "oldest": 1794501411000,
+    "span_days": 3.06
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 64,
+    "distinct": 63,
+    "distinct_non_okx": 63,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794760743000,
+    "oldest": 1794336105000,
+    "span_days": 4.91
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 260 distinct addresses outside OKX in its newest 400 USDT transfers read (2.04 days); sent to 1 and received from 1 OKX wallet(s)"
+  },
+  "TCz47XgC9TjCeF4UzfB6qZbM9LTF9s1tG7": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 762.238501,
+   "usdt_balance": 387.88,
+   "create_time": 1667478603000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 360,
+    "distinct_non_okx": 358,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 15,
+     "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": 2
+    },
+    "value_total": 52115131.66,
+    "value_to_okx": 50818964.98,
+    "newest": 1741864767000,
+    "oldest": 1717549545000,
+    "span_days": 281.43
+   },
+   "usdt_in": {
+    "n": 399,
+    "distinct": 385,
+    "distinct_non_okx": 362,
+    "distinct_okx": 23,
+    "okx_counts": {
+     "TBFge9fTu3XvsaDYLqoQB2QVAqPrK42dfp": 1,
+     "TBcQxVZqCu5dEKqe37w9VLuREHPjdUG1ep": 1,
+     "TEpVRBWMjWMDj1CL3YqPGAgKH1Kt6zub8Q": 1,
+     "TFJVA71fyLz8td3st3GfjV1JLCHSagdX6j": 1,
+     "TFigQtA3b8W7u6AMGYNqunRReB4vYBUpqP": 1,
+     "TG5kmTz5pc11XTXWe5FTQZMYUwcstLgqod": 1,
+     "TGhfgeaM4HmqidTfzWScHp9XBWx6uDCjq5": 1,
+     "TK8Ex2e9H4EZg6JnsQ1jAFbFrtXQfJuHM3": 1,
+     "TLaWYXbFPcv6Lpb38yZBYpn4QLu8pDPDtR": 1,
+     "TMzBSMZFR7zFGSmsNnRbXAF1r97xfWh6JG": 1,
+     "TNYyHznjcYzcDrUSUsoTrep4CFACP35Fk6": 1,
+     "TPrjzuKbudTSZc6TqUgATcPEhbsENx7PD9": 1,
+     "TQVVfg5xhKdNyzogvxfKTss6LC78NntM2r": 1,
+     "TQiTHuDVKiSHSnrreKtW1mMNQJe4cbqj5B": 1,
+     "TRLPjAHdkHKS5SPwtjfzgpqWwLbwEiHmPY": 1,
+     "TRgKEwqh8CaU8dVL5bmV7xECZTg27Z8ESg": 1,
+     "TS6b8oAfesPBwxcFqvtUMmDi5HbKqsmpEo": 1,
+     "TSBkQRnApdXbv5WHQTzt2DYy7L5Ku4qS3D": 1,
+     "TUoT9gfhSoGr69yeF3xWFvCCa911eQWSeM": 1,
+     "TUx4gQmYT95nSosBVd8LcSwhnHCn5FWKXa": 1,
+     "TXsVLbF3rptNF2b6Ga6N2EaupuKsaDApNn": 1,
+     "TYVUvCrShYpSw7cqHmxD2DYbamujzDUNxB": 1,
+     "TYqq6dc86VoPq7qzXuZ6xz1pS8qH9F4GaE": 1
+    },
+    "value_total": 1376740.35,
+    "value_to_okx": 16480.85,
+    "newest": 1768383819000,
+    "oldest": 1717550328000,
+    "span_days": 588.35
+   },
+   "trx_out": {
+    "n": 2,
+    "distinct": 1,
+    "distinct_non_okx": 0,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TBREsCfBdPyD612xZnwvGPux7osbXvtzLh": 2
+    },
+    "value_total": 11972719.0,
+    "value_to_okx": 11972719.0,
+    "newest": 1721642112000,
+    "oldest": 1721641869000,
+    "span_days": 0.0
+   },
+   "trx_in": {
+    "n": 138,
+    "distinct": 136,
+    "distinct_non_okx": 136,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 116.79,
+    "value_to_okx": 0.0,
+    "newest": 1766978076000,
+    "oldest": 1717441161000,
+    "span_days": 573.34
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 358 distinct addresses outside OKX in its newest 400 USDT transfers read (281.43 days); sent to 2 and received from 23 OKX wallet(s)"
+  },
+  "TDTJYL2UMdVMwvFvNDxgNP1P9kxxQPsSrS": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 110897.12869,
+   "usdt_balance": 64966.714473,
+   "create_time": 1745548755000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 206,
+    "distinct_non_okx": 204,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 40,
+     "TWgEx5F1tt755jLh7iB8Tm5i2Hw4cWUn9X": 1
+    },
+    "value_total": 12483802.47,
+    "value_to_okx": 11653882.7,
+    "newest": 1794755892000,
+    "oldest": 1793771445000,
+    "span_days": 11.39
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 184,
+    "distinct_non_okx": 183,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 52
+    },
+    "value_total": 20912493.78,
+    "value_to_okx": 17843660.03,
+    "newest": 1794747240000,
+    "oldest": 1793104401000,
+    "span_days": 19.01
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 196,
+    "distinct": 178,
+    "distinct_non_okx": 178,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794756024000,
+    "oldest": 1793768610000,
+    "span_days": 11.43
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 204 distinct addresses outside OKX in its newest 400 USDT transfers read (11.39 days); sent to 2 and received from 1 OKX wallet(s)"
+  },
+  "TEHPn1jYEePZz7v3Fp3VT9N5xDSKS8xTym": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 199462.663204,
+   "usdt_balance": 1717.379884,
+   "create_time": 1739528481000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 25,
+    "distinct": 3,
+    "distinct_non_okx": 0,
+    "distinct_okx": 3,
+    "okx_counts": {
+     "THdXEcBCZ7nagnmfRrfSHoiLRTbSRueoVW": 1,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 23,
+     "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": 1
+    },
+    "value_total": 135308742.81,
+    "value_to_okx": 135308742.81,
+    "newest": 1794714408000,
+    "oldest": 1740124752000,
+    "span_days": 631.82
+   },
+   "usdt_in": {
+    "n": 271,
+    "distinct": 5,
+    "distinct_non_okx": 1,
+    "distinct_okx": 4,
+    "okx_counts": {
+     "THdXEcBCZ7nagnmfRrfSHoiLRTbSRueoVW": 1,
+     "TK5EQaP9mHbA8JusA2Y7eBoF6evUGVmkuf": 1,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 266,
+     "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": 2
+    },
+    "value_total": 135310460.19,
+    "value_to_okx": 135310459.46,
+    "newest": 1794708516000,
+    "oldest": 1739528475000,
+    "span_days": 638.66
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 24,
+    "distinct": 22,
+    "distinct_non_okx": 20,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TWs8Bw27gqtaT5Gcp9hugEw9x3ZM9BHV1B": 1,
+     "TXGRttpC4PZkyid4WYFoWDJdekT1MmnGVC": 3
+    },
+    "value_total": 200220.0,
+    "value_to_okx": 200220.0,
+    "newest": 1794027795000,
+    "oldest": 1739528484000,
+    "span_days": 630.78
+   },
+   "class": "deposit_like",
+   "why": "all 25 real-USDT and TRX transfers it sent went to OKX wallets"
+  },
+  "TEqPzKzyB5HRjCBeFLPWC9aAaVB6xAp53Q": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 4.743059,
+   "usdt_balance": 74.41,
+   "create_time": 1764144282000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 1,
+    "distinct_non_okx": 0,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 400
+    },
+    "value_total": 851133.91,
+    "value_to_okx": 851133.91,
+    "newest": 1793347596000,
+    "oldest": 1792288926000,
+    "span_days": 12.25
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 26,
+    "distinct_non_okx": 26,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 47389.7,
+    "value_to_okx": 0.0,
+    "newest": 1794489705000,
+    "oldest": 1793204841000,
+    "span_days": 14.87
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 13,
+    "distinct": 12,
+    "distinct_non_okx": 12,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1793258436000,
+    "oldest": 1793194314000,
+    "span_days": 0.74
+   },
+   "class": "deposit_like",
+   "why": "all 400 real-USDT and TRX transfers it sent went to OKX wallets"
+  },
+  "THwyeoCMSXQq2aGDpXpSqo89VnTtFktGGp": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 16235067.629745,
+   "usdt_balance": 35868.346508,
+   "create_time": 1739528130000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "usdt_in": {
+    "n": 167,
+    "distinct": 155,
+    "distinct_non_okx": 155,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 35868.35,
+    "value_to_okx": 0.0,
+    "newest": 1794242961000,
+    "oldest": 1741795911000,
+    "span_days": 607.03
+   },
+   "trx_out": {
+    "n": 200,
+    "distinct": 190,
+    "distinct_non_okx": 190,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 315343.6,
+    "value_to_okx": 0.0,
+    "newest": 1794766611000,
+    "oldest": 1794762447000,
+    "span_days": 0.05
+   },
+   "trx_in": {
+    "n": 200,
+    "distinct": 186,
+    "distinct_non_okx": 159,
+    "distinct_okx": 27,
+    "okx_counts": {
+     "TA5PkoYdXfaVd6Ws3wMJcktL8DAM4xkmdC": 1,
+     "TArXfowYTGxvQcBJLe7cCjd1tuxW7pqDwd": 1,
+     "TBADA2CUy3vYYVQnsr7TuNgqcpcU7w59Nb": 1,
+     "TBNyN7d1eLsHNo3mLPSCcMMWDW2VZ224KM": 1,
+     "TEwoWDf6sSUBXU4rNymKm1gdiZ3VKQW2iL": 1,
+     "TFDBcwWARKx7GT24AbiqCFq5TKfWQMVvhs": 1,
+     "TFV9BKe6GcoQrGqzenNbL8GXKGjyxuxXep": 1,
+     "TGvXc2peaprA4khjarcG7G8fjvbLq1nchi": 1,
+     "TKyEau1CfCYetMcToPAiSwDJ5i7hZhtFoK": 1,
+     "TLN4cJY9EVmhsszbHrFTGQVyaaRpxF26t9": 1,
+     "TM5BQ8SELbtmfLUrCUrz8RouBUAYbe7xQc": 1,
+     "TMFSSGg9K35yxJZLtzv8nefHkkzc1Nm39d": 1,
+     "TMs1nBgc8cLKRxjbeuN9cwz9RYG9Dvnqd6": 1,
+     "TNRDcpkrXE9UfC7kk2Z29yGteh4Jx3erGe": 1,
+     "TPXiW2ooBFJ6KjnLKP7ZZ4qhyqs2HNRCnP": 1,
+     "TQb9dc3KtfnuPKYcsBbz6qVy3qtkWBj5Y7": 1,
+     "TShxrZAqbDBgjHfEh5M8jXf4uL4ug9sw3J": 1,
+     "TSkfhSue57ioQyNK896VxHgqVx3N6AMdkz": 1,
+     "TUASXTpyUw8rEVGaukTytLVQaWbjtGeMmX": 1,
+     "TW2AnN9a62oHzZzYdey26QJ6DXEt2ZBjLh": 1,
+     "TWdVY7kxAzwr7vyZDUgBoUUQQapwAZ7HSd": 1,
+     "TWheD2fTtwBZk9B3NUSW4xqEfsL9dxoKRK": 1,
+     "TWj3VP4FFaiXrf7hmGMByQP7XiV8BG3pkS": 1,
+     "TXA7ixBhy55ZBfnbUkiewMAWPMFQgMCW1j": 1,
+     "TXWeFsjoHEaKLarx9cYmNRQjeTpSZQsejE": 1,
+     "TXXcifGkoL9vGYUzfP7CPC5reBNpyntv4D": 3,
+     "TYd7eYQUEVnR1VLGWJWUBnXFuiWXtSN7QS": 1
+    },
+    "value_total": 100154.91,
+    "value_to_okx": 10074.55,
+    "newest": 1794766566000,
+    "oldest": 1794755766000,
+    "span_days": 0.12
+   },
+   "class": "unclassified",
+   "why": "no flow both ways with an OKX wallet in what was read"
+  },
+  "TJbHp48Shg4tTD5x6fKkU7PodggL5mjcJP": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 1093.819815,
+   "usdt_balance": 400.0,
+   "create_time": 1667478603000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 378,
+    "distinct_non_okx": 376,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 15,
+     "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": 3
+    },
+    "value_total": 6553779.03,
+    "value_to_okx": 5441645.64,
+    "newest": 1741864767000,
+    "oldest": 1717062255000,
+    "span_days": 287.07
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 385,
+    "distinct_non_okx": 373,
+    "distinct_okx": 12,
+    "okx_counts": {
+     "TAK4YSveoyXNvVsgLUQAgpToMGgmKjJSfm": 1,
+     "TAQAMt44kTkzP7aVrboeP4sFvqkytQoggy": 1,
+     "TBEpsj6wbkauYmeCqxvxavgCJhW9MCM4Mu": 1,
+     "TCzRixq9WqYumvaZERzWDQXFDeX4rMZCQ9": 1,
+     "TG7zicyFbWyoyE99uNrtiopWNc4QcLtyb9": 1,
+     "TK8Ex2e9H4EZg6JnsQ1jAFbFrtXQfJuHM3": 1,
+     "TNzTWhnn7mRZ3MZRAdDeSULSE9wgN6UZ48": 1,
+     "TPrjzuKbudTSZc6TqUgATcPEhbsENx7PD9": 1,
+     "TRCA6vaM6dygrqd5RYjkqaVLxgKVbrbRDA": 1,
+     "TREVjmNcnvKLz5GD7mHnqSQW6vAwMcJUFq": 1,
+     "TSkmrUpNKxr7kZ5EtEbzAqVeoa1LcfdNB2": 1,
+     "TSx5yMQwXiSZHLHoYyKLfGWUXz7WKTxTHk": 1
+    },
+    "value_total": 2278911.33,
+    "value_to_okx": 16607.57,
+    "newest": 1744825194000,
+    "oldest": 1717062621000,
+    "span_days": 321.33
+   },
+   "trx_out": {
+    "n": 1,
+    "distinct": 1,
+    "distinct_non_okx": 0,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TBREsCfBdPyD612xZnwvGPux7osbXvtzLh": 1
+    },
+    "value_total": 3381826.0,
+    "value_to_okx": 3381826.0,
+    "newest": 1721815092000,
+    "oldest": 1721815092000,
+    "span_days": 0.0
+   },
+   "trx_in": {
+    "n": 177,
+    "distinct": 174,
+    "distinct_non_okx": 174,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 363.81,
+    "value_to_okx": 0.0,
+    "newest": 1766978112000,
+    "oldest": 1716978687000,
+    "span_days": 578.7
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 376 distinct addresses outside OKX in its newest 400 USDT transfers read (287.07 days); sent to 2 and received from 12 OKX wallet(s)"
+  },
+  "TLLZMGUp5dmKEpk6E45QGXszjM5sPcznCX": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 5106.272755,
+   "usdt_balance": 78.954298,
+   "create_time": 1741082724000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 2,
+    "distinct_non_okx": 1,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 25
+    },
+    "value_total": 2655975729.13,
+    "value_to_okx": 155975729.13,
+    "newest": 1794737307000,
+    "oldest": 1791551292000,
+    "span_days": 36.88
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 6,
+    "distinct_non_okx": 5,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 371
+    },
+    "value_total": 2631975731.53,
+    "value_to_okx": 2476000000.0,
+    "newest": 1794737085000,
+    "oldest": 1791558276000,
+    "span_days": 36.79
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 193,
+    "distinct": 22,
+    "distinct_non_okx": 22,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794737358000,
+    "oldest": 1791799830000,
+    "span_days": 34.0
+   },
+   "class": "unclassified",
+   "why": "paid only 1 address outside OKX (fewer than 50)"
+  },
+  "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 401283.84023,
+   "usdt_balance": 100571.433106,
+   "create_time": 1535532969000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 363,
+    "distinct_non_okx": 362,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 20
+    },
+    "value_total": 587913956.38,
+    "value_to_okx": 587443182.38,
+    "newest": 1741865490000,
+    "oldest": 1741693707000,
+    "span_days": 1.99
+   },
+   "usdt_in": {
+    "n": 395,
+    "distinct": 370,
+    "distinct_non_okx": 360,
+    "distinct_okx": 10,
+    "okx_counts": {
+     "TAmRwq3GYLMs7hT9gq56orTQFqodEWqM8e": 1,
+     "TDTJYL2UMdVMwvFvNDxgNP1P9kxxQPsSrS": 1,
+     "TFCnhao777jKkvoQnaqLS2QCfaWwmv9Atm": 1,
+     "THAUvC5PgfH7rWtwTHVakVz2AX8TwbhqBq": 1,
+     "TLMNq5oxB9k6kCBfzN51TDg6ZwBNQ9Q2w1": 1,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 10,
+     "TPDfwHHPtFh5fsm6Hai1VbRJgonriKzBbu": 1,
+     "TVNX6fGAbP74HpkhUbrfd3WQoejMQVBBtr": 1,
+     "TWAA7uKb67uR9ryf5U28EWzcR2NPL6N5iA": 1,
+     "TXapm8BEvU7PsMGxFif4TQQdy9JdZB28aq": 1
+    },
+    "value_total": 1309238.28,
+    "value_to_okx": 25364.48,
+    "newest": 1792208121000,
+    "oldest": 1741692762000,
+    "span_days": 584.67
+   },
+   "trx_out": {
+    "n": 14,
+    "distinct": 9,
+    "distinct_non_okx": 8,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "THwyeoCMSXQq2aGDpXpSqo89VnTtFktGGp": 6
+    },
+    "value_total": 220265095.98,
+    "value_to_okx": 220226305.75,
+    "newest": 1746622512000,
+    "oldest": 1741693851000,
+    "span_days": 57.04
+   },
+   "trx_in": {
+    "n": 153,
+    "distinct": 133,
+    "distinct_non_okx": 130,
+    "distinct_okx": 3,
+    "okx_counts": {
+     "TGpC1efWgcTKfqJ7aeSe2jq5JCJwtonGpg": 1,
+     "THrQk2YQW9gHDeMZpF2AogMxza6cADMqFS": 1,
+     "TUZKXuaksVcDrfQfFcWrfkn3Jvqdp4H1Wx": 2
+    },
+    "value_total": 20001342.81,
+    "value_to_okx": 20000100.0,
+    "newest": 1791355203000,
+    "oldest": 1742745807000,
+    "span_days": 562.61
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 362 distinct addresses outside OKX in its newest 400 USDT transfers read (1.99 days); sent to 1 and received from 10 OKX wallet(s)"
+  },
+  "TNYowvaHncRBWAKDzAySA3uVHLkB9qs62p": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 3308.673547,
+   "usdt_balance": 19078.443544,
+   "create_time": 1752665241000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 22,
+    "distinct": 2,
+    "distinct_non_okx": 0,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 21,
+     "TTYWaWCFu5o6i1PexkWW8DawzgzmNSYHMK": 1
+    },
+    "value_total": 173108808.76,
+    "value_to_okx": 173108808.76,
+    "newest": 1793799048000,
+    "oldest": 1768383657000,
+    "span_days": 294.16
+   },
+   "usdt_in": {
+    "n": 62,
+    "distinct": 4,
+    "distinct_non_okx": 1,
+    "distinct_okx": 3,
+    "okx_counts": {
+     "TLNrPon76MdjfvreKXd2nmqod7AdyG9To1": 1,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 57,
+     "TTYWaWCFu5o6i1PexkWW8DawzgzmNSYHMK": 1
+    },
+    "value_total": 173127887.21,
+    "value_to_okx": 173127884.79,
+    "newest": 1793418540000,
+    "oldest": 1752665238000,
+    "span_days": 471.68
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 30,
+    "distinct": 26,
+    "distinct_non_okx": 24,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLrG47qTSVK3UVyNWwPuQAkyvBAFS2PKjh": 3,
+     "TUZKXuaksVcDrfQfFcWrfkn3Jvqdp4H1Wx": 1
+    },
+    "value_total": 3450.1,
+    "value_to_okx": 3450.0,
+    "newest": 1793418561000,
+    "oldest": 1752665244000,
+    "span_days": 471.68
+   },
+   "class": "deposit_like",
+   "why": "all 22 real-USDT and TRX transfers it sent went to OKX wallets"
+  },
+  "TNkUL9Za9uBnSJ5MQMDaf2aSSFpuuoKw3k": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 1045197.221342,
+   "usdt_balance": 39802.879704,
+   "create_time": 1729438854000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 201,
+    "distinct_non_okx": 199,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 63,
+     "TUMibvUbMfS9gh5MUbRDdUNK1qgXPfS95x": 2
+    },
+    "value_total": 21042550.56,
+    "value_to_okx": 8983935.69,
+    "newest": 1794765264000,
+    "oldest": 1794408075000,
+    "span_days": 4.13
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 284,
+    "distinct_non_okx": 274,
+    "distinct_okx": 10,
+    "okx_counts": {
+     "TBaL4n5EdbG68GJtG7MBTTTxXdL7vru4rQ": 1,
+     "TG7jhsgSprdRzsMWrGdD7FZAv3WQjTLEME": 1,
+     "TJ88grn6nVtwQxWi3wWyoeWBqQG7pVjEK7": 2,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 12,
+     "TN8rW44y5kyHb2fFL133RNbQhg9crekdxi": 2,
+     "TPUFMw9Rnoy5aTbaLsumqZydCzDibdMb7L": 1,
+     "TTPAhgbUNAeoXjn6TMjTxCzW9avaY8UUyS": 2,
+     "TTmHpbEoRLz1YaWfT9tJm6zNo2gfAwpnbo": 3,
+     "TTu7PDU3o4fSRZdf7rFzXyL9wXVMV2oEWs": 2,
+     "TWHobthT7kw1kKGXDk7FxJ5MjNoybGtPpb": 1
+    },
+    "value_total": 6053879.53,
+    "value_to_okx": 2198128.22,
+    "newest": 1794766026000,
+    "oldest": 1794654426000,
+    "span_days": 1.29
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 62,
+    "distinct": 59,
+    "distinct_non_okx": 59,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794762543000,
+    "oldest": 1794403311000,
+    "span_days": 4.16
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 199 distinct addresses outside OKX in its newest 400 USDT transfers read (4.13 days); sent to 2 and received from 10 OKX wallet(s)"
+  },
+  "TSAvg79MmExMFiwV5pkaXhKWvEuFdxZ1C6": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 236531.720506,
+   "usdt_balance": 814063.024027,
+   "create_time": 1739528361000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 220,
+    "distinct_non_okx": 214,
+    "distinct_okx": 6,
+    "okx_counts": {
+     "TAFHYyCvNzRESttqSNC3jFnGefnSCGLy8E": 1,
+     "TAsYq28pXNznPALqusiHQHwhWLvuFAiqVs": 1,
+     "TG9k5vGVqbaqzHWSSgsD7oguqMRaKXwj1b": 3,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 42,
+     "TNJgUNW49yTxhMsVErxXHzmLryXLiNaVGe": 1,
+     "TWQRWAF5HtQu87aTtYBYakeq2nPwFj6agS": 1
+    },
+    "value_total": 2083324.18,
+    "value_to_okx": 1831679.06,
+    "newest": 1794766200000,
+    "oldest": 1794680067000,
+    "span_days": 1.0
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 297,
+    "distinct_non_okx": 296,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 21
+    },
+    "value_total": 16961257.11,
+    "value_to_okx": 12040480.64,
+    "newest": 1794766026000,
+    "oldest": 1794586011000,
+    "span_days": 2.08
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 22,
+    "distinct": 22,
+    "distinct_non_okx": 22,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794745509000,
+    "oldest": 1794638481000,
+    "span_days": 1.24
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 214 distinct addresses outside OKX in its newest 400 USDT transfers read (1.0 days); sent to 6 and received from 1 OKX wallet(s)"
+  },
+  "TSaRZDiBPD8Rd5vrvX8a4zgunHczM9mj8S": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 871.069864,
+   "usdt_balance": 13036.54016,
+   "create_time": 1667478612000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 365,
+    "distinct_non_okx": 363,
+    "distinct_okx": 2,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 15,
+     "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": 2
+    },
+    "value_total": 6113445.93,
+    "value_to_okx": 5511141.55,
+    "newest": 1741864767000,
+    "oldest": 1717064781000,
+    "span_days": 287.04
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 385,
+    "distinct_non_okx": 367,
+    "distinct_okx": 18,
+    "okx_counts": {
+     "TAKUn5FS2sy99rSjV596qntcaUmu8VNezv": 1,
+     "TBW8XqWPxXQSen5YVfxjq5qVLAtHnwWUka": 1,
+     "TCzRixq9WqYumvaZERzWDQXFDeX4rMZCQ9": 2,
+     "TEWYVRWvbcxbHodzYBHqaaMY2axn9AvbFZ": 1,
+     "TFL6om5iZH6Q8JX78UgVY2c9R4cWFChNWg": 1,
+     "TG2AChsTYYVFxDm6oa69K8WgPnjS3K3hv3": 1,
+     "THvydJE5GfvWgm9s7zom1AoasqUba6SLEB": 1,
+     "TKV7TAsw5Nvu8QxLB2CYGneZr6YD1AZ9G2": 1,
+     "TMtMa3oarQr5HdNdWLDzS2pEHortU8AyaJ": 1,
+     "TPFXqrBJVC8fwCmDjtXRNkfCoMxrZku1ZM": 1,
+     "TRWF4PkHzmsQev95oYq8XhUmU9oiBnjsqn": 1,
+     "TRvUpwGVPXn2xzptdt9EhEcXZC12pK3rnC": 1,
+     "TTCAqYNC85fuJ6HACpFrPufDKoSzos6pS2": 1,
+     "TTkhgjmgACT3qgQq9aRfavs12ppSo9HsYx": 1,
+     "TTtDPXXvbJKzWL7NFJ859U3fFSbwC6h8ZW": 1,
+     "TWWLmFgR1UHoQkekG3jTqoroEKESxHes3M": 1,
+     "TY46zq5eMMzYHTweHtn6WTrPPXTaMRfEjq": 1,
+     "TY7Y9qwBaMeCNXGr7AoN5XwcDxYVF4VGGP": 1
+    },
+    "value_total": 1698154.3,
+    "value_to_okx": 26621.7,
+    "newest": 1777690248000,
+    "oldest": 1717065039000,
+    "span_days": 701.68
+   },
+   "trx_out": {
+    "n": 1,
+    "distinct": 1,
+    "distinct_non_okx": 0,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TBREsCfBdPyD612xZnwvGPux7osbXvtzLh": 1
+    },
+    "value_total": 3303266.0,
+    "value_to_okx": 3303266.0,
+    "newest": 1721815092000,
+    "oldest": 1721815092000,
+    "span_days": 0.0
+   },
+   "trx_in": {
+    "n": 155,
+    "distinct": 154,
+    "distinct_non_okx": 154,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 198.26,
+    "value_to_okx": 0.0,
+    "newest": 1787391579000,
+    "oldest": 1717008297000,
+    "span_days": 814.62
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 363 distinct addresses outside OKX in its newest 400 USDT transfers read (287.04 days); sent to 2 and received from 18 OKX wallet(s)"
+  },
+  "TVVNYQXRrqzVLtjuWmV4sFESbnsArZZrPX": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 0.000467,
+   "usdt_balance": 9998.0,
+   "create_time": 1793451684000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 242,
+    "distinct": 1,
+    "distinct_non_okx": 0,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 242
+    },
+    "value_total": 2944096.54,
+    "value_to_okx": 2944096.54,
+    "newest": 1794765711000,
+    "oldest": 1793451726000,
+    "span_days": 15.21
+   },
+   "usdt_in": {
+    "n": 305,
+    "distinct": 5,
+    "distinct_non_okx": 5,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 2944096.54,
+    "value_to_okx": 0.0,
+    "newest": 1794764616000,
+    "oldest": 1792836186000,
+    "span_days": 22.32
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 20,
+    "distinct": 13,
+    "distinct_non_okx": 13,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794764625000,
+    "oldest": 1794573915000,
+    "span_days": 2.21
+   },
+   "class": "deposit_like",
+   "why": "all 242 real-USDT and TRX transfers it sent went to OKX wallets"
+  },
+  "TWGZbjofbTLY3UCjCV4yiLkRg89zLqwRgi": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 779.097187,
+   "usdt_balance": 5697.58,
+   "create_time": 1667478594000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 368,
+    "distinct_non_okx": 365,
+    "distinct_okx": 3,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 15,
+     "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": 2,
+     "TNcpyTrF4PGogFhTVU1PM48LKidrBy6zmy": 1
+    },
+    "value_total": 52141044.12,
+    "value_to_okx": 41441428.55,
+    "newest": 1741864767000,
+    "oldest": 1717552065000,
+    "span_days": 281.4
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 386,
+    "distinct_non_okx": 368,
+    "distinct_okx": 18,
+    "okx_counts": {
+     "TDC7YEvQJ4L74vt6XL979erGsVy7SaKfqT": 1,
+     "TEPDpZzQLkkocSAeWc2c68MeutTtnx42k5": 1,
+     "TGMjfzCqe8ymWTsbzxJQBVAjKf5ydkoXJj": 1,
+     "TGaUeVLUzx619nWXhkRDDo3wDvsqx6hP8W": 1,
+     "THCeWFX5pdjTViTECqfKJR4ju9Q517Nk3S": 1,
+     "THCoxMPUqLHiK1KubsFSx3tgWcxfzoKg9q": 1,
+     "TK8Ex2e9H4EZg6JnsQ1jAFbFrtXQfJuHM3": 1,
+     "TKUMZ4WdsvLR7jUeXbZ7KKmMtrvwF58bKG": 1,
+     "TKfEvjk7ZJHsaYDN68UpLdgTboiy59a7cG": 1,
+     "TKuBAuKZQ6QqxcamD71ahaSDoth7ygk1FB": 1,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 1,
+     "TNcgvjPhVRAqmNWGRJNPQg3wVX9DrJKAJR": 1,
+     "TR1dpnffNEnvnBv84dR2f9CHf4vJDvLm6L": 1,
+     "TSgn67ErGoSRD3udPBjhnKibVrQLfxucxz": 1,
+     "TTCAqYNC85fuJ6HACpFrPufDKoSzos6pS2": 1,
+     "TTudpBzAYMWysx6PYuZtD45bRT5uDTrbGU": 1,
+     "TUExfFUidwiWKg7DCHP3xp1K2FkyLyfwxy": 1,
+     "TUVNQG6gkUA1on3WNHWK9QM8CXV8NpRsL5": 1
+    },
+    "value_total": 4073012.97,
+    "value_to_okx": 14378.99,
+    "newest": 1760868408000,
+    "oldest": 1717549716000,
+    "span_days": 501.37
+   },
+   "trx_out": {
+    "n": 2,
+    "distinct": 1,
+    "distinct_non_okx": 0,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TBREsCfBdPyD612xZnwvGPux7osbXvtzLh": 2
+    },
+    "value_total": 12463957.0,
+    "value_to_okx": 12463957.0,
+    "newest": 1721642532000,
+    "oldest": 1721642352000,
+    "span_days": 0.0
+   },
+   "trx_in": {
+    "n": 162,
+    "distinct": 161,
+    "distinct_non_okx": 160,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": 1
+    },
+    "value_total": 10000000.36,
+    "value_to_okx": 9999999.2,
+    "newest": 1766978016000,
+    "oldest": 1717380078000,
+    "span_days": 574.05
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 365 distinct addresses outside OKX in its newest 400 USDT transfers read (281.4 days); sent to 3 and received from 18 OKX wallet(s)"
+  },
+  "TYE5mNXSQHuPAdCa1etk76BKybD4FKJto6": {
+   "in_por": true,
+   "is_contract": false,
+   "trx_balance": 23809.067343,
+   "usdt_balance": 14790679.671729,
+   "create_time": 1739527995000,
+   "read_on": "2026-11-15",
+   "usdt_out": {
+    "n": 400,
+    "distinct": 164,
+    "distinct_non_okx": 163,
+    "distinct_okx": 1,
+    "okx_counts": {
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 47
+    },
+    "value_total": 387173371.26,
+    "value_to_okx": 248075384.46,
+    "newest": 1794765936000,
+    "oldest": 1794473814000,
+    "span_days": 3.38
+   },
+   "usdt_in": {
+    "n": 400,
+    "distinct": 141,
+    "distinct_non_okx": 135,
+    "distinct_okx": 6,
+    "okx_counts": {
+     "TDrPj5UabjqMrAG5J1ThCkJqU7idWStkVU": 1,
+     "TJTwuqHJx2zNNA949j3jVc9wyKjAm7MNt7": 2,
+     "TLaGjwhvA8XQYSxFAcAXy7Dvuue9eGYitv": 23,
+     "TRn5CFr7iDSkNfv5wHT3Lqx3d8R3EshGVf": 6,
+     "TXJy1S52XBVt1iUUz1hKMyYiJe2WjkcAyk": 1,
+     "TZEzQp1xGLrr9VoxZNKz7CgXb1YVBapKyE": 1
+    },
+    "value_total": 359442673.14,
+    "value_to_okx": 216778245.58,
+    "newest": 1794766026000,
+    "oldest": 1794469026000,
+    "span_days": 3.44
+   },
+   "trx_out": {
+    "n": 0,
+    "distinct": 0,
+    "distinct_non_okx": 0,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": null,
+    "oldest": null,
+    "span_days": null
+   },
+   "trx_in": {
+    "n": 196,
+    "distinct": 173,
+    "distinct_non_okx": 173,
+    "distinct_okx": 0,
+    "okx_counts": {},
+    "value_total": 0.0,
+    "value_to_okx": 0.0,
+    "newest": 1794757776000,
+    "oldest": 1793471130000,
+    "span_days": 14.89
+   },
+   "class": "own_wallet",
+   "why": "paid real USDT to 163 distinct addresses outside OKX in its newest 400 USDT transfers read (3.38 days); sent to 1 and received from 6 OKX wallet(s)"
+  }
+ }
+}

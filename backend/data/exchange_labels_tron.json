@@ -8,7 +8,7 @@
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
     "schema": "labels maps a Base58 address to {exchange, label, type}",
     "counts": {
-      "labels": 144,
+      "labels": 154,
       "exchanges": 26,
       "by_exchange": {
         "Binance": 25,
@@ -30,7 +30,7 @@
         "KuCoin": 5,
         "MEXC": 2,
         "MaskEX": 12,
-        "OKX": 1,
+        "OKX": 11,
         "OURBIT": 1,
         "Poloniex": 2,
         "UEEx": 1,
@@ -211,6 +211,59 @@
       },
       "description": "Rows whose 'source' starts with 'por:' come from the exchange's own published proof-of-reserves or wallet-address disclosure (sources below: URL, archive copy, publication and retrieval dates, SHA-256 of the file read). The exchange itself states it controls these addresses. Each was checked to be a valid Tron address, active on chain and not a contract (an account per TronGrid wallet/getaccount, or a received USDT-TRC20 transfer; keyless) on the retrieval date. A PoR list says nothing about hot or cold unless the source does, so these are typed exchange_wallet. Addresses already labelled from TronScan keep that row and are listed as corroborated; conflicts and anything on a frozen, sanctions, risk, gambling or demo list were left out, never overwritten.",
       "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_por_tron_labels --file <source id>=<downloaded file> ..."
+    },
+    "okx_own_wallets_2026_11_15": {
+      "rule": "OKX Tron wallets labelled outside the label store because ADR-0012 needs a deposit row's sweeps_to in this file as the same exchange's own wallet, and the PoR listing alone is the claim being checked. Each is one of the Tron addresses in OKX's own proof-of-reserves file (source below) and scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless on-chain reads: it pays real USDT to many addresses outside OKX and moves value both ways with OKX wallets. Typed exchange_wallet; no hot or cold role is claimed. Each row's sweep_basis gives the reading.",
+      "source": {
+        "url": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+        "archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+        "source_date": "2026-11-01",
+        "retrieved": "2026-11-14",
+        "sha256": "93095583a31e2c3f23a7c2061b8b6a00302a212704e96db2ae061446553367a6",
+        "page": "https://www.okx.com/proof-of-reserves/download",
+        "note": "the same file (same SHA-256) the Ethereum por_2026_11_15 rows cite; its archive copy is of the static.okx.com URL"
+      },
+      "classification": {
+        "script": "scripts/classify_okx_tron_wallets.py",
+        "rules": {
+          "own_wallet": "an account (not a contract) that paid real USDT, or TRX, to >= 50 distinct addresses outside OKX in what was read, and moved value both ways with OKX wallets: it sent real USDT or TRX to one and received real USDT or TRX from one",
+          "deposit_like": "everything it sent in what was read (real USDT and TRX) went to OKX wallets: a one-way sweep, what a deposit address does",
+          "unclassified": "anything else, including a contract, an address that sent nothing read here, or one that paid fewer than 50 addresses outside OKX"
+        },
+        "evidence": "tests/fixtures/okx_tron_own_wallets.json",
+        "evidence_sha256": "1e49904efbe3bcaaeedbad7ee2171957f26aa8e781972a1ae11b167dba9be159",
+        "read_on": "2026-11-15"
+      },
+      "listed": {
+        "TAqkpXjGwu2s6o6hjxj4advFnUcCJCmLuZ": "OKX: Reserve Wallet 264",
+        "TB73ShfgSqVyakXyoMjNXN6Y7y6SBKWzWx": "OKX: Reserve Wallet 265",
+        "TB8h4xAuzeb6SRqwjZbW5jkS9Yyi4oHkJA": "OKX: Reserve Wallet 266",
+        "TBNHZP2iAVyDhpTSZ8ee2Xjci1JExZTPE5": "OKX: Reserve Wallet 267",
+        "TBZijVV1NXgQ5Nwbnbq9qYuZvmpwDm4Abn": "OKX: Reserve Wallet 268",
+        "TBwBJwj81yXc4DNKS19GJcpUUzfSWRbBzS": "OKX: Reserve Wallet 269",
+        "TDTJYL2UMdVMwvFvNDxgNP1P9kxxQPsSrS": "OKX: Reserve Wallet 270",
+        "TNkUL9Za9uBnSJ5MQMDaf2aSSFpuuoKw3k": "OKX: Reserve Wallet 271",
+        "TSAvg79MmExMFiwV5pkaXhKWvEuFdxZ1C6": "OKX: Reserve Wallet 272",
+        "TYE5mNXSQHuPAdCa1etk76BKybD4FKJto6": "OKX: Reserve Wallet 273"
+      },
+      "left_out": {
+        "TCz47XgC9TjCeF4UzfB6qZbM9LTF9s1tG7": "classed own_wallet, but in a recorded demo (data/recorded_demos.json) and tests/fixtures/contract/exchange_wallet.json: re-record those before labelling it",
+        "TEHPn1jYEePZz7v3Fp3VT9N5xDSKS8xTym": "classed deposit_like: all 25 real-USDT and TRX transfers it sent went to OKX wallets",
+        "TEqPzKzyB5HRjCBeFLPWC9aAaVB6xAp53Q": "classed deposit_like: all 400 real-USDT and TRX transfers it sent went to OKX wallets",
+        "THwyeoCMSXQq2aGDpXpSqo89VnTtFktGGp": "classed unclassified: no flow both ways with an OKX wallet in what was read",
+        "TJbHp48Shg4tTD5x6fKkU7PodggL5mjcJP": "classed own_wallet, but in a recorded demo (data/recorded_demos.json) and tests/fixtures/contract/exchange_wallet.json: re-record those before labelling it",
+        "TLLZMGUp5dmKEpk6E45QGXszjM5sPcznCX": "classed unclassified: paid only 1 address outside OKX (fewer than 50)",
+        "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R": "classed own_wallet, but in a recorded demo (data/recorded_demos.json) and tests/fixtures/contract/exchange_wallet.json: re-record those before labelling it",
+        "TNYowvaHncRBWAKDzAySA3uVHLkB9qs62p": "classed deposit_like: all 22 real-USDT and TRX transfers it sent went to OKX wallets",
+        "TSaRZDiBPD8Rd5vrvX8a4zgunHczM9mj8S": "classed own_wallet, but in a recorded demo (data/recorded_demos.json) and tests/fixtures/contract/exchange_wallet.json: re-record those before labelling it",
+        "TVVNYQXRrqzVLtjuWmV4sFESbnsArZZrPX": "classed deposit_like: all 242 real-USDT and TRX transfers it sent went to OKX wallets",
+        "TWGZbjofbTLY3UCjCV4yiLkRg89zLqwRgi": "classed own_wallet, but in a recorded demo (data/recorded_demos.json) and tests/fixtures/contract/exchange_wallet.json: re-record those before labelling it"
+      },
+      "checks": "15 Nov 2026: each is a valid Tron address and an account, not a contract (TronGrid /v1/accounts); not on the Tron frozen, sanctions, risk or gambling lists, in a recorded demo or in a test (import_por_tron_labels.listed_elsewhere()); not a token, router or system address (never_flag); not in any other Tron label file; not on ~/exchequer-flagged/never_*.txt; not labelled before in this file",
+      "label_store": "every address is also among the staged OKX Tron PoR rows (okx_por_tron.csv); the JSON row is read first (ADR-0011) and both name OKX",
+      "added": {
+        "OKX": 10
+      }
     }
   },
   "labels": {
@@ -990,6 +1043,116 @@
       "exchange": "CoinDCX",
       "label": "CoinDCX Wallet 5",
       "type": "exchange_wallet"
+    },
+    "TAqkpXjGwu2s6o6hjxj4advFnUcCJCmLuZ": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 264",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 58 distinct addresses outside OKX in its newest 400 USDT transfers read (2.17 days); sent to 1 and received from 2 OKX wallet(s); an account, not a contract"
+    },
+    "TB73ShfgSqVyakXyoMjNXN6Y7y6SBKWzWx": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 265",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 191 distinct addresses outside OKX in its newest 400 USDT transfers read (4.1 days); sent to 1 and received from 2 OKX wallet(s); an account, not a contract"
+    },
+    "TB8h4xAuzeb6SRqwjZbW5jkS9Yyi4oHkJA": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 266",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 205 distinct addresses outside OKX in its newest 400 USDT transfers read (6.2 days); sent to 9 and received from 2 OKX wallet(s); an account, not a contract"
+    },
+    "TBNHZP2iAVyDhpTSZ8ee2Xjci1JExZTPE5": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 267",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 273 distinct addresses outside OKX in its newest 400 USDT transfers read (0.8 days); sent to 1 and received from 2 OKX wallet(s); an account, not a contract"
+    },
+    "TBZijVV1NXgQ5Nwbnbq9qYuZvmpwDm4Abn": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 268",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 231 distinct addresses outside OKX in its newest 400 USDT transfers read (18.83 days); sent to 1 and received from 2 OKX wallet(s); an account, not a contract"
+    },
+    "TBwBJwj81yXc4DNKS19GJcpUUzfSWRbBzS": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 269",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 260 distinct addresses outside OKX in its newest 400 USDT transfers read (2.04 days); sent to 1 and received from 1 OKX wallet(s); an account, not a contract"
+    },
+    "TDTJYL2UMdVMwvFvNDxgNP1P9kxxQPsSrS": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 270",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 204 distinct addresses outside OKX in its newest 400 USDT transfers read (11.39 days); sent to 2 and received from 1 OKX wallet(s); an account, not a contract"
+    },
+    "TNkUL9Za9uBnSJ5MQMDaf2aSSFpuuoKw3k": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 271",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 199 distinct addresses outside OKX in its newest 400 USDT transfers read (4.13 days); sent to 2 and received from 10 OKX wallet(s); an account, not a contract"
+    },
+    "TSAvg79MmExMFiwV5pkaXhKWvEuFdxZ1C6": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 272",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 214 distinct addresses outside OKX in its newest 400 USDT transfers read (1.0 days); sent to 6 and received from 1 OKX wallet(s); an account, not a contract"
+    },
+    "TYE5mNXSQHuPAdCa1etk76BKybD4FKJto6": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 273",
+      "type": "exchange_wallet",
+      "source": "https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "source_kind": "proof-of-reserves address (OKX does not mark hot or cold per address)",
+      "sweep_basis": "Listed among the Tron rows of OKX's own PoR file; scripts/classify_okx_tron_wallets.py classes it own_wallet from keyless TronGrid reads of 15 Nov 2026 (tests/fixtures/okx_tron_own_wallets.json): paid real USDT to 163 distinct addresses outside OKX in its newest 400 USDT transfers read (3.38 days); sent to 1 and received from 6 OKX wallet(s); an account, not a contract"
     }
   }
 }
