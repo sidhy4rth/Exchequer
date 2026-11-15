@@ -28,7 +28,7 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_OSINT_LOOKUPS` | Feature 4: live RDAP and DNS lookups of a case's scam domains, for signed-in officers | #106 | **On** in production since 13 Nov, and `"1"` in `render.yaml` (#108) |
 | `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | On: set in the Render dashboard on 15 Nov and in `render.yaml` since #232 (owner approved on 14 Nov) |
 | `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
-| `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | On: set in the Render dashboard on 15 Nov and in `render.yaml` (owner approved on 15 Nov, before the Render-logs check; section below) |
+| `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | On: set in the Render dashboard on 15 Nov and in `render.yaml` (owner approved on 15 Nov, after the flag-off Render-logs check; checked flag-on the same night; section below) |
 | `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the store release `labels-2026-11-15` carries exchange rows (OKX 474,529 Tron and 202 Ethereum, Bitget 10 Ethereum). A 30-address sample suggests most of the OKX Tron rows are customer deposit addresses that sweep to OKX, so it stays off until ADR-0011 allows deposit rows that state their basis. Switching it on is its own PR, which also re-records demo 9 (five of its addresses are OKX rows) |
 | `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
@@ -475,7 +475,7 @@ gets `case.trace_abandoned` with `stopped_by: client_disconnected`,
 `saved: false` (handoff `docs/handoff/trace-cancel-on-disconnect.md`). Background
 jobs (`POST /trace/jobs`) and batches are not touched.
 
-**Merged.** #227 (with #228) on `main`. No migration. Off in `render.yaml`.
+**Merged.** #227 (with #228) on `main`. No migration. On in `render.yaml` since this PR.
 
 **The open question.** The flag only helps if a client's hang-up reaches
 uvicorn through Render's chain: client → Cloudflare edge (Render's own account)
@@ -523,10 +523,11 @@ ends, so:
   uses `urllib`, `curl --http1.1`): the flag is likely to do nothing; the trace
   runs to the end as it does today. It does no harm either.
 
-**What was not measured.** The `POST /trace` phase itself, before any byte is
-written: the probe saw only streams whose headers were already sent. Whether
-the flag, once on, actually stops a trace. HTTP/3. Any Cloudflare edge other
-than the one these runs reached (`cf-ray` BLR).
+**What the probe did not measure.** The `POST /trace` phase itself, before any
+byte is written (the probe saw only streams whose headers were already sent),
+and whether the flag, once on, stops a trace. The owner-side checks below cover
+both. Still not measured: HTTP/3, and any Cloudflare edge other than the one
+these runs reached (`cf-ray` BLR).
 
 **The owner-side check** (Render dashboard; flag stays off, nothing stored).
 Run it twice, once with `--http1.1` and once with `--http2`, at least 3 minutes
@@ -561,13 +562,33 @@ reads `HTTP/1.1`.
 While the flag is off, the audit log cannot tell these apart: the trace
 finishes and `case.trace` is recorded either way. Use the access line.
 
-**Switched on, 15 Nov.** The owner chose to switch it on before running that
-check: it was set to `1` in the Render dashboard on 15 Nov (deploy
-`dep-dbsugv61egvs73eto9a0`) and in `render.yaml`. Off or on, an HTTP/1.1
-client's hang-up that never reaches uvicorn changes nothing, so the check
-above still tells whether it helps. Still to do: repeat the `--http2` run: the audit log should
-show `case.trace_start`, then `case.trace_abandoned` with
-`stopped_by: "client_disconnected", saved: false`, and no `case.trace`.
+**Flag-off check: done, 15 Nov 2026, 17:05–17:11 UTC.** Three `POST /trace`
+runs as above (demos 0 and 1, `save: false`, `time_budget_seconds: 20`), read
+in Render → exchequer → Logs:
+
+| Run | Client | `case.trace` (trace finished) | `"POST /trace HTTP/1.1" 200` line |
+|---|---|---|---|
+| `--http1.1`, demo 0 | hung up after 3 s, 0 bytes | 7 s after the hang-up | yes, 7 s after the hang-up: the hang-up never reached uvicorn |
+| `--http2`, demo 0 (control) | 200 in 1.3 s (cached, no hang-up) | at once | yes (proves access logging is on) |
+| `--http2`, demo 1 | hung up after 3 s, 0 bytes | 6 s after the hang-up | none: the hang-up reached uvicorn |
+
+So for HTTP/2 (browsers) the hang-up reaches uvicorn before the first byte too,
+and with the flag off the trace still ran to the end. For HTTP/1.1 clients the
+flag can do nothing, and does no harm.
+
+**Switched on, 15 Nov.** After that check the owner approved switching it on:
+it was set to `1` in the Render dashboard (deploy `dep-dbsugv61egvs73eto9a0`,
+17:16 UTC) and in `render.yaml`.
+
+**Flag-on check: done, 15 Nov 2026, 17:18–17:20 UTC.** One `--http2` run with
+demo 2 (not cached), same body and hang-up after 3 s (curl exit 28, 0 bytes).
+Render logs: `case.trace_start` at 17:18:46, `case.trace_abandoned` at 17:18:51
+(about 2 s after the hang-up), and **no `case.trace` and no `POST /trace` access
+line** when checked again 95 s after the hang-up, past the trace's 20 s walk and
+60 s post-walk cap. The trace stopped and nothing was saved:
+`case.trace_abandoned` is written only on the path that raises 409 before the
+result is stored. Its detail (`stopped_by: client_disconnected, saved: false`)
+shows in the log only as a hash. `GET /health` kept answering 200.
 
 **Switching it off.** The common steps above. Off, a hang-up changes nothing:
 the trace runs to the end as before.
