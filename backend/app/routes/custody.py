@@ -34,6 +34,7 @@ from .requests import _allow_write, _owner
 router = APIRouter()
 SWITCHED_OFF = "Custody wallet records are switched off on this deployment."
 SIGN_IN = "Sign in as an officer to record or change a custody wallet or its signing log."
+CHECK_SIGN_IN = "Sign in as an officer to read the custody balances on chain."
 
 
 class Signer(BaseModel):
@@ -182,7 +183,10 @@ def latest_balance_check(case_id: str, user: CurrentUser) -> dict[str, Any]:
         return {"case_id": case_id, "enabled": False, "check": None}
     check = custody_balance.latest(user, case_id)
     audit.record("custody.balance.view", case_id=case_id, detail={"check_id": check["check_id"] if check else None})
-    return {"case_id": case_id, "enabled": True, "check": check}
+    # can_check: whether this caller may run one (the POST refuses the demo caller), so the
+    # panel offers the button only to them, as GET /identifiers does with lookups_enabled.
+    return {"case_id": case_id, "enabled": True, "check": check, "can_check": not user.demo,
+            "check_note": CHECK_SIGN_IN if user.demo else ""}
 
 
 @router.post("/trace/{case_id}/custody-balance", status_code=201)
