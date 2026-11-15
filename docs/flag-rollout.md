@@ -38,8 +38,9 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_SOP_SUMMARY` | Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms | #218 (+#219, #220) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_SOP_DEADLINES` | Feature 8: the MHA CFCFRMS SOP's time limits, quoted, as reminders on bank holds in the asset register | #230 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_FREEZE_WORDING_V2` | Feature 7, #251: the bank-hold notice asks the bank to give effect to the Magistrate's order as it directs, not for a "debit freeze" | #252 | Off in `render.yaml`; awaits a lawyer; see its section below |
+| `EXCHEQUER_FIU_IND_NOTE` | #290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, notices, penalties) as a note on the report's FINDING and the exchange letters | #291 + its stacked slice 2 (not yet) | Off in `render.yaml`; see its section below |
 
-That is all sixteen flags in `FLAGS` on `main`.
+That is all sixteen flags in `FLAGS` on `main`, and one more in review (`EXCHEQUER_FIU_IND_NOTE`, #291 and its stacked slice 2).
 
 The rest of this file is about the seven features named at the top. The steps
 below for switching on, checking and switching off apply to every flag above.
@@ -421,6 +422,47 @@ the same. It contacts nothing outside Exchequer. No migration.
 **Owner decisions still open.** Switch it on only after a lawyer has answered
 the questions in `docs/legal/freeze-wording-review.md`; the wording itself may
 change with their answer.
+
+## `EXCHEQUER_FIU_IND_NOTE`: FIU-IND's facts about the exchange (#290)
+
+**What changes live.** When a trace's exchange is one of the 33 in
+`backend/data/fiu_ind_status.json`, the report's FINDING gains a `FIU-IND :`
+line and `FIU-IND source :` lines, and the exchange letters (request and urgent
+freeze, and the instant-exchanger ones for ChangeNOW and FixedFloat) gain a
+"FIU-IND NOTE (about the exchange, not any customer)" paragraph with its
+sources, under the closure note if there is one. The note says whether the
+exchange was on FIU-IND's list of registered VDA service providers as of
+9 Mar 2026 (Lok Sabha USQ 5805, Annexure-I) and the notices, takedown
+directions and penalties FIU-IND announced, each dated, e.g. "Kraken was not on
+FIU-IND's list of registered VDA service providers as of 9 Mar 2026 (Lok Sabha
+USQ 5805, Annexure-I); on 28 Dec 2023 FIU-IND announced a show-cause notice to
+it under section 13 of the PMLA and that it had written to MeitY to block its
+URLs (PIB release 1991372)." Nothing else changes: not the attribution, the
+labels, the addressee, the letter offers or what a letter asks. An exchange
+with no entry gets no note. No migration; it contacts nothing outside Exchequer.
+
+**Merged.** #291 and its stacked slice 2 (not yet). With the flag off, every report and letter is byte
+for byte what it was (`tests/test_fiu_ind_status.py`).
+
+**Checks after switching it on** (one test officer, on the test case):
+
+1. Confirm in `/health/detail` that `EXCHEQUER_FIU_IND_NOTE` is on. The server
+   restarts on the change, so no report kept from before is served.
+2. Open the text report of a case that reached Binance (or any listed exchange):
+   FINDING has the note and each source URL whole on its own line. Open the
+   sources and check the dates and amounts against them.
+3. Draft the request and urgent freeze letters for it: the note sits after the
+   header, the letter is still addressed to the exchange.
+4. A case that reached an exchange not in the file (for example FTX) shows no
+   note anywhere.
+
+**Switching it off.** Unset the variable and redeploy: the note goes from every
+report and letter rendered after the restart. Reports already downloaded keep
+it (they were signed with it).
+
+**Owner decisions still open.** Whether to switch it on. The registered list is
+frozen at 9 Mar 2026 and FIU-IND publishes none (USQ 5805(f)): re-check the file
+against the next Parliament answer or PIB release, and update `checked_on`.
 
 ## `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`: stop a trace whose client hung up (#227)
 
