@@ -5,7 +5,7 @@
 - **Branch**: `feat/trace-cancel-on-disconnect`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15 (live-site findings added)
-- **Status**: merged in #227 (with #228) on 2026-11-15, behind `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` (off)
+- **Status**: merged in #227 (with #228) on 2026-11-15, behind `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`; on since 22:46 IST on 15 Nov 2026 (Render deploy `dep-dbsugv61egvs73eto9a0`), recorded in `render.yaml` by #296. It reaches only direct `POST /trace` callers: the web app traces with `POST /trace/jobs` (`frontend/src/api/trace.js` `runTrace`), which the flag does not touch
 
 ## Done
 
@@ -23,7 +23,8 @@
 
 ## Next
 
-1. Owner: run the Render-logs check in `docs/flag-rollout.md` (section `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`), once with `--http1.1` and once with `--http2`, before deciding whether to set `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT=1` on Render. Keep it off until then. With the flag off the audit log cannot show the outcome (`case.trace` is recorded either way); the uvicorn access line can.
+1. Done 15 Nov: the Render-logs checks in `docs/flag-rollout.md` (flag off, `--http1.1` and `--http2`; then flag on, `--http2`), and the owner switched it on. HTTP/1.1 was not re-run with the flag on.
+2. Open: a background job whose tab was closed still runs to the end and saves a case (nothing sends DELETE on unload, and `job_events` only frees its stream). A possible design (stop a job once no progress stream or poll has watched it for a grace period, behind this flag) is not built.
 
 ## Measured on the live site (15 Nov 2026, flag off)
 

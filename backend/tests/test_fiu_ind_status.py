@@ -115,3 +115,16 @@ def test_a_missing_or_malformed_file_gives_no_note(on, tmp_path, monkeypatch):
         {"_meta": meta, "exchanges": {"Kraken": {"registered": False, "actions": [{"text": "undated"}]}}}))
     fiu_ind_status.clear_cache()
     assert fiu_ind_status.note("Kraken") is None  # a fact with no date or URL is never shown
+
+
+@pytest.mark.parametrize("listed_as", [None, "", "  ", 7])
+def test_a_registered_entry_without_its_listed_name_gives_no_note(on, tmp_path, monkeypatch, listed_as):
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    entry = {"registered": True, "actions": [], "penalties": [],
+             **({} if listed_as is None else {"listed_as": listed_as})}
+    (tmp_path / fiu_ind_status.STATUS_FILE).write_text(json.dumps(
+        {"_meta": {"register": DOCUMENT["_meta"]["register"]},
+         "exchanges": {"Binance": entry, "Kraken": ENTRIES["Kraken"]}}))
+    fiu_ind_status.clear_cache()
+    assert fiu_ind_status.note("Binance") is None  # never "listed as None"
+    assert fiu_ind_status.note("Kraken")  # the other entries still read

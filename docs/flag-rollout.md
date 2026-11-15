@@ -443,7 +443,9 @@ labels, the addressee, the letter offers or what a letter asks. An exchange
 with no entry gets no note. No migration; it contacts nothing outside Exchequer.
 
 **Merged.** #291 and its stacked slice 2 (#295). With the flag off, every report and letter is byte
-for byte what it was (`tests/test_fiu_ind_status.py`).
+for byte what it was (`tests/test_fiu_ind_note_outputs.py`, from line 58).
+A registered entry with no `listed_as` is skipped rather than printed as
+"listed as None" (`tests/test_fiu_ind_status.py`).
 
 **Checks after switching it on** (one test officer, on the test case):
 
@@ -476,7 +478,16 @@ gets `case.trace_abandoned` with `stopped_by: client_disconnected`,
 `saved: false` (handoff `docs/handoff/trace-cancel-on-disconnect.md`). Background
 jobs (`POST /trace/jobs`) and batches are not touched.
 
-**Merged.** #227 (with #228) on `main`. No migration. On in `render.yaml` since this PR.
+**Who it reaches.** Only a direct API caller of `POST /trace`. The web app
+starts every trace as a background job (`runTrace` in
+`frontend/src/api/trace.js`, `POST /trace/jobs`, called from
+`routes/TraceView.jsx`); the app's `traceAddress`, the only caller of
+`POST /trace`, is used by no page. So in the officer UI a closed tab does not
+stop a trace: the job runs to the end and saves its case, with the flag on or
+off. Of direct callers, the checks below show it works over HTTP/2 and does
+nothing over HTTP/1.1 (HTTP/3 not tested).
+
+**Merged.** #227 (with #228) on `main`. No migration. On in `render.yaml` since #296.
 
 **The open question.** The flag only helps if a client's hang-up reaches
 uvicorn through Render's chain: client → Cloudflare edge (Render's own account)
@@ -518,6 +529,8 @@ when a write to the client fails. `POST /trace` writes nothing until the trace
 ends, so:
 
 - **Browsers and other HTTP/2 or HTTP/3 clients:** the flag is likely to work.
+  (No page of the web app calls `POST /trace`, so this is about a protocol, not
+  the officer UI; see "Who it reaches" above.)
   HTTP/3 was not tested; Cloudflare's 19 Jan 2026 changelog says it now ends
   cancelled HTTP/3 requests at once.
 - **HTTP/1.1 scripts** (Python `urllib` and `requests`, `check_demos.py`, which
