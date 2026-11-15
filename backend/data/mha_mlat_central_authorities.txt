@@ -1,0 +1,84 @@
+# Figure 3.6's other columns: each treaty country's Central Authority, the language requirement as per the
+#   MLAT/agreement, and the specifications for making a request, as listed by the MHA in 2019. The country names
+#   are the "name" column of mha_mlat_countries.txt (same 42 rows, same order). Read by app/letters_of_request.py
+#   (central_authorities()); nothing in a draft letter or its notes uses it yet.
+# Source: Ministry of Home Affairs, IS-II Division/Legal Cell-I, F. No. 25016/52/2019-LC, dated 04/12/2019,
+#   "Comprehensive Guidelines for investigation abroad and issue of Letters Rogatory (LRs)/Mutual Legal
+#   Assistance (MLA) Request and Service of Summons/Notices/Judicial documents in respect of Criminal Matters",
+#   Figure 3.6 "List of countries having MLAT with India", columns "Central Authority- Address and Email ID",
+#   "Language requirement as per MLAT" and "Specifications requirements for making a request".
+#   Pages: rows 1-11 on page [25] (PDF page 27); rows 12-22 on page [26] (PDF page 28); rows 23-32 on page [27]
+#   (PDF page 29); rows 33-42 on page [28] (PDF page 30). Footnotes 12 and 13 are on pages [26] and [27].
+# Copy read: https://jkhighcourt.nic.in/upload/notices/guidelines.pdf (as circulated by the High Court of J&K;
+#   PDF SHA-256 a318fde9e80479b005cb3ee000feadfd7428fb07e2f6232600b8dab5d03ffbe2, the same copy as
+#   mha_mlat_countries.txt and mha_letter_of_request.txt; fetched again and checked on 16 November 2026).
+# The copy is a scan: PDF pages 27 to 30 were rendered to images and every cell below was read from the images
+#   (machine OCR only as a first draft), keeping the MHA's words, spelling and punctuation as printed, including
+#   what look like slips in the original: Kyrgyzstan's address is printed as "the Republic of Kazakhstan,
+#   Nur-Sultan city"; Russia's e-mail as "transgprf@mal.ru"; Vietnam's as "tttp_mla@vks.gov.v". A stray quotation
+#   mark printed after Kyrgyzstan's "General Prosecutor's Office" is left out. Accents in the Mexican and Spanish
+#   addresses are faint in the scan and are as the page images show them.
+# AWAITING A BY-EYE CHECK BY A SECOND PERSON against pages [25] to [28] of the PDF before anyone relies on it.
+# As listed on 4 December 2019; Central Authorities, addresses and rules may have changed since; the officer
+#   confirms with MHA IS-II.
+# One row per line: name | Central Authority | e-mail | language requirement | specifications.
+#   " / " marks a line break in the figure's Central Authority cell. Telephone, fax and web site lines in that
+#   cell are left out. An empty Central Authority means the figure's cell is blank (Switzerland); an empty
+#   e-mail means the figure prints none. Lines starting "#" are not data.
+# Footnote 12 (Hong Kong's "Mandatory assurances[12]"), page [26], as printed: "MANDATORY ASSURANCES (a) does not
+#   relate to the prosecution or punishment of a person for a criminal offence that is, or is by reason of the
+#   circumstances in which it is alleged to have been committed or was committed, an offence of a political
+#   character; (b) is not made for the purposes of prosecuting, punishing or otherwise causing prejudice to a
+#   person on account of that person's race, religion, nationality or political opinions; (c) does not relate to
+#   the prosecution of a person for an offence in a case where the person has been convicted, acquitted or
+#   pardoned by a competent court or other authority of (name of requesting place), in respect of that offence
+#   or of another offence constituted by the same act or omission as that offence; and (d) does not have as its
+#   primary purpose the assessment or collection of tax."
+# Footnote 13 (Singapore's "Foreign Law immunity certificate[13]"), page [27], as printed: "[Letter head] FOREIGN
+#   LAW IMMUNITY CERTIFICATE I, [name & designation], on behalf of the Government of India certify that under the
+#   law of India, persons generally or a specified person could, either generally or in specified proceedings and
+#   either generally or in specified circumstances, be required to[answer such questions as are sought to be
+#   asked / produce the equivalent of the document/things/information/evidence] sought by this Request.
+#   [Signature and/or seal] [Name, Designation, Office, Date]"
+Australia | Assistant Secretary International Crime Cooperation / Central Authority International Crime Cooperation / Division Attorney-General's Department 3-5 National / Circuit BARTON ACT 2600 AUSTRALIA | mutualassistance@ag.gov.au | Requests shall be submitted in the English language | No specific requirement.
+Azerbaijan | Ministry of Justice / AZ 1073, Baku, Inshaatchilar ave.1 | mincus@azdata.net | Contracting States shall use their national language attaching the translation in the national language of the other Contracting State or in the English language | No specific requirement.
+Bahrain | Ministry of Justice / 82 Rd No 1702, Manama, / Bahrain |  | Requests and supporting documents shall be accompanied by a translation into one of the official languages of the Requested State or into English | No specific requirement.
+Bangladesh | Ministry of Home Affairs |  | Requests and supporting documents shall be accompanied by a translation into English. | No specific requirement.
+Belarus | General Prosecutor's Office of the Republic of Belarus and the Supreme Court of the Republic of Belarus |  | Contracting Parties shall use their national language attaching the translation in the national language of the other Contracting Party or in English. | No specific requirement.
+Bosnia & Herzegovina | Ministry of Justice of Bosnia and Herzegovina / 1 Trg BiH Street, 71 000 Sarajevo |  | Requests with supporting documents shall be submitted in the English language, if required, accompanied by a translation in the language of the Requested State | No specific requirement.
+Bulgaria | Ministry of Justice / Address: 1 Slavyanska str. 1040, Sofia, / Bulgaria | priemna@justice.government.bg | Requests for legal assistance and supporting documents shall be accompanied by a certified translation in English or in the language of the Requested State | No specific requirement.
+Cambodia | Ministry of Interior / N° 275, Norodom, Phnom Penh; |  | Request shall be submitted in the English language. | No specific requirement.
+Canada | International Assistance Group / Litigation Branch, Criminal Law Division / Department of Justice Canada / 284 Wellington Street, 2nd Floor Ottawa, ON K1A 0H8 | cdncentralauthority@justice.gc.ca | Requests and supporting documents shall be accompanied by a translation into one of the official languages of the Requested State | No specific requirement.
+Egypt | Ministry of Justice / Lazoughly Square / Abdeen, Cairo Governorate, Egypt |  | Requests and supporting documents shall be accompanied by a translation in English or in the language of the Requested State | No specific requirement.
+France | Ministry of Justice / Ministère de la Justice et des Libertés / Direction des Affaires criminelles et des Grâces / Bureau de l'Entraide Pénale Internationale / 13 place Vendôme 75042 Cedex 01 |  | Requests and supporting documents shall be accompanied by a translation into one of the official languages of the Requested Party. (French Translation) | No specific requirement.
+Hong Kong | Secretary for Justice / The Mutual Legal Assistance Unit / Department of Justice / 47/F, High Block / Queensway Government Offices / 66 Queensway / Hong Kong |  | Requests shall be in, or translated into, an official language of the Requested Party. All documents submitted in support of a request shall be accompanied, if so required by the Requested Party, by a translation into an official language of the Requested Party | Mandatory assurances[12] are required.
+Iran | Central Authority is the Judiciary |  | Requests and supporting documents shall be accompanied by a translation in English or in the language of the Requested State | No specific requirement.
+Indonesia | Ministry of Law and Human Right / H.E. Minister for Law and Human Rights / Directorate General of Legal Administrative Affairs, Jl. / H.R. Rasuna Said Kav. 6-7 / Jakarta 12940 Indonesia |  | English and the Indonesian translation (Bhasha Indonesia) | No specific requirement.
+Israel | Ministry of Justice / 216 Y'affo st. Jerusalem (Sha'arei H'air building) Israel |  | Requests shall be submitted in the English language | No specific requirement.
+Kazakhstan | Office of the Attorney General |  | Requests and supporting documents shall be accompanied by a translation into one of the languages of the requested Party. (Translation in Kazakh or Russian) | No specific requirement.
+Kyrgyzstan | General Prosecutor's Office / 010000, the Republic of Kazakhstan, Nur-Sultan city, / Mangilik El avenue, 14 |  | the Contracting Parties shall use their national language attaching the translation in the national language of the other Contracting Party or in the English or Russian languages | No specific requirement.
+Kuwait | Ministry of Justice (Criminal Execution Office & Foreign Communications) |  | Requests and supporting documents shall be accompanied by a translation into one of the official languages of the Requested Party or into English. | No specific requirement.
+Malaysia | Attorney General of Malaysia / c/o International Cooperation Unit / Attorney General's Chambers / No. 45 Persiaran Perdana / Precinct 4, 62100 Putrajaya, MALAYSIA |  | Requests and supporting documents thereto and other communications related to the request shall be submitted in the English language. | No specific requirement.
+Maldives | Prosecutor General's Office / Majeedhee Magu, Male 20040, Maldives |  | Request has to be sent in English | No specific requirement.
+Mauritius | Attorney General's Office / Ground Floor, / 2nd, 3rd, 4th, 5th, and 6th floor / Renganaden Seeneevassen Building / Port Louis, MAURITIUS | ago@govmu.org | Requests shall be submitted in the English language | No specific requirement.
+Mexico | Office of the Attorney General / Dirección General de Extradiciones y Asistencia / Jurídica Procuraduría General de la República / Avenida Paseo de la Reforma Nº 211-213, Segundo / Piso, Colonia Cuauhtémoc, Delegación Cuauhtémoc, / México, Distrito Federal, C.P. 06500 | fresendiz@pgr.gob.mx | Requests and supporting documents shall be in the language of the Requested Party or in English | No specific requirement.
+Mongolia | General Prosecutor's Office. |  | Contracting Parties shall use their national language attaching the translation in the national language of the other Contracting Party or in the English language | No specific requirement.
+Morocco | Ministry of Justice / Ministry of Justice Mamounieh Square, PO Box 1015, / Rabat, Morocco |  | Arabic translation | No specific requirement.
+Myanmar | Ministry of Home Affairs / Office Building No.8, Administrative Zone / Naypyitaw, UNION OF MYANMAR |  | Requests shall be submitted in the English language. | No specific requirement.
+Russia | Prosecutor General's Office of the Russian Federation / Main Department of International Legal Cooperation / 15a, Bolshaya Dmitrovka, GSP-3 / Moscow 125993 Russia | transgprf@mal.ru | Contracting Parties shall use their national language attaching the translation in the national language of the other Contracting party or in the English language. (Russian Translation) | No specific requirement.
+Singapore | Director-General / International Affairs Division The Attorney-General's / Chambers / 1 Upper Pickering Street Singapore 058288 REPUBLIC / OF SINGAPORE. |  | All requests and supporting documents submitted by the Requesting State shall be in English. | Foreign Law immunity certificate[13] and Mandatory assurances are required.
+South Africa | Director General of the Department of Justice & / Constitutional Development / Private Bag x81 PRETORIA 0001 |  | Requests shall be submitted in the English language | No specific requirement.
+South Korea | International Criminal Affairs Division / Criminal Affairs Bureau / Ministry of Justice, / Republic of Korea / Gwacheon-Si Gwanmoon-Ro 88, / Government Complex Building #5, Postal Code 427-720 |  | Requests with supporting documents and other communications made shall be made in the English language accompanied by a translation into the Korean language | No specific requirement.
+Spain | Ministry of Justice / Ministerio de Justicia / Subdirección General de Cooperación Jurídica Internacional / c/San Bernardo, 62 / 28071 Madrid , Spain |  | Requests and supporting documents shall be accompanied by a translation into the official language of the Requested Party or English | No specific requirement.
+Sri Lanka | Ministry of Justice and Law Reforms / Secretary / Ministry of Justice and Prison Reforms / Superior Courts Complex / Adhikarana Mawatha / Colombo 12, Sri Lanka | secretary@moj.gov.lk | Requests shall be submitted in the English language. | No specific requirement.
+Switzerland |  |  | French, German or Italian translation is required | No specific requirement.
+Sultanate of Oman | Royal Oman Police |  | Requests and supporting documentation shall be accompanied by a translation into one of the official languages used in the Requested State | No specific requirement.
+Tajikistan | Prosecutor's Office of the Republic of Tajikistan / 734025, Dushanbe city, Tehron 36 Street | dushanbe@prokuratura.tj | Contracting Parties shall use their national language attaching the translation in the national language of the other Contracting Party or in the English language | No specific requirement.
+Thailand | International Affairs Department / Office of the Attorney General, Rajaburi Direkriddhi / Building, Government Complex / Chaeng Watthana Road, Lak si / Bangkok 10210, Thailand | inter@ago.go.th | Requests shall be submitted in English language | No specific requirement.
+Turkey | Ministry of Justice General / Directorate of International Law and Foreign Relations / Mustafa Kemal Mahallesi 2151. Cadde No:34/A 06520 / Söğütözü, Ankara, Turkey | uhdigm@adalet.gov.tr | Request and documents to be provided in the English language | No specific requirement.
+Ukraine | General Prosecutor's Office of Ukraine (concerning requests by pre-trial investigation authorities) and the Ministry of Justice of Ukraine (concerning requests by courts) |  | Requests and supporting documents shall be accompanied by a translation into English | No specific requirement.
+United Arab Emirates | Ministry of Interior / 1st Street, W 56 - Abu Dhabi / United Arab Emirates |  | Requests and supporting documents shall be accompanied by a translation into one of the official languages of the Requested Party. (Arabic along with English Translation) | Legal provisions relating to lapse and limitation of law suit.
+United Kingdom | UK Home Office / 5th Floor Fry Building 2 Marsham Street London SW1P 4DF |  | Request and supporting documents shall be drawn in the language of Requesting Party and shall be accompanied by a translation into that of the Requested Party. | No specific requirement.
+United States of America | Office of International Affairs / Criminal Division / United States Department of Justice / 1301 New York Avenue, N.W. / Washington, D.C. 20005 |  | The request shall be in English | No specific requirement.
+Uzbekistan | Prosecutor's Office of the Republic of Uzbekistan / 66 Yahyo Gulyamov Street, / Tashkent 142000, Uzbekistan |  | The Contracting Parties shall use their national language attaching the translation in the national language of the other Contracting Party or in the English language. | No specific requirement.
+Vietnam | International Cooperation and Mutual / Legal Assistance in Criminal Matters / Department, Mutual Legal Assistance in Criminal / Matters Division, Supreme People's Procuracy, 44 Ly / Thuong Kiet street / Hoan Kiem district, VIET NAM | tttp_mla@vks.gov.v | A request, any supporting documentation and any communications shall be in the language of the Requesting Party and be accompanied by a translation into the language of the Requested Party or in the English language | No specific requirement.

@@ -80,3 +80,63 @@ def test_the_officers_basis_is_kept_whatever_the_list_says():
 def test_no_country_given_says_nothing_about_the_list():
     notes, _ = notes_and_letter({**DETAILS, "country": ""})
     assert "2019 list" not in notes and "Treaty:" not in notes
+
+
+# Figure 3.6's Central Authority, language and specifications columns, and the MHA MLAT portal's current list
+# (#352). Both await a by-eye check by a second person, so no draft uses them yet. A change is deliberate: say
+# what changed and why in the pull request, and update the pin.
+AUTHORITIES_SHA256 = "a36aebb34d5cfd3fbc39ef74a1f2bb7752a469a532f7b69b8cb3146b841d2502"
+PORTAL_SHA256 = "3c5a38fc5b990e89af450d4853da62ab0d693898fcf3128128ecb2ab4da68f12"
+
+
+def header(path):
+    return flat(" ".join(ln.lstrip("# ") for ln in path.read_text().splitlines() if ln.startswith("#")))
+
+
+def test_figure_3_6_columns_are_the_reviewed_transcription_row_for_row():
+    assert letters_of_request.authorities_sha256() == AUTHORITIES_SHA256
+    rows = letters_of_request.central_authorities()
+    assert [r["name"] for r in rows] == [r["name"] for r in treaty_countries()]  # same 42 rows, same order
+    assert all(r["language"] and r["specifications"] for r in rows)
+    assert [r["name"] for r in rows if not r["authority"]] == ["Switzerland"]  # the figure's cell is blank
+    by_name = {r["name"]: r for r in rows}
+    assert by_name["United States of America"]["language"] == "The request shall be in English"
+    assert by_name["Morocco"]["language"] == "Arabic translation"
+    # Kept as printed, slips included; never "corrected" into something the MHA did not print.
+    assert "the Republic of Kazakhstan" in by_name["Kyrgyzstan"]["authority"]
+    assert by_name["Vietnam"]["email"] == "tttp_mla@vks.gov.v"
+    assert [r["name"] for r in rows if r["specifications"] != "No specific requirement."] == \
+        ["Hong Kong", "Singapore", "United Arab Emirates"]
+
+
+def test_portal_list_is_the_reviewed_transcription():
+    assert letters_of_request.portal_sha256() == PORTAL_SHA256
+    rows = letters_of_request.portal_countries()
+    assert len(rows) == 67
+    linked = [r for r in rows if r["treaty"].startswith("document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/")]
+    assert len(linked) == 41
+    assert sorted(r["name"] for r in rows if r["treaty"] == "icon, no document linked") == [
+        "Federal Democratic Republic of Nepal", "Germany", "Luxembourg", "New Zealand", "Poland",
+        "The Kingdom of Cambodia", "The Kingdom of Morocco", "The Netherlands"]
+    assert sum(r["treaty"] == "Not Exist" for r in rows) == 18
+    assert len({r["name"] for r in rows}) == 67
+
+
+def test_both_files_name_their_source_and_await_a_second_check():
+    authorities = header(letters_of_request.AUTHORITIES_FILE)
+    for part in ("F. No. 25016/52/2019-LC", "Figure 3.6", "page [25] (PDF page 27)", "page [28] (PDF page 30)",
+                 "a318fde9e80479b005cb3ee000feadfd7428fb07e2f6232600b8dab5d03ffbe2", "As listed on 4 December 2019",
+                 "AWAITING A BY-EYE CHECK BY A SECOND PERSON"):
+        assert part in authorities, part
+    portal = header(letters_of_request.PORTAL_FILE)
+    for part in ("https://mlat.mha.gov.in/", "Treaties/Agreements", "Retrieved: 15 November 2026",
+                 "2cd27be206d0660e009afacadb0423a605d1b3136089d4c3d26a5de2a476a140",
+                 "AWAITING A BY-EYE CHECK BY A SECOND PERSON", "A row is not proof that a treaty is in force"):
+        assert part in portal, part
+
+
+def test_the_draft_does_not_use_the_unchecked_files_yet():
+    notes, letter = notes_and_letter({**DETAILS, "country": "Kyrgyzstan"})
+    for text in (notes, letter):
+        assert "General Prosecutor's Office" not in text and "No specific requirement" not in text
+        assert "Kazakhstan" not in text and "MLAT portal" not in text and "mlat.mha.gov.in" not in text

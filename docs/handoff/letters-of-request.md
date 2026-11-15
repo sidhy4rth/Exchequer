@@ -3,9 +3,9 @@
 - **Feature**: suite feature 7 (request and letter generator): draft a letter of request to a foreign country (BNSS s.112) from a case, in the MHA's prescribed format
 - **Issue**: #125; #352 (Figure 3.6's Central Authorities and language rules, and the MHA's current treaty list)
 - **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, #130, on top of #127); `feat/letters-of-request-log` (logged in the requests log, #136, on top of #130); `feat/letters-of-request-followup` (a longer follow-up wait for letters of request, on top of #136); `feat/letters-of-request-fig36` (#352, data only)
-- **Current**: Sidhyarth (#352)
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: merged in #126 (with #127, #130, #136 and #158) on 2026-11-15; live, no flag
+- **Status**: merged in #126 (with #127, #130, #136 and #158) on 2026-11-15; live, no flag. #353 (data only, #352) in review
 
 ## Done
 
@@ -44,6 +44,11 @@
   - `freeze_requests.follow_up_days(kind)`: 30 days for `letter-rogatory` (`FOLLOW_UP_DAYS_BY_KIND`), 7 for every other kind. 30 days is an internal reminder interval the team chose, not a legal or MHA deadline.
   - Only the `follow_up` flag in `summary` changed, so the change stays clear of `feat/signoff-binding` (#133). The screens and #124 read the flag the server sends; neither has a 7-day number of its own.
 
+- **Figure 3.6's other columns and the MHA's current list (#352, #353).** Data only; no draft or note changes.
+  - `backend/data/mha_mlat_central_authorities.txt`: Figure 3.6's Central Authority (name and postal address; telephone, fax and web lines left out), e-mail, language requirement and specifications for each of the 42 rows, same names and order as `mha_mlat_countries.txt`, with footnotes 12 (mandatory assurances) and 13 (foreign law immunity certificate). Same PDF, SHA-256 re-checked (`a318fde9...ffbe2`). PDF pages 27 to 30 (printed [25] to [28]) rendered to PNG (PDFKit, 2.5x and 5x) and every cell read from the images, OCR only as a first draft. Printed slips kept as printed and named in the header (Kyrgyzstan's Kazakhstan address, two truncated e-mails).
+  - `backend/data/mha_mlat_portal_countries.txt`: the MHA's current list, the "Treaties/Agreements" (Treaty Details) table of its MLAT portal https://mlat.mha.gov.in/, retrieved 15 Nov 2026 21:00 UTC, 67 rows: 41 with a linked treaty document (the 2019 list's 40 in force plus Belgium), 8 with a document icon but no link (Nepal, Germany, Luxembourg, New Zealand, Poland, Cambodia, Morocco, Netherlands), 18 "Not Exist". It gives no years or in-force status. The page's hash changes per fetch (form state); the header records both fetches' hashes and the table's own hash. mha.gov.in's own MLA page lists no countries, and its 14.11.2025 document link points to the Criminal Law (Amendment) Act, 2018.
+  - `letters_of_request.py`: `central_authorities()`, `portal_countries()` and their SHA-256 pins; nothing calls them from the draft. 4 tests in `test_mlat_countries.py`, one showing the draft does not use them yet.
+
 ## Decisions
 
 - The letter's wording is the MHA's wherever the MHA gives it: transcribed from the scanned guidelines, checked against the page images, kept as printed (including "I, ..., has been authorized" and "the Government (name of the Requested Country)"), and pinned by SHA-256 in the tests so any change is deliberate.
@@ -56,7 +61,8 @@
 
 1. Barenyam (or anyone but Sidhyarth) checks `backend/data/mha_letter_of_request.txt` by eye against pages [20] to [24] of the guidelines PDF, and says so in the PR.
 2. Barenyam checks `backend/data/mha_mlat_countries.txt` by eye against pages [25] to [28] the same way (#130).
-3. Later: the MHA's current treaty list beside the 2019 one; Figure 3.6's Central Authorities and language requirements are not transcribed.
+3. Barenyam (or anyone but Sidhyarth) checks `backend/data/mha_mlat_central_authorities.txt` by eye against pages [25] to [28] (PDF pages 27 to 30) and `backend/data/mha_mlat_portal_countries.txt` against the Treaties/Agreements table on https://mlat.mha.gov.in/ (#353).
+   After that check (owner decision): show the country's Central Authority and language requirement, and whether the portal links a treaty for it, in the officer's notes (never the letter), behind a new flag.
 4. If the team wants a different reminder for letters of request, change `FOLLOW_UP_DAYS_BY_KIND` in `freeze_requests.py` (see "Follow-up wait" above).
 
 ## Open questions
@@ -65,4 +71,4 @@
 
 ## Files mid-change (do not touch)
 
-- `backend/data/mha_mlat_central_authorities.txt`, `backend/data/mha_mlat_portal_countries.txt` (new), `backend/app/letters_of_request.py`, `backend/tests/test_mlat_countries.py` (#352)
+- none

@@ -48,6 +48,11 @@ from .request_letters import (BLANK, COMPANY_WALLET_KINDS, _amount_lines, _attri
 WORDING_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_letter_of_request.txt"
 # Figure 3.6 of the same guidelines: the countries with a treaty or agreement with India, as listed in 2019.
 COUNTRIES_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_mlat_countries.txt"
+# Figure 3.6's other columns (Central Authority, language requirement, specifications), and the MHA's current
+# list from its MLAT portal. Read here and tested, but no draft or note uses them until a second person has
+# checked them by eye (docs/handoff/letters-of-request.md).
+AUTHORITIES_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_mlat_central_authorities.txt"
+PORTAL_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_mlat_portal_countries.txt"
 SECTIONS = ("opening", "basis_treaty", "basis_reciprocity", "assurances", "limitation_of_use", "confidentiality",
             "closing")
 BASES = ("treaty", "reciprocity")
@@ -109,6 +114,37 @@ def treaty_countries() -> list[dict[str, str]]:
             name, formal, instrument, status = (part.strip() for part in line.split("|"))
             rows.append({"name": name, "formal": formal, "instrument": instrument, "status": status})
     return rows
+
+
+def _rows(path: Path, fields: tuple[str, ...]) -> list[dict[str, str]]:
+    rows = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.startswith("#"):
+            parts = [part.strip() for part in line.split("|")]
+            if len(parts) != len(fields):
+                raise RuntimeError(f"data/{path.name}: expected {len(fields)} fields in {line[:60]!r}")
+            rows.append(dict(zip(fields, parts, strict=True)))
+    return rows
+
+
+def central_authorities() -> list[dict[str, str]]:
+    """Figure 3.6's Central Authority, e-mail, language requirement and specifications for each 2019 row,
+    keyed by the same name as treaty_countries(). Not yet used in a draft (awaiting a by-eye check)."""
+    return _rows(AUTHORITIES_FILE, ("name", "authority", "email", "language", "specifications"))
+
+
+def portal_countries() -> list[dict[str, str]]:
+    """The MHA MLAT portal's Treaty Details table: country, its "MLA Treaties" cell, its conventions.
+    Not yet used in a draft (awaiting a by-eye check)."""
+    return _rows(PORTAL_FILE, ("name", "treaty", "conventions"))
+
+
+def authorities_sha256() -> str:
+    return hashlib.sha256(AUTHORITIES_FILE.read_bytes()).hexdigest()
+
+
+def portal_sha256() -> str:
+    return hashlib.sha256(PORTAL_FILE.read_bytes()).hexdigest()
 
 
 def listed_country(country: str) -> dict[str, str] | None:

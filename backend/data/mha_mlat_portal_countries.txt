@@ -1,0 +1,99 @@
+# The MHA's current list of countries and the mutual legal assistance treaty it shows for each, beside the 2019
+#   list in mha_mlat_countries.txt. Read by app/letters_of_request.py (portal_countries()); nothing in a draft
+#   letter or its notes uses it yet.
+# Source: Ministry of Home Affairs, "Mutual Legal Assistance In Criminal Matters With Foreign Countries" (the MHA's
+#   MLAT portal), https://mlat.mha.gov.in/ ("Contents Maintained by Ministry of Home Affairs"), menu item
+#   "Treaties/Agreements", which opens the "Treaty Details" table (columns "Country", "MLA Treaties",
+#   "Conventions"), 67 rows in the order the page gives them. A web page, so it has no page numbers: the cite is
+#   that table. The MHA's own list was used because its main site (https://www.mha.gov.in/
+#   mutual-legal-assistancemla-criminal-matters, retrieved the same night) lists no countries, and its one document
+#   there ("Mutual Legal Assistance from abroad in Criminal Matters.", dated 14.11.2025) links to a different file
+#   (the Criminal Law (Amendment) Act, 2018).
+# Retrieved: 15 November 2026, 21:00 UTC (16 November 2026, 02:30 IST). SHA-256 of the HTML as fetched:
+#   2cd27be206d0660e009afacadb0423a605d1b3136089d4c3d26a5de2a476a140. The page carries per-request form state, so
+#   its hash changes on every fetch; a second fetch minutes later (SHA-256
+#   acf09fd5aab3008c0565791c4f0519f9666bcad0a8da07310fe4443eb2d44ae6) had the same table, cell for cell. SHA-256
+#   of the table's markup (from 'id="GridView1"' up to its "</table>"):
+#   b757f8f75ddadc00fe75202e58422d18a6f7ee5c1535faf9f8931e8cff71bc26.
+# Transcribed from the page's HTML by a script and read row by row; names and convention names as the page gives
+#   them (including "UN Convention against illicit Traffic in NDPS, 1998" and "Republic of Turkiye").
+# AWAITING A BY-EYE CHECK BY A SECOND PERSON against the live page's Treaties/Agreements table before anyone relies
+#   on it.
+# What the table does not say: the year of each treaty, whether it is in force, or Central Authorities and
+#   language rules (for those, Figure 3.6 in mha_mlat_central_authorities.txt, as of 2019). A row is not proof
+#   that a treaty is in force; the officer confirms with MHA IS-II.
+# One row per line: country as the page names it | the "MLA Treaties" cell | the "Conventions" cell.
+#   MLA Treaties cell: "document: <url>" where the page links a treaty document; "icon, no document linked" where
+#   it shows the document icon with no link (8 rows; not read as a treaty either way); "Not Exist" as printed.
+#   Conventions: the page's entries in order, joined by "; ", empty where it shows none. Lines starting "#" are
+#   not data.
+# Against the 2019 list (Figure 3.6, 42 rows): the 41 rows with a linked document are the 2019 list's 40 rows
+#   in force plus The Kingdom of Belgium; Cambodia and Morocco (signed, not yet in force in 2019) show the icon
+#   with no document.
+Afghanistan | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC; SAARC Convention
+Antigua and Barbuda | Not Exist | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Arab Republic of Egypt | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Egypt.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Armenia | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Azerbaijan | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Azerbaijan.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Bhutan | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC; SAARC Convention
+Bosnia & Herzegovina | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Bosnia&Herzegovina.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Brazil | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Canada | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Canada.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Chile | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Commonwealth of Australia | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Australia.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Croatia | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Democratic Socialist Republic of Sri Lanka | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/SriLanka.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC; SAARC Convention
+Federal Democratic Republic of Nepal | icon, no document linked | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC; SAARC Convention
+Fiji | Not Exist | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+French Republic | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/France.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Germany | icon, no document linked | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Islamic Republic of Iran | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Iran.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Italy | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Kingdom of Bahrain | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Bahrain.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Kingdom of Spain | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Spain.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Kingdom of Thailand | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Thailand.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Kyrgyz Republic | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Kyrgez.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Lithuania | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Luxembourg | icon, no document linked | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Malawi | Not Exist | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Malaysia | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Malaysia.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Mongolia | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Mongolia.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+New Zealand | icon, no document linked | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Papua New Guinea | Not Exist | Harare Scheme; UN Convention against Corruption
+People's Republic of Bangladesh | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Bangladesh.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC; SAARC Convention
+Peru | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Poland | icon, no document linked | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Portugal | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Belarus | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Belarus.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Bulgaria | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Bulgaria.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Indonesia | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Indonesia.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Kazakhstan | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Kazakhstan.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Korea | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Korean.pdf |
+Republic of Maldives | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Maldives.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC; SAARC Convention
+Republic of Mauritius | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Mauritius.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Singapore | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Singapore.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of South Africa | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/South%20Africa.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Tajikistan | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Tajikistan.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of the Union of Myanmar | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Myanmar.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Turkiye | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/TURKEY.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Republic of Uzbekistan | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/UZBEKISTAN.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Russian Federation | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Russian.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Saudi Arabia | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Socialist Republic of Vietnam | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Vietnam.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+State of Kuwait | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Kuwait.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Sultanate of Oman | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Oman.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Sweden | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Swiss Confederation | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/switzerland.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Tanzania | Not Exist |
+The Hong Kong SAR of the People's Republic of China | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Hongkong.pdf |
+The Kingdom of Belgium | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/TreatyBelgium.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+The Kingdom of Cambodia | icon, no document linked | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+The Kingdom of Morocco | icon, no document linked | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+The Netherlands | icon, no document linked | UN Convention against TOC
+The State of Israel | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Israel.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Tunisia | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+Ukraine | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Ukraine.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+United Arab Emirates | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/UAE.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+United Kingdom of Great Britain and Northern Ireland | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/UK.pdf | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+United Mexican States | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Mexico.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
+United States of America | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/USA.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
