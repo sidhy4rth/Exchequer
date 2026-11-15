@@ -20,7 +20,7 @@
 ## Next
 
 1. Owner: decide whether to merge (then mark the PR ready and request review).
-2. After merge: let the Tron deposit-row join accept the 5 new destinations (`~/exchequer-flagged/store/NEXT-RELEASE.md`).
+2. After merge: let the Tron deposit-row join accept the 5 new destinations (see the next-release notes kept with the label-store build, not in this repository).
 
 ## Open questions
 

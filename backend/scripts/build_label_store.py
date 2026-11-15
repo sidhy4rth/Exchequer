@@ -29,11 +29,12 @@ infrastructure, a government, court or issuer record conflicts with another
 category, or no never-poison list was given; each has a flag to accept it
 after review.
 
-    cd backend && .venv/bin/python -m scripts.build_label_store ~/exchequer-flagged/new_flagged.csv \
-        --never-poison ~/exchequer-flagged/never_poison_services.txt \
-        --never-poison ~/exchequer-flagged/never_poison_suresh.txt \
-        --never-poison ~/exchequer-flagged/never_poison_mukesh.txt \
-        --never-poison ~/exchequer-flagged/never_poison_scout.txt
+    # <hunt-dir> = the hunt's working folder (outside this repository)
+    cd backend && .venv/bin/python -m scripts.build_label_store <hunt-dir>/new_flagged.csv \
+        --never-poison <hunt-dir>/never_poison_services.txt \
+        --never-poison <hunt-dir>/never_poison_suresh.txt \
+        --never-poison <hunt-dir>/never_poison_mukesh.txt \
+        --never-poison <hunt-dir>/never_poison_scout.txt
 """
 from __future__ import annotations
 

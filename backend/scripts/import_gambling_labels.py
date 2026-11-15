@@ -20,7 +20,9 @@ it, so a label is never asserted on a chain with no evidence. Anything already
 labelled as an exchange in data/exchange_labels*.json is skipped: one address,
 one attribution.
 
-    cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir ~/exchequer-flagged
+    cd backend && .venv/bin/python -m scripts.import_gambling_labels --hunt-dir <hunt-dir>
+
+<hunt-dir> is the hunt's working folder, outside this repository.
 """
 from __future__ import annotations
 

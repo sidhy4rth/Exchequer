@@ -24,7 +24,7 @@
 
 ## Next
 
-1. After merge: let the Tron deposit-row join accept the 10 new destinations (see `~/exchequer-flagged/store/NEXT-RELEASE.md`).
+1. After merge: let the Tron deposit-row join accept the 10 new destinations (see the next-release notes kept with the label-store build, not in this repository).
 2. The 5 left-out wallets: labelled in the draft PR for #307 (`docs/handoff/okx-tron-demo-wallets.md`); no demo needed re-recording.
 
 ## Open questions
