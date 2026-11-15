@@ -20,6 +20,7 @@ import { plain } from '../text'
 import { BAND_RULE, bandLabel, bandOf } from '../components/confidence'
 import EntitiesTab from '../components/case/EntitiesTab'
 import { Address, PATTERN_NAME, RISK_NAME, middle, mmss, num, txUrl, when } from '../components/case/format'
+import StoreRowBasis from '../components/case/StoreRowBasis'
 const COMPONENT_NAME = {
   hop_proximity: 'Hop proximity',
   amount_correlation: 'Amount correlation',
@@ -599,6 +600,7 @@ export default function TraceView() {
                     <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
                     <Address value={result.exchange_address} head={22} tail={20} />
                   </div>
+                  <StoreRowBasis result={result} />
                 </>
               ) : followed ? (
                 <>
