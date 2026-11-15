@@ -36,5 +36,8 @@
  "generated_from": "backend/data/recorded_demos.json",
  "kinds_without_a_recorded_example": [
   "deposit_label"
- ]
+ ],
+ "pinned_recordings": {
+  "3": "backend/tests/fixtures/recorded_demo3_2026-10-14_usdt_follow_on.json"
+ }
 }

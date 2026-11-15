@@ -18,10 +18,12 @@ import pytest
 from app import config
 from app.request_letters import BLANK, LETTERS, NOT_VALID, LetterNotApplicable, available, draft
 
+from conftest import swap_recording
 from test_request_letters import DEPOSIT, PRORATA, SEED, SWAPPER, TX, case, follow_on_case
 
 DEMOS = {d["demo"]: d["result"] for d in json.loads(
     (Path(config.DATA_DIR) / "recorded_demos.json").read_text(encoding="utf-8"))}
+SWAP_DEMO = swap_recording()["result"]  # the old demo 3 (14 Oct): a swap with a USDT follow-on
 METHODS = {"figures": {"fifo": 2000.0, "prorata": 6000.0}, "range": {"low": 2000.0, "high": 6000.0},
            "conservative": 2000.0, "conservative_method": "fifo"}
 HOP = "T" + "h0p".ljust(33, "1")
@@ -240,10 +242,10 @@ def test_demo_3s_tether_freeze_names_neither_the_empty_swapping_wallet_nor_one_n
     # 0x35cf... sent all 5,215 USDT on to DEMO3_END, at the depth limit: the
     # walk never read what that wallet sent, so the case cannot say the USDT
     # stopped there, and there is no wallet left to ask Tether to freeze.
-    assert all(letter["to"] != "tether-freeze" for letter in available(DEMOS[3]))
+    assert all(letter["to"] != "tether-freeze" for letter in available(SWAP_DEMO))
     with pytest.raises(LetterNotApplicable):
-        draft("case-1", DEMOS[3], "tether-freeze")
-    assert DEMO3_END in draft("case-1", DEMOS[3], "tether") and DEMO3_TX in draft("case-1", DEMOS[3], "tether")
+        draft("case-1", SWAP_DEMO, "tether-freeze")
+    assert DEMO3_END in draft("case-1", SWAP_DEMO, "tether") and DEMO3_TX in draft("case-1", SWAP_DEMO, "tether")
 
 
 def node(address, out=0.0, into=0.0, **over):

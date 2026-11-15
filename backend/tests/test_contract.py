@@ -11,12 +11,14 @@ from pydantic import ValidationError
 
 from app.contracts import CONTRACT_VERSION, read_case, upgrade
 from app.pipeline import _all_transfers
+from conftest import swap_recording
 from scripts import build_contract_fixtures
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "contract"
 DEMOS = json.loads((DATA / "recorded_demos.json").read_text())
 BY_DEMO = {d["demo"]: d["result"] for d in DEMOS}
+SWAP_DEMO = swap_recording()["result"]  # the old demo 3: a swap with a USDT follow-on
 
 
 @pytest.mark.parametrize("demo", sorted(BY_DEMO))
@@ -80,7 +82,7 @@ def test_upgrade_adds_fields_and_changes_no_v1_field(demo):
 
 
 def test_follow_on_traces_are_upgraded_too():
-    v2 = upgrade(BY_DEMO[3])
+    v2 = upgrade(SWAP_DEMO)
     assert v2["follow_ons"], "demo 3 has a follow-on after a swap"
     for follow in v2["follow_ons"]:
         assert read_case(follow["result"]).contract_version == CONTRACT_VERSION
@@ -117,7 +119,7 @@ def test_pipeline_transfers_carry_the_block():
 
 
 def test_fixtures_match_what_the_script_would_write():
-    expected = build_contract_fixtures.build(DEMOS)
+    expected = build_contract_fixtures.build(build_contract_fixtures.load_demos())
     on_disk = {p.name for p in FIXTURES.glob("*.json")}
     assert on_disk == set(expected), "run: python -m scripts.build_contract_fixtures"
     for name, content in expected.items():

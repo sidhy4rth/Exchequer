@@ -43,6 +43,18 @@ from app import signing  # noqa: E402
 
 signing.reset_for_tests(signing.Signer(Ed25519PrivateKey.generate(), "file"))
 
+# The old demo 3 (0x536c4921...) as recorded on 14 Oct 2026, kept as a fixture
+# when demo 3 moved to another wallet (#284): it is the only recorded trace with
+# a swap and a USDT follow-on, which the letter, verify_case, contract and read
+# tests are pinned to. The contract fixtures are built from it too.
+from scripts.build_contract_fixtures import SWAP_RECORDING as SWAP_RECORDING_PATH  # noqa: E402
+
+
+def swap_recording() -> dict:
+    """That recording's row ({demo, recorded_at, result}), a fresh copy each call."""
+    import json
+    return json.loads(SWAP_RECORDING_PATH.read_text(encoding="utf-8"))[0]
+
 
 def addr(tag: str) -> str:
     """A syntactically valid EVM address that is readable in a failure message.

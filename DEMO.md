@@ -25,7 +25,7 @@ Every trace also has a **recording**: the full result as it came out on the
 day it was recorded, in `backend/data/recorded_demos.json`. Pick a demo in the
 app and an "open it as recorded" link appears beside the picker; it opens at
 `/demo/<n>` instantly, consults no chain, and its **Trace live** button runs the
-same trace now. When a live answer has moved (trace 3 does, by design), the two
+same trace now. When a live answer has moved (the old trace 3 did, by design), the two
 can be shown side by side. Recordings are not cases, so they never show up as
 related complaints. Re-record with `python backend/scripts/record_demos.py`
 (or `--only 3`) after the deployed label files change.
@@ -111,69 +111,96 @@ the running order, skip it and go 1 → 3.
 
 ---
 
-## 3 — An attribution that keeps moving, and what pro-rata says about it
+## 3 — A deposit address behind an intermediary, and what pro-rata says about it
 
 ```
-0x536c4921d1aafde6a5cda882fb5ca046f3601c65
+0x0067b43cb530e683dbffb43f5caacde867472721
 ```
-Ethereum · ETH · 3 hops · **~13 seconds**
+Ethereum · ETH · 3 hops · **~5–10 seconds cold, 16 requests**
 
 | | |
 |---|---|
-| Addresses traced | 15 |
-| Exchange | **None** within 3 hops (live trace, 15 November 2026, about 18:15 IST) |
-| Confidence | Not applicable: nothing reached an exchange. The recording of 14 October shows **Low** (0.40) at a probable Binance deposit address; on 27 September it was **High** (0.875); on 9 November the live trace reached Coinbase at 0.46 and, an hour later, Kraken at 0.45. This demo moves, which is the point of it. Say what the screen shows, not this table. |
-| Pro-rata | none (no attribution to share out) |
-| History | 4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: OKX deposit at 0.39 · 27 Sep: **Binance deposit at 0.875** · 14 Oct: Binance deposit at 0.40 · 9 Nov: Coinbase at 0.46, then Kraken at 0.45 · 15 Nov: **none** |
+| Addresses traced | 24 |
+| Attribution | **HitBTC — probable deposit address (inferred)** `0x4a126587…2c50c`, 2 hops (live trace, 15 November 2026, 21:14 IST) |
+| Confidence | **0.67, moderate** (hop 0.75 · amount 0.70 · directness **0.5**) |
+| Pro-rata | **about 0.74 of the 1.0626 ETH** that left the reported wallet on this path (69.7%) |
+| Evidence | 4 outgoing transfers, 100% of them to **HitBTC 3** `0xa12431d0…62be4` |
+| Also in `matches` | HitBTC 3 and HitBTC 6, exact labels, 3 hops, on other branches |
+| **Screening** | the reported address is itself a **reported phishing wallet** (`Fake_Phishing4989`, Etherscan's *Phish / Hack* label) |
 | Patterns | none |
-| Transfers excluded by the time rule | **97** |
+| Transfers excluded by the time rule | **89** |
 
-**Use this one to show honesty, not a clean result.** It has changed at
-least nine times, and every change has a reason the tool can state.
+The reported address carries Etherscan's *Phish / Hack* label and is in the
+same pinned list as demos 6 and 10. Its whole life is five transactions on
+23 and 24 November 2021. It received 2.22 ETH and 1.00 ETH on 23 November and
+sent 3.21 ETH on in three transfers within about a minute, early on 24 November.
+The route the sidebar names, hop by hop (all on 24 November 2021):
 
-On 4 September it reached Binance at 0.65. On 15 September, with the time
-rule in place, it reached nothing: that path ran through transfers made
-*before* the traced funds arrived — never the reported wallet's money. On the
-morning of 23 September it reached Uphold at 0.82 through a newly labelled
-wallet. By that evening the Uphold path was no longer in the graph — the
-wallets on it are busy, a trace reads each wallet's most recent transfers, and
-new activity changed what it read — and the closest attribution became a
-probable Binance deposit address two hops out. On 25 September the reported
-wallet itself had moved more ETH, and the closest attribution became a probable
-OKX deposit address, also two hops out — a weak lead: pro-rata said only about
-1.65 of the 951 ETH on that path was likely the reported funds.
+1. 06:51 IST: the reported wallet sends **1.0626 ETH** to `0x1930f9df…f811`
+   (tx `0xe60a0d2bdc1a96c619ba9d6e061f845bd0eba7e1b53e37291eb1f332f0338502`).
+2. 06:53 IST: `0x1930f9df…` sends **1.0604 ETH** to `0x4a126587…2c50c`
+   (tx `0x5fbed67e123e53ef593abb68b2b56d07e84ff489c2f66460579311e8365c5bf6`).
+3. 16:08 IST: `0x4a126587…` sweeps 1.1775 ETH into **HitBTC 3**, a labelled
+   HitBTC wallet (tx `0xa38e3780383bb6a9feb02851d60d4674e588c4981758be33330315f651f3dbbf`).
 
-On 27 September, between 00:41 and 05:34 IST, the reported wallet sent
-**2.01 ETH in nine transfers** directly to `0x2f9379f0…538e4` — a wallet that
-has only ever sent money to Binance 14, eighteen times since October 2022. One
-hop, and pro-rata has nothing to take away: all of it came from the reported
-wallet. The score (0.875) and the amount now say the same thing: a strong,
-small lead, and the deposit address a request to Binance should name.
+All 4 outgoing transfers the trace read from `0x4a126587…` went to HitBTC 3
+and nowhere else: the shape an exchange produces when it sweeps a customer's
+deposit address. So the result names it a *probable HitBTC deposit address
+(inferred)*, and the report prints the sentence that would confirm it: a lawful request to HitBTC asking whether that address is one it
+issued, and to whom. That is the address a request names; the hot wallet one
+hop on identifies nobody. Directness is 0.5 because it is an inference, not a
+label-file match; the exact matches are still listed.
 
-On 15 November it reached nothing, and no rule changed. The reported wallet
-has become very busy: Blockscout's public transaction list shows roughly 700
-to 800 transactions a day in and out since 9 November (754 on 9 November, 685
-on 14 November). A trace reads each wallet's 200 newest records, and at
-18:13 IST on 15 November those 200 covered only 12:31 to 18:13 IST that day,
-so the transfers the 9 November traces followed to Coinbase and Kraken are now
-thousands of records back and are not read. In the window that is read, the
-ten largest recipients lead nowhere labelled within 3 hops: the largest,
-20.70 ETH at 13:56 IST (`0x941d0641ce08…`, block 26419199) to `0xedd7e709…`,
-went on to `0x858ad8c2…` and then `0xd01607c3…`, none of them labelled; another
-8.30 ETH (`0x0c0a020aa440…`, 15:56 IST) went via `0xa54dc442…` into the WETH
-contract, and 9.35 ETH (`0x6938800956f3…`, 13:42 IST) via `0xf2b8c657…` into a
-pooled contract (`0x8feab81d…`), whose payouts a trace does not follow. The
-result says it was truncated at the reported wallet's record limit, which is
-the honest reading: older transfers exist and were not read.
+Pro-rata is the second point. The intermediary `0x1930f9df…` received 1.5222
+ETH while the reported funds passed through it, 1.0626 ETH of it from the
+reported wallet (69.8%), and sent 1.0604 ETH on to the deposit address. So the
+tool counts about **0.74 ETH** of that as the reported wallet's, not the full
+1.06, and the letter says so: "about 0.740266 ETH ... about 0.320183 came from
+other sources". The score and the amount say the same thing: a moderate lead,
+on a small sum.
 
-Say this out loud: on live blockchain data an attribution can move, and a
-tool that reports where money went has to say what changed and how much of
-the money it is talking about. Saved cases never move — the report reproduces
-exactly what was seen when the case was traced. With the wallet this busy, the
-200 records a trace reads now cover a few hours, so this demo can reach an
-exchange in one hour and none the next. The daily demo check expects it to
-move; its recorded expectation is now "none", so the check notes it when the
-trace reaches an exchange again rather than failing.
+Every wallet on this path is quiet: the reported wallet (5 transactions) and
+the intermediary (8) have not transacted since 24 November 2021, so a trace
+reads their whole history, not just the newest 200 records. So the daily Demo
+health check holds trace 3 to this answer strictly, like every other trace: a
+different exchange or score fails it.
+
+HitBTC is not in `backend/data/exchange_status.json`, so its labels carry no
+"(defunct)" or "(winding down)" mark, and the letters are addressed to HitBTC
+itself. HitBTC still operated on 15 November 2026: its public API
+(`api.hitbtc.com/api/3/public`) returned a live BTC/USDT ticker, with USDT
+deposits and withdrawals open. It is not on FIU-IND's list of registered VDA
+service providers (Lok Sabha USQ 5805, Annexure-I, as on 9 March 2026), and on
+1 October 2025 FIU-IND announced a notice to it under section 13 of the PMLA
+([PIB release 2173758](https://www.pib.gov.in/PressReleasePage.aspx?PRID=2173758);
+`backend/data/fiu_ind_status.json`).
+
+### Before 15 November: the attribution that kept moving
+
+Until 15 November 2026 demo 3 traced `0x536c4921d1aafde6a5cda882fb5ca046f3601c65`
+(still demo 4). Its answer changed at least nine times, and every change had a
+reason the tool could state:
+
+4 Sep: Binance at 0.65 · 15 Sep: **none** · 23 Sep (morning): Uphold at 0.82 · 23 Sep (evening): Binance deposit at 0.39 · 25 Sep: OKX deposit at 0.39 · 27 Sep: **Binance deposit at 0.875** · 14 Oct: Binance deposit at 0.40 · 9 Nov: Coinbase at 0.46, then Kraken at 0.45 · 15 Nov: **none**
+
+On 15 September the time rule removed a path that ran through transfers made
+*before* the traced funds arrived. On 23 September a newly labelled wallet put
+Uphold on the path, and new activity on busy wallets took it off again by the
+evening. On 25 September pro-rata said only about 1.65 of the 951 ETH on the
+OKX path was likely the reported funds. On 27 September the wallet sent
+2.01 ETH in nine transfers straight to a wallet that has only ever sent money
+to Binance 14, so pro-rata had nothing to take away (0.875).
+
+On 15 November it reached nothing within 3 hops, and no rule changed. The
+wallet had become very busy: Blockscout's public transaction list shows
+roughly 700 to 800 transactions a day since 9 November. A trace reads each
+wallet's 200 newest records, and at 18:13 IST on 15 November those covered
+only 12:31 to 18:13 IST that day. At that rate it could reach an exchange in
+one hour and none the next, so it could no longer show any particular
+exchange, and demo 3 moved to the quiet wallet above. The lesson it carried,
+that an attribution on live data can move and a tool must say why, is still
+told by trace 2 and *If a live trace disappoints*. Saved cases never move: the
+report reproduces exactly what was seen when the case was traced.
 
 ---
 
@@ -187,16 +214,18 @@ Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~1 second, 1
 | | |
 |---|---|
 | Addresses that funded it | **10** |
-| Total received from them | 43.5207 ETH |
-| Largest single sender | 16.9325 ETH |
+| Total received from them | 304.7749 ETH (trace of 15 November 2026, 21:12 IST) |
+| Largest single sender | 135.5910 ETH |
 | Exchanges among the senders | none |
 
-Trace 3 asked the other question. **Ten separate addresses paid money into
-it** — and none of them is a labelled exchange, so none is explained away as
+This is the wallet trace 3 used until 15 November, asked the other question.
+**Ten separate addresses paid money into it** — and none of them is a labelled exchange, so none is explained away as
 a withdrawal, even with three times as many exchange labels loaded. (The
-totals are lower than on 15 September — 248 ETH then — because the traversal
-keeps the ten largest senders of each address and the set has changed as the
-wallet kept receiving; the count did not.)
+totals move: 248 ETH on 15 September, 43.5 ETH on 23 September, 304.8 ETH on 15
+November. The traversal keeps the ten largest senders of each address, and
+the wallet now receives so often that on 15 November all ten had paid it
+between 17:16 and 20:36 IST that day. The count of ten and "no exchanges"
+did not move.)
 
 One complaint, ten more addresses that paid the same wallet. Each is a
 candidate victim who may hold a separate FIR, and the panel is labelled
@@ -444,11 +473,11 @@ On any case, press **P** (or the Present button). The case becomes four screens 
 
 ## Running order
 
-Trace 1, then 3. The story escalates: nothing found → a trace that *lost*
-its exchange when the time rule was applied and later found a different one
-when a wallet was labelled, which is the strongest argument for the tool's
-honesty you can make in one screen. Keep trace 2 in reserve for the question
-"why should I trust a pattern?".
+Trace 1, then 3. The story escalates: nothing found → money located at a
+probable HitBTC deposit address behind an intermediary, with pro-rata saying
+how much of it is the reported wallet's. Keep trace 2 in reserve for the
+question "why should I trust a pattern?"; it is also the one that shows a
+result moving as the chain moves.
 
 Set the depth selector to **3 hops**.
 
@@ -523,8 +552,9 @@ Pattern findings are threshold comparisons against a graph that reshapes as
 new transactions arrive. Trace 2 is the proof: its amount split fired on 15
 September and not on 23 September — a property of the method, not a defect,
 and worth saying out loud if asked. Attributions move too, for stated reasons:
-trace 3 lost one to the time rule, gained another from a new label, and has
-moved since as the wallets on its path kept transacting.
+the wallet trace 3 used until 15 November lost one to the time rule, gained
+another from a new label, and kept moving as the wallets on its path kept
+transacting.
 
 Every trace is stored as a case, so a known-good result can be opened
 instantly and will look identical every time:

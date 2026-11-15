@@ -171,7 +171,7 @@ def test_an_explorer_tag_asks_for_the_records_it_names_and_points_to_nothing_mis
 
 
 @pytest.mark.parametrize("demo, unsaid", [
-    (3, "to an account at Binance"),      # a probable deposit address: only the exchange can confirm it
+    (3, "to an account at HitBTC"),       # a probable deposit address: only the exchange can confirm it
     (12, "to an account at Flipster"),    # an explorer's tag this office has not confirmed
     (11, "to an account at Binance"),     # a wallet the exchange runs itself is no one customer's account
 ])

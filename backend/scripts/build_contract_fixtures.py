@@ -8,6 +8,12 @@ generated, never edited by hand. The rule that picks them: for every
 (attribution kind, source) the demos contain, the first outgoing demo that has
 it, plus the first outgoing demo that reaches no exchange.
 
+The demos are data/recorded_demos.json, except that demo 3 is read from
+tests/fixtures/recorded_demo3_2026-10-14_usdt_follow_on.json: the old demo 3
+as recorded on 14 Oct 2026, kept when the shipped demo 3 moved to another
+wallet (#284), so the fixtures and their readers' tests stay as they were.
+index.json names it under "pinned_recordings".
+
 A kind no recorded demo reaches has no fixture, and the index says so; a
 made-up case would let a reader's tests pass against data the tool never
 produced. `tests/test_contract.py` fails if these files drift from what this
@@ -25,12 +31,24 @@ from app.contracts.case_v2 import AttributionKind
 BACKEND = Path(__file__).resolve().parent.parent
 DEMOS = BACKEND / "data" / "recorded_demos.json"
 OUT = BACKEND / "tests" / "fixtures" / "contract"
+SWAP_RECORDING = BACKEND / "tests" / "fixtures" / "recorded_demo3_2026-10-14_usdt_follow_on.json"
+PINNED = {3: SWAP_RECORDING}
+
+
+def load_demos() -> list[dict[str, Any]]:
+    """The demos the fixtures are built from: recorded_demos.json, with each
+    pinned demo's row read from its own recording instead."""
+    pinned = {row["demo"]: row for path in PINNED.values()
+              for row in json.loads(path.read_text(encoding="utf-8"))}
+    return [pinned.get(entry["demo"], entry) for entry in json.loads(DEMOS.read_text())]
 
 
 def build(demos: list[dict[str, Any]]) -> dict[str, Any]:
     """{file name: content}, including index.json. Pure, for the drift test."""
     files: dict[str, Any] = {}
     index: dict[str, Any] = {"generated_from": "backend/data/recorded_demos.json",
+                             "pinned_recordings": {str(n): f"backend/{path.relative_to(BACKEND).as_posix()}"
+                                                   for n, path in sorted(PINNED.items())},
                              "fixtures": {}, "kinds_without_a_recorded_example": []}
     seen_kinds: set[str] = set()
     for entry in demos:
@@ -67,8 +85,7 @@ def dumps(content: Any) -> str:
 
 
 def main() -> None:
-    demos = json.loads(DEMOS.read_text())
-    files = build(demos)
+    files = build(load_demos())
     OUT.mkdir(parents=True, exist_ok=True)
     for stale in OUT.glob("*.json"):
         if stale.name not in files:

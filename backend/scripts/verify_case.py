@@ -87,10 +87,12 @@ def exit_code(checks: list[Check]) -> int:
     return 2 if any(c.outcome == UNCHECKED for c in checks) or not checks else 0
 
 
-def _demo_report(number: int, follow_on: bool = False) -> dict[str, Any]:
+def _demo_report(number: int, follow_on: bool = False, recordings: Path | None = None) -> dict[str, Any]:
+    """A recorded demo's report, from recorded_demos.json or another file in its format."""
     from app.models import Case
 
-    rows = json.loads((Path(config.DATA_DIR) / "recorded_demos.json").read_text(encoding="utf-8"))
+    path = recordings or Path(config.DATA_DIR) / "recorded_demos.json"
+    rows = json.loads(path.read_text(encoding="utf-8"))
     result = next(row for row in rows if row["demo"] == number)["result"]
     if follow_on:
         follow = result["follow_ons"][0]
