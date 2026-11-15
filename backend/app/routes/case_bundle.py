@@ -23,7 +23,8 @@ router = APIRouter()
 
 # A bundle reads every register of a case and zips it with the report, so each
 # build is charged, as a PDF render is (report_cache.pdf_renders): per client and
-# site-wide, an hour at a time. A refused (403/404) request is never charged.
+# site-wide, an hour at a time. A refused (403/404) request is never charged, nor one whose
+# PDF was refused (429).
 BUNDLES_PER_HOUR_PER_CLIENT = 20
 BUNDLES_PER_HOUR_TOTAL = 120
 bundles = rate_limit.SlidingWindowLimiter(BUNDLES_PER_HOUR_PER_CLIENT, 3600)
@@ -87,6 +88,11 @@ def download_bundle(case_id: str, user: CurrentUser, http: Request) -> Streaming
         raise HTTPException(status_code=413, detail=(
             f"This case's bundle would be larger than {case_bundle.MAX_BYTES // (1024 * 1024)} MB. "
             "Download the report and each register on its own instead.")) from exc
+    except HTTPException as exc:
+        if exc.status_code == 429:  # its PDF was refused (busy, or the PDF limit): no bundle was made
+            bundles.refund(client)
+            bundles_total.refund(rate_limit.TOTAL)
+        raise
     try:
         audit.record("case.bundle_download", case_id=case_id, detail={"files": files})
     except BaseException:

@@ -8,7 +8,8 @@ the crypto summary for CFCFRMS (#218) and the SOP reminders on bank holds
 is `1` (`true`, `yes` and `on` also count; see `flag()` in `config.py`). This
 file says, for each one: what it turns on, which PRs it came in, how
 to switch it on and off, what to try on the live site before telling anyone,
-and the decisions still open.
+and the decisions still open. One more, `EXCHEQUER_PRIVACY_CATEGORY`, is
+already merged and was switched on in production on 15 Nov (last section).
 
 Everything here comes from the PR descriptions, the handoff files and the flag definitions. Where something was not checked, it says so.
 Button names are taken from the PRs' tests and may differ slightly on screen.
@@ -420,3 +421,57 @@ the same. It contacts nothing outside Exchequer. No migration.
 **Owner decisions still open.** Switch it on only after a lawyer has answered
 the questions in `docs/legal/freeze-wording-review.md`; the wording itself may
 change with their answer.
+
+## `EXCHEQUER_PRIVACY_CATEGORY`: privacy protocols as a note (#189)
+
+Unlike the flags above, this one is already merged: the whole stack (#194,
+#195, #196, #198) reached `main` inside #149. The owner approved the category
+on 14 Nov and said yes to switching it on; it was set to `1` in the Render
+dashboard on 15 Nov, and the PR that adds it to `render.yaml` follows.
+
+**What it changes on the live site.** Nothing is contacted that was not before:
+the server only reads `backend/data/privacy_protocols*.json` (27 contracts of
+Railgun, Aztec, Hinkal and Privacy Pools on Ethereum, BNB Chain, Polygon,
+Arbitrum and Tron, each with its source; handoff
+`docs/handoff/privacy-protocol-category.md`).
+
+- **Privacy Pools moves from a mixer stop to a privacy note.** With the flag off
+  its two Ethereum contracts are mixers from `threat_labels.json`: a risk hit,
+  and the trail stops there. With it on, that mixer tag gives way to the privacy
+  entry, the trace walks on, and the hit is gone from every risk count. Only the
+  mixer tag gives way: a sanctions listing, a freeze or a theft tag on a privacy
+  contract still stands, and then no note is shown for it.
+- **The 27 contracts show as a grey note**, never the red alert: a dotted
+  "privacy protocol on the route · a note, not an accusation" box under the risk
+  alert (`PrivacyNotes.jsx`), a grey dotted halo on both maps, and a `privacy`
+  role on the Entities card. It counts toward nothing.
+- **The signed report gains a section** "PRIVACY PROTOCOLS ON THE PATH (A NOTE,
+  NOT AN ACCUSATION)" after the screening, only when the case has a match (#198,
+  on `main`); the JSON report gains `privacy_protocols` under the same rule, and
+  PDF page 1 a grey block. With no match the report bytes are unchanged. Letters
+  never mention privacy protocols.
+
+**Switching it on.** The common steps above: set `EXCHEQUER_PRIVACY_CATEGORY` to
+`1` in the Render dashboard and redeploy, then merge the `render.yaml` PR.
+
+**Check it after switching on** (a test officer and the test case, as above):
+
+1. `/health/detail` → `flags`: `EXCHEQUER_PRIVACY_CATEGORY` is on.
+2. Open the recorded demos: they look exactly as before. No recorded demo passes
+   a privacy contract (handoff, PR 1), so a change there is a bug.
+3. As the test officer, trace the Privacy Pools ETH pool
+   `0xf241d57c6debae225c0f2e6ea1529373c9a9c9fb` (Ethereum; in
+   `privacy_protocols.json` and, as a mixer, in `threat_labels.json`). Before the
+   switch it is a mixer risk hit; after it, the grey note says "the reported
+   address itself", the red alert does not name it, and the trace carries on.
+   This was not run for this doc; it is a busy contract, so watch the provider
+   quota and stop if it runs long.
+4. Download the signed report: the privacy section is there, and `/verify`
+   still accepts the file.
+5. No new audit event: the note is part of the trace's own output.
+
+**Switching it off.** The common steps above. Off, a new trace treats Privacy
+Pools as a mixer stop again and carries no notes. A case traced while the flag
+was on keeps the notes stored in its result, and the case page still shows them
+(`PrivacyNotes.jsx` does not read the flag) until it is traced again; its report
+drops the privacy section, because `report.py` reads the flag when it writes one.
