@@ -252,6 +252,34 @@ def test_a_pdf_issued_with_an_earlier_privacy_lede_still_verifies(railgun_case, 
     assert checked["status"] == "genuine" and checked["pdf"]["pages_match"] is True, checked["pdf"]["problems"]
 
 
+# Each earlier lede's cut-off (report_pdf.LEDE_REPLACED_AT): the merge that
+# replaced it plus 30 minutes. #189's: #279 at 21:24:26 IST, so 21:54:26 IST;
+# #279's: #288 at 21:52:44 IST, so 22:22:44 IST.
+@pytest.mark.parametrize(("lede", "generated_at", "matches"), [
+    (PRIVACY_LEDES[2], "2026-11-15T21:53:00+05:30", True),   # inside #189's margin
+    (PRIVACY_LEDES[2], "2026-11-15T21:55:00+05:30", False),  # after #189's cut-off
+    (PRIVACY_LEDES[2], "2026-11-15T23:00:00+05:30", False),
+    (PRIVACY_LEDES[1], "2026-11-15T22:20:00+05:30", True),   # inside #279's margin
+    (PRIVACY_LEDES[1], "2026-11-15T22:23:00+05:30", False),  # after #279's cut-off
+    (PRIVACY_LEDES[0], "2026-11-16T09:00:00+05:30", True),   # the newest: always
+], ids=["189-before", "189-after", "189-long-after", "279-before", "279-after", "newest"])
+def test_an_earlier_privacy_lede_matches_only_reports_generated_while_it_was_live(
+        railgun_case, lede, generated_at, matches):
+    report = build_report(_case(railgun_case), generated_at=generated_at)
+    text = render_text_report(report)
+    checked = _verify(render_issued(text, report["case"]["case_id"], privacy_lede=lede))
+    if matches:
+        assert checked["status"] == "genuine" and checked["pdf"]["pages_match"] is True, checked["pdf"]["problems"]
+    else:
+        assert checked["status"] == "summary_differs", checked
+
+
+def test_a_report_generated_after_both_cut_offs_has_one_privacy_summary_form(railgun_case, flag):
+    flag(True)
+    report = build_report(_case(railgun_case), generated_at="2026-11-15T23:00:00+05:30")
+    assert len(render_summary(render_text_report(report))) == 2  # today's lede and the short page
+
+
 @pytest.mark.parametrize("lede", [
     PRIVACY_LEDES[0].replace("this is not an accusation", "this is an accusation"),
     PRIVACY_LEDES[2].replace("did not stop there", "stopped there"),

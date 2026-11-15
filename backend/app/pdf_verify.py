@@ -566,13 +566,13 @@ def _issued(signed: str, case_id: str, first_page: str) -> Any:
     from pypdf import PdfReader
     from reportlab.platypus.doctemplate import LayoutError
 
-    from .report_pdf import PRIVACY_LEDES, render_issued
+    from .report_pdf import PRIVACY_LEDES, issued_ledes, render_issued
 
     laid_out = NOT_LAID_OUT not in first_page
-    # An earlier privacy lede on the page: drawn again with that one (render_summary
-    # accepts each), else with today's.
+    # An earlier privacy lede on the page that this report could have been issued
+    # with: drawn again with that one (as render_summary does), else with today's.
     shown = _compact(first_page)
-    lede = next((one for one in PRIVACY_LEDES[1:] if _compact(one) in shown), PRIVACY_LEDES[0])
+    lede = next((one for one in issued_ledes(signed)[1:] if _compact(one) in shown), PRIVACY_LEDES[0])
     try:
         pdf = render_issued(signed, case_id, laid_out=laid_out, privacy_lede=lede)
     except LayoutError:
