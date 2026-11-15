@@ -285,6 +285,10 @@ It is off until the owner switches it on:
   workflow checks it once by hand; a run started by hand always runs.
 - **Off:** set `KEEP_AWAKE` to `off`, or delete the variable. Scheduled runs
   are then skipped (grey), not failed.
+- **State now:** on. The repository variable `KEEP_AWAKE` was set to
+  `on` at 19:35 UTC on 15 Nov 2026 (01:05 IST on 16 Nov), after #315 merged
+  (`gh variable list` shows it updated at 2026-11-15T19:35:29Z). Change this
+  line whenever the variable changes.
 
 Before switching it on:
 
