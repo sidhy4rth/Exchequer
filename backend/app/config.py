@@ -924,3 +924,6 @@ CDR_IMPORT: bool = flag("EXCHEQUER_CDR_IMPORT",
 EXPORT_SCAN: bool = flag("EXCHEQUER_EXPORT_SCAN",
                          "Feature 2, slice 1: scan a phone or computer export in the browser for addresses, "
                          "hashes and seed phrases")
+TELEGRAM_LOOKUPS: bool = flag("EXCHEQUER_TELEGRAM_LOOKUPS",
+                              "Feature 4, OSINT slice 4: read a Telegram username's public t.me page "
+                              "(needs EXCHEQUER_OSINT_LOOKUPS too)")
