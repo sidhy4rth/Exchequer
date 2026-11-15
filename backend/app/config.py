@@ -907,7 +907,7 @@ TAINT_EXPANSION: bool = flag("EXCHEQUER_TAINT_EXPANSION",
 OSINT_LOOKUPS: bool = flag("EXCHEQUER_OSINT_LOOKUPS",
                            "Feature 4, OSINT slice 2: live RDAP and DNS lookups of a case's scam domains")
 PRIVACY_CATEGORY: bool = flag("EXCHEQUER_PRIVACY_CATEGORY",
-                              "#189: privacy protocols shown as a note, never a stop or a risk hit; awaits the owner")
+                              "#189: privacy protocols shown as a note, never a stop or a risk hit; on in production since 15 Nov")
 CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
                          "Feature 6: one zip of a case's report, registers and audit trail, with a manifest")
 TRACE_CANCEL_ON_DISCONNECT: bool = flag(

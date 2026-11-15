@@ -26,7 +26,7 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_TRACING_METHODS` | Lane A, R4: FIFO and LIBR beside pro-rata (one more read per hop) | #49 | Off in `render.yaml` |
 | `EXCHEQUER_TAINT_EXPANSION` | Lane A, R5: follow every branch carrying a share of the funds, not the top ten | #49 | Off in `render.yaml` |
 | `EXCHEQUER_OSINT_LOOKUPS` | Feature 4: live RDAP and DNS lookups of a case's scam domains, for signed-in officers | #106 | **On** in production since 13 Nov, and `"1"` in `render.yaml` (#108) |
-| `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | Off in `render.yaml`. Its handoff records the owner's approval on 14 Nov to switch it on after merge; not switched on yet as far as `main` shows |
+| `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | On: set in the Render dashboard on 15 Nov and in `render.yaml` since #232 (owner approved on 14 Nov) |
 | `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
 | `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | Off in `render.yaml`; awaits the owner |
 | `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the deployed store (`labels-2026-11-14b`) has no exchange rows yet |
