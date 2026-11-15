@@ -57,8 +57,8 @@ def _busiest():
 
 def test_the_rows_are_the_ones_the_note_lists():
     rows = _rows()
-    assert set(rows) == set(NOTE["listed"]) and len(rows) == 10
-    assert NOTE["added"] == {"OKX": 10}
+    assert set(rows) == set(NOTE["listed"]) and len(rows) == 15
+    assert NOTE["added"] == {"OKX": 15}
     assert {a: m["label"] for a, m in rows.items()} == NOTE["listed"]
     assert not set(rows) & set(NOTE["left_out"])
 
@@ -91,7 +91,7 @@ def test_a_number_is_not_shared_with_any_other_okx_wallet_on_any_chain():
 
 def test_the_counts_still_match_the_rows():
     counts = DOCUMENT["_meta"]["counts"]
-    assert counts["labels"] == len(LABELS) and counts["by_exchange"]["OKX"] == 11
+    assert counts["labels"] == len(LABELS) and counts["by_exchange"]["OKX"] == 16
 
 
 # -- the recorded classification ------------------------------------------------------
@@ -178,8 +178,36 @@ def test_a_trx_transfer_is_read_from_its_hex_parties_and_a_failed_one_is_not():
 def test_no_row_hides_a_freeze_a_sanction_a_demo_or_a_test_wallet():
     this_file = Path(__file__).name
     elsewhere = {a: why for a, why in por.listed_elsewhere().items() if this_file not in why}
-    assert {a: elsewhere[a] for a in _rows() if a in elsewhere} == {}
+    statement_only = set(NOTE["in_demo_statement_only"])
+    assert {a: elsewhere[a] for a in _rows() if a in elsewhere and a not in statement_only} == {}
+    # Those are in a recorded demo and on no Tron list (a list would be named first).
+    assert {a: elsewhere.get(a) for a in statement_only if "recorded demo" not in elsewhere.get(a, "")} == {}
     assert {a: k for a in _rows() if (k := never_flag.kind("tron", a)) != never_flag.EXCHANGE} == {}
+
+
+def _where(value, address, path=""):
+    """Every path in a JSON value whose string is `address`."""
+    if isinstance(value, dict):
+        return [p for k, v in value.items() for p in _where(v, address, f"{path}/{k}")]
+    if isinstance(value, list):
+        return [p for v in value for p in _where(v, address, f"{path}/[]")]
+    return [path] if value == address else []
+
+
+def test_a_row_in_a_recorded_demo_is_there_only_as_a_statement_sender():
+    """A statement row carries no label, so labelling its sender cannot move the demo's answer."""
+    statement_only = NOTE["in_demo_statement_only"]
+    assert set(statement_only) <= set(_rows()) and len(statement_only) == 5
+    assert set(statement_only) == set(FIXTURE["_meta"]["demo_addresses"])
+    recordings = {row["demo"]: row["result"] for row in json.loads((config.DATA_DIR / "recorded_demos.json").read_text())}
+    contract = json.loads((Path(__file__).parent / "fixtures" / "contract" / "exchange_wallet.json").read_text())
+    for address in statement_only:
+        found = {n: _where(r, address) for n, r in recordings.items() if _where(r, address)}
+        assert set(found) == {9}, address
+        assert set(found[9]) == {"/statement/credits/[]/counterparty"} == set(_where(contract, address)), address
+        for name in ("demo_traces.json", "demo_expectations.json"):
+            assert address not in (config.DATA_DIR / name).read_text(), (name, address)
+    assert recordings[9]["exchange_label"] == "Binance-Hot 7" and recordings[9]["confidence"] == 1.0
 
 
 def test_no_row_is_named_by_another_exchange_in_any_label_file():
