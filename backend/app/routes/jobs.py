@@ -110,8 +110,11 @@ def stop_job(job_id: str, user: CurrentUser) -> dict[str, Any]:
     job = _job_or_404(job_id)
     if user.owner_hash is None or user.owner_hash != job.owner:
         raise HTTPException(status_code=403, detail="Only the browser that started this trace can stop it.")
-    if job.status == jobs.RUNNING and job.budget is not None:
+    running = job.status == jobs.RUNNING
+    if running and job.budget is not None:
         job.budget.cancel()
+    # Ids only, as case.trace_start: the job id and whether there was a trace to stop.
+    audit.record("case.trace_stopped", detail={"job_id": job.id, "was_running": running})
     return {"job_id": job.id, "stopping": job.status == jobs.RUNNING}
 
 

@@ -1,12 +1,12 @@
 # Switching on the flagged features
 
-Five features are built behind `config.py` flags. Four of them are now on
-`main`, switched off: custody wallets (#129), statements and call detail records
-(#146), and the export scan (#147), each with the PRs stacked on it. The fifth,
-Telegram lookups (#162, with #169 and #170), is still in open pull requests
-(as of 2026-11-15). Every flag on `main` is listed first, below. Each flag is off until its environment variable
+Seven features are built behind `config.py` flags, and all of them are now on
+`main`, switched off (as of 2026-11-15): custody wallets (#129), statements and
+call detail records (#146), the export scan (#147), Telegram lookups (#162),
+the crypto summary for CFCFRMS (#218) and the SOP reminders on bank holds
+(#230), each with the PRs merged with it. Every flag on `main` is listed first, below. Each flag is off until its environment variable
 is `1` (`true`, `yes` and `on` also count; see `flag()` in `config.py`). This
-file says, for each one: what it turns on, which PRs must be merged first, how
+file says, for each one: what it turns on, which PRs it came in, how
 to switch it on and off, what to try on the live site before telling anyone,
 and the decisions still open.
 
@@ -33,30 +33,28 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_CDR_IMPORT` | Feature 5: read a call detail record CSV against a case; save a summary the officer confirms | #168 (+#172, #173), merged with #146 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_EXPORT_SCAN` | Feature 2: scan a phone or computer export in the browser for addresses, hashes and seed phrases | #147 (+#154, #155, #156, #164) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_TELEGRAM_LOOKUPS` | Feature 4, OSINT slice 4: read a Telegram username's public t.me page (needs `EXCHEQUER_OSINT_LOOKUPS` too) | #162 (+#169, #170) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_SOP_SUMMARY` | Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms | #218 (+#219, #220) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_SOP_DEADLINES` | Feature 8: the MHA CFCFRMS SOP's time limits, quoted, as reminders on bank holds in the asset register | #230 | Off in `render.yaml`; see its section below |
 
-That is all twelve flags in `FLAGS` on `main`. `EXCHEQUER_TELEGRAM_LOOKUPS`
-is not among them: it arrives with #162.
+That is all fifteen flags in `FLAGS` on `main`.
 
-The rest of this file is about the five features named at the top: the four
-now on `main` behind their flags, and Telegram lookups, still in review. The
-steps below for switching on, checking and switching off apply to every flag above.
+The rest of this file is about the seven features named at the top. The steps
+below for switching on, checking and switching off apply to every flag above.
 
 ## The same steps for every flag
 
-### Before: merge, then deploy
+### Before: merged and deployed
 
-1. Merge the flag's PRs in stack order (each section lists them; only the
-   Telegram stack is still open). Render deploys every push to `main`. A merged stack changes nothing a user sees while its
-   flag is off, but any migration in it runs at start-up (`models.init_db()`),
-   so new tables appear on the first deploy either way.
-2. Merging the custody and statement stacks is done. Their migrations now run
-   in one line on `main`: `g7_tasks_2` → `g7_custody_1` → `g7_custody_2` →
-   `g7_statements_1` → `g7_statements_2`, so the head on `main` is
-   `g7_statements_2` and the `down_revision` re-points are done. #162 adds no
-   migration. Its branch adds a flag line to `config.py`, where a text
-   conflict with `main`'s newer flags is likely: keep every line. Never edit a
+1. Every stack named here is merged (each section lists its PRs), and Render
+   deploys every push to `main`. A merged stack changes nothing a user sees
+   while its flag is off, but any migration in it runs at start-up
+   (`models.init_db()`), so its tables are already there.
+2. The migrations run in one line on `main`: `g7_tasks_2` → `g7_custody_1` →
+   `g7_custody_2` → `g7_statements_1` → `g7_statements_2`, so the head on
+   `main` is `g7_statements_2` and the `down_revision` re-points are done. The
+   Telegram, SOP summary and SOP reminder stacks add no migration. Never edit a
    migration that is already on `main`.
-3. Merge `main` into the Telegram stack before its last review.
 
 ### Switching it on (as #108 did for `EXCHEQUER_OSINT_LOOKUPS`)
 
@@ -304,10 +302,8 @@ SHA-256. Every result says a page is not an identity. It needs
 the OSINT handoff records it on in production since 13 Nov. Lookups are for
 signed-in officers only, never the demo caller.
 
-**Merge first.** #162 → #169 → #170 (stacked). No migration (pages are kept in
-`domain_lookups`, under its 50-lookups-per-identifier cap). #170 and #164 both
-edit `IdentifiersPanel.jsx`. A trial merge showed conflicts only in `config.py`
-and `docs/handoff/osint.md`.
+**Merged.** #162, with #169 and #170, on `main`. No migration (pages are kept in
+`domain_lookups`, under its 50-lookups-per-identifier cap).
 
 **Try it on the live site** (one test officer, on the test case):
 
@@ -327,7 +323,7 @@ and `docs/handoff/osint.md`.
 7. Withdraw the test identifier with the reason "TEST", as the domain-lookup
    live test did.
 
-**Owner decisions still open** (#170, handoff `docs/handoff/osint.md` on `feat/osint-telegram-screen`):
+**Owner decisions still open** (#170, handoff `docs/handoff/osint.md`):
 
 - **Read one public channel's page from the live site by hand first** (step 3
   above) and check the fields. #170 leaves the switch-on to Sidhyarth after that.
@@ -340,3 +336,62 @@ and `docs/handoff/osint.md`.
 - With the flag off, the button goes, but earlier Telegram lookups are still
   listed with their identifiers (the list route and panel do not check the flag
   when showing a kept lookup).
+
+## `EXCHEQUER_SOP_SUMMARY`: a crypto summary for CFCFRMS (feature 8)
+
+**What it turns on.** On a stored case's Letters tab, a "Crypto summary for
+CFCFRMS" panel. The officer answers "Is this exchange on CFCFRMS?" (yes, no or
+not known), may type the NCRP number, and copies a plain-text summary in the
+SOP's para 9.4 terms. The summary covers the exchange reached, its address and
+how it was attributed, and the amounts and hashes, with the SOP paragraph
+quoted for that answer. It contacts nothing outside Exchequer. The answer is
+not stored. The NCRP number is filled in by the browser and never sent.
+
+**Merged.** #218, with the server PR (#219) and the page PR (#220), on `main`. No migration.
+
+**Try it on the live site** (one test officer, on the test case):
+
+1. Confirm in `/health/detail` that `EXCHEQUER_SOP_SUMMARY` is on.
+2. On the test case's Letters tab, open the panel. Pick each answer in turn
+   and copy. "Yes" quotes SOP 9.4(ii), "No" quotes 9.4(iv), and "Not known"
+   quotes both.
+3. Check the exchange, address, label and hashes against the case report.
+4. Type a test number such as `51234567890123`. The unusual-shape note shows.
+   The copied text has the number; the server's requests do not (browser
+   developer tools, Network).
+5. Audit row: `case.sop_summary_copy` with only `{"on_cfcfrms": ...}`.
+6. With the flag off, the panel does not show and both routes answer 404.
+
+**Owner decisions still open** (handoff `docs/handoff/government-platforms.md`):
+the legal check on SOP holds under s.168 read with s.94 BNSS versus
+`notice_letters.py`'s Magistrate's-order rule (before any CFCFRMS notice
+draft), and a partner cyber cell to confirm the layout is useful.
+
+## `EXCHEQUER_SOP_DEADLINES`: SOP reminders on a bank hold (feature 8)
+
+**What it turns on.** In the asset register on the Letters tab, a collapsed
+list under a bank row that is still held: "SOP reminders, if this hold went
+through CFCFRMS". Each reminder quotes the MHA SOP for NCRP-CFCFRMS word for
+word, with its section, PDF page, source URL and copy date
+(`backend/app/sop_reminders.py`). Only the Annexure I 90-day limit runs from a
+date the register holds (the date seized); the rest are shown without a date.
+They are reminders only: nothing is refused, blocked or reordered, and the
+register's 45-day court deadline is unchanged. No reminder for exchange, issuer
+or custody rows, or once a hold has ended. It contacts nothing outside Exchequer.
+
+**Merged.** #230 on `main`. No migration. With the flag off, the register's
+rows are unchanged.
+
+**Try it on the live site** (one test officer, on the test case):
+
+1. Confirm in `/health/detail` that `EXCHEQUER_SOP_DEADLINES` is on.
+2. On the test case's Letters tab, add a TEST row held by a bank, status held,
+   in the asset register. The reminders list shows under it, collapsed.
+3. Check each quote, section and page against the SOP copy the handoff names
+   (`docs/handoff/sop-deadlines.md`, with its SHA-256).
+4. An exchange or issuer row shows no reminders. Change the TEST row's status
+   from held (for example, to released): the reminders go.
+
+**Owner decisions still open** (handoff `docs/handoff/sop-deadlines.md`): whether
+to turn the flag on once the reviewer has checked the quotes against the PDF,
+and a re-check of each quote if a newer official copy of the SOP is found.

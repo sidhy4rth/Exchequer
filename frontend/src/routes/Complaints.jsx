@@ -314,6 +314,7 @@ function Complaint({ reference }) {
         <p className="note">Complaint received {inIst(c.received_at, IST_TIME)} IST</p>
         <h1 className="mono">{c.reference}</h1>
         <p className="cq-flags"><Ncrp value={c.ncrp} /><Flags c={c} /></p>
+        {c.ncrp_note && <p className="note">{c.ncrp_note}</p>}
       </header>
       <div className="cq-grid">
         <Claim c={c} officer={officer} onClaimed={(unit) => setC((now) => ({ ...now, unit }))} />

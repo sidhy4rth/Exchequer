@@ -106,6 +106,19 @@ def test_nothing_the_officer_did_not_give_is_made_up():
     assert "BNS" not in text.split("LETTER OF REQUEST")[1]  # no offence is suggested to the Court
 
 
+def test_a_placeholder_typed_by_the_officer_stays_as_typed():
+    # Every placeholder is filled in one pass: the officer's text is never read again for more.
+    text = flat(draft("case-1", case(), {**DETAILS, "country": "Seychelles {court} {presiding}",
+                                         "presiding": "Smt. A. Rao {country}", "basis": "treaty",
+                                         "treaty": "of the Treaty {court}"}))
+    assert "Competent Authority of the Seychelles {court} {presiding} (Requested Country)" in text
+    assert "I, Smt. A. Rao {country}, has been authorized" in text
+    assert "in accordance with the provisions of the Treaty {court}." in text
+    assert f"{DETAILS['court']} (Court of Jurisdiction)" in text
+    assert text.count(DETAILS["court"]) == flat(draft("case-1", case(), {**DETAILS, "basis": "treaty",
+                                                                         "treaty": "of X"})).count(DETAILS["court"])
+
+
 def test_the_basis_is_the_officers_choice_and_never_assumed():
     reciprocity = flat(draft("case-1", case(), {**DETAILS, "basis": "reciprocity"}))
     assert "Assurance of Reciprocity in similar matters" in reciprocity and "provisions of the Treaty" not in reciprocity

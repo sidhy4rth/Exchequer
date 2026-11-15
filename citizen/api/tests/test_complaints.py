@@ -50,6 +50,14 @@ def test_the_ncrp_number_is_needed_and_checked(db):
     assert call("complaints", body=pack(ncrp="3123-4567 890123")).status == 201
 
 
+def test_a_number_not_of_the_sops_usual_shape_is_still_taken(db):
+    # The usual shape (14 digits starting 2 or 3, SOP for NCRP-CFCFRMS 6.1(d),
+    # 6.2(c)) is only a note on the page (src/api.js ncrpNote): the server
+    # keeps taking 8 to 20 letters and digits.
+    for odd in ("3123456789012", "51234567890123", "AB12345678"):
+        assert call("complaints", body=pack(ncrp=odd)).status == 201, odd
+
+
 def test_screenshots_and_unknown_fields_are_refused(db):
     res = call("complaints", body=pack(files=["scam.png"]))
     assert res.status == 400 and "files" in res.body["error"]

@@ -25,7 +25,8 @@ exchange E when all of the following hold:
   2. It made at least `min_sweeps` outgoing transfers, together worth more
      than dust in the traced asset (DUST_FLOOR).
   3. Every one of them went to a single address H that the label file records
-     as an E hot wallet (or exchange/contract/cold wallet) -- never to a
+     as an E hot wallet (or exchange or cold wallet, or a contract wallet
+     recorded in one of those roles) -- never to a
      labelled *deposit* wallet, because deposits sweep to hot wallets, and
      never anywhere else.
   4. Where the provider can answer it cheaply, the address's current native
@@ -51,17 +52,26 @@ from typing import Any, Callable
 
 import networkx as nx
 
+from . import never_flag
 from .evidence import utc_now_iso
-from .exchange_matcher import INFERRED_DEPOSIT, ExchangeMatch, ExchangeMatcher
+from .exchange_matcher import CONTRACT_WALLET, INFERRED_DEPOSIT, ExchangeMatch, ExchangeMatcher, role_of
 
 logger = logging.getLogger(__name__)
 
 # Label types a sweep may land on. A labelled deposit wallet is excluded: a
 # wallet whose outflows go to *another* deposit address is a customer, not a
-# deposit address. So is an exchange-operated contract wallet: the label
-# audit typed deposit *forwarders* that way, and a wallet paying into one of
-# those is, again, the customer.
+# deposit address. So is an exchange-operated contract wallet with no
+# recorded role: the label audit (scripts/audit_label_contracts.py) typed
+# deposit *forwarders* that way, and a wallet paying into one of those is,
+# again, the customer. A contract_wallet whose label row records the keyed
+# role it stands in for (scripts/check_label_code.py retyped an exchange's
+# proxy hot, cold and exchange wallets, Bitget's two hot wallets among them)
+# is read by that role (role_of), exactly as before the retype. Only a row
+# in the exchange label files can carry a role; an unlabelled contract has no
+# record at all, and one never_flag knows as a token, a DEX router or a
+# system address is refused even so.
 SWEEP_DESTINATION_TYPES = frozenset({"hot_wallet", "exchange_wallet", "cold_wallet"})
+NOT_A_WALLET = frozenset({never_flag.SYSTEM, never_flag.TOKEN, never_flag.ROUTER})
 
 
 # Below this much in all, an address moved dust and its pattern is not
@@ -101,7 +111,9 @@ def _sweep_destination(
     meta = matcher.lookup(counterparty)
     if meta is None:
         return None
-    if meta.get("type") not in SWEEP_DESTINATION_TYPES:
+    if role_of(meta.get("type"), meta.get("role")) not in SWEEP_DESTINATION_TYPES:
+        return None
+    if meta.get("type") == CONTRACT_WALLET and never_flag.kind(matcher.chain, counterparty) in NOT_A_WALLET:
         return None
     if "deposit" in (meta.get("label") or "").lower():
         return None

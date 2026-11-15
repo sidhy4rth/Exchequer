@@ -44,6 +44,15 @@ logger = logging.getLogger(__name__)
 # treats it as weaker, and the report says so.
 INFERRED_DEPOSIT = "inferred_deposit"
 DEPOSIT_WALLET = "deposit_wallet"
+# An exchange-operated contract (a proxy, forwarder or multisig): no key
+# behind it. A label file may record its `role`, the keyed type it stood in
+# for before scripts/check_label_code.py retyped it (hot_wallet, cold_wallet
+# or exchange_wallet); then it is that wallet, held in a contract, and scoring
+# and deposit inference read it as such (role_of). One without a role keeps
+# the contract_wallet reading: the label audit gave that type to deposit
+# forwarders too.
+CONTRACT_WALLET = "contract_wallet"
+CONTRACT_ROLES = frozenset({"hot_wallet", "cold_wallet", "exchange_wallet"})
 INSTANT_EXCHANGER = label_rules.INSTANT_EXCHANGER
 INSTANT_EXCHANGERS_FILE = "instant_exchangers.json"  # in config.DATA_DIR
 
@@ -54,6 +63,14 @@ INSTANT_EXCHANGERS_FILE = "instant_exchangers.json"  # in config.DATA_DIR
 # exchange ("AltCoinTrader: Binance Deposit 1"), and a deposit address is what
 # makes a letter ask the exchange for an account holder's KYC.
 DEPOSIT_LABEL = re.compile(r"\bDep:\s|^[^:]+:\s*Deposit (?:Address|Wallet)\b", re.IGNORECASE)
+
+
+def role_of(wallet_type: str | None, role: str | None = None) -> str | None:
+    """The wallet's role at its exchange: its type, or for a contract_wallet
+    with a recorded role, that role."""
+    if wallet_type == CONTRACT_WALLET and role in CONTRACT_ROLES:
+        return role
+    return wallet_type
 
 
 def is_deposit_label(label: str | None) -> bool:
@@ -67,8 +84,12 @@ def is_deposit_label(label: str | None) -> bool:
 # files attribute it there (scripts/clean_exchange_labels.py) and a letter names
 # the firm as the account holder. Not "Coinbase: Batch Deposit 1" or
 # "CoinList: WBTC Merchant Deposit Address": the exchange's own.
-FIRM_ACCOUNT = re.compile(r"^(?P<firm>[^:]+):\s*(?!Batch\b)(?P<at>\S[^:]*?)\s+(?:Deposit(?:\s+\d+)?|Prime Custody)$",
-                          re.IGNORECASE)
+# "(?<!\s)" lets the gap before "Deposit" start only where a run of spaces
+# starts, so a long run cannot make the match quadratic; and a label longer
+# than FIRM_LABEL_MAX (TronScan's tag cap, tron_tags.MAX_TAG_LENGTH) is no name.
+FIRM_ACCOUNT = re.compile(r"^(?P<firm>[^:]+):\s*(?!Batch\b)(?P<at>\S[^:]*?)(?<!\s)\s+"
+                          r"(?:Deposit(?:\s+\d+)?|Prime Custody)$", re.IGNORECASE)
+FIRM_LABEL_MAX = 200
 
 
 def firm_account(label: str | None, exchange: str | None = None) -> str | None:
@@ -76,7 +97,8 @@ def firm_account(label: str | None, exchange: str | None = None) -> str | None:
 
     With `exchange`, only when the firm is not that exchange: a row still
     attributed to the firm itself is not yet another firm's account there."""
-    found = FIRM_ACCOUNT.match(exchange_status.marked((label or "").strip(), None))  # without "(defunct)"
+    text = exchange_status.marked((label or "").strip(), None)  # without "(defunct)"
+    found = FIRM_ACCOUNT.match(text) if len(text) <= FIRM_LABEL_MAX else None
     if not found:
         return None
     firm = found["firm"].strip()
@@ -105,6 +127,8 @@ class ExchangeMatch:
     # What the attribution stands on, for a label-store exchange row only
     # (ADR-0011): {kind, source}. None for a label file, inference or live tag.
     basis: dict[str, str] | None = None
+    # A contract_wallet's recorded role (CONTRACT_ROLES); None otherwise.
+    role: str | None = None
 
     @property
     def inferred(self) -> bool:
@@ -126,6 +150,8 @@ class ExchangeMatch:
             out["category"] = self.category
         if self.basis is not None:
             out["attribution_basis"] = dict(self.basis)
+        if self.role is not None:
+            out["role"] = self.role
         return out
 
 
@@ -226,6 +252,9 @@ class ExchangeMatcher:
                     "label": _text(value.get("label")) or exchange,
                     "type": _text(value.get("type")) or "unknown",
                 }
+                role = _text(value.get("role"))
+                if labels[key]["type"] == CONTRACT_WALLET and role in CONTRACT_ROLES:
+                    labels[key]["role"] = role
             else:
                 logger.warning("Unrecognised label entry for %s; skipped", address)
 
@@ -305,6 +334,7 @@ class ExchangeMatcher:
                     value_received_native=value_in,
                     category=meta.get("category"),
                     basis=meta.get("basis"),
+                    role=meta.get("role") if role_of(meta["type"], meta.get("role")) != meta["type"] else None,
                 )
             )
 

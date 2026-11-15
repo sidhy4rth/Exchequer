@@ -45,7 +45,7 @@
 <tr>
 <td align="center"><h3>68.4M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
 <td align="center"><h3>68.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists</sub></td>
-<td align="center"><h3>26,127</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
+<td align="center"><h3>26,136</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>14,827</h3>addresses a stablecoin<br>issuer has frozen</td>
 <td align="center"><h3>100,000+</h3>hack, phishing and<br>scam wallets</td>
@@ -97,7 +97,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | | |
 |---|---|
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
-| **Names the exchange** | Exact match against 26,127 exchange addresses on five chains, including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
+| **Names the exchange** | Exact match against 26,136 exchange addresses on five chains, including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
 | **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **68-million-address label store**: hack proceeds, scams, stablecoin freezes and 68.3M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
@@ -362,7 +362,7 @@ sends) and the demos.
 | `GET /trace/{case_id}/identifiers` | What the victim reported besides the wallet (site, Telegram username, phone, UPI ID), each with its latest domain lookup and the other cases that name it |
 | `POST /trace/{case_id}/identifiers` | Adds an identifier |
 | `PATCH /identifiers/{identifier_id}` | Changes an identifier's context or notes, or withdraws it with a reason |
-| `POST /identifiers/{identifier_id}/lookup` | A domain's public registration record and DNS, kept with its SHA-256; officers only, and only with `EXCHEQUER_OSINT_LOOKUPS` on |
+| `POST /identifiers/{identifier_id}/lookup` | A domain's public registration record and DNS, or what a Telegram username's public t.me page shows (also needs `EXCHEQUER_TELEGRAM_LOOKUPS`), kept with its SHA-256; officers only, and only with `EXCHEQUER_OSINT_LOOKUPS` on |
 | `GET /trace/{case_id}/assets` | The case's asset register: what was frozen or seized, who holds it, and the 45-day court deadline |
 | `POST /trace/{case_id}/assets` | Adds a frozen or seized asset |
 | `PATCH /assets/{asset_id}` | Changes an asset's status, court order, outcome or key holders (names only), or its notes |
@@ -407,6 +407,8 @@ sends) and the demos.
 | `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether; `to=exchange-freeze` or `to=tether-freeze` for the urgent "hold these funds now" letter) |
 | `POST /trace/{case_id}/notice` | A draft notice to a bank (`to=bank-info`; `to=bank-freeze` for an urgent debit freeze, which needs the Magistrate's order and a second officer's sign-off) or a telecom operator (`to=telecom`), from the case and the account or phone details in the request body, never the URL |
 | `POST /trace/{case_id}/letter-of-request` | A draft letter of request to a foreign country (BNSS s.112) in the MHA's prescribed format, from the case, its requests log and the officer's details in the request body; blanks for whatever the officer or the Court has not supplied |
+| `GET /sop-summary` | Whether this server offers the crypto summary for CFCFRMS (behind `EXCHEQUER_SOP_SUMMARY`; 404 while it is off) |
+| `POST /trace/{case_id}/sop-summary` | The case's crypto summary in the CFCFRMS SOP's para 9.4 terms, as plain text for the officer to copy; the officer's answer to "Is this exchange on CFCFRMS?" is in the body and not stored, and the NCRP number is never sent (404 while the flag is off) |
 | `GET /requests` | The requests log: every letter this browser or unit has logged and what came of it |
 | `GET /trace/{case_id}/requests` | The requests logged for one case |
 | `POST /requests` | Logs a request (recipient, kind, address, asset, status) |
@@ -685,11 +687,11 @@ and matching one chain's address against the other's labels would manufacture an
 
 | File | Coverage |
 |---|---|
-| `exchange_labels.json` | **25,270 addresses / 95 exchanges** — 1,252 exchange wallets (the largest: Bybit, **CoinSwitch**, Coinbase, Huobi/HTX, Kraken, Binance, Nexo, Bithumb, Bitfinex, OKX, **CoinDCX**, Bitget) plus **24,018 customer deposit addresses** (19,027 Bitget, 4,991 Binance) |
-| `exchange_labels_bsc.json` | **222 addresses / 58 exchanges** — explorer-labelled wallets (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat), Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`), Bybit's wallets from its own proof-of-reserves list (`scripts/import_por_labels.py`) and Indian exchange wallets (`data/india_exchanges.json`) |
+| `exchange_labels.json` | **25,273 addresses / 96 exchanges** — 1,255 exchange wallets (the largest: Bybit, **CoinSwitch**, Coinbase, Huobi/HTX, Kraken, Binance, Nexo, Bithumb, OKX, Bitfinex, **CoinDCX**, Bitget) plus **24,018 customer deposit addresses** (19,027 Bitget, 4,991 Binance) |
+| `exchange_labels_bsc.json` | **223 addresses / 58 exchanges** — explorer-labelled wallets (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat), Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`), Bybit's wallets from its own proof-of-reserves list (`scripts/import_por_labels.py`) and Indian exchange wallets (`data/india_exchanges.json`) |
 | `exchange_labels_polygon.json` | **250 addresses / 54 exchanges** — Ethereum-labelled accounts confirmed to have sent on Polygon, OKX's and Bybit's wallets from their own proof-of-reserves lists, and Indian exchange wallets |
 | `exchange_labels_arbitrum.json` | **251 addresses / 45 exchanges** — the same three sources, on Arbitrum |
-| `exchange_labels_tron.json` | **134 addresses / 25 exchanges** — TronScan's own address tags, exchanges' own proof-of-reserves lists (`scripts/import_por_tron_labels.py`) and Indian exchange wallets |
+| `exchange_labels_tron.json` | **139 addresses / 26 exchanges** — TronScan's own address tags, exchanges' own proof-of-reserves lists (`scripts/import_por_tron_labels.py`) and Indian exchange wallets |
 
 **A deposit address is the most useful label there is**: it names one customer account, which is exactly what a
 lawful request asks the exchange about. The 19,027 Bitget and 4,991 Binance addresses come from Etherscan's
@@ -718,7 +720,7 @@ The router mattered most: funds passing through a swap router have been *traded*
 Tron labels are read **from TronScan's own API** — the label comes from the explorer that assigns it — and
 each must have no contract bytecode and at least one received transfer.
 
-**Tron attribution beyond the file.** A fixed file can only hold the Tron wallets someone imported — 134. So a Tron
+**Tron attribution beyond the file.** A fixed file can only hold the Tron wallets someone imported — 139. So a Tron
 trace also asks TronScan, for each wallet it reaches that no file names, what the explorer tags it (up to 60 wallets
 per trace, the most valuable first, the last hop included). A tag that names a known exchange attributes the wallet —
 labelled *"(TronScan tag, read live)"* so a reader always knows the source — and the trace stops there as it would
@@ -732,14 +734,15 @@ BSC**) must, the other way round, carry bytecode.
 
 ### Indian exchanges
 
-**WazirX, CoinDCX and CoinSwitch**: 168 wallets on Ethereum, BSC, Polygon, Arbitrum and Tron, each with its
+**WazirX, CoinDCX, CoinSwitch and Unocoin**: 175 wallets on Ethereum, BSC, Polygon, Arbitrum and Tron, each with its
 public source (the explorer's public name tag, or a wallet list the exchange published), recorded in
 `data/india_exchanges.json` and copied into each chain's label file. **CoinDCX** also has wallets from the
-explorer's own labels (30 on Ethereum in all), and **Delta Exchange** is covered on Ethereum. **ZebPay, Bitbns,
-Giottus, Mudrex, Unocoin and BuyUcoin remain absent**: no public source for their wallets has been found, and
+explorer's own labels (30 on Ethereum in all), and **Delta Exchange** is covered on Ethereum. **Unocoin** has one
+wallet, from its own proof-of-reserves post (June 2023 audit). **ZebPay, Bitbns,
+Giottus, Mudrex and BuyUcoin remain absent**: no public source for their wallets has been found, and
 guessing one would mean falsely naming a real company in a law-enforcement report. (The WazirX *exploiter*
 wallets are in the stolen-funds list.) On Tron, no TronScan tag names an Indian exchange among the largest
-accounts; the Tron wallets of WazirX and CoinSwitch come from the sources above.
+accounts; the Tron wallets of WazirX, CoinSwitch and CoinDCX come from the sources above.
 
 ```bash
 cd backend
@@ -1102,6 +1105,9 @@ what was turned down and what it costs, from serving the UI and API from one ima
 decimals. For a guided walk through the code, open the repository in VS Code with the
 [CodeTour](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour) extension and start
 *How a trace works, end to end* (`.tours/`): fifteen stops from the Trace button to the request letter.
+
+For investigating officers rather than developers, [`docs/officer-guide.md`](docs/officer-guide.md) walks through
+the suite by task, with what each feature records and its limits.
 
 ---
 
