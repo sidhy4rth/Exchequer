@@ -119,6 +119,9 @@ class ExchangeMatch:
     # INSTANT_EXCHANGER for a swap service's wallet (or a deposit address that
     # sweeps into one); None for an ordinary exchange.
     category: str | None = None
+    # What the attribution stands on, for a label-store exchange row only
+    # (ADR-0011): {kind, source}. None for a label file, inference or live tag.
+    basis: dict[str, str] | None = None
     # A contract_wallet's recorded role (CONTRACT_ROLES); None otherwise.
     role: str | None = None
 
@@ -140,6 +143,8 @@ class ExchangeMatch:
             out["evidence"] = self.evidence
         if self.category is not None:
             out["category"] = self.category
+        if self.basis is not None:
+            out["attribution_basis"] = dict(self.basis)
         if self.role is not None:
             out["role"] = self.role
         return out
@@ -183,7 +188,8 @@ class ExchangeMatcher:
     ) -> None:
         self._labels: dict[str, dict[str, str]] = labels or {}
         self.chain = chain or config.DEFAULT_CHAIN.key
-        # The label store's instant-exchanger rows, for addresses no file names.
+        # The label store's instant-exchanger rows (and, behind a flag, its
+        # exchange rows: ADR-0011), for addresses no file names.
         self.store = store
         if instant:  # a label file's record keeps its name and type; the seed says what kind of service it is
             self._labels = {**self._labels, **{
@@ -264,7 +270,10 @@ class ExchangeMatcher:
         key = normalize_address(address)
         found = self._labels.get(key)
         if found is None and self.store is not None:
-            found = self.store.instant_exchanger(self.chain, key)
+            if config.STORE_EXCHANGE_ROWS:
+                found = self.store.exchange_row(self.chain, key)  # the exchange's own list
+            if found is None:
+                found = self.store.instant_exchanger(self.chain, key)
         return found
 
     def entries(self) -> list[tuple[str, dict[str, str]]]:
@@ -319,6 +328,7 @@ class ExchangeMatcher:
                     depth=data.get("depth", 0),
                     value_received_native=value_in,
                     category=meta.get("category"),
+                    basis=meta.get("basis"),
                     role=meta.get("role") if role_of(meta["type"], meta.get("role")) != meta["type"] else None,
                 )
             )
@@ -400,12 +410,22 @@ def _router_matcher(key: str) -> ExchangeMatcher:
     return ExchangeMatcher.from_file(chain.router_labels_path, chain=chain.key)
 
 
+def instant_exchangers_path() -> Path:
+    return config.DATA_DIR / INSTANT_EXCHANGERS_FILE
+
+
+def curated_sources(chain_key: str) -> tuple[dict[str, dict[str, str]], dict[str, dict[str, str]]]:
+    """What the matcher reads before any store row, for one chain: its label
+    file's records and the instant-exchanger seed's rows. The store's exchange
+    rows are checked against exactly these (scripts/add_store_exchange_rows.py)."""
+    chain = config.get_chain(chain_key)
+    return (ExchangeMatcher.from_file(chain.labels_path, chain=chain.key)._labels,
+            read_instant_exchangers(instant_exchangers_path(), chain.key))
+
+
 @lru_cache(maxsize=None)
 def _matcher(key: str) -> ExchangeMatcher:
     from .label_store import get_label_store  # label_store reads never_flag, which reads this module
 
-    chain = config.get_chain(key)
-    matcher = ExchangeMatcher.from_file(chain.labels_path, chain=chain.key)
-    return ExchangeMatcher(matcher._labels, chain=chain.key,
-                           instant=read_instant_exchangers(config.DATA_DIR / INSTANT_EXCHANGERS_FILE, chain.key),
-                           store=get_label_store())
+    files, seed = curated_sources(key)
+    return ExchangeMatcher(files, chain=config.get_chain(key).key, instant=seed, store=get_label_store())

@@ -279,6 +279,68 @@ class SeizedAsset(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+class CustodyWallet(Base):
+    """A multisig wallet the unit holds seized crypto in, and who can sign for it
+    (custody.py, suite feature 9). Never a key: signers by name, role and unit only."""
+
+    __tablename__ = "custody_wallets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    chain: Mapped[str] = mapped_column(String(16))
+    address: Mapped[str] = mapped_column(String(64))
+    scheme: Mapped[str] = mapped_column(String(120))
+    threshold: Mapped[int] = mapped_column(Integer)
+    signers_json: Mapped[str] = mapped_column(Text)  # [{"name", "role", "unit"}]
+    proposer_may_sign: Mapped[bool] = mapped_column(Boolean, default=False)
+    set_up_by: Mapped[str] = mapped_column(String(120))
+    set_up_on: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD, India's date
+    asset_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
+
+
+CUSTODY_TX_LIVE = "tx_hash != '' AND status != 'cancelled'"  # migrations g7_custody_2 states it too
+
+
+class CustodyMovement(Base):
+    """One deposit into or release out of a custody wallet, and each signer's
+    approval as an officer recorded it (custody_log.py). Never a signature."""
+
+    __tablename__ = "custody_movements"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    wallet_id: Mapped[str] = mapped_column(String(36), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    kind: Mapped[str] = mapped_column(String(16))  # deposit | release
+    asset: Mapped[str] = mapped_column(String(16))
+    amount: Mapped[str] = mapped_column(String(48))  # exact decimal text
+    destination: Mapped[str] = mapped_column(String(64))
+    order_ref: Mapped[str] = mapped_column(String(200), default="")
+    proposed_by: Mapped[str] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(16))  # proposed | approved | broadcast | confirmed | cancelled
+    approvals_json: Mapped[str] = mapped_column(Text, default="[]")  # [{"signer", "at", "recorded_by"}]
+    tx_hash: Mapped[str] = mapped_column(String(80), default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    # One transaction is one live movement of a wallet: the store refuses a second, so two broadcasts
+    # racing with one hash cannot both land. A cancelled movement's hash may be recorded again.
+    __table_args__ = (Index("uq_custody_movements_wallet_tx", "wallet_id", "tx_hash", unique=True,
+                            sqlite_where=text(CUSTODY_TX_LIVE), postgresql_where=text(CUSTODY_TX_LIVE)),)
+    __mapper_args__ = {"version_id_col": row_version}
+
+
 class Exhibit(Base):
     """A file an outside forensic tool produced for a case, by its hashes, and its
     chain of custody (exhibits.py, suite feature 3). The file itself is never stored."""

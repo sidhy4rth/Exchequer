@@ -913,3 +913,7 @@ CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
 TRACE_CANCEL_ON_DISCONNECT: bool = flag(
     "EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT",
     "Trace engine: stop a POST /trace whose client hung up, at its next provider request; awaits the owner")
+STORE_EXCHANGE_ROWS: bool = flag("EXCHEQUER_STORE_EXCHANGE_ROWS",
+                                 "#222: name the exchange from label-store exchange rows (its own PoR list; ADR-0011)")
+CUSTODY_WALLETS: bool = flag("EXCHEQUER_CUSTODY_WALLETS",
+                             "Feature 9: custody wallet records and signing log (never a key)")
