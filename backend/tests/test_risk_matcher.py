@@ -13,7 +13,10 @@ import json
 import pytest
 
 from app import risk_matcher
-from app.risk_matcher import FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, SEIZED, STOLEN, RiskMatcher
+from app.label_rules import UNVETTED
+from app.risk_matcher import (
+    FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, PRIVACY, SANCTIONED, SCAM, SEIZED, STOLEN, RiskMatch, RiskMatcher,
+)
 
 from conftest import addr, make_graph
 
@@ -429,3 +432,35 @@ def test_the_load_log_counts_the_orders_left_out_as_ended(intl_file, today, capl
     with caplog.at_level("INFO", logger="app.risk_matcher"):
         RiskMatcher.from_file(intl_file)
     assert "Loaded 1 risk labels" in caplog.text and "1 past their end date, left out" in caplog.text
+
+
+# describe() puts a full stop after the source; some sources already end in one
+# (a note on how the address was checked), which used to print "..".
+_DESCRIBE_CASES = [
+    {"category": SANCTIONED}, {"category": SEIZED}, {"category": FROZEN}, {"category": SCAM, "tier": UNVETTED},
+    {"category": POISONING}, {"category": SCAM}, {"category": LAUNDERING}, {"category": GAMBLING},
+    {"category": STOLEN}, {"category": PRIVACY}, {"category": MIXER, "terminal": False}, {"category": MIXER},
+]
+
+
+def _match(source: str, **kw) -> RiskMatch:
+    return RiskMatch(address=addr("d7"), entity="Example", label="Example", source=source, depth=2,
+                     value_received_native=1.5, **kw)
+
+
+@pytest.mark.parametrize("kw", _DESCRIBE_CASES, ids=lambda kw: "-".join(str(v) for v in kw.values()))
+def test_describe_puts_one_full_stop_after_a_source_that_already_ends_in_one(kw):
+    with_stop = _match("Example list, read 15 Nov 2026.", **kw).describe()
+    assert ".." not in with_stop
+    assert "Example list, read 15 Nov 2026. " in with_stop
+    # Exactly the sentence a source without the stop gives.
+    assert with_stop == _match("Example list, read 15 Nov 2026", **kw).describe()
+
+
+def test_describe_adds_the_full_stop_to_a_source_without_one():
+    assert _match("OFAC SDN list (read 2026-11-15)", category=SANCTIONED).describe() == (
+        f"Sanctioned entity: {addr("d7")} is listed as Example on OFAC SDN list (read 2026-11-15). "
+        "It received 1.5000 ETH within this trace, 2 hops from the reported address."
+    )
+    assert _match("Example list", category=MIXER).describe().startswith(
+        f"Mixer: {addr("d7")} is Example, per Example list. It received 1.5000 ETH")
