@@ -174,3 +174,58 @@ def test_a_registered_entry_without_its_listed_name_gives_no_note(on, tmp_path, 
     fiu_ind_status.clear_cache()
     assert fiu_ind_status.note("Binance") is None  # never "listed as None"
     assert fiu_ind_status.note("Kraken")  # the other entries still read
+
+
+@pytest.mark.parametrize("day", ["2026-02-30", "2026-13-01", "2026-11-00"])
+def test_an_impossible_day_is_caught_when_the_file_is_read(on, tmp_path, monkeypatch, day):
+    # The pattern matches, but there is no such day: note() would raise while a letter is drafted.
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    register = DOCUMENT["_meta"]["register"]
+
+    def read(meta, exchanges):
+        (tmp_path / fiu_ind_status.STATUS_FILE).write_text(json.dumps({"_meta": meta, "exchanges": exchanges}))
+        fiu_ind_status.clear_cache()
+
+    read({"register": register, "checked_on": day}, {"Kraken": ENTRIES["Kraken"]})
+    assert fiu_ind_status.note("Kraken") is None  # the file is unusable, as with no checked_on
+    assert "unusable" in fiu_ind_status.staleness(TODAY)
+    read({"register": {**register, "as_of": day}, "checked_on": DOCUMENT["_meta"]["checked_on"]},
+         {"Kraken": ENTRIES["Kraken"]})
+    assert fiu_ind_status.note("Kraken") is None
+    fact = {**ENTRIES["Kraken"]["actions"][0], "date": day}
+    read({"register": register, "checked_on": DOCUMENT["_meta"]["checked_on"]},
+         {"Kraken": {**ENTRIES["Kraken"], "actions": [fact]}, "Bitstamp": ENTRIES["Bitstamp"]})
+    assert fiu_ind_status.note("Kraken") is None  # that entry is skipped
+    assert fiu_ind_status.note("Bitstamp")  # the others still read
+
+
+# -- scripts/check_fiu_staleness.py: the same rule by the real date, warning only -----------------
+def test_the_script_is_quiet_while_the_sources_are_recent(capsys, monkeypatch):
+    from scripts import check_fiu_staleness
+
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    assert check_fiu_staleness.main(TODAY) == 0
+    out = capsys.readouterr().out
+    assert "WARNING" not in out and "::warning" not in out
+
+
+def test_the_script_warns_with_what_to_do_once_due_and_still_exits_0(capsys, monkeypatch):
+    from scripts import check_fiu_staleness
+
+    late = date.fromisoformat(DOCUMENT["_meta"]["checked_on"]) + timedelta(days=fiu_ind_status.STALE_AFTER_DAYS + 1)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    assert check_fiu_staleness.main(late) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("WARNING: ") and "docs/flag-rollout.md" in out and "update _meta.checked_on" in out
+    assert "::warning" not in out
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    assert check_fiu_staleness.main(late) == 0
+    assert "::warning title=FIU-IND sources due a re-check::" in capsys.readouterr().out
+
+
+def test_the_script_warns_on_an_unusable_file_and_still_exits_0(capsys, tmp_path, monkeypatch):
+    from scripts import check_fiu_staleness
+
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    assert check_fiu_staleness.main(TODAY) == 0
+    assert "unusable" in capsys.readouterr().out
