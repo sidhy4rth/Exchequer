@@ -212,8 +212,10 @@ note instead, and drop out of every risk count.
   so no single payout can be tied to these funds." A note on a contract whose
   payouts were followed still says "The trace did not stop here." The section's
   opening line, on screen, in the text report and on page 1 of the PDF, says
-  being a privacy protocol never stops the trace and that each note says
-  whether the contract's payouts were followed.
+  being a privacy protocol never stops the trace, though the trace may not go
+  past a contract that pays out to, or is paid by, many addresses (#288). In a
+  reverse trace, the note on such a contract says its senders were not
+  followed back. PDFs issued with an earlier opening line still verify.
 - A note is written when the trace runs. A case traced before #279 went live
   keeps the old wording, "The trace did not stop here", even where the
   payouts were not followed; run the trace again for the new wording.
