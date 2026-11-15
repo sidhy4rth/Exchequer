@@ -420,9 +420,11 @@ def rows(candidates: dict[str, dict[str, dict]], accounts: dict[str, dict], sour
 
 
 def apply(new_rows: dict[str, dict[str, dict]], note: dict[str, Any],
-          elsewhere: dict[str, dict[str, Any]] | None = None) -> dict[str, int]:
-    """Add the rows to each chain's label file (never replacing one) and record `note` in its _meta,
-    with `elsewhere[chain]`: the rows of that chain sent to the label store instead."""
+          elsewhere: dict[str, dict[str, Any]] | None = None, meta_key: str = META_KEY) -> dict[str, int]:
+    """Add the rows to each chain's label file (never replacing one) and record `note` in its
+    _meta[meta_key], with `elsewhere[chain]`: the rows of that chain sent to the label store instead.
+    Another source's import (scripts/import_bitget_por_labels.py) passes its own meta_key, so the
+    note of the files read here is kept."""
     added = {}
     for chain, found in new_rows.items():
         path = config.CHAINS[chain].labels_path
@@ -435,10 +437,10 @@ def apply(new_rows: dict[str, dict[str, dict]], note: dict[str, Any],
         labels.update(fresh)
         if in_order:  # a file kept in address order stays in it
             document["labels"] = dict(sorted(labels.items()))
-        document["_meta"][META_KEY] = {**note, "added": {
+        document["_meta"][meta_key] = {**note, "added": {
             e: sum(1 for r in fresh.values() if r["exchange"] == e) for e in sorted({r["exchange"] for r in fresh.values()})}}
         if (elsewhere or {}).get(chain):
-            document["_meta"][META_KEY]["in_label_store"] = elsewhere[chain]
+            document["_meta"][meta_key]["in_label_store"] = elsewhere[chain]
         path.write_text(json.dumps(document, indent=indent, ensure_ascii=False) + "\n", encoding="utf-8")
         added[chain] = len(fresh)
     return added

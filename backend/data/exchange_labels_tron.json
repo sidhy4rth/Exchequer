@@ -8,12 +8,12 @@
     "regenerate_with": "cd backend && .venv/bin/python -m scripts.seed_tron_labels",
     "schema": "labels maps a Base58 address to {exchange, label, type}",
     "counts": {
-      "labels": 139,
+      "labels": 144,
       "exchanges": 26,
       "by_exchange": {
         "Binance": 25,
         "Bitfinex": 1,
-        "Bitget": 1,
+        "Bitget": 6,
         "Bithumb": 1,
         "Bitpanda": 1,
         "Bybit": 41,
@@ -147,6 +147,66 @@
             "TUpHuDkiCCmwaTZBHZvQdwWzGNm5t8J2b9": "Kucoin 4"
           },
           "left_out": {}
+        },
+        "por:bitget:2026-11": {
+          "exchange": "Bitget",
+          "url": "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail",
+          "archive_url": null,
+          "page": "https://www.bitget.com/promotion/proof-of-reserves",
+          "published": "2026-11-12",
+          "retrieved": "2026-11-15",
+          "sha256": "849bafc3921c7fdfa1b6eb478189d26676123d74d31014a19bbfd5e6ceec1fa1",
+          "kind": "proof-of-reserves reserve wallet (Bitget does not mark hot or cold per address)",
+          "statement": "Bitget's proof-of-reserves page lists, per audit, the wallets it calls its reserve wallets; this is the page's own public API answer for audit Au2026111300 (snapshot 2026-11-12 16:00 UTC), retrieved 2026-11-15 12:39:12 UTC. Rows read: chain 'Tron', address from the TronScan link Bitget gives for each wallet.",
+          "tron_addresses_listed": 3,
+          "added": 2,
+          "corroborated": {
+            "TJ7hhYhVhaxNx6BPyq7yFpqZrQULL3JSdb": "Bitget 9"
+          },
+          "left_out": {},
+          "request": "POST {\"auditId\": \"Au2026111300\"}"
+        },
+        "por:bitget:2026-10": {
+          "exchange": "Bitget",
+          "url": "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail",
+          "archive_url": null,
+          "page": "https://www.bitget.com/promotion/proof-of-reserves",
+          "published": "2026-10-21",
+          "retrieved": "2026-11-15",
+          "sha256": "57e0bfabd6c0abb4e585c4d30b1f12607489ae685119e8f061a281de2db16b5f",
+          "kind": "proof-of-reserves reserve wallet (Bitget does not mark hot or cold per address)",
+          "statement": "Bitget's proof-of-reserves page lists, per audit, the wallets it calls its reserve wallets; this is the page's own public API answer for audit Au2026102112 (snapshot 2026-10-21 04:00 UTC), retrieved 2026-11-15 12:39:17 UTC. Rows read: chain 'Tron', address from the TronScan link Bitget gives for each wallet.",
+          "tron_addresses_listed": 5,
+          "added": 2,
+          "corroborated": {
+            "TJ7hhYhVhaxNx6BPyq7yFpqZrQULL3JSdb": "Bitget 9",
+            "TKPqvBMU2v23RyjjViKvp16kiHPx7FnrHQ": "Bitget: Reserves Wallet (2026-11)",
+            "TMauqkA78pfysSTn8jD1dvEUkjme2gEEdn": "Bitget: Reserves Wallet (2026-11)"
+          },
+          "left_out": {},
+          "request": "POST {\"auditId\": \"Au2026102112\"}"
+        },
+        "por:bitget:2026-05": {
+          "exchange": "Bitget",
+          "url": "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail",
+          "archive_url": null,
+          "page": "https://www.bitget.com/promotion/proof-of-reserves",
+          "published": "2026-05-20",
+          "retrieved": "2026-11-15",
+          "sha256": "77fd83c167971d2537baee7784cb3f159c01d7df428cd084c8fd1ebc271365a5",
+          "kind": "proof-of-reserves reserve wallet (Bitget does not mark hot or cold per address)",
+          "statement": "Bitget's proof-of-reserves page lists, per audit, the wallets it calls its reserve wallets; this is the page's own public API answer for audit Au2026052008 (snapshot 2026-05-20 00:00 UTC), retrieved 2026-11-15 12:39:50 UTC. Rows read: chain 'Tron', address from the TronScan link Bitget gives for each wallet.",
+          "tron_addresses_listed": 6,
+          "added": 1,
+          "corroborated": {
+            "TBpo1Sh7vKCLrfxocZHd8CA5wc2R75kSJM": "Bitget: Reserves Wallet (2026-10)",
+            "TJ7hhYhVhaxNx6BPyq7yFpqZrQULL3JSdb": "Bitget 9",
+            "TKPqvBMU2v23RyjjViKvp16kiHPx7FnrHQ": "Bitget: Reserves Wallet (2026-11)",
+            "TMauqkA78pfysSTn8jD1dvEUkjme2gEEdn": "Bitget: Reserves Wallet (2026-11)",
+            "TWpNmnuq6EFMRnxWQTGGf47gjkkbtYJdbm": "Bitget: Reserves Wallet (2026-10)"
+          },
+          "left_out": {},
+          "request": "POST {\"auditId\": \"Au2026052008\"}"
         }
       },
       "description": "Rows whose 'source' starts with 'por:' come from the exchange's own published proof-of-reserves or wallet-address disclosure (sources below: URL, archive copy, publication and retrieval dates, SHA-256 of the file read). The exchange itself states it controls these addresses. Each was checked to be a valid Tron address, active on chain and not a contract (an account per TronGrid wallet/getaccount, or a received USDT-TRC20 transfer; keyless) on the retrieval date. A PoR list says nothing about hot or cold unless the source does, so these are typed exchange_wallet. Addresses already labelled from TronScan keep that row and are listed as corroborated; conflicts and anything on a frozen, sanctions, risk, gambling or demo list were left out, never overwritten.",
@@ -290,6 +350,36 @@
       "exchange": "Bitget",
       "label": "Bitget 9",
       "type": "exchange_wallet"
+    },
+    "TFrRVZFoHty7scd2a1q6BDxPU5fyqiB4iR": {
+      "exchange": "Bitget",
+      "label": "Bitget: Reserves Wallet (2026-05)",
+      "type": "exchange_wallet",
+      "source": "por:bitget:2026-05"
+    },
+    "TBpo1Sh7vKCLrfxocZHd8CA5wc2R75kSJM": {
+      "exchange": "Bitget",
+      "label": "Bitget: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bitget:2026-10"
+    },
+    "TWpNmnuq6EFMRnxWQTGGf47gjkkbtYJdbm": {
+      "exchange": "Bitget",
+      "label": "Bitget: Reserves Wallet (2026-10)",
+      "type": "exchange_wallet",
+      "source": "por:bitget:2026-10"
+    },
+    "TKPqvBMU2v23RyjjViKvp16kiHPx7FnrHQ": {
+      "exchange": "Bitget",
+      "label": "Bitget: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:bitget:2026-11"
+    },
+    "TMauqkA78pfysSTn8jD1dvEUkjme2gEEdn": {
+      "exchange": "Bitget",
+      "label": "Bitget: Reserves Wallet (2026-11)",
+      "type": "exchange_wallet",
+      "source": "por:bitget:2026-11"
     },
     "TP1V18T1UvFMA2RtFzLfa6n4BGkygHtWHZ": {
       "exchange": "Bithumb",
