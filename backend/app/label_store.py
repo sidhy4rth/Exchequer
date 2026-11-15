@@ -53,6 +53,13 @@ TIERS = {
 EXCHANGE = "exchange"
 EXCHANGE_TABLE = "exchange_rows"
 POR_BASIS = "exchange's own published list (PoR)"
+# A row of that list that behaves as a customer's deposit address (ADR-0012):
+# typed deposit_wallet, and held only with its basis, one observed sweep into a
+# wallet the label file names as the same exchange's, in a second optional
+# table (raw bytes, never in `texts`, which the reader holds in memory).
+DEPOSIT_WALLET = "deposit_wallet"
+DEPOSIT_TABLE = "exchange_deposits"
+POR_DEPOSIT_BASIS = "exchange's own published list (PoR), and a sweep into its labelled wallet"
 
 # The mixer pools and routers a store row may end a trace at (see pinned_mixers).
 MIXER_POOLS_FILE = "mixer_pools.json"
@@ -179,8 +186,9 @@ class LabelStore:
         for chain, category, n in self._db.execute("SELECT chain, category, n FROM counts"):
             self._counts.setdefault(chain, {})[category] = n
         # Optional (ADR-0011): a store built without it has no exchange rows.
-        self.has_exchange_rows = self._db.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (EXCHANGE_TABLE,)).fetchone() is not None
+        self.has_exchange_rows, self.has_deposit_rows = (self._db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone() is not None
+            for table in (EXCHANGE_TABLE, DEPOSIT_TABLE))
 
     def lookup(self, chain: str, address: str) -> dict[str, str] | None:
         chain_id = CHAIN_IDS.get(chain)
@@ -261,7 +269,9 @@ class LabelStore:
     def exchange_row(self, chain: str, address: str) -> dict | None:
         """The store's exchange row for `address` (ADR-0011), as an exchange label
         reads ({exchange, label, type, basis}); None without one. `basis` says
-        what it stands on: the exchange's own published list, and which.
+        what it stands on: the exchange's own published list, and which. A
+        deposit row's (ADR-0012) also has `deposit`: {sweeps_to, sweep_tx,
+        checked_on}; a deposit row without its basis is never read.
 
         Never for a burn or system address, a token contract, a DEX router or a
         casino wallet in a gambling file (app/never_flag.py): a list that names
@@ -283,10 +293,30 @@ class LabelStore:
         name = label_rules.clean_text(self._texts.get(exchange_id, ""))
         if not name:
             return None
-        return {"exchange": name, "label": label_rules.clean_text(self._texts.get(label_id, "")) or name,
-                "type": label_rules.clean_text(self._texts.get(type_id, "")) or "exchange_wallet",
-                "basis": {"kind": label_rules.clean_text(self._texts.get(basis_id, "")) or POR_BASIS,
-                          "source": label_rules.clean_text(self._texts.get(source_id, ""))}}
+        found = {"exchange": name, "label": label_rules.clean_text(self._texts.get(label_id, "")) or name,
+                 "type": label_rules.clean_text(self._texts.get(type_id, "")) or "exchange_wallet",
+                 "basis": {"kind": label_rules.clean_text(self._texts.get(basis_id, "")) or POR_BASIS,
+                           "source": label_rules.clean_text(self._texts.get(source_id, ""))}}
+        if found["type"] == DEPOSIT_WALLET:
+            deposit = self._deposit(raw, chain_id, chain)
+            if deposit is None:
+                return None  # a deposit row says why it is one, or it is not read (ADR-0012)
+            found["basis"]["deposit"] = deposit
+        return found
+
+    def _deposit(self, raw: bytes, chain_id: int, chain: str) -> dict[str, str] | None:
+        """A deposit row's basis: the wallet it swept to, one sweep's hash and the day it was read."""
+        if not self.has_deposit_rows:
+            return None
+        with self._lock:
+            row = self._db.execute(f"SELECT sweeps_to, sweep_tx, checked_on FROM {DEPOSIT_TABLE} "
+                                   "WHERE address=? AND chain=?", (raw, chain_id)).fetchone()
+        if row is None or not row[0] or not row[1] or not row[2]:
+            return None
+        sweeps_to, tx, day = row
+        d = str(day)
+        return {"sweeps_to": decode_address(sweeps_to), "sweep_tx": f"{'' if chain == 'tron' else '0x'}{tx.hex()}",
+                "checked_on": f"{d[:4]}-{d[4:6]}-{d[6:]}"}
 
     def _tier(self, source_id: int, category: str, stored: int) -> int:
         key = (source_id, category, stored)
