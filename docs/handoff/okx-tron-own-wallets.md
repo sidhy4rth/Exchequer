@@ -3,9 +3,9 @@
 - **Feature**: OKX Tron deposit addresses that sweep into an OKX wallet other than Hot Wallet 8 can get an ADR-0012 deposit row, because OKX's own Tron wallets from its proof-of-reserves list are labelled
 - **Issue**: #298
 - **Branch**: `labels/okx-tron-own-wallets`
-- **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: in review (PR #304)
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #304 on 2026-11-15 (18:45 UTC, `c39b7e8e`); live
 
 ## Done
 
@@ -24,8 +24,8 @@
 
 ## Next
 
-1. After merge: let the Tron deposit-row join accept the 10 new destinations (see `~/exchequer-flagged/store/NEXT-RELEASE.md`).
-2. The 5 left-out wallets: labelled in the draft PR for #307 (`docs/handoff/okx-tron-demo-wallets.md`); no demo needed re-recording.
+1. Next label-store release: let the Tron deposit-row join accept the 10 new destinations (steps in the release notes kept outside the repository; the release's own GitHub notes in `sidhy4rth/exchequer-labels` will say what it did).
+2. The 5 left-out wallets: labelled in #308 for #307, merged 2026-11-15 (`docs/handoff/okx-tron-demo-wallets.md`); no demo needed re-recording.
 
 ## Open questions
 

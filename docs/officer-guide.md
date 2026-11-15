@@ -16,9 +16,9 @@ Each section is marked:
 - **Coming: in review**: built and in review, with no switch. It appears on
   the site once it is merged.
 
-Status is as of 15 November 2026. Late that evening the site ran the code
-merged up to #296 (build e379cca); anything merged after it reaches the site
-with the next deploy. A switch counts as on only where the site's settings
+Status is as of 16 November 2026, when the site ran the code merged up to
+#308 (build c9f723b); anything merged after it reaches the site with the
+next deploy. A switch counts as on only where the site's settings
 (`render.yaml`) turn it on. `docs/suite-features.md`
 tracks status for the team.
 
@@ -231,14 +231,20 @@ Arbitrum (119), from each exchange's own proof-of-reserves file. Labels read
 "Bybit: Reserve Wallet N" or "OKX: Reserve Wallet N". An address another list
 already claims is left out, never overwritten. Since #248, also the two
 Ethereum wallets OKX sweeps USDT and USDC into, from the same proof-of-reserves
-file; their role rests on on-chain reads, which each label records.
+file; their role rests on on-chain reads, which each label records. Since
+#304 and #308, also 15 of OKX's own Tron wallets ("OKX: Reserve Wallet 264"
+to "278"), from OKX's proof-of-reserves file, each with the on-chain reads
+that show it is one of OKX's operating wallets.
 
 **Merged, switched off** (#223, with #224; switch
 `EXCHEQUER_STORE_EXCHANGE_ROWS`): OKX lists far more wallets (474,530 on Tron,
 17,046 on Ethereum) than the label files can carry, so they go into the label
 store. A match from the store says what it rests on (its attribution basis).
-The 15 November store carries these rows (474,529 OKX on Tron, 202 OKX and 10
-Bitget on Ethereum), but they name no exchange while the switch is off.
+The live store, `labels-2026-11-16` (70,895,553 labels counted once per
+chain; 69,973,340 distinct addresses), carries these rows: 474,529 OKX on
+Tron; on Ethereum, 162 OKX own wallets, 4,938 OKX deposit addresses that each
+state the OKX wallet it swept to, and 10 Bitget wallets. They name no
+exchange while the switch is off.
 
 ### Stopping a trace
 
