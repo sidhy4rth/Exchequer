@@ -126,6 +126,22 @@ services:
       # Pools a mixer stop and shows no notes (config.PRIVACY_CATEGORY).
       - key: EXCHEQUER_PRIVACY_CATEGORY
         value: "1"
+      # FIU-IND's dated, sourced facts about the exchange (fiu_ind_status.py,
+      # #290): the report's FINDING and the exchange letters gain a note saying
+      # whether the exchange was on FIU-IND's 9 Mar 2026 registered list and
+      # the notices and penalties FIU-IND announced. Reads only
+      # data/fiu_ind_status.json; contacts nothing new. "0" leaves every report
+      # and letter as before (config.FIU_IND_NOTE).
+      - key: EXCHEQUER_FIU_IND_NOTE
+        value: "1"
+      # Stop a synchronous POST /trace whose client hung up, at its next
+      # provider request, and store nothing (routes/cases.py, #227). Background
+      # jobs and batches are not touched. Likely helps browsers (HTTP/2) only;
+      # an HTTP/1.1 script's hang-up may not reach the server (docs/
+      # flag-rollout.md). "0" lets every trace run to the end
+      # (config.TRACE_CANCEL_ON_DISCONNECT).
+      - key: EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT
+        value: "1"
       # The address this server names as "Issued by" in signed reports, in
       # /signing-key and in the "check at <address>/verify" lines of letters
       # and certificates (config.PUBLIC_URL). Without it the server falls back

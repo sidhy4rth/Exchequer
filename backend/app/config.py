@@ -912,7 +912,8 @@ CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
                          "Feature 6: one zip of a case's report, registers and audit trail, with a manifest")
 TRACE_CANCEL_ON_DISCONNECT: bool = flag(
     "EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT",
-    "Trace engine: stop a POST /trace whose client hung up, at its next provider request; awaits the owner")
+    "Trace engine: stop a POST /trace whose client hung up, at its next provider request; "
+    "on in production since 15 Nov")
 STORE_EXCHANGE_ROWS: bool = flag("EXCHEQUER_STORE_EXCHANGE_ROWS",
                                  "#222: name the exchange from label-store exchange rows (its own PoR list; ADR-0011)")
 CUSTODY_WALLETS: bool = flag("EXCHEQUER_CUSTODY_WALLETS",
@@ -936,4 +937,5 @@ FREEZE_WORDING_V2: bool = flag("EXCHEQUER_FREEZE_WORDING_V2",
                                "as it directs, not for a 'debit freeze'; awaits a lawyer (docs/legal)")
 FIU_IND_NOTE: bool = flag("EXCHEQUER_FIU_IND_NOTE",
                           "#290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, "
-                          "notices, penalties) as a note on the report's FINDING and the exchange letters")
+                          "notices, penalties) as a note on the report's FINDING and the exchange letters; "
+                          "on in production since 15 Nov")
