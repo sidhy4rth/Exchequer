@@ -17,7 +17,9 @@ as the asset and exhibit registers do.
 Suggestions (suggestions()) are tasks the case's own records already call for:
 a request sent with no reply after a week, an urgent freeze letter waiting for
 its sign-off or approved and not sent, a freeze not yet in the asset register,
-and held funds with no court order on custody. They are worked out each time
+and held funds with no court order on custody. With EXCHEQUER_MORE_TASK_SUGGESTIONS
+on, also an exhibit handed over with no hash check recorded since, and unread
+alerts on the case's watches. They are worked out each time
 from those records, never stored, and name only what the records say. Taking
 one up adds a task carrying the suggestion's key (source); so does declining
 it, as a task dropped with the reason, so a suggestion never quietly returns.
@@ -33,7 +35,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 
-from . import assets, freeze_requests, models
+from . import assets, config, exhibits, freeze_requests, models, watchlist
 from .assets import NOT_A_KEY, looks_like_secret
 from .display_text import one_line
 
@@ -313,12 +315,69 @@ def _from_assets(viewer: Any, case_id: str) -> tuple[list[dict[str, Any]], set[s
     return out, registered
 
 
+def _short(text: str, limit: int = 120) -> str:
+    text = one_line(text)
+    return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
+
+
+def _from_exhibits(viewer: Any, case_id: str) -> list[dict[str, Any]]:
+    """A held exhibit whose last hand-over (a change of holder in its history) has no
+    hash check after it. Only exhibits with a SHA-256: the register checks a file by that alone.
+    The key carries the hand-over's place in the history, so a later hand-over asks again."""
+    out = []
+    for x in exhibits.list_for(viewer, case_id):
+        if x["status"] != "held" or not x["sha256"]:
+            continue
+        history = x["history"]
+        handovers = [i for i, h in enumerate(history) if h.get("action") == "changed" and "holder" in h.get("changed", [])]
+        if not handovers or any(h.get("action") == "checked" for h in history[handovers[-1] + 1:]):
+            continue
+        at, holder = handovers[-1], one_line(x["holder"])
+        out.append({"source": f"exhibit:{x['exhibit_id']}:{at}:check", "due_on": "",
+                    "title": f"Check the file of exhibit {_short(x['label'])} against its recorded hash",
+                    "why": f"Handed over{f' to {_short(holder)}' if holder else ''} on {_day(history[at].get('at'))}; "
+                           "no check of the file against its recorded SHA-256 since. A match shows the file is "
+                           "unchanged since its hash was recorded; it does not show who had it."})
+    return out
+
+
+ALERT_WHAT = {"exchange": "funds sent to an exchange wallet", "risk": "funds sent to a flagged address",
+              "moved": "funds moved", "more": "more movements than one check reads"}
+
+
+def _from_watches(viewer: Any, case_id: str) -> list[dict[str, Any]]:
+    """Unread alerts on this browser's watches of the case, one suggestion per watch, keyed by its
+    newest unread alert (a newer one asks again). Alerts below the dust floor do not count, as on
+    the watchlist, where they sort last."""
+    out = []
+    with models.session() as s:
+        watches = s.scalars(select(models.Watch).where(
+            models.Watch.owner_hash == viewer.owner_hash, models.Watch.case_id == case_id,
+            models.Watch.active.is_(True)).order_by(models.Watch.created_at)).all()
+        for w in watches:
+            unread = [a for a in s.scalars(select(models.Alert).where(
+                models.Alert.watch_id == w.id, models.Alert.owner_hash == viewer.owner_hash,
+                models.Alert.read.is_(False)).order_by(models.Alert.created_at.desc(), models.Alert.id)).all()
+                if a.kind == "more" or not watchlist.is_dust(a.value, a.asset)]
+            if not unread:
+                continue
+            newest, n = unread[0], len(unread)
+            out.append({"source": f"alert:{newest.id}:unread", "due_on": "",
+                        "title": f"Look at the {n} unread watch alert{'s' if n > 1 else ''} on {w.address}",
+                        "why": f"The newest came on {_day(newest.created_at)} "
+                               f"({ALERT_WHAT.get(newest.kind, 'a movement')}); "
+                               f"{'none has' if n > 1 else 'it has not'} been marked read on the Watchlist."})
+    return out
+
+
 def suggestions(viewer: Any, case_id: str) -> list[dict[str, Any]]:
     """Tasks the case's records call for that no task (open or closed) has taken up yet."""
     if getattr(viewer, "owner_hash", None) is None:
         return []
     held, registered = _from_assets(viewer, case_id)
     found = _from_requests(viewer, case_id, registered) + held
+    if config.MORE_TASK_SUGGESTIONS:
+        found += _from_exhibits(viewer, case_id) + _from_watches(viewer, case_id)
     with models.session() as s:
         taken = set(s.scalars(select(models.CaseTask.source).where(
             models.CaseTask.case_id == case_id, models.CaseTask.source != "", _readable(viewer))).all())

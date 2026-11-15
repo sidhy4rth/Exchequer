@@ -3,9 +3,9 @@
 - **Feature**: suite feature 6 (case management): a task list per case: what still has to be done, who it is assigned to (a name), by when, and what came of it
 - **Issue**: #121; more suggestions #334
 - **Branch**: `feat/case-tasks` (server, PR #122); `feat/case-tasks-screen` (screen, #123, on top of it); `feat/case-tasks-suggest` (suggestions, on top of #123); `feat/case-tasks-3` (two more suggestions, #334)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: merged in #122 (with #123 and #124) on 2026-11-15; live, no flag. Two more suggestions in progress (#334)
+- **Status**: merged in #122 (with #123 and #124) on 2026-11-15; live, no flag. two more suggestions behind `EXCHEQUER_MORE_TASK_SUGGESTIONS` (off) in PR #335, in review
 
 ## Done
 
@@ -15,6 +15,7 @@
 - End to end in a browser against the real server (throwaway database, a recorded demo saved as a case): added a task with a past due date (shown "Overdue by 2 days"), saw it on the home card, followed its link to the Evidence tab, dropped it with a reason (history and audit right, no text in the audit), added and marked done a second task.
 
 - Suggestions (on top of #123): `tasks.suggestions(viewer, case_id)` works out, from the case's own records, the tasks they call for: a request sent 7+ days ago with no reply (follow up), an urgent freeze letter awaiting sign-off (get it) or signed off but not sent (send it), a freeze not in the asset register (record it), and held funds with no court order on custody (get it, due on the register's 45-day deadline). `GET /trace/{case}/tasks` returns them as `suggested`; `POST` with `source` takes one up, and with `note` too declines it (a dropped task with the reason). Column `case_tasks.source`, migration `g7_tasks_2`. 13 backend tests (each rule fires, and stays silent on recent, answered, ordered or released records), 3 frontend tests; checked in a browser against seeded records.
+- Two more suggestions (#334, PR #335), behind `EXCHEQUER_MORE_TASK_SUGGESTIONS` (off): `_from_exhibits` and `_from_watches` in `tasks.py`. An exhibit in the register still held, with a SHA-256, whose last hand-over (a history entry changing `holder`) has no `checked` entry after it: "Check the file of exhibit <label> against its recorded hash". Unread alerts on this browser's active watches of the case: "Look at the N unread watch alerts on <address>". 13 tests in `backend/tests/test_tasks_more_suggestions.py` (each fires, stays silent once checked, read, ended, dust, another case, another browser, flag off; taken up, declined, audited by rule name only).
 
 ## Decisions
 
@@ -34,13 +35,17 @@
 - The panel opens on arrival when a task is open; after that only the officer folds it, so closing the last task does not snap it shut.
 - A task row's due date left half-typed (the browser reports it empty, with `badInput`) is not sent: the old date is put back and a hint says to type the whole date. An emptied field still clears the date.
 - Each open row's Assigned to and Due fields are named after the task (`aria-label` "Assigned to: <title>"), so a screen reader tells several rows apart.
+- Both new rules use only what is already stored: an exhibit's history (`changed` with `holder` is a hand-over, `checked` is a hash check, `exhibits.check`), and an alert's `read` (set only by "Mark all read" on the Watchlist, `watchlist.mark_read`). No new tracking, no migration.
+- An exhibit with no SHA-256 is not suggested: the register checks a file by its SHA-256 only, so the task could never be done in the app. Its key is `exhibit:<id>:<place of the hand-over in the history>:check`, so a later hand-over asks again even if an earlier one was declined. A check counts whatever its result: a mismatch is already shown on the register. The wording says a match shows the file is unchanged since its hash was recorded, not who had it.
+- Watch alerts are one suggestion per watch, keyed `alert:<newest unread alert id>:unread`, so a watch with 50 alerts is one task, and a newer alert asks again. Alerts below the dust floor do not count (they sort last on the Watchlist too); a "more" notice does. Alerts belong to the browser that set the watch (no unit on `alerts`), so a unit colleague is not shown them.
+- Behind a flag, not live: the task list itself is live with no flag, so new rules get their own.
 - Adding or changing a task is in `access.GUARDED`, as `POST /requests` is (security review, 14 Nov): with a demo code set it needs the code, and with `EXCHEQUER_CONSOLE=officers` a signed-in officer. Reading the list and `/tasks/due` need neither.
 
 ## Next
 
 1. Review and merge #122, then the screen PR (retarget it to `main` once #122 is squash-merged: merge `main` into it, keeping its side).
 2. Then the suggestions PR (retarget it to `main` the same way once #123 is merged).
-3. Later, more rules, each only where a record says so: an exhibit handed over with no check since, a watch alert not yet looked at.
+3. Review and merge #335 (two more rules, flag off). Then switch `EXCHEQUER_MORE_TASK_SUGGESTIONS` on per `docs/flag-rollout.md`: on a test case, record an exhibit with a SHA-256, change its holder, see the suggestion; check the file, see it go. Then retire the flag.
 
 ## Open questions
 
