@@ -929,3 +929,5 @@ TELEGRAM_LOOKUPS: bool = flag("EXCHEQUER_TELEGRAM_LOOKUPS",
                               "(needs EXCHEQUER_OSINT_LOOKUPS too)")
 SOP_SUMMARY: bool = flag("EXCHEQUER_SOP_SUMMARY",
                          "Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms")
+SOP_DEADLINES: bool = flag("EXCHEQUER_SOP_DEADLINES",
+                           "Feature 8: MHA CFCFRMS SOP time limits, quoted, as reminders on bank holds in the asset register")
