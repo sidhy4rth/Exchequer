@@ -5,7 +5,7 @@
 - **Branch**: `feat/store-exchange-rows-contract` (contract + ADR), `feat/store-exchange-rows` (code, stacked on it)
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: contract + ADR PR and stacked code PR open for review; flag `EXCHEQUER_STORE_EXCHANGE_ROWS` off
+- **Status**: merged in #223 (with #224) on 2026-11-15; flag `EXCHEQUER_STORE_EXCHANGE_ROWS` off
 
 ## Done
 

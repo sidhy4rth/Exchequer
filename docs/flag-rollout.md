@@ -27,6 +27,7 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | Off in `render.yaml`. Its handoff records the owner's approval on 14 Nov to switch it on after merge; not switched on yet as far as `main` shows |
 | `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
 | `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | Off in `render.yaml`; awaits the owner |
+| `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the deployed store (`labels-2026-11-14b`) has no exchange rows yet |
 
 The rest of this file is about the five flags still in open PRs. The steps
 below for switching on, checking and switching off apply to the flags above too.
@@ -41,8 +42,8 @@ below for switching on, checking and switching off apply to the flags above too.
    so new tables appear on the first deploy either way.
 2. Two things collide between stacks:
    - Every stack adds its flag on the line after `OSINT_LOOKUPS` in
-     `config.py`, where `main` now also has `PRIVACY_CATEGORY`, `CASE_BUNDLE`
-     and `TRACE_CANCEL_ON_DISCONNECT`, and most add a re-export line to
+     `config.py`, where `main` now also has `PRIVACY_CATEGORY`, `CASE_BUNDLE`,
+     `TRACE_CANCEL_ON_DISCONNECT` and `STORE_EXCHANGE_ROWS`, and most add a re-export line to
      `frontend/src/api.js`. Each stack has a small text conflict there: keep every line.
    - Custody (`g7_custody_1`) and statements (`g7_statements_1`) each add a
      migration whose `down_revision` is `g7_domain_lookups_1`. The task
