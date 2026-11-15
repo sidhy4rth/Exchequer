@@ -8,7 +8,8 @@ import './CustodyBalance.css'
 // Custody balance check (backend custody_balance.py; suite feature 9, part 2): each custody
 // address's balance as the chain's provider gave it, beside what the asset register records
 // as held there. Every result is said in words, never by colour alone. Hidden unless the
-// server's EXCHEQUER_CUSTODY_BALANCE_CHECK flag is on.
+// server's EXCHEQUER_CUSTODY_BALANCE_CHECK flag is on. The button shows only when the server
+// says this caller may run a check (can_check; a demo caller gets its note instead).
 
 export const VERDICT = { match: 'Matches the register', mismatch: 'Mismatch', unchecked: 'Not checked' }
 const TONE = { match: 'green', mismatch: 'red' }
@@ -59,9 +60,11 @@ export default function CustodyBalance({ result }) {
             ))}
           </div>
         ))}
-        <div className="request-add">
-          <button type="button" disabled={busy} onClick={check}>{busy ? 'Reading the chain…' : 'Check balances on chain now'}</button>
-        </div>
+        {data.can_check
+          ? <div className="request-add">
+              <button type="button" disabled={busy} onClick={check}>{busy ? 'Reading the chain…' : 'Check balances on chain now'}</button>
+            </div>
+          : data.check_note && <p className="note">{plain(data.check_note)}</p>}
         {error && <p className="error-line" role="alert">{error}</p>}
         <p className="note">Reads count against the deployment&apos;s daily provider allowance. Only held custody rows are counted.</p>
       </div>

@@ -50,13 +50,22 @@ describe('the custody balance check', () => {
 
   it('runs a check on request and shows a refusal from the server', async () => {
     const calls = api({
-      'GET /trace/c1/custody-balance': { body: { enabled: true, check: null } },
+      'GET /trace/c1/custody-balance': { body: { enabled: true, check: null, can_check: true, check_note: '' } },
       'POST /trace/c1/custody-balance': { status: 403, body: { detail: 'Sign in as an officer to record or change a custody wallet or its signing log.' } },
     })
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'Check balances on chain now' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Sign in as an officer')
     expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(['GET /trace/c1/custody-balance', 'POST /trace/c1/custody-balance'])
+  })
+
+  it('offers no button to a caller the server would refuse, and says why', async () => {
+    const calls = api({ 'GET /trace/c1/custody-balance': { body: { enabled: true, check: CHECK, can_check: false, check_note: 'Sign in as an officer to read the custody balances on chain.' } } })
+    open()
+    expect(await screen.findByText('Sign in as an officer to read the custody balances on chain.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check balances on chain now' })).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: `USDT at ${ADDRESS}: Mismatch` })).toBeInTheDocument() // the last run still shows
+    expect(calls.map((c) => c.method)).toEqual(['GET'])
   })
 
   it('counts results without the zeros', () => {
