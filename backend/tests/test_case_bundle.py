@@ -36,8 +36,8 @@ CASE = {
 }
 NOTE = "kept in locker four"
 FILES = ["report.txt", "report.pdf", "exhibits.csv", "exhibits-custody.csv", "assets.csv", "assets-history.csv",
-         "requests.csv", "requests-history.csv", "identifiers.csv", "identifiers-history.csv", "audit-trail.csv",
-         "MANIFEST.txt"]
+         "requests.csv", "requests-history.csv", "identifiers.csv", "identifiers-history.csv", "tasks.csv",
+         "tasks-history.csv", "audit-trail.csv", "MANIFEST.txt"]
 
 
 @pytest.fixture
@@ -235,3 +235,24 @@ def test_the_spooled_file_is_closed_after_a_full_download(client, monkeypatch):
     monkeypatch.setattr(route, "bundle_response", lambda spool, headers: made.append(spool) or real(spool, headers))
     assert len(bundle(client).namelist()) == len(FILES)
     assert made and made[0].closed
+
+
+def test_each_client_may_build_only_a_few_bundles_an_hour(client, engine, monkeypatch):
+    from app.routes import case_bundle as bundle_routes
+    monkeypatch.setattr(bundle_routes.bundles, "limit", 2)
+    assert client.get("/trace/case-1/bundle", headers={ownership.OWNER_HEADER: BOB}).status_code == 403  # costs nothing
+    bundle(client)
+    bundle(client)
+    refused = client.get("/trace/case-1/bundle", headers=HEAD)
+    assert refused.status_code == 429 and int(refused.headers["retry-after"]) > 0
+    assert "bundles" in refused.json()["detail"]
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM audit_events WHERE action='case.bundle_download'")).scalar() == 2
+
+
+def test_the_site_wide_bundle_ceiling_holds_whatever_the_client(client, monkeypatch):
+    from app.routes import case_bundle as bundle_routes
+    monkeypatch.setattr(bundle_routes.bundles_total, "limit", 1)
+    bundle(client)
+    refused = client.get("/trace/case-1/bundle", headers=HEAD)
+    assert refused.status_code == 429 and "on this server" in refused.json()["detail"]

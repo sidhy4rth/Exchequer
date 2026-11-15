@@ -37,6 +37,22 @@ export async function draftNotice(caseId, to, details) {
   return response.text()
 }
 
+/** Whether this server offers the case's crypto summary for CFCFRMS
+ * (backend routes/sop_summary.py, flag EXCHEQUER_SOP_SUMMARY): 404 when off. */
+export async function fetchSopSummaryOffered() {
+  return jsonOrThrow(await apiFetch(`${BASE}/sop-summary`))
+}
+
+/** The case's crypto summary in the CFCFRMS SOP's 9.4 terms, as plain text.
+ * Only the officer's answer is sent; the NCRP number never is. */
+export async function fetchSopSummary(caseId, onCfcfrms) {
+  const response = await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/sop-summary`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on_cfcfrms: onCfcfrms }),
+  })
+  if (!response.ok) throw await toError(response)
+  return response.text()
+}
+
 /** A recorded example's letters (routes/demos.py): listed and drafted from
  * the recording as a case's are, though none can be logged as sent. */
 export async function fetchRecordedLetters(demo) {

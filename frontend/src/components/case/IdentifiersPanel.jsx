@@ -90,14 +90,44 @@ export function Lookup({ lookup }) {
       ) : <p className="note">{plain(lookup.rdap_note) || 'No registration record was found.'}</p>}
       {hosts.length > 0 && <dl className="id-facts"><dt>Points to</dt><dd className="mono">{hosts.map(plain).join(', ')}</dd></dl>}
       {lookup.dns_note && <p className="note">{plain(lookup.dns_note)}</p>}
-      <details className="id-sources">
-        <summary>Where this came from ({lookup.sources?.length ?? 0} responses)</summary>
-        <ul>
-          {(lookup.sources ?? []).map((s, i) => (
-            <li key={i}><span className="mono">{plain(s.provider)}</span> · {s.source} · HTTP {s.status} · {String(s.fetched_at).slice(0, 19).replace('T', ' ')} UTC · SHA-256 <span className="mono" title={s.sha256}>{middle(s.sha256, 10, 8)}</span></li>
-          ))}
-        </ul>
-      </details>
+      <Sources sources={lookup.sources} />
+    </div>
+  )
+}
+
+/** Every response a lookup kept: who answered, when, and the SHA-256 of what they sent. */
+function Sources({ sources = [] }) {
+  return (
+    <details className="id-sources">
+      <summary>Where this came from ({sources.length} response{sources.length === 1 ? '' : 's'})</summary>
+      <ul>
+        {sources.map((s, i) => (
+          <li key={i}><span className="mono">{plain(s.provider)}</span> · {s.source} · HTTP {s.status} · {String(s.fetched_at).slice(0, 19).replace('T', ' ')} UTC · SHA-256 <span className="mono" title={s.sha256}>{middle(s.sha256, 10, 8)}</span></li>
+        ))}
+      </ul>
+    </details>
+  )
+}
+
+const PAGE_TYPES = new Map([['channel', 'Channel'], ['group', 'Group'], ['account', 'User account'], ['bot', 'Bot']])
+const BADGES = { verified: ['Verified badge', 'green'], scam: ['Scam badge', 'red'], fake: ['Fake badge', 'red'] }
+
+/** What a Telegram username's public t.me page showed, in Telegram's own words. A page, never an identity. */
+export function TelegramPage({ lookup }) {
+  const p = lookup.page
+  return (
+    <div className="id-lookup">
+      <span className="micro">Public t.me page · read {String(lookup.created_at).slice(0, 10)}</span>
+      {p?.exists ? (
+        <dl className="id-facts">
+          <dt>Title</dt><dd>{plain(p.title)}{(p.badges ?? []).filter((b) => BADGES[b]).map((b) => <span key={b} className={`pill ${BADGES[b][1]} id-age`}>{BADGES[b][0]}</span>)}</dd>
+          <dt>Type</dt><dd>{PAGE_TYPES.get(p.type) ?? 'The page does not say'}</dd>
+          {p.count_text && <><dt>Count shown</dt><dd>{plain(p.count_text)}</dd></>}
+          {p.description && <><dt>Description</dt><dd>{plain(p.description)}</dd></>}
+        </dl>
+      ) : <p className="note">{plain(lookup.page_note) || 't.me showed no account under this username.'}</p>}
+      <p className="note">What the page showed when it was read. A page is not an identity: anyone can name an account anything, and only Telegram can say who runs it.</p>
+      <Sources sources={lookup.sources} />
     </div>
   )
 }
@@ -114,11 +144,16 @@ export default function IdentifiersPanel({ result }) {
   const [error, setError] = useState(null)
   const [act, setAct] = useState({}) // identifier_id → { mode: 'withdraw' | 'note', note }
   const [lookups, setLookups] = useState(false)
+  const [tgLookups, setTgLookups] = useState(false)
   const [lookupsNote, setLookupsNote] = useState('') // why there is no lookup button (the demo caller)
   const [busy, setBusy] = useState(null) // identifier_id being looked up
+  // What a lookup found takes the keyboard's place once it is shown.
+  const [looked, setLooked] = useState(null) // { id } of the identifier just looked up
+  const lookedRef = useRef(null)
+  useEffect(() => { if (looked) lookedRef.current?.focus() }, [looked])
 
   // A failed load says so: an empty list would read as "the victim reported nothing else".
-  const load = () => caseId && fetchCaseIdentifiers(caseId).then((d) => { setRows(d.identifiers ?? []); setLookups(Boolean(d.lookups_enabled)); setLookupsNote(d.lookups_note ?? '') })
+  const load = () => caseId && fetchCaseIdentifiers(caseId).then((d) => { setRows(d.identifiers ?? []); setLookups(Boolean(d.lookups_enabled)); setTgLookups(Boolean(d.telegram_lookups_enabled)); setLookupsNote(d.lookups_note ?? '') })
     .catch(() => setError('The reported identifiers could not be loaded. Reload the page before relying on this list.'))
   useEffect(() => { load() }, [caseId]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -153,8 +188,9 @@ export default function IdentifiersPanel({ result }) {
     }
   }
   async function lookUp(row) {
+    if (busy === row.identifier_id) return
     setBusy(row.identifier_id)
-    try { await run(() => lookUpIdentifier(row.identifier_id)) } finally { setBusy(null) }
+    try { if (await run(() => lookUpIdentifier(row.identifier_id))) setLooked({ id: row.identifier_id }) } finally { setBusy(null) }
   }
   const active = rows.filter((r) => r.status === 'active').length
   const activeDomain = rows.some((r) => r.kind === 'domain' && r.status === 'active')
@@ -181,11 +217,16 @@ export default function IdentifiersPanel({ result }) {
               )}
               {row.notes && <p className="note">{plain(row.notes)}</p>}
               {row.status === 'active' && <AlsoIn others={row.also_in} />}
-              {row.lookup && <Lookup lookup={row.lookup} />}
+              {row.lookup && (
+                <div role="group" aria-label="What the lookup found" tabIndex={-1} ref={looked?.id === row.identifier_id ? lookedRef : undefined}>
+                  {row.kind === 'telegram' ? <TelegramPage lookup={row.lookup} /> : <Lookup lookup={row.lookup} />}
+                </div>
+              )}
               <div className="request-add">
-                {lookups && row.kind === 'domain' && row.status === 'active' && (
-                  <button type="button" disabled={busy === row.identifier_id} onClick={() => lookUp(row)}>
-                    {busy === row.identifier_id ? 'Looking up…' : row.lookup ? 'Look up again' : 'Look up public records'}
+                {((lookups && row.kind === 'domain') || (tgLookups && row.kind === 'telegram')) && row.status === 'active' && (
+                  // Marked, not disabled, while it looks up: it stays focusable, so the keyboard keeps its place.
+                  <button type="button" aria-disabled={busy === row.identifier_id || undefined} onClick={() => lookUp(row)}>
+                    {busy === row.identifier_id ? 'Looking up…' : row.lookup ? 'Look up again' : row.kind === 'telegram' ? 'Read the public t.me page' : 'Look up public records'}
                   </button>
                 )}
                 {row.status === 'active' && (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { NCRP_NEEDED, ncrpShape, refusal, sendComplaint } from '../api.js'
+import { NCRP_NEEDED, ncrpNote, ncrpShape, refusal, sendComplaint } from '../api.js'
 import { readDraft, writeDraft } from '../draft.js'
 import { checkHash } from '../hash.js'
 import { Icon, OfficialLinks, ReportSteps, usePageTitle } from '../parts.jsx'
@@ -150,6 +150,9 @@ function printCode() {
 function Send({ form, ready, onSent }) {
   const [ncrp, setNcrp] = useState('')
   const [agreed, setAgreed] = useState(false)
+  // A soft note once the box is left (api.js ncrpNote): the number is still sent.
+  const [left, setLeft] = useState(false)
+  const note = left && ncrpShape(ncrp) ? ncrpNote(ncrp) : ''
   const [alert, setAlert] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(null)
@@ -218,8 +221,9 @@ function Send({ form, ready, onSent }) {
         <div className="field">
           <label htmlFor="ncrp">NCRP acknowledgement number</label>
           <input id="ncrp" className="mono" value={ncrp} onChange={(e) => setNcrp(e.target.value)} autoComplete="off"
-            autoCapitalize="characters" spellCheck={false} aria-describedby="ncrp-hint" />
+            autoCapitalize="characters" spellCheck={false} aria-describedby={note ? 'ncrp-hint ncrp-note' : 'ncrp-hint'} onBlur={() => setLeft(true)} />
           <p className="hint" id="ncrp-hint">The number you got from 1930 or cybercrime.gov.in. You sign in with it.</p>
+          {note && <p className="hint" id="ncrp-note">{note}</p>}
         </div>
         <label className="consent">
           <input id="consent" type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />

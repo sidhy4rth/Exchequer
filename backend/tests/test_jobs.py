@@ -249,6 +249,24 @@ def test_someone_else_cannot_stop_your_job(client, monkeypatch):
     client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "o" * 32})
 
 
+def test_stopping_a_job_is_audited_by_its_id_only(client, monkeypatch):
+    from app import audit
+    recorded, real = [], audit.record
+
+    def record(event, *, case_id=None, detail=None):
+        real(event, case_id=case_id, detail=detail)  # a badly named event fails here
+        recorded.append((event, case_id, detail))
+    monkeypatch.setattr(audit, "record", record)
+    owner = "o" * 32
+    job_id = _slow_job(client, monkeypatch, owner)
+    assert client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "x" * 32}).status_code == 403
+    assert not [r for r in recorded if r[0] == "case.trace_stopped"]  # a refused stop did nothing
+    assert client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: owner}).status_code == 202
+    assert [r for r in recorded if r[0] == "case.trace_stopped"] == [
+        ("case.trace_stopped", None, {"job_id": job_id, "was_running": True})]
+    wait_done(client, job_id)
+
+
 def test_stopping_an_unknown_job_is_a_404(client):
     assert client.delete("/trace/jobs/nope", headers={ownership.OWNER_HEADER: "o" * 32}).status_code == 404
 

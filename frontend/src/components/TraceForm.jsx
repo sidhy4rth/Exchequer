@@ -6,6 +6,7 @@ import { fetchRecordedDemos, fetchTraceIntake } from '../api'
 import { ADDRESS_RE, HASH_RE } from '../find'
 import NoHashSearch from './NoHashSearch'
 import CaseRefField, { refOk, tidyRef, useSignedIn } from './CaseRefField'
+import { ncrpNote } from '../ncrp'
 import './TraceForm.css'
 
 // The ten verified traces in DEMO.md, one click each. Addresses and hooks
@@ -161,6 +162,8 @@ export default function TraceForm({ health, payments = '', startChain = null, st
   const badHashes = hashes.filter((h) => !(HASH_RE[family] ?? HASH_RE.evm).test(h))
   const ack = hashes.length ? ncrpAck.trim() : ''
   const badAck = ack !== '' && !NCRP_RE.test(ack)
+  // A soft note only (ncrp.js): a number of another shape is still sent.
+  const oddAck = ack !== '' && !badAck ? ncrpNote(ack) : ''
   // The victim's own wallet: each payment's sender is compared with it.
   const victim = hashes.length ? victimText.trim() : ''
   const victimIsReported = victim !== '' && (family === 'tron' ? victim === trimmed : victim.toLowerCase() === trimmed.toLowerCase())
@@ -353,6 +356,7 @@ export default function TraceForm({ health, payments = '', startChain = null, st
           </div>
         )}
         {badAck && <div className="banner warn">An NCRP acknowledgement number is 10 to 20 digits, as on the complaint's acknowledgement.</div>}
+        {oddAck && <p className="note" role="status">{oddAck}</p>}
         {badVictim && (
           <div className="banner warn">
             {victimIsReported

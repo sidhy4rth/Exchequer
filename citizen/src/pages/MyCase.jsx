@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { NCRP_NEEDED, amountText, istTime, myCase, ncrpShape, refusal, sendMessage, signIn, signOut } from '../api.js'
+import { NCRP_NEEDED, amountText, istTime, myCase, ncrpNote, ncrpShape, refusal, sendMessage, signIn, signOut } from '../api.js'
 import { Icon, usePageTitle } from '../parts.jsx'
 
 // C6 and C7: sign in with the NCRP number and the tracking code shown once
@@ -32,6 +32,9 @@ function SignIn({ given, focus, onIn }) {
   const [status, setStatus] = useState('')
   useEffect(() => setStatus(given.status ?? ''), [given.status])
   const [ncrp, setNcrp] = useState('')
+  // A soft note once the box is left (api.js ncrpNote): sign-in still tries the number.
+  const [left, setLeft] = useState(false)
+  const note = left && ncrpShape(ncrp) ? ncrpNote(ncrp) : ''
   const [code, setCode] = useState('')
   const [alert, setAlert] = useState(given.alert ?? '')
   const [busy, setBusy] = useState(false)
@@ -70,7 +73,8 @@ function SignIn({ given, focus, onIn }) {
         <div className="field">
           <label htmlFor="ncrp">NCRP acknowledgement number</label>
           <input id="ncrp" className="mono" value={ncrp} onChange={(e) => setNcrp(e.target.value)} autoComplete="off"
-            autoCapitalize="characters" spellCheck={false} />
+            autoCapitalize="characters" spellCheck={false} aria-describedby={note ? 'ncrp-note' : undefined} onBlur={() => setLeft(true)} />
+          {note && <p className="hint" id="ncrp-note">{note}</p>}
         </div>
         <div className="field">
           <label htmlFor="code">Tracking code</label>

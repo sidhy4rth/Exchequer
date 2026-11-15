@@ -33,6 +33,7 @@ Every draft says it is not valid until the Court issues it under its seal.
 from __future__ import annotations
 
 import hashlib
+import re
 import textwrap
 from pathlib import Path
 from typing import Any
@@ -282,6 +283,9 @@ def _records(kind: str, exchange: str, address: str, office: str, since: str) ->
     ]
 
 
+_PLACEHOLDER = re.compile(r"\{(country|court|presiding|treaty)\}")  # the wording file's blanks
+
+
 def draft(case_id: str, result: dict[str, Any], raw: dict[str, Any],
           requests: list[dict[str, Any]] | None = None) -> str:
     """The draft letter of request for the case, from its result, the officer's details and the
@@ -299,11 +303,13 @@ def draft(case_id: str, result: dict[str, Any], raw: dict[str, Any],
     into = _transfers_into(trace, address)
     manifest = (result.get("evidence") or {}).get("manifest_sha256")
 
+    filled = {"country": country, "court": _or_blank(d["court"], "the Court and its place"),
+              "presiding": _or_blank(d["presiding"], "name of the presiding officer of the Court")}
+
     def fill(text: str, treaty: str = d["treaty"]) -> str:
-        return (text.replace("{country}", country)
-                .replace("{court}", _or_blank(d["court"], "the Court and its place"))
-                .replace("{presiding}", _or_blank(d["presiding"], "name of the presiding officer of the Court"))
-                .replace("{treaty}", treaty))
+        # One pass: a "{court}" the officer typed in another field stays as typed.
+        values = {**filled, "treaty": treaty}
+        return _PLACEHOLDER.sub(lambda m: values[m[1]], text)
 
     lines = [
         "DRAFT — for the investigating officer and the Court to review, complete and issue.",
