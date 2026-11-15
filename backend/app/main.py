@@ -54,6 +54,7 @@ from .routes import assets as asset_register
 from .routes import case_bundle as case_bundles
 from .routes import certificates as certificate_drafts
 from .routes import complaints as complaint_queue
+from .routes import custody as custody_wallets
 from .routes import exhibits as exhibit_register
 from .routes import identifiers as identifier_register
 from .routes import letters_of_request as letter_of_request
@@ -253,6 +254,7 @@ app.include_router(watches.router)
 app.include_router(requests.router)
 app.include_router(asset_register.router)
 app.include_router(exhibit_register.router)
+app.include_router(custody_wallets.router)
 app.include_router(identifier_register.router)
 app.include_router(certificate_drafts.router)
 app.include_router(task_list.router)

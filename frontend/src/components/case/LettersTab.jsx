@@ -9,6 +9,7 @@ import { addressOf, assetOf, blanks, checks, kindOf, lines, recipientOf } from '
 import NoticeForm from './NoticeForm'
 import LetterOfRequestPanel from './LetterOfRequestPanel'
 import AssetsPanel from './AssetsPanel'
+import CustodyPanel from './CustodyPanel'
 import './Letters.css'
 
 const Tick = () => (
@@ -344,6 +345,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
         <RequestsPanel key={logged} result={result} onChange={() => loadRequests()?.catch(() => {})} />
         <AssetsPanel key={requests.map((r) => r.status).join()} result={result} />
         <LetterOfRequestPanel result={result} offered={letters?.some((l) => l.to === 'exchange' || l.to === 'instant')} onLogged={() => setLogged((n) => n + 1)} />
+        <CustodyPanel result={result} />
         <WatchPanel result={result} extra={watch} />
       </> : (
         <p className="card note case-note">
