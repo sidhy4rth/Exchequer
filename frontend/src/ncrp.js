@@ -1,10 +1,11 @@
 // The usual shape of an NCRP acknowledgement number, as a soft note only.
 //
-// Source: MHA, "SOP for NCRP-CFCFRMS, Custody, Restoration of Money &
-// Grievance Redressal", paragraphs 6.1(d) and 6.2(c): a portal complaint gets
-// a 14-digit number starting with "2", a 1930 helpline complaint a 14-digit
-// number starting with "3". Read from a copy of the SOP a bank publishes
-// (https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf), the SOP the
+// Source: MHA, "Standard Operating Procedure for (NCRP)-(CFCFRMS), Custody,
+// Restoration of Money and Grievance Redressal", paragraphs 6.1(d) and 6.2(c):
+// a portal complaint gets a 14-digit number starting with "2", a 1930 helpline
+// complaint a 14-digit number starting with "3". Read from a copy of the SOP a
+// bank publishes (https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf,
+// PDF pages 12 and 13), the SOP the
 // Meghalaya High Court notified on 28.04.2026.
 //
 // It never refuses or changes a number: older or other numbers may not fit.

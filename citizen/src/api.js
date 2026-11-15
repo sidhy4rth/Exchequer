@@ -60,9 +60,10 @@ export function amountText(amount) {
 }
 
 // The usual shape of an NCRP acknowledgement number, as a soft note only.
-// MHA "SOP for NCRP-CFCFRMS, Custody, Restoration of Money & Grievance
-// Redressal" 6.1(d) and 6.2(c): 14 digits starting with "2" (portal) or "3"
-// (1930 helpline). Read from a copy of the SOP a bank publishes, the SOP the
+// MHA "Standard Operating Procedure for (NCRP)-(CFCFRMS), Custody, Restoration
+// of Money and Grievance Redressal" 6.1(d) and 6.2(c): 14 digits starting with
+// "2" (portal) or "3" (1930 helpline). Read from a copy of the SOP a bank
+// publishes (PDF pages 12 and 13), the SOP the
 // Meghalaya High Court notified on 28.04.2026 (both links in
 // backend/app/ncrp.py: this file holds no outside address). It never refuses a number:
 // ncrpShape and the server keep taking 8 to 20 letters and digits, as older

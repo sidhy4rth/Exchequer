@@ -80,6 +80,20 @@ def test_the_officers_answer_picks_the_sop_paragraph_quoted(answer, quoted, not_
         assert q not in text
 
 
+def test_the_source_line_says_which_copy_and_page_the_quotes_are_from():
+    # Checked on 15 Nov 2026 against the rendered pages, not the PDF text layer (which runs a page out in the
+    # bank's copy). Para 9.4 is all on PDF page 19 of the bank's copy, whose cover has no date; the 02.01.2026
+    # cover date and the printed "Page 29 of 98" belong to the copy at the420.in.
+    s = sop_summary.SOURCE
+    bank, the420 = s.index("https://www.zoroastrianbank.bank.in/"), s.index("https://the420.in/")
+    assert "(PDF page 19; that copy's cover carries no date)" in s[bank:the420]
+    assert "02.01.2026" not in s[:the420] and s.index("whose cover is dated 02.01.2026") > the420
+    assert "page 29 of the copy at https://the420.in/" in s
+    # The printed words, word for word (9.4(iv) does say "ascertain that which").
+    assert sop_summary.ONBOARDED.endswith('wallet ID, and liquidation details."')
+    assert "ascertain that which VASP or VDA Exchange has control of the wallet." in sop_summary.NOT_ONBOARDED
+
+
 def test_the_ncrp_number_is_a_blank_even_when_the_case_holds_one():
     case = fixture("exchange_wallet")
     case["intake"]["ncrp_ack"] = NCRP

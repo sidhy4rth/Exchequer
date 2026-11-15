@@ -22,7 +22,12 @@
 
 ## What the research found (15 Nov 2026)
 
-Sources: the MHA "SOP for NCRP-CFCFRMS, Custody, Restoration of Money & Grievance Redressal", read in a copy a bank publishes (https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf). The Meghalaya High Court notified the same SOP on 28.04.2026. The quotes in `sop_summary.py` were checked word for word against the copy at https://the420.in/wp-content/uploads/2026/01/sop.pdf, whose cover is dated 02.01.2026. The other source is Lok Sabha Unstarred Q. 274, answered 21.07.2026. No portal was logged into or contacted.
+Sources: the MHA "Standard Operating Procedure for (NCRP)-(CFCFRMS), Custody, Restoration of Money and Grievance Redressal", read in a copy a bank publishes (https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf; its cover carries no date). The Meghalaya High Court notified the same SOP on 28.04.2026. The quotes in `sop_summary.py` were also checked word for word against the copy at https://the420.in/wp-content/uploads/2026/01/sop.pdf, whose cover is dated 02.01.2026.
+
+Quote check of 15 Nov 2026, against the rendered pages (the bank copy's text layer runs some text a page out, so a text dump gives wrong pages and, once, a wrong word):
+- Bank copy (52 PDF pages, SHA-256 `65400b47…3bd42`, pages print no numbers): 6.1(d) on PDF page 12, 6.2(c) on page 13, all of 9.4 on page 19, Annexure I on page 34, Annexure II on page 35.
+- the420.in copy (99 PDF pages, SHA-256 `75251166…a00a80d`, printed "Page N of 98" from the second page): 9.4 on printed pages 28 to 30, both quoted sentences on printed page 29 (PDF page 30). Its 9.4 ends with a list of P2P details for the VASP to update that the bank copy does not have, so the two copies are not the same text.
+- Every quote in this stack matched both copies word for word. Fixed: `sop_summary.py`'s source line had put the 02.01.2026 cover date and "pages 28 to 30" on the bank copy; it now names each copy with its own page and date. The SOP title in the NCRP comments now follows the bank copy's cover. The other source is Lok Sabha Unstarred Q. 274, answered 21.07.2026. No portal was logged into or contacted.
 
 - **NCRP and CFCFRMS**: MHA owns NCRP, including CFCFRMS, and NIC built it under I4C. State and UT police run the 1930 helpline. Every police station reports on CFCFRMS through an authorised officer.
 - **The only documented API runs between the portal and banks or financial institutions** (as DFS and RBI suggest). Nothing is published for police-side or third-party tools: no API, no bulk export, no input-form field list.

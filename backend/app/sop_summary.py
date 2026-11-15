@@ -2,14 +2,23 @@
 the officer to enter on CFCFRMS or attach (feature 8, flag EXCHEQUER_SOP_SUMMARY).
 
 Source: MHA, "Standard Operating Procedure (SOP) for NCRP-CFCFRMS, Custody,
-Restoration of money and Grievance Redressal", dated 02.01.2026 on its cover,
-para 9.4 "Measures to be taken by the Virtual Asset Service Providers
-(VASPs)" (pages 28 to 30). Read in a copy a bank publishes
-(https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf), the SOP the
-Meghalaya High Court notified on 28.04.2026
-(https://meghalayahighcourt.nic.in/notification-28042026-sop-national-cybercrime-reporting-portal-and-citizen-financial-fraud);
-the quotes below were checked word for word against the copy at
-https://the420.in/wp-content/uploads/2026/01/sop.pdf (page 29 of 98).
+Restoration of money and Grievance Redressal", para 9.4 "Measures to be taken
+by the Virtual Asset Service Providers (VASPs)". Two copies were read, and on
+15 Nov 2026 each quote below was checked word for word against both copies'
+rendered pages (not their text layers, which can run a page out):
+  - the copy a bank publishes,
+    https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf (52 PDF pages,
+    SHA-256 65400b47a16ae9986e7bb9b339b26db920435a3ce6c128e804492b6e4be3bd42):
+    para 9.4 is all on PDF page 19 (its pages print no numbers; its contents
+    list says 28-30). Its cover carries no date. It is the SOP the Meghalaya
+    High Court notified on 28.04.2026
+    (https://meghalayahighcourt.nic.in/notification-28042026-sop-national-cybercrime-reporting-portal-and-citizen-financial-fraud);
+  - the copy at https://the420.in/wp-content/uploads/2026/01/sop.pdf (99 PDF
+    pages, SHA-256 75251166065bfecbdb60ea91013bc98f8c5781c9e51a9824b5693cea7a00a80d),
+    whose cover is dated 02.01.2026: para 9.4 runs over printed pages 28 to 30
+    of 98 (PDF pages 29 to 31), and both quotes are on printed page 29 (PDF
+    page 30). This copy's 9.4 also ends with a list of P2P details the VASP
+    updates; the bank's copy does not have that list.
 
 What it holds is only what the case holds: the exchange the trace reached, the
 exchange address and how it was attributed, the amounts and transaction
@@ -40,9 +49,10 @@ NCRP_BLANK = "NCRP acknowledgement no.: [officer to enter]"
 LISTED = 20  # transfers into the exchange address listed here; the report lists every one
 
 SOURCE = ('MHA, "Standard Operating Procedure (SOP) for NCRP-CFCFRMS, Custody, Restoration of money and '
-          'Grievance Redressal" (02.01.2026), para 9.4, as published in a copy at '
-          "https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf and notified by the Meghalaya High Court "
-          "on 28.04.2026.")
+          'Grievance Redressal", para 9.4, quoted from the copy at '
+          "https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf (PDF page 19; that copy's cover carries no "
+          "date), the SOP the Meghalaya High Court notified on 28.04.2026. The same words are on page 29 of the "
+          "copy at https://the420.in/wp-content/uploads/2026/01/sop.pdf, whose cover is dated 02.01.2026.")
 
 # SOP 9.4(ii), last sentence: what an onboarded VASP updates on CFCFRMS.
 ONBOARDED = ('SOP 9.4(ii): "Additionally, the VASP shall update CFCFRMS with the relevant details, including the '

@@ -1,11 +1,13 @@
 """The usual shape of an NCRP acknowledgement number, as a soft note only.
 
-Source: MHA, "SOP for NCRP-CFCFRMS, Custody, Restoration of Money &
-Grievance Redressal", paragraphs 6.1(d) and 6.2(c): a complaint made on the
-portal (cybercrime.gov.in) gets a 14-digit acknowledgement number starting
-with "2"; one made through the 1930 helpline gets a 14-digit number starting
-with "3". Read from a copy of the SOP that a bank publishes
-(https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf), the same SOP
+Source: MHA, "Standard Operating Procedure for (NCRP)-(CFCFRMS), Custody,
+Restoration of Money and Grievance Redressal" (as its cover reads),
+paragraphs 6.1(d) and 6.2(c): a complaint made on the portal
+(cybercrime.gov.in) gets a 14-digit acknowledgement number starting with "2";
+one made through the 1930 helpline gets a 14-digit number starting with "3".
+Read from a copy of the SOP that a bank publishes
+(https://www.zoroastrianbank.bank.in/download/SOP-NCRP.pdf; 6.1(d) is on PDF
+page 12 and 6.2(c) on PDF page 13, checked against the rendered pages), the same SOP
 the Meghalaya High Court notified on 28.04.2026
 (https://meghalayahighcourt.nic.in/notification-28042026-sop-national-cybercrime-reporting-portal-and-citizen-financial-fraud).
 
