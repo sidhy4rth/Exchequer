@@ -33,6 +33,12 @@ label import runs (docs/label-releases.md) and which fails until it is read:
     cd backend && .venv/bin/python -m scripts.check_label_code --record   # asks the node
     cd backend && .venv/bin/python -m scripts.check_label_code --dry-run  # from the recording
     cd backend && .venv/bin/python -m scripts.check_label_code
+
+Every run adds to what earlier runs did and never wipes it: a run without
+flags keeps the rows an earlier run retyped in the note (they are
+contract_wallet now, so a fresh plan no longer lists them), and --record
+keeps the earlier answer for any address the node did not answer this time.
+Rerunning on an unchanged label file changes nothing.
 """
 from __future__ import annotations
 
@@ -155,10 +161,17 @@ def unread(labels: dict[str, dict[str, Any]], answers: dict[str, Any]) -> dict[s
 
 
 def apply(document: dict[str, Any], decided: dict[str, dict[str, str]], recorded_at: str) -> None:
+    """Retype what the plan says and write the note. A label retyped by an
+    earlier run is contract_wallet now, so a fresh plan no longer lists it:
+    the note keeps it (while the row is still a contract_wallet) and adds the
+    new ones, so a later run never wipes what an earlier one did."""
     for address in decided["retyped"]:
         row = document["labels"][address]
         row["role"] = row["type"]  # what the exchange uses it as (exchange_matcher.role_of)
         row["type"] = CONTRACT_WALLET
+    earlier = document["_meta"].get(META_KEY, {}).get("retyped", {})
+    kept = {a: why for a, why in earlier.items()
+            if document["labels"].get(a, {}).get("type") == CONTRACT_WALLET}
     document["_meta"][META_KEY] = {
         "date": "2026-11-15",
         "rule": "scripts/check_label_code.py: each label typed hot_wallet, cold_wallet or exchange_wallet "
@@ -166,7 +179,7 @@ def apply(document: dict[str, Any], decided: dict[str, dict[str, str]], recorded
                 "EIP-7702 delegated account keeps its type (the exchange still holds its key); any other "
                 "contract keeps its type and is listed for review.",
         "answers": f"backend/tests/fixtures/label_code/ethereum.json (read {recorded_at})",
-        "retyped": decided["retyped"],
+        "retyped": dict(sorted({**kept, **decided["retyped"]}.items())),
         "eip7702_delegated": decided["delegated"],
         "left_for_review": decided["review"],
     }
@@ -226,6 +239,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.record:
         asked = sorted(a for a, m in labels.items() if m.get("type") in (*WALLET_TYPES, CONTRACT_WALLET))
         answers, block = record(asked)
+        fresh = len(answers)
+        # A batch the node did not answer is left out of record(): keep what was
+        # read before for those addresses, so a record never wipes an answer.
+        if ANSWERS.is_file():
+            earlier = json.loads(ANSWERS.read_text(encoding="utf-8")).get("code", {})
+            answers = {**{a: c for a, c in earlier.items() if a not in answers}, **answers}
         stamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
         ANSWERS.parent.mkdir(parents=True, exist_ok=True)
         ANSWERS.write_text(json.dumps({
@@ -236,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
                       "regenerate_with": "cd backend && python -m scripts.check_label_code --record"},
             "code": answers,
         }, indent=1, sort_keys=True) + "\n", encoding="utf-8")
-        print(f"recorded {len(answers)} of {len(asked)} at block {block}")
+        print(f"recorded {fresh} of {len(asked)} at block {block}; {len(answers) - fresh} kept from before")
 
     recording = json.loads(ANSWERS.read_text(encoding="utf-8"))
     if args.check:
