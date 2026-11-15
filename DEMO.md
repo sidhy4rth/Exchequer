@@ -161,7 +161,9 @@ on a small sum.
 
 Every wallet on this path is quiet: the reported wallet (5 transactions) and
 the intermediary (8) have not transacted since 24 November 2021, so a trace
-reads their whole history, not just the newest 200 records.
+reads their whole history, not just the newest 200 records. So the daily Demo
+health check holds trace 3 to this answer strictly, like every other trace: a
+different exchange or score fails it.
 
 HitBTC is not in `backend/data/exchange_status.json`, so its labels carry no
 "(defunct)" or "(winding down)" mark, and the letters are addressed to HitBTC

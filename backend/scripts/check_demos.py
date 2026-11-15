@@ -16,7 +16,8 @@ and exits 1 if anything drifted, which fails the scheduled GitHub Action and
 e-mails the repository owner.
 
 A demo marked `"volatile": true` in the expectations file is one whose whole
-point is that it moves (DEMO.md trace 3). A new exchange or score there is
+point is that it moves (DEMO.md trace 3 was, until 15 November 2026; no demo
+is marked now). A new exchange or score there is
 printed as a note, not a failure; it fails only if it stops reaching an
 exchange at all or cannot be traced -- and, with --state, only when that
 happens on two runs in a row. A single day without an exchange is the demo

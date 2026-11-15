@@ -36,8 +36,7 @@
    "exchange": "HitBTC",
    "followed_exchange": null,
    "confidence": 0.6688
-  },
-  "volatile": true
+  }
  },
  {
   "demo": 4,

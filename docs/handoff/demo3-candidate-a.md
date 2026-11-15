@@ -20,7 +20,7 @@
 ## Decisions
 
 - Demo 4 stays on `0x536c4921…`: its expectation (no exchange among the funders) still holds on live. On the new wallet a reverse trace finds 2 funders, one of them Coinbase 3, which is a different story.
-- Demo 3 keeps `"volatile": true`, so `test_only_demo_3_is_marked_as_moving` is unchanged. The new path is quiet, so the owner may prefer a strict check (drop the key and change that test with it).
+- Demo 3's check is strict (lead's decision, 15 Nov): `"volatile"` removed from its expectation, since the new wallet has 5 transactions ever and a change should fail the daily check. `test_check_demos` now asserts no demo is marked as moving (`test_no_demo_is_marked_as_moving`).
 
 ## Next
 
@@ -28,7 +28,7 @@
 
 ## Open questions
 
-- Keep `volatile` on demo 3, or make its check strict? (kept for now)
+- none
 
 ## Files mid-change (do not touch)
 

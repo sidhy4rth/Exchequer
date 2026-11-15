@@ -28,10 +28,12 @@ def test_a_moving_demo_still_fails_if_it_reaches_nothing():
     assert drift(EXPECT, {**EXPECT, "exchange": None, "confidence": None}, volatile=True)
 
 
-def test_only_demo_3_is_marked_as_moving():
+def test_no_demo_is_marked_as_moving():
+    # Demo 3 was, until it moved to a quiet wallet on 15 Nov 2026 (#284): its
+    # check is now strict, like every other demo's.
     import json
     demos = json.loads(check_demos.EXPECTATIONS.read_text())
-    assert [d["demo"] for d in demos if d.get("volatile")] == [3]
+    assert [d["demo"] for d in demos if d.get("volatile")] == []
 
 
 def test_a_request_lost_once_is_retried(monkeypatch):
