@@ -52,7 +52,7 @@ from app.keccak import keccak256  # noqa: E402
 from scripts import check_label_code as clc  # noqa: E402
 
 EVIDENCE = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "contract_wallet_roles.json"
-# Ethereum only. On 15 and 16 Nov 2026 arbitrum.blockscout.com and polygon.blockscout.com
+# Ethereum only. On 15 Nov 2026 arbitrum.blockscout.com and polygon.blockscout.com
 # answered every API call with a browser challenge (403), BSC has no Blockscout, and Routescan's
 # keyless API answers "chain not supported" for all three. The keyless public nodes cannot do
 # the method either: Arbitrum's refuses log reads without a token, and Polygon's and BSC's read
@@ -81,9 +81,11 @@ HELD = {
 
 def roleless(chain: str) -> dict[str, dict[str, Any]]:
     """The contract wallets to measure: those with no role, and those whose role an earlier
-    --apply set (listed in _meta), so a later --record measures them again."""
+    --apply set (listed in _meta) or the evidence file already measured, so a later --record
+    measures them again and --check keeps comparing them."""
     document = json.loads(config.CHAINS[chain].labels_path.read_text(encoding="utf-8"))
-    ours = document["_meta"].get(META_KEY, {}).get("given", {})
+    measured = json.loads(EVIDENCE.read_text(encoding="utf-8")).get(chain, {}) if EVIDENCE.is_file() else {}
+    ours = {*document["_meta"].get(META_KEY, {}).get("given", {}), *measured}
     return {a: m for a, m in document["labels"].items()
             if isinstance(m, dict) and m.get("type") == clc.CONTRACT_WALLET and (not m.get("role") or a in ours)}
 
@@ -252,19 +254,27 @@ def dump(evidence: dict[str, Any]) -> str:
 
 
 def apply(evidence: dict[str, Any]) -> list[str]:
-    """Write each measured role into its label file, with a note in _meta; returns the files written."""
+    """Write each measured role into its label file, with a note in _meta; returns the files written.
+
+    A role an earlier --apply gave (listed in _meta's given) that the evidence now measures as
+    role-less is taken back; a role any other source set is never touched."""
     written = []
     for chain, rows in evidence.items():
-        if chain.startswith("_") or not any(seen["role"] for seen in rows.values()):
+        if chain.startswith("_"):
             continue
         path = config.CHAINS[chain].labels_path
         text = path.read_text(encoding="utf-8")
         document = json.loads(text)
-        given = {}
+        before = document["_meta"].get(META_KEY, {}).get("given", {})
+        if not any(seen["role"] for seen in rows.values()) and not before:
+            continue
+        given = {a: why for a, why in before.items() if a not in rows}  # not measured this time: kept as it was
         for address, seen in rows.items():
             if seen["role"]:
                 document["labels"][address]["role"] = seen["role"]
                 given[address] = f"{seen['why']} ({seen['label']})"
+            elif address in before:
+                document["labels"][address].pop("role", None)
         document["_meta"][META_KEY] = {
             "rule": ("A contract_wallet is given the role hot_wallet only when, read on chain, at least "
                      f"{MIN_SWEEPERS} unlabelled senders in a seeded sample of up to {SAMPLE} of its newest "

@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from . import config, provenance
+from . import config, fiu_ind_status, provenance
 from .case_privacy import WITHHELD, WITHHELD_PARAM
 from .display_text import one_line
 from .evidence import SEAL_MARKS, seal_text
@@ -410,13 +410,18 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
 
 
 # The privacy protocols on the path (#189): the screen's wording, a note.
+# The lede is drawn at render time for every stored case, so it claims nothing
+# about the notes' wording: a note stored before #279 never says whether a
+# pool's payouts were followed, even when graph_builder's service-contract
+# rule left them unfollowed.
 PRIVACY_TITLE = "PRIVACY PROTOCOLS ON THE PATH (A NOTE, NOT AN ACCUSATION)"
 PRIVACY_LEDE = (
     "Funds passing through a privacy protocol lose their visible link, so what leaves it is not "
-    "shown on chain to be the same money. The trace did not stop there. No sanctions list or "
-    "enforcement action names these protocols. This is not an accusation: using one is not a "
-    "finding against anyone, and none of these is counted in the screening above or in the "
-    "confidence score."
+    "shown on chain to be the same money. Being a privacy protocol never stops the trace, though "
+    "the trace may not go past a contract that pays out to, or is paid by, many addresses. No "
+    "sanctions list or enforcement action names these protocols. This is not an accusation: "
+    "using one is not a finding against anyone, and none of these is counted in the screening "
+    "above or in the confidence score."
 )
 
 
@@ -965,6 +970,13 @@ def render_text_report(report: dict[str, Any]) -> str:
         if attribution.get("also_reached"):
             add("                   Material funds went to more than one exchange: confirm which to")
             add("                   write to; a separate request may be needed to each.")
+        fiu = fiu_ind_status.note(attribution["exchange"])
+        if fiu:  # FIU-IND's facts about the exchange (EXCHEQUER_FIU_IND_NOTE); never a hash or URL split
+            for text, first in ((f"{fiu['text']} This is {fiu_ind_status.ABOUT}.", "FIU-IND          : "),
+                                *((url, "FIU-IND source   : ") for url in fiu["sources"])):
+                for wrapped in textwrap.wrap(text, width=78, initial_indent=first, subsequent_indent=" " * 19,
+                                             break_long_words=False, break_on_hyphens=False):
+                    add(wrapped)
     elif direction == "outgoing":
         add("No known exchange wallet was reached within the traced depth.")
         add("This does not establish that the funds were not cashed out.")

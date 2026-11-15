@@ -9,7 +9,7 @@
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
 [![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer.co.in)
-[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-69.4M-C0392B)](https://exchequer.co.in/risk-labels?chain=tron)
+[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-69.45M-C0392B)](https://exchequer.co.in/risk-labels?chain=tron)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -43,9 +43,9 @@
 
 <table>
 <tr>
-<td align="center"><h3>69.4M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
-<td align="center"><h3>68.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists</sub></td>
-<td align="center"><h3>26,136</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
+<td align="center"><h3>69.45M</h3>flagged addresses<br>screened live<br><sub>on five chains, counted once per chain:<br>the 69.4M label store and<br>the lists in this repository</sub></td>
+<td align="center"><h3>69.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists, counted once per chain</sub></td>
+<td align="center"><h3>26,204</h3>exchange addresses<br><sub>counted once per chain; incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>14,827</h3>addresses a stablecoin<br>issuer has frozen</td>
 <td align="center"><h3>100,000+</h3>hack, phishing and<br>scam wallets</td>
@@ -97,9 +97,9 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | | |
 |---|---|
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
-| **Names the exchange** | Exact match against 26,136 exchange addresses on five chains, including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
+| **Names the exchange** | Exact match against 26,204 exchange addresses on five chains (counted once per chain), including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
-| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **68-million-address label store**: hack proceeds, scams, stablecoin freezes and 68.3M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
+| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon; privacy protocols such as Privacy Pools are shown as a note, never a stop); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **69-million-address label store**: hack proceeds, scams, stablecoin freezes and 69.3M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
 | **Follows the money through a swap** | A transfer into a known DEX router is read from its receipt; if it came back as USDT or USDC, that stablecoin is traced onward from the moment of the swap, as its own linked trace. |
@@ -662,6 +662,8 @@ only the pools and routers of Tornado Cash, Typhoon and Privacy Pools, never the
 contracts. Pools named in a mixer's own deployment list (Tornado Cash on BSC, Polygon and Arbitrum; Cyclone
 Protocol) are added by hand to the same files, each checked on chain, and Polygon and Arbitrum have a threat file
 of their own. Privacy protocols no enforcement action calls a mixer (Railgun, Aztec, Hinkal) are not labelled.
+Since 15 November (`EXCHEQUER_PRIVACY_CATEGORY` on) these and Privacy Pools are a grey note instead: Privacy
+Pools' mixer tag gives way, so it no longer stops a trace or counts as a risk hit.
 The label store follows the same rule, and only on Ethereum, the chain its mixer tags were read on.
 A name in a list is not enough to cut a trail, so a store row stops a trace only at a pool or router kept in the
 repository (the threat file's mixer entries and `backend/data/mixer_pools.json`); any other store row named like
@@ -687,11 +689,11 @@ and matching one chain's address against the other's labels would manufacture an
 
 | File | Coverage |
 |---|---|
-| `exchange_labels.json` | **25,273 addresses / 96 exchanges** — 1,255 exchange wallets (the largest: Bybit, **CoinSwitch**, Coinbase, Huobi/HTX, Kraken, Binance, Nexo, Bithumb, OKX, Bitfinex, **CoinDCX**, Bitget) plus **24,018 customer deposit addresses** (19,027 Bitget, 4,991 Binance) |
-| `exchange_labels_bsc.json` | **223 addresses / 58 exchanges** — explorer-labelled wallets (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat), Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`), Bybit's wallets from its own proof-of-reserves list (`scripts/import_por_labels.py`) and Indian exchange wallets (`data/india_exchanges.json`) |
+| `exchange_labels.json` | **25,332 addresses / 96 exchanges** — 1,314 exchange wallets (the largest: Bybit, **CoinSwitch**, Coinbase, Huobi/HTX, Kraken, Binance, Nexo, Bithumb, OKX, Bitfinex, **CoinDCX**, Bitget) plus **24,018 customer deposit addresses** (19,027 Bitget, 4,991 Binance) |
+| `exchange_labels_bsc.json` | **227 addresses / 58 exchanges** — explorer-labelled wallets (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat), Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`), Bybit's wallets from its own proof-of-reserves list (`scripts/import_por_labels.py`) and Indian exchange wallets (`data/india_exchanges.json`) |
 | `exchange_labels_polygon.json` | **250 addresses / 54 exchanges** — Ethereum-labelled accounts confirmed to have sent on Polygon, OKX's and Bybit's wallets from their own proof-of-reserves lists, and Indian exchange wallets |
 | `exchange_labels_arbitrum.json` | **251 addresses / 45 exchanges** — the same three sources, on Arbitrum |
-| `exchange_labels_tron.json` | **139 addresses / 26 exchanges** — TronScan's own address tags, exchanges' own proof-of-reserves lists (`scripts/import_por_tron_labels.py`) and Indian exchange wallets |
+| `exchange_labels_tron.json` | **144 addresses / 26 exchanges** — TronScan's own address tags, exchanges' own proof-of-reserves lists (`scripts/import_por_tron_labels.py`) and Indian exchange wallets |
 
 **A deposit address is the most useful label there is**: it names one customer account, which is exactly what a
 lawful request asks the exchange about. The 19,027 Bitget and 4,991 Binance addresses come from Etherscan's

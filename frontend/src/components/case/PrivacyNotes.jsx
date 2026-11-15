@@ -5,7 +5,8 @@ import './PrivacyNotes.css'
 // The privacy protocols the funds passed through (Railgun, Aztec, Hinkal,
 // Privacy Pools; flag EXCHEQUER_PRIVACY_CATEGORY, #189). A note, never a risk
 // hit: grey and dotted, not the red alert, and it counts toward nothing. The
-// trace walked on past each one. Renders nothing for a case without any.
+// trace never stopped at one, though a pool's payouts may not be followed.
+// Renders nothing for a case without any.
 export default function PrivacyNotes({ result, unit }) {
   const matches = result?.privacy_matches ?? []
   if (!matches.length) return null
@@ -17,7 +18,8 @@ export default function PrivacyNotes({ result, unit }) {
       </div>
       <p className="lede">
         Funds passing through a privacy protocol lose their visible link, so what leaves it is not shown on chain to be
-        the same money. The trace did not stop there. No sanctions list or enforcement action names these protocols.
+        the same money. Being a privacy protocol never stops the trace, though the trace may not go past a contract that
+        pays out to, or is paid by, many addresses. No sanctions list or enforcement action names these protocols.
       </p>
       {matches.map((m, i) => (
         <div className="line" key={m.address}>

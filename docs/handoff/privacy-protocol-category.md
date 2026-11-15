@@ -24,6 +24,20 @@
   gains `privacy_protocols` under the same rule. PDF page 1 shows a grey block drawn from that signed section
   (so /verify still redraws page 1 exactly); Part 2 is the signed text. Flag off, or no match: report bytes
   unchanged (tested, recorded demos included). Report format stays v2.3: the section is optional.
+- Fix (#278, 15 Nov): a keyless local trace into the Privacy Pools Entrypoint showed the note saying "The trace
+  did not stop here" while the limits said its payouts were not followed (graph_builder's service-contract rule).
+  The note now says so for a service-contract node (`RiskMatch.payouts_followed`, not in `to_dict`, so no contract
+  change), and the screen, text-report and PDF ledes say being a privacy protocol never stops the trace. Notes
+  already stored in cases keep their old wording.
+- Fix (15 Nov, after #279): the ledes are drawn at render time for every stored case, and #279's "each note says
+  whether the contract's payouts were followed" was untrue for a case stored before #279 (its notes never say so).
+  The text-report, PDF and screen ledes now say only that the trace may not go past a contract that pays out to,
+  or is paid by, many addresses. Walking back, a service-contract note says its senders, not its payouts, were not
+  followed (`RiskMatch.senders_followed`, not in `to_dict`).
+- /verify: page 1's privacy lede has changed twice (#279, then this fix), and /verify redraws page 1 to compare.
+  `report_pdf.PRIVACY_LEDES` keeps every lede, newest first; `render_summary` yields a page-1 form for each and
+  `pdf_verify._issued` redraws the whole file with the lede the uploaded page carries, so a PDF issued with #189's
+  or #279's lede still reads genuine. #279 alone broke PDFs issued before it (18:03-21:24 IST, 15 Nov); this fixes both.
 
 ## Decisions
 

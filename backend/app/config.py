@@ -934,3 +934,6 @@ SOP_DEADLINES: bool = flag("EXCHEQUER_SOP_DEADLINES",
 FREEZE_WORDING_V2: bool = flag("EXCHEQUER_FREEZE_WORDING_V2",
                                "Feature 7, #251: the bank-hold notice asks the bank to act on the Magistrate's order "
                                "as it directs, not for a 'debit freeze'; awaits a lawyer (docs/legal)")
+FIU_IND_NOTE: bool = flag("EXCHEQUER_FIU_IND_NOTE",
+                          "#290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, "
+                          "notices, penalties) as a note on the report's FINDING and the exchange letters")

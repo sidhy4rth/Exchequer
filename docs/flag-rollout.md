@@ -28,7 +28,7 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_OSINT_LOOKUPS` | Feature 4: live RDAP and DNS lookups of a case's scam domains, for signed-in officers | #106 | **On** in production since 13 Nov, and `"1"` in `render.yaml` (#108) |
 | `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | On: set in the Render dashboard on 15 Nov and in `render.yaml` since #232 (owner approved on 14 Nov) |
 | `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
-| `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | Off in `render.yaml`; awaits the owner |
+| `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | Off in `render.yaml`; keep off until the owner's Render-logs check (section below) |
 | `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the store release `labels-2026-11-15` carries exchange rows (OKX 474,529 Tron and 202 Ethereum, Bitget 10 Ethereum). A 30-address sample suggests most of the OKX Tron rows are customer deposit addresses that sweep to OKX, so it stays off until ADR-0011 allows deposit rows that state their basis. Switching it on is its own PR, which also re-records demo 9 (five of its addresses are OKX rows) |
 | `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
@@ -38,8 +38,9 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_SOP_SUMMARY` | Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms | #218 (+#219, #220) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_SOP_DEADLINES` | Feature 8: the MHA CFCFRMS SOP's time limits, quoted, as reminders on bank holds in the asset register | #230 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_FREEZE_WORDING_V2` | Feature 7, #251: the bank-hold notice asks the bank to give effect to the Magistrate's order as it directs, not for a "debit freeze" | #252 | Off in `render.yaml`; awaits a lawyer; see its section below |
+| `EXCHEQUER_FIU_IND_NOTE` | #290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, notices, penalties) as a note on the report's FINDING and the exchange letters | #291 + its stacked slice 2 (not yet) | Off in `render.yaml`; see its section below |
 
-That is all sixteen flags in `FLAGS` on `main`.
+That is all sixteen flags in `FLAGS` on `main`, and one more in review (`EXCHEQUER_FIU_IND_NOTE`, #291 and its stacked slice 2).
 
 The rest of this file is about the seven features named at the top. The steps
 below for switching on, checking and switching off apply to every flag above.
@@ -421,6 +422,151 @@ the same. It contacts nothing outside Exchequer. No migration.
 **Owner decisions still open.** Switch it on only after a lawyer has answered
 the questions in `docs/legal/freeze-wording-review.md`; the wording itself may
 change with their answer.
+
+## `EXCHEQUER_FIU_IND_NOTE`: FIU-IND's facts about the exchange (#290)
+
+**What changes live.** When a trace's exchange is one of the 33 in
+`backend/data/fiu_ind_status.json`, the report's FINDING gains a `FIU-IND :`
+line and `FIU-IND source :` lines, and the exchange letters (request and urgent
+freeze, and the instant-exchanger ones for ChangeNOW and FixedFloat) gain a
+"FIU-IND NOTE (about the exchange, not any customer)" paragraph with its
+sources, under the closure note if there is one. The note says whether the
+exchange was on FIU-IND's list of registered VDA service providers as of
+9 Mar 2026 (Lok Sabha USQ 5805, Annexure-I) and the notices, takedown
+directions and penalties FIU-IND announced, each dated, e.g. "Kraken was not on
+FIU-IND's list of registered VDA service providers as of 9 Mar 2026 (Lok Sabha
+USQ 5805, Annexure-I); on 28 Dec 2023 FIU-IND announced a show-cause notice to
+it under section 13 of the PMLA and that it had written to MeitY to block its
+URLs (PIB release 1991372)." Nothing else changes: not the attribution, the
+labels, the addressee, the letter offers or what a letter asks. An exchange
+with no entry gets no note. No migration; it contacts nothing outside Exchequer.
+
+**Merged.** #291 and its stacked slice 2 (not yet). With the flag off, every report and letter is byte
+for byte what it was (`tests/test_fiu_ind_status.py`).
+
+**Checks after switching it on** (one test officer, on the test case):
+
+1. Confirm in `/health/detail` that `EXCHEQUER_FIU_IND_NOTE` is on. The server
+   restarts on the change, so no report kept from before is served.
+2. Open the text report of a case that reached Binance (or any listed exchange):
+   FINDING has the note and each source URL whole on its own line. Open the
+   sources and check the dates and amounts against them.
+3. Draft the request and urgent freeze letters for it: the note sits after the
+   header, the letter is still addressed to the exchange.
+4. A case that reached an exchange not in the file (for example FTX) shows no
+   note anywhere.
+
+**Switching it off.** Unset the variable and redeploy: the note goes from every
+report and letter rendered after the restart. Reports already downloaded keep
+it (they were signed with it).
+
+**Owner decisions still open.** Whether to switch it on. The registered list is
+frozen at 9 Mar 2026 and FIU-IND publishes none (USQ 5805(f)): re-check the file
+against the next Parliament answer or PIB release, and update `checked_on`.
+
+## `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`: stop a trace whose client hung up (#227)
+
+**What it turns on.** While a synchronous `POST /trace` runs, the server checks
+every second whether the client is still connected. If it has hung up, the
+trace stops at its next provider request, nothing is stored, and the audit log
+gets `case.trace_abandoned` with `stopped_by: client_disconnected`,
+`saved: false` (handoff `docs/handoff/trace-cancel-on-disconnect.md`). Background
+jobs (`POST /trace/jobs`) and batches are not touched.
+
+**Merged.** #227 (with #228) on `main`. No migration. Off in `render.yaml`.
+
+**The open question.** The flag only helps if a client's hang-up reaches
+uvicorn through Render's chain: client → Cloudflare edge (Render's own account)
+→ Render's load balancer → uvicorn. Neither Render nor Cloudflare documents
+whether it does.
+
+**What was measured** (15 Nov 2026, against https://exchequer.co.in, flag off;
+the test does not depend on the flag). `GET /trace/jobs/{id}/events` allows 3
+open progress streams per job (`MAX_STREAMS_PER_JOB` in `routes/jobs.py`); a 4th
+gets 429. A stream's place is given back when the server sees its client gone
+(`is_disconnected()`, polled every 0.3 s) or a write to it fails. So a 4th
+stream turning from 429 to 200 shows from outside when the server saw a
+hang-up. Each run started one background trace (`save: false`), kept stream A
+open, opened B and C with `curl --max-time 5`, then retried a 4th stream D about
+every 0.6 s; the job was stopped with DELETE at the end. Five runs; the first
+three do not count, because the trace ended before or during the first round.
+Times are seconds from the start of the run.
+
+| Round | Hang-up | 4th stream | First progress write after the hang-up |
+|---|---|---|---|
+| run 4, HTTP/1.1 | 6.75 | 429 at 6.87, 7.52, 8.11, 8.72; admitted by about 9.2 | 9.05 |
+| run 5, HTTP/1.1 #1 | 6.72 | 429 at 7 tries through 10.48; admitted 11.08 | 10.60 |
+| run 5, HTTP/1.1 #2 | 30.07 | 429 at 8 tries through 34.42; admitted 35.03 | 34.64 |
+| run 4, HTTP/2 | 18.77 | admitted at about 18.85 | 19.57 (after) |
+| run 5, HTTP/2 #1 | 20.54 | admitted 20.61 | none from 17.51 to 22.01 |
+| run 5, HTTP/2 #2 | 44.51 | admitted 44.60 | none from 41.24 to 46.65 |
+
+- **HTTP/2:** the place was freed within about 0.1 s of the hang-up, with no
+  write in between. (In the two run 5 rounds, a stale HTTP/1.1 stream from the
+  round before held one of the 3 places, so only one test stream was open; the
+  result rests on the windows with no writes.)
+- **HTTP/1.1:** the place was freed only just after the next progress write,
+  2.3–5.9 s after the hang-up, in all 3 rounds.
+
+**What it implies (inferences, not measured).** Render's load balancer passes a
+cancel on at once (the HTTP/2 rounds). The HTTP/1.1 delay looks like the
+Cloudflare edge treating the client's close as a half-close and noticing only
+when a write to the client fails. `POST /trace` writes nothing until the trace
+ends, so:
+
+- **Browsers and other HTTP/2 or HTTP/3 clients:** the flag is likely to work.
+  HTTP/3 was not tested; Cloudflare's 19 Jan 2026 changelog says it now ends
+  cancelled HTTP/3 requests at once.
+- **HTTP/1.1 scripts** (Python `urllib` and `requests`, `check_demos.py`, which
+  uses `urllib`, `curl --http1.1`): the flag is likely to do nothing; the trace
+  runs to the end as it does today. It does no harm either.
+
+**What was not measured.** The `POST /trace` phase itself, before any byte is
+written: the probe saw only streams whose headers were already sent. Whether
+the flag, once on, actually stops a trace. HTTP/3. Any Cloudflare edge other
+than the one these runs reached (`cf-ray` BLR).
+
+**The owner-side check** (Render dashboard; flag stays off, nothing stored).
+Run it twice, once with `--http1.1` and once with `--http2`, at least 3 minutes
+apart. Not around 01:30 UTC (07:00 IST), when the Demo health Action runs, and
+once each, not in a loop. Each run holds one trace slot for at most about 80 s.
+
+```sh
+cd ~/exchequer
+BODY=$(python3 -c 'import json;d=json.load(open("backend/data/demo_expectations.json"))[0];print(json.dumps({k:d[k] for k in ("address","chain","asset","max_depth","direction")}|{"save":False,"time_budget_seconds":20}))')
+curl -s https://exchequer.co.in/health; echo   # wake the instance first
+date -u
+curl -sS --http1.1 --max-time 3 -o /dev/null -w '%{http_code}\n' \
+  -X POST https://exchequer.co.in/trace -H 'content-type: application/json' -d "$BODY"
+echo "curl exit=$?"   # want 28 (timed out); a 200 means it was cached: retry with demo [1], [2] ...
+```
+
+For the second run, change `--http1.1` to `--http2`. Then open Render
+dashboard → exchequer → Logs and search `POST /trace` from each `date -u` time.
+`GET /health` lines from Render's health checker are the control (they prove
+access logging is on). uvicorn 0.54.0 writes no access line for a request
+whose client it saw leave before the response started (read in its code, not
+tested here). The upstream leg is HTTP/1.1 in both runs, so the line always
+reads `HTTP/1.1`.
+
+- **A `"POST /trace HTTP/1.1" 200` line about 20–80 s after the hang-up:** the
+  hang-up never reached uvicorn. Expected for the `--http1.1` run.
+- **No such line:** it did. Expected for the `--http2` run.
+- **The line in both runs:** the flag would do nothing in production. Keep it off.
+- **No line in either run:** both protocols get through, and the HTTP/1.1 delay
+  above is specific to a stream that has already started.
+
+While the flag is off, the audit log cannot tell these apart: the trace
+finishes and `case.trace` is recorded either way. Use the access line.
+
+**Recommendation.** Keep the flag off until the owner has run that check.
+Switching it on is the owner's call (changing a Render env var restarts the
+service). If it is switched on, repeat the `--http2` run: the audit log should
+show `case.trace_start`, then `case.trace_abandoned` with
+`stopped_by: "client_disconnected", saved: false`, and no `case.trace`.
+
+**Switching it off.** The common steps above. Off, a hang-up changes nothing:
+the trace runs to the end as before.
 
 ## `EXCHEQUER_PRIVACY_CATEGORY`: privacy protocols as a note (#189)
 
