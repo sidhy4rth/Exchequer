@@ -9,7 +9,7 @@ export default function ProrataReadFailure({ prorata }) {
   if (!sentence) return null
   return (
     <p className="note prorata-read-failure">
-      <strong>Data provider problem:</strong> {sentence}
+      <strong>Amount not checked:</strong> {sentence}
     </p>
   )
 }

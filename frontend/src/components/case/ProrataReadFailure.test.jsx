@@ -13,9 +13,9 @@ describe('the pro-rata read failure sentence', () => {
   it.each(KINDS)('says what stopped the check and to trace again: %s', (kind) => {
     const { container } = render(<ProrataReadFailure prorata={{ status: 'unknown', reason: 'r', read_failure: kind }} />)
     const p = container.querySelector('.prorata-read-failure')
-    expect(p).toHaveTextContent('Data provider problem:')
+    expect(p).toHaveTextContent('Amount not checked:')
     expect(p).toHaveTextContent(`The amount check could not be done: ${READ_FAILURE_WORDING[kind]}.`)
-    expect(p).toHaveTextContent('Tracing again later should give a complete score.')
+    expect(p).toHaveTextContent('Trace again later for a complete score.')
   })
 
   it('reads an unrecognised kind as an unexpected error', () => {

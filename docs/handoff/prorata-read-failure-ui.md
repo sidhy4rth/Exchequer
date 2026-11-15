@@ -9,7 +9,7 @@
 
 ## Done
 
-- PR #323: `frontend/src/components/case/ProrataReadFailure.jsx` (+ `.css`) shows, under the trace screen's pro-rata line, "Data provider problem: The amount check could not be done: <words>. Tracing again later should give a complete score." when `prorata.status` is `unknown` and `prorata.read_failure` is set; nothing otherwise. The words come from `readFailureWording.js`, which mirrors `READ_FAILURE_WORDING` in `backend/app/prorata.py`; one mount line in `frontend/src/routes/TraceView.jsx`.
+- PR #323: `frontend/src/components/case/ProrataReadFailure.jsx` (+ `.css`) shows, under the trace screen's pro-rata line, "Amount not checked: The amount check could not be done: <words>. Trace again later for a complete score." when `prorata.status` is `unknown` and `prorata.read_failure` is set; nothing otherwise. The words come from `readFailureWording.js`, which mirrors `READ_FAILURE_WORDING` in `backend/app/prorata.py`; one mount line in `frontend/src/routes/TraceView.jsx`.
 - Tests: `ProrataReadFailure.test.jsx` (every kind, unknown kind, field absent, other statuses), two in `TraceView.test.jsx` (shown; absent leaves the line unchanged), and `test_the_trace_screen_uses_the_same_read_failure_wording` in `backend/tests/test_prorata_read_failure.py` pins the two wording maps together.
 
 ## Decisions

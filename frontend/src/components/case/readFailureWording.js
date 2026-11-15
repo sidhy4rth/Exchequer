@@ -18,5 +18,5 @@ export function readFailureSentence(prorata) {
   const kind = prorata?.read_failure
   if (!kind || prorata.status !== 'unknown') return null
   const words = READ_FAILURE_WORDING[kind] ?? READ_FAILURE_WORDING.error
-  return `The amount check could not be done: ${words}. Tracing again later should give a complete score.`
+  return `The amount check could not be done: ${words}. Trace again later for a complete score.`
 }

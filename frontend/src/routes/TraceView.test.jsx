@@ -154,7 +154,7 @@ describe('what the amount is, and when it was not measured', () => {
     expect(document.querySelector('.prorata-unknown')).toHaveTextContent('Pro-rata: not estimated — the window could not be read.')
     const why = document.querySelector('.prorata-read-failure')
     expect(why).toHaveTextContent('The amount check could not be done: the data provider did not answer (rate limit).')
-    expect(why).toHaveTextContent('Tracing again later should give a complete score.')
+    expect(why).toHaveTextContent('Trace again later for a complete score.')
   })
 
   it('without a read failure the pro-rata line is as before', async () => {
