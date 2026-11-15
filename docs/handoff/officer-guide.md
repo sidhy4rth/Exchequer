@@ -5,7 +5,7 @@
 - **Branch**: `docs/officer-guide`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: merged in #192 on 2026-11-15; evening update in #283; #279 wording in `docs/officer-guide-279`
+- **Status**: merged in #192 (`fc38891e`) on 2026-11-15; evening update in #283 (`946615a3`); #279 wording merged in #289 (`a2985838`)
 
 ## Done
 
@@ -26,7 +26,7 @@
 
 1. When a Coming PR merges or a flag is switched on, change that section's status line.
 2. When a "Merged, switched off" switch goes on, change it to Live.
-3. After the next deploy, drop the status note that #221 is not yet on the site.
+3. ~~After the next deploy, drop the status note that #221 is not yet on the site.~~ Nothing to drop: on `main` the #221 entry (`docs/officer-guide.md:146`) sits under **Live** and no note says it is not on the site.
 
 ## Open questions
 
