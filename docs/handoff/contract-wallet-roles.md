@@ -10,7 +10,7 @@
 ## Done
 
 - `backend/scripts/measure_contract_wallet_roles.py`: for every role-less exchange `contract_wallet` (81 rows on 4 EVM chains: 34 Ethereum, 22 Arbitrum, 22 Polygon, 3 BSC), reads keylessly from Blockscout's public API whether the exchange's deposit-shaped addresses sweep into it (the #248 method), and writes `backend/tests/fixtures/contract_wallet_roles.json`. `--apply` writes the roles into the label files; `--check` (offline) compares them. Gate 7 in `docs/label-releases.md`.
-- Measured 15 Nov 2026: 5 Ethereum wallets meet the rule (Kraken 5, Coinbase 10, Crypto.com: MultiSig, Gemini 2, WazirX 5). WazirX 5 is held (see Open questions); the other 4 get `role: hot_wallet` in the stacked PR.
+- Measured 15 Nov 2026: 5 Ethereum wallets meet the rule (Kraken 5, Coinbase 10, Crypto.com: MultiSig, Gemini 2, WazirX 5). WazirX 5 is held (see Open questions); the other 4 get `role: hot_wallet` in the stacked PR (`--apply`, which also writes `_meta.contract_wallet_roles_2026_11_15` in `exchange_labels.json`). `docs/suite-features.md` row 1 says so.
 - Tests: `backend/tests/test_contract_wallet_roles.py`.
 
 ## Decisions
