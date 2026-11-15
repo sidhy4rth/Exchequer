@@ -27,7 +27,7 @@
 
 ## Open questions
 
-- Whether a stopped job (DELETE /trace/jobs/{id}) should get the same "returned after a stop is never stored" guard; today it can store a result whose late reads were skipped. Not changed here.
+- none. Answered by `fix/stopped-job-no-save` (stacked on this branch): a job stopped with DELETE /trace/jobs/{id} whose trace still returns is never stored either. `routes/jobs.py` checks the budget after `run_trace` and ends the job as any stop ends (failed, 409, "stopped by the person who started it"), no case saved. Not behind a flag: jobs are live on main, and the change is only that guard. Tests in `tests/test_jobs.py`.
 
 ## Files mid-change (do not touch)
 
