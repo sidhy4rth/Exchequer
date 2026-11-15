@@ -32,9 +32,12 @@ ARCHIVE = re.compile(r"https://web\.archive\.org/web/\d{14}/https://\S+")
 # A Bybit reserve wallet the October 2026 PoR file lists on Ethereum (USDT-Ethereum
 # row, among others), labelled by this import; not labelled before it.
 BYBIT_NEW_ETH = "0xee5b5b923ffce93a870b3104b7ca09c3db80047a"
-# An OKX wallet the November 2026 file lists on ETH ("ETH, Non Staking", 25,309.57 ETH at the
-# snapshot), labelled by this import; not labelled before it.
-OKX_NEW_ETH = "0x0003b5aa5e30e97fcc596bb5d0f3a75255e08d4e"
+# An OKX wallet the November 2026 file lists on ARBITRUM ("ETH-ARBITRUM" and "USDT-ARBITRUM",
+# Non Staking, at height 520033704), labelled by this import; not labelled before it.
+OKX_NEW_ARB = "0x03426aacbcf9030a380b3ba4a1f16b968649ef3d"
+# An OKX wallet the same file lists on ETH (25,309.57 ETH at the snapshot): OKX's 17,046
+# Ethereum rows go to the label store's exchange_rows table, not to exchange_labels.json.
+OKX_ETH_STORE_ROW = "0x0003b5aa5e30e97fcc596bb5d0f3a75255e08d4e"
 BYBIT_1 = "0xf89d7b9c864f589bbf53a82105107622b35eaa40"  # "Bybit 1", labelled before; the PoR file lists it too
 
 
@@ -130,7 +133,7 @@ def _tx(n, src, dst, value, when):
 
 @pytest.fixture
 def trace(monkeypatch):
-    def run(history):
+    def run(history, chain="ethereum"):
         class Fake:
             def get_outgoing_transactions(self, address, limit=None):
                 return [t for t in history if t.from_address == address]
@@ -140,7 +143,7 @@ def trace(monkeypatch):
             yield Fake()
         monkeypatch.setattr(pipeline, "open_source", open_source)
         monkeypatch.setattr(pipeline, "detect_swaps", lambda *a, **k: [])
-        return run_trace(TraceRequest(address=SEED, chain="ethereum", asset="ETH", max_depth=3,
+        return run_trace(TraceRequest(address=SEED, chain=chain, asset="ETH", max_depth=3,
                                       follow_swaps=False))
     return run
 
@@ -151,10 +154,18 @@ def test_a_transfer_into_a_new_bybit_reserve_wallet_is_attributed_to_bybit(trace
     assert result["exchange_address"] == BYBIT_NEW_ETH
 
 
-def test_a_transfer_into_a_new_okx_wallet_is_attributed_to_okx(trace):
-    result = trace([_tx(1, SEED, HOP, 4.0, T), _tx(2, HOP, OKX_NEW_ETH, 4.0, T + 60)])
+def test_a_transfer_into_a_new_okx_wallet_on_arbitrum_is_attributed_to_okx(trace):
+    result = trace([_tx(1, SEED, HOP, 4.0, T), _tx(2, HOP, OKX_NEW_ARB, 4.0, T + 60)], chain="arbitrum")
     assert result["exchange"] == "OKX"
-    assert result["exchange_address"] == OKX_NEW_ETH
+    assert result["exchange_address"] == OKX_NEW_ARB
+
+
+def test_okx_ethereum_rows_are_left_to_the_label_store_and_the_file_says_so():
+    document = _document("ethereum")
+    assert not [a for a, m in _por_rows("ethereum").items() if m["exchange"] == "OKX"]
+    assert OKX_ETH_STORE_ROW not in document["labels"]
+    moved = document["_meta"][por.META_KEY]["in_label_store"]["OKX"]
+    assert moved["rows"] == 17046 and moved["source_id"] == "por:okx:2026-11:ethereum"
 
 
 def test_a_transfer_to_an_unlabelled_wallet_is_attributed_to_nobody(trace):
@@ -250,3 +261,37 @@ def test_a_new_wallet_keeps_one_number_on_every_chain():
     out, left = por.rows(candidates, accounts, source)
     assert out["ethereum"][A]["label"] == out["bsc"][A]["label"] != out["bsc"][B]["label"]
     assert left == {"ethereum": [], "bsc": []}
+
+
+# -- rows for the label store's exchange_rows table ------------------------------------
+
+STORE_COLUMNS = ("address", "chain", "exchange", "label", "type", "source_id", "source_url", "published",
+                 "retrieved", "sha256")  # scripts/add_store_exchange_rows.py COLUMNS (PR #224)
+
+
+def test_store_rows_carry_the_same_source_and_checks_as_the_label_files(tmp_path):
+    candidates = {"ethereum": {A: {"exchange": "OKX"}, B: {"exchange": "OKX"}, C: {"exchange": "OKX"}}}
+    accounts = {f"ethereum:{A}": {"code": False, "delegated": False, "nonce": 2, "balance": 0},
+                f"ethereum:{B}": {"code": True, "delegated": False, "nonce": 1, "balance": 3, "erc20": False,
+                                  "safe": True},
+                f"ethereum:{C}": {"code": False, "delegated": False, "nonce": 0, "balance": 0}}
+    source = {"OKX": {"url": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+                      "source_date": "2026-11-01", "retrieved": "2026-11-14", "sha256": "f" * 64}}
+    found, left = por.store_rows(candidates, accounts, source)
+    assert [r["address"] for r in found] == [A, B] and [x["address"] for x in left["ethereum"]] == [C]
+    assert found[0] == {"address": A, "chain": "ethereum", "exchange": "OKX", "label": "OKX: Reserves Wallet (2026-11)",
+                        "type": "exchange_wallet", "source_id": "por:okx:2026-11:ethereum",
+                        "source_url": source["OKX"]["url"], "published": "2026-11-01", "retrieved": "2026-11-14",
+                        "sha256": "f" * 64}
+    assert found[1]["type"] == "contract_wallet"
+    path = tmp_path / "rows.csv"
+    por.write_store_csv(path, found)
+    lines = path.read_text().splitlines()
+    assert tuple(lines[0].split(",")) == STORE_COLUMNS and len(lines) == 3
+
+
+def test_the_ethereum_source_id_is_not_a_prefix_of_the_tron_one():
+    # add_store_exchange_rows replaces every row whose source text starts with "<source_id>: ".
+    ethereum = por.store_source_id("OKX", "ethereum", "2026-11-01")
+    assert ethereum == "por:okx:2026-11:ethereum"
+    assert not f"{ethereum}: ".startswith("por:okx:2026-11: ") and not "por:okx:2026-11: ".startswith(f"{ethereum}: ")

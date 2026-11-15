@@ -34,8 +34,14 @@ The rule, per address and chain (gather() offline, then check() on chain):
 An address the file already labels for the same exchange keeps its label.
 
     cd backend && .venv/bin/python -m scripts.import_por_labels \\
-        --bybit bybit_por_202610.csv --okx okx_por_2026110100_V1.csv \\
-        --checks por_checks.json --store label_store.db --dry-run
+        --bybit bybit_por_202610.csv --okx por_csv_2026110100_V1.zip --sources sources.json \\
+        --checks por_checks.json --store label_store.db \\
+        --to-store OKX/ethereum --store-csv okx_por_ethereum.csv --dry-run
+
+OKX's Ethereum list (17,046 rows on 15 Nov 2026) is too large for the JSON label
+file, so --to-store sends it to a CSV for the label store's exchange_rows table
+(ADR-0011, scripts/add_store_exchange_rows.py), as OKX's Tron rows are. Its
+rows pass the same checks and keep the same source fields.
 
 The CSVs are downloaded by hand (they are not fetched here) and read as data.
 --checks is a JSON checkpoint of the chain reads, so a rerun asks the RPCs
@@ -413,8 +419,10 @@ def rows(candidates: dict[str, dict[str, dict]], accounts: dict[str, dict], sour
     return out, left
 
 
-def apply(new_rows: dict[str, dict[str, dict]], note: dict[str, Any]) -> dict[str, int]:
-    """Add the rows to each chain's label file (never replacing one) and record `note` in its _meta."""
+def apply(new_rows: dict[str, dict[str, dict]], note: dict[str, Any],
+          elsewhere: dict[str, dict[str, Any]] | None = None) -> dict[str, int]:
+    """Add the rows to each chain's label file (never replacing one) and record `note` in its _meta,
+    with `elsewhere[chain]`: the rows of that chain sent to the label store instead."""
     added = {}
     for chain, found in new_rows.items():
         path = config.CHAINS[chain].labels_path
@@ -429,9 +437,53 @@ def apply(new_rows: dict[str, dict[str, dict]], note: dict[str, Any]) -> dict[st
             document["labels"] = dict(sorted(labels.items()))
         document["_meta"][META_KEY] = {**note, "added": {
             e: sum(1 for r in fresh.values() if r["exchange"] == e) for e in sorted({r["exchange"] for r in fresh.values()})}}
+        if (elsewhere or {}).get(chain):
+            document["_meta"][META_KEY]["in_label_store"] = elsewhere[chain]
         path.write_text(json.dumps(document, indent=indent, ensure_ascii=False) + "\n", encoding="utf-8")
         added[chain] = len(fresh)
     return added
+
+
+# A list too large for a JSON label file goes to the label store's exchange_rows
+# table instead (ADR-0011, scripts/add_store_exchange_rows.py), as a CSV in that
+# script's columns. One label per source, as the store holds every text once.
+STORE_COLUMNS = ("address", "chain", "exchange", "label", "type", "source_id", "source_url", "published",
+                 "retrieved", "sha256")
+STORE_LABEL = "{exchange}: Reserves Wallet ({month})"
+
+
+def store_source_id(exchange: str, chain: str, published: str) -> str:
+    """por:<exchange>:<YYYY-MM>:<chain>. The chain is in the id because the store
+    script replaces every row of a source id it is given: OKX's Tron rows, from the
+    same file, are their own source (por:okx:2026-11) and must survive this run."""
+    return f"por:{exchange.lower()}:{published[:7]}:{chain}"
+
+
+def store_rows(candidates: dict[str, dict[str, dict]], accounts: dict[str, dict],
+               source: dict[str, dict[str, str]]) -> tuple[list[dict[str, str]], dict[str, list[dict]]]:
+    """(CSV rows for the label store, {chain: [left out on chain]}), by the same rules as the label files."""
+    out: list[dict[str, str]] = []
+    left: dict[str, list[dict]] = {c: [] for c in candidates}
+    for chain, found in candidates.items():
+        for address, meta in sorted(found.items()):
+            kind, why = verdict(accounts.get(f"{chain}:{address}"))
+            if why:
+                left[chain].append({"address": address, "exchange": meta["exchange"], "why": why})
+                continue
+            cite = source[meta["exchange"]]
+            out.append({"address": address, "chain": chain, "exchange": meta["exchange"],
+                        "label": STORE_LABEL.format(exchange=meta["exchange"], month=cite["source_date"][:7]),
+                        "type": kind, "source_id": store_source_id(meta["exchange"], chain, cite["source_date"]),
+                        "source_url": cite["url"], "published": cite["source_date"], "retrieved": cite["retrieved"],
+                        "sha256": cite["sha256"]})
+    return out, left
+
+
+def write_store_csv(path: Path, found: list[dict[str, str]]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=STORE_COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(found)
 
 
 def main() -> int:
@@ -443,8 +495,13 @@ def main() -> int:
     parser.add_argument("--checks", type=Path, required=True, help="checkpoint of the on-chain reads")
     parser.add_argument("--store", type=Path, help="a label-store release to check for rows on these addresses")
     parser.add_argument("--report", type=Path, help="write counts, conflicts and the left-out list here")
+    parser.add_argument("--to-store", action="append", default=[], metavar="EXCHANGE/CHAIN",
+                        help="write this exchange's rows on this chain to --store-csv, not the label file")
+    parser.add_argument("--store-csv", type=Path, help="the label-store CSV for --to-store rows")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+    if args.to_store and not args.store_csv:
+        parser.error("--to-store needs --store-csv")
 
     found: dict[str, dict[str, dict[str, set[str]]]] = {}
     if args.bybit:
@@ -456,11 +513,21 @@ def main() -> int:
     source = json.loads(args.sources.read_text())
     candidates, conflicts, counts = gather(found, store=args.store)
     accounts = check(candidates, args.checks)
-    new_rows, left = rows(candidates, accounts, source)
+    to_store = {tuple(pair.split("/", 1)) for pair in args.to_store}
+    for_file = {c: {a: m for a, m in found.items() if (m["exchange"], c) not in to_store}
+                for c, found in candidates.items()}
+    for_store = {c: {a: m for a, m in found.items() if (m["exchange"], c) in to_store}
+                 for c, found in candidates.items()}
+    new_rows, left = rows(for_file, accounts, source)
+    in_store, left_store = store_rows(for_store, accounts, source)
     for chain in CHAINS:
+        left[chain] += left_store[chain]
         for row in new_rows[chain].values():
             counts[f"{row['exchange']}/{chain}"].setdefault("added", 0)
             counts[f"{row['exchange']}/{chain}"]["added"] += 1
+    for row in in_store:
+        counts[f"{row['exchange']}/{row['chain']}"].setdefault("to_label_store", 0)
+        counts[f"{row['exchange']}/{row['chain']}"]["to_label_store"] += 1
     report = {"counts": counts, "conflicts": conflicts, "left_out_on_chain": left}
     if args.report:
         args.report.write_text(json.dumps(report, indent=1))
@@ -471,7 +538,16 @@ def main() -> int:
                         "a demo or the label store is left out, never overwritten; a token contract or an address "
                         "with no activity on this chain is left out",
                 "sources": source}
-        print(apply(new_rows, note))
+        elsewhere: dict[str, dict[str, Any]] = {}
+        for row in in_store:
+            entry = elsewhere.setdefault(row["chain"], {}).setdefault(row["exchange"], {
+                "rows": 0, "source_id": row["source_id"], "where": "label store exchange_rows table "
+                "(scripts/add_store_exchange_rows.py), staged as " + args.store_csv.name})
+            entry["rows"] += 1
+        print(apply(new_rows, note, elsewhere))
+        if in_store:
+            write_store_csv(args.store_csv, in_store)
+            print(f"{len(in_store)} rows for the label store written to {args.store_csv}")
     return 0
 
 
