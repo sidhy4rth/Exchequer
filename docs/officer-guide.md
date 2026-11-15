@@ -206,9 +206,17 @@ note instead, and drop out of every risk count.
 - A pool that pays out to many addresses is treated like any such contract: it
   is read, but its payouts are not followed, and the scope notes say so. A
   shielded pool usually does, so the trail often goes no further there even
-  though the privacy note did not stop it. The note itself says "The trace did
-  not stop here"; a change in review (#279) makes it also say when the
-  payouts were not followed.
+  though the privacy note did not stop it. The note says so (#279, live since
+  15 November): "Being a privacy protocol did not stop the trace here, but its
+  payouts were not followed: it is a contract that pays out to many addresses,
+  so no single payout can be tied to these funds." A note on a contract whose
+  payouts were followed still says "The trace did not stop here." The section's
+  opening line, on screen, in the text report and on page 1 of the PDF, says
+  being a privacy protocol never stops the trace and that each note says
+  whether the contract's payouts were followed.
+- A note is written when the trace runs. A case traced before #279 went live
+  keeps the old wording, "The trace did not stop here", even where the
+  payouts were not followed; run the trace again for the new wording.
 - A government listing, freeze or theft tag on such a contract still stands as
   a risk hit, and then no note is shown for it.
 
