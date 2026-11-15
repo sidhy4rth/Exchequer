@@ -4,7 +4,8 @@
     GET  /trace/jobs/{id}            status, progress and, when done, the result
     GET  /trace/jobs/{id}/events     the same as server-sent events, live
 
-A job id works like a case id: whoever holds it can watch it. The finished
+A job id works like a case id: whoever holds it can watch it. A job stopped
+with DELETE stores nothing, even if its trace returns after the stop. The finished
 case is stored with the starting browser's owner key, as POST /trace does,
 and its complaint particulars go only to that browser (case_privacy.py).
 """
@@ -45,6 +46,12 @@ def _run_job(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str 
     try:
         with api_budget.using(job.budget):
             payload = pipeline.run_trace(request)
+        if job.budget is not None and job.budget.cancelled:
+            # It returned, but after a stop: a read refused by the stop may have
+            # been skipped by a stage that went on without it (a block's date, a
+            # tag), so the result cannot be taken as whole and is never stored.
+            # It ends as a stop that raised does (POST /trace's hang-up rule).
+            raise api_budget.Cancelled()
         jobs.store.report(job, {"stage": "saving"})
         # From here the trace is done and its provider calls are spent: a
         # failure to store or audit it is a warning on the result, never "failed".
@@ -103,8 +110,11 @@ def stop_job(job_id: str, user: CurrentUser) -> dict[str, Any]:
     job = _job_or_404(job_id)
     if user.owner_hash is None or user.owner_hash != job.owner:
         raise HTTPException(status_code=403, detail="Only the browser that started this trace can stop it.")
-    if job.status == jobs.RUNNING and job.budget is not None:
+    running = job.status == jobs.RUNNING
+    if running and job.budget is not None:
         job.budget.cancel()
+    # Ids only, as case.trace_start: the job id and whether there was a trace to stop.
+    audit.record("case.trace_stopped", detail={"job_id": job.id, "was_running": running})
     return {"job_id": job.id, "stopping": job.status == jobs.RUNNING}
 
 

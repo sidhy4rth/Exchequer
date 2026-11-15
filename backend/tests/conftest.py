@@ -172,9 +172,10 @@ def _fresh_trace_rate_limit():
     one client, so without this the 31st trace in a run would be refused.
     The site-wide ceilings are process-wide too."""
     from app import rate_limit
-    from app.routes import casebook, cases
+    from app.routes import case_bundle, casebook, cases
     for limiter in (rate_limit.traces, rate_limit.traces_total, rate_limit.watches_total, casebook.case_lists,
-                    casebook.correlations, rate_limit.rechecks, rate_limit.rechecks_total):
+                    casebook.correlations, rate_limit.rechecks, rate_limit.rechecks_total,
+                    case_bundle.bundles, case_bundle.bundles_total):
         limiter.reset()
     for limiter in (*rate_limit.officer_hour.values(), *rate_limit.officer_day.values()):
         limiter.reset()

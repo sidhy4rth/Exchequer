@@ -3,9 +3,9 @@
 - **Feature**: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop
 - **Issue**: #189
 - **Branch**: `feat/privacy-protocol-category` (PR 1, contract), `feat/privacy-protocol-trace` (PR 2, stacked), `feat/privacy-protocol-ui` (PR 3, stacked), `feat/privacy-in-report` (PR 4, stacked: the report)
-- **Current**: nobody (merged; switching the flag on waits for the owner's yes)
+- **Current**: nobody (merged; the owner said yes, and the flag was set to `1` in the Render dashboard on 2026-11-15)
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: all four PRs merged to `main` inside #149, behind `EXCHEQUER_PRIVACY_CATEGORY` (off in production). The switch-on (`render.yaml` entry, `docs/flag-rollout.md` section) is a draft PR awaiting the owner
+- **Status**: all four PRs merged to `main` inside #149 (#194, #195, #196, #198), behind `EXCHEQUER_PRIVACY_CATEGORY`, on in production since 2026-11-15. The `render.yaml` entry and `docs/flag-rollout.md` section are in the switch-on PR
 
 ## Done
 

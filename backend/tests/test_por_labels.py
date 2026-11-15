@@ -46,7 +46,11 @@ def _document(chain):
 
 
 def _por_rows(chain):
-    return {a: m for a, m in _document(chain)["labels"].items() if isinstance(m, dict) and "source_kind" in m}
+    """The rows this import wrote. A row with a `role_basis` cites the same PoR file but was
+    typed by hand from on-chain reads (OKX's two Ethereum consolidation wallets): those rows
+    are checked in tests/test_okx_consolidation_labels.py."""
+    return {a: m for a, m in _document(chain)["labels"].items()
+            if isinstance(m, dict) and "source_kind" in m and "role_basis" not in m}
 
 
 # -- the shipped rows --------------------------------------------------------------

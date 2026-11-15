@@ -910,3 +910,24 @@ PRIVACY_CATEGORY: bool = flag("EXCHEQUER_PRIVACY_CATEGORY",
                               "#189: privacy protocols shown as a note, never a stop or a risk hit; awaits the owner")
 CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
                          "Feature 6: one zip of a case's report, registers and audit trail, with a manifest")
+TRACE_CANCEL_ON_DISCONNECT: bool = flag(
+    "EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT",
+    "Trace engine: stop a POST /trace whose client hung up, at its next provider request; awaits the owner")
+STORE_EXCHANGE_ROWS: bool = flag("EXCHEQUER_STORE_EXCHANGE_ROWS",
+                                 "#222: name the exchange from label-store exchange rows (its own PoR list; ADR-0011)")
+CUSTODY_WALLETS: bool = flag("EXCHEQUER_CUSTODY_WALLETS",
+                             "Feature 9: custody wallet records and signing log (never a key)")
+STATEMENT_IMPORT: bool = flag("EXCHEQUER_STATEMENT_IMPORT",
+                              "Feature 5: read a bank or exchange statement CSV against a case; save confirmed rows")
+CDR_IMPORT: bool = flag("EXCHEQUER_CDR_IMPORT",
+                        "Feature 5: read a call detail record CSV against a case; save a confirmed summary")
+EXPORT_SCAN: bool = flag("EXCHEQUER_EXPORT_SCAN",
+                         "Feature 2, slice 1: scan a phone or computer export in the browser for addresses, "
+                         "hashes and seed phrases")
+TELEGRAM_LOOKUPS: bool = flag("EXCHEQUER_TELEGRAM_LOOKUPS",
+                              "Feature 4, OSINT slice 4: read a Telegram username's public t.me page "
+                              "(needs EXCHEQUER_OSINT_LOOKUPS too)")
+SOP_SUMMARY: bool = flag("EXCHEQUER_SOP_SUMMARY",
+                         "Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms")
+SOP_DEADLINES: bool = flag("EXCHEQUER_SOP_DEADLINES",
+                           "Feature 8: MHA CFCFRMS SOP time limits, quoted, as reminders on bank holds in the asset register")

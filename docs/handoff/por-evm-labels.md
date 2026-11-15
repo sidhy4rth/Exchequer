@@ -3,9 +3,9 @@
 - **Feature**: a trace that ends in one of Bybit's or OKX's own wallets on Ethereum, BNB Smart Chain, Polygon or Arbitrum names that exchange, because the wallet is labelled from the exchange's own proof-of-reserves list
 - **Issue**: #215
 - **Branch**: `feat/bybit-okx-evm-labels` (off `main` after #212 and #213 merged)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: in review
+- **Status**: merged in #226 on 2026-11-15
 
 ## Done
 

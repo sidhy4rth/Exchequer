@@ -3,9 +3,9 @@
 - **Feature**: clear the open Dependabot pull requests so dependencies stay current and CI stays green
 - **Issue**: #95
 - **Branch**: `feat/dependency-bumps`
-- **Current**: Barenyam
-- **Last worked on**: Barenyam, 2026-11-13
-- **Status**: #82's updates and their fix merged as #96. #80 tested on `main` at ad3768b and ready to merge; #81 waits for #80; #61 conflicts and must be regenerated
+- **Current**: Barenyam (Sidhyarth's session continued this, 14 Nov)
+- **Last worked on**: Sidhyarth, 2026-11-14
+- **Status**: #82's updates and their fix merged as #96. #80 retested on `main` at 39b3292, ready to merge; #81 waits for #80; #61 redone as our own PR on `feat/python-minor-bumps`
 
 ## Done
 
@@ -27,6 +27,15 @@
   - #81 merges cleanly on its own, but its lockfiles conflict with #80's. After #80 merges, Dependabot must rebase #81 (never hand-merge a lockfile).
   - #61 conflicts in `requirements.in` and `requirements-dev.in` with #96. Dependabot must recreate it, or we redo it in our own PR after reading the SQLAlchemy 2.1 and FastAPI release notes.
 
+- 14 Nov (Sidhyarth's session), against `main` at 39b3292:
+  - #80: its CI ran on 5da13fa (55 commits behind), so we asked Dependabot to rebase it. Merged locally into 39b3292: 1,592 frontend tests and 230 citizen page tests pass, 65 citizen API tests pass, both builds pass. Ready to merge once the rebased CI is green.
+  - #81: unchanged; waits for #80 and Dependabot's rebase.
+  - #61: redone on `feat/python-minor-bumps` (supersedes #61): FastAPI 0.162.0, Starlette 1.10.0, SQLAlchemy 2.1.6, reportlab 5.1.0, pytest 9.2.0 in `requirements.in` / `requirements-dev.in`, both locks recompiled with the uv command in `requirements.in`. Same versions as #61; greenlet leaves the lock because SQLAlchemy 2.1 no longer requires it (we use no asyncio). `citizen/api/requirements.txt` pins none of these. Backend 3,245 passed / 6 skipped, ruff clean, `alembic upgrade head` and `alembic check` clean on a fresh SQLite file, citizen API 65 passed. Release notes read; nothing in them touches our code (details in the PR).
+
+- 15 Nov (Sidhyarth's session, issue #199): pypdf 6.21.4 → 7.1.0 on `feat/pypdf-7`, stacked on `feat/python-minor-bumps` so the two lock changes never need merging by hand. Only pypdf changes in either lock. The 12 test files that read or write PDFs (verify, report PDF, report cache, both certificates, third-party text and others): 277 passed on 6.21.4 and 277 on 7.1.0; full backend suite 3,308 passed, 6 skipped. pypdf 7.1 deprecates positional arguments to `add_outline_item`, which one test helper in `test_verify_pdf.py` used; it now passes them by name (same call, works on 6 too). pypdf 7.0's random file identifiers do not change our PDFs: `report_pdf._attach` clones the reportlab file, which keeps its `/ID`.
+
+- 15 Nov (Sidhyarth's session, issue #200): `httpx2==2.16.0` added to `requirements-dev.in` on `feat/httpx2-testclient`, test-only. Starlette 1.10's `TestClient` imports httpx2 when it is installed and warns when it falls back to httpx; the site's own outbound calls stay on `httpx` (`requirements.in`), and the deployed image never installs httpx2. The dev lock gains httpx2, httpcore2 and truststore (and httpx2-jsfetch, marked for emscripten only, so never installed). Full backend suite 3,308 passed, 6 skipped, and the deprecation warning is gone.
+
 ## Decisions
 
 - #82 is taken over on this branch: Dependabot raised psycopg to 3.3.7 in `backend/requirements.txt` only. This branch also regenerates `backend/requirements-dev.txt` with the repo's uv command (only psycopg and psycopg-binary changed) and copies the 3.3.7 hash blocks into `citizen/api/requirements.txt`. `tests/test_requirements_locked.py` and `citizen/api/tests/test_endpoints.py::test_the_dependencies_are_psycopg_alone_pinned_with_hashes` pass locally.
@@ -36,13 +45,15 @@
 
 ## Next
 
-1. Review and merge this branch's PR (it carries #82's updates plus the fix), then close #82 as superseded.
-2. Merge #80, then #81 once Dependabot has rebased it and CI is green.
-3. #61 last, on its own, after reading the SQLAlchemy 2.1 and FastAPI release notes.
+1. Done 14 Nov: #80 closed by Dependabot; its newer npm patch group #131 is merged.
+2. Done 14 Nov: #81 closed; the newer npm minor group #141 is merged.
+3. Review and merge the `feat/python-minor-bumps` PR, then close #61 as superseded.
+4. Then review and merge `feat/pypdf-7` (pypdf 7.1.0, #199), which is stacked on it.
+5. FastAPI's TestClient now warns that it wants `httpx2` instead of `httpx` (Starlette deprecation). Done on `feat/httpx2-testclient` (#200, stacked on `feat/pypdf-7`): `httpx2==2.16.0` in `requirements-dev.in` only; merge it after `feat/pypdf-7`.
 
 ## Open questions
 
-- pypdf 6 → 7 (major) was only in the stale #56. Do we want it? If so, its own PR, tested against the evidence report PDFs. (Barenyam and Sidhyarth)
+- pypdf 6 → 7 (major) was only in the stale #56. Answered 15 Nov: yes, in its own PR (`feat/pypdf-7`, #199), tested against the evidence and report PDFs; merge it after `feat/python-minor-bumps`.
 - Who merges the Dependabot PRs: Sidhyarth, or whoever approves them?
 
 ## Files mid-change (do not touch)

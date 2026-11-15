@@ -3,7 +3,10 @@
 # constraint keeps every shared package at the runtime lock's version.
 -r requirements.in
 -c requirements.txt
-pytest==9.1.1
+pytest==9.2.0
+# Starlette's TestClient is built on httpx2 and warns when it falls back to
+# httpx. Tests only: the site's own outbound calls stay on httpx (requirements.in).
+httpx2==2.16.0
 ruff==0.17.3
 # The workflow tests read .github/workflows/*.yml.
 PyYAML==6.0.3

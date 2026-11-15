@@ -3,9 +3,9 @@
 - **Feature**: suite feature 6 (case management): a task list per case: what still has to be done, who it is assigned to (a name), by when, and what came of it
 - **Issue**: #121
 - **Branch**: `feat/case-tasks` (server, PR #122); `feat/case-tasks-screen` (screen, #123, on top of it); `feat/case-tasks-suggest` (suggestions, on top of #123)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: built and tested end to end in three stacked PRs (#122 server, #123 screen, then suggestions); all wait for review
+- **Status**: merged in #122 (with #123 and #124) on 2026-11-15; live, no flag
 
 ## Done
 

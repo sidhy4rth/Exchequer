@@ -1,8 +1,8 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import IdentifiersPanel, { Lookup, daysBetween, historyText, shown } from './IdentifiersPanel'
+import IdentifiersPanel, { Lookup, TelegramPage, daysBetween, historyText, identifiersChanged, shown } from './IdentifiersPanel'
 
 // What the victim reported besides the wallet (backend identifiers.py): each
 // identifier as kept, where it was seen, withdrawn with a reason, never deleted.
@@ -53,6 +53,27 @@ describe('the reported identifiers panel', () => {
     expect(screen.getByText('https://www.scam-shop.in/pay')).toBeInTheDocument()
     expect(screen.getByText('link sent on WhatsApp')).toBeInTheDocument()
     expect(screen.getByText(/Reported identifiers · 1/)).toBeInTheDocument()
+  })
+
+  it("loads its list again when another panel adds to this case, and only this case", async () => {
+    const calls = api({ 'GET /trace/c1/identifiers': { body: { identifiers: [ROW] } } })
+    open()
+    expect(await screen.findByText('scam-shop.in')).toBeInTheDocument()
+    const loads = () => calls.filter((c) => c.method === 'GET' && c.path === '/trace/c1/identifiers').length
+    expect(loads()).toBe(1)
+    act(() => { identifiersChanged('c2') })
+    await act(() => new Promise((r) => { setTimeout(r, 0) }))
+    expect(loads()).toBe(1) // another case's add leaves this list alone
+    act(() => { identifiersChanged('c1') })
+    await waitFor(() => expect(loads()).toBe(2))
+  })
+
+  it('names a wallet address from the export scan by its kind', async () => {
+    const wallet = { ...ROW, kind: 'wallet', value: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', entered: 'THWYhwUQnBcKpwSxaXjqv18RPtSoK4C5Ph', context: 'Found by the export scan' }
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [wallet] } } })
+    open()
+    expect(await screen.findByText('· Wallet address')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Look up/ })).toBeNull()
   })
 
   it('does not repeat the value as typed when it was typed as kept', async () => {
@@ -228,6 +249,84 @@ describe('the reported identifiers panel', () => {
     render(<Lookup lookup={{ ...LOOKUP, rdap: null, rdap_note: 'The .xyz registry offers no RDAP service.' }} />)
     expect(screen.getByText(/offers no RDAP service/)).toBeInTheDocument()
     expect(screen.queryByText(/old when looked up/)).not.toBeInTheDocument()
+  })
+
+  // A Telegram username's public page, as the backend reads backend/tests/fixtures/osint/telegram/scam_group.html
+  // (a synthetic page); 'SHA' stands in for its hash.
+  const TG_ROW = { ...ROW, identifier_id: 'i4', kind: 'telegram', value: 'sample_recovery', entered: '@Sample_Recovery', context: '' }
+  const TG_LOOKUP = {
+    lookup_id: 'l4', identifier_id: 'i4', case_id: 'c1', queried: 'sample_recovery', created_at: '2026-11-14T09:00:00Z', by: 'officer-1',
+    kind: 'telegram', page_note: '',
+    page: { exists: true, title: 'Sample Recovery Desk', type: 'group', count_text: '2 345 members, 67 online', description: 'Made-up group for tests.', badges: ['fake', 'scam'] },
+    sources: [{ source: 'telegram-page', provider: 't.me', request: 'https://t.me/sample_recovery', status: 200, fetched_at: '2026-11-14T09:00:00Z', sha256: 'SHA', bytes: 1012 }],
+  }
+
+  it('offers to read a username\'s t.me page only when the server has Telegram lookups on', async () => {
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [ROW, TG_ROW], lookups_enabled: true, telegram_lookups_enabled: false } } })
+    const first = open()
+    await screen.findByText('@sample_recovery')
+    expect(screen.queryByRole('button', { name: 'Read the public t.me page' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Look up public records' })).toBeInTheDocument()
+    first.unmount()
+    api({ 'GET /trace/c1/identifiers': { body: { identifiers: [ROW, TG_ROW], lookups_enabled: true, telegram_lookups_enabled: true } } })
+    open()
+    await screen.findByText('@sample_recovery')
+    expect(screen.getAllByRole('button', { name: 'Read the public t.me page' })).toHaveLength(1)
+  })
+
+  it('reads a username\'s page and shows what it showed, its badges and its source, never as an identity', async () => {
+    let rows = [TG_ROW]
+    const calls = api({
+      'GET /trace/c1/identifiers': () => ({ body: { identifiers: rows, lookups_enabled: true, telegram_lookups_enabled: true } }),
+      'POST /identifiers/i4/lookup': () => { rows = [{ ...TG_ROW, lookup: TG_LOOKUP }]; return { body: TG_LOOKUP } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Read the public t.me page' }))
+    expect(await screen.findByText('Sample Recovery Desk')).toBeInTheDocument()
+    expect(screen.getByText('Scam badge')).toHaveClass('red')
+    expect(screen.getByText('Fake badge')).toHaveClass('red')
+    expect(screen.getByText('Group')).toBeInTheDocument()
+    expect(screen.getByText('2 345 members, 67 online')).toBeInTheDocument()
+    expect(screen.getByText(/A page is not an identity/)).toBeInTheDocument()
+    expect(screen.getByText(/Where this came from \(1 response\)/)).toBeInTheDocument()
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1)
+  })
+
+  it("keeps the keyboard on the panel: what the t.me page showed takes focus, and a refusal leaves it on the button", async () => {
+    let rows = [TG_ROW]
+    let refuse = true
+    api({
+      'GET /trace/c1/identifiers': () => ({ body: { identifiers: rows, lookups_enabled: true, telegram_lookups_enabled: true } }),
+      'POST /identifiers/i4/lookup': () => {
+        if (refuse) return { status: 503, body: { detail: 't.me could not be reached. Try again later.' } }
+        rows = [{ ...TG_ROW, lookup: TG_LOOKUP }]
+        return { body: TG_LOOKUP }
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    const button = await screen.findByRole('button', { name: 'Read the public t.me page' })
+    button.focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+    expect(button).toHaveFocus() // not dropped to the page while the request ran
+    refuse = false
+    await user.keyboard('{Enter}')
+    const found = await screen.findByRole('group', { name: 'What the lookup found' })
+    expect(found).toHaveTextContent('Sample Recovery Desk')
+    await waitFor(() => expect(found).toHaveFocus())
+  })
+
+  it('says when the page showed no account, and when it does not say what the account is', () => {
+    const { unmount } = render(<TelegramPage lookup={{ ...TG_LOOKUP, page: { exists: false, title: '', type: '', count_text: '', description: '', badges: [] }, page_note: 't.me showed no public channel, group, user or bot under this username.' }} />)
+    expect(screen.getByText(/showed no public channel/)).toBeInTheDocument()
+    expect(screen.queryByText('Type')).not.toBeInTheDocument()
+    unmount()
+    render(<TelegramPage lookup={{ ...TG_LOOKUP, page: { ...TG_LOOKUP.page, type: '', badges: [], count_text: '' } }} />)
+    expect(screen.getByText('The page does not say')).toBeInTheDocument()
+    expect(screen.queryByText(/badge/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Count shown')).not.toBeInTheDocument()
   })
 
   it('counts days between two dates', () => {

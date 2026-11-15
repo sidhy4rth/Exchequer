@@ -5,7 +5,7 @@
 - **Branch**: `fix/assets-amount-length`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: open for review
+- **Status**: merged in #174 on 2026-11-14
 
 ## Done
 
