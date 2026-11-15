@@ -477,6 +477,12 @@ SCAM_RUN = "cd backend && .venv/bin/python -m scripts.import_threat_labels --sca
 OWN_SOURCE = f"via {DATASET_REPO}"
 
 
+def written_by_tag_run(chain_key: str, entry: dict) -> bool:
+    """An entry this run wrote: its source is the tag line candidates_by_chain() writes, at any
+    commit. A hand-filed entry that only cites the dataset among its sources (#148) is not."""
+    return entry.get("source", "").startswith(f"{EXPLORER[chain_key]} address tag, {OWN_SOURCE}")
+
+
 def verify_ethereum(candidates: list[tuple[str, dict]]) -> tuple[dict, list[str], list[str]]:
     """(kept, dropped, errors): an address whose check failed is in `errors`, never dropped."""
     kept, dropped, errors = {}, [], []
@@ -580,7 +586,7 @@ def main() -> int:
             continue
         try:
             labels, merge = merge_owned(
-                held, kept, owned=lambda a, e, mine=found[chain_key]: a in mine or OWN_SOURCE in e.get("source", ""),
+                held, kept, owned=lambda a, e, mine=found[chain_key], k=chain_key: a in mine or written_by_tag_run(k, e),
                 unknown=set(errors), allow_shrink=args.allow_shrink)
         except ShrinkRefused as exc:
             print(f"{chain_key}: refused, nothing written: {exc}")

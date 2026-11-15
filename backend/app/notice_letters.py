@@ -24,10 +24,14 @@ Three notices:
 The account number, IFSC and phone number are personal data. They are checked,
 written into the letter, and kept nowhere else: the route takes them in the
 request body (never the URL), names the file by case and notice, and records
-only which notice was drafted.
+only which notice was drafted. A bank hold's second-officer sign-off is bound
+to its details by fingerprint() (a SHA-256, stored on the request instead of
+the details), so changing any of them needs a fresh sign-off.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import textwrap
 from datetime import date
@@ -147,7 +151,9 @@ def _bank_info(case_id: str, result: dict[str, Any], details: dict[str, Any]) ->
     return "\n".join(lines) + "\n"
 
 
-def _bank_freeze(details: dict[str, Any], approval: dict[str, Any] | None) -> str:
+def _hold(details: dict[str, Any]) -> dict[str, Any]:
+    """A bank hold's details as its letter prints them: the order, the bank's
+    details and the amount (as two-decimal rupees, or None for a blank)."""
     order = _text(details, "order", "the Magistrate's order this hold rests on (number, date and court)",
                   TEXT_MAX, required=False)
     if not order:
@@ -156,22 +162,42 @@ def _bank_freeze(details: dict[str, Any], approval: dict[str, Any] | None) -> st
     b = _bank(details)
     amount = details.get("amount")
     if amount in (None, ""):
-        stated = [f"Amount    : {BLANK} (officer to state)"]
-    else:
-        if isinstance(amount, bool):
-            raise NoticeError("Enter the amount as a number of rupees.")
-        try:  # "2,50,000" and "250 000" are how officers write it
-            value = float(re.sub(r"[,\s]", "", str(amount)))
-        except ValueError as exc:
-            raise NoticeError("Enter the amount as a number of rupees.") from exc
-        if not 0 < value < AMOUNT_MAX:  # also refuses nan and inf
-            raise NoticeError("Enter an amount of rupees above zero and below one lakh crore.")
-        stated = [f"Amount    : up to INR {inr(value)}"]
-    ask = f"Please place a debit freeze, now, on account {b['account']} (IFSC {b['ifsc']}) up to the amount below"
-    lines = _freeze_header(f"The Nodal Officer, {b['bank']}", f"debit freeze on account {b['account']}", ask, approval)
-    lines += [f"Account   : {b['account']}", f"IFSC      : {b['ifsc']}", *stated,
-              *_wrap(f"Order     : {order} (copy attached)", indent=""),
-              *_wrap(f"Source    : {b['source']}", indent=""), "",
+        return {**b, "order": order, "amount": None}
+    if isinstance(amount, bool):
+        raise NoticeError("Enter the amount as a number of rupees.")
+    try:  # "2,50,000" and "250 000" are how officers write it
+        value = float(re.sub(r"[,\s]", "", str(amount)))
+    except ValueError as exc:
+        raise NoticeError("Enter the amount as a number of rupees.") from exc
+    if not 0 < value < AMOUNT_MAX:  # also refuses nan and inf
+        raise NoticeError("Enter an amount of rupees above zero and below one lakh crore.")
+    return {**b, "order": order, "amount": f"{value:.2f}"}
+
+
+def fingerprint(case_id: str, to: str, details: dict[str, Any]) -> str | None:
+    """What a second officer's sign-off on a bank hold covers: SHA-256 over the
+    case, the notice and its details exactly as the letter prints them, so
+    "2,50,000" and 250000 match and another account or order does not. None
+    for a notice without a sign-off. Raises NoticeError as draft() would."""
+    if to != BANK_FREEZE:
+        return None
+    canonical = json.dumps({"case_id": case_id, "to": to, **_hold(details)}, sort_keys=True,
+                           separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _bank_freeze(case_id: str, details: dict[str, Any], approval: dict[str, Any] | None) -> str:
+    h = _hold(details)
+    stated = [f"Amount    : {BLANK} (officer to state)" if h["amount"] is None
+              else f"Amount    : up to INR {inr(float(h['amount']))}"]
+    ask = f"Please place a debit freeze, now, on account {h['account']} (IFSC {h['ifsc']}) up to the amount below"
+    lines = _freeze_header(f"The Nodal Officer, {h['bank']}", f"debit freeze on account {h['account']}", ask, approval)
+    # Beside the approval line: the sign-off covers these details only (freeze_requests.sign_off).
+    lines.insert(3, f"Details fingerprint: {fingerprint(case_id, BANK_FREEZE, details)[:16]} "
+                    "(a second officer's sign-off covers these exact details)")
+    lines += [f"Account   : {h['account']}", f"IFSC      : {h['ifsc']}", *stated,
+              *_wrap(f"Order     : {h['order']} (copy attached)", indent=""),
+              *_wrap(f"Source    : {h['source']}", indent=""), "",
               "Please confirm the hold and the balance held to the contact above.",
               *SIGN_OFF]
     return "\n".join(lines) + "\n"
@@ -203,7 +229,7 @@ def draft(case_id: str, result: dict[str, Any], to: str, details: dict[str, Any]
         raise NoticeError(f"Unknown notice '{to}'. Expected one of: {', '.join(NOTICES)}.")
     result = _cleaned(result)
     if to == BANK_FREEZE:
-        return _bank_freeze(details, approval)
+        return _bank_freeze(case_id, details, approval)
     if to == BANK_INFO:
         return _bank_info(case_id, result, details)
     return _telecom(case_id, result, details)

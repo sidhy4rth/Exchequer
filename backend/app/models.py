@@ -239,6 +239,9 @@ class FreezeRequest(Base):
     signed_off_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     signed_off_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     signed_off_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # A bank hold's details as put up for sign-off: their SHA-256 only, never
+    # the account number (notice_letters.fingerprint). A sign-off covers these.
+    details_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     __mapper_args__ = {"version_id_col": row_version}
 
@@ -350,6 +353,35 @@ class DomainLookup(Base):
     by: Mapped[str] = mapped_column(String(64))
     summary_json: Mapped[str] = mapped_column(Text, default="{}")
     records_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
+class CaseTask(Base):
+    """One thing still to be done in a case, who it is assigned to (a name), by
+    when, and what came of it (tasks.py, suite feature 6). Never deleted."""
+
+    __tablename__ = "case_tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    assignee: Mapped[str] = mapped_column(String(120), default="")
+    due_on: Mapped[str] = mapped_column(String(10), default="")  # YYYY-MM-DD, India's date, or "" for none
+    status: Mapped[str] = mapped_column(String(16))  # open | done | dropped
+    notes: Mapped[str] = mapped_column(Text, default="")
+    # The suggestion it came from (tasks.suggestions), e.g. "asset:<id>:order"; "" when typed by hand.
+    source: Mapped[str] = mapped_column(String(80), default="", server_default="")
+    created_at: Mapped[str] = mapped_column(String(32))
+    updated_at: Mapped[str] = mapped_column(String(32))
+    history_json: Mapped[str] = mapped_column(Text, default="[]")
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": row_version}
+    # One task per suggestion, open or closed (migration g7_tasks_2); any number typed by hand.
+    __table_args__ = (Index("uq_case_tasks_case_source", "case_id", "source", unique=True,
+                            postgresql_where=text("source <> ''"), sqlite_where=text("source <> ''")),)
 
 
 class Batch(Base):

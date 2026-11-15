@@ -1,0 +1,41 @@
+{
+  "_meta": {
+    "description": "Privacy-protocol contracts on Arbitrum One (Railgun, Aztec, Hinkal, Privacy Pools). Not a risk list: with the flag EXCHEQUER_PRIVACY_CATEGORY on, a trace that passes through one shows a note and walks on; it is never a risk hit and never a stop.",
+    "provenance": "Contracts the 11 Nov 2026 mixer hunt (#148) found in each protocol's own deployment list (Railgun-Community/shared-models network-config.ts, Hinkal's Smart Contract Addresses page, Privacy Pools' Deployments page, L2BEAT's discovery for Aztec Connect) or in explorer tags (dawsbot/eth-labels @d9b21ae), each checked on chain for contract code (keyless eth_getCode; TronGrid getcontract on Tron) on 11 Nov and re-checked 14 Nov 2026 with the same result. Filed apart from the threat files because no enforcement action names these protocols a mixer.",
+    "verification_note": "Each entry is a contract a privacy protocol's own deployment list or an explorer tag names as its shielded pool or entry point, with code on this chain. It says the funds passed through a privacy protocol, so their visible link ends there; it is NOT an accusation against the protocol, its users or anyone who dealt with them.",
+    "category_note": "'privacy' marks a privacy protocol's contract: a note beside the risk screening, never a risk hit, never a stop.",
+    "chain": "arbitrum",
+    "last_reviewed": "2026-11-14",
+    "counts": {
+      "privacy": 4
+    },
+    "regenerate_with": "Added by hand from the 11 Nov 2026 mixer hunt (#189); check each address's contract code on chain before adding another.",
+    "schema": "labels maps an address to {category, entity, label, source}"
+  },
+  "labels": {
+    "0x5ad95c537b002770a39dea342c4bb2b68b1497aa": {
+      "category": "privacy",
+      "entity": "Railgun",
+      "label": "Railgun: Relay Adapt contract (Initial deployment - Feb 2023 post v3.1), shield/unshield entry point (privacy protocol, shielded pool)",
+      "source": "Railgun shared-models network-config.ts @b37e643 (Railgun-Community/shared-models) <https://github.com/Railgun-Community/shared-models/blob/b37e643ef38e3df554deffa33f40530b20ce9065/src/models/network-config.ts>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 10515 bytes (sha256 26ce7e567280); re-checked 2026-11-14, unchanged."
+    },
+    "0x7cb60446d7635c68edf1c568cac74a1f98c1cfa4": {
+      "category": "privacy",
+      "entity": "Hinkal",
+      "label": "Hinkal: main Hinkal contract, the shielded pool (privacy protocol with compliance screening)",
+      "source": "Hinkal docs: Smart Contract Addresses page <https://hinkal-team.gitbook.io/hinkal/security-and-compliance/smart-contract-addresses>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 22454 bytes (sha256 0c1f24548f2c); re-checked 2026-11-14, unchanged."
+    },
+    "0xb4f2d77bd12c6b548ae398244d7fad4abce4d89b": {
+      "category": "privacy",
+      "entity": "Railgun",
+      "label": "Railgun: Relay Adapt contract (Upgrade Jul 2025), shield/unshield entry point (privacy protocol, shielded pool)",
+      "source": "Railgun shared-models network-config.ts @b37e643 (Railgun-Community/shared-models) <https://github.com/Railgun-Community/shared-models/blob/b37e643ef38e3df554deffa33f40530b20ce9065/src/models/network-config.ts>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 9617 bytes (sha256 94862eb5bff5); re-checked 2026-11-14, unchanged."
+    },
+    "0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9": {
+      "category": "privacy",
+      "entity": "Railgun",
+      "label": "Railgun: smart wallet proxy, the shielded pool contract (privacy protocol, shielded pool)",
+      "source": "Railgun shared-models network-config.ts @b37e643 (Railgun-Community/shared-models) <https://github.com/Railgun-Community/shared-models/blob/b37e643ef38e3df554deffa33f40530b20ce9065/src/models/network-config.ts>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 1644 bytes (sha256 c20ce330a889); re-checked 2026-11-14, unchanged."
+    }
+  }
+}

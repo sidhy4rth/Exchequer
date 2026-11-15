@@ -153,7 +153,9 @@ def draft_notice(case_id: str, body: NoticeDetails, user: CurrentUser) -> PlainT
     case = _case_or_404(case_id, user)
     details = body.model_dump(exclude={"to"})
     try:
-        signed = freeze_requests.approval(case_id, body.to, user) if freeze_requests.needs_signoff(body.to) else None
+        bound_to = notice_letters.fingerprint(case_id, body.to, details)  # a bank hold's approval covers these only
+        signed = (freeze_requests.approval(case_id, body.to, user, bound_to)
+                  if freeze_requests.needs_signoff(body.to) else None)
         text = notice_letters.draft(case_id, case.result, body.to, details, signed)
     except notice_letters.NoticeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
