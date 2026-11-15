@@ -59,6 +59,24 @@ export function amountText(amount) {
   return parts ? BigInt(parts[1]).toLocaleString('en-IN') + (parts[2] ?? '') : text
 }
 
+// The usual shape of an NCRP acknowledgement number, as a soft note only.
+// MHA "Standard Operating Procedure for (NCRP)-(CFCFRMS), Custody, Restoration
+// of Money and Grievance Redressal" 6.1(d) and 6.2(c): 14 digits starting with
+// "2" (portal) or "3" (1930 helpline). Read from a copy of the SOP a bank
+// publishes (PDF pages 12 and 13), the SOP the
+// Meghalaya High Court notified on 28.04.2026 (both links in
+// backend/app/ncrp.py: this file holds no outside address). It never refuses a number:
+// ncrpShape and the server keep taking 8 to 20 letters and digits, as older
+// or other numbers may not fit. The same rule is backend/app/ncrp.py and
+// frontend/src/ncrp.js.
+export const NCRP_NOTE = 'NCRP acknowledgement numbers are usually 14 digits starting with 2 or 3 — check the number.'
+
+/** NCRP_NOTE when `text` is given but is not the SOP's usual shape, else ''. Spaces and hyphens are ignored. */
+export function ncrpNote(text) {
+  const plain = String(text ?? '').replace(/[\s-]/g, '')
+  return plain === '' || /^[23][0-9]{13}$/.test(plain) ? '' : NCRP_NOTE
+}
+
 /** The NCRP number as the server reads it, or '' when it cannot be one. */
 export function ncrpShape(text) {
   const plain = text.replace(/[\s-]/g, '').toUpperCase()

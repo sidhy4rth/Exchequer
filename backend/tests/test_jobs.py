@@ -190,12 +190,81 @@ def test_the_owner_can_stop_a_running_job_and_its_slot_is_freed(client, monkeypa
     assert cases._running.acquire(blocking=False) and cases._running.acquire(blocking=False)
 
 
+def _deaf_job(client, monkeypatch, owner, go):
+    # A trace whose reads swallow a stop: it waits for `go`, then returns a
+    # result as if whole. Returns the job id and the list store_result was called with.
+    returned = threading.Event()
+
+    def deaf(request, seed_window=None, budget=None):
+        assert go.wait(3)
+        returned.set()
+        return {"address": request.address, "chain": "ethereum", "exchange": "Binance"}
+
+    saved = []
+    real_store = cases.store_result
+
+    def store_result(payload, *a, **k):
+        saved.append(payload)
+        return real_store(payload, *a, **k)
+
+    monkeypatch.setattr(pipeline, "run_trace", deaf)
+    monkeypatch.setattr(cases, "store_result", store_result)
+    job_id = client.post("/trace/jobs", json={"address": ADDR}, headers={ownership.OWNER_HEADER: owner}).json()["job_id"]
+    return job_id, saved, returned
+
+
+def test_a_stopped_job_whose_trace_still_returns_stores_nothing(client, monkeypatch):
+    owner = "o" * 32
+    go = threading.Event()
+    job_id, saved, returned = _deaf_job(client, monkeypatch, owner, go)
+    assert client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: owner}).json()["stopping"]
+    go.set()  # the trace ignores the stop and finishes
+    job = wait_done(client, job_id)
+    assert returned.is_set()
+    assert job["status"] == "failed" and job["error"]["status_code"] == 409
+    assert "stopped by the person who started it" in job["error"]["detail"]
+    assert job["case_id"] is None and "result" not in job
+    assert saved == []
+    assert client.get("/cases", headers={ownership.OWNER_HEADER: owner}).json()["cases"] == []
+    assert cases._running.acquire(blocking=False) and cases._running.acquire(blocking=False)
+
+
+def test_a_job_that_is_not_stopped_is_stored_as_before(client, monkeypatch):
+    owner = "o" * 32
+    go = threading.Event()
+    job_id, saved, _ = _deaf_job(client, monkeypatch, owner, go)
+    go.set()
+    job = wait_done(client, job_id)
+    assert job["status"] == "done" and job["error"] is None
+    assert job["result"]["exchange"] == "Binance" and len(saved) == 1
+    listed = client.get("/cases", headers={ownership.OWNER_HEADER: owner}).json()["cases"]
+    assert job["case_id"] in {c["case_id"] for c in listed}
+
+
 def test_someone_else_cannot_stop_your_job(client, monkeypatch):
     job_id = _slow_job(client, monkeypatch, "o" * 32)
     other = client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "x" * 32})
     assert other.status_code == 403
     assert client.delete(f"/trace/jobs/{job_id}").status_code == 403  # no owner key at all
     client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "o" * 32})
+
+
+def test_stopping_a_job_is_audited_by_its_id_only(client, monkeypatch):
+    from app import audit
+    recorded, real = [], audit.record
+
+    def record(event, *, case_id=None, detail=None):
+        real(event, case_id=case_id, detail=detail)  # a badly named event fails here
+        recorded.append((event, case_id, detail))
+    monkeypatch.setattr(audit, "record", record)
+    owner = "o" * 32
+    job_id = _slow_job(client, monkeypatch, owner)
+    assert client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: "x" * 32}).status_code == 403
+    assert not [r for r in recorded if r[0] == "case.trace_stopped"]  # a refused stop did nothing
+    assert client.delete(f"/trace/jobs/{job_id}", headers={ownership.OWNER_HEADER: owner}).status_code == 202
+    assert [r for r in recorded if r[0] == "case.trace_stopped"] == [
+        ("case.trace_stopped", None, {"job_id": job_id, "was_running": True})]
+    wait_done(client, job_id)
 
 
 def test_stopping_an_unknown_job_is_a_404(client):

@@ -315,3 +315,33 @@ and `docs/handoff/osint.md`.
 - With the flag off, the button goes, but earlier Telegram lookups are still
   listed with their identifiers (the list route and panel do not check the flag
   when showing a kept lookup).
+
+## `EXCHEQUER_SOP_SUMMARY`: a crypto summary for CFCFRMS (feature 8)
+
+**What it turns on.** On a stored case's Letters tab, a "Crypto summary for
+CFCFRMS" panel. The officer answers "Is this exchange on CFCFRMS?" (yes, no or
+not known), may type the NCRP number, and copies a plain-text summary in the
+SOP's para 9.4 terms. The summary covers the exchange reached, its address and
+how it was attributed, and the amounts and hashes, with the SOP paragraph
+quoted for that answer. It contacts nothing outside Exchequer. The answer is
+not stored. The NCRP number is filled in by the browser and never sent.
+
+**Merge first.** #218 → the server PR → the page PR (stacked). No migration.
+
+**Try it on the live site** (one test officer, on the test case):
+
+1. Confirm in `/health/detail` that `EXCHEQUER_SOP_SUMMARY` is on.
+2. On the test case's Letters tab, open the panel. Pick each answer in turn
+   and copy. "Yes" quotes SOP 9.4(ii), "No" quotes 9.4(iv), and "Not known"
+   quotes both.
+3. Check the exchange, address, label and hashes against the case report.
+4. Type a test number such as `51234567890123`. The unusual-shape note shows.
+   The copied text has the number; the server's requests do not (browser
+   developer tools, Network).
+5. Audit row: `case.sop_summary_copy` with only `{"on_cfcfrms": ...}`.
+6. With the flag off, the panel does not show and both routes answer 404.
+
+**Owner decisions still open** (handoff `docs/handoff/government-platforms.md`):
+the legal check on SOP holds under s.168 read with s.94 BNSS versus
+`notice_letters.py`'s Magistrate's-order rule (before any CFCFRMS notice
+draft), and a partner cyber cell to confirm the layout is useful.

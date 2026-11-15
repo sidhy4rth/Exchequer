@@ -108,6 +108,27 @@ def test_a_complaint_opens_with_what_the_citizen_sent(client):
     assert client.get("/complaints/NOPE").status_code == 404
 
 
+def test_a_complaint_notes_an_ncrp_number_of_an_unusual_shape_without_logging_it(client, recorded, caplog):
+    # The SOP's usual shape is 14 digits starting with 2 or 3 (app/ncrp.py);
+    # another shape gets a fixed note, never a refusal, and the number is in
+    # neither the note, the log nor the audit trail.
+    assert client.get("/complaints/EXQ-OLDER1").json()["ncrp_note"] is None
+    odd = "ABC12345"
+    with models.session() as s:
+        s.add(Complaint(id="c9", reference="EXQ-ODD999", ncrp=odd, status="received", details_json="{}",
+                        wallet_match=None, created_at="2026-11-04T05:00:00+00:00",
+                        updated_at="2026-11-04T05:00:00+00:00"))
+        s.commit()
+    with caplog.at_level(logging.DEBUG):
+        res = client.get("/complaints/EXQ-ODD999")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ncrp"] == odd
+    assert body["ncrp_note"] == "NCRP acknowledgement numbers are usually 14 digits starting with 2 or 3 — check the number."
+    assert odd not in body["ncrp_note"] and odd not in caplog.text
+    assert recorded and all(odd not in json.dumps(c) for c in recorded)
+
+
 def test_a_browser_opening_the_queue_gets_the_app_not_the_json(client, monkeypatch, tmp_path):
     index = tmp_path / "index.html"
     index.write_text("<!doctype html><title>app</title>")
