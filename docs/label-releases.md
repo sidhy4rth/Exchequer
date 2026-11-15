@@ -28,6 +28,11 @@ and every release goes through the same gates first.
    runs retyped in the file's note, `--record` keeps an earlier answer for any
    address the node did not answer, and rerunning on an unchanged file changes
    nothing.
+7. **Contract wallet roles:** `cd backend && python -m scripts.measure_contract_wallet_roles --check`
+   (offline) fails when a contract_wallet's `role` differs from what
+   `tests/fixtures/contract_wallet_roles.json` measured. A role changes what
+   deposit inference concludes, so set one only through that script's
+   `--record` and `--apply`, then run `scripts/check_demos.py`.
 
 ## Instant exchangers (category `instant_exchanger`, added 10 Nov 2026)
 

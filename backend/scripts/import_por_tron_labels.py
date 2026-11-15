@@ -83,7 +83,21 @@ class Source:
     # Rows marked SIGNED stand on the exchange's own evidence; a random sample
     # of them is still checked on chain, and one failure stops the source.
     self_evidenced: bool = False
+    # For a source read as an API answer, not a file: the request that returned it.
+    request: str | None = None
 
+
+# Bitget publishes its reserve wallets per audit through its proof-of-reserves page's
+# public API (no key, no login). The answer is JSON, read byte-for-byte as served; the
+# answers read are kept in tests/fixtures/bitget_por/ (an API answer to a POST has no
+# Internet Archive copy).
+BITGET_URL = "https://www.bitget.com/v1/bill/proof/assets/public/queryReserveWalletDetail"
+BITGET_PAGE = "https://www.bitget.com/promotion/proof-of-reserves"
+BITGET_KIND = "proof-of-reserves reserve wallet (Bitget does not mark hot or cold per address)"
+BITGET_STATEMENT = ("Bitget's proof-of-reserves page lists, per audit, the wallets it calls its reserve wallets; "
+                    "this is the page's own public API answer for audit {audit} (snapshot {snapshot} UTC), "
+                    "retrieved {retrieved} UTC. Rows read: chain 'Tron', address from the TronScan link "
+                    "Bitget gives for each wallet.")
 
 SOURCES: dict[str, Source] = {
     "por:bybit:2026-10": Source(
@@ -121,6 +135,21 @@ SOURCES: dict[str, Source] = {
         statement="KuCoin's blog post 'Transparency and Trust' (11 Nov 2022) shares 'an overview of our hot "
                   "and cold wallet addresses and their current holdings', snapshot 11/11/2022 07:00 UTC, "
                   "and says it does not represent all holdings."),
+    "por:bitget:2026-11": Source(
+        exchange="Bitget", parser="bitget_json", published="2026-11-12",
+        url=BITGET_URL, page=BITGET_PAGE, request='POST {"auditId": "Au2026111300"}',
+        kind=BITGET_KIND,
+        statement=BITGET_STATEMENT.format(audit="Au2026111300", snapshot="2026-11-12 16:00", retrieved="2026-11-15 12:39:12")),
+    "por:bitget:2026-10": Source(
+        exchange="Bitget", parser="bitget_json", published="2026-10-21",
+        url=BITGET_URL, page=BITGET_PAGE, request='POST {"auditId": "Au2026102112"}',
+        kind=BITGET_KIND,
+        statement=BITGET_STATEMENT.format(audit="Au2026102112", snapshot="2026-10-21 04:00", retrieved="2026-11-15 12:39:17")),
+    "por:bitget:2026-05": Source(
+        exchange="Bitget", parser="bitget_json", published="2026-05-20",
+        url=BITGET_URL, page=BITGET_PAGE, request='POST {"auditId": "Au2026052008"}',
+        kind=BITGET_KIND,
+        statement=BITGET_STATEMENT.format(audit="Au2026052008", snapshot="2026-05-20 00:00", retrieved="2026-11-15 12:39:50")),
     "por:okx:2026-11": Source(
         exchange="OKX", parser="okx_zip", published="2026-11-01", self_evidenced=True,
         url="https://www.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
@@ -194,7 +223,15 @@ def parse_okx_zip(data: bytes) -> Iterator[tuple[str, str]]:
                     yield from parse_okx_csv(io.TextIOWrapper(handle, encoding="utf-8-sig"))
 
 
-PARSERS = {"bybit_csv": parse_bybit_csv, "htx_csv": parse_htx_csv,
+def parse_bitget_json(data: bytes) -> Iterator[tuple[str, str]]:
+    """Tron wallets in Bitget's queryReserveWalletDetail answer: one entry per wallet and coin."""
+    for entry in json.loads(data.decode("utf-8")).get("data") or []:
+        if entry.get("chainName") == "Tron":
+            for address in TRONSCAN_LINK.findall(entry.get("walletUrl", "")):
+                yield address, entry.get("coinName", "")
+
+
+PARSERS = {"bybit_csv": parse_bybit_csv, "htx_csv": parse_htx_csv, "bitget_json": parse_bitget_json,
            "tronscan_links": parse_tronscan_links, "okx_zip": parse_okx_zip}
 
 
@@ -307,6 +344,8 @@ def main() -> int:
                 "statement": source.statement, "tron_addresses_listed": len(notes),
                 "added": 0, "corroborated": {}, "left_out": {},
             }
+            if source.request:
+                record["request"] = source.request
             if source.self_evidenced:
                 record["spot_check"] = spot_check(grid, notes, args.sample, record["sha256"])
                 print(f"{source_id}: on-chain spot check {record['spot_check']}")
