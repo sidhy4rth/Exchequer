@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import textwrap
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -185,6 +186,29 @@ def derived_kind(trace: dict[str, Any]) -> str:
     return LABELLED_DEPOSIT if deposit else EXCHANGE_WALLET
 
 
+def store_basis(trace: dict[str, Any]) -> dict[str, Any] | None:
+    """What the attribution stands on when the case's address came from a
+    label-store exchange row (ADR-0011, ADR-0012): `matches[].attribution_basis`
+    of the match the case names; None for every other match."""
+    address = trace.get("exchange_address")
+    match = next((m for m in trace.get("matches") or [] if m.get("address") == address), {})
+    basis = match.get("attribution_basis")
+    return basis if isinstance(basis, dict) and basis.get("source") else None
+
+
+def basis_lines(basis: dict[str, Any], exchange: str) -> list[str]:
+    """The basis in sentences, for the report's FINDING and the exchange letter."""
+    lines = [f"Listed by {exchange} in its own published address list: {basis['source']}."]
+    deposit = basis.get("deposit") or {}
+    if deposit:
+        into = f" ({deposit['sweeps_to_label']})" if deposit.get("sweeps_to_label") else ""
+        lines.append(f"Sent funds to {deposit.get('sweeps_to')}{into}, a wallet labelled as {exchange}'s, "
+                     f"in tx {deposit.get('sweep_tx')} (checked {deposit.get('checked_on')}): the pattern of "
+                     "an exchange sweeping a customer deposit address. This is an inference from public "
+                     f"records, which only {exchange} can confirm.")
+    return lines
+
+
 def _band_word(score: float | None) -> str:
     """'High', 'Moderate', 'Low' or 'Very low' for a score (R10): scoring.py's thresholds."""
     if score is None:
@@ -294,6 +318,8 @@ def build_report(case: Case, generated_at: str | None = None) -> dict[str, Any]:
             # Material funds also reached these exchanges (more than one: the
             # officer confirms which to write to; a request may be needed to each).
             "also_reached": also_reached(result),
+            # A label-store row's basis (ADR-0012): only when the case's address came from one.
+            **({"attribution_basis": store_basis(result)} if store_basis(result) else {}),
         },
         "confidence": {
             "score": result.get("confidence"),
@@ -887,9 +913,19 @@ def render_text_report(report: dict[str, Any]) -> str:
             add(f"Address label    : {_shown_label(attribution['exchange_wallet_label'])}")
         basis = ("a TronScan tag, not confirmed by the exchange" if attribution.get("kind") == EXPLORER_TAG
                  else "exact match against a published exchange label")
+        listed = attribution.get("attribution_basis")
+        if listed:  # a label-store exchange row (ADR-0011, ADR-0012)
+            basis = ("INFERRED from the exchange's own list and a sweep into it"
+                     if listed.get("deposit") else "the exchange's own published address list (PoR)")
         add("Basis            : "
             + ("INFERRED from the wallet's behaviour, not a label-file match"
-               if attribution.get("inferred") else basis))
+               if attribution.get("inferred") and not listed else basis))
+        for line in basis_lines(listed, attribution["exchange"]) if listed else []:
+            # Never a hash or URL split across lines: each must be copied whole.
+            for wrapped in textwrap.wrap(_shown_label(line), width=78, initial_indent=" " * 19,
+                                         subsequent_indent=" " * 19, break_long_words=False,
+                                         break_on_hyphens=False):
+                add(wrapped)
         if attribution.get("kind") in KIND_WORDING:
             add(KIND_LINE + KIND_WORDING[attribution["kind"]])
         if attribution.get("kind_note"):

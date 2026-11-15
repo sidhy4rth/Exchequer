@@ -485,6 +485,19 @@ def _match_directness(match: ExchangeMatch) -> ScoreComponent:
     the default depth, so against that particular wallet the two come out
     within a few hundredths of each other -- the report shows both.
     """
+    listed = (match.basis or {}).get("deposit")
+    if match.wallet_type == INFERRED_DEPOSIT and listed:
+        # A label-store deposit row (ADR-0012): an inference, made when the store was built.
+        return ScoreComponent(
+            "match_directness",
+            0.5,
+            WEIGHT_MATCH_DIRECTNESS,
+            f"Inferred, not labelled: {match.address} is on {match.exchange}'s own published "
+            f"address list, and is called a probable {match.exchange} deposit address because it "
+            f"sent funds to the labelled {match.exchange} wallet {listed.get('sweeps_to')} "
+            f"(tx {listed.get('sweep_tx')}, checked {listed.get('checked_on')}). Only "
+            f"{match.exchange} can confirm this.",
+        )
     if match.wallet_type == INFERRED_DEPOSIT:
         e = match.evidence or {}
         return ScoreComponent(

@@ -45,7 +45,8 @@ from .display_text import one_line, short
 from .exchange_matcher import firm_account
 from .label_rules import INSTANT_EXCHANGER
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
-                     _amount, _paid_at, _when, _when_iso, also_reached, also_reached_line, attribution_kind)
+                     _amount, _paid_at, _when, _when_iso, also_reached, also_reached_line, attribution_kind,
+                     basis_lines, store_basis)
 from .risk_matcher import _list_meta, is_tether_usdt_freeze
 
 EXCHANGE = "exchange"
@@ -475,7 +476,8 @@ def _claim(kind: str, trace: dict[str, Any], exchange: str) -> str:
         return (f"which TronScan, the Tron block explorer, tags as “{label}”.\n"
                 "   That tag is the explorer's: this office has not confirmed it. When it was read is\n"
                 "   recorded in the attached report's evidence manifest.")
-    source = f"(label: {label}; {_label_source(trace)})."
+    source = (f"(label: {label}; {exchange}'s own published address list, below)." if store_basis(trace)
+              else f"(label: {label}; {_label_source(trace)}).")
     if kind == LABELLED_DEPOSIT:
         return f"which is publicly labelled as a deposit address of {exchange}\n   {source}"
     firm = firm_account(label, exchange)
@@ -638,7 +640,12 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
         f"2. Public blockchain records show {moved}",
         f"   {address}, {_claim(kind, trace, exchange)}",
     ]
-    if kind == INFERRED_DEPOSIT:
+    listed = store_basis(trace)
+    if listed:  # a label-store exchange row (ADR-0011, ADR-0012): what the attribution stands on
+        lines += [wrapped for line in basis_lines(listed, exchange)
+                  for wrapped in textwrap.wrap(line, width=95, initial_indent="   ", subsequent_indent="   ",
+                                               break_long_words=False)]
+    elif kind == INFERRED_DEPOSIT:
         dep = next((m for m in trace.get("inferred_deposits") or [] if m.get("address") == address), {})
         ev = dep.get("evidence") or {}
         lines += [
