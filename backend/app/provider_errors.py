@@ -32,6 +32,19 @@ def public_reason(exc: BaseException) -> str:
     return "an unexpected error"
 
 
+def error_name(exc: BaseException) -> str:
+    """The class name to show for `exc` where one is shown (the warm-up's
+    status): a client out of retries raises its provider's
+    ProviderUnavailableError subclass, shown as the provider's own error
+    (EtherscanError, NoderealError, TronError) as it was before that subclass
+    existed. Anything else is its own name."""
+    if isinstance(exc, ProviderUnavailableError):
+        for cls in type(exc).__mro__[1:]:
+            if issubclass(cls, EtherscanError) and not issubclass(cls, ProviderUnavailableError):
+                return cls.__name__
+    return type(exc).__name__
+
+
 def failure_kind(exc: BaseException) -> str:
     """What kind of failure `exc` is, as a case records it (`prorata.read_failure`):
     "rate_limit" (the provider kept refusing), "no_answer" (server errors or no

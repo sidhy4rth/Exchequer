@@ -44,6 +44,7 @@ from .evidence import EvidenceLog
 from . import config
 from .etherscan_client import (
     _QUOTA_MESSAGES,
+    _RATE_LIMIT_MESSAGES,
     EtherscanError,
     ProviderQuotaError,
     ProviderResponseError,
@@ -321,10 +322,14 @@ class NoderealClient:
             if error:
                 # A JSON-RPC error is an object; a provider in trouble has sent a bare string.
                 message = str(error.get("message", error)) if isinstance(error, dict) else str(error)
-                # Rate limiting arrives as a JSON-RPC error, not an HTTP status.
+                # Rate limiting arrives as a JSON-RPC error, not an HTTP status
+                # ({"code": -32005, "message": "too many requests"}). Only a
+                # rate-limit message is retried and counted as a refusal: any
+                # other error that mentions a "limit" (a range or size limit)
+                # will not go away on a re-read.
                 if any(phrase in message.lower() for phrase in _QUOTA_MESSAGES):
                     raise NoderealQuotaError(f"NodeReal quota spent: {message}")
-                if "limit" in message.lower() or "too many" in message.lower():
+                if any(phrase in message.lower() for phrase in _RATE_LIMIT_MESSAGES):
                     last_error = NoderealError(f"NodeReal rate limit: {message}")
                     refused = True
                     self._pacer.penalize()
