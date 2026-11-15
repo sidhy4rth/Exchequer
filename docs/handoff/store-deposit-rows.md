@@ -5,7 +5,7 @@
 - **Branch**: `labels/deposit-rows-basis` (ADR + contract), then stacked: `labels/deposit-rows-store` (store + add script), `labels/deposit-rows-read` (matcher, scoring, report, letter)
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: three stacked PRs open for review; flag `EXCHEQUER_STORE_EXCHANGE_ROWS` stays off
+- **Status**: PRs 1 and 2 merged (#265, #266); PR 3 (#267) open for review; flag `EXCHEQUER_STORE_EXCHANGE_ROWS` stays off
 
 ## Done
 

@@ -907,7 +907,7 @@ TAINT_EXPANSION: bool = flag("EXCHEQUER_TAINT_EXPANSION",
 OSINT_LOOKUPS: bool = flag("EXCHEQUER_OSINT_LOOKUPS",
                            "Feature 4, OSINT slice 2: live RDAP and DNS lookups of a case's scam domains")
 PRIVACY_CATEGORY: bool = flag("EXCHEQUER_PRIVACY_CATEGORY",
-                              "#189: privacy protocols shown as a note, never a stop or a risk hit; awaits the owner")
+                              "#189: privacy protocols shown as a note, never a stop or a risk hit; on in production since 15 Nov")
 CASE_BUNDLE: bool = flag("EXCHEQUER_CASE_BUNDLE",
                          "Feature 6: one zip of a case's report, registers and audit trail, with a manifest")
 TRACE_CANCEL_ON_DISCONNECT: bool = flag(
@@ -931,3 +931,6 @@ SOP_SUMMARY: bool = flag("EXCHEQUER_SOP_SUMMARY",
                          "Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms")
 SOP_DEADLINES: bool = flag("EXCHEQUER_SOP_DEADLINES",
                            "Feature 8: MHA CFCFRMS SOP time limits, quoted, as reminders on bank holds in the asset register")
+FREEZE_WORDING_V2: bool = flag("EXCHEQUER_FREEZE_WORDING_V2",
+                               "Feature 7, #251: the bank-hold notice asks the bank to act on the Magistrate's order "
+                               "as it directs, not for a 'debit freeze'; awaits a lawyer (docs/legal)")
