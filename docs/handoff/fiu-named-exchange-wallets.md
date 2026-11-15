@@ -1,11 +1,11 @@
 # Handoff: fiu-named-exchange-wallets
 
 - **Feature**: a trace that ends in a wallet of an exchange FIU-IND acted against, but that had no wallet in the label files, now names that exchange, so the FIU-IND note (`EXCHEQUER_FIU_IND_NOTE`) can appear
-- **Issue**: #342
-- **Branch**: `data/fiu-exchange-wallets`
-- **Current**: nobody
+- **Issue**: #342 (batch 1), #354 (batch 2)
+- **Branch**: `data/fiu-exchange-wallets` (batch 1), `data/fiu-exchange-wallets-2` (batch 2, stacked on #343)
+- **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: batch 1 (BingX, LBank, XT.com, Phemex, Bitrue) in PR #343, ready for review
+- **Status**: batch 1 (BingX, LBank, XT.com, Phemex, Bitrue) in PR #343, ready for review; batch 2 in progress (#354)
 
 ## Done
 
