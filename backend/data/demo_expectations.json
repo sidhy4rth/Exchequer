@@ -27,15 +27,15 @@
  },
  {
   "demo": 3,
-  "address": "0x536c4921d1aafde6a5cda882fb5ca046f3601c65",
+  "address": "0x0067b43cb530e683dbffb43f5caacde867472721",
   "chain": "ethereum",
   "asset": "ETH",
   "max_depth": 3,
   "direction": "outgoing",
   "expect": {
-   "exchange": null,
+   "exchange": "HitBTC",
    "followed_exchange": null,
-   "confidence": null
+   "confidence": 0.6688
   },
   "volatile": true
  },

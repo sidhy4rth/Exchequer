@@ -375,7 +375,7 @@ describe('the verified examples\' hooks', () => {
   })
 
   it('give demos 03 and 11 the band their recordings now carry', () => {
-    expect(DEMOS.find((d) => d.n === '03').hook).toMatch(/low confidence/)
+    expect(DEMOS.find((d) => d.n === '03').hook).toMatch(/HitBTC.*moderate confidence/)
     expect(DEMOS.find((d) => d.n === '11').hook).toMatch(/Binance-Hot 7.*low confidence/)
   })
 })
