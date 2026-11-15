@@ -29,7 +29,7 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | On: set in the Render dashboard on 15 Nov and in `render.yaml` since #232 (owner approved on 14 Nov) |
 | `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
 | `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | On: set in the Render dashboard on 15 Nov and in `render.yaml` (owner approved on 15 Nov, after the flag-off Render-logs check; checked flag-on the same night; section below) |
-| `EXCHEQUER_JOB_STOP_UNWATCHED` | #302: stop a background trace job no page has watched for 120 s after its last progress stream closed; nothing saved | #303 (in review) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_JOB_STOP_UNWATCHED` | #302: stop a background trace job no page has watched for 120 s after its last progress stream closed; nothing saved | #303 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the store release `labels-2026-11-16` carries exchange rows (OKX 474,529 Tron; OKX Ethereum 162 own wallets and 4,938 deposit rows that state their basis, ADR-0012; Bitget 10 Ethereum). A sample suggests most of the OKX Tron rows are customer deposit addresses that sweep to OKX, yet they are still typed as OKX's own wallets, so it stays off until they are rebuilt as deposit and own-wallet rows (ADR-0012). Switching it on is its own PR, which also re-records demo 9 (five of its addresses are OKX rows) |
 | `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
@@ -669,7 +669,7 @@ same record a hung-up `POST /trace` gets), not `case.trace_stopped`.
   trace stops, and on waking the page shows the 409, as after a Stop.
 - Jobs live in one process's memory; the clock is a timer on its event loop.
 
-**Pull request.** #303 (in review when this was written). No migration. Off in `render.yaml`.
+**Pull request.** Merged in #303 (15 Nov, `039b917c`). No migration. Off in `render.yaml`.
 
 **Checks after switching it on** (the common steps above; one trace each).
 

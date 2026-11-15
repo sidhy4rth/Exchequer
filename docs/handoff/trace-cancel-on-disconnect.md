@@ -24,7 +24,7 @@
 ## Next
 
 1. Done 15 Nov: the Render-logs checks in `docs/flag-rollout.md` (flag off, `--http1.1` and `--http2`; then flag on, `--http2`), and the owner switched it on. HTTP/1.1 was not re-run with the flag on.
-2. Open: a background job whose tab was closed still runs to the end and saves a case (nothing sends DELETE on unload, and `job_events` only frees its stream). A possible design (stop a job once no progress stream or poll has watched it for a grace period, behind this flag) is not built.
+2. A background job whose tab was closed still runs to the end and saves a case while its own flag is off (nothing sends DELETE on unload, and `job_events` only frees its stream). The design (stop a job once no progress stream or status poll has watched it for a grace period; nothing saved) is built, in #302/#303 (merged 15 Nov), behind its own flag `EXCHEQUER_JOB_STOP_UNWATCHED` (off in `render.yaml`) with a 120 s grace (`JOB_UNWATCHED_GRACE_SECONDS`), not behind this flag. See its section in `docs/flag-rollout.md`.
 
 ## Measured on the live site (15 Nov 2026, flag off)
 
