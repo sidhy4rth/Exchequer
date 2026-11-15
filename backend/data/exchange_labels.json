@@ -366,7 +366,7 @@
         "0xfe908731af54c56dfd63948f18ce5878a3b8a1ad": "OKX PoR file rows: ETH (Non Staking)@ETH",
         "0xff8a035ea6c80673f741c2265985ed976a40d390": "OKX PoR file rows: ETH (Non Staking)@ETH, LINK (Non Staking)@ETH, OKB (Non Staking)@ETH, PEOPLE (Non Staking)@ETH, UNI (Non Staking)@ETH, USDG-ERC20 (Non Staking)@ETH, USDT-ERC20 (Non Staking)@ETH"
       },
-      "checks": "scripts/import_por_labels.py gather() with label store build label_store_2026-11-15 (build-r7): no conflict with any label file, demo, token list or store row; read_accounts() 15 Nov 2026 (ethereum-rpc.publicnode.com): none answers totalSupply() or getThreshold(); not on ~/exchequer-flagged/never_*.txt",
+      "checks": "scripts/import_por_labels.py gather() with label store build label_store_2026-11-15 (build-r7): no conflict with any label file, demo, token list or store row; read_accounts() 15 Nov 2026 (ethereum-rpc.publicnode.com): none answers totalSupply() or getThreshold(); not on the hunt's never-flag lists (kept with the label-store build, not in this repository)",
       "left_out": {
         "0x0003b5aa5e30e97fcc596bb5d0f3a75255e08d4e": "passes, but tests/test_por_labels.py names it as an OKX Ethereum row left to the label store; every dropped row that sweeps to it also sweeps to a wallet added here",
         "13 others": "the classification does not class them exchange_wallet (12 unclassified, 1 deposit_wallet): low-nonce addresses that look like deposit addresses themselves"
