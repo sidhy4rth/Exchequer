@@ -267,6 +267,43 @@ both out before the month ends. And GitHub pauses scheduled workflows in a
 repository with no activity for 60 days; Actions shows a button to turn the
 schedule back on.
 
+## Keeping the site awake
+
+`.github/workflows/keep-awake.yml` asks for `/health` every 14 minutes
+(`curl -fsS --max-time 60`, one retry), so Render's free instance never
+reaches 15 idle minutes and a visitor does not wait for the container to
+start. It needs no secret, gets a token with no permissions, and reads the
+address from the repository variable `SITE_URL` (falling back to
+`https://exchequer.co.in`). A run that is still going when the next starts is
+cancelled, so runs do not pile up.
+
+It is off until the owner switches it on:
+
+- **On:** Settings → Secrets and variables → Actions → Variables: the
+  repository variable `KEEP_AWAKE` = `on`
+  (`gh variable set KEEP_AWAKE --body on`). Actions → Keep awake → Run
+  workflow checks it once by hand; a run started by hand always runs.
+- **Off:** set `KEEP_AWAKE` to `off`, or delete the variable. Scheduled runs
+  are then skipped (grey), not failed.
+
+Before switching it on:
+
+- **Free hours.** An instance that never sleeps uses about 744 of the
+  workspace's 750 free instance hours a month (31 days x 24 hours). A second
+  free web service in the same Render workspace would run both out before
+  the month ends, and Render then suspends them until the next month. The
+  owner must confirm in the Render dashboard that this is the only free web
+  service in the workspace.
+- **Delays.** GitHub runs scheduled workflows on a best-effort basis: at busy
+  times a run can start several minutes late or be dropped, so the instance
+  can still fall asleep now and then. GitHub also pauses schedules in a
+  repository with no activity for 60 days.
+- **Not watch checks.** This only keeps the instance up. Watched addresses
+  are still checked only by `watch-cron.yml` (Scheduled watch checks), which
+  needs the `WATCH_CRON_TOKEN` secret. Once that job is on, it knocks on the
+  site every 15 minutes itself and keeps it nearly as awake, so the two
+  together cost no more hours than either alone.
+
 ## Backups
 
 The production store is Neon Postgres (`DATABASE_URL` on Render). Its
