@@ -8,13 +8,18 @@ records), and the limits you should know before you rely on it.
 Each section is marked:
 
 - **Live**: on the site today.
+- **Merged, switched off**: reviewed and merged, but its switch is off until
+  the team has tried it on the live site and turns it on
+  (`docs/flag-rollout.md`).
 - **Coming: behind a switch until reviewed**: built and in review. Once merged
   it stays switched off until the team has tried it and turns it on.
 - **Coming: in review**: built and in review, with no switch. It appears on
   the site once it is merged.
 
-Status is as of 14 November 2026. `docs/suite-features.md` tracks it for the
-team.
+Status is as of 15 November 2026. On that day the site ran the code merged up
+to the task list (#122); anything merged after it (the Tron proof-of-reserves
+labels, #221) reaches the site with the next deploy. `docs/suite-features.md`
+tracks status for the team.
 
 ## Rules that hold everywhere
 
@@ -49,6 +54,7 @@ team.
 7. [Look up a domain or Telegram username](#7-look-up-a-domain-or-telegram-username)
 8. [Keep seized crypto in a multisig wallet](#8-keep-seized-crypto-in-a-multisig-wallet)
 9. [Download the case bundle](#9-download-the-case-bundle)
+10. [Work alongside NCRP and CFCFRMS](#10-work-alongside-ncrp-and-cfcfrms)
 
 ---
 
@@ -68,7 +74,8 @@ cases; **Bulk intake** traces a CSV of complaints as one batch.
    them, one per line. Where tracing from a payment hash is switched off, the
    form says so and asks for the wallet instead.
 3. Add the NCRP acknowledgement number if you have it. It is never put in
-   links or logs.
+   links or logs. (Coming: a note when the number is not the usual shape; see
+   section 10.)
 4. Choose how far to follow, and the direction: **where the money went**, or
    **Trace who paid in** to find the addresses that funded it.
 5. Press **Start trace**. The Flow tab shows where the money went; the
@@ -96,6 +103,90 @@ listed in the report's evidence manifest), and the signed report.
   thereby clean; a foreign sanctions listing is a lead, not a finding.
 
 The full list is in the README's Limitations section and in every report.
+
+### What the lists behind a match now hold
+
+**Live** (merged 14 and 15 November):
+
+- **India exchanges** (#135): 168 wallets of WazirX, CoinDCX and CoinSwitch on
+  Ethereum, Polygon, BNB Smart Chain, Arbitrum and Tron. Each comes from an
+  explorer's public name tag or a wallet list the exchange published itself
+  (CoinSwitch's posts, WazirX's proof-of-reserves page as the Internet Archive
+  kept it), and each is listed with its source in `data/india_exchanges.json`.
+  There is still no public source for ZebPay, Bitbns, Giottus, Mudrex, Unocoin
+  or BuyUcoin wallets.
+- **Exchange labels cleaned** (#212): token contracts and infrastructure
+  addresses were removed, so a trace no longer "ends at an exchange" there.
+  Accounts a firm holds at an exchange are labelled as that exchange's, and the
+  letter names the firm as the account holder.
+- **Closed and closing exchanges** (#213): 16 exchanges that have closed or
+  announced a closing date, each with a cited source, read "(defunct)" or
+  "(winding down)" on their labels. Letters to them change (section 3).
+- **Lifted Tether freezes dropped** (#206): 28 Tron addresses Tether has since
+  released no longer read "Frozen by Tether". A freeze is treated as lifted
+  only when two public endpoints both say so.
+- **Sanctions, mixers and forfeitures** (#149): 21 more OFAC addresses (from
+  the SDN list of 13 November 2026), 93 Tron wallets under Israeli NBCTF orders
+  in force (each re-checked on the NBCTF site's own records), wallets named in
+  U.S. court forfeiture orders (each re-read in its notice), and 36 more mixer
+  pools and entry points. Polygon and Arbitrum now have their own lists.
+- **Tron exchange wallets from proof of reserves** (#221): 52 Tron wallets
+  that Binance, Bybit, HTX and KuCoin published as their own reserves. On main;
+  on the site after the next deploy.
+
+**Limits**
+
+- A proof-of-reserves list does not say whether a wallet is a hot wallet or a
+  customer's deposit address. These rows are the exchange's own wallets, so
+  the letter asks for the accounts behind the listed transactions only.
+- A freeze lifted after the last re-check (run by hand on 15 November; the
+  nightly refresh is off until the team turns it on) still reads as frozen.
+- 5 of the 16 closed exchanges rest only on exchange-listing sites, the
+  weakest source. Check the source the letter cites before relying on it.
+- A U.S. forfeiture order is filed as "seized": a foreign court's act, a lead
+  for your case, not a finding in it.
+
+### Privacy protocols on the route
+
+**Merged, switched off** (#149 stack; switch `EXCHEQUER_PRIVACY_CATEGORY`).
+
+When it is on, a trace that passes through Railgun, Aztec, Hinkal or Privacy
+Pools (27 contracts on 5 chains, each with its source) shows a grey note under
+the risk alert: "a note, not an accusation". The trace does not stop there and
+it is not counted as a risk hit. The maps mark the contract with a grey dotted
+ring, and the signed report adds a section "PRIVACY PROTOCOLS ON THE PATH (A
+NOTE, NOT AN ACCUSATION)". Letters never mention it. With the switch off,
+Privacy Pools stays a mixer and a trace stops there, as before.
+
+**Limits:** funds passing through a privacy protocol lose their visible link,
+so what leaves it is not shown on chain to be the same money. A government
+listing, freeze or theft tag on such a contract still stands as a risk hit.
+
+### Bybit and OKX wallets; OKX's full list
+
+**Coming: in review** (PR #226): Bybit's wallets on Ethereum (125), BNB Smart
+Chain (31), Polygon (13) and Arbitrum (24), and OKX's on Polygon (95) and
+Arbitrum (119), from each exchange's own proof-of-reserves file. Labels read
+"Bybit: Reserve Wallet N" or "OKX: Reserve Wallet N". An address another list
+already claims is left out, never overwritten.
+
+**Coming: behind a switch until reviewed** (PRs #223, #224; switch
+`EXCHEQUER_STORE_EXCHANGE_ROWS`): OKX lists far more wallets (474,530 on Tron,
+17,046 on Ethereum) than the label files can carry, so they go into the label
+store. A match from the store says what it rests on (its attribution basis).
+It also needs a new label store release before it does anything.
+
+### Stopping a trace
+
+**Live:** a trace that runs in the background shows **Stop this trace** while
+it runs. Today, a trace already finishing when you press it may still be saved
+as a case.
+
+**Coming: in review** (PRs #227, #228): a stopped trace is never saved, even
+if its last reads come back after you stopped it. Behind the switch
+`EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT`, a trace whose page was closed also
+stops at its next request to a provider, and nothing is saved. Trace again if
+you still need it.
 
 ---
 
@@ -189,7 +280,16 @@ need a stored case.
 customer behind a labelled deposit address; whether an inferred address is the
 exchange's, then the customer; for a wallet the exchange runs itself, the
 accounts behind the listed transactions only; for an explorer's tag, only
-whether the address is theirs.
+whether the address is theirs. Where the address is a firm's account at the
+exchange, the letter names that firm as the account holder.
+
+**A closed or closing exchange** (live, #213): for an exchange that has closed,
+the letter is addressed to "The administrator, liquidator or successor of" the
+exchange, with a blank for you to identify who now holds its records. Its note
+says the exchange "cannot answer this letter itself", gives the source, and
+says: "If no one does, do not send it." For an exchange that is closing, the
+note gives its closing date and asks you to send the letter before then and
+confirm the channel still answers.
 
 ### Notices to a bank or a phone company
 
@@ -203,6 +303,8 @@ whether the address is theirs.
    period, what is linked to it, login records) or **Urgent hold**. Enter the
    bank, account number, IFSC and where you got them. A hold needs the
    Magistrate's order (number, date, court); the draft is refused without it.
+   Courts differ on whether police may direct a bank to hold money without a
+   Magistrate's order; follow your unit's legal advice.
 3. Phone company: the operator, the number, where you got it, and the period.
 4. Press **Draft the letter**. Changing a detail asks for a fresh draft. An
    urgent hold needs a second officer's sign-off, as above.
@@ -211,10 +313,19 @@ whether the address is theirs.
 it. The account number, IFSC and phone number go into the letter and nowhere
 else: not the URL, not the audit trail, not the store.
 
-**Limits:** today a sign-off on a bank hold is tied to the case and the kind of
-letter, not to the account details. A fix that ties it to the exact details
-approved is in review (PR #133). Until it is merged, if any detail of a hold
-changes after sign-off, close that request and ask for a fresh sign-off.
+**A hold's sign-off covers the exact details approved** (live, #133). The
+second officer's sign-off is tied to the details the letter prints: bank,
+account, IFSC, amount, source and the Magistrate's order. The **Second
+officer** card shows the fingerprint it covers ("Approved for the details with
+fingerprint … only"). Typing differences the letter erases (spaces in the
+account, a lower-case IFSC, "2,50,000" for 250000) still match; any printed
+difference needs a fresh sign-off. A signed-off hold is marked as sent from
+the Letters tab, with its details, not from the Requests page. A hold signed
+off before this change shows as still awaiting approval: close that request
+and ask again.
+
+Only the fingerprint is kept with the request. The audit trail records the
+request, never the account number or any part of the fingerprint.
 
 ### A letter of request to a foreign country
 
@@ -276,7 +387,7 @@ countries names the country you typed.
 
 ### A task list per case
 
-**Coming: in review** (PRs #122, #123, #124).
+**Live** (#122, with #123 and #124).
 
 **Where:** the Evidence tab, a **Tasks** panel first among the registers, and a
 **Tasks due** card on the Console under the court deadlines.
@@ -297,7 +408,12 @@ countries names the country you typed.
 trail records which fields changed and the new status, never the text.
 
 **Limits:** suggestions come only from the records you can read. A task nobody
-recorded will not be suggested.
+recorded will not be suggested. Tasks are not yet in the case bundle
+(section 9).
+
+### SOP reminders on a bank hold
+
+**Coming: behind a switch until reviewed** (PR #230). See section 10.
 
 ---
 
@@ -512,8 +628,7 @@ legal advice; follow the court's order and your unit's instructions.
 
 ## 9. Download the case bundle
 
-**Coming: behind a switch until reviewed** (PRs #187, #190; switch
-`EXCHEQUER_CASE_BUNDLE`).
+**Merged, switched off** (#187, with #190; switch `EXCHEQUER_CASE_BUNDLE`).
 
 Until then, download the signed report from the Evidence tab (section 1).
 
@@ -535,13 +650,89 @@ holding the link is refused.
   about whether the records are right.
 - The manifest itself is not signed; the report is.
 - Certificate drafts are not included: they are drafts you complete.
-- Registers still in review (tasks, custody, statements, letters of request)
-  are added once they are merged.
+- Not yet in it: the task list (merged after the bundle), and the registers
+  still in review (custody, statements, letters of request).
+
+---
+
+## 10. Work alongside NCRP and CFCFRMS
+
+Exchequer has no access to NCRP, the 1930 helpline or CFCFRMS, and contacts
+none of them. These features help you prepare what you enter there yourself.
+The quotes come from the MHA's "SOP for NCRP-CFCFRMS, Custody, Restoration of
+Money & Grievance Redressal", read in a copy a bank publishes; the source is
+linked from each screen.
+
+### A note on an unusual NCRP number
+
+**Coming: in review** (PR #218).
+
+On New trace, the officers' complaint page and the citizen site, a number
+that is not the usual shape gets a note: "NCRP acknowledgement numbers are
+usually 14 digits starting with 2 or 3 — check the number." (SOP 6.1(d) and
+6.2(c): 2 for the portal, 3 for the 1930 helpline.) It is a note only: no
+number is refused or changed, since older complaints or other channels may use
+other formats.
+
+### A crypto summary for CFCFRMS
+
+**Coming: behind a switch until reviewed** (PRs #218, #219, #220; switch
+`EXCHEQUER_SOP_SUMMARY`).
+
+**Where:** a stored case's Letters tab, **Crypto summary for CFCFRMS**.
+
+**Steps**
+
+1. Answer "Is this exchange on CFCFRMS?": yes, no or not known.
+2. Type the NCRP acknowledgement number if you want it in the text (optional).
+3. Press **Copy the summary**, and enter or attach it on CFCFRMS yourself.
+
+**What it holds:** the exchange the trace reached, its address and how it was
+attributed, and the amounts and hashes, in the words of SOP para 9.4. "Yes"
+quotes 9.4(ii) (an onboarded exchange), "No" quotes 9.4(iv) (an exchange not
+onboarded), and "Not known" quotes both.
+
+**What it records:** one audit row with your answer (yes, no or not known)
+and nothing else. The answer is not stored with the case. The NCRP number is
+filled in by your browser and never sent to the server.
+
+**Limits**
+
+- It is not a CFCFRMS export and gives no legal advice. It never says that a
+  provision applies.
+- Exchequer holds no list of exchanges onboarded on CFCFRMS: the answer is
+  yours.
+
+### SOP reminders on a bank hold
+
+**Coming: behind a switch until reviewed** (PR #230; switch
+`EXCHEQUER_SOP_DEADLINES`).
+
+**Where:** the Letters tab, **Frozen and seized**: under a bank row that is
+still held, a folded list "SOP reminders, if this hold went through CFCFRMS".
+
+**What it shows:** five time limits from the SOP, each quoted word for word
+with its section, PDF page and a link to the source. Only the Annexure I
+90-day limit runs from a date the register holds (the date seized), so only it
+shows a date.
+
+**What it records:** nothing new. It adds no field to the register.
+
+**Limits**
+
+- Reminders only: the screen says "Not a deadline Exchequer enforces". Nothing
+  is refused or reordered, and the register's 45-day court deadline is
+  unchanged.
+- Bank holds only: the SOP sets no time limit for exchange or issuer holds.
+- The register does not record whether a hold went through CFCFRMS, so the
+  reminders show on every bank hold still held.
+- Courts cite other versions of the SOP (02.01.2026, 10.04.2026). Check a
+  quote against the version your unit follows.
 
 ---
 
 ## Not covered here
 
 Features not yet built or not described above: imports from government
-platforms (NCRP, CFCFRMS and others), IPDR, and an India exchange label set
-(in review, PR #135). See `docs/suite-features.md`.
+platforms (NCRP, CFCFRMS and others: Exchequer has no access to them), and
+IPDR. See `docs/suite-features.md`.
