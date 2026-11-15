@@ -465,7 +465,8 @@ def _part_one(facts: dict[str, Any], st: dict[str, ParagraphStyle], digest: str,
     privacy = facts.get("privacy") or []
     if privacy:
         story.append(_p("PRIVACY PROTOCOLS ON THE PATH · A NOTE, NOT AN ACCUSATION", st["micro"]))
-        story.append(_p("Funds passing through lose their visible link. The trace did not stop there; "
+        story.append(_p("Funds passing through lose their visible link. Being a privacy protocol never "
+                        "stops the trace (each note says whether the contract's payouts were followed); "
                         "this is not an accusation and counts toward nothing above.", st["small"]))
         for note in privacy[:4]:
             match = _MATCH.fullmatch(note)

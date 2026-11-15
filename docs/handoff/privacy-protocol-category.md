@@ -24,6 +24,11 @@
   gains `privacy_protocols` under the same rule. PDF page 1 shows a grey block drawn from that signed section
   (so /verify still redraws page 1 exactly); Part 2 is the signed text. Flag off, or no match: report bytes
   unchanged (tested, recorded demos included). Report format stays v2.3: the section is optional.
+- Fix (#278, 15 Nov): a keyless local trace into the Privacy Pools Entrypoint showed the note saying "The trace
+  did not stop here" while the limits said its payouts were not followed (graph_builder's service-contract rule).
+  The note now says so for a service-contract node (`RiskMatch.payouts_followed`, not in `to_dict`, so no contract
+  change), and the screen, text-report and PDF ledes say being a privacy protocol never stops the trace. Notes
+  already stored in cases keep their old wording.
 
 ## Decisions
 

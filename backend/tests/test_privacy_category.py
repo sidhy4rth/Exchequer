@@ -100,6 +100,24 @@ def test_flag_on_a_privacy_hit_sets_no_risk_tag_and_reads_as_a_note(flag_on):
     assert "2.5000 ETH" in note and "2 hops" in note
     assert "funds passing through lose their visible link" in note
     assert "The trace did not stop here" in note and "This is not an accusation" in note
+    assert "payouts were not followed" not in note  # a contract whose payouts the walk did follow
+
+
+def test_flag_on_a_privacy_pool_whose_payouts_were_not_followed_says_so(flag_on):
+    # A live trace (15 Nov) into the Privacy Pools Entrypoint: graph_builder's
+    # service-contract rule left its payouts unfollowed, and the note said
+    # "The trace did not stop here" beside a limit saying they were not followed.
+    matcher = get_risk_matcher("ethereum")
+    graph = nx.DiGraph()
+    graph.add_edge(W1, ENTRY, value_native=0.5)
+    graph.nodes[ENTRY].update(depth=1, is_service_contract=True)
+    [match] = matcher.annotate_privacy(graph)
+    assert match.payouts_followed is False and not match.is_terminal
+    assert "payouts_followed" not in match.to_dict()  # no change to the case contract
+    note = match.describe()
+    assert "The trace did not stop here" not in note
+    assert "Being a privacy protocol did not stop the trace here, but its payouts were not followed" in note
+    assert "This is not an accusation" in note
 
 
 @pytest.mark.parametrize("address", [POOL, ENTRY])

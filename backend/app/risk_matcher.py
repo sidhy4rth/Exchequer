@@ -243,6 +243,10 @@ class RiskMatch:
     # False for a store mixer row that is not a pinned pool or router
     # (label_store.pinned_mixers): shown, but the trace went on past it.
     terminal: bool | None = None
+    # A privacy match only: False when the walk did not follow the contract's
+    # payouts because it pays out to many addresses (graph_builder's service-
+    # contract rule), so the note must not say the trace went on past it.
+    payouts_followed: bool | None = None
 
     @property
     def is_terminal(self) -> bool:
@@ -378,11 +382,15 @@ class RiskMatch:
                 f"took part in it."
             )
         if self.category == PRIVACY:
+            walked = ("The trace did not stop here." if self.payouts_followed is not False else
+                      "Being a privacy protocol did not stop the trace here, but its payouts "
+                      "were not followed: it is a contract that pays out to many addresses, "
+                      "so no single payout can be tied to these funds.")
             return (
                 f"Privacy protocol: {self.address} is {named}, per {self.source}. "
                 f"{placement}. A privacy protocol: funds passing through lose their "
                 f"visible link, so what leaves it is not shown on chain to be the "
-                f"same money. The trace did not stop here. This is not an "
+                f"same money. {walked} This is not an "
                 f"accusation: no sanctions list or enforcement action names this "
                 f"protocol, and using it is not a finding against anyone."
             )
@@ -624,6 +632,7 @@ class RiskMatcher:
                 source=meta["source"], depth=data.get("depth", 0),
                 value_received_native=sum(edge.get("value_native", 0.0) for _, _, edge in edges),
                 origin=meta.get("origin"),
+                payouts_followed=False if data.get("is_service_contract") else None,
             ))
         matches.sort(key=lambda m: (m.depth, -m.value_received_native))
         return matches
