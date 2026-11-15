@@ -65,8 +65,8 @@ def transport(answer):
     return httpx.Client(transport=httpx.MockTransport(handle)), seen
 
 
-def tron(trc20=None, balance=None, data=True, status=200):
-    account = {"address": "41", "trc20": [{USDT_TRON: v} for v in ([trc20] if trc20 is not None else [])]}
+def tron(trc20=None, balance=None, data=True, status=200, **fields):
+    account = {"address": "41", "trc20": [{USDT_TRON: v} for v in ([trc20] if trc20 is not None else [])], **fields}
     if balance is not None:
         account["balance"] = balance
     client, seen = transport(lambda r: (status, {"data": [account] if data else [], "success": True, "meta": {}}))
@@ -134,6 +134,51 @@ def test_native_trx_is_read_in_sun_and_an_account_without_a_balance_field_holds_
     assert check(tron(balance=12_500_000))[0]["status"] == "match"
     [r] = check(tron())
     assert (r["status"], r["chain_amount"]) == ("mismatch", "0")
+
+
+def test_staked_trx_is_counted_with_the_free_balance_and_the_result_says_how_much():
+    held(amount="100", asset="TRX")
+    # Field names from TRON's account schema (developers.tron.network, get-account-info-by-address);
+    # the amounts are test values in sun.
+    client, seen = tron(balance=10_000_000, frozenV2=[{"amount": 50_000_000}, {"type": "ENERGY", "amount": 20_000_000},
+                                                      {"type": "TRON_POWER"}],
+                        unfrozenV2=[{"unfreeze_amount": 5_000_000, "unfreeze_expire_time": 1}],
+                        delegated_frozenV2_balance_for_bandwidth=10_000_000,
+                        account_resource={"delegated_frozenV2_balance_for_energy": 5_000_000,
+                                          "acquired_delegated_frozenV2_balance_for_energy": 999_000_000},
+                        acquired_delegated_frozenV2_balance_for_bandwidth=999_000_000)
+    [r] = check((client, seen))
+    assert (r["status"], r["chain_amount"], r["staked_amount"]) == ("match", "100", "90")
+    assert "90 TRX is staked, delegated or being unstaked" in r["reason"]  # stake others lent it is not its own
+    held(amount="1", asset="TRX")
+    [r] = check(tron(balance=1_000_000, frozen=[{"frozen_balance": 1_000_000, "expire_time": 1}],
+                     account_resource={"frozen_balance_for_energy": {"frozen_balance": 99_000_000}}))
+    assert (r["status"], r["chain_amount"], r["staked_amount"]) == ("match", "101", "100")  # Stake 1.0 too
+
+
+def test_usdt_on_tron_ignores_staked_trx_and_a_bad_stake_field_is_unreadable():
+    held()
+    [r] = check(tron(trc20="635000000", frozenV2=[{"amount": 50_000_000}]))
+    assert r["status"] == "match" and "staked_amount" not in r
+    held(amount="1", asset="TRX")
+    out = check(tron(trc20="635000000", balance=1_000_000, frozenV2=[{"amount": "lots"}]))
+    trx = next(x for x in out if x["asset"] == "TRX")
+    assert trx["status"] == "unchecked" and "not a whole-number balance" in trx["reason"]
+
+
+def test_a_register_amount_finer_than_the_asset_allows_is_said_plainly_not_called_a_mismatch():
+    held(amount="635.1234567")  # USDT on Tron has 6 decimal places
+    [r] = check(tron(trc20="635123456"))
+    assert r["status"] == "unchecked" and r["difference"] is None and r["chain_amount"] == "635.123456"
+    assert r["reason"].startswith("The recorded amount, 635.1234567 USDT, has more decimal places than USDT "
+                                  "allows (6), so no balance can equal it")
+    assert "Mismatch" not in r["reason"]
+
+
+def test_trailing_zeros_past_the_assets_decimals_are_not_extra_places():
+    held(amount="635.00000000")
+    [r] = check(tron(trc20="635000000"))
+    assert r["status"] == "match"
 
 
 def test_ethereum_native_and_usdt_are_read_through_etherscan_with_the_configured_decimals():
