@@ -1,7 +1,8 @@
 """Reading TronScan's public address tags during a Tron trace.
 
 Tron is where the evidence says Indian scam money moves, yet a fixed label file
-can only ever hold the wallets someone thought to import -- 41 of them. TronScan
+can only ever hold the wallets someone thought to import -- 68 of them at the
+4 Nov 2026 review (data/exchange_labels_tron.json). TronScan
 publishes a tag for far more addresses than that, and the tag is the explorer's
 own attribution, the same provenance the Tron label file already relies on. So
 a Tron trace can ask TronScan, for each wallet it reaches that no file names,
@@ -80,7 +81,7 @@ CANONICAL: dict[str, str] = {
     "bitget": "Bitget", "poloniex": "Poloniex", "kraken": "Kraken",
     "bitfinex": "Bitfinex", "coinbase": "Coinbase", "crypto": "Crypto.com",
     "cryptocom": "Crypto.com", "bitmart": "BitMart", "coindcx": "CoinDCX",
-    "wazirx": "WazirX", "zebpay": "ZebPay", "giottus": "Giottus",
+    "wazirx": "WazirX", "zebpay": "ZebPay", "giottus": "Giottus", "coinswitch": "CoinSwitch",
     "whitebit": "WhiteBIT", "bingx": "BingX", "lbank": "LBank", "hitbtc": "HitBTC",
     "upbit": "Upbit", "bithumb": "Bithumb", "coinex": "CoinEx", "xt": "XT.com",
     "phemex": "Phemex", "deepcoin": "Deepcoin", "bitstamp": "Bitstamp",

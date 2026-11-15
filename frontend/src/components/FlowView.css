@@ -1,0 +1,3 @@
+/* A privacy protocol's contract (flag EXCHEQUER_PRIVACY_CATEGORY): grey, with
+   a dotted halo beside the gambling dash. A note, not a risk hit (#189). */
+.flow .flow-node.role-privacy .halo { stroke: var(--text-2); stroke-dasharray: 0.6 1.6; }

@@ -6,18 +6,14 @@
   "chain": "tron",
   "last_reviewed": "2026-09-23",
   "counts": {
-   "frozen": 7562,
+   "frozen": 7534,
    "freeze_events": 8584,
    "release_events": 967,
-   "excluded": 27
+   "excluded": 55
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.import_tether_freezes",
   "schema": "labels maps an address to {category, entity, label, source}",
   "excluded": {
-   "TDk91SWz2GvwfZwMTGX21d4ngUUH8YZZAv": {
-    "why": "token contract",
-    "label": "USDT frozen by Tether on 2022-06-30"
-   },
    "TBgrbeMEsagESCSdih3nGKB9kMuaHQnhmU": {
     "why": "mixer pool",
     "label": "USDT frozen by Tether on 2021-02-01"
@@ -26,9 +22,25 @@
     "why": "token contract",
     "label": "USDT frozen by Tether on 2025-03-17"
    },
+   "TCfjHzdetvFQGXn5546GRLeVfV2iGrkmEd": {
+    "why": "lifted on 2026-10-23, tx ee1ad6f746378e8a38917fffd437fdd2f0e4c2b49b55e8aecd0704df69049977",
+    "label": "USDT frozen by Tether on 2026-07-06"
+   },
    "TCinTo9YBf1jsBiWuexazL1nYiDZa1r38x": {
     "why": "token contract",
     "label": "USDT frozen by Tether on 2022-12-22"
+   },
+   "TDLcRL3ExZPiCsBQbDcfppdsGCULY4Zh3Q": {
+    "why": "lifted on 2026-11-12, tx 094d2b9b4dd37bf621941524d2843557ea4b35a2dd6bca162bcf76cfe13b767c",
+    "label": "USDT frozen by Tether on 2026-01-29"
+   },
+   "TDk91SWz2GvwfZwMTGX21d4ngUUH8YZZAv": {
+    "why": "token contract",
+    "label": "USDT frozen by Tether on 2022-06-30"
+   },
+   "TDkvMXb9Vjq6NY9jucp77kc7DCrVCqMAZu": {
+    "why": "lifted on 2026-10-16, tx 9c10f8227ff6790e3803e9c4af4b7c51bf8987eaec084c1f60c2be7185783255",
+    "label": "USDT frozen by Tether on 2026-05-19"
    },
    "TDnxemZfPUWNtfAJY2RJBzH1EBkHWTZeiC": {
     "why": "multi-user contract",
@@ -38,9 +50,41 @@
     "why": "multi-user contract",
     "label": "USDT frozen by Tether on 2021-01-11"
    },
+   "TE5SntrSahUw9H1xKsamVqUMGotYfWnJsr": {
+    "why": "lifted on 2026-09-30, tx 044cd700c2dfc4a990f3449647fe01b323ee4ad5fab73c2b1a99e851aad23fa1",
+    "label": "USDT frozen by Tether on 2026-09-13"
+   },
+   "TEJbrZ4SwsKxyztPLkhfPkapHoPjyQ35eJ": {
+    "why": "lifted on 2026-11-06, tx 53147ec49eed219ea2c3689f8e1ef6f85b4f8e57512ef14f2cfd74178bc8422f",
+    "label": "USDT frozen by Tether on 2026-08-10"
+   },
+   "TENe3DWCHz35tpKidzSengythVUipgDBF6": {
+    "why": "lifted on 2026-11-06, tx a200808232a7dba5cb1d13c673594aaa0ca49759b28d1516d354a652401b5d04",
+    "label": "USDT frozen by Tether on 2026-08-07"
+   },
+   "TEcfJG8eeXHwxrid3Rq3iFdQPaPSmJxwj4": {
+    "why": "lifted on 2026-10-20, tx e6e6b0c6a11fb6a3d83d9bddac077e2cb788ce256c7389127ae0ed3689c1dffd",
+    "label": "USDT frozen by Tether on 2024-11-14"
+   },
    "TEkfR7frxVhxPQYUF1B81bBahAMefoC9b5": {
     "why": "token contract",
     "label": "USDT frozen by Tether on 2020-11-06"
+   },
+   "TFB5wGzo8T3oWW675Z1ZpQ7XMGggFGHoPC": {
+    "why": "lifted on 2026-09-25, tx b66af551c11e87c41568871fd92b8f0f953096d7929ac8afaf50d675e5ee306b",
+    "label": "USDT frozen by Tether on 2026-08-27"
+   },
+   "TFLqQn2YJkgJL63nN8mNiEwBLnWbSAPix6": {
+    "why": "lifted on 2026-11-06, tx 8fdf0a9a8003882a08a034a223214f668acd80475c146529392062ed59e87bde",
+    "label": "USDT frozen by Tether on 2026-08-10"
+   },
+   "TFaBenDV4zrAAvPQpW5gX95m3YkPSTwCzR": {
+    "why": "lifted on 2026-10-20, tx d5b9c25c1ce6189006ddb0dd6ad278e3d262201557eb804f7d632d1cb712210d",
+    "label": "USDT frozen by Tether on 2024-11-14"
+   },
+   "TFhtzyJm9pXhJXD6PU8bDU5J1uCSHWJZMA": {
+    "why": "lifted on 2026-11-06, tx f69a8451f180cfdc41b32a12e56b938dd290f85dfefb1cdd7d63d7afa46fb4f1",
+    "label": "USDT frozen by Tether on 2026-08-07"
    },
    "TFpqLdyzdSnfEGMrZR4d3R3gb5Nt2jDgmz": {
     "why": "token contract",
@@ -50,13 +94,37 @@
     "why": "token contract",
     "label": "USDT frozen by Tether on 2020-09-11"
    },
+   "THAenojAt5suSUgXxjXvRgUthD9b1Nke1B": {
+    "why": "lifted on 2026-10-22, tx d6d797a8f940e269bbc45411eb9608c1ee1e166d737c572d0ec1966eb45169f2",
+    "label": "USDT frozen by Tether on 2026-03-06"
+   },
+   "TJQ4rbmG3cwsR66xci2kaw12MayigAWFdg": {
+    "why": "lifted on 2026-11-09, tx 2fdde5a1c07fb6724eaf8f58b978d0919a75f5c641a6a3646a7db0227de0f79c",
+    "label": "USDT frozen by Tether on 2026-08-07"
+   },
+   "TLgmszPUhJimzVwEHG9cB2juTwy1NdPvQ1": {
+    "why": "lifted on 2026-10-20, tx 6ebeaeb7aaf7795f8bc5c4e2a28e7969b6572a18cb27d92514e4668abd9ce652",
+    "label": "USDT frozen by Tether on 2024-11-14"
+   },
+   "TLvmLspsvPDzuBiZNygYADRyWxrtixh3cn": {
+    "why": "lifted on 2026-10-20, tx b3b2e9577006efcbc56d9e85e4adbcbf719699be58e48dfc158478fcc3302823",
+    "label": "USDT frozen by Tether on 2024-11-14"
+   },
    "TM9797VRM66LyKXq2TbxP1sNmuQWBrsnYw": {
     "why": "multi-user contract",
     "label": "USDT frozen by Tether on 2020-09-15"
    },
+   "TMk5ji4vTGZG8E1RnKEYvaK6kgNobLSTtE": {
+    "why": "lifted on 2026-10-28, tx af48c0d23f9d6f90e4cc3b90a7065d8b1811311ea04134d99f4d920b20c29ef8",
+    "label": "USDT frozen by Tether on 2025-09-24"
+   },
    "TMx56BMVa9imVE1v4mr1FD8bavnyku3mTW": {
     "why": "multi-user contract",
     "label": "USDT frozen by Tether on 2020-09-11"
+   },
+   "TN4FeLtGNRdbvpjDg5ahTTTP1Unzr5yUiB": {
+    "why": "lifted on 2026-11-06, tx 6d4d6c286573d4e71e43507aba6b2a571e09939c251cc2d9c407886f8ce3a835",
+    "label": "USDT frozen by Tether on 2026-08-07"
    },
    "TNu2UgeDjPxr62CUfjh8poRvcf6EiJHjJs": {
     "why": "token contract",
@@ -66,6 +134,14 @@
     "why": "multi-user contract",
     "label": "USDT frozen by Tether on 2025-10-30"
    },
+   "TPW1urGCAiY5vKQ9VRFgkBXpSwf8AfvVRG": {
+    "why": "lifted on 2026-10-16, tx 244d98e30da0d04f214637a6e6baef45385f731ad88173926c03cac59ae303d9",
+    "label": "USDT frozen by Tether on 2026-05-19"
+   },
+   "TQ4RY7KiEPur2yFdHqvBtXKxGyKPcebfkN": {
+    "why": "lifted on 2026-11-06, tx d70b3788452cbc451bc3114ba4540851b92d4dfed24485417585dd9ec6e38656",
+    "label": "USDT frozen by Tether on 2026-08-10"
+   },
    "TQxWztAUSArGB9aA8rDGXG4j7gcAKUCHvQ": {
     "why": "NFT collection contract",
     "label": "USDT frozen by Tether on 2024-03-15"
@@ -73,6 +149,10 @@
    "TR1PpCdPXE79DKtLRBcBKiAQ9zP8Eg362t": {
     "why": "token contract",
     "label": "USDT frozen by Tether on 2021-06-07"
+   },
+   "TRQEGeryR96HThyU4aFDX3sPUxHEasCqwN": {
+    "why": "lifted on 2026-11-12, tx 8eaaf69f669749f4c0adc0e6bffa8d1e472f5e8fd4d444f0a4212e3ff24f7c12",
+    "label": "USDT frozen by Tether on 2026-04-27"
    },
    "TRdnF8wvK1rFHnhuQYjTkDPu9v3b6ib96a": {
     "why": "multi-user contract",
@@ -86,13 +166,29 @@
     "why": "multi-user contract",
     "label": "USDT frozen by Tether on 2021-01-11"
    },
+   "TSoXDMtBgwNMou5kqr3gfoAwqu5cBBApXb": {
+    "why": "lifted on 2026-10-22, tx 96e823d5499f692c82a997fdb8151b5a26288ecefb6b1c47d4f68ad2d9c8275a",
+    "label": "USDT frozen by Tether on 2026-06-25"
+   },
    "TT9hkd5KDcmx2MCwpeNS2XiXeUJfkDh8Qq": {
     "why": "token contract",
     "label": "USDT frozen by Tether on 2021-03-19"
    },
+   "TTX4oWgcoQ5HJjQ98k2poEgBPrMkLbJZ1c": {
+    "why": "lifted on 2026-10-16, tx 748ccdf6b2d6e2f727736f71e3545c3f2713f2e76cbd8fe37ea64cb8e14a3859",
+    "label": "USDT frozen by Tether on 2026-05-16"
+   },
    "TUZU2mHKXHjLvevu5ye88YK64CZfZEsJA1": {
     "why": "multi-user contract",
     "label": "USDT frozen by Tether on 2022-03-10"
+   },
+   "TUrnYdmKLS8hZna5EjskLRdirLo4HG1jAx": {
+    "why": "lifted on 2026-11-06, tx 44bf085759339201c0bb4dbbb0fc32a18baadfce41ae0b36ab955296f9b6f891",
+    "label": "USDT frozen by Tether on 2026-08-10"
+   },
+   "TV1ErMvnSFdGdhH6GNYZMj5trV5Z6QHBMJ": {
+    "why": "lifted on 2026-09-25, tx 91703a82c63de99af6151c4d0611b0ec40c40bb0a5d00cbd2b9b2c234b93c815",
+    "label": "USDT frozen by Tether on 2026-08-27"
    },
    "TVE2XCeDRqbLQQQhbcp6g6vit52zLgYzzT": {
     "why": "DEX pool",
@@ -110,6 +206,10 @@
     "why": "multi-user contract",
     "label": "USDT frozen by Tether on 2020-10-03"
    },
+   "TXPy8wuifdCQ8rc8VLVgiUqsVioJBELs8i": {
+    "why": "lifted on 2026-10-13, tx d698441c4c43a0fd7097ca1a411e6a283ccc833761ea68040d736a82631f9e86",
+    "label": "USDT frozen by Tether on 2026-05-29"
+   },
    "TXermUkr1fNdknCr7F9WBSNZDo6WxYFLjv": {
     "why": "token contract",
     "label": "USDT frozen by Tether on 2020-11-06"
@@ -121,9 +221,23 @@
    "TYeWBx8nkdCJRTsrtH57JYFddt5TXBZiVD": {
     "why": "token contract",
     "label": "USDT frozen by Tether on 2022-06-30"
+   },
+   "TZ5vGSUq39kzWxonrteLreyRhBqTYJk1dM": {
+    "why": "lifted on 2026-11-09, tx 3f24a1648eeb2cf703dad8727ac2b5e926c5a1ee6844aa3ff3ada60a70f361b9",
+    "label": "USDT frozen by Tether on 2026-08-07"
+   },
+   "TZ9ZSexQTiydf7T3fecmp7n498hBT9VPuZ": {
+    "why": "lifted on 2026-09-24, tx 86276726f967c672ac6f5c622e50fe4cb3f3185d779f1519a7c9bb13ec2823e6",
+    "label": "USDT frozen by Tether on 2026-01-14"
+   },
+   "TZGgQ1e4tFLQ1RnoyreXXUVkT7UKYtg7DC": {
+    "why": "lifted on 2026-11-09, tx 3cf93e623518ec5bcbfda69e97f66b44bb820bb8e2cdad98773af7d07e2fd7c9",
+    "label": "USDT frozen by Tether on 2025-01-23"
    }
   },
-  "excluded_note": "Frozen by Tether but left out: token contracts, DEX routers, burn addresses and the shared contracts in data/never_frozen.json (DEX pools, mixer contracts, token sales) are on many users' paths, not one party's wallet (app/never_flag.py)."
+  "excluded_note": "Frozen by Tether but left out: token contracts, DEX routers, burn addresses and the shared contracts in data/never_frozen.json (DEX pools, mixer contracts, token sales) are on many users' paths, not one party's wallet (app/never_flag.py).",
+  "lifts_rechecked": "2026-11-14",
+  "lift_note": "An entry whose why starts 'lifted' was frozen when the list was built and Tether has since released it: isBlackListed(address) answered false on two public endpoints (scripts/import_tether_freezes.py --recheck-lifts). It is no longer a freeze."
  },
  "labels": {
   "T9yGhjmHZCqiujMZX1DjYgRVRN36VxgR7u": {
@@ -5634,12 +5748,6 @@
    "label": "USDT frozen by Tether on 2026-09-21",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 482771c9df966a4e1c8d4aaa7bfd90ed3600dde3ebb1ce27fd28fe08ca3b7be6"
   },
-  "TCfjHzdetvFQGXn5546GRLeVfV2iGrkmEd": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-07-06",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 3bbb1e195c73cb5e62d65f84ff6b7a1e0d197aafa80004fd2b4aee909e0f5073"
-  },
   "TCfr5oZp8qJJwarum6kjt4o23wTNhi1ss8": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -6918,12 +7026,6 @@
    "label": "USDT frozen by Tether on 2026-09-09",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 3deb68c55a541ab21e33c379d0c375b6ab1f968d74664f6138bf10b53388510d"
   },
-  "TDLcRL3ExZPiCsBQbDcfppdsGCULY4Zh3Q": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-01-29",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 5ceb1e1e72dfb8bf89510a94c8765f64a4dc608efd6f9ef3c7b454633c169b39"
-  },
   "TDMN3remc5BzjzXUyxkdNmJ7VrjZJs6whB": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -7764,12 +7866,6 @@
    "label": "USDT frozen by Tether on 2025-01-16",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx b61c2c4ab49a72ca8be2b12247bd6c4c4f214d7050dea0b875f7541dda81737b"
   },
-  "TDkvMXb9Vjq6NY9jucp77kc7DCrVCqMAZu": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-05-19",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 167e7c8456caabbcd033f863127def5652d711cd2620d85439d1094636375203"
-  },
   "TDm8EPfvGWphgkWWa9kvQ6CHU3GER1gvNy": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -8370,12 +8466,6 @@
    "label": "USDT frozen by Tether on 2026-07-01",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 61e5cb347e483196044d9d348d83af368ea3d69dbf87a545df1d7940017cbc19"
   },
-  "TE5SntrSahUw9H1xKsamVqUMGotYfWnJsr": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-09-13",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 11621730de14371c9c59e0bab5612d21b8bf7d3e402f1e75bf5a9b18f66daa65"
-  },
   "TE5bqwBJbJ1zwF5zQavn4XhEJAt3a2MHZH": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -8808,12 +8898,6 @@
    "label": "USDT frozen by Tether on 2026-03-11",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx f47d3b14b859c406dbdce6a24082cb01be4e61ea26b05e2353c66179a4cdc59d"
   },
-  "TEJbrZ4SwsKxyztPLkhfPkapHoPjyQ35eJ": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-10",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx b41a92d8c2198eded38a273a1d902db208f9569850f7bf5896cd760f4c45efc0"
-  },
   "TEJc98phyWzSBQiWNiFq1diXXxowFHZvW2": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -8927,12 +9011,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-07-12",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx e908bd980b3df9b3c4352f1c2b3057a94894423884e7131fbd1544e3f26b6fd3"
-  },
-  "TENe3DWCHz35tpKidzSengythVUipgDBF6": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-07",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx d9734cbcd9639cec9c3f7fbf7a41eed9f1e3e54800b45c5b3e46e8aa55ba8caf"
   },
   "TENjm9Zyn4McrqQmLzhMvNNX6oFj85tAoW": {
    "category": "frozen",
@@ -9341,12 +9419,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-09-01",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx b33a0683fc3894aeb7a0be4b3b0a60ad5612f66826c0731e1374cf0085a3f153"
-  },
-  "TEcfJG8eeXHwxrid3Rq3iFdQPaPSmJxwj4": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-11-14",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 4a7cde06e42ee2ccd61f910f1a82a440eefde2056200cd667b19f4b7e2c9e4e7"
   },
   "TEcfu1bdP6yGfzCW98ruTjKpJmVNbsd3ar": {
    "category": "frozen",
@@ -10362,12 +10434,6 @@
    "label": "USDT frozen by Tether on 2025-07-24",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx b698bf8c8117fbda6af26504e593db3f08dc9e81e8f52ea23ced57eec814d858"
   },
-  "TFB5wGzo8T3oWW675Z1ZpQ7XMGggFGHoPC": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-27",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 564a3cea1daf656e1bb6e70089308209138ace2abdad902dea6d1c996ec150a7"
-  },
   "TFBmQceiPDgV6xPu9YYYYUDhWybr4VGSbf": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -10655,12 +10721,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-07-09",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx b5ded3ca6baae9dc0636953ee670c19d0215944140c379c4dc8ef1039b39e557"
-  },
-  "TFLqQn2YJkgJL63nN8mNiEwBLnWbSAPix6": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-10",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 34f2a20d51adec5404c308176bf5ed2a81e229adda05e0d898880229c10b83c3"
   },
   "TFLrNMnjW8Kp9HWMstZdtYSpxRZcborGK2": {
    "category": "frozen",
@@ -11160,12 +11220,6 @@
    "label": "USDT frozen by Tether on 2025-07-07",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx f80a5243ec70eed191c384d799f320cbe8157bdd2cb8b85334524d3488b6521c"
   },
-  "TFaBenDV4zrAAvPQpW5gX95m3YkPSTwCzR": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-11-14",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx e53f642abc06a7c56436254886e1400989761343a403854ef426e49d96488d04"
-  },
   "TFaDxYsVjCV1vsmXuK75hjtsZQrHD4MYnA": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -11501,12 +11555,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-07-12",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx e8f9e541e07bfc539a820e6af803f724027a9446efa9a9073e8111ebf7465b03"
-  },
-  "TFhtzyJm9pXhJXD6PU8bDU5J1uCSHWJZMA": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-07",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 688d1a54c3cd49ff299ea1cede7c951ff65ddaf7262dcc5568d9617a1faf08ce"
   },
   "TFhwzuTRQUHMzogRPTNH892pvqC3AFk2Ci": {
    "category": "frozen",
@@ -14490,12 +14538,6 @@
    "label": "USDT frozen by Tether on 2025-07-28",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 6d546690d89e98c63b3a25e707ee2b1557f2d581fe33c7d94eee939c8239f127"
   },
-  "THAenojAt5suSUgXxjXvRgUthD9b1Nke1B": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-03-06",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 3242aa2186cf03c7dbb5e3ab45e5707e9446d2eaca1c12dff745c3e356673dc7"
-  },
   "THApHyyemD1zw9sodvX9514gsAMpCF8xp2": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -16961,12 +17003,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-04-16",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 1f3a9988270f8ee3fa9b43c359f5ea3d54022998b5b61527ba035e9ddf490f22"
-  },
-  "TJQ4rbmG3cwsR66xci2kaw12MayigAWFdg": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-07",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 5aa38c6c7e031c462de884ceb6ac736f8e54a49f5415404338064702330ab561"
   },
   "TJQD4Q5XJLncjUR2RfC9XoUKMdJMiDMwsH": {
    "category": "frozen",
@@ -21174,12 +21210,6 @@
    "label": "USDT frozen by Tether on 2026-01-15",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 0b90dd58959a11d0690e2830a704e55cd3e98d2d9c50dcc0cdad1b8e4273086e"
   },
-  "TLgmszPUhJimzVwEHG9cB2juTwy1NdPvQ1": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-11-14",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx d4b19ea3de4e021cd27253b9b22b048e1bb6ac39926fd3423a02db7576be4bab"
-  },
   "TLgvdqH5mGRsqrR7U7sqZhE23SBHop7BCs": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -21695,12 +21725,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-06-17",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 03977cf2bbaf3475ead3c9ffd7288731028d588316ce8907ee98c05109d6320d"
-  },
-  "TLvmLspsvPDzuBiZNygYADRyWxrtixh3cn": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2024-11-14",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx d216e1a30f7ddbbceaa8a1ecf6adfcc6184196912f212e5fd4aaa2f21f5e3159"
   },
   "TLvuvpfBKdxddxSsJefeiGCe9eVY8HUroE": {
    "category": "frozen",
@@ -23232,12 +23256,6 @@
    "label": "USDT frozen by Tether on 2025-07-12",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx ffffb8dd0af7e416da49155d597f73014aebdec55ccb057e049f89e4deaeabcf"
   },
-  "TMk5ji4vTGZG8E1RnKEYvaK6kgNobLSTtE": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-09-24",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 6ce15fedfac5c5417db184593872d495b8d168c27663a57a27360c9837da3af4"
-  },
   "TMk7amDXHxL8jTN8LDJEeK1uZt4dzG7d4g": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -23831,12 +23849,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-07-12",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 49e7cd4d1877827f2bd84de27fd5ac1eac4bed6edd4031720f055878a7fa212f"
-  },
-  "TN4FeLtGNRdbvpjDg5ahTTTP1Unzr5yUiB": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-07",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 3d03f42e6cd7cda72cc59d1db2236d57369f8ad0d4b0decfe53bff4d98310ff0"
   },
   "TN4hS3YJNE5iPn7sToHcyBDqqNx64Gk7UA": {
    "category": "frozen",
@@ -26490,12 +26502,6 @@
    "label": "USDT frozen by Tether on 2026-06-10",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx a972fcc84187104da9d8cb6fdec1d8cb9bb84545a659c8fd73d66cd8c502c22d"
   },
-  "TPW1urGCAiY5vKQ9VRFgkBXpSwf8AfvVRG": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-05-19",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx ef2638b440498437d9fab763ece9a09e8cbdd847f5a60ff5bb0c78cbb303c1b2"
-  },
   "TPWKoS52QYVKe8oWy3PoTxm4YiMdhJhLTi": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -27551,12 +27557,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2024-04-09",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 9201e20daa8474ade86c7150ae2616a5e177bb30c19542d2fa7463e49f5cd900"
-  },
-  "TQ4RY7KiEPur2yFdHqvBtXKxGyKPcebfkN": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-10",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 5e7156ed23aeb7364c1497e95e5e62ee279613ac940cf206e96312d51357e034"
   },
   "TQ4fzGLT1jpzSfFwSydDob7eMj5BizAx65": {
    "category": "frozen",
@@ -30144,12 +30144,6 @@
    "label": "USDT frozen by Tether on 2025-07-07",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx d3e4e6dfcd648e919f9b7ca8b0c469375d64bd4ddb71f309e37ff85376fede77"
   },
-  "TRQEGeryR96HThyU4aFDX3sPUxHEasCqwN": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-04-27",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 7ef17bf41616fd1e4379c617364b145095e61b30f31c08b8c07ed9029126e31b"
-  },
   "TRQdC6XUPKf8Gwj6xUndzM3zHPU8zYyTVd": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -32652,12 +32646,6 @@
    "label": "USDT frozen by Tether on 2025-09-23",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 9c4a1f94740b020b9c6fb325c43f578635c58b0d6e0f9a045a188ba2cb999e6a"
   },
-  "TSoXDMtBgwNMou5kqr3gfoAwqu5cBBApXb": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-06-25",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 045857c1ad82f94db4bf0b109ca09678bfff0bdde73c148dcdf96836a75c597f"
-  },
   "TSoYmFSnCugv3cvx2PuU61x7Xmt5fsEPmi": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -34085,12 +34073,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-07-12",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 7044e5887eb84c2c098b42b32052a51d2f3418232244bd1ea0dbfaa82ba282b2"
-  },
-  "TTX4oWgcoQ5HJjQ98k2poEgBPrMkLbJZ1c": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-05-16",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 71fe410df0e53f2e186273fcf05e0b1491f125b3ee169a4182c216915d30552a"
   },
   "TTX9KYL2tCcroitDtDGke7hifcx8Q7NLvR": {
    "category": "frozen",
@@ -36780,12 +36762,6 @@
    "label": "USDT frozen by Tether on 2025-03-10",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx b2ef2b50f48e59afa0d2c43e4303a0a253b22d9d014afecf5bf250248ecfe9ea"
   },
-  "TUrnYdmKLS8hZna5EjskLRdirLo4HG1jAx": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-10",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 7f00a7647d96b4ee21218bc6e715469029f377a4e4c97cbe481cc544aededffc"
-  },
   "TUrpg6ejbik8z52kprK3sR3FbtJiFfedp6": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -37133,12 +37109,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2026-01-05",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 769f76e881201be0c43541312fa68a838dd3546004dbb0731f64e45ad7570ba8"
-  },
-  "TV1ErMvnSFdGdhH6GNYZMj5trV5Z6QHBMJ": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-27",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx f0952a9698a3409cd1ae7ea58739cc95403544f6757722b0065cf6a07a240669"
   },
   "TV1G6ccvxDR9DMw3EjhahxHKmBi7pmykT1": {
    "category": "frozen",
@@ -41826,12 +41796,6 @@
    "label": "USDT frozen by Tether on 2025-07-12",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx a46f3eadc1019ceb19d7513aedbeb3d14a624b1401ec174d1165d2be418a3472"
   },
-  "TXPy8wuifdCQ8rc8VLVgiUqsVioJBELs8i": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-05-29",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx d4aa7d53d395c16ba5cc164c58fc28fb74ee8fa3c547dd4f1dade841ae97fef1"
-  },
   "TXQ1gvmDQUZvXxFSCun6EcvPxF7a8mKxfv": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -45078,12 +45042,6 @@
    "label": "USDT frozen by Tether on 2024-10-26",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 03bcc82d81fb2a9a2bede028c68674dcad2980f5c2fde4ecd47dcf9cde3f101e"
   },
-  "TZ5vGSUq39kzWxonrteLreyRhBqTYJk1dM": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-08-07",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 7c86e0ab51058eb0442e74b4c53e6c2ebf433703e49e3ae0ee53f79c38f0059a"
-  },
   "TZ66MwVWsHcUSqjURva5ZmSp1QkrDKteYg": {
    "category": "frozen",
    "entity": "Tether (USDT freeze)",
@@ -45197,12 +45155,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-07-12",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 057bb9737776c68c2cceaefa9a0c0cac12959ad7c6eaf70efb382573cab44f80"
-  },
-  "TZ9ZSexQTiydf7T3fecmp7n498hBT9VPuZ": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2026-01-14",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx dec5e7f17bfc673ae0876cf787b63f35031c6f19ab19e7e8e98df431fed212fd"
   },
   "TZ9o7pRjuYtqmMTL4JpEhvWs3eYQgAAg6U": {
    "category": "frozen",
@@ -45425,12 +45377,6 @@
    "entity": "Tether (USDT freeze)",
    "label": "USDT frozen by Tether on 2025-08-14",
    "source": "Tether USDT contract on Tron, AddedBlackList event, tx 1342b67d0700d4993fac0f4e8d1e597663a7c6b925b434649e6450358e432036"
-  },
-  "TZGgQ1e4tFLQ1RnoyreXXUVkT7UKYtg7DC": {
-   "category": "frozen",
-   "entity": "Tether (USDT freeze)",
-   "label": "USDT frozen by Tether on 2025-01-23",
-   "source": "Tether USDT contract on Tron, AddedBlackList event, tx 5aa7eeeeee26f312776847dd0624ebe52772796cc4994dc42f945dd88f74d124"
   },
   "TZGjNsUPZEpRynihyETkHENUXHGGnxyUh3": {
    "category": "frozen",

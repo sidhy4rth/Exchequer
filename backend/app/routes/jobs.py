@@ -4,7 +4,8 @@
     GET  /trace/jobs/{id}            status, progress and, when done, the result
     GET  /trace/jobs/{id}/events     the same as server-sent events, live
 
-A job id works like a case id: whoever holds it can watch it. The finished
+A job id works like a case id: whoever holds it can watch it. A job stopped
+with DELETE stores nothing, even if its trace returns after the stop. The finished
 case is stored with the starting browser's owner key, as POST /trace does,
 and its complaint particulars go only to that browser (case_privacy.py).
 """
@@ -45,6 +46,12 @@ def _run_job(job: jobs.Job, request: TraceRequest, owner: str | None, slot: str 
     try:
         with api_budget.using(job.budget):
             payload = pipeline.run_trace(request)
+        if job.budget is not None and job.budget.cancelled:
+            # It returned, but after a stop: a read refused by the stop may have
+            # been skipped by a stage that went on without it (a block's date, a
+            # tag), so the result cannot be taken as whole and is never stored.
+            # It ends as a stop that raised does (POST /trace's hang-up rule).
+            raise api_budget.Cancelled()
         jobs.store.report(job, {"stage": "saving"})
         # From here the trace is done and its provider calls are spent: a
         # failure to store or audit it is a warning on the result, never "failed".

@@ -7,6 +7,7 @@ import WatchPanel from '../WatchPanel'
 import { ist } from './format'
 import { addressOf, assetOf, blanks, checks, kindOf, lines, recipientOf } from './letterChecks'
 import NoticeForm from './NoticeForm'
+import LetterOfRequestPanel from './LetterOfRequestPanel'
 import AssetsPanel from './AssetsPanel'
 import './Letters.css'
 
@@ -145,6 +146,8 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   const held = Boolean(caseId) && urgent && !row?.signoff && !sent
   // Said before anyone presses Ask: a letter no unit's officer could sign would wait for good.
   const cannotAsk = row ? row.ask_reason : askReason
+  // A bank hold is put up and signed off for the details typed beside it, and only those (freeze_requests.py).
+  const hold = to === 'bank-freeze' ? { details: details.bank } : {}
 
   function pick(next) {
     if (next === to && failed[to] !== undefined) redraft(to)
@@ -162,15 +165,15 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   }
   /** Move this letter's row on to `next` (`from` the statuses it may leave),
    * or log it at `next`: read afresh, since the log may have changed. */
-  async function moveTo(next, from) {
+  async function moveTo(next, from, extra = {}) {
     const fresh = rowOf(await loadRequests())
     if (fresh?.mine === false) return false
-    if (fresh && from.includes(fresh.status)) await updateRequest(fresh.request_id, { status: next })
+    if (fresh && from.includes(fresh.status)) await updateRequest(fresh.request_id, { status: next, ...extra })
     else if (!fresh) {
       await logRequest({
         case_id: caseId, recipient: recipientFor(letter), kind: kindOf(to),
         address: addressOf(letter, result),
-        asset: assetOf(to, result), status: next,
+        asset: assetOf(to, result), status: next, ...extra,
       })
     }
     return true
@@ -187,7 +190,8 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
     if (sent) return
     if (held) { setSaid({ tone: 'status', text: 'A second officer must sign this letter off before it can be marked as sent.' }); return }
     try {
-      if (!(await moveTo('sent', ['drafted', 'ready']))) {
+      // A bank hold goes out only with the details it was signed off for (freeze_requests.py).
+      if (!(await moveTo('sent', ['drafted', 'ready'], hold))) {
         setSaid({ tone: 'status', text: 'The officer who drafted this letter logs it as sent.' })
         return
       }
@@ -198,7 +202,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   }
   async function askSignoff() {
     try {
-      await moveTo('awaiting_signoff', ['drafted'])
+      await moveTo('awaiting_signoff', ['drafted'], hold)
       await done("Asked for a second officer's sign-off.", true)
     } catch (e) {
       setSaid({ tone: 'alert', text: `The sign-off could not be asked for: ${e.message}` })
@@ -206,7 +210,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
   }
   async function signOff() {
     try {
-      await signOffRequest(row.request_id)
+      await signOffRequest(row.request_id, hold.details)
       await done('Signed off. The letter is ready to send.', true)
     } catch (e) {
       setSaid({ tone: 'alert', text: `It could not be signed off: ${e.message}` })
@@ -296,6 +300,12 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
                     : status === 'awaiting_signoff' ? "Awaiting a second officer's approval."
                       : 'A second officer of your unit must approve this urgent letter before it is ready to send.'}
                 </p>
+                {row?.fingerprint && hold.details && (
+                  <p className="note">
+                    {row.signoff ? 'Approved' : 'Put up'} for the details with fingerprint <code>{row.fingerprint}</code> only.
+                    The letter prints its own: if they differ, its details need a fresh sign-off.
+                  </p>
+                )}
                 {!caseId ? <p className="note">A recorded example cannot be signed off: Trace live stores it as a case.</p>
                   : status === 'awaiting_signoff' ? (row.can_sign_off
                     ? <button type="button" className="lt-sign" onClick={signOff}>Sign off</button>
@@ -333,6 +343,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
       {caseId ? <>
         <RequestsPanel key={logged} result={result} onChange={() => loadRequests()?.catch(() => {})} />
         <AssetsPanel key={requests.map((r) => r.status).join()} result={result} />
+        <LetterOfRequestPanel result={result} offered={letters?.some((l) => l.to === 'exchange' || l.to === 'instant')} onLogged={() => setLogged((n) => n + 1)} />
         <WatchPanel result={result} extra={watch} />
       </> : (
         <p className="card note case-note">

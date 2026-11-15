@@ -11,7 +11,56 @@
    "brianleect": 1
   },
   "regenerate_with": "cd backend && .venv/bin/python -m scripts.port_evm_labels",
-  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json."
+  "audit_2026_11_05": "5 Nov 2026 security audit: removed labels that name a router, a DEX, another company's treasury or a contract deployer rather than a cash-out wallet (an exchange match ends a trace). OKX DEX Router 2 and 4 moved to router_labels.json.",
+  "exchange_status": {
+   "source": "data/exchange_status.json, applied by scripts/mark_exchange_status.py",
+   "labels": {
+    "AscendEX": 1,
+    "BitMEX": 1,
+    "FTX": 2,
+    "Hotbit": 7
+   }
+  },
+  "india_exchanges": "4 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, or a wallet list the exchange published itself) and what was left out and why.",
+  "por_2026_11_15": {
+   "rule": "scripts/import_por_labels.py: each exchange's own proof-of-reserves wallet list (a first-party source, accepted by the owner 15 Nov 2026); a conflict with any other file, a demo or the label store is left out, never overwritten; a token contract or an address with no activity on this chain is left out",
+   "sources": {
+    "Bybit": {
+     "url": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+     "archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+     "page": "https://www.bybit.com/en/proof-of-reserve",
+     "source_date": "2026-10-27",
+     "retrieved": "2026-11-14",
+     "sha256": "9dd0b4cf4c5bc547b1eb6e85b43c549df45f8174c2d7630f7c46f5c5ddb51c68",
+     "snapshot_heights": {
+      "ethereum": 26282105,
+      "bsc": 130037645,
+      "polygon": 96250259,
+      "arbitrum": 518656879
+     },
+     "note": "October 2026 file (Last-Modified 27 Oct 2026); the November file was not yet published on 14 Nov. The archived copy is byte-identical (same SHA-256)."
+    },
+    "OKX": {
+     "url": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+     "archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+     "page": "https://www.okx.com/proof-of-reserves/download",
+     "page_archive": "https://web.archive.org/web/20261114212506/https://www.okx.com/en-us/proof-of-reserves/download",
+     "source_date": "2026-11-01",
+     "retrieved": "2026-11-14",
+     "sha256": "93095583a31e2c3f23a7c2061b8b6a00302a212704e96db2ae061446553367a6",
+     "snapshot_heights": {
+      "ethereum": "26313625-26313797",
+      "polygon": 96504628,
+      "arbitrum": 520033704
+     },
+     "note": "November 2026 file (okx_por_2026110100_V1.csv inside; Last-Modified 1 Nov 2026), the latest on the download page on 14 Nov. Each row carries OKX's signature of 'I am an OKX address'; the signatures were not verified here. OKX lists no BNB Smart Chain wallets. Rows typed other than 'Non Staking' (staking positions) are not read."
+    }
+   },
+   "added": {
+    "Bybit": 24,
+    "OKX": 119
+   }
+  }
  },
  "labels": {
   "0x0363bfc09b48616190d15ddee5987ae2d05da6f4": {
@@ -61,7 +110,7 @@
   },
   "0x274f3c32c90517975e29dfc209a23f315c1e5fc7": {
    "exchange": "Hotbit",
-   "label": "Hotbit 1",
+   "label": "Hotbit 1 (defunct)",
    "type": "hot_wallet"
   },
   "0x2864de013415b6c2c7a96333183b20f0f9cc7532": {
@@ -86,7 +135,7 @@
   },
   "0x3701f04e25b57e549a2a348c18e2d925c2805602": {
    "exchange": "FTX",
-   "label": "FTX 12",
+   "label": "FTX 12 (defunct)",
    "type": "exchange_wallet"
   },
   "0x3727cfcbd85390bb11b3ff421878123adb866be8": {
@@ -146,12 +195,12 @@
   },
   "0x4a41d76b0524a3989998380c033f12bfeb5f7201": {
    "exchange": "Hotbit",
-   "label": "Hotbit 13",
+   "label": "Hotbit 13 (defunct)",
    "type": "hot_wallet"
   },
   "0x4b1a99467a284cc690e3237bc69105956816f762": {
    "exchange": "AscendEX",
-   "label": "AscendEX 2",
+   "label": "AscendEX 2 (defunct)",
    "type": "exchange_wallet"
   },
   "0x4d24eececb86041f47bca41265319e9f06ae2fcb": {
@@ -171,7 +220,7 @@
   },
   "0x562680a4dc50ed2f14d75bf31f494cfe0b8d10a1": {
    "exchange": "Hotbit",
-   "label": "Hotbit 9",
+   "label": "Hotbit 9 (defunct)",
    "type": "hot_wallet"
   },
   "0x563537412ad5d49faa7fa442b9193b8238d98c3c": {
@@ -226,7 +275,7 @@
   },
   "0x768f2a7ccdfde9ebdfd5cea8b635dd590cb3a3f1": {
    "exchange": "Hotbit",
-   "label": "Hotbit 11",
+   "label": "Hotbit 11 (defunct)",
    "type": "hot_wallet"
   },
   "0x77134cbc06cb00b66f4c7e623d5fdbf6777635ec": {
@@ -261,7 +310,7 @@
   },
   "0x8533a0bd9310eb63e7cc8e1116c18a3d67b1976a": {
    "exchange": "Hotbit",
-   "label": "Hotbit 8",
+   "label": "Hotbit 8 (defunct)",
    "type": "hot_wallet"
   },
   "0x8550e644d74536f1df38b17d5f69aa1bfe28ae86": {
@@ -316,7 +365,7 @@
   },
   "0x9ade1c17d25246c405604344f89e8f23f8c1c632": {
    "exchange": "FTX",
-   "label": "FTX 6",
+   "label": "FTX 6 (defunct)",
    "type": "exchange_wallet"
   },
   "0x9b0c45d46d386cedd98873168c36efd0dcba8d46": {
@@ -341,7 +390,7 @@
   },
   "0xa986266b60390e1d313ecd3b2311a9af74c57400": {
    "exchange": "Hotbit",
-   "label": "Hotbit 12",
+   "label": "Hotbit 12 (defunct)",
    "type": "hot_wallet"
   },
   "0xa9bd318a4ca1747e6068d100e18711b529386e29": {
@@ -411,7 +460,7 @@
   },
   "0xc7029e939075f48fa2d5953381660c7d01570171": {
    "exchange": "Hotbit",
-   "label": "Hotbit 14",
+   "label": "Hotbit 14 (defunct)",
    "type": "hot_wallet"
   },
   "0xc882b111a75c0c657fc507c04fbfcd2cc984f071": {
@@ -526,13 +575,1463 @@
   },
   "0xfb8131c260749c7835a08ccbdb64728de432858e": {
    "exchange": "BitMEX",
-   "label": "BitMEX 2",
+   "label": "BitMEX 2 (defunct)",
    "type": "exchange_wallet"
   },
   "0xffb3118124cdaebd9095fa9a479895042018cac2": {
    "exchange": "MEXC",
    "label": "MEXC 9",
    "type": "exchange_wallet"
+  },
+  "0x46d950798cecf8cfc52f07a19c310987311c454f": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ARBITRUM/ARB wallet",
+   "type": "exchange_wallet"
+  },
+  "0x628d6380a28b8d9ae7516597fa625934185bfed4": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ARBITRUM/RDNT wallet",
+   "type": "exchange_wallet"
+  },
+  "0x012eed0ee2b9d098e6383630584d02e0958d481a": {
+   "exchange": "CoinSwitch",
+   "label": "CoinSwitch: ARBITRUM wallet",
+   "type": "exchange_wallet"
+  },
+  "0x32a4eadbf619d6996eb70b9c0bf79f61441fe9ad": {
+   "exchange": "WazirX",
+   "label": "WazirX: ARB wallet 1",
+   "type": "contract_wallet"
+  },
+  "0x18673311fec54ac2244a602e6d91845553d24e62": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 10",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x1c3944173abee256456b1498299fc501ad5bbd6f": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 13",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x3dedec283546862d78e7f0707215954e166907bd": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 33",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x588846213a30fd36244e0ae0ebb2374516da836c": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 49",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x5a22c49ea09a2995aa1ad15fa6953b9c4109f439": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 50",
+   "type": "contract_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x6bd869be16359f9e26f0608a50497f6ef122ee3e": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 59",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x6fa5b6d93e2539caea358518d3fe8f75418e5a1d": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 62",
+   "type": "contract_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x7da0b9211020d3775b18116fe751c555b9a7058c": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 73",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x83d8b993ff9795aee4abe8597c1925b50b30d5be": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 78",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x88a1493366d48225fc3cefbdae9ebb23e323ade3": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 82",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x8c062ffcd87a1c5f7638b8cf18da5495c390c2cf": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 84",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x93228d328c9c74c2bfe9f97638bbb5ef322f2bd5": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 90",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x9814ba501c7ad64bed5ac731d0a4f9a506e18f8a": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 92",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x9d271a4e9523d74572b618ec10419a0a330e1bf0": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 94",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x9db812a1b55ac6fdbd1d52e628324e2fd2dbb560": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 95",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xa0acdf9fa38b293f0bbdd01ca6bf3e7ed8291dd4": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 96",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xa7a93fd0a276fc1c0197a5b5623ed117786eed06": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 100",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xbaed383ede0e5d9d72430661f3285daa77e9439f": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 110",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xbedf525201f58984182d2ad607a343ac8a2e54a2": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 112",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xd07e6ab4b75b3da5a96b5e81064a65fc04f98814": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 125",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xd4d2e6ebca6c94dd28a0935ae468012fdda5d35a": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 126",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xeb9af6505bdfd2b64848a21ed02f8ccab9144f5d": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 131",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xee5b5b923ffce93a870b3104b7ca09c3db80047a": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 133",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0xf440139a62b2b939699c5b3e09f88e40464ab9bc": {
+   "exchange": "Bybit",
+   "label": "Bybit: Reserve Wallet 139",
+   "type": "exchange_wallet",
+   "source_kind": "Bybit proof-of-reserves wallet ('Proof of Funds' file; no hot or cold role given)",
+   "source": "https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_archive": "https://web.archive.org/web/20261114212455/https://api2.bybit.com/common-static/por/bybit_por_202610.csv",
+   "source_date": "2026-10-27",
+   "retrieved": "2026-11-14"
+  },
+  "0x03426aacbcf9030a380b3ba4a1f16b968649ef3d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 5",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x04e9d79a17f4894c76c65c52516f790531ef6bee": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 8",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x085673a0fe2d1440112225d2ce433434216b80c3": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 9",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x0938c63109801ee4243a487ab84dffa2bba4589e": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 10",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x11efcc0b689d6cbd217899479305c0d7f8a3655c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 14",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x126d0c3f792b99ec831990c5ef23badda9c95f5e": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 15",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x13be4b56a8f3d5f000eb2be700de7e385cf52587": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 16",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x172883abff9ba6a49d7355b0984a0e7bf82cd147": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 18",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x17de8c47489a8cf34a0cc6676565fa5f443528c5": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 19",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x1b151dd63b464add0fba6e1df1d9a057d7032149": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 21",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x1cb2fbeb90da13f19df98cd197e8d5f7018a04e0": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 24",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x1cdf5ba7297f276bf0320c88ca948d4311c913ce": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 25",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x1d22bd71ac3ef6f35e34715a1414f71e3252d319": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 26",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x1d397b0afa588d1b5adcdca54ebeb28b82f00a31": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 27",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x1d6ca1b7825c2895990fee5bf7a43a9173b10b2e": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 28",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x229b1c70124141ec96945aec2323a22b68bb093c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 30",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x27b6ebda5e3158ff89ab0e55463c7b43cca3b039": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 32",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x299ab41d456e587fae98d4dbdd3b47c26ce890ab": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 33",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x2dc529b1111bdef630a188afd43139f41c25fac0": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 34",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x31768ac0c067b8b837a742b87d3fe8f775ea2100": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 36",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x34bba0d0a1d0cab16ef6be267465efe5c4df201a": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 38",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x35a0083ae4e52f1d2509f1898cb2fbc3a4fd052d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 39",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x35dfb44511bda4c5625a9543bf4988a4fff80719": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 40",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x3e8c0d3cf96b69c245b14923758dc8a2db8621ec": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 46",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x3ee8863d3345f96ddda022eda4fdb58c32d519e8": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 47",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x4568253bcf6e71bb4e2dd33c6d21652071a0820c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 50",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x470b6ae22f17e5feb6b6d6fbab9229730bcc2cf1": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 52",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x4a1ca3e90e9e3a00eb27e9f409b4db310aa7405f": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 55",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x4c51b920f03b8692520d9c0bb1645fb8f0ccf12d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 58",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x52e232da865d81dd7417fc372f96778bf9373d34": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 61",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x53f5ce98eb7555ad5326005334c74140f1bcfed0": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 62",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x5530942407be0c15ac3dad71b5326984c4631144": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 63",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x582988097ef9f2cf50cfac3f5f3b1ed54bc52a88": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 67",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x595a657c7a8b6ad1ada09b0095e71307a3e6e26c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 68",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x5ad6d46d925e238fcd2f9d466e0f1f6ac59ced7b": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 69",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x5ca1063894e5bbd688830d83fefa5ce3d339744d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 71",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x5e973b6ed38a2d2c3e14f1329837233ba47a9198": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 72",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x62f062a9cc39f23d91177334ec6ec0a2721ea7fb": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 76",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x65a1f26453d752fc423afdf4bf78f1fc21d81dab": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 78",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x70b6443b25127af586e7757fa95a5fe65a235ca8": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 84",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x7232ce85622b290bd0a0f09218b61c220b4a92e4": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 85",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x7265748a7eae8763dcf3411a0b629ce291348a8e": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 86",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x77a9b3fa8387652128ca5a9e4756e9e88dac3634": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 88",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x7af418e5651a1f4258c7eb8abb73c02bd05fda5d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 92",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x7cfb1543e6dec0dadd2435f23b97e08d682b6241": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 96",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x7cfc90f86e6695c191a0edc3505f59c20fe1f3c1": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 97",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x7fa19087a1290a1e36c1f8a4a80778ea25dee63d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 99",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x80e99e5b3e5438ce36217f0cdba1546f5b1a2ef3": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 101",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x84714ac1a08d11fc9383ef8d4d406d43ffe80363": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 104",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x8749596ce1288d518589bf1aef43150386a6769c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 105",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x88288100c2005c5ce9b06956bed357f3ccc95b9e": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 106",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x8a895fe30b73907c8c6d1efc89a27b7b34131f9b": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 107",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x8c1cf2d3480c5cbde6194413e8bdb411ca0d7407": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 109",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x8e1cfb5b23554a515fbd925181cae19bc08539e4": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 111",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x908ea000c00425aae42ffa6cf08dbab80f0ee0fe": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 113",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x946c1043f86ebc7eee771fbe9600e31ffd2632e0": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 114",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x94a8a0fc880caa891e4c635b2a8fda0a78e97f7a": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 115",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x95b855be94ba78ea9e7ba568e1b564f49c70d1b8": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 116",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x9b65692dc3fde3bf331156afda771f147ff0d460": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 120",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0x9d587dd67f8f8746ccac1eacb34eff9975231fb2": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 124",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xa0c9b4ce1785953abdceae569789aa158a01da4c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 125",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xa1ffea07ba9f2997ccde687fdf6ac1924a466a2c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 126",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xa92a1f0684911316fc8e8b0e64dea76beaf7130d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 130",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xaaba3b3be26430760c5a284bc0d101097217ae8c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 132",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xab56ce2fd4939339fe0d2c3e46ad2f8712cc496a": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 133",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xace6249b58029e55bf3c5b8dd32095f448f22af3": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 137",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xafee421482faea92292ed3ffe29371742542ad72": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 139",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xb0473ca01e91981623b65daf84ab7bc94a7e4000": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 140",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xb0f3b242b5273b4705a31576e2ffcd7bdec8aaff": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 141",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xb24472398170408edcb3b5cd30dc0b17c7eb4816": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 143",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xb2746ef5c9021def18a7568a56380eef6041eca6": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 144",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xb37172818580416a8d4db0ae793a144cfe43b9c0": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 145",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xb4086efea4058a144a4231af112a6311f4f6d25b": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 146",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xb8b70cf4edd49aa6c7212286917bcefb42da01c3": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 149",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xbb3c6d28def21b6297016622a57a0b05015e3ad2": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 151",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xbe9ac2d59743d69c4054bab09fa9821929d0f31b": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 152",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xbedfc76292386f2751bbc335087cf3bf571ff989": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 153",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xbf94f0ac752c739f623c463b5210a7fb2cbb420b": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 155",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xc0e400824044f8b660596f073abc8b31bdaba047": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 156",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xc14bd267f715bfa41cc33c16b0836e38c1ec0442": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 157",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xc31907f59603a8512748a80415bf62c1978ebdb7": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 158",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xc3520b4a68f7fd5e0832e90187a8fad3d7d3c880": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 159",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xc496e5e40f18035d6f8e805f1e5595657d7dca9f": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 160",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xc706f61c9b7eba61fd7170f191fce16e79c7f314": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 161",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xc83d31b0eaa032da12056f90da27635ede10b2ba": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 165",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xca4815761f16f826211213c429c393e179354e3b": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 166",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xcd276ebdf62d8867b7c9a31e81af11a159bb4a3d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 167",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xcd75adb65431c5a697bd17b02a5969f27e8d5575": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 168",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xcf67640fd0716eb9c0d18c32214a36b8d8a2abaf": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 169",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xd353943193d87dc97c099ca456afd6a1e73b9411": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 173",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xd864d3e3b0c8938f7088cbc2ac83e89e05952b3e": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 175",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xd8a3ed83a59d3e10d82a4b845d64b24ba0572baf": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 176",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xd953e4717c4aa75b08052645379cec64d539ea5a": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 178",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xd9eb8ddaed166d9ec9c8e46bbd4bff2d39ff1eb2": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 179",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xdac67ce88f012005233733a4bd2b1b32a4f484c8": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 180",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xddbe5633c49ebb4efa44d0a7009d0e98c11f5215": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 181",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xdddce28b1f7b0544eee9f8dd167ce6f72bc60403": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 182",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xe0cf244d013e2fd8aac4aeb95002e74fd0abaa6c": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 184",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xe22ad79ac9eac9b8258f02188a9d444e47377292": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 185",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xe30752866cb320f17565a06def871d8447fa8268": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 186",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xe7c5e276b2434743f6c79365d967cbe4291477bc": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 188",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xe8c3f674bbf27674243c46e27b8340b2188d3811": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 190",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xec62bdea852d9404e20f53f0070853490c1e64bd": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 191",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xecbdebb62d636808a3e9418307c585b14127393d": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 192",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xed226a5c88ff01cf83450ae2310ec0681186c6ed": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 194",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xed55e0d547fd2fa53aa64f587b21a9caa9e2d90f": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 195",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xee7976324503d5bf5fa7a0daa94fa884f485ad07": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 197",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xef0737a3adc5da0735f37a7d634d3e529153ab2e": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 199",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xef841a37fd3b261bed24545788a696c46475ef78": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 201",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xf117596518c7c4784bc092e1078325736cb349c6": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 203",
+   "type": "contract_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xf1d885f9579e211db28fbc1df31859fe16137eee": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 204",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xf1e7b58ccd200fcb9400ddbc30867c43b7dc9ee1": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 206",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xf28143f7b282e59bd5f979012982e7cb9d9b95b0": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 207",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xf63a8073a3e3750c53eb052f6e91756773b33b54": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 209",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xf7e12541dd9042ecead315d45ce3a0c86a69c1f3": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 210",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xf7f767ec932a506efce0b644a2344f628f804bfd": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 211",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xfbf4878f5223352f013221369052a12867beeba0": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 212",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xfedd0afcb68e97bbbe13c16848d6f592e828b651": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 213",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
+  },
+  "0xffdfef455bebc6abb4b7db6b6432e91b4bf04fea": {
+   "exchange": "OKX",
+   "label": "OKX: Reserve Wallet 214",
+   "type": "exchange_wallet",
+   "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+   "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+   "source_date": "2026-11-01",
+   "retrieved": "2026-11-14"
   }
  }
 }

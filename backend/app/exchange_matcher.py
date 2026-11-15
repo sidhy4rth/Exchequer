@@ -33,7 +33,7 @@ from typing import Any
 
 import networkx as nx
 
-from . import config, label_rules
+from . import config, exchange_status, label_rules
 from .etherscan_client import is_valid_address, normalize_address
 from .graph_builder import OUTGOING
 
@@ -59,6 +59,28 @@ DEPOSIT_LABEL = re.compile(r"\bDep:\s|^[^:]+:\s*Deposit (?:Address|Wallet)\b", r
 def is_deposit_label(label: str | None) -> bool:
     """True if the label itself says the address is one customer's deposit address."""
     return bool(DEPOSIT_LABEL.search(label or ""))
+
+
+# Another firm's account at an exchange, in the explorer's words: "Wintermute:
+# Binance Deposit", "AltCoinTrader: Binance Deposit 1", "Deribit: Coinbase Prime
+# Custody". The exchange that holds it is the one with the records, so the label
+# files attribute it there (scripts/clean_exchange_labels.py) and a letter names
+# the firm as the account holder. Not "Coinbase: Batch Deposit 1" or
+# "CoinList: WBTC Merchant Deposit Address": the exchange's own.
+FIRM_ACCOUNT = re.compile(r"^(?P<firm>[^:]+):\s*(?!Batch\b)(?P<at>\S[^:]*?)\s+(?:Deposit(?:\s+\d+)?|Prime Custody)$",
+                          re.IGNORECASE)
+
+
+def firm_account(label: str | None, exchange: str | None = None) -> str | None:
+    """The firm whose account at `exchange` the label names, or None.
+
+    With `exchange`, only when the firm is not that exchange: a row still
+    attributed to the firm itself is not yet another firm's account there."""
+    found = FIRM_ACCOUNT.match(exchange_status.marked((label or "").strip(), None))  # without "(defunct)"
+    if not found:
+        return None
+    firm = found["firm"].strip()
+    return None if exchange is not None and firm.casefold() == exchange.strip().casefold() else firm
 
 
 @dataclass(frozen=True)

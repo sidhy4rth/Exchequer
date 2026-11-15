@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "description": "Mixer pools and entry points on Arbitrum One that Exchequer screens a trace against. A trace stops at one: a mixer pays out from a commingled pool, so transfers leaving it have no established link to the deposit that arrived.",
+    "provenance": "Mixer pools and entry points the 11 Nov 2026 mixer hunt found in each project's own deployment list (Tornado Cash classic UI networkConfig.js and docs, Cyclone Protocol docs) or in explorer tags (brianleect/etherscan-labels @923aba7), each checked on chain: contract code present and, for a pool, its denomination() (Cyclone: coinDenomination()/tokenDenomination()) matching its name. Re-checked for contract code 14 Nov 2026. Privacy protocols (Railgun, Aztec, Hinkal) were left out: no enforcement action names them a mixer.",
+    "verification_note": "Each entry is a contract a mixer's own deployment list or an explorer tag names as its pool or entry point, with code on this chain. It says the funds passed through a mixer; it does NOT say any depositor or withdrawer took part in a crime. Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025, so a Tornado Cash entry is not a sanctions listing.",
+    "category_note": "'mixer' marks pools and entry points where deposits commingle; a trace stops there.",
+    "chain": "arbitrum",
+    "last_reviewed": "2026-11-14",
+    "counts": {
+      "mixer": 5
+    },
+    "regenerate_with": "Added by hand from the 11 Nov 2026 mixer hunt; check each address on the explorer before adding another (data/mixer_pools.json rule).",
+    "schema": "labels maps an address to {category, entity, label, source}"
+  },
+  "labels": {
+    "0x0d5550d52428e7e3175bfc9550207e4ad3859b17": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: Proxy Light (deposit/withdraw entry point)",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 1270 bytes (sha256 bc4f2843f541). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x1e34a77868e19a6647b1f2f47b51ed72dede95dd": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 100 ETH pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (arbiscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/arbiscan/combined/combinedAllLabels.json>; Explorer tag via dawsbot/eth-labels @d9b21ae (label tornado-cash) <https://github.com/dawsbot/eth-labels/blob/d9b21aefeded56f7fce7208d6fa173d128526c1b/data/json/accounts.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 e32fc6938d18); denomination()=100000000000000000000 = 100 ETH (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x330bdfade01ee9bf63c209ee33102dd334618e0a": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 10 ETH pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (arbiscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/arbiscan/combined/combinedAllLabels.json>; Explorer tag via dawsbot/eth-labels @d9b21ae (label tornado-cash) <https://github.com/dawsbot/eth-labels/blob/d9b21aefeded56f7fce7208d6fa173d128526c1b/data/json/accounts.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 25f0a6ae3c01); denomination()=10000000000000000000 = 10 ETH (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0x84443cfd09a48af6ef360c6976c5392ac5023a1f": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 0.1 ETH pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (arbiscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/arbiscan/combined/combinedAllLabels.json>; Explorer tag via dawsbot/eth-labels @d9b21ae (label tornado-cash) <https://github.com/dawsbot/eth-labels/blob/d9b21aefeded56f7fce7208d6fa173d128526c1b/data/json/accounts.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 d51ad1d30b44); denomination()=100000000000000000 = 0.1 ETH (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    },
+    "0xd47438c816c9e7f2e2888e060936a499af9582b3": {
+      "category": "mixer",
+      "entity": "Tornado Cash",
+      "label": "Tornado Cash: 1 ETH pool",
+      "source": "Tornado Cash classic UI networkConfig.js (tornadocash/tornado-classic-ui) <https://github.com/tornadocash/tornado-classic-ui/blob/master/networkConfig.js>; Tornado Cash docs: smart contracts page (tornadocash/docs) <https://github.com/tornadocash/docs/blob/master/general/tornado-cash-smart-contracts.md>; Explorer tag via brianleect/etherscan-labels @923aba7 (arbiscan) <https://github.com/brianleect/etherscan-labels/blob/923aba72c7e2d0682f7ae6194b6140bd90668dc9/data/arbiscan/combined/combinedAllLabels.json>; Explorer tag via dawsbot/eth-labels @d9b21ae (label tornado-cash) <https://github.com/dawsbot/eth-labels/blob/d9b21aefeded56f7fce7208d6fa173d128526c1b/data/json/accounts.json>. Checked on chain 2026-11-11 (keyless RPC): eth_getCode: 5072 bytes (sha256 8984fd2324b0); denomination()=1000000000000000000 = 1 ETH (native coin pool, no token()). Tornado Cash was removed from the OFAC SDN list on 21 Mar 2025; this is not a sanctions listing."
+    }
+  }
+}

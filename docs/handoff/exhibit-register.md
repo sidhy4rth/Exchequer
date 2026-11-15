@@ -5,7 +5,7 @@
 - **Branch**: `feat/exhibit-register` (merged as #103); follow-up on `feat/exhibit-audit-notes`
 - **Current**: Barenyam
 - **Last worked on**: Barenyam, 2026-11-13
-- **Status**: merged (#103) and live since 13 Nov 2026; a follow-up audits a note on its own (in review)
+- **Status**: merged (#103) and live since 13 Nov 2026; the follow-up that audits a note on its own merged as #110 (13 Nov)
 
 ## The nine features (see `docs/suite-features.md`)
 
@@ -31,7 +31,9 @@
 ## Next
 
 1. Done: merged as #103 and live (Site canary green on `main`). #103 was merged without an approving review; a review after the fact is welcome.
-2. Later (feature 6): Exchequer does not yet draft the s.63(4) certificate at all. A draft of it, filled from the exhibit register (each file's hash and algorithm), for the officer and the expert to check and sign, is the natural next piece; take its wording from the Schedule's official text, never from memory.
+2. Done (#113, #114, 13 Nov; #119 for Exchequer's own report, 14 Nov; see `s63-certificate.md`). Was: Later (feature 6): Exchequer does not yet draft the s.63(4) certificate at all. A draft of it, filled from the exhibit register (each file's hash and algorithm), for the officer and the expert to check and sign, is the natural next piece; take its wording from the Schedule's official text, never from memory.
+
+3. Open, by Sidhyarth: #181 keeps keyboard focus in the exhibits panel after adding or checking a file.
 
 ## Open questions
 
