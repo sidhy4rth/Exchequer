@@ -5,7 +5,7 @@ the n signers by name, role and unit (never a key), who set it up and when, and
 the asset-register rows moved into it. A new table, nothing else touched.
 
 Revision ID: g7_custody_1
-Revises: g7_domain_lookups_1
+Revises: g7_tasks_2
 Create Date: 2026-11-14
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "g7_custody_1"
-down_revision: Union[str, Sequence[str], None] = "g7_domain_lookups_1"
+down_revision: Union[str, Sequence[str], None] = "g7_tasks_2"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

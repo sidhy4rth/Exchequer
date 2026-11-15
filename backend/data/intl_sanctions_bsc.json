@@ -3,7 +3,7 @@
     "description": "Crypto addresses on sanctions and seizure lists published by governments other than the U.S. A match means the funds touched a wallet a government has frozen or seized.",
     "provenance": "UK: https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv. EU: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw. Israel (NBCTF), Japan (MOF) and France (DG Tresor) via OpenSanctions, which extracts them from each publisher's own documents; OpenSanctions data is licensed CC BY-NC 4.0. Built by backend/scripts/import_intl_sanctions.py.",
     "opensanctions_versions": {
-      "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261105060204-mpo/entities.ftm.json",
+      "il_mod_crypto": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
       "jp_mof_sanctions": "https://data.opensanctions.org/artifacts/jp_mof_sanctions/20260922183801-kpe/entities.ftm.json",
       "fr_tresor_gels_avoir": "https://data.opensanctions.org/artifacts/fr_tresor_gels_avoir/20260922155801-lpp/entities.ftm.json"
     },
@@ -27,12 +27,10 @@
     "schema": "labels maps an address to {category, entity, label, source, authorities}, plus valid_until (the last day it is in force) when every listing behind it has an end date; category is seized when only seizure orders name it, sanctioned otherwise",
     "rechecked": {
       "il_mod_crypto": {
-        "date": "2026-11-06",
-        "version": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261105060204-mpo/entities.ftm.json",
-        "removed": 1,
-        "removed_addresses": [
-          "0xc3b194e0a4bfff0e986594d7768f58746e52eb53"
-        ],
+        "date": "2026-11-14",
+        "version": "https://data.opensanctions.org/artifacts/il_mod_crypto/20261114120205-dfd/entities.ftm.json",
+        "removed": 0,
+        "removed_addresses": [],
         "note": "Israel listings re-screened offline against this version; every listing whose measures had all ended was removed. Other authorities' listings were not re-read, so last_reviewed is unchanged."
       }
     }

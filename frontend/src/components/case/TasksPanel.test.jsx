@@ -1,0 +1,349 @@
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { describe, expect, it, vi } from 'vitest'
+import TaskDeadlines from '../TaskDeadlines'
+import TasksPanel, { dueText, historyLine } from './TasksPanel'
+
+// The case's task list on the Evidence tab (backend tasks.py) and the home
+// page's tasks-due card. Rows come from the backend; the panel adds a task,
+// marks one done, and asks why before dropping one or opening it again.
+const TASK = {
+  task_id: 't1', case_id: 'c1', title: 'Send the notice to the bank', assignee: 'SI Iyer', due_on: '2026-11-16',
+  status: 'open', notes: '', created_at: '2026-11-14T05:00:00Z', updated_at: '2026-11-14T05:00:00Z',
+  days_left: 2, overdue: false, history: [{ at: '2026-11-14T05:00:00Z', by: 'demo', action: 'added' }],
+}
+const DONE = { ...TASK, task_id: 't2', title: 'Get the court order', assignee: 'Insp. Rao', status: 'done', days_left: null,
+  history: [...TASK.history, { at: '2026-11-15T05:00:00Z', by: 'demo', action: 'done', changed: ['status'] }] }
+
+const SUGGESTED = {
+  source: 'asset:a1:order', title: "Get the court's order on custody of 635.000000 USDT", due_on: '2026-12-16',
+  why: 'Seized on 1 Nov 2026; the asset register counts the order as due 45 days later, on 16 Dec 2026.',
+}
+
+function api(routes) {
+  const calls = []
+  vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+    const method = init.method || 'GET'
+    const [path] = String(url).replace(/^\/api/, '').split('?')
+    let body = init.body
+    try { body = JSON.parse(body) } catch { /* none */ }
+    calls.push({ method, path, body })
+    const hit = routes[`${method} ${path}`]
+    if (!hit) return new Response(JSON.stringify({ detail: 'not stubbed' }), { status: 404 })
+    const { status = 200, body: out } = typeof hit === 'function' ? hit(body) : hit
+    return new Response(JSON.stringify(out), { status })
+  }))
+  return calls
+}
+
+const open = () => render(<MemoryRouter><TasksPanel result={{ case_id: 'c1' }} /></MemoryRouter>)
+
+describe('the case task list', () => {
+  it('shows open tasks with who and when, and keeps closed ones folded away', async () => {
+    api({ 'GET /trace/c1/tasks': { body: { tasks: [TASK, DONE] } } })
+    open()
+    expect(await screen.findByText('Send the notice to the bank')).toBeInTheDocument()
+    expect(screen.getByText('Due in 2 days')).toBeInTheDocument()
+    expect(screen.getByLabelText('Assigned to')).toHaveValue('SI Iyer')
+    expect(screen.getByText('Insp. Rao')).toBeInTheDocument() // a closed task's assignee, as text
+    expect(screen.getByText('Tasks · 1 open')).toBeInTheDocument()
+    expect(screen.getByText('Done and dropped · 1')).toBeInTheDocument()
+  })
+
+  it('adds a task with what, who and by when', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [] } },
+      'POST /trace/c1/tasks': (b) => ({ status: 201, body: { ...TASK, ...b } }),
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add a task' }))
+    const form = screen.getByRole('form', { name: 'Add a task' })
+    const save = within(form).getByRole('button', { name: 'Add the task' })
+    expect(save).toBeDisabled()
+    await user.type(within(form).getByLabelText('What has to be done'), 'Collect the phone extraction')
+    await user.type(within(form).getByLabelText('Assigned to'), 'SI Pal')
+    await user.click(save)
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({ title: 'Collect the phone extraction', assignee: 'SI Pal', due_on: '', notes: '' })
+  })
+
+  it("names each open task's fields after the task, so several rows are told apart", async () => {
+    const OTHER = { ...TASK, task_id: 't3', title: 'Get the court order', assignee: 'Insp. Rao', due_on: '2026-11-20' }
+    api({ 'GET /trace/c1/tasks': { body: { tasks: [TASK, OTHER] } } })
+    open()
+    expect(await screen.findByRole('textbox', { name: 'Assigned to: Send the notice to the bank' })).toHaveValue('SI Iyer')
+    expect(screen.getByRole('textbox', { name: 'Assigned to: Get the court order' })).toHaveValue('Insp. Rao')
+    expect(screen.getByLabelText('Due: Send the notice to the bank')).toHaveValue('2026-11-16')
+    expect(screen.getByLabelText('Due: Get the court order')).toHaveValue('2026-11-20')
+  })
+
+  it('keeps the due date when a half-typed one is left, and says so', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [TASK] } },
+      'PATCH /tasks/t1': (b) => ({ body: { ...TASK, ...b } }),
+    })
+    open()
+    const due = await screen.findByLabelText('Due: Send the notice to the bank')
+    // A browser reports a half-typed date as an empty value with badInput set.
+    Object.defineProperty(due, 'validity', { configurable: true, value: { badInput: true, valid: false } })
+    fireEvent.change(due, { target: { value: '' } })
+    fireEvent.blur(due)
+    expect(await screen.findByText(/Type the whole date/)).toBeInTheDocument()
+    expect(due).toHaveValue('2026-11-16')
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false)
+  })
+
+  it('clears the due date when it is emptied on purpose', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [TASK] } },
+      'PATCH /tasks/t1': (b) => ({ body: { ...TASK, ...b } }),
+    })
+    open()
+    const due = await screen.findByLabelText('Due: Send the notice to the bank')
+    fireEvent.change(due, { target: { value: '' } })
+    fireEvent.blur(due)
+    await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true))
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ due_on: '' })
+  })
+
+  it('marks a task done in one click', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [TASK] } },
+      'PATCH /tasks/t1': (b) => ({ body: { ...TASK, ...b } }),
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Mark done' }))
+    await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true))
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ status: 'done' })
+  })
+
+  it('asks why before dropping a task, and sends the reason', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [TASK] } },
+      'PATCH /tasks/t1': (b) => ({ body: { ...TASK, ...b } }),
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Drop…' }))
+    const drop = screen.getByRole('button', { name: 'Drop the task' })
+    expect(drop).toBeDisabled()
+    await user.type(screen.getByLabelText('Why drop it?'), 'Bank answered on the portal')
+    await user.click(drop)
+    await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true))
+    expect(calls.find((c) => c.method === 'PATCH').body).toEqual({ status: 'dropped', note: 'Bank answered on the portal' })
+  })
+
+  it('stays open after the last open task is closed', async () => {
+    let tasks = [TASK]
+    api({
+      'GET /trace/c1/tasks': () => ({ body: { tasks } }),
+      'PATCH /tasks/t1': (b) => { tasks = [{ ...TASK, ...b, days_left: null }]; return { body: tasks[0] } },
+    })
+    const user = userEvent.setup()
+    const { container } = open()
+    await user.click(await screen.findByRole('button', { name: 'Mark done' }))
+    await screen.findByText('Done and dropped · 1')
+    expect(container.querySelector('.tasks-panel')).toHaveAttribute('open')
+  })
+
+  it("shows what the case's records suggest, and opens for them", async () => {
+    api({ 'GET /trace/c1/tasks': { body: { tasks: [], suggested: [SUGGESTED] } } })
+    const { container } = open()
+    expect(await screen.findByText("Get the court's order on custody of 635.000000 USDT")).toBeInTheDocument()
+    expect(screen.getByText(/Seized on 1 Nov 2026/)).toBeInTheDocument()
+    expect(screen.getByText('Due 16 Dec 2026')).toBeInTheDocument()
+    expect(screen.getByText('1 suggested')).toBeInTheDocument()
+    expect(container.querySelector('.tasks-panel')).toHaveAttribute('open')
+  })
+
+  it('adds a suggestion as a task by its key alone: the server words it from the records', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [], suggested: [SUGGESTED] } },
+      'POST /trace/c1/tasks': { status: 201, body: { ...TASK, source: SUGGESTED.source } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add as a task' }))
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({ source: SUGGESTED.source })
+  })
+
+  it('asks why before declining a suggestion, and sends the reason', async () => {
+    const calls = api({
+      'GET /trace/c1/tasks': { body: { tasks: [], suggested: [SUGGESTED] } },
+      'POST /trace/c1/tasks': { status: 201, body: { ...TASK, status: 'dropped' } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Not needed…' }))
+    const decline = screen.getByRole('button', { name: 'Not needed' })
+    expect(decline).toBeDisabled()
+    await user.type(screen.getByLabelText('Why is it not needed?'), 'Order made on 10 Nov')
+    await user.click(decline)
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST').body).toEqual({ source: SUGGESTED.source, note: 'Order made on 10 Nov' })
+  })
+
+  it('keeps the keyboard on the panel after a suggestion is taken up or declined', async () => {
+    let tasks = []
+    let suggested = [SUGGESTED]
+    api({
+      'GET /trace/c1/tasks': () => ({ body: { tasks, suggested } }),
+      'POST /trace/c1/tasks': (b) => {
+        tasks = [{ ...TASK, task_id: 't9', title: SUGGESTED.title, ...(b.note ? { status: 'dropped', days_left: null } : {}) }]
+        suggested = []
+        return { status: 201, body: tasks[0] }
+      },
+    })
+    const user = userEvent.setup()
+    const first = open()
+    const take = await screen.findByRole('button', { name: 'Add as a task' })
+    take.focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Add as a task' })).toBeNull())
+    await waitFor(() => expect(screen.getByText(SUGGESTED.title).closest('.request-row')).toHaveFocus()) // the new task's row
+    first.unmount()
+
+    tasks = []
+    suggested = [SUGGESTED]
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Not needed…' }))
+    await user.type(screen.getByLabelText('Why is it not needed?'), 'Order made on 10 Nov')
+    screen.getByRole('button', { name: 'Not needed' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Not needed' })).toBeNull())
+    const said = await screen.findByRole('status')
+    expect(said).toHaveTextContent('Marked not needed')
+    await waitFor(() => expect(said).toHaveFocus()) // the suggestion is gone; its task is folded away with the dropped ones
+  })
+
+  it('takes up a suggestion once however fast its button is pressed', async () => {
+    const posts = []
+    let finish
+    vi.stubGlobal('fetch', vi.fn((url, init = {}) => {
+      if ((init.method || 'GET') === 'POST') {
+        posts.push(init.body)
+        return new Promise((resolve) => { finish = () => resolve(new Response(JSON.stringify(TASK), { status: 201 })) })
+      }
+      return Promise.resolve(new Response(JSON.stringify({ tasks: [], suggested: [SUGGESTED] })))
+    }))
+    const user = userEvent.setup()
+    open()
+    await user.dblClick(await screen.findByRole('button', { name: 'Add as a task' }))
+    expect(posts).toHaveLength(1)
+    // Marked rather than disabled while it saves, so it keeps the keyboard's focus; a second press is ignored.
+    expect(screen.getByRole('button', { name: 'Add as a task' })).toHaveAttribute('aria-disabled', 'true')
+    finish()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add as a task' })).not.toHaveAttribute('aria-disabled'))
+  })
+
+  it('adds a task once however fast its button is pressed', async () => {
+    const posts = []
+    let finish
+    vi.stubGlobal('fetch', vi.fn((url, init = {}) => {
+      if ((init.method || 'GET') === 'POST') {
+        posts.push(init.body)
+        return new Promise((resolve) => { finish = () => resolve(new Response(JSON.stringify(TASK), { status: 201 })) })
+      }
+      return Promise.resolve(new Response(JSON.stringify({ tasks: [] })))
+    }))
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add a task' }))
+    await user.type(screen.getByLabelText('What has to be done'), 'Collect the phone extraction')
+    await user.dblClick(screen.getByRole('button', { name: 'Add the task' }))
+    expect(posts).toHaveLength(1)
+    // Marked rather than disabled while it saves, so it keeps the keyboard's focus; a second press is ignored.
+    expect(screen.getByRole('button', { name: 'Add the task' })).toHaveAttribute('aria-disabled', 'true')
+    finish()
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Add a task' })).toBeNull())
+  })
+
+  it('keeps the keyboard on the panel: the new task takes focus, and a refusal leaves it on the button', async () => {
+    let tasks = []
+    let refuse = true
+    api({
+      'GET /trace/c1/tasks': () => ({ body: { tasks } }),
+      'POST /trace/c1/tasks': (b) => {
+        if (refuse) return { status: 400, body: { detail: 'This looks like a private key or seed phrase.' } }
+        tasks = [{ ...TASK, task_id: 't9', ...b }]
+        return { status: 201, body: tasks[0] }
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add a task' }))
+    await user.type(screen.getByLabelText('What has to be done'), 'Collect the phone extraction')
+    const button = screen.getByRole('button', { name: 'Add the task' })
+    button.focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+    expect(button).toHaveFocus() // not dropped to the page while the request ran
+    refuse = false
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Add a task' })).toBeNull())
+    const added = screen.getByText('Collect the phone extraction').closest('.request-row')
+    await waitFor(() => expect(added).toHaveFocus()) // the form is gone: the new task takes its place
+    expect(document.activeElement).not.toBe(document.body)
+  })
+
+  it("shows the server's refusal", async () => {
+    api({
+      'GET /trace/c1/tasks': { body: { tasks: [] } },
+      'POST /trace/c1/tasks': { status: 400, body: { detail: 'This looks like a private key or seed phrase.' } },
+    })
+    const user = userEvent.setup()
+    open()
+    await user.click(await screen.findByRole('button', { name: 'Add a task' }))
+    await user.type(screen.getByLabelText('What has to be done'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Add the task' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('private key or seed phrase')
+  })
+
+  it('shows nothing without a case', () => {
+    const { container } = render(<TasksPanel result={null} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('what a due date says', () => {
+  it('reads overdue, today, this week, later and closed', () => {
+    expect(dueText({ ...TASK, days_left: -3, overdue: true })).toEqual({ tone: 'red', text: 'Overdue by 3 days' })
+    expect(dueText({ ...TASK, days_left: 0 })).toEqual({ tone: 'red', text: 'Due today' })
+    expect(dueText({ ...TASK, days_left: 1 })).toEqual({ tone: 'amber', text: 'Due in 1 day' })
+    expect(dueText({ ...TASK, days_left: 30, due_on: '2026-12-14' })).toEqual({ tone: '', text: 'Due 14 Dec 2026' })
+    expect(dueText({ ...TASK, due_on: '', days_left: null })).toEqual({ tone: '', text: 'No due date' })
+    expect(dueText(DONE).text).toBe('Done')
+    expect(dueText({ ...TASK, status: 'dropped' }).text).toBe('Dropped')
+  })
+
+  it('writes history as short lines with any reason', () => {
+    expect(historyLine({ at: '2026-11-14T05:00:00Z', action: 'dropped', changed: ['status'], note: 'Bank answered' }))
+      .toBe('2026-11-14 dropped: Bank answered')
+    expect(historyLine({ at: '2026-11-14T05:00:00Z', action: 'changed', changed: ['assignee', 'due_on'] }))
+      .toBe('2026-11-14 changed assignee, due date')
+    expect(historyLine({ at: '2026-11-15T05:00:00Z', action: 'reopened', changed: ['status'], note: 'Wrong account' }))
+      .toBe('2026-11-15 opened again: Wrong account')
+    expect(historyLine({ at: '2026-11-14T05:00:00Z', action: 'added', from: 'suggestion' })).toBe('2026-11-14 added from a suggestion')
+  })
+})
+
+describe("the home page's tasks-due card", () => {
+  it('lists tasks due soon, linking to the case', async () => {
+    api({ 'GET /tasks/due': { body: { tasks: [{ ...TASK, days_left: -1, overdue: true }] } } })
+    render(<MemoryRouter><TaskDeadlines /></MemoryRouter>)
+    const link = await screen.findByRole('link', { name: /Send the notice to the bank/ })
+    expect(link).toHaveAttribute('href', '/case/c1?tab=evidence')
+    expect(within(link).getByText('Overdue by 1 day')).toBeInTheDocument()
+  })
+
+  it('shows nothing when no task is due, or the list cannot be reached', async () => {
+    const calls = api({ 'GET /tasks/due': { body: { tasks: [] } } })
+    const { container } = render(<MemoryRouter><TaskDeadlines /></MemoryRouter>)
+    await waitFor(() => expect(calls.length).toBe(1))
+    expect(container).toBeEmptyDOMElement()
+  })
+})

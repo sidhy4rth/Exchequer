@@ -9,6 +9,8 @@ export function roleOf(node) {
   if (node.is_seed) return 'seed'
   if (node.risk_category === 'gambling') return 'gambling'
   if (node.risk_category) return 'risk'
+  // A privacy protocol's contract: a note, never a confirmed risk (#189).
+  if (node.privacy_entity) return 'privacy'
   if (node.exchange && !node.inferred_exchange) return 'exchange'
   if (node.inferred_exchange) return 'inferred'
   if (node.is_router || node.is_service_contract) return 'service'
