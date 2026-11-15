@@ -43,9 +43,9 @@
 
 <table>
 <tr>
-<td align="center"><h3>69.4M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
-<td align="center"><h3>69.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists</sub></td>
-<td align="center"><h3>26,157</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
+<td align="center"><h3>69.4M</h3>flagged addresses<br>screened live<br><sub>on five chains, counted once per chain</sub></td>
+<td align="center"><h3>69.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists, counted once per chain</sub></td>
+<td align="center"><h3>26,157</h3>exchange addresses<br><sub>counted once per chain; incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
 <td align="center"><h3>14,827</h3>addresses a stablecoin<br>issuer has frozen</td>
 <td align="center"><h3>100,000+</h3>hack, phishing and<br>scam wallets</td>

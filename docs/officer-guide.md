@@ -148,7 +148,9 @@ The full list is in the README's Limitations section and in every report.
   labels that sit on a proxy or forwarder contract now read as a contract
   wallet. What a trace concludes does not change.
 - **The label store** (#261): release `labels-2026-11-15` screens **69,410,610
-  flagged addresses** (69.4 million, up 993,748 on the day before). Nearly all
+  flagged addresses** (69.4 million, up 993,748 on the day before), counted
+  once per chain: an address flagged on two chains counts twice, so the store
+  holds 68,527,888 distinct addresses. Nearly all
   the new rows are address-poisoning wallets from scans of Polygon, BNB Smart
   Chain and Tron; 40 are issuer freezes.
 - **Bitget reserve wallets** (#258): 21 wallets Bitget lists on its own
@@ -165,9 +167,13 @@ The full list is in the README's Limitations section and in every report.
 
 **Limits**
 
-- Every other contract wallet has no role, so a deposit into it is not
-  inferred. The 12 Ethereum Bitget wallets were measured and none met the rule
-  (#270); on Arbitrum, Polygon and BNB Smart Chain none could be measured.
+- Contract wallets that already carry a role from their source (an exchange,
+  hot or cold wallet role, such as Gemini's cold wallet or OKX Reserve Wallet
+  215) are treated the same way: a deposit into them can be inferred. A
+  contract wallet with no role is matched only directly, and a deposit into it
+  is not inferred. The 12 Ethereum Bitget wallets were measured and none met
+  the rule (#270); on Arbitrum, Polygon and BNB Smart Chain none could be
+  measured.
 - A proof-of-reserves list does not say whether a wallet is a hot wallet or a
   customer's deposit address. These rows are the exchange's own wallets, so
   the letter asks for the accounts behind the listed transactions only.
