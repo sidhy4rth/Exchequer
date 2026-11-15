@@ -224,6 +224,26 @@
         "0xf2d4766ad705e3a5c9ba5b0436b473085f82f82f": "contract code, 2334 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinhako: Old Warm Wallet)",
         "0xff6b1cdfd2d3e37977d7938aa06b6d89d6675e27": "contract code, 6608 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Allbit 2 (defunct))"
       }
+    },
+    "okx_consolidation_2026_11_15": {
+      "rule": "Two OKX Ethereum wallets labelled outside the label store because deposit inference (app/deposit_inference.py) needs its sweep destinations in this file: each is listed in OKX's own proof-of-reserves file (the source cited below, as the por_2026_11_15 rows cite it) and is where OKX's per-customer deposit addresses sweep USDT or USDC today. The source gives no role; each row's role_basis says what on-chain reading the hot_wallet role stands on.",
+      "source": {
+        "url": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+        "archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+        "page": "https://www.okx.com/proof-of-reserves/download",
+        "source_date": "2026-11-01",
+        "retrieved": "2026-11-14",
+        "sha256": "93095583a31e2c3f23a7c2061b8b6a00302a212704e96db2ae061446553367a6"
+      },
+      "listed": {
+        "0x559432e18b281731c054cd703d4b49872be4ed53": "okx_por_2026110100_V1.csv lines 6960 (ETH, Non Staking, 56.000019597052154348), 22500 (USDC, Non Staking, 1927.600200) and 49267 (USDT-ERC20, Non Staking, 96930157.531775), all at height 26313797",
+        "0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97": "okx_por_2026110100_V1.csv line 21424 (USDC, Non Staking, 99202817.661847, at height 26313797)"
+      },
+      "checks": "scripts/import_por_labels.py gather() with label store build label_store_2026-11-15: no conflict with any label file, demo, token list or store row; read_accounts() at block 26419380: 0x559432e18b281731c054cd703d4b49872be4ed53 has no code and nonce 8761014; 0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97 has 209 bytes of code (an ERC-1967 proxy), answers neither totalSupply() nor getThreshold(), and holds 13,519,635 USDC",
+      "label_store": "both addresses are also among the 17,046 rows staged for the label store's exchange_rows table (okx_por_ethereum.csv); the JSON row is read first (ADR-0011), and both name OKX",
+      "added": {
+        "OKX": 2
+      }
     }
   },
   "labels": {
@@ -127232,6 +127252,29 @@
       "exchange": "Unocoin",
       "label": "Unocoin: cold storage (PoR June 2023)",
       "type": "cold_wallet"
+    },
+    "0x559432e18b281731c054cd703d4b49872be4ed53": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 216",
+      "type": "hot_wallet",
+      "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+      "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "role_basis": "Role read on chain, not from the source (the PoR file gives none): an account with no code and nonce 8,761,014 that OKX's per-address USDT sweeps have gone to since about block 22.15M; 25 of a seeded random sample of 300 of OKX's Ethereum PoR addresses, each a small-balance address that sent value only to OKX-labelled or OKX PoR-listed addresses, sent it 209 transfers (207 USDT, 2 USDC), and one more sampled PoR address, 0x0a9100ff165d3dab0c6172a7a2ad06b2e7ca09a0 (nonce 68,267), sent it 126 USDT transfers (read 15 Nov 2026, keyless public RPCs)"
+    },
+    "0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97": {
+      "exchange": "OKX",
+      "label": "OKX: Reserve Wallet 215",
+      "role": "hot_wallet",
+      "type": "contract_wallet",
+      "source_kind": "OKX proof-of-reserves address, type 'Non Staking' (signed 'I am an OKX address'; no hot or cold role given)",
+      "source": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
+      "source_date": "2026-11-01",
+      "retrieved": "2026-11-14",
+      "role_basis": "Role read on chain, not from the source (the PoR file gives none): an ERC-1967 proxy (implementation 0xd206ac7fef53d83ed4563e770b28dba90d0d9ec8) that OKX's per-address USDC sweeps have gone to since about block 22.67M; 31 of a seeded random sample of 300 of OKX's Ethereum PoR addresses, each a small-balance address that sent value only to OKX-labelled or OKX PoR-listed addresses, sent it 93 USDC transfers (read 15 Nov 2026, keyless public RPCs)"
     }
   },
   "_unverified_pending": {
