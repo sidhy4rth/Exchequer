@@ -9,13 +9,26 @@ compares it with the register:
     match      the chain shows exactly what the register's held rows add up to
     mismatch   it shows more or less; the result says by how much, in words
     unchecked  this run could not tell (no address on a chain read here, an asset
-               not read on that chain, the provider not configured or not answering)
+               not read on that chain, the provider not configured or not answering,
+               or a register amount with more decimal places than the asset has, which
+               no balance can equal: the result says so instead of calling it a mismatch)
 
 Which address a row is held at: the custody wallet record it is linked to
 (custody.py), else its own `held_at` when that is a valid address on its chain.
 Rows still held, in custody, and readable by the viewer are counted, summed per
 address and asset. Decimals come from config.CHAINS (the native coin's, or the
 token's), never from the provider's answer. Amounts are exact decimals.
+
+TRX on Tron counts staked TRX too: TronGrid's `balance` is only the free part, and an
+account that staked keeps the rest in other fields of the same /v1/accounts answer
+(TRON's account schema, developers.tron.network/reference/get-account-info-by-address):
+its own stake (`frozenV2[].amount`; Stake 1.0 `frozen[].frozen_balance` and
+`account_resource.frozen_balance_for_energy.frozen_balance`), stake it delegated to
+others (`delegated_frozenV2_balance_for_bandwidth`, `account_resource.delegated_frozenV2_
+balance_for_energy` and their Stake 1.0 `delegated_frozen_*` twins) and stake being
+unstaked (`unfrozenV2[].unfreeze_amount`). All of it is still the account's. Stake others
+delegated to it (`acquired_*`) is theirs and is not counted. The result says how much of
+the figure is staked.
 
 Each result keeps the provider's evidence records (request without the key,
 SHA-256 of the answer, time). A balance is a moment, not a fact about the
@@ -93,8 +106,33 @@ def _places(s: Any, viewer: Any, case_id: str) -> tuple[list[dict[str, Any]], li
     return list(groups.values()), unplaced
 
 
-def _read_raw(client: Any, chain: config.Chain, address: str, token: config.Token | None) -> tuple[int, str]:
-    """(balance in the asset's smallest unit, a note on how it was read) through the client's own request path."""
+def _sun(value: Any) -> int:
+    if value in (None, ""):
+        return 0
+    try:
+        return int(str(value))
+    except ValueError as exc:
+        raise Unreadable("TronGrid's answer was not a whole-number balance.") from exc
+
+
+def _staked_sun(account: dict[str, Any]) -> int:
+    """TRX the account staked, delegated out or is unstaking, in sun (see the module notes for the fields)."""
+    resource = account.get("account_resource") if isinstance(account.get("account_resource"), dict) else {}
+    energy_v1 = resource.get("frozen_balance_for_energy")
+    rows = [(account.get("frozenV2"), "amount"), (account.get("unfrozenV2"), "unfreeze_amount"),
+            (account.get("frozen"), "frozen_balance")]
+    total = sum(_sun(e.get(field)) for entries, field in rows for e in (entries or []) if isinstance(e, dict))
+    total += _sun(energy_v1.get("frozen_balance")) if isinstance(energy_v1, dict) else 0
+    for key in ("delegated_frozenV2_balance_for_bandwidth", "delegated_frozen_balance_for_bandwidth"):
+        total += _sun(account.get(key))
+    for key in ("delegated_frozenV2_balance_for_energy", "delegated_frozen_balance_for_energy"):
+        total += _sun(resource.get(key))
+    return total
+
+
+def _read_raw(client: Any, chain: config.Chain, address: str, token: config.Token | None) -> tuple[int, str, int]:
+    """(balance in the asset's smallest unit, a note on how it was read, how much of it is staked TRX)
+    through the client's own request path."""
     if isinstance(client, EtherscanClient):
         params = {"module": "account", "action": "balance", "address": normalize_address(address), "tag": "latest"}
         if token is not None:
@@ -103,7 +141,7 @@ def _read_raw(client: Any, chain: config.Chain, address: str, token: config.Toke
         result = client._request(params)
         if not isinstance(result, str) or not result.isdigit():
             raise Unreadable("Etherscan's answer was not a whole-number balance.")
-        return int(result), "latest block"
+        return int(result), "latest block", 0
     if isinstance(client, NoderealClient):
         block = hex(client.head_block())  # a fixed block: the answer is history, and says which block
         if token is None:
@@ -112,7 +150,7 @@ def _read_raw(client: Any, chain: config.Chain, address: str, token: config.Toke
             data = BALANCE_OF + normalize_address(address)[2:].rjust(64, "0")
             result = client._rpc("eth_call", [{"to": token.address, "data": data}, block])
         try:
-            return _hex_int(result), f"block {int(block, 16)}"
+            return _hex_int(result), f"block {int(block, 16)}", 0
         except EtherscanError as exc:
             raise Unreadable("NodeReal's answer was not a balance.") from exc
     if isinstance(client, TronClient):
@@ -121,15 +159,12 @@ def _read_raw(client: Any, chain: config.Chain, address: str, token: config.Toke
         if not isinstance(data, list) or not data or not isinstance(data[0], dict):
             raise Unreadable("TronGrid has no account record for this address (never activated, or not answering).")
         account = data[0]
-        if token is None:
-            raw = account.get("balance", 0)  # TronGrid leaves `balance` out of an account holding no TRX
-        else:
-            raw = next((entry[token.address] for entry in account.get("trc20") or []
-                        if isinstance(entry, dict) and token.address in entry), "0")
-        try:
-            return int(str(raw)), "latest block"
-        except ValueError as exc:
-            raise Unreadable("TronGrid's answer was not a whole-number balance.") from exc
+        if token is None:  # TronGrid leaves `balance` out of an account holding no free TRX
+            staked = _staked_sun(account)
+            return _sun(account.get("balance", 0)) + staked, "latest block", staked
+        raw = next((entry[token.address] for entry in account.get("trc20") or []
+                    if isinstance(entry, dict) and token.address in entry), "0")
+        return _sun(raw), "latest block", 0
     raise Unreadable("No balance reader for this chain's provider.")
 
 
@@ -142,6 +177,12 @@ def _why_not(exc: Exception, chain: config.Chain) -> str:
     if isinstance(exc, Unreadable):
         return str(exc)
     return f"{provider} did not give a usable answer; try again later."
+
+
+def _decimal_places(d: Decimal) -> int:
+    """Decimal places the amount really uses: 635.500 uses 1, 635 uses none."""
+    exponent = d.normalize().as_tuple().exponent
+    return max(0, -exponent) if isinstance(exponent, int) else 0
 
 
 def compare(register: Decimal, on_chain: Decimal, asset: str) -> tuple[str, str]:
@@ -171,14 +212,24 @@ def _check_one(g: dict[str, Any], opener: Callable[..., Any]) -> dict[str, Any]:
     try:
         client = opener(chain)
         client.max_retries = 1  # inside a request: one retry, not a trace's four
-        raw, at = _read_raw(client, chain, g["address"], token)
+        raw, at, staked = _read_raw(client, chain, g["address"], token)
     except (EtherscanError, TraceStopped, Unreadable, httpx.HTTPError) as exc:
         out.update(status=UNCHECKED, reason=_why_not(exc, chain))
     else:
         on_chain = Decimal(raw).scaleb(-decimals)
-        status, reason = compare(g["total"], on_chain, g["asset"])
-        out.update(status=status, reason=reason, chain_amount=_text(on_chain), read_from=at,
-                   difference=_text(on_chain - g["total"]))
+        out.update(chain_amount=_text(on_chain), read_from=at)
+        if _decimal_places(g["total"]) > decimals:
+            out.update(status=UNCHECKED, reason=(
+                f"The recorded amount, {_text(g['total'])} {g['asset']}, has more decimal places than {g['asset']} "
+                f"allows ({decimals}), so no balance can equal it: correct the amount on the register. "
+                f"The chain shows {_text(on_chain)} {g['asset']}."))
+        else:
+            status, reason = compare(g["total"], on_chain, g["asset"])
+            out.update(status=status, reason=reason, difference=_text(on_chain - g["total"]))
+        if staked:
+            out["staked_amount"] = _text(Decimal(staked).scaleb(-decimals))
+            out["reason"] += (f" Of the chain's {_text(on_chain)} {g['asset']}, {out['staked_amount']} {g['asset']} "
+                              "is staked, delegated or being unstaked; it is still this wallet's and is counted.")
     finally:
         if client is not None:
             out["evidence"] = [r.to_dict() for r in client.evidence.records]
