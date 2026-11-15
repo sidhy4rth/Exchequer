@@ -1,0 +1,35 @@
+# Handoff: contract-wallet-types
+
+- **Feature**: an Ethereum exchange label typed hot, cold or exchange wallet is an account the exchange holds the key to, never a contract
+- **Issue**: #233
+- **Branch**: `fix/contract-wallet-types`
+- **Current**: Sidhyarth
+- **Last worked on**: Sidhyarth, 2026-11-15
+- **Status**: in review
+
+## Done
+
+- `scripts/check_label_code.py` read the code of all 1,252 non-deposit Ethereum exchange labels with keyless `eth_getCode` (publicnode, block 26416966) and kept the answers in `tests/fixtures/label_code/ethereum.json`.
+- 26 labels on proxy or forwarder contracts retyped `contract_wallet` (20 exchange_wallet, 4 cold_wallet, 2 hot_wallet). Each is listed with its reason in `_meta.code_check_2026_11_15.retyped`.
+- 6 EIP-7702 delegated accounts kept their type, listed in `_meta.code_check_2026_11_15.eip7702_delegated`.
+- 25 other contracts kept their type, listed in `_meta.code_check_2026_11_15.left_for_review`.
+- Guard tests in `tests/test_label_code.py`, offline on the recording.
+
+## Decisions
+
+- EIP-7702: the account still has its own key, held by the exchange, so it stays a keyed wallet. The label schema has no note field, so the delegation is listed in `_meta`.
+- Proxy: code of 1 KB or less that uses DELEGATECALL (EIP-1167, Gnosis Safe proxy, EIP-1967, older delegatecall proxies). Forwarder: code of 1 KB or less with no functions whose fallback CALLs out. Anything else is "other" and needs a person to read it.
+- The guard fails on a new Ethereum keyed-wallet label with no recorded answer: run `--record`, then the script.
+
+## Next
+
+1. Owner: decide the 25 review rows (see Open questions).
+
+## Open questions
+
+- 14 of the 25 review rows are multisig wallets by their verified source on Blockscout (11 BitGo `WalletSimple`, 3 Gnosis `MultiSigWallet`). Retype them `contract_wallet` too? (Sidhyarth)
+- `contract_wallet` is not a sweep destination in `deposit_inference.py` (written for deposit forwarders). If any retyped multisig proxy (Bitget Hot Wallet 1 and 2, for example) receives sweeps, a deposit address sweeping into it is no longer inferred. No demo touches these addresses. Should multisig custody count as a sweep destination? (Sidhyarth)
+
+## Files mid-change (do not touch)
+
+- none

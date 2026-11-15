@@ -156,6 +156,74 @@
           "where": "label store exchange_rows table (scripts/add_store_exchange_rows.py), staged as okx_por_ethereum.csv"
         }
       }
+    },
+    "code_check_2026_11_15": {
+      "date": "2026-11-15",
+      "rule": "scripts/check_label_code.py: each label typed hot_wallet, cold_wallet or exchange_wallet was read with eth_getCode. A proxy or forwarder contract is typed contract_wallet; an EIP-7702 delegated account keeps its type (the exchange still holds its key); any other contract keeps its type and is listed for review.",
+      "answers": "backend/tests/fixtures/label_code/ethereum.json (read 2026-11-15, block 26416966)",
+      "retyped": {
+        "0x0162cd2ba40e23378bf0fd41f919e1be075f025f": "exchange_wallet -> contract_wallet: Gnosis Safe proxy, 170 bytes (MEXC 14)",
+        "0x100ae042ef0ea159ecc3513e9a378ff21f3829ba": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe8e847cf573fc8ed75621660a36affd18c543d7e (Bullish 2)",
+        "0x1522900b6dafac587d499a862861c0869be6e428": "exchange_wallet -> contract_wallet: delegatecall proxy, 51 bytes (Bitstamp 2)",
+        "0x1a96e5da1315efcf9b75100f5757d5e8b76abb0c": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget 16)",
+        "0x31a36512d4903635b7dd6828a934c3915a5809be": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget 9)",
+        "0x367c42a6f261ec54ffbecf5f41c226be12a3dca0": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe8e847cf573fc8ed75621660a36affd18c543d7e (Bullish 1)",
+        "0x4dfc15890972ecea7a213bda2b478dabc382e7a1": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget 15)",
+        "0x5051e9860c1889eb1bfa394365364b3dd61787f1": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget 14)",
+        "0x59708733fbbf64378d9293ec56b977c011a08fd2": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0x0d424072d658e6abd92c36f8fc16fd6479ae15a0 (Bitget 23)",
+        "0x731309e453972598ea05d706c6ee6c3c21ab4d2a": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget 18)",
+        "0x77f33da6046a03ebb0e6d33a26cb49bd738774ff": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe8e847cf573fc8ed75621660a36affd18c543d7e (FTX: Banruptcy Dust Collector (defunct))",
+        "0x842ea89f73add9e4fe963ae7929fdc1e80acdb52": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget 13)",
+        "0x93c3cf42439dc4cce8fa5f3da078facc9fbb4c15": "cold_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5dcdc13b628c2df813db1080367e929c1507ca0 (FTX: Cold 2 (defunct))",
+        "0x97f991971a37d4ca58064e6a98fc563f03a71e5c": "cold_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe8e847cf573fc8ed75621660a36affd18c543d7e (FTX: Cold 1 (defunct))",
+        "0xa98f8fda8cc449e99183229bb906cefb246a7ef3": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5dcdc13b628c2df813db1080367e929c1507ca0 (FTX: Whitehat (defunct))",
+        "0xafcd96e580138cfa2332c632e66308eacd45c5da": "cold_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xaa1c1b3bbbb59930a4e88f87345b8c513cc56fa6 (Gemini: Cold Wallet)",
+        "0xafedf06777839d59eed3163cc3e0a5057b514399": "cold_wallet -> contract_wallet: delegatecall proxy, 304 bytes (CoinEx: Cold (winding down))",
+        "0xbfc39b6f805a9e40e77291aff27aee3c96915bdd": "exchange_wallet -> contract_wallet: forwarder: no functions, its fallback passes payments on, 228 bytes (Poloniex 5)",
+        "0xd6a062cae6123c158768a5c444ca0896cc60d6b1": "exchange_wallet -> contract_wallet: delegatecall proxy, 51 bytes (Coinjar 3)",
+        "0xd91efec7e42f80156d1d9f660a69847188950747": "exchange_wallet -> contract_wallet: EIP-1967 proxy, 708 bytes (KuCoin: ERC-20 Batch Transfer)",
+        "0xe2b406ec9227143a8830229eeb3eb6e24b5c60be": "hot_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget: Hot Wallet 2)",
+        "0xe5d7ccc5fc3b3216c4dff3a59442f1d83038468c": "exchange_wallet -> contract_wallet: delegatecall proxy, 51 bytes (Korbit 6)",
+        "0xe6a421f24d330967a3af2f4cdb5c34067e7e4d75": "hot_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget: Hot Wallet 1)",
+        "0xe80623a9d41f2f05780d9cd9cea0f797fd53062a": "exchange_wallet -> contract_wallet: EIP-1167 minimal proxy to 0xe5176064c995adad5ac00e2a592260c434861717 (Bitget 1)",
+        "0xee136c0389733849dd710ac7104e92c6bf497574": "exchange_wallet -> contract_wallet: Gnosis Safe proxy, 171 bytes (MEXC 4)",
+        "0xf016e1d45ef23bdd414e7a2e4d46e1b34577b508": "exchange_wallet -> contract_wallet: Gnosis Safe proxy, 171 bytes (MEXC 27)"
+      },
+      "eip7702_delegated": {
+        "0x1579b5f6582c7a04f5ffeec683c13008c4b0a520": "EIP-7702 delegated account, delegate 0x0000fb7702036ff9f76044a501ac1aa74cbab16b; type hot_wallet kept (Bitkub: Hot Wallet 4)",
+        "0x21dd5c13925407e5bcec3f27ab11a355a9dafbe3": "EIP-7702 delegated account, delegate 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b; type exchange_wallet kept (Coinsbit 2)",
+        "0x562680a4dc50ed2f14d75bf31f494cfe0b8d10a1": "EIP-7702 delegated account, delegate 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b; type hot_wallet kept (Hotbit 9 (defunct))",
+        "0x59e0cda5922efba00a57794faf09bf6252d64126": "EIP-7702 delegated account, delegate 0x0000fb7702036ff9f76044a501ac1aa74cbab16b; type hot_wallet kept (Bitkub: Hot Wallet 3)",
+        "0x68b22215ff74e3606bd5e6c1de8c2d68180c85f7": "EIP-7702 delegated account, delegate 0x47e747f5e8cb5819c966292dd969d989ae9dea5e; type exchange_wallet kept (BitMart 2 (winding down))",
+        "0x8696e84ab5e78983f2456bcb5c199eea9648c8c2": "EIP-7702 delegated account, delegate 0x17c11fddadac2b341f2455afe988fec4c3ba26e3; type cold_wallet kept (Coincheck Cold 2)"
+      },
+      "left_for_review": {
+        "0x0bc7b31bf8ffac8213e496102167fe73fc30937a": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinmetro 6)",
+        "0x0c01089aedc45ab0f43467cceca6b4d3e4170bea": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Korbit 1)",
+        "0x111cff45948819988857bbf1966a0399e0d1141e": "contract code, 5905 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (bitFlyer)",
+        "0x187c0e0aa33282096b39a33457939f1dc3ea8e0f": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (CoinList 4)",
+        "0x1e7b450322e42b53d55abc795913537fd680fe0c": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinmetro 5)",
+        "0x30b71d015f60e2f959743038ce0aaec9b4c1ea44": "contract code, 3739 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Kryptono 3 (defunct))",
+        "0x34e158883efc81c5d92fde785fba48db738711ee": "contract code, 7636 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (BitPay: Invoice)",
+        "0x46a189c7f37953b91e5bd75d0e608efdafefaf1c": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinmetro 4)",
+        "0x4cf2220105995f006813923019f02be1ccca8132": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinmetro 2)",
+        "0x52de8d3febd3a06d3c627f59d56e6892b80dcf12": "contract code, 4039 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (BitPay: Invoice 2)",
+        "0x5f65f7b609678448494de4c87521cdf6cef1e932": "contract code, 6529 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Gemini 4)",
+        "0x629a7144235259336ea2694167f3c8b856edd7dc": "contract code, 5172 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Kryptono 2 (defunct))",
+        "0x6908c23476d3c8aa59994662e95b40414b396bf0": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Bullish 3)",
+        "0x7915f087685fffd71608e5d118f3b70c27d9ef4e": "contract code, 24179 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinbase: Coinbase Commerce)",
+        "0x8d1f2ebfaccf1136db76fdd1b86f1dede2d23852": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (CoinList 2)",
+        "0x9554efa1669014c25070bc23c2df262825704228": "contract code, 574 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Indodax 5)",
+        "0xb726da4fbdc3e4dbda97bb20998cf899b0e727e0": "contract code, 5165 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Cobinhood 2 (defunct))",
+        "0xbb44e3349c23cc430cae6ebbaf0256c9f2a1872f": "contract code, 1417 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinhako 4)",
+        "0xc5b611f502a0dcf6c3188fd494061ae29b2baa4f": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Bitstamp 6)",
+        "0xd1669ac6044269b59fa12c5822439f609ca54f41": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (CoinList 1)",
+        "0xdc1882f350b42ac9a23508996254b1915c78b204": "contract code, 6046 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Allbit 1 (defunct))",
+        "0xe978d95b437d75826aba2ed1a0bdb534f173e28c": "contract code, 6505 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (GMO Coin 10)",
+        "0xefe9a82d56cd965d7b332c7ac1feb15c53cd4340": "contract code, 2490 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinbase: Batch Deposit 1)",
+        "0xf2d4766ad705e3a5c9ba5b0436b473085f82f82f": "contract code, 2334 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinhako: Old Warm Wallet)",
+        "0xff6b1cdfd2d3e37977d7938aa06b6d89d6675e27": "contract code, 6608 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Allbit 2 (defunct))"
+      }
     }
   },
   "labels": {
@@ -25892,7 +25960,7 @@
     "0xe80623a9d41f2f05780d9cd9cea0f797fd53062a": {
       "exchange": "Bitget",
       "label": "Bitget 1",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x461f6dcdd5be42d41fe71611154279d87c06b406": {
       "exchange": "Bitget",
@@ -25912,22 +25980,22 @@
     "0x842ea89f73add9e4fe963ae7929fdc1e80acdb52": {
       "exchange": "Bitget",
       "label": "Bitget 13",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x5051e9860c1889eb1bfa394365364b3dd61787f1": {
       "exchange": "Bitget",
       "label": "Bitget 14",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x4dfc15890972ecea7a213bda2b478dabc382e7a1": {
       "exchange": "Bitget",
       "label": "Bitget 15",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x1a96e5da1315efcf9b75100f5757d5e8b76abb0c": {
       "exchange": "Bitget",
       "label": "Bitget 16",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0xbc942e2250ec7ab83bfc4516bca4e281dbfbb393": {
       "exchange": "Bitget",
@@ -25937,7 +26005,7 @@
     "0x731309e453972598ea05d706c6ee6c3c21ab4d2a": {
       "exchange": "Bitget",
       "label": "Bitget 18",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x1d5ba5414f2983212e03bf7725add9eb4cdb00dc": {
       "exchange": "Bitget",
@@ -25967,7 +26035,7 @@
     "0x59708733fbbf64378d9293ec56b977c011a08fd2": {
       "exchange": "Bitget",
       "label": "Bitget 23",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x97b9d2102a9a65a26e1ee82d59e42d1b73b68689": {
       "exchange": "Bitget",
@@ -26002,7 +26070,7 @@
     "0x31a36512d4903635b7dd6828a934c3915a5809be": {
       "exchange": "Bitget",
       "label": "Bitget 9",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x000483c56fe99127fbd62da5d8b899a159116dc1": {
       "exchange": "Bitget",
@@ -121142,12 +121210,12 @@
     "0xe6a421f24d330967a3af2f4cdb5c34067e7e4d75": {
       "exchange": "Bitget",
       "label": "Bitget: Hot Wallet 1",
-      "type": "hot_wallet"
+      "type": "contract_wallet"
     },
     "0xe2b406ec9227143a8830229eeb3eb6e24b5c60be": {
       "exchange": "Bitget",
       "label": "Bitget: Hot Wallet 2",
-      "type": "hot_wallet"
+      "type": "contract_wallet"
     },
     "0xf646d9b7d20babe204a89235774248ba18086dae": {
       "exchange": "Bitget",
@@ -121347,7 +121415,7 @@
     "0x1522900b6dafac587d499a862861c0869be6e428": {
       "exchange": "Bitstamp",
       "label": "Bitstamp 2",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x9a9bed3eb03e386d66f8a29dc67dc29bbb1ccb72": {
       "exchange": "Bitstamp",
@@ -121542,12 +121610,12 @@
     "0x367c42a6f261ec54ffbecf5f41c226be12a3dca0": {
       "exchange": "Bullish",
       "label": "Bullish 1",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x100ae042ef0ea159ecc3513e9a378ff21f3829ba": {
       "exchange": "Bullish",
       "label": "Bullish 2",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x6908c23476d3c8aa59994662e95b40414b396bf0": {
       "exchange": "Bullish",
@@ -121817,7 +121885,7 @@
     "0xafedf06777839d59eed3163cc3e0a5057b514399": {
       "exchange": "CoinEx",
       "label": "CoinEx: Cold (winding down)",
-      "type": "cold_wallet"
+      "type": "contract_wallet"
     },
     "0xb9ee1e551f538a464e8f8c41e9904498505b49b0": {
       "exchange": "CoinEx",
@@ -121842,7 +121910,7 @@
     "0xd6a062cae6123c158768a5c444ca0896cc60d6b1": {
       "exchange": "CoinJar",
       "label": "Coinjar 3",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0xd1669ac6044269b59fa12c5822439f609ca54f41": {
       "exchange": "CoinList",
@@ -123047,17 +123115,17 @@
     "0x77f33da6046a03ebb0e6d33a26cb49bd738774ff": {
       "exchange": "FTX",
       "label": "FTX: Banruptcy Dust Collector (defunct)",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x97f991971a37d4ca58064e6a98fc563f03a71e5c": {
       "exchange": "FTX",
       "label": "FTX: Cold 1 (defunct)",
-      "type": "cold_wallet"
+      "type": "contract_wallet"
     },
     "0x93c3cf42439dc4cce8fa5f3da078facc9fbb4c15": {
       "exchange": "FTX",
       "label": "FTX: Cold 2 (defunct)",
-      "type": "cold_wallet"
+      "type": "contract_wallet"
     },
     "0x02412e9a81a98829716588f80458c8bf593cadc0": {
       "exchange": "FTX",
@@ -123067,7 +123135,7 @@
     "0xa98f8fda8cc449e99183229bb906cefb246a7ef3": {
       "exchange": "FTX",
       "label": "FTX: Whitehat (defunct)",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0xffd0ecee885fcd2ebce0fec9add69bf1ed03194b": {
       "exchange": "Fairdesk",
@@ -123222,7 +123290,7 @@
     "0xafcd96e580138cfa2332c632e66308eacd45c5da": {
       "exchange": "Gemini",
       "label": "Gemini: Cold Wallet",
-      "type": "cold_wallet"
+      "type": "contract_wallet"
     },
     "0x07ee55aa48bb72dcc6e9d78256648910de513eca": {
       "exchange": "Gemini",
@@ -123797,7 +123865,7 @@
     "0xe5d7ccc5fc3b3216c4dff3a59442f1d83038468c": {
       "exchange": "Korbit",
       "label": "Korbit 6",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0xe83a48cae4d7120e8ba1c2e0409568ffba532e87": {
       "exchange": "Korbit",
@@ -124332,7 +124400,7 @@
     "0xd91efec7e42f80156d1d9f660a69847188950747": {
       "exchange": "KuCoin",
       "label": "KuCoin: ERC-20 Batch Transfer",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0xe59cd29be3be4461d79c0881d238cbe87d64595a": {
       "exchange": "KuCoin",
@@ -124387,7 +124455,7 @@
     "0x0162cd2ba40e23378bf0fd41f919e1be075f025f": {
       "exchange": "MEXC",
       "label": "MEXC 14",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x4e3ae00e8323558fa5cac04b152238924aa31b60": {
       "exchange": "MEXC",
@@ -124402,7 +124470,7 @@
     "0xf016e1d45ef23bdd414e7a2e4d46e1b34577b508": {
       "exchange": "MEXC",
       "label": "MEXC 27",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0x3cc936b795a188f0e246cbb2d74c5bd190aecf18": {
       "exchange": "MEXC",
@@ -124412,7 +124480,7 @@
     "0xee136c0389733849dd710ac7104e92c6bf497574": {
       "exchange": "MEXC",
       "label": "MEXC 4",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0xdf90c9b995a3b10a5b8570a47101e6c6a29eb945": {
       "exchange": "MEXC",
@@ -124927,7 +124995,7 @@
     "0xbfc39b6f805a9e40e77291aff27aee3c96915bdd": {
       "exchange": "Poloniex",
       "label": "Poloniex 5",
-      "type": "exchange_wallet"
+      "type": "contract_wallet"
     },
     "0xdf21fa922215b1a56f5a6d6294e6e36c85a0acfb": {
       "exchange": "Poloniex",
