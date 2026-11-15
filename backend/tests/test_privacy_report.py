@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import io
 import json
+from dataclasses import replace
+
+import networkx as nx
 
 import pytest
 from fastapi.testclient import TestClient
@@ -22,12 +25,12 @@ from app import config, request_letters
 from app.main import app
 from app.models import Case
 from app.report import PRIVACY_TITLE, build_report, render_text_report
-from app.report_pdf import render_pdf
-from app.risk_matcher import clear_label_caches
+from app.report_pdf import PRIVACY_LEDES, render_issued, render_pdf, render_summary
+from app.risk_matcher import clear_label_caches, get_risk_matcher
 from app.routes import demos
 from app.signing import verify_report
 
-from test_privacy_category import BINANCE_14, POOL, RAILGUN, SEED, W1, _route, _tx, trace  # noqa: F401 -- fixture
+from test_privacy_category import BINANCE_14, ENTRY, POOL, RAILGUN, SEED, W1, _route, _tx, trace  # noqa: F401 -- fixture
 from test_report import full_result, stored
 
 WHEN = "2026-11-14T10:00:00+00:00"
@@ -175,6 +178,99 @@ def test_without_the_section_page_one_has_no_privacy_block(railgun_case, flag):
     report = build_report(_case(railgun_case), generated_at=WHEN)
     first = PdfReader(io.BytesIO(render_pdf(report, render_text_report(report)))).pages[0].extract_text()
     assert "PRIVACY PROTOCOLS" not in first
+
+
+# --- the lede: true for a case stored before #279 too ---------------------------
+
+# #279's lede said "each note says whether the contract's payouts were followed";
+# notes stored before #279 never say so, and the lede is drawn at render time.
+UNTRUE = "each note says"
+LEDE = "may not go past a contract that pays out to, or is paid by, many addresses"
+
+
+def _entry_case(railgun_case, payouts_followed):
+    """railgun_case with its match swapped for the Privacy Pools Entrypoint as a
+    service contract: the note as #279 writes it (payouts_followed=False) or as
+    a note stored before #279 reads (the default, which never says so)."""
+    graph = nx.DiGraph()
+    graph.add_edge(W1, ENTRY, value_native=0.5)
+    graph.nodes[ENTRY].update(depth=1, is_service_contract=True)
+    [match] = get_risk_matcher("ethereum").annotate_privacy(graph)
+    if payouts_followed is None:
+        match = replace(match, payouts_followed=None)
+    return railgun_case | {"privacy_matches": [match.to_dict()], "privacy_notes": [match.describe()]}
+
+
+def _rendered(result):
+    report = build_report(_case(result), generated_at=WHEN)
+    text = render_text_report(report)
+    pdf = render_pdf(report, text)
+    first = " ".join(PdfReader(io.BytesIO(pdf)).pages[0].extract_text().split())
+    return " ".join(text.split()), text, pdf, first
+
+
+@pytest.mark.parametrize("payouts_followed", [None, False], ids=["stored-before-279", "new"])
+def test_the_lede_claims_nothing_a_stored_note_may_not_say(railgun_case, payouts_followed):
+    flat, text, pdf, first = _rendered(_entry_case(railgun_case, payouts_followed))
+    assert UNTRUE not in flat and UNTRUE not in first
+    assert LEDE in flat and "Being a privacy protocol never stops the trace" in first
+    assert verify_report(text)["signature_ok"] is True
+    checked = TestClient(app).post("/verify", content=pdf, headers={"Content-Type": "application/pdf"}).json()
+    assert checked["status"] == "genuine" and checked["pdf"]["pages_match"] is True, checked["pdf"]["problems"]
+
+
+def test_a_pre_279_note_renders_as_stored(railgun_case):
+    flat, _, _, _ = _rendered(_entry_case(railgun_case, None))
+    assert f"Privacy protocol: {ENTRY}" in flat and "The trace did not stop here." in flat
+    assert "payouts were not followed" not in flat
+
+
+def test_a_new_note_still_says_the_payouts_were_not_followed(railgun_case):
+    flat, _, _, first = _rendered(_entry_case(railgun_case, False))
+    assert "The trace did not stop here" not in flat
+    assert "Being a privacy protocol did not stop the trace here, but its payouts were not followed" in flat
+    assert ENTRY in first
+
+
+# --- /verify: a PDF issued with an earlier page-1 lede still matches -------------
+
+def _verify(pdf):
+    return TestClient(app).post("/verify", content=pdf, headers={"Content-Type": "application/pdf"}).json()
+
+
+@pytest.mark.parametrize("lede", PRIVACY_LEDES[1:], ids=["279", "before-279"])
+def test_a_pdf_issued_with_an_earlier_privacy_lede_still_verifies(railgun_case, lede):
+    # Privacy notes were on in production from about 18:03 IST on 15 Nov with
+    # #189's lede, and from 21:24 IST with #279's; each PDF issued then must
+    # still read genuine once the lede changes again.
+    report = build_report(_case(railgun_case), generated_at=WHEN)
+    text = render_text_report(report)
+    pdf = render_issued(text, report["case"]["case_id"], privacy_lede=lede)
+    first = " ".join(PdfReader(io.BytesIO(pdf)).pages[0].extract_text().split())
+    assert lede in first and PRIVACY_LEDES[0] not in first
+    checked = _verify(pdf)
+    assert checked["status"] == "genuine" and checked["pdf"]["pages_match"] is True, checked["pdf"]["problems"]
+
+
+@pytest.mark.parametrize("lede", [
+    PRIVACY_LEDES[0].replace("this is not an accusation", "this is an accusation"),
+    PRIVACY_LEDES[2].replace("did not stop there", "stopped there"),
+    "Funds passing through lose their visible link.",
+], ids=["edited-current", "edited-earlier", "cut-short"])
+def test_a_pdf_whose_privacy_lede_is_altered_otherwise_reads_differs(railgun_case, lede):
+    report = build_report(_case(railgun_case), generated_at=WHEN)
+    text = render_text_report(report)
+    checked = _verify(render_issued(text, report["case"]["case_id"], privacy_lede=lede))
+    assert checked["status"] == "summary_differs"
+
+
+def test_a_case_without_privacy_notes_has_one_summary_form(railgun_case, flag):
+    flag(False)
+    report = build_report(_case(railgun_case), generated_at=WHEN)
+    assert len(render_summary(render_text_report(report))) == 2  # the summary and the short page
+    flag(True)
+    report = build_report(_case(railgun_case), generated_at=WHEN)
+    assert len(render_summary(render_text_report(report))) == 1 + len(PRIVACY_LEDES)
 
 
 # --- the letters: deliberately left out ----------------------------------------
