@@ -25,11 +25,12 @@ from app.contracts import on_read, upgrade
 from app.graph_builder import TraceConfig, build_trace_graph, graph_to_dict
 from app.risk_matcher import RiskMatch, freeze_event
 from app.main import app
-from conftest import addr
+from conftest import addr, swap_recording
 from test_graph_builder import FakeClient, itx, tx
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 BY_DEMO = {d["demo"]: d["result"] for d in json.loads((DATA / "recorded_demos.json").read_text())}
+SWAP_DEMO = swap_recording()["result"]  # the old demo 3 (14 Oct): a swap with a USDT follow-on
 SEED_11 = "TUVNGw2z3Gt8SDNukoj8GqSStKrve5i3ts"
 TZ7L = "TZ7LmC6zBipRx6tDMavbzaF8piBpw89cNz"
 FROZEN_11 = {SEED_11: "a7a163d21039fe8c378aaad209423a0825a4c66c65486f0d7a57609dd3237f2c",
@@ -188,7 +189,7 @@ def test_every_read_route_carries_them_and_the_stored_case_is_unchanged(client):
 
 
 def test_a_follow_on_gets_them_too():
-    got = on_read(BY_DEMO[3])["follow_ons"][0]["result"]
+    got = on_read(SWAP_DEMO)["follow_ons"][0]["result"]
     assert all("expanded" in n for n in got["graph"]["nodes"])
 
 

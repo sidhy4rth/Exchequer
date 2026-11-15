@@ -165,7 +165,13 @@ reads their whole history, not just the newest 200 records.
 
 HitBTC is not in `backend/data/exchange_status.json`, so its labels carry no
 "(defunct)" or "(winding down)" mark, and the letters are addressed to HitBTC
-itself.
+itself. HitBTC still operated on 15 November 2026: its public API
+(`api.hitbtc.com/api/3/public`) returned a live BTC/USDT ticker, with USDT
+deposits and withdrawals open. It is not on FIU-IND's list of registered VDA
+service providers (Lok Sabha USQ 5805, Annexure-I, as on 9 March 2026), and on
+1 October 2025 FIU-IND announced a notice to it under section 13 of the PMLA
+([PIB release 2173758](https://www.pib.gov.in/PressReleasePage.aspx?PRID=2173758);
+`backend/data/fiu_ind_status.json`).
 
 ### Before 15 November: the attribution that kept moving
 
@@ -206,16 +212,18 @@ Ethereum · ETH · **direction: who sent funds here** · 1 hop · **~1 second, 1
 | | |
 |---|---|
 | Addresses that funded it | **10** |
-| Total received from them | 43.5207 ETH |
-| Largest single sender | 16.9325 ETH |
+| Total received from them | 304.7749 ETH (trace of 15 November 2026, 21:12 IST) |
+| Largest single sender | 135.5910 ETH |
 | Exchanges among the senders | none |
 
 This is the wallet trace 3 used until 15 November, asked the other question.
 **Ten separate addresses paid money into it** — and none of them is a labelled exchange, so none is explained away as
 a withdrawal, even with three times as many exchange labels loaded. (The
-totals are lower than on 15 September — 248 ETH then — because the traversal
-keeps the ten largest senders of each address and the set has changed as the
-wallet kept receiving; the count did not.)
+totals move: 248 ETH on 15 September, 43.5 ETH on 23 September, 304.8 ETH on 15
+November. The traversal keeps the ten largest senders of each address, and
+the wallet now receives so often that on 15 November all ten had paid it
+between 17:16 and 20:36 IST that day. The count of ten and "no exchanges"
+did not move.)
 
 One complaint, ten more addresses that paid the same wallet. Each is a
 candidate victim who may hold a separate FIR, and the panel is labelled

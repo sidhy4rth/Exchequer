@@ -33,7 +33,7 @@ from app.etherscan_client import Transaction
 from app.main import app
 from app.pipeline import TraceRequest
 from app.routes import demos
-from conftest import addr
+from conftest import addr, swap_recording
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 BY_DEMO = {d["demo"]: d["result"] for d in json.loads((DATA / "recorded_demos.json").read_text())}
@@ -116,17 +116,21 @@ def test_every_flow_says_which_build_made_it():
         assert victim_flow.build(result)["version"] == victim_flow.VERSION
 
 
-def test_each_follow_on_is_served_with_its_flow(client):
+def test_each_follow_on_is_served_with_its_flow(client, monkeypatch):
     """A follow-on is a full case of its own, and upgrade() gives it a flow:
     every read does the same, and keeps a current flow the follow-on carries."""
-    want = upgrade(BY_DEMO[3])["follow_ons"][0]["result"]["victim_flow"]
+    # The old demo 3 (14 Oct): the only recording with a swap and a follow-on.
+    row = swap_recording()
+    monkeypatch.setattr(demos, "_recordings", lambda: {3: row})
+    swap = row["result"]
+    want = upgrade(swap)["follow_ons"][0]["result"]["victim_flow"]
     assert want["status"] == "estimated"
-    models.save_case("swap-case", BY_DEMO[3]["address"], demo(3), owner_hash=OWNER_HASH)
+    models.save_case("swap-case", swap["address"], copy.deepcopy(swap), owner_hash=OWNER_HASH)
     for body in (client.get("/demos/recorded/3").json(), client.get("/trace/swap-case").json()):
         assert body["follow_ons"][0]["result"]["victim_flow"] == want
-    carried = demo(3)
+    carried = copy.deepcopy(swap)
     carried["follow_ons"][0]["result"]["victim_flow"] = STORED
-    models.save_case("swap-kept", BY_DEMO[3]["address"], carried, owner_hash=OWNER_HASH)
+    models.save_case("swap-kept", swap["address"], carried, owner_hash=OWNER_HASH)
     assert client.get("/trace/swap-kept").json()["follow_ons"][0]["result"]["victim_flow"] == STORED
     assert "victim_flow" not in models.get_case("swap-case").result["follow_ons"][0]["result"]
 

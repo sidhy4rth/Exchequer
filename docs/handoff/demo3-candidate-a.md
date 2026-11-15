@@ -5,7 +5,7 @@
 - **Branch**: `demos/demo3-candidate-a`
 - **Current**: Sidhyarth
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: draft PR, CI red on purpose: 14 backend tests are pinned to the old demo 3 recording; waiting for the owner
+- **Status**: owner approved the swap (15 Nov); ready for the lead to merge
 
 ## Done
 
@@ -13,6 +13,9 @@
 - DEMO.md section 3 rewritten from that trace, keeping the old wallet's history in a subsection; header, demo 4, running order and *If a live trace disappoints* updated where they named the old trace 3. README demo row, `TraceForm.jsx` demos 03 and 04, `demo_traces.json` (warm-up) updated.
 - `demo_expectations.json`: demo 3's address changed, expectations re-recorded from live for demos 3 and 4 (demo 4 unchanged: no exchange). `recorded_demos.json`: demo 3 re-recorded from live.
 - `TraceForm.test.jsx`: the demo-03 band check now expects "HitBTC ... moderate confidence", the band the new recording carries.
+- The old demo 3 recording (14 Oct, `0x536c4921…`) is kept verbatim as `backend/tests/fixtures/recorded_demo3_2026-10-14_usdt_follow_on.json` (the row from `recorded_demos.json` on main). The 14 tests that need a swap with a USDT follow-on read it (via `conftest.swap_recording`), with unchanged assertions; `build_contract_fixtures.py` builds demo 3's fixture from it, so the contract fixtures are unchanged except an additive `pinned_recordings` key in `index.json`. `verify_case._demo_report` takes an optional recordings file.
+- `test_letters_of_request`: demo 3's "claims no more than the case holds" check now looks for "to an account at HitBTC", the exchange the new recording names.
+- DEMO.md demo 3 says HitBTC still operated on 15 Nov 2026 and is not FIU-IND registered (s.13 PMLA notice, 1 Oct 2025, PIB 2173758). Demo 4's totals updated from a 15 Nov reverse trace (local backend from this branch): 304.7749 ETH, largest 135.5910 ETH, still 10 senders and no exchange.
 
 ## Decisions
 
@@ -21,15 +24,11 @@
 
 ## Next
 
-1. Owner: decide whether to swap demo 3 (and whether HitBTC as the named exchange is acceptable).
-2. If yes, decide how the old demo 3 recording (14 Oct, 0x536c4921..., the repo's only recorded swap with a USDT follow-on) survives for the 14 tests pinned to it: test_contract (2, incl. the contract-fixture drift test, since `scripts/build_contract_fixtures.py` builds `deposit_inferred.json` from demo 3), test_verify_case (7, via `scripts/verify_case.py::_demo_report`), test_letter_audit (2), test_read_fields (1), test_victim_flow_read (1), test_freeze_letters (1). One way: keep that recording verbatim as a test fixture and point those tests and the two scripts at it. That touches the contract fixtures, so it needs Barenyam's agreement (CLAUDE.md rule 3).
-3. Then mark the PR ready and request review.
+1. Lead: merge.
 
 ## Open questions
 
-- Is HitBTC acceptable as the exchange the demo letter is addressed to? It is not in `exchange_status.json`, so the repo treats it as open; nobody has checked its current status for this PR.
-- Keep `volatile` on demo 3, or make its check strict?
-- Demo 4's table (43.5207 ETH total, largest sender 16.9325 ETH) no longer matches the live funders' amounts; the count (10) and "no exchanges" still do. Not changed here.
+- Keep `volatile` on demo 3, or make its check strict? (kept for now)
 
 ## Files mid-change (do not touch)
 

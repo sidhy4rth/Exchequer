@@ -15,7 +15,7 @@ import pytest
 
 from app.request_letters import BLANK, LetterNotApplicable, available, draft
 
-from test_freeze_letters import DEMOS, SEED, node, one_line, stopped_case
+from test_freeze_letters import DEMOS, SEED, SWAP_DEMO, node, one_line, stopped_case
 
 HASH = re.compile(r"\btx (?:0x)?([0-9a-f]{64})\b")
 CARRY = ("38ef314819abff3f5c448da6de769fad80821ae06a26f15a8fd134e1645fbdba",  # 19 Dec 2024
@@ -92,14 +92,14 @@ def test_when_two_rules_find_none_the_letter_names_both():
 
 # -- a freeze the list now excludes -------------------------------------------------------
 def test_demo_3s_tether_letter_no_longer_calls_the_swap_router_frozen():
-    text = draft("case-1", DEMOS[3], "tether")
+    text = draft("case-1", SWAP_DEMO, "tether")
     assert ROUTER not in text and "AddedBlackList" not in text
 
 
 def test_an_excluded_freeze_alone_supports_no_tether_letter():
     excluded = {"address": ROUTER, "category": "frozen", "label": "USDT frozen by Tether on 2021-08-05",
                 "source": "Tether USDT contract on Ethereum, AddedBlackList event"}
-    result = copy.deepcopy(DEMOS[3])
+    result = copy.deepcopy(SWAP_DEMO)
     result["follow_ons"] = []
     result["risk_matches"] = [excluded]
     assert all(letter["to"] != "tether" for letter in available(result))
@@ -109,7 +109,7 @@ def test_an_excluded_freeze_alone_supports_no_tether_letter():
 
 # -- a USDT trace with no route ----------------------------------------------------------
 def test_demo_3s_tether_letter_says_where_the_follow_on_usdt_went():
-    text = draft("case-1", DEMOS[3], "tether")
+    text = draft("case-1", SWAP_DEMO, "tether")
     assert DEMO3_END in text and DEMO3_TX in text and "5,215.000000 USDT" in text
     assert not re.search(r"as follows:\n\n", text)
 

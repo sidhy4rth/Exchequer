@@ -15,12 +15,19 @@ import httpx
 import pytest
 
 from scripts import verify_case as vc
-from scripts.verify_case import CONFIRMED, MISMATCH, UNCHECKED, _demo_report, exit_code, verify
+from conftest import SWAP_RECORDING_PATH
+from scripts.verify_case import CONFIRMED, MISMATCH, UNCHECKED, exit_code, verify
 
 FIXTURES = Path(__file__).parent / "fixtures" / "verify_case"
 RECORDED = [(12, False, "demo_12_tron.json", 5),
             (1, False, "demo_1_ethereum.json", 16),
             (3, True, "demo_3_follow_on_usdt.json", 1)]
+
+
+def _demo_report(number: int, follow_on: bool = False) -> dict:
+    # Demo 3's swap and USDT follow-on are the old demo 3's 14 Oct recording,
+    # kept as a fixture when the shipped demo 3 moved (#284).
+    return vc._demo_report(number, follow_on, SWAP_RECORDING_PATH if number == 3 else None)
 
 
 def answers(name: str) -> dict:
