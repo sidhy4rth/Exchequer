@@ -117,10 +117,12 @@ def keep_previous(kept: dict[str, dict], previous: dict[str, dict], dropped: set
 
     A row from an exchange's own proof-of-reserves list (source "por:...",
     scripts/import_por_tron_labels.py) is first-party and not this script's to
-    replace, so it always stays as it was."""
+    replace, so it always stays as it was. So does an OKX wallet from OKX's PoR
+    file that scripts/classify_okx_tron_wallets.py classed (a `sweep_basis` row)."""
     retained = 0
     for address, meta in previous.items():
-        if str(meta.get("source", "")).startswith("por:") or (address not in kept and address not in dropped):
+        first_party = str(meta.get("source", "")).startswith("por:") or "sweep_basis" in meta
+        if first_party or (address not in kept and address not in dropped):
             kept[address] = meta
             retained += 1
     return retained
