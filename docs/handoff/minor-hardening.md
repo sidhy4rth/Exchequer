@@ -18,7 +18,8 @@
   `re.sub` pass, so an officer's own text that contains a placeholder stays as typed. The MHA wording file
   is unchanged (its SHA pin test passes).
 - `GET /trace/{id}/bundle`: charged per client (20 an hour) and site-wide (120 an hour), as PDF renders
-  are; 429 with Retry-After. A 403 or 404 is not charged. The test suite resets both limiters.
+  are; 429 with Retry-After. A 403 or 404 is not charged, nor a request whose PDF was refused (busy, or the
+  PDF limit: 429), which is refunded. The test suite resets both limiters.
 
 ## Decisions
 
