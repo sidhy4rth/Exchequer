@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date, timedelta
 
 import pytest
 
@@ -22,6 +23,9 @@ ENTRIES = DOCUMENT["exchanges"]
 LS_5805 = "https://sansad.in/getFile/loksabhaquestions/annex/187/AU5805_lMTYNK.pdf?source=pqals"
 PIB_DEC_2023 = "https://pib.gov.in/PressReleasePage.aspx?PRID=1991372"
 ISO = re.compile(r"\d{4}-\d{2}-\d{2}")
+# The staleness check's clock. It is fixed so CI never starts failing by itself; move it
+# forward when you re-check the sources (docs/flag-rollout.md, EXCHEQUER_FIU_IND_NOTE).
+TODAY = date(2026, 11, 16)
 
 
 @pytest.fixture(autouse=True)
@@ -39,6 +43,20 @@ def test_the_flag_is_registered_and_off_by_default():
 def test_the_register_snapshot_is_dated_and_sourced():
     register = DOCUMENT["_meta"]["register"]
     assert register == {"as_of": "2026-03-09", "source": "Lok Sabha USQ 5805, Annexure-I", "url": LS_5805}
+    assert DOCUMENT["_meta"]["checked_on"] == "2026-11-15"  # all 33 entries read against their sources that day
+
+
+def test_the_sources_were_checked_recently():
+    # Fails, with what to do, once checked_on is more than STALE_AFTER_DAYS before TODAY.
+    assert fiu_ind_status.staleness(TODAY) is None, fiu_ind_status.staleness(TODAY)
+
+
+def test_the_staleness_check_fires_after_the_limit():
+    checked = date.fromisoformat(DOCUMENT["_meta"]["checked_on"])
+    assert fiu_ind_status.staleness(checked + timedelta(days=fiu_ind_status.STALE_AFTER_DAYS)) is None
+    late = fiu_ind_status.staleness(checked + timedelta(days=fiu_ind_status.STALE_AFTER_DAYS + 1))
+    assert late and "last checked on 2026-11-15" in late and "re-check every entry against its source" in late
+    assert "docs/flag-rollout.md" in late and "update _meta.checked_on" in late
 
 
 @pytest.mark.parametrize("name", sorted(ENTRIES))
@@ -79,15 +97,38 @@ def on(monkeypatch):
 def test_the_note_states_the_facts_and_their_sources(on):
     found = fiu_ind_status.note("Kraken")
     assert found == {
-        "text": ("Kraken was not on FIU-IND's list of registered VDA service providers as of 9 Mar 2026 "
-                 "(Lok Sabha USQ 5805, Annexure-I); on 28 Dec 2023 FIU-IND announced a show-cause notice to it "
-                 "under section 13 of the PMLA and that it had written to MeitY to block its URLs "
-                 "(PIB release 1991372)."),
+        "text": ("Kraken, in date order: on 28 Dec 2023 FIU-IND announced a show-cause notice to it under "
+                 "section 13 of the PMLA and that it had written to MeitY to block its URLs (PIB release "
+                 "1991372); as of 9 Mar 2026 Kraken was not on FIU-IND's list of registered VDA service "
+                 "providers (Lok Sabha USQ 5805, Annexure-I). Exchequer last checked the sources on 15 Nov 2026."),
         "sources": [LS_5805, PIB_DEC_2023]}
     bybit = fiu_ind_status.note("Bybit")["text"]
-    assert bybit.startswith("Bybit, listed as Bybit Fintech Limited, was on FIU-IND's list")
-    assert bybit.index("7 May 2024") < bybit.index("31 Jan 2025")  # the facts in date order
+    assert bybit.startswith("Bybit, in date order: on 7 May 2024 FIU-IND issued it a notice")
+    assert bybit.index("7 May 2024") < bybit.index("31 Jan 2025") < bybit.index("as of 9 Mar 2026")  # in date order
     assert "imposed a penalty of Rs 9,27,00,000" in bybit
+    assert "as of 9 Mar 2026 Bybit, listed as Bybit Fintech Limited, was on FIU-IND's list" in bybit
+
+
+def test_coinbase_reads_in_date_order_each_clause_with_its_source(on):
+    assert fiu_ind_status.note("Coinbase")["text"] == (
+        "Coinbase, in date order: on 28 Aug 2024 FIU-IND issued it a notice under section 13 of the PMLA "
+        "(FIU-IND Order 16/DIR/FIU-IND/2024); on 6 Mar 2025 FIU-IND issued it a warning under section 13(2)(a) "
+        "of the PMLA, with no penalty, in an order that says Coinbase India Private Limited had ceased its "
+        "operations in India (FIU-IND Order 16/DIR/FIU-IND/2024); as of 9 Mar 2026 Coinbase, listed as Coinbase "
+        "India Private Limited, was on FIU-IND's list of registered VDA service providers (Lok Sabha USQ 5805, "
+        "Annexure-I); on 30 Mar 2026 the Government told the Lok Sabha that FIU-IND had directed the takedown "
+        "of its apps and URLs (Lok Sabha USQ 5805, Annexure-II). Exchequer last checked the sources on 15 Nov 2026.")
+
+
+@pytest.mark.parametrize("name", sorted(ENTRIES))
+def test_every_note_is_in_date_order_and_says_when_the_sources_were_checked(on, name):
+    text = fiu_ind_status.note(name)["text"]
+    assert text.endswith(". Exchequer last checked the sources on 15 Nov 2026.")
+    days = [date.fromisoformat(f["date"]) for f in ENTRIES[name]["actions"] + ENTRIES[name]["penalties"]]
+    days.append(date(2026, 3, 9))  # the register snapshot
+    said = [f"{d.day} {d:%b %Y}" for d in sorted(days)]
+    assert [text.index(d) for d in said] == sorted(text.index(d) for d in said)
+    assert text.count("(") >= len(days)  # a source after every clause
 
 
 def test_flag_off_there_is_no_note():
@@ -110,11 +151,16 @@ def test_a_missing_or_malformed_file_gives_no_note(on, tmp_path, monkeypatch):
     (tmp_path / fiu_ind_status.STATUS_FILE).write_text('{"exchanges": {}}')
     fiu_ind_status.clear_cache()
     assert fiu_ind_status.note("Kraken") is None  # no register snapshot
-    meta = {"register": DOCUMENT["_meta"]["register"]}
+    meta = {"register": DOCUMENT["_meta"]["register"], "checked_on": DOCUMENT["_meta"]["checked_on"]}
     (tmp_path / fiu_ind_status.STATUS_FILE).write_text(json.dumps(
         {"_meta": meta, "exchanges": {"Kraken": {"registered": False, "actions": [{"text": "undated"}]}}}))
     fiu_ind_status.clear_cache()
     assert fiu_ind_status.note("Kraken") is None  # a fact with no date or URL is never shown
+    (tmp_path / fiu_ind_status.STATUS_FILE).write_text(json.dumps(
+        {"_meta": {"register": meta["register"]}, "exchanges": {"Kraken": ENTRIES["Kraken"]}}))
+    fiu_ind_status.clear_cache()
+    assert fiu_ind_status.note("Kraken") is None  # no checked_on: the note could not say when it was checked
+    assert "unusable" in fiu_ind_status.staleness(TODAY)
 
 
 @pytest.mark.parametrize("listed_as", [None, "", "  ", 7])
@@ -123,7 +169,7 @@ def test_a_registered_entry_without_its_listed_name_gives_no_note(on, tmp_path, 
     entry = {"registered": True, "actions": [], "penalties": [],
              **({} if listed_as is None else {"listed_as": listed_as})}
     (tmp_path / fiu_ind_status.STATUS_FILE).write_text(json.dumps(
-        {"_meta": {"register": DOCUMENT["_meta"]["register"]},
+        {"_meta": {"register": DOCUMENT["_meta"]["register"], "checked_on": DOCUMENT["_meta"]["checked_on"]},
          "exchanges": {"Binance": entry, "Kraken": ENTRIES["Kraken"]}}))
     fiu_ind_status.clear_cache()
     assert fiu_ind_status.note("Binance") is None  # never "listed as None"

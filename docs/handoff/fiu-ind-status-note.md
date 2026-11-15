@@ -3,8 +3,8 @@
 - **Feature**: Feature 7 / feature 1 data: a dated, sourced FIU-IND note (registration as of 9 Mar 2026, enforcement actions, penalties) about the exchange a trace reached, on the report's FINDING and the exchange letters, behind `EXCHEQUER_FIU_IND_NOTE`
 - **Issue**: #290
 - **Branch**: `feat/fiu-ind-status-note` (slice 1, #291), `feat/fiu-ind-status-note-2` (slice 2, stacked on it)
-- **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-15
+- **Current**: Sidhyarth (follow-ups: branch `fix/fiu-note-followups`)
+- **Last worked on**: Sidhyarth, 2026-11-16
 - **Status**: merged (#291, #295) and live: `EXCHEQUER_FIU_IND_NOTE` on since 22:46 IST on 15 Nov 2026 (Render deploy `dep-dbsugv61egvs73eto9a0`), recorded in `render.yaml` by #296
 
 ## Done
@@ -21,13 +21,14 @@
 - Wording: facts and dates only, each with its source; never "illegal" or advice. "Not on the 9 Mar 2026 list", never "not registered" without a date.
 - An Annexure-II row is cited only where no PIB release records that action (OKX, Bitget, BitMart, Gemini, Crypto.com, Coinbase).
 - Left out: Delta Exchange (Annexure-I's is the Indian entity; the label files do not say which Delta Exchange their wallet is), the ambiguous Annexure-II names, and the 39 named exchanges with no wallet in the label files.
-- No test fails on the file's age (a date-based failure would break CI on a day, not on a change); the note prints the as-of date instead.
+- Superseded 16 Nov (review question 3): the note now ends "Exchequer last checked the sources on <checked_on>", and `test_the_sources_were_checked_recently` fails once `checked_on` is more than 180 days before the test's fixed `TODAY`. The clock is the test's, so CI still never fails on a day, only when someone moves `TODAY`; the re-check procedure is in `docs/flag-rollout.md`.
+- 16 Nov (review question 4): every note's clauses are in date order, each naming its source; the 9 Mar 2026 list sits at its date (it leads only when nothing is older). Coinbase's warning clause no longer has a semicolon inside it ("..., with no penalty, in an order that says ..."). No fact changed.
 - Separate data file, `backend/data/fiu_ind_status.json`, not a third status in `exchange_status.json`: closure and FIU-IND standing are independent (BitMEX is closed and was noticed; Coinbase was listed for takedown and is registered).
 
 ## Next
 
 1. Done 15 Nov: the owner switched `EXCHEQUER_FIU_IND_NOTE` on after a fact-check of all 33 entries. Steps 1 and 2 of the checks in `docs/flag-rollout.md` (`/health/detail`, a signed-in report's FINDING) had not been done by the end of 15 Nov.
-2. Re-check the file against any newer Parliament answer or PIB release; update `_meta.checked_on`.
+2. Re-check the file against any newer Parliament answer or PIB release, by 14 May 2027 at the latest (180 days after 15 Nov 2026), following `docs/flag-rollout.md`; update `_meta.checked_on`.
 3. Optional: wallets for the 39 FIU-IND-named exchanges with none in the label files (Huione, BC.Game, Paxful, Changelly, LBank, Phemex, ...), sourced as usual; then add their entries.
 4. Done: a registered entry with no `listed_as` is skipped, so no note can read "listed as None" (`tests/test_fiu_ind_status.py`; all 8 registered entries have one).
 
