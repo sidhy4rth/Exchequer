@@ -170,9 +170,9 @@ def _verify(body: bytes) -> dict[str, Any]:
         return result
     try:
         pages = _page_texts(reader, started)
-        summary_problems, copy_problems, summary_numbers = _compare(reader, pages, text, result["finding"])
+        summary_problems, copy_problems, summary_numbers, summary = _compare(reader, pages, text, result["finding"])
         file_problems, summary_drawn, copy_drawn = _against_redraw(
-            reader, pages, text, result["finding"].get("case_id") or "", summary_numbers, started)
+            reader, text, result["finding"].get("case_id") or "", summary_numbers, summary, started)
         # A page whose text already differs is named by that; what it draws adds nothing.
         summary_problems += [] if summary_problems else summary_drawn
         copy_problems += [] if copy_problems else copy_drawn
@@ -377,9 +377,9 @@ def _short(value: str) -> str:
 
 
 def _compare(reader: Any, pages: list[str], signed: str,
-             finding: dict[str, Any]) -> tuple[list[str], list[str], set[int]]:
+             finding: dict[str, Any]) -> tuple[list[str], list[str], set[int], str]:
     """(problems with page 1, problems with the footers and the printed copy,
-    the numbers of the pages the summary is on)."""
+    the numbers of the pages the summary is on, the summary's text)."""
     case_id = finding.get("case_id") or ""
     digest, key = _seal_facts(signed)
     footer = _footer(case_id, digest, key)
@@ -466,7 +466,7 @@ def _compare(reader: Any, pages: list[str], signed: str,
         printed_compact = _compact(printed)
         if not printed_compact.startswith(note) or not _same_text(printed_compact[len(note):], signed):
             copy_problems.append("The printed copy (Part 2) differs from the attached file.")
-    return problems, copy_problems, {n for n, _ in summary_pages}
+    return problems, copy_problems, {n for n, _ in summary_pages}, summary
 
 
 # -- comparing the whole file with the PDF Exchequer issues for the signed text --------
@@ -560,18 +560,20 @@ class _Canon:
         return value
 
 
-def _issued(signed: str, case_id: str, first_page: str) -> Any:
-    """The PDF report_pdf issues for `signed`, in the form page 1 shows: the
-    summary, or the short page printed when it could not be laid out."""
+def _issued(signed: str, case_id: str, summary: str) -> Any:
+    """The PDF report_pdf issues for `signed`, in the form the uploaded summary
+    pages (`summary`, their text) show: the summary, or the short page printed
+    when it could not be laid out."""
     from pypdf import PdfReader
     from reportlab.platypus.doctemplate import LayoutError
 
     from .report_pdf import PRIVACY_LEDES, issued_ledes, render_issued
 
-    laid_out = NOT_LAID_OUT not in first_page
-    # An earlier privacy lede on the page that this report could have been issued
-    # with: drawn again with that one (as render_summary does), else with today's.
-    shown = _compact(first_page)
+    laid_out = NOT_LAID_OUT not in summary
+    # An earlier privacy lede on the summary pages (the privacy section can start
+    # on page 2) that this report could have been issued with: drawn again with
+    # that one (as render_summary does), else with today's.
+    shown = _compact(summary)
     lede = next((one for one in issued_ledes(signed)[1:] if _compact(one) in shown), PRIVACY_LEDES[0])
     try:
         pdf = render_issued(signed, case_id, laid_out=laid_out, privacy_lede=lede)
@@ -601,12 +603,12 @@ def _show(value: Any) -> str:
     return _short(str(value.get_object() if hasattr(value, "get_object") else value))
 
 
-def _against_redraw(reader: Any, pages: list[str], signed: str, case_id: str, summary_numbers: set[int],
+def _against_redraw(reader: Any, signed: str, case_id: str, summary_numbers: set[int], summary: str,
                     started: float) -> tuple[list[str], list[str], list[str]]:
     """(problems with the file as a whole, with the summary pages, with the
     rest), from comparing the uploaded PDF with the one Exchequer issues for
     `signed`."""
-    issued = _issued(signed, case_id, pages[0] if pages else "")
+    issued = _issued(signed, case_id, summary)
     up, re_ = _Canon(started), _Canon(started)
     whole: list[str] = []
 
