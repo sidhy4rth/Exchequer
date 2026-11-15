@@ -29,6 +29,11 @@
   The note now says so for a service-contract node (`RiskMatch.payouts_followed`, not in `to_dict`, so no contract
   change), and the screen, text-report and PDF ledes say being a privacy protocol never stops the trace. Notes
   already stored in cases keep their old wording.
+- Fix (15 Nov, after #279): the ledes are drawn at render time for every stored case, and #279's "each note says
+  whether the contract's payouts were followed" was untrue for a case stored before #279 (its notes never say so).
+  The text-report, PDF and screen ledes now say only that the trace may not go past a contract that pays out to,
+  or is paid by, many addresses. Walking back, a service-contract note says its senders, not its payouts, were not
+  followed (`RiskMatch.senders_followed`, not in `to_dict`).
 
 ## Decisions
 

@@ -18,6 +18,7 @@ import pytest
 
 from app import config, never_flag, pipeline
 from app.etherscan_client import Transaction, normalize_address
+from app.graph_builder import INCOMING
 from app.pipeline import TraceRequest, run_trace
 from app.risk_matcher import (CATEGORIES, MIXER, PRIVACY, SANCTIONED, RiskMatcher, clear_label_caches,
                               get_risk_matcher)
@@ -118,6 +119,27 @@ def test_flag_on_a_privacy_pool_whose_payouts_were_not_followed_says_so(flag_on)
     assert "The trace did not stop here" not in note
     assert "Being a privacy protocol did not stop the trace here, but its payouts were not followed" in note
     assert "This is not an accusation" in note
+
+
+def test_flag_on_walking_back_a_pool_whose_senders_were_not_followed_says_senders_not_payouts(flag_on):
+    # Walking back, graph_builder's service-contract rule reads many contract
+    # senders into the node, so it is the senders, not the payouts, that the
+    # walk left unfollowed; the note must say which.
+    matcher = get_risk_matcher("ethereum")
+    graph = nx.DiGraph()
+    graph.add_edge(ENTRY, W1, value_native=0.5)
+    graph.nodes[ENTRY].update(depth=1, is_service_contract=True)
+    [match] = matcher.annotate_privacy(graph, INCOMING)
+    assert match.senders_followed is False and match.payouts_followed is None and not match.is_terminal
+    assert not {"payouts_followed", "senders_followed"} & match.to_dict().keys()  # no contract change
+    note = match.describe()
+    assert "payouts" not in note and "The trace did not stop here" not in note
+    assert "Being a privacy protocol did not stop the trace here, but its senders were not followed back" in note
+    assert "This is not an accusation" in note
+    # Not a service contract: the walk went on past it in either direction.
+    del graph.nodes[ENTRY]["is_service_contract"]
+    [plain] = matcher.annotate_privacy(graph, INCOMING)
+    assert plain.senders_followed is None and "The trace did not stop here." in plain.describe()
 
 
 @pytest.mark.parametrize("address", [POOL, ENTRY])

@@ -247,6 +247,9 @@ class RiskMatch:
     # payouts because it pays out to many addresses (graph_builder's service-
     # contract rule), so the note must not say the trace went on past it.
     payouts_followed: bool | None = None
+    # The same rule walking back (a reverse trace): False when the walk did not
+    # follow the contract's senders because many contracts pay into it.
+    senders_followed: bool | None = None
 
     @property
     def is_terminal(self) -> bool:
@@ -382,10 +385,16 @@ class RiskMatch:
                 f"took part in it."
             )
         if self.category == PRIVACY:
-            walked = ("The trace did not stop here." if self.payouts_followed is not False else
-                      "Being a privacy protocol did not stop the trace here, but its payouts "
-                      "were not followed: it is a contract that pays out to many addresses, "
-                      "so no single payout can be tied to these funds.")
+            if self.payouts_followed is False:
+                walked = ("Being a privacy protocol did not stop the trace here, but its payouts "
+                          "were not followed: it is a contract that pays out to many addresses, "
+                          "so no single payout can be tied to these funds.")
+            elif self.senders_followed is False:
+                walked = ("Being a privacy protocol did not stop the trace here, but its senders "
+                          "were not followed back: it is a contract that many addresses pay into, "
+                          "so no single deposit can be tied to these funds.")
+            else:
+                walked = "The trace did not stop here."
             return (
                 f"Privacy protocol: {self.address} is {named}, per {self.source}. "
                 f"{placement}. A privacy protocol: funds passing through lose their "
@@ -627,12 +636,16 @@ class RiskMatcher:
             edges = (graph.in_edges(node, data=True) if direction == OUTGOING
                      else graph.out_edges(node, data=True))
             data["privacy_entity"] = meta["entity"]
+            service = bool(data.get("is_service_contract"))
             matches.append(RiskMatch(
                 address=node, category=PRIVACY, entity=meta["entity"], label=meta["label"],
                 source=meta["source"], depth=data.get("depth", 0),
                 value_received_native=sum(edge.get("value_native", 0.0) for _, _, edge in edges),
                 origin=meta.get("origin"),
-                payouts_followed=False if data.get("is_service_contract") else None,
+                # graph_builder's service-contract rule reads payouts walking
+                # out and senders walking back; the note names the one it skipped.
+                payouts_followed=False if service and direction == OUTGOING else None,
+                senders_followed=False if service and direction != OUTGOING else None,
             ))
         matches.sort(key=lambda m: (m.depth, -m.value_received_native))
         return matches
