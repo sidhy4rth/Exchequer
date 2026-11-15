@@ -25,7 +25,7 @@
 ## Next
 
 1. After merge: let the Tron deposit-row join accept the 10 new destinations (see `~/exchequer-flagged/store/NEXT-RELEASE.md`).
-2. Owner decision: re-record the demo and `tests/fixtures/contract/exchange_wallet.json` by their scripts, then label the 5 left-out wallets the same way.
+2. The 5 left-out wallets: labelled in the draft PR for #307 (`docs/handoff/okx-tron-demo-wallets.md`); no demo needed re-recording.
 
 ## Open questions
 
