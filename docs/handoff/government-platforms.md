@@ -3,9 +3,9 @@
 - **Feature**: work alongside NCRP, the 1930 helpline and CFCFRMS without any access to them: check an NCRP number's usual shape, and give the officer a crypto summary in the SOP's own terms to enter on CFCFRMS or attach
 - **Issue**: #214
 - **Branch**: `feat/ncrp-number-check` (#218), `feat/cfcfrms-crypto-summary` (server, stacked on #218), `feat/cfcfrms-crypto-summary-page` (the case page, stacked on that)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: three PRs in review; the summary is behind `EXCHEQUER_SOP_SUMMARY` (off)
+- **Status**: merged in #218 (with the summary server and page PRs, #219 and #220) on 2026-11-15; the summary is behind `EXCHEQUER_SOP_SUMMARY` (off)
 
 ## Done
 
@@ -48,8 +48,8 @@ Quote check of 15 Nov 2026, against the rendered pages (the bank copy's text lay
 
 1. Owner: answer the questions below. The first one blocks a CFCFRMS notice draft (research option 2).
 2. After a partner cell confirms its workflow, switch the flag on (`docs/flag-rollout.md`).
-3. Later options from the research, none started:
-   - SOP deadlines in the asset register (90-day hold, 15-day grievance decision, 2-day bank reply, 1-week KYC update)
+3. Later options from the research:
+   - SOP deadlines in the asset register (90-day hold, 15-day grievance decision, 2-day bank reply, 1-week KYC update): done in #230 (`docs/handoff/sop-deadlines.md`), behind `EXCHEQUER_SOP_DEADLINES` (off)
    - reading an NCRP complaint PDF the officer already has (needs redacted samples)
    - deep links to cybercrime.gov.in and 1930
 

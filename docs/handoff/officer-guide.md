@@ -3,9 +3,9 @@
 - **Feature**: a plain-English guide for investigating officers to the suite's features, by task (docs only; touches features 2 to 9)
 - **Issue**: #191
 - **Branch**: `docs/officer-guide`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: written; in review
+- **Status**: merged in #192 on 2026-11-15
 
 ## Done
 

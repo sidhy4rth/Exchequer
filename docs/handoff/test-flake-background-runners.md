@@ -3,9 +3,9 @@
 - **Feature**: batch and trace-job threads no longer outlive the test that started them
 - **Issue**: none (follow-up to #159 / #160)
 - **Branch**: `fix/flaky-tests-2`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: fixed and tested; waits for review
+- **Status**: merged in #197 on 2026-11-15
 
 ## Done
 

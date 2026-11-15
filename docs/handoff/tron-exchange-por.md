@@ -5,7 +5,7 @@
 - **Branch**: `feat/tron-exchange-por`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: first set of sources imported; PR open for review
+- **Status**: first set of sources imported; merged in #221 on 2026-11-15
 
 ## Done
 

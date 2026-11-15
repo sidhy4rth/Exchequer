@@ -3,9 +3,9 @@
 - **Feature**: an officer scans a phone or computer export (CSV, TSV, XML, JSON, HTML, text) in the browser for wallet addresses, transaction hashes and seed phrases
 - **Issue**: #145
 - **Branch**: `feat/forensic-import` (stacked: `feat/forensic-import-checks`, `feat/forensic-import-scan`, `feat/forensic-import-panel`, `feat/forensic-import-identifiers`)
-- **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: slice 1 (format-agnostic, in-browser scan) in review, behind `EXCHEQUER_EXPORT_SCAN`
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-15
+- **Status**: slice 1 (format-agnostic, in-browser scan) merged on 2026-11-15 in #147 (with #154, #155, #156 and #164), behind `EXCHEQUER_EXPORT_SCAN`, off
 
 ## Done
 

@@ -3,9 +3,9 @@
 - **Feature**: suite feature 8 (government platforms): time limits from the MHA SOP for NCRP-CFCFRMS, quoted word for word, shown as reminders on bank holds in the asset register
 - **Issue**: #229
 - **Branch**: `feat/sop-deadlines`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: open for review, behind `EXCHEQUER_SOP_DEADLINES` (off by default)
+- **Status**: merged in #230 on 2026-11-15, behind `EXCHEQUER_SOP_DEADLINES` (off by default)
 
 ## Done
 

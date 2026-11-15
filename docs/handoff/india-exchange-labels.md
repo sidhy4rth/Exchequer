@@ -5,7 +5,7 @@
 - **Branch**: `feat/india-exchange-labels` (round 1); round 2 is stacked on it as `feat/india-exchange-labels-2`, `-3`, `-4`; round 3 is `feat/india-por-coindcx-unocoin` off main
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: rounds 1 and 2 merged (#135); round 3 PR ready for review
+- **Status**: rounds 1 and 2 merged in #135 (with #209, #210, #211); round 3 merged in #247; all on 2026-11-15
 
 ## Done
 

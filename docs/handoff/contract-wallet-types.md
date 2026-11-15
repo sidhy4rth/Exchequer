@@ -3,9 +3,9 @@
 - **Feature**: an Ethereum exchange label typed hot, cold or exchange wallet is an account the exchange holds the key to, never a contract
 - **Issue**: #233
 - **Branch**: `fix/contract-wallet-types`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: in review
+- **Status**: merged in #234 (with #238) on 2026-11-15
 
 ## Done
 

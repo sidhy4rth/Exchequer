@@ -5,7 +5,7 @@
 - **Branch**: `fix/minor-hardening`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: one PR, ready for review
+- **Status**: merged in #242 on 2026-11-15
 
 ## Done
 
@@ -27,7 +27,7 @@
 
 ## Next
 
-1. Review and merge.
+1. Done: merged in #242 on 2026-11-15.
 
 ## Open questions
 

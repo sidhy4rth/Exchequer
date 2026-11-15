@@ -3,9 +3,9 @@
 - **Feature**: the exchange label files name only cash-out wallets, attribute firms' accounts to the exchange that holds them, and mark closed exchanges so no letter is addressed to one as if it could answer
 - **Issue**: #208
 - **Branch**: `fix/label-quality` (part 1), `fix/label-defunct` (part 2, stacked on part 1)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: both parts in review
+- **Status**: merged: part 1 in #212, with part 2 (#213), on 2026-11-15
 
 ## Done
 

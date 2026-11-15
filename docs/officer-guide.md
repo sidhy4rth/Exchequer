@@ -17,7 +17,7 @@ Each section is marked:
   the site once it is merged.
 
 Status is as of 15 November 2026. On that day the site ran the code merged up
-to #239 (build 47aadf5); anything merged after it reaches the site with the
+to #248 (build 87d5881); anything merged after it reaches the site with the
 next deploy. A switch counts as on only where the site's settings
 (`render.yaml`) turn it on. `docs/suite-features.md`
 tracks status for the team.
@@ -75,8 +75,8 @@ cases; **Bulk intake** traces a CSV of complaints as one batch.
    them, one per line. Where tracing from a payment hash is switched off, the
    form says so and asks for the wallet instead.
 3. Add the NCRP acknowledgement number if you have it. It is never put in
-   links or logs. (Coming: a note when the number is not the usual shape; see
-   section 10.)
+   links or logs. A number that is not the usual shape gets a note, never a
+   refusal (section 10).
 4. Choose how far to follow, and the direction: **where the money went**, or
    **Trace who paid in** to find the addresses that funded it.
 5. Press **Start trace**. The Flow tab shows where the money went; the
@@ -109,13 +109,14 @@ The full list is in the README's Limitations section and in every report.
 
 **Live** (merged 14 and 15 November):
 
-- **India exchanges** (#135): 168 wallets of WazirX, CoinDCX and CoinSwitch on
-  Ethereum, Polygon, BNB Smart Chain, Arbitrum and Tron. Each comes from an
-  explorer's public name tag or a wallet list the exchange published itself
-  (CoinSwitch's posts, WazirX's proof-of-reserves page as the Internet Archive
-  kept it), and each is listed with its source in `data/india_exchanges.json`.
-  There is still no public source for ZebPay, Bitbns, Giottus, Mudrex, Unocoin
-  or BuyUcoin wallets.
+- **India exchanges** (#135, #247): 175 wallets of WazirX, CoinDCX, CoinSwitch
+  and Unocoin on Ethereum, Polygon, BNB Smart Chain, Arbitrum and Tron. Each
+  comes from an explorer's public name tag or a wallet list the exchange
+  published itself (CoinSwitch's posts, WazirX's proof-of-reserves page and
+  CoinDCX's wallet list as the Internet Archive kept them, Unocoin's June 2023
+  proof-of-reserves post), and each is listed with its source in
+  `data/india_exchanges.json`. There is still no public source for ZebPay,
+  Bitbns, Giottus, Mudrex or BuyUcoin wallets.
 - **Exchange labels cleaned** (#212): token contracts and infrastructure
   addresses were removed, so a trace no longer "ends at an exchange" there.
   Accounts a firm holds at an exchange are labelled as that exchange's, and the
@@ -133,6 +134,9 @@ The full list is in the README's Limitations section and in every report.
   pools and entry points. Polygon and Arbitrum now have their own lists.
 - **Tron exchange wallets from proof of reserves** (#221): 52 Tron wallets
   that Binance, Bybit, HTX and KuCoin published as their own reserves.
+- **Exchange labels on contracts** (#234, with #238): 26 Ethereum exchange
+  labels that sit on a proxy or forwarder contract now read as a contract
+  wallet. What a trace concludes does not change.
 
 **Limits**
 
@@ -168,7 +172,9 @@ listing, freeze or theft tag on such a contract still stands as a risk hit.
 Chain (31), Polygon (13) and Arbitrum (24), and OKX's on Polygon (95) and
 Arbitrum (119), from each exchange's own proof-of-reserves file. Labels read
 "Bybit: Reserve Wallet N" or "OKX: Reserve Wallet N". An address another list
-already claims is left out, never overwritten.
+already claims is left out, never overwritten. Since #248, also the two
+Ethereum wallets OKX sweeps USDT and USDC into, from the same proof-of-reserves
+file; their role rests on on-chain reads, which each label records.
 
 **Merged, switched off** (#223, with #224; switch
 `EXCHEQUER_STORE_EXCHANGE_ROWS`): OKX lists far more wallets (474,530 on Tron,
@@ -411,7 +417,7 @@ recorded will not be suggested. Tasks are not yet in the case bundle
 
 ### SOP reminders on a bank hold
 
-**Coming: behind a switch until reviewed** (PR #230). See section 10.
+**Merged, switched off** (#230). See section 10.
 
 ---
 
@@ -550,7 +556,7 @@ the kind of identifier, never its value.
 
 ### Telegram usernames
 
-**Coming: behind a switch until reviewed** (PRs #162, #169, #170; switch
+**Merged, switched off** (#162, with #169 and #170; switch
 `EXCHEQUER_TELEGRAM_LOOKUPS`, which also needs domain lookups on).
 
 **Where:** on an active Telegram username in **Reported identifiers**, **Read
@@ -629,7 +635,7 @@ legal advice; follow the court's order and your unit's instructions.
 
 ## 9. Download the case bundle
 
-**Merged, switched off** (#187, with #190; switch `EXCHEQUER_CASE_BUNDLE`).
+**Merged, switched off** (#187, with #190, and #244; switch `EXCHEQUER_CASE_BUNDLE`).
 
 Until then, download the signed report from the Evidence tab (section 1).
 
@@ -638,7 +644,9 @@ file buttons of the signed report.
 
 **What is in it:** one zip with the signed report (text and PDF, exactly as the
 report download gives them), the exhibits, frozen and seized funds, requests
-and identifiers registers, each with its history, the case's audit trail, and
+and identifiers registers, each with its history, the task list (#244), and,
+where their switches are on, the custody wallets and signing log, the statement
+rows and the CDR summaries (#244), the case's audit trail, and
 `MANIFEST.txt`. The manifest lists each file's size and SHA-256, who downloaded
 it and when, and how to check the report on the Verify page.
 
@@ -666,7 +674,7 @@ linked from each screen.
 
 ### A note on an unusual NCRP number
 
-**Coming: in review** (PR #218).
+**Live** (#218).
 
 On New trace, the officers' complaint page and the citizen site, a number
 that is not the usual shape gets a note: "NCRP acknowledgement numbers are
@@ -677,7 +685,7 @@ other formats.
 
 ### A crypto summary for CFCFRMS
 
-**Coming: behind a switch until reviewed** (PRs #218, #219, #220; switch
+**Merged, switched off** (#218, with #219 and #220; switch
 `EXCHEQUER_SOP_SUMMARY`).
 
 **Where:** a stored case's Letters tab, **Crypto summary for CFCFRMS**.
@@ -706,7 +714,7 @@ filled in by your browser and never sent to the server.
 
 ### SOP reminders on a bank hold
 
-**Coming: behind a switch until reviewed** (PR #230; switch
+**Merged, switched off** (#230; switch
 `EXCHEQUER_SOP_DEADLINES`).
 
 **Where:** the Letters tab, **Frozen and seized**: under a bank row that is

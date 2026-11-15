@@ -45,12 +45,12 @@
 <tr>
 <td align="center"><h3>68.4M</h3>flagged addresses<br>screened live<br><sub>on five chains</sub></td>
 <td align="center"><h3>68.3M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists</sub></td>
-<td align="center"><h3>25,508</h3>exchange addresses<br><sub>incl. 24,025 Bitget and Binance<br>customer deposit addresses</sub></td>
+<td align="center"><h3>26,136</h3>exchange addresses<br><sub>incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
-<td align="center"><h3>10,352</h3>addresses Tether<br>has frozen</td>
-<td align="center"><h3>65,000+</h3>hack, phishing and<br>scam wallets</td>
+<td align="center"><h3>14,827</h3>addresses a stablecoin<br>issuer has frozen</td>
+<td align="center"><h3>100,000+</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>5</h3>chains, 14 assets</td>
-<td align="center"><h3>560+</h3>tests, no network</td>
+<td align="center"><h3>3,500+</h3>tests, no network</td>
 </tr>
 </table>
 
@@ -97,9 +97,9 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | | |
 |---|---|
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
-| **Names the exchange** | Exact match against 25,508 exchange addresses on five chains, including **CoinDCX** and **Delta Exchange** — and 24,025 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
+| **Names the exchange** | Exact match against 26,136 exchange addresses on five chains, including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
-| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **32-million-address label store**: hack proceeds, scams, stablecoin freezes and 31.9M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
+| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon, Privacy Pools); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **68-million-address label store**: hack proceeds, scams, stablecoin freezes and 68.3M address-poisoning wallets found by on-chain scans, each cited with its source, a sample transaction and an evidence tier. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
 | **Follows the money through a swap** | A transfer into a known DEX router is read from its receipt; if it came back as USDT or USDC, that stablecoin is traced onward from the moment of the swap, as its own linked trace. |
@@ -318,29 +318,148 @@ A wallet with no outgoing transfers, or one that reaches no known exchange, retu
 
 ### Other endpoints
 
+Every route on `main`, by area. Rows marked officers only, admin only or operator only need that account or
+token. The others also answer a browser with no account, which reads only its own cases (by the owner key it
+sends) and the demos.
+
+**Tracing and cases**
+
 | Endpoint | Purpose |
 |---|---|
+| `GET /trace/intake` | What the trace form may offer: whether a trace can start from the victim's payment hashes (`EXCHEQUER_TX_INTAKE`), and how many of the reported wallet's incoming transfers are searched for them |
+| `POST /trace/jobs` | Starts a trace in the background, as the app does (same body as `POST /trace`); 202 with the job id |
+| `GET /trace/jobs/{job_id}` | The job's progress, and its result once done |
+| `GET /trace/jobs/{job_id}/events` | The same progress as a server-sent event stream |
+| `DELETE /trace/jobs/{job_id}` | Stops a running trace: only the browser that started it may. The trace ends at its next provider request or backoff |
+| `POST /payments/search` | Transfers into a wallet of exactly one amount between two times (`from`, `to`), for finding the victim's payment; gated like `POST /trace` |
+| `POST /batches` | Starts a batch of traces from a list of rows; 202, or 400 with the rows in error |
+| `GET /batches` | This browser's batches |
+| `GET /batches/{batch_id}` | One batch: each row's outcome, and the wallets its cases share |
 | `GET /trace/{case_id}` | Retrieve a stored case |
+| `GET /trace/{case_id}/recheck` | The case's last recheck, or `"checked_at": null` when none is kept |
+| `POST /trace/{case_id}/recheck` | Rereads the transfers the case cites on its route to the exchange through a second provider, and says of each whether it matches, differs, is missing or could not be read |
+| `GET /cases` | History of past traces |
+| `GET /cases/correlate` | Intermediaries shared by two or more of your stored cases (plus the demos) — the campaign view (`?case_id=` narrows it) |
+| `GET /demos/recorded` | Which demos have a recording, and what each found |
+| `GET /demos/recorded/{demo}` | One recorded demo, in the shape of a stored case but with no case id |
+| `GET /demos/recorded/{demo}/letters` | The letters a recording supports, as for a case; none can be logged as sent |
+| `GET /demos/recorded/{demo}/letter` | A recording's draft letter, marked as an example |
+
+**Reports, evidence and registers**
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /trace/{case_id}/report?format=text` | The investigator's report (`format=json`, the default, for structured; `format=pdf` for the signed PDF): summary, finding and basis, the path hop by hop with amounts, times and hashes, every pattern with its thresholds, every inference with its evidence, screening hits with their sources, limitations, and an appendix of every address and transaction hash |
+| `GET /trace/{case_id}/graph?format=graphml` | The case's transfer graph for Gephi, yEd or Maltego (`format=csv` for a spreadsheet) |
+| `POST /verify` | Checks a text report or an Exchequer PDF sent as the raw body: its signature and, for a PDF, that its pages match the attached report |
+| `GET /signing-key` | The public half of the key that signs this server's reports, and whether it is in the committed list of Exchequer keys |
+| `GET /trace/{case_id}/exhibits` | The case's exhibit register: each forensic file by its hashes, with its chain of custody |
+| `POST /trace/{case_id}/exhibits` | Adds an exhibit |
+| `PATCH /exhibits/{exhibit_id}` | Records a change of holder, place or status in the exhibit's chain of custody, or a note |
+| `POST /exhibits/{exhibit_id}/check` | Checks a file's SHA-256, worked out in the browser, against the one registered |
+| `POST /trace/{case_id}/certificate` | A draft s.63(4) certificate (BSA) for chosen exhibits, as a PDF: Part A filled from the register, Part B left for the expert |
+| `POST /trace/{case_id}/report-certificate` | A draft s.63(4) certificate for Exchequer's own report: the server checks the report file as `/verify` does and states its SHA-256 |
+| `GET /trace/{case_id}/identifiers` | What the victim reported besides the wallet (site, Telegram username, phone, UPI ID), each with its latest domain lookup and the other cases that name it |
+| `POST /trace/{case_id}/identifiers` | Adds an identifier |
+| `PATCH /identifiers/{identifier_id}` | Changes an identifier's context or notes, or withdraws it with a reason |
+| `POST /identifiers/{identifier_id}/lookup` | A domain's public registration record and DNS, or what a Telegram username's public t.me page shows (also needs `EXCHEQUER_TELEGRAM_LOOKUPS`), kept with its SHA-256; officers only, and only with `EXCHEQUER_OSINT_LOOKUPS` on |
+| `GET /trace/{case_id}/assets` | The case's asset register: what was frozen or seized, who holds it, and the 45-day court deadline |
+| `POST /trace/{case_id}/assets` | Adds a frozen or seized asset |
+| `PATCH /assets/{asset_id}` | Changes an asset's status, court order, outcome or key holders (names only), or its notes |
+| `GET /assets/due?days=7` | Assets whose court deadline falls within that many days (at most 90) or has passed |
 | `GET /trace/{case_id}/tasks` | The case's task list, as far as this browser or unit may read it: what is left to do, who it is assigned to (a name), by when, and each task's history; open tasks first, soonest due first. Also `suggested`: tasks the case's own records call for (a request with no reply in 7 days, a freeze letter awaiting sign-off or not yet sent, a freeze not in the asset register, held funds with no court order), worked out on each read and never stored |
 | `POST /trace/{case_id}/tasks` | Adds a task (title, assignee, due date, notes); text that looks like a private key or seed phrase is refused. With `source`, takes up a suggestion (its own title and due date); with `note` as well, declines it, as a dropped task with that reason |
 | `PATCH /tasks/{task_id}` | Changes a task, closes it (done, or dropped with a reason), opens it again (with a reason) or adds a note; the audit log records which fields changed, never their text |
 | `GET /tasks/due?days=7` | Open tasks due within that many days (default 7, at most 90) or already overdue, among the tasks this browser or unit may read, most overdue first |
-| `GET /trace/{case_id}/report?format=text` | The investigator's report (`format=json` for structured): summary, finding and basis, the path hop by hop with amounts, times and hashes, every pattern with its thresholds, every inference with its evidence, screening hits with their sources, limitations, and an appendix of every address and transaction hash |
 | `GET /trace/{case_id}/export-scan` | Whether this server offers the scan of a phone or computer export (behind `EXCHEQUER_EXPORT_SCAN`; 404 while it is off) |
 | `POST /trace/{case_id}/export-scan` | Records that the officer's browser scanned an export for addresses, transaction hashes and seed-phrase runs, by its counts only; the file and what was found stay in the browser |
-| `GET /trace/{case_id}/letters` | Which request letters the case supports: the urgent freeze letters first, then the information letters (to the exchange, to Tether) |
+| `GET /case-bundle` | Whether the case bundle is on, and the files it holds; 404 while `EXCHEQUER_CASE_BUNDLE` is off |
+| `GET /trace/{case_id}/bundle` | One zip of the case's signed report, its registers as CSV and its audit trail, with a manifest of SHA-256 hashes; 404 while `EXCHEQUER_CASE_BUNDLE` is off |
+| `GET /audit?case_id=` | The case's audit trail, for the browser or unit that traced it |
+
+**Statements and call records** (behind `EXCHEQUER_STATEMENT_IMPORT` and `EXCHEQUER_CDR_IMPORT`, both off by default)
+
+| Endpoint | Purpose |
+|---|---|
 | `GET /trace/{case_id}/statements` | The bank and exchange statement rows kept with the case that this browser or unit may read, and the exchange names a narration is matched against (behind `EXCHEQUER_STATEMENT_IMPORT`; while it is off the list says so) |
 | `POST /trace/{case_id}/statements` | Keeps the statement rows the officer confirmed, each with why (amount and date, UTR, exchange name or transaction hash), never the whole statement; signed-in officers only; audited by counts only (403 while the flag is off) |
-| `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether; `to=exchange-freeze` or `to=tether-freeze` for the urgent "hold these funds now" letter) |
+| `POST /trace/{case_id}/statements/{import_id}/withdraw` | Withdraws a saved statement import entered by mistake, with a reason; the import is kept, marked withdrawn with who, when and why, and `GET ...?withdrawn=1` lists withdrawn imports too; signed-in officers only; audited by the import's id, never the reason (403 while the flag is off) |
+| `GET /trace/{case_id}/cdr` | The call detail record summaries kept with the case that this browser or unit may read (behind `EXCHEQUER_CDR_IMPORT`; while it is off the list says so; `?withdrawn=1` lists withdrawn ones too) |
+| `POST /trace/{case_id}/cdr` | Keeps the CDR summary the officer confirmed (numbers and counts, never the CDR itself); signed-in officers only; audited by counts only (403 while the flag is off) |
+| `POST /trace/{case_id}/cdr/check` | For the numbers the officer chose (in the body, never the URL): whether each is one of this case's phone identifiers, and which other cases this browser or unit may read name it (403 while the flag is off) |
+| `POST /trace/{case_id}/cdr/{import_id}/withdraw` | Withdraws a saved CDR summary entered by mistake, with a reason; signed-in officers only (403 while the flag is off) |
+
+**Custody wallets** (behind `EXCHEQUER_CUSTODY_WALLETS`, off by default)
+
+| Endpoint | Purpose |
+|---|---|
 | `GET /trace/{case_id}/custody` | The multisig wallets the case's seized crypto is held in that this browser or unit may read: chain, address, scheme, threshold and signers (behind `EXCHEQUER_CUSTODY_WALLETS`; while it is off the list says so) |
 | `POST /trace/{case_id}/custody` | Records a custody wallet and the asset-register rows moved into it (409 if the case already records it); signed-in officers only; no field takes a key, and writes are refused while the flag is off |
 | `PATCH /custody/{wallet_id}` | Changes a custody wallet's notes or the asset-register rows moved into it (signed-in officers only) |
 | `POST /custody/{wallet_id}/movements` | Proposes a deposit into the custody wallet or a release out of it (a release names the court's order and a destination address on the wallet's chain) |
 | `POST /custody/movements/{movement_id}/{step}` | Moves it on: `approve` (it is approved once the wallet's threshold of distinct signers have), `broadcast` with the transaction hash, `confirm`, or `cancel` with a reason; the signatures themselves happen on the signers' hardware wallets, and the server never sees a key |
+
+**Letters and requests**
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /trace/{case_id}/letters` | Which request letters the case supports: the urgent freeze letters first, then the information letters (to the exchange, to Tether) |
+| `GET /trace/{case_id}/letter?to=exchange` | A draft request letter filled from the case, for the officer to complete (`to=tether` for Tether; `to=exchange-freeze` or `to=tether-freeze` for the urgent "hold these funds now" letter) |
 | `POST /trace/{case_id}/notice` | A draft notice to a bank (`to=bank-info`; `to=bank-freeze` for an urgent debit freeze, which needs the Magistrate's order and a second officer's sign-off) or a telecom operator (`to=telecom`), from the case and the account or phone details in the request body, never the URL |
 | `POST /trace/{case_id}/letter-of-request` | A draft letter of request to a foreign country (BNSS s.112) in the MHA's prescribed format, from the case, its requests log and the officer's details in the request body; blanks for whatever the officer or the Court has not supplied |
-| `GET /cases` | History of past traces |
-| `GET /cases/correlate` | Intermediaries shared by two or more of your stored cases (plus the demos) — the campaign view (`?case_id=` narrows it) |
+| `GET /sop-summary` | Whether this server offers the crypto summary for CFCFRMS (behind `EXCHEQUER_SOP_SUMMARY`; 404 while it is off) |
+| `POST /trace/{case_id}/sop-summary` | The case's crypto summary in the CFCFRMS SOP's para 9.4 terms, as plain text for the officer to copy; the officer's answer to "Is this exchange on CFCFRMS?" is in the body and not stored, and the NCRP number is never sent (404 while the flag is off) |
+| `GET /requests` | The requests log: every letter this browser or unit has logged and what came of it |
+| `GET /trace/{case_id}/requests` | The requests logged for one case |
+| `POST /requests` | Logs a request (recipient, kind, address, asset, status) |
+| `PATCH /requests/{request_id}` | Records what happened to a request: status, reference, notes, date sent, amount frozen |
+| `DELETE /requests/{request_id}` | Removes a logged request |
+| `POST /requests/{request_id}/signoff` | A second officer or supervisor of the drafter's unit signs off an urgent freeze letter; a bank hold's sign-off covers only the details approved |
+
+**Watches and alerts**
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /watches` | Watches a wallet for new movements |
+| `GET /watches` | This browser's watches, and how often checks run |
+| `DELETE /watches/{watch_id}` | Removes a watch |
+| `POST /watches/{watch_id}/check` | Checks one watch now |
+| `DELETE /watches/{watch_id}/webhook` | Drops a watch's webhook and keeps the watch |
+| `POST /watches/check-due` | For the scheduler (bearer `EXCHEQUER_WATCH_CRON_TOKEN`): checks the watches that are due, oldest first |
+| `GET /alerts` | This browser's alerts (`?unread=true` for new ones only) |
+| `POST /alerts/read` | Marks alerts read |
+
+**Complaints from the citizen site** (officers only)
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /complaints` | One page of the complaint queue the officer's unit may see, and how many there are in all |
+| `GET /complaints/{reference}` | One complaint, with its payments and messages |
+| `POST /complaints/{reference}/claim` | Claims a complaint for the officer's unit; from then on it is that unit's alone |
+| `POST /complaints/{reference}/status` | Changes a complaint's status |
+| `POST /complaints/{reference}/messages` | A reply the citizen's site shows |
+| `POST /complaints/{reference}/link-case` | Links a complaint to a stored case |
+
+**Accounts and administration**
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /auth/login` | Signs an officer in (a session cookie); repeated failures are slowed and then refused |
+| `POST /auth/logout` | Signs out |
+| `GET /auth/me` | The signed-in officer and unit, or `{"demo": true}` |
+| `POST /auth/password` | Changes the officer's own password |
+| `POST /auth/bootstrap` | Makes the first admin account with `EXCHEQUER_BOOTSTRAP_TOKEN`; 404 when the token is unset or once an admin exists |
+| `GET /admin/units` · `POST /admin/units` | Admin only: lists or adds units |
+| `GET /admin/units/{unit_id}/limits` · `PUT /admin/units/{unit_id}/limits` | Admin only: a unit's per-officer hourly and daily limits |
+| `GET /admin/officers` · `POST /admin/officers` | Admin only: lists officers, or adds one with a temporary password shown once |
+| `PATCH /admin/officers/{officer_id}` | Admin only: changes a role, unit or active flag, or resets the password |
+| `GET /admin/backup` | Operator only (bearer `EXCHEQUER_BACKUP_TOKEN`): a snapshot of the SQLite store; 404 on Postgres |
+| `GET /audit/verify` | Operator only (bearer `EXCHEQUER_HEALTH_TOKEN`): checks the audit log's hash chain |
+
+**Coverage, health and access**
+
+| Endpoint | Purpose |
+|---|---|
 | `GET /exchanges?chain=bsc` | What that chain's exchange labels cover |
 | `GET /risk-labels?chain=bsc` | What that chain's screening covers, by category: sanctioned, mixer, stolen |
 | `GET /ledger?chain=ethereum` | The labelled addresses the sign-in backdrop draws |
@@ -568,12 +687,14 @@ and matching one chain's address against the other's labels would manufacture an
 
 | File | Coverage |
 |---|---|
-| `exchange_labels.json` | **25,020 addresses / 92 exchanges** — 957 exchange wallets (the largest: Huobi/HTX, Coinbase, Binance, Kraken, Bitfinex, Nexo, OKX, Bithumb, KuCoin, **CoinDCX**, Bitget, Poloniex) plus **24,063 customer deposit addresses** (19,027 Bitget, 4,998 Binance, 38 at other exchanges) |
-| `exchange_labels_bsc.json` | **184 addresses / 56 exchanges** — the original 38 (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat) plus 146 Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`) |
-| `exchange_labels_tron.json` | **41 addresses / 19 exchanges** — read live from TronScan's own address tags |
+| `exchange_labels.json` | **25,273 addresses / 96 exchanges** — 1,255 exchange wallets (the largest: Bybit, **CoinSwitch**, Coinbase, Huobi/HTX, Kraken, Binance, Nexo, Bithumb, OKX, Bitfinex, **CoinDCX**, Bitget) plus **24,018 customer deposit addresses** (19,027 Bitget, 4,991 Binance) |
+| `exchange_labels_bsc.json` | **223 addresses / 58 exchanges** — explorer-labelled wallets (Binance, MaskEX, Gate.io, KuCoin, Huobi/HTX, MEXC, BitMart, Hotbit, **CoinDCX**, AscendEX, Crypto.com, Azbit, FixedFloat), Ethereum-labelled exchange accounts confirmed to have sent on BNB Smart Chain (`scripts/port_evm_labels.py`), Bybit's wallets from its own proof-of-reserves list (`scripts/import_por_labels.py`) and Indian exchange wallets (`data/india_exchanges.json`) |
+| `exchange_labels_polygon.json` | **250 addresses / 54 exchanges** — Ethereum-labelled accounts confirmed to have sent on Polygon, OKX's and Bybit's wallets from their own proof-of-reserves lists, and Indian exchange wallets |
+| `exchange_labels_arbitrum.json` | **251 addresses / 45 exchanges** — the same three sources, on Arbitrum |
+| `exchange_labels_tron.json` | **139 addresses / 26 exchanges** — TronScan's own address tags, exchanges' own proof-of-reserves lists (`scripts/import_por_tron_labels.py`) and Indian exchange wallets |
 
 **A deposit address is the most useful label there is**: it names one customer account, which is exactly what a
-lawful request asks the exchange about. The 19,027 Bitget and 4,998 Binance addresses come from Etherscan's
+lawful request asks the exchange about. The 19,027 Bitget and 4,991 Binance addresses come from Etherscan's
 "Bitget Dep" and "Binance Dep" tags, and every one was confirmed on chain to have at least one transaction or token
 transfer — all 19,027 Bitget addresses passed; 21 of 5,012 Binance addresses had never been used and were left out.
 
@@ -599,7 +720,7 @@ The router mattered most: funds passing through a swap router have been *traded*
 Tron labels are read **from TronScan's own API** — the label comes from the explorer that assigns it — and
 each must have no contract bytecode and at least one received transfer.
 
-**Tron attribution beyond the file.** A fixed file can only hold the Tron wallets someone imported — 41. So a Tron
+**Tron attribution beyond the file.** A fixed file can only hold the Tron wallets someone imported — 139. So a Tron
 trace also asks TronScan, for each wallet it reaches that no file names, what the explorer tags it (up to 60 wallets
 per trace, the most valuable first, the last hop included). A tag that names a known exchange attributes the wallet —
 labelled *"(TronScan tag, read live)"* so a reader always knows the source — and the trace stops there as it would
@@ -613,11 +734,15 @@ BSC**) must, the other way round, carry bytecode.
 
 ### Indian exchanges
 
-**CoinDCX** is covered on Ethereum (29 wallets) and BSC, and **Delta Exchange** on Ethereum, each from the
-explorer's own labels and verified on chain. **WazirX and ZebPay remain absent**: their hot wallets could not be
-sourced to a standard appropriate for an attribution tool, and guessing one would mean falsely naming a real
-company in a law-enforcement report. (The WazirX *exploiter* wallets are in the stolen-funds list.) On Tron, no
-TronScan tag names an Indian exchange among the largest accounts; the importer looks for them and would keep one.
+**WazirX, CoinDCX, CoinSwitch and Unocoin**: 175 wallets on Ethereum, BSC, Polygon, Arbitrum and Tron, each with its
+public source (the explorer's public name tag, or a wallet list the exchange published), recorded in
+`data/india_exchanges.json` and copied into each chain's label file. **CoinDCX** also has wallets from the
+explorer's own labels (30 on Ethereum in all), and **Delta Exchange** is covered on Ethereum. **Unocoin** has one
+wallet, from its own proof-of-reserves post (June 2023 audit). **ZebPay, Bitbns,
+Giottus, Mudrex and BuyUcoin remain absent**: no public source for their wallets has been found, and
+guessing one would mean falsely naming a real company in a law-enforcement report. (The WazirX *exploiter*
+wallets are in the stolen-funds list.) On Tron, no TronScan tag names an Indian exchange among the largest
+accounts; the Tron wallets of WazirX, CoinSwitch and CoinDCX come from the sources above.
 
 ```bash
 cd backend
@@ -939,7 +1064,7 @@ exchequer/
 │   │   ├── prune_cases.py             reduces the case store, with a backup
 │   │   ├── seed_hosted.py             replays the demos against a hosted instance
 │   │   └── check_etherscan.py         live API smoke test
-│   └── tests/                         backend tests, no network or keys (560+ with the frontend's)
+│   └── tests/                         backend tests, no network or keys (3,500+ with the frontend's)
 ├── frontend/src/
 │   ├── routes/          SignIn.jsx · Citizen.jsx · Home.jsx · TraceView.jsx
 │   ├── api/             client · trace · evidence · platform (api.js re-exports them)

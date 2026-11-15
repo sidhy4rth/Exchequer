@@ -3,9 +3,9 @@
 - **Feature**: suite feature 7 (request and letter generator): draft a letter of request to a foreign country (BNSS s.112) from a case, in the MHA's prescribed format
 - **Issue**: #125
 - **Branch**: `feat/letters-of-request` (server, #126); `feat/letters-of-request-screen` (screen, #127, on top of it); `feat/letters-of-request-countries` (Figure 3.6's treaty countries in the officer's notes, #130, on top of #127); `feat/letters-of-request-log` (logged in the requests log, #136, on top of #130); `feat/letters-of-request-followup` (a longer follow-up wait for letters of request, on top of #136)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: built and tested; server #126, screen #127, treaty-country note #130, requests-log kind #136, stacked in that order; all wait for review
+- **Status**: merged in #126 (with #127, #130, #136 and #158) on 2026-11-15; live, no flag
 
 ## Done
 

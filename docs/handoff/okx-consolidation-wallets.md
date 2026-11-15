@@ -3,9 +3,9 @@
 - **Feature**: a trace through one of OKX's per-customer Ethereum deposit addresses can be read as an OKX deposit, because the two wallets OKX sweeps USDT and USDC into today are labelled
 - **Issue**: #246
 - **Branch**: `feat/okx-consolidation-wallets`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: in review
+- **Status**: merged in #248 on 2026-11-15
 
 ## Done
 

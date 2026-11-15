@@ -1,35 +1,60 @@
 # Switching on the flagged features
 
-Five features are built behind `config.py` flags in pull requests that are
-still open (as of 2026-11-14). Each flag is off until its environment variable
+Seven features are built behind `config.py` flags, and all of them are now on
+`main`, switched off (as of 2026-11-15): custody wallets (#129), statements and
+call detail records (#146), the export scan (#147), Telegram lookups (#162),
+the crypto summary for CFCFRMS (#218) and the SOP reminders on bank holds
+(#230), each with the PRs merged with it. Every flag on `main` is listed first, below. Each flag is off until its environment variable
 is `1` (`true`, `yes` and `on` also count; see `flag()` in `config.py`). This
-file says, for each one: what it turns on, which PRs must be merged first, how
+file says, for each one: what it turns on, which PRs it came in, how
 to switch it on and off, what to try on the live site before telling anyone,
 and the decisions still open.
 
-Everything here comes from the PR descriptions, the handoff files on their
-branches and the flag definitions. Where something was not checked, it says so.
+Everything here comes from the PR descriptions, the handoff files and the flag definitions. Where something was not checked, it says so.
 Button names are taken from the PRs' tests and may differ slightly on screen.
+
+## Flags already on `main`
+
+Every flag in `config.py` `FLAGS` on `main` (2026-11-15). "Off in `render.yaml`"
+means the Blueprint does not set it; whether the dashboard sets it is not
+checked here, so read `/health/detail` → `flags` to be sure.
+
+| Flag | What it turns on | Merged in | Status |
+|---|---|---|---|
+| `EXCHEQUER_TX_INTAKE` | Lane A, R1: start a trace from the victim's payment transaction hash | #49 | Off in `render.yaml` |
+| `EXCHEQUER_TRACING_METHODS` | Lane A, R4: FIFO and LIBR beside pro-rata (one more read per hop) | #49 | Off in `render.yaml` |
+| `EXCHEQUER_TAINT_EXPANSION` | Lane A, R5: follow every branch carrying a share of the funds, not the top ten | #49 | Off in `render.yaml` |
+| `EXCHEQUER_OSINT_LOOKUPS` | Feature 4: live RDAP and DNS lookups of a case's scam domains, for signed-in officers | #106 | **On** in production since 13 Nov, and `"1"` in `render.yaml` (#108) |
+| `EXCHEQUER_PRIVACY_CATEGORY` | #189: privacy protocols (Railgun, Aztec, Hinkal, Privacy Pools) shown on a trace as a note, never a risk hit or a stop | with #149 (#194, #195, #196, #198) | Off in `render.yaml`. Its handoff records the owner's approval on 14 Nov to switch it on after merge; not switched on yet as far as `main` shows |
+| `EXCHEQUER_CASE_BUNDLE` | Feature 6: one zip of a case's report, registers and audit trail, with a manifest | #187 (+#190) | Off in `render.yaml` |
+| `EXCHEQUER_TRACE_CANCEL_ON_DISCONNECT` | Trace engine: stop a `POST /trace` whose client hung up, at its next provider request | #227 (+#228) | Off in `render.yaml`; awaits the owner |
+| `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the deployed store (`labels-2026-11-14b`) has no exchange rows yet |
+| `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_CDR_IMPORT` | Feature 5: read a call detail record CSV against a case; save a summary the officer confirms | #168 (+#172, #173), merged with #146 | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_EXPORT_SCAN` | Feature 2: scan a phone or computer export in the browser for addresses, hashes and seed phrases | #147 (+#154, #155, #156, #164) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_TELEGRAM_LOOKUPS` | Feature 4, OSINT slice 4: read a Telegram username's public t.me page (needs `EXCHEQUER_OSINT_LOOKUPS` too) | #162 (+#169, #170) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_SOP_SUMMARY` | Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms | #218 (+#219, #220) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_SOP_DEADLINES` | Feature 8: the MHA CFCFRMS SOP's time limits, quoted, as reminders on bank holds in the asset register | #230 | Off in `render.yaml`; see its section below |
+
+That is all fifteen flags in `FLAGS` on `main`.
+
+The rest of this file is about the seven features named at the top. The steps
+below for switching on, checking and switching off apply to every flag above.
 
 ## The same steps for every flag
 
-### Before: merge, then deploy
+### Before: merged and deployed
 
-1. Merge the flag's PRs in stack order (each section lists them). Render deploys
-   every push to `main`. A merged stack changes nothing a user sees while its
-   flag is off, but any migration in it runs at start-up (`models.init_db()`),
-   so new tables appear on the first deploy either way.
-2. Two things collide between stacks:
-   - Every stack adds its flag on the line after `OSINT_LOOKUPS` in
-     `config.py`, and most add a re-export line to `frontend/src/api.js`.
-     Whichever stack merges second has a small text conflict there: keep both lines.
-   - Custody (`g7_custody_1`) and statements (`g7_statements_1`) each add a
-     migration whose `down_revision` is `g7_domain_lookups_1`, as do the open
-     task PRs #122 (`g7_tasks_1`) and #124. Whichever merges second must point its
-     `down_revision` at the head left by the first, so that `alembic heads` shows
-     exactly one head. Never edit a migration that is already on `main`.
-3. The stacks were branched before #160 and #165 merged, so merge `main` into
-   each before its last review.
+1. Every stack named here is merged (each section lists its PRs), and Render
+   deploys every push to `main`. A merged stack changes nothing a user sees
+   while its flag is off, but any migration in it runs at start-up
+   (`models.init_db()`), so its tables are already there.
+2. The migrations run in one line on `main`: `g7_tasks_2` → `g7_custody_1` →
+   `g7_custody_2` → `g7_statements_1` → `g7_statements_2`, so the head on
+   `main` is `g7_statements_2` and the `down_revision` re-points are done. The
+   Telegram, SOP summary and SOP reminder stacks add no migration. Never edit a
+   migration that is already on `main`.
 
 ### Switching it on (as #108 did for `EXCHEQUER_OSINT_LOOKUPS`)
 
@@ -59,10 +84,10 @@ Button names are taken from the PRs' tests and may differ slightly on screen.
   the public demo case is left alone.
 - Use only synthetic data: the files each section names, which the PRs' own tests use.
   Never use a real statement, CDR, phone export, phone number or seized wallet.
-- Nothing in these registers can be deleted. A wallet record, a saved statement
-  row or a CDR summary stays on the test case for good. A movement can be
-  cancelled and an identifier withdrawn, each with a reason. Put "TEST" in notes
-  and titles.
+- Nothing in these registers can be deleted. A wallet record stays on the test
+  case for good. A movement can be cancelled, an identifier withdrawn, and a
+  saved statement or CDR import withdrawn (#183, #184), each with a reason; a
+  withdrawn one is kept and marked so. Put "TEST" in notes and titles.
 
 ### Watching it afterwards
 
@@ -96,7 +121,7 @@ proposed → approved by distinct signers → broadcast (with the transaction ha
 → confirmed, or cancelled with a reason. The server never receives, stores or
 generates a key, seed phrase or signature, and Exchequer moves no funds.
 
-**Merge first.** #129 → #139 → #140 → #142 (stacked). Migrations `g7_custody_1`
+**Merged.** #129, with #139, #140 and #142, on `main`. Migrations `g7_custody_1`
 and `g7_custody_2` (see the migration note above). Have the unit read
 `docs/custody-procedure.md` (#142) before the flag goes on. The handoff asks for this.
 
@@ -128,7 +153,6 @@ and `g7_custody_2` (see the migration note above). Have the unit read
   it means a new record. Is that enough?
 - Must the officer who enters an approval be someone other than the officer who
   entered the proposal? Today one account may propose and enter one approval.
-- The migration re-pointing above, if #122/#124 or the statements stack merge first.
 
 ## `EXCHEQUER_STATEMENT_IMPORT`: bank and exchange statements (feature 5, first slice)
 
@@ -140,14 +164,13 @@ narrations that name a known exchange. They are shown on a timeline beside the
 trace. Only the rows the officer ticks are sent and saved, never the whole
 statement. The audit log holds counts only.
 
-**Merge first.** #146 → #151 → #152 → #153 (stacked). Migration
-`g7_statements_1` (see the migration note above).
+**Merged.** #146, with #151, #152, #153, and the withdrawal PRs #183 and #184, on
+`main`. Migrations `g7_statements_1` and `g7_statements_2` (see the migration note above).
 
 **Try it on the live site** (one test officer, on the test case):
 
 1. Make `statement.csv` from the five `CSV` lines in
-   `frontend/src/components/case/StatementPanel.test.jsx` (branch
-   `feat/bank-statement-import-panel`). It is synthetic: a test account number
+   `frontend/src/components/case/StatementPanel.test.jsx`. It is synthetic: a test account number
    and invented references.
 2. Evidence tab: the statement panel shows. Choose bank, INR, and the file.
 3. With the browser's Network tab open: reading the file sends nothing. Two
@@ -155,10 +178,12 @@ statement. The audit log holds counts only.
 4. Add "Rupees paid, from the complaint" 2,50,000 on 2026-03-12: the NEFT row
    now says amount and date match.
 5. Untick the CoinDCX row and save. The one POST carries only the ticked row.
-   Reload: the saved row is listed. It cannot be withdrawn yet (see below), so
-   saving one row is enough.
-6. Audit rows: `statement.list`, `statement.save`, with counts by reason and no
-   account number, reference or narration.
+   Reload: the saved row is listed.
+6. Withdraw the saved import with the reason "TEST". It drops out of the list,
+   and shows again, struck through, with "show withdrawn".
+7. Audit rows: `statement.list`, `statement.save`, `statement.withdraw`, with
+   counts by reason or the import's id, and no account number, reference,
+   narration or reason.
 
 **Owner decisions still open** (handoff `docs/handoff/bank-statement-import.md`, #153):
 
@@ -167,8 +192,6 @@ statement. The audit log holds counts only.
   would show which header names and narration shapes to add. Every test row so
   far is synthetic. The handoff's own next step is "try the panel with real
   (redacted) statements, then turn the flag on".
-- Withdrawing a saved row entered by mistake (with a reason, like the identifier
-  register) is not built yet. Should it be, before the flag goes on?
 
 ## `EXCHEQUER_CDR_IMPORT`: call detail records (feature 5, second slice)
 
@@ -180,17 +203,16 @@ on this case's phone identifiers. For numbers the officer ticks, it shows which
 of their other cases have them. Only a summary the officer ticks is saved: never
 a row of the CDR. A number is a lead, not a person.
 
-**Merge first.** The whole statements stack (#146, #151, #152, #153: #168 is
-stacked on #153 and saves into the same `statement_imports` table), then
-#168 → #172 → #173. No migration of its own. It has its own flag, so
-statements can go live first.
+**Merged.** #168, #172 and #173, with the statements stack in #146 (CDR
+summaries are kept in the same `statement_imports` table). No migration of its
+own. It has its own flag, so statements can go live first.
 
 **Try it on the live site** (one test officer, on the test case):
 
 1. In the identifiers panel, add the phone identifier `+44 7700 900003`. It is in
    Ofcom's range for drama, so no subscriber holds it.
 2. Make `cdr.csv` from the four `CSV` lines in
-   `frontend/src/components/case/CdrPanel.test.jsx` (branch `feat/cdr-import-panel`).
+   `frontend/src/components/case/CdrPanel.test.jsx`.
    Never use a 10-digit number starting 6 to 9 in a test file: any of them could
    be a real subscriber's.
 3. Evidence tab → CDR panel → choose the file. Reading sends nothing. The CDR's
@@ -202,7 +224,8 @@ statements can go live first.
    only.
 6. Audit rows: `cdr.list`, `cdr.check`, `cdr.save`, counts only. Search the
    Render log for `7700900`: it must not appear.
-7. Withdraw the test phone identifier with the reason "TEST".
+7. Withdraw the saved CDR summary and the test phone identifier, each with the
+   reason "TEST". The summary's withdrawal is audited as `cdr.withdraw`.
 
 **Owner decisions still open** (handoff, #173):
 
@@ -226,13 +249,13 @@ run is shown only as "N BIP-39 words at line L, hidden": the words are never
 kept, shown or sent. Each address gets a Trace link, which waits for a click.
 The server records only that a scan ran, with five counts.
 
-**Merge first.** #147 → #154 → #155 → #156 (stacked). #164 (stacked on #156) is
-optional: it adds "Add as case identifier" to each address row. No migration.
+**Merged.** #147, with #154, #155, #156 and #164, on `main`. #164 adds "Add as
+case identifier" to each address row. No migration.
 
 **Note on #164.** It adds a `wallet` kind to the identifier register. That kind
-is **not behind any flag**: once #164 merges, "Wallet address" can be typed by
-hand in the identifiers panel on the live site, even while `EXCHEQUER_EXPORT_SCAN`
-is off. Only the export scan's "Add as case identifier" button waits for the flag.
+is **not behind any flag**: since #164 merged, "Wallet address" can be typed by
+hand in the identifiers panel, even while `EXCHEQUER_EXPORT_SCAN` is off. Only
+the export scan's "Add as case identifier" button waits for the flag.
 
 **Try it on the live site** (one test officer, on the test case):
 
@@ -248,11 +271,11 @@ is off. Only the export scan's "Add as case identifier" button waits for the fla
 4. The Trace link opens the trace form filled in and waits. Do not run it unless
    you mean to.
 5. Pick a binary file (an image): it says to export it as text.
-6. With #164: "Add as case identifier" on one address. It appears in the
+6. "Add as case identifier" on one address. It appears in the
    identifiers panel without a reload, and a second click says "Already on the
    case". Withdraw it afterwards with the reason "TEST".
-7. Audit rows: `export_scan.open`, `export_scan.run` (the five counts), and with
-   #164 `identifier.add` with the kind only, no address.
+7. Audit rows: `export_scan.open`, `export_scan.run` (the five counts), and
+   `identifier.add` with the kind only, no address.
 
 **Owner decisions still open:**
 
@@ -260,8 +283,8 @@ is off. Only the export scan's "Add as case identifier" button waits for the fla
   and not stored: an EVM address is the same on Ethereum, BNB Chain, Polygon and
   Arbitrum, so two cases naming it are linked whichever chain each traced. Is that
   right, or should the officer record a chain?
-- Should the `wallet` kind go live with #164 before the export scan is switched
-  on (see the note above)?
+- The `wallet` kind went live with #164 before the export scan is switched on
+  (see the note above). Keep it that way, or put it behind the flag?
 - Vendor importers (Cellebrite UFDR, Magnet AXIOM, MSAB XRY, Oxygen, Autopsy)
   need sample exports. None exist yet. The handoff (`docs/handoff/forensic-import.md`)
   lists no other open question.
@@ -279,10 +302,8 @@ SHA-256. Every result says a page is not an identity. It needs
 the OSINT handoff records it on in production since 13 Nov. Lookups are for
 signed-in officers only, never the demo caller.
 
-**Merge first.** #162 → #169 → #170 (stacked). No migration (pages are kept in
-`domain_lookups`, under its 50-lookups-per-identifier cap). #170 and #164 both
-edit `IdentifiersPanel.jsx`. A trial merge showed conflicts only in `config.py`
-and `docs/handoff/osint.md`.
+**Merged.** #162, with #169 and #170, on `main`. No migration (pages are kept in
+`domain_lookups`, under its 50-lookups-per-identifier cap).
 
 **Try it on the live site** (one test officer, on the test case):
 
@@ -302,7 +323,7 @@ and `docs/handoff/osint.md`.
 7. Withdraw the test identifier with the reason "TEST", as the domain-lookup
    live test did.
 
-**Owner decisions still open** (#170, handoff `docs/handoff/osint.md` on `feat/osint-telegram-screen`):
+**Owner decisions still open** (#170, handoff `docs/handoff/osint.md`):
 
 - **Read one public channel's page from the live site by hand first** (step 3
   above) and check the fields. #170 leaves the switch-on to Sidhyarth after that.
@@ -326,7 +347,7 @@ how it was attributed, and the amounts and hashes, with the SOP paragraph
 quoted for that answer. It contacts nothing outside Exchequer. The answer is
 not stored. The NCRP number is filled in by the browser and never sent.
 
-**Merge first.** #218 → the server PR → the page PR (stacked). No migration.
+**Merged.** #218, with the server PR (#219) and the page PR (#220), on `main`. No migration.
 
 **Try it on the live site** (one test officer, on the test case):
 
@@ -345,3 +366,32 @@ not stored. The NCRP number is filled in by the browser and never sent.
 the legal check on SOP holds under s.168 read with s.94 BNSS versus
 `notice_letters.py`'s Magistrate's-order rule (before any CFCFRMS notice
 draft), and a partner cyber cell to confirm the layout is useful.
+
+## `EXCHEQUER_SOP_DEADLINES`: SOP reminders on a bank hold (feature 8)
+
+**What it turns on.** In the asset register on the Letters tab, a collapsed
+list under a bank row that is still held: "SOP reminders, if this hold went
+through CFCFRMS". Each reminder quotes the MHA SOP for NCRP-CFCFRMS word for
+word, with its section, PDF page, source URL and copy date
+(`backend/app/sop_reminders.py`). Only the Annexure I 90-day limit runs from a
+date the register holds (the date seized); the rest are shown without a date.
+They are reminders only: nothing is refused, blocked or reordered, and the
+register's 45-day court deadline is unchanged. No reminder for exchange, issuer
+or custody rows, or once a hold has ended. It contacts nothing outside Exchequer.
+
+**Merged.** #230 on `main`. No migration. With the flag off, the register's
+rows are unchanged.
+
+**Try it on the live site** (one test officer, on the test case):
+
+1. Confirm in `/health/detail` that `EXCHEQUER_SOP_DEADLINES` is on.
+2. On the test case's Letters tab, add a TEST row held by a bank, status held,
+   in the asset register. The reminders list shows under it, collapsed.
+3. Check each quote, section and page against the SOP copy the handoff names
+   (`docs/handoff/sop-deadlines.md`, with its SHA-256).
+4. An exchange or issuer row shows no reminders. Change the TEST row's status
+   from held (for example, to released): the reminders go.
+
+**Owner decisions still open** (handoff `docs/handoff/sop-deadlines.md`): whether
+to turn the flag on once the reviewer has checked the quotes against the PDF,
+and a re-check of each quote if a newer official copy of the SOP is found.

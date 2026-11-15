@@ -4,8 +4,8 @@
 - **Issue**: #128
 - **Branch**: `feat/custody-wallets` (then stacked `feat/custody-signing-log`, `feat/custody-screen`, `feat/custody-procedure`)
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: all four parts open for review (#129, #139, #140, and the procedure doc); behind `EXCHEQUER_CUSTODY_WALLETS`, off
+- **Last worked on**: Sidhyarth, 2026-11-15
+- **Status**: merged on 2026-11-15 in #129 (with #139, #140 and #142), behind `EXCHEQUER_CUSTODY_WALLETS`, off
 
 ## Done
 
@@ -35,13 +35,12 @@
 
 ## Next
 
-1. Review and merge in order: #129, #139, #140, then the procedure PR.
+1. Done: #129, #139, #140 and #142 merged on 2026-11-15.
 2. Done 14 Nov: clicked through in Chrome against a local server with the flag on and two signed-in officers of one unit (wallet linked to a register row, deposit, release refused without the court's order, two approvals, broadcast, confirm, cancel; both themes, keyboard, axe on the panel). Four panel fixes went into `feat/custody-screen` (#140): stale signer after an approval, register rows added after load not offered, focus lost after a step, the deposit's approval count.
 3. Turn the flag on (and later delete it) once the owner is happy; the procedure doc should be read by the unit before it is.
 
 ## Open questions
 
-- Migration `g7_custody_1` revises `g7_domain_lookups_1` (main's head on 14 Nov). If #122 (`g7_tasks_1`) or #124 (`g7_tasks_2`) merge first, re-point its `down_revision` before merging.
 - Signer rotation (replacing an owner of the same Safe) is not modelled: today it means a new record. Sidhyarth to decide whether that is enough.
 - Should the officer entering an approval also have to be a different officer from the one who entered the proposal? Today one account may propose and enter one approval.
 

@@ -3,9 +3,9 @@
 - **Feature**: suite feature 5, first and second slices. An officer reads a bank statement CSV, or a transaction CSV an exchange provided, against a case: the rows that match the victim's payments, the UPI/IMPS/NEFT/RTGS references in narrations, the narrations that name a known exchange, on a timeline beside the trace's own on-chain times. The officer may save the rows they confirm (never the whole statement) to the case. Second slice: a call detail record (CDR) read the same way, its top contacts, handsets and the numbers on this or the officer's other cases; a summary saved, never the CDR.
 - **Issue**: #144 (statements); #167 (call detail records, the second slice)
 - **Branch**: four stacked PRs: `feat/bank-statement-import` (#146, the record), `feat/bank-statement-import-routes` (#151, the routes), `feat/bank-statement-import-parse` (#152, reading and matching in the browser), `feat/bank-statement-import-panel` (#153, the panel on the Evidence tab). CDR, stacked on #153: `feat/cdr-import` (#168, the record and routes), `feat/cdr-import-parse` (#172, reading in the browser), `feat/cdr-import-panel` (#173, the panel). Withdrawing a saved import, stacked on #173: `feat/statement-import-withdraw`
-- **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: first slice built in four stacked PRs, behind the flag `EXCHEQUER_STATEMENT_IMPORT` (off by default); awaiting review. Second slice (call detail records, #167) built in three stacked PRs behind its own flag `EXCHEQUER_CDR_IMPORT` (off); awaiting review
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-15
+- **Status**: merged on 2026-11-15 in #146 (with #151, #152, #153, the CDR slice #168, #172, #173, and the withdrawal PRs #183, #184), behind `EXCHEQUER_STATEMENT_IMPORT` and `EXCHEQUER_CDR_IMPORT`, both off by default
 
 ## Done
 
@@ -44,7 +44,7 @@
 ## Next
 
 1. Try the panel with real (redacted) statements, then turn the flag on in production (render.yaml and Render's environment), and remove the flag once it has shipped.
-2. Migration heads: `g7_statements_2` revises `g7_statements_1`. If another migration (for example #122 `g7_tasks_1`, #124 `g7_tasks_2`) merges to main first, re-point `g7_statements_1`'s or this one's `down_revision` so there is one head.
+2. Migration heads: done. On `main` the chain is `g7_tasks_2` → `g7_custody_1` → `g7_custody_2` → `g7_statements_1` → `g7_statements_2` (the head).
 3. CDR: try it on real (redacted) CDRs from Airtel, Jio, Vi and BSNL to add their header names and call-type spellings to `CDR_HEADERS` and `eventType`, then turn `EXCHEQUER_CDR_IMPORT` on. Reading an XLSX directly (today: save as CSV) would need a dependency, in its own PR.
 4. IPDR is not started.
 

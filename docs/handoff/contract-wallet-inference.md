@@ -3,9 +3,9 @@
 - **Feature**: the contract_wallet retype of #234 changes nothing a trace concludes: the retyped rows keep their old type as a `role`, which deposit inference and scoring read
 - **Issue**: #237
 - **Branch**: `fix/contract-wallet-inference` (stacked on `fix/contract-wallet-types`, PR #234)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: in review
+- **Status**: merged with #234 (as #238) on 2026-11-15
 
 ## Done
 
@@ -21,7 +21,7 @@
 
 ## Next
 
-1. Owner: review together with #234.
+1. Done: merged with #234 on 2026-11-15.
 
 ## Open questions
 

@@ -4,9 +4,9 @@
 - **Issue**: #186
 - **Branch**: `feat/case-bundle` (server), `feat/case-bundle-screen` (button, stacked), `feat/bundle-more-registers`
   (the registers merged later)
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: server and button done behind `EXCHEQUER_CASE_BUNDLE` (off); in review
+- **Status**: merged in #187 (with #190) and #244 (the task list, custody wallets and signing log, statement rows and CDR summaries) on 2026-11-15, behind `EXCHEQUER_CASE_BUNDLE` (off)
 
 ## Done
 
