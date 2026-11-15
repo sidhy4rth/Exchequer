@@ -200,7 +200,7 @@ const MAP_NAME = { bubble: 'bubble map', hop: 'hop map' }
 // for an exchange and an inferred deposit.
 const ROLE_TONE = {
   seed: 'var(--text)', risk: 'var(--risk)', flagged: 'var(--risk)', exchange: 'var(--go)', inferred: 'var(--go-soft)',
-  gambling: 'var(--text-2)', service: 'var(--text-2)', node: 'var(--text-2)',
+  gambling: 'var(--text-2)', privacy: 'var(--text-2)', service: 'var(--text-2)', node: 'var(--text-2)',
 }
 
 /** The skin the page is in, kept current as it flips (as GraphView does), so
@@ -238,6 +238,7 @@ function walletRole(node) {
     seed: 'Reported address',
     risk: `Confirmed risk · ${risk}`,
     gambling: `Gambling platform · ${risk}`,
+    privacy: `Privacy protocol · ${plain(node.privacy_entity)} (a note, not an accusation)`,
     exchange: `Labelled exchange · ${plain(node.label) || plain(node.exchange)}`,
     inferred: `Probable deposit · ${plain(node.inferred_exchange)}`,
     service: `Service contract${node.router || node.label ? ` · ${plain(node.router ?? node.label)}` : ''}`,

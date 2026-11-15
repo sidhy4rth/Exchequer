@@ -38,10 +38,11 @@ import textwrap
 from datetime import datetime, timezone
 from typing import Any
 
-from . import config, never_flag, provenance
+from . import config, exchange_status, never_flag, provenance
 from .case_privacy import WITHHELD
 from .contracts.case_v2 import expanded_nodes
 from .display_text import one_line, short
+from .exchange_matcher import firm_account
 from .label_rules import INSTANT_EXCHANGER
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, IST, LABELLED_DEPOSIT, TAG_WORDING,
                      _amount, _paid_at, _when, _when_iso, also_reached, also_reached_line, attribution_kind)
@@ -326,14 +327,54 @@ def _tether_holds(result: dict[str, Any]) -> list[tuple[dict[str, Any], list[dic
     return out
 
 
+def _addressee(exchange: str) -> tuple[str, dict[str, str] | None]:
+    """Who an exchange letter is offered to, and the exchange's closure entry if it has one.
+
+    A closed exchange cannot answer a letter, so its letters are offered to
+    whoever now holds its records (exchange_status.py); a closing one's say when it closes."""
+    found = exchange_status.status(exchange)
+    if found and found["status"] == exchange_status.DEFUNCT:
+        return f"{exchange}'s administrator or successor ({exchange} closed {found.get('since', '')})", found
+    if found:
+        return f"{exchange} (closing {found.get('until') or found.get('since', '')})", found
+    return exchange, None
+
+
+def _to_exchange(exchange: str) -> str:
+    """The letter's To line."""
+    if exchange_status.is_defunct(exchange):
+        return (f"The administrator, liquidator or successor of {exchange} {BLANK} "
+                f"(officer to identify who now holds {exchange}'s records)")
+    return f"{exchange} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)"
+
+
+def _status_lines(exchange: str) -> list[str]:
+    """What the letter says about a closed or closing exchange, with the source; nothing for any other."""
+    found = exchange_status.status(exchange)
+    if not found:
+        return []
+    if found["status"] == exchange_status.DEFUNCT:
+        said = [f"NOTE: {exchange} has closed, so it cannot answer this letter itself. {found.get('what', '')}",
+                f"Address this letter to whoever now holds {exchange}'s records (an administrator, liquidator "
+                "or successor). If no one does, do not send it."]
+    else:
+        said = [f"NOTE: {exchange} is closing. {found.get('what', '')}",
+                f"Send this before {found.get('until') or 'it closes'}, and confirm the channel still answers."]
+    said.insert(1, f"Source: {found.get('source', '')} ({found.get('source_kind', 'source')}).")
+    return [line for text in said for line in textwrap.wrap(text, width=95, break_long_words=False,
+                                                            break_on_hyphens=False)] + [""]
+
+
 def available(result: dict[str, Any]) -> list[dict[str, str]]:
     """Which letters this case can support, for the interface to offer: the
     urgent freeze letters first, since they are sent first."""
     urgent, info = [], []
     found, instant = _attribution(result), _instant(result)
     if found and result.get("direction", "outgoing") == "outgoing" and not (instant and instant["found"]):
-        urgent.append({"to": EXCHANGE_FREEZE, "title": f"Urgent freeze request to {found['trace']['exchange']}"})
-        info.append({"to": EXCHANGE, "title": f"Request to {found['trace']['exchange']}"})
+        who, closed = _addressee(found["trace"]["exchange"])
+        status = {"exchange_status": closed["status"]} if closed else {}
+        urgent.append({"to": EXCHANGE_FREEZE, "title": f"Urgent freeze request to {who}", **status})
+        info.append({"to": EXCHANGE, "title": f"Request to {who}", **status})
     if instant:
         # The wallet each is about, for the requests log: the service may not be the case's exchange.
         at = instant["match"]["address"]
@@ -437,6 +478,10 @@ def _claim(kind: str, trace: dict[str, Any], exchange: str) -> str:
     source = f"(label: {label}; {_label_source(trace)})."
     if kind == LABELLED_DEPOSIT:
         return f"which is publicly labelled as a deposit address of {exchange}\n   {source}"
+    firm = firm_account(label, exchange)
+    if firm:
+        return (f"which is publicly labelled as a deposit address of {firm}'s account at {exchange}\n   {source} "
+                f"We understand the account is {firm}'s, not one of {exchange}'s own wallets.")
     return (f"which is publicly labelled as a wallet {exchange} operates itself\n   {source} "
             "We understand it does not belong to any one customer.")
 
@@ -581,11 +626,7 @@ def _exchange_letter(case_id: str, result: dict[str, Any]) -> str:
         EXPLORER_TAG: f"Request to confirm whether address {address} is controlled by {exchange} ({chain_name})",
     }
 
-    lines = _header(
-        case_id, result,
-        f"{exchange} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
-        subjects[kind],
-    )
+    lines = _header(case_id, result, _to_exchange(exchange), subjects[kind]) + _status_lines(exchange)
     sender = (swap or {}).get("sender")
     moved = (f"{swap.get('asset_in')} moving from that address and, after a swap at\n"
              f"   {swap.get('router_label')} (tx {swap.get('tx')}),\n"
@@ -865,9 +906,8 @@ def _exchange_freeze(result: dict[str, Any], approval: dict[str, Any] | None = N
     exchange, address, kind = trace["exchange"], trace["exchange_address"], attribution_kind(trace)
     stated = _letter_amount(result, found)
     pairs, count, note = _freeze_pairs(trace, address, kind, stated)
-    lines = _freeze_header(
-        f"{exchange} — Law Enforcement / Compliance team {BLANK} (officer to find and confirm the right channel)",
-        f"hold funds credited through {address}", FREEZE_ASK[kind].format(a=address), approval)
+    lines = _freeze_header(_to_exchange(exchange), f"hold funds credited through {address}",
+                           FREEZE_ASK[kind].format(a=address), approval) + _status_lines(exchange)
     lines += [f"Chain     : {trace.get('chain_name') or result.get('chain_name')}", f"Token     : {asset}",
               f"Wallet    : {address}", *_freeze_amount(stated, asset), *_hash_lines(pairs, "it", count), *note,
               *SIGN_OFF]
