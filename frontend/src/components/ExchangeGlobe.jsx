@@ -723,7 +723,7 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
           <>
             {coverage.flagged > 0 && (
               <dl className="cover">
-                <div className="hero"><dt>Flagged addresses screened, live</dt><dd><CountUp to={coverage.flagged} compact /></dd></div>
+                <div className="hero"><dt>Flagged addresses screened, live, counted once per chain</dt><dd><CountUp to={coverage.flagged} compact /></dd></div>
               </dl>
             )}
             {coverage.byChain.length > 0 && (
@@ -773,9 +773,11 @@ export default function ExchangeGlobe({ open, onOpen, hint, anchorRef, role = 'i
   )
 }
 
-/** A number that counts up once when it first appears, then holds still. */
-const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+/** The headline, 69,452,797 -> "69.45M": two decimals like the chain rows under
+ * it, so they visibly add up to it. One decimal rounded it up to "69.5M". */
+const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 2 })
 
+/** A number that counts up once when it first appears, then holds still. */
 function CountUp({ to, ms = 1200, compact = false }) {
   const [value, setValue] = useState(0)
   useEffect(() => {
