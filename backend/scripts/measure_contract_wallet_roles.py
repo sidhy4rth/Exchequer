@@ -63,21 +63,34 @@ SENDER_PAGES = 1    # the sender's newest 50 of each
 PAUSE = 0.35
 ROLE = "hot_wallet"
 META_KEY = "contract_wallet_roles_2026_11_15"
-# Rows another source owns exactly: measured, but the role is left to that source.
+# Measured, but the role is not set: a row another source owns exactly, or evidence too old to say
+# what the wallet is today.
 HELD = {
     "0x305dcaea67a9d4152e54e68060c89db05fd67a7b": (
         "its row comes from data/india_exchanges.json, which tests/test_india_exchanges.py holds to exactly "
         "exchange, label and type; giving it a role is a change to that seed, for the owner"),
+    "0x51ca21ed46a9df3cb6f34624cbd482d312996730": (
+        "every sweep read is from blocks 7.4M to 9.5M (2019-2020), so a hot role today would claim more "
+        "than the reading shows (owner's decision, #262)"),
 }
 
 
 def roleless(chain: str) -> dict[str, dict[str, Any]]:
-    labels = json.loads(config.CHAINS[chain].labels_path.read_text(encoding="utf-8"))["labels"]
-    return {a: m for a, m in labels.items()
-            if isinstance(m, dict) and m.get("type") == clc.CONTRACT_WALLET and not m.get("role")}
+    """The contract wallets to measure: those with no role, and those whose role an earlier
+    --apply set (listed in _meta), so a later --record measures them again."""
+    document = json.loads(config.CHAINS[chain].labels_path.read_text(encoding="utf-8"))
+    ours = document["_meta"].get(META_KEY, {}).get("given", {})
+    return {a: m for a, m in document["labels"].items()
+            if isinstance(m, dict) and m.get("type") == clc.CONTRACT_WALLET and (not m.get("role") or a in ours)}
 
 
 CACHE: Path | None = None  # --cache DIR keeps every answer, so a re-run asks nothing twice
+OFFLINE = False  # --offline: answer only from CACHE; a wallet with no cached answer is recorded as not measured yet
+NOT_MEASURED_YET = "not measured yet: no cached Blockscout answer when this file was recorded offline"
+
+
+class NotCached(Exception):
+    """--offline and the cache has no answer for this request (never a RuntimeError: see measure)."""
 
 
 def _get(base: str, path: str, params: dict[str, Any]) -> dict[str, Any]:
@@ -85,6 +98,8 @@ def _get(base: str, path: str, params: dict[str, Any]) -> dict[str, Any]:
     kept = CACHE / (keccak256(url.encode()).hex() + ".json") if CACHE else None
     if kept and kept.is_file():
         return json.loads(kept.read_text())
+    if OFFLINE:
+        raise NotCached(url)
     for attempt in range(5):
         time.sleep(PAUSE * (1 + 3 * attempt))
         try:
@@ -139,7 +154,13 @@ def measure(chain: str, address: str, row: dict[str, Any], all_labels: dict[str,
         return {"role": None, "why": f"not measured: no keyless indexer answered for {chain} (see BLOCKSCOUT)"}
     if code is not None and clc.classify(code)[0] == clc.FORWARDER:
         return {"role": None, "why": "not measured: a forwarder by its recorded code, never a sweep destination"}
-    base, exchange = BLOCKSCOUT[chain], row["exchange"]
+    try:
+        return _measured(chain, address, all_labels, BLOCKSCOUT[chain], row["exchange"])
+    except NotCached:
+        return {"role": None, "why": NOT_MEASURED_YET}
+
+
+def _measured(chain: str, address: str, all_labels: dict[str, dict], base: str, exchange: str) -> dict[str, Any]:
     inflow, _ = _flows(base, address, "to", WALLET_PAGES)
     blocks = [f["block"] for f in inflow if f["block"]]
     senders = sorted({f["party"] for f in inflow if f["party"] != address and not f["is_contract"]
@@ -262,8 +283,13 @@ def main() -> int:
     group.add_argument("--check", action="store_true")
     group.add_argument("--apply", action="store_true", help="write the evidence file's roles into the label files")
     parser.add_argument("--cache", type=Path, help="keep every Blockscout answer in this directory")
+    parser.add_argument("--offline", action="store_true",
+                        help="with --record and --cache: ask nothing; a wallet with no cached answer is not measured yet")
     args = parser.parse_args()
-    global CACHE
+    global CACHE, OFFLINE
+    if args.offline and not (args.record and args.cache):
+        parser.error("--offline needs --record and --cache")
+    OFFLINE = args.offline
     if args.cache:
         args.cache.mkdir(parents=True, exist_ok=True)
         CACHE = args.cache

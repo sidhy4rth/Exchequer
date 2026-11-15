@@ -245,6 +245,14 @@
         "OKX": 2
       }
     },
+    "contract_wallet_roles_2026_11_15": {
+      "rule": "A contract_wallet is given the role hot_wallet only when, read on chain, at least 10 unlabelled senders in a seeded sample of up to 30 of its newest incoming senders each sent it two or more transfers and sent value nowhere else (except to the same exchange's labelled wallets): the sweep shape #248 used for OKX's USDC proxy. Evidence: tests/fixtures/contract_wallet_roles.json, by scripts/measure_contract_wallet_roles.py --record (Blockscout public API, keyless, read 2026-11-15). Every other contract_wallet stays role-less.",
+      "given": {
+        "0x6fc82a5fe25a5cdb58bc74600a40a69c065263f8": "10 of 30 sampled senders sent it 2+ transfers and value nowhere else (Gemini 2)",
+        "0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43": "12 of 30 sampled senders sent it 2+ transfers and value nowhere else (Coinbase 10)",
+        "0xfa52274dd61e1643d2205169732f29114bc240b3": "18 of 30 sampled senders sent it 2+ transfers and value nowhere else (Kraken 5)"
+      }
+    },
     "por_bitget_2026_11_15": {
       "rule": "scripts/import_bitget_por_labels.py: Bitget's own proof-of-reserves reserve-wallet list, per audit (a first-party source, as the por_2026_11_15 rows); each address cites the newest audit that lists it; the rules of scripts/import_por_labels.py: a conflict with any other file, a demo or the label store is left out, never overwritten; a token contract or an address with no activity on this chain is left out; contract code -> contract_wallet, with no role (Bitget gives none)",
       "source": {
@@ -122213,7 +122221,8 @@
     "0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43": {
       "exchange": "Coinbase",
       "label": "Coinbase 10",
-      "type": "contract_wallet"
+      "type": "contract_wallet",
+      "role": "hot_wallet"
     },
     "0x77696bb39917c91a0c3908d577d5e322095425ca": {
       "exchange": "Coinbase",
@@ -123352,7 +123361,8 @@
     "0x6fc82a5fe25a5cdb58bc74600a40a69c065263f8": {
       "exchange": "Gemini",
       "label": "Gemini 2",
-      "type": "contract_wallet"
+      "type": "contract_wallet",
+      "role": "hot_wallet"
     },
     "0x61edcdf5bb737adffe5043706e7c5bb1f1a56eea": {
       "exchange": "Gemini",
@@ -124164,7 +124174,8 @@
     "0xfa52274dd61e1643d2205169732f29114bc240b3": {
       "exchange": "Kraken",
       "label": "Kraken 5",
-      "type": "contract_wallet"
+      "type": "contract_wallet",
+      "role": "hot_wallet"
     },
     "0xf1f7648f81f5219c36d75d24d33811f16b426dbe": {
       "exchange": "Kraken",
