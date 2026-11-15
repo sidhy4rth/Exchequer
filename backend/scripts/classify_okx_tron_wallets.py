@@ -27,7 +27,7 @@ Reads, per address (keyless, one request at a time, spaced out):
 "An OKX wallet" is Hot Wallet 8 or any address in the PoR file.
 
     cd backend && .venv/bin/python -m scripts.classify_okx_tron_wallets \\
-        --por ~/exchequer-flagged/store/next-release/okx_por_tron.csv \\
+        --por okx_por_tron.csv \\
         --candidates candidates.json --out evidence.json
 """
 from __future__ import annotations

@@ -22,7 +22,7 @@
 
 ## Next
 
-1. After merge: regenerate `okx_dest.json` from main and rerun `okx_deposits_scripts/build.py` + `verify.py`; expect 821 of the 825 dropped rows back (see `~/exchequer-flagged/store/NEXT-RELEASE.md`).
+1. After merge: regenerate `okx_dest.json` from main and rerun `okx_deposits_scripts/build.py` + `verify.py`; expect 821 of the 825 dropped rows back (see the next-release notes kept with the label-store build, not in this repository; the 825 dropped rows and the 4 still left out after this PR are attached to label-store release `labels-2026-11-16` in sidhy4rth/exchequer-labels as `okx_por_ethereum_deposits.dropped.tsv` (SHA-256 f2f4467858e5b3dc9d298fa1e0a38cae44f7ce031200caf90f2b8e899d0c7cf2) and `okx_por_ethereum_deposits.dropped_after_277.tsv`).
 
 ## Open questions
 

@@ -20,10 +20,12 @@
 - The add script's conflict check reads every source the matcher reads first: the chain's label file, the
   instant-exchanger seed and the store's instant-exchanger rows (`exchange_matcher.curated_sources`, shared with
   the matcher). A CSV row of any type but `exchange_wallet` (blank reads as it) refuses the whole CSV.
-- OKX staged outside the repo: `~/exchequer-flagged/store/next-release/okx_por_tron.csv`, 474,529 rows from OKX's
+- OKX staged outside the repo: `okx_por_tron.csv` in the release build's working files (not in this repository;
+  its rows are the OKX Tron `exchange_rows` of label-store releases `labels-2026-11-15` and `labels-2026-11-16`,
+  sidhy4rth/exchequer-labels), 474,529 rows from OKX's
   1 Nov 2026 file (SHA-256 93095583...367a6, 474,530 listed, all signed with a balance; 1 already in the label file
   as OKX). Trial ingest into an empty store: 3 s, +17.7 MB after VACUUM. Ingest steps in
-  `~/exchequer-flagged/store/NEXT-RELEASE.md`.
+  the next-release notes kept with the label-store build, not in this repository.
 
 ## Decisions
 
