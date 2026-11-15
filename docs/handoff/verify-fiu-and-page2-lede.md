@@ -5,7 +5,7 @@
 - **Branch**: `tests/verify-fiu-and-page2-lede`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: done; PR ready
+- **Status**: merged in #306 on 2026-11-15 (18:57 UTC, `c33327a0`); live
 
 ## Done
 
