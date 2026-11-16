@@ -248,6 +248,9 @@ def test_a_store_instant_exchanger_is_still_named_once_tronscan_names_another_wa
     swap = "TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf"
 
     class Store:
+        def exchange_row(self, chain, address):  # as LabelStore's: no exchange row here, so None
+            return None
+
         def instant_exchanger(self, chain, address):
             return {"exchange": "FixedFloat", "label": "FixedFloat", "type": "unknown",
                     "category": INSTANT_EXCHANGER, "source": "test"} if address == swap else None
