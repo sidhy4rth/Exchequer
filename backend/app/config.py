@@ -957,3 +957,6 @@ FIU_IND_NOTE: bool = flag("EXCHEQUER_FIU_IND_NOTE",
                           "#290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, "
                           "notices, penalties) as a note on the report's FINDING and the exchange letters; "
                           "on in production since 15 Nov")
+MHA_FIG36: bool = flag("EXCHEQUER_MHA_FIG36",
+                       "Feature 7, #352: read Figure 3.6's Central Authorities and language rules and the MHA MLAT "
+                       "portal's treaty list (letters_of_request.py); off until a second person checks them by eye")
