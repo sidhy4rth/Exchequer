@@ -29,7 +29,7 @@ ENV VITE_API_BASE=""
 RUN npm run build
 
 # ---------- stage 2: the application ----------
-FROM python:3.12.16-slim-trixie@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54 AS app
+FROM python:3.12.16-slim-trixie@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b AS app
 
 # Unbuffered so logs appear in the platform's log viewer immediately rather
 # than sitting in a pipe buffer.
