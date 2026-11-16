@@ -1,11 +1,11 @@
 # Handoff: landing-flagged-figure
 
 - **Feature**: the landing and citizen sign-in hero's flagged-address figure says what it counts and agrees with the chain rows under it
-- **Issue**: #285
-- **Branch**: `fix/landing-flagged-figure`
+- **Issue**: #285 (merged in #292); now #346
+- **Branch**: `feat/landing-overlap-metadata` (was `fix/landing-flagged-figure`)
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR ready; frontend and README
+- **Last worked on**: Sidhyarth, 2026-11-16
+- **Status**: #292 merged (`b287826b`); #346 in PR #347, ready for review (applies to label stores built after it merges: r10+)
 
 ## Done
 
@@ -13,14 +13,19 @@
 - `frontend/src/components/ExchangeGlobe.test.jsx`: renders the hero from a mocked GET /chains and checks the wording, the headline and the chain rows.
 - `README.md` (after #283, which added "counted once per chain"): the badge and the flagged figure say 69.45M, what GET /chains sums (the 69.4M store and the repository's lists); exchange addresses 26,157 -> 26,204 and the feature table's 26,136 -> 26,204, the live /chains sum after #277; the label-file table's Ethereum (25,332; 1,314 exchange wallets), BSC (227) and Tron (144) counts, from the files.
 
+- #346 (this branch): `scripts/build_label_store.py` records, as store meta `list_overlap`, which of the repository's risk-list addresses the store also holds (on the list's own chain, with the store row's category; and on any chain), the store's distinct addresses across chains, and a digest of the risk files it read. `RiskMatcher.counts_by_category` subtracts the same-chain overlap still named by a file, so GET /chains and the hero count each address once per chain, with no store lookup at start. GET /chains gains `flagged_distinct` ({addresses, exact}; null without the meta): distinct across chains, store and files. The hero does not show it yet. A store built without the meta (r9 and older) counts as before.
+
 ## Decisions
 
 - Measured with the app's own matchers against release `labels-2026-11-15` (15 Nov): the store holds 69,410,610 rows, one per address and chain, so each category count is of different rows (no address is counted under two categories on one chain). The JSON lists in `backend/data` add 42,189 entries, of which 32 (8 Ethereum: 4 mixer, 4 frozen; 24 Tron) are also in the store. So the /chains sum (69.45M) is the store plus the repository's lists, per chain, and only those 32 are counted twice. A reviewer measured 68,527,888 distinct addresses across chains; the site counts per chain, and now says so.
 - Not done: removing the 32. It needs one store lookup per list entry (~42,000), measured at 4 to 8 seconds here, on every start (main.py logs the counts) or on the first /chains request. `RiskMatcher.counts_by_category` already notes the overstatement.
 
+- #346: the overlap is subtracted under the store row's category, because a lookup returns the file's label (files outrank the store), so each address stays under the category a trace shows. Only addresses a file still names are subtracted, so a file entry removed after the build is never subtracted wrongly; one added after the build that the store also holds is counted twice, as before, and `flagged_distinct.exact` turns false (the file digest differs). The build reads the files without the privacy file, which only removes entries, so the overlap covers the app's files with the privacy flag on or off.
+- The hero keeps "counted once per chain" (now exact for an r10+ store with unchanged files). `flagged_distinct` is a different figure (an address on two chains once), so it is not shown without the owner's say.
+
 ## Next
 
-1. If an exact count is wanted: have `scripts/build_label_store.py` or the release checks record the overlap with the repository's lists, rather than querying at start.
+1. After a store built with #346 is live: compare GET /chains `flagged_distinct.addresses` with the hero's sum; the owner decides whether the hero should show the distinct figure (it would need new wording, e.g. "distinct flagged addresses").
 
 ## Open questions
 

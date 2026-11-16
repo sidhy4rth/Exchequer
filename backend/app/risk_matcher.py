@@ -88,6 +88,7 @@ government list says so.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -511,11 +512,19 @@ class RiskMatcher:
         for meta in self._labels.values():
             counts[meta["category"]] = counts.get(meta["category"], 0) + 1
         if self.store:
-            # The store's figures are counted when it is built; an address a
-            # file also names is counted twice, a small overstatement of
-            # coverage that never changes what a trace reports.
+            # The store's figures are counted when it is built. A store built
+            # with its overlap recorded (scripts/build_label_store.py) names the
+            # addresses a file here also holds: each is counted once, under the
+            # file's category, which is the one a trace shows. Without it, or
+            # for a file entry added after the build, an address a file also
+            # names is counted twice, a small overstatement of coverage that
+            # never changes what a trace reports.
             for category, n in self.store.counts(self.chain).items():
                 counts[category] = counts.get(category, 0) + n
+            overlap = self.store.list_overlap()
+            for address, category in (overlap["same_chain"].get(self.chain, {}) if overlap else {}).items():
+                if address in self._labels and counts.get(category, 0) > 0:
+                    counts[category] -= 1
         return counts
 
     def store_entry(self) -> dict[str, Any] | None:
@@ -665,11 +674,11 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
 def _risk_matcher(key: str) -> RiskMatcher:
     chain = config.get_chain(key)
     threat = chain.threat_labels_path
+    first, *extra = _list_paths(chain)
     return RiskMatcher.from_file(
-        chain.risk_labels_path,
+        first,
         chain=chain.key,
-        extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, threat,
-                     chain.gambling_labels_path),
+        extra_paths=tuple(extra),
         store=get_label_store(),
         # Read only with the flag on: off, nothing here changes (#189).
         privacy_path=chain.privacy_protocols_path if config.PRIVACY_CATEGORY else None,
@@ -677,10 +686,52 @@ def _risk_matcher(key: str) -> RiskMatcher:
     )
 
 
+def _list_paths(chain: config.Chain) -> tuple[Path | None, ...]:
+    """A chain's risk files in order of authority: OFAC first, then other
+    governments' lists, Tether freezes, the threat tags and gambling wallets."""
+    return (chain.risk_labels_path, chain.intl_sanctions_path, chain.frozen_labels_path,
+            chain.threat_labels_path, chain.gambling_labels_path)
+
+
+def lists_matcher(key: str) -> RiskMatcher:
+    """One chain's risk files alone: no store, and no privacy file (which only
+    takes entries out), so it holds every address the app's matcher can.
+    scripts/build_label_store.py records the store's overlap with these."""
+    first, *extra = _list_paths(config.get_chain(key))
+    return RiskMatcher.from_file(first, chain=key, extra_paths=tuple(extra))
+
+
+def list_files_digest() -> str:
+    """Which risk files these are: a build records it, so the app can tell
+    whether the overlap it was given is with the files it reads now."""
+    digest = hashlib.sha256()
+    for key in sorted(config.CHAINS):
+        for path in _list_paths(config.get_chain(key)):
+            if path is not None and path.is_file():
+                digest.update(f"{key} {path.name} ".encode() + hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()[:16]
+
+
+@lru_cache(maxsize=1)
+def distinct_flagged() -> dict[str, Any] | None:
+    """Distinct flagged addresses across every chain, the store and the risk
+    files together (an address on two chains counted once), from what the
+    store's build recorded; None for a store built without it, or no store.
+    `exact` is False when the files changed since the build: an entry added
+    since that the store also holds is then counted twice."""
+    store = get_label_store()
+    overlap = store.list_overlap() if store is not None else None
+    if overlap is None:
+        return None
+    listed = {address for key in config.CHAINS for address, _ in get_risk_matcher(key).entries()}
+    return {"addresses": overlap["store_distinct"] + len(listed.difference(overlap["in_store"])),
+            "exact": overlap["lists_sha256"] is not None and overlap["lists_sha256"] == list_files_digest()}
+
+
 def clear_label_caches() -> None:
     """Forget every loaded label file, so the next call reads them again (tests)."""
     from . import exchange_matcher, label_store
-    for cached in (_risk_matcher, _list_meta, _list_ends, exchange_matcher._matcher,
+    for cached in (_risk_matcher, distinct_flagged, _list_meta, _list_ends, exchange_matcher._matcher,
                    exchange_matcher._router_matcher, label_store.pinned_mixers):
         cached.cache_clear()
 
