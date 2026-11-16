@@ -72,7 +72,7 @@
 ## Open questions
 
 - Report: done in PR 4. Letters: deliberately not (see Decisions); revisit only if the owner wants it.
-- `RiskMatch.describe` prints "..unchanged.." (a source ending in a full stop, then ". "): cosmetic, from PR 2.
+- (Fixed in #339: `RiskMatch.describe` no longer prints ".." after a source that ends in a full stop.)
 - The hunt's Solana and Base Hinkal rows are not filed: Exchequer traces neither chain.
 
 ## Files mid-change (do not touch)

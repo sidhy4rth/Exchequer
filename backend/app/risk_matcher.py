@@ -279,6 +279,9 @@ class RiskMatch:
         # The label usually is the entity name; repeating it as "X (X)" reads
         # like a bug in a document meant to be quoted.
         named = self.label if self.label == self.entity else f"{self.label} ({self.entity})"
+        # Some sources already end in a full stop (a note on how the address was
+        # checked); adding another would print "..".
+        src = self.source if self.source.endswith(".") else f"{self.source}."
 
         # For the reported address itself there is no "value that reached it
         # within this trace" -- the trace starts there, so the graph holds no
@@ -295,13 +298,13 @@ class RiskMatch:
         if self.category == SANCTIONED:
             return (
                 f"Sanctioned entity: {self.address} is listed as {named} on "
-                f"{self.source}. {placement}."
+                f"{src} {placement}."
             )
         if self.category == SEIZED:
             # The entity is the holder's name when the order gives one, else the order id.
             holder = "" if self.entity.startswith("NBCTF ") else f" Listed holder: {named}."
             return (
-                f"Government seizure order: {self.address} is named in {self.source}.{holder} "
+                f"Government seizure order: {self.address} is named in {src}{holder} "
                 f"{placement}. A seizure or forfeiture order is one "
                 f"government's measure against the wallet, often time-limited, not a "
                 f"sanctions designation; it is not a finding that any counterparty took "
@@ -318,7 +321,7 @@ class RiskMatch:
             issuer = issuer or "the token's issuer"
             by = f"{issuer} ({token})" if token else issuer
             return (
-                f"Frozen by {by}: {self.address} — {self.label}, per {self.source}. "
+                f"Frozen by {by}: {self.address} — {self.label}, per {src} "
                 f"{placement}. The issuer acted on this address; the freeze does not "
                 f"say why, and it is not a finding that any counterparty took part in "
                 f"anything. {issuer[0].upper() + issuer[1:]} can say, on a lawful request."
@@ -328,7 +331,7 @@ class RiskMatch:
             # what it says is a lead for the investigator, not a finding.
             return (
                 f"Unverified listing: {self.address} is listed as {named} "
-                f"({UNVERIFIED_WHAT[self.category]}), per {self.source}. {placement}. "
+                f"({UNVERIFIED_WHAT[self.category]}), per {src} {placement}. "
                 f"The list is a community report or a machine-learning dataset that "
                 f"nobody has checked; treat it as a lead to verify, not as a finding "
                 f"about this wallet or anyone who dealt with it."
@@ -342,7 +345,7 @@ class RiskMatch:
                      "on-chain detection, and it is not a designation.")
             return (
                 f"Address poisoning: {self.address} is a lookalike address used in an "
-                f"address-poisoning scam ({self.label}), per {self.source}. {placement}. "
+                f"address-poisoning scam ({self.label}), per {src} {placement}. "
                 f"The scam plants a near-identical address in a victim's transaction "
                 f"history so that it is copied by mistake; funds sent here most likely "
                 f"went to the scammer in error. {whose}"
@@ -350,14 +353,14 @@ class RiskMatch:
         if self.category == SCAM:
             return (
                 f"Reported scam: {self.address} is attributed as {named} by "
-                f"{self.source}. {placement}. The source ties the wallet to a scam or "
+                f"{src} {placement}. The source ties the wallet to a scam or "
                 f"fraud; it is not a sanctions designation, and not a finding that any "
                 f"other counterparty took part in it."
             )
         if self.category == LAUNDERING:
             return (
                 f"Laundering: {self.address} is identified as {named} by "
-                f"{self.source}. {placement}. The source names the wallet as moving "
+                f"{src} {placement}. The source names the wallet as moving "
                 f"illicit proceeds; it is not a sanctions designation, and not a "
                 f"finding that any other counterparty took part in it."
             )
@@ -370,7 +373,7 @@ class RiskMatch:
             )
         if self.category == GAMBLING:
             return (
-                f"Gambling platform: {self.address} is {named}, per {self.source}. "
+                f"Gambling platform: {self.address} is {named}, per {src} "
                 f"{placement}. The funds reached a wallet that a gambling platform "
                 f"controls; the platform holds the account behind it and can identify "
                 f"the account holder on a lawful request. This is an attribution of "
@@ -379,7 +382,7 @@ class RiskMatch:
         if self.category == STOLEN:
             return (
                 f"Stolen funds: {self.address} is tagged as {named} by "
-                f"{self.source}. {placement}. Funds that pass through it are "
+                f"{src} {placement}. Funds that pass through it are "
                 f"commingled with the proceeds of that theft; the tag is that "
                 f"source's attribution, not a finding that any counterparty "
                 f"took part in it."
@@ -396,7 +399,7 @@ class RiskMatch:
             else:
                 walked = "The trace did not stop here."
             return (
-                f"Privacy protocol: {self.address} is {named}, per {self.source}. "
+                f"Privacy protocol: {self.address} is {named}, per {src} "
                 f"{placement}. A privacy protocol: funds passing through lose their "
                 f"visible link, so what leaves it is not shown on chain to be the "
                 f"same money. {walked} This is not an "
@@ -405,14 +408,14 @@ class RiskMatch:
             )
         if not self.is_terminal:
             return (
-                f"Mixer tag: {self.address} is tagged {named}, per {self.source}. "
+                f"Mixer tag: {self.address} is tagged {named}, per {src} "
                 f"{placement}. It is not one of the mixer pools or routers on this "
                 f"tool's pinned list, so the trace did not stop here and followed the "
                 f"funds past it; the tag is that source's, a reason to look closer, "
                 f"not a finding."
             )
         return (
-            f"Mixer: {self.address} is {named}, per {self.source}. {placement}. "
+            f"Mixer: {self.address} is {named}, per {src} {placement}. "
             f"The trace stops here — a mixer pays out from a commingled pool, "
             f"so transfers leaving it have no established link to the funds "
             f"that arrived."
