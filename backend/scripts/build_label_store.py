@@ -42,7 +42,9 @@ import argparse
 import collections
 import contextlib
 import csv
+import functools
 import hashlib
+import json
 import re
 import sqlite3
 import sys
@@ -50,8 +52,8 @@ import time
 from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 
-from app import label_rules, never_flag
-from app.label_store import CHAIN_IDS, SCHEMA_VERSION, decode_address, encode_address, encode_tx, pinned_mixers
+from app import label_rules, never_flag, risk_matcher
+from app.label_store import CHAIN_IDS, OVERLAP_KEY, SCHEMA_VERSION, decode_address, encode_address, encode_tx, pinned_mixers
 
 DEFAULT_OUT = Path(__file__).resolve().parent.parent / "data" / "label_store.db"
 
@@ -206,10 +208,12 @@ def iter_rows(reader: Iterable[dict[str, str]], skipped: collections.Counter,
 
 def build(csv_path: Path, out: Path, limit: int | None = None, *, listed: Iterable[Path] = (),
           no_poisoning: Iterable[Path] = (), refused_out: Path | None = None,
-          without_never_poison: bool = False) -> dict:
+          without_never_poison: bool = False, risk_lists: dict[str, Iterable[str]] | None = None) -> dict:
     """Build the store at `out`. `listed` and `no_poisoning` are extra never-flag
     lists (every label refused, or only poisoning); every refused row is written
-    to `refused_out`, by default beside the CSV and so outside the repository."""
+    to `refused_out`, by default beside the CSV and so outside the repository.
+    `risk_lists` ({chain: addresses}) stands in for the repository's risk files
+    when the overlap is recorded (tests); by default the files are read."""
     csv.field_size_limit(sys.maxsize)
     listed, no_poisoning = tuple(listed), tuple(no_poisoning)
     never = {key: never_flag.build_kinds(key, listed, no_poisoning) for key in CHAIN_IDS}
@@ -222,7 +226,7 @@ def build(csv_path: Path, out: Path, limit: int | None = None, *, listed: Iterab
     tmp.unlink(missing_ok=True)
     db = sqlite3.connect(tmp)
     try:
-        return _build(db, tmp, csv_path, out, limit, never, refused_out, lists)
+        return _build(db, tmp, csv_path, out, limit, never, refused_out, lists, risk_lists)
     except BaseException:
         # Private hunt data: a failed or interrupted build leaves no copy behind.
         db.close()
@@ -242,8 +246,44 @@ def describe_lists(paths: Iterable[Path]) -> str:
     return "; ".join(found) if found else "none"
 
 
+@functools.lru_cache(maxsize=1)
+def _risk_list_addresses(digest: str) -> dict[str, list[str]]:
+    """Every chain's risk-file addresses, read once per set of files (`digest`)."""
+    return {key: [a for a, _ in risk_matcher.lists_matcher(key).entries()] for key in CHAIN_IDS}
+
+
+def list_overlap(db: sqlite3.Connection, risk_lists: dict[str, Iterable[str]] | None = None) -> dict:
+    """Which of the repository's risk-list addresses this store also holds,
+    for the meta table (LabelStore.list_overlap): the app then counts each
+    address once without a store lookup per list entry at start (#346).
+
+    same_chain: {chain: {address: the store row's category}}, a row on the
+    list's own chain; in_store: every list address with a row on any chain;
+    store_distinct: the store's distinct addresses across chains;
+    lists_sha256: which files were read (None for lists given by a test)."""
+    digest = risk_matcher.list_files_digest() if risk_lists is None else None
+    if risk_lists is None:
+        risk_lists = _risk_list_addresses(digest)
+    same: dict[str, dict[str, str]] = {}
+    held: set[str] = set()
+    for chain, addresses in risk_lists.items():
+        for address in addresses:
+            raw = encode_address(address)
+            if chain == "tron" and raw is not None and len(raw) == 20:
+                raw = b"\x41" + raw  # a Tron address written in hex form, as map_row reads it
+            if raw is None:
+                continue
+            for chain_id, category in db.execute("SELECT chain, category FROM labels WHERE address=?", (raw,)):
+                held.add(address)
+                if chain_id == CHAIN_IDS.get(chain):
+                    same.setdefault(chain, {})[address] = category
+    distinct = db.execute("SELECT COUNT(DISTINCT address) FROM labels").fetchone()[0]
+    return {"lists_sha256": digest, "store_distinct": distinct, "same_chain": same, "in_store": sorted(held)}
+
+
 def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: int | None,
-           never: dict[str, dict[bytes, str]], refused_out: Path, lists: dict[str, str]) -> dict:
+           never: dict[str, dict[bytes, str]], refused_out: Path, lists: dict[str, str],
+           risk_lists: dict[str, Iterable[str]] | None = None) -> dict:
     db.executescript("""
         PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -328,6 +368,7 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
     unpinned = sum(1 for raw, chain_id in db.execute("SELECT address, chain FROM labels WHERE category='mixer'")
                    if raw not in pinned_mixers(names[chain_id]))
     db.executemany("INSERT INTO counts VALUES (?,?,?)", [(names[c], cat, n) for c, cat, n in counts])
+    overlap = list_overlap(db, risk_lists)
     db.executemany("INSERT INTO meta VALUES (?,?)", [
         ("schema_version", str(SCHEMA_VERSION)),
         ("built_from", csv_path.name),
@@ -335,6 +376,7 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         ("never_flag_refused", str(refused["rows"])),
         ("duplicates", str(merged["duplicates"])),
         ("conflicts", str(merged["conflicts"])),
+        (OVERLAP_KEY, json.dumps(overlap, sort_keys=True)),
         *lists.items(),
     ])
     db.commit()
@@ -355,6 +397,9 @@ def _build(db: sqlite3.Connection, tmp: Path, csv_path: Path, out: Path, limit: 
         "strong_conflicts": merged["strong"],
         "strong_conflicts_shown": strong,
         "size_mb": round(out.stat().st_size / 1e6, 1),
+        "store_distinct": overlap["store_distinct"],
+        "list_overlap_same_chain": sum(len(v) for v in overlap["same_chain"].values()),
+        "list_overlap_any_chain": len(overlap["in_store"]),
         **lists,
     }
     return report
@@ -419,6 +464,9 @@ def main(argv: list[str] | None = None) -> int:
     if report["unpinned_mixers"]:
         print(f"  {report['unpinned_mixers']:,} mixer tags not on the pinned list (data/mixer_pools.json, "
               "threat_labels*.json): shown as tags, they do not stop a trace")
+    print(f"  {report['store_distinct']:,} distinct addresses; the repository's risk lists name "
+          f"{report['list_overlap_same_chain']:,} of its rows on their own chain and "
+          f"{report['list_overlap_any_chain']:,} addresses it holds on any chain (meta {OVERLAP_KEY})")
     if report["duplicates"]:
         print(f"  {report['duplicates']:,} duplicate rows merged (stronger evidence kept), "
               f"{report['conflicts']:,} with different categories")

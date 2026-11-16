@@ -5,7 +5,7 @@
 - **Branch**: `labels/bitget-por`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR #258 ready for review
+- **Status**: merged in #258 (`1faad34d`) on 2026-11-15
 
 ## Done
 
@@ -23,7 +23,7 @@
 
 ## Next
 
-1. Owner: merge #258 when green. The `labels/contract-wallet-roles` branch (#254) works on contract_wallet roles in the same label files. This PR only adds rows and one new `_meta` key, so the two should merge cleanly. If #254 gives role-less contract wallets a role from sweep evidence, these 16 rows are candidates.
+1. ~~Owner: merge #258 when green.~~ Done: merged in #258 (`1faad34d`). The 16 Bitget contract wallets were then checked for a role: #268 (`fdaa9219`) recorded them as not measured yet, and #270 (`fcd6b0a8`) measured the 12 Ethereum ones on chain: none meets the role rule, so they stay role-less; the 4 BSC ones stay not measured, as BSC has no Blockscout (`contract-wallet-roles.md`). Nothing left for this branch.
 
 ## Open questions
 

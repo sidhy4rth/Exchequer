@@ -5,7 +5,7 @@
 - **Branch**: `tools/check-demos-only`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: done, in review
+- **Status**: merged in #272 (`5704bc7b`)
 
 ## Done
 
@@ -18,7 +18,7 @@
 
 ## Next
 
-1. Nothing planned.
+1. None.
 
 ## Open questions
 

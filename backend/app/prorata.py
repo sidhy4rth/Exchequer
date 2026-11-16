@@ -41,7 +41,7 @@ from typing import Any, Callable
 
 import networkx as nx
 
-from .provider_errors import public_reason
+from .provider_errors import failure_kind, public_reason
 from .tracing_methods import FlowsBetween, Loops, take_back, transfer_key
 
 # A share below this at any wallet is called out: the victim's funds were a
@@ -118,7 +118,9 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
     complete). `flows_between`, when given, is read instead and also returns
     what the wallet paid out, so coins it got back from wallets it had paid
     are netted out. Never raises: a failed read is an "unknown", not a failed
-    trace.
+    trace, and says what kind of failure it was (`read_failure`,
+    provider_errors.failure_kind) so the case can say why the amount earned
+    no credit (read_failure_note).
 
     `seed_cap` limits the starting figure: the victim's reported payments
     (`cap_basis` "reported_amount") or what a swap returned ("swap_output").
@@ -162,8 +164,9 @@ def estimate(graph: nx.DiGraph, path: list[str], incoming_between: IncomingBetwe
             else:
                 (received, complete), paid = incoming_between(wallet, start_block, end_block, start_ts, end_ts), []
         except Exception as exc:  # noqa: BLE001 -- an estimate is never worth a failed trace
-            return _unknown(sent, hops, capped,
-                            f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})")
+            return {**_unknown(sent, hops, capped,
+                               f"{wallet}'s incoming transfers could not be read ({public_reason(exc)})"),
+                    "read_failure": failure_kind(exc)}
         if not complete:
             return _unknown(sent, hops, capped, f"{wallet} received too many transfers in the window to read in full")
 
@@ -227,3 +230,32 @@ def _unknown(sent: float, hops: list[dict[str, Any]], capped: dict[str, Any], re
     lowest = min((h["victim_share"] for h in hops), default=None)
     return {"status": "unknown", "sent": sent, "hops": hops, "reason": reason,
             "lowest_share": lowest, "diluted": lowest is not None and lowest < DILUTED, **capped}
+
+
+# What stopped a window read (`read_failure`, provider_errors.failure_kind), in words.
+READ_FAILURE_WORDING = {
+    "rate_limit": "the data provider did not answer (rate limit)",
+    "no_answer": "the data provider did not answer (no response, or a server error)",
+    "quota": "the data provider's allowance is used up for now",
+    "stopped": "the trace reached its own time or request limit first",
+    "bad_response": "the data provider sent a response Exchequer could not read",
+    "provider_error": "the data provider reported an error",
+    "error": "an unexpected error stopped the read",
+}
+
+
+def read_failure_words(prorata: dict[str, Any] | None) -> str | None:
+    """What stopped the amount check, in words, when a read did; None
+    otherwise -- a complete estimate, or one the path itself ruled out."""
+    kind = (prorata or {}).get("read_failure")
+    if not kind or prorata.get("status") != "unknown":
+        return None
+    return READ_FAILURE_WORDING.get(kind, READ_FAILURE_WORDING["error"])
+
+
+def read_failure_note(prorata: dict[str, Any] | None) -> str | None:
+    """The sentence a case states when the amount check failed at a read: the
+    lower confidence is the read's doing, not the money's."""
+    words = read_failure_words(prorata)
+    return (f"The amount check could not be done: {words}. The confidence score gives the amount no credit; "
+            "trace again later for a complete score.") if words else None

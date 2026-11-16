@@ -5,7 +5,7 @@
 - **Branch**: `fix/report-cache-test-flake`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: merged in #160 on 2026-11-14
+- **Status**: merged in #160 (`06f02ca4`) on 2026-11-14
 
 ## Done
 
@@ -22,7 +22,7 @@
 
 ## Next
 
-1. Review and merge.
+1. None.
 
 ## Open questions
 

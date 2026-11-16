@@ -199,6 +199,23 @@ def test_an_impossible_day_is_caught_when_the_file_is_read(on, tmp_path, monkeyp
     assert fiu_ind_status.note("Bitstamp")  # the others still read
 
 
+@pytest.mark.parametrize("field", ["actions", "penalties"])
+@pytest.mark.parametrize("value", [None, 7, "text", {"date": "2026-01-01"}])
+def test_an_entry_of_the_wrong_shape_is_skipped_and_the_others_still_read(
+        on, tmp_path, monkeypatch, caplog, field, value):
+    # "actions": null once raised TypeError for every note, so letter drafting stopped.
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    (tmp_path / fiu_ind_status.STATUS_FILE).write_text(json.dumps(
+        {"_meta": DOCUMENT["_meta"],
+         "exchanges": {"Kraken": {**ENTRIES["Kraken"], field: value}, "Bitstamp": ENTRIES["Bitstamp"]}}))
+    fiu_ind_status.clear_cache()
+    with caplog.at_level("ERROR", logger=fiu_ind_status.__name__):
+        assert fiu_ind_status.note("Kraken") is None  # that entry is skipped
+    assert fiu_ind_status.note("Bitstamp")  # the others still read
+    assert fiu_ind_status.staleness(TODAY) is None  # the file itself is still usable
+    assert any(r.levelname == "ERROR" and "'Kraken'" in r.getMessage() for r in caplog.records)
+
+
 # -- scripts/check_fiu_staleness.py: the same rule by the real date, warning only -----------------
 def test_the_script_is_quiet_while_the_sources_are_recent(capsys, monkeypatch):
     from scripts import check_fiu_staleness

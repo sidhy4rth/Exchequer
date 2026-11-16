@@ -3,9 +3,9 @@
 - **Feature**: DEMO.md trace 3 moves to a quiet documented phishing wallet that reaches a probable exchange deposit address through an intermediary, with a pro-rata amount
 - **Issue**: #284
 - **Branch**: `demos/demo3-candidate-a`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: owner approved the swap (15 Nov); ready for the lead to merge
+- **Status**: owner approved the swap (15 Nov); merged in #286 (`dde8e1ee`)
 
 ## Done
 
@@ -24,7 +24,7 @@
 
 ## Next
 
-1. Lead: merge.
+1. None. (~~Lead: merge~~: merged in #286.)
 
 ## Open questions
 

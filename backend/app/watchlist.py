@@ -50,6 +50,7 @@ from .chain_data import open_source
 from .etherscan_client import normalize_address
 from .exchange_matcher import get_matcher
 from .input_rules import plain_text
+from .provider_errors import public_reason
 from .risk_matcher import get_risk_matcher
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,13 @@ def is_dust(value: float | None, asset: str | None) -> bool:
     burst of dust to a hot wallet or a sanctioned address after a cash-out
     can never bury it or make the cap delete it (r2-g2-watchlist-alerts-0-1)."""
     return float(value or 0.0) < dust_floor(asset)
+
+
+def is_dust_alert(alert: Any) -> bool:
+    """An exchange or flagged alert below its asset's dust floor; a movement
+    or "more" alert is never dust. The one rule the list, the ranking and
+    the case task suggestions (app/tasks.py) all use."""
+    return alert.kind in URGENT_KINDS and is_dust(alert.value, alert.asset)
 
 
 def _floor() -> Any:
@@ -402,7 +410,7 @@ def alert_summary(alert: models.Alert, chain_key: str | None = None,
         "tx_time": alert.tx_time, "value": alert.value, "asset": alert.asset,
         "counterparty": alert.counterparty, "counterparty_label": alert.counterparty_label,
         "read": alert.read,
-        "dust": alert.kind in URGENT_KINDS and is_dust(alert.value, alert.asset),
+        "dust": is_dust_alert(alert),
     }
 
 
@@ -739,7 +747,7 @@ def check_watch(watch_id: str, source: Source = open_source,
     except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
         spent = isinstance(exc, BudgetSpent)
         _finish_check(watch_id, error=f"Not checked: the {exc.reason} is used up." if spent else
-                      f"Could not read the address this round ({type(exc).__name__}).")
+                      f"Could not read the address this round ({public_reason(exc)}).")
         logger.warning("Watch %s: provider failure: %s", watch_id, exc)
         if hook:  # the outbox does not wait for the chain
             _deliver_safely(watch_id, address, chain_key, case_id, post)
@@ -845,7 +853,7 @@ def _deliver_pending(watch_id: str, address: str, chain_key: str, case_id: str |
 
 def _rank(alerts: list[models.Alert]) -> list[models.Alert]:
     def key(a: models.Alert) -> tuple[Any, ...]:
-        dust = a.kind in URGENT_KINDS and is_dust(a.value, a.asset)
+        dust = is_dust_alert(a)
         return (dust, KIND_RANK.get(a.kind, 9), -(a.value or 0.0), a.tx_time)
     return sorted(alerts, key=key)
 
