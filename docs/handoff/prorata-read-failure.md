@@ -19,7 +19,7 @@
 
 ## Next
 
-1. Optional: show `prorata.read_failure` on the trace screen (the note already shows there as a limitation; `TraceView.jsx`'s pro-rata line still says only the reason).
+1. Optional: show `prorata.read_failure` on the trace screen (the note already shows there as a limitation; `TraceView.jsx`'s pro-rata line still says only the reason). Taken in #322 / PR #323, see `prorata-read-failure-ui.md`.
 
 ## Open questions
 

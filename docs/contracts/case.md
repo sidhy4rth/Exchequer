@@ -79,8 +79,8 @@ largest destinations, the default) or `min_share` (flag
 behind. A report that states where the money went should state this too.
 
 `prorata` (v1-style) is pro-rata's working (`backend/app/prorata.py`). When a
-wallet's window could not be read because a provider request failed, even
-after one more try, `prorata.status` is `unknown` and `prorata.read_failure`
+wallet's window could not be read because a provider request failed (a rate limit or
+no answer is first read once more), `prorata.status` is `unknown` and `prorata.read_failure`
 says what failed: `rate_limit`, `no_answer` (no response or server errors),
 `quota`, `stopped` (the case's own time or request limit), `bad_response`,
 `provider_error` or `error` (`provider_errors.failure_kind`). The amount earns
