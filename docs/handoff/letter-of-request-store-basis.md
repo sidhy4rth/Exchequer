@@ -4,8 +4,8 @@
 - **Issue**: #348
 - **Branch**: `feat/lor-deposit-basis`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: PR #349 open for review; shows only with `EXCHEQUER_STORE_EXCHANGE_ROWS` on (off), since only a store row carries the field
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #349 on 2026-11-16 (`b847f792`); shows only with `EXCHEQUER_STORE_EXCHANGE_ROWS` on (off), since only a store row carries the field
 
 ## Done
 
@@ -24,7 +24,7 @@
 
 ## Next
 
-1. Review and merge #349. Nothing else here; turning the flag on is `store-deposit-rows.md` Next 3.
+1. Nothing here; turning the flag on is `store-deposit-rows.md` Next 3.
 
 ## Open questions
 

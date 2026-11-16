@@ -3,9 +3,9 @@
 - **Feature**: a pull request that changes only `docs/**` or root Markdown files skips the frontend, accessibility, image and migrations jobs and the citizen site's npm steps, while every required check still reports
 - **Issue**: #318
 - **Branch**: `ci/skip-heavy-jobs-for-docs`
-- **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: PR open, ready for the owner
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #319 on 2026-11-16 (`fb1d30a9`); runs on every pull request
 
 ## Done
 
@@ -21,7 +21,7 @@
 
 ## Next
 
-1. After merge, check the first docs-only pull request: the five gated jobs show the "Only documentation changed" step and pass in seconds.
+1. Check the first docs-only pull request opened after the merge: the five gated jobs show the "Only documentation changed" step and pass in seconds.
 
 ## Open questions
 

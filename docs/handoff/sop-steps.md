@@ -4,8 +4,8 @@
 - **Issue**: #326
 - **Branch**: `feat/sop-steps`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: PR #327 ready for review, behind `EXCHEQUER_SOP_STEPS` (off)
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #327 on 2026-11-16 (`272dc620`); behind `EXCHEQUER_SOP_STEPS` (off)
 
 ## Done
 
@@ -22,8 +22,7 @@
 
 ## Next
 
-1. Reviewer: check the five new quotes in `sop_steps.py` against PDF pages 12 and 13 of the copy.
-2. Owner: decide whether to turn the flag on (Render env `EXCHEQUER_SOP_STEPS=1`).
+1. Owner: decide whether to turn the flag on (Render env `EXCHEQUER_SOP_STEPS=1`).
 
 ## Open questions
 

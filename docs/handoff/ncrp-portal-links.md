@@ -4,8 +4,8 @@
 - **Issue**: #340
 - **Branch**: `feat/ncrp-portal-links`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: PR #341 ready for review; behind `EXCHEQUER_SOP_SUMMARY` (off)
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #341 on 2026-11-16 (`daaf3b4c`); behind `EXCHEQUER_SOP_SUMMARY` (off)
 
 ## Done
 
@@ -22,8 +22,7 @@
 
 ## Next
 
-1. Review and merge #341.
-2. When `EXCHEQUER_SOP_SUMMARY` goes on (`docs/flag-rollout.md`), check the links on the live complaint page.
+1. When `EXCHEQUER_SOP_SUMMARY` goes on (`docs/flag-rollout.md`), check the links on the live complaint page.
 
 ## Open questions
 

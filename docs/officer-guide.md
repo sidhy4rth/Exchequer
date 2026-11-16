@@ -17,7 +17,7 @@ Each section is marked:
   the site once it is merged.
 
 Status is as of 16 November 2026, when the site ran the code merged up to
-#317 (build 76101ce); anything merged after it reaches the site with the
+#325 (build 6d74f64); anything merged after it reaches the site with the
 next deploy. A switch counts as on only where the site's settings
 (`render.yaml`) turn it on. `docs/suite-features.md`
 tracks status for the team.
@@ -185,6 +185,18 @@ The full list is in the README's Limitations section and in every report.
 - A U.S. forfeiture order is filed as "seized": a foreign court's act, a lead
   for your case, not a finding in it.
 
+**Exchanges FIU-IND acted against** (live, #343, #355 and #359, merged
+16 November): 15 such exchanges had no wallet in the label files, so a trace
+ending at one could not name it or carry its FIU-IND note (section 3). Their
+wallets are now labelled: BingX, LBank, XT.com, Phemex, Bitrue, MoonPay,
+WOO X, Paxful, ProBit Global, LCX, CEX.IO, YouHodler, Changelly, Mercuryo and
+Beldex, 108 on Ethereum and 41 on Polygon. Each comes from the public name tag
+the block explorer shows on the address's own page, and
+`data/fiu_named_exchanges.json` lists each with its page and the day it was
+read, and what was left out and why. An explorer's tag is a weaker source than
+an exchange's own list: open it before you rely on the attribution. 24
+exchanges FIU-IND acted against still have no wallet here.
+
 ### Privacy protocols on the route
 
 **Live** (#232; switch `EXCHEQUER_PRIVACY_CATEGORY`, on since 15 November).
@@ -245,6 +257,51 @@ chain; 69,973,340 distinct addresses), carries these rows: 474,529 OKX on
 Tron; on Ethereum, 162 OKX own wallets, 4,938 OKX deposit addresses that each
 state the OKX wallet it swept to, and 10 Bitget wallets. They name no
 exchange while the switch is off.
+
+**The basis on the trace screen** (merged, switched off: #337, 16 November;
+same switch, off until the team switches it on): when the address to cite came
+from the store, the trace screen shows, under that address, a **Basis** line
+and the same sentences the signed report and the exchange letter print: the
+exchange's own published list it came from and, for a deposit address, the
+transfer that swept it into a wallet labelled as that exchange's, ending "This
+is an inference from public records, which only <exchange> can confirm." A
+match from the label files shows nothing new.
+
+### When the amount could not be checked
+
+**Live** (#321, #323 and #331, merged 16 November; no switch).
+
+Pro-rata works out how much of the value that reached the exchange was the
+reported funds. For that it reads the wallet before the exchange over a short
+window. If the data provider refuses or does not answer that read (a rate
+limit, no response, a server error), Exchequer now waits 10 seconds and reads
+once more, if the trace has at least 40 seconds of its time left. If the read
+still fails:
+
+- The trace screen says, under the "Pro-rata: not estimated" line: "**Amount
+  not checked:** The amount check could not be done: <reason>. Trace again
+  later for a complete score." The reason is in plain words, for example "the
+  data provider did not answer (rate limit)".
+- The score's explanation, the limitations and the signed report say the
+  same, and that the score gives the amount no credit.
+- The exchange letter and the instant-exchanger letter carry a note to you:
+  "[Officer: the amount could not be estimated: <reason>. Trace again later
+  for an estimate, or state the amount from your own records.]"
+
+**What it changes:** the wording only. An amount that could not be measured
+still earns no credit, so the score is lower than a complete read would give:
+on verified example 3 a refused read takes it from moderate to low. Trace
+again later before you rely on that score.
+
+**Limits**
+
+- When the reason is "the trace reached its own time or request limit
+  first", tracing again with the same limits may stop at the same place.
+- A case traced before 16 November with a failed read has the lower score
+  without the "Amount not checked" line; trace it again.
+- On the **Watchlist**, a watch whose address could not be read this round
+  now says "Could not read the address this round (the provider reported an
+  error)." (#331).
 
 ### Stopping a trace
 
@@ -475,6 +532,15 @@ Notes for you come first, marked to be removed: the MHA's route, the checklist
 of what goes with the draft, and whether the MHA's 2019 list of treaty
 countries names the country you typed.
 
+**A label-store match** (merged, switched off: #349, 16 November; switch
+`EXCHEQUER_STORE_EXCHANGE_ROWS`, off until the team switches it on): when the
+exchange address came from the label store (section 1, "Bybit and OKX
+wallets"), the Statement of Facts prints, right after the claim about the
+address, what the attribution rests on, in the signed report's words: the
+exchange's own published list and, for a deposit address, the sweep into the
+exchange's wallet, ending "This is an inference from public records, which
+only <exchange> can confirm." Without a store match the draft is unchanged.
+
 **Limits**
 
 - It is not a letter of request until the Court issues it under its seal.
@@ -524,6 +590,23 @@ trail records which fields changed and the new status, never the text.
 **Limits:** suggestions come only from the records you can read. A task nobody
 recorded will not be suggested. Tasks go into the case bundle (#244), which is
 still switched off (section 9).
+
+**Two more suggestions** (merged, switched off: #335, 16 November; switch
+`EXCHEQUER_MORE_TASK_SUGGESTIONS`, off until the team switches it on):
+
+- **Check an exhibit's file after a hand-over.** An exhibit still held, with a
+  SHA-256 in the register, whose holder was changed and whose file has not
+  been checked against that hash since: "Check the file of exhibit <label>
+  against its recorded hash". If the last check after the hand-over did not
+  match, the suggestion stays and says so. A match shows the file is unchanged
+  since its hash was recorded; it does not show who had it. A change of place
+  alone is not a hand-over.
+- **Look at unread watch alerts.** One suggestion per active watch of the case
+  that has unread alerts: "Look at the N unread watch alerts on <address>".
+  **Mark all read** on the Watchlist ends it; a newer alert brings it back.
+  Small exchange or flagged-address alerts the Watchlist marks as dust do not
+  count. Alerts belong to the browser that set the watch, so a colleague on
+  the same case does not get this suggestion.
 
 ### SOP reminders on a bank hold
 
@@ -741,6 +824,45 @@ and it cannot see a device's screen: each signer checks the amount and
 destination on their own device. The procedure is a working checklist, not
 legal advice; follow the court's order and your unit's instructions.
 
+### Checking custody balances on chain
+
+**Merged, switched off** (#333, #344 and #345, 16 November; switch
+`EXCHEQUER_CUSTODY_BALANCE_CHECK`, off until the team switches it on). It does
+not need the custody wallet switch: a register row that records its custody
+address is enough.
+
+**Where:** the Letters tab, **Custody balances**, under the custody wallets.
+
+**Steps**
+
+1. Open **Custody balances**. It shows the last check, if any, and when the
+   chain was read.
+2. Press **Check balances on chain now** (signed-in officers only). Exchequer
+   reads each custody address's balance from that chain's data provider and
+   compares it with what the asset register says is held there: this case's
+   held custody rows, added up per address and asset. The address is the
+   linked custody wallet's, or else the address recorded on the row.
+3. Read each line: **Matches the register**; **Mismatch**, with both amounts
+   and the difference in words; or **Not checked**, with the reason (no
+   custody address on the row, an asset not read on that chain, the provider
+   not answering, or a register amount with more decimal places than the
+   asset has). The panel opens by itself when a line does not match.
+
+**What it records:** each check, with every provider response it read
+(provider, time, SHA-256). The audit trail records that a check ran or was
+viewed, with counts only.
+
+**Limits**
+
+- A balance is a moment: read it again before relying on it.
+- It goes by case, not by wallet. If the unit's wallet also holds other cases'
+  money, it shows more on chain than this case's rows, and says why.
+- On Tron, TRX the wallet staked counts as its own; stake others delegated to
+  it does not. The line says how much is staked.
+- One check reads at most 10 address-asset pairs; the rest are "Not checked".
+  Reads count against the site's daily provider allowance.
+- It only reads. It never moves funds or holds a key.
+
 ---
 
 ## 9. Download the case bundle
@@ -791,6 +913,23 @@ usually 14 digits starting with 2 or 3 — check the number." (SOP 6.1(d) and
 6.2(c): 2 for the portal, 3 for the 1930 helpline.) It is a note only: no
 number is refused or changed, since older complaints or other channels may use
 other formats.
+
+### Links to cybercrime.gov.in and 1930
+
+**Merged, switched off** (#341, 16 November; it shows with the switch
+`EXCHEQUER_SOP_SUMMARY`, off until the team switches it on).
+
+**Where:** a complaint's page (**Complaints** in the side menu), under the
+NCRP number.
+
+Two links: "National Cybercrime Reporting Portal, cybercrime.gov.in", which
+opens the government site's home page in a new tab, and "Call 1930", the
+National Helpline for cyber financial fraud (source: I4C's NCRP page, read
+16 November).
+
+**Limits:** only the portal's home page is linked: no published address opens
+one complaint, so you find it there yourself. The NCRP number never goes into
+either link, and nothing about the complaint is sent to the government site.
 
 ### A crypto summary for CFCFRMS
 
@@ -846,6 +985,41 @@ shows a date.
   reminders show on every bank hold still held.
 - Courts cite other versions of the SOP (02.01.2026, 10.04.2026). Check a
   quote against the version your unit follows.
+
+### The SOP's steps beside the case
+
+**Merged, switched off** (#327, 16 November; switch `EXCHEQUER_SOP_STEPS`, off
+until the team switches it on).
+
+**Where:** a stored case's Letters tab, **CFCFRMS SOP steps**, folded until
+you open it.
+
+**What it shows:** six steps of the SOP, each quoted word for word with its
+section and PDF page, and beside each what this case's own records show:
+
+1. The complaint's acknowledgement number (6.1(d), 6.2(c)): whether the case
+   records a number of the usual shape, never which number.
+2. The police officer submits the complaint to CFCFRMS (6.1(f)).
+3. Notices to the banks to hold the amount (6.1(g), 6.1(k)): how many bank
+   holds the asset register still holds for the case.
+4. An FIR or e-FIR (6.1(i)).
+5. Money converted into crypto at an exchange (9.4(ii), (iv)): the exchange
+   the trace reached. Whether it is on CFCFRMS is your answer: Exchequer holds
+   no list of onboarded exchanges.
+6. If the account holder raises a grievance about a hold (10.1(e), (f)).
+
+Steps 2, 4 and 6 happen on the portal or with the bank, which Exchequer cannot
+see, so it shows nothing beside them.
+
+**What it records:** one audit row that you opened the steps for the case,
+with no detail. Nothing is stored and no notice is drafted.
+
+**Limits**
+
+- Quoted, never applied, and not legal advice. The quotes come from the same
+  copy of the SOP as the reminders above; check them against the version your
+  unit follows.
+- The register does not record whether a hold went through CFCFRMS.
 
 ---
 

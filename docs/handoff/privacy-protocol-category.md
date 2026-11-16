@@ -4,8 +4,8 @@
 - **Issue**: #189
 - **Branch**: `feat/privacy-protocol-category` (PR 1, contract), `feat/privacy-protocol-trace` (PR 2, stacked), `feat/privacy-protocol-ui` (PR 3, stacked), `feat/privacy-in-report` (PR 4, stacked: the report)
 - **Current**: nobody (merged; the owner said yes, and the flag was set to `1` in the Render dashboard on 2026-11-15)
-- **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: all four PRs merged to `main` inside #149 (#194, #195, #196, #198), behind `EXCHEQUER_PRIVACY_CATEGORY`, on in production since 2026-11-15. The `render.yaml` entry and `docs/flag-rollout.md` section are in the switch-on PR
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: all four PRs merged to `main` inside #149 (#194, #195, #196, #198), behind `EXCHEQUER_PRIVACY_CATEGORY`, on in production since 2026-11-15; the `render.yaml` entry and the `docs/flag-rollout.md` row came in #232 (`07f63935`)
 
 ## Done
 
@@ -62,9 +62,7 @@
 
 ## Next
 
-1. When the owner says yes: set `EXCHEQUER_PRIVACY_CATEGORY=1` in the Render dashboard (Environment) and
-   redeploy, check `/health/detail` → `flags`, do the checks in `docs/flag-rollout.md`, then merge the draft PR
-   that adds the same key to `render.yaml` (as #108 did for `EXCHEQUER_OSINT_LOOKUPS`).
+1. Done: the flag was set in the Render dashboard on 15 Nov and added to `render.yaml` in #232 (`07f63935`).
 2. The owner approved the category and moving Privacy Pools to it on 14 Nov (relayed by the lead). Later retire the flag (delete the `config.PRIVACY_CATEGORY`
    branches in `risk_matcher._risk_matcher` and `pipeline.run_trace`), add the privacy file to `LISTS`, and move
    Privacy Pools out of `threat_labels.json`.

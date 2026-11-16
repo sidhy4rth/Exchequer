@@ -4,8 +4,8 @@
 - **Issue**: #324
 - **Branch**: `docs/postmerge-6-small-things`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: done; PR #325 ready for review
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #325 on 2026-11-16 (`6d74f649`); live
 
 ## Done
 
@@ -21,7 +21,7 @@
 
 ## Next
 
-1. Before merge: if anything else has merged and deployed, change the officer guide's "#317 (build 76101ce)" to the build live `/health` reports.
+1. Done after merge, in the handoff sweep part 8 PR (#365): the officer guide names #325 (build 6d74f64), which live `/health` reported (`6d74f649abec`) at 10:40 UTC on 16 Nov.
 
 ## Open questions
 

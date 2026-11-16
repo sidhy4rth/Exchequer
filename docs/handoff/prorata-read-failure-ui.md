@@ -4,8 +4,8 @@
 - **Issue**: #322
 - **Branch**: `feat/prorata-read-failure-ui` (stacked on `fix/prorata-read-failure`, PR #321)
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: done, PR #323 ready for review (retarget to `main` after #321 merges)
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #323 on 2026-11-16 (`3212ebfc`); live
 
 ## Done
 
