@@ -185,6 +185,18 @@ The full list is in the README's Limitations section and in every report.
 - A U.S. forfeiture order is filed as "seized": a foreign court's act, a lead
   for your case, not a finding in it.
 
+**Exchanges FIU-IND acted against** (live, #343, #355 and #359, merged
+16 November): 15 such exchanges had no wallet in the label files, so a trace
+ending at one could not name it or carry its FIU-IND note (section 3). Their
+wallets are now labelled: BingX, LBank, XT.com, Phemex, Bitrue, MoonPay,
+WOO X, Paxful, ProBit Global, LCX, CEX.IO, YouHodler, Changelly, Mercuryo and
+Beldex, 108 on Ethereum and 41 on Polygon. Each comes from the public name tag
+the block explorer shows on the address's own page, and
+`data/fiu_named_exchanges.json` lists each with its page and the day it was
+read, and what was left out and why. An explorer's tag is a weaker source than
+an exchange's own list: open it before you rely on the attribution. 24
+exchanges FIU-IND acted against still have no wallet here.
+
 ### Privacy protocols on the route
 
 **Live** (#232; switch `EXCHEQUER_PRIVACY_CATEGORY`, on since 15 November).
