@@ -3,9 +3,9 @@
 - **Feature**: DEMO.md trace 3 says what the live trace shows again, so the demo check passes honestly
 - **Issue**: #259
 - **Branch**: `demos/demo3-refresh`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR open, ready for merge by the owner
+- **Status**: merged in #260 (`2985a4b4`); demo 3 was then replaced by #286
 
 ## Done
 
@@ -18,11 +18,11 @@
 
 ## Next
 
-1. Nothing for this branch. If demo 3 should stay a reliable on-stage demo, the owner picks a quieter documented wallet (see open question).
+1. None. ~~If demo 3 should stay a reliable on-stage demo, the owner picks a quieter documented wallet.~~ Done: the owner approved a quiet documented phishing wallet for demo 3 on 15 Nov, merged in #286 (`dde8e1ee`, `demo3-candidate-a.md`).
 
 ## Open questions
 
-- Demo 3 now flips between an exchange and none within hours, and with its expectation at none the daily check can no longer fail on it. Keep it as the "attribution that moves" demo, or replace it with a quieter wallet? Owner to decide.
+- ~~Demo 3 now flips between an exchange and none within hours. Keep it as the "attribution that moves" demo, or replace it with a quieter wallet?~~ Answered: replaced (#286).
 
 ## Files mid-change (do not touch)
 
