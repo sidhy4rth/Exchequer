@@ -53,6 +53,17 @@ export async function fetchSopSummary(caseId, onCfcfrms) {
   return response.text()
 }
 
+/** Whether this server offers the CFCFRMS SOP steps on a case
+ * (backend routes/sop_summary.py, flag EXCHEQUER_SOP_STEPS): 404 when off. */
+export async function fetchSopStepsOffered() {
+  return jsonOrThrow(await apiFetch(`${BASE}/sop-steps`))
+}
+
+/** The SOP's steps, each quoted with its section and page, beside what the case's records show. */
+export async function fetchSopSteps(caseId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/sop-steps`))
+}
+
 /** A recorded example's letters (routes/demos.py): listed and drafted from
  * the recording as a case's are, though none can be logged as sent. */
 export async function fetchRecordedLetters(demo) {
