@@ -3,9 +3,9 @@
 - **Feature**: the OKX Ethereum deposit addresses that sweep only into OKX proof-of-reserves wallets the label file did not name can get a deposit row, because those destination wallets are labelled
 - **Issue**: #276
 - **Branch**: `labels/okx-sweep-destinations`
-- **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: in review (PR #277)
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #277 on 2026-11-15 (15:57 UTC, `470541e3`); live
 
 ## Done
 

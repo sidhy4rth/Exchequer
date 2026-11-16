@@ -514,6 +514,15 @@ the file is unusable. It always exits 0, so it never blocks a merge or turns a
 run red: look for the annotation on the weekly run. When it appears, follow the
 steps below.
 
+GitHub pauses the weekly run on its own: "In a public repository, scheduled
+workflows are automatically disabled when no repository activity has occurred
+in 60 days" (https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
+After 60 quiet days `fiu-staleness.yml` stops running and no warning appears,
+however old `checked_on` is; the pull-request check in `test.yml` still runs
+when a pull request is opened. To turn it back on: Actions → FIU-IND sources
+due → Enable workflow (or `gh workflow enable fiu-staleness.yml`), then run it
+once by hand.
+
 A `checked_on`, `_meta.register.as_of` or fact date that is not a real day
 (e.g. `2026-02-30`) is caught when the file is read: a bad `checked_on` or
 `as_of` makes the file unusable (no note at all, error logged), as a missing

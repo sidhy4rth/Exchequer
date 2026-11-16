@@ -4,8 +4,8 @@
 - **Issue**: #316
 - **Branch**: `labels/notes-no-local-paths`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: done; PR ready
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #317 on 2026-11-15 (19:41 UTC, `76101ce0`); live
 
 ## Done
 
