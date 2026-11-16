@@ -307,22 +307,34 @@ schedule back on.
 
 ## Keeping the site awake
 
-`.github/workflows/keep-awake.yml` asks for `/health` every 14 minutes
-(`curl -fsS --max-time 60`, one retry), so Render's free instance never
+`.github/workflows/keep-awake.yml` asks for `/health` every 10 minutes
+(`curl -fsS --max-time 60`, two retries), so Render's free instance never
 reaches 15 idle minutes and a visitor does not wait for the container to
 start. It needs no secret, gets a token with no permissions, and reads the
 address from the repository variable `SITE_URL` (falling back to
-`https://exchequer.co.in`). A run that is still going when the next starts is
-cancelled, so runs do not pile up.
+`https://exchequer.co.in`).
+
+GitHub drops most scheduled runs in this repository (with a 14-minute
+schedule, the first version ran twice in 15 hours on 15-16 Nov 2026), so one
+run does not ask once: it loops. A run is four legs, one after another, each
+asking every 10 minutes for 340 minutes and then resting 5 minutes, about 23
+hours in all. The schedule fires every hour at minute 23 and only has to
+land once in that time. A run that arrives while one is going waits and
+takes over when it ends; a newer arrival replaces a waiting one (it shows as
+cancelled), so only one loop ever runs and two pings are never closer than
+5 minutes. A leg is red only if no ping in it was answered; a single missed
+answer is a warning.
 
 It is off until the owner switches it on:
 
 - **On:** Settings → Secrets and variables → Actions → Variables: the
   repository variable `KEEP_AWAKE` = `on`
   (`gh variable set KEEP_AWAKE --body on`). Actions → Keep awake → Run
-  workflow checks it once by hand; a run started by hand always runs.
+  workflow with "Ask once and stop" ticked checks it once by hand; a run
+  started by hand always runs, and unticked it starts the loop at once.
 - **Off:** set `KEEP_AWAKE` to `off`, or delete the variable. Scheduled runs
-  are then skipped (grey), not failed.
+  are then skipped (grey), not failed. The run already looping goes on for
+  up to 23 hours: cancel it in Actions → Keep awake.
 - **State now:** on. The repository variable `KEEP_AWAKE` was set to
   `on` at 19:35 UTC on 15 Nov 2026 (01:05 IST on 16 Nov), after #315 merged
   (`gh variable list` shows it updated at 2026-11-15T19:35:29Z). Change this
@@ -336,15 +348,17 @@ Before switching it on:
   the month ends, and Render then suspends them until the next month. The
   owner must confirm in the Render dashboard that this is the only free web
   service in the workspace.
-- **Delays.** GitHub runs scheduled workflows on a best-effort basis: at busy
-  times a run can start several minutes late or be dropped, so the instance
-  can still fall asleep now and then. GitHub also pauses schedules in a
-  repository with no activity for 60 days.
+- **Delays.** GitHub runs scheduled workflows on a best-effort basis. The
+  loop covers late and dropped triggers, but if none lands for a whole run
+  (about 23 hours) the instance can sleep until the next one. GitHub also
+  pauses schedules in a repository with no activity for 60 days.
+- **Runner.** The loop keeps one GitHub-hosted runner busy all the time.
+  Minutes are free for a public repository; it takes one of the account's
+  concurrent job slots, which CI shares.
 - **Not watch checks.** This only keeps the instance up. Watched addresses
   are still checked only by `watch-cron.yml` (Scheduled watch checks), which
-  needs the `WATCH_CRON_TOKEN` secret. Once that job is on, it knocks on the
-  site every 15 minutes itself and keeps it nearly as awake, so the two
-  together cost no more hours than either alone.
+  needs the `WATCH_CRON_TOKEN` secret. Its calls also wake the site, so the
+  two together cost no more hours than either alone.
 
 ## Backups
 
