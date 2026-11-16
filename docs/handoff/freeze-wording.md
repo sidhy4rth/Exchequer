@@ -5,7 +5,7 @@
 - **Branch**: `notices/freeze-wording-option`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR #252 ready; flag off; waits for a lawyer before it is switched on
+- **Status**: merged in #252 (`9ce0aee5`); flag off; waits for a lawyer before it is switched on
 
 ## Done
 

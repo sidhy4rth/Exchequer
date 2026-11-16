@@ -88,6 +88,7 @@ government list says so.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -279,6 +280,9 @@ class RiskMatch:
         # The label usually is the entity name; repeating it as "X (X)" reads
         # like a bug in a document meant to be quoted.
         named = self.label if self.label == self.entity else f"{self.label} ({self.entity})"
+        # Some sources already end in a full stop (a note on how the address was
+        # checked); adding another would print "..".
+        src = self.source if self.source.endswith(".") else f"{self.source}."
 
         # For the reported address itself there is no "value that reached it
         # within this trace" -- the trace starts there, so the graph holds no
@@ -295,13 +299,13 @@ class RiskMatch:
         if self.category == SANCTIONED:
             return (
                 f"Sanctioned entity: {self.address} is listed as {named} on "
-                f"{self.source}. {placement}."
+                f"{src} {placement}."
             )
         if self.category == SEIZED:
             # The entity is the holder's name when the order gives one, else the order id.
             holder = "" if self.entity.startswith("NBCTF ") else f" Listed holder: {named}."
             return (
-                f"Government seizure order: {self.address} is named in {self.source}.{holder} "
+                f"Government seizure order: {self.address} is named in {src}{holder} "
                 f"{placement}. A seizure or forfeiture order is one "
                 f"government's measure against the wallet, often time-limited, not a "
                 f"sanctions designation; it is not a finding that any counterparty took "
@@ -318,7 +322,7 @@ class RiskMatch:
             issuer = issuer or "the token's issuer"
             by = f"{issuer} ({token})" if token else issuer
             return (
-                f"Frozen by {by}: {self.address} — {self.label}, per {self.source}. "
+                f"Frozen by {by}: {self.address} — {self.label}, per {src} "
                 f"{placement}. The issuer acted on this address; the freeze does not "
                 f"say why, and it is not a finding that any counterparty took part in "
                 f"anything. {issuer[0].upper() + issuer[1:]} can say, on a lawful request."
@@ -328,7 +332,7 @@ class RiskMatch:
             # what it says is a lead for the investigator, not a finding.
             return (
                 f"Unverified listing: {self.address} is listed as {named} "
-                f"({UNVERIFIED_WHAT[self.category]}), per {self.source}. {placement}. "
+                f"({UNVERIFIED_WHAT[self.category]}), per {src} {placement}. "
                 f"The list is a community report or a machine-learning dataset that "
                 f"nobody has checked; treat it as a lead to verify, not as a finding "
                 f"about this wallet or anyone who dealt with it."
@@ -342,7 +346,7 @@ class RiskMatch:
                      "on-chain detection, and it is not a designation.")
             return (
                 f"Address poisoning: {self.address} is a lookalike address used in an "
-                f"address-poisoning scam ({self.label}), per {self.source}. {placement}. "
+                f"address-poisoning scam ({self.label}), per {src} {placement}. "
                 f"The scam plants a near-identical address in a victim's transaction "
                 f"history so that it is copied by mistake; funds sent here most likely "
                 f"went to the scammer in error. {whose}"
@@ -350,14 +354,14 @@ class RiskMatch:
         if self.category == SCAM:
             return (
                 f"Reported scam: {self.address} is attributed as {named} by "
-                f"{self.source}. {placement}. The source ties the wallet to a scam or "
+                f"{src} {placement}. The source ties the wallet to a scam or "
                 f"fraud; it is not a sanctions designation, and not a finding that any "
                 f"other counterparty took part in it."
             )
         if self.category == LAUNDERING:
             return (
                 f"Laundering: {self.address} is identified as {named} by "
-                f"{self.source}. {placement}. The source names the wallet as moving "
+                f"{src} {placement}. The source names the wallet as moving "
                 f"illicit proceeds; it is not a sanctions designation, and not a "
                 f"finding that any other counterparty took part in it."
             )
@@ -370,7 +374,7 @@ class RiskMatch:
             )
         if self.category == GAMBLING:
             return (
-                f"Gambling platform: {self.address} is {named}, per {self.source}. "
+                f"Gambling platform: {self.address} is {named}, per {src} "
                 f"{placement}. The funds reached a wallet that a gambling platform "
                 f"controls; the platform holds the account behind it and can identify "
                 f"the account holder on a lawful request. This is an attribution of "
@@ -379,7 +383,7 @@ class RiskMatch:
         if self.category == STOLEN:
             return (
                 f"Stolen funds: {self.address} is tagged as {named} by "
-                f"{self.source}. {placement}. Funds that pass through it are "
+                f"{src} {placement}. Funds that pass through it are "
                 f"commingled with the proceeds of that theft; the tag is that "
                 f"source's attribution, not a finding that any counterparty "
                 f"took part in it."
@@ -396,7 +400,7 @@ class RiskMatch:
             else:
                 walked = "The trace did not stop here."
             return (
-                f"Privacy protocol: {self.address} is {named}, per {self.source}. "
+                f"Privacy protocol: {self.address} is {named}, per {src} "
                 f"{placement}. A privacy protocol: funds passing through lose their "
                 f"visible link, so what leaves it is not shown on chain to be the "
                 f"same money. {walked} This is not an "
@@ -405,14 +409,14 @@ class RiskMatch:
             )
         if not self.is_terminal:
             return (
-                f"Mixer tag: {self.address} is tagged {named}, per {self.source}. "
+                f"Mixer tag: {self.address} is tagged {named}, per {src} "
                 f"{placement}. It is not one of the mixer pools or routers on this "
                 f"tool's pinned list, so the trace did not stop here and followed the "
                 f"funds past it; the tag is that source's, a reason to look closer, "
                 f"not a finding."
             )
         return (
-            f"Mixer: {self.address} is {named}, per {self.source}. {placement}. "
+            f"Mixer: {self.address} is {named}, per {src} {placement}. "
             f"The trace stops here — a mixer pays out from a commingled pool, "
             f"so transfers leaving it have no established link to the funds "
             f"that arrived."
@@ -508,11 +512,19 @@ class RiskMatcher:
         for meta in self._labels.values():
             counts[meta["category"]] = counts.get(meta["category"], 0) + 1
         if self.store:
-            # The store's figures are counted when it is built; an address a
-            # file also names is counted twice, a small overstatement of
-            # coverage that never changes what a trace reports.
+            # The store's figures are counted when it is built. A store built
+            # with its overlap recorded (scripts/build_label_store.py) names the
+            # addresses a file here also holds: each is counted once, under the
+            # file's category, which is the one a trace shows. Without it, or
+            # for a file entry added after the build, an address a file also
+            # names is counted twice, a small overstatement of coverage that
+            # never changes what a trace reports.
             for category, n in self.store.counts(self.chain).items():
                 counts[category] = counts.get(category, 0) + n
+            overlap = self.store.list_overlap()
+            for address, category in (overlap["same_chain"].get(self.chain, {}) if overlap else {}).items():
+                if address in self._labels and counts.get(category, 0) > 0:
+                    counts[category] -= 1
         return counts
 
     def store_entry(self) -> dict[str, Any] | None:
@@ -662,11 +674,11 @@ def get_risk_matcher(chain_key: str | None = None) -> RiskMatcher:
 def _risk_matcher(key: str) -> RiskMatcher:
     chain = config.get_chain(key)
     threat = chain.threat_labels_path
+    first, *extra = _list_paths(chain)
     return RiskMatcher.from_file(
-        chain.risk_labels_path,
+        first,
         chain=chain.key,
-        extra_paths=(chain.intl_sanctions_path, chain.frozen_labels_path, threat,
-                     chain.gambling_labels_path),
+        extra_paths=tuple(extra),
         store=get_label_store(),
         # Read only with the flag on: off, nothing here changes (#189).
         privacy_path=chain.privacy_protocols_path if config.PRIVACY_CATEGORY else None,
@@ -674,10 +686,52 @@ def _risk_matcher(key: str) -> RiskMatcher:
     )
 
 
+def _list_paths(chain: config.Chain) -> tuple[Path | None, ...]:
+    """A chain's risk files in order of authority: OFAC first, then other
+    governments' lists, Tether freezes, the threat tags and gambling wallets."""
+    return (chain.risk_labels_path, chain.intl_sanctions_path, chain.frozen_labels_path,
+            chain.threat_labels_path, chain.gambling_labels_path)
+
+
+def lists_matcher(key: str) -> RiskMatcher:
+    """One chain's risk files alone: no store, and no privacy file (which only
+    takes entries out), so it holds every address the app's matcher can.
+    scripts/build_label_store.py records the store's overlap with these."""
+    first, *extra = _list_paths(config.get_chain(key))
+    return RiskMatcher.from_file(first, chain=key, extra_paths=tuple(extra))
+
+
+def list_files_digest() -> str:
+    """Which risk files these are: a build records it, so the app can tell
+    whether the overlap it was given is with the files it reads now."""
+    digest = hashlib.sha256()
+    for key in sorted(config.CHAINS):
+        for path in _list_paths(config.get_chain(key)):
+            if path is not None and path.is_file():
+                digest.update(f"{key} {path.name} ".encode() + hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()[:16]
+
+
+@lru_cache(maxsize=1)
+def distinct_flagged() -> dict[str, Any] | None:
+    """Distinct flagged addresses across every chain, the store and the risk
+    files together (an address on two chains counted once), from what the
+    store's build recorded; None for a store built without it, or no store.
+    `exact` is False when the files changed since the build: an entry added
+    since that the store also holds is then counted twice."""
+    store = get_label_store()
+    overlap = store.list_overlap() if store is not None else None
+    if overlap is None:
+        return None
+    listed = {address for key in config.CHAINS for address, _ in get_risk_matcher(key).entries()}
+    return {"addresses": overlap["store_distinct"] + len(listed.difference(overlap["in_store"])),
+            "exact": overlap["lists_sha256"] is not None and overlap["lists_sha256"] == list_files_digest()}
+
+
 def clear_label_caches() -> None:
     """Forget every loaded label file, so the next call reads them again (tests)."""
     from . import exchange_matcher, label_store
-    for cached in (_risk_matcher, _list_meta, _list_ends, exchange_matcher._matcher,
+    for cached in (_risk_matcher, distinct_flagged, _list_meta, _list_ends, exchange_matcher._matcher,
                    exchange_matcher._router_matcher, label_store.pinned_mixers):
         cached.cache_clear()
 

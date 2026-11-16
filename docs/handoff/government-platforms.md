@@ -51,7 +51,7 @@ Quote check of 15 Nov 2026, against the rendered pages (the bank copy's text lay
 3. Later options from the research:
    - SOP deadlines in the asset register (90-day hold, 15-day grievance decision, 2-day bank reply, 1-week KYC update): done in #230 (`docs/handoff/sop-deadlines.md`), behind `EXCHEQUER_SOP_DEADLINES` (off)
    - reading an NCRP complaint PDF the officer already has (needs redacted samples)
-   - deep links to cybercrime.gov.in and 1930
+   - links to cybercrime.gov.in and 1930: on the officers' complaint page in #341 (`docs/handoff/ncrp-portal-links.md`), behind `EXCHEQUER_SOP_SUMMARY` (off). Source: I4C (MHA), https://i4c.mha.gov.in/ncrp.aspx, read 16.11.2026. Only the portal's home page: no published address opens one complaint, so no deep link.
 
 ## Open questions (owner)
 

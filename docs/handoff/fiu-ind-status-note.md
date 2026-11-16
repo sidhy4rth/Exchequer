@@ -3,9 +3,9 @@
 - **Feature**: Feature 7 / feature 1 data: a dated, sourced FIU-IND note (registration as of 9 Mar 2026, enforcement actions, penalties) about the exchange a trace reached, on the report's FINDING and the exchange letters, behind `EXCHEQUER_FIU_IND_NOTE`
 - **Issue**: #290
 - **Branch**: `feat/fiu-ind-status-note` (slice 1, #291), `feat/fiu-ind-status-note-2` (slice 2, stacked on it)
-- **Current**: Sidhyarth (follow-ups: branch `fix/fiu-checked-on-parse-and-warning`)
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: merged (#291, #295) and live: `EXCHEQUER_FIU_IND_NOTE` on since 22:46 IST on 15 Nov 2026 (Render deploy `dep-dbsugv61egvs73eto9a0`), recorded in `render.yaml` by #296
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged (#291, #295) and live: `EXCHEQUER_FIU_IND_NOTE` on since 22:46 IST on 15 Nov 2026 (Render deploy `dep-dbsugv61egvs73eto9a0`), recorded in `render.yaml` by #296; follow-ups merged on 2026-11-15 in #310 (19:11 UTC, `c60e7e0a`) and #314 (19:31 UTC, `d4d9a1cd`, branch `fix/fiu-checked-on-parse-and-warning`); live
 
 ## Done
 

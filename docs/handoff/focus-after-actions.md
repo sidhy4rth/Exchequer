@@ -5,7 +5,7 @@
 - **Branch**: `fix/focus-after-actions`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: merged in #181 on 2026-11-15
+- **Status**: merged in #181 (`64fc4194`) on 2026-11-15
 
 ## Done
 
@@ -21,7 +21,7 @@
 
 ## Next
 
-1. Review and merge.
+1. None.
 
 ## Open questions
 

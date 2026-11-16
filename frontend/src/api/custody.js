@@ -22,3 +22,13 @@ export async function proposeMovement(walletId, body) {
 export async function movementStep(movementId, step, body = {}) {
   return jsonOrThrow(await apiFetch(`${BASE}/custody/movements/${encodeURIComponent(movementId)}/${encodeURIComponent(step)}`, post(body)))
 }
+
+/** The newest custody balance check of the case; `enabled: false` when the server's flag is off. */
+export async function fetchCustodyBalance(caseId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/custody-balance`))
+}
+
+/** Read the case's custody addresses on chain now, against the asset register (custody_balance.py). */
+export async function runCustodyBalance(caseId) {
+  return jsonOrThrow(await apiFetch(`${BASE}/trace/${encodeURIComponent(caseId)}/custody-balance`, post({})))
+}

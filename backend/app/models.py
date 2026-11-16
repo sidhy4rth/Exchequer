@@ -341,6 +341,22 @@ class CustodyMovement(Base):
     __mapper_args__ = {"version_id_col": row_version}
 
 
+class CustodyBalanceCheck(Base):
+    """One run of the custody balance check (custody_balance.py, suite feature 9 part 2): each custody
+    address's balance as a provider gave it, beside what the asset register records, with the evidence."""
+
+    __tablename__ = "custody_balance_checks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hash: Mapped[str] = mapped_column(String(64), index=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    officer_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    checked_at: Mapped[str] = mapped_column(String(32))
+    checked_by: Mapped[str] = mapped_column(String(64))
+    results_json: Mapped[str] = mapped_column(Text)  # [{chain, address, asset, register/chain amounts, status, evidence}]
+
+
 class Exhibit(Base):
     """A file an outside forensic tool produced for a case, by its hashes, and its
     chain of custody (exhibits.py, suite feature 3). The file itself is never stored."""
