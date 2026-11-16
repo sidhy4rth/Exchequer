@@ -160,6 +160,16 @@ never cancelled. Branch protection on main requires seven of its checks:
 build`, `accessibility (WCAG 2.2 AA)`, `citizen site tests + build` and
 `docker image builds and runs as non-root`.
 
+**The two slowest checks run in shards.** `backend tests` and
+`accessibility (WCAG 2.2 AA)` run as three and four jobs at once (`backend
+shard 1 of 3`, `accessibility shard 1 of 4` and so on), and the job with the required name passes only when every
+shard passed. The backend shards split the test files by size
+(`backend/tests/shards.py`, read by `conftest.py` from
+`EXCHEQUER_TEST_SHARD=k/n`; unset, a local run keeps every test); each file
+lands in exactly one shard. Ruff and the FIU-IND note run in shard 1. The
+accessibility shards are Playwright's own `--shard`, each with its own build
+and backend.
+
 **Docs-only pull requests run less.** The job `what the pull request changes`
 diffs the merge commit under test against main. When every changed file is
 under `docs/` or is a Markdown file at the repository root (`README.md`,
@@ -169,10 +179,10 @@ their steps:
 | Job | On a docs-only pull request |
 |---|---|
 | commit e-mails | runs in full |
-| backend tests | runs in full (tests read `docs/operations.md`, `DEMO.md`, `SECURITY.md` and scan every tracked file for keys) |
+| backend tests | every shard runs in full (tests read `docs/operations.md`, `DEMO.md`, `SECURITY.md` and scan every tracked file for keys) |
 | citizen site tests + build | API tests run (they read `docs/citizen-deploy.md`); page tests and build skipped |
 | frontend tests + build | skipped |
-| accessibility (WCAG 2.2 AA) | skipped |
+| accessibility (WCAG 2.2 AA) | each shard skips its steps |
 | docker image builds and runs as non-root | skipped (`docs/` is not in the image) |
 | migrations on Postgres | skipped (the Postgres service still starts) |
 

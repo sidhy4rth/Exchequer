@@ -14,6 +14,10 @@ if (!site) throw new Error('Set EXCHEQUER_URL to a running Exchequer, e.g. EXCHE
 export default defineConfig({
   testDir: './e2e',
   testMatch: 'a11y.spec.js',
+  // Every test opens its own page and changes nothing on the server, so the
+  // tests of the one file run side by side rather than one project per
+  // worker, and CI's --shard splits them evenly (test.yml).
+  fullyParallel: true,
   timeout: 60_000,
   reporter: [['list']],
   use: {
