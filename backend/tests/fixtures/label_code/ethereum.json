@@ -12,6 +12,11 @@
     "recorded": "2026-11-15",
     "why": "OKX sweep destination, added with the okx_sweep_destinations_2026_11_15 rows (#276); read from the same keyless node with check_label_code.record (a full --record run whose other answers were unchanged), not a re-record of the rest"
    },
+   "0x06283bcfc481cf8cf942d46d51f2a7bd3917960a": {
+    "block": 26425012,
+    "recorded": "2026-11-16",
+    "why": "WazirX wallet from the second page of its own proof-of-reserves data, added with the India round 4 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
    "0x065ac3d33fec104fba9f2f4d674afaa7c4ebcf43": {
     "block": 26422970,
     "recorded": "2026-11-15",
@@ -71,6 +76,11 @@
     "block": 26422970,
     "recorded": "2026-11-15",
     "why": "FIU-IND-named exchange wallet (BingX, LBank, XT.com, Phemex or Bitrue), added with the fiu_named_exchanges rows (#342); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
+   "0x17438fb8f92795fa2d3b0cb4ea8782144062113a": {
+    "block": 26425012,
+    "recorded": "2026-11-16",
+    "why": "WazirX wallet from the second page of its own proof-of-reserves data, added with the India round 4 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
    "0x18b5efcfe83eb635030acfa460e01c1143cdb132": {
     "block": 26421367,
@@ -342,6 +352,11 @@
     "recorded": "2026-11-15",
     "why": "FIU-IND-named exchange wallet (BingX, LBank, XT.com, Phemex or Bitrue), added with the fiu_named_exchanges rows (#342); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
+   "0x7c70063fe82f5f5896c585c7446e55051291d723": {
+    "block": 26425012,
+    "recorded": "2026-11-16",
+    "why": "WazirX wallet from the second page of its own proof-of-reserves data, added with the India round 4 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
    "0x7fea5b4568751533039179116e372e26b6b41b13": {
     "block": 26421367,
     "recorded": "2026-11-15",
@@ -537,6 +552,11 @@
     "recorded": "2026-11-15",
     "why": "FIU-IND-named exchange wallet (BingX, LBank, XT.com, Phemex or Bitrue), added with the fiu_named_exchanges rows (#342); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
+   "0xc82f5f24ae7dedfff233d286ae14e4f5d06cdb45": {
+    "block": 26425012,
+    "recorded": "2026-11-16",
+    "why": "WazirX wallet from the second page of its own proof-of-reserves data, added with the India round 4 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
    "0xcab044b301d94875ac1502b73e54d63b0162c70f": {
     "block": 26422970,
     "recorded": "2026-11-15",
@@ -581,6 +601,11 @@
     "block": 26422970,
     "recorded": "2026-11-15",
     "why": "FIU-IND-named exchange wallet (BingX, LBank, XT.com, Phemex or Bitrue), added with the fiu_named_exchanges rows (#342); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
+   "0xd6d7e42a2829ca5c17e30ff698c32553c44882e8": {
+    "block": 26425012,
+    "recorded": "2026-11-16",
+    "why": "WazirX wallet from the second page of its own proof-of-reserves data, added with the India round 4 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
    "0xda43c54ce5083885f561e05fd6220b7096be246c": {
     "block": 26422970,
@@ -652,6 +677,11 @@
     "recorded": "2026-11-15",
     "why": "FIU-IND-named exchange wallet (BingX, LBank, XT.com, Phemex or Bitrue), added with the fiu_named_exchanges rows (#342); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
+   "0xee9081c84a86c4a131592cf2e7243d2e87820e05": {
+    "block": 26425012,
+    "recorded": "2026-11-16",
+    "why": "WazirX wallet from the second page of its own proof-of-reserves data, added with the India round 4 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
    "0xef317e433b0836f294866d43f67d6871b609b351": {
     "block": 26422970,
     "recorded": "2026-11-15",
@@ -671,6 +701,11 @@
     "block": 26420517,
     "recorded": "2026-11-15",
     "why": "Bitget reserve wallet, added with the por_bitget_2026_11_15 rows (#257); read from the same keyless node with check_label_code.record (a full --record run whose other answers were unchanged), not a re-record of the rest"
+   },
+   "0xf264e73d6c3178dfca8cf9d899632b1fd114e05b": {
+    "block": 26425012,
+    "recorded": "2026-11-16",
+    "why": "WazirX wallet from the second page of its own proof-of-reserves data, added with the India round 4 rows; read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
    "0xf28f8f8dd8cf0b5eeed05c51167de5390418efdd": {
     "block": 26422970,
@@ -753,6 +788,7 @@
   "0x06051836ac6c5112b890f8b6ec78e33d1afeae7c": "0x",
   "0x061f7937b7b2bc7596539959804f86538b6368dc": "0x",
   "0x062448f804191128d71fc72e10a1d13bd7308e7e": "0x",
+  "0x06283bcfc481cf8cf942d46d51f2a7bd3917960a": "0x",
   "0x0639556f03714a74a5feeaf5736a4a64ff70d206": "0x",
   "0x065ac3d33fec104fba9f2f4d674afaa7c4ebcf43": "0x",
   "0x0681d8db095565fe8a346fa0277bffde9c0edbbf": "0x",
@@ -852,6 +888,7 @@
   "0x170af0a02339743687afd3dc8d48cffd1f660728": "0x",
   "0x170c7c38419767816cc7ec519da67d1a4dc43826": "0x",
   "0x171f04c170c537d99233e2352683042fb50b96a3": "0x",
+  "0x17438fb8f92795fa2d3b0cb4ea8782144062113a": "0x",
   "0x176f3dab24a159341c0509bb36b833e7fdd0a132": "0x",
   "0x17a678c673fbb5b2f3294ef35e18c0ef8cc3e64f": "0x",
   "0x17bc58b788808dab201a9a90817ff3c168bf3d61": "0x",
@@ -1489,6 +1526,7 @@
   "0x7c217eb128337c4b44ca9093ea9a9984b1803488": "0x",
   "0x7c41c7d883dbbe1edfcefca9d7a7592dd30c8b51": "0x",
   "0x7c61ef42102c9d3c4f3d3ff183d862680c637c8b": "0x",
+  "0x7c70063fe82f5f5896c585c7446e55051291d723": "0x",
   "0x7d3f7a3842f18873c769a42f92f51f091954211c": "0x",
   "0x7d8dcdb3f11ea9a118d12fe891ac47d59eb4be63": "0x",
   "0x7da0b9211020d3775b18116fe751c555b9a7058c": "0x",
@@ -1931,6 +1969,7 @@
   "0xc708a1c712ba26dc618f972ad7a187f76c8596fd": "0x",
   "0xc77d79f8802ba8042929cb1360945bb8c85770b9": "0x",
   "0xc7bf35c9a3bdd1b1c19a6963de669cb45191a019": "0x",
+  "0xc82f5f24ae7dedfff233d286ae14e4f5d06cdb45": "0x",
   "0xc8373edfad6d5c5f600b6b2507f78431c5271ff5": "0x",
   "0xc837f51a0efa33f8eca03570e3d01a4b2cf97ffd": "0x",
   "0xc83f43f27c210cb2a949bc2b3e4643be61c08c02": "0x",
@@ -2016,6 +2055,7 @@
    "size": 3517
   },
   "0xd6a062cae6123c158768a5c444ca0896cc60d6b1": "0x366000803760206000366000735b9e8728e316bbeb692d22daaab74f6cbf2c46916102c65a03f41515602d57fe5b60206000f3",
+  "0xd6d7e42a2829ca5c17e30ff698c32553c44882e8": "0x",
   "0xd6e0f7da4480b3ad7a2c8b31bc5a19325355ca15": "0x",
   "0xd782e53a49d564f5fce4ba99555dd25d16d02a75": "0x",
   "0xd793281182a0e3e023116004778f45c29fc14f19": {
@@ -2160,6 +2200,7 @@
   "0xee136c0389733849dd710ac7104e92c6bf497574": "0x608060405273ffffffffffffffffffffffffffffffffffffffff600054167fa619486e0000000000000000000000000000000000000000000000000000000060003514156050578060005260206000f35b3660008037600080366000845af43d6000803e60008114156070573d6000fd5b3d6000f3fea2646970667358221220d1429297349653a4918076d650332de1a1068c5f3e07c5c82360c277770b955264736f6c63430007060033",
   "0xee163037917e6848224230315f36124a6649fc85": "0x",
   "0xee5b5b923ffce93a870b3104b7ca09c3db80047a": "0x",
+  "0xee9081c84a86c4a131592cf2e7243d2e87820e05": "0x",
   "0xeea81c4416d71cef071224611359f6f99a4c4294": "0x",
   "0xeec606a66edb6f497662ea31b5eb1610da87ab5f": "0x",
   "0xeed86b90448c371eab47b7f16e294297c27e4f51": "0x",
@@ -2192,6 +2233,7 @@
   "0xf22a4b9d9d1b20b44699e36a1e3903e78143f9da": "0x",
   "0xf250ee103b8e4c5b9825a270e5c70ea0c113c854": "0x",
   "0xf25d1d2507ce1f956f5bab45ad2341e3c0db6d3c": "0x",
+  "0xf264e73d6c3178dfca8cf9d899632b1fd114e05b": "0x",
   "0xf27182c5568beafb967140286e25807250eacc4c": "0x",
   "0xf27daff52c38b2c373ad2b9392652ddf433303c4": "0x",
   "0xf27e7fa401b991a593a9e83aa6f23f2a212a9ac4": "0x",

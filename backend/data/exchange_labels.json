@@ -111,7 +111,7 @@
         "Yunbi": 3
       }
     },
-    "india_exchanges": "132 Indian exchange wallets added from data/india_exchanges.json (14 and 15 Nov 2026), which records each one's public source (an explorer's public name tag, a wallet list the exchange published itself, or one it says it published through Nansen Portfolio) and what was left out and why.",
+    "india_exchanges": "139 Indian exchange wallets added from data/india_exchanges.json (14 to 16 Nov 2026), which records each one's public source (an explorer's public name tag, a wallet list the exchange published itself, or one it says it published through Nansen Portfolio) and what was left out and why.",
     "por_2026_11_15": {
       "rule": "scripts/import_por_labels.py: each exchange's own proof-of-reserves wallet list (a first-party source, accepted by the owner 15 Nov 2026); a conflict with any other file, a demo or the label store is left out, never overwritten; a token contract or an address with no activity on this chain is left out",
       "sources": {
@@ -125680,6 +125680,41 @@
     "0x618ffd1cdabee36ce5992a857cc7463f21272bd7": {
       "exchange": "WazirX",
       "label": "WazirX: Withdrawals",
+      "type": "exchange_wallet"
+    },
+    "0x17438fb8f92795fa2d3b0cb4ea8782144062113a": {
+      "exchange": "WazirX",
+      "label": "WazirX: ETH wallet 1",
+      "type": "exchange_wallet"
+    },
+    "0xd6d7e42a2829ca5c17e30ff698c32553c44882e8": {
+      "exchange": "WazirX",
+      "label": "WazirX: ETH wallet 2",
+      "type": "exchange_wallet"
+    },
+    "0x7c70063fe82f5f5896c585c7446e55051291d723": {
+      "exchange": "WazirX",
+      "label": "WazirX: ETH wallet 3",
+      "type": "exchange_wallet"
+    },
+    "0xf264e73d6c3178dfca8cf9d899632b1fd114e05b": {
+      "exchange": "WazirX",
+      "label": "WazirX: ETH wallet 4",
+      "type": "exchange_wallet"
+    },
+    "0xc82f5f24ae7dedfff233d286ae14e4f5d06cdb45": {
+      "exchange": "WazirX",
+      "label": "WazirX: ETH wallet 5",
+      "type": "exchange_wallet"
+    },
+    "0x06283bcfc481cf8cf942d46d51f2a7bd3917960a": {
+      "exchange": "WazirX",
+      "label": "WazirX: ETH wallet 6",
+      "type": "exchange_wallet"
+    },
+    "0xee9081c84a86c4a131592cf2e7243d2e87820e05": {
+      "exchange": "WazirX",
+      "label": "WazirX: ETH wallet 7",
       "type": "exchange_wallet"
     },
     "0xcb410a193ffb725e0e554f778606020a4b76fc62": {
