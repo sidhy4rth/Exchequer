@@ -1,0 +1,53 @@
+{
+ "_meta": {
+  "address": "TDD97yguPESTpcrJMqU6h2ozZbibv4Vaqm",
+  "who": "Cryptomus (SR; TronScan tag 'Cryptomus Exchange Hot Wallet'), as TronScan names it; not a label in Exchequer's sense",
+  "source_of_address": "TronScan's Super Representative list (apilist.tronscanapi.com/api/pagewitness?witnesstype=0, read keyless 2026-11-16T10:41Z); also in data/exchange_labels_tron.json _meta.excluded_not_exchange as 'SR Partners'",
+  "why_chosen": "Stake 2.0 own stake for energy and stake delegated out for energy (it delegates many times a minute; read again right after the TronScan page)",
+  "trongrid": {
+   "request": "https://api.trongrid.io/v1/accounts/TDD97yguPESTpcrJMqU6h2ozZbibv4Vaqm",
+   "fetched_at": "2026-11-16T10:44:18Z",
+   "key": "none",
+   "sha256_full_answer": "9d08ff29861c105a3db4a1845b953940dc0e483ec5cbff2596d59f2f3b98d9b1",
+   "sha256_note": "of the whole answer as received, re-serialised with sorted keys and no spaces",
+   "trimmed": "only the fields custody_balance reads, the acquired_* (delegated-in) fields it must leave out, allowance, is_witness and latest_opration_time are kept; trc20, assetV2, permissions, votes and usage counters are dropped"
+  },
+  "tronscan": {
+   "page": "https://tronscan.org/#/address/TDD97yguPESTpcrJMqU6h2ozZbibv4Vaqm",
+   "as_at_utc": "2026-11-16 10:44",
+   "trx_available": "18,584.619669",
+   "trx_staked": "18,879,500",
+   "trx_total": "18,898,084.619669",
+   "rewards_shown_separately": "Claimable Rewards for SR: 396.208656 TRX",
+   "read": "account page in a browser, keyless; TronScan's account APIs (api/accountv2, api/account/tokens) answered 401 without a key"
+  }
+ },
+ "trongrid_answer": {
+  "data": [
+   {
+    "address": "41238af61c3a6cfc81d54d70fbca85317e52db8726",
+    "balance": 18584619669,
+    "frozenV2": [
+     {},
+     {
+      "amount": 17347499022174,
+      "type": "ENERGY"
+     },
+     {
+      "type": "TRON_POWER"
+     }
+    ],
+    "is_witness": true,
+    "latest_opration_time": 1794825768000,
+    "account_resource": {
+     "delegated_frozenV2_balance_for_energy": 1532000977826
+    }
+   }
+  ],
+  "success": true,
+  "meta": {
+   "at": 1794825859563,
+   "page_size": 1
+  }
+ }
+}
