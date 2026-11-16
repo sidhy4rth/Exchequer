@@ -25,7 +25,7 @@
 
 ## Open questions
 
-- Should the older contract_wallet rows with no role (Bitfinex MultiSig, OKX and Bybit reserve wallets...) get a role and count as sweep destinations? That would be a change to what traces conclude, so its own PR with demo checks. (Sidhyarth)
+- ~~Should the older contract_wallet rows with no role get a role and count as sweep destinations?~~ Answered by #253: measured on chain in #254 (`952e3b79`), roles on main in #268 (`fdaa9219`), Bitget round in #270 (`fcd6b0a8`); see `contract-wallet-roles.md`.
 
 ## Files mid-change (do not touch)
 

@@ -32,6 +32,7 @@ from typing import Any
 
 from . import config
 from .models import utc_now_iso
+from .provider_errors import error_name
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +126,7 @@ def _loop(interval: float) -> None:
         try:
             records = warm_once()
         except Exception as exc:  # noqa: BLE001 -- the thread must outlive one bad run
-            error = f"{type(exc).__name__}: {str(exc)[:200]}"
+            error = f"{error_name(exc)}: {str(exc)[:200]}"
             logger.exception("Warm-up run failed")
         with _lock:
             _state["in_progress"] = False

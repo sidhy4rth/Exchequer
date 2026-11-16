@@ -24,7 +24,9 @@ Reads, per address (keyless, one request at a time, spaced out):
   * /v1/accounts/{a}/transactions, only_from and only_to, one page of 200: the
     TRX transfers (TransferContract, SUCCESS) among them.
 
-"An OKX wallet" is Hot Wallet 8 or any address in the PoR file.
+"An OKX wallet" is Hot Wallet 8 or any address in the PoR file. A transfer
+from an address to itself is no flow with anyone, so it is not read: a PoR
+address's self-sends must never meet the "both ways" rule on their own.
 
     cd backend && .venv/bin/python -m scripts.classify_okx_tron_wallets \\
         --por okx_por_tron.csv \\
@@ -88,10 +90,12 @@ def summarise(transfers: list[dict], other: str, okx: set[str]) -> dict:
 
 
 def usdt_transfers(rows: list[dict], address: str, side: str) -> list[dict]:
-    """Real-USDT `Transfer` events with value > 0 that `address` sent (side "out") or received ("in")."""
+    """Real-USDT `Transfer` events with value > 0 that `address` sent (side "out") or received ("in"), not to itself."""
     kept = []
     for t in rows:
         if (t.get("token_info") or {}).get("address") != USDT or t.get("type") != "Transfer" or int(t["value"]) <= 0:
+            continue
+        if t["from"] == t["to"]:
             continue
         if (side == "out" and t["from"] != address) or (side == "in" and t["to"] != address):
             continue
@@ -100,7 +104,7 @@ def usdt_transfers(rows: list[dict], address: str, side: str) -> list[dict]:
 
 
 def trx_transfers(rows: list[dict], address: str, side: str) -> list[dict]:
-    """Successful TRX TransferContract transactions that `address` sent ("out") or received ("in")."""
+    """Successful TRX TransferContract transactions that `address` sent ("out") or received ("in"), not to itself."""
     kept = []
     for t in rows:
         contract = ((t.get("raw_data") or {}).get("contract") or [{}])[0]
@@ -108,7 +112,7 @@ def trx_transfers(rows: list[dict], address: str, side: str) -> list[dict]:
             continue
         value = contract["parameter"]["value"]
         sender, receiver = hex_to_base58(value["owner_address"]), hex_to_base58(value["to_address"])
-        if (side == "out" and sender != address) or (side == "in" and receiver != address):
+        if sender == receiver or (side == "out" and sender != address) or (side == "in" and receiver != address):
             continue
         kept.append({"from": sender, "to": receiver, "v": int(value.get("amount", 0)), "ts": t["block_timestamp"]})
     return kept

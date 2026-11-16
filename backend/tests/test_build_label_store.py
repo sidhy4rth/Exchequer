@@ -272,3 +272,60 @@ def test_a_private_lawsuit_is_not_a_court_record(tmp_path):
     assert label_rules.source_tier("Court record: USAO EDNY") == 1
     assert label_rules.source_tier("Research dataset: LaunderNet expert flow") == 3
     assert label_rules.source_tier("Research dataset (unverified): SADPonzi chain") == 5
+
+
+# -- the overlap with the repository's risk lists, recorded at build (#346) ---------------
+LISTED = addr("115ed")       # on a risk list and a store row on the list's own chain
+ELSEWHERE = addr("e15e")     # on Ethereum's list; a store row only on BSC
+UNLISTED = addr("0dd")       # a store row no list names
+
+
+def meta(out, key):
+    import sqlite3
+
+    db = sqlite3.connect(out)
+    try:
+        row = db.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+        return row and row[0]
+    finally:
+        db.close()
+
+
+def test_the_build_records_which_list_addresses_the_store_holds(tmp_path):
+    import json
+
+    rows = [freeze(LISTED), freeze(LISTED, "bsc"), poisoning(ELSEWHERE, "bsc"), poisoning(UNLISTED)]
+    out = tmp_path / "label_store.db"
+    lists = {"ethereum": [LISTED, ELSEWHERE, addr("a11")], "bsc": [addr("a11")]}
+    report = build(write_csv(tmp_path / "flagged.csv", rows), out, risk_lists=lists)
+    overlap = json.loads(meta(out, "list_overlap"))
+    # Only a row on the list's own chain is the same flagged address counted twice.
+    assert overlap["same_chain"] == {"ethereum": {LISTED: "frozen"}}
+    assert overlap["in_store"] == sorted([LISTED, ELSEWHERE])
+    assert overlap["store_distinct"] == 3  # LISTED on two chains is one address
+    assert overlap["lists_sha256"] is None  # lists given by the test, not the repository's files
+    assert (report["rows"], report["store_distinct"], report["list_overlap_same_chain"],
+            report["list_overlap_any_chain"]) == (4, 3, 1, 2)
+
+
+def test_no_list_address_in_the_store_records_no_overlap(tmp_path):
+    import json
+
+    out = tmp_path / "label_store.db"
+    build(write_csv(tmp_path / "flagged.csv", [poisoning(UNLISTED)]), out, risk_lists={"ethereum": [LISTED]})
+    overlap = json.loads(meta(out, "list_overlap"))
+    assert (overlap["same_chain"], overlap["in_store"], overlap["store_distinct"]) == ({}, [], 1)
+
+
+def test_a_release_build_reads_the_repositorys_own_risk_files(tmp_path, capsys):
+    import json
+
+    from app import risk_matcher
+
+    out = tmp_path / "label_store.db"
+    src = write_csv(tmp_path / "flagged.csv", [poisoning(UNLISTED)])
+    assert build_label_store.main([str(src), "--out", str(out), *TRIAL]) == 0
+    overlap = json.loads(meta(out, "list_overlap"))
+    assert overlap["lists_sha256"] == risk_matcher.list_files_digest()
+    assert overlap["same_chain"] == {} and overlap["in_store"] == []
+    assert "1 distinct addresses; the repository's risk lists name 0 of its rows" in capsys.readouterr().out

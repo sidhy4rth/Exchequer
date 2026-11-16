@@ -35,8 +35,8 @@
 
 1. Release agent: classify each PoR row before adding it (ADR-0012 (4)); re-classify OKX's 474,529 Tron rows.
    CSV columns: the ten of ADR-0011 plus `sweeps_to`, `sweep_tx`, `checked_on` (blank on own-wallet rows).
-2. Not done here: the letter of request (`letters_of_request.py`) and the UI do not print the basis yet; the
-   letter of request already words a deposit row as an inferred deposit (it reads `attribution_kind`).
+2. The trace screen prints it: #336 / PR #337 (`trace-screen-store-basis.md`). The letter of request
+   prints it: #348 / PR #349 (`letter-of-request-store-basis.md`).
 3. Turning the flag on (separate PR): needs a store built under ADR-0012 and the demo re-record (ADR-0011).
 
 ## Open questions

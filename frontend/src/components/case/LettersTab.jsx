@@ -12,6 +12,7 @@ import AssetsPanel from './AssetsPanel'
 import CustodyPanel from './CustodyPanel'
 import CustodyBalance from './CustodyBalance'
 import CryptoSummary from './CryptoSummary'
+import SopSteps from './SopSteps'
 import './Letters.css'
 
 const Tick = () => (
@@ -350,6 +351,7 @@ function LettersTab({ result, recorded, pick: asked = null, watch = null }) {
         <CustodyPanel result={result} />
         <CustodyBalance result={result} />
         <CryptoSummary result={result} />
+        <SopSteps result={result} />
         <WatchPanel result={result} extra={watch} />
       </> : (
         <p className="card note case-note">

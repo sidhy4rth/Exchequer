@@ -945,9 +945,14 @@ SOP_SUMMARY: bool = flag("EXCHEQUER_SOP_SUMMARY",
                          "Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms")
 SOP_DEADLINES: bool = flag("EXCHEQUER_SOP_DEADLINES",
                            "Feature 8: MHA CFCFRMS SOP time limits, quoted, as reminders on bank holds in the asset register")
+SOP_STEPS: bool = flag("EXCHEQUER_SOP_STEPS",
+                       "Feature 8: the CFCFRMS SOP's steps, quoted with section and page, beside what a case's records show")
 FREEZE_WORDING_V2: bool = flag("EXCHEQUER_FREEZE_WORDING_V2",
                                "Feature 7, #251: the bank-hold notice asks the bank to act on the Magistrate's order "
                                "as it directs, not for a 'debit freeze'; awaits a lawyer (docs/legal)")
+MORE_TASK_SUGGESTIONS: bool = flag("EXCHEQUER_MORE_TASK_SUGGESTIONS",
+                                   "Feature 6, #334: suggest tasks for an exhibit handed over with no hash check "
+                                   "since, and for unread alerts on the case's watches")
 FIU_IND_NOTE: bool = flag("EXCHEQUER_FIU_IND_NOTE",
                           "#290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, "
                           "notices, penalties) as a note on the report's FINDING and the exchange letters; "
