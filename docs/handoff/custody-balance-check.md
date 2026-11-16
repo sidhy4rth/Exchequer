@@ -4,8 +4,8 @@
 - **Issue**: #332
 - **Branch**: `feat/custody-balance-check` (#333), then stacked `feat/custody-balance-runs`, `feat/custody-balance-panel`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: three stacked PRs ready for review, behind `EXCHEQUER_CUSTODY_BALANCE_CHECK` (off)
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged on 2026-11-16 in #333 (`0b94ef60`), #344 (`863d39f4`) and #345 (`cc093397`); behind `EXCHEQUER_CUSTODY_BALANCE_CHECK` (off); the table `custody_balance_checks` is created on deploy whatever the flag says
 
 ## Done
 
@@ -27,7 +27,6 @@
 ## Next
 
 1. Owner: switch on per `docs/flag-rollout.md` (section `EXCHEQUER_CUSTODY_BALANCE_CHECK`) once reviewed; try it on an address the unit controls.
-2. If another migration off `g7_statements_2` merges first, re-point `g7_custody_3`'s `down_revision` so `alembic heads` shows one head.
 
 ## Open questions
 
