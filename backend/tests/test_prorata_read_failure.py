@@ -314,3 +314,21 @@ def test_the_trace_screen_uses_the_same_read_failure_wording():
     block = js.split("export const READ_FAILURE_WORDING = {", 1)[1].split("}", 1)[0]
     pairs = re.findall(r"^\s*([a-z_]+): (?:'([^']*)'|\"([^\"]*)\"),$", block, re.M)
     assert {key: single or double for key, single, double in pairs} == READ_FAILURE_WORDING
+
+
+def test_an_instant_exchanger_beside_the_named_exchange_is_not_told_a_later_trace_gives_its_amount():
+    # The case's estimate is for the exchange it names (request_letters._instant_parts): a letter to
+    # another instant exchanger the trace passed states no figure however the read went, so the
+    # read failure note ("Trace again later for an estimate") would promise what no trace gives.
+    from test_instant_exchangers import SWAP, TX1
+    from test_request_letters import SEED, case
+
+    side = {"address": SWAP, "exchange": "FixedFloat", "label": "FixedFloat: Hot Wallet", "depth": 1,
+            "wallet_type": "hot_wallet", "category": "instant_exchanger"}
+    failed = {"status": "unknown", "sent": 1.0, "hops": [], "reason": "x", "read_failure": "rate_limit"}
+    result = case(matches=[side], prorata=failed,
+                  transfers=[{"hash": TX1, "from": SEED, "to": SWAP, "value_native": 0.5, "timestamp": 1_758_000_000}])
+    assert "could not be estimated" in request_letters.draft("c1", result, request_letters.EXCHANGE)  # its own
+    text = request_letters.draft("c1", result, "instant")
+    assert "FixedFloat" in text and "(officer to state)" in text
+    assert "could not be estimated" not in text and "Trace again later" not in text

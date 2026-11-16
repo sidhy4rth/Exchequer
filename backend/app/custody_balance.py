@@ -37,7 +37,9 @@ address: the result says when it was read. Nothing here moves money or holds a k
 from __future__ import annotations
 
 import json
+import re
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Callable
 
@@ -265,7 +267,7 @@ def run(viewer: Any, case_id: str, opener: Callable[..., Any] | None = None) -> 
         r = models.CustodyBalanceCheck(
             id=str(uuid.uuid4()), owner_hash=viewer.owner_hash or "", case_id=case_id,
             officer_id=getattr(viewer, "officer_id", None), unit_id=getattr(viewer, "unit_id", None),
-            checked_at=models.utc_now_iso(), checked_by=getattr(viewer, "id", None) or "unknown",
+            checked_at=_checked_at(), checked_by=getattr(viewer, "id", None) or "unknown",
             results_json=json.dumps(results))
         s.add(r)
         s.commit()
@@ -273,9 +275,16 @@ def run(viewer: Any, case_id: str, opener: Callable[..., Any] | None = None) -> 
         return summary(r)
 
 
+def _checked_at() -> str:
+    """Now, to the microsecond (32 characters, the column's width): latest() orders the runs by it,
+    and two runs in one second must not tie. summary() shows it to the second, as elsewhere."""
+    return datetime.now(tz=timezone.utc).isoformat(timespec="microseconds")
+
+
 def summary(r: models.CustodyBalanceCheck) -> dict[str, Any]:
     results = json.loads(r.results_json or "[]")
-    return {"check_id": r.id, "case_id": r.case_id, "checked_at": r.checked_at, "checked_by": r.checked_by,
+    checked_at = re.sub(r"\.\d+(?=[+-]\d\d:\d\d$|Z$)", "", r.checked_at or "")
+    return {"check_id": r.id, "case_id": r.case_id, "checked_at": checked_at, "checked_by": r.checked_by,
             "results": results, "counts": counts(results)}
 
 
