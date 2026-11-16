@@ -1,0 +1,5 @@
+/* A label-store row's basis on the trace screen: plain sentences under the
+   address to cite. Grey and quiet: a statement of sources, not a finding. */
+.store-basis { margin-top: 10px; font-size: 12.5px; color: var(--text-2); }
+.store-basis p { margin: 3px 0 0; overflow-wrap: anywhere; }
+.store-basis .store-basis-kind { color: var(--text); font-weight: 600; }

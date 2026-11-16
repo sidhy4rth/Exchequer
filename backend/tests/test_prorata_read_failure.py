@@ -299,3 +299,18 @@ def test_an_answered_case_carries_no_note(trace):
                                                 result_json=json.dumps(r))))
     assert "amount check could not be done" not in text and "read_failure" not in r["prorata"]
     assert "could not be estimated" not in request_letters.draft("c1", r, request_letters.EXCHANGE)
+
+
+def test_the_trace_screen_uses_the_same_read_failure_wording():
+    # frontend/src/components/case/readFailureWording.js mirrors
+    # READ_FAILURE_WORDING (#322); if one changes without the other, the trace
+    # screen and the report word the same failure differently.
+    import re
+
+    from app.prorata import READ_FAILURE_WORDING
+
+    js = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "components" / "case"
+          / "readFailureWording.js").read_text()
+    block = js.split("export const READ_FAILURE_WORDING = {", 1)[1].split("}", 1)[0]
+    pairs = re.findall(r"^\s*([a-z_]+): (?:'([^']*)'|\"([^\"]*)\"),$", block, re.M)
+    assert {key: single or double for key, single, double in pairs} == READ_FAILURE_WORDING

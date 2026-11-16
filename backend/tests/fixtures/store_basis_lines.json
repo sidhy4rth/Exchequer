@@ -1,0 +1,52 @@
+{
+  "_comment": "report.basis_lines (backend) and StoreRowBasis.basisLines (frontend) must give these lines for these inputs, so the trace screen says what the report and letter say. Fixture values only: no real list, address or transaction. Built by running report.basis_lines; tests/test_store_basis_wording.py checks it.",
+  "cases": [
+    {
+      "name": "own-wallet row",
+      "exchange": "ExampleX",
+      "basis": {
+        "kind": "exchange's own published list (PoR)",
+        "source": "por:example:2026-11: ExampleX's own published address list (test fixture, no real list), published 2026-11-01, retrieved 2026-11-02, SHA-256 0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "lines": [
+        "Listed by ExampleX in its own published address list: por:example:2026-11: ExampleX's own published address list (test fixture, no real list), published 2026-11-01, retrieved 2026-11-02, SHA-256 0000000000000000000000000000000000000000000000000000000000000000."
+      ]
+    },
+    {
+      "name": "deposit row, sweeps to a labelled wallet",
+      "exchange": "ExampleX",
+      "basis": {
+        "kind": "exchange's own published list (PoR)",
+        "source": "por:example:2026-11: ExampleX's own published address list (test fixture, no real list), published 2026-11-01, retrieved 2026-11-02, SHA-256 0000000000000000000000000000000000000000000000000000000000000000",
+        "deposit": {
+          "sweeps_to": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "sweep_tx": "0xb2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "checked_on": "2026-11-15",
+          "sweeps_to_label": "ExampleX 1"
+        }
+      },
+      "lines": [
+        "Listed by ExampleX in its own published address list: por:example:2026-11: ExampleX's own published address list (test fixture, no real list), published 2026-11-01, retrieved 2026-11-02, SHA-256 0000000000000000000000000000000000000000000000000000000000000000.",
+        "Sent funds to 0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 (ExampleX 1), a wallet labelled as ExampleX's, in tx 0xb2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2 (checked 2026-11-15): the pattern of an exchange sweeping a customer deposit address. This is an inference from public records, which only ExampleX can confirm."
+      ]
+    },
+    {
+      "name": "deposit row, no label on the wallet it swept to",
+      "exchange": "ExampleX",
+      "basis": {
+        "kind": "exchange's own published list (PoR)",
+        "source": "por:example:2026-11: ExampleX's own published address list (test fixture, no real list), published 2026-11-01, retrieved 2026-11-02, SHA-256 0000000000000000000000000000000000000000000000000000000000000000",
+        "deposit": {
+          "sweeps_to": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "sweep_tx": "0xb2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "checked_on": "2026-11-15",
+          "sweeps_to_label": null
+        }
+      },
+      "lines": [
+        "Listed by ExampleX in its own published address list: por:example:2026-11: ExampleX's own published address list (test fixture, no real list), published 2026-11-01, retrieved 2026-11-02, SHA-256 0000000000000000000000000000000000000000000000000000000000000000.",
+        "Sent funds to 0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1, a wallet labelled as ExampleX's, in tx 0xb2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2 (checked 2026-11-15): the pattern of an exchange sweeping a customer deposit address. This is an inference from public records, which only ExampleX can confirm."
+      ]
+    }
+  ]
+}
