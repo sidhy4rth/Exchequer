@@ -131,3 +131,65 @@ def test_one_sweep_or_a_sweep_into_an_unlabelled_wallet_is_still_not_inferred():
     assert infer_deposit_addresses(_sweeps_into(MOST_SWEPT, count=1), MATCHER) == []
     assert MATCHER.lookup(UNLABELLED) is None
     assert infer_deposit_addresses(_sweeps_into(UNLABELLED), MATCHER) == []
+
+
+# -- 16 Nov 2026 revision (#328): rows the internal-wallet filter dropped no longer count --------
+REVISED = NOTE["revised_2026_11_16"]
+RESERVE_237 = "0x5ca38fb7cf2b587026a1650f0d2b0a13c41f5d0f"
+RESERVE_258 = "0xdce83237fbf279c4522e7cac4b10428e2b8694da"
+TX_HASH = re.compile(r"0x[0-9a-f]{64}")
+
+
+def _counted(row):
+    return int(re.search(r"and (\d+) OKX PoR addresses that file classes deposit_wallet", row["sweep_basis"]).group(1))
+
+
+def test_each_revised_row_states_what_the_filter_dropped_and_what_is_left():
+    counts = REVISED["wallets_counted_dropped_left"]
+    assert len(counts) == 29 and set(counts) <= set(_rows())
+    assert REVISED["rows_counted"] == 821 and REVISED["rows_dropped_by_filter"] == 79
+    assert REVISED["counted_rows_file_sha256"] == NOTE["classification"]["dropped_rows_sha256"]
+    for address, text in counts.items():
+        counted, dropped, left = map(int, re.fullmatch(
+            r"(\d+) counted, (\d+) dropped by the filter, (\d+) left", text).groups())
+        row = _rows()[address]
+        assert counted == _counted(row) and dropped >= 1 and left == counted - dropped, address
+        assert "(#328)" in row["sweep_basis"] and f"dropped {dropped} of those {counted}, so " in row["sweep_basis"]
+        if left:
+            assert f"so {left} of them are left as deposit sweeps" in row["sweep_basis"], address
+        else:
+            assert "so no deposit sweep is left behind this label" in row["sweep_basis"], address
+    none_left = [a for a, t in counts.items() if t.endswith(" 0 left")]
+    assert sorted(none_left) == sorted(REVISED["no_customer_deposit_sweep_left"]) and len(none_left) == 13
+    assert {RESERVE_237, RESERVE_258} <= set(none_left)
+    assert "#328" in NOTE["rule"] and "13 of the 47" in NOTE["rule"]
+
+
+def test_a_row_the_filter_did_not_touch_is_not_revised():
+    unrevised = set(_rows()) - set(REVISED["wallets_counted_dropped_left"])
+    assert len(unrevised) == 18 and A_PROXY in unrevised
+    for address in unrevised:
+        assert "#328" not in _rows()[address]["sweep_basis"] and "revised" not in _rows()[address]["sweep_basis"]
+
+
+def test_237_and_258_cite_the_hand_checked_funding_tests_and_keep_their_label():
+    tests = REVISED["hand_check"]["funding_tests"]
+    assert set(tests) == {RESERVE_237, RESERVE_258}
+    seen = set()
+    for wallet, test in tests.items():
+        row = LABELS[wallet]
+        assert row["exchange"] == "OKX" and row["type"] == "exchange_wallet" and row["source"] == NOTE["source"]["url"]
+        assert _counted(row) == len(test["rows"]) == 10
+        assert test["funded_by"] in row["sweep_basis"] and "block 25126685" in row["sweep_basis"]
+        three = 0
+        for deposit, hashes in test["rows"].items():
+            hashes = hashes.split(",")
+            assert re.fullmatch(r"0x[0-9a-f]{40}", deposit) and deposit not in LABELS and deposit not in seen
+            assert len(hashes) in (2, 3) and all(TX_HASH.fullmatch(h) for h in hashes), deposit
+            three += len(hashes) == 3
+            seen.add(deposit)
+        assert three == 5  # 5 of each 10 also got 10 USDT and returned 5 USDT
+        funding, back = re.search(r"e\.g\. funding (0x[0-9a-f]{64}), return (0x[0-9a-f]{64})", row["sweep_basis"]).groups()
+        assert [funding, back] in [h.split(",") for h in test["rows"].values()]
+    relay = REVISED["hand_check"]["not_counted"].split(",")[0]
+    assert relay not in LABELS and relay not in seen and relay not in REVISED["wallets_counted_dropped_left"]

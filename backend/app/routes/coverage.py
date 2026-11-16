@@ -17,7 +17,7 @@ from .. import access, api_budget, config, label_store, models, ownership, rate_
 from ..chain_data import provider_status
 from ..exchange_matcher import get_matcher
 from ..risk_matcher import (FROZEN, GAMBLING, LAUNDERING, MIXER, POISONING, SANCTIONED, SCAM, SEIZED, STOLEN,
-                            get_risk_matcher)
+                            distinct_flagged, get_risk_matcher)
 
 
 logger = logging.getLogger(__name__)
@@ -99,6 +99,10 @@ def chains() -> dict[str, Any]:
         # The deepest a request may ask for here.
         "max_depth_ceiling": config.TRACE_MAX_DEPTH_CEILING,
         "chains": listed,
+        # Distinct flagged addresses across chains, store and files, when the
+        # store's build recorded its overlap with the files (None before r10);
+        # the landing hero still sums the chains' counts, once per chain.
+        "flagged_distinct": distinct_flagged(),
     }
 
 

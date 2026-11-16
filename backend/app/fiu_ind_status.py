@@ -74,8 +74,11 @@ def _document() -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
         return {}, {}
     out = {}
     for name, entry in rows.items():
-        facts = ([*entry.get("actions", []), *entry.get("penalties", [])]
+        # Each entry's shape is checked here, so one bad entry ("actions": null, a
+        # string, a number) is skipped and never makes note() raise while a letter is drafted.
+        lists = ([entry.get("actions", []), entry.get("penalties", [])]
                  if isinstance(entry, dict) and isinstance(entry.get("registered"), bool) else [None])
+        facts = [*lists[0], *lists[1]] if all(isinstance(each, list) for each in lists) else [None]
         # A listed exchange is named as Annexure-I lists it; without that name
         # the note would read "listed as None", so the entry is skipped.
         named = facts == [None] or not entry["registered"] or (
@@ -83,7 +86,7 @@ def _document() -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
         if isinstance(name, str) and name.strip() and named and all(_dated(f) for f in facts):
             out[_key(name)] = {"name": name.strip(), **entry}
         else:
-            logger.warning("%s: entry %r is not dated and sourced; skipped", STATUS_FILE, name)
+            logger.error("%s: entry %r is not dated and sourced; skipped, so it gets no note", STATUS_FILE, name)
     return register, out
 
 

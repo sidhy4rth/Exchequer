@@ -2,6 +2,8 @@
 
     GET  /sop-summary                     whether this server offers it (EXCHEQUER_SOP_SUMMARY)
     POST /trace/{case_id}/sop-summary     the plain text, for the officer to copy
+    GET  /sop-steps                       whether this server offers the SOP steps (EXCHEQUER_SOP_STEPS)
+    GET  /trace/{case_id}/sop-steps       the SOP's steps beside the case's records (app/sop_steps.py)
 
 Both answer 404 with the flag off, as if they did not exist. The officer's
 answer to "Is this exchange on CFCFRMS?" is sent in the body and not stored;
@@ -13,10 +15,10 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict
 
-from .. import audit, config, sop_summary
+from .. import assets, audit, config, sop_steps, sop_summary
 from ..auth import CurrentUser
 from .evidence import KEEP, _case_or_404
 
@@ -49,3 +51,25 @@ def summary(case_id: str, body: Ask, user: CurrentUser) -> PlainTextResponse:
     text = sop_summary.summary(case_id, case.result, body.on_cfcfrms)
     audit.record("case.sop_summary_copy", case_id=case_id, detail={"on_cfcfrms": body.on_cfcfrms})
     return PlainTextResponse(text, headers=KEEP)
+
+
+def _steps_offered() -> None:
+    if not config.SOP_STEPS:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+
+@router.get("/sop-steps")
+def steps_offered(user: CurrentUser) -> dict[str, Any]:
+    """Whether the case page offers the SOP steps; reads no case."""
+    _steps_offered()
+    return {"enabled": True}
+
+
+@router.get("/trace/{case_id}/sop-steps")
+def steps(case_id: str, user: CurrentUser) -> JSONResponse:
+    """The checklist for the case as this caller may read it; audited with no detail."""
+    _steps_offered()
+    case = _case_or_404(case_id, user)
+    out = sop_steps.steps(case.result, assets.list_for(user, case_id))
+    audit.record("case.sop_steps_view", case_id=case_id)
+    return JSONResponse(out, headers=KEEP)

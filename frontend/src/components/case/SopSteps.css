@@ -1,0 +1,7 @@
+/* The CFCFRMS SOP steps on the Letters tab (SopSteps.jsx). */
+.sop-steps .ss-body { display: flex; flex-direction: column; gap: 10px; }
+.sop-steps .ss-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; font-size: 13px; }
+.sop-steps blockquote { margin: 6px 0; padding: 4px 10px; border-left: 2px solid var(--rule-strong); color: var(--text-2); }
+.sop-steps cite { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--muted); }
+.sop-steps .ss-case { margin: 4px 0 0; }
+.sop-steps .ss-case .micro { margin-right: 6px; }

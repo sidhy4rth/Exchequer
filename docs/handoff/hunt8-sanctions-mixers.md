@@ -39,8 +39,7 @@
 
 ## Open questions
 
-- Privacy Pools (2 Ethereum entries, already on main) is filed as a mixer although it screens deposits; keep it? (owner)
-- Should privacy protocols get a category of their own (shown, never a stop)? (owner)
+- ~~Privacy Pools is filed as a mixer although it screens deposits; keep it?~~ and ~~Should privacy protocols get a category of their own (shown, never a stop)?~~ Answered by #189: the privacy-protocol category merged in #149 (`83b4d75e`, `EXCHEQUER_PRIVACY_CATEGORY`) and is on in production by #232 (`07f63935`); with it on, Privacy Pools shows a note and is not a mixer stop (`render.yaml`). Moving Privacy Pools out of `threat_labels.json` waits on the owner's retire-the-flag decision.
 
 ## Files mid-change (do not touch)
 

@@ -40,6 +40,7 @@ import networkx as nx
 from .exchange_matcher import INFERRED_DEPOSIT, ExchangeMatch, role_of
 from .graph_builder import OUTGOING
 from .pattern_detection import PatternFinding
+from .prorata import read_failure_note
 
 logger = logging.getLogger(__name__)
 
@@ -472,6 +473,9 @@ def _not_estimated(prorata: dict[str, Any], materiality: dict[str, Any] | None,
     else:
         lines.append("Whatever reached it along this route may include other people's money;")
     lines.append("no credit is given for an amount that could not be measured.")
+    note = read_failure_note(prorata)
+    if note:  # a provider failure, not the money, lowered the score: say so
+        lines.append(note)
     return ScoreComponent("amount_correlation", 0.0, WEIGHT_AMOUNT_CORRELATION, " ".join(lines))
 
 
@@ -688,6 +692,9 @@ def _prorata_caveats(prorata: dict[str, Any] | None, native_symbol: str) -> list
     if not prorata or prorata.get("status") == "not_applicable":
         return []
     out = []
+    note = read_failure_note(prorata)
+    if note:
+        out.append(note)
     if prorata.get("status") == "unknown":
         out.append(
             f"How much of the value at the exchange was the traced funds could not be "

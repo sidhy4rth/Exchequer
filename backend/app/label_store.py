@@ -189,6 +189,16 @@ class LabelStore:
         self.has_exchange_rows, self.has_deposit_rows = (self._db.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone() is not None
             for table in (EXCHANGE_TABLE, DEPOSIT_TABLE))
+        self._overlap = _read_overlap(self._db, self.path)
+
+    def list_overlap(self) -> dict | None:
+        """The repository's list addresses this store also holds, as
+        scripts/build_label_store.py recorded them (meta `list_overlap`):
+        {lists_sha256, store_distinct, same_chain: {chain: {address: the store
+        row's category}}, in_store: [address held on any chain]}. None for a
+        store built before it (r9 and older): each list address it holds is
+        then counted twice, as before."""
+        return self._overlap
 
     def lookup(self, chain: str, address: str) -> dict[str, str] | None:
         chain_id = CHAIN_IDS.get(chain)
@@ -335,6 +345,26 @@ class LabelStore:
         with self._lock:
             rows = self._db.execute("SELECT key, value FROM meta WHERE key IN ('built_at', 'built_from')").fetchall()
         return {key: str(value) for key, value in rows}
+
+
+OVERLAP_KEY = "list_overlap"
+
+
+def _read_overlap(db: sqlite3.Connection, path: Path) -> dict | None:
+    row = db.execute("SELECT value FROM meta WHERE key=?", (OVERLAP_KEY,)).fetchone()
+    if row is None:
+        return None
+    try:
+        overlap = json.loads(row[0])
+        if not (isinstance(overlap["store_distinct"], int) and isinstance(overlap["lists_sha256"], (str, type(None)))
+                and all(isinstance(v, dict) for v in overlap["same_chain"].values())
+                and isinstance(overlap["in_store"], list)):
+            raise ValueError("unexpected shape")
+    except (ValueError, KeyError, TypeError, AttributeError) as exc:
+        # Counted as a store without it: each overlap twice, never one too few.
+        logger.warning("Label store %s: unreadable %s metadata, ignored: %s", path, OVERLAP_KEY, exc)
+        return None
+    return overlap
 
 
 @lru_cache(maxsize=1)

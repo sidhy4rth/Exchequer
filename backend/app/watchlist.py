@@ -102,6 +102,13 @@ def is_dust(value: float | None, asset: str | None) -> bool:
     return float(value or 0.0) < dust_floor(asset)
 
 
+def is_dust_alert(alert: Any) -> bool:
+    """An exchange or flagged alert below its asset's dust floor; a movement
+    or "more" alert is never dust. The one rule the list, the ranking and
+    the case task suggestions (app/tasks.py) all use."""
+    return alert.kind in URGENT_KINDS and is_dust(alert.value, alert.asset)
+
+
 def _floor() -> Any:
     """SQL: the alert's asset's dust floor."""
     return case(*((func.upper(models.Alert.asset) == name, amount) for name, amount in DUST_FLOOR.items()),
@@ -402,7 +409,7 @@ def alert_summary(alert: models.Alert, chain_key: str | None = None,
         "tx_time": alert.tx_time, "value": alert.value, "asset": alert.asset,
         "counterparty": alert.counterparty, "counterparty_label": alert.counterparty_label,
         "read": alert.read,
-        "dust": alert.kind in URGENT_KINDS and is_dust(alert.value, alert.asset),
+        "dust": is_dust_alert(alert),
     }
 
 
@@ -845,7 +852,7 @@ def _deliver_pending(watch_id: str, address: str, chain_key: str, case_id: str |
 
 def _rank(alerts: list[models.Alert]) -> list[models.Alert]:
     def key(a: models.Alert) -> tuple[Any, ...]:
-        dust = a.kind in URGENT_KINDS and is_dust(a.value, a.asset)
+        dust = is_dust_alert(a)
         return (dust, KIND_RANK.get(a.kind, 9), -(a.value or 0.0), a.tx_time)
     return sorted(alerts, key=key)
 

@@ -40,8 +40,9 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_SOP_DEADLINES` | Feature 8: the MHA CFCFRMS SOP's time limits, quoted, as reminders on bank holds in the asset register | #230 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_FREEZE_WORDING_V2` | Feature 7, #251: the bank-hold notice asks the bank to give effect to the Magistrate's order as it directs, not for a "debit freeze" | #252 | Off in `render.yaml`; awaits a lawyer; see its section below |
 | `EXCHEQUER_FIU_IND_NOTE` | #290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, notices, penalties) as a note on the report's FINDING and the exchange letters | #291 + #295 | On: set in the Render dashboard on 15 Nov and in `render.yaml` (owner approved on 15 Nov); see its section below |
+| `EXCHEQUER_MORE_TASK_SUGGESTIONS` | Feature 6, #334: two more task suggestions, an exhibit handed over with no hash check since and unread alerts on the case's watches | #335 | Off in `render.yaml` |
 
-That is all eighteen flags in `FLAGS` on `main`.
+That is all nineteen flags in `FLAGS` on `main`.
 
 The rest of this file is about the seven features named at the top. The steps
 below for switching on, checking and switching off apply to every flag above.
