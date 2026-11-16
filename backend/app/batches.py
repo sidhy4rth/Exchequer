@@ -38,6 +38,7 @@ import threading
 import time
 import uuid
 from collections import Counter
+from dataclasses import dataclass, field
 from typing import Any
 
 from datetime import datetime, timedelta, timezone
@@ -85,20 +86,44 @@ class BatchError(ValueError):
         self.row_errors = row_errors or []
 
 
+@dataclass(frozen=True)
+class RowCheck:
+    """check_rows's answer: the clean rows, or the sentence and the per-row
+    errors to show the sender. Plain data, so the route returns what the
+    checks wrote and never an exception's text."""
+    rows: list[dict[str, Any]] = field(default_factory=list)
+    problem: str | None = None
+    row_errors: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _unknown_chain(key: str) -> str:
+    return f"Unsupported chain '{key}'. Supported: {', '.join(sorted(config.CHAINS))}."
+
+
 def validate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Normalised rows, or BatchError listing every bad row by number (1-based)."""
+    checked = check_rows(rows)
+    if checked.problem is not None:
+        raise BatchError(checked.problem, checked.row_errors)
+    return checked.rows
+
+
+def check_rows(rows: list[dict[str, Any]]) -> RowCheck:
+    """Normalised rows, or what is wrong with them: a sentence for the batch
+    and, when rows are bad, each bad row by number (1-based)."""
     if not rows:
-        raise BatchError("The batch has no rows.")
+        return RowCheck(problem="The batch has no rows.")
     if len(rows) > MAX_ROWS:
-        raise BatchError(f"A batch holds at most {MAX_ROWS} rows; this one has {len(rows)}. Split it.")
+        return RowCheck(problem=f"A batch holds at most {MAX_ROWS} rows; this one has {len(rows)}. Split it.")
     clean, errors = [], []
     first_of: dict[tuple, int] = {}  # what a row traces -> the first row that traces it
     for n, raw in enumerate(rows, start=1):
         address = str(raw.get("address") or "").strip()
+        chain_key = (raw.get("chain") or None) and str(raw["chain"]).strip().lower()
         try:
-            chain = config.get_chain((raw.get("chain") or None) and str(raw["chain"]).strip().lower())
-        except config.UnknownChainError as exc:
-            errors.append({"row": n, "error": str(exc)})
+            chain = config.get_chain(chain_key)
+        except config.UnknownChainError:
+            errors.append({"row": n, "error": _unknown_chain(chain_key)})
             continue
         if not chain.validate_address(address):
             errors.append({"row": n, "error": f"'{address[:60]}' is not a valid {chain.name} address. "
@@ -132,8 +157,9 @@ def validate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "case_id": None, "exchange": None, "confidence": None, "error": None,
         })
     if errors:
-        raise BatchError(f"{len(errors)} row{'s' if len(errors) != 1 else ''} cannot be traced as written.", errors)
-    return clean
+        return RowCheck(problem=f"{len(errors)} row{'s' if len(errors) != 1 else ''} cannot be traced as written.",
+                        row_errors=errors)
+    return RowCheck(rows=clean)
 
 
 def traces_needed(rows: list[dict[str, Any]]) -> int:
