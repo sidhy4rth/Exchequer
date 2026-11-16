@@ -85,8 +85,8 @@ def test_no_country_given_says_nothing_about_the_list():
 # Figure 3.6's Central Authority, language and specifications columns, and the MHA MLAT portal's current list
 # (#352). Both await a by-eye check by a second person, so no draft uses them yet. A change is deliberate: say
 # what changed and why in the pull request, and update the pin.
-AUTHORITIES_SHA256 = "a36aebb34d5cfd3fbc39ef74a1f2bb7752a469a532f7b69b8cb3146b841d2502"
-PORTAL_SHA256 = "3c5a38fc5b990e89af450d4853da62ab0d693898fcf3128128ecb2ab4da68f12"
+AUTHORITIES_SHA256 = "d19af6317c26feab5e88c1e80f256491d32dc02a051f5fd14906d999f8885fe7"
+PORTAL_SHA256 = "b7b178dc93892154ab8b5867278975345f1fa9407c3d0de3c7f41e995fda9572"
 
 
 def header(path):

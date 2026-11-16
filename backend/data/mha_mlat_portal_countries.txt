@@ -27,9 +27,10 @@
 #   it shows the document icon with no link (8 rows; not read as a treaty either way); "Not Exist" as printed.
 #   Conventions: the page's entries in order, joined by "; ", empty where it shows none. Lines starting "#" are
 #   not data.
-# Against the 2019 list (Figure 3.6, 42 rows): the 41 rows with a linked document are the 2019 list's 40 rows
-#   in force plus The Kingdom of Belgium; Cambodia and Morocco (signed, not yet in force in 2019) show the icon
-#   with no document.
+# Against the 2019 list (Figure 3.6, 42 rows): the 41 rows with a linked document are the 2019 list's 42 rows
+#   less Cambodia and Morocco (that is, its 39 rows in force plus Maldives, which it marked signed but not yet in
+#   force), plus The Kingdom of Belgium; Cambodia and Morocco (also signed, not yet in force in 2019) show the
+#   icon with no document.
 Afghanistan | Not Exist | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC; SAARC Convention
 Antigua and Barbuda | Not Exist | Harare Scheme; UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC
 Arab Republic of Egypt | document: https://mlat.mha.gov.in/UploadMedia/MlaTreaty/Egypt.pdf | UN Convention against illicit Traffic in NDPS, 1998; UN Convention against Corruption; UN Convention against TOC

@@ -8,7 +8,9 @@
 #   Figure 3.6 "List of countries having MLAT with India", columns "Central Authority- Address and Email ID",
 #   "Language requirement as per MLAT" and "Specifications requirements for making a request".
 #   Pages: rows 1-11 on page [25] (PDF page 27); rows 12-22 on page [26] (PDF page 28); rows 23-32 on page [27]
-#   (PDF page 29); rows 33-42 on page [28] (PDF page 30). Footnotes 12 and 13 are on pages [26] and [27].
+#   (PDF page 29); rows 33-42 on page [28] (PDF page 30). Row 22 (Mexico) runs on to the top of page [27] (its
+#   last address line and e-mail) and row 32 (Switzerland) to the top of page [28] (its blank cells). Footnotes
+#   12 and 13 are on pages [26] and [27].
 # Copy read: https://jkhighcourt.nic.in/upload/notices/guidelines.pdf (as circulated by the High Court of J&K;
 #   PDF SHA-256 a318fde9e80479b005cb3ee000feadfd7428fb07e2f6232600b8dab5d03ffbe2, the same copy as
 #   mha_mlat_countries.txt and mha_letter_of_request.txt; fetched again and checked on 16 November 2026).
@@ -59,7 +61,7 @@ Kazakhstan | Office of the Attorney General |  | Requests and supporting documen
 Kyrgyzstan | General Prosecutor's Office / 010000, the Republic of Kazakhstan, Nur-Sultan city, / Mangilik El avenue, 14 |  | the Contracting Parties shall use their national language attaching the translation in the national language of the other Contracting Party or in the English or Russian languages | No specific requirement.
 Kuwait | Ministry of Justice (Criminal Execution Office & Foreign Communications) |  | Requests and supporting documents shall be accompanied by a translation into one of the official languages of the Requested Party or into English. | No specific requirement.
 Malaysia | Attorney General of Malaysia / c/o International Cooperation Unit / Attorney General's Chambers / No. 45 Persiaran Perdana / Precinct 4, 62100 Putrajaya, MALAYSIA |  | Requests and supporting documents thereto and other communications related to the request shall be submitted in the English language. | No specific requirement.
-Maldives | Prosecutor General's Office / Majeedhee Magu, Male 20040, Maldives |  | Request has to be sent in English | No specific requirement.
+Maldives | Prosecutor General's Office / Majeedhee Magu, Malé 20040, Maldives |  | Request has to be sent in English | No specific requirement.
 Mauritius | Attorney General's Office / Ground Floor, / 2nd, 3rd, 4th, 5th, and 6th floor / Renganaden Seeneevassen Building / Port Louis, MAURITIUS | ago@govmu.org | Requests shall be submitted in the English language | No specific requirement.
 Mexico | Office of the Attorney General / Dirección General de Extradiciones y Asistencia / Jurídica Procuraduría General de la República / Avenida Paseo de la Reforma Nº 211-213, Segundo / Piso, Colonia Cuauhtémoc, Delegación Cuauhtémoc, / México, Distrito Federal, C.P. 06500 | fresendiz@pgr.gob.mx | Requests and supporting documents shall be in the language of the Requested Party or in English | No specific requirement.
 Mongolia | General Prosecutor's Office. |  | Contracting Parties shall use their national language attaching the translation in the national language of the other Contracting Party or in the English language | No specific requirement.
