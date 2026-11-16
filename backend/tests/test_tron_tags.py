@@ -269,3 +269,18 @@ def test_a_store_instant_exchanger_is_still_named_once_tronscan_names_another_wa
     assert result["live_tags"]["found"][0]["address"] == EXCH
     hit = next(m for m in result["matches"] if m["address"] == swap)
     assert hit["exchange"] == "FixedFloat" and hit["category"] == INSTANT_EXCHANGER
+
+
+@pytest.mark.parametrize("tag", ["CEX", "CEX 1", "Cex Hot Wallet", "CEX: Deposit", "CEX-2", "Cex.com 3"])
+def test_cex_alone_is_the_word_for_a_centralised_exchange_not_cex_io(tag):
+    # Only CEX.IO's own spellings read as CEX.IO (#371), here and in the EVM importers that reuse the map.
+    from scripts import import_eth_labels
+    assert exchange_for_tag(tag) is None
+    assert import_eth_labels.CANONICAL.get(import_eth_labels.tag_head(tag)) is None
+
+
+@pytest.mark.parametrize("tag", ["CEX.IO", "CEX.IO 2", "CEX.IO Hot Wallet", "CEXIO 1", "cex.io: Wallet"])
+def test_cex_io_spelt_out_still_reads_as_cex_io(tag):
+    from scripts import import_eth_labels
+    assert exchange_for_tag(tag) == "CEX.IO"
+    assert import_eth_labels.CANONICAL.get(import_eth_labels.tag_head(tag)) == "CEX.IO"
