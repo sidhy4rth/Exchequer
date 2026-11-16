@@ -4,8 +4,8 @@
 - **Issue**: #285 (merged in #292); now #346
 - **Branch**: `feat/landing-overlap-metadata` (was `fix/landing-flagged-figure`)
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: #292 merged (`b287826b`); #346 in PR #347, ready for review (applies to label stores built after it merges: r10+)
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: #292 merged (`b287826b`); #346 merged in #347 on 2026-11-16 (`c9896a3f`); applies to label stores built after it (r10+); live `/chains` shows `flagged_distinct: null` until then
 
 ## Done
 

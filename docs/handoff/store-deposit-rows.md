@@ -4,8 +4,8 @@
 - **Issue**: #264
 - **Branch**: `labels/deposit-rows-basis` (ADR + contract), then stacked: `labels/deposit-rows-store` (store + add script), `labels/deposit-rows-read` (matcher, scoring, report, letter)
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PRs 1 and 2 merged (#265, #266); PR 3 (#267) open for review; flag `EXCHEQUER_STORE_EXCHANGE_ROWS` stays off
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: all three merged (#265, #266, #267 `7fcd1dab`); the trace screen (#337) and the letter of request (#349) print the basis too; flag `EXCHEQUER_STORE_EXCHANGE_ROWS` stays off
 
 ## Done
 
@@ -35,8 +35,8 @@
 
 1. Release agent: classify each PoR row before adding it (ADR-0012 (4)); re-classify OKX's 474,529 Tron rows.
    CSV columns: the ten of ADR-0011 plus `sweeps_to`, `sweep_tx`, `checked_on` (blank on own-wallet rows).
-2. The trace screen prints it: #336 / PR #337 (`trace-screen-store-basis.md`). The letter of request
-   prints it: #348 / PR #349 (`letter-of-request-store-basis.md`).
+2. Done: the trace screen prints it, #337 (`7c4c5024`, `trace-screen-store-basis.md`); the letter of
+   request prints it, #349 (`b847f792`, `letter-of-request-store-basis.md`).
 3. Turning the flag on (separate PR): needs a store built under ADR-0012 and the demo re-record (ADR-0011).
 
 ## Open questions

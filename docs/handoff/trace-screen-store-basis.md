@@ -4,8 +4,8 @@
 - **Issue**: #336
 - **Branch**: `feat/trace-deposit-basis`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: PR #337 ready for review; shows only when the trace read a store row (`EXCHEQUER_STORE_EXCHANGE_ROWS`, off)
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #337 on 2026-11-16 (`7c4c5024`); shows only when the trace read a store row (`EXCHEQUER_STORE_EXCHANGE_ROWS`, off)
 
 ## Done
 

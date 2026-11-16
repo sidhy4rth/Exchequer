@@ -4,8 +4,8 @@
 - **Issue**: #350
 - **Branch**: `docs/handoff-status-sweep-7`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: PR #351 ready for review
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #351 on 2026-11-16 (`33b9d779`)
 
 ## Done
 
@@ -19,9 +19,8 @@
 
 ## Next
 
-1. Lead: review and merge #351.
-2. Later sweep: `dependency-bumps.md`, `exhibit-register.md` and `report-certificate.md` still name Barenyam as Current although their work is merged (#138 `76ff238a`; #103, #110, #181; #119). CLAUDE.md says not to edit a file someone else holds, so they were left for Barenyam or the owner.
-3. Also left: handoffs an open PR edits (e.g. `landing-flagged-figure.md` in #347, `store-deposit-rows.md` in #337); fix them after those merge if still stale.
+1. Later sweep: `dependency-bumps.md`, `exhibit-register.md` and `report-certificate.md` still name Barenyam as Current although their work is merged (#138 `76ff238a`; #103, #110, #181; #119). CLAUDE.md says not to edit a file someone else holds, so they were left for Barenyam or the owner.
+2. Done in part 8 (`handoff-status-sweep-8.md`): `landing-flagged-figure.md` and `store-deposit-rows.md`, after #347 and #337 merged.
 
 ## Open questions
 

@@ -3,9 +3,9 @@
 - **Feature**: a risk or privacy note never shows ".." when its source text already ends in a full stop
 - **Issue**: #338
 - **Branch**: `fix/describe-double-stop`
-- **Current**: nobody (in review)
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: done; PR #339 in review
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #339 on 2026-11-16 (`f0db9519`); live
 
 ## Done
 
@@ -19,7 +19,7 @@
 
 ## Next
 
-1. none; the lead merges #339.
+1. none
 
 ## Open questions
 

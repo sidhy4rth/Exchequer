@@ -4,8 +4,8 @@
 - **Issue**: #356
 - **Branch**: `feat/review-nits-15nov`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: done in PR #357, awaiting review
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #357 on 2026-11-16 (`f336fb3b`); live
 
 ## Done
 
@@ -21,7 +21,7 @@
 
 ## Next
 
-1. Review and merge #357.
+1. none
 
 ## Open questions
 

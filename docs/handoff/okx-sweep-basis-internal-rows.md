@@ -3,9 +3,9 @@
 - **Feature**: the `sweep_basis` of #277's 47 OKX Ethereum sweep-destination labels counts only rows that are still customer-deposit sweeps, after the label-store build's internal-wallet filter dropped OKX-funded rows
 - **Issue**: #328
 - **Branch**: `labels/okx-sweep-basis-internal-rows`
-- **Current**: Sidhyarth
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: in review (PR #329)
+- **Current**: nobody
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #329 on 2026-11-16 (`76bd1f9d`); live (data notes only; no app code reads `sweep_basis`)
 
 ## Done
 

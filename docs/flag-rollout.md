@@ -32,18 +32,19 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_JOB_STOP_UNWATCHED` | #302: stop a background trace job no page has watched for 120 s after its last progress stream closed; nothing saved | #303 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the store release `labels-2026-11-16` carries exchange rows (OKX 474,529 Tron; OKX Ethereum 162 own wallets and 4,938 deposit rows that state their basis, ADR-0012; Bitget 10 Ethereum). A sample suggests most of the OKX Tron rows are customer deposit addresses that sweep to OKX, yet they are still typed as OKX's own wallets, so it stays off until they are rebuilt as deposit and own-wallet rows (ADR-0012). Switching it on is its own PR, which also re-records demo 9 (five of its addresses are OKX rows) |
 | `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
-| `EXCHEQUER_CUSTODY_BALANCE_CHECK` | Feature 9 part 2: read each custody address's balance on chain against the asset register, with the provider evidence | #333 (+ stacked PRs, issue #332) | Off; see its section below |
+| `EXCHEQUER_CUSTODY_BALANCE_CHECK` | Feature 9 part 2: read each custody address's balance on chain against the asset register, with the provider evidence | #333 (+#344, #345; issue #332) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_CDR_IMPORT` | Feature 5: read a call detail record CSV against a case; save a summary the officer confirms | #168 (+#172, #173), merged with #146 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_EXPORT_SCAN` | Feature 2: scan a phone or computer export in the browser for addresses, hashes and seed phrases | #147 (+#154, #155, #156, #164) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_TELEGRAM_LOOKUPS` | Feature 4, OSINT slice 4: read a Telegram username's public t.me page (needs `EXCHEQUER_OSINT_LOOKUPS` too) | #162 (+#169, #170) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_SOP_SUMMARY` | Feature 8: a copy-ready crypto summary of a case in the CFCFRMS SOP's 9.4 terms | #218 (+#219, #220) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_SOP_DEADLINES` | Feature 8: the MHA CFCFRMS SOP's time limits, quoted, as reminders on bank holds in the asset register | #230 | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_SOP_STEPS` | Feature 8, #326: the CFCFRMS SOP's steps on a case's Letters tab, each quoted with its section and PDF page, beside what the case's own records show | #327 | Off in `render.yaml` |
 | `EXCHEQUER_FREEZE_WORDING_V2` | Feature 7, #251: the bank-hold notice asks the bank to give effect to the Magistrate's order as it directs, not for a "debit freeze" | #252 | Off in `render.yaml`; awaits a lawyer; see its section below |
 | `EXCHEQUER_FIU_IND_NOTE` | #290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, notices, penalties) as a note on the report's FINDING and the exchange letters | #291 + #295 | On: set in the Render dashboard on 15 Nov and in `render.yaml` (owner approved on 15 Nov); see its section below |
 | `EXCHEQUER_MORE_TASK_SUGGESTIONS` | Feature 6, #334: two more task suggestions, an exhibit handed over with no hash check since and unread alerts on the case's watches | #335 | Off in `render.yaml` |
 
-That is all nineteen flags in `FLAGS` on `main`.
+That is all twenty-one flags in `FLAGS` on `main`.
 
 The rest of this file is about the seven features named at the top. The steps
 below for switching on, checking and switching off apply to every flag above.
